@@ -983,7 +983,7 @@ async function publicPost(p,viewerId) {
     try{return {id:asset.id,mimeType:asset.mimeType,mediaType:asset.mediaType,url:await resolveAssetUrl(asset),byteSize:asset.byteSize};}catch{return null;}
   }));
   const {imageUrl,...cleanPost}=p;
-  return {...cleanPost,media:media.filter(item=>item?.url),soundtrack:await publicSoundtrack(p.soundtrack,viewerId),author:safeUser(author),reactions:p.reactions||{},reactionCount:Object.values(p.reactions||{}).length,myReaction:(p.reactions||{})[viewerId]||null,
+  return {...cleanPost,media:media.filter(item=>item?.url),soundtrack:await publicSoundtrack(p.soundtrack,viewerId),author:safeUser(author),taggedUsers:(p.taggedUserIds||[]).map(id=>db.users.find(member=>member.id===id)).filter(Boolean).map(member=>safeUser(member,viewerId)),reactions:p.reactions||{},reactionCount:Object.values(p.reactions||{}).length,myReaction:(p.reactions||{})[viewerId]||null,
     isSaved:(db.savedPosts||[]).some(saved=>saved.userId===viewerId&&saved.postId===p.id),
     isWatchLater:(db.savedPosts||[]).some(saved=>saved.userId===viewerId&&saved.postId===p.id&&saved.readLater===true),
     comments:(p.comments||[]).map(c=>({...c,author:safeUser(db.users.find(u=>u.id===c.userId))}))};
@@ -4652,12 +4652,21 @@ async function route(req, res) {
         if(requestedVideoFormat!==null&&!['video','reel'].includes(requestedVideoFormat))return json(res,400,{error:'Video format must be video or reel.'});
         const audience=String(input.audience||'public');
         if(!['public','friends','close_friends','followers','private'].includes(audience))return json(res,400,{error:'Unsupported post audience.'});
+        const feeling=String(input.feeling||'').trim(),activity=String(input.activity||'').trim(),location=String(input.location||'').trim(),background=String(input.background||'').trim();
+        if(feeling.length>40||activity.length>80||location.length>120)return json(res,400,{error:'Feeling, activity or location is too long.'});
+        if(background&&!['sky','sunset','rose','violet','mint'].includes(background))return json(res,400,{error:'Unsupported text background.'});
+        const requestedTagIds=input.taggedUserIds===undefined?[]:(Array.isArray(input.taggedUserIds)?[...new Set(input.taggedUserIds.map(value=>String(value||'').trim()).filter(Boolean))]:null);
+        if(!requestedTagIds||requestedTagIds.length>10)return json(res,400,{error:'Tag up to 10 friends in one post.'});
+        const allowedFriendIds=new Set(getMutualFollowIds(db.follows||[],user.id,db.blocks||[]));
+        if(requestedTagIds.some(id=>id===user.id||!allowedFriendIds.has(id)))return json(res,400,{error:'You can tag only your Minglora friends.'});
         let soundtrack=null;try{soundtrack=resolveSoundtrackForUser(user.id,input.soundtrack);}catch(error){return json(res,error.status||400,{error:error.message});}
         const assets=ids.map(id=>(db.mediaAssets||[]).find(asset=>asset.id===id&&asset.ownerId===user.id&&asset.slot==='post'&&asset.status==='uploaded'));
         if(assets.some(asset=>!asset))return json(res,400,{error:'One or more selected media files are no longer available. Upload them again.'});
         if(requestedVideoFormat&&(assets.length!==1||assets[0]?.mediaType!=='video'))return json(res,400,{error:'A video or Reel post must contain exactly one uploaded video file.'});
-        const post={id:uid(),userId:user.id,text,mediaIds:ids,soundtrack,audience,...(requestedVideoFormat?{videoFormat:requestedVideoFormat}:{}),createdAt:now(),reactions:{},comments:[]};
-        assets.forEach(asset=>{asset.status='attached';asset.attachedTo=post.id;});db.posts.unshift(post);await saveStore();return json(res,201,{post:await publicPost(post,user.id)});
+        const post={id:uid(),userId:user.id,text,mediaIds:ids,soundtrack,audience,...(feeling?{feeling}:{}),...(activity?{activity}:{}),...(location?{location}:{}),...(background&&!ids.length?{background}:{}),...(requestedTagIds.length?{taggedUserIds:requestedTagIds}:{}),...(requestedVideoFormat?{videoFormat:requestedVideoFormat}:{}),createdAt:now(),reactions:{},comments:[]};
+        assets.forEach(asset=>{asset.status='attached';asset.attachedTo=post.id;});db.posts.unshift(post);
+        requestedTagIds.forEach(taggedId=>{const taggedMember=db.users.find(member=>member.id===taggedId);if(taggedMember)notify(taggedId,user.id,'post_tagged',(user.name||'A Minglora friend')+' tagged you in a post.',{postId:post.id});});
+        await saveStore();return json(res,201,{post:await publicPost(post,user.id)});
       }
       let m=p.match(/^\/api\/posts\/([^/]+)$/);
       if(method==='PATCH'&&m){
