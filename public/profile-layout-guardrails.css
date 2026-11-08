@@ -310,6 +310,11 @@
   line-height: 1.2 !important;
 }
 
+/* Visitor metrics follow their action row; never overlap those controls. */
+.minglora-profile-page .profile-header-card--viewer .profile-counts {
+  grid-row: 3 !important;
+}
+
 /* Admin tools get a complete content row before the metrics row. */
 .minglora-profile-page .profile-header-card--admin .profile-info > .profile-admin-tools {
   grid-column: 1 / -1 !important;
