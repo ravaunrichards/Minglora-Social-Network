@@ -4875,7 +4875,24 @@ async function finishPaypalCoinReturn(){
   catch(error){toast("PayPal return received, but the purchase could not be completed: "+error.message);}
 }
 
-function syncPageLayout(){const active=state.view==='profile';const forYou=state.view==='for-you';const layout=document.querySelector('.layout');if(layout)layout.classList.toggle('profile-view',active);document.body.classList.toggle('minglora-profile-active',active);document.documentElement.classList.toggle('minglora-profile-active',active);document.body.classList.toggle('minglora-for-you-active',forYou);document.documentElement.classList.toggle('minglora-for-you-active',forYou);}
+function syncPageLayout(){
+  const active=state.view==='profile';
+  const forYou=state.view==='for-you';
+  // Home alone keeps the Facebook-style feature rail. For You has its own
+  // immersive layout; every other destination is a standalone full-page view.
+  const standalone=state.view!=='feed'&&!forYou;
+  const layout=document.querySelector('.layout');
+  if(layout){
+    layout.classList.toggle('profile-view',active);
+    layout.classList.toggle('standalone-page-view',standalone);
+  }
+  document.body.classList.toggle('minglora-profile-active',active);
+  document.documentElement.classList.toggle('minglora-profile-active',active);
+  document.body.classList.toggle('minglora-standalone-page',standalone);
+  document.documentElement.classList.toggle('minglora-standalone-page',standalone);
+  document.body.classList.toggle('minglora-for-you-active',forYou);
+  document.documentElement.classList.toggle('minglora-for-you-active',forYou);
+}
 function activateSilent(view){if(view!=='profile')stopProfilePresence();if(view!=='friends')stopPeopleDiscoveryRefresh();if(view!=='profile')state.profileTargetId='';state.view=view;syncPageLayout();syncMessageRefreshPolling();document.querySelectorAll('[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===view));persistCurrentView();recordBrowserNavigation();}
 async function loadGroups(){state.groups=(await api('/groups')).groups;}
 async function renderGroups(){
