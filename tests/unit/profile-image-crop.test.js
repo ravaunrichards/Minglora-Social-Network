@@ -110,7 +110,7 @@ test('profile thought cloud occupies the portrait column above the photo without
   const separatedCss=fs.readFileSync(path.join(root,'public/profile-independent-avatar-header.css'),'utf8');
   const html=fs.readFileSync(path.join(root,'public/index.html'),'utf8');
   assert.match(app,/\(profileThoughtMarkup\?'<div class="profile-thought-slot">'/);
-  assert.match(app,/class="profile-info'\+\(isAdminProfile\?' profile-info--admin':' '\)/);
+  assert.ok(app.includes("profile-info--with-thought"),'thought profiles use their own grid rows');
   assert.match(separatedCss,/\.profile-header-card \.profile-thought-slot\{[\s\S]*?grid-column:1!important[\s\S]*?grid-row:1!important/);
   assert.match(separatedCss,/\.profile-header-card \.profile-thought-slot\+\.profile-avatar-edit-wrap\{[\s\S]*?grid-column:1!important[\s\S]*?grid-row:2!important/);
   assert.match(separatedCss,/\.profile-header-card \.profile-thought-slot~\.profile-info-main\{[\s\S]*?grid-column:2!important[\s\S]*?grid-row:2!important/);
