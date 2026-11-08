@@ -70,13 +70,14 @@ test('For You is a full-screen swipe feed with phone navigation and selectable p
   assert.match(app, /data-fyp-scope="following"/);
   assert.match(app, /data-fyp-scope="following"/);
   assert.match(app, /data-fyp-scope="for-you"/);
-  assert.match(app, /fyp-profile-action/);
+  assert.match(app, /fyp-avatar-button/);
+  assert.match(app, /fyp-action-rail/);
   assert.doesNotMatch(app, /fyp-bottom-nav|data-fyp-nav="(?:feed|friends|create|messages|profile)"|data-fyp-home/);
   assert.match(styles, /body\.minglora-for-you-active \.topbar[\s\S]*display:none!important/);
   assert.match(styles, /\.fyp-stream\{[\s\S]*scroll-snap-type:y mandatory/);
   assert.match(styles, /\.fyp-video-card\{[\s\S]*height:100dvh/);
   assert.doesNotMatch(styles, /\.fyp-bottom-nav|\.fyp-brand/);
-  assert.match(styles, /\.fyp-profile-action\{/);
+  assert.match(styles, /\.fyp-action-rail\{/);
   assert.match(styles, /\.fyp-overlay-bottom\{bottom:calc\(17px \+ env\(safe-area-inset-bottom\)\)\}/);
   assert.match(html, /data-view="for-you"/);
 });
