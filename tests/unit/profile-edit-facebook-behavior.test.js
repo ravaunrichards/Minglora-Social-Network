@@ -20,17 +20,23 @@ const profileEnd=app.indexOf('async function loadProfileGiftGallery',profileStar
 assert.ok(profileStart>=0&&profileEnd>profileStart,'profile renderer exists');
 const profile=app.slice(profileStart,profileEnd);
 
-test('profile Edit profile control opens the authenticated owner editor as a dialog',()=>{
+test('profile Edit profile control navigates directly to About without opening an overlay',()=>{
   assert.ok(profile.includes('id="edit-profile"'));
-  assert.ok(profile.includes('aria-haspopup="dialog"'));
-  assert.ok(profile.includes('aria-controls="minglora-profile-editor"'));
-  assert.ok(profile.includes("$('#edit-profile')?.addEventListener('click',()=>openEditProfile(u))"));
+  assert.ok(profile.includes('aria-controls="profile-tab-panel"'));
+  assert.doesNotMatch(profile,/aria-haspopup="dialog"/);
+  assert.ok(profile.includes("$('#edit-profile')?.addEventListener('click',()=>{\n    showTab('about');"));
+  assert.ok(profile.includes("aboutPanel?.scrollIntoView({behavior:'smooth',block:'start'})"));
+  assert.ok(profile.includes("aboutPanel?.querySelector('[data-edit-about-section]')?.focus({preventScroll:true})"));
+  assert.ok(profile.includes('data-edit-about-section='));
+});
+
+test('the full account editor remains available to other legitimate editor entry points',()=>{
   assert.ok(editor.includes("modal.id='minglora-profile-editor'"));
   assert.ok(editor.includes("modal.showModal()"));
   assert.ok(editor.includes("dialog#minglora-profile-editor[open]"));
 });
 
-test('the editor has direct navigation for Intro, About details, profile picture and cover photo',()=>{
+test('the full account editor has direct navigation for Intro, About details, profile picture and cover photo',()=>{
   for(const key of ['intro','details','avatar','cover']){
     assert.ok(editor.includes('data-profile-editor-jump="'+key+'"'),'Missing editor navigation '+key);
     assert.ok(editor.includes('data-profile-editor-target="'+key+'"'),'Missing editor target '+key);
