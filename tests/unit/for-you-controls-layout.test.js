@@ -41,7 +41,7 @@ test('For You header and search reserve their own space above the scrolling feed
   assert.match(app, /<header class="fyp-header"[\s\S]*fyp-feed-switch[\s\S]*fyp-top-search[\s\S]*class="fyp-stream"/);
   assert.match(app, /setupForYouPlayback\(feedRoot\)/);
   assert.match(app, /data-fyp-retry/);
-  assert.match(css, /\.fyp-header\s*\{[\s\S]*grid-template-rows:\s*auto minmax\(0, 1fr\)/);
+  assert.match(css, /\.minglora-for-you\s*\{[\s\S]*grid-template-rows:\s*auto minmax\(0, 1fr\)/);
   assert.match(css, /\.fyp-top-search\s*\{[\s\S]*position:\s*relative !important/);
   assert.match(css, /\.fyp-feed-switch\s*\{[\s\S]*position:\s*relative !important/);
   assert.match(css, /\.fyp-stream\s*\{[\s\S]*grid-row:\s*2 !important[\s\S]*overflow-y:\s*auto !important/);
