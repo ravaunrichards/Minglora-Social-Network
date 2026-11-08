@@ -6897,3 +6897,12 @@ dialog.profile-editor-dialog .modal-head{position:sticky;top:0;z-index:2;backgro
 .post-reaction-picker button{width:36px;height:36px;display:grid;place-items:center;border:0;border-radius:50%;background:transparent;font-size:23px;line-height:1;cursor:pointer;transition:transform .14s ease,background .14s ease}
 .post-reaction-picker button:hover,.post-reaction-picker button:focus-visible{background:var(--surface-hover,#eef3fb);transform:translateY(-4px) scale(1.12);outline:2px solid var(--accent,#1769e0);outline-offset:1px}
 @media(max-width:520px){.post-reaction-picker{gap:2px;padding:7px 6px}.post-reaction-picker button{width:34px;height:36px;font-size:21px}}
+
+
+/* Minglora Facebook-style profile layout: hide Home feature navigation outside Home/feed views. */
+.layout.profile-view{grid-template-columns:minmax(0,900px) 300px;max-width:1250px;justify-content:center}
+.layout.profile-view>.left-rail{display:none}
+.layout.profile-view>.main-content{grid-column:1;min-width:0}
+.layout.profile-view>.right-rail{grid-column:2}
+@media(max-width:1150px){.layout.profile-view{grid-template-columns:minmax(0,1fr);max-width:900px}.layout.profile-view>.right-rail{display:none}}
+@media(max-width:760px){.layout.profile-view{display:block;max-width:620px}.layout.profile-view>.left-rail{display:none}.layout.profile-view>.main-content{width:100%}}
