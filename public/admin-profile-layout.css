@@ -68,91 +68,53 @@
 }
 .profile-header-card--viewer .profile-info--with-thought .profile-counts{grid-row:4!important}
 
-/* A dedicated administrative profile workspace, separate from member profiles. */
+/* Administrator profile identity and its single Admin Centre shortcut. */
 .profile-header-card--admin{
   border-color:color-mix(in srgb,var(--blue) 24%,var(--line))!important;
   box-shadow:0 8px 28px color-mix(in srgb,var(--blue) 8%,transparent);
 }
 .profile-header-card--admin .profile-info--admin{row-gap:12px!important}
-.profile-header-card--admin .profile-info--admin .profile-admin-tools{
+.profile-header-card--admin .profile-info--admin .profile-counts{grid-row:4!important}
+.profile-admin-centre-entry{
   grid-column:1 / -1!important;
   grid-row:3!important;
-  min-width:0;
-  padding:15px;
-  border:1px solid color-mix(in srgb,var(--blue) 22%,var(--line));
-  border-radius:14px;
-  background:linear-gradient(135deg,color-mix(in srgb,var(--blue) 6%,var(--card)),var(--card) 68%);
-}
-.profile-admin-tools-heading{
-  display:flex;
+  display:inline-flex;
   align-items:center;
-  justify-content:space-between;
-  gap:14px;
-  margin:0 0 12px;
-}
-.profile-admin-tools-heading>div{display:grid;gap:3px}
-.profile-admin-tools-heading>div>span{
-  color:var(--blue);
-  font-size:9px;
-  font-weight:900;
-  letter-spacing:.14em;
-}
-.profile-admin-tools-heading>div>strong{
+  justify-self:start;
+  gap:10px;
+  width:max-content;
+  max-width:100%;
+  min-height:46px;
+  padding:8px 14px;
+  border:1px solid color-mix(in srgb,var(--blue) 42%,var(--line));
+  border-radius:11px;
+  background:linear-gradient(135deg,color-mix(in srgb,var(--blue) 11%,var(--card)),var(--card));
   color:var(--text);
-  font-size:15px;
+  font-size:12px;
   font-weight:850;
+  text-decoration:none;
+  box-shadow:0 3px 12px color-mix(in srgb,var(--blue) 10%,transparent);
 }
-.profile-admin-tools-heading>p{
-  max-width:330px;
-  margin:0;
-  color:var(--muted);
-  font-size:11px;
-  line-height:1.45;
-  text-align:right;
-}
-.profile-admin-tools-grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
-  gap:8px;
-}
-.profile-admin-tool{
-  display:flex;
-  align-items:center;
-  justify-content:flex-start;
-  gap:9px;
-  min-width:0;
-  min-height:50px;
-  padding:9px 10px;
-  border:1px solid var(--line);
-  border-radius:10px;
-  background:var(--card);
-  color:var(--text);
-  font:inherit;
-  font-size:11px;
-  font-weight:750;
-  line-height:1.25;
-  text-align:left;
-  cursor:pointer;
-  transition:border-color .15s ease,background .15s ease,transform .15s ease;
-}
-.profile-admin-tool:hover{
+.profile-admin-centre-entry:hover{
   border-color:var(--blue);
-  background:color-mix(in srgb,var(--blue) 5%,var(--card));
-  transform:translateY(-1px);
+  background:color-mix(in srgb,var(--blue) 8%,var(--card));
 }
-.profile-admin-tool-icon{
+.profile-admin-centre-entry:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
+.profile-admin-centre-entry-icon{
   display:grid;
   place-items:center;
   flex:0 0 30px;
   width:30px;
   height:30px;
   border-radius:9px;
-  background:color-mix(in srgb,var(--blue) 10%,var(--card));
-  color:var(--blue);
-  font-size:18px;
+  background:linear-gradient(145deg,#2d7de0,#174d9d);
+  color:#fff;
 }
-.profile-admin-tool--secondary{background:var(--surface-soft)}
-.profile-header-card--admin .profile-info--admin .profile-counts{grid-row:4!important}
+.profile-admin-centre-entry-icon svg{
+  width:18px;height:18px;fill:none;stroke:currentColor;
+  stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;
+}
+.profile-admin-centre-entry-arrow{color:var(--blue);font-size:16px;font-weight:900}
 .profile-story-edit-modal .modal-body>p{line-height:1.5}
 .profile-story-edit-preview{
   display:grid;
@@ -178,18 +140,9 @@
   .profile-thought-row{margin-bottom:0}
   .profile-thought-card{min-height:50px;padding:9px 10px}
   .profile-thought-card-text{font-size:12px}
-  .profile-admin-tools-heading{align-items:flex-start;flex-direction:column;gap:4px}
-  .profile-admin-tools-heading>p{text-align:left}
-  .profile-admin-tools-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
-  .profile-admin-tool{min-height:48px;padding:8px;font-size:11px}
-  .profile-admin-tool-icon{width:28px;height:28px;flex-basis:28px}
-  .profile-header-card--admin .profile-info--admin .profile-admin-tools{padding:11px}
 }
 @media(max-width:390px){
-  .profile-admin-tools-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .profile-admin-tool{gap:6px;padding:7px;font-size:10px}
 }
-@media(prefers-reduced-motion:reduce){.profile-admin-tool{transition:none}}
 
 /* Compact profile thought cloud: separate it slightly from the top edge and avoid a full-width banner. */
 .profile-thought-row{
@@ -316,14 +269,6 @@
 .profile-admin-identity-mark--owner{border-color:rgba(190,157,82,.45);background:linear-gradient(135deg,#fff9e9,#fff);color:#8a641c}
 .profile-admin-identity-mark--security{border-color:rgba(43,121,202,.28);background:linear-gradient(135deg,#edf6ff,#fff);color:#2468ae}
 .profile-admin-identity-mark--control{border-color:rgba(117,91,180,.28);background:linear-gradient(135deg,#f4efff,#fff);color:#7254a9}
-.profile-admin-tools-heading{align-items:flex-end}
-.profile-admin-tools-heading>p{max-width:390px}
-.profile-admin-tool{position:relative;text-decoration:none}
-.profile-admin-tool:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
-.profile-admin-tool--centre{border-color:color-mix(in srgb,var(--blue) 40%,var(--line));background:linear-gradient(135deg,color-mix(in srgb,var(--blue) 8%,var(--card)),var(--card))}
-.profile-admin-tool--centre .profile-admin-tool-icon{background:linear-gradient(145deg,#2d7de0,#174d9d);color:#fff}
-.profile-admin-tool--centre .profile-admin-tool-icon svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
-.profile-admin-tool-arrow{margin-left:auto;color:var(--blue);font-size:15px;font-weight:900}
 @media(max-width:760px){
   .profile-admin-identity{gap:6px}
   .profile-admin-identity-mark{min-height:28px;padding:4px 7px}
@@ -331,73 +276,3 @@
 }
 
 
-/* Administrator profile actions: keep all four controls in one horizontal row,
-   including compact mobile layouts. */
-.profile-header-card--admin .profile-info--admin .profile-admin-tools-grid{
-  display:grid!important;
-  grid-template-columns:repeat(4,minmax(0,1fr))!important;
-  grid-auto-flow:row;
-  gap:8px!important;
-  min-width:0;
-}
-.profile-header-card--admin .profile-info--admin .profile-admin-tool{
-  display:flex!important;
-  flex-direction:row!important;
-  align-items:center!important;
-  justify-content:center!important;
-  gap:5px!important;
-  min-width:0!important;
-  min-height:50px!important;
-  padding:7px 5px!important;
-  font-size:10px!important;
-  line-height:1.2!important;
-  text-align:center!important;
-  white-space:normal!important;
-  overflow-wrap:anywhere;
-}
-.profile-header-card--admin .profile-info--admin .profile-admin-tool-icon{
-  flex:0 0 22px!important;
-  width:22px!important;
-  height:22px!important;
-  font-size:14px!important;
-}
-.profile-header-card--admin .profile-info--admin .profile-admin-tool-arrow{
-  display:none!important;
-}
-@media(max-width:760px){
-  .profile-header-card--admin .profile-info--admin .profile-admin-tools-grid{
-    grid-template-columns:repeat(4,minmax(0,1fr))!important;
-    gap:5px!important;
-  }
-  .profile-header-card--admin .profile-info--admin .profile-admin-tool{
-    flex-direction:row!important;
-    min-height:48px!important;
-    padding:6px 3px!important;
-    gap:3px!important;
-    font-size:9px!important;
-  }
-  .profile-header-card--admin .profile-info--admin .profile-admin-tool-icon{
-    flex-basis:19px!important;
-    width:19px!important;
-    height:19px!important;
-    font-size:12px!important;
-  }
-}
-@media(max-width:390px){
-  .profile-header-card--admin .profile-info--admin .profile-admin-tools-grid{
-    grid-template-columns:repeat(4,minmax(0,1fr))!important;
-    gap:3px!important;
-  }
-  .profile-header-card--admin .profile-info--admin .profile-admin-tool{
-    min-height:46px!important;
-    padding:5px 2px!important;
-    gap:2px!important;
-    font-size:8px!important;
-  }
-  .profile-header-card--admin .profile-info--admin .profile-admin-tool-icon{
-    flex-basis:17px!important;
-    width:17px!important;
-    height:17px!important;
-    font-size:11px!important;
-  }
-}
