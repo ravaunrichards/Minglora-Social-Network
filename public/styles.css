@@ -7111,7 +7111,7 @@ body.minglora-for-you-active .main-content{width:100%!important;height:100dvh!im
 .fyp-top-search input{width:min(62vw,260px);height:36px;border:1px solid #ffffff66;border-radius:20px;background:#111a;color:#fff;padding:0 12px;outline:none}
 .fyp-top-search input::placeholder{color:#ddd}
 .fyp-top-search button{display:grid;place-items:center;width:38px;height:38px;border:0;border-radius:50%;background:transparent;color:#fff;font-size:29px;text-shadow:0 1px 6px #000}
-.fyp-brand{position:absolute;z-index:8;top:max(13px,env(safe-area-inset-top));left:max(14px,calc((100vw - 480px)/2 + 14px));display:none;width:34px;height:34px;border:0;border-radius:11px;background:#1769e0;color:#fff;font:bold 27px Georgia,serif}
+.fyp-brand{display:block;position:absolute;z-index:8;top:max(13px,env(safe-area-inset-top));left:max(14px,calc((100vw - 480px)/2 + 14px));display:none;width:34px;height:34px;border:0;border-radius:11px;background:#1769e0;color:#fff;font:bold 27px Georgia,serif}
 .fyp-overlay-bottom{position:absolute;z-index:4;left:14px;right:76px;bottom:28px;display:flex;flex-direction:column;gap:9px;color:#fff;text-shadow:0 1px 4px #000b}
 .fyp-creator-line{display:flex;align-items:center;gap:9px;min-width:0}
 .fyp-avatar-button{flex:none;width:40px;height:40px;padding:2px;border:2px solid #fff;border-radius:50%;background:#111}
@@ -7134,7 +7134,7 @@ body.minglora-for-you-active .main-content{width:100%!important;height:100dvh!im
 .fyp-comment-form{width:100%;max-width:100%;margin:0;padding:0}
 .fyp-comment-form input{height:36px;background:#ffffffed;color:#172033}
 .fyp-comment-form[hidden]{display:none}
-.fyp-bottom-nav{display:none}
+.fyp-bottom-nav{position:absolute;z-index:9;left:50%;bottom:0;display:flex;align-items:center;justify-content:space-around;width:min(100%,480px);height:58px;transform:translateX(-50%);padding:0 6px;border-top:1px solid #ffffff1a;background:#080808;color:#fff}
 .fyp-empty,.fyp-loading{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:13px;width:min(100%,480px);margin:auto;padding:32px 28px;text-align:center;background:#101010;color:#fff}
 .fyp-empty h2{margin:0;font-size:21px}
 .fyp-empty p{max-width:360px;margin:0;color:#c4c4c4;font-size:13px;line-height:1.55}
@@ -7150,7 +7150,7 @@ body.minglora-for-you-active .main-content{width:100%!important;height:100dvh!im
   .fyp-overlay-bottom{left:12px;right:72px;bottom:calc(78px + env(safe-area-inset-bottom));gap:8px}
   .fyp-action-rail{right:7px;bottom:calc(98px + env(safe-area-inset-bottom));gap:13px;width:54px}
   .fyp-action{width:50px}
-  .fyp-bottom-nav{position:absolute;z-index:9;right:0;bottom:0;left:0;display:flex;align-items:center;justify-content:space-around;height:calc(58px + env(safe-area-inset-bottom));padding:0 6px env(safe-area-inset-bottom);border-top:1px solid #ffffff1a;background:#080808;color:#fff}
+  .fyp-bottom-nav{position:absolute;z-index:9;right:0;bottom:0;left:0;width:100%;height:calc(58px + env(safe-area-inset-bottom));transform:none;padding:0 6px env(safe-area-inset-bottom);border-top:1px solid #ffffff1a;background:#080808;color:#fff}
   .fyp-bottom-nav button{display:flex;flex:1;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-width:0;height:50px;border:0;background:transparent;color:#fff}
   .fyp-bottom-nav button>span{font-size:24px;line-height:1.1}
   .fyp-bottom-nav button>small{font-size:9px;font-weight:650}
