@@ -14,8 +14,8 @@ test('Minglora Menu beside Messenger has a clean single-row header', () => {
   assert.ok(html.includes('id="messenger-btn"'));
   assert.ok(html.includes('id="minglora-menu-toggle"'));
   assert.ok(html.includes('id="minglora-menu-panel"'));
-  assert.ok(html.includes('minglora-menu.css?v=20261108-create-column-scroll-3'));
-  assert.ok(html.includes('minglora-menu.js?v=20261108-menu-clean-header-2'));
+  assert.ok(html.includes('minglora-menu.css?v=20261108-internal-menu-search-1'));
+  assert.ok(html.includes('minglora-menu.js?v=20261108-internal-menu-search-1'));
   for (const label of ['Social','Entertainment','Shopping','Personal','Professional','More from Meta','Create']) {
     assert.ok(script.includes(label), 'Menu contains ' + label);
   }
@@ -36,15 +36,23 @@ test('Menu uses an independent scroll column, a stationary Create panel and resp
   assert.match(css, /\.account-switcher-actions/);
 });
 
-test('Menu header does not show the redundant Search Menu side field', () => {
+test('External top-bar Search is removed while the internal Menu search remains functional', () => {
+  const html = read('public/index.html');
   const script = read('public/minglora-menu.js');
   const css = read('public/minglora-menu.css');
+  const app = read('public/app.js');
+  assert.ok(!html.includes('id="search-form"'), 'Remove the external top-bar Search field');
+  assert.ok(!html.includes('id="search-input"'), 'Remove the external top-bar Search input');
   assert.ok(script.includes('<h2>Menu</h2>'));
-  assert.ok(script.includes('minglora-menu-close'));
-  assert.ok(!script.includes('Search Menu'));
-  assert.ok(!script.includes('minglora-menu-search'));
-  assert.ok(!css.includes('.minglora-menu-search'));
-  assert.match(css, /\.minglora-menu-header\s*\{[^}]*grid-template-columns:minmax\(0,1fr\) 40px/s);
+  assert.ok(script.includes('id="minglora-menu-search"'));
+  assert.ok(script.includes('placeholder="Search menu"'));
+  assert.ok(script.includes("searchInput?.addEventListener('input', filterMenu)"));
+  assert.ok(script.includes("item.textContent.toLocaleLowerCase().includes(query)"));
+  assert.ok(css.includes('.minglora-menu-search'));
+  assert.ok(css.includes('.minglora-menu-search-icon'));
+  assert.ok(app.includes("$('#search-form')?.addEventListener"), 'Removed external form must not break app startup');
+  assert.match(css, /\.minglora-menu-header\s*\{[^}]*grid-template-columns:minmax\(150px,\.65fr\) minmax\(220px,1fr\) 40px/s);
+  assert.match(css, /@media\(max-width:760px\)[\s\S]*\.minglora-menu-search\{grid-column:1;grid-row:2/s);
 });
 
 
