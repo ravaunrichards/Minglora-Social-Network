@@ -37,10 +37,26 @@
   };
 
   const reloadIntoSession = (mfaEnrollmentRequired = false) => {
-    // A fresh document read runs the normal /auth/me bootstrap with the new HttpOnly sid cookie.
+    // Fallback only when the main application bundle is unavailable.
     const destination = new URL(window.location.href);
     if (mfaEnrollmentRequired) destination.searchParams.set('mfa-setup', 'required');
     window.location.replace(destination.pathname + destination.search);
+  };
+
+  const enterMingloraSession = async (user, mfaEnrollmentRequired = false) => {
+    if (!user || !user.id) throw new Error('Minglora did not create a sign-in session. Please try again.');
+    if (mfaEnrollmentRequired) {
+      const destination = new URL(window.location.href);
+      destination.searchParams.set('mfa-setup', 'required');
+      window.history.replaceState(null, '', destination.pathname + destination.search);
+    }
+    // The main app exposes this function after its deferred bundle loads.
+    // Enter in place so a full document reload cannot race the new HttpOnly cookie.
+    if (typeof window.enterMingloraApp === 'function') {
+      await window.enterMingloraApp(user);
+      return;
+    }
+    reloadIntoSession(mfaEnrollmentRequired);
   };
 
   const showRegistrationError = message => {
@@ -74,9 +90,9 @@
       button.disabled = true;
       error.textContent = '';
       try {
-        await jsonRequest('/auth/mfa/login', { challengeId, code });
-        finish(true);
-        reloadIntoSession();
+        const result = await jsonRequest('/auth/mfa/login', { challengeId, code });
+        if (!result.user || !result.user.id) throw new Error('Minglora verified the code but did not return an active member session.');
+        finish(result);
       } catch (cause) {
         error.textContent = cause.message || 'Your sign-in verification could not be completed.';
         button.disabled = false;
@@ -101,14 +117,18 @@
       });
       if (result.mfaRequired) {
         const verified = await requestMfa(result.challengeId);
-        if (!verified) showError('Sign-in verification was closed. Enter your details and try again.');
+        if (!verified) {
+          showError('Sign-in verification was closed. Enter your details and try again.');
+          return;
+        }
+        await enterMingloraSession(verified.user);
         return;
       }
       if (!result.user || !result.user.id) {
         throw new Error('Minglora did not create a sign-in session. Please try again.');
       }
       button.textContent = result.mfaEnrollmentRequired ? 'Opening security setup…' : 'Opening Minglora…';
-      reloadIntoSession(result.mfaEnrollmentRequired === true);
+      await enterMingloraSession(result.user, result.mfaEnrollmentRequired === true);
     } catch (cause) {
       showError(cause.message || 'Minglora could not sign you in. Please try again.');
     } finally {
@@ -142,7 +162,7 @@
         throw new Error('Minglora did not finish creating your account. Please try again.');
       }
       button.textContent = 'Opening Minglora…';
-      reloadIntoSession();
+      await enterMingloraSession(result.user);
     } catch (cause) {
       showRegistrationError(cause.message || 'Minglora could not create your account. Please try again.');
       button.disabled = false;
