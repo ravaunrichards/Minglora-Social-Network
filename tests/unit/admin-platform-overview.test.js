@@ -60,12 +60,13 @@ test("Admin Centre opens as its own page from the authorized administrator profi
 });
 
 test("administrator profile keeps name and username grouped with three distinctive identity marks", () => {
-  assert.ok(index.includes("admin-profile-layout.css?v=20261108-admin-profile-workspace-1"));
+  assert.ok(index.includes("admin-profile-layout.css?v=20261108-admin-profile-workspace-2"));
   assert.ok(app.includes("profile-admin-identity-mark--owner"));
   assert.ok(app.includes("profile-admin-identity-mark--security"));
   assert.ok(app.includes("profile-admin-identity-mark--control"));
   assert.ok(app.includes('data-profile-admin-action="edit-profile"'));
   assert.ok(app.includes('data-profile-admin-action="privacy"'));
+  assert.ok(app.includes('data-profile-admin-action="edit-story"'));
   assert.ok(app.includes("if(action==='edit-profile') $('#edit-profile')?.click()"));
 });
 
