@@ -24,6 +24,7 @@ import android.webkit.SslErrorHandler;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
+import android.webkit.URLUtil;
 import android.webkit.WebResourceError;
 import android.webkit.RenderProcessGoneDetail;
 import android.webkit.WebSettings;
@@ -195,6 +196,9 @@ public final class MainActivity extends Activity {
             }
         });
 
+        webView.setDownloadListener((url, userAgent, contentDisposition, mimeType, contentLength) ->
+                startUserDownload(url, userAgent, contentDisposition, mimeType));
+
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onProgressChanged(WebView view, int progress) {
@@ -266,6 +270,57 @@ public final class MainActivity extends Activity {
 
     private int dp(int value) {
         return Math.round(value * getResources().getDisplayMetrics().density);
+    }
+
+    private void startUserDownload(String rawUrl, String userAgent,
+                                   String contentDisposition, String mimeType) {
+        Uri uri;
+        try {
+            uri = Uri.parse(rawUrl == null ? "" : rawUrl);
+        } catch (Exception error) {
+            Toast.makeText(this, "This download link is invalid.", Toast.LENGTH_LONG).show();
+            return;
+        }
+        if (!"https".equalsIgnoreCase(uri.getScheme()) || uri.getHost() == null ||
+                uri.getHost().trim().isEmpty() || uri.getUserInfo() != null) {
+            Toast.makeText(this, "Minglora only downloads files from secure HTTPS links.", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        String fileName = URLUtil.guessFileName(rawUrl, contentDisposition, mimeType);
+        fileName = fileName == null ? "" : fileName.replaceAll("[^A-Za-z0-9._ -]", "_").trim();
+        if (fileName.length() > 120) fileName = fileName.substring(0, 120);
+        if (fileName.isEmpty() || ".".equals(fileName) || "..".equals(fileName)) {
+            fileName = "minglora-download";
+        }
+        String safeMimeType = mimeType == null || mimeType.trim().isEmpty()
+                ? "application/octet-stream" : mimeType.trim();
+
+        try {
+            DownloadManager manager = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
+            if (manager == null) throw new IllegalStateException("Android Download Manager is unavailable.");
+            DownloadManager.Request request = new DownloadManager.Request(uri)
+                    .setTitle(fileName)
+                    .setDescription("Downloading shared media from Minglora")
+                    .setMimeType(safeMimeType)
+                    .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                    .setAllowedOverMetered(true)
+                    .setAllowedOverRoaming(false);
+            if (userAgent != null && !userAgent.trim().isEmpty()) {
+                request.addRequestHeader("User-Agent", userAgent);
+            }
+            String cookie = CookieManager.getInstance().getCookie(rawUrl);
+            if (cookie != null && !cookie.trim().isEmpty()) {
+                request.addRequestHeader("Cookie", cookie);
+            }
+            request.setDestinationInExternalFilesDir(this, Environment.DIRECTORY_DOWNLOADS, fileName);
+            manager.enqueue(request);
+            Toast.makeText(this, "Download started. Android will notify you when it is ready.",
+                    Toast.LENGTH_LONG).show();
+        } catch (Exception error) {
+            Toast.makeText(this, "Minglora could not start this download. Please try again.",
+                    Toast.LENGTH_LONG).show();
+        }
     }
 
     private View createLoadErrorPanel() {

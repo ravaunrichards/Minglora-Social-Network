@@ -73,6 +73,7 @@ Database migrations remain a reviewed deployment operation. This workflow does n
 - The retry action reloads the current Minglora route, or opens the configured production entry point when no route is available.
 - Android's system document picker now receives the media accept types and single/multiple-selection mode requested by the Minglora upload control.
 - The WebView pauses and resumes with the Activity lifecycle and flushes its cookies when backgrounded or after a page finishes loading.
+- HTTPS media/document links use Android Download Manager, carrying the target host's matching WebView cookies when present; downloaded files are stored in the app-scoped Downloads folder and Android shows download completion notifications.
 - If Android terminates the WebView renderer, the app recreates the WebView and returns to the live Minglora entry point rather than keeping a dead white surface.
 
 These changes improve the native Android container around the shared live product. They do not turn the existing WebView into a fully native reimplementation of every Minglora screen; the responsive Minglora client continues to supply the actual social-network features and account data.
