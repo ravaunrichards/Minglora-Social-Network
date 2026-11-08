@@ -210,10 +210,10 @@ const DEFAULT_PROFILE_COVER='/assets/default-profile-cover.svg?v=20261106-profil
 const fallbackAvatar = () => DEFAULT_PROFILE_AVATAR;
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const avatar = u => esc(u?.avatar || fallbackAvatar(u?.name));
-function thoughtAvatarMarkup(member,className='avatar',clickToProfile=false){
+function thoughtAvatarMarkup(member,className='avatar',clickToProfile=false,showThoughtIndicator=true){
   const profileAttr=clickToProfile?' data-profile="'+esc(member?.id||'')+'"':'';
   const image='<img class="'+esc(className)+'"'+profileAttr+' src="'+avatar(member)+'" alt="">';
-  if(!member?.id)return image;
+  if(!showThoughtIndicator||!member?.id)return image;
   if(!member?.profileThought?.text&&member.id===state.user?.id)return '<span class="ml-thought-avatar-wrap">'+image+'<button type="button" class="ml-thought-avatar-indicator ml-thought-avatar-add" data-edit-profile-thought aria-label="Share a thought" title="Share a thought">+</button></span>';
   if(!member?.profileThought?.text)return image;
   return '<span class="ml-thought-avatar-wrap">'+image+'<button type="button" class="ml-thought-avatar-indicator" data-view-profile-thought-user="'+esc(member.id)+'" aria-label="View '+esc(member.name||'member')+'’s thought" title="View thought">…</button></span>';
@@ -508,7 +508,7 @@ const MESSENGER_ICON_SPRITE='/assets/icons/navigation-3d.svg?v=20261104-recharge
 function messenger3dIcon(id,className='messenger-3d-icon'){
   return '<svg class="'+className+'" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><use href="'+MESSENGER_ICON_SPRITE+'#'+id+'"></use></svg>';
 }
-function composer(){return `<section class="card"><div class="composer-top">${thoughtAvatarMarkup(state.user)}<button class="composer-open" id="open-composer" type="button" aria-haspopup="dialog">${messenger3dIcon('share','composer-share-icon')}<span>Share your thoughts, ${esc(state.user.name.split(' ')[0])}?</span></button></div><div class="composer-actions"><button id="post-photo" class="photo" type="button">${messenger3dIcon('photo','composer-action-icon')}<span>Photo / link</span></button><button id="post-feeling" class="feeling" type="button">${messenger3dIcon('feeling','composer-action-icon')}<span>Feeling / activity</span></button><button id="post-text" type="button">${messenger3dIcon('create','composer-action-icon')}<span>Share thoughts</span></button></div></section>`;}
+function composer(){return `<section class="card"><div class="composer-top ml-share-thought-composer">${thoughtAvatarMarkup(state.user,'avatar',false,false)}<button class="composer-open ml-share-thought-open" id="open-composer" type="button" aria-haspopup="dialog" aria-label="Share thoughts"><span class="ml-share-thought-cloud-bridge" aria-hidden="true"><span class="ml-share-thought-cloud"><svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M6.1 18.1h11.2a4.2 4.2 0 0 0 .5-8.37 5.8 5.8 0 0 0-11.1-1.1A4.7 4.7 0 0 0 6.1 18.1Z"></path></svg></span><i></i><i></i></span><span class="ml-share-thought-prompt">Share your thoughts, ${esc(state.user.name.split(' ')[0])}?</span></button></div><div class="composer-actions"><button id="post-photo" class="photo" type="button">${messenger3dIcon('photo','composer-action-icon')}<span>Photo / link</span></button><button id="post-feeling" class="feeling" type="button">${messenger3dIcon('feeling','composer-action-icon')}<span>Feeling / activity</span></button><button id="post-text" type="button">${messenger3dIcon('create','composer-action-icon')}<span>Share thoughts</span></button></div></section>`;}
 function renderSingleMedia(media,className='post-media-viewer'){
   if(!media?.url)return '';
   const url=esc(media.url);
