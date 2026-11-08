@@ -560,7 +560,7 @@ function syncNavigationActive(){
   const moreButton=document.querySelector('#mobile-more-nav');
   moreButton?.classList.toggle('active',activeView==='more'||!['feed','for-you','profile','friends','live','messages'].includes(activeView));
 }
-function activateNav(view){const requestedView=view;if(requestedView==='profile'&&state.user){state.profileTargetId=String(state.user.id);state.profileTab='posts';}if(state.view==='meetwave'&&requestedView!=='meetwave')window.MingloraMeetWave?.onNavigateAway?.();if(state.view==='leagues'&&requestedView!=='leagues')window.MingloraLeagues?.onNavigateAway?.();if(state.view==='gifter-progression'&&requestedView!=='gifter-progression')window.MingloraGifterProgression?.onNavigateAway?.();if(state.view==='feed'&&requestedView!=='feed'&&requestedView!=='for-you')stopFeedAutoSync();if(requestedView==='for-you'){state.forYouScope=state.forYouScope==='following'?'following':'for-you';view='for-you';}else if(requestedView==='feed'&&!restoringSavedView){state.feedScope='all';}if(view!=='profile')stopProfilePresence();if(view!=='friends')stopPeopleDiscoveryRefresh();if(view!=='profile')state.profileTargetId='';state.view=view;syncPageLayout();syncMessageRefreshPolling();syncNavigationActive();persistCurrentView();recordBrowserNavigation();return renderView();}
+function activateNav(view){const requestedView=view;if(state.view==='for-you'&&requestedView!=='for-you'){stopForYouAutoRefresh();teardownForYouPlayback();}if(requestedView==='profile'&&state.user){state.profileTargetId=String(state.user.id);state.profileTab='posts';}if(state.view==='meetwave'&&requestedView!=='meetwave')window.MingloraMeetWave?.onNavigateAway?.();if(state.view==='leagues'&&requestedView!=='leagues')window.MingloraLeagues?.onNavigateAway?.();if(state.view==='gifter-progression'&&requestedView!=='gifter-progression')window.MingloraGifterProgression?.onNavigateAway?.();if(state.view==='feed'&&requestedView!=='feed'&&requestedView!=='for-you')stopFeedAutoSync();if(requestedView==='for-you'){state.forYouScope=state.forYouScope==='following'?'following':'for-you';view='for-you';}else if(requestedView==='feed'&&!restoringSavedView){state.feedScope='all';}if(view!=='profile')stopProfilePresence();if(view!=='friends')stopPeopleDiscoveryRefresh();if(view!=='profile')state.profileTargetId='';state.view=view;syncPageLayout();syncMessageRefreshPolling();syncNavigationActive();persistCurrentView();recordBrowserNavigation();return renderView();}
 window.MingloraActivateView=view=>activateNav(view);
 window.addEventListener('minglora:open-wallet',event=>{
   const tab=['recharge','earnings','exchange','currency','calculator'].includes(event.detail?.tab)?event.detail.tab:'recharge';
@@ -9214,28 +9214,83 @@ async function loadMoreForYouVideos(){
   while(pending.firstChild)stream.appendChild(pending.firstChild);
   setupForYouPlayback(document.querySelector('.minglora-for-you'));
 }
+let forYouRefreshTimer=null;
+let forYouRefreshBusy=false;
+function stopForYouAutoRefresh(){
+  if(forYouRefreshTimer!==null)window.clearInterval(forYouRefreshTimer);
+  forYouRefreshTimer=null;
+  forYouRefreshBusy=false;
+}
+function renderForYouStreamContent(stream){
+  if(!stream)return;
+  const cards=state.videoFeed.map((post,index)=>forYouCard(post,index)).join('');
+  stream.innerHTML=cards||'<div class="fyp-empty"><div class="fyp-empty-mark" aria-hidden="true">▶</div><h2>'+(state.forYouScope==='following'?'No videos from creators you follow yet':'No videos available right now')+'</h2><p>New eligible Minglora videos will appear here automatically. Keep watching, following creators and interacting with videos to improve your recommendations.</p><button type="button" class="fyp-refresh-button" data-fyp-refresh>Refresh feed</button></div>';
+  bindFeed(stream);
+  setupForYouPlayback(document.querySelector('.minglora-for-you'));
+  stream.querySelector('[data-fyp-refresh]')?.addEventListener('click',()=>void renderForYouFeed());
+}
+async function refreshForYouFeedIfNew(){
+  const stream=document.querySelector('#fyp-stream');
+  if(forYouRefreshBusy||state.view!=='for-you'||document.visibilityState!=='visible'||!stream||stream.scrollTop>24||state.forYouLoading)return;
+  forYouRefreshBusy=true;
+  const previousFeed=state.videoFeed;
+  const previousCursor=state.forYouNextCursor;
+  const previousHasMore=state.forYouHasMore;
+  try{
+    await fetchForYouPage({reset:true});
+    const oldIds=previousFeed.slice(0,12).map(post=>post.id).join('|');
+    const newIds=state.videoFeed.slice(0,12).map(post=>post.id).join('|');
+    if(oldIds===newIds){
+      state.videoFeed=previousFeed;
+      state.forYouNextCursor=previousCursor;
+      state.forYouHasMore=previousHasMore;
+      return;
+    }
+    renderForYouStreamContent(stream);
+    stream.scrollTop=0;
+  }catch(error){
+    state.videoFeed=previousFeed;
+    state.forYouNextCursor=previousCursor;
+    state.forYouHasMore=previousHasMore;
+    console.warn('[Minglora] For You refresh failed:',error?.message||error);
+  }finally{
+    forYouRefreshBusy=false;
+  }
+}
+function startForYouAutoRefresh(){
+  stopForYouAutoRefresh();
+  forYouRefreshTimer=window.setInterval(()=>{
+    if(state.view!=='for-you'){stopForYouAutoRefresh();return;}
+    void refreshForYouFeedIfNew();
+  },30000);
+}
 async function renderForYouFeed(){
   state.view='for-you';
+  syncPageLayout();
   state.forYouScope=state.forYouScope==='following'?'following':'for-you';
+  stopForYouAutoRefresh();
   teardownForYouPlayback();
   state.videoFeed=[];
   state.forYouNextCursor=null;
   state.forYouHasMore=false;
-  setContent('<section class="minglora-for-you"><div class="fyp-loading">Loading your videos…</div></section>');
+  setContent('<section class="minglora-for-you"><div class="fyp-loading"><span class="fyp-loading-spinner" aria-hidden="true"></span><strong>Finding videos for you…</strong><small>Loading real videos from Minglora members</small></div></section>');
   const root=$('#main-content');
   try{
     await fetchForYouPage({reset:true});
-    const cards=state.videoFeed.map((post,index)=>forYouCard(post,index)).join('');
-    root.innerHTML='<section class="minglora-for-you"><div class="fyp-top-search"><input id="fyp-search-input" type="search" maxlength="100" placeholder="Search videos" aria-label="Search For You videos" hidden><button type="button" data-fyp-search aria-label="Search videos">⌕</button></div><div class="fyp-feed-switch"><button type="button" data-fyp-scope="following" class="'+(state.forYouScope==='following'?'active':'')+'">Following</button><span></span><button type="button" data-fyp-scope="for-you" class="'+(state.forYouScope==='for-you'?'active':'')+'">For You</button></div><div class="fyp-stream" id="fyp-stream" tabindex="0" aria-label="For You videos">'+(cards||'<div class="fyp-empty"><div class="fyp-empty-mark">▶</div><h2>'+(state.forYouScope==='following'?'No videos from creators you follow yet':'Your For You feed is ready for its first videos')+'</h2><p>When Minglora members publish eligible public videos, they will appear here. Follow creators, watch videos and interact to personalize recommendations.</p><button type="button" class="primary" id="fyp-create-video">Create a video</button></div>')+'</div></section>';
+    root.innerHTML='<section class="minglora-for-you" aria-label="Minglora video feed"><button type="button" class="fyp-exit" data-fyp-exit aria-label="Return to Home" title="Return to Home">‹</button><div class="fyp-top-search"><input id="fyp-search-input" type="search" maxlength="100" placeholder="Search videos" aria-label="Search For You videos" hidden><button type="button" data-fyp-search aria-label="Search videos" title="Search videos">⌕</button></div><div class="fyp-feed-switch" role="group" aria-label="Video feed"><button type="button" data-fyp-scope="following" class="'+(state.forYouScope==='following'?'active':'')+'" aria-pressed="'+(state.forYouScope==='following'?'true':'false')+'">Following</button><span aria-hidden="true"></span><button type="button" data-fyp-scope="for-you" class="'+(state.forYouScope==='for-you'?'active':'')+'" aria-pressed="'+(state.forYouScope==='for-you'?'true':'false')+'">For You</button></div><div class="fyp-stream" id="fyp-stream" tabindex="0" aria-label="Swipe or scroll through videos"></div></section>';
     const main=$('#main-content');
-    main.querySelector('#fyp-create-video')?.addEventListener('click',()=>openVideoComposer({videoFormat:'reel',onPublished:()=>renderForYouFeed()}));
-    bindFeed(main.querySelector('#fyp-stream')||main);
-    setupForYouPlayback(main.querySelector('.minglora-for-you'));
+    const stream=main.querySelector('#fyp-stream');
+    renderForYouStreamContent(stream);
+    main.querySelector('[data-fyp-exit]')?.addEventListener('click',()=>void activateNav('feed'));
+    startForYouAutoRefresh();
   }catch(error){
-    setContent('<section class="minglora-for-you"><div class="fyp-empty"><h2>Could not load For You videos</h2><p>'+esc(error.message)+'</p><button type="button" class="primary" id="fyp-retry">Try again</button></div></section>');
-    $('#fyp-retry')?.addEventListener('click',()=>void renderForYouFeed());
+    root.innerHTML='<section class="minglora-for-you"><button type="button" class="fyp-exit" data-fyp-exit aria-label="Return to Home" title="Return to Home">‹</button><div class="fyp-empty"><h2>Could not load videos</h2><p>'+esc(error.message||'Please check your connection and try again.')+'</p><button type="button" class="fyp-refresh-button" id="fyp-retry">Try again</button></div></section>';
+    root.querySelector('[data-fyp-exit]')?.addEventListener('click',()=>void activateNav('feed'));
+    root.querySelector('#fyp-retry')?.addEventListener('click',()=>void renderForYouFeed());
+    startForYouAutoRefresh();
   }
 }
+
 async function renderVideoCentre(){
   const scope=['for-you','all','following','friends'].includes(state.videoScope)?state.videoScope:'for-you';
   const mode=['videos','reels','watch-later'].includes(state.videoMode)?state.videoMode:'videos';
