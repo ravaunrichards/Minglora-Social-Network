@@ -55,3 +55,16 @@ test('profile Create reel reuses the single-video composer and returns to the pr
   assert.match(app, /function openProfileReelComposer\(profileId\)\{\s*return openVideoComposer\(\{onPublished:\(\)=>openProfile\(profileId\)\}\);\s*\}/);
   assert.match(app, /if\(typeof options\.onPublished==='function'\)await options\.onPublished\(\)/);
 });
+
+test('Minglora stores and filters Video and Reel posts as distinct formats', async () => {
+  const [app, server] = await Promise.all([
+    read('../../public/app.js'),
+    read('../../src/server.js')
+  ]);
+  assert.match(app, /videoFormat:options\.videoFormat==='reel'\?'reel':'video'/);
+  assert.match(app, /modePosts=state\.videoFeed\.filter\(post=>mode==='reels'\?post\.videoFormat==='reel':post\.videoFormat!=='reel'\)/);
+  assert.match(app, /openVideoComposer\(\{videoFormat:mode==='reels'\?'reel':'video'\}\)/);
+  assert.match(server, /requestedVideoFormat=input\.videoFormat===undefined\|\|input\.videoFormat===null\?null:String\(input\.videoFormat\)/);
+  assert.match(server, /requestedVideoFormat&&\(assets\.length!==1\|\|assets\[0\]\?\.mediaType!=='video'\)/);
+  assert.match(server, /videoFormat:requestedVideoFormat/);
+});
