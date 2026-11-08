@@ -9322,9 +9322,9 @@ function bindNavigation(){
   }
   $('#see-people').onclick=()=>activateNav('friends');
   $('#see-groups').onclick=()=>activateNav('groups');
-  $('#search-form').addEventListener('submit',async e=>{
+  $('#search-form')?.addEventListener('submit',async e=>{
     e.preventDefault();
-    const q=$('#search-input').value.trim();
+    const q=$('#search-input')?.value.trim() || '';
     if(q)try{await renderSearch(q)}catch(err){toast(err.message)}
   });
   const logout=async()=>{
