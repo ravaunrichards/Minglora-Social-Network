@@ -160,3 +160,41 @@
 .profile-header-card .profile-admin-tools-grid .profile-admin-tool{
   border-radius:999px!important;
 }
+
+ 
+/* Facebook-matched profile cover, portrait and header action geometry. */
+:root{--minglora-profile-avatar-size:176px}
+.minglora-profile-page .profile-header-card .profile-cover{width:100%!important;height:auto!important;aspect-ratio:2.7 / 1!important;min-height:0!important;max-height:none!important;overflow:hidden!important;border-radius:14px 14px 0 0!important;background-position:center!important;background-size:cover!important}
+.minglora-profile-page .profile-header-card .profile-cover-image{display:block!important;width:100%!important;height:100%!important;max-width:none!important;object-fit:cover!important;object-position:center!important}
+.minglora-profile-page .profile-header-card .profile-info{grid-template-columns:var(--minglora-profile-avatar-size) minmax(0,1fr)!important;column-gap:20px!important;row-gap:10px!important;padding:0 24px 18px!important}
+.minglora-profile-page .profile-header-card .profile-avatar-edit-wrap{display:flex!important;grid-column:1!important;grid-row:2!important;flex:0 0 var(--minglora-profile-avatar-size)!important;width:var(--minglora-profile-avatar-size)!important;height:var(--minglora-profile-avatar-size)!important;margin-top:calc(var(--minglora-profile-avatar-size) / -2)!important;padding:0!important;gap:0!important;overflow:visible!important;align-items:flex-start!important}
+.minglora-profile-page .profile-header-card .profile-avatar-edit-wrap>.avatar{display:block!important;flex:0 0 var(--minglora-profile-avatar-size)!important;width:var(--minglora-profile-avatar-size)!important;height:var(--minglora-profile-avatar-size)!important;max-width:none!important;max-height:none!important;margin:0!important;padding:0!important;border:5px solid var(--card,#fff)!important;border-radius:50%!important;object-fit:cover!important;object-position:center!important;box-sizing:border-box!important}
+.minglora-profile-page .profile-header-card--owner .profile-info{grid-template-columns:var(--minglora-profile-avatar-size) minmax(0,1fr) auto!important}
+.minglora-profile-page .profile-header-card--owner .profile-avatar-edit-wrap,.minglora-profile-page .profile-header-card--owner .profile-info-main,.minglora-profile-page .profile-header-card--owner .profile-owner-actions{grid-row:2!important}
+.minglora-profile-page .profile-header-card--owner .profile-info-main{grid-column:2!important;min-width:0!important;align-self:center!important;padding:0!important}
+.minglora-profile-page .profile-header-card--owner .profile-owner-actions{grid-column:3!important;display:flex!important;flex-flow:row nowrap!important;align-items:center!important;justify-content:flex-end!important;gap:8px!important;width:auto!important;min-width:0!important;max-width:100%!important;margin:0!important;padding:0!important;overflow:visible!important}
+.minglora-profile-page .profile-header-card--owner .profile-info--with-thought .profile-counts{grid-row:3!important}
+.minglora-profile-page .profile-header-card--admin .profile-info{grid-template-columns:var(--minglora-profile-avatar-size) minmax(0,1fr)!important}
+.minglora-profile-page .profile-header-card--admin .profile-info-main{grid-column:2!important;grid-row:2!important}
+.minglora-profile-page .profile-header-card .profile-actions .profile-edit,.minglora-profile-page .profile-header-card .profile-owner-actions .profile-edit{min-height:40px!important;padding:8px 14px!important;border-radius:8px!important;font-size:13px!important;font-weight:750!important;white-space:nowrap!important}
+.minglora-profile-page .profile-header-card .profile-media-action-row,.minglora-profile-page .profile-header-card .profile-avatar-inline-edit{display:none!important}
+.profile-crop-preview--cover{aspect-ratio:2.7 / 1!important;max-height:none!important;min-height:0!important}
+@media(max-width:760px){
+  :root{--minglora-profile-avatar-size:112px}
+  .minglora-profile-page .profile-header-card .profile-cover{aspect-ratio:2.5 / 1!important}
+  .minglora-profile-page .profile-header-card .profile-info,.minglora-profile-page .profile-header-card--owner .profile-info{grid-template-columns:var(--minglora-profile-avatar-size) minmax(0,1fr)!important;column-gap:12px!important;padding:0 14px 14px!important}
+  .minglora-profile-page .profile-header-card .profile-avatar-edit-wrap{grid-column:1!important;grid-row:2!important;width:var(--minglora-profile-avatar-size)!important;height:var(--minglora-profile-avatar-size)!important;flex-basis:var(--minglora-profile-avatar-size)!important;margin-top:calc(var(--minglora-profile-avatar-size) / -2)!important}
+  .minglora-profile-page .profile-header-card .profile-avatar-edit-wrap>.avatar{width:var(--minglora-profile-avatar-size)!important;height:var(--minglora-profile-avatar-size)!important;flex-basis:var(--minglora-profile-avatar-size)!important}
+  .minglora-profile-page .profile-header-card--owner .profile-info-main{grid-column:2!important;grid-row:2!important;align-self:center!important;padding:0!important}
+  .minglora-profile-page .profile-header-card--owner .profile-owner-actions{grid-column:1 / -1!important;grid-row:3!important;justify-content:flex-start!important;flex-wrap:nowrap!important;width:100%!important;overflow-x:auto!important;overflow-y:hidden!important;padding:4px 0 7px!important}
+  .minglora-profile-page .profile-header-card--owner .profile-info--with-thought .profile-counts{grid-row:4!important}
+  .minglora-profile-page .profile-header-card--admin .profile-info-main{grid-row:2!important}
+  .minglora-profile-page .profile-header-card .profile-actions .profile-edit,.minglora-profile-page .profile-header-card .profile-owner-actions .profile-edit{min-height:40px!important;padding:8px 12px!important;font-size:12px!important}
+  .profile-crop-preview--cover{aspect-ratio:2.5 / 1!important}
+}
+@media(max-width:390px){
+  :root{--minglora-profile-avatar-size:100px}
+  .minglora-profile-page .profile-header-card .profile-info,.minglora-profile-page .profile-header-card--owner .profile-info{column-gap:10px!important;padding-inline:10px!important}
+  .minglora-profile-page .profile-header-card .profile-info h1{font-size:clamp(17px,5vw,21px)!important}
+  .minglora-profile-page .profile-header-card .profile-actions .profile-edit,.minglora-profile-page .profile-header-card .profile-owner-actions .profile-edit{min-height:38px!important;padding:7px 10px!important;font-size:11px!important}
+}
