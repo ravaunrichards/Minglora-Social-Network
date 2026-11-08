@@ -11,6 +11,7 @@ const finalHeaderCss=read('public/profile-layout-guardrails.css');
 const avatarAnchorCss=read('public/profile-facebook-avatar-anchor.css');
 const facebookCss=read('public/profile-facebook-panel.css');
 const independentCss=read('public/profile-independent-avatar-header.css');
+const actionPlacementCss=read('public/profile-owner-action-placement.css');
 const html=read('public/index.html');
 const worker=read('public/sw.js');
 
@@ -62,6 +63,29 @@ test('web, tablet and phone have separate avatar sizing while preserving avatar-
   assert.ok(html.indexOf('profile-layout-guardrails.css')<html.indexOf('profile-independent-avatar-header.css'));
 });
 
+test('Add to story, Edit profile and the V control appear in Facebook order and the correct responsive position',()=>{
+  const story=app.indexOf('id="profile-add-story"');
+  const edit=app.indexOf('id="edit-profile"');
+  const chevron=app.indexOf('id="profile-people-toggle"');
+  assert.ok(story>=0&&edit>story&&chevron>edit,'action order is Add to story, Edit profile, then V');
+  assert.ok(actionPlacementCss.includes('grid-column:3!important'));
+  assert.ok(actionPlacementCss.includes('grid-row:2!important'));
+  assert.ok(actionPlacementCss.includes('justify-content:flex-end!important'));
+  assert.ok(actionPlacementCss.includes('#profile-add-story'));
+  assert.ok(actionPlacementCss.includes('#edit-profile'));
+  assert.ok(actionPlacementCss.includes('#profile-people-toggle'));
+  assert.ok(actionPlacementCss.includes('order:1!important'));
+  assert.ok(actionPlacementCss.includes('order:2!important'));
+  assert.ok(actionPlacementCss.includes('order:3!important'));
+  assert.ok(actionPlacementCss.includes('@media(min-width:1025px)'));
+  assert.ok(actionPlacementCss.includes('@media(min-width:761px) and (max-width:1024px)'));
+  assert.ok(actionPlacementCss.includes('@media(max-width:760px)'));
+  assert.ok(actionPlacementCss.includes('grid-column:1/-1!important'));
+  assert.ok(actionPlacementCss.includes('grid-row:3!important'));
+  assert.ok(html.indexOf('profile-owner-action-placement.css')>html.indexOf('profile-independent-avatar-header.css'));
+  assert.ok(worker.includes('/profile-owner-action-placement.css?v=20261108-facebook-action-control-order-1'));
+});
+
 test('picture and cover remain editable in the normal Edit profile dialog',()=>{
   assert.match(app,/function openEditProfile\(u,mediaOnly=null\)/);
   assert.match(app,/data-profile-media-section="avatar"/);
@@ -97,6 +121,7 @@ test('new profile assets are loaded and precached by the active service-worker c
     assetFrom('href','/profile-layout-guardrails.css?'),
     assetFrom('href','/profile-facebook-avatar-anchor.css?'),
     assetFrom('href','/profile-independent-avatar-header.css?'),
+    assetFrom('href','/profile-owner-action-placement.css?'),
     assetFrom('src','/app.js?')
   ];
   for(const asset of assets){
