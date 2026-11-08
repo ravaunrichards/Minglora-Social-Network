@@ -489,3 +489,38 @@ body.minglora-for-you-active .fyp-live-follow.following {
     font-size: 16px !important;
   }
 }
+
+
+body.minglora-for-you-active .fyp-photo-carousel {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 0 !important;
+  display: flex !important;
+  width: 100% !important;
+  height: 100% !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  overscroll-behavior-x: contain !important;
+  scroll-snap-type: x mandatory !important;
+  scrollbar-width: none !important;
+  touch-action: pan-x pan-y !important;
+  background: #080b12 !important;
+}
+
+body.minglora-for-you-active .fyp-photo-carousel::-webkit-scrollbar {
+  display: none !important;
+}
+
+body.minglora-for-you-active .fyp-photo-carousel .fyp-photo {
+  position: relative !important;
+  inset: auto !important;
+  display: block !important;
+  flex: 0 0 100% !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  object-fit: contain !important;
+  scroll-snap-align: center !important;
+  scroll-snap-stop: always !important;
+}
