@@ -67,7 +67,7 @@ test('Minglora Android opens the native share sheet only for trusted Minglora HT
   assert.match(java, /APP_HOST\.equalsIgnoreCase\(shareUri\.getHost\(\)\)/);
   assert.match(java, /new Intent\(Intent\.ACTION_SEND\)/);
   assert.match(java, /Intent\.createChooser\(shareIntent, chooserTitle\)/);
-  assert.match(app, /window\.MingloraAndroid\?\.shareText\(shareTitle,shareText,shareUrl\)/);
+  assert.match(app, /window\\.MingloraAndroid\\.shareText\\(shareTitle,shareText,shareUrl\\)/);
   assert.match(app, /navigator\.share\(\{title:shareTitle,text:shareText,url:shareUrl\}\)/);
   assert.match(docs, /Android Sharesheet/);
 });
