@@ -10,7 +10,7 @@ const app=read('public/app.js');
 const server=read('src/server.js');
 const html=read('public/index.html');
 const worker=read('public/sw.js');
-const profileCss=[read('public/profile-action-row.css'),read('public/profile-facebook-panel.css'),read('public/profile-layout-guardrails.css'),read('public/profile-facebook-avatar-anchor.css'),read('public/profile-independent-avatar-header.css'),read('public/profile-owner-action-placement.css')].join('\n');
+const profileCss=[read('public/profile-action-row.css'),read('public/profile-facebook-panel.css'),read('public/profile-layout-guardrails.css'),read('public/profile-facebook-avatar-anchor.css'),read('public/profile-independent-avatar-header.css'),read('public/profile-owner-action-placement.css'),read('public/profile-facebook-account-menu.css')].join('\n');
 const profileStart=app.indexOf('function renderProfile(data){');
 const profileEnd=app.indexOf('async function loadProfileGiftGallery',profileStart);
 assert.ok(profileStart>=0&&profileEnd>profileStart,'profile renderer exists');
@@ -178,4 +178,20 @@ test('profile renders core data before optional profile panels settle',()=>{
   assert.ok(loader.indexOf('renderProfile(data)')<loader.indexOf('void Promise.allSettled(['),'supplemental requests start only after the profile is rendered');
   assert.ok(loader.includes('retry-profile-load'),'failed core requests show a working retry action');
   assert.ok(loader.includes('profileLoadGeneration'),'late profile responses are prevented from replacing a newer profile');
+});
+
+test('all five primary visitor actions are visible in a three-over-two horizontal grid',()=>{
+  const ordered=['id="profile-follow"','id="profile-subscribe"','id="profile-message"','data-profile-call="audio"','data-profile-call="video"'];
+  let previous=-1;
+  for(const marker of ordered){
+    const index=profile.indexOf(marker);
+    assert.ok(index>previous,'Primary action order is Follow, Subscribe, Message, Voice call, Video call');
+    previous=index;
+  }
+  const more=profile.indexOf('class="profile-extra-actions"');
+  assert.ok(more>previous,'Report and Block remain available after the five primary actions');
+  assert.ok(profileCss.includes('.profile-actions--primary'));
+  assert.ok(profileCss.includes('grid-template-columns:repeat(3,minmax(0,1fr))!important'));
+  assert.ok(profileCss.includes('grid-column:1/-1!important'));
+  assert.ok(profileCss.includes('position:static!important'),'More actions expand in normal document flow instead of covering profile content');
 });
