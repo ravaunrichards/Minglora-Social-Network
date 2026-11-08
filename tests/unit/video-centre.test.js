@@ -62,7 +62,7 @@ test('Minglora stores and filters Video and Reel posts as distinct formats', asy
     read('../../src/server.js')
   ]);
   assert.match(app, /videoFormat:options\.videoFormat==='reel'\?'reel':'video'/);
-  assert.match(app, /modePosts=state\.videoFeed\.filter\(post=>mode==='reels'\?post\.videoFormat==='reel':post\.videoFormat!=='reel'\)/);
+  assert.match(app, /modePosts=mode==='watch-later'\?state\.videoFeed:state\.videoFeed\.filter\(post=>mode==='reels'\?post\.videoFormat==='reel':post\.videoFormat!=='reel'\)/);
   assert.match(app, /openVideoComposer\(\{videoFormat:mode==='reels'\?'reel':'video'\}\)/);
   assert.match(server, /requestedVideoFormat=input\.videoFormat===undefined\|\|input\.videoFormat===null\?null:String\(input\.videoFormat\)/);
   assert.match(server, /requestedVideoFormat&&\(assets\.length!==1\|\|assets\[0\]\?\.mediaType!=='video'\)/);
