@@ -283,6 +283,19 @@
   height: 20px !important;
 }
 
+.minglora-profile-page .profile-header-card .profile-actions #profile-follow[data-following="true"] {
+  background: #f1f1f2 !important;
+  color: #161823 !important;
+}
+.minglora-profile-page .profile-header-card .profile-actions #profile-subscribe {
+  background: #161823 !important;
+  color: #fff !important;
+}
+.minglora-profile-page .profile-header-card .profile-actions #profile-subscribe[data-subscription-active="true"] {
+  background: #f1f1f2 !important;
+  color: #161823 !important;
+}
+
 /* Extra visitor actions remain available without crowding Follow and Message. */
 .minglora-profile-page .profile-extra-actions {
   position: relative !important;
