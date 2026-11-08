@@ -47,6 +47,8 @@ test('phone profile uses a real two-column grid with the avatar overlapping the 
 test('Facebook profile picture stays left of the name across desktop, tablet and phones',()=>{
   assert.ok(avatarAnchorCss.includes('grid-template-columns:168px minmax(0,1fr) auto!important'));
   assert.ok(avatarAnchorCss.includes('margin:-84px 0 0!important'));
+  assert.ok(avatarAnchorCss.includes('inset:auto!important')&&avatarAnchorCss.includes('left:auto!important')&&avatarAnchorCss.includes('top:auto!important'));
+  assert.ok(avatarAnchorCss.includes('transform:none!important'));
   assert.ok(avatarAnchorCss.includes('grid-column:1!important')&&avatarAnchorCss.includes('grid-row:1!important'));
   assert.ok(avatarAnchorCss.includes('grid-column:2!important')&&avatarAnchorCss.includes('grid-row:1!important'));
   assert.ok(avatarAnchorCss.includes('@media (min-width:761px) and (max-width:1024px)'));
