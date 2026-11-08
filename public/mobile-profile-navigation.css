@@ -16,7 +16,7 @@
   }
   .profile-counts>*{
     display:flex!important;
-    flex:0 0 16.666667%!important;
+    flex:0 0 20%!important;
     flex-direction:column!important;
     align-items:center!important;
     justify-content:center!important;
