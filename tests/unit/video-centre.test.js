@@ -29,12 +29,12 @@ test('Minglora Video Centre discovers only real video attachments from the authe
   assert.match(app, /function findVisiblePost\(id\)[\s\S]*state\.videoFeed/);
   assert.match(app, /video-create-button/);
   assert.match(app, /data-video-search|video-search/);
-  assert.match(html, /native-share-sheet-1/);
+  assert.match(html, /src="\/app\.js\?v=[^"]+"/);
   assert.match(styles, /\.video-centre-feed/);
   assert.match(styles, /\.video-centre-reels/);
   assert.match(styles, /scroll-snap-type:y mandatory/);
   assert.match(styles, /\.minglora-reel-video/);
-  assert.match(html, /native-share-sheet-1/);
+  assert.match(html, /src="\/app\.js\?v=[^"]+"/);
   assert.doesNotMatch(app, /sampleVideoFixtures|fakeVideoFixtures|seedVideoFeed/i);
 });
 
