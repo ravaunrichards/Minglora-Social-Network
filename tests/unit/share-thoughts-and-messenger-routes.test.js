@@ -4,25 +4,42 @@ import { readFile } from 'node:fs/promises';
 
 const read = path => readFile(new URL(path, import.meta.url), 'utf8');
 
-test('Share thoughts is a real post composer connected to the authenticated post API', async () => {
-  const [app, server, html] = await Promise.all([
+test('Share thoughts uses a Facebook-style composer and persists audience and post context', async () => {
+  const [app, composer, css, server, html] = await Promise.all([
     read('../../public/app.js'),
+    read('../../public/share-thoughts.js'),
+    read('../../public/share-thoughts.css'),
     read('../../src/server.js'),
     read('../../public/index.html')
   ]);
 
   assert.ok(app.includes('Share your thoughts,'));
   assert.ok(app.includes('<span>Share thoughts</span>'));
-  assert.ok(app.includes('id="create-post-form"'));
-  assert.ok(app.includes('placeholder="What would you like to share?"'));
-  assert.ok(app.includes("await api('/posts',{method:'POST',body:JSON.stringify({text:values.get('text'),mediaIds})});"));
-  assert.ok(app.includes("createMediaPicker(modal.querySelector('#create-post-media-picker'),{slot:'post',maxFiles:10})"));
+  assert.ok(composer.includes('What’s on your mind?'));
+  assert.ok(composer.includes('data-share-open="media"'));
+  assert.ok(composer.includes('data-share-open="feeling"'));
+  assert.ok(composer.includes('data-share-open="location"'));
+  assert.ok(composer.includes('data-share-open="tags"'));
+  assert.ok(composer.includes('data-share-open="background"'));
+  assert.ok(composer.includes('data-share-open="music"'));
+  assert.ok(composer.includes("createMediaPicker(modal.querySelector('#ml-share-media-picker'), { slot:'post', maxFiles:10 })"));
+  assert.ok(composer.includes("const result = await api('/friends')"));
+  assert.ok(composer.includes('audience: form.elements.audience.value'));
+  assert.ok(composer.includes('taggedUserIds: selectedTags'));
+  assert.ok(composer.includes("await api('/posts', { method:'POST', body:JSON.stringify(payload) })"));
+  assert.ok(composer.includes('window.MingloraOpenShareThoughts = openShareComposer'));
+  assert.ok(css.includes('.ml-share-modal'));
+  assert.ok(css.includes('.ml-post-text-background--sky'));
   assert.ok(server.includes("if(method==='POST'&&p==='/api/posts')"));
   assert.ok(server.includes('validatePostInput(input)'));
-  assert.ok(server.includes('publicPost(post,user.id)'));
+  assert.ok(server.includes('const audience=String(input.audience||\'public\')'));
+  assert.ok(server.includes('taggedUserIds:requestedTagIds'));
+  assert.ok(server.includes("'post_tagged'"));
+  assert.ok(server.includes('taggedUsers:(p.taggedUserIds||[])'));
   assert.match(html, /src="\/app\.js\?v=[^"]+"/, 'the current app script has a versioned URL');
+  assert.match(html, /src="\/share-thoughts\.js\?v=[^"]+"/, 'the Share Thoughts behavior is loaded after the app');
+  assert.match(html, /href="\/share-thoughts\.css\?v=[^"]+"/, 'the Share Thoughts styles have a versioned URL');
 });
-
 test('Messenger controls connect to conversation, user, settings and read-receipt routes', async () => {
   const [app, server, settings] = await Promise.all([
     read('../../public/app.js'),
