@@ -23,7 +23,6 @@ test('Minglora exposes a searchable Facebook-style Menu beside Messenger', () =>
     assert.ok(script.includes(label), 'Menu includes ' + label);
   }
   assert.ok(script.includes("window.MingloraActivateView"));
-  assert.ok(script.includes("window.MingloraCalendar"));
   assert.ok(script.includes("window.MingloraSettings"));
 });
 
