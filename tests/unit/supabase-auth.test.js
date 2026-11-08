@@ -192,3 +192,33 @@ test('Supabase magic-link requests use the explicit Minglora production redirect
     globalThis.fetch=saved.fetch;
   }
 });
+
+test('Supabase returns a stable 401 code and actionable text for an incorrect password', async () => {
+  const saved = {
+    url: process.env.SUPABASE_URL,
+    key: process.env.SUPABASE_PUBLISHABLE_KEY,
+    fetch: globalThis.fetch
+  };
+  try {
+    process.env.SUPABASE_URL = 'https://minglora-unit-test.supabase.co';
+    process.env.SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_test-key';
+    globalThis.fetch = async () => new Response(JSON.stringify({
+      msg: 'Invalid login credentials',
+      code: 'invalid_credentials'
+    }), { status: 400, headers: { 'content-type': 'application/json' } });
+
+    await assert.rejects(
+      supabaseSignIn({ email: 'member@example.test', password: 'WrongPassword123!' }),
+      error => {
+        assert.equal(error.status, 401);
+        assert.equal(error.code, 'invalid_credentials');
+        assert.match(error.message, /Forgot password/);
+        return true;
+      }
+    );
+  } finally {
+    if (saved.url === undefined) delete process.env.SUPABASE_URL; else process.env.SUPABASE_URL = saved.url;
+    if (saved.key === undefined) delete process.env.SUPABASE_PUBLISHABLE_KEY; else process.env.SUPABASE_PUBLISHABLE_KEY = saved.key;
+    globalThis.fetch = saved.fetch;
+  }
+});
