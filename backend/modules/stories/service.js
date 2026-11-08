@@ -10,6 +10,8 @@ export function canViewStory({ viewerId, story, friendships = [], follows = [], 
   if (!viewerId || !story?.userId) return false;
   if (viewerId === story.userId) return true;
   if (isBlockedBetween(blocks, viewerId, story.userId)) return false;
+  if (Array.isArray(story.hiddenUserIds) && story.hiddenUserIds.includes(viewerId)) return false;
+  if (story.audience === 'custom') return Array.isArray(story.customUserIds) && story.customUserIds.includes(viewerId);
   if (story.audience === 'public') return true;
   if (story.audience === 'friends') {
     return friendships.some(friendship => friendship.status === 'accepted' &&
