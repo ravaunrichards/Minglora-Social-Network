@@ -187,6 +187,7 @@
   .minglora-profile-page .profile-header-card .profile-avatar-edit-wrap>.avatar{width:var(--minglora-profile-avatar-size)!important;height:var(--minglora-profile-avatar-size)!important;flex-basis:var(--minglora-profile-avatar-size)!important}
   .minglora-profile-page .profile-header-card--owner .profile-info-main{grid-column:2!important;grid-row:2!important;align-self:center!important;padding:0!important}
   .minglora-profile-page .profile-header-card--owner .profile-owner-actions{grid-column:1 / -1!important;grid-row:3!important;justify-content:flex-start!important;flex-wrap:nowrap!important;width:100%!important;overflow-x:auto!important;overflow-y:hidden!important;padding:4px 0 7px!important}
+  .minglora-profile-page .profile-header-card--owner .profile-counts{grid-row:4!important}
   .minglora-profile-page .profile-header-card--owner .profile-info--with-thought .profile-counts{grid-row:4!important}
   .minglora-profile-page .profile-header-card--admin .profile-info-main{grid-row:2!important}
   .minglora-profile-page .profile-header-card .profile-actions .profile-edit,.minglora-profile-page .profile-header-card .profile-owner-actions .profile-edit{min-height:40px!important;padding:8px 12px!important;font-size:12px!important}
