@@ -25,19 +25,19 @@ test('Messenger is available beside notifications and displays actual unread con
   assert.match(app,/<h1>Messenger<\/h1>/);
 });
 
-test('profile picture editor is in the avatar column directly below the image',()=>{
+test('profile picture remains in the avatar column and upload is controlled from Edit profile',()=>{
   const wrapper=app.indexOf('profile-avatar-edit-wrap');
   const avatar=app.indexOf('class="avatar"',wrapper);
   const imageEnd=app.indexOf('alt="">',avatar);
-  const editor=app.indexOf('profile-avatar-inline-edit',wrapper);
-  const wrapperEnd=app.indexOf('</div>',editor);
-  const details=app.indexOf('profile-info-main',wrapper);
-  assert.ok(wrapper>=0&&avatar>wrapper&&imageEnd>avatar&&editor>imageEnd&&wrapperEnd>editor&&details>wrapperEnd);
-  assert.match(css,/\.profile-avatar-edit-wrap\{display:flex;[^}]*flex-direction:column/);
-  assert.match(css,/\.profile-avatar-inline-edit\{position:static/);
-  assert.doesNotMatch(app,/profile-avatar-edit-button/);
+  const details=app.indexOf('profile-info-main',imageEnd);
+  assert.ok(wrapper>=0&&avatar>wrapper&&imageEnd>avatar&&details>imageEnd);
+  assert.doesNotMatch(app,/profile-avatar-inline-edit|profile-inline-media-edit|profile-media-action-row/);
+  assert.match(app,/id="edit-profile" type="button" aria-label="Edit profile"/);
+  assert.match(app,/data-profile-media-section="avatar"/);
+  assert.match(app,/id="edit-avatar-file"/);
+  assert.match(css,/\.profile-header-card \.profile-avatar-edit-wrap/);
+  assert.match(css,/\.profile-avatar-edit-wrap>\.avatar\{[^}]*object-fit:cover/);
 });
-
 test('profile count row shows five real aligned profile metrics',()=>{
   for(const kind of ['followers','following','friends'])assert.match(app,new RegExp('data-open-connections="'+kind+'"'));
   assert.match(app,/profile-count-item/);
