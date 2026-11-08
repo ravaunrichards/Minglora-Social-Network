@@ -94,6 +94,10 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   });
   assert.equal(registration.status, 201);
   assert.equal(registration.body.user.username, 'mingloratest');
+  const persistentSessionCookie = registration.headers.get('set-cookie') || '';
+  assert.match(persistentSessionCookie, /Max-Age=34560000/, 'sign-in cookie remains valid across browser closes for 400 days');
+  assert.match(persistentSessionCookie, /HttpOnly/, 'the persistent sign-in cookie is not readable by page JavaScript');
+  assert.match(persistentSessionCookie, /SameSite=Lax/, 'the persistent sign-in cookie keeps same-site protection');
   const initialLeague = await request('/api/leagues/overview');
   assert.equal(initialLeague.status, 200, JSON.stringify(initialLeague.body));
   assert.equal(initialLeague.body.profile.leagueClass, 'D5');
