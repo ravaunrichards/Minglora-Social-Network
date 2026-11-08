@@ -9147,7 +9147,10 @@ function setupForYouPlayback(root){
   });
   bindOnce('[data-fyp-search]',()=>{
     const search=root.querySelector('#fyp-search-input');
-    if(search){search.hidden=false;search.focus();}
+    if(!search)return;
+    search.focus();
+    if(forYouSearchTimer!==null)window.clearTimeout(forYouSearchTimer);
+    void searchForYouPosts();
   });
   bindOnce('[data-fyp-search-clear]',()=>{
     state.forYouSearch='';
@@ -9167,14 +9170,15 @@ function setupForYouPlayback(root){
     search.dataset.fypBound='true';
     search.value=state.forYouSearch||'';
     search.addEventListener('input',()=>{
-      state.forYouSearch=search.value.trim().slice(0,100);
+      state.forYouSearch=search.value.slice(0,100);
       const clearButton=root.querySelector('[data-fyp-search-clear]');
-      if(clearButton)clearButton.hidden=!state.forYouSearch;
+      if(clearButton)clearButton.hidden=!state.forYouSearch.trim();
       if(forYouSearchTimer!==null)window.clearTimeout(forYouSearchTimer);
       forYouSearchTimer=window.setTimeout(()=>void searchForYouPosts(),320);
     });
     search.addEventListener('keydown',event=>{
       if(event.key==='Enter'){event.preventDefault();if(forYouSearchTimer!==null)window.clearTimeout(forYouSearchTimer);void searchForYouPosts();}
+      else if(event.key==='Escape'&&search.value){event.preventDefault();search.value='';state.forYouSearch='';const clearButton=root.querySelector('[data-fyp-search-clear]');if(clearButton)clearButton.hidden=true;if(forYouSearchTimer!==null)window.clearTimeout(forYouSearchTimer);void searchForYouPosts();}
     });
   }
   if(stream&&stream.dataset.fypScrollBound!=='true'){
@@ -9206,6 +9210,8 @@ function stopForYouAutoRefresh(){
 }
 function renderForYouStreamContent(stream){
   if(!stream)return;
+  stream.setAttribute('aria-label',state.forYouScope==='following'?'Following feed':'For You feed');
+  stream.removeAttribute('aria-busy');
   const cards=state.videoFeed.map((post,index)=>forYouCard(post,index)).join('');
   const query=String(state.forYouSearch||'').trim();
   const heading=query?'No matching posts':state.forYouScope==='following'?'No posts from accounts you follow yet':'No posts available right now';
@@ -9223,6 +9229,7 @@ async function searchForYouPosts(){
   const stream=document.querySelector('#fyp-stream');
   if(!stream)return;
   const query=String(state.forYouSearch||'').trim();
+  stream.setAttribute('aria-busy','true');
   stream.innerHTML='<div class="fyp-search-loading" role="status">'+(query?'Searching Minglora posts…':'Loading the feed…')+'</div>';
   try{
     await fetchForYouPage({reset:true});
@@ -9231,6 +9238,7 @@ async function searchForYouPosts(){
     stream.scrollTop=0;
   }catch(error){
     if(searchRequestId===forYouSearchSequence&&state.view==='for-you'&&stream.isConnected){
+      stream.removeAttribute('aria-busy');
       stream.innerHTML='<div class="fyp-empty"><h2>Search could not load</h2><p>'+esc(error.message||'Check your connection and try again.')+'</p><button type="button" class="fyp-refresh-button" data-fyp-refresh>Try again</button></div>';
       stream.querySelector('[data-fyp-refresh]')?.addEventListener('click',()=>void searchForYouPosts());
     }
@@ -9268,6 +9276,28 @@ function startForYouAutoRefresh(){
   // Keep the current For You stream stable; refresh when the user reopens the view.
   stopForYouAutoRefresh();
 }
+function forYouFeedShellMarkup(){
+  const following=state.forYouScope==='following';
+  const search=String(state.forYouSearch||'');
+  return '<section class="minglora-for-you" aria-label="Minglora social feed">'+
+    '<header class="fyp-header" aria-label="Feed controls">'+
+      '<button type="button" class="fyp-exit" data-fyp-exit aria-label="Return to Home" title="Return to Home">‹</button>'+
+      '<div class="fyp-feed-switch" role="group" aria-label="Choose feed">'+
+        '<button type="button" data-fyp-scope="following" class="'+(following?'active':'')+'" aria-pressed="'+(following?'true':'false')+'">Following</button>'+
+        '<span aria-hidden="true"></span>'+
+        '<button type="button" data-fyp-scope="for-you" class="'+(following?'':'active')+'" aria-pressed="'+(following?'false':'true')+'">For You</button>'+
+      '</div>'+
+      '<div class="fyp-top-search" role="search" aria-label="Search the feed">'+
+        '<input id="fyp-search-input" type="search" maxlength="100" autocomplete="off" enterkeyhint="search" spellcheck="false" placeholder="Search posts and people" aria-label="Search Minglora posts and people" value="'+esc(search)+'">'+
+        '<button type="button" data-fyp-search aria-label="Search feed" title="Search feed">Search</button>'+
+        '<button type="button" data-fyp-search-clear aria-label="Clear search" title="Clear search" '+(search.trim()?'':'hidden')+'>×</button>'+
+      '</div>'+
+    '</header>'+
+    '<div class="fyp-stream" id="fyp-stream" tabindex="0" aria-label="'+(following?'Following feed':'For You feed')+'" aria-live="polite">'+
+      '<div class="fyp-search-loading" role="status">'+(following?'Loading posts from people you follow…':'Finding posts for you…')+'</div>'+
+    '</div>'+
+  '</section>';
+}
 async function renderForYouFeed(){
   forYouSearchSequence++;
   if(forYouSearchTimer!==null)window.clearTimeout(forYouSearchTimer);
@@ -9279,22 +9309,23 @@ async function renderForYouFeed(){
   state.videoFeed=[];
   state.forYouNextCursor=null;
   state.forYouHasMore=false;
-  setContent('<section class="minglora-for-you"><div class="fyp-loading"><span class="fyp-loading-spinner" aria-hidden="true"></span><strong>Finding posts for you…</strong><small>Loading real posts from Minglora members</small></div></section>');
+  setContent(forYouFeedShellMarkup());
   const root=$('#main-content');
+  const feedRoot=root?.querySelector('.minglora-for-you');
+  const stream=feedRoot?.querySelector('#fyp-stream');
+  if(!feedRoot||!stream)return;
+  feedRoot.querySelector('[data-fyp-exit]')?.addEventListener('click',()=>void activateNav('feed'));
+  setupForYouPlayback(feedRoot);
   try{
     await fetchForYouPage({reset:true});
-    root.innerHTML='<section class="minglora-for-you" aria-label="Minglora social feed"><button type="button" class="fyp-exit" data-fyp-exit aria-label="Return to Home" title="Return to Home">‹</button><div class="fyp-top-search"><input id="fyp-search-input" type="search" maxlength="100" placeholder="Search posts and people" aria-label="Search Minglora posts and people" '+(state.forYouSearch?'':'hidden')+' value="'+esc(state.forYouSearch||'')+'"><button type="button" data-fyp-search aria-label="Search posts" title="Search posts">⌕</button><button type="button" data-fyp-search-clear aria-label="Clear search" title="Clear search" '+(state.forYouSearch?'':'hidden')+'>×</button></div><div class="fyp-feed-switch" role="group" aria-label="Post feed"><button type="button" data-fyp-scope="following" class="'+(state.forYouScope==='following'?'active':'')+'" aria-pressed="'+(state.forYouScope==='following'?'true':'false')+'">Following</button><span aria-hidden="true"></span><button type="button" data-fyp-scope="for-you" class="'+(state.forYouScope==='for-you'?'active':'')+'" aria-pressed="'+(state.forYouScope==='for-you'?'true':'false')+'">For You</button></div><div class="fyp-stream" id="fyp-stream" tabindex="0" aria-label="Swipe or scroll through Minglora posts"></div></section>';
-    const main=$('#main-content');
-    const stream=main.querySelector('#fyp-stream');
+    if(!stream.isConnected||state.view!=='for-you')return;
     renderForYouStreamContent(stream);
-    main.querySelector('[data-fyp-exit]')?.addEventListener('click',()=>void activateNav('feed'));
-    startForYouAutoRefresh();
   }catch(error){
-    root.innerHTML='<section class="minglora-for-you"><button type="button" class="fyp-exit" data-fyp-exit aria-label="Return to Home" title="Return to Home">‹</button><div class="fyp-empty"><h2>Could not load posts</h2><p>'+esc(error.message||'Please check your connection and try again.')+'</p><button type="button" class="fyp-refresh-button" id="fyp-retry">Try again</button></div></section>';
-    root.querySelector('[data-fyp-exit]')?.addEventListener('click',()=>void activateNav('feed'));
-    root.querySelector('#fyp-retry')?.addEventListener('click',()=>void renderForYouFeed());
-    startForYouAutoRefresh();
+    if(!stream.isConnected||state.view!=='for-you')return;
+    stream.innerHTML='<div class="fyp-empty"><h2>Could not load posts</h2><p>'+esc(error.message||'Please check your connection and try again.')+'</p><button type="button" class="fyp-refresh-button" data-fyp-refresh>Try again</button></div>';
+    stream.querySelector('[data-fyp-refresh]')?.addEventListener('click',()=>void renderForYouFeed());
   }
+  startForYouAutoRefresh();
 }
 
 async function renderVideoCentre(){
