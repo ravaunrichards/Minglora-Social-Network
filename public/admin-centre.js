@@ -40,7 +40,7 @@
 
 
   function initializeInternalActivityFeed(panel) {
-    const section = panel.querySelector('#admin-internal-activity');
+    const section = panel.querySelector('#admin-internal-operations');
     if (!section || section.dataset.initialized === 'true') return;
     section.dataset.initialized = 'true';
 
