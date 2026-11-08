@@ -9352,17 +9352,23 @@ async function searchForYouPosts(){
 }
 async function refreshForYouFeedIfNew(){
   const stream=document.querySelector('#fyp-stream');
+  const focused=document.activeElement;
   if(forYouRefreshBusy||state.view!=='for-you'||document.visibilityState!=='visible'||!stream||stream.scrollTop>24||state.forYouLoading)return;
+  if(focused?.closest('.fyp-header,.fyp-video-card'))return;
   forYouRefreshBusy=true;
   const previousFeed=state.videoFeed;
+  const previousLiveSessions=forYouLiveSessions;
   const previousCursor=state.forYouNextCursor;
   const previousHasMore=state.forYouHasMore;
   try{
     await fetchForYouPage({reset:true});
     const oldIds=previousFeed.slice(0,12).map(post=>post.id).join('|');
     const newIds=state.videoFeed.slice(0,12).map(post=>post.id).join('|');
-    if(oldIds===newIds){
+    const oldLiveIds=previousLiveSessions.map(session=>[session.id,session.title,session.viewerCount,session.host?.following].join(':')).join('|');
+    const newLiveIds=forYouLiveSessions.map(session=>[session.id,session.title,session.viewerCount,session.host?.following].join(':')).join('|');
+    if(oldIds===newIds&&oldLiveIds===newLiveIds){
       state.videoFeed=previousFeed;
+      forYouLiveSessions=previousLiveSessions;
       state.forYouNextCursor=previousCursor;
       state.forYouHasMore=previousHasMore;
       return;
@@ -9371,16 +9377,17 @@ async function refreshForYouFeedIfNew(){
     stream.scrollTop=0;
   }catch(error){
     state.videoFeed=previousFeed;
+    forYouLiveSessions=previousLiveSessions;
     state.forYouNextCursor=previousCursor;
     state.forYouHasMore=previousHasMore;
-    console.warn('[Minglora] For You refresh failed:',error?.message||error);
+    console.warn('[Minglora] Home feed refresh failed:',error?.message||error);
   }finally{
     forYouRefreshBusy=false;
   }
 }
 function startForYouAutoRefresh(){
-  // Keep the current For You stream stable; refresh when the user reopens the view.
   stopForYouAutoRefresh();
+  forYouRefreshTimer=window.setInterval(()=>void refreshForYouFeedIfNew(),15000);
 }
 function forYouFeedShellMarkup(){
   const following=state.forYouScope==='following';
