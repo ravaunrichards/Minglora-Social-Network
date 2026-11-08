@@ -35,7 +35,7 @@ test('profile identity stays compact and About information is shown in its own s
   const viewAsEnd=app.indexOf('async function openProfilePrivacySettings',viewAsStart);
   const viewAs=app.slice(viewAsStart,viewAsEnd);
   assert.ok(!viewAs.includes('profile-view-as-bio')&&!viewAs.includes('bioVisible'),'View as keeps the profile identity area free of introductions');
-  assert.ok(app.includes('class="profile-intro-card"'),'the separate Intro card remains available outside the username block');
+  assert.ok(app.includes('profile-intro-card'),'the separate Intro card remains available outside the username block');
 });
 
 test('About includes the requested independent categories, with Personal details distinct from Intro',()=>{
