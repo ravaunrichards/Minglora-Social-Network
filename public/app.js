@@ -9032,45 +9032,49 @@ function bindReelPlayback(root){
 }
 let forYouPlaybackObserver=null;
 let forYouActiveVideos=[];
+let forYouRequestSequence=0;
 async function fetchForYouPage({reset=false}={}){
-  if(state.forYouLoading)return;
+  if(state.forYouLoading&&!reset)return [];
+  const requestId=++forYouRequestSequence;
   state.forYouLoading=true;
   try{
     const scope=state.forYouScope==='following'?'following':'for-you';
     const params=new URLSearchParams({scope,limit:'12',followedOnly:'1'});
+    const query=String(state.forYouSearch||'').trim().slice(0,100);
+    if(query)params.set('q',query);
     if(!reset&&state.forYouNextCursor)params.set('cursor',state.forYouNextCursor);
-    const result=await api('/for-you/videos?'+params.toString());
-    const posts=(result.posts||[]).filter(post=>(post.media||[]).some(media=>media.mediaType==='video'&&media.url));
+    const result=await api('/feed?'+params.toString());
+    if(requestId!==forYouRequestSequence)return [];
+    const posts=result.posts||[];
     state.videoFeed=reset?posts:[...state.videoFeed,...posts.filter(post=>!state.videoFeed.some(old=>old.id===post.id))];
     state.forYouNextCursor=result.nextCursor||null;
     state.forYouHasMore=result.hasMore===true;
     return posts;
-  }finally{state.forYouLoading=false;}
+  }finally{if(requestId===forYouRequestSequence)state.forYouLoading=false;}
 }
 function forYouCard(post,index){
-  const author=post.author||{},media=(post.media||[]).find(item=>item.mediaType==='video'&&item.url);
-  if(!media)return '';
-  const following=post.following===true||post.isFollowing===true;
-  const caption=String(post.text||'').trim();
-  const liked=post.myReaction?'liked':'';
-  return '<article class="fyp-video-card" data-fyp-post="'+esc(post.id)+'" data-post="'+esc(post.id)+'">'+
-    '<video class="fyp-video" data-fyp-video data-post-id="'+esc(post.id)+'" playsinline webkit-playsinline loop muted preload="'+(index<2?'auto':'metadata')+'" src="'+esc(media.url)+'" aria-label="Video by '+esc(author.name||'Minglora member')+'"></video>'+
-    '<div class="fyp-video-shade" aria-hidden="true"></div>'+
-    '<div class="fyp-overlay-bottom"><div class="fyp-creator-line"><button type="button" class="fyp-creator-name" data-profile="'+esc(author.id||'')+'">@'+esc(author.username||'member')+' '+verifiedProfileBadge(author)+'</button></div>'+
-    '<p class="fyp-caption">'+esc(caption||'')+'</p>'+
-    '<div class="fyp-sound-line">'+(post.soundtrack?renderPostSoundtrack(post):'<span>♫ Original audio · '+esc(author.username||'Minglora creator')+'</span>')+'</div>'+
+  const author=post.author||{},media=(post.media||[]).find(item=>['video','image','photo','audio','model3d'].includes(item.mediaType)&&item.url);
+  const isVideo=media?.mediaType==='video',isImage=media?.mediaType==='image'||media?.mediaType==='photo';
+  const following=post.following===true||post.isFollowing===true,caption=String(post.text||'').trim(),liked=post.myReaction?'liked':'';
+  const mediaMarkup=!media
+    ?'<div class="fyp-text-media"><span class="fyp-text-mark" aria-hidden="true">m</span><p>'+esc(caption||'Shared a post on Minglora')+'</p></div>'
+    :isVideo
+      ?'<video class="fyp-video" data-fyp-video data-post-id="'+esc(post.id)+'" playsinline webkit-playsinline loop muted preload="'+(index<2?'auto':'metadata')+'" src="'+esc(media.url)+'" aria-label="Video by '+esc(author.name||'Minglora member')+'"></video>'
+      :isImage
+        ?'<img class="fyp-photo" src="'+esc(media.url)+'" alt="Photo shared by '+esc(author.name||'Minglora member')+'" loading="'+(index<2?'eager':'lazy')+'">'
+        :media.mediaType==='audio'
+          ?'<div class="fyp-audio-media"><span aria-hidden="true">♫</span><strong>'+esc(caption||'Audio post')+'</strong><audio controls preload="metadata" src="'+esc(media.url)+'"></audio></div>'
+          :'<model-viewer class="fyp-model-media" src="'+esc(media.url)+'" alt="Interactive 3D post" camera-controls auto-rotate></model-viewer>';
+  const mediaCount=(post.media||[]).filter(item=>item.url).length;
+  return '<article class="fyp-video-card fyp-post-card '+(isVideo?'has-video':isImage?'has-image':'has-text')+'" data-fyp-post="'+esc(post.id)+'" data-post="'+esc(post.id)+'">'+
+    mediaMarkup+'<div class="fyp-video-shade" aria-hidden="true"></div>'+(mediaCount>1?'<span class="fyp-media-count">1 / '+mediaCount+'</span>':'')+
+    '<div class="fyp-overlay-bottom"><div class="fyp-creator-line"><button type="button" class="fyp-avatar-button" data-profile="'+esc(author.id||'')+'" aria-label="Open '+esc(author.name||'member')+' profile"><img class="fyp-avatar" src="'+esc(avatar(author))+'" alt=""></button><button type="button" class="fyp-creator-name" data-profile="'+esc(author.id||'')+'">@'+esc(author.username||'member')+' '+verifiedProfileBadge(author)+'</button>'+(author.id&&author.id!==state.user.id?'<button type="button" class="fyp-follow '+(following?'following':'')+'" data-foryou-follow="'+esc(author.id)+'" data-following="'+(following?'true':'false')+'">'+(following?'Following':'Follow')+'</button>':'')+'</div>'+
+    (caption&&media?'<p class="fyp-caption">'+esc(caption)+'</p>':'')+'<div class="fyp-post-meta"><span>'+esc(timeAgo(post.createdAt))+'</span>'+(mediaCount>1?'<span> · '+mediaCount+' attachments</span>':'')+'</div>'+(post.soundtrack?'<div class="fyp-sound-line">'+renderPostSoundtrack(post)+'</div>':'')+
     '<form class="comment-form fyp-comment-form" data-comment-form="'+esc(post.id)+'" hidden><input name="text" maxlength="2000" placeholder="Add a comment…" aria-label="Add a comment" required><button type="submit">Send</button></form></div>'+
-    '<aside class="fyp-action-rail" aria-label="Video actions">'+
-    '<div class="fyp-profile-action"><button type="button" class="fyp-avatar-button" data-profile="'+esc(author.id||'')+'" aria-label="Open '+esc(author.name||'creator')+' profile"><img class="fyp-avatar" src="'+esc(avatar(author))+'" alt=""></button><button type="button" class="fyp-follow '+(following?'following':'')+'" data-foryou-follow="'+esc(author.id||'')+'" data-following="'+(following?'true':'false')+'" aria-label="'+(following?'Following creator':'Follow creator')+'">'+(following?'✓':'+')+'</button></div>'+
-    '<button type="button" class="fyp-action '+liked+'" data-react="'+esc(post.id)+'" aria-label="Like video"><span>♥</span><small>'+Number(post.reactionCount||0).toLocaleString()+'</small></button>'+
-    '<button type="button" class="fyp-action" data-focus-comment="'+esc(post.id)+'" aria-label="Comment"><span>▢</span><small>'+Number((post.comments||[]).length).toLocaleString()+'</small></button>'+
-    '<button type="button" class="fyp-action" data-toggle-save="'+esc(post.id)+'" data-saved="'+(post.isSaved?'true':'false')+'" aria-label="Save video"><span>'+(post.isSaved?'▣':'♧')+'</span><small>Save</small></button>'+
-    '<button type="button" class="fyp-action" data-share="'+esc(post.id)+'" aria-label="Share video"><span>↗</span><small>Share</small></button>'+
-    '<button type="button" class="fyp-action" data-gift-content="post" data-gift-id="'+esc(post.id)+'" data-gift-username="'+esc(author.username||'')+'" aria-label="Send gift"><span>🎁</span><small>Gift</small></button>'+
-    '<button type="button" class="fyp-action fyp-more-action" data-fyp-not-interested="'+esc(post.id)+'" aria-label="Not interested"><span>⋯</span><small>More</small></button>'+
-    '<button type="button" class="fyp-disc" data-fyp-sound="'+esc(post.id)+'" aria-label="Toggle sound">♫</button></aside>'+
-    '<button type="button" class="fyp-play-toggle" data-fyp-play="'+esc(post.id)+'" aria-label="Pause or play video">Ⅱ</button>'+
-    '</article>';
+    '<aside class="fyp-action-rail" aria-label="Post actions"><button type="button" class="fyp-action '+liked+'" data-react="'+esc(post.id)+'" data-current-reaction="'+esc(post.myReaction||'like')+'" aria-label="Like post"><span>♥</span><small>'+Number(post.reactionCount||0).toLocaleString()+'</small></button>'+
+    '<button type="button" class="fyp-action" data-focus-comment="'+esc(post.id)+'" aria-label="Comment"><span>▢</span><small>'+Number((post.comments||[]).length).toLocaleString()+'</small></button><button type="button" class="fyp-action" data-toggle-save="'+esc(post.id)+'" data-saved="'+(post.isSaved?'true':'false')+'" aria-label="Save post"><span>'+(post.isSaved?'▣':'♧')+'</span><small>Save</small></button>'+
+    '<button type="button" class="fyp-action" data-share="'+esc(post.id)+'" aria-label="Share post"><span>↗</span><small>Share</small></button><button type="button" class="fyp-action" data-gift-content="post" data-gift-id="'+esc(post.id)+'" data-gift-username="'+esc(author.username||'')+'" aria-label="Send gift"><span>🎁</span><small>Gift</small></button>'+
+    (isVideo?'<button type="button" class="fyp-action fyp-more-action" data-fyp-not-interested="'+esc(post.id)+'" aria-label="Not interested"><span>⋯</span><small>More</small></button>':'<button type="button" class="fyp-action fyp-more-action" data-post-menu="'+esc(post.id)+'" aria-label="Post options"><span>⋯</span><small>More</small></button>')+(isVideo?'<button type="button" class="fyp-disc" data-fyp-sound="'+esc(post.id)+'" aria-label="Toggle sound">♫</button>':'')+'</aside>'+(isVideo?'<button type="button" class="fyp-play-toggle" data-fyp-play="'+esc(post.id)+'" aria-label="Pause or play video">Ⅱ</button>':'')+'</article>';
 }
 function teardownForYouPlayback(){
   if(forYouPlaybackObserver){forYouPlaybackObserver.disconnect();forYouPlaybackObserver=null;}
