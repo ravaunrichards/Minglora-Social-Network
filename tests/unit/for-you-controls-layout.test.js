@@ -5,20 +5,29 @@ import { readFile } from 'node:fs/promises';
 const root = new URL('../../', import.meta.url);
 const read = path => readFile(new URL(path, root), 'utf8');
 
-test('For You and Following are real, independently selectable feed scopes', async () => {
+test('Home, Friends, Subscribers and Following have real click handlers and audience-backed feeds', async () => {
   const [app, server] = await Promise.all([
     read('public/app.js'),
     read('src/server.js')
   ]);
-  assert.match(app, /data-fyp-scope="following"/);
-  assert.match(app, /data-fyp-scope="for-you"/);
-  assert.match(app, /bindOnce\('\[data-fyp-scope\]'[\s\S]*state\.forYouScope=scope;[\s\S]*await renderForYouFeed\(\)/);
-  assert.match(app, /new URLSearchParams\(\{scope,limit:'12',followedOnly:'1'\}\)/);
+  for (const scope of ['for-you', 'friends', 'subscribers', 'following']) {
+    assert.match(app, new RegExp('data-fyp-scope="' + scope + '"'));
+  }
+  assert.match(app, /function bindForYouScopeControls\(root\)[\s\S]*root\.querySelectorAll\('\[data-fyp-scope\]'\)[\s\S]*button\.addEventListener\('click',async\(\)=>\{[\s\S]*state\.forYouScope=normalizeForYouScope\(scope\);[\s\S]*persistCurrentView\(\);[\s\S]*recordBrowserNavigation\(\);[\s\S]*await renderForYouFeed\(\)/);
+  const renderStart = app.indexOf('async function renderForYouFeed()');
+  const scopeBinding = app.indexOf('bindForYouScopeControls(feedRoot)', renderStart);
+  const firstFeedRequest = app.indexOf('await fetchForYouPage({reset:true})', renderStart);
+  assert.ok(scopeBinding > renderStart && firstFeedRequest > scopeBinding, 'tab clicks are wired before the asynchronous feed request');
+  assert.match(app, /new URLSearchParams\(\{scope,limit:'12'\}\)/);
+  assert.match(app, /if\(scope==='following'\)params\.set\('followedOnly','1'\)/);
+  assert.match(app, /forYouRoutePath\(snapshot\.forYouScope\)/);
+  assert.match(app, /window\.addEventListener\('popstate',[\s\S]*restoreBrowserNavigation/);
   assert.match(server, /const followedOnly=url\.searchParams\.get\('followedOnly'\)==='1'&&scope==='following'/);
   assert.match(server, /eligibleIds=followedOnly\?followedIds:new Set\(\[user\.id,\.\.\.followedIds\]\)/);
+  assert.match(server, /scope==='friends'[\s\S]*getMutualFollowIds/);
+  assert.match(server, /scope==='subscribers'[\s\S]*subscription_subscribers_list/);
   assert.match(server, /scope==='for-you'\s*\?rankForYouFeed/);
 });
-
 test('For You search stays visible, submits immediately, filters results and can be cleared', async () => {
   const app = await read('public/app.js');
   assert.match(app, /function forYouFeedShellMarkup\(\)[\s\S]*id="fyp-search-input" type="search"/);
@@ -48,5 +57,7 @@ test('For You header and search reserve their own space above the scrolling feed
   assert.match(css, /@media \(max-width: 760px\)[\s\S]*grid-template-areas:[\s\S]*"search search"/);
   assert.ok(html.includes('/for-you-controls.css?v=20261108-home-live-mixed-feed-2'));
   assert.ok(sw.includes('/for-you-controls.css?v=20261108-home-live-mixed-feed-2'));
+  assert.ok(html.includes('/app.js?v=20261108-for-you-four-routes-1'));
+  assert.ok(sw.includes('/app.js?v=20261108-for-you-four-routes-1'));
   assert.match(sw, /^const CACHE_NAME='minglora-shell-v[0-9]+-[^']+';$/m);
 });
