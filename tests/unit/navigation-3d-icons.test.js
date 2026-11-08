@@ -5,12 +5,13 @@ import { readFile } from 'node:fs/promises';
 const root = new URL('../../', import.meta.url);
 const read = path => readFile(new URL(path, root), 'utf8');
 
-const [html, css, sprite, serviceWorker, menuScript] = await Promise.all([
+const [html, css, sprite, serviceWorker, menuScript, appScript] = await Promise.all([
   read('public/index.html'),
   read('public/styles.css'),
   read('public/assets/icons/navigation-3d.svg'),
   read('public/sw.js'),
-  read('public/minglora-menu.js')
+  read('public/minglora-menu.js'),
+  read('public/app.js')
 ]);
 
 const useIcon = id => `<use href="/assets/icons/navigation-3d.svg?v=${id==='recharge'?'20261104-recharge-wallet-3d-3':id==='video'?'20261108-mobile-navigation-icons-1':'20261102-navigation-3d-2'}#${id}"></use>`;
@@ -30,7 +31,7 @@ test('desktop navigation keeps its existing destinations and uses 3D icons', () 
     assert.ok(nav.includes(`<small>${label}</small>`), `${label} label remains visible`);
   }
   assert.match(nav,/data-view="leagues"/);
-  assert.ok(nav.includes('<span>🏆</span><small>Leagues</small>'));
+  assert.ok(nav.includes('<span class="league-nav-icon" aria-hidden="true">🏆</span><small>Leagues</small>'));
 });
 
 test('mobile navigation keeps five clear destinations and secondary features in the organised More page', () => {
@@ -60,8 +61,11 @@ test('utility rail and header actions use the matching rendered icon assets', ()
   }
   assert.ok(html.includes('id="notifications-btn"') && html.includes(useIcon('activity')));
   assert.ok(html.includes('id="settings-btn"') && html.includes(useIcon('settings')));
-  assert.ok(!html.includes('nav-search-icon'), 'external top-bar Search is removed');
-  assert.ok(!menuScript.includes("sprite('search')") && !menuScript.includes('minglora-menu-search'), 'the Menu contains no Search Menu field or search icon');
+  assert.ok(html.includes('id="top-search-form"') && html.includes('id="top-search-input"'), 'the top bar has a real Search Minglora field');
+  assert.ok(html.includes('class="top-search-submit"') && html.includes('class="nav-search-icon"'), 'the top bar search action has a visible icon');
+  assert.ok(appScript.includes("$('#top-search-form')?.addEventListener('submit'"), 'global search submits through the app search handler');
+  assert.ok(appScript.includes("await renderSearch(q)"), 'global search loads actual Minglora search results');
+  assert.ok(!menuScript.includes("sprite('search')") && !menuScript.includes('minglora-menu-search'), 'the app menu does not contain a duplicate Search field');
 });
 
 test('the SVG sprite contains finished dimensional artwork for primary and supporting actions', () => {
@@ -90,4 +94,39 @@ test('service-worker shell pre-caches the latest icon sprite and refreshed style
   assert.ok(activeStyles&&serviceWorker.includes("'"+activeStyles+"'"),'active stylesheet is cached');
   assert.match(serviceWorker,/mobile-profile-navigation\.css\?v=20261106-horizontal-profile-navigation-1/);
   assert.match(serviceWorker,/\/assets\/icons\/navigation-3d\.svg/);
+});
+
+test('Facebook-style top bar keeps logo, Search, five navigation tabs and account controls in left-to-right order', () => {
+  const header = html.match(/<header class="topbar">[\\s\\S]*?<\\/header>/)?.[0] || '';
+  assert.ok(header, 'top bar exists');
+  const ordered = [
+    'id="home-brand"',
+    'id="top-search-form"',
+    'class="top-nav"',
+    'data-view="feed"',
+    'data-view="for-you"',
+    'data-view="live"',
+    'data-view="meetwave"',
+    'data-view="leagues"',
+    'id="minglora-menu-toggle"',
+    'id="messenger-btn"',
+    'id="notifications-btn"',
+    'id="profile-menu"'
+  ];
+  let last = -1;
+  for (const marker of ordered) {
+    const at = header.indexOf(marker);
+    assert.ok(at > last, marker + ' appears in the intended left-to-right position');
+    last = at;
+  }
+  assert.ok(header.includes('id="palette-toggle"') && header.includes('id="settings-btn"'), 'palette and settings controls remain available');
+});
+
+test('top bar gives navigation and action icons consistent dimensions at desktop, tablet and mobile widths', () => {
+  assert.match(css,/\.topbar\s*\{[\\s\\S]*?height:72px/);
+  assert.match(css,/\.nav-item \.nav-3d-icon\s*\{width:31px;height:31px/);
+  assert.match(css,/\.circle-action\s*\{display:grid;place-items:center;flex:0 0 42px;width:42px;height:42px/);
+  assert.match(css,/@media\\(max-width:980px\\) and \\(min-width:761px\\)/);
+  assert.match(css,/@media\\(max-width:760px\\)/);
+  assert.match(css,/\.search-box:focus-within/);
 });
