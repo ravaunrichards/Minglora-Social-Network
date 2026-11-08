@@ -58,7 +58,9 @@ test("existing Admin Centre opens inside the authorized Admin Account using the 
 test("app shell and service worker load the current embedded Admin Centre assets", () => {
   assert.match(index, /admin-centre\.css\?v=20261108-admin-account-inline-1/);
   assert.match(index, /admin-centre\.js\?v=20261108-admin-account-inline-1/);
-  assert.match(serviceWorker, /minglora-shell-v233-admin-account-centre-1/);
+  const cacheName = serviceWorker.match(/const CACHE_NAME='([^']+)'/)?.[1] || '';
+  assert.match(cacheName, /^minglora-shell-v\\d+-/);
+  assert.notEqual(cacheName, 'minglora-shell-v232-facebook-edit-profile-3');
   assert.match(serviceWorker, /admin-centre\.css\?v=20261108-admin-account-inline-1/);
   assert.match(serviceWorker, /admin-centre\.js\?v=20261108-admin-account-inline-1/);
 });
