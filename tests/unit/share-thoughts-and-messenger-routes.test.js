@@ -98,5 +98,5 @@ test('new Share thoughts and Messenger controls use the dimensional SVG sprite',
   }
   assert.match(serviceWorker, /minglora-shell-v\d+-self-updating-1/);
   assert.ok(serviceWorker.includes('navigation-3d.svg?v=20261102-navigation-3d-2'));
-  assert.ok(serviceWorker.includes('mobile-layout.css?v=20261105-flow-navigation-1'));
+  assert.ok(serviceWorker.includes('mobile-layout.css?v=20261108-mobile-overlay-panels-1'));
 });
