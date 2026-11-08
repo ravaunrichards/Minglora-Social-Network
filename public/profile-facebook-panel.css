@@ -433,15 +433,20 @@
    This block is last in the profile stylesheet and overrides older layout variants. */
 .minglora-profile-page .profile-header-card{
   --minglora-profile-avatar-size:168px;
+  width:100%!important;
+  max-width:851px!important;
+  margin-inline:auto!important;
 }
 .minglora-profile-page .profile-header-card .profile-cover{
   display:block!important;
   position:relative!important;
   width:100%!important;
   height:auto!important;
-  aspect-ratio:3 / 1!important;
+  aspect-ratio:851 / 315!important;
   min-height:0!important;
   max-height:315px!important;
+  max-width:851px!important;
+  margin-inline:auto!important;
   overflow:hidden!important;
 }
 .minglora-profile-page .profile-header-card .profile-cover-image{
@@ -500,8 +505,9 @@
 .minglora-profile-page .profile-header-card--owner .profile-info-main{grid-column:2!important}
 .minglora-profile-page .profile-header-card--owner .profile-owner-actions{grid-column:3!important}
 .profile-crop-preview--cover{
-  aspect-ratio:3 / 1!important;
+  aspect-ratio:851 / 315!important;
   max-height:315px!important;
+  max-width:851px!important;
   min-height:0!important;
 }
 @media(max-width:760px){
@@ -509,8 +515,9 @@
     --minglora-profile-avatar-size:96px;
   }
   .minglora-profile-page .profile-header-card .profile-cover{
-    aspect-ratio:3 / 1!important;
-    max-height:180px!important;
+    aspect-ratio:851 / 315!important;
+    max-height:315px!important;
+    max-width:100%!important;
   }
   .minglora-profile-page .profile-header-card .profile-info,
   .minglora-profile-page .profile-header-card--owner .profile-info,
@@ -554,7 +561,7 @@
     grid-row:2!important;
   }
   .minglora-profile-page .profile-header-card--viewer .profile-counts{grid-row:3!important}
-  .profile-crop-preview--cover{aspect-ratio:3 / 1!important;max-height:180px!important}
+  .profile-crop-preview--cover{aspect-ratio:851 / 315!important;max-height:315px!important;max-width:851px!important;}
 }
 @media(max-width:390px){
   .minglora-profile-page .profile-header-card .profile-info,
