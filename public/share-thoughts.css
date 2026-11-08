@@ -83,3 +83,32 @@
   .ml-share-modal-actions{bottom:-16px;}
 }
 @media(prefers-reduced-motion:reduce){.ml-share-modal *{scroll-behavior:auto!important;transition:none!important;}}
+
+
+/* Facebook-sized thought-cloud connector in the home Share Thoughts composer */
+.ml-share-thought-composer{gap:8px;min-width:0;overflow:visible}
+.ml-share-thought-composer>.ml-thought-avatar-wrap,
+.ml-share-thought-composer>.avatar{width:43px;height:43px;flex:0 0 43px}
+.ml-share-thought-open{display:flex!important;align-items:center;gap:5px;min-width:0;min-height:43px;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;color:inherit!important;box-shadow:none!important;overflow:visible;text-align:left}
+.ml-share-thought-cloud-bridge{display:flex;align-items:center;gap:3px;flex:0 0 43px;width:43px;height:34px}
+.ml-share-thought-cloud{display:grid;place-items:center;width:28px;height:28px;flex:0 0 28px;border-radius:50%;background:#e4e6eb;color:#606770}
+.ml-share-thought-cloud svg{display:block;width:19px;height:19px;fill:#fff;stroke:#606770;stroke-width:1.55;stroke-linecap:round;stroke-linejoin:round}
+.ml-share-thought-cloud-bridge>i{display:block;flex:0 0 auto;border-radius:50%;background:#e4e6eb}
+.ml-share-thought-cloud-bridge>i:first-of-type{width:7px;height:7px}
+.ml-share-thought-cloud-bridge>i:last-of-type{width:5px;height:5px}
+.ml-share-thought-prompt{display:flex;align-items:center;flex:1 1 auto;min-width:0;height:43px;padding:0 15px;border:0;border-radius:22px;background:#f0f2f5;color:#65676b;font-size:15px;font-weight:400;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:background .15s ease}
+.ml-share-thought-open:hover .ml-share-thought-prompt{background:#e4e6eb}
+.ml-share-thought-open:focus-visible{outline:2px solid var(--blue,#1769e0);outline-offset:3px;border-radius:24px!important}
+@media(max-width:600px){
+  .ml-share-thought-composer{gap:7px}
+  .ml-share-thought-composer>.ml-thought-avatar-wrap,
+  .ml-share-thought-composer>.avatar{width:43px;height:43px;flex-basis:43px}
+  .ml-share-thought-open{gap:4px}
+  .ml-share-thought-cloud-bridge{flex-basis:40px;width:40px;gap:2px}
+  .ml-share-thought-cloud{width:26px;height:26px;flex-basis:26px}
+  .ml-share-thought-cloud svg{width:18px;height:18px}
+  .ml-share-thought-cloud-bridge>i:first-of-type{width:6px;height:6px}
+  .ml-share-thought-cloud-bridge>i:last-of-type{width:4px;height:4px}
+  .ml-share-thought-prompt{height:43px;padding:0 13px;font-size:15px}
+}
+@media(prefers-reduced-motion:reduce){.ml-share-thought-prompt{transition:none}}
