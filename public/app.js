@@ -761,7 +761,17 @@ function bindFeed(root=document){
   }));
   root.querySelectorAll('[data-share]').forEach(el=>el.addEventListener('click',async()=>{
     const post=findVisiblePost(el.dataset.share);if(!post)return;
-    try{await navigator.clipboard.writeText(`${location.origin}/#post-${post.id}`);toast('Post link copied.');}
+    const shareUrl=new URL('/#post-'+encodeURIComponent(post.id),location.origin).toString();
+    const shareTitle='Minglora post';
+    const shareText=String(post.text||'View this post on Minglora.').trim().slice(0,1500)||'View this post on Minglora.';
+    if(typeof window.MingloraAndroid?.shareText==='function'){
+      try{window.MingloraAndroid.shareText(shareTitle,shareText,shareUrl);return;}catch{}
+    }
+    if(typeof navigator.share==='function'){
+      try{await navigator.share({title:shareTitle,text:shareText,url:shareUrl});return;}
+      catch(error){if(error?.name==='AbortError')return;}
+    }
+    try{await navigator.clipboard.writeText(shareUrl);toast('Post link copied.');}
     catch{toast('Copy this page URL to share the post.');}
   }));
   root.querySelectorAll('[data-post-menu]').forEach(el=>el.addEventListener('click',()=>{
