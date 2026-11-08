@@ -68,21 +68,21 @@ body.minglora-for-you-active .fyp-feed-switch {
   align-items: center !important;
   justify-content: center !important;
   justify-self: center !important;
-  gap: clamp(8px, 1.8vw, 20px) !important;
+  gap: clamp(3px, .6vw, 8px) !important;
   width: max-content !important;
   max-width: 100% !important;
   height: auto !important;
   min-height: 42px !important;
   margin: 0 !important;
-  padding: 0 4px !important;
+  padding: 0 2px !important;
   transform: none !important;
   white-space: nowrap !important;
 }
 
 body.minglora-for-you-active .fyp-feed-switch button {
-  min-width: 72px !important;
+  min-width: 68px !important;
   min-height: 42px !important;
-  padding: 8px 10px !important;
+  padding: 8px 8px !important;
   border: 0 !important;
   border-radius: 8px !important;
   background: transparent !important;
@@ -255,17 +255,30 @@ body.minglora-for-you-active .fyp-search-loading {
 
   body.minglora-for-you-active .fyp-feed-switch {
     grid-area: scope !important;
-    justify-self: center !important;
+    justify-self: stretch !important;
     width: 100% !important;
-    gap: clamp(5px, 3.5vw, 16px) !important;
+    min-width: 0 !important;
+    gap: 2px !important;
     min-height: 40px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    overscroll-behavior-inline: contain !important;
+    scrollbar-width: none !important;
+    justify-content: space-between !important;
+  }
+
+  body.minglora-for-you-active .fyp-feed-switch::-webkit-scrollbar {
+    display: none !important;
   }
 
   body.minglora-for-you-active .fyp-feed-switch button {
+    flex: 1 1 0 !important;
     min-width: 0 !important;
     min-height: 40px !important;
-    padding: 7px clamp(7px, 2.8vw, 13px) !important;
-    font-size: 14px !important;
+    padding: 7px 3px !important;
+    font-size: clamp(10px, 3.2vw, 13px) !important;
+    letter-spacing: -.02em !important;
+    white-space: nowrap !important;
   }
 
   body.minglora-for-you-active .fyp-top-search {
@@ -293,13 +306,13 @@ body.minglora-for-you-active .fyp-search-loading {
 
 @media (max-width: 360px) {
   body.minglora-for-you-active .fyp-feed-switch {
-    gap: 4px !important;
+    gap: 1px !important;
   }
 
   body.minglora-for-you-active .fyp-feed-switch button {
-    padding-right: 6px !important;
-    padding-left: 6px !important;
-    font-size: 13px !important;
+    padding-right: 2px !important;
+    padding-left: 2px !important;
+    font-size: 10.5px !important;
   }
 
   body.minglora-for-you-active .fyp-top-search button[data-fyp-search] {
