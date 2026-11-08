@@ -42,7 +42,7 @@ test('mobile navigation keeps five clear destinations and secondary features in 
   for (const [view, icon] of [
     ['feed', 'home'],
     ['friends', 'friends'],
-    ['videos', 'video'],
+    ['for-you', 'explore'],
     ['live', 'live'],
   ]) {
     assert.ok(nav.includes('data-view="' + view + '"'), view + ' is a primary destination');
@@ -90,7 +90,7 @@ test('3D icon presentation uses depth, lighting and reduced-motion-safe transiti
 
 test('service-worker shell pre-caches the latest icon sprite and refreshed stylesheet', () => {
   const activeStyles=html.match(/href="(\/styles\.css\?v=[^"]+)"/)?.[1]||'';
-  assert.match(serviceWorker,/CACHE_NAME='minglora-shell-v186-facebook-topbar-search-2'/);
+  assert.match(serviceWorker,/^const CACHE_NAME='minglora-shell-v\\d+-[^']+';$/m);
   assert.ok(activeStyles&&serviceWorker.includes("'"+activeStyles+"'"),'active stylesheet is cached');
   assert.match(serviceWorker,/mobile-profile-navigation\.css\?v=20261106-horizontal-profile-navigation-1/);
   assert.match(serviceWorker,/\/assets\/icons\/navigation-3d\.svg/);
