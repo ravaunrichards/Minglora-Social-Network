@@ -19,7 +19,7 @@ test('desktop primary navigation remains unchanged and mobile navigation stays f
   const mobileEnd=html.indexOf('</div>',mobileStart);
   assert.notEqual(mobileStart,-1,'Mobile navigation exists');
   const mobile=html.slice(mobileStart,mobileEnd);
-  const expectedMobile=['feed','friends','videos','live','more'];
+  const expectedMobile=['feed','friends','for-you','live','more'];
   assert.deepEqual([...mobile.matchAll(/data-view="([^"]+)"/g)].map(match=>match[1]),expectedMobile);
   assert.ok(!html.includes('id="mobile-more-menu"'),'The old cramped floating More menu is removed');
   assert.ok(!html.includes('id="mobile-more-btn"'),'The obsolete More dropdown trigger is removed');
