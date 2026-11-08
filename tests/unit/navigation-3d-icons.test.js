@@ -35,7 +35,9 @@ test('desktop navigation keeps its existing destinations and uses 3D icons', () 
 });
 
 test('mobile header keeps the requested five primary tabs visible below logo and Search', () => {
-  const nav = html.match(/<nav class="top-nav"[\\s\\S]*?<\\/nav>/)?.[0] || '';
+  const navStart = html.indexOf('<nav class="top-nav"');
+  const navEnd = html.indexOf('</nav>', navStart);
+  const nav = navStart >= 0 && navEnd > navStart ? html.slice(navStart, navEnd) : '';
   assert.ok(nav, 'shared navigation is present in the header');
   for (const [view, icon, label] of [
     ['feed', 'home', 'Home'],
