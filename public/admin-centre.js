@@ -48,6 +48,7 @@
     const status = section.querySelector('#admin-internal-activity-status');
     const updated = section.querySelector('#admin-internal-activity-updated');
     const summary = section.querySelector('#admin-internal-activity-summary');
+    const inventory = panel.querySelector('#admin-platform-module-grid');
     let cursor = 0;
     let busy = false;
     let timer = null;
@@ -81,19 +82,39 @@
         '</article>';
     };
     const setSnapshot = snapshot => {
-      if (!summary || !snapshot) return;
+      if (!snapshot) return;
       const metrics = [
         ['Members', snapshot.registeredMembers],
+        ['Active sessions', snapshot.activeSessions],
         ['Active calls', snapshot.activeCalls],
         ['LIVE now', Math.max(Number(snapshot.activeLiveSessions || 0), Number(snapshot.activeDatabaseBroadcasts || 0))],
         ['MeetWave rooms', snapshot.activeMeetings],
+        ['Tracked collections', snapshot.trackedCollections],
+        ['Stored records', snapshot.totalStoredRecords],
         ['Runtime revision', snapshot.revision]
       ];
-      summary.innerHTML = metrics.map(([label, value]) =>
-        '<div class="admin-internal-activity-metric"><strong>' +
-        escapeText(Number(value || 0).toLocaleString()) +
-        '</strong><small>' + escapeText(label) + '</small></div>'
-      ).join('');
+      if (summary) {
+        summary.innerHTML = metrics.map(([label, value]) =>
+          '<div class="admin-internal-activity-metric"><strong>' +
+          escapeText(Number(value || 0).toLocaleString()) +
+          '</strong><small>' + escapeText(label) + '</small></div>'
+        ).join('');
+      }
+      if (inventory) {
+        const modules = Array.isArray(snapshot.modules) ? snapshot.modules : [];
+        inventory.innerHTML = modules.length ? modules.map(module => {
+          const collections = Array.isArray(module.collections) ? module.collections : [];
+          const rows = collections.map(collection =>
+            '<div class="admin-platform-collection-row"><span>' + escapeText(collection.label || collection.key || 'Collection') +
+            '</span><strong>' + escapeText(Number(collection.count || 0).toLocaleString()) + '</strong></div>'
+          ).join('');
+          return '<article class="admin-platform-module-card"><div class="admin-platform-module-card-heading"><div><h4>' +
+            escapeText(module.label || 'Minglora feature') + '</h4><small>' +
+            escapeText(Number(module.collectionCount || collections.length).toLocaleString()) + ' collections</small></div>' +
+            '<strong>' + escapeText(Number(module.recordCount || 0).toLocaleString()) + ' records</strong></div>' +
+            '<div class="admin-platform-collection-list">' + rows + '</div></article>';
+        }).join('') : '<p class="admin-platform-inventory-empty">The platform inventory has not returned any feature counts yet.</p>';
+      }
       if (updated) updated.textContent = 'Database synced ' + formatTime(snapshot.syncedAt || snapshot.updatedAt);
     };
     const schedule = delay => {
@@ -218,7 +239,7 @@
       </div>
       <nav class="admin-centre-navigation" aria-label="Admin Centre sections">
         <a href="#admin-control-centre">Overview</a>
-        ${unlocked ? `<a href="#admin-internal-operations">Internal operations</a><a href="#admin-audit-log">Audit log</a><a href="#admin-user-management">User management</a><a href="#admin-badge-controls">Profile &amp; badge controls</a><a href="#admin-campaign-coins-wallet">Admin Promotional Gift Wallet</a><a href="#admin-member-promotions">Member promotions</a><a href="#admin-marketing-budget">Marketing budget</a><a href="#admin-live-pro-access">LIVE Pro access</a><a href="#admin-gift-earnings">Gift revenue &amp; earnings</a><a href="#admin-withdrawal-tracker">Creator withdrawals</a><a href="#admin-promotional-tracker">Promotional tracking</a><a href="#moderation-workspace">Moderation</a><a href="#moderator-support-workspace">Support inbox</a>` : ''}
+        ${unlocked ? `<a href="#admin-internal-operations">Internal operations</a><a href="#admin-platform-overview">Platform overview</a><a href="#admin-audit-log">Audit log</a><a href="#admin-user-management">User management</a><a href="#admin-badge-controls">Profile &amp; badge controls</a><a href="#admin-campaign-coins-wallet">Admin Promotional Gift Wallet</a><a href="#admin-member-promotions">Member promotions</a><a href="#admin-marketing-budget">Marketing budget</a><a href="#admin-live-pro-access">LIVE Pro access</a><a href="#admin-gift-earnings">Gift revenue &amp; earnings</a><a href="#admin-withdrawal-tracker">Creator withdrawals</a><a href="#admin-promotional-tracker">Promotional tracking</a><a href="#moderation-workspace">Moderation</a><a href="#moderator-support-workspace">Support inbox</a>` : ''}
         <a href="#admin-centre-settings">Admin settings</a>
       </nav>
       ${unlocked ? `
@@ -239,6 +260,17 @@
             </div>
           </div>
           <p class="admin-internal-activity-footnote">The journal records event type, time, source table, operation and a reference ID only. It never stores message bodies, passwords, session tokens, media URLs or payment credentials.</p>
+        </section>
+        <section class="admin-platform-overview admin-control-centre-section" id="admin-platform-overview" aria-labelledby="admin-platform-overview-title">
+          <div class="admin-platform-overview-heading">
+            <div><h3 id="admin-platform-overview-title">Complete Minglora platform overview</h3>
+              <p>Live counts for every active runtime collection, grouped by feature area and refreshed with the internal activity feed.</p></div>
+            <span class="admin-control-centre-status">Owner-only · metadata counts</span>
+          </div>
+          <div id="admin-platform-module-grid" class="admin-platform-module-grid" aria-live="polite">
+            <p class="admin-platform-inventory-empty">Loading all active Minglora feature areas…</p>
+          </div>
+          <p class="admin-platform-overview-footnote">This inventory reports record counts only. It does not expose private message contents, passwords, authentication tokens, media URLs or payment credentials. Moderation, support and financial details remain in their dedicated protected workspaces.</p>
         </section>
         <section class="admin-audit-log admin-control-centre-section" id="admin-audit-log" aria-labelledby="admin-audit-log-title">
           <div class="admin-control-centre-section-heading"><div><h3 id="admin-audit-log-title">Administrator audit log</h3>
