@@ -4524,12 +4524,15 @@ async function route(req, res) {
       if(method==='POST'&&p==='/api/posts'){
         const validation=validatePostInput(input);if(!validation.valid)return json(res,400,{error:validation.errors.join(' ')});
         const {text,mediaIds}=validation.value;const ids=[...new Set(mediaIds)];
+        const requestedVideoFormat=input.videoFormat===undefined||input.videoFormat===null?null:String(input.videoFormat);
+        if(requestedVideoFormat!==null&&!['video','reel'].includes(requestedVideoFormat))return json(res,400,{error:'Video format must be video or reel.'});
         const audience=String(input.audience||'public');
         if(!['public','friends','close_friends','followers','private'].includes(audience))return json(res,400,{error:'Unsupported post audience.'});
         let soundtrack=null;try{soundtrack=resolveSoundtrackForUser(user.id,input.soundtrack);}catch(error){return json(res,error.status||400,{error:error.message});}
         const assets=ids.map(id=>(db.mediaAssets||[]).find(asset=>asset.id===id&&asset.ownerId===user.id&&asset.slot==='post'&&asset.status==='uploaded'));
         if(assets.some(asset=>!asset))return json(res,400,{error:'One or more selected media files are no longer available. Upload them again.'});
-        const post={id:uid(),userId:user.id,text,mediaIds:ids,soundtrack,audience,createdAt:now(),reactions:{},comments:[]};
+        if(requestedVideoFormat&&(assets.length!==1||assets[0]?.mediaType!=='video'))return json(res,400,{error:'A video or Reel post must contain exactly one uploaded video file.'});
+        const post={id:uid(),userId:user.id,text,mediaIds:ids,soundtrack,audience,...(requestedVideoFormat?{videoFormat:requestedVideoFormat}:{}),createdAt:now(),reactions:{},comments:[]};
         assets.forEach(asset=>{asset.status='attached';asset.attachedTo=post.id;});db.posts.unshift(post);await saveStore();return json(res,201,{post:await publicPost(post,user.id)});
       }
       let m=p.match(/^\/api\/posts\/([^/]+)$/);
@@ -5210,9 +5213,10 @@ async function route(req, res) {
           const visiblePhotos=photos.filter(photo=>photo?.url);
           return {id:album.id,title:album.title,description:album.description||'',visibility:album.visibility,coverAssetId:album.coverAssetId||null,createdAt:album.createdAt,updatedAt:album.updatedAt,photos:visiblePhotos};
         }));
-        const profileMedia=profilePosts.flatMap(post=>(post.media||[]).map(media=>({...media,postId:post.id,postText:post.text||'',createdAt:post.createdAt}))).filter(media=>media.url);
+        const profileMedia=profilePosts.flatMap(post=>(post.media||[]).map(media=>({...media,postId:post.id,postText:post.text||'',createdAt:post.createdAt,...(media.mediaType==='video'?{videoFormat:post.videoFormat==='reel'?'reel':'video'}:{})}))).filter(media=>media.url);
         const profilePhotos=profileMedia.filter(media=>media.mediaType==='image');
-        const profileVideos=profileMedia.filter(media=>media.mediaType==='video');
+        const profileVideos=profileMedia.filter(media=>media.mediaType==='video'&&media.videoFormat!=='reel');
+        const profileReels=profileMedia.filter(media=>media.mediaType==='video'&&media.videoFormat==='reel');
         const profileFriends=[...new Set((db.follows||[]).filter(edge=>edge.followedId===target.id&&(db.follows||[]).some(reverse=>reverse.followerId===target.id&&reverse.followedId===edge.followerId)).map(edge=>edge.followerId))]
           .map(id=>db.users.find(member=>member.id===id)).filter(member=>member&&!blockedBetween(user.id,member.id)&&canViewProfile(user.id,member)).map(member=>safeUser(member,user.id));
         // Subscription totals are loaded through the separate, supported creator-subscription
@@ -5228,7 +5232,7 @@ async function route(req, res) {
           profileSections:readProfileSections(target.id),
           albums:profileAlbums,
           photos:profilePhotos,
-          reels:profileVideos,
+          reels:profileReels,
           videos:profileVideos,
           friends:profileFriends,
           groups:(db.groups||[]).filter(group=>group.ownerId===target.id||(group.members||[]).includes(target.id)).map(group=>({id:group.id,name:group.name,description:group.description||'',memberCount:(group.members||[]).length,isMember:(group.members||[]).includes(target.id)})),
