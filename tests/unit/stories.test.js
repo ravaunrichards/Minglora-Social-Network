@@ -13,6 +13,15 @@ test('story audiences require real friendship or follow relationship', () => {
   assert.equal(canViewStory({ viewerId: 'viewer', story: { ...story, audience: 'private' } }), false);
 });
 
+test('custom story visibility is limited to selected friends and hide lists override access', () => {
+  const customStory = { ...story, audience: 'custom', customUserIds: ['selected'] };
+  assert.equal(canViewStory({ viewerId: 'selected', story: customStory }), true);
+  assert.equal(canViewStory({ viewerId: 'other', story: customStory }), false);
+  const publicWithExclusions = { ...story, audience: 'public', hiddenUserIds: ['hidden'] };
+  assert.equal(canViewStory({ viewerId: 'hidden', story: publicWithExclusions }), false);
+  assert.equal(canViewStory({ viewerId: 'other', story: publicWithExclusions }), true);
+});
+
 test('blocking overrides public story visibility in either direction', () => {
   const blocks = [{ blockerId: 'viewer', blockedId: 'author' }];
   assert.equal(isBlockedBetween(blocks, 'viewer', 'author'), true);
