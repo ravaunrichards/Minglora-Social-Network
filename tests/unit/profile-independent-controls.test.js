@@ -9,6 +9,7 @@ const read=file=>fs.readFileSync(path.join(root,file),'utf8');
 const app=read('public/app.js');
 const css=read('public/profile-layout-guardrails.css');
 const avatarCss=read('public/profile-facebook-avatar-anchor.css');
+const independentCss=read('public/profile-independent-avatar-header.css');
 
 test('profile header does not render separate profile-picture or cover-picture edit controls',()=>{
   assert.doesNotMatch(app,/id="profile-edit-avatar"|id="profile-edit-cover"|id="profile-edit-admin-cover"/);
@@ -45,18 +46,20 @@ test('admin profile keeps shared owner actions and its standard administrator to
   assert.doesNotMatch(admin,/profile-edit-admin-cover|Edit Cover/);
 });
 
-test('Facebook profile keeps the cover visible with the portrait overlapping its lower-left edge',()=>{
-  assert.ok(css.includes('.minglora-profile-page .profile-header-card .profile-cover {'));
-  assert.ok(css.includes('display: block !important'));
-  assert.ok(css.includes('position: relative !important'));
-  assert.ok(css.includes('margin: -84px 0 0 !important'));
-  assert.ok(css.includes('width: 168px !important')&&css.includes('height: 168px !important'));
-  assert.ok(css.includes('border-radius: 50% !important'));
+test('profile cover and portrait remain independent and the portrait stays left of the identity',()=>{
+  assert.ok(independentCss.includes('margin:0 0 18px!important'));
+  assert.ok(independentCss.includes('margin:0!important'));
+  assert.ok(independentCss.includes('border-radius:50%!important'));
+  assert.ok(independentCss.includes('grid-template-columns:var(--minglora-profile-avatar-size) minmax(0,1fr)!important'));
+  assert.ok(independentCss.includes('.profile-thought-slot+.profile-avatar-edit-wrap'));
+  assert.ok(independentCss.includes('.profile-thought-slot~.profile-info-main'));
+  assert.ok(independentCss.includes('grid-column:2!important'));
+  assert.ok(independentCss.includes('grid-row:2!important'));
+  assert.doesNotMatch(independentCss,/margin(?:-top)?\\s*:\\s*-\\d|top\\s*:\\s*-\\d/);
+  assert.ok(app.includes('esc(u.cover)'));
+  assert.ok(app.includes("src=\\\"'+avatar(u)+'\\\" alt=\\\"\\\""));
   assert.ok(avatarCss.includes('@media (max-width:760px)'));
-  assert.ok(avatarCss.includes('position:absolute!important'));
-  assert.ok(avatarCss.includes('left:13px!important')&&avatarCss.includes('top:-48px!important'));
-  assert.ok(avatarCss.includes('@media (max-width:390px)'));
-  assert.ok(avatarCss.includes('left:10px!important')&&avatarCss.includes('top:-44px!important'));
+  assert.ok(css.includes('position: relative !important'));
 });
 test('profile editing retains centered native dialogs and About section editing',()=>{
   assert.ok(app.includes("const modal=document.createElement('dialog');modal.className='profile-inline-editor profile-editor-dialog'"));
