@@ -6904,5 +6904,5 @@ dialog.profile-editor-dialog .modal-head{position:sticky;top:0;z-index:2;backgro
 .layout.profile-view>.left-rail{display:none}
 .layout.profile-view>.main-content{grid-column:1;min-width:0}
 .layout.profile-view>.right-rail{grid-column:2}
-@media(max-width:1150px){.layout.profile-view{grid-template-columns:minmax(0,1fr);max-width:900px}.layout.profile-view>.right-rail{display:none}}
+@media(max-width:1270px){.layout.profile-view{grid-template-columns:minmax(0,1fr);max-width:900px}.layout.profile-view>.right-rail{display:none}}
 @media(max-width:760px){.layout.profile-view{display:block;max-width:620px}.layout.profile-view>.left-rail{display:none}.layout.profile-view>.main-content{width:100%}}
