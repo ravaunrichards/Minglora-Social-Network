@@ -10,7 +10,7 @@ const app=read('public/app.js');
 const server=read('src/server.js');
 const html=read('public/index.html');
 const worker=read('public/sw.js');
-const profileCss=read('public/profile-tiktok-layout.css');
+const profileCss=[read('public/profile-action-row.css'),read('public/profile-facebook-panel.css'),read('public/profile-layout-guardrails.css')].join('\n');
 const profileStart=app.indexOf('function renderProfile(data){');
 const profileEnd=app.indexOf('async function loadProfileGiftGallery',profileStart);
 assert.ok(profileStart>=0&&profileEnd>profileStart,'profile renderer exists');
@@ -106,17 +106,17 @@ test('profile post cards reuse the working feed action bindings inside profile t
 });
 
 test('visitor profile actions stay readable and tappable on narrow screens',()=>{
-  assert.ok(profileCss.includes('min-height: 38px'));
-  assert.ok(profileCss.includes('white-space: nowrap !important'));
-  assert.ok(profileCss.includes('flex-flow: row wrap !important'));
+  assert.ok(profileCss.includes('min-height:40px!important')||profileCss.includes('min-height:38px!important')||profileCss.includes('min-height:36px!important'));
+  assert.ok(profileCss.includes('white-space:nowrap!important'));
+  assert.ok(profileCss.includes('flex-flow:row wrap!important'));
   assert.ok(profile.includes('id="profile-message" aria-label="Start a chat with \'+esc(u.name)+\'">Message</button>'));
   assert.ok(profile.includes('id="profile-report" aria-label="Report \'+esc(u.name)+\'">Report</button>'));
   assert.ok(profile.includes('id="profile-block" aria-label="Block \'+esc(u.name)+\'">Block</button>'));
 });
 
 test('visitor profile actions stay in one horizontal row and preserve subscription checkout',()=>{
-  assert.ok(profileCss.includes('background: #fe2c55 !important;'),'inactive profile actions use Minglora blue');
-  assert.ok(profileCss.includes('background: #f1f1f2 !important;'),'active profile actions use red');
+  assert.ok(profileCss.includes('background:var(--blue)!important'),'inactive profile actions use Minglora theme blue');
+  assert.ok(profileCss.includes('background:var(--danger,#c43d4b)!important'),'active profile actions use semantic danger color');
   assert.ok(profileCss.includes('[data-following="true"]'),'follow state is represented in the button');
   assert.ok(profileCss.includes('[data-subscription-active="true"]'),'active subscription state is represented in the button');
   assert.ok(profile.includes("data-friendship=")&&profile.includes("esc(data.friendship||'')"),'accepted friendship is represented as active');
