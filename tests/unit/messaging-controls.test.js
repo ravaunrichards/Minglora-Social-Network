@@ -17,6 +17,15 @@ test('Messenger popups stay right-pinned and expose phone, camera and microphone
   assert.ok(app.includes('data-message-minimize=')&&app.includes('data-message-close='));
 });
 
+test('Messenger realtime startup failures retain API polling and schedule a bounded reconnect',async()=>{
+  const app=await read('../../public/app.js');
+  const start=app.slice(app.indexOf('function startMessengerRealtime()'),app.indexOf('\nfunction messageWindowConversationId'));
+  assert.match(start,/try\{\s*socket=new WebSocket/);
+  assert.match(start,/syncMessageRefreshPolling\(\)/);
+  assert.match(start,/messengerRealtimeReconnectAttempts=Math\.min\(messengerRealtimeReconnectAttempts\+1,8\)/);
+  assert.match(start,/setTimeout\(\(\)=>\{messengerRealtimeReconnectTimer=null;startMessengerRealtime\(\);\}/);
+});
+
 test('Messages expose sender edit, per-user delete, unsend and inbox removal APIs', async()=>{
   const [app,server,store]=await Promise.all([
     read('../../public/app.js'),read('../../src/server.js'),read('../../src/store.js')
