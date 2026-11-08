@@ -85,3 +85,56 @@
   .topbar .top-actions .profile-menu-avatar-wrap,
   .topbar .top-actions .profile-menu img#top-avatar{flex-basis:36px!important;width:36px!important;height:36px!important;min-width:36px!important;min-height:36px!important}
 }
+
+
+/* Profile metrics: keep every count in one horizontal row.
+   Small screens scroll sideways instead of wrapping into a second line. */
+.minglora-profile-page .profile-header-card .profile-counts{
+  display:flex!important;
+  flex-flow:row nowrap!important;
+  grid-template-columns:none!important;
+  align-items:stretch!important;
+  justify-content:flex-start!important;
+  gap:0!important;
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+  overflow-x:auto!important;
+  overflow-y:hidden!important;
+  overscroll-behavior-x:contain;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:thin;
+}
+.minglora-profile-page .profile-header-card .profile-counts>*{
+  display:flex!important;
+  flex:1 1 0!important;
+  min-width:0!important;
+  max-width:none!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  white-space:nowrap!important;
+  border-right:1px solid var(--line)!important;
+  scroll-snap-align:center;
+}
+.minglora-profile-page .profile-header-card .profile-counts>*:last-child{
+  border-right:0!important;
+}
+.minglora-profile-page .profile-header-card .profile-counts strong,
+.minglora-profile-page .profile-header-card .profile-counts span{
+  white-space:nowrap!important;
+  overflow-wrap:normal!important;
+}
+@media(max-width:760px){
+  .minglora-profile-page .profile-header-card .profile-counts{
+    flex-wrap:nowrap!important;
+    scroll-snap-type:x proximity;
+    padding-bottom:3px!important;
+  }
+  .minglora-profile-page .profile-header-card .profile-counts>*{
+    flex:0 0 clamp(76px,18vw,104px)!important;
+    min-width:76px!important;
+    min-height:42px!important;
+    padding-inline:5px!important;
+  }
+}
