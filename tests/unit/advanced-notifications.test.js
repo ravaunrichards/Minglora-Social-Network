@@ -76,6 +76,14 @@ test('Web Push caches the active app shell and routes notifications to the curre
   assert.match(worker,/notificationId/);
 });
 
+test('Foreground notification polling keeps fresh items in scope and refreshes an open notification inbox',()=>{
+  const poll=app.slice(app.indexOf('async function pollBrowserNotifications()'),app.indexOf('\nfunction startBrowserNotificationPolling()'));
+  assert.match(poll,/let fresh=\[\]/);
+  assert.match(poll,/fresh=items\.filter\(item=>!browserNotificationSeen\.has\(item\.id\)\)/);
+  assert.match(poll,/if\(fresh\.length&&state\.view==='notifications'\)void renderNotifications\(\)/);
+  assert.doesNotMatch(poll,/\bconst fresh=/);
+});
+
 test('Notification changes are broadcast only to the authenticated recipient account realtime sockets',()=>{
   assert.match(server,/function publishNotificationEvent\(userId,type,notificationId=null\)/);
   assert.match(server,/messengerRealtime\?\.publish\(\[userId\],\{type,notificationId:notificationId\|\|null\}\)/);
