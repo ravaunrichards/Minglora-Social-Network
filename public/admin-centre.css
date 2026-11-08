@@ -1178,3 +1178,45 @@
   .admin-control-centre-note{padding:10px 11px}
   .admin-control-centre-page > section{padding:12px;border-radius:12px}
 }
+
+
+/* Clear navigation groups for the dedicated administration workspace. */
+.admin-centre-navigation{
+  position:static;
+  max-height:none;
+  overflow:visible;
+  align-self:start;
+  gap:13px;
+}
+.admin-centre-navigation::before{display:none}
+.admin-centre-nav-group{
+  display:grid;
+  align-content:start;
+  gap:4px;
+  min-width:0;
+}
+.admin-centre-nav-heading{
+  padding:5px 9px 6px;
+  color:var(--muted,#687487);
+  font-size:9px;
+  font-weight:900;
+  letter-spacing:.115em;
+  line-height:1.3;
+  text-transform:uppercase;
+}
+.admin-centre-nav-group a{width:100%;min-width:0;white-space:normal}
+@media(max-width:900px){
+  .admin-centre-navigation{
+    position:static;
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    align-items:start;
+    gap:12px;
+    overflow:visible;
+  }
+  .admin-centre-nav-group{min-width:0}
+  .admin-centre-nav-group a{width:100%;white-space:normal}
+}
+@media(max-width:560px){
+  .admin-centre-navigation{grid-template-columns:minmax(0,1fr);gap:9px}
+}
