@@ -126,7 +126,7 @@ test('new Share thoughts and Messenger controls use the dimensional SVG sprite',
   assert.ok(serviceWorker.includes("CACHE_NAME='minglora-shell-v237-facebook-thought-cloud-1'"));
   assert.ok(app.includes('ml-share-thought-cloud-bridge'), 'the old share-arrow prompt is replaced by the cloud connector');
   assert.ok(serviceWorker.includes('share-thoughts.js?v=20261108-facebook-share-thoughts-1'));
-  assert.ok(serviceWorker.includes('share-thoughts.css?v=20261108-facebook-share-thoughts-1'));
+  assert.ok(serviceWorker.includes('share-thoughts.css?v=20261108-facebook-thought-cloud-1'));
   assert.ok(serviceWorker.includes('navigation-3d.svg?v=20261102-navigation-3d-2'));
   assert.ok(serviceWorker.includes('mobile-layout.css?v=20261108-mobile-overlay-panels-1'));
 });
