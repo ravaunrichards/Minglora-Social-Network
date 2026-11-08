@@ -21,7 +21,7 @@ test('Minglora Video Centre discovers only real video attachments from the authe
   assert.match(app, /data-reel-video controls playsinline loop muted preload="metadata"/);
   assert.match(app, /data-react=/);
   assert.match(app, /data-comment-form=/);
-  assert.match(app, /state\.videoFeed=\(result\.posts\|\|\[\]\)\.filter\(post=>\(post\.media\|\|\[\]\)\.some\(media=>media\.mediaType==='video'\)\)/);
+  assert.match(app, /state\.videoFeed=\(result\.posts\|\|\[\]\)\.filter\(post=>\(post\.media\|\|\[\]\)\.some\(media=>media\.mediaType==='video'&&media\.url\)\)/);
   assert.match(app, /api\('\/feed\?scope='/);
   assert.match(app, /view:'videos'/);
   assert.match(app, /state\.view==='videos'/);
