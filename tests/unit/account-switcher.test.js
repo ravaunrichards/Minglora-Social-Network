@@ -6,6 +6,7 @@ const html=fs.readFileSync(new URL('../../public/index.html',import.meta.url),'u
 const app=fs.readFileSync(new URL('../../public/app.js',import.meta.url),'utf8');
 const server=fs.readFileSync(new URL('../../src/server.js',import.meta.url),'utf8');
 const css=fs.readFileSync(new URL('../../public/styles.css',import.meta.url),'utf8');
+const topbarCss=fs.readFileSync(new URL('../../public/profile-facebook-account-menu.css',import.meta.url),'utf8');
 
 test('account switching is nested inside the existing profile picture dropdown',()=>{
   assert.equal((html.match(/id="profile-menu"/g)||[]).length,1,'keep the existing Creator/profile trigger instead of adding a second header button');
@@ -63,4 +64,22 @@ test('Creator account switcher escapes header stacking and stays above every app
   assert.match(app,/!panel\?\.contains\(event\.target\)/);
   assert.match(app,/anchor\.appendChild\(panel\)/);
   assert.match(css,/\.profile-account-menu\.is-top-layer\{[\s\S]*?z-index:2147483647!important/);
+});
+
+test('top-right profile trigger is avatar-only with the Facebook-style lower-right V control',()=>{
+  assert.doesNotMatch(html,/id="top-name"/,'do not render the account name beside the top-right picture');
+  assert.match(html,/id="profile-menu"[^>]*aria-label="Open profile and account menu"/);
+  assert.match(html,/class="profile-menu-avatar-wrap"/);
+  assert.match(html,/class="profile-menu-chevron"[^>]*aria-hidden="true"/);
+  assert.match(topbarCss,/profile-menu img#top-avatar[\s\S]*?width:40px!important/);
+  assert.match(topbarCss,/profile-menu-chevron[\s\S]*?position:absolute!important;right:-2px!important;bottom:-1px!important/);
+});
+test('profile dropdown opens the current profile, saved profiles, add-profile and settings actions',()=>{
+  assert.match(app,/data-account-view-profile/);
+  assert.match(app,/data-account-switch=/);
+  assert.match(app,/Switch profiles/);
+  assert.match(app,/data-account-add/);
+  assert.match(app,/data-account-open-settings/);
+  assert.match(app,/window\.MingloraSettings\?\.open/);
+  assert.match(app,/data-account-logout-all/);
 });

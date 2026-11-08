@@ -411,7 +411,7 @@ function showSubscriptionReturnNotice(){
 }
 window.addEventListener('DOMContentLoaded',showSubscriptionReturnNotice,{once:true});
 function showAuth(){ stopMessengerRealtime();$('#app').classList.add('hidden');$('#auth-screen').classList.remove('hidden'); }
-function showApp(){ $('#auth-screen').classList.add('hidden');$('#app').classList.remove('hidden');$('#top-avatar').src=avatar(state.user);$('#rail-avatar').src=avatar(state.user);$('#top-name').textContent=state.user.name.split(' ')[0];$('#rail-name').textContent=state.user.name;window.dispatchEvent(new Event('minglora:session-ready'));startMessengerRealtime();startBrowserNotificationPolling();startIncomingCallPolling();prepareMingloraServiceWorker();handleMingloraPushNavigation(); }
+function showApp(){ $('#auth-screen').classList.add('hidden');$('#app').classList.remove('hidden');$('#top-avatar').src=avatar(state.user);$('#rail-avatar').src=avatar(state.user);$('#rail-name').textContent=state.user.name;window.dispatchEvent(new Event('minglora:session-ready'));startMessengerRealtime();startBrowserNotificationPolling();startIncomingCallPolling();prepareMingloraServiceWorker();handleMingloraPushNavigation(); }
 function primeCallAudio(){try{const C=window.AudioContext||window.webkitAudioContext;if(!C)return;if(!callToneContext)callToneContext=new C();if(callToneContext.state==='suspended')void callToneContext.resume();}catch{}}
 document.addEventListener('pointerdown',primeCallAudio,{capture:true,once:true});
 function base64UrlToBytes(value){
@@ -9940,24 +9940,42 @@ async function renderAccountSwitcherMenu(){
   try{
     const result=await api('/auth/accounts');
     const accounts=Array.isArray(result.accounts)?result.accounts:[];
-    const rows=accounts.map(entry=>{
-      const member=entry.user||{},active=Boolean(entry.active);
+    const activeAccount=accounts.find(entry=>entry.active)?.user||state.user||{};
+    const savedAccounts=accounts.filter(entry=>!entry.active);
+    const currentName=activeAccount.name||activeAccount.username||'Your Minglora profile';
+    const currentUsername=activeAccount.username?'@'+activeAccount.username:'Current profile';
+    const rows=savedAccounts.map(entry=>{
+      const member=entry.user||{};
       const label=member.name||member.username||'Minglora member';
       return "<div class='account-switcher-row'>"+
-        "<button type='button' class='account-switcher-account' data-account-switch='"+esc(entry.sessionId||'')+"' "+(active?"aria-current='true'":"")+">"+
+        "<button type='button' class='account-switcher-account' data-account-switch='"+esc(entry.sessionId||'')+"'>"+
           "<img src='"+esc(avatar(member))+"' alt='' loading='lazy'>"+
-          "<span class='account-switcher-account-copy'><strong>"+esc(label)+"</strong><small>@"+esc(member.username||'member')+" · "+(active?'Current account':'Saved on this device')+"</small></span>"+
-          (active?"<span class='account-switcher-active'>Active</span>":"<span class='account-switcher-arrow' aria-hidden='true'>↗</span>")+
+          "<span class='account-switcher-account-copy'><strong>"+esc(label)+"</strong><small>@"+esc(member.username||'member')+" · Saved on this device</small></span>"+
+          "<span class='account-switcher-arrow' aria-hidden='true'>›</span>"+
         "</button>"+
-        (!active?"<button type='button' class='account-switcher-remove' data-account-remove='"+esc(entry.sessionId||'')+"' aria-label='Remove "+esc(label)+" from this device' title='Remove account from this device'>×</button>":"")+
+        "<button type='button' class='account-switcher-remove' data-account-remove='"+esc(entry.sessionId||'')+"' aria-label='Remove "+esc(label)+" from this device' title='Remove account from this device'>×</button>"+
       "</div>";
     }).join('');
     panel.innerHTML=
-      "<div class='account-switcher-head'><div><strong>Switch account</strong><small>Tap a saved account to switch instantly—no login needed</small></div><button type='button' class='account-switcher-close' data-account-menu-close aria-label='Close account menu'>×</button></div>"+
-      "<div class='account-switcher-list'>"+(rows||"<p class='account-switcher-empty'>No saved accounts were found.</p>")+"</div>"+
-      "<button type='button' class='account-switcher-add' data-account-add><span aria-hidden='true'>＋</span><span><strong>Add an account</strong><small>Log in or create another Minglora account</small></span></button>"+
-      "<div class='account-switcher-foot'><button type='button' class='account-switcher-logout-all' data-account-logout-all>Log out of all accounts on this device</button><small>Each account keeps its own profile, messages and privacy settings.</small></div>";
+      "<div class='account-switcher-current-card'><button type='button' class='account-switcher-current' data-account-view-profile>"+
+        "<img src='"+esc(avatar(activeAccount))+"' alt='' loading='lazy'>"+
+        "<span class='account-switcher-current-copy'><strong>"+esc(currentName)+"</strong><small>"+esc(currentUsername)+" · View your profile</small></span>"+
+        "<span class='account-switcher-arrow' aria-hidden='true'>›</span>"+
+      "</button></div>"+
+      "<div class='account-switcher-head'><div><strong>Switch profiles</strong><small>Choose another profile saved on this device</small></div><button type='button' class='account-switcher-close' data-account-menu-close aria-label='Close account menu'>×</button></div>"+
+      "<div class='account-switcher-list'>"+(rows||"<p class='account-switcher-empty'>No other profiles are saved on this device yet.</p>")+"</div>"+
+      "<button type='button' class='account-switcher-add' data-account-add><span aria-hidden='true'>＋</span><span><strong>Add another profile</strong><small>Log in or create another Minglora account</small></span></button>"+
+      "<div class='account-switcher-foot'><button type='button' class='account-switcher-settings' data-account-open-settings><svg viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#settings'></use></svg><span>Settings &amp; privacy</span><span aria-hidden='true'>›</span></button><button type='button' class='account-switcher-logout-all' data-account-logout-all>Log out of all accounts on this device</button><small>Each account keeps its own profile, messages and privacy settings.</small></div>";
     panel.querySelector('[data-account-menu-close]')?.addEventListener('click',closeAccountSwitcherMenu);
+    panel.querySelector('[data-account-view-profile]')?.addEventListener('click',()=>{
+      closeAccountSwitcherMenu();
+      void window.MingloraActivateView?.('profile');
+    });
+    panel.querySelector('[data-account-open-settings]')?.addEventListener('click',()=>{
+      closeAccountSwitcherMenu();
+      if(window.MingloraSettings?.open)window.MingloraSettings.open();
+      else toast('Settings & privacy is not available right now.');
+    });
     panel.querySelector('[data-account-add]')?.addEventListener('click',()=>{closeAccountSwitcherMenu();openAccountAccessDialog('login');});
     panel.querySelectorAll('[data-account-switch]').forEach(button=>button.addEventListener('click',async()=>{
       const sessionId=button.dataset.accountSwitch;
