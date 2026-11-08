@@ -90,6 +90,7 @@ async function restoreBrowserNavigation(event){
     state.savedType=String(saved.savedType||'all');
     state.savedSort=String(saved.savedSort||'saved-newest');
     state.savedSearch=String(saved.savedSearch||'');
+    syncPageLayout();
     syncNavigationActive();
     syncMessageRefreshPolling();
     await renderView();
