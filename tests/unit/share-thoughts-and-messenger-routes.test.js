@@ -14,6 +14,11 @@ test('Share thoughts uses a Facebook-style composer and persists audience and po
   ]);
 
   assert.ok(app.includes('Share your thoughts,'));
+  assert.ok(app.includes('ml-share-thought-cloud-bridge'));
+  assert.ok(app.includes('ml-share-thought-prompt'));
+  assert.ok(app.includes("thoughtAvatarMarkup(state.user,'avatar',false,false)"));
+  assert.ok(css.includes('.ml-share-thought-cloud{'));
+  assert.ok(css.includes('.ml-share-thought-prompt{'));
   assert.ok(app.includes('<span>Share thoughts</span>'));
   assert.ok(composer.includes('What’s on your mind?'));
   assert.ok(composer.includes('data-share-open="media"'));
@@ -118,7 +123,7 @@ test('new Share thoughts and Messenger controls use the dimensional SVG sprite',
     assert.match(sprite, new RegExp('<symbol id="' + id + '" viewBox="0 0 64 64">'));
     assert.ok(app.includes("messenger3dIcon('" + id + "'") || app.includes("'" + id + "'"), id + ' is used by the client');
   }
-  assert.ok(serviceWorker.includes("CACHE_NAME='minglora-shell-v235-self-updating-1'"));
+  assert.ok(serviceWorker.includes("CACHE_NAME='minglora-shell-v237-facebook-thought-cloud-1'"));
   assert.ok(serviceWorker.includes('share-thoughts.js?v=20261108-facebook-share-thoughts-1'));
   assert.ok(serviceWorker.includes('share-thoughts.css?v=20261108-facebook-share-thoughts-1'));
   assert.ok(serviceWorker.includes('navigation-3d.svg?v=20261102-navigation-3d-2'));
