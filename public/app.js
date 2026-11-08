@@ -690,7 +690,19 @@ function postCard(post,options={}){
     ${renderPostSoundtrack(post)}
     <div class="post-stats"><span>👍 ${post.reactionCount||0} ${post.reactionCount===1?'reaction':'reactions'}</span><span>${comments.length} comments</span></div>
     <div class="post-actions">
-      <button class="${post.myReaction?'liked':''}" data-react="${esc(post.id)}">${post.myReaction==='love'?'❤️':post.myReaction==='haha'?'😆':post.myReaction==='care'?'🤗':post.myReaction?'👍':'♡'} &nbsp; ${post.myReaction?esc(post.myReaction[0].toUpperCase()+post.myReaction.slice(1)):'Like'}</button>
+      <div class="post-reaction-control">
+        <button class="${post.myReaction?'liked':''}" data-react="${esc(post.id)}" data-current-reaction="${esc(post.myReaction||'like')}" aria-label="${post.myReaction?'Remove your '+post.myReaction+' reaction':'Like this post'}">${post.myReaction==='love'?'❤️':post.myReaction==='haha'?'😆':post.myReaction==='care'?'🤗':post.myReaction==='wow'?'😮':post.myReaction==='sad'?'😢':post.myReaction==='angry'?'😡':post.myReaction?'👍':'♡'} &nbsp; ${post.myReaction?esc(post.myReaction[0].toUpperCase()+post.myReaction.slice(1)):'Like'}</button>
+        <button type="button" class="post-reaction-picker-toggle" data-reaction-picker="${esc(post.id)}" aria-label="Choose a reaction" aria-expanded="false">▾</button>
+        <div class="post-reaction-picker" data-reaction-menu="${esc(post.id)}" role="group" aria-label="Choose your reaction" hidden>
+          <button type="button" data-reaction-choice="like" aria-label="Like" title="Like">👍</button>
+          <button type="button" data-reaction-choice="love" aria-label="Love" title="Love">❤️</button>
+          <button type="button" data-reaction-choice="care" aria-label="Care" title="Care">🤗</button>
+          <button type="button" data-reaction-choice="haha" aria-label="Haha" title="Haha">😆</button>
+          <button type="button" data-reaction-choice="wow" aria-label="Wow" title="Wow">😮</button>
+          <button type="button" data-reaction-choice="sad" aria-label="Sad" title="Sad">😢</button>
+          <button type="button" data-reaction-choice="angry" aria-label="Angry" title="Angry">😡</button>
+        </div>
+      </div>
       <button data-focus-comment="${esc(post.id)}">▢ &nbsp; Comment</button>
       ${watchLaterControl}
       <button data-toggle-save="${esc(post.id)}" data-saved="${post.isSaved?'true':'false'}">${post.isSaved?'▣ Saved':'▢ Save'}</button>
@@ -729,9 +741,27 @@ function bindFeed(root=document){
   root.querySelectorAll('[data-open-story]').forEach(el=>el.addEventListener('click',()=>openStory(el.dataset.openStory)));
   bindProfileLinks(root);
   root.querySelectorAll('[data-react]').forEach(el=>el.addEventListener('click',async()=>{
-    try{await api(`/posts/${el.dataset.react}/reactions`,{method:'POST',body:JSON.stringify({reaction:'like'})});await refreshVisiblePosts();}
-    catch(e){toast(e.message);}
+    el.disabled=true;
+    try{await api(`/posts/${el.dataset.react}/reactions`,{method:'POST',body:JSON.stringify({reaction:el.dataset.currentReaction||'like'})});await refreshVisiblePosts();}
+    catch(e){toast(e.message);el.disabled=false;}
   }));
+  root.querySelectorAll('[data-reaction-picker]').forEach(toggle=>toggle.addEventListener('click',event=>{
+    event.stopPropagation();
+    const menu=root.querySelector(`[data-reaction-menu="${toggle.dataset.reactionPicker}"]`);
+    if(!menu)return;
+    const opening=menu.hidden;
+    root.querySelectorAll('[data-reaction-menu]').forEach(item=>{item.hidden=true;});
+    root.querySelectorAll('[data-reaction-picker]').forEach(item=>item.setAttribute('aria-expanded','false'));
+    menu.hidden=!opening;
+    toggle.setAttribute('aria-expanded',String(opening));
+  }));
+  root.querySelectorAll('[data-reaction-menu]').forEach(menu=>menu.querySelectorAll('[data-reaction-choice]').forEach(choice=>choice.addEventListener('click',async()=>{
+    const postId=menu.dataset.reactionMenu;
+    const reaction=choice.dataset.reactionChoice;
+    choice.disabled=true;
+    try{await api(`/posts/${postId}/reactions`,{method:'POST',body:JSON.stringify({reaction})});await refreshVisiblePosts();}
+    catch(error){toast(error.message);choice.disabled=false;}
+  })));
   root.querySelectorAll('[data-comment-form]').forEach(form=>form.addEventListener('submit',async e=>{
     e.preventDefault();const input=form.elements.text;
     try{await api(`/posts/${form.dataset.commentForm}/comments`,{method:'POST',body:JSON.stringify({text:input.value})});await refreshVisiblePosts();}
