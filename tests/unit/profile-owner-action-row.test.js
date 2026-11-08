@@ -69,5 +69,5 @@ test('updated profile assets are loaded and precached by a refreshed shell cache
     assert.ok(asset,'index.html includes the current profile asset');
     assert.ok(worker.includes("'"+asset+"'"),'service worker precaches '+asset);
   }
-  assert.match(worker,/CACHE_NAME='minglora-shell-v\\d+-self-updating-1'/);
+  assert.match(worker,/CACHE_NAME='minglora-shell-v\d+-self-updating-1'/);
 });
