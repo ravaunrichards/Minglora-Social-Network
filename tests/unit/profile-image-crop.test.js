@@ -89,44 +89,36 @@ test('crop preview and saved output use the visible inner frame rather than its 
   assert.ok(Math.abs(exportOffset/exportScale-previewOffset/previewScale)<1e-9);
 });
 
-test('public profile page uses the Facebook-style wide cover and portrait crop presentation',()=>{
+test('profile cover and circular portrait use separate image sources and independent crop roles',()=>{
   const profileCss=fs.readFileSync(path.join(root,'public/profile-action-row.css'),'utf8');
   const facebookCss=fs.readFileSync(path.join(root,'public/profile-facebook-panel.css'),'utf8');
-  const alignment=fs.readFileSync(path.join(root,'public/profile-alignment.css'),'utf8');
-  assert.ok(app.includes('class="profile-cover"'), 'profile cover container must exist');
+  const separatedCss=fs.readFileSync(path.join(root,'public/profile-independent-avatar-header.css'),'utf8');
+  assert.ok(app.includes('class="profile-cover"'),'profile cover container must exist');
   assert.ok(app.includes('class="profile-cover-image" data-view-image='));
-  assert.match(profileCss,/\.minglora-profile-page \.profile-header-card \.profile-cover\{[^}]*aspect-ratio:2\.7 \/ 1/);
-  assert.match(profileCss,/\.minglora-profile-page \.profile-header-card \.profile-cover-image\{[^}]*object-fit:cover/);
-  assert.match(profileCss,/\.minglora-profile-page \.profile-header-card \.profile-avatar-edit-wrap>\.avatar\{[^}]*object-fit:cover/);
-  assert.match(facebookCss,/\.minglora-profile-page \.profile-header-card \.profile-cover\{[\s\S]*?aspect-ratio:851 \/ 315!important[\s\S]*?max-height:315px!important/);
-  assert.match(facebookCss,/\.minglora-profile-page \.profile-header-card \.profile-avatar-edit-wrap\{[\s\S]*?margin-top:calc\(var\(--minglora-profile-avatar-size\) \/ -2\)!important/);
-  assert.match(facebookCss,/\.minglora-profile-page \.profile-header-card \.profile-avatar-edit-wrap>\.avatar\{[\s\S]*?border-radius:50%!important/);
-  assert.match(facebookCss,/\.minglora-profile-page \.profile-header-card \.profile-avatar-edit-wrap>\.avatar\{[\s\S]*?object-fit:cover!important/);
-  assert.match(facebookCss,/@media\(max-width:760px\)[\s\S]*?--minglora-profile-avatar-size:clamp\(88px,25vw,112px\)/);
-  assert.match(facebookCss,/@media\(max-width:760px\)[\s\S]*?aspect-ratio:851 \/ 315!important[\s\S]*?max-height:315px!important/);
-  assert.doesNotMatch(facebookCss,/aspect-ratio:2\.5 \/ 1/);
+  assert.ok(app.includes('esc(u.cover)'),'cover image must come from the independent cover field');
+  assert.ok(app.includes('avatar(u)'),'portrait must come from the independent avatar field');
   assert.match(profileCss,/\.profile-crop-preview--cover\{aspect-ratio:2\.7 \/ 1!important/);
-  assert.match(facebookCss,/--minglora-profile-avatar-size:168px/);
-  assert.match(facebookCss,/max-width:851px!important/);
-  assert.match(facebookCss,/aspect-ratio:851 \/ 315!important/);
-  assert.match(facebookCss,/\.profile-avatar-edit-wrap>\.avatar\{[\s\S]*?width:168px!important;[\s\S]*?height:168px!important/);
-  assert.match(facebookCss,/@media\(max-width:760px\)[\s\S]*?width:96px!important;[\s\S]*?height:96px!important/);
-  assert.match(facebookCss,/@media\(max-width:390px\)[\s\S]*?width:88px!important;[\s\S]*?height:88px!important/);
-  assert.match(facebookCss,/\.profile-crop-preview--cover\{[\s\S]*?aspect-ratio:851 \/ 315!important/);
-  assert.match(alignment,/--minglora-profile-avatar-size:168px/);
-  assert.ok(css.includes('.person-card--immersive .person-cover{'));
-  assert.ok(css.includes('aspect-ratio:3/1;padding:0!important'));
-  assert.ok(css.includes('.person-cover-image{object-fit:contain!important'));
+  assert.match(facebookCss,/\.minglora-profile-page \.profile-header-card \.profile-cover\{[\s\S]*?aspect-ratio:851 \/ 315!important/);
+  assert.match(facebookCss,/\.minglora-profile-page \.profile-header-card \.profile-avatar-edit-wrap>\.avatar\{[\s\S]*?border-radius:50%!important/);
+  assert.match(separatedCss,/\.minglora-profile-page \.profile-header-card \.profile-cover\{[\s\S]*?margin:0 0 18px!important/);
+  assert.match(separatedCss,/\.minglora-profile-page \.profile-header-card \.profile-avatar-edit-wrap\{[\s\S]*?margin:0!important/);
+  assert.match(separatedCss,/\.minglora-profile-page \.profile-header-card \.profile-avatar-edit-wrap>\.avatar\{[\s\S]*?border-radius:50%!important[\s\S]*?object-fit:cover!important/);
+  assert.doesNotMatch(separatedCss,/margin(?:-top)?\s*:\s*-\d|top\s*:\s*-\d/,'active independent-avatar rules must not pull the portrait over the cover');
 });
 
-test('Facebook profile shell keeps the whole page, portrait overlap and identity row aligned',()=>{
-  const facebookCss=fs.readFileSync(path.join(root,'public/profile-facebook-panel.css'),'utf8');
-  assert.match(facebookCss,/\.minglora-profile-page\{[\s\S]*?max-width:851px!important[\s\S]*?margin-inline:auto!important/);
-  assert.match(facebookCss,/\.minglora-profile-page \.profile-header-card \.profile-avatar-edit-wrap\{[\s\S]*?position:absolute!important[\s\S]*?left:24px!important[\s\S]*?top:-84px!important/);
-  assert.match(facebookCss,/\.minglora-profile-page \.profile-header-card \.profile-avatar-edit-wrap>\.avatar\{[\s\S]*?width:168px!important[\s\S]*?height:168px!important[\s\S]*?object-fit:cover!important/);
-  assert.match(facebookCss,/\.profile-header-card--owner \.profile-owner-actions\{[\s\S]*?grid-column:2!important[\s\S]*?grid-row:1!important/);
-  assert.match(facebookCss,/\.profile-header-card \.profile-info-main\{[\s\S]*?grid-column:1!important[\s\S]*?grid-row:1!important/);
-  assert.match(facebookCss,/@media\(max-width:760px\)[\s\S]*?left:13px!important[\s\S]*?top:-48px!important[\s\S]*?width:96px!important/);
-  assert.match(facebookCss,/@media\(max-width:390px\)[\s\S]*?left:10px!important[\s\S]*?top:-44px!important[\s\S]*?width:88px!important/);
-  assert.match(facebookCss,/\.minglora-profile-page>#profile-tab-panel\{[\s\S]*?max-width:851px!important/);
+test('profile thought cloud occupies the portrait column above the photo without covering the cover, portrait or name',()=>{
+  const separatedCss=fs.readFileSync(path.join(root,'public/profile-independent-avatar-header.css'),'utf8');
+  const html=fs.readFileSync(path.join(root,'public/index.html'),'utf8');
+  assert.match(app,/\(profileThoughtMarkup\?'<div class="profile-thought-slot">'/);
+  assert.match(app,/class="profile-info'\+\(isAdminProfile\?' profile-info--admin':' '\)/);
+  assert.match(separatedCss,/\.profile-header-card \.profile-thought-slot\{[\s\S]*?grid-column:1!important[\s\S]*?grid-row:1!important/);
+  assert.match(separatedCss,/\.profile-header-card \.profile-thought-slot\+\.profile-avatar-edit-wrap\{[\s\S]*?grid-column:1!important[\s\S]*?grid-row:2!important/);
+  assert.match(separatedCss,/\.profile-header-card \.profile-thought-slot~\.profile-info-main\{[\s\S]*?grid-column:2!important[\s\S]*?grid-row:2!important/);
+  assert.match(separatedCss,/\.profile-thought-slot \.ml-profile-thought-bubble,[\s\S]*?max-height:none!important[\s\S]*?overflow:visible!important/);
+  assert.match(separatedCss,/@media \(max-width:760px\)[\s\S]*?aspect-ratio:2\.4 \/ 1!important/);
+  assert.doesNotMatch(separatedCss,/margin(?:-top)?\s*:\s*-\d|top\s*:\s*-\d/);
+  const legacy=html.indexOf('profile-facebook-avatar-anchor.css');
+  const independent=html.indexOf('profile-independent-avatar-header.css');
+  assert.ok(legacy>=0&&independent>legacy,'the independent layout must load after all legacy avatar positioning styles');
 });
+
