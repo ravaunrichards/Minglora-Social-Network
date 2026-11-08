@@ -9276,9 +9276,6 @@ function renderForYouStreamContent(stream){
   state.videoFeed.forEach((post,index)=>{
     if(liveIndex<lives.length&&index%3===0)entries.push(forYouLiveCard(lives[liveIndex],index));
     entries.push(forYouCard(post,index));
-    if(index===state.videoFeed.length-1){
-      while(liveIndex<lives.length)entries.push(forYouLiveCard(lives[liveIndex++],index+liveIndex));
-    }
   });
   while(liveIndex<lives.length)entries.push(forYouLiveCard(lives[liveIndex],state.videoFeed.length+liveIndex++));
   const cards=entries.join('');
