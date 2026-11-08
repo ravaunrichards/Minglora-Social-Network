@@ -1,5 +1,6 @@
 /* Facebook-style Minglora profile header and People You May Know drop-down. */
 .minglora-profile-page .profile-header-card{
+  --minglora-profile-avatar-size:clamp(112px,15vw,176px);
   overflow:visible!important;
   border-radius:14px!important;
 }
@@ -49,7 +50,7 @@
   width:100%!important;
   height:auto!important;
   min-width:0!important;
-  margin-top:clamp(-88px,-7.5vw,-58px)!important;
+  margin-top:calc(var(--minglora-profile-avatar-size) / -2)!important;
   padding:0!important;
   gap:8px!important;
   overflow:visible!important;
@@ -356,7 +357,8 @@
   grid-row:3!important;
 }
 @media(max-width:760px){
-  .minglora-profile-page .profile-header-card .profile-cover{aspect-ratio:2.5 / 1!important}
+  .minglora-profile-page .profile-header-card{--minglora-profile-avatar-size:clamp(88px,25vw,112px);}
+  .minglora-profile-page .profile-header-card .profile-cover{aspect-ratio:2.7 / 1!important}
   .minglora-profile-page .profile-header-card .profile-info,
   .minglora-profile-page .profile-header-card--owner .profile-info,
   .minglora-profile-page .profile-header-card--viewer .profile-info{
@@ -368,7 +370,7 @@
   .minglora-profile-page .profile-header-card .profile-avatar-edit-wrap{
     grid-column:1!important;
     grid-row:1!important;
-    margin-top:clamp(-56px,-12vw,-42px)!important;
+    margin-top:calc(var(--minglora-profile-avatar-size) / -2)!important;
   }
   .minglora-profile-page .profile-header-card .profile-avatar-edit-wrap>.avatar{
     max-width:112px!important;
