@@ -29,7 +29,7 @@ test('Minglora Video Centre discovers only real video attachments from the authe
   assert.match(app, /function findVisiblePost\(id\)[\s\S]*state\.videoFeed/);
   assert.match(app, /video-create-button/);
   assert.match(app, /data-video-search|video-search/);
-  assert.match(html, /video-centre-foundation-1/);
+  assert.match(html, /reels-viewer-1/);
   assert.match(styles, /\.video-centre-feed/);
   assert.match(styles, /\.video-centre-reels/);
   assert.match(styles, /scroll-snap-type:y mandatory/);
