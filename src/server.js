@@ -6876,7 +6876,7 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
         const empty={users:[],posts:[],groups:[],pages:[]};
         if(!q)return json(res,200,empty);
         const users=db.users
-          .filter(member=>member.id!==user.id&&!blockedBetween(user.id,member.id)&&canViewProfile(user.id,member)&&(`${member.name||''} ${member.username||''}`).toLowerCase().includes(q))
+          .filter(member=>!blockedBetween(user.id,member.id)&&canViewProfile(user.id,member)&&(`${member.name||''} ${member.username||''}`).toLowerCase().includes(q))
           .sort((first,second)=>{
             const score=member=>Number(String(member.username||'').toLowerCase()===q)*4+
               Number(String(member.name||'').toLowerCase()===q)*3+
