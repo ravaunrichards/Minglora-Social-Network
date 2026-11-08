@@ -347,6 +347,11 @@ function validateSettingsPatch(input,user){
 const json = (res, status, body, headers={}) => { res.writeHead(status, { 'Content-Type':'application/json; charset=utf-8', 'Cache-Control':'no-store', ...SECURITY_HEADERS, ...headers }); res.end(JSON.stringify(body)); };
 const cookie = (req, name) => (req.headers.cookie || '').split(';').map(s=>s.trim()).find(s=>s.startsWith(name+'='))?.slice(name.length+1);
 const sign = value => crypto.createHmac('sha256', SESSION_SECRET).update(value).digest('hex');
+// Keep accounts signed in across app/browser restarts. Renew the persistent cookie
+// while the account is active; 400 days stays within common browser cookie limits.
+const APP_SESSION_TTL_MS = 400 * 24 * 60 * 60 * 1000;
+const APP_SESSION_COOKIE_MAX_AGE_SECONDS = 400 * 24 * 60 * 60;
+const APP_SESSION_ACTIVITY_PERSIST_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const sessionCipherKey=crypto.createHash('sha256').update(SESSION_SECRET+'|minglora-session-vault-v1').digest();
 function sealSessionAuth(value){
   if(!value?.access_token)return null;
@@ -415,10 +420,10 @@ function isSameOriginApiWrite(req) {
   return isAllowedAppOrigin(suppliedOrigin, req);
 }
 function appSessionCookie(sid) {
-  return `sid=${encodeURIComponent(sid+'.'+sign(sid))}; HttpOnly; SameSite=Lax; Path=/; Max-Age=604800${process.env.NODE_ENV==='production'?'; Secure':''}`;
+  return `sid=${encodeURIComponent(sid+'.'+sign(sid))}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${APP_SESSION_COOKIE_MAX_AGE_SECONDS}${process.env.NODE_ENV==='production'?'; Secure':''}`;
 }
 function appDeviceSessionCookie(deviceId){
-  return `mid=${encodeURIComponent(deviceId+'.'+sign('device:'+deviceId))}; HttpOnly; SameSite=Lax; Path=/; Max-Age=31536000${process.env.NODE_ENV==='production'?'; Secure':''}`;
+  return `mid=${encodeURIComponent(deviceId+'.'+sign('device:'+deviceId))}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${APP_SESSION_COOKIE_MAX_AGE_SECONDS}${process.env.NODE_ENV==='production'?'; Secure':''}`;
 }
 function clearDeviceSessionCookie(){
   return `mid=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0${process.env.NODE_ENV==='production'?'; Secure':''}`;
@@ -433,7 +438,7 @@ async function createAppSession(user,authTokens=null,req=null) {
   // Keep one saved session per account on this browser. Sessions belonging to
   // the same account on another device are intentionally left untouched.
   db.sessions=db.sessions.filter(session=>!(session.deviceId===deviceId&&session.userId===user.id));
-  db.sessions.push({id:sid,userId:user.id,deviceId,createdAt,lastSeenAt:createdAt,expiresAt:new Date(Date.now()+7*86400000).toISOString(),authSealed:sealSessionAuth(authTokens),authExpiresAt:authTokens?.access_token?new Date(getAuthTokenExpiresAt(authTokens)).toISOString():null,mfaVerified:!authTokens?.access_token||tokenAal(authTokens.access_token)==='aal2',userAgent:String(req?.headers?.['user-agent']||'Unknown device').slice(0,240)});
+  db.sessions.push({id:sid,userId:user.id,deviceId,createdAt,lastSeenAt:createdAt,expiresAt:new Date(Date.now()+APP_SESSION_TTL_MS).toISOString(),authSealed:sealSessionAuth(authTokens),authExpiresAt:authTokens?.access_token?new Date(getAuthTokenExpiresAt(authTokens)).toISOString():null,mfaVerified:!authTokens?.access_token||tokenAal(authTokens.access_token)==='aal2',userAgent:String(req?.headers?.['user-agent']||'Unknown device').slice(0,240)});
   await saveStore();
   return [appSessionCookie(sid),appDeviceSessionCookie(deviceId)];
 }
@@ -1379,6 +1384,21 @@ async function route(req, res) {
   if (p.startsWith('/api/')) {
     let input; try { if (!['GET','HEAD'].includes(method)) input=await body(req,1_000_000); } catch(e) { return json(res,e.status||400,{error:e.message}); }
     const user = sessionUser(req);
+    // Roll the signed-in device session forward during normal API activity. The
+    // cookie and persisted session expire together; persist activity at most daily.
+    const activeSession = user ? sessionFromRequest(req) : null;
+    if (activeSession) {
+      const activityTime = Date.now();
+      const previousActivity = Date.parse(activeSession.lastSeenAt || activeSession.createdAt || '');
+      activeSession.lastSeenAt = now();
+      activeSession.expiresAt = new Date(activityTime + APP_SESSION_TTL_MS).toISOString();
+      const refreshedCookies = [appSessionCookie(activeSession.id)];
+      if (activeSession.deviceId) refreshedCookies.push(appDeviceSessionCookie(activeSession.deviceId));
+      res.setHeader('Set-Cookie', refreshedCookies);
+      if (!Number.isFinite(previousActivity) || activityTime - previousActivity >= APP_SESSION_ACTIVITY_PERSIST_INTERVAL_MS) {
+        await saveStore();
+      }
+    }
     if(method==='GET'&&p==='/api/auth/accounts'){
       const activeSession=sessionFromRequest(req);
       if(!user||!activeSession)return json(res,401,{error:'Sign in to manage your saved Minglora accounts.'});
@@ -1418,7 +1438,7 @@ async function route(req, res) {
         if(!auth?.access_token)return json(res,401,{error:'This account session has expired. Add the account again to continue.'});
       }
       targetSession.lastSeenAt=now();
-      targetSession.expiresAt=new Date(Date.now()+7*86400000).toISOString();
+      targetSession.expiresAt=new Date(Date.now()+APP_SESSION_TTL_MS).toISOString();
       await saveStore();
       return json(res,200,{user:safeUser(targetUser,targetUser.id)},{'Set-Cookie':[appSessionCookie(targetSession.id),appDeviceSessionCookie(deviceId)]});
     }
