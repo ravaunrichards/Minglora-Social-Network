@@ -1,7 +1,7 @@
 const $ = s => document.querySelector(s);
-const state = { user:null, view:'feed', feed:[], feedScope:'all', savedPosts:[], savedPostCollections:[], savedFilter:'all', savedCollection:'all', savedType:'all', savedSort:'saved-newest', savedSearch:'', stories:[], people:[], discoveryLiveSessions:[], groups:[], notifications:[], conversations:[], activeConversation:null, messageWindows:[], activeGroup:null, pages:[], activePage:null, profile:null, searchResults:null, settings:null, activeConnections:null, liveStartFormat:'video_audio', messengerFilter:'all', messengerSearch:'', messengerPanelOpen:false, messengerOptionsOpen:false, messengerPanelSection:'chats', messengerComposeMode:false, messengerComposeUsers:null, messengerComposeLoading:false, messengerPresence:{}, messengerTyping:{}, messengerRealtimeConnected:false, rechargeTab:'recharge', rechargeCurrencyMode:'two-way' };
+const state = { user:null, view:'feed', feed:[], feedScope:'all', videoFeed:[], videoScope:'for-you', videoSearch:'', savedPosts:[], savedPostCollections:[], savedFilter:'all', savedCollection:'all', savedType:'all', savedSort:'saved-newest', savedSearch:'', stories:[], people:[], discoveryLiveSessions:[], groups:[], notifications:[], conversations:[], activeConversation:null, messageWindows:[], activeGroup:null, pages:[], activePage:null, profile:null, searchResults:null, settings:null, activeConnections:null, liveStartFormat:'video_audio', messengerFilter:'all', messengerSearch:'', messengerPanelOpen:false, messengerOptionsOpen:false, messengerPanelSection:'chats', messengerComposeMode:false, messengerComposeUsers:null, messengerComposeLoading:false, messengerPresence:{}, messengerTyping:{}, messengerRealtimeConnected:false, rechargeTab:'recharge', rechargeCurrencyMode:'two-way' };
 const LAST_VIEW_SESSION_PREFIX='minglora:last-view:v1:';
-const RESTORABLE_VIEWS=new Set(['feed','more','gifts','gifter-progression','live','live-pro','leagues','coins','creator','friends','groups','messages','saved','pages','meetwave','connections','page','group','profile','search','notifications','calendar','clock-centre','menstrual-health']);
+const RESTORABLE_VIEWS=new Set(['feed','more','videos','gifts','gifter-progression','live','live-pro','leagues','coins','creator','friends','groups','messages','saved','pages','meetwave','connections','page','group','profile','search','notifications','calendar','clock-centre','menstrual-health']);
 const MINGLORA_HISTORY_KEY='mingloraNavigation';
 let restoringSavedView=false;
 let restoringBrowserNavigation=false;
@@ -701,12 +701,13 @@ function postCard(post,options={}){
   </article>`;
 }
 function findVisiblePost(id){
-  return [...state.feed,...state.savedPosts,...(state.profile?.posts||[]),...(state.creatorStudio?.profile?.posts||[]),...(state.searchResults?.posts||[])].find(post=>post.id===id);
+  return [...state.feed,...state.videoFeed,...state.savedPosts,...(state.profile?.posts||[]),...(state.creatorStudio?.profile?.posts||[]),...(state.searchResults?.posts||[])].find(post=>post.id===id);
 }
 async function refreshVisiblePosts(){
   if(state.view==='creator'&&state.creatorStudio){state.creatorStudio.profile=await api('/users/'+encodeURIComponent(state.user.id));await renderCreatorSection(state.creatorStudio.section||'content');return;}
   if(state.view==='group'&&state.activeGroup){await renderGroup(state.activeGroup);return;}
   if(state.view==='saved'){await renderSavedPosts();return;}
+  if(state.view==='videos'){await renderVideoCentre();return;}
   if(state.view==='profile'&&state.profile?.user?.id){await openProfile(state.profile.user.id);return;}
   if(state.view==='search'){
     const query=$('#search-input')?.value.trim();
@@ -968,6 +969,7 @@ function createSoundtrackEditor(root,initialTrack=null){
   };
 }
 function openComposer(){
+  const returnToVideoCentre=state.view==='videos';
   const modal=document.createElement('div');modal.className='modal-backdrop';
   modal.innerHTML='<section class="modal composer-modal" role="dialog" aria-modal="true" aria-labelledby="create-post-title"><div class="modal-head"><h2 id="create-post-title">Share your thoughts</h2><button class="modal-close" type="button" aria-label="Close">'+messenger3dIcon('close','modal-close-icon')+'</button></div><form class="modal-body" id="create-post-form"><div class="post-head"><img class="avatar" src="'+avatar(state.user)+'" alt=""><div class="post-author"><strong>'+esc(state.user.name)+'</strong><small>Choose the audience for this post</small></div></div><div class="field"><label for="post-audience">Who can see this post?</label><select id="post-audience" name="audience"><option value="public">Public</option><option value="friends">Friends</option><option value="close_friends">Close Friends</option><option value="followers">Followers</option><option value="private">Only me</option></select></div><div class="field"><textarea name="text" maxlength="5000" placeholder="What would you like to share?" aria-label="Share your thoughts"></textarea></div><div class="field"><label>Photos, videos and audio attachments</label><div id="create-post-media-picker"></div></div><div class="field"><label>Soundtrack</label><div id="create-post-soundtrack"></div></div><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button type="submit" class="primary">Share post</button></div></form></section>';
   document.body.append(modal);
@@ -981,7 +983,7 @@ function openComposer(){
     try{
       const values=new FormData(event.currentTarget),mediaIds=await picker.upload();
       await api('/posts',{method:'POST',body:JSON.stringify({text:values.get('text'),mediaIds,soundtrack:soundtrack.value()})});
-      close();await loadFeed();await renderFeed();toast('Your post is published.');
+      close();if(returnToVideoCentre)await renderVideoCentre();else{await loadFeed();await renderFeed();}toast('Your post is published.');
     }catch(error){toast(error.message);button.disabled=false;}
   });
 }
@@ -8868,8 +8870,31 @@ async function renderSearch(q){
   document.querySelectorAll('[data-open-group]').forEach(button=>button.addEventListener('click',()=>renderGroup(button.dataset.openGroup)));
   document.querySelectorAll('[data-open-page]').forEach(button=>button.addEventListener('click',()=>renderPage(button.dataset.openPage)));
 }
+async function renderVideoCentre(){
+  const scope=['for-you','all','following','friends'].includes(state.videoScope)?state.videoScope:'for-you';
+  state.videoScope=scope;
+  const result=await api('/feed?scope='+encodeURIComponent(scope)+'&limit=100');
+  state.videoFeed=(result.posts||[]).filter(post=>(post.media||[]).some(media=>media.mediaType==='video'));
+  setContent('<div class="video-centre"><header class="card video-centre-heading"><div><span class="eyebrow">MINGLORA WATCH</span><h1>Minglora Video</h1><p>Discover videos shared by real Minglora members. Publish a video from your device and it will appear here after posting.</p></div><button type="button" class="primary" id="video-create-button">＋ Create video post</button></header><section class="card video-centre-toolbar"><label for="video-scope">Discover videos<select id="video-scope"><option value="for-you" '+(scope==='for-you'?'selected':'')+'>For You</option><option value="all" '+(scope==='all'?'selected':'')+'>All videos</option><option value="following" '+(scope==='following'?'selected':'')+'>Following</option><option value="friends" '+(scope==='friends'?'selected':'')+'>Friends</option></select></label><label for="video-search">Search videos<input id="video-search" type="search" maxlength="100" value="'+esc(state.videoSearch||'')+'" placeholder="Search captions or creators"></label></section><section id="video-centre-feed" class="video-centre-feed" aria-live="polite"></section><p class="video-centre-note">Video discovery uses actual Minglora posts and uploaded video files. No sample videos or fabricated view counts are displayed.</p></div>');
+  const root=$('#main-content');
+  const feed=root.querySelector('#video-centre-feed');
+  const drawVideoPosts=()=>{
+    const query=String(state.videoSearch||'').trim().toLowerCase();
+    const visible=state.videoFeed.filter(post=>!query||[post.text,post.author?.name,post.author?.username].some(value=>String(value||'').toLowerCase().includes(query)));
+    feed.innerHTML=visible.length?visible.map(postCard).join(''):'<section class="card empty-state"><div class="empty-icon">▶</div><h3>No videos found</h3><p>'+(query?'Try another search or change the video audience.':'There are no videos in this feed yet. Share a real video post to start the Minglora Video library.')+'</p><button type="button" class="primary" id="video-empty-create">＋ Create a video post</button></section>';
+    bindFeed(feed);
+    feed.querySelector('#video-empty-create')?.addEventListener('click',()=>openComposer());
+  };
+  root.querySelector('#video-create-button')?.addEventListener('click',()=>openComposer());
+  root.querySelector('#video-scope')?.addEventListener('change',async event=>{state.videoScope=event.target.value;await renderVideoCentre();});
+  root.querySelector('#video-search')?.addEventListener('input',event=>{state.videoSearch=event.target.value;drawVideoPosts();});
+  drawVideoPosts();
+}
 function renderMoreHub(){
   const sections=[
+    {title:'Watch & create',items:[
+      {label:'Minglora Video',detail:'Discover community videos and publish your own',view:'videos',icon:'<span class="mobile-hub-emoji" aria-hidden="true">▶</span>'}
+    ]},
     {title:'Connect & community',items:[
       {label:'MeetWave',detail:'Voice and video conversations',view:'meetwave',icon:messenger3dIcon('meetwave','mobile-hub-icon')},
       {label:'Friends',detail:'People you connect with',view:'friends',icon:messenger3dIcon('friends','mobile-hub-icon')},
@@ -8911,7 +8936,7 @@ function renderMoreHub(){
     else if(action==='app-metrics')window.dispatchEvent(new CustomEvent('minglora:open-creator-section',{detail:{section:'analytics'}}));
   }));
 }
-async function renderView(){try{if(state.view==='more')renderMoreHub();else if(state.view==='feed'){await loadPeople();await loadFeed();await loadStories();await renderFeed()}else if(state.view==='gifts')await window.MingloraGifts?.render();else if(state.view==='gifter-progression')await window.MingloraGifterProgression?.render();else if(state.view==='live')await renderLive();else if(state.view==='live-pro')await renderLiveProStudio();else if(state.view==='leagues')await window.MingloraLeagues?.render();else if(state.view==='coins')await renderCoins();else if(state.view==='calendar')await window.MingloraCalendar?.render();else if(state.view==='clock-centre')await window.MingloraClockCentre?.render({user:state.user});else if(state.view==='menstrual-health')await window.MingloraMenstrualHealth?.render();else if(state.view==='creator'){await renderCreator();if(state.restoreCreatorSection&&state.restoreCreatorSection!=='overview')await renderCreatorSection(state.restoreCreatorSection)}else if(state.view==='friends')await renderFriends();else if(state.view==='groups')await renderGroups();else if(state.view==='messages')await renderMessages();else if(state.view==='saved')await renderSavedPosts();else if(state.view==='pages')await renderPages();else if(state.view==='meetwave')await window.MingloraMeetWave?.render();else if(state.view==='connections'&&state.activeConnections)await renderConnections(state.activeConnections.profileId,state.activeConnections.kind);else if(state.view==='page'&&state.activePage)await renderPage(state.activePage,state.pageTab||'posts',state.pageDays||30);else if(state.view==='group'&&state.activeGroup)await renderGroup(state.activeGroup);else if(state.view==='profile'&&state.profileTargetId)await openProfile(state.profileTargetId);else if(state.view==='search'&&state.searchQuery)await renderSearch(state.searchQuery);else if(state.view==='notifications')await renderNotifications();}catch(e){setContent(`<section class="card empty-state"><h3>Could not load this page</h3><p>${esc(e.message)}</p><button class="primary" id="retry-view">Try again</button></section>`);$('#retry-view').onclick=renderView;}}
+async function renderView(){try{if(state.view==='more')renderMoreHub();else if(state.view==='feed'){await loadPeople();await loadFeed();await loadStories();await renderFeed()}else if(state.view==='videos')await renderVideoCentre();else if(state.view==='gifts')await window.MingloraGifts?.render();else if(state.view==='gifter-progression')await window.MingloraGifterProgression?.render();else if(state.view==='live')await renderLive();else if(state.view==='live-pro')await renderLiveProStudio();else if(state.view==='leagues')await window.MingloraLeagues?.render();else if(state.view==='coins')await renderCoins();else if(state.view==='calendar')await window.MingloraCalendar?.render();else if(state.view==='clock-centre')await window.MingloraClockCentre?.render({user:state.user});else if(state.view==='menstrual-health')await window.MingloraMenstrualHealth?.render();else if(state.view==='creator'){await renderCreator();if(state.restoreCreatorSection&&state.restoreCreatorSection!=='overview')await renderCreatorSection(state.restoreCreatorSection)}else if(state.view==='friends')await renderFriends();else if(state.view==='groups')await renderGroups();else if(state.view==='messages')await renderMessages();else if(state.view==='saved')await renderSavedPosts();else if(state.view==='pages')await renderPages();else if(state.view==='meetwave')await window.MingloraMeetWave?.render();else if(state.view==='connections'&&state.activeConnections)await renderConnections(state.activeConnections.profileId,state.activeConnections.kind);else if(state.view==='page'&&state.activePage)await renderPage(state.activePage,state.pageTab||'posts',state.pageDays||30);else if(state.view==='group'&&state.activeGroup)await renderGroup(state.activeGroup);else if(state.view==='profile'&&state.profileTargetId)await openProfile(state.profileTargetId);else if(state.view==='search'&&state.searchQuery)await renderSearch(state.searchQuery);else if(state.view==='notifications')await renderNotifications();}catch(e){setContent(`<section class="card empty-state"><h3>Could not load this page</h3><p>${esc(e.message)}</p><button class="primary" id="retry-view">Try again</button></section>`);$('#retry-view').onclick=renderView;}}
 let accountSwitcherTopLayerCleanup=null;
 function positionAccountSwitcherTopLayer(){
   const panel=$('#profile-account-menu'),anchor=$('.profile-menu-anchor');
