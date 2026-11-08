@@ -1390,12 +1390,13 @@ async function route(req, res) {
     if (activeSession) {
       const activityTime = Date.now();
       const previousActivity = Date.parse(activeSession.lastSeenAt || activeSession.createdAt || '');
-      activeSession.lastSeenAt = now();
       activeSession.expiresAt = new Date(activityTime + APP_SESSION_TTL_MS).toISOString();
       const refreshedCookies = [appSessionCookie(activeSession.id)];
       if (activeSession.deviceId) refreshedCookies.push(appDeviceSessionCookie(activeSession.deviceId));
       res.setHeader('Set-Cookie', refreshedCookies);
       if (!Number.isFinite(previousActivity) || activityTime - previousActivity >= APP_SESSION_ACTIVITY_PERSIST_INTERVAL_MS) {
+        // Advance lastSeenAt only when the extended expiry is written durably.
+        activeSession.lastSeenAt = now();
         await saveStore();
       }
     }
