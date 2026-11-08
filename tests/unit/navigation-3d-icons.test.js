@@ -61,7 +61,7 @@ test('utility rail and header actions use the matching rendered icon assets', ()
   assert.ok(html.includes('id="notifications-btn"') && html.includes(useIcon('activity')));
   assert.ok(html.includes('id="settings-btn"') && html.includes(useIcon('settings')));
   assert.ok(!html.includes('nav-search-icon'), 'external top-bar Search is removed');
-  assert.ok(menuScript.includes("sprite('search')") && menuScript.includes('id="minglora-menu-search"'), 'the internal Menu search uses the matching 3D search icon');
+  assert.ok(!menuScript.includes("sprite('search')") && !menuScript.includes('minglora-menu-search'), 'the Menu contains no Search Menu field or search icon');
 });
 
 test('the SVG sprite contains finished dimensional artwork for primary and supporting actions', () => {
