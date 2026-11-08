@@ -40,7 +40,7 @@ test("admin centre renders module and per-collection totals from the live snapsh
   assert.match(admin, /private message contents/i);
   assert.match(css, /admin-platform-module-grid/);
   assert.match(css, /admin-platform-collection-row/);
-  assert.match(html, /20261108-admin-account-inline-1/);
+  assert.match(html, /20261108-admin-workspace-2/);
 });
 
 
@@ -70,11 +70,11 @@ test("administrator profile keeps name and username grouped with three distincti
 
 
 test("app shell and service worker load the current standalone Admin Centre assets", () => {
-  assert.match(index, /admin-centre\.css\?v=20261108-admin-account-inline-1/);
-  assert.match(index, /admin-centre\.js\?v=20261108-admin-account-inline-1/);
+  assert.match(index, /admin-centre\.css\?v=20261108-admin-workspace-2/);
+  assert.match(index, /admin-centre\.js\?v=20261108-admin-workspace-2/);
   const cacheName = serviceWorker.match(/const CACHE_NAME='([^']+)'/)?.[1] || '';
   assert.match(cacheName, /^minglora-shell-v\d+-/);
-  assert.notEqual(cacheName, 'minglora-shell-v235-self-updating-1');
-  assert.match(serviceWorker, /admin-centre\.css\?v=20261108-admin-account-inline-1/);
-  assert.match(serviceWorker, /admin-centre\.js\?v=20261108-admin-account-inline-1/);
+  assert.notEqual(cacheName, 'minglora-shell-v236-admin-workspace-1');
+  assert.match(serviceWorker, /admin-centre\.css\?v=20261108-admin-workspace-2/);
+  assert.match(serviceWorker, /admin-centre\.js\?v=20261108-admin-workspace-2/);
 });
