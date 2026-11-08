@@ -27,9 +27,7 @@
 
     button.disabled = true;
     try {
-      await activate('videos');
-      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-      document.querySelector('#main-content [data-video-mode="reels"]')?.click();
+      await activate('reels');
     } catch (error) {
       const toast = document.getElementById('toast');
       if (toast) {
