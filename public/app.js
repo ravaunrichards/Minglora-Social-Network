@@ -5821,11 +5821,6 @@ function renderProfile(data){
     aboutPanel?.scrollIntoView({behavior:'smooth',block:'start'});
     aboutPanel?.querySelector('[data-edit-about-section]')?.focus({preventScroll:true});
   });
-  document.querySelectorAll('[data-profile-admin-action]').forEach(button=>button.addEventListener('click',()=>{
-    const action=button.dataset.profileAdminAction;
-    if(action==='edit-profile') $('#edit-profile')?.click();
-    if(action==='privacy') openProfilePrivacySettings();
-  }));
   const peopleToggle=$('#profile-people-toggle');
   const peoplePanel=$('#profile-people-panel');
   const peopleTrack=$('#profile-people-track');
@@ -5888,7 +5883,8 @@ function renderProfile(data){
 
   document.querySelectorAll('[data-profile-admin-action]').forEach(button=>button.addEventListener('click',()=>{
     const action=button.dataset.profileAdminAction;
-    if(action==='privacy')void openProfilePrivacySettings();
+    if(action==='edit-profile') $('#edit-profile')?.click();
+    else if(action==='privacy')void openProfilePrivacySettings();
     else if(action==='edit-story')void openProfileStoryEditor(u.id);
   }));
   $('#profile-add-story')?.addEventListener('click',()=>openStoryComposer());
