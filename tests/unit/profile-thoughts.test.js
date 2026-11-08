@@ -11,7 +11,8 @@ test('profile thoughts appear beside member profile pictures and are tappable fr
   assert.ok(app.includes('function thoughtAvatarMarkup('));
   assert.ok(app.includes('function openProfileThoughtViewer('));
   assert.ok(app.includes('function openProfileThoughtByUserId('));
-  assert.ok(app.includes('class="profile-thought-card"'));
+  assert.ok(app.includes('class="ml-thought-avatar-indicator"'));
+  assert.ok(app.includes('data-view-profile-thought-user='));
   assert.ok(app.includes('ml-thought-avatar-add'));
   assert.ok(app.includes("api('/users/'+encodeURIComponent(userId)+'/profile-status')"));
   assert.ok(server.includes('canViewProfileAudience(viewerId,u.id,item.audience)'));
