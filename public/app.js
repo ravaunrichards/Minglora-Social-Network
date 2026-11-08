@@ -400,107 +400,16 @@ function base64UrlToBytes(value){
   return Uint8Array.from(atob(padded),character=>character.charCodeAt(0));
 }
 let mingloraUpdateRegistration=null;
-let mingloraUpdateHooksReady=false;
-let mingloraKnownController=false;
-let mingloraUpdateCheckBusy=false;
-let mingloraLastUpdateCheckAt=0;
-let mingloraLastInteractionAt=Date.now();
-let mingloraRequestedActivationWorker=null;
-let mingloraUpdateReloadScheduled=false;
-const MINGLORA_UPDATE_CHECK_INTERVAL_MS=5*60*1000;
-const MINGLORA_UPDATE_IDLE_MS=45*1000;
-
-function markMingloraUpdateActivity(){
-  mingloraLastInteractionAt=Date.now();
-}
-function isMingloraUpdateSafe(){
-  if(document.visibilityState!=='visible')return false;
-  if(activeCallRoom||activeCallOverlay||activeLiveRoom)return false;
-  if(typeof incomingCallOverlay!=='undefined'&&incomingCallOverlay)return false;
-  if(typeof outgoingCallPending!=='undefined'&&outgoingCallPending)return false;
-  const meetWaveCanUpdate=typeof window.MingloraMeetWave?.canAutoUpdate!=='function'||window.MingloraMeetWave.canAutoUpdate();
-  if(!meetWaveCanUpdate)return false;
-  const focused=document.activeElement;
-  if(focused?.matches?.('input,textarea,select,[contenteditable="true"]'))return false;
-  if(Array.from(document.querySelectorAll('video,audio')).some(media=>!media.paused&&!media.ended))return false;
-  const openDialog=Array.from(document.querySelectorAll('dialog[open],[role="dialog"],[aria-modal="true"]'))
-    .some(element=>!element.hidden&&element.getClientRects().length>0);
-  return !openDialog;
-}
-function scheduleMingloraSafeReload(){
-  if(mingloraUpdateReloadScheduled)return;
-  mingloraUpdateReloadScheduled=true;
-  const reloadWhenReady=()=>{
-    if(!isMingloraUpdateSafe()||Date.now()-mingloraLastInteractionAt<MINGLORA_UPDATE_IDLE_MS){
-      window.setTimeout(reloadWhenReady,10000);
-      return;
-    }
-    window.location.reload();
-  };
-  window.setTimeout(reloadWhenReady,1000);
-}
-function maybeActivateMingloraWaitingWorker(){
-  const waiting=mingloraUpdateRegistration?.waiting;
-  if(!waiting||waiting===mingloraRequestedActivationWorker)return;
-  if(!isMingloraUpdateSafe()||Date.now()-mingloraLastInteractionAt<MINGLORA_UPDATE_IDLE_MS)return;
-  mingloraRequestedActivationWorker=waiting;
-  try{waiting.postMessage({type:'MINGLORA_ACTIVATE_WHEN_SAFE'});}
-  catch{mingloraRequestedActivationWorker=null;}
-}
-async function checkMingloraForUpdates(force=false){
-  const registration=mingloraUpdateRegistration;
-  if(!registration||!navigator.onLine||document.visibilityState!=='visible'||mingloraUpdateCheckBusy)return;
-  const now=Date.now();
-  const minimumInterval=force?30000:MINGLORA_UPDATE_CHECK_INTERVAL_MS;
-  if(now-mingloraLastUpdateCheckAt<minimumInterval){maybeActivateMingloraWaitingWorker();return;}
-  mingloraLastUpdateCheckAt=now;
-  mingloraUpdateCheckBusy=true;
-  try{await registration.update();}
-  catch(error){console.warn('Minglora automatic update check failed:',error?.message||error);}
-  finally{mingloraUpdateCheckBusy=false;maybeActivateMingloraWaitingWorker();}
-}
+// Use the browser's normal service-worker lifecycle. Updates wait until the app is
+// naturally closed; Minglora must never force an automatic page reload.
 function startMingloraServiceWorkerUpdates(registration){
   mingloraUpdateRegistration=registration;
-  if(!mingloraUpdateHooksReady){
-    mingloraKnownController=Boolean(navigator.serviceWorker.controller);
-    navigator.serviceWorker.addEventListener('controllerchange',()=>{
-      const replacingExistingController=mingloraKnownController;
-      mingloraKnownController=Boolean(navigator.serviceWorker.controller);
-      if(replacingExistingController&&mingloraKnownController)scheduleMingloraSafeReload();
-    });
-    for(const eventName of ['pointerdown','keydown','touchstart','input','wheel','scroll']){
-      document.addEventListener(eventName,markMingloraUpdateActivity,{capture:true,passive:true});
-    }
-    const resumeUpdateChecks=()=>{
-      markMingloraUpdateActivity();
-      void checkMingloraForUpdates(true);
-      maybeActivateMingloraWaitingWorker();
-    };
-    window.addEventListener('focus',resumeUpdateChecks);
-    window.addEventListener('online',resumeUpdateChecks);
-    document.addEventListener('visibilitychange',()=>{
-      if(document.visibilityState==='visible')resumeUpdateChecks();
-    });
-    window.setInterval(()=>{
-      void checkMingloraForUpdates(false);
-      maybeActivateMingloraWaitingWorker();
-    },15000);
-    mingloraUpdateHooksReady=true;
-  }
-  registration.addEventListener('updatefound',()=>{
-    const installing=registration.installing;
-    installing?.addEventListener('statechange',()=>{
-      if(installing.state==='installed')maybeActivateMingloraWaitingWorker();
-    });
-  });
-  void checkMingloraForUpdates(true);
-  maybeActivateMingloraWaitingWorker();
 }
 
 async function prepareMingloraServiceWorker(){
   if(!('serviceWorker' in navigator)||!window.isSecureContext)return;
   try{
-    const registration=await navigator.serviceWorker.register('/sw.js?v=20261108-for-you-general-posts-3',{scope:'/',updateViaCache:'none'});
+    const registration=await navigator.serviceWorker.register('/sw.js?v=20261108-normal-navigation-no-forced-refresh-1',{scope:'/',updateViaCache:'none'});
     startMingloraServiceWorkerUpdates(registration);
     // Keep the installed shell current even while the visitor is signed out.
     // The browser checks for worker updates normally; new versions must not take over this open page.
@@ -877,8 +786,8 @@ function stopFeedAutoSync(){
   feedAutoSyncTimer=null;
 }
 function startFeedAutoSync(){
+  // Do not replace the user's feed while they are reading; refresh on navigation or action.
   stopFeedAutoSync();
-  feedAutoSyncTimer=window.setInterval(()=>void syncFeedAutomatically(),30000);
 }
 async function syncFeedAutomatically(){
   if(feedAutoSyncBusy||state.view!=='feed'||document.visibilityState!=='visible')return;
@@ -1196,8 +1105,8 @@ function stopPeopleDiscoveryRefresh(){
   peopleDiscoveryRefreshTimer=null;
 }
 function startPeopleDiscoveryRefresh(){
+  // Keep discovery stable while the user browses; reload data when they revisit the view.
   stopPeopleDiscoveryRefresh();
-  peopleDiscoveryRefreshTimer=window.setInterval(()=>void refreshPeopleDiscovery({quiet:true}),30000);
 }
 async function refreshPeopleDiscovery({quiet=true}={}){
   if(peopleDiscoveryRefreshBusy||state.view!=='friends'||document.visibilityState!=='visible')return;
@@ -9356,11 +9265,8 @@ async function refreshForYouFeedIfNew(){
   }
 }
 function startForYouAutoRefresh(){
+  // Keep the current For You stream stable; refresh when the user reopens the view.
   stopForYouAutoRefresh();
-  forYouRefreshTimer=window.setInterval(()=>{
-    if(state.view!=='for-you'){stopForYouAutoRefresh();return;}
-    void refreshForYouFeedIfNew();
-  },30000);
 }
 async function renderForYouFeed(){
   forYouSearchSequence++;
