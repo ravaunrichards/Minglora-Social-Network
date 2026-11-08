@@ -63,6 +63,12 @@
 
 .minglora-profile-page .profile-header-card .profile-avatar-edit-wrap{
   position:relative!important;
+  inset:auto!important;
+  left:auto!important;
+  top:auto!important;
+  right:auto!important;
+  bottom:auto!important;
+  transform:none!important;
   z-index:8!important;
   display:flex!important;
   flex:0 0 168px!important;
