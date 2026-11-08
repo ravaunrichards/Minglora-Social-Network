@@ -927,3 +927,24 @@
 .admin-audit-log-entry p{margin:0;font-size:13px;overflow-wrap:anywhere;white-space:pre-wrap}
 .admin-audit-log-empty{padding:14px;border:1px dashed var(--border,#dce3ee);border-radius:12px;color:var(--muted,#687386)}
 @media(max-width:680px){.admin-audit-log-controls{grid-template-columns:minmax(0,1fr)}.admin-audit-log-entry-heading{display:grid;grid-template-columns:minmax(0,1fr)}}
+
+
+/* Complete owner-only Minglora platform inventory. */
+.admin-platform-overview{display:grid;gap:14px;padding:16px;border:1px solid var(--line);border-radius:14px;background:var(--card);min-width:0}
+.admin-platform-overview-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.admin-platform-overview-heading h3{margin:0;font-size:17px}
+.admin-platform-overview-heading p{margin:5px 0 0;color:var(--muted);font-size:12px;line-height:1.5}
+.admin-platform-module-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,255px),1fr));gap:10px;min-width:0}
+.admin-platform-module-card{display:grid;align-content:start;gap:10px;min-width:0;padding:13px;border:1px solid var(--line);border-radius:12px;background:var(--surface,var(--card))}
+.admin-platform-module-card-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;min-width:0}
+.admin-platform-module-card-heading>div{min-width:0}
+.admin-platform-module-card-heading h4{margin:0;font-size:13px;line-height:1.35}
+.admin-platform-module-card-heading small{display:block;margin-top:3px;color:var(--muted);font-size:10px}
+.admin-platform-module-card-heading>strong{flex:0 0 auto;font-size:12px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.admin-platform-collection-list{display:grid;gap:0;min-width:0}
+.admin-platform-collection-row{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:5px 0;border-top:1px solid var(--line);font-size:11px;line-height:1.35}
+.admin-platform-collection-row span{min-width:0;color:var(--muted);overflow-wrap:anywhere}
+.admin-platform-collection-row strong{flex:0 0 auto;font-size:11px;font-variant-numeric:tabular-nums}
+.admin-platform-inventory-empty{grid-column:1/-1;margin:0;padding:12px;border:1px dashed var(--line);border-radius:10px;color:var(--muted);font-size:12px}
+.admin-platform-overview-footnote{margin:0;color:var(--muted);font-size:11px;line-height:1.5}
+@media(max-width:620px){.admin-platform-overview{padding:12px}.admin-platform-overview-heading{flex-direction:column}.admin-platform-module-grid{grid-template-columns:1fr}}
