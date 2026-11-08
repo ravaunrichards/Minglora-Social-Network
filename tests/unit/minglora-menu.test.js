@@ -7,16 +7,16 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 
-test('Minglora exposes a searchable Facebook-style Menu beside Messenger', () => {
+test('Minglora Menu beside Messenger has a clean single-row header', () => {
   const html = read('public/index.html');
   const script = read('public/minglora-menu.js');
   const css = read('public/minglora-menu.css');
   assert.ok(html.includes('id="messenger-btn"'));
   assert.ok(html.includes('id="minglora-menu-toggle"'));
   assert.ok(html.includes('id="minglora-menu-panel"'));
-  assert.ok(html.includes('minglora-menu.css?v=20261108-facebook-menu-1'));
-  assert.ok(html.includes('minglora-menu.js?v=20261108-facebook-menu-1'));
-  for (const label of ['Social','Entertainment','Shopping','Personal','Professional','More from Meta','Search Menu','Create']) {
+  assert.ok(html.includes('minglora-menu.css?v=20261108-menu-clean-header-2'));
+  assert.ok(html.includes('minglora-menu.js?v=20261108-menu-clean-header-2'));
+  for (const label of ['Social','Entertainment','Shopping','Personal','Professional','More from Meta','Create']) {
     assert.ok(script.includes(label), 'Menu contains ' + label);
   }
   for (const label of ['Events','Friends','Groups','News Feed','Feeds','Pages','Reels','Gaming Video','Play Games','Order and Payments','Marketplace','Your Ad Activity','Memories','Saved','Ads Manager','Creator Dashboard','Post','Story','Reel','Life Update','Note','Ad','Group','Event']) {
@@ -34,4 +34,15 @@ test('Menu uses an independent scroll column, a stationary Create panel and resp
   assert.match(css, /writing-mode:horizontal-tb!important/);
   assert.match(css, /word-break:normal!important/);
   assert.match(css, /\.account-switcher-actions/);
+});
+
+test('Menu header does not show the redundant Search Menu side field', () => {
+  const script = read('public/minglora-menu.js');
+  const css = read('public/minglora-menu.css');
+  assert.ok(script.includes('<h2>Menu</h2>'));
+  assert.ok(script.includes('minglora-menu-close'));
+  assert.ok(!script.includes('Search Menu'));
+  assert.ok(!script.includes('minglora-menu-search'));
+  assert.ok(!css.includes('.minglora-menu-search'));
+  assert.match(css, /\.minglora-menu-header\s*\{[^}]*grid-template-columns:minmax\(0,1fr\) 40px/s);
 });
