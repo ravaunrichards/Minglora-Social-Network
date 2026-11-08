@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 
 const read = path => readFile(new URL(path, import.meta.url), 'utf8');
 
-test('profile thoughts appear beside member profile pictures and are tappable from the feed', async () => {
+test('profile thought clouds sit above the separate portrait and remain tappable from the feed', async () => {
   const [app,server,css] = await Promise.all([
     read('../../public/app.js'),read('../../src/server.js'),read('../../public/styles.css')
   ]);
@@ -17,12 +17,13 @@ test('profile thoughts appear beside member profile pictures and are tappable fr
   assert.ok(app.includes('const profileThoughtMarkup=data.profileStatus?.text'));
   assert.ok(app.includes('ml-profile-thought-bubble'));
   assert.ok(app.includes('ml-profile-thought-add'));
+  const thoughtSlotStart=app.indexOf(`(profileThoughtMarkup?'<div class="profile-thought-slot">'`);
   const avatarWrapStart=app.indexOf('class="profile-avatar-edit-wrap"><img');
   const infoMainStart=app.indexOf('<div class="profile-info-main">',avatarWrapStart);
-  const thoughtSlotStart=app.indexOf(`(profileThoughtMarkup?'<div class="profile-thought-slot">'`,infoMainStart);
-  assert.ok(avatarWrapStart>=0&&infoMainStart>avatarWrapStart,'profile portrait wrapper exists');
-  assert.ok(thoughtSlotStart>infoMainStart,'profile thought has its own slot alongside the portrait');
-  assert.doesNotMatch(app.slice(avatarWrapStart,infoMainStart),/profileThoughtMarkup/,'thought content must not occupy the avatar wrapper');
+  assert.ok(thoughtSlotStart>=0&&avatarWrapStart>thoughtSlotStart,'thought cloud is emitted before the independent portrait');
+  assert.ok(infoMainStart>avatarWrapStart,'profile identity stays in its own column beside the portrait');
+  assert.doesNotMatch(app.slice(avatarWrapStart,infoMainStart),/profileThoughtMarkup/,'thought content must not be inserted over the portrait or identity');
+  assert.ok(app.includes(`(profileThoughtMarkup?' profile-info--with-thought':'')`),'thought profiles receive the dedicated two-row layout class');
   assert.ok(app.includes("bindProfileThoughtControls($('#main-content'))"));
   assert.ok(app.includes("api('/users/'+encodeURIComponent(userId)+'/profile-status')"));
   assert.ok(server.includes('canViewProfileAudience(viewerId,u.id,item.audience)'));
