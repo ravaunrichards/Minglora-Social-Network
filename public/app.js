@@ -9153,6 +9153,23 @@ function teardownForYouPlayback(){
   forYouActiveVideos.forEach(video=>video.pause());
   forYouActiveVideos=[];
 }
+function bindForYouScopeControls(root){
+  if(!root)return;
+  root.querySelectorAll('[data-fyp-scope]').forEach(button=>{
+    if(button.dataset.forYouScopeBound==='true')return;
+    button.dataset.forYouScopeBound='true';
+    button.addEventListener('click',async()=>{
+      const scope=button.dataset.fypScope;
+      if(!FOR_YOU_SCOPE_VALUES.has(scope)||scope===state.forYouScope)return;
+      state.forYouScope=normalizeForYouScope(scope);
+      state.forYouNextCursor=null;
+      state.forYouHasMore=false;
+      persistCurrentView();
+      recordBrowserNavigation();
+      await renderForYouFeed();
+    });
+  });
+}
 function setupForYouPlayback(root){
   if(!root)return;
   teardownForYouPlayback();
@@ -9244,14 +9261,6 @@ function setupForYouPlayback(root){
       toast(result.friends?'You are now friends through mutual follows.':(next?'Now following creator.':'Unfollowed creator.'));
     }catch(error){toast(error.message);}
     finally{button.disabled=false;}
-  });
-  bindOnce('[data-fyp-scope]',async button=>{
-    const scope=button.dataset.fypScope;
-    if(!FOR_YOU_SCOPE_VALUES.has(scope)||scope===state.forYouScope)return;
-    state.forYouScope=normalizeForYouScope(scope);
-    persistCurrentView();
-    recordBrowserNavigation();
-    await renderForYouFeed();
   });
   bindOnce('[data-fyp-watch-live]',async button=>{
     const session=forYouLiveSessions.find(item=>item.id===button.dataset.fypWatchLive);
@@ -9471,6 +9480,7 @@ async function renderForYouFeed(){
   const feedRoot=root?.querySelector('.minglora-for-you');
   const stream=feedRoot?.querySelector('#fyp-stream');
   if(!feedRoot||!stream)return;
+  bindForYouScopeControls(feedRoot);
   feedRoot.querySelector('[data-fyp-exit]')?.addEventListener('click',()=>void activateNav('feed'));
   setupForYouPlayback(feedRoot);
   try{
