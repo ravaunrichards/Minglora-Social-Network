@@ -8,14 +8,14 @@ const read = path => readFile(new URL(path, root), 'utf8');
 test('the overlay contract loads after mobile styles and is included in the service worker cache', async () => {
   const [html, sw] = await Promise.all([read('public/index.html'), read('public/sw.js')]);
   const mobileLink = html.indexOf('mobile-layout.css?v=20261108-mobile-overlay-panels-1');
-  const safetyLink = html.indexOf('/layout-safety.css?v=20261108-facebook-overlay-principles-1');
+  const safetyLink = html.indexOf('/layout-safety.css?v=20261108-single-document-scroll-1');
   const liveLink = html.indexOf('live-room-compact.css?v=20261107-live-layout-1');
   const phoneLink = html.indexOf('phone-experience.css?v=20261108-phone-overlay-panels-1');
   const appLockLink = html.indexOf('app-lock.css?v=20261107-app-lock-1');
   assert.ok(mobileLink >= 0 && safetyLink > mobileLink && liveLink > safetyLink);
   assert.ok(phoneLink > appLockLink && appLockLink >= 0);
   for (const asset of [
-    '/layout-safety.css?v=20261108-facebook-overlay-principles-1',
+    '/layout-safety.css?v=20261108-single-document-scroll-1',
     '/phone-experience.css?v=20261108-phone-overlay-panels-1',
     '/meetwave.css?v=20261108-meetwave-dialog-overlays-1'
   ]) assert.ok(sw.includes("'" + asset + "'"), 'service worker caches ' + asset);
@@ -80,4 +80,24 @@ test('long names and profile statistics wrap without widening the viewport', asy
   assert.ok(css.includes('overflow-wrap:anywhere!important'));
   assert.ok(css.includes('white-space:normal!important'));
   assert.ok(css.includes('.profile-counts'));
+});
+
+
+test('normal pages use one document scrollbar while chat keeps its own message scroll area', async () => {
+  const [css, styles, html, sw] = await Promise.all([
+    read('public/layout-safety.css'), read('public/styles.css'),
+    read('public/index.html'), read('public/sw.js')
+  ]);
+  const asset = '/layout-safety.css?v=20261108-single-document-scroll-1';
+  assert.ok(html.includes(asset), 'the app loads the single-scroll layout stylesheet');
+  assert.ok(sw.includes("'" + asset + "'"), 'the service worker caches the matching stylesheet version');
+  const railStart = css.indexOf('.left-rail,.right-rail{');
+  assert.ok(railStart >= 0, 'both page rails share the no-nested-scroll rule');
+  const railRule = css.slice(railStart, css.indexOf('}', railStart) + 1);
+  assert.match(railRule, /overflow:visible!important/);
+  assert.doesNotMatch(railRule, /overflow-y\s*:\s*(?:auto|scroll)/i);
+  assert.ok(styles.includes('.message-window-scroll{'), 'Messenger retains a dedicated message-list region');
+  const chatStart = styles.indexOf('.message-window-scroll{');
+  const chatRule = styles.slice(chatStart, styles.indexOf('}', chatStart) + 1);
+  assert.match(chatRule, /overflow:auto/);
 });
