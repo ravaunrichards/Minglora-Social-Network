@@ -46,7 +46,7 @@ test('For You header and search reserve their own space above the scrolling feed
   assert.match(css, /\.fyp-feed-switch\s*\{[\s\S]*position:\s*relative !important/);
   assert.match(css, /\.fyp-stream\s*\{[\s\S]*grid-row:\s*2 !important[\s\S]*overflow-y:\s*auto !important/);
   assert.match(css, /@media \(max-width: 760px\)[\s\S]*grid-template-areas:[\s\S]*"search search"/);
-  assert.ok(html.includes('/for-you-controls.css?v=20261108-home-live-mixed-feed-1'));
-  assert.ok(sw.includes('/for-you-controls.css?v=20261108-home-live-mixed-feed-1'));
-  assert.match(sw, /^const CACHE_NAME='minglora-shell-v213-self-updating-1';$/m);
+  assert.ok(html.includes('/for-you-controls.css?v=20261108-home-live-mixed-feed-2'));
+  assert.ok(sw.includes('/for-you-controls.css?v=20261108-home-live-mixed-feed-2'));
+  assert.match(sw, /^const CACHE_NAME='minglora-shell-v214-self-updating-1';$/m);
 });
