@@ -51,7 +51,7 @@ test('mobile navigation keeps five clear destinations and secondary features in 
   assert.ok(nav.includes('data-view="more"'), 'More is the fifth primary destination');
   assert.ok(nav.includes('id="mobile-more-nav"'), 'More is a proper navigation item');
   assert.ok(!html.includes('id="mobile-more-menu"'), 'the cramped floating More menu is removed');
-  assert.ok(html.includes('/mobile-layout.css?v=20261105-flow-navigation-1'));
+  assert.ok(html.includes('/mobile-layout.css?v=20261108-mobile-overlay-panels-1'));
 });
 test('utility rail and header actions use the matching rendered icon assets', () => {
   for (const icon of ['live', 'recharge', 'creator', 'friends', 'groups', 'pages', 'messages', 'saved', 'activity', 'settings']) {
