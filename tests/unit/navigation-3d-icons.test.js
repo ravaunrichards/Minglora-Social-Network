@@ -34,26 +34,26 @@ test('desktop navigation keeps its existing destinations and uses 3D icons', () 
   assert.ok(nav.includes('<span class="league-nav-icon" aria-hidden="true">🏆</span><small>Leagues</small>'));
 });
 
-test('mobile navigation keeps five clear destinations and secondary features in the organised More page', () => {
-  const navStart = html.indexOf('<div class="mobile-nav"');
-  const navEnd = html.indexOf('</div>', navStart);
-  const nav = html.slice(navStart, navEnd);
-  assert.ok(navStart >= 0 && navEnd > navStart, 'mobile navigation exists');
-  for (const [view, icon] of [
-    ['feed', 'home'],
-    ['friends', 'friends'],
-    ['for-you', 'explore'],
-    ['live', 'live'],
+test('mobile header keeps the requested five primary tabs visible below logo and Search', () => {
+  const nav = html.match(/<nav class="top-nav"[\\s\\S]*?<\\/nav>/)?.[0] || '';
+  assert.ok(nav, 'shared navigation is present in the header');
+  for (const [view, icon, label] of [
+    ['feed', 'home', 'Home'],
+    ['for-you', 'explore', 'For You'],
+    ['live', 'live', 'LIVE'],
+    ['meetwave', 'meetwave', 'MeetWave'],
   ]) {
-    assert.ok(nav.includes('data-view="' + view + '"'), view + ' is a primary destination');
+    assert.ok(nav.includes('data-view="' + view + '"'), view + ' remains a primary destination');
     assert.ok(nav.includes(useIcon(icon)), view + ' uses the shared 3D artwork');
+    assert.ok(nav.includes('<small>' + label + '</small>'), label + ' label is visible');
   }
-  assert.ok(html.includes('id="messenger-btn"') && html.includes(useIcon('messages')), 'Messenger remains in the header action row');
-  assert.ok(html.includes('id="notifications-btn"') && html.includes(useIcon('activity')), 'Notifications remains in the header action row');
-  assert.ok(nav.includes('data-view="more"'), 'More is the fifth primary destination');
-  assert.ok(nav.includes('id="mobile-more-nav"'), 'More is a proper navigation item');
+  assert.ok(nav.includes('data-view="leagues"') && nav.includes('Leagues'), 'Leagues remains the fifth primary tab');
+  assert.ok(css.includes('.top-nav{') && css.includes('display:flex!important'), 'mobile breakpoint explicitly displays the same top navigation');
+  assert.ok(css.includes('.mobile-nav{display:none!important}'), 'duplicate bottom navigation is hidden on mobile');
+  assert.ok(html.includes('id="top-search-form"') && html.includes('id="top-search-input"'), 'Search remains beside the Minglora logo');
+  assert.ok(html.includes('id="messenger-btn"') && html.includes(useIcon('messages')), 'Messenger remains in the account action row');
+  assert.ok(html.includes('id="notifications-btn"') && html.includes(useIcon('activity')), 'Notifications remains in the account action row');
   assert.ok(!html.includes('id="mobile-more-menu"'), 'the cramped floating More menu is removed');
-  assert.ok(html.includes('/mobile-layout.css?v=20261108-mobile-overlay-panels-1'));
 });
 test('utility rail and header actions use the matching rendered icon assets', () => {
   for (const icon of ['live', 'recharge', 'creator', 'friends', 'groups', 'pages', 'messages', 'saved', 'activity', 'settings']) {
