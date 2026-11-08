@@ -19,7 +19,7 @@ test('the overlay contract loads after mobile styles and is included in the serv
     '/phone-experience.css?v=20261108-phone-overlay-panels-1',
     '/meetwave.css?v=20261108-meetwave-dialog-overlays-1'
   ]) assert.ok(sw.includes("'" + asset + "'"), 'service worker caches ' + asset);
-  assert.match(sw, /CACHE_NAME='minglora-shell-v\\d+-self-updating-1'/);
+  assert.ok(sw.includes("const CACHE_NAME='minglora-shell-v181-self-updating-1';"));
 });
 
 test('open menus, chat panels, drawers and dialogs are never forced into normal page flow', async () => {
