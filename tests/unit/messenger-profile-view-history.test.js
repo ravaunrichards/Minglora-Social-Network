@@ -47,7 +47,7 @@ test('profile count row shows five real aligned profile metrics',()=>{
   const countEnd=app.indexOf("</div>'+'</div><nav",countStart);
   const countMarkup=app.slice(countStart,countEnd);
   assert.ok(countMarkup.indexOf('<span>Posts</span>')<countMarkup.indexOf('<span>Likes</span>'),'Likes follows Posts in the profile metric row');
-  assert.match(css,/\.profile-counts\{[^}]*grid-template-columns:repeat\(5,minmax\(0,1fr\)\)/);
+  assert.match(profileCss,/\.profile-counts\{[^}]*grid-template-columns:repeat\(5,minmax\(0,1fr\)\)/);
   assert.doesNotMatch(app,/profile-live-insights|Profile views · 30 days|Viewing now/);
 });
 
