@@ -18,6 +18,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.Gravity;
 import android.webkit.CookieManager;
+import android.webkit.JavascriptInterface;
 import android.webkit.GeolocationPermissions;
 import android.webkit.PermissionRequest;
 import android.webkit.SslErrorHandler;
@@ -117,6 +118,7 @@ public final class MainActivity extends Activity {
         loadErrorPanel.setVisibility(View.GONE);
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
+        webView.addJavascriptInterface(new MingloraAndroidBridge(), "MingloraAndroid");
         settings.setDomStorageEnabled(true);
         settings.setDatabaseEnabled(true);
         settings.setAllowFileAccess(false);
@@ -425,6 +427,58 @@ public final class MainActivity extends Activity {
         WebChromeClient.CustomViewCallback callback = customViewCallback;
         customViewCallback = null;
         if (callback != null) callback.onCustomViewHidden();
+    }
+
+    private boolean isTrustedMingloraPage() {
+        try {
+            Uri current = Uri.parse(webView == null ? "" : String.valueOf(webView.getUrl()));
+            return "https".equalsIgnoreCase(current.getScheme()) &&
+                    APP_HOST.equalsIgnoreCase(current.getHost()) &&
+                    current.getUserInfo() == null;
+        } catch (Exception error) {
+            return false;
+        }
+    }
+
+    private final class MingloraAndroidBridge {
+        @JavascriptInterface
+        public void shareText(String title, String text, String rawUrl) {
+            if (!isTrustedMingloraPage()) return;
+            try {
+                Uri shareUri = Uri.parse(rawUrl == null ? "" : rawUrl);
+                if (!"https".equalsIgnoreCase(shareUri.getScheme()) ||
+                        !APP_HOST.equalsIgnoreCase(shareUri.getHost()) ||
+                        shareUri.getUserInfo() != null) {
+                    return;
+                }
+                String safeTitle = title == null ? "Share on Minglora" : title.trim();
+                if (safeTitle.isEmpty()) safeTitle = "Share on Minglora";
+                if (safeTitle.length() > 80) safeTitle = safeTitle.substring(0, 80);
+                String safeText = text == null ? "" : text.trim();
+                if (safeText.length() > 3000) safeText = safeText.substring(0, 3000);
+
+                String payload = safeText.isEmpty()
+                        ? shareUri.toString()
+                        : safeText + "\n\n" + shareUri;
+                Intent shareIntent = new Intent(Intent.ACTION_SEND);
+                shareIntent.setType("text/plain");
+                shareIntent.putExtra(Intent.EXTRA_TEXT, payload);
+                shareIntent.putExtra(Intent.EXTRA_TITLE, safeTitle);
+                final String chooserTitle = safeTitle;
+                mainHandler.post(() -> {
+                    if (isFinishing() || isDestroyed() || !isTrustedMingloraPage()) return;
+                    try {
+                        startActivity(Intent.createChooser(shareIntent, chooserTitle));
+                    } catch (ActivityNotFoundException error) {
+                        Toast.makeText(MainActivity.this,
+                                "No sharing app is available on this device.", Toast.LENGTH_LONG).show();
+                    }
+                });
+            } catch (Exception error) {
+                mainHandler.post(() -> Toast.makeText(MainActivity.this,
+                        "Minglora could not open the Android share menu.", Toast.LENGTH_LONG).show());
+            }
+        }
     }
 
     private boolean handleNavigation(Uri uri) {
