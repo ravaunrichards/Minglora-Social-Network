@@ -10,7 +10,7 @@ const app=read('public/app.js');
 const server=read('src/server.js');
 const html=read('public/index.html');
 const worker=read('public/sw.js');
-const profileCss=[read('public/profile-action-row.css'),read('public/profile-facebook-panel.css'),read('public/profile-layout-guardrails.css'),read('public/profile-facebook-avatar-anchor.css')].join('\n');
+const profileCss=[read('public/profile-action-row.css'),read('public/profile-facebook-panel.css'),read('public/profile-layout-guardrails.css'),read('public/profile-facebook-avatar-anchor.css'),read('public/profile-independent-avatar-header.css'),read('public/profile-owner-action-placement.css')].join('\\n');
 const profileStart=app.indexOf('function renderProfile(data){');
 const profileEnd=app.indexOf('async function loadProfileGiftGallery',profileStart);
 assert.ok(profileStart>=0&&profileEnd>profileStart,'profile renderer exists');
@@ -25,6 +25,25 @@ test('profile owner edit, media and story buttons invoke their real actions',()=
   assert.doesNotMatch(profile,/profile-edit-avatar|profile-edit-cover|profile-edit-admin-cover/);
   assert.match(app,/data-profile-media-section="avatar"/);
   assert.match(app,/data-profile-media-section="cover"/);
+});
+
+test('owner Add to story, Edit profile and V controls follow the correct Facebook order and responsive placement',()=>{
+  const story=profile.indexOf('id="profile-add-story"');
+  const edit=profile.indexOf('id="edit-profile"');
+  const chevron=profile.indexOf('id="profile-people-toggle"');
+  assert.ok(story>=0&&edit>story&&chevron>edit);
+  assert.ok(profileCss.includes('@media(min-width:1025px)'));
+  assert.ok(profileCss.includes('grid-column:3!important'));
+  assert.ok(profileCss.includes('grid-row:2!important'));
+  assert.ok(profileCss.includes('justify-content:flex-end!important'));
+  assert.ok(profileCss.includes('@media(max-width:760px)'));
+  assert.ok(profileCss.includes('grid-column:1/-1!important'));
+  assert.ok(profileCss.includes('grid-row:3!important'));
+  assert.ok(profileCss.includes('#profile-add-story'));
+  assert.ok(profileCss.includes('#edit-profile'));
+  assert.ok(profileCss.includes('#profile-people-toggle'));
+  assert.ok(html.indexOf('profile-owner-action-placement.css')>html.indexOf('profile-independent-avatar-header.css'));
+  assert.ok(worker.includes('/profile-owner-action-placement.css?v=20261108-facebook-action-control-order-1'));
 });
 
 test('visitor Follow, Subscribe, Message, call, Report and Block controls are connected',()=>{
