@@ -89,11 +89,15 @@ test('crop preview and saved output use the visible inner frame rather than its 
   assert.ok(Math.abs(exportOffset/exportScale-previewOffset/previewScale)<1e-9);
 });
 
-test('public profile pages and outside member cards show the complete saved profile images',()=>{
+test('public profile page uses the Facebook-style wide cover and portrait crop presentation',()=>{
+  const profileCss=fs.readFileSync(path.join(root,'public/profile-action-row.css'),'utf8');
+  const alignment=fs.readFileSync(path.join(root,'public/profile-alignment.css'),'utf8');
   assert.ok(app.includes('class="profile-cover"'), 'profile cover container must exist');
   assert.ok(app.includes('class="profile-cover-image" data-view-image='));
-  assert.ok(css.includes('.profile-cover-image{display:block;width:100%;height:100%;object-fit:contain'));
-  assert.ok(css.includes('.profile-info .avatar,.person-avatar-wrap .avatar{object-fit:contain'));
+  assert.match(profileCss,/\.minglora-profile-page \.profile-header-card \.profile-cover\{[^}]*aspect-ratio:2\.7 \/ 1/);
+  assert.match(profileCss,/\.minglora-profile-page \.profile-header-card \.profile-cover-image\{[^}]*object-fit:cover/);
+  assert.match(profileCss,/\.minglora-profile-page \.profile-header-card \.profile-avatar-edit-wrap>\.avatar\{[^}]*object-fit:cover/);
+  assert.match(alignment,/--minglora-profile-avatar-size:168px/);
   assert.ok(css.includes('.person-card--immersive .person-cover{'));
   assert.ok(css.includes('aspect-ratio:3/1;padding:0!important'));
   assert.ok(css.includes('.person-cover-image{object-fit:contain!important'));
