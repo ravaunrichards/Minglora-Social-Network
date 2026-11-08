@@ -39,3 +39,15 @@ test("admin centre renders module and per-collection totals from the live snapsh
   assert.match(css, /admin-platform-collection-row/);
   assert.match(html, /20261108-admin-overview-1/);
 });
+
+
+test("existing Admin Centre opens inside the authorized Admin Account using the current profile controls", () => {
+  assert.match(admin, /document\.querySelector\('#edit-profile'\)/);
+  assert.doesNotMatch(admin, /document\.querySelector\('#profile-edit-avatar'\)/);
+  assert.match(admin, /profile\.querySelector\('\.profile-admin-tools'\)/);
+  assert.match(admin, /profileHeader\.insertAdjacentElement\('afterend', root\)/);
+  assert.match(admin, /initializeAdminCentre\(root\)/);
+  assert.match(admin, /authenticator-verified session/i);
+  assert.match(css, /admin-centre-profile-root\[hidden\]/);
+  assert.match(html, /20261108-admin-account-inline-1/);
+});
