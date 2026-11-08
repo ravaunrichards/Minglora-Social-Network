@@ -440,7 +440,7 @@ button,input,select,textarea{min-width:0;max-width:100%}
     overflow-wrap:anywhere;
   }
 
-  /* Dialog and in-page tools can grow; they never create a second clipped scroll area. */
+  /* Dialogs stay in a viewport-fixed backdrop and scroll within their own card. */
   body:not(:has(#live-player-shell)) .modal,
   body:not(:has(#live-player-shell)) .modal-body,
   body:not(:has(#live-player-shell)) .modal-content,
@@ -449,12 +449,11 @@ button,input,select,textarea{min-width:0;max-width:100%}
   body:not(:has(#live-player-shell)) .creator-studio-shell{
     min-width:0!important;
     max-width:100%!important;
-    max-height:none!important;
   }
-  body:not(:has(#live-player-shell)) .modal,
-  body:not(:has(#live-player-shell)) .modal-body,
-  body:not(:has(#live-player-shell)) .modal-content{
-    overflow:visible!important;
+  body:not(:has(#live-player-shell)) .modal{
+    max-height:calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 20px)!important;
+    overflow-x:hidden!important;
+    overflow-y:auto!important;
   }
 }
 
