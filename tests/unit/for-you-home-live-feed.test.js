@@ -55,3 +55,11 @@ test('the mixed Home feed displays video posts, photo posts and horizontal multi
   assert.match(css, /\.fyp-photo-carousel/);
   assert.match(css, /\.fyp-feed-switch button[\s\S]*touch-action:\s*manipulation/);
 });
+
+test('Home and Following quietly refresh real posts and verified LIVE items without interrupting interactions', async () => {
+  const app = await read('public/app.js');
+  assert.match(app, /function startForYouAutoRefresh\(\)[\s\S]*window\.setInterval\(\(\)=>void refreshForYouFeedIfNew\(\),15000\)/);
+  assert.match(app, /focused\?\.closest\('\.fyp-header,\.fyp-video-card'\)/);
+  assert.match(app, /oldLiveIds[\s\S]*newLiveIds/);
+  assert.match(app, /forYouLiveSessions=previousLiveSessions/);
+});
