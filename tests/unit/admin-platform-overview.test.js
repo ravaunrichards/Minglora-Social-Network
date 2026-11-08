@@ -53,7 +53,7 @@ test("Admin Centre opens as its own page from the authorized administrator profi
   assert.ok(html.includes("20261108-admin-workspace-2"));
   assert.ok(css.includes("admin-control-centre-page"));
   assert.ok(css.includes("grid-template-columns:minmax(220px,260px) minmax(0,1fr)"));
-  assert.ok(css.includes("People &amp; community") === false);
+  assert.ok(css.includes(".admin-centre-nav-group"));
   assert.ok(admin.includes("People &amp; community"));
   assert.ok(admin.includes("Creators &amp; finance"));
   assert.ok(admin.includes("Trust &amp; support"));
