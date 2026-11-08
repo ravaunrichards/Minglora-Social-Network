@@ -68,6 +68,11 @@ function recordBrowserNavigation({replace=false}={}){
 function initializeBrowserNavigation(){
   if(!state.user)return;
   try{
+    const routeScope=forYouScopeFromPath();
+    if(routeScope){
+      state.view='for-you';
+      state.forYouScope=normalizeForYouScope(routeScope);
+    }
     const snapshot=getBrowserNavigationSnapshot();
     window.history.replaceState(withMingloraHistoryState(snapshot),'',snapshot.view==='for-you'?forYouRoutePath(snapshot.forYouScope):window.location.href);
   }catch(error){
