@@ -87,6 +87,16 @@ test('Supabase sign-in without profile metadata preserves the saved public name 
   assert.ok(ensure.includes('fallback.phoneNumber||user?.contactPhone'),'saved contact phone survives a sign-in response without metadata');
 });
 
+test('signed-in members can search for their own profile by name or username', async () => {
+  const server = await read('src/server.js');
+  const start=server.indexOf("if(method==='GET'&&p==='/api/search')");
+  const end=server.indexOf("return json(res,404,{error:'API route not found.'})",start);
+  assert.ok(start>=0&&end>start,'member search route exists');
+  const route=server.slice(start,end);
+  assert.ok(!route.includes('member.id!==user.id'),'search can include the current member profile');
+  assert.ok(route.includes('canViewProfile(user.id,member)'),'self search still follows profile access checks');
+});
+
 test('search ranks an exact public username or display-name match before broader matches', async () => {
   const server = await read('src/server.js');
   const start=server.indexOf("if(method==='GET'&&p==='/api/search')");
