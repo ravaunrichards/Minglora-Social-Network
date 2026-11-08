@@ -1007,7 +1007,7 @@ function openVideoComposer(options={}){
       const mediaIds=await picker.upload();
       if(mediaIds.length!==1)throw new Error('Upload one video file to publish a video post.');
       const values=new FormData(event.currentTarget);
-      await api('/posts',{method:'POST',body:JSON.stringify({text:values.get('text'),audience:values.get('audience'),mediaIds})});
+      await api('/posts',{method:'POST',body:JSON.stringify({text:values.get('text'),audience:values.get('audience'),mediaIds,videoFormat:options.videoFormat==='reel'?'reel':'video'})});
       close();
       if(typeof options.onPublished==='function')await options.onPublished();
       else{state.videoMode='videos';await renderVideoCentre();}
@@ -5407,7 +5407,7 @@ function profileTabMarkup(data,tab,aboutHtml,isMe){
       '<h3 class="profile-subheading">All photos</h3>'+(unique.length?'<div class="profile-media-grid">'+unique.map(item=>profilePhotoTile(item,false)).join('')+'</div>':'<p class="muted">No individual photos have been shared yet.</p>')+'</section>';
   }
   if(tab==='reels')return '<section class="card profile-media-section"><div class="page-heading"><div><h2>Reels</h2><p class="muted">Short videos shared on this profile</p></div>'+(isMe?'<button type="button" class="primary" id="profile-create-reel">Create reel</button>':'')+'</div>'+(reels.length?'<div class="profile-reels-grid">'+reels.map(item=>'<article class="profile-reel-tile"><video controls playsinline preload="metadata" src="'+esc(item.url)+'"></video><small>'+esc(item.postText||'Video')+'</small></article>').join('')+'</div>':'<div class="empty-state"><h3>No reels yet</h3><p>Videos shared by this member will appear here.</p></div>')+'</section>';
-  if(tab==='videos')return '<section class="card profile-media-section"><div class="page-heading"><div><h2>Videos</h2><p class="muted">All video posts on this profile</p></div>'+(isMe?'<button type="button" class="primary" id="profile-create-reel">Upload video</button>':'')+'</div>'+(reels.length?'<div class="profile-video-list">'+reels.map(item=>'<article class="profile-video-row"><video controls playsinline preload="metadata" src="'+esc(item.url)+'"></video><div><strong>'+esc(item.postText||'Video shared')+'</strong><small>'+esc(timeAgo(item.createdAt))+'</small></div></article>').join('')+'</div>':'<div class="empty-state"><h3>No videos yet</h3><p>Videos shared by this member will appear here.</p></div>')+'</section>';
+  if(tab==='videos')return '<section class="card profile-media-section"><div class="page-heading"><div><h2>Videos</h2><p class="muted">All video posts on this profile</p></div>'+(isMe?'<button type="button" class="primary" id="profile-upload-video">Upload video</button>':'')+'</div>'+(reels.length?'<div class="profile-video-list">'+reels.map(item=>'<article class="profile-video-row"><video controls playsinline preload="metadata" src="'+esc(item.url)+'"></video><div><strong>'+esc(item.postText||'Video shared')+'</strong><small>'+esc(timeAgo(item.createdAt))+'</small></div></article>').join('')+'</div>':'<div class="empty-state"><h3>No videos yet</h3><p>Videos shared by this member will appear here.</p></div>')+'</section>';
   if(tab==='checkins'){const checkIns=data.checkIns||[];return '<section class="card profile-media-section"><div class="page-heading"><div><h2>Check-ins</h2><p class="muted">Places shared by this member</p></div>'+(isMe?'<button type="button" class="primary" id="profile-create-checkin">Create check-in</button>':'')+'</div>'+(checkIns.length?'<div class="profile-checkin-list">'+checkIns.map(item=>'<article class="profile-checkin-card"><strong>⌖ '+esc(item.place)+'</strong>'+(item.note?'<p>'+esc(item.note)+'</p>':'')+'<small>'+esc(timeAgo(item.createdAt))+' · '+esc(item.visibility||'public')+'</small></article>').join('')+'</div>':'<div class="empty-state"><h3>No check-ins yet</h3><p>'+(isMe?'Share a place with the audience you choose.':'This member has not shared any check-ins.')+'</p></div>')+'</section>';}
   if(tab==='events'){const events=data.events||[];return '<section class="card profile-media-section"><div class="page-heading"><div><h2>Events</h2><p class="muted">Events hosted or attended by this member</p></div>'+(isMe?'<button type="button" class="primary" id="profile-create-event">Create event</button>':'')+'</div>'+(events.length?'<div class="profile-event-list">'+events.map(item=>'<article class="profile-event-card"><div class="profile-event-date"><strong>'+esc(new Date(item.startAt).toLocaleDateString(undefined,{day:"2-digit"}))+'</strong><small>'+esc(new Date(item.startAt).toLocaleDateString(undefined,{month:"short"}))+'</small></div><div class="profile-event-main"><strong>'+esc(item.title)+'</strong><p>'+esc(item.description||'')+'</p><small>'+esc(new Date(item.startAt).toLocaleString())+(item.location?' · '+esc(item.location):'')+'</small><small>'+Number(item.rsvpCount||0)+' going · Hosted by '+esc(item.host?.name||'Minglora member')+'</small><div class="profile-event-rsvp"><button type="button" class="'+(item.myRsvp==='going'?'primary':'secondary')+'" data-event-id="'+esc(item.id)+'" data-event-rsvp="going">Going</button><button type="button" class="'+(item.myRsvp==='interested'?'primary':'secondary')+'" data-event-id="'+esc(item.id)+'" data-event-rsvp="interested">Interested</button>'+(item.myRsvp?'<button type="button" class="text-button" data-event-id="'+esc(item.id)+'" data-event-rsvp-remove>Remove RSVP</button>':'')+'</div></div></article>').join('')+'</div>':'<div class="empty-state"><h3>No events yet</h3><p>'+(isMe?'Create an event and let people choose whether they are going or interested.':'This member has no visible events.')+'</p></div>')+'</section>';}
   if(tab==='highlights'){const highlights=data.highlights||[];return '<section class="card profile-media-section"><div class="page-heading"><div><h2>Highlights</h2><p class="muted">Stories saved on this profile</p></div>'+(isMe?'<button type="button" class="primary" id="profile-manage-highlights">Manage Highlights</button>':'')+'</div>'+(highlights.length?'<div class="profile-highlights-grid">'+highlights.map(item=>'<article class="profile-highlight-card">'+(item.coverUrl?'<img src="'+esc(item.coverUrl)+'" alt="">':'<span>✧</span>')+'<strong>'+esc(item.title)+'</strong><small>'+Number(item.storyCount||0)+' stories</small></article>').join('')+'</div>':'<div class="empty-state"><h3>No Highlights yet</h3><p>'+(isMe?'Save active or archived Stories as Highlights to keep them on your profile.':'This member has not added Highlights.')+'</p></div>')+'</section>';}
@@ -5459,7 +5459,7 @@ function openProfilePhotoComposer(profileId){
   });
 }
 function openProfileReelComposer(profileId){
-  return openVideoComposer({onPublished:()=>openProfile(profileId)});
+  return openVideoComposer({videoFormat:'reel',onPublished:()=>openProfile(profileId)});
 }
 
 function closeProfileOverflowMenu(){
@@ -6018,6 +6018,7 @@ function bindProfileTabActions(panel){
   panel.querySelector('#profile-upload-photo')?.addEventListener('click',()=>openProfilePhotoComposer(state.profile.user.id));
   panel.querySelector('#profile-create-album')?.addEventListener('click',()=>openProfileAlbumEditor(state.profile.user.id));
   panel.querySelector('#profile-create-reel')?.addEventListener('click',()=>openProfileReelComposer(state.profile.user.id));
+  panel.querySelector('#profile-upload-video')?.addEventListener('click',()=>openVideoComposer({videoFormat:'video',onPublished:()=>openProfile(state.profile.user.id)}));
   panel.querySelector('#profile-create-checkin')?.addEventListener('click',()=>openProfileCheckInComposer(state.profile.user.id));
   panel.querySelector('#profile-create-event')?.addEventListener('click',()=>openProfileEventComposer(state.profile.user.id));
   panel.querySelector('#profile-manage-highlights')?.addEventListener('click',()=>openProfileHighlightsManager(state.profile.user.id));
@@ -8953,7 +8954,8 @@ async function renderVideoCentre(){
   const feed=root.querySelector('#video-centre-feed');
   const drawVideoPosts=()=>{
     const query=String(state.videoSearch||'').trim().toLowerCase();
-    const visible=state.videoFeed.filter(post=>!query||[post.text,post.author?.name,post.author?.username].some(value=>String(value||'').toLowerCase().includes(query)));
+    const modePosts=state.videoFeed.filter(post=>mode==='reels'?post.videoFormat==='reel':post.videoFormat!=='reel');
+    const visible=modePosts.filter(post=>!query||[post.text,post.author?.name,post.author?.username].some(value=>String(value||'').toLowerCase().includes(query)));
     if(mode==='reels'){
       const reels=visible.flatMap(post=>(post.media||[]).filter(media=>media.mediaType==='video'&&media.url).map(media=>({post,media})));
       feed.innerHTML=reels.length?'<div class="video-centre-reels">'+reels.map((reel,index)=>renderReelCard(reel.post,reel.media,index)).join('')+'</div>':'<section class="card empty-state"><div class="empty-icon">▶</div><h3>No Reels found</h3><p>'+(query?'Try another search or change the video audience.':'There are no real video posts in this feed yet. Publish a video to start the Reels experience.')+'</p><button type="button" class="primary" id="video-empty-create">＋ Create a video post</button></section>';
@@ -8963,14 +8965,14 @@ async function renderVideoCentre(){
       feed.innerHTML=visible.length?visible.map(postCard).join(''):'<section class="card empty-state"><div class="empty-icon">▶</div><h3>No videos found</h3><p>'+(query?'Try another search or change the video audience.':'There are no videos in this feed yet. Share a real video post to start the Minglora Video library.')+'</p><button type="button" class="primary" id="video-empty-create">＋ Create a video post</button></section>';
       bindFeed(feed);
     }
-    feed.querySelector('#video-empty-create')?.addEventListener('click',()=>openVideoComposer());
+    feed.querySelector('#video-empty-create')?.addEventListener('click',()=>openVideoComposer({videoFormat:mode==='reels'?'reel':'video'}));
   };
   root.querySelectorAll('[data-video-mode]').forEach(button=>button.addEventListener('click',async()=>{
     if(state.videoMode===button.dataset.videoMode)return;
     state.videoMode=button.dataset.videoMode;
     await renderVideoCentre();
   }));
-  root.querySelector('#video-create-button')?.addEventListener('click',()=>openVideoComposer());
+  root.querySelector('#video-create-button')?.addEventListener('click',()=>openVideoComposer({videoFormat:mode==='reels'?'reel':'video'}));
   root.querySelector('#video-scope')?.addEventListener('change',async event=>{state.videoScope=event.target.value;await renderVideoCentre();});
   root.querySelector('#video-search')?.addEventListener('input',event=>{state.videoSearch=event.target.value;drawVideoPosts();});
   drawVideoPosts();
