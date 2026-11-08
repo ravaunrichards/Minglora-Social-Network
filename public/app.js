@@ -9154,6 +9154,12 @@ function setupForYouPlayback(root){
     await renderForYouFeed();
   });
   bindOnce('[data-fyp-home]',()=>activateNav('feed'));
+  bindOnce('[data-fyp-nav]',button=>{
+    const destination=button.dataset.fypNav;
+    if(destination==='create'){openVideoComposer({videoFormat:'reel',onPublished:()=>renderForYouFeed()});return;}
+    if(destination==='profile'){openProfile(state.user.id);return;}
+    if(destination)activateNav(destination);
+  });
   bindOnce('[data-fyp-search]',()=>{
     const search=root.querySelector('#fyp-search-input');
     if(search){search.hidden=false;search.focus();}
@@ -9206,7 +9212,7 @@ async function renderForYouFeed(){
   try{
     await fetchForYouPage({reset:true});
     const cards=state.videoFeed.map((post,index)=>forYouCard(post,index)).join('');
-    root.innerHTML='<section class="minglora-for-you"><div class="fyp-top-search"><input id="fyp-search-input" type="search" maxlength="100" placeholder="Search videos" aria-label="Search For You videos" hidden><button type="button" data-fyp-search aria-label="Search videos">⌕</button></div><div class="fyp-feed-switch"><button type="button" data-fyp-scope="following" class="'+(state.forYouScope==='following'?'active':'')+'">Following</button><span></span><button type="button" data-fyp-scope="for-you" class="'+(state.forYouScope==='for-you'?'active':'')+'">For You</button></div><div class="fyp-stream" id="fyp-stream" tabindex="0" aria-label="For You videos">'+(cards||'<div class="fyp-empty"><div class="fyp-empty-mark">▶</div><h2>'+(state.forYouScope==='following'?'No videos from creators you follow yet':'Your For You feed is ready for its first videos')+'</h2><p>When Minglora members publish eligible public videos, they will appear here. Follow creators, watch videos and interact to personalize recommendations.</p><button type="button" class="primary" id="fyp-create-video">Create a video</button></div>')+'</div></section>';
+    root.innerHTML='<section class="minglora-for-you"><div class="fyp-top-search"><input id="fyp-search-input" type="search" maxlength="100" placeholder="Search videos" aria-label="Search For You videos" hidden><button type="button" data-fyp-search aria-label="Search videos">⌕</button></div><div class="fyp-feed-switch"><button type="button" data-fyp-scope="following" class="'+(state.forYouScope==='following'?'active':'')+'">Following</button><span></span><button type="button" data-fyp-scope="for-you" class="'+(state.forYouScope==='for-you'?'active':'')+'">For You</button></div><div class="fyp-stream" id="fyp-stream" tabindex="0" aria-label="For You videos">'+(cards||'<div class="fyp-empty"><div class="fyp-empty-mark">▶</div><h2>'+(state.forYouScope==='following'?'No videos from creators you follow yet':'Your For You feed is ready for its first videos')+'</h2><p>When Minglora members publish eligible public videos, they will appear here. Follow creators, watch videos and interact to personalize recommendations.</p><button type="button" class="primary" id="fyp-create-video">Create a video</button></div>')+'</div><nav class="fyp-bottom-nav" aria-label="Minglora navigation"><button type="button" data-fyp-nav="feed"><span>⌂</span><small>Home</small></button><button type="button" data-fyp-nav="friends"><span>♙</span><small>Friends</small></button><button type="button" data-fyp-nav="create" class="fyp-create-tab" aria-label="Create video"><span>＋</span></button><button type="button" data-fyp-nav="messages"><span>▣</span><small>Inbox</small></button><button type="button" data-fyp-nav="profile"><span>◉</span><small>Profile</small></button></nav></section>';
     const main=$('#main-content');
     main.querySelector('#fyp-create-video')?.addEventListener('click',()=>openVideoComposer({videoFormat:'reel',onPublished:()=>renderForYouFeed()}));
     bindFeed(main.querySelector('#fyp-stream')||main);
