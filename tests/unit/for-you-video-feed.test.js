@@ -76,6 +76,8 @@ test('For You is a dedicated full-screen video route with swipe snapping and pho
   assert.match(styles, /\.fyp-stream\{[\s\S]*scroll-snap-type:y mandatory/);
   assert.match(styles, /\.fyp-video-card\{[\s\S]*height:100dvh/);
   assert.doesNotMatch(styles, /\.fyp-bottom-nav|\.fyp-brand/);
+  assert.match(styles, /\.fyp-profile-action\{/);
+  assert.match(styles, /\.fyp-overlay-bottom\{bottom:calc\(17px \+ env\(safe-area-inset-bottom\)\)\}/);
   assert.match(html, /data-view="for-you"/);
 });
 
