@@ -14,7 +14,9 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.Settings;
+import android.view.View;
 import android.view.ViewGroup;
+import android.view.Gravity;
 import android.webkit.CookieManager;
 import android.webkit.GeolocationPermissions;
 import android.webkit.PermissionRequest;
@@ -22,11 +24,18 @@ import android.webkit.SslErrorHandler;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceError;
+import android.webkit.RenderProcessGoneDetail;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.net.http.SslError;
 import android.widget.Toast;
+import android.widget.Button;
+import android.widget.FrameLayout;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 import org.json.JSONObject;
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -58,6 +67,13 @@ public final class MainActivity extends Activity {
     private final ExecutorService updateExecutor = Executors.newSingleThreadExecutor();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private WebView webView;
+    private FrameLayout rootContainer;
+    private ProgressBar pageProgress;
+    private View loadErrorPanel;
+    private TextView loadErrorMessage;
+    private View customView;
+    private WebChromeClient.CustomViewCallback customViewCallback;
+    private int previousSystemUiVisibility;
     private ValueCallback<Uri[]> fileChooserCallback;
     private PermissionRequest pendingWebPermissionRequest;
     private GeolocationPermissions.Callback pendingGeolocationCallback;
@@ -76,9 +92,28 @@ public final class MainActivity extends Activity {
     }
 
     private void createWebView() {
+        rootContainer = new FrameLayout(this);
+        rootContainer.setBackgroundColor(Color.rgb(244, 247, 251));
+
         webView = new WebView(this);
-        webView.setLayoutParams(new ViewGroup.LayoutParams(
+        webView.setLayoutParams(new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        rootContainer.addView(webView, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+        pageProgress = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
+        pageProgress.setMax(100);
+        pageProgress.setProgressTintList(android.content.res.ColorStateList.valueOf(Color.rgb(23, 105, 224)));
+        pageProgress.setIndeterminateTintList(android.content.res.ColorStateList.valueOf(Color.rgb(23, 105, 224)));
+        FrameLayout.LayoutParams progressParams = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(3), Gravity.TOP);
+        rootContainer.addView(pageProgress, progressParams);
+        pageProgress.setVisibility(View.GONE);
+
+        loadErrorPanel = createLoadErrorPanel();
+        rootContainer.addView(loadErrorPanel, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        loadErrorPanel.setVisibility(View.GONE);
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
@@ -99,6 +134,48 @@ public final class MainActivity extends Activity {
 
         webView.setWebViewClient(new WebViewClient() {
             @Override
+            public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
+                hideLoadError();
+                pageProgress.setProgress(4);
+                pageProgress.setVisibility(View.VISIBLE);
+            }
+
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                pageProgress.setProgress(100);
+                pageProgress.setVisibility(View.GONE);
+                CookieManager.getInstance().flush();
+            }
+
+            @Override
+            public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+                if (request != null && request.isForMainFrame()) {
+                    showLoadError("Minglora could not load this page. Check your connection and try again.");
+                }
+            }
+
+            @Override
+            public void onReceivedHttpError(WebView view, WebResourceRequest request,
+                                            android.webkit.WebResourceResponse response) {
+                if (request != null && request.isForMainFrame() && response != null &&
+                        response.getStatusCode() >= 400) {
+                    showLoadError("Minglora is temporarily unavailable. Please try again.");
+                }
+            }
+
+            @Override
+            public boolean onRenderProcessGone(WebView view, RenderProcessGoneDetail detail) {
+                if (view == webView) {
+                    if (rootContainer != null) rootContainer.removeView(view);
+                    webView = null;
+                    view.destroy();
+                    createWebView();
+                    webView.loadUrl(BuildConfig.MINGLORA_BASE_URL);
+                }
+                return true;
+            }
+
+            @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 return handleNavigation(request.getUrl());
             }
@@ -111,19 +188,39 @@ public final class MainActivity extends Activity {
             @Override
             public void onReceivedSslError(WebView view, SslErrorHandler handler, SslError error) {
                 handler.cancel();
+                if (view == webView && error != null && error.getUrl() != null &&
+                        error.getUrl().equals(view.getUrl())) {
+                    showLoadError("A secure connection to Minglora could not be verified.");
+                }
             }
         });
 
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
+            public void onProgressChanged(WebView view, int progress) {
+                pageProgress.setProgress(progress);
+                pageProgress.setVisibility(progress >= 100 ? View.GONE : View.VISIBLE);
+            }
+
+            @Override
+            public void onShowCustomView(View view, CustomViewCallback callback) {
+                showCustomView(view, callback);
+            }
+
+            @Override
+            public void onHideCustomView() {
+                hideCustomView();
+            }
+
+            @Override
             public boolean onShowFileChooser(
                     WebView view, ValueCallback<Uri[]> callback, FileChooserParams params) {
                 if (fileChooserCallback != null) fileChooserCallback.onReceiveValue(null);
                 fileChooserCallback = callback;
-                Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                Intent intent = params.createIntent();
                 intent.addCategory(Intent.CATEGORY_OPENABLE);
-                intent.setType("*/*");
-                intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+                intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE,
+                        params.getMode() == WebChromeClient.FileChooserParams.MODE_OPEN_MULTIPLE);
                 try {
                     startActivityForResult(
                             Intent.createChooser(intent, "Choose photos, videos or files"),
@@ -164,7 +261,115 @@ public final class MainActivity extends Activity {
             }
         });
 
-        setContentView(webView);
+        setContentView(rootContainer);
+    }
+
+    private int dp(int value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
+    }
+
+    private View createLoadErrorPanel() {
+        FrameLayout panel = new FrameLayout(this);
+        panel.setBackgroundColor(Color.rgb(244, 247, 251));
+
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setGravity(Gravity.CENTER_HORIZONTAL);
+        content.setPadding(dp(28), dp(24), dp(28), dp(24));
+
+        TextView title = new TextView(this);
+        title.setText("Unable to connect");
+        title.setTextColor(Color.rgb(16, 24, 40));
+        title.setTextSize(22);
+        title.setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD);
+        title.setGravity(Gravity.CENTER);
+
+        loadErrorMessage = new TextView(this);
+        loadErrorMessage.setText("Minglora could not load. Check your internet connection and try again.");
+        loadErrorMessage.setTextColor(Color.rgb(71, 84, 103));
+        loadErrorMessage.setTextSize(15);
+        loadErrorMessage.setGravity(Gravity.CENTER);
+        loadErrorMessage.setPadding(0, dp(12), 0, dp(20));
+
+        Button retry = new Button(this);
+        retry.setText("Try again");
+        retry.setAllCaps(false);
+        retry.setOnClickListener(ignored -> retryPage());
+
+        content.addView(title, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        content.addView(loadErrorMessage, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        content.addView(retry, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        FrameLayout.LayoutParams contentParams = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER);
+        panel.addView(content, contentParams);
+        return panel;
+    }
+
+    private void showLoadError(String message) {
+        runOnUiThread(() -> {
+            if (pageProgress != null) pageProgress.setVisibility(View.GONE);
+            if (loadErrorMessage != null) loadErrorMessage.setText(message);
+            if (loadErrorPanel != null) loadErrorPanel.setVisibility(View.VISIBLE);
+        });
+    }
+
+    private void hideLoadError() {
+        if (loadErrorPanel != null) loadErrorPanel.setVisibility(View.GONE);
+    }
+
+    private void retryPage() {
+        hideLoadError();
+        if (pageProgress != null) {
+            pageProgress.setProgress(0);
+            pageProgress.setVisibility(View.VISIBLE);
+        }
+        if (webView == null) {
+            createWebView();
+            webView.loadUrl(BuildConfig.MINGLORA_BASE_URL);
+            return;
+        }
+        String currentUrl = webView.getUrl();
+        if (currentUrl == null || currentUrl.trim().isEmpty()) webView.loadUrl(BuildConfig.MINGLORA_BASE_URL);
+        else webView.reload();
+    }
+
+    private void showCustomView(View view, WebChromeClient.CustomViewCallback callback) {
+        if (customView != null) {
+            callback.onCustomViewHidden();
+            return;
+        }
+        customView = view;
+        customViewCallback = callback;
+        previousSystemUiVisibility = getWindow().getDecorView().getSystemUiVisibility();
+        webView.setVisibility(View.GONE);
+        rootContainer.addView(customView, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        applyImmersiveFullscreen();
+    }
+
+    private void applyImmersiveFullscreen() {
+        getWindow().getDecorView().setSystemUiVisibility(
+                View.SYSTEM_UI_FLAG_FULLSCREEN |
+                View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
+                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY |
+                View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
+                View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
+                View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
+    }
+
+    private void hideCustomView() {
+        if (customView == null) return;
+        if (rootContainer != null) rootContainer.removeView(customView);
+        customView = null;
+        if (webView != null) webView.setVisibility(View.VISIBLE);
+        getWindow().getDecorView().setSystemUiVisibility(previousSystemUiVisibility);
+        WebChromeClient.CustomViewCallback callback = customViewCallback;
+        customViewCallback = null;
+        if (callback != null) callback.onCustomViewHidden();
     }
 
     private boolean handleNavigation(Uri uri) {
@@ -436,7 +641,21 @@ public final class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        if (webView != null) webView.onResume();
         if (BuildConfig.MINGLORA_CHECK_UPDATES) checkForUpdates();
+    }
+
+    @Override
+    protected void onPause() {
+        if (webView != null) webView.onPause();
+        CookieManager.getInstance().flush();
+        super.onPause();
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus && customView != null) applyImmersiveFullscreen();
     }
 
     @Override
@@ -447,12 +666,17 @@ public final class MainActivity extends Activity {
 
     @Override
     public void onBackPressed() {
+        if (customView != null) {
+            hideCustomView();
+            return;
+        }
         if (webView != null && webView.canGoBack()) webView.goBack();
         else super.onBackPressed();
     }
 
     @Override
     protected void onDestroy() {
+        if (customView != null) hideCustomView();
         if (fileChooserCallback != null) {
             fileChooserCallback.onReceiveValue(null);
             fileChooserCallback = null;
