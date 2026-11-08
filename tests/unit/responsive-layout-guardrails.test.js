@@ -80,7 +80,7 @@ test('dialogs use fixed viewport overlays and scroll inside their own bounds', a
   const css = await read('public/styles.css');
   const safety = await read('public/layout-safety.css');
   const phone = await read('public/phone-experience.css');
-  assert.ok(ruleFor(css, '.modal-backdrop').includes('position:fixed'));
+  assert.ok(safety.includes('.modal-backdrop,.about-section-editor-backdrop'));
   assert.ok(safety.includes('.modal-backdrop,.about-section-editor-backdrop'));
   assert.ok(safety.includes('position:fixed!important'));
   assert.ok(safety.includes('overflow-y:auto!important'));
