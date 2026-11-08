@@ -40,8 +40,11 @@ test('photo albums are persisted and owner-only album operations use owned uploa
 test('profile Photos and Reels use media actually attached to the member profile', async () => {
   const [server, app] = await Promise.all([read('../../src/server.js'), read('../../public/app.js')]);
   assert.match(server, /const profilePhotos=profileMedia\.filter\(media=>media\.mediaType==='image'\)/);
-  assert.match(server, /const profileVideos=profileMedia\.filter\(media=>media\.mediaType==='video'\)/);
-  assert.match(server, /reels:profileVideos/);
+  assert.match(server, /const profileVideos=profileMedia\.filter\(media=>media\.mediaType==='video'&&media\.videoFormat!=='reel'\)/);
+  assert.match(server, /const profileReels=profileMedia\.filter\(media=>media\.mediaType==='video'&&media\.videoFormat==='reel'\)/);
+  assert.match(server, /videoFormat:post\.videoFormat==='reel'\?'reel':'video'/);
+  assert.match(server, /reels:profileReels/);
+  assert.match(server, /videos:profileVideos/);
   assert.match(app, /function openProfileAlbumEditor/);
   assert.match(app, /function openProfilePhotoComposer/);
   assert.match(app, /function openProfileReelComposer/);
