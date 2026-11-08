@@ -68,23 +68,27 @@ test('phone profile counts stay horizontal and the top account menu remains the 
 });
 
 
-test('desktop left sidebar keeps the primary Minglora destinations visible and routed',()=>{
+test('desktop left sidebar contains secondary features while primary destinations stay in the top navigation',()=>{
   const start=html.indexOf('<div class="left-rail-feature-list" id="left-rail-feature-list">');
   const end=html.indexOf('id="left-rail-see-toggle"',start);
   assert.notEqual(start,-1,'Desktop left sidebar feature list exists');
   assert.ok(end>start,'Desktop left sidebar feature list is present before its See less control');
   const sidebar=html.slice(start,end);
+  const primaryViews=['feed','for-you','live','meetwave','leagues'];
+  for(const view of primaryViews){
+    assert.ok(!sidebar.includes('data-view="'+view+'"'),view+' stays in the top navigation instead of being duplicated in the sidebar');
+  }
+  assert.ok(!sidebar.includes('>Feeds</span>'),'The duplicate For You/Feeds sidebar shortcut is removed');
   const expected=[
-    ['feed','Home'],['for-you','For You'],['live','LIVE'],['meetwave','MeetWave'],
-    ['leagues','Leagues'],['friends','Friends'],['creator','Creator Studio'],
-    ['messages','Messenger'],['gifts','Gifts'],['coins','Coins &amp; Payments'],
-    ['groups','Groups'],['pages','Pages'],['saved','Saved']
+    ['friends','Friends'],['creator','Creator Studio'],['messages','Messenger'],
+    ['gifts','Gifts'],['coins','Coins &amp; Payments'],['groups','Groups'],
+    ['pages','Pages'],['saved','Saved'],['calendar','Events'],['videos','Video']
   ];
   for(const [view,label] of expected){
     assert.ok(sidebar.includes('data-view="'+view+'"'),view+' remains directly available from the desktop sidebar');
     assert.ok(sidebar.includes('>'+label+'</span>'),label+' has a visible sidebar label');
   }
-  for(const symbol of ['home','explore','live','meetwave','activity','friends','creator','messages','feeling','coins','groups','pages','saved']){
+  for(const symbol of ['friends','saved','groups','creator','feeling','calendar','video','messages','coins','pages']){
     assert.ok(sidebar.includes('#'+symbol+'\"'),symbol+' uses the shared 3D navigation icon set');
   }
 });
