@@ -64,12 +64,12 @@
           '<section class="ml-share-add-box" aria-label="Add to your post">' +
             '<div class="ml-share-add-heading"><strong>Add to your post</strong><span>Choose anything you want to include</span></div>' +
             '<div class="ml-share-add-actions">' +
-              '<button type="button" data-share-open="media"><span class="ml-share-action-icon ml-share-photo-icon">▣</span><span>Photo/video</span></button>' +
-              '<button type="button" data-share-open="feeling"><span class="ml-share-action-icon ml-share-feeling-icon">☺</span><span>Feeling/activity</span></button>' +
+              '<button type="button" data-share-open="media"><span class="ml-share-action-icon ml-share-photo-icon">' + messenger3dIcon('photo','ml-share-3d-icon') + '</span><span>Photo/video</span></button>' +
+              '<button type="button" data-share-open="feeling"><span class="ml-share-action-icon ml-share-feeling-icon">' + messenger3dIcon('feeling','ml-share-3d-icon') + '</span><span>Feeling/activity</span></button>' +
               '<button type="button" data-share-open="location"><span class="ml-share-action-icon ml-share-location-icon">⌖</span><span>Check in</span></button>' +
-              '<button type="button" data-share-open="tags"><span class="ml-share-action-icon ml-share-tag-icon">@</span><span>Tag friends</span></button>' +
-              '<button type="button" data-share-open="background"><span class="ml-share-action-icon ml-share-background-icon">▤</span><span>Background</span></button>' +
-              '<button type="button" data-share-open="music"><span class="ml-share-action-icon ml-share-music-icon">♫</span><span>Music</span></button>' +
+              '<button type="button" data-share-open="tags"><span class="ml-share-action-icon ml-share-tag-icon">' + messenger3dIcon('friends','ml-share-3d-icon') + '</span><span>Tag friends</span></button>' +
+              '<button type="button" data-share-open="background"><span class="ml-share-action-icon ml-share-background-icon">' + messenger3dIcon('palette','ml-share-3d-icon') + '</span><span>Background</span></button>' +
+              '<button type="button" data-share-open="music"><span class="ml-share-action-icon ml-share-music-icon">' + messenger3dIcon('sound','ml-share-3d-icon') + '</span><span>Music</span></button>' +
             '</div>' +
             '<div class="ml-share-panel" data-share-panel="media" hidden><div class="ml-share-panel-title"><strong>Photos and videos</strong><button type="button" data-share-panel-close>Done</button></div><div id="ml-share-media-picker"></div></div>' +
             '<div class="ml-share-panel" data-share-panel="feeling" hidden>' +
