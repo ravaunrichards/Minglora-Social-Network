@@ -10,10 +10,9 @@
     const ownProfileControls = document.querySelector('#edit-profile');
     const profile = profileInfo?.closest('.minglora-profile-page');
     const adminTools = profile?.querySelector('.profile-admin-tools');
-    if (!profileInfo || !ownProfileControls || !adminTools ||
-        profileInfo.querySelector('[data-open-admin-centre]') ||
-        adminTools.querySelector('[data-open-admin-centre]') ||
-        checkingAdminAccess) return;
+    const adminGrid = adminTools?.querySelector('.profile-admin-tools-grid');
+    if (!profileInfo || !ownProfileControls || !adminTools || !adminGrid ||
+        adminGrid.querySelector('[data-open-admin-centre]') || checkingAdminAccess) return;
 
     checkingAdminAccess = true;
     try {
@@ -25,48 +24,21 @@
       const access = await response.json();
       if ((access?.canAccess !== true && access?.setupRequired !== true) ||
           !profileInfo.isConnected || !ownProfileControls.isConnected ||
-          !adminTools.isConnected || adminTools.querySelector('[data-open-admin-centre]')) return;
+          !adminGrid.isConnected || adminGrid.querySelector('[data-open-admin-centre]')) return;
 
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'admin-centre-profile-button';
-      button.dataset.openAdminCentre = 'true';
-      button.setAttribute('aria-controls', 'admin-centre-root');
-      button.setAttribute('aria-expanded', 'false');
-      button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 3.5 5.5v6.1c0 5.2 3.4 8.8 8.5 10.4 5.1-1.6 8.5-5.2 8.5-10.4V5.5L12 2Z"></path><path d="M8 12h8M12 8v8"></path></svg><span>Open Admin Centre</span>';
-      button.addEventListener('click', async () => {
-        const profilePage = button.closest('.minglora-profile-page');
-        const profileHeader = profilePage?.querySelector('.profile-header-card');
-        if (!profilePage || !profileHeader) return;
-
-        let root = profilePage.querySelector('#admin-centre-root');
-        if (!root) {
-          root = document.createElement('div');
-          root.id = 'admin-centre-root';
-          root.className = 'admin-centre-profile-root';
-          root.hidden = true;
-          root.setAttribute('aria-label', 'Minglora Admin Centre');
-          profileHeader.insertAdjacentElement('afterend', root);
-        }
-
-        const opening = root.hidden;
-        root.hidden = !opening;
-        button.setAttribute('aria-expanded', String(opening));
-        const label = button.querySelector('span');
-        if (label) label.textContent = opening ? 'Close Admin Centre' : 'Open Admin Centre';
-        if (!opening) return;
-
-        if (root.dataset.initialized !== 'true') await initializeAdminCentre(root);
-        root.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      });
-      adminTools.append(button);
+      const link = document.createElement('a');
+      link.href = '/admin-centre.html';
+      link.className = 'profile-admin-tool profile-admin-tool--centre';
+      link.dataset.openAdminCentre = 'true';
+      link.setAttribute('aria-label', 'Open the separate Minglora Admin Centre page');
+      link.innerHTML = '<span class="profile-admin-tool-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v13a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 18.5z"></path><path d="M8 8h8M8 12h8M8 16h4"></path></svg></span><span>Admin Centre</span><span class="profile-admin-tool-arrow" aria-hidden="true">↗</span>';
+      adminGrid.append(link);
     } catch (error) {
       console.warn('[Minglora admin] Admin Centre access could not be checked.', error);
     } finally {
       checkingAdminAccess = false;
     }
   }
-
 
   function initializeInternalActivityFeed(panel) {
     const section = panel.querySelector('#admin-internal-operations');
@@ -258,13 +230,13 @@
     panel.innerHTML = `
       <div class="admin-control-centre-head">
         <div>
-          <h3>Admin Control Centre</h3>
-          <p>All platform controls for the authorized Minglora administrator.</p>
+          <h3>Minglora Admin Centre</h3>
+          <p>A dedicated workspace for platform oversight, member administration, creator operations and security.</p>
         </div>
         <span class="admin-control-centre-status">${unlocked ? 'Secure session active' : 'MFA required'}</span>
       </div>
       <div class="admin-control-centre-note">
-        This is the existing Minglora Admin Centre, embedded in the authorized Admin Account. Protected actions require the designated Creator Hub account and an authenticator-verified session.
+        This is the private Minglora platform workspace. It opens separately from the administrator profile and member-facing settings. Protected actions require the designated Creator Hub account and an authenticator-verified session.
       </div>
       <nav class="admin-centre-navigation" aria-label="Admin Centre sections">
         <a href="#admin-control-centre">Overview</a>
