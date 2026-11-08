@@ -555,7 +555,7 @@ function syncNavigationActive(){
   const moreButton=document.querySelector('#mobile-more-nav');
   moreButton?.classList.toggle('active',activeView==='more'||!['feed','for-you','profile','friends','live','messages'].includes(activeView));
 }
-function activateNav(view){const requestedView=view;if(requestedView==='profile'&&state.user){state.profileTargetId=String(state.user.id);state.profileTab='posts';}if(state.view==='meetwave'&&requestedView!=='meetwave')window.MingloraMeetWave?.onNavigateAway?.();if(state.view==='leagues'&&requestedView!=='leagues')window.MingloraLeagues?.onNavigateAway?.();if(state.view==='gifter-progression'&&requestedView!=='gifter-progression')window.MingloraGifterProgression?.onNavigateAway?.();if(state.view==='feed'&&requestedView!=='feed'&&requestedView!=='for-you')stopFeedAutoSync();if(requestedView==='for-you'){state.feedScope='for-you';view='feed';}else if(requestedView==='feed'&&!restoringSavedView){state.feedScope='all';}if(view!=='profile')stopProfilePresence();if(view!=='friends')stopPeopleDiscoveryRefresh();if(view!=='profile')state.profileTargetId='';state.view=view;syncMessageRefreshPolling();syncNavigationActive();persistCurrentView();recordBrowserNavigation();return renderView();}
+function activateNav(view){const requestedView=view;if(requestedView==='profile'&&state.user){state.profileTargetId=String(state.user.id);state.profileTab='posts';}if(state.view==='meetwave'&&requestedView!=='meetwave')window.MingloraMeetWave?.onNavigateAway?.();if(state.view==='leagues'&&requestedView!=='leagues')window.MingloraLeagues?.onNavigateAway?.();if(state.view==='gifter-progression'&&requestedView!=='gifter-progression')window.MingloraGifterProgression?.onNavigateAway?.();if(state.view==='feed'&&requestedView!=='feed'&&requestedView!=='for-you')stopFeedAutoSync();if(requestedView==='for-you'){state.feedScope='for-you';view='feed';}else if(requestedView==='feed'&&!restoringSavedView){state.feedScope='all';}if(view!=='profile')stopProfilePresence();if(view!=='friends')stopPeopleDiscoveryRefresh();if(view!=='profile')state.profileTargetId='';state.view=view;syncPageLayout();syncMessageRefreshPolling();syncNavigationActive();persistCurrentView();recordBrowserNavigation();return renderView();}
 window.MingloraActivateView=view=>activateNav(view);
 window.addEventListener('minglora:open-wallet',event=>{
   const tab=['recharge','earnings','exchange','currency','calculator'].includes(event.detail?.tab)?event.detail.tab:'recharge';
@@ -4868,7 +4868,8 @@ async function finishPaypalCoinReturn(){
   catch(error){toast("PayPal return received, but the purchase could not be completed: "+error.message);}
 }
 
-function activateSilent(view){if(view!=='profile')stopProfilePresence();if(view!=='friends')stopPeopleDiscoveryRefresh();if(view!=='profile')state.profileTargetId='';state.view=view;syncMessageRefreshPolling();document.querySelectorAll('[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===view));persistCurrentView();recordBrowserNavigation();}
+function syncPageLayout(){const layout=document.querySelector('.layout');if(layout)layout.classList.toggle('profile-view',state.view==='profile');}
+function activateSilent(view){if(view!=='profile')stopProfilePresence();if(view!=='friends')stopPeopleDiscoveryRefresh();if(view!=='profile')state.profileTargetId='';state.view=view;syncPageLayout();syncMessageRefreshPolling();document.querySelectorAll('[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===view));persistCurrentView();recordBrowserNavigation();}
 async function loadGroups(){state.groups=(await api('/groups')).groups;}
 async function renderGroups(){
   activateSilent('groups');await loadGroups();
