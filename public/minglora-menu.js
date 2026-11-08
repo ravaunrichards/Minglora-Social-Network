@@ -315,14 +315,8 @@
       else panel.hidden = true;
 
       if (action === 'profiles') {
-        const list = panel.querySelector('.account-switcher-list');
-        if (list) {
-          list.setAttribute('tabindex', '-1');
-          list.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          list.focus({ preventScroll: true });
-        }
-        const trigger = document.getElementById('profile-menu');
-        trigger?.click();
+        // The account switcher itself lists every profile saved on this device.
+        document.getElementById('profile-menu')?.click();
         return;
       }
 
