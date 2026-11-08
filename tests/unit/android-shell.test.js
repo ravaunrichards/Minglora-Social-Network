@@ -50,3 +50,24 @@ test('Minglora Android keeps media selection and WebView lifecycle aligned with 
   assert.match(docs, /Video players that request HTML fullscreen/);
   assert.match(docs, /renderer/);
 });
+
+test('Minglora Android opens the native share sheet only for trusted Minglora HTTPS pages and links', async () => {
+  const [java, app, docs] = await Promise.all([
+    read('../../apps/android/app/src/main/java/com/minglora/social/MainActivity.java'),
+    read('../../public/app.js'),
+    read('../../apps/android/README.md')
+  ]);
+
+  assert.match(java, /import android\.webkit\.JavascriptInterface/);
+  assert.match(java, /addJavascriptInterface\(new MingloraAndroidBridge\(\), "MingloraAndroid"\)/);
+  assert.match(java, /private boolean isTrustedMingloraPage\(\)/);
+  assert.match(java, /"https"\.equalsIgnoreCase\(current\.getScheme\(\)\)/);
+  assert.match(java, /APP_HOST\.equalsIgnoreCase\(current\.getHost\(\)\)/);
+  assert.match(java, /public void shareText\(String title, String text, String rawUrl\)/);
+  assert.match(java, /APP_HOST\.equalsIgnoreCase\(shareUri\.getHost\(\)\)/);
+  assert.match(java, /new Intent\(Intent\.ACTION_SEND\)/);
+  assert.match(java, /Intent\.createChooser\(shareIntent, chooserTitle\)/);
+  assert.match(app, /window\.MingloraAndroid\?\.shareText\(shareTitle,shareText,shareUrl\)/);
+  assert.match(app, /navigator\.share\(\{title:shareTitle,text:shareText,url:shareUrl\}\)/);
+  assert.match(docs, /Android Sharesheet/);
+});
