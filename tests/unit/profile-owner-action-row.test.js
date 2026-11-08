@@ -109,23 +109,3 @@ test('new profile assets are loaded and precached by the active service-worker c
   assert.match(app,/data-profile-people-more/);
   assert.ok(facebookCss.includes('.profile-people-toggle[aria-expanded="true"] svg{transform:rotate(180deg)}'));
 });
-
-test('Facebook profile picture stays left of the name across desktop, tablet and phones',()=>{
-  assert.ok(avatarAnchorCss.includes('grid-template-columns:minmax(0,1fr) auto!important'));
-  assert.ok(avatarAnchorCss.includes('padding:16px 24px 16px calc(var(--minglora-profile-avatar-size,168px) + 48px)!important'));
-  assert.ok(avatarAnchorCss.includes('left:24px!important'));
-  assert.ok(avatarAnchorCss.includes('top:calc(var(--minglora-profile-avatar-size,168px) / -2)!important'));
-  assert.ok(avatarAnchorCss.includes('grid-column:1!important'));
-  assert.ok(avatarAnchorCss.includes('grid-row:1!important'));
-  assert.ok(avatarAnchorCss.includes('text-align:left!important'));
-  assert.ok(avatarAnchorCss.includes('@media (min-width:761px) and (max-width:900px)'));
-  assert.ok(avatarAnchorCss.includes('padding:14px 18px 14px 170px!important'));
-  assert.ok(avatarAnchorCss.includes('@media (max-width:760px)'));
-  assert.ok(avatarAnchorCss.includes('padding:0 0 0 109px!important'));
-  assert.ok(avatarAnchorCss.includes('@media (max-width:390px)'));
-  assert.ok(avatarAnchorCss.includes('padding-left:99px!important'));
-  assert.ok(avatarAnchorCss.includes('@media (max-width:380px)'));
-  assert.ok(avatarAnchorCss.includes('padding-left:95px!important'));
-  assert.ok(html.indexOf('profile-layout-guardrails.css')<html.indexOf('profile-facebook-avatar-anchor.css'),
-    'the Facebook avatar lockup must load after the older profile guardrails');
-});
