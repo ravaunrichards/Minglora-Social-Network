@@ -42,11 +42,15 @@ test('phone profile keeps the portrait overlapping the cover edge and clears ide
 });
 
 test('phone avatar is absolutely anchored to the Facebook cover edge',()=>{
-  assert.match(avatarAnchorCss,/@media \(max-width:760px\\)[\\s\\S]*?position:absolute!important;[\\s\\S]*?left:13px!important;[\\s\\S]*?top:-48px!important/);
-  assert.ok(avatarAnchorCss.includes('width:96px!important')&&avatarAnchorCss.includes('height:96px!important'));
-  assert.match(avatarAnchorCss,/@media \(max-width:390px\\)[\\s\\S]*?left:10px!important;[\\s\\S]*?top:-44px!important/);
-  assert.match(avatarAnchorCss,/@media \(max-width:380px\\)[\\s\\S]*?top:-42px!important/);
-});
+  const mobile=avatarAnchorCss.slice(avatarAnchorCss.indexOf('@media (max-width:760px)'),avatarAnchorCss.indexOf('@media (max-width:390px)'));
+  const compact=avatarAnchorCss.slice(avatarAnchorCss.indexOf('@media (max-width:390px)'),avatarAnchorCss.indexOf('@media (max-width:380px)'));
+  const narrow=avatarAnchorCss.slice(avatarAnchorCss.indexOf('@media (max-width:380px)'));
+  assert.ok(mobile.includes('position:absolute!important'));
+  assert.ok(mobile.includes('left:13px!important')&&mobile.includes('top:-48px!important'));
+  assert.ok(mobile.includes('width:96px!important')&&mobile.includes('height:96px!important'));
+  assert.ok(compact.includes('left:10px!important')&&compact.includes('top:-44px!important'));
+  assert.ok(narrow.includes('top:-42px!important'));
+});;
 
 test('picture and cover remain editable in the normal Edit profile dialog',()=>{
   assert.match(app,/function openEditProfile\(u,mediaOnly=null\)/);
