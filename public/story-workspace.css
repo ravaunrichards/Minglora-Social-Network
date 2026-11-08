@@ -44,7 +44,7 @@
 .story-workspace-privacy-link span{display:flex;flex-direction:column;gap:2px;min-width:0}
 .story-workspace-privacy-link strong{font-size:13px;font-weight:800}
 .story-workspace-privacy-link small{font-size:11px;color:var(--muted,#6d7688)}
-.story-workspace-privacy-link>span:last-child:not(:first-child){margin-left:auto;font-size:20px}
+ .story-workspace-privacy-link>span:nth-child(3){margin-left:auto;font-size:20px}
 .story-workspace-choose{width:min(100%,720px);margin:clamp(34px,8vh,86px) auto 40px}
 .story-workspace-intro{text-align:center;margin:0 0 25px}
 .story-workspace-intro h2{font-size:25px;margin:0 0 8px}
