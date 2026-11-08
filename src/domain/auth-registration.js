@@ -39,13 +39,15 @@ export async function createOrResumeSupabaseAccount({ register, signIn }) {
         return { authenticated, resumedExistingAccount: true };
       }
     } catch (signInError) {
-      // A transient outage during resume is more actionable than a duplicate
-      // message. Invalid credentials deliberately keep the original conflict.
-      if (Number(signInError?.status) >= 500 || Number(signInError?.status) === 429) {
-        throw signInError;
-      }
+      // Always show the actual reason the existing account could not resume.
+      // In particular, invalid credentials must direct the member to recovery
+      // instead of leaving them stuck on an "already registered" message.
+      throw signInError;
     }
-    throw registrationError;
+    throw Object.assign(
+      new Error('This email already has a Minglora account. Check the password or use Forgot password to reset it.'),
+      { status: 401, code: 'invalid_credentials' }
+    );
   }
 
   if (!registration?.user?.id) {
