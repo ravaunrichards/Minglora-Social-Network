@@ -4499,7 +4499,7 @@ async function route(req, res) {
         const page=orderedPosts.slice(offset,offset+rawLimit+1);
         const hasMore=page.length>rawLimit;
         const items=await Promise.all(page.slice(0,rawLimit).map(post=>publicPost(post,user.id)));
-        const posts=items.filter(post=>(post.media||[]).some(media=>media.mediaType==='video'&&media.url));
+        const posts=items.filter(post=>(post.media||[]).some(media=>media.mediaType==='video'&&media.url)).map(post=>({...post,following:followedIds.has(post.userId)}));
         return json(res,200,{posts,nextCursor:hasMore?String(offset+rawLimit):null,hasMore,scope});
       }
       const videoWatchMatch=p.match(new RegExp('^/api/videos/([^/]+)/watch$'));
