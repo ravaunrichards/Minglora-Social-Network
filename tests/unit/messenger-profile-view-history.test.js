@@ -36,8 +36,8 @@ test('profile picture remains in the avatar column and upload is controlled from
   assert.match(app,/id="edit-profile" type="button" aria-label="Edit profile"/);
   assert.match(app,/data-profile-media-section="avatar"/);
   assert.match(app,/id="edit-avatar-file"/);
-  assert.match(profileCss,/\\.profile-avatar-edit-wrap/);
-  assert.match(profileCss,/\\.minglora-profile-page \\.profile-header-card \\.profile-avatar-edit-wrap>\\.avatar\\{[^}]*object-fit:cover/);
+  assert.match(profileCss,/\.profile-avatar-edit-wrap/);
+  assert.match(profileCss,/\.minglora-profile-page \.profile-header-card \.profile-avatar-edit-wrap>\.avatar\{[^}]*object-fit:cover/);
 });
 test('profile count row shows five real aligned profile metrics',()=>{
   for(const kind of ['followers','following','friends'])assert.match(app,new RegExp('data-open-connections="'+kind+'"'));
