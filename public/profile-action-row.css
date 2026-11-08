@@ -181,7 +181,7 @@
 .profile-crop-preview--cover{aspect-ratio:2.7 / 1!important;max-height:none!important;min-height:0!important}
 @media(max-width:760px){
   :root{--minglora-profile-avatar-size:112px}
-  .minglora-profile-page .profile-header-card .profile-cover{aspect-ratio:2.5 / 1!important}
+  .minglora-profile-page .profile-header-card .profile-cover{aspect-ratio:2.7 / 1!important}
   .minglora-profile-page .profile-header-card .profile-info,.minglora-profile-page .profile-header-card--owner .profile-info{grid-template-columns:var(--minglora-profile-avatar-size) minmax(0,1fr)!important;column-gap:12px!important;padding:0 14px 14px!important}
   .minglora-profile-page .profile-header-card .profile-avatar-edit-wrap{grid-column:1!important;grid-row:2!important;width:var(--minglora-profile-avatar-size)!important;height:var(--minglora-profile-avatar-size)!important;flex-basis:var(--minglora-profile-avatar-size)!important;margin-top:calc(var(--minglora-profile-avatar-size) / -2)!important}
   .minglora-profile-page .profile-header-card .profile-avatar-edit-wrap>.avatar{width:var(--minglora-profile-avatar-size)!important;height:var(--minglora-profile-avatar-size)!important;flex-basis:var(--minglora-profile-avatar-size)!important}
@@ -191,7 +191,7 @@
   .minglora-profile-page .profile-header-card--owner .profile-info--with-thought .profile-counts{grid-row:4!important}
   .minglora-profile-page .profile-header-card--admin .profile-info-main{grid-row:2!important}
   .minglora-profile-page .profile-header-card .profile-actions .profile-edit,.minglora-profile-page .profile-header-card .profile-owner-actions .profile-edit{min-height:40px!important;padding:8px 12px!important;font-size:12px!important}
-  .profile-crop-preview--cover{aspect-ratio:2.5 / 1!important}
+  .profile-crop-preview--cover{aspect-ratio:2.7 / 1!important}
 }
 @media(max-width:390px){
   :root{--minglora-profile-avatar-size:100px}
