@@ -51,17 +51,15 @@ test('picture and cover remain editable in the normal Edit profile dialog',()=>{
   assert.match(app,/\$\('#edit-profile'\)\?\.addEventListener\('click',\(\)=>openEditProfile\(u\)\)/);
 });
 
-test('TikTok-style post tiles open real posts with the existing feed actions',()=>{
-  assert.ok(app.includes('function profilePostTileMarkup(post)'));
-  assert.ok(app.includes('function profilePostsGridMarkup(data,isMe)'));
-  assert.ok(app.includes('function openProfilePostViewer(post)'));
-  assert.ok(app.includes("if(tab==='posts')return profilePostsGridMarkup(data,isMe)"));
-  assert.ok(app.includes("panel.querySelectorAll('[data-profile-post-open]')"));
-  assert.ok(app.includes('bindFeed(modal)'));
-  assert.ok(tiktokCss.includes('.profile-post-grid'));
-  assert.ok(tiktokCss.includes('aspect-ratio: 3 / 4'));
+test('profile Posts retains the Facebook-style Intro sidebar, composer and timeline',()=>{
+  assert.doesNotMatch(app,/profilePostTileMarkup|profilePostsGridMarkup|openProfilePostViewer|data-profile-post-open/);
+  assert.ok(app.includes('profile-body profile-body--established'));
+  assert.ok(app.includes('profile-side-column'));
+  assert.ok(app.includes('profile-intro-card'));
+  assert.ok(app.includes('profile-status-composer'));
+  assert.ok(app.includes('profile-post-column'));
+  assert.ok(app.includes('posts.map(postCard).join'));
 });
-
 test('new profile assets are loaded and precached by the active service-worker cache',()=>{
   const assetFrom=(attribute,prefix)=>{
     const marker=attribute+'="'+prefix;
