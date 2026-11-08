@@ -9797,14 +9797,19 @@ function openAccountAccessDialog(initialMode='login'){
   window.setTimeout(()=>form.elements.email?.focus(),0);
 }
 function bindNavigation(){
+  // Wire the two global header actions before optional navigation elements.
+  // Missing legacy rail controls must never abort the header click handlers.
+  const notificationsButton=$('#notifications-btn');
+  if(notificationsButton)notificationsButton.onclick=()=>{void renderNotifications().catch(error=>toast(error.message||'Notifications could not load.'));};
+  const messengerButton=$('#messenger-btn');
+  if(messengerButton)messengerButton.onclick=()=>{void toggleMessengerPanel().catch(error=>toast(error.message||'Messenger could not open.'));};
   bindPaletteSwitcher();
   document.querySelectorAll('[data-view]').forEach(el=>el.addEventListener('click',()=>activateNav(el.dataset.view)));
   $('#home-brand').onclick=()=>activateNav('feed');
   $('#rail-profile').onclick=()=>openProfile(state.user.id);
   bindAccountSwitcherMenu();
-  $('#rail-notifications').onclick=()=>renderNotifications();
-  $('#notifications-btn').onclick=()=>renderNotifications();
-  $('#messenger-btn')?.addEventListener('click',toggleMessengerPanel);
+  const railNotifications=$('#rail-notifications');
+  if(railNotifications)railNotifications.onclick=()=>renderNotifications();
   if(!document.documentElement.dataset.messengerOutsideBound){
     document.documentElement.dataset.messengerOutsideBound='true';
     // Keep Chats pinned while the user works elsewhere. Only explicit close controls
