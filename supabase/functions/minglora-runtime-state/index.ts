@@ -72,7 +72,7 @@ Deno.serve(async (req: Request) => {
   const action = input.action;
   const supportedActions = [
     "internal_activity_feed",
-    "admin_users_list", "admin_user_set_ban", "admin_audit_log",
+    "admin_users_list", "admin_user_set_ban", "admin_audit_log", "admin_audit_log",
     "streambay_cleanup", "load", "save", "health", "media_sign", "media_upload_prepare", "media_upload_complete", "media_delete",
     "live_broadcast_create", "live_broadcast_end", "live_chat_list", "live_chat_send", "live_chat_delete",
     "live_participant_mark_connected", "live_participant_mark_left", "live_speaker_request", "live_speaker_requests_list", "live_speaker_request_status",
@@ -350,7 +350,391 @@ Deno.serve(async (req: Request) => {
     const activeSessions = sessions.filter((item: any) => {
       const expiry = Date.parse(String(item?.expiresAt || item?.expires_at || ""));
       return Number.isFinite(expiry) && expiry > Date.now();
-    }).length;
+    const countCollection = (key: string) => {
+      const items = state[key];
+      return Array.isArray(items) ? items.length : 0;
+    };
+    const collectionGroups =     [
+      {
+        "id": "accounts",
+        "label": "Accounts & relationships",
+        "collections": [
+          {
+            "label": "Member accounts",
+            "key": "users"
+          },
+          {
+            "label": "Sign-in sessions",
+            "key": "sessions"
+          },
+          {
+            "label": "Follows",
+            "key": "follows"
+          },
+          {
+            "label": "Friend links",
+            "key": "friendships"
+          },
+          {
+            "label": "Blocked connections",
+            "key": "blocks"
+          },
+          {
+            "label": "Friend lists",
+            "key": "friendLists"
+          },
+          {
+            "label": "Friend preferences",
+            "key": "friendPreferences"
+          },
+          {
+            "label": "Dismissed suggestions",
+            "key": "dismissedPeopleSuggestions"
+          },
+          {
+            "label": "Profile views",
+            "key": "profileViews"
+          },
+          {
+            "label": "Profile-view presence",
+            "key": "profileViewPresence"
+          },
+          {
+            "label": "Notifications",
+            "key": "notifications"
+          },
+          {
+            "label": "Data-rights requests",
+            "key": "dataRightsRequests"
+          },
+          {
+            "label": "Pending authentication",
+            "key": "pendingAuth"
+          },
+          {
+            "label": "Push subscriptions",
+            "key": "pushSubscriptions"
+          }
+        ]
+      },
+      {
+        "id": "publishing",
+        "label": "Posts, video & profile media",
+        "collections": [
+          {
+            "label": "Posts",
+            "key": "posts"
+          },
+          {
+            "label": "Photo albums",
+            "key": "albums"
+          },
+          {
+            "label": "Saved posts",
+            "key": "savedPosts"
+          },
+          {
+            "label": "Saved-post collections",
+            "key": "savedPostCollections"
+          },
+          {
+            "label": "Video watch events",
+            "key": "videoWatchEvents"
+          },
+          {
+            "label": "Video feedback",
+            "key": "videoFeedback"
+          },
+          {
+            "label": "Media assets",
+            "key": "mediaAssets"
+          },
+          {
+            "label": "Stories",
+            "key": "stories"
+          },
+          {
+            "label": "Story views",
+            "key": "storyViews"
+          },
+          {
+            "label": "Story archives",
+            "key": "storyArchives"
+          },
+          {
+            "label": "Profile sections",
+            "key": "profileSections"
+          },
+          {
+            "label": "Profile statuses",
+            "key": "profileStatuses"
+          },
+          {
+            "label": "Profile highlights",
+            "key": "profileHighlights"
+          },
+          {
+            "label": "Profile activity",
+            "key": "profileActivity"
+          }
+        ]
+      },
+      {
+        "id": "messaging",
+        "label": "Messaging & communities",
+        "collections": [
+          {
+            "label": "Direct-message records",
+            "key": "messages"
+          },
+          {
+            "label": "Message groups",
+            "key": "messageGroups"
+          },
+          {
+            "label": "Group members",
+            "key": "messageGroupMembers"
+          },
+          {
+            "label": "Group messages",
+            "key": "messageGroupMessages"
+          },
+          {
+            "label": "Conversation settings",
+            "key": "messageConversationSettings"
+          },
+          {
+            "label": "Conversation hides",
+            "key": "messageConversationHides"
+          },
+          {
+            "label": "Communities",
+            "key": "groups"
+          },
+          {
+            "label": "Community posts",
+            "key": "groupPosts"
+          }
+        ]
+      },
+      {
+        "id": "pages-events",
+        "label": "Pages, events & check-ins",
+        "collections": [
+          {
+            "label": "Pages",
+            "key": "pages"
+          },
+          {
+            "label": "Page roles",
+            "key": "pageRoles"
+          },
+          {
+            "label": "Page followers",
+            "key": "pageFollows"
+          },
+          {
+            "label": "Page posts",
+            "key": "pagePosts"
+          },
+          {
+            "label": "Page views",
+            "key": "pageViews"
+          },
+          {
+            "label": "Check-ins",
+            "key": "checkIns"
+          },
+          {
+            "label": "Events",
+            "key": "events"
+          },
+          {
+            "label": "Event RSVPs",
+            "key": "eventRsvps"
+          }
+        ]
+      },
+      {
+        "id": "live",
+        "label": "LIVE & creator engagement",
+        "collections": [
+          {
+            "label": "LIVE sessions",
+            "key": "liveSessions"
+          },
+          {
+            "label": "LIVE participants",
+            "key": "liveParticipants"
+          },
+          {
+            "label": "Speaker requests",
+            "key": "liveSpeakerRequests"
+          },
+          {
+            "label": "Fan-club memberships",
+            "key": "liveFanClubMemberships"
+          },
+          {
+            "label": "Fan-club events",
+            "key": "liveFanClubEvents"
+          },
+          {
+            "label": "Gift-gallery events",
+            "key": "giftGalleryEvents"
+          },
+          {
+            "label": "Gift-gallery settings",
+            "key": "giftGallerySettings"
+          },
+          {
+            "label": "Gift-gallery preferences",
+            "key": "giftGalleryPreferences"
+          }
+        ]
+      },
+      {
+        "id": "calls-meetwave",
+        "label": "Calls & MeetWave",
+        "collections": [
+          {
+            "label": "Calls",
+            "key": "calls"
+          },
+          {
+            "label": "Call participants",
+            "key": "callParticipants"
+          },
+          {
+            "label": "MeetWave rooms",
+            "key": "meetWaveRooms"
+          },
+          {
+            "label": "MeetWave invitations",
+            "key": "meetWaveInvitations"
+          },
+          {
+            "label": "MeetWave messages",
+            "key": "meetWaveMessages"
+          },
+          {
+            "label": "MeetWave attendance",
+            "key": "meetWaveAttendance"
+          },
+          {
+            "label": "MeetWave cleanup queue",
+            "key": "meetWaveProviderCleanupQueue"
+          }
+        ]
+      },
+      {
+        "id": "creator-economy",
+        "label": "Creator economy, leagues & badges",
+        "collections": [
+          {
+            "label": "Creator subscriptions",
+            "key": "creatorSubscriptions"
+          },
+          {
+            "label": "Creator League profiles",
+            "key": "creatorLeagueProfiles"
+          },
+          {
+            "label": "Creator League gift ledger",
+            "key": "creatorLeagueGiftLedger"
+          },
+          {
+            "label": "Creator League daily scores",
+            "key": "creatorLeagueDailyScores"
+          },
+          {
+            "label": "Creator League daily settlements",
+            "key": "creatorLeagueDailySettlements"
+          },
+          {
+            "label": "Creator League matches",
+            "key": "creatorLeagueMatches"
+          },
+          {
+            "label": "Creator League power-up uses",
+            "key": "creatorLeaguePowerupUses"
+          },
+          {
+            "label": "Creator League events",
+            "key": "creatorLeagueEvents"
+          },
+          {
+            "label": "Gifter progression ledger",
+            "key": "gifterProgressionLedger"
+          },
+          {
+            "label": "Gifter badge overrides",
+            "key": "gifterBadgeAdminOverrides"
+          },
+          {
+            "label": "Gifter badge admin audit",
+            "key": "gifterBadgeAdminAudit"
+          }
+        ]
+      },
+      {
+        "id": "moderation-support",
+        "label": "Moderation, support & audit",
+        "collections": [
+          {
+            "label": "Member reports",
+            "key": "reports"
+          },
+          {
+            "label": "Support tickets",
+            "key": "supportTickets"
+          },
+          {
+            "label": "Support replies",
+            "key": "supportMessages"
+          },
+          {
+            "label": "Moderation actions",
+            "key": "moderationActions"
+          },
+          {
+            "label": "Administrator audit records",
+            "key": "auditLog"
+          }
+        ]
+      },
+      {
+        "id": "audio",
+        "label": "Sounds & audio",
+        "collections": [
+          {
+            "label": "Sounds",
+            "key": "sounds"
+          },
+          {
+            "label": "Sound favorites",
+            "key": "soundFavorites"
+          }
+        ]
+      }
+    ];
+    const modules = collectionGroups.map((group) => {
+      const collections = group.collections.map((collection) => ({
+        key: collection.key,
+        label: collection.label,
+        count: countCollection(collection.key)
+      }));
+      return {
+        id: group.id,
+        label: group.label,
+        collectionCount: collections.length,
+        recordCount: collections.reduce((total, collection) => total + collection.count, 0),
+        collections
+      };
+    });
+    const trackedCollections = modules.reduce((total, module) => total + module.collectionCount, 0);
+    const totalStoredRecords = modules.reduce((total, module) => total + module.recordCount, 0);
+
     const liveBroadcastQuery = await admin
       .from("live_broadcasts")
       .select("id", { count: "exact", head: true })
@@ -372,7 +756,10 @@ Deno.serve(async (req: Request) => {
         activeDatabaseBroadcasts: Number(liveBroadcastQuery.count || 0),
         activeMeetings: Array.isArray(state.meetWaveRooms) ? state.meetWaveRooms.filter((item: any) =>
           !["ended", "completed", "closed", "cancelled", "expired"].includes(String(item?.status || "").toLowerCase())
-        ).length : 0
+        ).length : 0,
+        trackedCollections,
+        totalStoredRecords,
+        modules
       }
     });
   }
