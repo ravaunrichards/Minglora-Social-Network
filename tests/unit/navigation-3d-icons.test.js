@@ -12,7 +12,7 @@ const [html, css, sprite, serviceWorker] = await Promise.all([
   read('public/sw.js')
 ]);
 
-const useIcon = id => `<use href="/assets/icons/navigation-3d.svg?v=${id==='recharge'?'20261104-recharge-wallet-3d-3':'20261102-navigation-3d-2'}#${id}"></use>`;
+const useIcon = id => `<use href="/assets/icons/navigation-3d.svg?v=${id==='recharge'?'20261104-recharge-wallet-3d-3':id==='video'?'20261108-mobile-navigation-icons-1':'20261102-navigation-3d-2'}#${id}"></use>`;
 
 test('desktop navigation keeps its existing destinations and uses 3D icons', () => {
   const nav = html.match(/<nav class="top-nav"[\s\S]*?<\/nav>/)?.[0] || '';
@@ -39,14 +39,15 @@ test('mobile navigation keeps five clear destinations and secondary features in 
   assert.ok(navStart >= 0 && navEnd > navStart, 'mobile navigation exists');
   for (const [view, icon] of [
     ['feed', 'home'],
-    ['profile', 'profile'],
+    ['friends', 'friends'],
+    ['videos', 'video'],
     ['live', 'live'],
-    ['messages', 'messages'],
   ]) {
     assert.ok(nav.includes('data-view="' + view + '"'), view + ' is a primary destination');
     assert.ok(nav.includes(useIcon(icon)), view + ' uses the shared 3D artwork');
   }
-  assert.ok(!nav.includes('data-view="friends"'), 'Friends is not a bottom-bar destination');
+  assert.ok(html.includes('id="messenger-btn"') && html.includes(useIcon('messages')), 'Messenger remains in the header action row');
+  assert.ok(html.includes('id="notifications-btn"') && html.includes(useIcon('activity')), 'Notifications remains in the header action row');
   assert.ok(nav.includes('data-view="more"'), 'More is the fifth primary destination');
   assert.ok(nav.includes('id="mobile-more-nav"'), 'More is a proper navigation item');
   assert.ok(!html.includes('id="mobile-more-menu"'), 'the cramped floating More menu is removed');
@@ -62,7 +63,7 @@ test('utility rail and header actions use the matching rendered icon assets', ()
 });
 
 test('the SVG sprite contains finished dimensional artwork for primary and supporting actions', () => {
-  for (const id of ['home', 'explore', 'create', 'live', 'friends', 'messages', 'coins', 'creator', 'groups', 'pages', 'saved', 'activity', 'settings', 'search', 'profile', 'microphone', 'palette', 'share', 'photo', 'feeling', 'call', 'sound', 'privacy', 'request', 'archive', 'delivery', 'lock', 'block', 'external-link', 'more', 'close', 'restore', 'unlock', 'arrow-left', 'arrow-right']) {
+  for (const id of ['home', 'explore', 'create', 'video', 'live', 'friends', 'messages', 'coins', 'creator', 'groups', 'pages', 'saved', 'activity', 'settings', 'search', 'profile', 'microphone', 'palette', 'share', 'photo', 'feeling', 'call', 'sound', 'privacy', 'request', 'archive', 'delivery', 'lock', 'block', 'external-link', 'more', 'close', 'restore', 'unlock', 'arrow-left', 'arrow-right']) {
     assert.match(sprite, new RegExp(`<symbol id="${id}" viewBox="0 0 64 64">`), `sprite contains ${id}`);
   }
   assert.match(sprite, /<linearGradient id="blue-front"/);

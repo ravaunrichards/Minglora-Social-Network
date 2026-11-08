@@ -19,7 +19,7 @@ test('desktop primary navigation remains unchanged and mobile navigation stays f
   const mobileEnd=html.indexOf('</div>',mobileStart);
   assert.notEqual(mobileStart,-1,'Mobile navigation exists');
   const mobile=html.slice(mobileStart,mobileEnd);
-  const expectedMobile=['feed','profile','live','messages','more'];
+  const expectedMobile=['feed','friends','videos','live','more'];
   assert.deepEqual([...mobile.matchAll(/data-view="([^"]+)"/g)].map(match=>match[1]),expectedMobile);
   assert.ok(!html.includes('id="mobile-more-menu"'),'The old cramped floating More menu is removed');
   assert.ok(!html.includes('id="mobile-more-btn"'),'The obsolete More dropdown trigger is removed');
@@ -58,12 +58,12 @@ test('mobile navigation stylesheet is linked and versioned independently',()=>{
   assert.ok(html.includes('/mobile-profile-navigation.css?v=20261106-horizontal-profile-navigation-1'));
 });
 
-test('phone profile counts stay horizontal and the bottom Profile destination opens the signed-in profile',()=>{
+test('phone profile counts stay horizontal and the top account menu remains the profile entry point',()=>{
   const css=fs.readFileSync(path.join(root,'public/mobile-profile-navigation.css'),'utf8');
   assert.ok(css.includes('display:flex!important'));
   assert.ok(css.includes('flex-flow:row nowrap!important'));
   assert.ok(css.includes('flex:0 0 16.666667%!important'));
   assert.ok(css.includes('overflow-x:auto!important'));
   assert.ok(css.includes('flex-shrink:0!important'));
-  assert.ok(app.includes("if(requestedView==='profile'&&state.user){state.profileTargetId=String(state.user.id);state.profileTab='posts';}"));
+  assert.ok(html.includes('id="profile-menu"'),'signed-in profile remains available from the top account menu');
 });

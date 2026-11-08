@@ -6882,3 +6882,6 @@ dialog.profile-editor-dialog .modal-head{position:sticky;top:0;z-index:2;backgro
 .minglora-reel-comments p{margin:0;line-height:1.4;overflow-wrap:anywhere}
 .minglora-reel-comment-form{margin-top:0}
 @media(max-width:640px){.video-centre-reels{max-height:calc(100svh - 185px);min-height:390px;gap:10px;padding:0 0 12px}.minglora-reel{border-radius:12px}.minglora-reel-stage{height:min(66svh,680px);min-height:390px}.minglora-reel-details{padding:10px}.minglora-reel-actions{gap:6px}.minglora-reel-actions button{padding:7px 9px;font-size:11px}}
+
+/* Five phone-first destinations stay evenly sized without a horizontal-scroll navigation bar. */
+@media(max-width:760px){.mobile-nav>button{flex:1 1 20%!important;max-width:20%!important;min-width:0}}
