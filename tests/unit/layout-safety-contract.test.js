@@ -15,9 +15,9 @@ test('the overlay contract loads after mobile styles and is included in the serv
   assert.ok(mobileLink >= 0 && safetyLink > mobileLink && liveLink > safetyLink);
   assert.ok(phoneLink > appLockLink && appLockLink >= 0);
   for (const asset of [
-    'layout-safety.css?v=20261108-facebook-overlay-principles-1',
-    'phone-experience.css?v=20261108-phone-overlay-panels-1',
-    'meetwave.css?v=20261108-meetwave-dialog-overlays-1'
+    '/layout-safety.css?v=20261108-facebook-overlay-principles-1',
+    '/phone-experience.css?v=20261108-phone-overlay-panels-1',
+    '/meetwave.css?v=20261108-meetwave-dialog-overlays-1'
   ]) assert.ok(sw.includes("'" + asset + "'"), 'service worker caches ' + asset);
   assert.match(sw, /CACHE_NAME='minglora-shell-v\\d+-self-updating-1'/);
 });
