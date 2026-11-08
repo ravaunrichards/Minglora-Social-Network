@@ -298,24 +298,17 @@ body:has(#settings-form) #message-window-dock{
   .profile-counts>*{flex:1 1 88px;min-width:0;white-space:normal!important}
 }
 
-/* One main document scrollbar plus exactly one contained left navigation scrollbar.
-   The right rail never becomes an independent vertical scroll area. */
-.left-rail {
-  position: sticky !important;
-  top: 80px !important;
-  align-self: start !important;
-  min-height: 0 !important;
-  max-height: calc(100dvh - 92px) !important;
-  overflow-x: hidden !important;
-  overflow-y: auto !important;
-  overscroll-behavior-y: contain !important;
-  scrollbar-gutter: stable;
-  scrollbar-width: thin;
-  -webkit-overflow-scrolling: touch;
-}
-.right-rail {
-  max-height: none !important;
-  overflow: visible !important;
+/* One vertical page scrollbar: both desktop rails remain in document flow.
+   Only true overlays and content panes (including Messenger messages) own local scrolling. */
+.left-rail,.right-rail{
+  position:relative!important;
+  top:auto!important;
+  align-self:start!important;
+  min-height:0!important;
+  max-height:none!important;
+  overflow:visible!important;
+  overscroll-behavior:auto!important;
+  scrollbar-gutter:auto!important;
 }
 .left-rail-features { min-width: 0; }
 .left-rail-feature-list {
