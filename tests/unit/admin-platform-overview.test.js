@@ -60,7 +60,11 @@ test("Admin Centre opens as its own page from the authorized administrator profi
 });
 
 test("administrator profile keeps name and username grouped with three distinctive identity marks", () => {
-  assert.ok(index.includes("admin-profile-layout.css?v=20261108-admin-profile-workspace-2"));
+  assert.ok(index.includes("admin-profile-layout.css?v=20261108-admin-profile-horizontal-tools-1"));
+  assert.ok(app.includes("<span>Edit Profile</span>"));
+  assert.ok(app.includes("<span>Privacy Controls</span>"));
+  assert.ok(css.includes("grid-template-columns:repeat(4,minmax(0,1fr))!important"));
+  assert.ok(css.includes("Administrator profile actions: keep all four controls in one horizontal row"));
   assert.ok(app.includes("profile-admin-identity-mark--owner"));
   assert.ok(app.includes("profile-admin-identity-mark--security"));
   assert.ok(app.includes("profile-admin-identity-mark--control"));
