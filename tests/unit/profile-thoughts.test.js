@@ -17,7 +17,12 @@ test('profile thoughts appear beside member profile pictures and are tappable fr
   assert.ok(app.includes('const profileThoughtMarkup=data.profileStatus?.text'));
   assert.ok(app.includes('ml-profile-thought-bubble'));
   assert.ok(app.includes('ml-profile-thought-add'));
-  assert.ok(app.includes("'+profileThoughtMarkup+'</div><div class=\"profile-info-main\">"));
+  const avatarWrapStart=app.indexOf('class="profile-avatar-edit-wrap"><img');
+  const infoMainStart=app.indexOf('<div class="profile-info-main">',avatarWrapStart);
+  const thoughtSlotStart=app.indexOf(`(profileThoughtMarkup?'<div class="profile-thought-slot">'`,infoMainStart);
+  assert.ok(avatarWrapStart>=0&&infoMainStart>avatarWrapStart,'profile portrait wrapper exists');
+  assert.ok(thoughtSlotStart>infoMainStart,'profile thought has its own slot alongside the portrait');
+  assert.doesNotMatch(app.slice(avatarWrapStart,infoMainStart),/profileThoughtMarkup/,'thought content must not occupy the avatar wrapper');
   assert.ok(app.includes("bindProfileThoughtControls($('#main-content'))"));
   assert.ok(app.includes("api('/users/'+encodeURIComponent(userId)+'/profile-status')"));
   assert.ok(server.includes('canViewProfileAudience(viewerId,u.id,item.audience)'));
