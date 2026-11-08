@@ -40,7 +40,7 @@ test('Minglora Video Centre discovers only real video attachments from the authe
 
 test('Minglora Video Centre publishes through a video-only one-file composer', async () => {
   const app = await read('../../public/app.js');
-  assert.match(app, /function openVideoComposer\(\)/);
+  assert.match(app, /function openVideoComposer\(options=\{\}\)/);
   assert.match(app, /createMediaPicker\(modal\.querySelector\('#create-video-media-picker'\),\{slot:'post',maxFiles:1,accept:'video\/mp4,video\/webm,video\/quicktime'\}\)/);
   assert.match(app, /new Set\(\['video\/mp4','video\/webm','video\/quicktime'\]\)/);
   assert.match(app, /Choose one supported video file before publishing/);
@@ -48,4 +48,10 @@ test('Minglora Video Centre publishes through a video-only one-file composer', a
   assert.match(app, /api\('\/posts',\{method:'POST',body:JSON\.stringify\(\{text:values\.get\('text'\),audience:values\.get\('audience'\),mediaIds\}\)\}\)/);
   assert.ok(app.includes("root.querySelector('#video-create-button')?.addEventListener('click',()=>openVideoComposer())"));
   assert.ok(app.includes("feed.querySelector('#video-empty-create')?.addEventListener('click',()=>openVideoComposer())"));
+});
+
+test('profile Create reel reuses the single-video composer and returns to the profile', async () => {
+  const app = await read('../../public/app.js');
+  assert.match(app, /function openProfileReelComposer\(profileId\)\{\s*return openVideoComposer\(\{onPublished:\(\)=>openProfile\(profileId\)\}\);\s*\}/);
+  assert.match(app, /if\(typeof options\.onPublished==='function'\)await options\.onPublished\(\)/);
 });
