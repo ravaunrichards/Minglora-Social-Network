@@ -350,6 +350,7 @@ Deno.serve(async (req: Request) => {
     const activeSessions = sessions.filter((item: any) => {
       const expiry = Date.parse(String(item?.expiresAt || item?.expires_at || ""));
       return Number.isFinite(expiry) && expiry > Date.now();
+    }).length;
     const countCollection = (key: string) => {
       const items = state[key];
       return Array.isArray(items) ? items.length : 0;
