@@ -63,6 +63,6 @@ test('responsive Settings entry remains available after removing navigation logo
   assert.ok(currentStylesheet && serviceWorker.includes(currentStylesheet), 'the active stylesheet must be cached using the current HTML version');
   assert.ok(currentAppScript && serviceWorker.includes(currentAppScript), 'the active app bundle must be cached using the current HTML version');
   assert.ok(serviceWorker.includes('settings.js?v=20261106-refresh-controls-removed-1'));
-  assert.ok(serviceWorker.includes('mobile-layout.css?v=20261105-flow-navigation-1'));
+  assert.ok(serviceWorker.includes('mobile-layout.css?v=20261108-mobile-overlay-panels-1'));
   assert.ok(mobileCss.includes('.top-actions #settings-btn{display:none!important}'));
 });
