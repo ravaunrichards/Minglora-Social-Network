@@ -3,13 +3,23 @@ const state = { user:null, view:'feed', feed:[], feedScope:'all', videoFeed:[], 
 const LAST_VIEW_SESSION_PREFIX='minglora:last-view:v1:';
 const RESTORABLE_VIEWS=new Set(['feed','for-you','more','videos','gifts','gifter-progression','live','live-pro','leagues','coins','creator','friends','groups','messages','saved','pages','meetwave','connections','page','group','profile','search','notifications','calendar','clock-centre','menstrual-health']);
 const MINGLORA_HISTORY_KEY='mingloraNavigation';
+const FOR_YOU_SCOPE_VALUES=new Set(['for-you','friends','subscribers','following']);
+function normalizeForYouScope(value){return FOR_YOU_SCOPE_VALUES.has(value)?value:'for-you';}
+function forYouRoutePath(scope=state.forYouScope){
+  const normalized=normalizeForYouScope(scope);
+  return '/for-you/'+(normalized==='for-you'?'home':normalized);
+}
+function forYouScopeFromPath(pathname=window.location.pathname){
+  const match=String(pathname||'').match(/^\/for-you\/(home|friends|subscribers|following)\/?$/);
+  return match?(match[1]==='home'?'for-you':match[1]):null;
+}
 let restoringSavedView=false;
 let restoringBrowserNavigation=false;
 function getBrowserNavigationSnapshot(){
   return {
     view:state.view,
     feedScope:state.feedScope||'all',
-    forYouScope:state.forYouScope||'for-you',
+    forYouScope:normalizeForYouScope(state.forYouScope),
     profileId:state.profileTargetId||state.profile?.user?.id||'',
     profileTab:state.profileTab||'posts',
     activePage:state.activePage||'',
@@ -36,7 +46,9 @@ function recordBrowserNavigation({replace=false}={}){
   if(!state.user||restoringBrowserNavigation)return;
   const snapshot=getBrowserNavigationSnapshot();
   const current=window.history.state?.[MINGLORA_HISTORY_KEY];
-  if(current&&JSON.stringify(current)===JSON.stringify(snapshot))return;
+  const targetUrl=snapshot.view==='for-you'?forYouRoutePath(snapshot.forYouScope):(window.location.pathname.startsWith('/for-you/')?'/':window.location.href);
+  const targetPath=new URL(targetUrl,window.location.origin).pathname;
+  if(current&&JSON.stringify(current)===JSON.stringify(snapshot)&&window.location.pathname===targetPath)return;
   try{
     const scrollKey=MINGLORA_HISTORY_KEY+'Scroll';
     if(!replace){
@@ -48,7 +60,7 @@ function recordBrowserNavigation({replace=false}={}){
     const nextState=withMingloraHistoryState(snapshot);
     delete nextState[scrollKey];
     const method=replace?'replaceState':'pushState';
-    window.history[method](nextState,'',window.location.href);
+    window.history[method](nextState,'',targetUrl);
   }catch(error){
     console.warn('Minglora browser navigation history could not be updated:',error?.message||error);
   }
@@ -56,7 +68,8 @@ function recordBrowserNavigation({replace=false}={}){
 function initializeBrowserNavigation(){
   if(!state.user)return;
   try{
-    window.history.replaceState(withMingloraHistoryState(getBrowserNavigationSnapshot()),'',window.location.href);
+    const snapshot=getBrowserNavigationSnapshot();
+    window.history.replaceState(withMingloraHistoryState(snapshot),'',snapshot.view==='for-you'?forYouRoutePath(snapshot.forYouScope):window.location.href);
   }catch(error){
     console.warn('Minglora browser navigation could not be initialized:',error?.message||error);
   }
@@ -73,7 +86,7 @@ async function restoreBrowserNavigation(event){
   try{
     state.view=saved.view;
     state.feedScope=['all','for-you','following','friends'].includes(saved.feedScope)?saved.feedScope:'all';
-    state.forYouScope=saved.forYouScope==='following'?'following':'for-you';
+    state.forYouScope=normalizeForYouScope(saved.forYouScope);
     state.profileTargetId=String(saved.profileId||'');
     state.profileTab=['posts','about','friends','photos','reels','badges','more','gift-gallery','checkins','events','highlights','groups','videos','manage'].includes(saved.profileTab)?saved.profileTab:'posts';
     state.activePage=String(saved.activePage||'')||null;
@@ -114,7 +127,7 @@ function persistCurrentView(){
     sessionStorage.setItem(lastViewStorageKey(),JSON.stringify({
       view:state.view,
       feedScope:state.feedScope,
-      forYouScope:state.forYouScope,
+      forYouScope:normalizeForYouScope(state.forYouScope),
       profileId:state.profileTargetId||state.profile?.user?.id||'',
       profileTab:state.profileTab||'posts',
       activePage:state.activePage||'',
@@ -150,10 +163,12 @@ function readPersistedView(){
   }catch{return null;}
 }
 async function restoreLastView(){
-  const saved=readPersistedView();
+  const routeScope=forYouScopeFromPath();
+  const persisted=readPersistedView();
+  const saved=routeScope?{...(persisted||{}),view:'for-you',forYouScope:routeScope}:persisted;
   if(!saved){activateNav('feed');return;}
   state.feedScope=['all','for-you','following','friends'].includes(saved.feedScope)?saved.feedScope:'all';
-  state.forYouScope=saved.forYouScope==='following'?'following':'for-you';
+  state.forYouScope=normalizeForYouScope(saved.forYouScope);
   state.profileTab=['posts','about','friends','photos','reels','badges','more','gift-gallery','checkins','events','highlights','groups','videos','manage'].includes(saved.profileTab)?saved.profileTab:'posts';
   state.profileTargetId=String(saved.profileId||'');
   state.activePage=String(saved.activePage||'')||null;
@@ -470,7 +485,7 @@ function syncNavigationActive(){
   const moreButton=document.querySelector('#mobile-more-nav');
   moreButton?.classList.toggle('active',activeView==='more'||!['feed','for-you','profile','friends','live','messages'].includes(activeView));
 }
-function activateNav(view){const requestedView=view;if(state.view==='for-you'&&requestedView!=='for-you'){stopForYouAutoRefresh();teardownForYouPlayback();}if(requestedView==='profile'&&state.user){state.profileTargetId=String(state.user.id);state.profileTab='posts';}if(state.view==='meetwave'&&requestedView!=='meetwave')window.MingloraMeetWave?.onNavigateAway?.();if(state.view==='leagues'&&requestedView!=='leagues')window.MingloraLeagues?.onNavigateAway?.();if(state.view==='gifter-progression'&&requestedView!=='gifter-progression')window.MingloraGifterProgression?.onNavigateAway?.();if(state.view==='feed'&&requestedView!=='feed'&&requestedView!=='for-you')stopFeedAutoSync();if(requestedView==='for-you'){state.forYouScope=state.forYouScope==='following'?'following':'for-you';view='for-you';}else if(requestedView==='feed'&&!restoringSavedView){state.feedScope='all';}if(view!=='profile')stopProfilePresence();if(view!=='friends')stopPeopleDiscoveryRefresh();if(view!=='profile')state.profileTargetId='';state.view=view;syncPageLayout();syncMessageRefreshPolling();syncNavigationActive();persistCurrentView();recordBrowserNavigation();return renderView();}
+function activateNav(view){const requestedView=view;if(state.view==='for-you'&&requestedView!=='for-you'){stopForYouAutoRefresh();teardownForYouPlayback();}if(requestedView==='profile'&&state.user){state.profileTargetId=String(state.user.id);state.profileTab='posts';}if(state.view==='meetwave'&&requestedView!=='meetwave')window.MingloraMeetWave?.onNavigateAway?.();if(state.view==='leagues'&&requestedView!=='leagues')window.MingloraLeagues?.onNavigateAway?.();if(state.view==='gifter-progression'&&requestedView!=='gifter-progression')window.MingloraGifterProgression?.onNavigateAway?.();if(state.view==='feed'&&requestedView!=='feed'&&requestedView!=='for-you')stopFeedAutoSync();if(requestedView==='for-you'){state.forYouScope=normalizeForYouScope(state.forYouScope);view='for-you';}else if(requestedView==='feed'&&!restoringSavedView){state.feedScope='all';}if(view!=='profile')stopProfilePresence();if(view!=='friends')stopPeopleDiscoveryRefresh();if(view!=='profile')state.profileTargetId='';state.view=view;syncPageLayout();syncMessageRefreshPolling();syncNavigationActive();persistCurrentView();recordBrowserNavigation();return renderView();}
 window.MingloraActivateView=view=>activateNav(view);
 window.addEventListener('minglora:open-wallet',event=>{
   const tab=['recharge','earnings','exchange','currency','calculator'].includes(event.detail?.tab)?event.detail.tab:'recharge';
@@ -9008,14 +9023,21 @@ async function fetchForYouPage({reset=false}={}){
   const requestId=++forYouRequestSequence;
   state.forYouLoading=true;
   try{
-    const scope=state.forYouScope==='following'?'following':'for-you';
-    const params=new URLSearchParams({scope,limit:'12',followedOnly:'1'});
+    const scope=normalizeForYouScope(state.forYouScope);
+    const params=new URLSearchParams({scope,limit:'12'});
+    if(scope==='following')params.set('followedOnly','1');
     const query=String(state.forYouSearch||'').trim().slice(0,100);
     if(query)params.set('q',query);
     if(!reset&&state.forYouNextCursor)params.set('cursor',state.forYouNextCursor);
+    const audienceRequest=reset&&scope==='friends'
+      ?api('/friends')
+      :reset&&scope==='subscribers'
+        ?api('/users/'+encodeURIComponent(state.user.id)+'/subscribers')
+        :Promise.resolve(null);
     const requests=await Promise.allSettled([
       api('/feed?'+params.toString()),
-      reset?api('/live/sessions'):Promise.resolve(null)
+      reset?api('/live/sessions'):Promise.resolve(null),
+      audienceRequest
     ]);
     if(requests[0].status!=='fulfilled')throw requests[0].reason;
     if(requestId!==forYouRequestSequence)return [];
@@ -9026,11 +9048,20 @@ async function fetchForYouPage({reset=false}={}){
     state.forYouHasMore=result.hasMore===true;
     if(reset){
       const liveResult=requests[1];
+      let audienceIds=null;
+      if(scope==='friends'||scope==='subscribers'){
+        const audienceResult=requests[2];
+        const members=audienceResult?.status==='fulfilled'
+          ?(scope==='friends'?(audienceResult.value?.friends||[]):(audienceResult.value?.users||[]))
+          :[];
+        audienceIds=new Set(members.map(member=>String(member?.id||'')).filter(Boolean));
+      }
       if(liveResult.status==='fulfilled'){
         const searchQuery=query.toLowerCase();
         forYouLiveSessions=(Array.isArray(liveResult.value?.sessions)?liveResult.value.sessions:[])
           .filter(session=>session?.status==='live'&&session.viewerCountVerified===true)
           .filter(session=>scope!=='following'||session.host?.following===true)
+          .filter(session=>!audienceIds||audienceIds.has(String(session.host?.id||session.hostId||'')))
           .filter(session=>!searchQuery||[session.title,session.description,session.host?.name,session.host?.username]
             .some(value=>String(value||'').toLowerCase().includes(searchQuery)))
           .slice(0,4);
@@ -9193,8 +9224,10 @@ function setupForYouPlayback(root){
   });
   bindOnce('[data-fyp-scope]',async button=>{
     const scope=button.dataset.fypScope;
-    if(!['for-you','following'].includes(scope)||scope===state.forYouScope)return;
-    state.forYouScope=scope;
+    if(!FOR_YOU_SCOPE_VALUES.has(scope)||scope===state.forYouScope)return;
+    state.forYouScope=normalizeForYouScope(scope);
+    persistCurrentView();
+    recordBrowserNavigation();
     await renderForYouFeed();
   });
   bindOnce('[data-fyp-watch-live]',async button=>{
@@ -9273,8 +9306,10 @@ function stopForYouAutoRefresh(){
 }
 function renderForYouStreamContent(stream){
   if(!stream)return;
-  const following=state.forYouScope==='following';
-  stream.setAttribute('aria-label',following?'Following feed':'Home discovery feed');
+  const scope=normalizeForYouScope(state.forYouScope);
+  const scopeLabels={'for-you':'Home','friends':'Friends','subscribers':'Subscribers','following':'Following'};
+  const scopeLabel=scopeLabels[scope];
+  stream.setAttribute('aria-label',scopeLabel+' feed');
   stream.removeAttribute('aria-busy');
   const entries=[];
   let liveIndex=0;
@@ -9286,8 +9321,20 @@ function renderForYouStreamContent(stream){
   while(liveIndex<lives.length)entries.push(forYouLiveCard(lives[liveIndex],state.videoFeed.length+liveIndex++));
   const cards=entries.join('');
   const query=String(state.forYouSearch||'').trim();
-  const heading=query?'No matching posts':following?'No posts from accounts you follow yet':'No posts available right now';
-  const detail=query?'Try another name, username or phrase.':following?'Posts and LIVE broadcasts from people you follow will appear here.':'New public posts, photos, videos and LIVE broadcasts will appear here.';
+  const emptyCopy={
+    'for-you':'New public posts, photos, videos and LIVE broadcasts will appear here.',
+    friends:'Posts and LIVE from people who follow you back will appear here.',
+    subscribers:'Posts and LIVE from members who actively subscribe to you will appear here.',
+    following:'Posts and LIVE broadcasts from people you follow will appear here.'
+  };
+  const emptyTitle={
+    'for-you':'No posts available right now',
+    friends:'No friend posts yet',
+    subscribers:'No subscriber posts yet',
+    following:'No posts from accounts you follow yet'
+  };
+  const heading=query?'No matching posts':emptyTitle[scope];
+  const detail=query?'Try another name, username or phrase.':emptyCopy[scope];
   stream.innerHTML=cards||'<div class="fyp-empty"><div class="fyp-empty-mark" aria-hidden="true">✦</div><h2>'+heading+'</h2><p>'+detail+'</p><button type="button" class="fyp-refresh-button" data-fyp-refresh>Refresh feed</button></div>';
   bindFeed(stream);
   setupForYouPlayback(document.querySelector('.minglora-for-you'));
@@ -9356,24 +9403,32 @@ function startForYouAutoRefresh(){
   forYouRefreshTimer=window.setInterval(()=>void refreshForYouFeedIfNew(),15000);
 }
 function forYouFeedShellMarkup(){
-  const following=state.forYouScope==='following';
+  const scope=normalizeForYouScope(state.forYouScope);
   const search=String(state.forYouSearch||'');
+  const scopeLabels={'for-you':'Home','friends':'Friends','subscribers':'Subscribers','following':'Following'};
+  const loadingText={
+    'for-you':'Finding posts, photos, videos and LIVE for you…',
+    friends:'Loading posts and LIVE from your friends…',
+    subscribers:'Loading posts and LIVE from your subscribers…',
+    following:'Loading posts and LIVE from people you follow…'
+  };
+  const tabs=
+    '<button type="button" data-fyp-scope="for-you" class="'+(scope==='for-you'?'active':'')+'" aria-pressed="'+(scope==='for-you'?'true':'false')+'" aria-label="Show Home feed" title="Home feed">Home</button>'+
+    '<button type="button" data-fyp-scope="friends" class="'+(scope==='friends'?'active':'')+'" aria-pressed="'+(scope==='friends'?'true':'false')+'" aria-label="Show Friends feed" title="Posts and LIVE from mutual-follow friends">Friends</button>'+
+    '<button type="button" data-fyp-scope="subscribers" class="'+(scope==='subscribers'?'active':'')+'" aria-pressed="'+(scope==='subscribers'?'true':'false')+'" aria-label="Show Subscribers feed" title="Posts and LIVE from members subscribed to you">Subscribers</button>'+
+    '<button type="button" data-fyp-scope="following" class="'+(scope==='following'?'active':'')+'" aria-pressed="'+(scope==='following'?'true':'false')+'" aria-label="Show Following feed" title="Posts and LIVE from accounts you follow">Following</button>';
   return '<section class="minglora-for-you" aria-label="Minglora social feed">'+
     '<header class="fyp-header" aria-label="Feed controls">'+
       '<button type="button" class="fyp-exit" data-fyp-exit aria-label="Return to Home" title="Return to Home">‹</button>'+
-      '<div class="fyp-feed-switch" role="group" aria-label="Choose feed">'+
-        '<button type="button" data-fyp-scope="for-you" class="'+(following?'':'active')+'" aria-pressed="'+(following?'false':'true')+'" aria-label="Show Home feed" title="Home feed">Home</button>'+
-        '<span aria-hidden="true"></span>'+
-        '<button type="button" data-fyp-scope="following" class="'+(following?'active':'')+'" aria-pressed="'+(following?'true':'false')+'" aria-label="Show Following feed" title="Posts and LIVE from accounts you follow">Following</button>'+
-      '</div>'+
+      '<div class="fyp-feed-switch" role="group" aria-label="Choose feed">'+tabs+'</div>'+
       '<div class="fyp-top-search" role="search" aria-label="Search the feed">'+
         '<input id="fyp-search-input" type="search" maxlength="100" autocomplete="off" enterkeyhint="search" spellcheck="false" placeholder="Search posts, people and LIVE" aria-label="Search Minglora posts, people and LIVE broadcasts" value="'+esc(search)+'">'+
         '<button type="button" data-fyp-search aria-label="Search feed" title="Search feed">Search</button>'+
         '<button type="button" data-fyp-search-clear aria-label="Clear search" title="Clear search" '+(search.trim()?'':'hidden')+'>×</button>'+
       '</div>'+
     '</header>'+
-    '<div class="fyp-stream" id="fyp-stream" tabindex="0" aria-label="'+(following?'Following feed':'Home discovery feed')+'" aria-live="polite">'+
-      '<div class="fyp-search-loading" role="status">'+(following?'Loading posts and LIVE from people you follow…':'Finding posts, photos, videos and LIVE for you…')+'</div>'+
+    '<div class="fyp-stream" id="fyp-stream" tabindex="0" aria-label="'+scopeLabels[scope]+' feed" aria-live="polite">'+
+      '<div class="fyp-search-loading" role="status">'+loadingText[scope]+'</div>'+
     '</div>'+
   '</section>';
 }
@@ -9382,7 +9437,7 @@ async function renderForYouFeed(){
   if(forYouSearchTimer!==null)window.clearTimeout(forYouSearchTimer);
   state.view='for-you';
   syncPageLayout();
-  state.forYouScope=state.forYouScope==='following'?'following':'for-you';
+  state.forYouScope=normalizeForYouScope(state.forYouScope);
   stopForYouAutoRefresh();
   teardownForYouPlayback();
   state.videoFeed=[];
