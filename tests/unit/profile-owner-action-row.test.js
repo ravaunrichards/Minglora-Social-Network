@@ -63,6 +63,7 @@ test('updated profile assets are loaded and precached by a refreshed shell cache
   const assets=[
     assetFrom('href','/profile-alignment.css?'),
     assetFrom('href','/profile-action-row.css?'),
+    assetFrom('href','/profile-facebook-panel.css?'),
     assetFrom('src','/app.js?')
   ];
   for(const asset of assets){
@@ -70,4 +71,9 @@ test('updated profile assets are loaded and precached by a refreshed shell cache
     assert.ok(worker.includes("'"+asset+"'"),'service worker precaches '+asset);
   }
   assert.match(worker,/CACHE_NAME='minglora-shell-v\d+-[a-z0-9-]+'/);
+  assert.match(app,/id="profile-people-toggle"/);
+  assert.match(app,/id="profile-people-panel"/);
+  assert.match(app,/data-profile-people-scroll="1"/);
+  assert.match(app,/data-profile-people-more/);
+
 });
