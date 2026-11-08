@@ -6906,3 +6906,171 @@ dialog.profile-editor-dialog .modal-head{position:sticky;top:0;z-index:2;backgro
 .layout.profile-view>.right-rail{grid-column:2}
 @media(max-width:1270px){.layout.profile-view{grid-template-columns:minmax(0,1fr);max-width:900px}.layout.profile-view>.right-rail{display:none}}
 @media(max-width:760px){.layout.profile-view{display:block;max-width:620px}.layout.profile-view>.left-rail{display:none}.layout.profile-view>.main-content{width:100%}}
+
+
+/* Dedicated Facebook-style member profile destination. */
+.layout.profile-view{
+  display:block!important;
+  width:100%!important;
+  max-width:1240px!important;
+  margin:0 auto!important;
+  padding:22px clamp(12px,2.4vw,28px)!important;
+}
+.layout.profile-view>.left-rail,
+.layout.profile-view>.right-rail{
+  display:none!important;
+}
+.layout.profile-view>.main-content{
+  display:block!important;
+  width:100%!important;
+  max-width:1184px!important;
+  min-width:0!important;
+  margin:0 auto!important;
+  grid-column:auto!important;
+}
+.minglora-profile-page{
+  display:block;
+  width:100%;
+  min-width:0;
+  margin:0 auto;
+}
+.minglora-profile-page>.profile-header-card{
+  width:100%;
+  min-width:0;
+  overflow:visible;
+}
+.minglora-profile-page>#profile-tab-panel{
+  width:100%;
+  min-width:0;
+  margin-top:16px;
+}
+.minglora-profile-page .profile-body--established{
+  display:grid!important;
+  grid-template-columns:minmax(280px,360px) minmax(0,1fr)!important;
+  align-items:start!important;
+  gap:18px!important;
+  width:100%;
+}
+.minglora-profile-page .profile-side-column{
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  align-items:start;
+  gap:14px;
+  min-width:0;
+}
+.minglora-profile-page .profile-post-column{
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  gap:14px;
+  min-width:0;
+}
+.profile-sidebar-preview{
+  min-width:0;
+  padding:16px;
+}
+.profile-sidebar-preview-heading{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin:0 0 12px;
+}
+.profile-sidebar-preview-heading h3{
+  margin:0;
+  color:var(--text,var(--ink));
+  font-size:17px;
+  font-weight:800;
+}
+.profile-sidebar-preview-heading button{
+  border:0;
+  padding:5px 0;
+  background:transparent;
+  color:var(--blue);
+  font:inherit;
+  font-size:12px;
+  font-weight:750;
+  cursor:pointer;
+}
+.profile-sidebar-photo-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:5px;
+  overflow:hidden;
+  border-radius:10px;
+}
+.profile-sidebar-photo-grid button{
+  display:block;
+  min-width:0;
+  aspect-ratio:1;
+  overflow:hidden;
+  padding:0;
+  border:0;
+  border-radius:7px;
+  background:var(--surface-soft,var(--line));
+  cursor:pointer;
+}
+.profile-sidebar-photo-grid img{
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+.profile-sidebar-friend-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:10px 8px;
+}
+.profile-sidebar-friend-grid button{
+  display:grid;
+  min-width:0;
+  gap:5px;
+  padding:0;
+  border:0;
+  background:transparent;
+  color:var(--text,var(--ink));
+  text-align:left;
+  cursor:pointer;
+}
+.profile-sidebar-friend-grid img{
+  display:block;
+  width:100%;
+  aspect-ratio:1;
+  object-fit:cover;
+  border-radius:9px;
+  background:var(--surface-soft,var(--line));
+}
+.profile-sidebar-friend-grid strong{
+  display:block;
+  min-width:0;
+  overflow:hidden;
+  font-size:11px;
+  line-height:1.3;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+@media(max-width:900px){
+  .layout.profile-view{
+    max-width:760px!important;
+    padding:14px 12px!important;
+  }
+  .minglora-profile-page .profile-body--established{
+    grid-template-columns:minmax(0,1fr)!important;
+  }
+  .minglora-profile-page .profile-side-column{
+    grid-template-columns:minmax(0,1fr);
+  }
+}
+@media(max-width:760px){
+  .layout.profile-view{
+    display:block!important;
+    max-width:620px!important;
+    padding:10px 10px 18px!important;
+  }
+  .layout.profile-view>.left-rail,
+  .layout.profile-view>.right-rail{display:none!important}
+  .layout.profile-view>.main-content{width:100%!important;max-width:none!important}
+  .minglora-profile-page>#profile-tab-panel{margin-top:10px}
+  .minglora-profile-page .profile-body--established{gap:10px!important}
+  .minglora-profile-page .profile-side-column{gap:10px}
+  .profile-sidebar-preview{padding:12px}
+}
