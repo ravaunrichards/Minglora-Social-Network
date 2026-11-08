@@ -32,7 +32,8 @@ test('all shared multi-file publishing surfaces keep their intended attachment c
   assert.match(app, /createMediaPicker\(\$\('#group-post-media-picker'\),\{slot:'group',maxFiles:10\}\)/);
   assert.match(app, /createMediaPicker\(modal\.querySelector\('\[data-profile-album-picker\]'\),\{slot:'post',maxFiles:30/);
   assert.match(app, /createMediaPicker\(modal\.querySelector\('\[data-profile-photo-picker\]'\),\{slot:'post',maxFiles:10/);
-  assert.match(app, /createMediaPicker\(modal\.querySelector\('#create-video-media-picker'\),\{slot:'post',maxFiles:1,accept:'video\/mp4,video\/webm,video\/quicktime'\}\)/);\n  assert.match(app, /function openProfileReelComposer\(profileId\)\{\s*return openVideoComposer\(\{onPublished:\(\)=>openProfile\(profileId\)\}\);\s*\}/);
+  assert.match(app, /createMediaPicker\(modal\.querySelector\('#create-video-media-picker'\),\{slot:'post',maxFiles:1,accept:'video\/mp4,video\/webm,video\/quicktime'\}\)/);
+  assert.match(app, /function openProfileReelComposer\(profileId\)\{\s*return openVideoComposer\(\{onPublished:\(\)=>openProfile\(profileId\)\}\);\s*\}/);
   assert.match(app, /createMediaPicker\(modal\.querySelector\('#story-media-picker'\),\{slot:'story',maxFiles:10,maxTotalBytes:500\*1024\*1024\}\)/);
   assert.match(app, /createMediaPicker\(root,\{slot:'message',maxFiles:5,compact:true\}\)/);
 });
