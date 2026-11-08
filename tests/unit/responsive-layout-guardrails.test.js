@@ -66,7 +66,8 @@ test('Settings is flattened without decorative category rails or nested card lay
   assert.match(flat, /\.settings-card\{[\s\S]*?background:transparent!important/);
   assert.match(flat, /\.settings-section-title\{[\s\S]*?display:block!important/);
   assert.match(flat, /\.settings-save-bar\{[\s\S]*?position:static!important/);
-  assert.match(flat, /body:has\(#settings-form\) #message-window-dock\{[\s\S]*?position:static!important/);
+  const overlayContract = await read('public/layout-safety.css');
+  assert.match(overlayContract, /body:has\(#settings-form\) #message-window-dock\{[\s\S]*?position:fixed!important/);
   assert.doesNotMatch(settings, /class="settings-layout"|class="settings-nav"|class="settings-icon"|settings-icon/);
   assert.doesNotMatch(settings, /sectionHeading\('[^']*',/);
   assert.match(settings, /function sectionHeading\(title\)/);
@@ -75,13 +76,16 @@ test('Settings is flattened without decorative category rails or nested card lay
   assert.match(settings, /id="settings-help"/);
 });
  
-test('dialogs expand in document flow and use the page scroll on short screens', async () => {
+test('dialogs use fixed viewport overlays and scroll inside their own bounds', async () => {
   const css = await read('public/styles.css');
-  const mobile = await read('public/mobile-layout.css');
-  assert.ok(ruleFor(css, '.modal-backdrop').includes('overflow-y:auto'));
-  assert.ok(ruleFor(mobile, '.modal-backdrop').includes('overflow:visible!important'));
-  assert.ok(ruleFor(mobile, '.modal').includes('max-height:none!important'));
-  assert.ok(ruleFor(mobile, '.modal').includes('overflow:visible!important'));
+  const safety = await read('public/layout-safety.css');
+  const phone = await read('public/phone-experience.css');
+  assert.ok(ruleFor(css, '.modal-backdrop').includes('position:fixed'));
+  assert.ok(safety.includes('.modal-backdrop,.about-section-editor-backdrop'));
+  assert.ok(safety.includes('position:fixed!important'));
+  assert.ok(safety.includes('overflow-y:auto!important'));
+  assert.ok(phone.includes('max-height:calc(100dvh - env(safe-area-inset-top)'));
+  assert.ok(phone.includes('overflow-y:auto!important'));
 });
 
 test('the responsive shell caches the dedicated phone layout and current navigation code', async () => {
