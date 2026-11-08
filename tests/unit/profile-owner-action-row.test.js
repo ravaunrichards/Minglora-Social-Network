@@ -75,5 +75,9 @@ test('updated profile assets are loaded and precached by a refreshed shell cache
   assert.match(app,/id="profile-people-panel"/);
   assert.match(app,/data-profile-people-scroll="1"/);
   assert.match(app,/data-profile-people-more/);
+  assert.ok(app.includes('<path d="m7 10 5 5 5-5"></path>'),'closed People You May Know chevron points down');
+  assert.ok(css.includes('.minglora-profile-page .profile-header-card--owner .profile-info{grid-template-columns:clamp(112px,15vw,176px) minmax(0,1fr) auto!important;}'),'owner header has explicit portrait, identity and action columns');
+  assert.ok(css.includes('.profile-people-toggle[aria-expanded="true"] svg{transform:rotate(180deg)}'),'the dropdown chevron flips when opened');
+
 
 });
