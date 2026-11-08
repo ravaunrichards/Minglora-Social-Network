@@ -10,7 +10,7 @@ const app=read('public/app.js');
 const server=read('src/server.js');
 const html=read('public/index.html');
 const worker=read('public/sw.js');
-const profileCss=read('public/profile-established.css');
+const profileCss=read('public/profile-tiktok-layout.css');
 const profileStart=app.indexOf('function renderProfile(data){');
 const profileEnd=app.indexOf('async function loadProfileGiftGallery',profileStart);
 assert.ok(profileStart>=0&&profileEnd>profileStart,'profile renderer exists');
@@ -47,7 +47,7 @@ test('profile counts, section tabs and profile links navigate to live views',()=
   assert.ok(profile.includes("renderConnections(u.id,button.dataset.openConnections)"));
   assert.ok(profile.includes("document.querySelectorAll('.profile-tabs [data-profile-tab]')"));
   assert.ok(profile.includes("showTab(button.dataset.profileTab)"));
-  for(const tab of ["['posts','All']","['about','About']","['friends','Friends']","['photos','Photos']","['reels','Reels']","['more','More']"]){
+  for(const tab of ["['posts','Posts']","['about','About']","['friends','Friends']","['photos','Photos']","['reels','Reels']","['more','More']"]){
     assert.ok(profile.includes(tab),'Missing profile tab '+tab);
   }
   assert.doesNotMatch(profile,/\['badges','Badges'\]|\['gift-gallery','Gift Gallery'\]/);
@@ -106,8 +106,8 @@ test('profile post cards reuse the working feed action bindings inside profile t
 });
 
 test('visitor profile actions stay readable and tappable on narrow screens',()=>{
-  assert.ok(profileCss.includes('grid-template-columns:repeat(auto-fit,minmax(min(100%,132px),1fr))'));
-  assert.ok(profileCss.includes('min-height:44px'));
+  assert.ok(profileCss.includes('min-height: 38px'));
+  assert.ok(profileCss.includes('white-space: nowrap !important'));
   assert.ok(profileCss.includes('white-space:normal'));
   assert.ok(profile.includes('id="profile-message" aria-label="Start a chat with \'+esc(u.name)+\'">Message</button>'));
   assert.ok(profile.includes('id="profile-report" aria-label="Report \'+esc(u.name)+\'">Report</button>'));
@@ -115,16 +115,16 @@ test('visitor profile actions stay readable and tappable on narrow screens',()=>
 });
 
 test('visitor profile actions stay in one horizontal row and preserve subscription checkout',()=>{
-  assert.ok(profileCss.includes('background:var(--blue)!important'),'inactive profile actions use Minglora blue');
-  assert.ok(profileCss.includes('background:var(--danger,#c43d4b)!important'),'active profile actions use red');
+  assert.ok(profileCss.includes('background: #fe2c55 !important;'),'inactive profile actions use Minglora blue');
+  assert.ok(profileCss.includes('background: #f1f1f2 !important;'),'active profile actions use red');
   assert.ok(profileCss.includes('[data-following="true"]'),'follow state is represented in the button');
   assert.ok(profileCss.includes('[data-subscription-active="true"]'),'active subscription state is represented in the button');
   assert.ok(profile.includes("data-friendship=")&&profile.includes("esc(data.friendship||'')"),'accepted friendship is represented as active');
   assert.ok(profile.includes("data-subscription-active=")&&profile.includes("subscriptionAlreadyExists?'true':'false'")&&profile.includes("['active','past_due'].includes(subscriptionStatus)"),'active subscription state is wired to the button color');
-  assert.ok(profileCss.includes('display:flex!important'),'visitor actions use a horizontal flex row');
-  assert.ok(profileCss.includes('flex-flow:row nowrap!important'),'visitor actions never wrap into vertical rows');
-  assert.ok(profileCss.includes('overflow-x:auto!important'),'narrow screens scroll horizontally to reach every action');
-  assert.ok(profileCss.includes('white-space:nowrap!important'),'action labels remain on one line');
+  assert.ok(profileCss.includes('display: flex !important'),'visitor actions use a horizontal flex row');
+  assert.ok(profileCss.includes('flex-flow: row wrap !important'),'visitor actions never wrap into vertical rows');
+  assert.ok(profileCss.includes('flex-flow: row wrap !important'),'narrow screens scroll horizontally to reach every action');
+  assert.ok(profileCss.includes('white-space: nowrap !important'),'action labels remain on one line');
   assert.ok(profile.includes("profileSubscribeButton.disabled=subscriptionAlreadyExists"),'Subscribe remains available unless a subscription already exists');
   assert.ok(!profile.includes('profileSubscribeButton.remove()'),'Subscribe is not removed from the profile');
   assert.ok(profile.includes("api('/subscriptions/checkout'"),'Subscribe keeps its checkout route');
