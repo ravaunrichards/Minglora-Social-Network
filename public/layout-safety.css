@@ -297,3 +297,10 @@ body:has(#settings-form) #message-window-dock{
   .profile-counts{display:flex;flex-wrap:wrap;overflow:visible!important}
   .profile-counts>*{flex:1 1 88px;min-width:0;white-space:normal!important}
 }
+
+/* Single document scrollbar: side rails must not create nested page scroll areas. */
+.left-rail,
+.right-rail {
+  max-height: none !important;
+  overflow: visible !important;
+}
