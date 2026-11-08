@@ -500,7 +500,7 @@ function startMingloraServiceWorkerUpdates(registration){
 async function prepareMingloraServiceWorker(){
   if(!('serviceWorker' in navigator)||!window.isSecureContext)return;
   try{
-    const registration=await navigator.serviceWorker.register('/sw.js?v=20261108-for-you-general-posts-1',{scope:'/',updateViaCache:'none'});
+    const registration=await navigator.serviceWorker.register('/sw.js?v=20261108-for-you-general-posts-2',{scope:'/',updateViaCache:'none'});
     startMingloraServiceWorkerUpdates(registration);
     // Keep the installed shell current even while the visitor is signed out.
     // The browser checks for worker updates normally; new versions must not take over this open page.
