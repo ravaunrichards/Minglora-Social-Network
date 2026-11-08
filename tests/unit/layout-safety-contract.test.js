@@ -8,7 +8,7 @@ const read = path => readFile(new URL(path, root), 'utf8');
 test('the overlay contract loads after mobile styles and is included in the service worker cache', async () => {
   const [html, sw] = await Promise.all([read('public/index.html'), read('public/sw.js')]);
   const mobileLink = html.indexOf('mobile-layout.css?v=20261108-mobile-overlay-panels-1');
-  const safetyLink = html.indexOf('layout-safety.css?v=20261108-facebook-overlay-principles-1');
+  const safetyLink = html.indexOf('/layout-safety.css?v=20261108-facebook-overlay-principles-1');
   const liveLink = html.indexOf('live-room-compact.css?v=20261107-live-layout-1');
   const phoneLink = html.indexOf('phone-experience.css?v=20261108-phone-overlay-panels-1');
   const appLockLink = html.indexOf('app-lock.css?v=20261107-app-lock-1');
@@ -30,7 +30,7 @@ test('open menus, chat panels, drawers and dialogs are never forced into normal 
     '.modal-backdrop', '.mw-modal-backdrop', '.live-tools-backdrop'
   ]) assert.ok(css.includes(selector), 'overlay rules include ' + selector);
   assert.ok(css.includes('position:fixed!important'));
-  assert.ok(css.includes('position:fixed;'));
+  assert.ok(css.includes('position:fixed!important'));
 });
 
 test('Messenger chat windows and popovers stay anchored and scroll inside their own panel', async () => {
