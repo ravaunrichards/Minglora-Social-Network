@@ -8999,6 +8999,7 @@ function bindReelPlayback(root){
 }
 let forYouPlaybackObserver=null;
 let forYouActiveVideos=[];
+let forYouLiveSessions=[];
 let forYouRequestSequence=0;
 async function fetchForYouPage({reset=false}={}){
   if(state.forYouLoading&&!reset)return [];
@@ -9010,14 +9011,58 @@ async function fetchForYouPage({reset=false}={}){
     const query=String(state.forYouSearch||'').trim().slice(0,100);
     if(query)params.set('q',query);
     if(!reset&&state.forYouNextCursor)params.set('cursor',state.forYouNextCursor);
-    const result=await api('/feed?'+params.toString());
+    const requests=await Promise.allSettled([
+      api('/feed?'+params.toString()),
+      reset?api('/live/sessions'):Promise.resolve(null)
+    ]);
+    if(requests[0].status!=='fulfilled')throw requests[0].reason;
     if(requestId!==forYouRequestSequence)return [];
+    const result=requests[0].value;
     const posts=result.posts||[];
     state.videoFeed=reset?posts:[...state.videoFeed,...posts.filter(post=>!state.videoFeed.some(old=>old.id===post.id))];
     state.forYouNextCursor=result.nextCursor||null;
     state.forYouHasMore=result.hasMore===true;
+    if(reset){
+      const liveResult=requests[1];
+      if(liveResult.status==='fulfilled'){
+        const searchQuery=query.toLowerCase();
+        forYouLiveSessions=(Array.isArray(liveResult.value?.sessions)?liveResult.value.sessions:[])
+          .filter(session=>session?.status==='live'&&session.viewerCountVerified===true)
+          .filter(session=>scope!=='following'||session.host?.following===true)
+          .filter(session=>!searchQuery||[session.title,session.description,session.host?.name,session.host?.username]
+            .some(value=>String(value||'').toLowerCase().includes(searchQuery)))
+          .slice(0,4);
+      }else{
+        forYouLiveSessions=[];
+        console.warn('[Minglora] LIVE items could not be added to the feed:',liveResult.reason?.message||liveResult.reason);
+      }
+    }
     return posts;
   }finally{if(requestId===forYouRequestSequence)state.forYouLoading=false;}
+}
+function forYouLiveCard(session,index){
+  const host=session.host||{};
+  const audioOnly=session.broadcastType==='audio_only'||session.liveMode==='audio_only';
+  const title=String(session.title||'Minglora creator is LIVE').trim();
+  const viewers=session.liveSettings?.markViewers!==false&&session.viewerCountVerified===true
+    ?Number(session.viewerCount||0).toLocaleString()+' watching':'';
+  const board=String(session.liveSettings?.board||'general').replace(/_/g,' ');
+  const following=host.following===true;
+  return '<article class="fyp-video-card fyp-post-card fyp-live-card" data-fyp-live-card="'+esc(session.id)+'">'+
+    '<div class="fyp-live-backdrop" aria-hidden="true"></div>'+
+    '<div class="fyp-live-content">'+
+      '<span class="fyp-live-now"><span aria-hidden="true"></span> LIVE NOW</span>'+
+      '<button type="button" class="fyp-live-host-button" data-profile="'+esc(host.id||session.hostId||'')+'" aria-label="Open '+esc(host.name||'creator')+' profile"><img src="'+esc(avatar(host))+'" alt=""></button>'+
+      '<p class="fyp-live-eyebrow">'+(audioOnly?'AUDIO BROADCAST':'LIVE BROADCAST')+'</p>'+
+      '<h2>'+esc(host.name||'Minglora creator')+' is LIVE</h2>'+
+      '<p class="fyp-live-title">'+esc(title)+'</p>'+
+      '<div class="fyp-live-meta"><span>'+esc(board)+'</span>'+(viewers?'<span>·</span><span>'+esc(viewers)+'</span>':'')+'</div>'+
+      '<div class="fyp-live-actions">'+
+        '<button type="button" class="fyp-live-watch" data-fyp-watch-live="'+esc(session.id)+'">'+(audioOnly?'Listen LIVE':'Watch LIVE')+'</button>'+
+        (host.id&&host.id!==state.user.id?'<button type="button" class="fyp-live-follow '+(following?'following':'')+'" data-foryou-follow="'+esc(host.id)+'" data-following="'+(following?'true':'false')+'">'+(following?'Following':'Follow')+'</button>':'')+
+      '</div>'+
+    '</div>'+
+  '</article>';
 }
 function forYouCard(post,index){
   const author=post.author||{},media=(post.media||[]).find(item=>['video','image','photo','audio','model3d'].includes(item.mediaType)&&item.url);
@@ -9135,15 +9180,27 @@ function setupForYouPlayback(root){
       const result=await api('/users/'+encodeURIComponent(id)+'/follow',{method:following?'DELETE':'POST',body:'{}'});
       const next=!following;button.dataset.following=String(next);button.classList.toggle('following',next);button.textContent=next?'✓':'+';button.setAttribute('aria-label',next?'Following creator':'Follow creator');
       state.videoFeed.filter(post=>post.author?.id===id).forEach(post=>post.following=next);
+      forYouLiveSessions.filter(session=>(session.host?.id||session.hostId)===id).forEach(session=>{if(session.host)session.host.following=next;});
       toast(result.friends?'You are now friends through mutual follows.':(next?'Now following creator.':'Unfollowed creator.'));
     }catch(error){toast(error.message);}
     finally{button.disabled=false;}
   });
   bindOnce('[data-fyp-scope]',async button=>{
     const scope=button.dataset.fypScope;
-    if(scope===state.forYouScope)return;
+    if(!['for-you','following'].includes(scope)||scope===state.forYouScope)return;
     state.forYouScope=scope;
     await renderForYouFeed();
+  });
+  bindOnce('[data-fyp-watch-live]',async button=>{
+    const session=forYouLiveSessions.find(item=>item.id===button.dataset.fypWatchLive);
+    if(!session)return;
+    button.disabled=true;
+    try{
+      await openLiveRoom(session,session.hostId===state.user.id?'host':'viewer');
+    }catch(error){
+      toast(error.message||'This LIVE broadcast could not be opened.');
+      button.disabled=false;
+    }
   });
   bindOnce('[data-fyp-search]',()=>{
     const search=root.querySelector('#fyp-search-input');
@@ -9210,12 +9267,23 @@ function stopForYouAutoRefresh(){
 }
 function renderForYouStreamContent(stream){
   if(!stream)return;
-  stream.setAttribute('aria-label',state.forYouScope==='following'?'Following feed':'For You feed');
+  const following=state.forYouScope==='following';
+  stream.setAttribute('aria-label',following?'Following feed':'Home discovery feed');
   stream.removeAttribute('aria-busy');
-  const cards=state.videoFeed.map((post,index)=>forYouCard(post,index)).join('');
+  const entries=[];
+  let liveIndex=0;
+  const lives=forYouLiveSessions.slice(0,4);
+  state.videoFeed.forEach((post,index)=>{
+    if(liveIndex<lives.length&&index%3===0)entries.push(forYouLiveCard(lives[liveIndex],index));
+    entries.push(forYouCard(post,index));
+    if(index===state.videoFeed.length-1){
+      while(liveIndex<lives.length)entries.push(forYouLiveCard(lives[liveIndex++],index+liveIndex));
+    }
+  });
+  const cards=entries.join('');
   const query=String(state.forYouSearch||'').trim();
-  const heading=query?'No matching posts':state.forYouScope==='following'?'No posts from accounts you follow yet':'No posts available right now';
-  const detail=query?'Try another name, username or phrase.':state.forYouScope==='following'?'Posts from people you follow will appear here as they share updates.':'New public and otherwise eligible Minglora member posts will appear here, ranked using your activity and connections.';
+  const heading=query?'No matching posts':following?'No posts from accounts you follow yet':'No posts available right now';
+  const detail=query?'Try another name, username or phrase.':following?'Posts and LIVE broadcasts from people you follow will appear here.':'New public posts, photos, videos and LIVE broadcasts will appear here.';
   stream.innerHTML=cards||'<div class="fyp-empty"><div class="fyp-empty-mark" aria-hidden="true">✦</div><h2>'+heading+'</h2><p>'+detail+'</p><button type="button" class="fyp-refresh-button" data-fyp-refresh>Refresh feed</button></div>';
   bindFeed(stream);
   setupForYouPlayback(document.querySelector('.minglora-for-you'));
@@ -9283,18 +9351,18 @@ function forYouFeedShellMarkup(){
     '<header class="fyp-header" aria-label="Feed controls">'+
       '<button type="button" class="fyp-exit" data-fyp-exit aria-label="Return to Home" title="Return to Home">‹</button>'+
       '<div class="fyp-feed-switch" role="group" aria-label="Choose feed">'+
-        '<button type="button" data-fyp-scope="following" class="'+(following?'active':'')+'" aria-pressed="'+(following?'true':'false')+'">Following</button>'+
+        '<button type="button" data-fyp-scope="for-you" class="'+(following?'':'active')+'" aria-pressed="'+(following?'false':'true')+'" aria-label="Show Home feed" title="Home feed">Home</button>'+
         '<span aria-hidden="true"></span>'+
-        '<button type="button" data-fyp-scope="for-you" class="'+(following?'':'active')+'" aria-pressed="'+(following?'false':'true')+'">For You</button>'+
+        '<button type="button" data-fyp-scope="following" class="'+(following?'active':'')+'" aria-pressed="'+(following?'true':'false')+'" aria-label="Show Following feed" title="Posts and LIVE from accounts you follow">Following</button>'+
       '</div>'+
       '<div class="fyp-top-search" role="search" aria-label="Search the feed">'+
-        '<input id="fyp-search-input" type="search" maxlength="100" autocomplete="off" enterkeyhint="search" spellcheck="false" placeholder="Search posts and people" aria-label="Search Minglora posts and people" value="'+esc(search)+'">'+
+        '<input id="fyp-search-input" type="search" maxlength="100" autocomplete="off" enterkeyhint="search" spellcheck="false" placeholder="Search posts, people and LIVE" aria-label="Search Minglora posts, people and LIVE broadcasts" value="'+esc(search)+'">'+
         '<button type="button" data-fyp-search aria-label="Search feed" title="Search feed">Search</button>'+
         '<button type="button" data-fyp-search-clear aria-label="Clear search" title="Clear search" '+(search.trim()?'':'hidden')+'>×</button>'+
       '</div>'+
     '</header>'+
-    '<div class="fyp-stream" id="fyp-stream" tabindex="0" aria-label="'+(following?'Following feed':'For You feed')+'" aria-live="polite">'+
-      '<div class="fyp-search-loading" role="status">'+(following?'Loading posts from people you follow…':'Finding posts for you…')+'</div>'+
+    '<div class="fyp-stream" id="fyp-stream" tabindex="0" aria-label="'+(following?'Following feed':'Home discovery feed')+'" aria-live="polite">'+
+      '<div class="fyp-search-loading" role="status">'+(following?'Loading posts and LIVE from people you follow…':'Finding posts, photos, videos and LIVE for you…')+'</div>'+
     '</div>'+
   '</section>';
 }
