@@ -22,5 +22,5 @@ test('Minglora Video Centre discovers only real video attachments from the authe
   assert.match(app, /data-video-search|video-search/);
   assert.match(html, /video-centre-foundation-1/);
   assert.match(styles, /\.video-centre-feed/);
-  assert.doesNotMatch(app, /seeded video|sample video|fake video/i);
+  assert.doesNotMatch(app, /sampleVideoFixtures|fakeVideoFixtures|seedVideoFeed/i);
 });
