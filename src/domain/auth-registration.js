@@ -6,15 +6,12 @@ export function isValidSupabaseAuthSession(session) {
   );
 }
 
-function isRegistrationConflict(error) {
+function isExistingEmailConflict(error) {
   if (Number(error?.status) !== 409) return false;
   const code = String(error?.code || '').toLowerCase();
   const message = String(error?.message || '');
-  return [
-    'email_already_registered',
-    'username_already_taken',
-    'registration_identifier_conflict'
-  ].includes(code) || /already registered|already in use|username is already taken|duplicate key/i.test(message);
+  return code === 'email_already_registered' ||
+    /user already registered|email.{0,40}(already|exists|registered)|(already|exists|registered).{0,40}email/i.test(message);
 }
 
 /**
@@ -31,7 +28,7 @@ export async function createOrResumeSupabaseAccount({ register, signIn }) {
   try {
     registration = await register();
   } catch (registrationError) {
-    if (!isRegistrationConflict(registrationError)) throw registrationError;
+    if (!isExistingEmailConflict(registrationError)) throw registrationError;
 
     try {
       const authenticated = await signIn();
