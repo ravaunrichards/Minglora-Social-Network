@@ -948,3 +948,12 @@
 .admin-platform-inventory-empty{grid-column:1/-1;margin:0;padding:12px;border:1px dashed var(--line);border-radius:10px;color:var(--muted);font-size:12px}
 .admin-platform-overview-footnote{margin:0;color:var(--muted);font-size:11px;line-height:1.5}
 @media(max-width:620px){.admin-platform-overview{padding:12px}.admin-platform-overview-heading{flex-direction:column}.admin-platform-module-grid{grid-template-columns:1fr}}
+
+
+
+/* Admin Centre now opens within the existing authorized member profile. */
+.admin-centre-profile-button{font-family:inherit;text-align:left;cursor:pointer}
+.admin-centre-profile-button:focus-visible{outline:3px solid var(--accent,#1769e0);outline-offset:3px}
+.admin-centre-profile-root{width:100%;min-width:0;margin:16px 0 24px;scroll-margin-top:18px}
+.admin-centre-profile-root[hidden]{display:none!important}
+.admin-centre-profile-root .admin-control-centre-page{width:100%;max-width:none}
