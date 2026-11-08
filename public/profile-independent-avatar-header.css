@@ -348,8 +348,10 @@
   }
   .minglora-profile-page .profile-header-card .profile-counts{grid-row:3!important}
   .minglora-profile-page .profile-header-card .profile-thought-slot~.profile-counts{grid-row:4!important}
-  .minglora-profile-page .profile-header-card--admin .profile-info--admin>.profile-admin-tools{grid-row:4!important}
-  .minglora-profile-page .profile-header-card--admin .profile-info--admin .profile-counts{grid-row:5!important}
+  .minglora-profile-page .profile-header-card--admin .profile-info--admin>.profile-admin-tools{grid-row:3!important}
+  .minglora-profile-page .profile-header-card--admin .profile-info--admin .profile-counts{grid-row:4!important}
+  .minglora-profile-page .profile-header-card--admin .profile-info--with-thought>.profile-admin-tools{grid-row:4!important}
+  .minglora-profile-page .profile-header-card--admin .profile-info--with-thought .profile-counts{grid-row:5!important}
 }
 
 /* Phones use a distinct compact geometry, never a reduced desktop overlap. */
