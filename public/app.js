@@ -9552,13 +9552,6 @@ function bindNavigation(){
     const q=$('#search-input')?.value.trim() || '';
     if(q)try{await renderSearch(q)}catch(err){toast(err.message)}
   });
-  $('#top-search-form')?.addEventListener('submit',async e=>{
-    e.preventDefault();
-    const q=$('#top-search-input')?.value.trim()||'';
-    if(!q){$('#top-search-input')?.focus();return;}
-    try{await renderSearch(q);}
-    catch(err){toast(err.message||'Search could not be completed.');}
-  });
   const logout=async()=>{
     document.querySelectorAll('[data-logout]').forEach(button=>{button.disabled=true;});
     try{
