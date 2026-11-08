@@ -43,24 +43,37 @@ test("admin centre renders module and per-collection totals from the live snapsh
 });
 
 
-test("existing Admin Centre opens inside the authorized Admin Account using the current profile controls", () => {
-  assert.match(admin, /document\.querySelector\('#edit-profile'\)/);
-  assert.doesNotMatch(admin, /document\.querySelector\('#profile-edit-avatar'\)/);
-  assert.match(admin, /profile\.querySelector\('\.profile-admin-tools'\)/);
-  assert.match(admin, /profileHeader\.insertAdjacentElement\('afterend', root\)/);
-  assert.match(admin, /initializeAdminCentre\(root\)/);
+test("Admin Centre opens as its own page from the authorized administrator profile", () => {
+  assert.match(admin, /document\\.querySelector\\('#edit-profile'\\)/);
+  assert.match(admin, /profile\\?\\.querySelector\\('\\.profile-admin-tools'\\)/);
+  assert.match(admin, /link\\.href = '\\/admin-centre\\.html'/);
+  assert.match(admin, /adminGrid\\.append\\(link\\)/);
+  assert.doesNotMatch(admin, /insertAdjacentElement\\('afterend', root\\)/);
   assert.match(admin, /authenticator-verified session/i);
-  assert.match(css, /admin-centre-profile-root\[hidden\]/);
-  assert.match(html, /20261108-admin-account-inline-1/);
+  assert.match(html, /id="admin-centre-root"/);
+  assert.match(html, /20261108-admin-workspace-2/);
+  assert.match(css, /admin-control-centre-page/);
+  assert.match(css, /grid-template-columns:minmax\\(220px,260px\\) minmax\\(0,1fr\\)/);
+  assert.match(css, /@media\\(max-width:900px\\)/);
+});
+
+test("administrator profile keeps name and username grouped with three distinctive identity marks", () => {
+  assert.match(index, /admin-profile-layout\\.css\\?v=20261108-admin-profile-workspace-1/);
+  assert.match(index, /app\\.js\\?v=20261108-admin-profile-workspace-1/);
+  assert.match(admin, /profile-admin-identity-mark--owner/);
+  assert.match(admin, /profile-admin-identity-mark--security/);
+  assert.match(admin, /profile-admin-identity-mark--control/);
+  assert.match(admin, /data-profile-admin-action="edit-profile"/);
+  assert.match(admin, /data-profile-admin-action="privacy"/);
 });
 
 
-test("app shell and service worker load the current embedded Admin Centre assets", () => {
+test("app shell and service worker load the current standalone Admin Centre assets", () => {
   assert.match(index, /admin-centre\.css\?v=20261108-admin-account-inline-1/);
   assert.match(index, /admin-centre\.js\?v=20261108-admin-account-inline-1/);
   const cacheName = serviceWorker.match(/const CACHE_NAME='([^']+)'/)?.[1] || '';
   assert.match(cacheName, /^minglora-shell-v\d+-/);
-  assert.notEqual(cacheName, 'minglora-shell-v232-facebook-edit-profile-3');
+  assert.notEqual(cacheName, 'minglora-shell-v235-self-updating-1');
   assert.match(serviceWorker, /admin-centre\.css\?v=20261108-admin-account-inline-1/);
   assert.match(serviceWorker, /admin-centre\.js\?v=20261108-admin-account-inline-1/);
 });
