@@ -17,6 +17,23 @@ test('Messenger popups stay right-pinned and expose phone, camera and microphone
   assert.ok(app.includes('data-message-minimize=')&&app.includes('data-message-close='));
 });
 
+test('Top-right Messenger and Notifications actions bind before optional legacy rail controls',async()=>{
+  const app=await read('../../public/app.js');
+  const start=app.indexOf('function bindNavigation(){');
+  const end=app.indexOf('\nasync function enterMingloraApp',start);
+  assert.ok(start>=0&&end>start,'the main navigation binder exists');
+  const binder=app.slice(start,end);
+  const notifications=binder.indexOf("const notificationsButton=$('#notifications-btn')");
+  const messenger=binder.indexOf("const messengerButton=$('#messenger-btn')");
+  const palette=binder.indexOf('bindPaletteSwitcher()');
+  assert.ok(notifications>=0&&messenger>=0,'both header action buttons receive handlers');
+  assert.ok(notifications<palette&&messenger<palette,'header handlers are attached before other navigation setup');
+  assert.match(binder,/notificationsButton\.onclick=\(\)=>\{void renderNotifications\(\)\.catch/);
+  assert.match(binder,/messengerButton\.onclick=\(\)=>\{void toggleMessengerPanel\(\)\.catch/);
+  assert.match(binder,/const railNotifications=\$\('#rail-notifications'\);\s*if\(railNotifications\)/);
+  assert.doesNotMatch(binder,/\$\('#rail-notifications'\)\.onclick/);
+});
+
 test('Messenger realtime startup failures retain API polling and schedule a bounded reconnect',async()=>{
   const app=await read('../../public/app.js');
   const start=app.slice(app.indexOf('function startMessengerRealtime()'),app.indexOf('\nfunction messageWindowConversationId'));
