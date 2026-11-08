@@ -86,6 +86,6 @@ test('desktop left sidebar keeps the primary Minglora destinations visible and r
     assert.ok(sidebar.includes('>'+label+'</span>'),label+' has a visible sidebar label');
   }
   for(const symbol of ['home','explore','live','meetwave','activity','friends','creator','messages','feeling','coins','groups','pages','saved']){
-    assert.ok(sidebar.includes('#'+symbol+'</use>'),symbol+' uses the shared 3D navigation icon set');
+    assert.ok(sidebar.includes('#'+symbol+'\"'),symbol+' uses the shared 3D navigation icon set');
   }
 });
