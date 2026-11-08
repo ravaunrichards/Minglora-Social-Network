@@ -308,3 +308,184 @@ body.minglora-for-you-active .fyp-search-loading {
     padding-left: 8px !important;
   }
 }
+
+
+/* Unified Home / Following feed: verified LIVE broadcasts are first-class feed cards. */
+body.minglora-for-you-active .fyp-header,
+body.minglora-for-you-active .fyp-feed-switch,
+body.minglora-for-you-active .fyp-feed-switch button {
+  pointer-events: auto !important;
+}
+
+body.minglora-for-you-active .fyp-header { z-index: 30 !important; }
+body.minglora-for-you-active .fyp-feed-switch { position: relative !important; z-index: 32 !important; }
+
+body.minglora-for-you-active .fyp-feed-switch button {
+  position: relative !important;
+  z-index: 33 !important;
+  touch-action: manipulation !important;
+  -webkit-tap-highlight-color: rgba(77, 154, 255, .22) !important;
+}
+
+body.minglora-for-you-active .fyp-stream { z-index: 1 !important; }
+
+body.minglora-for-you-active .fyp-live-card {
+  display: grid !important;
+  place-items: center !important;
+  overflow: hidden !important;
+  background: #080d1b !important;
+  color: #fff !important;
+}
+
+body.minglora-for-you-active .fyp-live-backdrop {
+  position: absolute !important;
+  inset: 0 !important;
+  background:
+    radial-gradient(ellipse at 50% 30%, rgba(35, 105, 220, .55), transparent 48%),
+    radial-gradient(ellipse at 18% 82%, rgba(125, 40, 180, .28), transparent 42%),
+    linear-gradient(145deg, #091326 0%, #101c36 48%, #070a13 100%) !important;
+}
+
+body.minglora-for-you-active .fyp-live-content {
+  position: relative !important;
+  z-index: 4 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 15px !important;
+  width: min(100%, 560px) !important;
+  max-height: 100% !important;
+  box-sizing: border-box !important;
+  padding: 36px 24px 56px !important;
+  text-align: center !important;
+  color: #fff !important;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, .35) !important;
+}
+
+body.minglora-for-you-active .fyp-live-now {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 8px 14px !important;
+  border-radius: 30px !important;
+  background: #e7234d !important;
+  color: #fff !important;
+  font-size: 12px !important;
+  font-weight: 900 !important;
+  letter-spacing: .11em !important;
+}
+
+body.minglora-for-you-active .fyp-live-now > span {
+  width: 8px !important;
+  height: 8px !important;
+  border-radius: 50% !important;
+  background: #fff !important;
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, .17) !important;
+}
+
+body.minglora-for-you-active .fyp-live-host-button {
+  display: grid !important;
+  place-items: center !important;
+  width: clamp(100px, 19vw, 150px) !important;
+  height: clamp(100px, 19vw, 150px) !important;
+  padding: 5px !important;
+  border: 3px solid #fff !important;
+  border-radius: 50% !important;
+  background: linear-gradient(145deg, #4c9aff, #873bd7) !important;
+  box-shadow: 0 16px 55px rgba(0, 0, 0, .42) !important;
+  cursor: pointer !important;
+}
+
+body.minglora-for-you-active .fyp-live-host-button img {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 50% !important;
+  object-fit: cover !important;
+}
+
+body.minglora-for-you-active .fyp-live-eyebrow {
+  margin: 0 !important;
+  color: #9dc7ff !important;
+  font-size: 11px !important;
+  font-weight: 850 !important;
+  letter-spacing: .16em !important;
+}
+
+body.minglora-for-you-active .fyp-live-content h2 {
+  max-width: 100% !important;
+  margin: 0 !important;
+  color: #fff !important;
+  font-size: clamp(24px, 4.6vw, 42px) !important;
+  font-weight: 900 !important;
+  line-height: 1.12 !important;
+  overflow-wrap: anywhere !important;
+}
+
+body.minglora-for-you-active .fyp-live-title {
+  max-width: 90% !important;
+  max-height: 4.2em !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  color: rgba(255, 255, 255, .88) !important;
+  font-size: clamp(15px, 2.4vw, 20px) !important;
+  line-height: 1.4 !important;
+  overflow-wrap: anywhere !important;
+}
+
+body.minglora-for-you-active .fyp-live-meta {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 9px !important;
+  color: rgba(255, 255, 255, .74) !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  text-transform: capitalize !important;
+}
+
+body.minglora-for-you-active .fyp-live-actions {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-wrap: wrap !important;
+  gap: 10px !important;
+  width: 100% !important;
+  margin-top: 4px !important;
+}
+
+body.minglora-for-you-active .fyp-live-watch,
+body.minglora-for-you-active .fyp-live-follow {
+  min-height: 46px !important;
+  padding: 0 22px !important;
+  border: 1px solid #fff !important;
+  border-radius: 24px !important;
+  background: #fff !important;
+  color: #0b1730 !important;
+  font-size: 14px !important;
+  font-weight: 900 !important;
+  cursor: pointer !important;
+}
+
+body.minglora-for-you-active .fyp-live-follow {
+  border-color: rgba(255, 255, 255, .35) !important;
+  background: rgba(255, 255, 255, .1) !important;
+  color: #fff !important;
+}
+
+body.minglora-for-you-active .fyp-live-follow.following {
+  background: rgba(255, 255, 255, .18) !important;
+}
+
+@media (max-width: 520px) {
+  body.minglora-for-you-active .fyp-live-content {
+    gap: 13px !important;
+    padding: 28px 18px 42px !important;
+  }
+
+  body.minglora-for-you-active .fyp-live-title {
+    max-width: 96% !important;
+    font-size: 16px !important;
+  }
+}
