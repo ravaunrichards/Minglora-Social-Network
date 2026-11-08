@@ -9172,12 +9172,18 @@ function setupForYouPlayback(root){
     const scope=button.dataset.fypScope;
     if(scope===state.forYouScope)return;
     state.forYouScope=scope;
-    state.forYouSearch='';
     await renderForYouFeed();
   });
   bindOnce('[data-fyp-search]',()=>{
     const search=root.querySelector('#fyp-search-input');
     if(search){search.hidden=false;search.focus();}
+  });
+  bindOnce('[data-fyp-search-clear]',()=>{
+    state.forYouSearch='';
+    const search=root.querySelector('#fyp-search-input');
+    if(search)search.value='';
+    if(forYouSearchTimer!==null)window.clearTimeout(forYouSearchTimer);
+    void searchForYouPosts();
   });
   bindOnce('[data-focus-comment]',button=>{
     const form=root.querySelector('[data-comment-form="'+CSS.escape(button.dataset.focusComment)+'"]');
@@ -9186,13 +9192,14 @@ function setupForYouPlayback(root){
   const search=root.querySelector('#fyp-search-input');
   if(search&&search.dataset.fypBound!=='true'){
     search.dataset.fypBound='true';
+    search.value=state.forYouSearch||'';
     search.addEventListener('input',()=>{
-      const q=search.value.trim().toLowerCase();
-      root.querySelectorAll('.fyp-video-card').forEach(card=>{
-        const post=state.videoFeed.find(item=>item.id===card.dataset.fypPost);
-        const haystack=[post?.text,post?.author?.name,post?.author?.username].join(' ').toLowerCase();
-        card.hidden=Boolean(q&&!haystack.includes(q));
-      });
+      state.forYouSearch=search.value.trim().slice(0,100);
+      if(forYouSearchTimer!==null)window.clearTimeout(forYouSearchTimer);
+      forYouSearchTimer=window.setTimeout(()=>void searchForYouPosts(),320);
+    });
+    search.addEventListener('keydown',event=>{
+      if(event.key==='Enter'){event.preventDefault();if(forYouSearchTimer!==null)window.clearTimeout(forYouSearchTimer);void searchForYouPosts();}
     });
   }
   if(stream&&stream.dataset.fypScrollBound!=='true'){
