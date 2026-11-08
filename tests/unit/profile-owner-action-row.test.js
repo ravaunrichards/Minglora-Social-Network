@@ -10,6 +10,7 @@ const app=read('public/app.js');
 const finalHeaderCss=read('public/profile-layout-guardrails.css');
 const avatarAnchorCss=read('public/profile-facebook-avatar-anchor.css');
 const facebookCss=read('public/profile-facebook-panel.css');
+const independentCss=read('public/profile-independent-avatar-header.css');
 const html=read('public/index.html');
 const worker=read('public/sw.js');
 
@@ -21,47 +22,46 @@ test('owner profile keeps Edit profile and Add to story without separate photo e
   assert.doesNotMatch(app,/id="profile-edit-avatar"|id="profile-edit-cover"|id="profile-edit-admin-cover"/);
 });
 
-test('profile cover and portrait match Facebook lower-edge placement',()=>{
-  assert.ok(finalHeaderCss.includes('.minglora-profile-page .profile-header-card .profile-cover {'));
-  assert.ok(finalHeaderCss.includes('display: block !important'));
-  assert.ok(finalHeaderCss.includes('grid-template-columns: 168px minmax(0, 1fr) auto !important'));
-  assert.ok(finalHeaderCss.includes('margin: -84px 0 0 !important'));
-  assert.ok(finalHeaderCss.includes('width: 168px !important')&&finalHeaderCss.includes('height: 168px !important'));
-  assert.ok(finalHeaderCss.includes('border-radius: 50% !important'));
+test('profile cover and portrait are separate blocks with a clear gap and independent image sources',()=>{
+  assert.ok(independentCss.includes('margin:0 0 18px!important'));
+  assert.ok(independentCss.includes('margin:0!important'));
+  assert.ok(independentCss.includes('border-radius:50%!important'));
+  assert.ok(independentCss.includes('object-fit:cover!important'));
+  assert.doesNotMatch(independentCss,/margin(?:-top)?\\s*:\\s*-\\d|top\\s*:\\s*-\\d/);
+  assert.ok(app.includes('class="profile-cover-image"'));
+  assert.ok(app.includes('esc(u.cover)'));
+  assert.ok(app.includes("src=\\\"'+avatar(u)+'\\\" alt=\\\"\\\""));
   assert.ok(app.includes('class="profile-avatar-edit-wrap"><img class="avatar"'));
-  assert.ok(app.includes("src=\"'+avatar(u)+'\" alt=\"\""));
-  assert.ok(app.includes('const profileBioMarkup='));
   assert.ok(app.includes("profileBioMarkup+(data.profileStatus?"));
   assert.ok(app.includes("[['posts','Posts'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Reels'],['more','More']]"));
 });
-test('phone profile uses a real two-column grid with the avatar overlapping the cover edge',()=>{
-  const mobile=avatarAnchorCss.slice(avatarAnchorCss.indexOf('@media (max-width:760px)'),avatarAnchorCss.indexOf('@media (max-width:390px)'));
-  assert.ok(mobile.includes('grid-template-columns:var(--minglora-profile-avatar-size) minmax(0,1fr)!important'));
-  assert.ok(mobile.includes('grid-column:1!important')&&mobile.includes('grid-row:1!important'));
-  assert.ok(mobile.includes('margin:calc(var(--minglora-profile-avatar-size) / -2) 0 0!important'));
-  assert.ok(mobile.includes('grid-column:2!important')&&mobile.includes('grid-row:1!important'));
-  assert.doesNotMatch(mobile,/position:absolute!important/);
-  assert.doesNotMatch(mobile,/padding:\s*0 0 0 109px/);
+
+test('profile thought cloud sits in its own row above the portrait while name and username align beside it',()=>{
+  assert.ok(app.includes(`(profileThoughtMarkup?'<div class="profile-thought-slot">' `.trim()),'thought markup is attached to the profile header');
+  assert.ok(independentCss.includes('.profile-thought-slot{'));
+  assert.ok(independentCss.includes('grid-column:1!important'));
+  assert.ok(independentCss.includes('grid-row:1!important'));
+  assert.ok(independentCss.includes('.profile-thought-slot+.profile-avatar-edit-wrap'));
+  assert.ok(independentCss.includes('.profile-thought-slot~.profile-info-main'));
+  assert.ok(independentCss.includes('grid-column:2!important'));
+  assert.ok(independentCss.includes('grid-row:2!important'));
+  assert.ok(independentCss.includes('max-height:none!important'));
+  assert.ok(independentCss.includes('overflow:visible!important'));
 });
 
-test('Facebook profile picture stays left of the name across desktop, tablet and phones',()=>{
-  assert.ok(avatarAnchorCss.includes('grid-template-columns:168px minmax(0,1fr) auto!important'));
-  assert.ok(avatarAnchorCss.includes('margin:-84px 0 0!important'));
-  assert.ok(avatarAnchorCss.includes('inset:auto!important')&&avatarAnchorCss.includes('left:auto!important')&&avatarAnchorCss.includes('top:auto!important'));
-  assert.ok(avatarAnchorCss.includes('transform:none!important'));
-  assert.ok(avatarAnchorCss.includes('grid-column:1!important')&&avatarAnchorCss.includes('grid-row:1!important'));
-  assert.ok(avatarAnchorCss.includes('grid-column:2!important')&&avatarAnchorCss.includes('grid-row:1!important'));
-  assert.ok(avatarAnchorCss.includes('@media (min-width:761px) and (max-width:1024px)'));
-  assert.ok(avatarAnchorCss.includes('grid-template-columns:132px minmax(0,1fr)!important'));
-  assert.ok(avatarAnchorCss.includes('@media (max-width:760px)'));
-  assert.ok(avatarAnchorCss.includes('grid-template-columns:var(--minglora-profile-avatar-size) minmax(0,1fr)!important'));
-  assert.ok(avatarAnchorCss.includes('@media (max-width:390px)'));
-  assert.ok(avatarAnchorCss.includes('--minglora-profile-avatar-size:clamp(76px,22.5vw,88px)!important'));
-  assert.doesNotMatch(avatarAnchorCss,/\.profile-avatar-edit-wrap\{[^}]*position:absolute!important/);
-  assert.ok(html.indexOf('profile-layout-guardrails.css')<html.indexOf('profile-facebook-avatar-anchor.css'),
-    'the Facebook avatar grid must load after older profile guardrails');
+test('web, tablet and phone have separate avatar sizing while preserving avatar-left identity layout',()=>{
+  assert.ok(independentCss.includes('--minglora-profile-avatar-size:144px'));
+  assert.ok(independentCss.includes('@media (min-width:761px) and (max-width:1024px)'));
+  assert.ok(independentCss.includes('--minglora-profile-avatar-size:120px!important'));
+  assert.ok(independentCss.includes('@media (max-width:760px)'));
+  assert.ok(independentCss.includes('grid-template-columns:var(--minglora-profile-avatar-size) minmax(0,1fr)!important'));
+  assert.ok(independentCss.includes('aspect-ratio:2.4 / 1!important'));
+  assert.ok(independentCss.includes('@media(max-width:390px)'));
+  assert.ok(independentCss.includes('--minglora-profile-avatar-size:clamp(74px,23vw,84px)!important'));
+  assert.ok(html.indexOf('profile-independent-avatar-header.css')>html.indexOf('profile-facebook-avatar-anchor.css'));
+  assert.ok(html.indexOf('profile-layout-guardrails.css')<html.indexOf('profile-independent-avatar-header.css'));
 });
- 
+
 test('picture and cover remain editable in the normal Edit profile dialog',()=>{
   assert.match(app,/function openEditProfile\(u,mediaOnly=null\)/);
   assert.match(app,/data-profile-media-section="avatar"/);
@@ -96,6 +96,7 @@ test('new profile assets are loaded and precached by the active service-worker c
   const assets=[
     assetFrom('href','/profile-layout-guardrails.css?'),
     assetFrom('href','/profile-facebook-avatar-anchor.css?'),
+    assetFrom('href','/profile-independent-avatar-header.css?'),
     assetFrom('src','/app.js?')
   ];
   for(const asset of assets){
