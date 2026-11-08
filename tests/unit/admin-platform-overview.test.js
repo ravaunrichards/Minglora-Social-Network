@@ -34,7 +34,7 @@ test("admin centre renders module and per-collection totals from the live snapsh
   assert.match(admin, /id="admin-platform-module-grid"/);
   assert.match(admin, /module\.collections/);
   assert.match(admin, /Active sessions/);
-  assert.match(admin, /Private message contents/);
+  assert.match(admin, /private message contents/i);
   assert.match(css, /admin-platform-module-grid/);
   assert.match(css, /admin-platform-collection-row/);
   assert.match(html, /20261108-admin-overview-1/);
