@@ -43,6 +43,17 @@ test('account dropdown and add-account dialog have desktop and phone layouts',()
   assert.match(css,/@media\(max-width:760px\)[\s\S]*?\.profile-account-menu\{position:fixed/);
 });
 
+test('signed-in accounts persist across restarts and renew while active until the user signs out',()=>{
+  assert.match(server,/APP_SESSION_TTL_MS\s*=\s*400 \* 24 \* 60 \* 60 \* 1000/);
+  assert.match(server,/APP_SESSION_COOKIE_MAX_AGE_SECONDS\s*=\s*400 \* 24 \* 60 \* 60/);
+  assert.match(server,/Max-Age=\$\{APP_SESSION_COOKIE_MAX_AGE_SECONDS\}/);
+  assert.match(server,/activeSession\.expiresAt = new Date\(activityTime \+ APP_SESSION_TTL_MS\)/);
+  assert.match(server,/res\.setHeader\('Set-Cookie', refreshedCookies\)/);
+  assert.match(server,/activityTime - previousActivity >= APP_SESSION_ACTIVITY_PERSIST_INTERVAL_MS/);
+  assert.match(server,/p==='\/api\/auth\/logout'/,'explicit sign-out remains the action that removes the active saved session');
+  assert.match(server,/db\.sessions=db\.sessions\.filter\(s=>s\.id!==id\)/);
+});
+
 test('Creator account switcher escapes header stacking and stays above every application overlay',()=>{
   assert.match(app,/function mountAccountSwitcherTopLayer\(\)/);
   assert.match(app,/document\.body\.appendChild\(panel\)/);
