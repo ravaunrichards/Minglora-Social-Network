@@ -427,3 +427,159 @@
   .profile-people-track{scroll-behavior:auto}
   .profile-people-toggle svg{transition:none}
 }
+
+
+/* Final display sizing: compact Facebook-style cover and correctly sized portrait.
+   This block is last in the profile stylesheet and overrides older layout variants. */
+.minglora-profile-page .profile-header-card{
+  --minglora-profile-avatar-size:168px;
+}
+.minglora-profile-page .profile-header-card .profile-cover{
+  display:block!important;
+  position:relative!important;
+  width:100%!important;
+  height:auto!important;
+  aspect-ratio:3 / 1!important;
+  min-height:0!important;
+  max-height:315px!important;
+  overflow:hidden!important;
+}
+.minglora-profile-page .profile-header-card .profile-cover-image{
+  position:absolute!important;
+  inset:0!important;
+  display:block!important;
+  width:100%!important;
+  height:100%!important;
+  min-width:0!important;
+  min-height:0!important;
+  max-width:none!important;
+  max-height:none!important;
+  object-fit:cover!important;
+  object-position:center!important;
+}
+.minglora-profile-page .profile-header-card .profile-info{
+  grid-template-columns:168px minmax(0,1fr)!important;
+}
+.minglora-profile-page .profile-header-card--owner .profile-info{
+  grid-template-columns:168px minmax(0,1fr) auto!important;
+}
+.minglora-profile-page .profile-header-card .profile-avatar-edit-wrap{
+  display:flex!important;
+  grid-column:1!important;
+  grid-row:1!important;
+  flex:0 0 168px!important;
+  width:168px!important;
+  height:auto!important;
+  min-width:168px!important;
+  max-width:168px!important;
+  margin-top:-84px!important;
+  align-items:flex-start!important;
+  overflow:visible!important;
+}
+.minglora-profile-page .profile-header-card .profile-avatar-edit-wrap>.avatar{
+  display:block!important;
+  flex:0 0 168px!important;
+  width:168px!important;
+  height:168px!important;
+  min-width:168px!important;
+  min-height:168px!important;
+  max-width:168px!important;
+  max-height:168px!important;
+  aspect-ratio:1 / 1!important;
+  border:5px solid #fff!important;
+  border-radius:50%!important;
+  object-fit:cover!important;
+  object-position:center!important;
+  box-sizing:border-box!important;
+}
+.minglora-profile-page .profile-header-card--owner .profile-avatar-edit-wrap,
+.minglora-profile-page .profile-header-card--owner .profile-info-main,
+.minglora-profile-page .profile-header-card--owner .profile-owner-actions{
+  grid-row:1!important;
+}
+.minglora-profile-page .profile-header-card--owner .profile-info-main{grid-column:2!important}
+.minglora-profile-page .profile-header-card--owner .profile-owner-actions{grid-column:3!important}
+.profile-crop-preview--cover{
+  aspect-ratio:3 / 1!important;
+  max-height:315px!important;
+  min-height:0!important;
+}
+@media(max-width:760px){
+  .minglora-profile-page .profile-header-card{
+    --minglora-profile-avatar-size:96px;
+  }
+  .minglora-profile-page .profile-header-card .profile-cover{
+    aspect-ratio:3 / 1!important;
+    max-height:180px!important;
+  }
+  .minglora-profile-page .profile-header-card .profile-info,
+  .minglora-profile-page .profile-header-card--owner .profile-info,
+  .minglora-profile-page .profile-header-card--viewer .profile-info{
+    grid-template-columns:96px minmax(0,1fr)!important;
+    column-gap:12px!important;
+    padding:0 13px 13px!important;
+  }
+  .minglora-profile-page .profile-header-card--owner .profile-info{
+    grid-template-columns:96px minmax(0,1fr)!important;
+  }
+  .minglora-profile-page .profile-header-card .profile-avatar-edit-wrap{
+    grid-column:1!important;
+    grid-row:1!important;
+    flex:0 0 96px!important;
+    width:96px!important;
+    min-width:96px!important;
+    max-width:96px!important;
+    margin-top:-48px!important;
+  }
+  .minglora-profile-page .profile-header-card .profile-avatar-edit-wrap>.avatar{
+    flex:0 0 96px!important;
+    width:96px!important;
+    height:96px!important;
+    min-width:96px!important;
+    min-height:96px!important;
+    max-width:96px!important;
+    max-height:96px!important;
+  }
+  .minglora-profile-page .profile-header-card--owner .profile-info-main{
+    grid-column:2!important;
+    grid-row:1!important;
+  }
+  .minglora-profile-page .profile-header-card--owner .profile-owner-actions{
+    grid-column:1 / -1!important;
+    grid-row:2!important;
+  }
+  .minglora-profile-page .profile-header-card--owner .profile-counts{grid-row:3!important}
+  .minglora-profile-page .profile-header-card--viewer .profile-actions{
+    grid-column:1 / -1!important;
+    grid-row:2!important;
+  }
+  .minglora-profile-page .profile-header-card--viewer .profile-counts{grid-row:3!important}
+  .profile-crop-preview--cover{aspect-ratio:3 / 1!important;max-height:180px!important}
+}
+@media(max-width:390px){
+  .minglora-profile-page .profile-header-card .profile-info,
+  .minglora-profile-page .profile-header-card--owner .profile-info,
+  .minglora-profile-page .profile-header-card--viewer .profile-info{
+    grid-template-columns:88px minmax(0,1fr)!important;
+    padding-inline:10px!important;
+    column-gap:10px!important;
+  }
+  .minglora-profile-page .profile-header-card--owner .profile-info{grid-template-columns:88px minmax(0,1fr)!important}
+  .minglora-profile-page .profile-header-card{--minglora-profile-avatar-size:88px}
+  .minglora-profile-page .profile-header-card .profile-avatar-edit-wrap{
+    flex-basis:88px!important;
+    width:88px!important;
+    min-width:88px!important;
+    max-width:88px!important;
+    margin-top:-44px!important;
+  }
+  .minglora-profile-page .profile-header-card .profile-avatar-edit-wrap>.avatar{
+    flex-basis:88px!important;
+    width:88px!important;
+    height:88px!important;
+    min-width:88px!important;
+    min-height:88px!important;
+    max-width:88px!important;
+    max-height:88px!important;
+  }
+}
