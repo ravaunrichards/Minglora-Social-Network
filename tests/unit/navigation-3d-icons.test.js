@@ -91,7 +91,7 @@ test('3D icon presentation uses depth, lighting and reduced-motion-safe transiti
 test('service-worker shell pre-caches the latest icon sprite, stylesheet and app script', () => {
   const activeStyles=html.match(/href="(\/styles\.css\?v=[^"]+)"/)?.[1]||'';
   const activeScript=html.match(/src="(\/app\.js\?v=[^"]+)"/)?.[1]||'';
-  assert.match(serviceWorker,/^const CACHE_NAME='minglora-shell-v\\d+-[^']+';$/m);
+  assert.match(serviceWorker,/^const CACHE_NAME='minglora-shell-v[0-9]+-[^']+';$/m);
   assert.ok(activeStyles&&serviceWorker.includes("'"+activeStyles+"'"),'active stylesheet is cached');
   assert.ok(activeScript&&serviceWorker.includes("'"+activeScript+"'"),'active app script is cached');
   assert.match(serviceWorker,/mobile-profile-navigation\.css\?v=20261106-horizontal-profile-navigation-1/);
