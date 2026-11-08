@@ -112,6 +112,8 @@ jobs:
           node --check tests/unit/meetwave.test.js
           node --check src/domain/validation.js
           node --check src/domain/pagination.js
+          node --check src/domain/video-ranking.js
+          node --check tests/unit/for-you-video-feed.test.js
           node --check src/domain/relationships.js
       - name: Generate original Minglora gift assets
         run: npm run build:gifts
