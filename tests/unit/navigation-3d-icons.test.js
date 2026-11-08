@@ -5,11 +5,12 @@ import { readFile } from 'node:fs/promises';
 const root = new URL('../../', import.meta.url);
 const read = path => readFile(new URL(path, root), 'utf8');
 
-const [html, css, sprite, serviceWorker] = await Promise.all([
+const [html, css, sprite, serviceWorker, menuScript] = await Promise.all([
   read('public/index.html'),
   read('public/styles.css'),
   read('public/assets/icons/navigation-3d.svg'),
-  read('public/sw.js')
+  read('public/sw.js'),
+  read('public/minglora-menu.js')
 ]);
 
 const useIcon = id => `<use href="/assets/icons/navigation-3d.svg?v=${id==='recharge'?'20261104-recharge-wallet-3d-3':id==='video'?'20261108-mobile-navigation-icons-1':'20261102-navigation-3d-2'}#${id}"></use>`;
@@ -59,7 +60,8 @@ test('utility rail and header actions use the matching rendered icon assets', ()
   }
   assert.ok(html.includes('id="notifications-btn"') && html.includes(useIcon('activity')));
   assert.ok(html.includes('id="settings-btn"') && html.includes(useIcon('settings')));
-  assert.ok(html.includes('nav-search-icon') && html.includes(useIcon('search')));
+  assert.ok(!html.includes('nav-search-icon'), 'external top-bar Search is removed');
+  assert.ok(menuScript.includes("sprite('search')") && menuScript.includes('id="minglora-menu-search"'), 'the internal Menu search uses the matching 3D search icon');
 });
 
 test('the SVG sprite contains finished dimensional artwork for primary and supporting actions', () => {
