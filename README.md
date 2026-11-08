@@ -23,7 +23,8 @@ Before enabling production withdrawals, set `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_S
 - Responsive browser interface and account registration/sign-in/sign-out (Supabase Auth when configured)
 - Signed HttpOnly application session cookies; Supabase Auth owns production passwords, while salted scrypt hashes remain only for legacy-account migration
 - Profile editing for display name, unique username, bio and location; independent avatar and cover picture editing; organised About sections for Personal details, Intro, Work, Education, Hobbies, Interests, Travel, Links, Contact info, Names, Details and About you, each with its own pencil editor and Public/Friends/Only me visibility; multiple workplace, education and social-media link entries
-- All/Following/Friends feeds backed by persisted relationships, with optional cursor pagination; posts accept uploaded images, video, audio and interactive GLB 3D files (no pasted image URLs)
+- All/Following/Friends feeds backed by persisted relationships, with optional cursor pagination;
+- Dedicated TikTok-style full-screen For You video feed with vertical swipe/scroll snapping, automatic one-video playback, Following/For You tabs, creator actions, watch-time-based personalization, saved/reaction signals, Not interested feedback and cursor-loaded recommendations from real member videos; posts accept uploaded images, video, audio and interactive GLB 3D files (no pasted image URLs)
 - Create, edit and delete your own posts, add reactions/comments, and save/unsave posts
 - Friend requests and friend lists, directed follows/unfollows, automatic friendship on reciprocal follow, clickable follower/following lists, block/unblock and profile counts
 - Group creation/browsing, join/leave, group detail pages and member-only text discussions
