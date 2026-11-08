@@ -9068,18 +9068,22 @@ function forYouCard(post,index){
   const author=post.author||{},media=(post.media||[]).find(item=>['video','image','photo','audio','model3d'].includes(item.mediaType)&&item.url);
   const isVideo=media?.mediaType==='video',isImage=media?.mediaType==='image'||media?.mediaType==='photo';
   const following=post.following===true||post.isFollowing===true,caption=String(post.text||'').trim(),liked=post.myReaction?'liked':'';
+  const photos=(post.media||[]).filter(item=>['image','photo'].includes(item.mediaType)&&item.url);
   const mediaMarkup=!media
     ?'<div class="fyp-text-media"><span class="fyp-text-mark" aria-hidden="true">m</span><p>'+esc(caption||'Shared a post on Minglora')+'</p></div>'
     :isVideo
       ?'<video class="fyp-video" data-fyp-video data-post-id="'+esc(post.id)+'" playsinline webkit-playsinline loop muted preload="'+(index<2?'auto':'metadata')+'" src="'+esc(media.url)+'" aria-label="Video by '+esc(author.name||'Minglora member')+'"></video>'
       :isImage
-        ?'<img class="fyp-photo" src="'+esc(media.url)+'" alt="Photo shared by '+esc(author.name||'Minglora member')+'" loading="'+(index<2?'eager':'lazy')+'">'
+        ?photos.length>1
+          ?'<div class="fyp-photo-carousel" aria-label="'+photos.length+' photos shared by '+esc(author.name||'Minglora member')+'">'+photos.map((photo,photoIndex)=>'<img class="fyp-photo" src="'+esc(photo.url)+'" alt="Photo '+(photoIndex+1)+' of '+photos.length+' shared by '+esc(author.name||'Minglora member')+'" loading="'+(index<2&&photoIndex===0?'eager':'lazy')+'">').join('')+'</div>'
+          :'<img class="fyp-photo" src="'+esc(media.url)+'" alt="Photo shared by '+esc(author.name||'Minglora member')+'" loading="'+(index<2?'eager':'lazy')+'">'
         :media.mediaType==='audio'
           ?'<div class="fyp-audio-media"><span aria-hidden="true">♫</span><strong>'+esc(caption||'Audio post')+'</strong><audio controls preload="metadata" src="'+esc(media.url)+'"></audio></div>'
           :'<model-viewer class="fyp-model-media" src="'+esc(media.url)+'" alt="Interactive 3D post" camera-controls auto-rotate></model-viewer>';
   const mediaCount=(post.media||[]).filter(item=>item.url).length;
+  const mediaCountLabel=isImage&&photos.length>1?'Photos · swipe':'1 / '+mediaCount;
   return '<article class="fyp-video-card fyp-post-card '+(isVideo?'has-video':isImage?'has-image':'has-text')+'" data-fyp-post="'+esc(post.id)+'" data-post="'+esc(post.id)+'">'+
-    mediaMarkup+'<div class="fyp-video-shade" aria-hidden="true"></div>'+(mediaCount>1?'<span class="fyp-media-count">1 / '+mediaCount+'</span>':'')+
+    mediaMarkup+'<div class="fyp-video-shade" aria-hidden="true"></div>'+(mediaCount>1?'<span class="fyp-media-count">'+mediaCountLabel+'</span>':'')+
     '<div class="fyp-overlay-bottom"><div class="fyp-creator-line"><button type="button" class="fyp-avatar-button" data-profile="'+esc(author.id||'')+'" aria-label="Open '+esc(author.name||'member')+' profile"><img class="fyp-avatar" src="'+esc(avatar(author))+'" alt=""></button><button type="button" class="fyp-creator-name" data-profile="'+esc(author.id||'')+'">@'+esc(author.username||'member')+' '+verifiedProfileBadge(author)+'</button>'+(author.id&&author.id!==state.user.id?'<button type="button" class="fyp-follow '+(following?'following':'')+'" data-foryou-follow="'+esc(author.id)+'" data-following="'+(following?'true':'false')+'">'+(following?'Following':'Follow')+'</button>':'')+'</div>'+
     (caption&&media?'<p class="fyp-caption">'+esc(caption)+'</p>':'')+'<div class="fyp-post-meta"><span>'+esc(timeAgo(post.createdAt))+'</span>'+(mediaCount>1?'<span> · '+mediaCount+' attachments</span>':'')+'</div>'+(post.soundtrack?'<div class="fyp-sound-line">'+renderPostSoundtrack(post)+'</div>':'')+
     '<form class="comment-form fyp-comment-form" data-comment-form="'+esc(post.id)+'" hidden><input name="text" maxlength="2000" placeholder="Add a comment…" aria-label="Add a comment" required><button type="submit">Send</button></form></div>'+
