@@ -239,9 +239,37 @@
         This is the private Minglora platform workspace. It opens separately from the administrator profile and member-facing settings. Protected actions require the designated Creator Hub account and an authenticator-verified session.
       </div>
       <nav class="admin-centre-navigation" aria-label="Admin Centre sections">
-        <a href="#admin-control-centre">Overview</a>
-        ${unlocked ? `<a href="#admin-internal-operations">Internal operations</a><a href="#admin-platform-overview">Platform overview</a><a href="#admin-audit-log">Audit log</a><a href="#admin-user-management">User management</a><a href="#admin-badge-controls">Profile &amp; badge controls</a><a href="#admin-campaign-coins-wallet">Admin Promotional Gift Wallet</a><a href="#admin-member-promotions">Member promotions</a><a href="#admin-marketing-budget">Marketing budget</a><a href="#admin-live-pro-access">LIVE Pro access</a><a href="#admin-gift-earnings">Gift revenue &amp; earnings</a><a href="#admin-withdrawal-tracker">Creator withdrawals</a><a href="#admin-promotional-tracker">Promotional tracking</a><a href="#moderation-workspace">Moderation</a><a href="#moderator-support-workspace">Support inbox</a>` : ''}
-        <a href="#admin-centre-settings">Admin settings</a>
+        <div class="admin-centre-nav-group">
+          <span class="admin-centre-nav-heading">Dashboard</span>
+          <a href="#admin-control-centre">Overview</a>
+          ${unlocked ? `<a href="#admin-internal-operations">Internal operations</a><a href="#admin-platform-overview">Platform overview</a>` : ''}
+        </div>
+        ${unlocked ? `
+        <div class="admin-centre-nav-group">
+          <span class="admin-centre-nav-heading">People &amp; community</span>
+          <a href="#admin-audit-log">Audit log</a>
+          <a href="#admin-user-management">User management</a>
+        </div>
+        <div class="admin-centre-nav-group">
+          <span class="admin-centre-nav-heading">Creators &amp; finance</span>
+          <a href="#admin-badge-controls">Profile &amp; badge controls</a>
+          <a href="#admin-campaign-coins-wallet">Admin promotional gift wallet</a>
+          <a href="#admin-member-promotions">Member promotions</a>
+          <a href="#admin-marketing-budget">Marketing budget</a>
+          <a href="#admin-live-pro-access">LIVE Pro access</a>
+          <a href="#admin-gift-earnings">Gift revenue &amp; earnings</a>
+          <a href="#admin-withdrawal-tracker">Creator withdrawals</a>
+          <a href="#admin-promotional-tracker">Promotional tracking</a>
+        </div>
+        <div class="admin-centre-nav-group">
+          <span class="admin-centre-nav-heading">Trust &amp; support</span>
+          <a href="#moderation-workspace">Moderation</a>
+          <a href="#moderator-support-workspace">Support inbox</a>
+        </div>` : ''}
+        <div class="admin-centre-nav-group">
+          <span class="admin-centre-nav-heading">Administration</span>
+          <a href="#admin-centre-settings">Admin settings</a>
+        </div>
       </nav>
       ${unlocked ? `
         <section class="admin-internal-activity" id="admin-internal-operations" aria-labelledby="admin-internal-activity-title">
