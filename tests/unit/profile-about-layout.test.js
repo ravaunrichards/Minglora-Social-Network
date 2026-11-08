@@ -22,10 +22,20 @@ test('profile identity stays compact and About information is shown in its own s
   assert.match(identity,/u\.name/);
   assert.match(identity,/u\.username/);
   assert.doesNotMatch(identity,/u\.(bio|location)/);
+  assert.doesNotMatch(identity,/profileBioMarkup|profile-bio/,'the name and username block never displays a bio');
   assert.match(app,/function profileAboutMarkup\(u,isMe\)/);
   assert.match(app,/data-about-section=/);
   assert.match(app,/profile-about-sections/);
   assert.match(app,/about-section-card/);
+  const renderProfileStart=app.indexOf('function renderProfile(data){');
+  const renderProfileEnd=app.indexOf('const showTab=nextTab=>{',renderProfileStart);
+  const profileHeader=app.slice(renderProfileStart,renderProfileEnd);
+  assert.ok(!profileHeader.includes('profileBioMarkup')&&!profileHeader.includes('class="profile-bio"'),'profile header has no introduction beneath the username');
+  const viewAsStart=app.indexOf('function openProfileViewAsPreview(u,data){');
+  const viewAsEnd=app.indexOf('async function openProfilePrivacySettings',viewAsStart);
+  const viewAs=app.slice(viewAsStart,viewAsEnd);
+  assert.ok(!viewAs.includes('profile-view-as-bio')&&!viewAs.includes('bioVisible'),'View as keeps the profile identity area free of introductions');
+  assert.ok(app.includes('class="profile-intro-card"'),'the separate Intro card remains available outside the username block');
 });
 
 test('About includes the requested independent categories, with Personal details distinct from Intro',()=>{
