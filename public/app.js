@@ -9454,7 +9454,7 @@ async function renderAccountSwitcherMenu(){
       "</div>";
     }).join('');
     panel.innerHTML=
-      "<div class='account-switcher-head'><div><strong>Switch account</strong><small>Choose a Minglora account on this device</small></div><button type='button' class='account-switcher-close' data-account-menu-close aria-label='Close account menu'>×</button></div>"+
+      "<div class='account-switcher-head'><div><strong>Switch account</strong><small>Tap a saved account to switch instantly—no login needed</small></div><button type='button' class='account-switcher-close' data-account-menu-close aria-label='Close account menu'>×</button></div>"+
       "<div class='account-switcher-list'>"+(rows||"<p class='account-switcher-empty'>No saved accounts were found.</p>")+"</div>"+
       "<button type='button' class='account-switcher-add' data-account-add><span aria-hidden='true'>＋</span><span><strong>Add an account</strong><small>Log in or create another Minglora account</small></span></button>"+
       "<div class='account-switcher-foot'><button type='button' class='account-switcher-logout-all' data-account-logout-all>Log out of all accounts on this device</button><small>Each account keeps its own profile, messages and privacy settings.</small></div>";
