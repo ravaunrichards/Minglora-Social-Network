@@ -52,10 +52,18 @@ test('picture and cover remain editable in the normal Edit profile dialog only',
 });
 
 test('updated profile assets are loaded and precached by a refreshed shell cache',()=>{
+  const assetFrom=(attribute,prefix)=>{
+    const marker=attribute+'="'+prefix;
+    const start=html.indexOf(marker);
+    if(start<0)return '';
+    const valueStart=start+attribute.length+2;
+    const valueEnd=html.indexOf('"',valueStart);
+    return valueEnd>valueStart?html.slice(valueStart,valueEnd):'';
+  };
   const assets=[
-    html.match(/href="(\\/profile-alignment\\.css\\?v=[^"]+)"/)?.[1]||'',
-    html.match(/href="(\\/profile-action-row\\.css\\?v=[^"]+)"/)?.[1]||'',
-    html.match(/src="(\\/app\\.js\\?v=[^"]+)"/)?.[1]||''
+    assetFrom('href','/profile-alignment.css?'),
+    assetFrom('href','/profile-action-row.css?'),
+    assetFrom('src','/app.js?')
   ];
   for(const asset of assets){
     assert.ok(asset,'index.html includes the current profile asset');
