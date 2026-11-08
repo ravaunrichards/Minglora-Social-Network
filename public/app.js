@@ -8986,7 +8986,7 @@ function renderReelCard(post,media,index){
   const likedLabel=post.myReaction?String(post.myReaction).charAt(0).toUpperCase()+String(post.myReaction).slice(1):'Like';
   return '<article class="minglora-reel" data-post="'+esc(post.id)+'" data-reel-index="'+index+'">'+
     '<div class="minglora-reel-stage">'+
-      '<video class="post-media-video minglora-reel-video" data-reel-video data-post-id="'+esc(post.id)+'" controls playsinline loop muted preload="metadata" src="'+esc(media.url)+'" aria-label="Video shared by @'+esc(author.username||'member')+'"></video>'+
+      '<video class="post-media-video minglora-reel-video" data-reel-video controls playsinline loop muted preload="metadata" data-post-id="'+esc(post.id)+'" src="'+esc(media.url)+'" aria-label="Video shared by @'+esc(author.username||'member')+'"></video>'+
       '<button type="button" class="minglora-reel-sound" data-reel-sound="'+esc(post.id)+'" aria-pressed="false">Unmute</button>'+
       (post.text?'<div class="minglora-reel-caption-overlay">'+esc(post.text)+'</div>':'')+
     '</div>'+
