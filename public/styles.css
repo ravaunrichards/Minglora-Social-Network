@@ -7074,3 +7074,14 @@ dialog.profile-editor-dialog .modal-head{position:sticky;top:0;z-index:2;backgro
   .minglora-profile-page .profile-side-column{gap:10px}
   .profile-sidebar-preview{padding:12px}
 }
+
+
+/* Hard guard: a member profile is its own destination, never the Home feature rail. */
+html.minglora-profile-active body .layout,
+body.minglora-profile-active .layout{display:block!important;width:100%!important;max-width:1240px!important;margin:0 auto!important;padding:22px clamp(12px,2.4vw,28px)!important}
+html.minglora-profile-active body .layout>.left-rail,
+html.minglora-profile-active body .layout>.right-rail,
+body.minglora-profile-active .layout>.left-rail,
+body.minglora-profile-active .layout>.right-rail{display:none!important}
+html.minglora-profile-active body .layout>.main-content,
+body.minglora-profile-active .layout>.main-content{display:block!important;width:100%!important;max-width:1184px!important;min-width:0!important;margin:0 auto!important;grid-column:auto!important}
