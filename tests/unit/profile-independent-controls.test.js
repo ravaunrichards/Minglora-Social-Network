@@ -31,14 +31,17 @@ test('the regular profile editor retains photo upload, camera and crop workflows
   assert.match(app,/function openEditProfile\(u,mediaOnly=null\)/);
 });
 
-test('admin profile keeps its standard tools without a separate Edit Cover action',()=>{
-  const start=app.indexOf('const adminToolsMarkup');
-  const end=app.indexOf('const profileActionMarkup',start);
-  assert.ok(start>=0&&end>start);
-  const admin=app.slice(start,end);
-  assert.match(admin,/id="edit-profile"/);
-  assert.match(admin,/id="profile-add-story"/);
+test('admin profile keeps shared owner actions and its standard administrator tools',()=>{
+  const relationshipStart=app.indexOf('const relationshipActions=isMe');
+  const adminStart=app.indexOf('const adminToolsMarkup');
+  const adminEnd=app.indexOf('const profileActionMarkup',adminStart);
+  assert.ok(relationshipStart>=0&&adminStart>relationshipStart&&adminEnd>adminStart);
+  const ownerActions=app.slice(relationshipStart,adminStart);
+  const admin=app.slice(adminStart,adminEnd);
+  assert.match(ownerActions,/id="edit-profile"/);
+  assert.match(ownerActions,/id="profile-add-story"/);
   assert.match(admin,/data-profile-admin-action="privacy"/);
+  assert.match(admin,/data-profile-admin-action="edit-story"/);
   assert.doesNotMatch(admin,/profile-edit-admin-cover|Edit Cover/);
 });
 
