@@ -119,3 +119,17 @@ jobs:
         run: npm run build:gifts
       - name: Run automated tests
         run: npm test
+
+  for-you-functional:
+    name: For You functional navigation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Verify real tab clicks, audience connections and direct routes
+        run: node --test tests/unit/for-you-scope-clicks.test.js tests/unit/for-you-controls-layout.test.js tests/unit/for-you-home-live-feed.test.js
