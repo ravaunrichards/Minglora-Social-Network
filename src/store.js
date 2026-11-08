@@ -198,6 +198,7 @@ export async function requestSupabaseState(action, extra = {}) {
 
     const error = new Error(payload.error || ('Minglora Supabase persistence request failed (HTTP ' + response.status + ').'));
     error.status = response.status;
+    error.code = payload.code || null;
     throw error;
   }
 
