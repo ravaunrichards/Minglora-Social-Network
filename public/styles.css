@@ -7362,3 +7362,54 @@ body.minglora-for-you-active .main-content{width:100%!important;height:100dvh!im
   .story-create-card,.story-card{flex-basis:98px;width:98px;height:170px}
   .story-panel-head h2{font-size:15px}
 }
+
+
+/* Stories sizing and stacking correction: keep the create button above the label. */
+.story-create-card,.story-card{
+  flex:0 0 112px;
+  width:112px;
+  height:196px;
+  border-radius:10px;
+}
+.story-create-photo{z-index:0;inset:0 0 29% 0}
+.story-create-label{
+  z-index:1;
+  height:29%;
+  padding:12px 6px 7px;
+  font-size:12px;
+  line-height:1.2;
+}
+.story-create-plus{
+  z-index:3;
+  top:71%;
+  width:40px;
+  height:40px;
+  border-width:4px;
+  pointer-events:none;
+  box-shadow:0 0 0 1px #fff,0 2px 8px #17203338;
+}
+.story-card{border-radius:10px}
+.story-rail-nav button{width:40px;height:40px;font-size:27px;box-shadow:0 1px 5px #17203312}
+.story-viewer-arrow{flex-basis:48px;width:48px;height:48px;font-size:34px;box-shadow:0 2px 12px #0004}
+.story-viewer-content{cursor:pointer;touch-action:pan-y}
+.story-viewer-content video,.story-viewer-content audio,.story-viewer-content model-viewer{cursor:auto}
+.story-progress-segment.is-active{background:#ffffff5c}
+.story-progress-segment.is-active:before{
+  content:"";
+  display:block;
+  width:0;
+  height:100%;
+  border-radius:inherit;
+  background:#fff;
+  animation:minglora-story-progress 5s linear forwards;
+}
+@keyframes minglora-story-progress{from{width:0}to{width:100%}}
+@media(max-width:760px){
+  .story-create-card,.story-card{flex-basis:112px;width:112px;height:196px}
+  .story-create-plus{width:40px;height:40px}
+  .story-rail-nav button{width:34px;height:34px}
+}
+@media(max-width:380px){
+  .story-create-card,.story-card{flex-basis:104px;width:104px;height:184px}
+  .story-create-plus{width:38px;height:38px}
+}
