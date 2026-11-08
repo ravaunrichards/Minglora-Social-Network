@@ -8,15 +8,16 @@ import { giftGalleryTimeZone, getGiftGalleryPeriod } from '../../backend/modules
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 const read=file=>fs.readFileSync(path.join(root,file),'utf8');
 
-test('Gift Gallery is a first-class profile tab directly after Badges',()=>{
+test('Gift Gallery remains a profile section reachable from More, outside the Facebook-style top tab row',()=>{
   const app=read('public/app.js');
-  assert.match(app,/\[\['posts','All'\],\['about','About'\],\['friends','Friends'\],\['photos','Photos'\],\['reels','Reels'\],\['badges','Badges'\],\['gift-gallery','Gift Gallery'\],\['more','More'\]\]/);
+  assert.match(app,/\[\['posts','All'\],\['about','About'\],\['friends','Friends'\],\['photos','Photos'\],\['reels','Reels'\],\['more','More'\]\]/);
   assert.match(app,/if\(tab==='gift-gallery'\)return/);
-  assert.doesNotMatch(app,/if\(tab==='more'\)return[^\n]*data-profile-tab="gift-gallery"/);
-  assert.match(app,/selected=button\.dataset\.profileTab===nextTab/);
-  assert.match(app,/\['posts','about','friends','photos','reels','badges','more','gift-gallery'/);
+  const moreStart=app.indexOf("if(tab==='more')return",app.indexOf('function profileTabMarkup'));
+  const moreEnd=app.indexOf('const previewPhotos=',moreStart);
+  assert.ok(moreStart>=0&&moreEnd>moreStart,'More profile menu exists');
+  assert.match(app.slice(moreStart,moreEnd),/data-profile-tab="gift-gallery"/);
+  assert.match(app,/\['checkins','events','highlights','groups','videos','badges','gift-gallery','manage'\]\.includes\(nextTab\)/);
 });
-
 test('Gift Gallery resolves the time-zone variable before formatting the weekly reset',()=>{
   const app=read('public/app.js');
   const gallery=app.slice(app.indexOf('async function loadProfileGiftGallery'),app.indexOf('function bindProfileTabActions'));
