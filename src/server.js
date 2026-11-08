@@ -452,12 +452,15 @@ function ensureLocalUser(authUser, fallback = {}) {
   const trustedRole = !isSecondaryCreatorHubTestAccount && ['platform_owner','admin','moderator'].includes(String(appMetadata.role||''))?String(appMetadata.role):null;
   const verificationBadge = appMetadata.verification_badge==='blue'?'blue':'none';
   const verificationStatus = ['pending','needs_information','verified','rejected','suspended'].includes(String(appMetadata.verification_status||''))?String(appMetadata.verification_status):'not_submitted';
-  const name = String(metadata.name || metadata.full_name || fallback.name || email.split('@')[0] || 'Minglora Member').trim();
-  const username = normalizeUsername(metadata.username || fallback.username || `member_${String(authUser.id).replace(/-/g,'').slice(0,12)}`);
-  const contactPhone=normalizeContactPhone(metadata.contact_phone||metadata.phone_number||fallback.phoneNumber||'');
+  // Resolve the existing local profile before applying Auth metadata. Supabase
+  // sign-in responses may omit user_metadata; never replace a saved public name
+  // or username with the email prefix or a generated member handle in that case.
+  let user = db.users.find(item => item.id === authUser.id) || db.users.find(item => normalizeEmail(item.email) === email);
+  const name = String(metadata.name || metadata.full_name || fallback.name || user?.name || email.split('@')[0] || 'Minglora Member').trim();
+  const username = normalizeUsername(metadata.username || fallback.username || user?.username || `member_${String(authUser.id).replace(/-/g,'').slice(0,12)}`);
+  const contactPhone=normalizeContactPhone(metadata.contact_phone||metadata.phone_number||fallback.phoneNumber||user?.contactPhone||'');
   if (!validateUsername(username).valid) throw Object.assign(new Error('The username on this account is invalid. Contact Minglora support.'), { status:409 });
   if(!validateContactPhone(contactPhone).valid)throw Object.assign(new Error('The contact phone stored on this account is invalid. Update it in your Minglora profile.'),{status:409});
-  let user = db.users.find(item => item.id === authUser.id) || db.users.find(item => normalizeEmail(item.email) === email);
   const usernameOwner = db.users.find(item => item.username === username && item.id !== user?.id);
   if (usernameOwner) throw Object.assign(new Error('That username is already in use on Minglora.'), { status:409 });
   if (!user) {
@@ -4836,8 +4839,7 @@ async function route(req, res) {
         }
         const candidates=db.users
           .filter(member=>member.id!==user.id&&!dismissedMemberIds.has(member.id)&&!blockedBetween(user.id,member.id)&&canViewProfile(user.id,member))
-          .sort((first,second)=>Math.max(activityAt.get(second.id)||0,Date.parse(second.createdAt)||0)-Math.max(activityAt.get(first.id)||0,Date.parse(first.createdAt)||0))
-          .slice(0,24);
+          .sort((first,second)=>Math.max(activityAt.get(second.id)||0,Date.parse(second.createdAt)||0)-Math.max(activityAt.get(first.id)||0,Date.parse(first.createdAt)||0));
         const users=await Promise.all(candidates.map(async member=>{
           const memberFriendIds=[...new Set(follows
             .filter(edge=>edge.followedId===member.id&&follows.some(reverse=>reverse.followerId===member.id&&reverse.followedId===edge.followerId))
@@ -6873,7 +6875,16 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
         const q=rawQuery.replace(/^@/,'').trim();
         const empty={users:[],posts:[],groups:[],pages:[]};
         if(!q)return json(res,200,empty);
-        const users=db.users.filter(member=>member.id!==user.id&&!blockedBetween(user.id,member.id)&&canViewProfile(user.id,member)&&(`${member.name||''} ${member.username||''}`).toLowerCase().includes(q)).slice(0,12).map(member=>safeUser(member,user.id));
+        const users=db.users
+          .filter(member=>member.id!==user.id&&!blockedBetween(user.id,member.id)&&canViewProfile(user.id,member)&&(`${member.name||''} ${member.username||''}`).toLowerCase().includes(q))
+          .sort((first,second)=>{
+            const score=member=>Number(String(member.username||'').toLowerCase()===q)*4+
+              Number(String(member.name||'').toLowerCase()===q)*3+
+              Number(String(member.username||'').toLowerCase().startsWith(q))*2;
+            return score(second)-score(first);
+          })
+          .slice(0,12)
+          .map(member=>safeUser(member,user.id));
         const posts=await Promise.all(db.posts.filter(post=>post.status!=='hidden'&&!post.archivedAt&&!blockedBetween(user.id,post.userId)&&String(post.text||'').toLowerCase().includes(q)).slice(0,20).map(post=>publicPost(post,user.id)));
         const groups=(db.groups||[]).filter(group=>!['private','hidden'].includes(String(group.visibility||group.privacy||'').toLowerCase())||group.members?.includes(user.id)).filter(group=>(String(group.name||'')+' '+String(group.description||'')).toLowerCase().includes(q)).slice(0,12).map(group=>({...group,memberCount:(group.members||[]).length,owner:safeUser(db.users.find(member=>member.id===group.ownerId),user.id)}));
         const pages=(db.pages||[]).filter(page=>page.status==='active'&&!blockedBetween(user.id,page.createdBy)&&(page.title+' '+page.handle+' '+page.description+' '+page.category).toLowerCase().includes(q)).slice(0,12).map(page=>({...page,owner:safeUser(db.users.find(member=>member.id===page.createdBy),user.id),followerCount:(db.pageFollows||[]).filter(follow=>follow.pageId===page.id).length,isFollowing:(db.pageFollows||[]).some(follow=>follow.pageId===page.id&&follow.userId===user.id)}));
