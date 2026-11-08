@@ -9037,7 +9037,7 @@ async function fetchForYouPage({reset=false}={}){
   state.forYouLoading=true;
   try{
     const scope=state.forYouScope==='following'?'following':'for-you';
-    const params=new URLSearchParams({scope,limit:'12'});
+    const params=new URLSearchParams({scope,limit:'12',followedOnly:'1'});
     if(!reset&&state.forYouNextCursor)params.set('cursor',state.forYouNextCursor);
     const result=await api('/for-you/videos?'+params.toString());
     const posts=(result.posts||[]).filter(post=>(post.media||[]).some(media=>media.mediaType==='video'&&media.url));
