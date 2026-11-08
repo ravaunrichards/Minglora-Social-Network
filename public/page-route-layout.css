@@ -1,0 +1,37 @@
+/* Minglora page-shell rule:
+   Home keeps the Facebook-style left feature rail. Every other destination
+   gets its own full-width page canvas without Home's feature or suggestion rails. */
+html.minglora-standalone-page body.minglora-standalone-page .layout{
+  display:block!important;
+  width:100%!important;
+  max-width:none!important;
+  margin:0 auto!important;
+  padding:22px clamp(12px,2.4vw,28px)!important;
+  gap:0!important;
+}
+html.minglora-standalone-page body.minglora-standalone-page .layout>.left-rail,
+html.minglora-standalone-page body.minglora-standalone-page .layout>.right-rail{
+  display:none!important;
+}
+html.minglora-standalone-page body.minglora-standalone-page .layout>.main-content{
+  display:block!important;
+  width:100%!important;
+  max-width:1440px!important;
+  min-width:0!important;
+  margin:0 auto!important;
+  padding:0!important;
+  grid-column:auto!important;
+}
+@media(max-width:760px){
+  html.minglora-standalone-page body.minglora-standalone-page .layout{
+    width:100%!important;
+    max-width:none!important;
+    margin:0!important;
+    padding:12px 10px!important;
+  }
+  html.minglora-standalone-page body.minglora-standalone-page .layout>.main-content{
+    width:100%!important;
+    max-width:none!important;
+    margin:0!important;
+  }
+}
