@@ -727,7 +727,8 @@ async function refreshVisiblePosts(){
   if(state.view==='creator'&&state.creatorStudio){state.creatorStudio.profile=await api('/users/'+encodeURIComponent(state.user.id));await renderCreatorSection(state.creatorStudio.section||'content');return;}
   if(state.view==='group'&&state.activeGroup){await renderGroup(state.activeGroup);return;}
   if(state.view==='saved'){await renderSavedPosts();return;}
-  if(state.view==='for-you'){await renderForYouFeed();return;}\n  if(state.view==='videos'){await renderVideoCentre();return;}
+  if(state.view==='for-you'){await renderForYouFeed();return;}
+  if(state.view==='videos'){await renderVideoCentre();return;}
   if(state.view==='profile'&&state.profile?.user?.id){await openProfile(state.profile.user.id);return;}
   if(state.view==='search'){
     const query=$('#search-input')?.value.trim();
