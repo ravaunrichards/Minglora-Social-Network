@@ -55,7 +55,7 @@ test('For You interleaves creators instead of repeating one account', () => {
   assert.equal(new Set(ranked.slice(0, 3).map(item => item.userId)).size, 3);
 });
 
-test('For You is a dedicated full-screen video route with swipe snapping and phone navigation', async () => {
+test('For You is a full-screen swipe feed with phone navigation and selectable post scopes', async () => {
   const [app, styles, html] = await Promise.all([
     read('../../public/app.js'),
     read('../../public/styles.css'),
@@ -65,7 +65,7 @@ test('For You is a dedicated full-screen video route with swipe snapping and pho
   assert.match(app, /requestedView==='for-you'\)[\s\S]*view='for-you'/);
   assert.match(app, /state\.view==='for-you'\)await renderForYouFeed\(\)/);
   assert.match(app, /async function renderForYouFeed\(\)/);
-  assert.match(app, /api\('\/for-you\/videos\?'/);
+  assert.match(app, /api\('\/feed\?'/);
   assert.match(app, /data-fyp-scope="for-you"/);
   assert.match(app, /data-fyp-scope="following"/);
   assert.match(app, /data-fyp-scope="following"/);
