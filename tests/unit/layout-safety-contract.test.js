@@ -5,65 +5,79 @@ import { readFile } from 'node:fs/promises';
 const root = new URL('../../', import.meta.url);
 const read = path => readFile(new URL(path, root), 'utf8');
 
-test('the final layout stylesheet loads after every feature stylesheet', async () => {
-  const [html, sw, safety] = await Promise.all([
-    read('public/index.html'), read('public/sw.js'), read('public/layout-safety.css')
-  ]);
-  const mobileLink = html.indexOf('mobile-layout.css?v=20261105-flow-navigation-1');
-  const safetyLink = html.indexOf('layout-safety.css?v=20261105-page-flow-contract-2');
+test('the overlay contract loads after mobile styles and is included in the service worker cache', async () => {
+  const [html, sw] = await Promise.all([read('public/index.html'), read('public/sw.js')]);
+  const mobileLink = html.indexOf('mobile-layout.css?v=20261108-mobile-overlay-panels-1');
+  const safetyLink = html.indexOf('layout-safety.css?v=20261108-facebook-overlay-principles-1');
   const liveLink = html.indexOf('live-room-compact.css?v=20261107-live-layout-1');
-  const lastFeatureLink = html.indexOf('gifter-badge-3d.css?v=20261105-gifter-badge-3d-1');
-  assert.ok(lastFeatureLink >= 0 && mobileLink > lastFeatureLink && safetyLink > mobileLink && liveLink > safetyLink);
-  assert.ok(sw.includes("layout-safety.css?v=20261105-page-flow-contract-2"));
-  assert.match(sw,/CACHE_NAME='minglora-shell-v\d+-/);
-  assert.doesNotMatch(safety, /position\s*:\s*(?:fixed|sticky)/i);
+  const phoneLink = html.indexOf('phone-experience.css?v=20261108-phone-overlay-panels-1');
+  const appLockLink = html.indexOf('app-lock.css?v=20261107-app-lock-1');
+  assert.ok(mobileLink >= 0 && safetyLink > mobileLink && liveLink > safetyLink);
+  assert.ok(phoneLink > appLockLink && appLockLink >= 0);
+  for (const asset of [
+    'layout-safety.css?v=20261108-facebook-overlay-principles-1',
+    'phone-experience.css?v=20261108-phone-overlay-panels-1',
+    'meetwave.css?v=20261108-meetwave-dialog-overlays-1'
+  ]) assert.ok(sw.includes("'" + asset + "'"), 'service worker caches ' + asset);
+  assert.match(sw, /CACHE_NAME='minglora-shell-v\\d+-self-updating-1'/);
 });
 
-test('shared navigation and workspace bars stay in normal page flow', async () => {
+test('open menus, chat panels, drawers and dialogs are never forced into normal page flow', async () => {
   const css = await read('public/layout-safety.css');
-  for (const selector of ['.topbar', '.left-rail,.right-rail', '.settings-nav,.settings-save-bar',
-    '.creator-studio-nav', '.profile-tabs,.recharge-checkout-card,.mobile-nav']) {
-    assert.ok(css.includes(selector), 'flow contract includes ' + selector);
-  }
-  assert.match(css, /position:static!important/);
-  assert.match(css, /max-height:none!important/);
+  assert.doesNotMatch(css, /position\\s*:\\s*static\\s*!important/i);
+  for (const selector of [
+    '#message-window-dock', '.messenger-panel', '.palette-switcher-panel',
+    '.modal-backdrop', '.mw-modal-backdrop', '.live-tools-backdrop'
+  ]) assert.ok(css.includes(selector), 'overlay rules include ' + selector);
+  assert.ok(css.includes('position:fixed!important'));
+  assert.ok(css.includes('position:fixed;'));
 });
 
-test('dialogs, floating panels, menus, message windows and LIVE tools expand in page flow', async () => {
+test('Messenger chat windows and popovers stay anchored and scroll inside their own panel', async () => {
   const css = await read('public/layout-safety.css');
-  for (const selector of ['#message-window-dock', '.messenger-panel', '.call-overlay',
-    '.palette-switcher-panel', '.profile-overflow-menu', '.mobile-more-menu',
-    '.modal-backdrop', '.mw-modal-backdrop', '.live-tools-backdrop']) {
-    assert.ok(css.includes(selector), 'flow contract includes ' + selector);
-  }
-  for (const selector of ['.message-scroll,.message-window,.message-window-scroll',
-    '.messenger-panel-list', '.live-community-panel,.live-chat-list,.live-gift-grid']) {
-    assert.ok(css.includes(selector), 'scroll region uses page flow: ' + selector);
-  }
-  assert.match(css, /overflow:visible!important/);
+  assert.ok(css.includes('#message-window-dock,\nbody:has(#settings-form) #message-window-dock'));
+  assert.ok(css.includes('bottom:0!important'));
+  assert.ok(css.includes('.messenger-panel{\n  position:fixed!important'));
+  assert.ok(css.includes('overflow-y:auto!important'));
+  assert.ok(css.includes('.profile-account-menu.is-top-layer'));
 });
 
-test('LIVE stage identity, controls and chat sit outside the video layer', async () => {
-  const css = await read('public/layout-safety.css');
-  assert.match(css, /\.live-video-stage>\.live-stage-topbar/);
-  assert.match(css, /\.live-chat-overlay\{/);
-  assert.match(css, /\.live-chat-overlay \.live-chat-list\{[\s\S]*?overflow:visible!important/);
-  assert.doesNotMatch(css, /\.live-player-shell\.live-full-screen-active/);
+test('dialogs remain centered, fixed to the viewport and internally scrollable', async () => {
+  const [css, phone, mobile, meetwave] = await Promise.all([
+    read('public/layout-safety.css'), read('public/phone-experience.css'),
+    read('public/mobile-layout.css'), read('public/meetwave.css')
+  ]);
+  assert.ok(css.includes('.modal-backdrop,.about-section-editor-backdrop,.story-viewer-backdrop,'));
+  assert.ok(css.includes('position:fixed!important'));
+  assert.ok(css.includes('max-height:calc(100dvh - env(safe-area-inset-top)'));
+  assert.ok(css.includes('overflow-y:auto!important'));
+  assert.ok(phone.includes('body:not(:has(#live-player-shell)) .modal{'));
+  assert.ok(phone.includes('overflow-y:auto!important'));
+  assert.ok(!mobile.includes('.modal-backdrop{align-items:stretch'));
+  assert.ok(meetwave.includes('.mw-modal-backdrop{position:fixed'));
+  assert.ok(meetwave.includes('max-height:calc(100dvh - 28px)'));
 });
 
-test('long names and profile statistics wrap instead of disappearing at narrow widths', async () => {
+test('LIVE tools open in an anchored side drawer or mobile bottom sheet', async () => {
   const css = await read('public/layout-safety.css');
-  assert.match(css, /\.profile-counts\{[\s\S]*?overflow:visible!important/);
-  assert.match(css, /overflow-wrap:anywhere!important/);
-  assert.match(css, /white-space:normal!important/);
-  assert.match(css, /@media\(max-width:760px\)/);
+  assert.ok(css.includes('.live-tools-backdrop{\n  position:fixed!important'));
+  assert.ok(css.includes('.live-tools-drawer{\n  position:relative!important'));
+  assert.ok(css.includes('overflow-y:auto!important'));
+  assert.ok(css.includes('align-items:flex-end!important'));
 });
 
-test('hidden dialogs and closed menus stay hidden; inactive toasts take no space', async () => {
+test('hidden panels remain hidden and inactive toasts reserve no document space', async () => {
   const css = await read('public/layout-safety.css');
-  assert.match(css, /\.hidden,\[hidden\][\s\S]*?display:none!important/);
-  assert.match(css, /\.modal-backdrop\.hidden/);
-  assert.match(css, /\.messenger-panel\.hidden/);
-  assert.match(css, /\.toast:not\(\.show\)\{[\s\S]*?display:none!important/);
-  assert.match(css, /\.toast\.show\{[\s\S]*?display:block!important/);
+  assert.ok(css.includes('.hidden,[hidden]'));
+  assert.ok(css.includes('.modal-backdrop.hidden'));
+  assert.ok(css.includes('.messenger-panel.hidden'));
+  assert.ok(css.includes('.toast:not(.show){display:none!important}'));
+  assert.ok(css.includes('.toast.show{pointer-events:auto!important}'));
+});
+
+test('long names and profile statistics wrap without widening the viewport', async () => {
+  const css = await read('public/layout-safety.css');
+  assert.ok(css.includes('overflow-wrap:anywhere!important'));
+  assert.ok(css.includes('white-space:normal!important'));
+  assert.ok(css.includes('.profile-counts'));
 });
