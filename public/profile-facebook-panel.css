@@ -873,3 +873,71 @@
   .minglora-profile-page .profile-header-card .profile-counts strong{font-size:12px!important}
   .minglora-profile-page .profile-header-card .profile-counts span{font-size:8px!important}
 }
+
+
+/* Minglora profile Posts: Facebook-style timeline controls, filters and layout modes. */
+.profile-post-toolbar{display:flex;flex-direction:column;gap:12px;margin:0 0 14px!important;padding:14px!important;min-width:0}
+.profile-post-toolbar-head{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0}
+.profile-post-toolbar-head>div:first-child{min-width:0}
+.profile-post-toolbar-head h3{margin:0 0 3px;font-size:19px;font-weight:750}
+.profile-post-toolbar-head small{color:var(--muted,#65676b);font-size:12px}
+.profile-post-toolbar-actions,.profile-post-layout-control{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.profile-post-control-button,.profile-post-layout-control button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:36px;padding:7px 11px;border:1px solid var(--line,#e4e6eb);border-radius:8px;background:var(--surface-soft,#f0f2f5);color:var(--ink,#1c1e21);font-weight:650;font-size:13px;cursor:pointer}
+.profile-post-control-button .post-action-svg,.profile-post-layout-control .post-action-svg{width:16px;height:16px}
+.profile-post-layout-control{border-top:1px solid var(--line,#e4e6eb);padding-top:10px}
+.profile-post-layout-control button{flex:1 1 130px}
+.profile-post-layout-control button.is-active{background:var(--blue-soft,#e7f3ff);border-color:var(--blue,#1877f2);color:var(--blue,#1877f2)}
+.profile-post-list{display:flex;flex-direction:column;gap:14px;min-width:0}
+.profile-post-list[data-layout="grid"]{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:14px}
+.profile-post-list>.post{width:100%;min-width:0;max-width:100%;align-self:start;overflow:hidden}
+.profile-post-pinned,.profile-post-tagged{display:flex;align-items:center;gap:7px;margin:0 0 8px;color:var(--muted,#65676b);font-size:12px;font-weight:650}
+.profile-post-pinned .post-action-svg{width:14px;height:14px}
+.profile-post-tagged{color:var(--blue,#1877f2)}
+.post-actions .post-icon-button{display:inline-flex;align-items:center;justify-content:center;flex:1 1 42px;min-width:34px;min-height:38px;padding:7px 5px;font-size:18px;line-height:1;color:var(--muted,#65676b)}
+.post-actions .post-icon-button .post-action-svg{display:block;width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.post-actions .post-icon-button .post-action-svg--like{fill:currentColor;stroke:currentColor;stroke-width:.8}
+.post-actions .post-icon-button .post-action-svg--favorite{fill:none}
+.post-actions .post-icon-button.is-active,.post-actions .post-icon-button.liked{color:var(--blue,#1877f2)}
+.post-actions .post-favorite-button.is-active .post-action-svg--favorite{fill:currentColor}
+.post-actions .post-like-button{border-radius:7px!important}
+.post-reaction-control .post-reaction-picker-toggle{flex:0 0 25px!important;min-width:25px!important;padding:5px!important}
+.profile-post-empty{margin:0!important;width:100%}
+.profile-post-filter-backdrop,.profile-manage-posts-backdrop{z-index:1300}
+.profile-post-dialog,.profile-manage-posts-dialog{width:min(650px,calc(100vw - 22px))!important;max-width:650px!important;max-height:min(88dvh,820px)!important;overflow:auto!important;overscroll-behavior:contain}
+.profile-post-filter-form{display:flex;flex-direction:column;gap:16px}
+.profile-post-filter-description{margin:0 0 4px;color:var(--muted,#65676b);font-size:13px;line-height:1.45}
+.profile-post-filter-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.profile-post-filter-fields label{display:flex;flex-direction:column;gap:7px;min-width:0;color:var(--ink,#1c1e21);font-size:13px;font-weight:700}
+.profile-post-filter-fields select{width:100%;min-height:42px;padding:9px 34px 9px 11px;border:1px solid var(--line,#d8dadf);border-radius:8px;background:var(--card,#fff);color:var(--ink,#1c1e21);font:inherit;font-weight:500}
+.profile-post-dialog-actions{display:flex;justify-content:space-between;align-items:center;gap:10px;padding-top:12px;border-top:1px solid var(--line,#e4e6eb)}
+.profile-manage-head-back{display:flex;flex-direction:column;align-items:flex-start;gap:5px;min-width:0}
+.profile-manage-head-back h2{margin:0}
+.profile-manage-select-body{display:flex;flex-direction:column;gap:12px;min-height:0}
+.profile-manage-select-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.profile-manage-select-toolbar strong{font-size:14px}
+.profile-manage-select-toolbar button{min-width:94px}
+.profile-manage-post-list{display:flex;flex-direction:column;gap:2px;max-height:min(52dvh,500px);overflow:auto;overscroll-behavior:contain}
+.profile-manage-post-row{display:flex;align-items:center;gap:12px;padding:12px 8px;border-bottom:1px solid var(--line,#e4e6eb);cursor:pointer;min-width:0}
+.profile-manage-post-row input{width:19px;height:19px;flex:0 0 auto;accent-color:var(--blue,#1877f2)}
+.profile-manage-post-row.is-other-post{opacity:.72;cursor:default}
+.profile-manage-post-copy{display:flex;flex-direction:column;gap:4px;min-width:0}
+.profile-manage-post-copy strong{font-size:13px;line-height:1.35;overflow-wrap:anywhere}
+.profile-manage-post-copy small{color:var(--muted,#65676b);font-size:11px}
+.profile-manage-no-results{padding:16px;text-align:center}
+.profile-manage-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:12px;border-top:1px solid var(--line,#e4e6eb)}
+.profile-manage-footer [data-manage-next]{margin-left:auto;min-width:108px}
+.profile-manage-actions{display:flex;flex-direction:column;gap:10px}
+.profile-manage-delete{color:#d93025!important}
+@media(max-width:760px){
+  .profile-post-list[data-layout="grid"]{grid-template-columns:minmax(0,1fr)}
+  .profile-post-toolbar-head{align-items:flex-start;flex-direction:column}
+  .profile-post-toolbar-actions{width:100%}
+  .profile-post-control-button{flex:1 1 auto}
+}
+@media(max-width:480px){
+  .profile-post-filter-fields{grid-template-columns:minmax(0,1fr)}
+  .profile-post-dialog,.profile-manage-posts-dialog{width:calc(100vw - 14px)!important;max-height:calc(100dvh - 14px)!important}
+  .profile-post-toolbar{padding:11px!important}
+  .profile-post-toolbar-actions{gap:6px}
+  .profile-post-control-button{padding:7px 8px;font-size:12px}
+}
