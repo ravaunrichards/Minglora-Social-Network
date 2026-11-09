@@ -204,6 +204,20 @@ BEGIN
   JOIN public.ai_provider_accounts AS account ON account.id = assignment.provider_account_id
   JOIN public.ai_provider_models AS model ON model.id = assignment.model_id
   WHERE assignment.id = v_assignment_id;
+
+  INSERT INTO public.ai_identity_audit_logs (
+    identity_id,actor_user_id,action,target_type,target_id,summary,metadata
+  ) VALUES (
+    v_identity_id,p_actor_user_id,'provider.assignment_configured','provider_assignment',
+    v_assignment_id::text,'Configured provider/model assignment; provider health remains unverified.',
+    pg_catalog.jsonb_build_object(
+      'providerIdentifier',v_provider_identifier,
+      'modelIdentifier',v_model_identifier,
+      'credentialConfigured',(v_secret_reference IS NOT NULL),
+      'routingPriority',v_priority,
+      'isPrimary',v_primary
+    )
+  );
   RETURN v_result;
 END;
 $function$;
