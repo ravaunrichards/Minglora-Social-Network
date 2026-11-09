@@ -184,6 +184,30 @@ test('owner Admin Centre exposes bounded JSON identity batch import with retry h
 
 
 
+test('owner Admin Centre exposes vacancy creation and safe lifecycle management',async()=>{
+  const [ui,service,api]=await Promise.all([
+    read('public/personal-ai-bots.js'),
+    read('backend/modules/personal-ai-bots/personal-ai-bots-service.js'),
+    read('backend/modules/personal-ai-bots/admin-api.js')
+  ]);
+  for(const phrase of [
+    'Corporate vacancies','id="pab-vacancy-form"','id="pab-vacancy-position"',
+    'id="pab-vacancy-department"','id="pab-vacancy-title"',
+    'id="pab-vacancy-slots"','id="pab-vacancy-requirements"',
+    'pab-save-vacancy','createVacancy','saveVacancy','vacancyCard'
+  ])assert.ok(ui.includes(phrase),phrase);
+  assert.match(ui,/vacancies\.map\(vacancyCard\)/);
+  assert.match(ui,/No AI identity or appointment was created/);
+  assert.match(ui,/No employee appointed/);
+  assert.match(api,/path===root\+'\/vacancies'/);
+  assert.match(api,/vacancyMatch&&method==='PATCH'/);
+  assert.match(api,/vacancyMatch&&method==='DELETE'/);
+  assert.match(service,/An open or paused vacancy with this title already exists/);
+  assert.match(service,/statusHistory\.push/);
+  assert.match(service,/vacancy\.created/);
+  assert.match(service,/vacancy\.updated/);
+});
+
 test('owner Admin Centre exposes the 20-department catalogue and safe hierarchy controls',async()=>{
   const [ui,service,html]=await Promise.all([
     read('public/personal-ai-bots.js'),
