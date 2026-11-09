@@ -7119,6 +7119,16 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
       return json(res, status, { error: e.status ? e.message : 'Internal server error.' });
     }
   }
+  const publicAiPageMatch=p.match(/^\/ai\/([a-z0-9]+(?:-[a-z0-9]+)*)$/i);
+  if(method==='GET'&&publicAiPageMatch){
+    const pageFile=path.join(publicDir,'ai-profile.html');
+    fs.readFile(pageFile,(error,data)=>{
+      if(error)return json(res,404,{error:'Public AI profile page is unavailable.'});
+      res.writeHead(200,{'Content-Type':MIME['.html'],'Cache-Control':'no-store',...SECURITY_HEADERS});
+      res.end(data);
+    });
+    return;
+  }
   if(p==='/assets/gifters-level-up.png'){
     const assetFile=path.join(__dirname,'..','assets','Gifters Level Up.png');
     fs.readFile(assetFile,(error,data)=>{if(error)return json(res,404,{error:'Gifter progression artwork not found.'});res.writeHead(200,{'Content-Type':'image/png','Cache-Control':'public, max-age=3600',...SECURITY_HEADERS});res.end(data);});
