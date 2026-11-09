@@ -1863,6 +1863,18 @@ async function route(req, res) {
           const result=await requestSupabaseState('ai_email_identity_list',{actorUserId:user.id,identityId,limit,offset});
           return Array.isArray(result.emails)?result.emails:[];
         },
+        listAiIdentityReports:async ({status='pending',limit=100,offset=0}={})=>{
+          if(!isSupabasePersistence())return null;
+          const result=await requestSupabaseState('ai_identity_report_list',{actorUserId:user.id,status,limit,offset});
+          return Array.isArray(result.reports)?result.reports:[];
+        },
+        reviewAiIdentityReport:async ({reportId,status,resolutionNote=''})=>{
+          if(!isSupabasePersistence())throw Object.assign(new Error('AI report review requires Minglora Supabase PostgreSQL persistence.'),{status:503});
+          const result=await requestSupabaseState('ai_identity_report_review',{
+            actorUserId:user.id,reportId,status,resolutionNote
+          });
+          return result.report||null;
+        },
         lookupAdminMember:async targetUserId=>{
           const local=(db.users||[]).find(member=>member.id===String(targetUserId));
           if(local)return local;
