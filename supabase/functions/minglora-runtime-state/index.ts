@@ -117,7 +117,7 @@ Deno.serve(async (req: Request) => {
     }
     if (!Array.isArray(identities) || identities.length < 1 || identities.length > 100 ||
         identities.some((identity: any) => !identity || typeof identity !== "object" || Array.isArray(identity) ||
-          !validUuid(identity.id) || !validUuid(identity.id))) {
+          !validUuid(identity.id))) {
       return json(400, { error: "Provide between 1 and 100 valid AI identity objects." });
     }
     const allowedFields = new Set([
@@ -125,7 +125,7 @@ Deno.serve(async (req: Request) => {
       "public_profile_slug","public_profile_enabled","first_name","last_name","middle_name",
       "full_name","display_name","username","biography","introduction","gender","nationality",
       "country_of_origin","current_country","time_zone","personality","interests","hobbies",
-      "profession","skills","memory_enabled","memory_configuration","visibility","created_at"
+      "profession","skills","languages","memory_enabled","memory_configuration","visibility","created_at"
     ]);
     if (identities.some((identity: any) => Object.keys(identity).some((key: string) => !allowedFields.has(key)))) {
       return json(400, { error: "AI identity payload contains an unsupported field; provider secrets are not accepted." });
