@@ -37,7 +37,13 @@ self.addEventListener('install',event=>{
     await cacheCurrentShellAssets(cache);
   })());
 });
-// No skipWaiting message handler: updated workers follow the browser's normal lifecycle.
+
+// A client sends this only after its idle/media/call/LIVE safety checks pass.
+self.addEventListener('message',event=>{
+  if(event.data?.type==='MINGLORA_ACTIVATE_WHEN_SAFE'){
+    event.waitUntil(self.skipWaiting());
+  }
+});
 self.addEventListener('activate',event=>{
   event.waitUntil((async()=>{
     await caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('minglora-shell-')&&key!==CACHE_NAME).map(key=>caches.delete(key))));
