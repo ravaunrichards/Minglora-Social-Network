@@ -893,7 +893,9 @@
 .profile-post-pinned,.profile-post-tagged{display:flex;align-items:center;gap:7px;margin:0 0 8px;color:var(--muted,#65676b);font-size:12px;font-weight:650}
 .profile-post-pinned .post-action-svg{width:14px;height:14px}
 .profile-post-tagged{color:var(--blue,#1877f2)}
-.post-actions .post-icon-button{display:inline-flex;align-items:center;justify-content:center;flex:1 1 42px;min-width:34px;min-height:38px;padding:7px 5px;font-size:18px;line-height:1;color:var(--muted,#65676b)}
+.post-actions{display:flex;flex-wrap:wrap;align-items:center;gap:4px}
+.post-actions .post-reaction-control{flex:1 1 78px;min-width:76px}
+.post-actions .post-icon-button{display:inline-flex;align-items:center;justify-content:center;flex:1 1 36px;min-width:34px;min-height:38px;padding:7px 5px;font-size:18px;line-height:1;color:var(--muted,#65676b)}
 .post-actions .post-icon-button .post-action-svg{display:block;width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .post-actions .post-icon-button .post-action-svg--like{fill:currentColor;stroke:currentColor;stroke-width:.8}
 .post-actions .post-icon-button .post-action-svg--favorite{fill:none}
@@ -902,7 +904,7 @@
 .post-actions .post-like-button{border-radius:7px!important}
 .post-reaction-control .post-reaction-picker-toggle{flex:0 0 25px!important;min-width:25px!important;padding:5px!important}
 .profile-post-empty{margin:0!important;width:100%}
-.profile-post-filter-backdrop,.profile-manage-posts-backdrop{z-index:1300}
+.profile-post-filter-backdrop,.profile-manage-posts-backdrop{z-index:2700}
 .profile-post-dialog,.profile-manage-posts-dialog{width:min(650px,calc(100vw - 22px))!important;max-width:650px!important;max-height:min(88dvh,820px)!important;overflow:auto!important;overscroll-behavior:contain}
 .profile-post-filter-form{display:flex;flex-direction:column;gap:16px}
 .profile-post-filter-description{margin:0 0 4px;color:var(--muted,#65676b);font-size:13px;line-height:1.45}
