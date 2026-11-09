@@ -41,7 +41,7 @@ test('the requested 15 categories are defined and initially enabled',()=>{
   assert.equal(PERSONAL_AI_BOT_CATEGORIES.length,15);
   assert.equal(categories.length,15);
   assert.ok(categories.every(category=>category.enabled===true));
-  for(const name of ['AI Friends','AI Moderators','AI Support','AI Business','AI News','AI Friends','AI Creators','AI Influencers','AI Friends','AI News','AI Entertainers','AI Musicians','AI Community Hosts','AI Support','AI Live Hosts']){
+  for(const name of ['AI Friends','AI Creators','AI Influencers','AI News','AI Musicians','AI Entertainers','AI Gamers','AI Community Hosts','AI Live Hosts','AI Moderators','AI Support','AI Educators','AI Sports','AI Travel','AI Business']){
     assert.ok(categories.some(category=>category.name===name),name+' category should exist');
   }
 });
