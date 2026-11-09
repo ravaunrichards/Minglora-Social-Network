@@ -35,13 +35,14 @@ test('profile picture remains in the avatar column and upload is controlled from
   const details=app.indexOf('profile-info-main',imageEnd);
   assert.ok(wrapper>=0&&avatar>wrapper&&imageEnd>avatar&&details>imageEnd);
   assert.doesNotMatch(app,/profile-avatar-inline-edit|profile-inline-media-edit|profile-media-action-row/);
-  assert.match(app,/id="edit-profile" type="button" aria-label="Edit profile"/);
+  assert.match(app,/id="edit-profile" type="button" aria-label="Edit profile(?: details in About)?"/);
+  assert.match(app,/\$\(\x27#edit-profile\x27\)\?\.addEventListener\(\x27click\x27,\(\)=>\{[\s\S]*?showTab\(\x27about\x27\)/);
   assert.match(app,/data-profile-media-section="avatar"/);
   assert.match(app,/id="edit-avatar-file"/);
   assert.match(profileCss,/\.profile-avatar-edit-wrap/);
   assert.match(profileCss,/\.minglora-profile-page \.profile-header-card \.profile-avatar-edit-wrap>\.avatar\{[^}]*object-fit:cover/);
 });
-test('profile count row shows five real aligned profile metrics',()=>{
+test('profile count row shows six real aligned profile metrics',()=>{
   for(const kind of ['followers','following','friends'])assert.match(app,new RegExp('data-open-connections="'+kind+'"'));
   assert.match(app,/profile-count-item/);
   assert.ok(app.includes('Number(data.likesCount||0).toLocaleString()'));
@@ -49,7 +50,7 @@ test('profile count row shows five real aligned profile metrics',()=>{
   const countEnd=app.indexOf("</div>'+'</div><nav",countStart);
   const countMarkup=app.slice(countStart,countEnd);
   assert.ok(countMarkup.indexOf('<span>Posts</span>')<countMarkup.indexOf('<span>Likes</span>'),'Likes follows Posts in the profile metric row');
-  assert.match(profileCss,/\.profile-counts\{[^}]*grid-template-columns:repeat\(5,minmax\(0,1fr\)\)/);
+  assert.match(read('public/profile-admin-layout-parity.css'),/grid-template-columns: repeat\(6, minmax\(0, 1fr\)\) !important/);
   assert.doesNotMatch(app,/profile-live-insights|Profile views · 30 days|Viewing now/);
 });
 
