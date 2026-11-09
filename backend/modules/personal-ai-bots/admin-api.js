@@ -10,7 +10,6 @@ import {
   approvePersonalAiBotTask,
   cancelPersonalAiBotTask,
   setPersonalAiBotNetworkSettings,
-  setPersonalAiBotCategoryEnabled,
   updatePersonalAiBotCategory,
   bulkUpdatePersonalAiBots,
   emergencyShutdownPersonalAiBots,
