@@ -173,7 +173,7 @@ test('owner Admin Centre exposes bounded JSON identity batch import with retry h
     read('backend/modules/personal-ai-bots/admin-api.js'),
     read('backend/modules/personal-ai-bots/personal-ai-bots-service.js')
   ]);
-  for(const phrase of ['Bulk AI identity generation and import','id="pab-batch-form"','id="pab-batch-items"','id="pab-batch-key"','Recent identity batches','createIdentityBatch','API+\\'/batches\\'']) assert.ok(ui.includes(phrase),phrase);
+  for(const phrase of ['Bulk AI identity generation and import','id="pab-batch-form"','id="pab-batch-items"','id="pab-batch-key"','Recent identity batches','createIdentityBatch',"API+'/batches'"']) assert.ok(ui.includes(phrase),phrase);
   assert.match(api,/identity batch was saved for recovery/);
   assert.match(api,/idempotencyKey/);
   assert.match(api,/CANONICAL_PERSISTENCE_FAILED/);
