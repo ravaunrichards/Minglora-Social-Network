@@ -247,6 +247,36 @@ export function createPersonalAiBotCategory(db, input, actorId, timestamp, uid) 
   return category;
 }
 
+export function updatePersonalAiBotCategory(db, categoryId, input, actorId, timestamp, uid) {
+  ensurePersonalAiBotCollections(db);
+  const category=getPersonalAiBotCategories(db).find(item=>item.id===categoryId);
+  if(!category)throw Object.assign(new Error('Bot category not found.'),{status:404});
+  const source=category.builtIn?PERSONAL_AI_BOT_CATEGORIES:db.personalAiBotCategories;
+  const stored=source.find(item=>item.id===categoryId);
+  const changes=[];
+  if(Object.hasOwn(input,'name')){
+    const name=String(input.name||'').trim().replace(/\s+/g,' ');
+    if(name.length<3||name.length>56)throw Object.assign(new Error('Category name must be between 3 and 56 characters.'),{status:400});
+    if(getPersonalAiBotCategories(db).some(item=>item.id!==categoryId&&item.name.toLowerCase()===name.toLowerCase()))throw Object.assign(new Error('That category name is already in use.'),{status:409});
+    stored.name=name;changes.push('name');
+    for(const bot of db.personalAiBots.filter(item=>item.categoryId===categoryId))bot.categoryName=name;
+  }
+  if(Object.hasOwn(input,'description')){
+    stored.description=String(input.description||'').trim().slice(0,600);
+    changes.push('description');
+  }
+  if(Object.hasOwn(input,'enabled')){
+    const enabled=Boolean(input.enabled);
+    const settings=ensurePersonalAiBotCollections(db);
+    const disabled=new Set(settings.disabledCategoryIds||[]);
+    if(enabled)disabled.delete(categoryId);else disabled.add(categoryId);
+    settings.disabledCategoryIds=[...disabled];
+    changes.push(enabled?'enabled':'disabled');
+  }
+  if(changes.length)audit(db,actorId,'category.updated','category',categoryId,'Updated '+stored.name+': '+changes.join(', '),timestamp,uid);
+  return {...stored,...category, name:stored.name, description:stored.description, enabled:!new Set(ensurePersonalAiBotCollections(db).disabledCategoryIds||[]).has(categoryId)};
+}
+
 export function setPersonalAiBotCategoryEnabled(db, categoryId, enabled, actorId, timestamp, uid) {
   const settings=ensurePersonalAiBotCollections(db);
   if(typeof enabled!=='boolean')throw Object.assign(new Error('Choose whether this category is enabled.'),{status:400});
@@ -319,15 +349,71 @@ export function setPersonalAiBotNetworkSettings(db, input, actorId, timestamp, u
   const settings=ensurePersonalAiBotCollections(db);
   if(typeof input.enabled!=='boolean')throw Object.assign(new Error('Choose whether the bot network is enabled.'),{status:400});
   settings.enabled=input.enabled;
+  if(input.enabled)settings.emergencyShutdownAt=null;
   if(Object.hasOwn(input,'hybridEnabled')){
     if(typeof input.hybridEnabled!=='boolean')throw Object.assign(new Error('Hybrid enablement must be true or false.'),{status:400});
     settings.hybridEnabled=input.hybridEnabled;
+  }
+  if(Object.hasOwn(input,'concurrentExecutionLimit')){
+    const value=Number(input.concurrentExecutionLimit);
+    if(!Number.isInteger(value)||value<0||value>10000)throw Object.assign(new Error('Concurrent execution limit must be between 0 and 10,000.'),{status:400});
+    settings.concurrentExecutionLimit=value;
+  }
+  if(Object.hasOwn(input,'dailyExecutionBudget')){
+    const value=Number(input.dailyExecutionBudget);
+    if(!Number.isInteger(value)||value<0||value>1000000)throw Object.assign(new Error('Daily execution budget must be between 0 and 1,000,000 tasks.'),{status:400});
+    settings.dailyExecutionBudget=value;
+  }
+  if(Object.hasOwn(input,'automaticSuspensionEnabled')){
+    if(typeof input.automaticSuspensionEnabled!=='boolean')throw Object.assign(new Error('Automatic suspension must be true or false.'),{status:400});
+    settings.automaticSuspensionEnabled=input.automaticSuspensionEnabled;
   }
   settings.requireAdministratorApproval=true;
   settings.defaultAutonomyMode='administrator_controlled';
   settings.updatedBy=actorId;settings.updatedAt=timestamp;
   audit(db,actorId,'network.settings_updated','network','global','Updated Personal AI Bots Network controls.',timestamp,uid);
   return settings;
+}
+
+export function bulkUpdatePersonalAiBots(db, botIds, status, actorId, timestamp, uid) {
+  ensurePersonalAiBotCollections(db);
+  if(!Array.isArray(botIds)||botIds.length<1||botIds.length>100)throw Object.assign(new Error('Select between 1 and 100 bots for a bulk control operation.'),{status:400});
+  if(!['enabled','disabled','paused'].includes(status))throw Object.assign(new Error('Choose enabled, disabled or paused.'),{status:400});
+  const uniqueIds=[...new Set(botIds.map(String))];
+  const bots=uniqueIds.map(id=>db.personalAiBots.find(bot=>bot.id===id));
+  if(bots.some(bot=>!bot))throw Object.assign(new Error('One or more selected bots could not be found.'),{status:404});
+  if(status==='enabled'){
+    const categories=getPersonalAiBotCategories(db);
+    if(bots.some(bot=>!categories.some(category=>category.id===bot.categoryId&&category.enabled)))throw Object.assign(new Error('One or more selected bots belong to a disabled category.'),{status:409});
+  }
+  for(const bot of bots){
+    bot.status=status;bot.enabled=status==='enabled';bot.updatedBy=actorId;bot.updatedAt=timestamp;
+    if(status!=='enabled')bot.pausedAt=status==='paused'?timestamp:null;
+  }
+  audit(db,actorId,'bot.bulk_status_updated','bot',uniqueIds.join(','),'Set '+bots.length+' selected bots to '+status+'.',timestamp,uid);
+  return {updated:bots.length,bots};
+}
+
+export function emergencyShutdownPersonalAiBots(db, actorId, timestamp, uid) {
+  const settings=ensurePersonalAiBotCollections(db);
+  settings.enabled=false;
+  settings.hybridEnabled=false;
+  settings.emergencyShutdownAt=timestamp;
+  settings.emergencyShutdownBy=actorId;
+  let paused=0,cancelled=0;
+  for(const bot of db.personalAiBots){
+    if(bot.status==='enabled'||bot.enabled){
+      bot.status='paused';bot.enabled=false;bot.pausedAt=timestamp;bot.updatedAt=timestamp;bot.updatedBy=actorId;paused++;
+    }
+  }
+  for(const task of db.personalAiBotTasks){
+    if(['awaiting_administrator_approval','approved_waiting_for_worker','running'].includes(task.status)){
+      task.status='cancelled';task.executionStatus='cancelled_by_emergency_shutdown';
+      task.cancelledAt=timestamp;task.cancelledBy=actorId;cancelled++;
+    }
+  }
+  audit(db,actorId,'network.emergency_shutdown','network','global','Emergency shutdown paused '+paused+' bots and cancelled '+cancelled+' pending or running task records.',timestamp,uid);
+  return {ok:true,paused,cancelled,network:settings};
 }
 
 export function getPersonalAiBotOverview(db) {
@@ -344,7 +430,7 @@ export function getPersonalAiBotOverview(db) {
       pendingInstructions:tasks.filter(task=>task.status==='awaiting_administrator_approval').length,
       approvedWaitingForWorker:tasks.filter(task=>task.status==='approved_waiting_for_worker').length,
       categories:getPersonalAiBotCategories(db).length,
-      activeBots:bots.filter(bot=>bot.status==='active').length,
+      activeBots:bots.filter(bot=>bot.status==='enabled'&&bot.lastActiveAt&&Date.parse(bot.lastActiveAt)>Date.now()-5*60*1000).length,
       executingBots:new Set(tasks.filter(task=>task.status==='running').map(task=>task.botId)).size,
       identityDesignTarget:settings.identityDesignTarget||8300000000,
       concurrentExecutionLimit:settings.concurrentExecutionLimit||0
