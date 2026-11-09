@@ -424,7 +424,7 @@ export async function handlePersonalAiBotsAdminApi(context) {
       await saveStore();
       return (json(res,201,{ok:true,department}),true);
     }
-    const departmentMatch=path.match(/^\/api\/admin\/personal-ai-bots\/departments\/([a-z0-9-]+)$/i);
+    const departmentMatch=path.match(/^\/api\/admin\/personal-ai-bots\/departments\/([a-z0-9_-]+)$/i);
     if(departmentMatch&&method==='PATCH'){
       const allowed=new Set(['name','description','enabled','parentDepartmentId']);
       if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).some(key=>!allowed.has(key))||!Object.keys(input).length){
