@@ -7150,7 +7150,9 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
           message: String(e.message || 'Request rejected').slice(0, 160)
         }));
       }
-      return json(res, status, { error: e.status ? e.message : 'Internal server error.' });
+      const failure = { error: e.status ? e.message : 'Internal server error.' };
+      if (e.partial === true) failure.partial = true;
+      return json(res, status, failure);
     }
   }
   if(p==='/assets/gifters-level-up.png'){
