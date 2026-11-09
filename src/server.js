@@ -1709,7 +1709,14 @@ async function route(req, res) {
           const result=await requestSupabaseState('ai_identity_discover',{
             actorUserId:user.id,search,filters,sort,limit,offset
           });
-          return json(res,200,{ok:true,total:Number(result.total||0),items:Array.isArray(result.items)?result.items:[]});
+          const visibleItems=(Array.isArray(result.items)?result.items:[])
+            .filter(item=>{
+              const ownerId=String(item.ownerAdminId||'');
+              return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(ownerId)
+                && !blockedBetween(user.id,ownerId);
+            })
+            .map(({ownerAdminId,...item})=>item);
+          return json(res,200,{ok:true,total:visibleItems.length,items:visibleItems});
         }catch(error){
           return json(res,Number(error?.status)||503,{error:String(error?.message||'AI discovery is unavailable.').slice(0,240)});
         }
