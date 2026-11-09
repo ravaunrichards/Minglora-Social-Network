@@ -43,6 +43,7 @@ test('owner overview returns the requested categories without fabricated bots or
   assert.equal(context.res.payload.departments.filter(item=>item.builtIn).length,20);
   assert.equal(context.res.payload.jobPositions.length,20);
   assert.deepEqual(context.res.payload.vacancies,[]);
+  assert.deepEqual(context.res.payload.applications,[]);
   assert.ok(context.res.payload.jobPositions.every(item=>item.permissions.length===0&&item.appointmentEnabled===false));
   assert.equal(context.res.payload.bots.length,0);
   assert.equal(context.res.payload.tasks.length,0);
@@ -1214,5 +1215,61 @@ test('vacancy API rejects non-owner writes and unsupported filled status',async(
   });
   await handlePersonalAiBotsAdminApi(attempt);
   assert.equal(attempt.res.statusCode,400);
+});
+
+
+test('owner can submit and review an organizational AI candidate application',async()=>{
+  const db={};let saves=0;
+  const vacancyContext=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/vacancies',
+    input:{positionCode:'worker',departmentId:'department-finance_accounting',title:'Finance AI Worker'},
+    db,uid:sequenceUid(2600),saveStore:async()=>{saves++;}
+  });
+  await handlePersonalAiBotsAdminApi(vacancyContext);
+  const vacancy=vacancyContext.res.payload.vacancy;
+  db.personalAiBots.push({id:'org-candidate-001',population:'organizational',displayName:'Org Candidate',username:'ai_org_candidate'});
+  const create=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/applications',
+    input:{vacancyId:vacancy.id,identityId:'org-candidate-001'},
+    db,uid:sequenceUid(2700),saveStore:async()=>{saves++;}
+  });
+  await handlePersonalAiBotsAdminApi(create);
+  assert.equal(create.res.statusCode,201);
+  assert.equal(create.res.payload.application.status,'submitted');
+  assert.equal(Object.hasOwn(create.res.payload.application,'employeeId'),false);
+  const list=makeContext({method:'GET',path:'/api/admin/personal-ai-bots/applications',db});
+  await handlePersonalAiBotsAdminApi(list);
+  assert.equal(list.res.statusCode,200);
+  assert.equal(list.res.payload.applications.length,1);
+  const review=makeContext({
+    method:'PATCH',path:'/api/admin/personal-ai-bots/applications/'+create.res.payload.application.id,
+    input:{status:'in_review'},db,saveStore:async()=>{saves++;}
+  });
+  await handlePersonalAiBotsAdminApi(review);
+  assert.equal(review.res.statusCode,200);
+  assert.equal(review.res.payload.application.status,'in_review');
+  assert.equal(saves,3);
+});
+
+test('candidate application routes are owner-only and reject independent AI identities',async()=>{
+  const nonOwner=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/applications',
+    input:{vacancyId:'vacancy-existing',identityId:'candidate-existing'},
+    isOwnerAdmin:false
+  });
+  await handlePersonalAiBotsAdminApi(nonOwner);
+  assert.equal(nonOwner.res.statusCode,403);
+  assert.equal(nonOwner.db.personalAiBotApplications,undefined);
+  const db={personalAiBots:[{id:'independent-001',population:'independent',displayName:'Independent'}],personalAiBotVacancies:[{
+    id:'vacancy-001',ownerId:'admin-1',title:'Position',positionCode:'worker',positionTitle:'Worker',
+    departmentId:'department-finance_accounting',departmentName:'Finance and Accounting',status:'open'
+  }]};
+  const attempt=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/applications',
+    input:{vacancyId:'vacancy-001',identityId:'independent-001'},db
+  });
+  await handlePersonalAiBotsAdminApi(attempt);
+  assert.equal(attempt.res.statusCode,409);
+  assert.equal(attempt.db.personalAiBotApplications,undefined);
 });
 
