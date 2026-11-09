@@ -44,13 +44,17 @@ test("admin centre renders module and per-collection totals from the live snapsh
 });
 
 
-test("Admin Centre opens as its own page from the authorized administrator profile", () => {
-  assert.ok(admin.includes("link.href = '/admin-centre.html'"));
-  assert.ok(admin.includes("adminGrid.append(link)"));
-  assert.ok(!admin.includes("insertAdjacentElement('afterend', root)"));
+test("Admin Centre is embedded as a protected feature within the administrator profile", () => {
+  assert.ok(app.includes("[['admin-centre','Admin Centre']]"));
+  assert.ok(app.includes("tab==='admin-centre'"));
+  assert.ok(app.includes("admin-centre-profile-root"));
+  assert.ok(app.includes("window.MingloraAdminCentre?.initialize"));
+  assert.ok(admin.includes("window.MingloraAdminCentre = Object.freeze"));
+  assert.ok(admin.includes("access.canAccess === true"));
+  assert.ok(admin.includes("access.setupRequired"));
+  assert.ok(!admin.includes("profile-admin-centre-entry"));
+  assert.ok(!admin.includes("link.href = '/admin-centre.html'"));
   assert.ok(admin.includes("authenticator-verified session"));
-  assert.ok(html.includes('id="admin-centre-root"'));
-  assert.ok(html.includes("20261108-admin-workspace-2"));
   assert.ok(css.includes("admin-control-centre-page"));
   assert.ok(css.includes("grid-template-columns:minmax(220px,260px) minmax(0,1fr)"));
   assert.ok(css.includes(".admin-centre-nav-group"));
@@ -59,16 +63,15 @@ test("Admin Centre opens as its own page from the authorized administrator profi
   assert.ok(admin.includes("Trust &amp; support"));
 });
 
-test("administrator profile has no duplicate profile-management controls and keeps one secured Admin Centre entry", () => {
-  assert.ok(index.includes("admin-profile-layout.css?v=20261108-admin-profile-centre-only-1"));
+test("administrator profile shows Admin Centre as a feature tab without a header shortcut", () => {
+  assert.ok(index.includes("admin-profile-layout.css?v=20261108-admin-profile-feature-tab-1"));
   assert.ok(!app.includes("profile-admin-tools"));
   assert.ok(!app.includes("data-profile-admin-action"));
   assert.ok(!app.includes("Profile management"));
-  assert.ok(admin.includes("profile-admin-centre-entry"));
-  assert.ok(admin.includes("adminProfile.querySelector('[data-open-admin-centre]')"));
-  assert.ok(admin.includes("access?.canAccess !== true && access?.setupRequired !== true"));
-  assert.ok(admin.includes("profileInfo.insertAdjacentElement('afterend', link)"));
-  assert.ok(css.includes(".profile-admin-centre-entry{"));
+  assert.ok(app.includes("profile-admin-centre-tab"));
+  assert.ok(!admin.includes("profile-admin-centre-entry"));
+  assert.ok(!admin.includes("addProfileEntry"));
+  assert.ok(!css.includes(".profile-admin-centre-entry{"));
   assert.ok(!css.includes("profile-admin-tools"));
   assert.ok(!css.includes("profile-admin-tool"));
   assert.ok(app.includes("profile-admin-identity-mark--owner"));
@@ -76,8 +79,19 @@ test("administrator profile has no duplicate profile-management controls and kee
   assert.ok(app.includes("profile-admin-identity-mark--control"));
 });
 
+test("app shell and service worker load the profile feature Admin Centre assets", () => {
+  assert.match(index, /admin-centre\.css\?v=20261108-admin-workspace-2/);
+  assert.match(index, /admin-centre\.js\?v=20261108-admin-profile-feature-tab-1/);
+  assert.match(index, /app\.js\?v=20261108-admin-centre-profile-feature-tab-1/);
+  const cacheName = serviceWorker.match(/const CACHE_NAME='([^']+)'/)?.[1] || '';
+  assert.match(cacheName, /^minglora-shell-v\d+-/);
+  assert.equal(cacheName, 'minglora-shell-v254-admin-profile-admin-centre-feature-1');
+  assert.match(serviceWorker, /admin-centre\.css\?v=20261108-admin-workspace-2/);
+  assert.match(serviceWorker, /admin-centre\.js\?v=20261108-admin-profile-feature-tab-1/);
+  assert.match(serviceWorker, /admin-profile-layout\.css\?v=20261108-admin-profile-feature-tab-1/);
+  assert.match(serviceWorker, /app\.js\?v=20261108-admin-centre-profile-feature-tab-1/);
+});
 
-test("app shell and service worker load the current standalone Admin Centre assets", () => {
   assert.match(index, /admin-centre\.css\?v=20261108-admin-workspace-2/);
   assert.match(index, /admin-centre\.js\?v=20261108-admin-workspace-2/);
   const cacheName = serviceWorker.match(/const CACHE_NAME='([^']+)'/)?.[1] || '';
