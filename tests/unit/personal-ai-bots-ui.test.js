@@ -251,7 +251,7 @@ test('owner Admin Centre exposes organizational candidate submission and review 
   ]);
   for(const phrase of ['AI candidate applications and review','pab-application-form','pab-application-candidate','pab-application-vacancy','createApplication','saveApplication','pab-save-application'])assert.ok(ui.includes(phrase),phrase);
   assert.match(ui,/Only existing AI identities with population "organizational" can be submitted/);
-  assert.ok(service.includes('population!==\\'organizational\\''));
+  assert.ok(service.includes("candidate.population!=='organizational'"));
   assert.ok(api.includes("root+'/applications'"));
   assert.ok(html.includes('/personal-ai-bots.js?v=20261109-personal-ai-bots-6'));
 });
