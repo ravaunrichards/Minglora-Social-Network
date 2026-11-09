@@ -53,7 +53,7 @@ test('Facebook-style people cards have responsive sizing and reduced-motion trea
   assert.match(css,/\.facebook-sidebar-suggestion/);
   assert.match(css,/white-space:nowrap!important/);
   assert.match(css,/aspect-ratio:1\/1/);
-  assert.match(css,/@media\(max-width:600px\)/);
+  assert.match(css,/@media\(max-width:760px\)/);
   assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
 });
 test('static shell cache includes the active discovery app assets', async () => {
@@ -77,7 +77,9 @@ test('People You May Know cards keep Facebook-style square photo proportions on 
   assert.ok(app.includes('facebook-person-follow'));
   assert.ok(app.includes('facebook-person-remove'));
   assert.ok(css.includes('.facebook-person-photo{'));
-  assert.ok(css.includes('aspect-ratio:1 / 1!important'));
+  assert.ok(css.includes('aspect-ratio:1/1!important'));
+  assert.ok(css.includes('grid-template-columns:76px minmax(0,1fr)!important'));
+  assert.ok(css.includes('max-height:210px!important'));
   assert.ok(css.includes('.people-grid.people-discovery-grid>.facebook-person-card'));
 });
 test('Supabase sign-in without profile metadata preserves the saved public name and username', async () => {
