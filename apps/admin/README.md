@@ -222,10 +222,12 @@ Keep PR #203 open and draft. Do not merge or rebase without authorization. The n
 
 The Admin Centre's Supabase Auth provider panel uses `SUPABASE_ACCESS_TOKEN` on the Minglora Render service to call the Supabase Management API. Configure a project-scoped Personal Access Token with the least required permissions:
 
-- `auth_config_read` for GET `/v1/projects/{ref}/config/auth`.
-- `auth_config_write` and `project_admin_write` for PATCH `/v1/projects/{ref}/config/auth`.
+- **Auth Config — Read** for GET `/v1/projects/{ref}/config/auth`.
+- **Auth Config — Read-write** plus **Project Settings — Read-write** for PATCH `/v1/projects/{ref}/config/auth`.
 
-Official current documentation: [GET Auth service config](https://supabase.com/docs/reference/api/v1-get-auth-service-config), [PATCH Auth service config](https://supabase.com/docs/reference/api/v1-update-auth-service-config), and [Personal Access Tokens](https://supabase.com/docs/guides/platform/personal-access-tokens).
+These are the current permission names in Supabase's Personal Access Token permission matrix. Scoped PATs are in public alpha and may not be available to every account yet. Prefer a token scoped to this one project and only the permissions above; classic PATs have broad account-level access, so do not place one in Render without a separate security review.
+
+Official documentation: [GET Auth service config](https://supabase.com/docs/reference/api/v1-get-auth-service-config), [PATCH Auth service config](https://supabase.com/docs/reference/api/v1-update-auth-service-config), and [Personal Access Tokens and permission scopes](https://supabase.com/docs/guides/platform/personal-access-tokens).
 
 The token must be stored only in Render's server-side environment; it is never sent to the browser or written to source control. No token was supplied or verified in this execution, and the connected Render tool does not reveal secret environment values. The provider panel therefore remains **configured in code but not end-to-end verified** until a scoped token and provider-side client credentials are present.
 
@@ -309,3 +311,37 @@ Live service reads during this continuation reconfirmed:
 ### Exact next action
 
 Keep PR #203 in draft and production unchanged. Obtain authorization for the reviewed reconciliation of `src/server.js`, `public/admin-centre.html`, and `public/sw.js`; hosted acceptance and deployment remain blocked until that review and the required token setup are available.
+## Continuation addendum — 2026-11-09 11:36 UTC
+
+**Verified progress remains 73% / 27% remaining.** The weighted milestone tracker is unchanged because the Supabase Management API health card is implemented but its new focused assertion and hosted endpoint response still need verification.
+
+### Service inventory and new health check
+
+The Admin Centre service inventory now also checks the Supabase Management API endpoint used by the Auth-provider manager: `GET https://api.supabase.com/v1/projects/gzycobgbasnqqhnympkr/config/auth`. The check runs only when `SUPABASE_ACCESS_TOKEN` is present on the server, uses a 4.5-second timeout, and returns only the HTTP outcome and a safe status message; the token and Auth config response are never sent to the dashboard. The card distinguishes missing token, HTTP 401, HTTP 403, network failure, and successful authenticated read.
+
+The active provider inventory remains Supabase (including Auth, database, Storage and Edge Functions), Supabase Management API, Render, GitHub, LiveKit, PayPal, Tenor, SIX Group, Frankfurter, and browser Web Push. Google, Apple and other social login providers remain managed under the separate Supabase Auth provider panel.
+
+SMTP, Resend, SendGrid, Sentry and OTLP variables in `.env.example` are not active connections in the current server implementation or dependency list. They must not be shown as connected services. The Auth email card explicitly says this runtime does not test SMTP delivery.
+
+### Current tests and CI
+
+- Previous completed workflow run [#8350](https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/42610272786) reported **748 tests, 718 passed, 30 failed**; the separate For You suite reported **13 passed, 2 failed**.
+- The Admin Centre tests passed in that run. The new test that checks the Supabase Management API card, scoped server token usage, endpoint and secret-safety is on the current branch and was included in the next workflow run; its result was pending at this checkpoint.
+- The 30 full-suite and 2 For You failures remain unrelated existing tests in other areas and are not counted as passes.
+
+### Current branch snapshot
+
+- **Branch:** `feat/minglora-admin-user-and-service-centre-20261109`.
+- **Head:** `a57886e6ec4b8b708ded3c975bfe48537df7b401`.
+- **PR #203:** open draft; GitHub reports `mergeable=false` / `dirty`.
+- The PR remains one commit behind `main`; do not merge or rebase without authorization.
+- Production Supabase Edge Function and Render deployment remain on `main`; no production change was made.
+
+### Remaining
+
+- **Easy:** Confirm the new Supabase Management API test passes on the current head; update this checkpoint with that run.
+- **Medium:** Obtain authorization to reconcile the known PR/main overlap; verify hosted account management and provider service cards with the required owner/MFA session.
+- **Hard:** Configure a project-scoped `SUPABASE_ACCESS_TOKEN` in Render, then verify actual Management API GET and PATCH permissions. Do not enable/disable Auth providers without explicit user approval.
+- **Final:** Complete hosted CRUD, audit, revocation and service checks; resolve or formally accept the 30+2 existing repository failures before a 100% claim.
+
+**Exact next action:** review the latest CI run for the new Management API health-card test, then re-check live Supabase/Render state. Keep the PR in draft and production unchanged.
