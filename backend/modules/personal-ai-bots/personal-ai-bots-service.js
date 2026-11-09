@@ -224,9 +224,9 @@ export function updatePersonalAiBot(db, botId, input, actorId, timestamp, uid) {
   }
   if (Object.hasOwn(input,'autonomyMode')) {
     const mode=String(input.autonomyMode);
-    if(!['administrator_controlled','hybrid'].includes(mode))throw Object.assign(new Error('Choose administrator-controlled or hybrid mode.'),{status:400});
+    if(!['administrator_controlled','human_approval','hybrid'].includes(mode))throw Object.assign(new Error('Choose administrator-controlled, human-approval or hybrid mode.'),{status:400});
     bot.autonomyMode=mode;
-    if(mode==='administrator_controlled')bot.allowedAutonomousActions=[];
+    if(mode!=='hybrid')bot.allowedAutonomousActions=[];
     changes.push('autonomy mode');
   }
   if (Object.hasOwn(input,'allowedAutonomousActions')) {
