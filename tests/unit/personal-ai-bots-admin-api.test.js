@@ -397,3 +397,98 @@ test('emergency shutdown synchronizes every cancelled task to the durable queue'
   assert.equal(persisted[0].cancelledBy,'owner-1');
   assert.equal(saves,1);
 });
+
+
+test('owner instruction persistence stores the AI identity before inserting its foreign-key task',async()=>{
+  const botId='00000000-0000-4000-8000-000000000401';
+  const order=[];
+  let identityPayload=null,taskPayload=null;
+  const context=makeContext({
+    method:'POST',
+    path:'/api/admin/personal-ai-bots/bots/'+botId+'/instructions',
+    input:{taskType:'assistant_request',instruction:'Explain how members can manage account privacy.'},
+    db:{
+      personalAiBotSettings:[{id:'global',enabled:true}],
+      personalAiBots:[{
+        id:botId,createdBy:'owner-1',displayName:'Minglora AI Guide',
+        categoryId:'ai-support',categoryName:'AI Support',
+        username:'ai_minglora_guide',enabled:true,status:'enabled'
+      }],
+      personalAiBotTasks:[]
+    },
+    persistAiIdentities:async identities=>{order.push('identity');identityPayload=identities;},
+    persistAiBotTasks:async tasks=>{order.push('task');taskPayload=tasks;},
+    saveStore:async()=>{order.push('save');}
+  });
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,201);
+  assert.deepEqual(order,['identity','task','save']);
+  assert.equal(identityPayload[0].id,botId);
+  assert.equal(taskPayload[0].botId,botId);
+});
+
+test('owner network controls synchronize to PostgreSQL without opening provider dispatch gates',async()=>{
+  let persisted=null,saves=0;
+  const context=makeContext({
+    method:'PUT',path:'/api/admin/personal-ai-bots/network',
+    input:{
+      enabled:true,hybridEnabled:true,concurrentExecutionLimit:3,
+      dailyExecutionBudget:75,automaticSuspensionEnabled:false
+    },
+    persistAiBotSettings:async settings=>{persisted=settings;},
+    saveStore:async()=>{saves++;}
+  });
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,200);
+  assert.deepEqual(persisted,{
+    enabled:true,hybridEnabled:true,maxConcurrentExecutions:3,
+    dailyExecutionBudget:75,automaticSuspensionEnabled:false,
+    emergencyShutdownAt:null
+  });
+  assert.equal(persisted.executionEnabled,undefined);
+  assert.equal(persisted.providerReady,undefined);
+  assert.equal(saves,1);
+});
+
+test('network settings persistence failure does not report a successful control change',async()=>{
+  let saves=0;
+  const context=makeContext({
+    method:'PUT',path:'/api/admin/personal-ai-bots/network',
+    input:{enabled:true,hybridEnabled:false},
+    persistAiBotSettings:async()=>{throw Object.assign(new Error('Durable network settings unavailable.'),{status:503});},
+    saveStore:async()=>{saves++;}
+  });
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,503);
+  assert.match(context.res.payload.error,/Durable network settings unavailable/);
+  assert.equal(saves,0);
+});
+
+test('emergency shutdown closes the PostgreSQL dispatch gate before syncing identity and task cancellations',async()=>{
+  const botId='00000000-0000-4000-8000-000000000402';
+  const taskId='00000000-0000-4000-8000-000000000403';
+  const order=[];
+  const context=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/emergency-shutdown',
+    db:{
+      personalAiBotSettings:[{id:'global',enabled:true}],
+      personalAiBots:[{
+        id:botId,createdBy:'owner-1',displayName:'Minglora AI Guide',
+        categoryId:'ai-support',categoryName:'AI Support',
+        username:'ai_minglora_guide',enabled:true,status:'enabled'
+      }],
+      personalAiBotTasks:[{
+        id:taskId,botId,taskType:'assistant_request',
+        instruction:'Prepare an answer about privacy settings.',
+        status:'approved_waiting_for_worker'
+      }]
+    },
+    persistAiBotSettings:async settings=>{order.push('settings');assert.equal(settings.enabled,false);assert.ok(settings.emergencyShutdownAt);},
+    persistAiIdentities:async identities=>{order.push('identity');assert.equal(identities[0].status,'restricted');},
+    persistAiBotTasks:async tasks=>{order.push('tasks');assert.equal(tasks[0].status,'cancelled');},
+    saveStore:async()=>{order.push('save');}
+  });
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,200);
+  assert.deepEqual(order,['settings','identity','tasks','save']);
+});
