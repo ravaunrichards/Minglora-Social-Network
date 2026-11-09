@@ -4,9 +4,9 @@
 
 - **Project:** Minglora Social Network — ravaunrichards/Minglora-Social-Network
 - **Branch:** `feat/minglora-admin-user-and-service-centre-20261109`
-- **Branch head:** `d4f15343af7c85702c5a7a47046d049a27e7a966` (checkpoint-only commit after the tested source commit `ad8ea2c3e1600952238a94715e6d56c4786e7a8b`).
+- **Code commit with the tested implementation:** `ad8ea2c3e1600952238a94715e6d56c4786e7a8b`; subsequent commits on this branch only update this checkpoint.
 - **PR:** [#203](https://github.com/ravaunrichards/Minglora-Social-Network/pull/203) remains OPEN and DRAFT, not merged; reported mergeable=false.
-- **Latest CI run for branch head:** [42714965643](https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/42714965643).
+- **Latest completed CI run before this checkpoint-only update:** [42714965643](https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/42714965643).
   - **Supabase Auth provider controls:** PASS — job completed successfully; provider source syntax and focused acceptance tests passed (17 tests, per the CI result captured during the prior continuation).
   - **Admin Centre real-browser viewport regression:** PASS.
   - **Repository-wide test job:** FAIL — failures are outside the Auth Provider control scope.
