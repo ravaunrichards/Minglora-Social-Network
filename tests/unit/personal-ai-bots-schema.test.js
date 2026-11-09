@@ -22,6 +22,19 @@ const emailSql = await readFile(
   'utf8'
 );
 
+const discoverySql = await readFile(
+  new URL('../../supabase/migrations/20261109230000_minglora_ai_identity_discovery.sql', import.meta.url),
+  'utf8'
+);
+const serverSource = await readFile(
+  new URL('../../src/server.js', import.meta.url),
+  'utf8'
+);
+const discoveryUi = await readFile(
+  new URL('../../public/ai-discover.js', import.meta.url),
+  'utf8'
+);
+
 test('normalized AI bot migration contains all 15 master categories',()=>{
   for(const id of [
     'ai-friends','ai-creators','ai-influencers','ai-news','ai-musicians',
@@ -384,4 +397,55 @@ test('canonical identity gateway accepts the complete profile schema without acc
   ]) assert.ok(gateway.includes('"'+field+'"'),'missing gateway allowlist field '+field);
   assert.doesNotMatch(gateway,/api_key\s*:/i);
   assert.doesNotMatch(gateway,/password\s*:/i);
+});
+
+
+test('public AI discovery exposes only explicitly public enabled identities',()=>{
+  assert.ok(discoverySql.includes('CREATE OR REPLACE FUNCTION public.minglora_ai_identity_discover'));
+  assert.match(discoverySql,/identity\.status = 'active'/);
+  assert.match(discoverySql,/identity\.public_profile_enabled = true/);
+  assert.match(discoverySql,/profile\.visibility = 'public'/);
+  assert.match(discoverySql,/GRANT EXECUTE ON FUNCTION public\.minglora_ai_identity_discover\(text,jsonb,text,integer,integer\) TO service_role/);
+  assert.match(discoverySql,/WHERE enabled = true AND verification_status = 'verified'/);
+  for(const filter of [
+    'gender','nationality','countryOfOrigin','currentCountry','countryCode',
+    'stateProvince','parishCounty','city','language','category','profession',
+    'personality','interest','capability'
+  ]) assert.ok(discoverySql.includes("'"+filter+"'"),'missing discovery filter '+filter);
+  for(const privateField of ['email_address','credential_secret_reference','api_key','provider_configuration']) {
+    assert.ok(!discoverySql.includes(privateField),'public discovery must not expose '+privateField);
+  }
+});
+
+test('AI discovery Edge gateway and server endpoint require a signed-in member',()=>{
+  assert.ok(gateway.includes('"ai_identity_discover"'));
+  const handler=gateway.slice(gateway.indexOf('if (action === "ai_identity_discover")'),gateway.indexOf('if (action === "ai_identity_upsert_batch")'));
+  assert.match(handler,/validUuid\(actorUserId\)/);
+  assert.match(handler,/Sign in to discover public Minglora AI identities/);
+  assert.match(handler,/admin\.rpc\("minglora_ai_identity_discover"/);
+  const route=serverSource.slice(serverSource.indexOf("if(method==='GET'&&p==='/api/ai/discover')"),serverSource.indexOf('handlePersonalAiBotsAdminApi',serverSource.indexOf("if(method==='GET'&&p==='/api/ai/discover')")));
+  assert.ok(route.length>0);
+  assert.match(serverSource,/requireAuth\(user\);\s*if\(method==='GET'&&p==='\/api\/ai\/discover'/);
+  assert.match(route,/requestSupabaseState\('ai_identity_discover'/);
+  assert.match(route,/AI discovery requires Minglora Supabase PostgreSQL persistence/);
+});
+
+test('worldwide AI discovery country selector covers the 249 ISO 3166-1 entries',()=>{
+  const match=discoveryUi.match(/const COUNTRY_CODES='([^']+)'\.split\(' '\)/);
+  assert.ok(match,'country code catalogue missing');
+  const codes=match[1].split(' ');
+  assert.equal(codes.length,249);
+  assert.equal(new Set(codes).size,249);
+  for(const code of codes)assert.match(code,/^[A-Z]{2}$/);
+  assert.match(discoveryUi,/new Intl\.DisplayNames\(\['en'\],\{type:'region'\}\)/);
+  assert.match(discoveryUi,/countrySelect\.appendChild\(fragment\)/);
+});
+
+test('AI discovery filters combine multiple dimensions and paginate without false activity metrics',()=>{
+  assert.match(discoverySql,/LIMIT p_limit OFFSET p_offset/);
+  assert.match(discoverySql,/ORDER BY[\s\S]*created_at DESC/);
+  assert.match(discoveryUi,/filters:JSON\.stringify\(filtersFromForm\(\)\)/);
+  assert.match(discoveryUi,/sort:document\.querySelector\('#aid-sort'\)\.value/);
+  assert.match(discoveryUi,/offset\+=items\.length/);
+  assert.doesNotMatch(discoverySql,/followers|likes|views|popularity_score/i);
 });
