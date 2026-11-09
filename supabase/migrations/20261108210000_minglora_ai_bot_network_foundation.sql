@@ -816,6 +816,18 @@ COMMIT;
     RAISE EXCEPTION 'AI population or lifecycle status is invalid.' USING ERRCODE = '22023';
   END IF;
 
+  IF v_category IS NOT NULL THEN
+    INSERT INTO public.minglora_ai_bot_categories (
+      id,name,description,is_builtin,enabled,created_by,updated_by
+    ) VALUES (
+      v_category,
+      COALESCE(NULLIF(pg_catalog.btrim(p_identity->>'category_name'),''),'AI Custom Category'),
+      COALESCE(LEFT(p_identity->>'category_description',600),''),
+      false,true,v_owner,v_owner
+    )
+    ON CONFLICT (id) DO NOTHING;
+  END IF;
+
   SELECT i.status INTO v_previous_status
   FROM public.ai_identities AS i
   WHERE i.identity_id = v_id AND i.owner_admin_id = v_owner
@@ -843,7 +855,7 @@ COMMIT;
     public_profile_slug=EXCLUDED.public_profile_slug,
     public_profile_enabled=EXCLUDED.public_profile_enabled,
     updated_at=pg_catalog.now()
-  WHERE public.ai_identities.owner_admin_id = v_owner;
+  WHERE existing_identity.owner_admin_id = v_owner;
 
   IF NOT FOUND THEN
     RAISE EXCEPTION 'AI identity is owned by a different administrator.' USING ERRCODE = '42501';
@@ -1021,6 +1033,7 @@ AS $function$
         'population',i.population,
         'identityType',i.identity_type,
         'categoryId',i.category_id,
+        'categoryName',c.name,
         'status',i.status,
         'parentIdentityId',i.parent_identity_id,
         'publicProfileSlug',i.public_profile_slug,
@@ -1055,6 +1068,7 @@ AS $function$
     FROM public.ai_identities AS i
     JOIN public.ai_names AS n ON n.identity_id=i.identity_id
     LEFT JOIN public.ai_profiles AS p ON p.identity_id=i.identity_id
+    LEFT JOIN public.minglora_ai_bot_categories AS c ON c.id=i.category_id
     WHERE i.owner_admin_id=p_owner_admin_id
     ORDER BY i.created_at DESC
     LIMIT LEAST(GREATEST(COALESCE(p_limit,100),1),1000)
