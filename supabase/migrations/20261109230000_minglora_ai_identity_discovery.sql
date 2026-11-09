@@ -12,6 +12,10 @@ CREATE TABLE IF NOT EXISTS public.ai_identity_followers (
   updated_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE (identity_id,follower_user_id)
 );
+ALTER TABLE public.ai_identity_followers ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE public.ai_identity_followers FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.ai_identity_followers TO service_role;
+
 CREATE INDEX IF NOT EXISTS ai_identity_followers_identity_active_idx
   ON public.ai_identity_followers (identity_id,created_at DESC) WHERE status='active';
 CREATE INDEX IF NOT EXISTS ai_identity_followers_user_active_idx
