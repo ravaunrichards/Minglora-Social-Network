@@ -435,6 +435,52 @@ function clearDeviceSessionCookie(){
 function clearAppSessionCookie() {
   return `sid=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0${process.env.NODE_ENV==='production'?'; Secure':''}`;
 }
+
+const OAUTH_PROVIDER_LABELS=Object.freeze({
+  apple:'Apple',azure:'Microsoft',bitbucket:'Bitbucket',discord:'Discord',facebook:'Facebook',
+  figma:'Figma',github:'GitHub',gitlab:'GitLab',google:'Google',kakao:'KakaoTalk',
+  keycloak:'Keycloak',linkedin_oidc:'LinkedIn',notion:'Notion',slack_oidc:'Slack',
+  slack:'Slack (legacy)',spotify:'Spotify',twitch:'Twitch',x:'X',twitter:'Twitter (legacy)',
+  workos:'WorkOS',zoom:'Zoom'
+});
+const OAUTH_PROVIDER_ORDER=Object.keys(OAUTH_PROVIDER_LABELS);
+function oauthFlowCookie(state,verifier){
+  const encoded=Buffer.from(JSON.stringify({state,verifier,createdAt:Date.now()})).toString('base64url');
+  return 'minglora_oauth='+encodeURIComponent(encoded+'.'+sign(encoded))+
+    '; HttpOnly; SameSite=Lax; Path=/auth/oauth/callback; Max-Age=600'+
+    (process.env.NODE_ENV==='production'?'; Secure':'');
+}
+function readOAuthFlowCookie(req){
+  const raw=cookie(req,'minglora_oauth');
+  if(!raw)return null;
+  let decoded;
+  try{decoded=decodeURIComponent(raw);}catch{return null;}
+  const split=decoded.lastIndexOf('.');
+  if(split<1)return null;
+  const encoded=decoded.slice(0,split),supplied=decoded.slice(split+1);
+  const expected=Buffer.from(sign(encoded),'utf8'),actual=Buffer.from(supplied,'utf8');
+  if(actual.length!==expected.length||!crypto.timingSafeEqual(actual,expected))return null;
+  try{
+    const value=JSON.parse(Buffer.from(encoded,'base64url').toString('utf8'));
+    const age=Date.now()-Number(value.createdAt);
+    if(!value.state||!value.verifier||age<0||age>10*60*1000)return null;
+    return value;
+  }catch{return null;}
+}
+function clearOAuthFlowCookie(){
+  return 'minglora_oauth=; HttpOnly; SameSite=Lax; Path=/auth/oauth/callback; Max-Age=0'+
+    (process.env.NODE_ENV==='production'?'; Secure':'');
+}
+function redirectOAuthResult(res,query='',cookies=[]){
+  const suffix=query?'?'+query:'';
+  res.writeHead(303,{
+    Location:'/'+suffix,
+    'Cache-Control':'no-store',
+    'Set-Cookie':cookies,
+    ...SECURITY_HEADERS
+  });
+  res.end();
+}
 async function createAppSession(user,authTokens=null,req=null) {
   const currentSession=req?sessionFromRequest(req):null;
   const deviceId=currentSession?.deviceId||deviceIdFromRequest(req||{})||uid();
