@@ -817,7 +817,7 @@ COMMIT;
   END IF;
 
   IF v_category IS NOT NULL THEN
-    INSERT INTO public.minglora_ai_bot_categories (
+    INSERT INTO public.minglora_ai_bot_categories AS existing_category (
       id,name,description,is_builtin,enabled,created_by,updated_by
     ) VALUES (
       v_category,
@@ -825,7 +825,11 @@ COMMIT;
       COALESCE(LEFT(p_identity->>'category_description',600),''),
       false,true,v_owner,v_owner
     )
-    ON CONFLICT (id) DO NOTHING;
+    ON CONFLICT (id) DO UPDATE SET
+      name=EXCLUDED.name,
+      description=CASE WHEN EXCLUDED.description<>'' THEN EXCLUDED.description ELSE existing_category.description END,
+      updated_by=EXCLUDED.updated_by,
+      updated_at=pg_catalog.now();
   END IF;
 
   SELECT i.status INTO v_previous_status
@@ -834,7 +838,7 @@ COMMIT;
   FOR UPDATE;
   v_is_new := NOT FOUND;
 
-  INSERT INTO public.ai_identities (
+  INSERT INTO public.ai_identities AS existing_identity (
     identity_id,population,identity_type,category_id,status,parent_identity_id,
     owner_admin_id,source_system,source_identity_id,public_profile_slug,
     public_profile_enabled,created_at,updated_at
