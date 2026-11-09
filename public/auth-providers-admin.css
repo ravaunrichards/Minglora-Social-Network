@@ -14,14 +14,11 @@
 .admin-auth-provider-state{font-size:10px;font-weight:750;color:var(--muted)}
 .admin-auth-provider-state.is-enabled{color:#16834b}
 .admin-auth-provider-state.is-locked{color:#a36a12}
-.admin-auth-provider-switch{position:relative;display:inline-flex;align-items:center;flex:0 0 auto;width:42px;height:24px;cursor:pointer}
-.admin-auth-provider-switch input{position:absolute;width:1px;height:1px;opacity:0}
-.admin-auth-provider-switch>span{width:42px;height:24px;border-radius:999px;background:#aab2bf;transition:background .15s;position:relative}
-.admin-auth-provider-switch>span:after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px #0003;transition:transform .15s}
-.admin-auth-provider-switch input:checked+span{background:#16834b}
-.admin-auth-provider-switch input:checked+span:after{transform:translateX(18px)}
-.admin-auth-provider-switch input:focus-visible+span{outline:3px solid #5899ed;outline-offset:2px}
-.admin-auth-provider-switch input:disabled+span{opacity:.45;cursor:not-allowed}
+.admin-auth-provider-action{flex:0 0 auto;min-width:82px;min-height:36px;padding:8px 12px;border:1px solid var(--line);border-radius:9px;background:var(--surface-soft,var(--card));color:var(--text);font-size:12px;font-weight:750;cursor:pointer}
+.admin-auth-provider-action:hover:not(:disabled){border-color:var(--blue);color:var(--blue)}
+.admin-auth-provider-action[data-enabled="true"]{border-color:color-mix(in srgb,var(--blue) 24%,var(--line))}
+.admin-auth-provider-action:focus-visible{outline:3px solid #5899ed;outline-offset:2px}
+.admin-auth-provider-action:disabled{opacity:.45;cursor:not-allowed}
 .admin-auth-provider-footnote{padding-top:10px;border-top:1px solid var(--line)}
 .admin-auth-provider-error{padding:13px;border:1px solid #d8a84d;border-radius:10px;color:var(--text);background:var(--surface,var(--card));font-size:12px;line-height:1.5}
 @media(max-width:620px){.admin-auth-provider-grid{grid-template-columns:1fr}.admin-auth-provider-section>.admin-control-centre-section-heading{flex-direction:column}}
