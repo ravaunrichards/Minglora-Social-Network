@@ -19,7 +19,7 @@ const [app, html, css, worker, server, runtime, migration, balanceMigration] = a
 ]);
 
 test('the Coins destination is presented as Recharge in navigation', () => {
-  assert.match(html, /data-view="coins"[^>]*>[\s\S]*?Recharge<\/button>/);
+  assert.match(html, /data-view="coins"[^>]*>[\s\S]*?<span class="rail-label">Recharge<\/span>[\s\S]*?<\/button>/);
   assert.match(app, /label:'Recharge',detail:'Buy Coins or exchange available money balance for Minglora Coins',view:'coins'/);
   assert.match(app, /<h1>Wallet &amp; earnings<\/h1>/);
 });
