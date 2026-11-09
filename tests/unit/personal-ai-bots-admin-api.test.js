@@ -1248,7 +1248,15 @@ test('owner can submit and review an organizational AI candidate application',as
   await handlePersonalAiBotsAdminApi(review);
   assert.equal(review.res.statusCode,200);
   assert.equal(review.res.payload.application.status,'in_review');
-  assert.equal(saves,3);
+  const withdraw=makeContext({
+    method:'PATCH',path:'/api/admin/personal-ai-bots/applications/'+create.res.payload.application.id,
+    input:{status:'withdrawn'},db,saveStore:async()=>{saves++;}
+  });
+  await handlePersonalAiBotsAdminApi(withdraw);
+  assert.equal(withdraw.res.statusCode,200);
+  assert.equal(withdraw.res.payload.application.status,'withdrawn');
+  assert.deepEqual(withdraw.res.payload.application.statusHistory.map(entry=>entry.status),['submitted','in_review','withdrawn']);
+  assert.equal(saves,4);
 });
 
 test('candidate application routes are owner-only and reject independent AI identities',async()=>{
