@@ -244,6 +244,21 @@ test('organizational AI candidate applications support audited screening without
   assert.equal(updatePersonalAiBotApplication(db,application.id,{status:'shortlisted'},actor,stamp,uid).status,'shortlisted');
   assert.equal(updatePersonalAiBotApplication(db,application.id,{status:'rejected'},actor,stamp,uid).status,'rejected');
   assert.throws(()=>updatePersonalAiBotApplication(db,application.id,{status:'submitted'},actor,stamp,uid),/transition is not permitted/);
+
+  const withdrawalCandidate=createPersonalAiBot(db,{
+    displayName:'Withdrawal Candidate',firstName:'Withdrawal',lastName:'Candidate',
+    categoryId:category.id,population:'organizational'
+  },actor,stamp,uid);
+  const withdrawalApplication=createPersonalAiBotApplication(db,{
+    identityId:withdrawalCandidate.id,vacancyId:vacancy.id
+  },actor,stamp,uid);
+  const withdrawn=updatePersonalAiBotApplication(db,withdrawalApplication.id,{status:'withdrawn'},actor,stamp,uid);
+  assert.equal(withdrawn.status,'withdrawn');
+  assert.deepEqual(withdrawn.statusHistory.map(entry=>entry.status),['submitted','withdrawn']);
+  assert.equal(db.personalAiBotAudit.filter(item=>item.targetId===withdrawn.id&&item.action==='application.status_changed').length,1);
+  assert.throws(()=>createPersonalAiBotApplication(db,{
+    identityId:withdrawalCandidate.id,vacancyId:vacancy.id
+  },actor,stamp,uid),/already has an application/);
 });
 
 test('candidate applications require existing organizational identities and open vacancies',()=>{
