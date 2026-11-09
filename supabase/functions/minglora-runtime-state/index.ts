@@ -121,7 +121,7 @@ Deno.serve(async (req: Request) => {
       return json(400, { error: "Provide between 1 and 100 valid AI identity objects." });
     }
     const allowedFields = new Set([
-      "id","population","identity_type","category_id","status","parent_identity_id",
+      "id","population","identity_type","category_id","category_name","category_description","status","parent_identity_id",
       "public_profile_slug","public_profile_enabled","first_name","last_name","middle_name",
       "full_name","display_name","username","biography","introduction","gender","nationality",
       "country_of_origin","current_country","time_zone","personality","interests","hobbies",
