@@ -42,8 +42,7 @@
 .admin-auth-provider-locked-note{grid-column:1/-1;color:var(--muted);font-size:11px}
 .admin-auth-provider-footnote{padding-top:10px;border-top:1px solid var(--line)}
 .admin-auth-provider-error{padding:13px;border:1px solid #d8a84d;border-radius:10px;color:var(--text);background:var(--surface,var(--card));font-size:12px;line-height:1.5}
-@media(max-width:620px){
-  .admin-auth-provider-grid{grid-template-columns:1fr}
+@media(max-width:620px){.admin-auth-provider-grid{grid-template-columns:1fr}
   .admin-auth-provider-fields{grid-template-columns:1fr}
   .admin-auth-provider-section>.admin-control-centre-section-heading{flex-direction:column}
   .admin-auth-provider-route-row{grid-template-columns:minmax(0,1fr)}
