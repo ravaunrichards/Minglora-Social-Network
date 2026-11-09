@@ -57,6 +57,16 @@ Statuses are based on the latest repository, workflow, deployment, and log evide
 | AUTH-16 | Real provider-issued Client ID/Secret is stored, provider enabled, and retained after refresh | Medium / external provider console + owner session | BLOCKED | No real provider credential pair was supplied or created. Do not use placeholders. |
 | AUTH-17 | Designated MFA-verified owner performs route repair and a live provider enable/disable round trip | Easy/Medium / owner session + Management token | BLOCKED | No owner browser interaction or request to `/api/admin/auth-providers` is present in the inspected production request-log interval. |
 | AUTH-18 | A real external provider login returns through callback and establishes a working Minglora session (including MFA where enabled) | Hard / AUTH-09, AUTH-16, AUTH-17 | BLOCKED | No live request to `/auth/oauth/*` was observed; only mocked tests have passed. |
+| AUTH-19 | OAuth state cookie validates signature, state/verifier shape, expiry, HttpOnly/SameSite/Secure scope, and cleanup behavior | Easy / none | PASS | Six direct unit tests in `tests/unit/oauth-flow-state.test.js`; Auth CI 40/40 passed. This is not a substitute for live OAuth acceptance. |
+
+### New verified OAuth state-cookie work
+
+- `src/oauth-flow-state.js` now owns OAuth flow cookie creation, parsing, HMAC verification, expiry validation, and scoped cleanup.
+- `src/server.js` delegates OAuth cookie creation/read/cleanup to that module while retaining the existing session secret and production Secure-cookie behavior.
+- `tests/unit/oauth-flow-state.test.js` adds six direct behavioral tests: round-trip, HttpOnly/SameSite/Secure attributes, tampered payload/signature rejection, expiry/future/malformed rejection, weak secret/invalid verifier rejection, and scoped cleanup.
+- `.github/workflows/ci.yml` runs the new module syntax check and tests in the dedicated Auth job.
+- `tests/unit/auth-oauth-flow.test.js` was updated to assert the extracted helper rather than the removed inline cookie string.
+- Latest Auth CI run: 40 tests, 40 passed, 0 failed. This strengthens PKCE state handling but does not count as live third-party sign-in.
 
 ### Scope notes
 
@@ -127,7 +137,7 @@ Current source head: [`99b106b8dedd95bca04235e42a10e6946bfec8d8`](https://github
 
 ## Last action and exact next step
 
-**Last confirmed action:** current HTML and service-worker bundle URLs independently verified identical; current Admin Centre shell/cache regression test passes; dedicated Auth job passes 34/34; latest Render deployment is LIVE and Supabase project is ACTIVE_HEALTHY.
+**Last confirmed action:** extracted OAuth flow cookie state into `src/oauth-flow-state.js`; server now uses the helper; six direct behavior tests pass for valid round-trip, HttpOnly/SameSite/Secure attributes, tampering, expiry/future timestamps, malformed input, weak secrets, and scoped cleanup. Dedicated Auth CI passes 40/40; Render deploy `dep-dbp310navr4c73e6eckg` is LIVE; Supabase project is ACTIVE_HEALTHY.
 
 **Exact next action:** the designated owner must open the deployed standalone Admin Centre with an MFA-verified session, refresh provider status, and run **Connect / repair routes**. The response will establish whether `SUPABASE_ACCESS_TOKEN` is present and has Auth Read/Auth Write permissions. Then configure one real external provider and perform an actual provider sign-in.
 
