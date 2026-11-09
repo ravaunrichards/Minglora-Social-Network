@@ -1692,7 +1692,14 @@ async function route(req, res) {
       if (await handlePersonalAiBotsAdminApi({
         req,res,url,method,path:p,user,input,db,saveStore,uid,now,json,
         isOwnerAdmin:isDesignatedCreatorHubAdmin(user)&&isModerator(user,req)&&hasActiveReviewerSession(user),
-        isSameOriginWrite:isSameOriginApiWrite(req)
+        isSameOriginWrite:isSameOriginApiWrite(req),
+        lookupAdminMember:async targetUserId=>{
+          const local=(db.users||[]).find(member=>member.id===String(targetUserId));
+          if(local)return local;
+          if(AUTH_PROVIDER!=='supabase')return null;
+          const result=await requestSupabaseState('admin_users_list',{actorUserId:user.id,search:String(targetUserId),status:'active'});
+          return (Array.isArray(result.users)?result.users:[]).find(member=>member.id===String(targetUserId))||null;
+        }
       })) return;
       if(p==='/api/menstrual-health'||p.startsWith('/api/menstrual-health/')){
         if(AUTH_PROVIDER!=='supabase')return json(res,503,{error:'Menstrual Health requires Minglora Supabase Auth and private database storage.'});
