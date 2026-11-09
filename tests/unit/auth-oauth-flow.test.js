@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 
 const read = path => readFile(new URL(path, import.meta.url), 'utf8');
 
-const [server, auth, login, admin, adminPage, adminCentre, html, css, worker, flowState, routeHelpers] = await Promise.all([
+const [server, auth, login, admin, adminPage, adminCentre, html, css, worker, flowState, routeHelpers, credentialHelpers] = await Promise.all([
   read('../../src/server.js'),
   read('../../src/supabase-auth.js'),
   read('../../public/auth-login.js'),
@@ -15,7 +15,8 @@ const [server, auth, login, admin, adminPage, adminCentre, html, css, worker, fl
   read('../../public/auth-oauth.css'),
   read('../../public/sw.js'),
   read('../../src/oauth-flow-state.js'),
-  read('../../src/auth-redirect-routes.js')
+  read('../../src/auth-redirect-routes.js'),
+  read('../../src/auth-provider-credentials.js')
 ]);
 
 test('OAuth start route only accepts providers enabled by current Supabase Auth settings', () => {
@@ -68,7 +69,10 @@ test('Admin provider setup writes allowlisted credentials and verifies enable/di
   assert.ok(server.includes("isDesignatedCreatorHubAdmin(user)"));
   assert.ok(server.includes("hasActiveReviewerSession(user)"));
   assert.ok(server.includes("Auth Write access to this project"));
-  assert.ok(server.includes("buildCredentialPatch(definition,input.credentials,current)"));
+  assert.ok(server.includes("buildSupabaseProviderCredentialPatch({definition,credentials:input.credentials,current,smsProviders,fieldLabel})"));
+  assert.ok(credentialHelpers.includes("definition.keys || []"));
+  assert.ok(credentialHelpers.includes("definition.optionalKeys || []"));
+  assert.ok(credentialHelpers.includes("parsed.protocol !== 'https:'"));
   assert.ok(server.includes("await callManagement('PATCH',requestedPatch)"));
   assert.ok(server.includes("const verified=await callManagement('GET')"));
   assert.ok(server.includes("verified[definition.flag]===true)!==requestedEnabled"));
