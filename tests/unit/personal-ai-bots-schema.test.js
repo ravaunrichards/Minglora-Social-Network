@@ -332,3 +332,15 @@ test('email identity gateway is owner-only and excludes client-declared mailbox 
   const handler=gateway.slice(gateway.indexOf('if (action === "ai_email_identity_upsert")'),gateway.indexOf('if (action === "ai_provider_runtime_list")'));
   assert.doesNotMatch(handler,/verificationStatus|provisioningStatus|password|apiKey|secretValue/i);
 });
+
+
+test('worker marks all provider assignments unavailable when adapter configuration is missing',()=>{
+  const missingBranch=workerEntrypoint.slice(
+    workerEntrypoint.indexOf('if(!createAdapter){'),
+    workerEntrypoint.indexOf('for(const assignment of assignments)',workerEntrypoint.indexOf('if(!createAdapter){')+1)
+  );
+  assert.ok(workerEntrypoint.includes("if(!createAdapter){"));
+  assert.match(workerEntrypoint,/No provider adapter module configured; all assignments are marked unavailable/);
+  assert.ok((workerEntrypoint.match(/healthStatus:'unavailable'/g)||[]).length>=2);
+  assert.ok(workerEntrypoint.includes("'ai_provider_health_update'"));
+});
