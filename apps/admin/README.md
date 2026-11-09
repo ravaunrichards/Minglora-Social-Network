@@ -667,3 +667,33 @@ Commit `a7747b7cfcffcc56fc9c7688e8d6f0de0272e9b2` adds regression assertions tha
 ### Exact next action
 
 Keep PR #203 in draft and production unchanged. The next task is browser-level verification at desktop/tablet/phone widths once a real browser runner is available, while preserving the current 76% tracker. Reconciliation with `main` still requires explicit authorization.
+
+
+## Continuation recovery — browser viewport harness
+
+- **Checkpoint timestamp:** 2026-11-09 17:01 UTC (latest code/workflow commit timestamp)
+- **Project / repository / task:** Minglora Social Network; `ravaunrichards/Minglora-Social-Network`; Admin Centre member management, service connections and no-hidden/no-overlap responsive layout; PR #203.
+- **Branch:** `feat/minglora-admin-user-and-service-centre-20261109`
+- **Latest branch head at checkpoint:** `1ed0dbe6b0151022242403c1c27c635902518667`.
+- **PR:** open, draft, 107 commits, 16 changed files, `mergeable=false`; no merge, rebase or deployment performed.
+- **Previous and current verified completion:** 76% / 76%; **remaining:** 24%; **change:** no percentage increase. Browser-test code and CI wiring are newly saved but have not yet passed a browser run.
+
+### New implementation since the 12:23 UTC checkpoint
+
+- Commit `a6c2ab5af19bfa643952175d3664228989309ec4` strengthens `tests/unit/admin-user-and-service-centre.test.js`: rejects fixed/sticky positioning, text ellipsis and all `overflow:hidden` blocks except the circular member avatar crop; asserts long activity timestamps, withdrawal timestamps, module totals and promotional amounts wrap. These assertions were manually matched against the current stylesheet; this is source inspection, not a CI test result.
+- Commit `d024e98a2539ee2548c4b15db4eaafa0e372b35c` adds `tests/e2e/admin-centre-layout.test.js`, an executable Chromium test serving the actual Admin Centre HTML/CSS/JS locally and intercepting API reads with disposable fixture data. It checks 320, 360, 390, 768, 1024 and 1440 CSS-pixel widths; document/panel bounds; direct panel sibling collisions; controls outside the panel; fixed/sticky descendants; browser page errors; and expansion of the explicit Create account and Delete account safety disclosures. All API writes are rejected and asserted absent.
+- Commit `1ed0dbe6b0151022242403c1c27c635902518667` adds a separate `admin-centre-viewport` workflow job. It installs pinned Playwright `1.65.0` without changing `package.json` or `package-lock.json`, installs Chromium and system dependencies, and runs only the isolated browser layout test. The main unit-test workflow remains separate.
+- Official Playwright documentation confirms Playwright's CI browser-install command and Node 24 support: https://playwright.dev/docs/intro and https://playwright.dev/docs/release-notes (Version 1.65).
+
+### Verification state and limitations
+
+- **Project verified:** the E2E script and CI job are present on the branch head; PR #203 has the new head SHA above and now contains 16 changed files.
+- **Manual source validation:** all five newly added no-overlay/no-clipping CSS checks matched the current source stylesheet. The earlier CI run `42616953685` reported all Admin Centre-specific tests passing but did not include the new browser test.
+- **Browser execution:** not yet verified. The connected workflow-run lookup and combined commit status did not return a run/status for the new head; that response is not proof that CI passed or that no push-triggered run exists. Do not count browser verification as completed.
+- **Last detailed existing CI:** run `42616953685` on prior checkpoint commit `d1976e49`: 721/751 general tests passed (30 failed), For You 13/15 passed (2 failed), no Admin Centre-specific failures; syntax, structure, dependency audit and gift-asset generation passed.
+- **Remaining merge blocker:** PR is divergent/dirty against `main`, one main commit behind; overlapping `src/server.js`, `public/admin-centre.html` and `public/sw.js` remain unreconciled. No authorization to rebase/merge.
+- **Production blockers:** current production Edge Function was historically observed at version 112 and does not contain this branch's new CRUD actions. Render's Management API access token remains unavailable/unverified. Hosted CRUD/session/deletion/provider acceptance is therefore still outstanding; historic service state was not refreshed in this checkpoint.
+
+### Exact next action
+
+Retrieve and inspect the new `admin-centre-viewport` Chromium job result for head `1ed0dbe6b0151022242403c1c27c635902518667`. If it fails, fix only the measured Admin Centre viewport regression and rerun. If it passes, record the six-viewport browser evidence; keep the 76% tracker until the remaining hosted integration, dirty-branch reconciliation/review and final acceptance criteria are completed with authorization.
