@@ -40,7 +40,7 @@ No arbitrary product-level ceiling is imposed on the eventual identity namespace
 - Global network and hybrid switches.
 - Per-category enable/disable and rename/description editing.
 - Per-bot personality/profile editing and administrator instructions.
-- Administrator-controlled or restricted-hybrid mode.
+- Administrator-controlled, human-approval and restricted-hybrid modes; switching out of hybrid clears autonomous permissions.
 - Hybrid allowlist limited to read-only analytics, moderation flags for human review, content drafts, translation and FAQ drafts.
 - Per-bot schedule configuration (timezone, days, active hours and daily task cap). This is configuration only until a scheduler worker is connected.
 - Per-bot task intake limits: at most 20 new instructions in a rolling 15-minute window and 50 open tasks for that bot.
