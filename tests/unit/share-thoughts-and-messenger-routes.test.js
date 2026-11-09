@@ -123,7 +123,7 @@ test('new Share thoughts and Messenger controls use the dimensional SVG sprite',
     assert.match(sprite, new RegExp('<symbol id="' + id + '" viewBox="0 0 64 64">'));
     assert.ok(app.includes("messenger3dIcon('" + id + "'") || app.includes("'" + id + "'"), id + ' is used by the client');
   }
-  assert.match(serviceWorker, /CACHE_NAME='minglora-shell-v\\d+-[^']+'/);
+  assert.match(serviceWorker, /CACHE_NAME='minglora-shell-v\d+-[^']+'/);
   assert.ok(app.includes('ml-share-thought-cloud-bridge'), 'the old share-arrow prompt is replaced by the cloud connector');
   assert.ok(serviceWorker.includes('share-thoughts.js?v=20261108-facebook-share-thoughts-1'));
   assert.ok(serviceWorker.includes('share-thoughts.css?v=20261108-facebook-thought-cloud-1'));
