@@ -16,9 +16,9 @@ test('Personal AI Bots page loads the dedicated responsive controller and styles
 test('admin UI exposes the complete 15-category starter set and all five autonomy modes',async()=>{
   const [service,ui]=await Promise.all([read('backend/modules/personal-ai-bots/personal-ai-bots-service.js'),read('public/personal-ai-bots.js')]);
   for(const name of ['AI Friends','AI Creators','AI Influencers','AI News','AI Musicians','AI Entertainers','AI Gamers','AI Community Hosts','AI Live Hosts','AI Moderators','AI Support','AI Educators','AI Sports','AI Travel','AI Business']) assert.ok(service.includes("name:'"+name+"'"),name);
-  assert.match(ui,/Administrator-controlled/);
-  assert.match(ui,/Human approval for every task/);
-  assert.match(ui,/Hybrid \(restricted\)/);
+  for(const mode of ['Fully supervised','Supervisor controlled','Hybrid autonomy','Autonomous within limits','Restricted observation']) assert.ok(ui.includes('>'+mode+'</option>'),mode);
+  assert.ok(ui.includes("card.querySelectorAll('.pab-hybrid-action')"));
+  assert.ok(ui.includes("autonomyMode==='autonomous_within_limits'"));
 });
 
 test('dashboard contains global, category, individual, bulk and emergency controls',async()=>{
