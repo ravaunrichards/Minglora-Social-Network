@@ -921,15 +921,41 @@ function notifyPlatformReviewers(type,applicantId,actorId,text,extra={}){
 const blockedBetween = (firstId, secondId) => firstId !== secondId && (db.blocks || []).some(b => (b.blockerId === firstId && b.blockedId === secondId) || (b.blockerId === secondId && b.blockedId === firstId));
 const pageRole = (pageId, userId) => (db.pageRoles || []).find(role => role.pageId === pageId && role.userId === userId)?.role || null;
 const canManagePage = (pageId, userId) => canManagePagePolicy(db.pageRoles || [], pageId, userId);
+const DEFAULT_STORY_PRIVACY={audience:'public',customUserIds:[],hideUserIds:[]};
+function storyPrivacySettingsFor(userId){
+  const saved=(db.storyPrivacy||[]).find(item=>item.userId===userId);
+  return {audience:['public','friends','following','followers','subscribers','custom'].includes(saved?.audience)?saved.audience:'public',customUserIds:Array.isArray(saved?.customUserIds)?saved.customUserIds.map(String):[],hideUserIds:Array.isArray(saved?.hideUserIds)?saved.hideUserIds.map(String):[]};
+}
+function normalizeStoryPrivacyIds(value,ownerId,label){
+  if(!Array.isArray(value))throw new TypeError(label+' must be a list of member IDs.');
+  const ids=[...new Set(value.map(item=>String(item||'').trim()).filter(Boolean))].filter(id=>id!==ownerId);
+  if(ids.length>500)throw new RangeError(label+' can contain up to 500 members.');
+  if(ids.some(id=>!(db.users||[]).some(member=>member.id===id)))throw new TypeError(label+' contains an account that is no longer available.');
+  return ids;
+}
+const storySubscriberAccessCache=new Map();
+async function refreshStorySubscriberAccess(stories=[]){
+  const creatorIds=[...new Set(stories.filter(story=>story?.audience==='subscribers').map(story=>story.userId).filter(Boolean))];
+  for(const creatorId of creatorIds){
+    try{
+      const subscriberIds=isSupabasePersistence()?(await requestSupabaseState('subscription_subscribers_list',{creatorId})).subscriberIds:listActiveCreatorSubscriptions(db.creatorSubscriptions,creatorId).map(item=>item.subscriberId);
+      storySubscriberAccessCache.set(creatorId,new Set((Array.isArray(subscriberIds)?subscriberIds:[]).map(String)));
+    }catch(error){
+      console.warn('[Minglora] Story subscriber access could not be refreshed:',error?.message||error);
+      storySubscriberAccessCache.set(creatorId,new Set(listActiveCreatorSubscriptions(db.creatorSubscriptions,creatorId).map(item=>item.subscriberId)));
+    }
+  }
+}
 const canViewStory = (viewerId, story) => {
   if(!story?.userId)return false;
   if(viewerId!==story.userId&&friendStoriesMuted(viewerId,story.userId))return false;
+  if(story.hideUserIds?.includes?.(viewerId))return false;
   if(story.audience==='close_friends')return canViewProfileAudience(viewerId,story.userId,'close_friends');
   const mutualFriendships=getMutualFollowIds(db.follows||[],story.userId,db.blocks||[])
     .map(friendId=>({from:friendId,to:story.userId,status:'accepted'}));
   return canViewStoryPolicy({
     viewerId,story,friendships:[...(db.friendships||[]),...mutualFriendships],
-    follows:db.follows||[],blocks:db.blocks||[]
+    follows:db.follows||[],blocks:db.blocks||[],subscriptions:listActiveCreatorSubscriptions(db.creatorSubscriptions,story.userId),subscriberIds:[...(storySubscriberAccessCache.get(story.userId)||new Set())]
   });
 };
 async function pruneExpiredStories() {
@@ -1064,7 +1090,8 @@ async function publicStory(story,viewerId,includeViews=false) {
   }));
   const visibleMedia=mediaItems.filter(Boolean),media=visibleMedia[0]||null;
   const views=(db.storyViews||[]).filter(view=>view.storyId===story.id);
-  return {...story,media,mediaItems:visibleMedia,soundtrack:await publicSoundtrack(story.soundtrack,viewerId),author:safeUser(db.users.find(u=>u.id===story.userId)),viewedByMe:story.userId===viewerId||views.some(view=>view.viewerId===viewerId),viewCount:views.length,
+  const {customUserIds:privateCustomUserIds,hideUserIds:privateHideUserIds,...safeStory}=story;
+  return {...safeStory,media,mediaItems:visibleMedia,soundtrack:await publicSoundtrack(story.soundtrack,viewerId),author:safeUser(db.users.find(u=>u.id===story.userId)),viewedByMe:story.userId===viewerId||views.some(view=>view.viewerId===viewerId),viewCount:views.length,
     viewers:includeViews&&story.userId===viewerId?views.map(view=>({...view,user:safeUser(db.users.find(u=>u.id===view.viewerId))})):undefined};
 }
 
@@ -5989,29 +6016,49 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
         const posts=await Promise.all((db.groupPosts||[]).filter(post=>post.groupId===group.id&&post.status!=='hidden').sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(post=>publicGroupPost(post)));
         return json(res,200,{group:{...group,owner:safeUser(db.users.find(u=>u.id===group.ownerId)),members:group.members.map(id=>safeUser(db.users.find(u=>u.id===id))).filter(Boolean),memberCount:group.members.length,isMember:group.members.includes(user.id)},posts});
       }
+      if(method==='GET'&&p==='/api/stories/privacy')return json(res,200,{settings:storyPrivacySettingsFor(user.id)});
+      if(method==='PUT'&&p==='/api/stories/privacy'){
+        const current=storyPrivacySettingsFor(user.id),audience=String(input.audience===undefined?current.audience:input.audience||'');
+        if(!['public','friends','following','followers','subscribers','custom'].includes(audience))return json(res,400,{error:'Choose a supported story audience.'});
+        let customUserIds,hideUserIds;
+        try{customUserIds=normalizeStoryPrivacyIds(input.customUserIds===undefined?current.customUserIds:input.customUserIds,user.id,'Custom audience');hideUserIds=normalizeStoryPrivacyIds(input.hideUserIds===undefined?current.hideUserIds:input.hideUserIds,user.id,'Hide story from');}
+        catch(error){return json(res,400,{error:error.message});}
+        if(audience==='custom'&&!customUserIds.length)return json(res,400,{error:'Choose at least one person for a Custom story.'});
+        db.storyPrivacy ||= [];
+        const saved={userId:user.id,audience,customUserIds,hideUserIds,updatedAt:now()},index=db.storyPrivacy.findIndex(item=>item.userId===user.id);
+        if(index>=0)db.storyPrivacy[index]=saved;else db.storyPrivacy.push(saved);
+        await saveStore();return json(res,200,{settings:storyPrivacySettingsFor(user.id)});
+      }
       if(method==='GET'&&p==='/api/stories'){
         await pruneExpiredStories();
+        await refreshStorySubscriberAccess(db.stories||[]);
         const visible=(db.stories||[]).filter(story=>canViewStory(user.id,story)).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
         const stories=await Promise.all(visible.map(story=>publicStory(story,user.id)));
         return json(res,200,{stories});
       }
       if(method==='POST'&&p==='/api/stories'){
-        const text=String(input.text||'').trim(),audience=String(input.audience||'public');
+        const defaults=storyPrivacySettingsFor(user.id);
+        const text=String(input.text||'').trim(),audience=String(input.audience===undefined?defaults.audience:input.audience||'');
         if(input.imageUrl!==undefined&&input.imageUrl!=='')return json(res,400,{error:'Image URLs are not accepted. Choose media from your device.'});
-        if(!['public','friends','close_friends','followers','private'].includes(audience))return json(res,400,{error:'Unsupported story audience.'});
+        if(!['public','friends','close_friends','following','followers','subscribers','custom','private'].includes(audience))return json(res,400,{error:'Unsupported story audience.'});
         if(input.mediaIds!==undefined&&!Array.isArray(input.mediaIds))return json(res,400,{error:'Story media must be provided as a list of uploaded files.'});
         const requestedMediaIds=Array.isArray(input.mediaIds)?input.mediaIds:(input.mediaId?[input.mediaId]:[]);
         const mediaIds=[...new Set(requestedMediaIds.map(value=>String(value||'').trim()).filter(Boolean))];
         if(mediaIds.length>10)return json(res,400,{error:'A story can contain up to 10 media attachments.'});
         if(!text&&!mediaIds.length&&!input.soundtrack)return json(res,400,{error:'Add text, a photo/video or a sound to your Story.'});
         if(text.length>1000)return json(res,400,{error:'Story text must be 1000 characters or fewer.'});
+        let customUserIds,hideUserIds;
+        try{customUserIds=normalizeStoryPrivacyIds(input.customUserIds===undefined?defaults.customUserIds:input.customUserIds,user.id,'Custom audience');hideUserIds=normalizeStoryPrivacyIds(input.hideUserIds===undefined?defaults.hideUserIds:input.hideUserIds,user.id,'Hide story from');}
+        catch(error){return json(res,400,{error:error.message});}
+        if(audience==='custom'&&!customUserIds.length)return json(res,400,{error:'Choose at least one person for a Custom story.'});
+        const background=['sunset','ocean','violet','forest','rose','midnight'].includes(input.background)?input.background:null;
         let soundtrack=null;try{soundtrack=resolveSoundtrackForUser(user.id,input.soundtrack);}catch(error){return json(res,error.status||400,{error:error.message});}
         const assets=mediaIds.map(id=>(db.mediaAssets||[]).find(item=>item.id===id&&item.ownerId===user.id&&item.slot==='story'&&item.status==='uploaded'&&['image','video'].includes(item.mediaType)));
         if(assets.some(asset=>!asset))return json(res,400,{error:'One or more selected story files are unavailable. Select them again.'});
         const totalBytes=assets.reduce((total,asset)=>total+Math.max(0,Number(asset.byteSize)||0),0);
         if(totalBytes>500*1024*1024)return json(res,400,{error:'This combined story upload is larger than 500 MB. Remove some files and try again.'});
         const createdAt=now();
-        const story={id:uid(),userId:user.id,text,mediaIds,mediaId:mediaIds[0]||null,soundtrack,audience,createdAt,expiresAt:new Date(Date.now()+24*60*60*1000).toISOString()};
+        const story={id:uid(),userId:user.id,text,mediaIds,mediaId:mediaIds[0]||null,soundtrack,audience,customUserIds,hideUserIds,background,createdAt,expiresAt:new Date(Date.now()+24*60*60*1000).toISOString()};
         assets.forEach(asset=>{asset.status='attached';asset.attachedTo=story.id;});
         db.stories.push(story);await saveStore();return json(res,201,{story:await publicStory(story,user.id)});
       }
@@ -6019,6 +6066,7 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
       if(method==='POST'&&m){
         await pruneExpiredStories();
         const story=db.stories.find(x=>x.id===m[1]);
+        if(story?.audience==='subscribers')await refreshStorySubscriberAccess([story]);
         if(!story||!canViewStory(user.id,story))return json(res,404,{error:'Story not found.'});
         if(story.userId!==user.id&&!(db.storyViews||[]).some(view=>view.storyId===story.id&&view.viewerId===user.id)){
           db.storyViews.push({storyId:story.id,viewerId:user.id,viewedAt:now()});await saveStore();
@@ -6033,11 +6081,17 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
         if(story.userId!==user.id)return json(res,403,{error:'Only the story author can edit this story.'});
         const text=input.text===undefined?String(story.text||''):String(input.text||'').trim();
         const audience=input.audience===undefined?String(story.audience||'public'):String(input.audience||'');
-        if(!['public','friends','close_friends','followers','private'].includes(audience))return json(res,400,{error:'Unsupported story audience.'});
+        if(!['public','friends','close_friends','following','followers','subscribers','custom','private'].includes(audience))return json(res,400,{error:'Unsupported story audience.'});
         if(text.length>1000)return json(res,400,{error:'Story text must be 1000 characters or fewer.'});
         const mediaIds=Array.isArray(story.mediaIds)&&story.mediaIds.length?story.mediaIds:(story.mediaId?[story.mediaId]:[]);
         if(!text&&!mediaIds.length&&!story.soundtrack)return json(res,400,{error:'A story must contain text, media or a sound.'});
-        story.text=text;story.audience=audience;story.updatedAt=now();
+        let customUserIds,hideUserIds;
+        try{customUserIds=normalizeStoryPrivacyIds(input.customUserIds===undefined?(story.customUserIds||[]):input.customUserIds,user.id,'Custom audience');hideUserIds=normalizeStoryPrivacyIds(input.hideUserIds===undefined?(story.hideUserIds||[]):input.hideUserIds,user.id,'Hide story from');}
+        catch(error){return json(res,400,{error:error.message});}
+        if(audience==='custom'&&!customUserIds.length)return json(res,400,{error:'Choose at least one person for a Custom story.'});
+        story.text=text;story.audience=audience;story.customUserIds=customUserIds;story.hideUserIds=hideUserIds;
+        if(input.background!==undefined)story.background=['sunset','ocean','violet','forest','rose','midnight'].includes(input.background)?input.background:null;
+        story.updatedAt=now();
         await saveStore();return json(res,200,{story:await publicStory(story,user.id,true)});
       }
       if(method==='DELETE'&&m){

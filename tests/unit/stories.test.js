@@ -35,3 +35,27 @@ test('expiry cleanup removes expired stories and their viewer records only', () 
   assert.deepEqual(result.views.map(item => item.storyId), ['active']);
   assert.equal(result.removedCount, 1);
 });
+
+
+test('Following stories are visible to people the author follows, not every follower',()=>{
+ const storyFollowing={...story,audience:'following'},follows=[{followerId:'author',followedId:'viewer'}];
+ assert.equal(canViewStory({viewerId:'viewer',story:storyFollowing,follows}),true);
+ assert.equal(canViewStory({viewerId:'other',story:storyFollowing,follows}),false);
+});
+test('Custom stories are restricted to selected member IDs and exclusions win',()=>{
+ const customStory={...story,audience:'custom',customUserIds:['viewer','friend-2']};
+ assert.equal(canViewStory({viewerId:'viewer',story:customStory}),true);
+ assert.equal(canViewStory({viewerId:'other',story:customStory}),false);
+ assert.equal(canViewStory({viewerId:'viewer',story:{...customStory,hideUserIds:['viewer']}}),false);
+});
+test('Hide story from is enforced even for Public stories',()=>{
+ const publicStory={...story,audience:'public',hideUserIds:['viewer']};
+ assert.equal(canViewStory({viewerId:'viewer',story:publicStory}),false);
+ assert.equal(canViewStory({viewerId:'other',story:publicStory}),true);
+});
+test('Subscribers-only stories require an active subscription to that creator',()=>{
+ const subscribersStory={...story,audience:'subscribers'};
+ assert.equal(canViewStory({viewerId:'viewer',story:subscribersStory,subscriptions:[{creatorId:'author',subscriberId:'viewer',status:'active'}]}),true);
+ assert.equal(canViewStory({viewerId:'viewer',story:subscribersStory,subscriptions:[{creatorId:'someone-else',subscriberId:'viewer',status:'active'}]}),false);
+ assert.equal(canViewStory({viewerId:'viewer',story:subscribersStory,subscriberIds:['viewer']}),true);
+});
