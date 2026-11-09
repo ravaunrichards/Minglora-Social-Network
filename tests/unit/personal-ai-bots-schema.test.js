@@ -157,3 +157,11 @@ test('worker remains provider-gated and draft-only, with no social action task t
   assert.ok(workerEntrypoint.includes('MINGLORA_AI_BOT_PROVIDER_MODULE'));
   assert.ok(workerEntrypoint.includes("'ai_bot_task_claim'"));
 });
+
+test('every staged identity/control table declaration closes without a trailing comma',()=>{
+  const tableBlocks=[...sql.matchAll(/CREATE TABLE IF NOT EXISTS public\.([a-z0-9_]+)\s*\(([\s\S]*?)\n\);/g)];
+  assert.equal(tableBlocks.length,27);
+  for(const match of tableBlocks) {
+    assert.doesNotMatch(match[2].trimEnd(),/,$/,'table declaration has a trailing comma: '+match[1]);
+  }
+});
