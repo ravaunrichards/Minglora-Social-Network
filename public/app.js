@@ -611,23 +611,42 @@ function renderSavedControls(post){
   </section>`;
 }
 
+
+function postActionIcon(name){
+  const drawings={
+    like:'<path d="M7.5 10.5v10h-3a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2h3zm0 0 4.2-7.1a1.5 1.5 0 0 1 2.8.9L13.7 10H19a2 2 0 0 1 2 2.4l-1.5 6.4a2 2 0 0 1-2 1.6H7.5Z"></path>',
+    comment:'<path d="M20.5 11.5a7.5 7.5 0 0 1-7.5 7.5H6l-3 2v-6.5A7.5 7.5 0 0 1 10.5 7h2a7.5 7.5 0 0 1 8 4.5Z"></path><circle cx="8.5" cy="13" r=".8" fill="currentColor" stroke="none"></circle><circle cx="12" cy="13" r=".8" fill="currentColor" stroke="none"></circle><circle cx="15.5" cy="13" r=".8" fill="currentColor" stroke="none"></circle>',
+    share:'<path d="M14 4l7 7-7 7"></path><path d="M21 11H9a6 6 0 0 0-6 6v2"></path>',
+    favorite:'<path d="m12 3 2.75 5.58 6.16.9-4.45 4.34 1.05 6.14L12 17.06 6.49 19.96l1.05-6.14L3.09 9.48l6.16-.9L12 3Z"></path>',
+    save:'<path d="M6 3.5h12a1 1 0 0 1 1 1V21l-7-4-7 4V4.5a1 1 0 0 1 1-1Z"></path>',
+    pin:'<path d="M8 4h8l-1 5 3 3v2h-5v7l-2-2v-5H6v-2l3-3-1-5Z"></path>',
+    list:'<path d="M9 6h11M9 12h11M9 18h11"></path><circle cx="4" cy="6" r="1"></circle><circle cx="4" cy="12" r="1"></circle><circle cx="4" cy="18" r="1"></circle>',
+    grid:'<rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect>'
+  };
+  return '<svg class="post-action-svg post-action-svg--'+name+'" viewBox="0 0 24 24" aria-hidden="true" focusable="false">'+(drawings[name]||drawings.list)+'</svg>';
+}
+
 function postCard(post,options={}){
   const author=post.author||{}, comments=post.comments||[];
   const savedControls=options.saved?renderSavedControls(post):'';
   const watchLaterControl=options.videoWatchLater?`<button type="button" data-watch-later="${esc(post.id)}" data-watch-later-saved="${post.isWatchLater?'true':'false'}">${post.isWatchLater?'✓ Watch Later':'＋ Watch Later'}</button>`:'';
+  const reactionIcon=post.myReaction==='love'?'❤️':post.myReaction==='haha'?'😆':post.myReaction==='care'?'🤗':post.myReaction==='wow'?'😮':post.myReaction==='sad'?'😢':post.myReaction==='angry'?'😡':postActionIcon('like');
+  const pinNotice=post.isPinnedForProfile?'<div class="profile-post-pinned">'+postActionIcon('pin')+'<span>Pinned post</span></div>':'';
   return `<article class="card post" data-post="${esc(post.id)}">
     <div class="post-head">${thoughtAvatarMarkup(author,'avatar',true)}
       <div class="post-author"><strong data-profile="${esc(author.id||'')}">${esc(author.name||'Unknown account')}</strong><small>@${esc(author.username||'')} ${verifiedProfileBadge(author)}${gifterProfileBadge(author)} · ${timeAgo(post.createdAt)} · ◉</small></div>
       <button class="post-menu" aria-label="Post options" data-post-menu="${esc(post.id)}">···</button>
     </div>
+    ${pinNotice}
+    ${post.isTaggedPost?'<div class="profile-post-tagged">Tagged in this post</div>':''}
     ${post.text?`<div class="post-text">${esc(post.text)}</div>`:''}
     ${renderPostMedia(post)}
     ${renderPostSoundtrack(post)}
     <div class="post-stats"><span>👍 ${post.reactionCount||0} ${post.reactionCount===1?'reaction':'reactions'}</span><span>${comments.length} comments</span></div>
     <div class="post-actions">
       <div class="post-reaction-control">
-        <button class="${post.myReaction?'liked':''}" data-react="${esc(post.id)}" data-current-reaction="${esc(post.myReaction||'like')}" aria-label="${post.myReaction?'Remove your '+post.myReaction+' reaction':'Like this post'}">${post.myReaction==='love'?'❤️':post.myReaction==='haha'?'😆':post.myReaction==='care'?'🤗':post.myReaction==='wow'?'😮':post.myReaction==='sad'?'😢':post.myReaction==='angry'?'😡':post.myReaction?'👍':'♡'} &nbsp; ${post.myReaction?esc(post.myReaction[0].toUpperCase()+post.myReaction.slice(1)):'Like'}</button>
-        <button type="button" class="post-reaction-picker-toggle" data-reaction-picker="${esc(post.id)}" aria-label="Choose a reaction" aria-expanded="false">▾</button>
+        <button type="button" class="post-icon-button post-like-button ${post.myReaction?'liked':''}" data-react="${esc(post.id)}" data-current-reaction="${esc(post.myReaction||'like')}" aria-pressed="${Boolean(post.myReaction)}" aria-label="${post.myReaction?'Change or remove your '+post.myReaction+' reaction':'Like this post'}" title="${post.myReaction?'Your '+post.myReaction+' reaction':'Like'}">${reactionIcon}</button>
+        <button type="button" class="post-reaction-picker-toggle" data-reaction-picker="${esc(post.id)}" aria-label="Choose a reaction" title="Choose a reaction" aria-expanded="false">▾</button>
         <div class="post-reaction-picker" data-reaction-menu="${esc(post.id)}" role="group" aria-label="Choose your reaction" hidden>
           <button type="button" data-reaction-choice="like" aria-label="Like" title="Like">👍</button>
           <button type="button" data-reaction-choice="love" aria-label="Love" title="Love">❤️</button>
@@ -638,10 +657,11 @@ function postCard(post,options={}){
           <button type="button" data-reaction-choice="angry" aria-label="Angry" title="Angry">😡</button>
         </div>
       </div>
-      <button data-focus-comment="${esc(post.id)}">▢ &nbsp; Comment</button>
+      <button type="button" class="post-icon-button" data-focus-comment="${esc(post.id)}" aria-label="Comment" title="Comment">${postActionIcon('comment')}</button>
+      <button type="button" class="post-icon-button post-favorite-button ${post.isFavorite?'is-active':''}" data-toggle-favorite="${esc(post.id)}" data-favorite="${post.isFavorite?'true':'false'}" aria-label="${post.isFavorite?'Remove from favorites':'Add to favorites'}" title="${post.isFavorite?'Remove from favorites':'Add to favorites'}">${postActionIcon('favorite')}</button>
       ${watchLaterControl}
-      <button data-toggle-save="${esc(post.id)}" data-saved="${post.isSaved?'true':'false'}">${post.isSaved?'▣ Saved':'▢ Save'}</button>
-      <button data-share="${esc(post.id)}">↗ &nbsp; Share</button>
+      <button type="button" class="post-icon-button ${post.isSaved?'is-active':''}" data-toggle-save="${esc(post.id)}" data-saved="${post.isSaved?'true':'false'}" aria-label="${post.isSaved?'Remove from saved posts':'Save post'}" title="${post.isSaved?'Remove from saved posts':'Save post'}">${postActionIcon('save')}</button>
+      <button type="button" class="post-icon-button" data-share="${esc(post.id)}" aria-label="Share" title="Share">${postActionIcon('share')}</button>
       <button type="button" data-gift-content="post" data-gift-id="${esc(post.id)}" data-gift-username="${esc(author.username||'')}">🎁 Gift</button>
     </div>
     ${savedControls}
@@ -650,7 +670,7 @@ function postCard(post,options={}){
   </article>`;
 }
 function findVisiblePost(id){
-  return [...state.feed,...state.videoFeed,...state.savedPosts,...(state.profile?.posts||[]),...(state.creatorStudio?.profile?.posts||[]),...(state.searchResults?.posts||[])].find(post=>post.id===id);
+  return [...state.feed,...state.videoFeed,...state.savedPosts,...(state.profile?.posts||[]),...(state.profile?.timelinePosts||[]),...(state.creatorStudio?.profile?.posts||[]),...(state.searchResults?.posts||[])].find(post=>post.id===id);
 }
 async function refreshVisiblePosts(){
   if(state.view==='creator'&&state.creatorStudio){state.creatorStudio.profile=await api('/users/'+encodeURIComponent(state.user.id));await renderCreatorSection(state.creatorStudio.section||'content');return;}
@@ -731,6 +751,16 @@ function bindFeed(root=document){
     try{await api(`/posts/${btn.dataset.toggleSave}/save`,{method:saving?'POST':'DELETE',body:'{}'});await refreshVisiblePosts();toast(saving?'Post saved.':'Post removed from saved posts.');}
     catch(err){toast(err.message);}
   }));
+
+  root.querySelectorAll('[data-toggle-favorite]').forEach(btn=>btn.addEventListener('click',async()=>{
+    const adding=btn.dataset.favorite!=='true';
+    btn.disabled=true;
+    try{
+      await api('/posts/'+encodeURIComponent(btn.dataset.toggleFavorite)+'/favorite',{method:adding?'POST':'DELETE',body:'{}'});
+      await refreshVisiblePosts();
+      toast(adding?'Added to favorites.':'Removed from favorites.');
+    }catch(error){toast(error.message);btn.disabled=false;}
+  }));
   root.querySelectorAll('[data-share]').forEach(el=>el.addEventListener('click',async()=>{
     const post=findVisiblePost(el.dataset.share);if(!post)return;
     const shareUrl=new URL('/#post-'+encodeURIComponent(post.id),location.origin).toString();
@@ -783,13 +813,17 @@ function openPostOptions(post){
   const owner=post.userId===state.user.id, author=post.author||{};
   const modal=document.createElement('div');modal.className='modal-backdrop';
   const actions=owner
-    ? '<button class="secondary full" data-post-action="edit">Edit post</button>'+(post.archivedAt?'':'<button class="secondary full" data-post-action="archive">Archive post</button>')+'<button class="secondary full" data-post-action="delete">Delete post</button>'
+    ? '<button class="secondary full" data-post-action="edit">Edit post</button>'+'<button class="secondary full" data-post-action="pin">'+(post.isPinned?'Unpin':'Pin')+' post</button>'+(post.archivedAt?'':'<button class="secondary full" data-post-action="archive">Archive post</button>')+'<button class="secondary full" data-post-action="delete">Delete post</button>'
     : `<button class="secondary full" data-post-action="report-post">Report this post</button><button class="secondary full" data-post-action="report-user">Report ${esc(author.name||'this member')}</button><button class="secondary full" data-post-action="block">Block ${esc(author.name||'this member')}</button>`;
   modal.innerHTML=`<section class="modal" role="dialog" aria-modal="true" aria-labelledby="post-options-title"><div class="modal-head"><h2 id="post-options-title">Post options</h2><button class="modal-close" aria-label="Close">×</button></div><div class="modal-body">${actions}<button type="button" class="secondary full modal-cancel">Cancel</button></div></section>`;
   document.body.append(modal);
   modal.querySelectorAll('.modal-close,.modal-cancel').forEach(btn=>btn.onclick=()=>modal.remove());
   modal.addEventListener('click',e=>{if(e.target===modal)modal.remove();});
   modal.querySelector('[data-post-action="edit"]')?.addEventListener('click',()=>{modal.remove();openEditPost(post);});
+  modal.querySelector('[data-post-action="pin"]')?.addEventListener('click',async()=>{
+    try{await api('/posts/'+encodeURIComponent(post.id)+'/pin',{method:'POST',body:JSON.stringify({pinned:!post.isPinned})});modal.remove();await refreshVisiblePosts();toast(post.isPinned?'Post unpinned.':'Post pinned to your profile.');}
+    catch(error){toast(error.message);}
+  });
   modal.querySelector('[data-post-action="archive"]')?.addEventListener('click',async()=>{try{await api('/profile/archive',{method:'POST',body:JSON.stringify({postId:post.id})});modal.remove();await refreshVisiblePosts();toast('Post moved to your archive.');}catch(error){toast(error.message);}});
   modal.querySelector('[data-post-action="delete"]')?.addEventListener('click',async()=>{
     if(!window.confirm('Delete this post permanently?'))return;
@@ -4897,7 +4931,7 @@ async function openProfile(id,openEditor=false){
   if(!profileId)return;
   const generation=++profileLoadGeneration;
   stopProfilePresence();
-  if(state.profileTargetId!==profileId)state.profileTab='posts';
+  if(state.profileTargetId!==profileId){state.profileTab='posts';state.profilePostFilters={...DEFAULT_PROFILE_POST_FILTERS};}
   state.profileTargetId=profileId;
   activateSilent('profile');
   persistCurrentView();
@@ -5416,8 +5450,177 @@ function profileBadgesMarkup(data,isMe){
     content+"</section>";
 }
 
+
+const DEFAULT_PROFILE_POST_FILTERS={year:'all',postedBy:'anyone',privacy:'all',tagged:'all'};
+function profilePostFilterOption(value,label,current){
+  return '<option value="'+esc(value)+'"'+(String(current)===String(value)?' selected':'')+'>'+esc(label)+'</option>';
+}
+function profilePostFilterFieldsMarkup(posts,filters){
+  const years=[...new Set((posts||[]).map(post=>{
+    const date=new Date(post.createdAt);
+    return Number.isNaN(date.getTime())?'':String(date.getFullYear());
+  }).filter(Boolean))].sort((a,b)=>Number(b)-Number(a));
+  return '<div class="profile-post-filter-fields">'+
+    '<p class="profile-post-filter-description">Use filters to find posts on your timeline. This will not affect how others see your timeline.</p>'+
+    '<label><span>Year</span><select name="year">'+profilePostFilterOption('all','Any year',filters.year)+years.map(year=>profilePostFilterOption(year,year,filters.year)).join('')+'</select></label>'+
+    '<label><span>Posted by</span><select name="postedBy">'+profilePostFilterOption('anyone','Anyone',filters.postedBy)+profilePostFilterOption('you','You',filters.postedBy)+profilePostFilterOption('others','Others',filters.postedBy)+'</select></label>'+
+    '<label><span>Privacy</span><select name="privacy">'+profilePostFilterOption('public','Public',filters.privacy)+profilePostFilterOption('followers','Followers',filters.privacy)+profilePostFilterOption('following','Following',filters.privacy)+profilePostFilterOption('friends','Friends',filters.privacy)+profilePostFilterOption('subscribers','Subscribers',filters.privacy)+profilePostFilterOption('private','Only Me',filters.privacy)+profilePostFilterOption('all','All posts',filters.privacy)+'</select></label>'+
+    '<label><span>Tagged</span><select name="tagged">'+profilePostFilterOption('all','All posts',filters.tagged)+profilePostFilterOption('tagged',"Only show posts I'm tagged in",filters.tagged)+'</select></label>'+
+    '</div>';
+}
+function profilePostFiltersFromForm(form){
+  const values=new FormData(form);
+  return {
+    year:String(values.get('year')||'all'),
+    postedBy:String(values.get('postedBy')||'anyone'),
+    privacy:String(values.get('privacy')||'all'),
+    tagged:String(values.get('tagged')||'all')
+  };
+}
+function filterProfileTimelinePosts(posts,profileId,filtersInput){
+  const filters={...DEFAULT_PROFILE_POST_FILTERS,...(filtersInput||{})};
+  return (posts||[]).filter(post=>{
+    if(filters.year!=='all'){
+      const date=new Date(post.createdAt);
+      if(Number.isNaN(date.getTime())||String(date.getFullYear())!==String(filters.year))return false;
+    }
+    if(filters.postedBy==='you'&&post.userId!==profileId)return false;
+    if(filters.postedBy==='others'&&post.userId===profileId)return false;
+    if(filters.privacy!=='all'){
+      const audience=String(post.audience||'public');
+      if(filters.privacy==='private'){
+        if(!['private','only_me','only-me'].includes(audience))return false;
+      }else if(audience!==filters.privacy)return false;
+    }
+    if(filters.tagged==='tagged'&&!(Array.isArray(post.taggedUserIds)&&post.taggedUserIds.includes(profileId)))return false;
+    return true;
+  });
+}
+function profilePostsSectionMarkup(posts,isMe){
+  const layout=state.profilePostLayout==='grid'?'grid':'list';
+  const filters={...DEFAULT_PROFILE_POST_FILTERS,...(state.profilePostFilters||{})};
+  const visible=filterProfileTimelinePosts(posts,state.profile?.user?.id,filters);
+  return '<section class="card profile-post-toolbar" data-profile-post-toolbar><div class="profile-post-toolbar-head"><div><h3>Posts</h3><small>'+visible.length+' of '+(posts||[]).length+' posts</small></div><div class="profile-post-toolbar-actions">'+
+    '<button type="button" class="secondary profile-post-control-button" data-profile-post-filters title="Filter posts">'+postActionIcon('list')+'<span>Filters</span></button>'+
+    (isMe?'<button type="button" class="secondary profile-post-control-button" data-manage-profile-posts title="Manage your posts">'+postActionIcon('pin')+'<span>Manage posts</span></button>':'')+
+    '</div></div><div class="profile-post-layout-control" role="group" aria-label="Post layout">'+
+    '<button type="button" data-profile-post-layout="list" class="'+(layout==='list'?'is-active':'')+'" aria-pressed="'+(layout==='list'?'true':'false')+'" title="List view">'+postActionIcon('list')+'<span>List View</span></button>'+
+    '<button type="button" data-profile-post-layout="grid" class="'+(layout==='grid'?'is-active':'')+'" aria-pressed="'+(layout==='grid'?'true':'false')+'" title="Grid view">'+postActionIcon('grid')+'<span>Grid</span></button>'+
+    '</div></section><div class="profile-post-list" data-profile-post-list data-layout="'+layout+'">'+
+    (visible.length?visible.map(postCard).join(''):'<section class="card empty-state profile-post-empty"><h3>'+(posts&&posts.length?'No posts match these filters':'No posts yet')+'</h3><p>'+(posts&&posts.length?'Change or clear the filters to see more posts.':'Posts shared by this profile will appear here.')+'</p></section>')+
+    '</div>';
+}
+function renderProfilePostList(panel){
+  const root=panel?.querySelector('[data-profile-post-list]');
+  const profileId=state.profile?.user?.id;
+  if(!root||!profileId)return;
+  const posts=state.profile.timelinePosts||state.profile.posts||[];
+  const visible=filterProfileTimelinePosts(posts,profileId,state.profilePostFilters);
+  root.dataset.layout=state.profilePostLayout==='grid'?'grid':'list';
+  root.innerHTML=visible.length?visible.map(postCard).join(''):'<section class="card empty-state profile-post-empty"><h3>'+(posts.length?'No posts match these filters':'No posts yet')+'</h3><p>'+(posts.length?'Change or clear the filters to see more posts.':'Posts shared by this profile will appear here.')+'</p></section>';
+  bindFeed(root);
+}
+function openProfilePostFilters(posts,profileId,initialFilters,onDone){
+  let filters={...DEFAULT_PROFILE_POST_FILTERS,...(initialFilters||{})};
+  const modal=document.createElement('div');
+  modal.className='modal-backdrop profile-post-filter-backdrop';
+  modal.innerHTML='<section class="modal profile-post-dialog" role="dialog" aria-modal="true" aria-labelledby="profile-post-filter-title"><header class="modal-head"><div><h2 id="profile-post-filter-title">Post filters</h2></div><button type="button" class="modal-close" data-filter-close aria-label="Close filters">×</button></header><form class="modal-body profile-post-filter-form"><div data-profile-filter-fields></div><div class="profile-post-dialog-actions"><button type="button" class="secondary" data-profile-filter-clear>Clear</button><button type="button" class="primary" data-profile-filter-done>Done</button></div></form></section>';
+  document.body.append(modal);
+  const form=modal.querySelector('form');
+  const fields=modal.querySelector('[data-profile-filter-fields]');
+  const close=()=>modal.remove();
+  const renderFields=()=>{fields.innerHTML=profilePostFilterFieldsMarkup(posts,filters);};
+  renderFields();
+  modal.querySelector('[data-filter-close]').addEventListener('click',close);
+  modal.addEventListener('click',event=>{if(event.target===modal)close();});
+  modal.querySelector('[data-profile-filter-clear]').addEventListener('click',()=>{filters={...DEFAULT_PROFILE_POST_FILTERS};renderFields();});
+  modal.querySelector('[data-profile-filter-done]').addEventListener('click',()=>{
+    filters=profilePostFiltersFromForm(form);
+    close();
+    if(typeof onDone==='function')onDone(filters);
+  });
+}
+function openManageProfilePosts(posts,profileId){
+  const source=Array.isArray(posts)?posts:[];
+  const selected=new Set();
+  let filters={...DEFAULT_PROFILE_POST_FILTERS};
+  let screen='select';
+  const modal=document.createElement('div');
+  modal.className='modal-backdrop profile-manage-posts-backdrop';
+  document.body.append(modal);
+  const close=()=>modal.remove();
+  const render=()=>{
+    if(screen==='filters'){
+      modal.innerHTML='<section class="modal profile-post-dialog profile-manage-posts-dialog" role="dialog" aria-modal="true" aria-labelledby="manage-posts-filter-title"><header class="modal-head"><div class="profile-manage-head-back"><button type="button" class="text-button" data-manage-back>‹ Back</button><h2 id="manage-posts-filter-title">Filters</h2></div><button type="button" class="modal-close" data-manage-close aria-label="Close Manage Posts">×</button></header><form class="modal-body profile-post-filter-form"><div data-manage-filter-fields></div><div class="profile-post-dialog-actions"><button type="button" class="secondary" data-manage-filter-clear>Clear</button><button type="button" class="primary" data-manage-filter-done>Done</button></div></form></section>';
+      modal.querySelector('[data-manage-close]').addEventListener('click',close);
+      modal.querySelector('[data-manage-back]').addEventListener('click',()=>{screen='select';render();});
+      modal.querySelector('[data-manage-filter-fields]').innerHTML=profilePostFilterFieldsMarkup(source,filters);
+      modal.querySelector('[data-manage-filter-clear]').addEventListener('click',()=>{filters={...DEFAULT_PROFILE_POST_FILTERS};render();});
+      const form=modal.querySelector('form');
+      modal.querySelector('[data-manage-filter-done]').addEventListener('click',()=>{filters=profilePostFiltersFromForm(form);screen='select';render();});
+      return;
+    }
+    if(screen==='actions'){
+      const chosen=source.filter(post=>selected.has(post.id));
+      const single=chosen.length===1?chosen[0]:null;
+      modal.innerHTML='<section class="modal profile-manage-posts-dialog" role="dialog" aria-modal="true" aria-labelledby="manage-posts-actions-title"><header class="modal-head"><div class="profile-manage-head-back"><button type="button" class="text-button" data-manage-back>‹ Back</button><h2 id="manage-posts-actions-title">Manage selected posts</h2><small>'+chosen.length+' selected</small></div><button type="button" class="modal-close" data-manage-close aria-label="Close Manage Posts">×</button></header><div class="modal-body profile-manage-actions">'+
+        '<button type="button" class="secondary full" data-manage-action="archive">Archive selected posts</button>'+
+        (single?'<button type="button" class="secondary full" data-manage-action="pin">'+(single.isPinned?'Unpin':'Pin')+' selected post</button>':'')+
+        '<button type="button" class="secondary full profile-manage-delete" data-manage-action="delete">Delete selected posts</button></div></section>';
+      modal.querySelector('[data-manage-close]').addEventListener('click',close);
+      modal.querySelector('[data-manage-back]').addEventListener('click',()=>{screen='select';render();});
+      modal.querySelectorAll('[data-manage-action]').forEach(button=>button.addEventListener('click',async()=>{
+        const action=button.dataset.manageAction;
+        const ids=chosen.map(post=>post.id);
+        if(!ids.length)return;
+        if(action==='delete'&&!window.confirm('Delete '+ids.length+' selected post'+(ids.length===1?'':'s')+' permanently?'))return;
+        if(action==='pin'&&ids.length!==1)return;
+        const buttons=[...modal.querySelectorAll('button')];
+        buttons.forEach(item=>{item.disabled=true;});
+        try{
+          if(action==='archive'){
+            for(const id of ids)await api('/profile/archive',{method:'POST',body:JSON.stringify({postId:id})});
+          }else if(action==='delete'){
+            for(const id of ids)await api('/posts/'+encodeURIComponent(id),{method:'DELETE',body:'{}'});
+          }else if(action==='pin'){
+            await api('/posts/'+encodeURIComponent(ids[0])+'/pin',{method:'POST',body:JSON.stringify({pinned:!single.isPinned})});
+          }
+          close();
+          await openProfile(profileId);
+          toast(action==='archive'?'Selected posts archived.':action==='delete'?'Selected posts deleted.':(single.isPinned?'Post unpinned.':'Post pinned to your profile.'));
+        }catch(error){
+          toast(error.message);
+          buttons.forEach(item=>{item.disabled=false;});
+        }
+      }));
+      return;
+    }
+    const visible=filterProfileTimelinePosts(source,profileId,filters);
+    const selectedCount=[...selected].filter(id=>source.some(post=>post.id===id&&post.userId===profileId)).length;
+    modal.innerHTML='<section class="modal profile-manage-posts-dialog" role="dialog" aria-modal="true" aria-labelledby="manage-posts-title"><header class="modal-head"><div><h2 id="manage-posts-title">Manage posts</h2><small>Choose the posts you want to manage.</small></div><button type="button" class="modal-close" data-manage-close aria-label="Close Manage Posts">×</button></header><div class="modal-body profile-manage-select-body"><div class="profile-manage-select-toolbar"><strong>Selected posts ('+selectedCount+')</strong><button type="button" class="secondary" data-manage-filter-open>Filters</button></div><div class="profile-manage-post-list">'+
+      (visible.length?visible.map(post=>{
+        const owned=post.userId===profileId;
+        const checked=selected.has(post.id);
+        const title=String(post.text||'').trim().slice(0,130)||('Post by '+String(post.author?.name||'Minglora member'));
+        const date=post.createdAt?new Date(post.createdAt).toLocaleDateString():'';
+        return '<label class="profile-manage-post-row '+(owned?'':'is-other-post')+'"><input type="checkbox" data-manage-post-select="'+esc(post.id)+'" '+(checked?'checked ':'')+(!owned?'disabled ':'')+'><span class="profile-manage-post-copy"><strong>'+esc(title)+'</strong><small>'+esc(post.author?.name||'Member')+' · '+esc(date)+(post.isPinned?' · Pinned':'')+'</small></span></label>';
+      }).join(''):'<p class="muted profile-manage-no-results">No posts match these filters.</p>')+
+      '</div><div class="profile-manage-footer"><button type="button" class="secondary" data-manage-clear>Clear</button><button type="button" class="primary" data-manage-next '+(selectedCount?'':'disabled')+'>Next</button></div></div></section>';
+    modal.querySelector('[data-manage-close]').addEventListener('click',close);
+    modal.addEventListener('click',event=>{if(event.target===modal)close();});
+    modal.querySelector('[data-manage-filter-open]').addEventListener('click',()=>{screen='filters';render();});
+    modal.querySelector('[data-manage-clear]').addEventListener('click',()=>{selected.clear();filters={...DEFAULT_PROFILE_POST_FILTERS};render();});
+    modal.querySelector('[data-manage-next]').addEventListener('click',()=>{if(selectedCount){screen='actions';render();}});
+    modal.querySelectorAll('[data-manage-post-select]').forEach(input=>input.addEventListener('change',()=>{
+      if(input.checked)selected.add(input.dataset.managePostSelect);else selected.delete(input.dataset.managePostSelect);
+      render();
+    }));
+  };
+  render();
+}
+
 function profileTabMarkup(data,tab,aboutHtml,isMe){
-  const posts=data.posts||[],albums=data.albums||[],photos=data.photos||[],reels=data.reels||[],friends=data.friends||[];
+  const posts=data.timelinePosts||data.posts||[],albums=data.albums||[],photos=data.photos||[],reels=data.reels||[],friends=data.friends||[];
   if(tab==='badges')return profileBadgesMarkup(data,isMe);
   if(tab==='about')return '<section class="card profile-about"><div class="about-heading"><div><h3>About you</h3><p class="muted">Your details, story, work, education and the things you enjoy.</p></div></div><div class="profile-about-sections">'+(aboutHtml||'<p class="muted">No About details have been added yet.</p>')+'</div></section>';
   if(tab==='friends')return '<section class="card"><div class="page-heading"><h2>Friends</h2><span class="muted">'+friends.length+' friends</span></div>'+(friends.length?'<div class="profile-friends-grid">'+friends.map(member=>'<button type="button" class="profile-friend-card" data-profile="'+esc(member.id)+'"><img class="avatar" src="'+avatar(member)+'" alt=""><strong>'+esc(member.name)+'</strong><small>@'+esc(member.username)+' '+verifiedProfileBadge(member)+'</small></button>').join('')+'</div>':'<div class="empty-state"><h3>No friends to show</h3><p>Friends appear here when both members follow each other.</p></div>')+'</section>';
@@ -5452,7 +5655,7 @@ function profileTabMarkup(data,tab,aboutHtml,isMe){
   const profileComposerMarkup=isMe
     ? '<section class="card profile-compose-card profile-status-composer" aria-label="Create a profile post"><div class="composer-top"><img class="avatar" src="'+avatar(state.user)+'" alt=""><button type="button" class="composer-open" id="profile-composer" aria-haspopup="dialog">What’s on your mind, '+esc(String(state.user.name||'').split(' ')[0])+'?</button></div><div class="composer-actions"><button type="button" class="profile-composer-live" id="profile-live-video">'+messenger3dIcon('live','composer-action-icon')+'<span>Live video</span></button><button type="button" class="photo" id="profile-post-photo">'+messenger3dIcon('photo','composer-action-icon')+'<span>Photo/video</span></button><button type="button" class="feeling" id="profile-post-feeling">'+messenger3dIcon('feeling','composer-action-icon')+'<span>Feeling/activity</span></button></div></section>'
     : '';
-  return '<div class="profile-body profile-body--established"><aside class="profile-side-column"><section class="card profile-about profile-intro-card"><div class="about-heading"><div><h3>Intro</h3><p class="muted">A clearer introduction to this member.</p></div></div>'+profileIntroOverviewMarkup(data,isMe)+'</section>'+photoPreview+friendsPreview+'</aside><div class="profile-post-column">'+profileComposerMarkup+(posts.length?posts.map(postCard).join(''):'<section class="card empty-state"><h3>No posts yet</h3><p>Posts shared by this profile will appear here.</p></section>')+'</div></div>';
+  return '<div class="profile-body profile-body--established"><aside class="profile-side-column"><section class="card profile-about profile-intro-card"><div class="about-heading"><div><h3>Intro</h3><p class="muted">A clearer introduction to this member.</p></div></div>'+profileIntroOverviewMarkup(data,isMe)+'</section>'+photoPreview+friendsPreview+'</aside><div class="profile-post-column">'+profileComposerMarkup+profilePostsSectionMarkup(posts,isMe)+'</div></div>';
 }
 function openProfileAlbumEditor(profileId,album=null){
   const modal=document.createElement('div');modal.className='modal-backdrop';
@@ -6065,6 +6268,18 @@ async function loadProfileGiftGallery(panel,profileData){
   }
 }
 function bindProfileTabActions(panel){
+  if(state.profileTab==='posts'&&state.profile?.user?.id){
+    const profileId=state.profile.user.id;
+    const sourcePosts=state.profile.timelinePosts||state.profile.posts||[];
+    panel.querySelector('[data-profile-post-filters]')?.addEventListener('click',()=>openProfilePostFilters(sourcePosts,profileId,state.profilePostFilters,filters=>{state.profilePostFilters=filters;renderProfilePostList(panel);}));
+    panel.querySelector('[data-manage-profile-posts]')?.addEventListener('click',()=>openManageProfilePosts(sourcePosts,profileId));
+    panel.querySelectorAll('[data-profile-post-layout]').forEach(button=>button.addEventListener('click',()=>{
+      state.profilePostLayout=button.dataset.profilePostLayout==='grid'?'grid':'list';
+      const list=panel.querySelector('[data-profile-post-list]');
+      if(list)list.dataset.layout=state.profilePostLayout;
+      panel.querySelectorAll('[data-profile-post-layout]').forEach(item=>{const active=item.dataset.profilePostLayout===state.profilePostLayout;item.classList.toggle('is-active',active);item.setAttribute('aria-pressed',String(active));});
+    }));
+  }
   if(state.profileTab==='gift-gallery'&&state.profile)void loadProfileGiftGallery(panel,state.profile);
   panel.querySelector('#profile-section-manager')?.addEventListener('submit',async event=>{
     event.preventDefault();const form=event.currentTarget,button=form.querySelector('[type="submit"]');button.disabled=true;
