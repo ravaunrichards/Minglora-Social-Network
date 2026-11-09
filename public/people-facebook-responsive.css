@@ -223,13 +223,13 @@
 /* Keep the actual profile page's established Facebook-sized container geometry. */
 .minglora-profile-page{
   width:100%!important;
-  max-width:1120px!important;
+  max-width:851px!important;
   min-width:0!important;
   margin-inline:auto!important;
 }
 .minglora-profile-page .profile-header-card{
   width:100%!important;
-  max-width:1120px!important;
+  max-width:851px!important;
   min-width:0!important;
   overflow:visible!important;
 }
