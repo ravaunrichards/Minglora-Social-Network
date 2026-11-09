@@ -1,0 +1,118 @@
+/* Minglora admin profile parity and no-overlap controls.
+   Administrator identity and permissions remain intact; only the profile geometry
+   is shared with regular member profiles. */
+
+/* Admin identity marks stay in the normal identity column and wrap within it. */
+.minglora-profile-page .profile-header-card--owner .profile-info-main,
+.minglora-profile-page .profile-header-card--owner .profile-info-main > * {
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+.minglora-profile-page .profile-header-card--owner .profile-admin-identity {
+  display: flex !important;
+  flex-flow: row wrap !important;
+  align-items: center !important;
+  gap: 6px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  margin: 5px 0 0 !important;
+}
+.minglora-profile-page .profile-header-card--owner .profile-admin-identity-mark {
+  flex: 0 1 auto !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  white-space: normal !important;
+}
+
+/* Every profile action remains in normal document flow. Narrow screens can
+   horizontally scroll the action strip instead of clipping or covering content. */
+.minglora-profile-page .profile-header-card .profile-actions-shell,
+.minglora-profile-page .profile-header-card .profile-actions--primary,
+.minglora-profile-page .profile-header-card .profile-action-menu {
+  position: static !important;
+  inset: auto !important;
+  transform: none !important;
+}
+.minglora-profile-page .profile-header-card--viewer .profile-actions-shell {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow: visible !important;
+}
+.minglora-profile-page .profile-header-card--viewer .profile-actions--primary {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  overscroll-behavior-x: contain !important;
+  scrollbar-width: thin !important;
+  -webkit-overflow-scrolling: touch;
+}
+.minglora-profile-page .profile-header-card--viewer .profile-action-menu:not([hidden]) {
+  display: grid !important;
+  position: static !important;
+  align-self: flex-end !important;
+  width: min(176px, 100%) !important;
+  max-width: 100% !important;
+  margin: 6px 0 0 !important;
+  overflow: visible !important;
+}
+
+/* The profile-tab ellipsis menu expands below the tabs in normal flow.
+   It never floats over the profile, posts, controls, or badges. */
+.minglora-profile-page .profile-tabs {
+  display: flex !important;
+  flex-flow: row wrap !important;
+  align-items: center !important;
+  min-width: 0 !important;
+  overflow: visible !important;
+}
+.minglora-profile-page .profile-tabs > .profile-tabs-list {
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+}
+.minglora-profile-page .profile-tabs > .profile-tabs-overflow {
+  display: contents !important;
+}
+.minglora-profile-page .profile-tabs > .profile-tabs-overflow > .profile-overflow-trigger {
+  position: static !important;
+  flex: 0 0 38px !important;
+  align-self: center !important;
+  margin: 0 0 0 8px !important;
+}
+.minglora-profile-page .profile-tabs > .profile-tabs-overflow > .profile-overflow-menu:not([hidden]) {
+  display: block !important;
+  position: static !important;
+  inset: auto !important;
+  z-index: auto !important;
+  flex: 1 0 100% !important;
+  order: 10 !important;
+  width: min(290px, 100%) !important;
+  max-width: 100% !important;
+  max-height: min(70dvh, 560px) !important;
+  margin: 8px 0 10px auto !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  box-shadow: 0 6px 18px rgba(16, 27, 47, .12) !important;
+}
+.minglora-profile-page .profile-tabs > .profile-tabs-overflow > .profile-overflow-menu[hidden] {
+  display: none !important;
+}
+
+@media (max-width: 760px) {
+  .minglora-profile-page .profile-tabs {
+    gap: 0 !important;
+  }
+  .minglora-profile-page .profile-tabs > .profile-tabs-list {
+    flex-basis: calc(100% - 46px) !important;
+  }
+  .minglora-profile-page .profile-tabs > .profile-tabs-overflow > .profile-overflow-trigger {
+    width: 36px !important;
+    min-width: 36px !important;
+    height: 36px !important;
+  }
+  .minglora-profile-page .profile-tabs > .profile-tabs-overflow > .profile-overflow-menu:not([hidden]) {
+    width: 100% !important;
+    margin: 8px 0 10px !important;
+  }
+}
