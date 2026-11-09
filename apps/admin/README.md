@@ -93,3 +93,31 @@ Relevant commits:
 ### Next action
 
 Obtain an actual CI run on the current branch and verify the Admin Centre-specific checks. Then reconcile the single missing `main` commit and perform hosted account-management acceptance testing after the required review and deployment authorization.
+
+
+## Continuation addendum 2 — 2026-11-09
+
+**Progress remains 71% / 29% remaining.** The recent source corrections are saved and independently checked against the branch files, but they remain uncounted until the project test runner and hosted behavior are verified.
+
+### Additional corrections saved
+
+- Account creation now checks required display-name and username fields against the live `public.profiles` NOT NULL schema.
+- Username availability is checked against the existing lowercase unique username invariant before Supabase Auth `createUser` is called; duplicates return HTTP 409.
+- Admin Centre now displays a warning if account creation, session revocation, or deletion succeeds but its audit entry cannot be confirmed.
+- Regression assertions cover the schema-required fields, username lookup ordering, duplicate handling, and audit-warning messages.
+
+At this snapshot the feature branch head is `b8dd41c22bcc34f1e77b665143c274462bd86608`. Source-level checks against the saved branch files confirmed these guards and UI messages are present. The project unit test runner has **not** been executed on this head.
+
+### Supabase security-advisor review
+
+Live advisors were retrieved on 2026-11-09 at approximately 09:55 UTC:
+- Health advisors returned no lints.
+- Security advisors reported 36 RLS-enabled tables without policies, including `audit_log` and internal runtime tables. Those tables are intended for server-side service-role access; no public policy or permission change was made.
+- The advisor also flagged `public.minglora_list_my_mfa_factors()`. Its live definition uses `SECURITY DEFINER`, an empty search path, filters factors by `auth.uid()`, and its ACL grants execution to `authenticated` and `service_role`, not `PUBLIC`. The inspected definition appears scoped to the caller's own MFA factors; no change was made.
+
+### Remaining acceptance work
+
+- A fresh full CI run is still unavailable through the connected GitHub status/run lookup.
+- The branch remains divergent from current `main` by one commit; do not merge without reconciling and reviewing it.
+- Production Render remains on `main`; the production Supabase Edge Function remains version 112 and does not include this branch's new CRUD actions.
+- Real account CRUD, deletion constraint handling, global session revocation, audit failure behavior, and service checks still require hosted acceptance testing after deployment is authorized.
