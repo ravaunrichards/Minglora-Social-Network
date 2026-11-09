@@ -2065,7 +2065,6 @@ async function route(req, res) {
           },
           {
             key:'tenor',name:'Tenor',category:'GIF and sticker search',
-            status:tenorConfigured?'configured':'not-configured',
             status:tenorConnected?'connected':tenorConfigured?'attention':'not-configured',
             detail:tenorConnected?'The Tenor GIF search API responded successfully. Its key is never returned to this dashboard.':tenorConfigured?'The Tenor key is present, but its API health check did not succeed.':'TENOR_API_KEY is not configured on the Minglora server.',
             dashboardUrl:'https://tenor.com/gifapi/documentation',
@@ -2148,7 +2147,7 @@ async function route(req, res) {
         }
         if(AUTH_PROVIDER!=='supabase')return json(res,503,{error:'Account updates require Minglora Supabase Auth.'});
         const targetId=String(adminUserIdMatch[1]||'').toLowerCase();
-        const result=await requestSupabaseState('admin_user_update',{actorUserId:user.id,userId:targetId,patch:input});
+        const result=await requestSupabaseState('admin_user_update',{actorUserId:user.id,userId:targetId,patch:input.patch||{}});
         return json(res,200,result);
       }
 
