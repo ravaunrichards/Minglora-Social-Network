@@ -99,6 +99,18 @@ test("failed provider session revocation is audited and the UI discloses audit s
   assert.ok(admin.includes("The failed session-revocation attempt was recorded in the administrator audit log"));
 });
 
+test("the account-delete API returns failure status when Supabase Auth rejects deletion", () => {
+  const start = server.indexOf("if(method==='DELETE'&&adminUserIdMatch){");
+  const end = server.indexOf("const adminRevokeSessionMatch", start);
+  assert.ok(start >= 0 && end > start);
+  const route = server.slice(start, end);
+  assert.match(route, /if\(result\.deleted\)\{/);
+  assert.match(route, /return json\(res,result\.deleted\?200:409,result\)/);
+  assert.ok(route.indexOf("await saveStore()") < route.indexOf("return json(res,result.deleted?200:409,result)"));
+  assert.ok(admin.includes("Supabase Auth account deleted."));
+  assert.ok(admin.includes("const sessionWarning = error?.payload?.warning"));
+});
+
 test("failed account deletion discloses both session and audit outcomes", () => {
   const start = runtime.indexOf('if (action === "admin_user_delete")');
   const end = runtime.indexOf('if (action === "admin_user_revoke_sessions")', start);
