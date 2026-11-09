@@ -38,6 +38,7 @@ jobs:
           node --check backend/modules/personal-ai-bots/personal-ai-bots-service.js
           node --check backend/modules/personal-ai-bots/admin-api.js
           node --check public/personal-ai-bots.js
+          node --check tests/unit/personal-ai-bots-ui.test.js
           node --check tests/unit/personal-ai-bots.test.js
           node --check tests/unit/personal-ai-bots-admin-api.test.js
           node --check tests/unit/personal-ai-bots-schema.test.js
