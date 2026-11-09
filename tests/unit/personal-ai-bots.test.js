@@ -4,6 +4,7 @@ import {
   PERSONAL_AI_BOT_CATEGORIES,
   PERSONAL_AI_BOT_HYBRID_ACTIONS,
   PERSONAL_AI_BOT_AUTONOMY_MODES,
+  PERSONAL_AI_BOT_POPULATIONS,
   ensurePersonalAiBotCollections,
   getPersonalAiBotCategories,
   getPersonalAiBotOverview,
@@ -105,6 +106,39 @@ test('AI identity creation stores gender identity and gender presentation as sep
   },actor,stamp,uid);
   assert.equal(bot.gender,'non_binary');
   assert.equal(bot.genderPresentation,'androgynous');
+});
+
+test('AI identities persist one of the three supported population types and reject invalid values',()=>{
+  const db=makeDb();
+  assert.deepEqual(PERSONAL_AI_BOT_POPULATIONS.map(item=>item.id),[
+    'independent','organizational','specialized_service'
+  ]);
+  const created=[];
+  for(const population of ['independent','organizational','specialized_service']){
+    const bot=createPersonalAiBot(db,{
+      displayName:'Minglora '+population.replaceAll('_',' ')+' AI',
+      categoryId:'ai-business',
+      population
+    },actor,stamp,uid);
+    created.push(bot);
+    assert.equal(bot.population,population);
+    assert.equal(bot.status,'disabled');
+    assert.equal(bot.visibility,'private');
+  }
+  assert.equal(created[0].identityType,'social_personality');
+  assert.equal(created[1].identityType,'corporate_employee');
+  assert.equal(created[2].identityType,'backend_service');
+  assert.throws(()=>createPersonalAiBot(db,{
+    displayName:'Invalid Population AI',
+    categoryId:'ai-business',
+    population:'human_account'
+  },actor,stamp,uid),/independent, organizational or specialized service/);
+
+  const updated=updatePersonalAiBot(db,created[0].id,{population:'organizational'},actor,stamp,uid);
+  assert.equal(updated.population,'organizational');
+  assert.equal(updated.identityType,'corporate_employee');
+  assert.throws(()=>updatePersonalAiBot(db,created[0].id,{population:'unknown'},actor,stamp,uid),/independent, organizational or specialized service/);
+  assert.equal(updated.population,'organizational');
 });
 
 test('single-word AI names require explicit separate first and last name fields',()=>{
