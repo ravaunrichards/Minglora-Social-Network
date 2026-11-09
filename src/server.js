@@ -1775,6 +1775,43 @@ async function route(req, res) {
         try{const result=await requestSupabaseState('ai_discovery_saved_search_delete',{actorUserId:user.id,searchId:savedAiSearchMatch[1]});return json(res,200,{ok:true,deleted:result.deleted===true});}
         catch(error){return json(res,503,{error:String(error?.message||'Saved AI discovery search could not be deleted.').slice(0,240)});}
       }
+      const publicAiProfileMatch=p.match(/^\/api\/ai\/profiles\/([a-z0-9]+(?:-[a-z0-9]+)*)$/i);
+      if(method==='GET'&&publicAiProfileMatch){
+        if(!isSupabasePersistence())return json(res,503,{error:'Public AI profiles require Minglora Supabase PostgreSQL persistence.'});
+        try{
+          const result=await requestSupabaseState('ai_identity_public_profile_get',{actorUserId:user.id,slug:publicAiProfileMatch[1]});
+          const profile=result.profile;
+          if(!profile)return json(res,404,{error:'AI profile not found.'});
+          const ownerId=String(profile.ownerAdminId||'');
+          if(!/^[0-9a-f-]{36}$/i.test(ownerId)||blockedBetween(user.id,ownerId))return json(res,404,{error:'AI profile not found.'});
+          const {ownerAdminId,...publicProfile}=profile;
+          return json(res,200,{ok:true,profile:publicProfile});
+        }catch(error){return json(res,503,{error:String(error?.message||'Public AI profile is unavailable.').slice(0,240)});}
+      }
+      if(method==='GET'&&p==='/api/ai/blocks'){
+        if(!isSupabasePersistence())return json(res,503,{error:'AI profile blocks require Minglora Supabase PostgreSQL persistence.'});
+        try{const result=await requestSupabaseState('ai_identity_block_list',{actorUserId:user.id,limit:500,offset:0});return json(res,200,{ok:true,blockedIdentities:Array.isArray(result.blockedIdentities)?result.blockedIdentities:[]});}
+        catch(error){return json(res,503,{error:String(error?.message||'AI profile block list is unavailable.').slice(0,240)});}
+      }
+      const aiProfileSafetyMatch=p.match(/^\/api\/ai\/profiles\/([0-9a-f-]{36})\/(block|report)$/i);
+      if(aiProfileSafetyMatch&&aiProfileSafetyMatch[2]==='block'&&(method==='POST'||method==='DELETE')){
+        if(!isSupabasePersistence())return json(res,503,{error:'AI profile blocks require Minglora Supabase PostgreSQL persistence.'});
+        try{
+          const result=await requestSupabaseState('ai_identity_block_set',{actorUserId:user.id,identityId:aiProfileSafetyMatch[1],blocked:method==='POST',reason:String(input?.reason||'').slice(0,300)});
+          return json(res,200,{ok:true,identityId:result.identityId||aiProfileSafetyMatch[1],blocked:result.blocked===true});
+        }catch(error){return json(res,Number(error?.status)||404,{error:String(error?.message||'AI profile block could not be updated.').slice(0,240)});}
+      }
+      if(method==='POST'&&p==='/api/ai/reports'){
+        if(!isSupabasePersistence())return json(res,503,{error:'AI profile reports require Minglora Supabase PostgreSQL persistence.'});
+        const identityId=String(input?.identityId||'').trim();
+        const reason=String(input?.reason||'');
+        const details=String(input?.details||'').trim();
+        if(!/^[0-9a-f-]{36}$/i.test(identityId)||!['impersonation','spam','misleading_identity','inappropriate_content','harassment','privacy','other'].includes(reason)||details.length>2000){
+          return json(res,400,{error:'AI profile report fields are invalid.'});
+        }
+        try{const result=await requestSupabaseState('ai_identity_report_create',{actorUserId:user.id,identityId,reason,details});return json(res,201,{ok:true,report:result.report||{}});}
+        catch(error){return json(res,Number(error?.status)||404,{error:String(error?.message||'AI profile report could not be submitted.').slice(0,240)});}
+      }
       if (await handlePersonalAiBotsAdminApi({
         req,res,url,method,path:p,user,input,db,saveStore,uid,now,json,
         isOwnerAdmin:isDesignatedCreatorHubAdmin(user)&&isModerator(user,req)&&hasActiveReviewerSession(user),
