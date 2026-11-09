@@ -838,3 +838,113 @@ test('AI report review rejects unsupported statuses and oversized resolution not
     assert.equal(context.res.statusCode,400);
   }
 });
+
+
+function sequenceUid(start=900){
+  let next=start;
+  return ()=> '00000000-0000-4000-8000-'+String(next++).padStart(12,'0');
+}
+
+const identityBatchItems=[
+  {displayName:'Batch Learning Guide',categoryId:'ai-educators',firstName:'Batch',lastName:'Guide',population:'independent'},
+  {displayName:'Batch Service Analyst',categoryId:'ai-support',firstName:'Batch',lastName:'Analyst',population:'specialized_service'}
+];
+
+test('owner creates a bounded AI identity batch and persists every canonical identity before success',async()=>{
+  const db={};
+  let persisted=null,saves=0;
+  const context=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/batches',
+    input:{idempotencyKey:'identity-batch-0001',items:identityBatchItems},
+    db,uid:sequenceUid(),
+    persistAiIdentities:async rows=>{persisted=rows;},
+    saveStore:async()=>{saves++;}
+  });
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,201);
+  assert.equal(context.res.payload.batch.status,'completed');
+  assert.equal(context.res.payload.batch.totalRecords,2);
+  assert.equal(context.res.payload.batch.completedRecords,2);
+  assert.equal(db.personalAiBots.length,2);
+  assert.equal(new Set(db.personalAiBots.map(bot=>bot.id)).size,2);
+  assert.ok(db.personalAiBots.every(bot=>bot.enabled===false&&bot.status==='disabled'));
+  assert.equal(persisted.length,2);
+  assert.equal(persisted[0].first_name,'Batch');
+  assert.equal(persisted[0].last_name,'Guide');
+  assert.equal(persisted[1].population,'specialized_service');
+  assert.equal(saves,2);
+});
+
+test('AI identity batch retries use the same identities after canonical persistence fails',async()=>{
+  const db={};
+  let attempts=0,saves=0,persistedIds=[];
+  const input={idempotencyKey:'identity-batch-retry-01',items:identityBatchItems};
+  const first=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/batches',input,db,uid:sequenceUid(950),
+    persistAiIdentities:async rows=>{attempts++;if(attempts===1)throw new Error('database unavailable');persistedIds=rows.map(row=>row.id);},
+    saveStore:async()=>{saves++;}
+  });
+  await handlePersonalAiBotsAdminApi(first);
+  assert.equal(first.res.statusCode,503);
+  assert.equal(first.res.payload.batch.status,'retryable_failed');
+  const initialIds=db.personalAiBots.map(bot=>bot.id);
+  const retry=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/batches',input,db,uid:sequenceUid(990),
+    persistAiIdentities:async rows=>{attempts++;persistedIds=rows.map(row=>row.id);},
+    saveStore:async()=>{saves++;}
+  });
+  await handlePersonalAiBotsAdminApi(retry);
+  assert.equal(retry.res.statusCode,200);
+  assert.equal(retry.res.payload.batch.status,'completed');
+  assert.equal(attempts,2);
+  assert.deepEqual(db.personalAiBots.map(bot=>bot.id),initialIds);
+  assert.deepEqual(persistedIds,initialIds);
+  assert.equal(db.personalAiBots.length,2);
+});
+
+test('AI identity batch rejects duplicate names and changed idempotency payloads without extra records',async()=>{
+  const db={};
+  const input={idempotencyKey:'identity-batch-duplicate-01',items:identityBatchItems};
+  const first=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/batches',input,db,uid:sequenceUid(1000),
+    persistAiIdentities:async()=>{}
+  });
+  await handlePersonalAiBotsAdminApi(first);
+  assert.equal(first.res.statusCode,201);
+  const changed=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/batches',
+    input:{idempotencyKey:input.idempotencyKey,items:[{...identityBatchItems[0],displayName:'Changed Name'}]},
+    db,persistAiIdentities:async()=>{throw new Error('must not be called');}
+  });
+  await handlePersonalAiBotsAdminApi(changed);
+  assert.equal(changed.res.statusCode,409);
+  const duplicate=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/batches',
+    input:{idempotencyKey:'identity-batch-duplicate-02',items:[
+      {displayName:'Same AI Name',categoryId:'ai-support'},
+      {displayName:' same   ai name ',categoryId:'ai-support'}
+    ]},
+    db,persistAiIdentities:async()=>{throw new Error('must not be called');}
+  });
+  await handlePersonalAiBotsAdminApi(duplicate);
+  assert.equal(duplicate.res.statusCode,409);
+  assert.equal(db.personalAiBots.length,2);
+});
+
+test('AI identity batch requires canonical persistence and rejects batches larger than 100',async()=>{
+  const noPersistence=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/batches',
+    input:{idempotencyKey:'identity-batch-no-store',items:identityBatchItems}
+  });
+  await handlePersonalAiBotsAdminApi(noPersistence);
+  assert.equal(noPersistence.res.statusCode,503);
+  assert.equal(noPersistence.db.personalAiBots.length,0);
+  const tooLarge=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/batches',
+    input:{idempotencyKey:'identity-batch-too-large',items:Array.from({length:101},(_,i)=>({displayName:'Batch AI '+i,categoryId:'ai-support'}))},
+    persistAiIdentities:async()=>{throw new Error('must not be called');}
+  });
+  await handlePersonalAiBotsAdminApi(tooLarge);
+  assert.equal(tooLarge.res.statusCode,400);
+  assert.equal(tooLarge.db.personalAiBots.length,0);
+});
