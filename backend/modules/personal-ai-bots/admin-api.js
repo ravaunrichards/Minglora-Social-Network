@@ -16,6 +16,8 @@ function canonicalAiIdentity(bot) {
     population:String(bot.population||'independent'),
     identity_type:String(bot.identityType||'social_personality'),
     category_id:String(bot.categoryId||''),
+    category_name:String(bot.categoryName||'AI Social Member'),
+    category_description:String(bot.categoryDescription||''),
     status:lifecycleStatus,
     parent_identity_id:bot.parentIdentityId||null,
     public_profile_slug:String(bot.slug||('ai-'+String(bot.id).replace(/-/g,'').slice(0,12))),
