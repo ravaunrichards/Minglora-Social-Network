@@ -20,20 +20,22 @@ test('discovery previews use real member content and existing privacy policies',
   assert.match(server, /await pruneExpiredStories\(\)/);
 });
 
-test('People You May Know renders real member covers, stories, posts and verified LIVE sessions', async () => {
-  const app = await read('public/app.js');
-  assert.match(app, /person-cover-image/);
-  assert.match(app, /person-avatar-wrap/);
-  assert.match(app, /p\.recentPosts/);
-  assert.match(app, /p\.latestStory/);
-  assert.match(app, /viewerCountVerified===true/);
-  assert.match(app, /data-watch-live/);
-  assert.match(app, /data-open-profile-story/);
-  assert.match(app, /\/discovery\/people/);
-  assert.match(app, /No recent public activity/);
-  assert.doesNotMatch(app, /Connect and get to know each other\./);
+test('People You May Know uses Facebook-style photo, name, mutual-friend and Follow/Remove cards', async () => {
+  const [app,server] = await Promise.all([read('public/app.js'),read('src/server.js')]);
+  const start=app.indexOf('function peopleCard(p){');
+  const end=app.indexOf('function peopleGridMarkup(){',start);
+  assert.ok(start>=0&&end>start,'People You May Know card renderer exists');
+  const card=app.slice(start,end);
+  assert.match(card,/facebook-person-photo/);
+  assert.match(card,/facebook-person-name/);
+  assert.match(card,/p\.mutualFriendsPreview/);
+  assert.match(card,/mutualFriendsCount/);
+  assert.match(card,/data-toggle-follow/);
+  assert.match(card,/data-dismiss-suggestion/);
+  assert.match(server,/mutualFriendsPreview/);
+  assert.match(server,/mutualFriendsCount:commonFriendIds\.length/);
+  assert.match(app,/member\.friendship!=='accepted'/);
 });
-
 test('Friends discovery updates quietly in the background while the screen is visible', async () => {
   const app = await read('public/app.js');
   assert.match(app, /peopleDiscoveryRefreshTimer=window.setInterval\(\(\)=>void refreshPeopleDiscovery\(\{quiet:true\}\),30000\)/);
@@ -44,37 +46,37 @@ test('Friends discovery updates quietly in the background while the screen is vi
   assert.match(app, /openLiveRoom\(session,'viewer'\)/);
   assert.doesNotMatch(app, /id="people-discovery-refresh"/);
 });
-test('outside-profile cards provide dimensional responsive styling and respect reduced motion', async () => {
-  const css = await read('public/styles.css');
-  assert.match(css, /\.person-card--immersive/);
-  assert.match(css, /box-shadow:0 20px 38px/);
-  assert.match(css, /\.person-cover:after/);
-  assert.match(css, /@media\(max-width:760px\)/);
-  assert.match(css, /@media\(prefers-reduced-motion:reduce\)/);
-  assert.match(css, /\.theme-dark \.person-card--immersive/);
+test('Facebook-style people cards have responsive sizing and reduced-motion treatment', async () => {
+  const css=await read('public/social-facebook-layout.css');
+  assert.match(css,/\.facebook-person-card/);
+  assert.match(css,/\.facebook-person-photo/);
+  assert.match(css,/aspect-ratio:1 \/ 1/);
+  assert.match(css,/@media\(max-width:600px\)/);
+  assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
 });
-
 test('static shell cache includes the active discovery app assets', async () => {
   const html = await read('public/index.html');
   const worker = await read('public/sw.js');
   const assets=[
     html.match(/href="(\/styles\.css\?v=[^"]+)"/)?.[1],
-    html.match(/src="(\/app\.js\?v=[^"]+)"/)?.[1]
+    html.match(/src="(\/app\.js\?v=[^"]+)"/)?.[1],
+    html.match(/src="(\/friends-advanced\.js\?v=[^"]+)"/)?.[1],
+    html.match(/href="(\/social-facebook-layout\.css\?v=[^"]+)"/)?.[1]
   ].filter(Boolean);
   assert.ok(worker.includes("const CACHE_NAME='minglora-shell-v"),'service-worker cache is versioned');
   for(const asset of assets)assert.ok(worker.includes("'"+asset+"'"),'service worker caches '+asset);
 });
 
-test('outside profile cards preserve the full 3:1 saved cover and uncropped avatar',async()=>{
+test('People You May Know cards keep Facebook-style square photo proportions on desktop and mobile',async()=>{
   const app=await read('public/app.js');
-  const css=await read('public/styles.css');
-  assert.ok(app.includes('person-cover-image'));
-  assert.ok(css.includes('.person-card--immersive .person-cover{'));
-  assert.ok(css.includes('aspect-ratio:3/1;padding:0!important'));
-  assert.ok(css.includes('.person-cover-image{object-fit:contain!important'));
-  assert.ok(css.includes('.person-avatar-wrap .avatar{object-fit:contain'));
+  const css=await read('public/social-facebook-layout.css');
+  assert.ok(app.includes('facebook-person-photo'));
+  assert.ok(app.includes('facebook-person-follow'));
+  assert.ok(app.includes('facebook-person-remove'));
+  assert.ok(css.includes('.facebook-person-photo{'));
+  assert.ok(css.includes('aspect-ratio:1 / 1!important'));
+  assert.ok(css.includes('.people-grid.people-discovery-grid>.facebook-person-card'));
 });
-
 test('Supabase sign-in without profile metadata preserves the saved public name and username', async () => {
   const server = await read('src/server.js');
   const start=server.indexOf('function ensureLocalUser(authUser, fallback = {})');
