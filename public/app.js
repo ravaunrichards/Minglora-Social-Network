@@ -5947,10 +5947,7 @@ function renderProfile(data){
   }));
 
   $('#edit-profile')?.addEventListener('click',()=>{
-    showTab('about');
-    const aboutPanel=$('#profile-tab-panel');
-    aboutPanel?.scrollIntoView({behavior:'smooth',block:'start'});
-    aboutPanel?.querySelector('[data-edit-about-section]')?.focus({preventScroll:true});
+    openEditProfile(u);
   });
   const peopleToggle=$('#profile-people-toggle');
   const peoplePanel=$('#profile-people-panel');
