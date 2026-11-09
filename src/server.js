@@ -2193,6 +2193,7 @@ async function route(req, res) {
       }
 
 if((method==='GET'||method==='PATCH')&&p==='/api/admin/auth-providers'){
+        if(method==='PATCH'&&!isSameOriginApiWrite(req))return json(res,403,{error:'This authentication-provider change must come from Minglora.'});
         if(!isDesignatedCreatorHubAdmin(user)||!isModerator(user,req)||!hasActiveReviewerSession(user)){
           return json(res,403,{error:'Only the MFA-verified designated Minglora owner can manage authentication providers.'});
         }
