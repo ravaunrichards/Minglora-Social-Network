@@ -17,7 +17,7 @@ test('profile About accepts separately structured categories and audience settin
         {platform:'TikTok',url:'https://www.tiktok.com/@example'}
       ]},
       contactInfo:{email:'hello@example.com',phone:'+18765551234',website:'https://example.com'},
-      names:{nickname:'Sam',pronunciation:'sam'},
+      names:{firstName:'Sam',middleName:'Alex',lastName:'Taylor',preferredName:'Sammy',nickname:'Sam',pronunciation:'sam',formerName:'Jordan'},
       details:{languages:['English','Spanish'],favoriteQuote:'Keep learning.'},
       aboutYou:{description:'A little more about me.'}
     },
@@ -29,6 +29,17 @@ test('profile About accepts separately structured categories and audience settin
   assert.equal(result.value.aboutSections.travel.placesLived[0],'Kingston, Jamaica');
   assert.equal(result.value.aboutSections.work.entries[0].isCurrent,true);
   assert.equal(result.value.aboutSectionVisibility.contactInfo,'private');
+  assert.equal(result.value.aboutSections.names.firstName,'Sam');
+  assert.equal(result.value.aboutSections.names.middleName,'Alex');
+  assert.equal(result.value.aboutSections.names.lastName,'Taylor');
+  assert.equal(result.value.aboutSections.names.preferredName,'Sammy');
+});
+
+test('profile identity edits continue to validate display name and unique username',()=>{
+  const result=validateProfilePatch({name:'Sam Alex Taylor',username:'sam_alex_taylor'});
+  assert.equal(result.valid,true,result.errors.join(' '));
+  assert.equal(result.value.name,'Sam Alex Taylor');
+  assert.equal(result.value.username,'sam_alex_taylor');
 });
 
 test('profile About rejects unsafe social and website URLs',()=>{
