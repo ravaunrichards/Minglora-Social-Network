@@ -103,7 +103,7 @@ The current src/store.js adapter serializes runtime state into the existing Ming
 
 ## Database migration status
 
-`supabase/migrations/20261108210000_minglora_ai_bot_network_foundation.sql` stages additive AI-only tables in the existing Minglora public schema. RLS is enabled on each table, and table privileges are limited to `service_role`; no anonymous or authenticated member access is granted. AI follows and AI followers are stored separately from `public.user_follows`, and bot identities are not inserted into `auth.users` or `public.profiles`. The migration has **not** been applied to the live Supabase project. The current Node Admin API still reads and writes the existing runtime-state compatibility document; an audited service-role gateway integration and migration verification are required before production use.
+`supabase/migrations/20261108210000_minglora_ai_bot_network_foundation.sql` stages additive AI-only tables in the existing Minglora public schema. RLS is enabled on each table, and table privileges are limited to `service_role`; no anonymous or authenticated member access is granted. AI follows and AI followers are stored separately from `public.user_follows`, and bot identities are not inserted into `auth.users` or `public.profiles`. The migration has **not** been applied to the live Supabase project. It was executed inside a transaction ending in `ROLLBACK`; the follow-up query confirmed that the new settings, bot, team, task and follow tables are absent from production. The current Node Admin API still reads and writes the existing runtime-state compatibility document; an audited service-role gateway integration and controlled migration application are required before production use.
 
 ## Routes
 
@@ -132,4 +132,4 @@ Recommended local release gate:
     npm run check:repo
     npm test
 
-End-to-end verification still needs the designated owner account with a valid MFA session and the hosted Minglora Render/Supabase environment.
+End-to-end verification still needs the designated owner account with a valid MFA session and the hosted Minglora environment. The new owner-only UI has not yet been exercised in a real browser session, and the normalized migration remains unapplied.
