@@ -35,6 +35,9 @@ import {
   getPersonalAiBotApplications,
   createPersonalAiBotApplication,
   updatePersonalAiBotApplication,
+  getPersonalAiBotAppointments,
+  getPersonalAiBotEmploymentHistory,
+  createPersonalAiBotAppointment,
 } from '../../backend/modules/personal-ai-bots/personal-ai-bots-service.js';
 
 const makeDb=()=>({});
@@ -259,6 +262,76 @@ test('organizational AI candidate applications support audited screening without
   assert.throws(()=>createPersonalAiBotApplication(db,{
     identityId:withdrawalCandidate.id,vacancyId:vacancy.id
   },actor,stamp,uid),/already has an application/);
+});
+
+test('owner-approved appointments require shortlisted candidates, valid reporting managers and leave AI identities disabled',()=>{
+  const db=makeDb();
+  const category=getPersonalAiBotCategories(db)[0];
+  const executive=getPersonalAiBotDepartments(db).find(item=>item.code==='executive_management');
+  const finance=getPersonalAiBotDepartments(db).find(item=>item.code==='finance_accounting');
+  const createCandidate=(name)=>createPersonalAiBot(db,{
+    displayName:name,firstName:name.split(' ')[0],lastName:name.split(' ').slice(1).join(' ')||'Candidate',
+    categoryId:category.id,population:'organizational'
+  },actor,stamp,uid);
+  const prepareShortlisted=(candidate,positionCode,department,slots=1)=>{
+    const vacancy=createPersonalAiBotVacancy(db,{positionCode,departmentId:department.id,title:nameFor(positionCode),slots},actor,stamp,uid);
+    const application=createPersonalAiBotApplication(db,{identityId:candidate.id,vacancyId:vacancy.id},actor,stamp,uid);
+    updatePersonalAiBotApplication(db,application.id,{status:'in_review'},actor,stamp,uid);
+    updatePersonalAiBotApplication(db,application.id,{status:'shortlisted'},actor,stamp,uid);
+    return {vacancy,application};
+  };
+  const nameFor=code=>({
+    board_chair:'Board Chair Appointment',
+    ceo:'Chief Executive Appointment',
+    cfo:'Finance Officer Appointment'
+  })[code]||'Corporate Appointment';
+
+  const chairCandidate=createCandidate('Board Chair Candidate');
+  const chairOpening=prepareShortlisted(chairCandidate,'board_chair',executive);
+  const chair=createPersonalAiBotAppointment(db,{applicationId:chairOpening.application.id},actor,stamp,uid);
+  assert.equal(chair.status,'appointed');
+  assert.equal(chair.positionCode,'board_chair');
+  assert.equal(chair.reportingManagerAppointmentId,null);
+  assert.deepEqual(chair.permissions,[]);
+  assert.equal(chair.permissionGrantStatus,'not_granted');
+  assert.equal(chair.identityActivationStatus,'unchanged_disabled');
+  assert.equal(chairCandidate.status,'disabled');
+  assert.equal(chairCandidate.enabled,false);
+  assert.equal(chairOpening.application.status,'appointed');
+  assert.equal(getPersonalAiBotAppointments(db).length,1);
+  assert.equal(getPersonalAiBotEmploymentHistory(db).length,1);
+  assert.equal(db.personalAiBotAudit.filter(item=>item.targetType==='appointment'&&item.targetId===chair.id).length,1);
+  assert.throws(()=>createPersonalAiBotAppointment(db,{applicationId:chairOpening.application.id},actor,stamp,uid),/shortlisted/);
+
+  const ceoCandidate=createCandidate('Chief Executive Candidate');
+  const ceoOpening=prepareShortlisted(ceoCandidate,'ceo',executive);
+  assert.throws(()=>createPersonalAiBotAppointment(db,{applicationId:ceoOpening.application.id},actor,stamp,uid),/reporting-manager appointment/);
+  const ceo=createPersonalAiBotAppointment(db,{
+    applicationId:ceoOpening.application.id,reportingManagerAppointmentId:chair.id
+  },actor,stamp,uid);
+  assert.equal(ceo.reportingManagerIdentityId,chairCandidate.id);
+  assert.equal(ceoCandidate.status,'disabled');
+  assert.equal(ceoCandidate.enabled,false);
+
+  const cfoCandidate=createCandidate('Chief Finance Candidate');
+  const cfoOpening=prepareShortlisted(cfoCandidate,'cfo',finance);
+  assert.throws(()=>createPersonalAiBotAppointment(db,{
+    applicationId:cfoOpening.application.id,reportingManagerAppointmentId:chair.id
+  },actor,stamp,uid),/allowed parent position/);
+  const cfo=createPersonalAiBotAppointment(db,{
+    applicationId:cfoOpening.application.id,reportingManagerAppointmentId:ceo.id
+  },actor,stamp,uid);
+  assert.equal(cfo.reportingManagerIdentityId,ceoCandidate.id);
+  assert.equal(cfoCandidate.status,'disabled');
+  assert.equal(cfoCandidate.enabled,false);
+  assert.equal(getPersonalAiBotAppointments(db).length,3);
+  assert.equal(getPersonalAiBotEmploymentHistory(db).length,3);
+  assert.equal(getPersonalAiBotVacancies(db).find(item=>item.id===cfoOpening.vacancy.id).remainingSlots,0);
+
+  const duplicateCandidate=createCandidate('Duplicate Finance Candidate');
+  assert.throws(()=>createPersonalAiBotApplication(db,{
+    identityId:duplicateCandidate.id,vacancyId:cfoOpening.vacancy.id
+  },actor,stamp,uid),/appointment capacity/);
 });
 
 test('candidate applications require existing organizational identities and open vacancies',()=>{
