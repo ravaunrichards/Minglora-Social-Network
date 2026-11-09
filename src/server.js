@@ -21,6 +21,7 @@ import { normalizeEmail, normalizeUsername, normalizeContactPhone, validateConta
 import { createSessionAuthManager, getAuthTokenExpiresAt } from './session-auth.js';
 import { createOrResumeSupabaseAccount } from './domain/auth-registration.js';
 import { createOAuthFlowCookie, readOAuthFlowCookie as parseOAuthFlowCookie, clearOAuthFlowCookie as buildClearOAuthFlowCookie } from './oauth-flow-state.js';
+import { createSupabaseOAuthAuthorization } from './oauth-authorization.js';
 import { createMingloraAuthRouteState, buildMingloraAuthRoutePatch } from './auth-redirect-routes.js';
 import { buildSupabaseProviderCredentialPatch } from './auth-provider-credentials.js';
 import { paginateDescending } from './domain/pagination.js';
@@ -1421,20 +1422,13 @@ async function route(req, res) {
     try{
       const settings=await supabaseGetAuthSettings();
       if(settings.external?.[provider]!==true)return redirectOAuthResult(res,'oauth_error=provider_not_enabled');
-      const state=crypto.randomBytes(24).toString('base64url');
-      const verifier=crypto.randomBytes(32).toString('base64url');
-      const challenge=crypto.createHash('sha256').update(verifier).digest('base64url');
-      const redirectTarget=new URL('/auth/oauth/callback',appOrigin(req));
-      redirectTarget.searchParams.set('state',state);
-      const authorize=new URL('https://gzycobgbasnqqhnympkr.supabase.co/auth/v1/authorize');
-      authorize.searchParams.set('provider',provider);
-      authorize.searchParams.set('redirect_to',redirectTarget.toString());
-      authorize.searchParams.set('code_challenge',challenge);
-      authorize.searchParams.set('code_challenge_method','s256');
+      const authorization=createSupabaseOAuthAuthorization(
+        provider,appOrigin(req),'https://gzycobgbasnqqhnympkr.supabase.co'
+      );
       res.writeHead(302,{
-        Location:authorize.toString(),
+        Location:authorization.authorizationUrl,
         'Cache-Control':'no-store',
-        'Set-Cookie':oauthFlowCookie(state,verifier),
+        'Set-Cookie':oauthFlowCookie(authorization.state,authorization.verifier),
         ...SECURITY_HEADERS
       });
       res.end();
