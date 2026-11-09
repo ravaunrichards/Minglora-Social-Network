@@ -72,7 +72,7 @@ Deno.serve(async (req: Request) => {
   const action = input.action;
   const supportedActions = [
     "internal_activity_feed",
-    "admin_users_list", "admin_user_set_ban", "admin_user_set_restriction", "admin_audit_log", "admin_audit_log",
+    "admin_users_list", "admin_user_set_ban", "admin_user_set_restriction", "relationship_account_statuses", "admin_audit_log", "admin_audit_log",
     "streambay_cleanup", "load", "save", "health", "media_sign", "media_upload_prepare", "media_upload_complete", "media_delete",
     "live_broadcast_create", "live_broadcast_end", "live_chat_list", "live_chat_send", "live_chat_delete",
     "live_participant_mark_connected", "live_participant_mark_left", "live_speaker_request", "live_speaker_requests_list", "live_speaker_request_status",
@@ -103,6 +103,24 @@ Deno.serve(async (req: Request) => {
   const validUuid = (value: unknown) => uuidPattern.test(String(value || ""));
   const fail = (error: any, fallback: string) =>
     json(409, { error: String(error?.message || fallback).slice(0, 240) });
+
+  if (action === "relationship_account_statuses") {
+    const rawIds = Array.isArray(input.userIds) ? input.userIds : [];
+    const userIds = [...new Set(rawIds.map((value: unknown) => String(value || "")).filter((id: string) => validUuid(id)))].slice(0, 500);
+    if (!userIds.length) return json(200, { accountStatuses: {}, deletedIds: [] });
+    const { data: profiles, error } = await admin.from("profiles")
+      .select("id,account_status")
+      .in("id", userIds);
+    if (error) return json(503, { error: "Minglora account status could not be synchronized." });
+    const accountStatuses: Record<string, string> = {};
+    for (const profile of profiles || []) {
+      const status = String((profile as any).account_status || "active").toLowerCase();
+      accountStatuses[String((profile as any).id)] =
+        ["active", "banned", "restricted", "suspended", "deactivated"].includes(status) ? status : "active";
+    }
+    const deletedIds = userIds.filter(id => !Object.prototype.hasOwnProperty.call(accountStatuses, id));
+    return json(200, { accountStatuses, deletedIds });
+  }
 
   if (action === "admin_user_set_restriction") {
     const actorUserId = String(input.actorUserId || "");
