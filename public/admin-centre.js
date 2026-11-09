@@ -309,7 +309,7 @@
             <summary>Create a member account</summary>
             <form id="admin-user-create-form" class="admin-user-create-form">
               <label for="admin-user-create-name">Display name</label>
-              <input id="admin-user-create-name" name="displayName" maxlength="80" autocomplete="name" required>
+              <input id="admin-user-create-name" name="displayName" maxlength="80" minlength="2" autocomplete="name" required>
               <label for="admin-user-create-username">Username</label>
               <input id="admin-user-create-username" name="username" maxlength="30" required pattern="[a-zA-Z0-9_]{3,30}" title="Use 3–30 letters, numbers or underscores; the saved username will be lowercase" autocomplete="off" placeholder="username">
               <label for="admin-user-create-email">Email address</label>
