@@ -433,6 +433,6 @@ test('AI profile updates reject unsupported gender, invalid time zones and dupli
   assert.throws(()=>updatePersonalAiBot(db,bot.id,{locations:[
     {locationType:'current',countryCode:'JM',timeZone:'America/Jamaica'},
     {locationType:'current',countryCode:'CA',timeZone:'America/Toronto'}
-  ]},actor,stamp,uid),/unique location types/);
+  ]},actor,stamp,uid),/unique supported location types/);
   assert.throws(()=>createPersonalAiBot(db,{displayName:'Invalid Timezone AI',categoryId:'ai-support',timeZone:'Bad/Timezone'},actor,stamp,uid),/valid profile time zone/);
 });
