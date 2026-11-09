@@ -131,6 +131,7 @@ AS $function$
   FROM (
     SELECT pg_catalog.jsonb_build_object(
       'identityId',identity.identity_id,
+      'ownerAdminId',identity.owner_admin_id,
       'displayName',names.display_name,
       'username',names.username,
       'publicProfileSlug',identity.public_profile_slug,
