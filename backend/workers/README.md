@@ -19,7 +19,14 @@ Required environment (only after the provider adapter and release have been revi
 - `SUPABASE_STATE_API_KEY`
 - `SUPABASE_PUBLISHABLE_KEY` (or the existing `SUPABASE_ANON_KEY`)
 - `MINGLORA_AI_BOT_WORKER_ENABLED=true`
-- `MINGLORA_AI_BOT_PROVIDER_MODULE` pointing to a server-side module exporting `generate()` or `createProviderAdapter()`
+- `MINGLORA_AI_BOT_PROVIDER_MODULE` pointing to a server-side module exporting `createProviderAdapter()`
+- One environment secret for every configured `credentialSecretReference`, using its exact name after the `env:` prefix (for example, `MINGLORA_AI_PROVIDER_OPENAI_API_KEY`)
+
+Each AI identity can have one or more provider/model assignments in the canonical provider tables. The assignment stores only an environment-secret reference such as `env:MINGLORA_AI_PROVIDER_OPENAI_API_KEY`; the actual credential is read from the worker's environment at runtime and is never written to PostgreSQL or returned to the Admin Centre.
+
+The configured provider module must export `createProviderAdapter({ provider, model, credential, ... })`. It must return an adapter with the exact `providerIdentifier` and `modelIdentifier`, a real `healthCheck({ signal })` method, and a `generate(request, { signal })` method. The worker health-checks assignments and records `healthy`, `degraded`, `unavailable`, or `error` status. A credential reference alone is not a successful health check. Health is rechecked periodically; an assignment recovers after a later successful check.
+
+Only active, healthy, text-capable provider/model assignments with a configured credential reference and no tool permissions are eligible for task claims. The claim RPC chooses the primary healthy assignment, then the lowest routing priority, allowing an available secondary assignment when a primary provider is unhealthy.
 
 The adapter receives a draft-only request, no tools, and `externalActionsAllowed=false`. The worker allowlist is limited to `assistant_request`, `moderation_review`, `analytics_report`, and `translation`; it does not publish content, follow/unfollow members, send messages, react, join groups, attend events, or execute live actions. Outputs are saved as `human_review_draft` records for an administrator to inspect.
 
