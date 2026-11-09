@@ -21,6 +21,7 @@ import { normalizeEmail, normalizeUsername, normalizeContactPhone, validateConta
 import { createSessionAuthManager, getAuthTokenExpiresAt } from './session-auth.js';
 import { createOrResumeSupabaseAccount } from './domain/auth-registration.js';
 import { createOAuthFlowCookie, readOAuthFlowCookie as parseOAuthFlowCookie, clearOAuthFlowCookie as buildClearOAuthFlowCookie } from './oauth-flow-state.js';
+import { createMingloraAuthRouteState, buildMingloraAuthRoutePatch } from './auth-redirect-routes.js';
 import { paginateDescending } from './domain/pagination.js';
 import { rankForYouFeed } from './domain/feed-ranking.js';
 import { rankForYouVideos } from './domain/video-ranking.js';
@@ -2191,7 +2192,6 @@ async function route(req, res) {
             smsFields
           };
         });
-        const parseRedirectList=value=>String(value||'').split(',').map(item=>item.trim()).filter(Boolean);
         const callManagement=async(httpMethod,payload)=>{
           let response;
           try{
@@ -2223,20 +2223,7 @@ async function route(req, res) {
           return data;
         };
         const appSiteUrl=appOrigin(req);
-        const siteRedirectUrl=new URL('/',appSiteUrl).toString();
-        const appRedirectUrl=new URL('/auth/oauth/callback',appSiteUrl).toString();
-        const routeState=config=>{
-          const allowedRedirectUrls=parseRedirectList(config.uri_allow_list);
-          return {
-            providerCallbackUrl,
-            appSiteUrl,
-            siteRedirectUrl,
-            appRedirectUrl,
-            configuredSiteUrl:String(config.site_url||''),
-            allowedRedirectUrls,
-            redirectReady:String(config.site_url||'').replace(/\/+$/,'')===appSiteUrl&&allowedRedirectUrls.includes(siteRedirectUrl)&&allowedRedirectUrls.includes(appRedirectUrl)
-          };
-        };
+        const routeState=config=>createMingloraAuthRouteState(config,appSiteUrl,providerCallbackUrl);
         const buildCredentialPatch=(definition,credentials,current)=>{
           const patch={};
           if(definition.id==='phone'){
@@ -2278,11 +2265,7 @@ async function route(req, res) {
           }
           if(input?.action==='sync-routes'){
             const current=await callManagement('GET');
-            const allowedRedirectUrls=parseRedirectList(current.uri_allow_list);
-            for(const requiredRedirect of [siteRedirectUrl,appRedirectUrl])if(!allowedRedirectUrls.includes(requiredRedirect))allowedRedirectUrls.push(requiredRedirect);
-            const routePatch={};
-            if(String(current.site_url||'').replace(/\/+$/,'')!==appSiteUrl)routePatch.site_url=appSiteUrl;
-            if(String(current.uri_allow_list||'')!==allowedRedirectUrls.join(','))routePatch.uri_allow_list=allowedRedirectUrls.join(',');
+            const routePatch=buildMingloraAuthRoutePatch(current,appSiteUrl);
             if(Object.keys(routePatch).length)await callManagement('PATCH',routePatch);
             const verified=await callManagement('GET');
             const routes=routeState(verified);
