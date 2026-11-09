@@ -23,7 +23,7 @@ import {
 } from './personal-ai-bots-service.js';
 
 export async function handlePersonalAiBotsAdminApi(context) {
-  const {req,res,url,method,path,user,input,db,saveStore,uid,now,json,isOwnerAdmin,isSameOriginWrite}=context;
+  const {req,res,url,method,path,user,input,db,saveStore,uid,now,json,isOwnerAdmin,isSameOriginWrite,lookupAdminMember}=context;
   const root='/api/admin/personal-ai-bots';
   if(path!==root&&!path.startsWith(root+'/'))return false;
   if(!isOwnerAdmin)return (json(res,403,{error:'Only the designated MFA-verified Minglora owner can manage the Personal AI Bots Network.'}),true);
@@ -113,7 +113,7 @@ export async function handlePersonalAiBotsAdminApi(context) {
       const network=db.personalAiBotSettings.find(item=>item.id==='global');
       if(!network?.enabled)return (json(res,409,{error:'Enable the global bot network before submitting follow instructions.'}),true);
       const targetUserId=String(input?.targetUserId||'').trim();
-      const targetMember=(db.users||[]).find(member=>member.id===targetUserId);
+      const targetMember=typeof lookupAdminMember==='function'?await lookupAdminMember(targetUserId):(db.users||[]).find(member=>member.id===targetUserId);
       if(!targetMember)return (json(res,404,{error:'The selected Minglora member account could not be found.'}),true);
       if(['banned','suspended','deactivated','deleted'].includes(String(targetMember.status||'').toLowerCase())){
         return (json(res,409,{error:'This member account is not eligible for following operations.'}),true);
