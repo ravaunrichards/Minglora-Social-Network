@@ -99,7 +99,9 @@ test('picture and cover remain editable in the normal Edit profile dialog',()=>{
   assert.match(app,/id="edit-cover-camera-button"/);
   assert.match(app,/uploadProfileImage\('avatar',edited/);
   assert.match(app,/uploadProfileImage\('cover',edited/);
-  assert.match(app,/\$\('#edit-profile'\)\?\.addEventListener\('click',\(\)=>openEditProfile\(u\)\)/);
+  assert.match(app,/\$\('#edit-profile'\)\?\.addEventListener\('click',\(\)=>\{\s*showTab\('about'\);/);
+  assert.match(app,/aboutPanel\?\.scrollIntoView\(\{behavior:'smooth',block:'start'\}\)/);
+  assert.match(app,/aboutPanel\?\.querySelector\('\[data-edit-about-section\]'\)\?\.focus\(\{preventScroll:true\}\)/);
 });
 
 test('profile Posts retains the Facebook-style Intro sidebar, composer and timeline',()=>{
