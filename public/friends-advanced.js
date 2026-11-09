@@ -90,13 +90,18 @@ function friendsDashboardCard(member,listId=null) {
 }
 
 function friendsDashboardListCards() {
-  const builtins=[
-    {id:'close',name:'Close Friends',icon:'★',count:friendsDashboardState.friends.filter(member=>member.isCloseFriend).length},
-    {id:'restricted',name:'Restricted',icon:'🔒',count:friendsDashboardState.friends.filter(member=>member.isRestricted).length}
+  const icons = {
+    restricted: '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="4.5" y="10" width="15" height="11" rx="2"></rect><path d="M8 10V7a4 4 0 1 1 8 0v3"></path></svg>',
+    close: '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m12 2.6 2.85 5.78 6.38.93-4.62 4.5 1.09 6.35L12 17.16l-5.7 3 1.09-6.35-4.62-4.5 6.38-.93L12 2.6Z"></path></svg>',
+    custom: '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 6h12M8 12h12M8 18h12"></path><circle cx="4" cy="6" r="1"></circle><circle cx="4" cy="12" r="1"></circle><circle cx="4" cy="18" r="1"></circle></svg>'
+  };
+  const builtins = [
+    {id:'restricted',name:'Restricted',icon:icons.restricted,count:friendsDashboardState.friends.filter(member=>member.isRestricted).length},
+    {id:'close',name:'Close Friends',icon:icons.close,count:friendsDashboardState.friends.filter(member=>member.isCloseFriend).length}
   ];
   return '<div class="facebook-friend-list-grid">'+
-    builtins.map(item=>'<button type="button" class="facebook-friend-list-tile" data-open-built-in-list="'+item.id+'"><span class="facebook-friend-list-icon facebook-friend-list-icon--'+item.id+'" aria-hidden="true">'+item.icon+'</span><span><strong>'+item.name+'</strong><small>'+item.count.toLocaleString()+' friends</small></span><span class="facebook-friend-list-arrow" aria-hidden="true">›</span></button>').join('')+
-    friendsDashboardState.lists.map(list=>'<article class="facebook-friend-list-tile"><span class="facebook-friend-list-icon" aria-hidden="true">☷</span><span><strong>'+esc(list.name)+'</strong><small>'+Number(list.memberCount||0).toLocaleString()+' friends</small></span><button type="button" class="facebook-friend-list-open" data-open-friend-list="'+esc(list.id)+'">Open</button></article>').join('')+
+    builtins.map(item=>'<button type="button" class="facebook-friend-list-tile" data-open-built-in-list="'+item.id+'" aria-label="Open '+item.name+' list"><span class="facebook-friend-list-icon facebook-friend-list-icon--'+item.id+'" aria-hidden="true">'+item.icon+'</span><span><strong>'+item.name+'</strong><small>'+item.count.toLocaleString()+' friends</small></span><span class="facebook-friend-list-arrow" aria-hidden="true">›</span></button>').join('')+
+    friendsDashboardState.lists.map(list=>'<article class="facebook-friend-list-tile"><span class="facebook-friend-list-icon" aria-hidden="true">'+icons.custom+'</span><span><strong>'+esc(list.name)+'</strong><small>'+Number(list.memberCount||0).toLocaleString()+' friends</small></span><button type="button" class="facebook-friend-list-open" data-open-friend-list="'+esc(list.id)+'">Open</button></article>').join('')+
     '</div>';
 }
 
