@@ -524,3 +524,73 @@ test('AI discovery controller offers explicit follow controls and private saved 
   assert.match(discoveryUi,/loadMyFollows/);
   assert.match(discoveryUi,/excludeFromHumanFollowCounts/);
 });
+
+
+test('AI user follows persist separately from human follows and respect public profile consent',()=>{
+  assert.match(discoverySql,/CREATE TABLE IF NOT EXISTS public\.ai_identity_followers/);
+  assert.match(discoverySql,/exclude_from_human_follow_counts boolean NOT NULL DEFAULT true CHECK/);
+  assert.match(discoverySql,/ALTER TABLE public\.ai_identity_followers ENABLE ROW LEVEL SECURITY/);
+  assert.match(discoverySql,/GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public\.ai_identity_followers TO service_role/);
+  assert.doesNotMatch(discoverySql,/INSERT INTO public\.user_follows|UPDATE public\.user_follows/i);
+  assert.match(socialSql,/CREATE OR REPLACE FUNCTION public\.minglora_ai_identity_public_owner_lookup/);
+  assert.match(socialSql,/CREATE OR REPLACE FUNCTION public\.minglora_ai_identity_follow_set/);
+  assert.match(socialSql,/identity\.public_profile_enabled = true/);
+  assert.match(socialSql,/profile\.visibility = 'public'/);
+  assert.match(socialSql,/The owner cannot follow their own AI identity/);
+  assert.match(socialSql,/relationshipType','human_follows_ai'/);
+  assert.match(socialSql,/excludeFromHumanFollowCounts',true/);
+  assert.match(socialSql,/CREATE OR REPLACE FUNCTION public\.minglora_ai_identity_follow_list/);
+});
+
+test('saved AI discovery groups are stored privately per Minglora member',()=>{
+  assert.match(socialSql,/CREATE TABLE IF NOT EXISTS public\.ai_discovery_saved_searches/);
+  assert.match(socialSql,/user_id uuid NOT NULL REFERENCES auth\.users\(id\) ON DELETE CASCADE/);
+  assert.match(socialSql,/UNIQUE \(user_id,name\)/);
+  assert.match(socialSql,/ALTER TABLE public\.ai_discovery_saved_searches ENABLE ROW LEVEL SECURITY/);
+  assert.match(socialSql,/REVOKE ALL ON TABLE public\.ai_discovery_saved_searches FROM PUBLIC, anon, authenticated/);
+  assert.match(socialSql,/GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public\.ai_discovery_saved_searches TO service_role/);
+  assert.match(socialSql,/up to 50 AI discovery searches/);
+  assert.match(socialSql,/WHERE user_id=p_user_id/);
+  assert.match(socialSql,/minglora_ai_discovery_saved_search_upsert/);
+  assert.match(socialSql,/minglora_ai_discovery_saved_search_list/);
+  assert.match(socialSql,/minglora_ai_discovery_saved_search_delete/);
+});
+
+test('runtime gateway exposes all signed-in member follow and saved-search operations',()=>{
+  for(const action of [
+    'ai_identity_public_owner_lookup','ai_identity_follow_set','ai_identity_follow_list',
+    'ai_discovery_saved_search_upsert','ai_discovery_saved_search_list','ai_discovery_saved_search_delete'
+  ])assert.ok(gateway.includes(action),'missing gateway action '+action);
+  for(const functionName of [
+    'minglora_ai_identity_public_owner_lookup','minglora_ai_identity_follow_set',
+    'minglora_ai_identity_follow_list','minglora_ai_discovery_saved_search_upsert',
+    'minglora_ai_discovery_saved_search_list','minglora_ai_discovery_saved_search_delete'
+  ])assert.ok(gateway.includes(functionName),'missing RPC '+functionName);
+});
+
+test('AI social API endpoints use the authenticated member ID, enforce blocks and do not leak owner IDs',()=>{
+  const discoveryRoute=serverSource.slice(serverSource.indexOf("if(method==='GET'&&p==='/api/ai/discover')"),serverSource.indexOf("if(method==='POST'&&p==='/api/ai/follows')"));
+  assert.match(discoveryRoute,/blockedBetween\(user\.id,ownerId\)/);
+  assert.match(discoveryRoute,/\.map\(\(\{ownerAdminId,\.\.\.item\}\)=>item\)/);
+  const socialRoutes=serverSource.slice(serverSource.indexOf("if(method==='POST'&&p==='/api/ai/follows')"),serverSource.indexOf('handlePersonalAiBotsAdminApi',serverSource.indexOf("if(method==='POST'&&p==='/api/ai/follows')")));
+  assert.match(socialRoutes,/ai_identity_public_owner_lookup/);
+  assert.match(socialRoutes,/blockedBetween\(user\.id,ownerAdminId\)/);
+  assert.match(socialRoutes,/ai_identity_follow_set/);
+  assert.match(socialRoutes,/ai_identity_follow_list/);
+  assert.match(socialRoutes,/ai_discovery_saved_search_upsert/);
+  assert.match(socialRoutes,/ai_discovery_saved_search_list/);
+  assert.match(socialRoutes,/ai_discovery_saved_search_delete/);
+  assert.match(socialRoutes,/actorUserId:user\.id/);
+  assert.match(socialRoutes,/\.map\(\(\{ownerAdminId,\.\.\.item\}\)=>item\)/);
+  assert.match(serverSource,/requireAuth\(user\);\s*if\(method==='GET'&&p==='\/api\/ai\/discover'/);
+});
+
+test('discovery UI supports explicit AI follows and private saved searches',()=>{
+  for(const item of [
+    'aid-follow-button','aid-save-search-form','aid-saved-searches','aid-my-follows',
+    'aid-apply-saved','aid-delete-saved','loadMyFollows','excludeFromHumanFollowCounts'
+  ])assert.ok(discoveryUi.includes(item),'missing AI social UI control '+item);
+  assert.ok(discoveryUi.includes("fetch('/api/ai/follows'"));
+  assert.ok(discoveryUi.includes("fetch('/api/ai/discovery/saved-searches'"));
+  assert.ok(discoveryUi.includes("fetch('/api/ai/discovery/saved-searches/'+encodeURIComponent(id)"));
+});
