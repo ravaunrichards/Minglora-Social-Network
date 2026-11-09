@@ -171,6 +171,10 @@ CREATE TABLE IF NOT EXISTS public.ai_discovery_saved_searches (
 );
 CREATE INDEX IF NOT EXISTS ai_discovery_saved_searches_user_updated_idx
   ON public.ai_discovery_saved_searches (user_id,updated_at DESC);
+ALTER TABLE public.ai_discovery_saved_searches ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE public.ai_discovery_saved_searches FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.ai_discovery_saved_searches TO service_role;
+
 
 CREATE OR REPLACE FUNCTION public.minglora_ai_discovery_saved_search_upsert(
   p_user_id uuid,
@@ -189,7 +193,7 @@ DECLARE
 BEGIN
   IF p_user_id IS NULL OR pg_catalog.char_length(pg_catalog.btrim(COALESCE(p_name,''))) NOT BETWEEN 2 AND 80
      OR pg_catalog.char_length(COALESCE(p_search_text,'')) > 160
-     OR p_sort NOT IN ('newest','recently_updated')
+     OR p_sort IS NULL OR p_sort NOT IN ('newest','recently_updated')
      OR p_filters IS NULL OR pg_catalog.jsonb_typeof(p_filters)<>'object' THEN
     RAISE EXCEPTION 'Saved AI discovery search values are invalid.' USING ERRCODE = '22023';
   END IF;
