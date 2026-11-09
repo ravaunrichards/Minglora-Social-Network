@@ -657,3 +657,27 @@ test('AI email overview reads PostgreSQL records and preserves provisioning trut
   assert.deepEqual(context.res.payload.emailIdentities,[row]);
   assert.equal(context.res.payload.emailIdentities[0].provisioningStatus,'not_provisioned');
 });
+
+
+test('provider assignment API rejects unsupported raw credential fields before persistence',async()=>{
+  const botId='00000000-0000-4000-8000-000000000503';
+  let calls=0;
+  const context=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/providers',
+    input:{
+      identityId:botId,providerName:'Example Provider',providerIdentifier:'example_provider',
+      providerAccountReference:'default',modelName:'Example Model',modelIdentifier:'example/model',
+      apiKey:'must-not-be-accepted'
+    },
+    db:{
+      personalAiBotSettings:[{id:'global',enabled:false}],
+      personalAiBots:[{id:botId,createdBy:'owner-1',displayName:'AI Guide',categoryId:'ai-support',username:'ai_guide'}]
+    },
+    persistAiIdentities:async()=>{calls++;},
+    persistAiProviderAssignment:async()=>{calls++;}
+  });
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,400);
+  assert.match(context.res.payload.error,/unsupported or sensitive/);
+  assert.equal(calls,0);
+});
