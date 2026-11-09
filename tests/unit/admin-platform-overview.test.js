@@ -83,12 +83,12 @@ test("App shell and service worker load the restored Admin Centre navigation ass
   const version = "20261109-admin-user-service-centre-1";
   assert.ok(index.includes("/admin-centre.css?v=" + version));
   assert.ok(index.includes("/admin-centre.js?v=" + version));
-  assert.ok(index.includes("/app.js?v=" + version));
-  assert.ok(index.includes("/sidebar-features.js?v=" + version));
+  assert.ok(index.includes("/app.js?v=20261109-admin-centre-left-sidebar-1"));
+  assert.ok(index.includes("/sidebar-features.js?v=20261109-admin-centre-left-sidebar-1"));
   const cacheName = serviceWorker.match(/const CACHE_NAME='([^']+)'/)?.[1] || '';
   assert.equal(cacheName, 'minglora-shell-v256-admin-user-service-centre-1');
   assert.ok(serviceWorker.includes("/admin-centre.css?v=" + version));
   assert.ok(serviceWorker.includes("/admin-centre.js?v=" + version));
-  assert.ok(serviceWorker.includes("/app.js?v=" + version));
-  assert.ok(serviceWorker.includes("/sidebar-features.js?v=" + version));
+  assert.ok(serviceWorker.includes("/app.js?v=20261109-admin-centre-left-sidebar-1"));
+  assert.ok(serviceWorker.includes("/sidebar-features.js?v=20261109-admin-centre-left-sidebar-1"));
 });
