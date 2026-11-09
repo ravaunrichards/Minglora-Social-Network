@@ -13,7 +13,6 @@ on:
       - 'public/ai-discover.*'
       - 'public/index.html'
       - 'tests/unit/personal-ai-bots*.test.js'
-      - 'tests/unit/personal-ai-bots*.test.js'
       - 'src/personal-ai-bot-worker.js'
       - 'src/server.js'
       - 'package.json'
@@ -26,7 +25,12 @@ on:
     paths:
       - 'backend/modules/personal-ai-bots/**'
       - 'public/personal-ai-bots.*'
+      - 'public/ai-discover.*'
+      - 'public/index.html'
       - 'supabase/migrations/*ai_bot*'
+      - 'supabase/migrations/*ai_provider*'
+      - 'supabase/migrations/*ai_email*'
+      - 'supabase/migrations/*ai_identity*'
       - 'tests/unit/personal-ai-bots*.test.js'
       - 'src/personal-ai-bot-worker.js'
       - 'src/server.js'
@@ -59,6 +63,7 @@ jobs:
           node --check src/personal-ai-bot-worker.js
           node --check src/server.js
           node --check public/personal-ai-bots.js
+          node --check public/ai-discover.js
           node --check tests/unit/personal-ai-bots-ui.test.js
           node --check tests/unit/personal-ai-bots.test.js
           node --check tests/unit/personal-ai-bots-admin-api.test.js
