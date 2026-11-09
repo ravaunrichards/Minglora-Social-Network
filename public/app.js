@@ -7131,7 +7131,7 @@ function storyPrivacyIcon(name){
     followers:'<circle cx="8" cy="8" r="3"></circle><path d="M2.5 20a5.5 5.5 0 0 1 11 0M16 7h5M18.5 4.5 21 7l-2.5 2.5"></path>',
     subscribers:'<path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.8 1-6.1-4.4-4.3 6.1-.9L12 3Z"></path>',
     custom:'<circle cx="12" cy="7.5" r="3.5"></circle><path d="M4.5 21a7.5 7.5 0 0 1 15 0"></path>',
-    hide:'<circle cx="9" cy="8" r="3"></circle><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 5l6 6M22 5l-6 6"></path>'
+    hide:'<circle cx="9" cy="8" r="3"></circle><path d="M2.5 20a6.5 6.5 0 0 1 13 0"></path><circle cx="17.5" cy="8.5" r="2.2" opacity=".55"></circle><path d="M15.5 14a4.5 4.5 0 0 1 5.8 3.2" opacity=".55"></path>'
   };
   return '<svg class="story-privacy-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">'+(paths[name]||paths.public)+'</svg>';
 }
