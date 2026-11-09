@@ -7,7 +7,7 @@ const read=path=>readFile(new URL(path,root),'utf8');
 
 test('Personal AI Bots page loads the dedicated responsive controller and styles',async()=>{
   const html=await read('public/personal-ai-bots.html');
-  assert.match(html,/personal-ai-bots\.js\?v=20261109-personal-ai-bots-7/);
+  assert.match(html,/personal-ai-bots\.js\?v=20261109-personal-ai-bots-8/);
   assert.match(html,/personal-ai-bots\.js/);
   assert.match(html,/id="pab-root"/);
   assert.match(html,/noindex,nofollow/);
@@ -215,9 +215,10 @@ test('owner Admin Centre exposes the 20-department catalogue and safe hierarchy 
     read('public/personal-ai-bots.html')
   ]);
   for(const phrase of ['Corporate departments','pab-department-form','pab-new-department-name','pab-new-department-parent','pab-department-parent','pab-save-department','createDepartment','saveDepartment'])assert.ok(ui.includes(phrase),phrase);
-  assert.match(ui,/Leadership assignments and employment workflows remain disabled/);
-  for(const phrase of ['Corporate board and job-position catalogue','position types','No appointment','No permissions','No execution authority'])assert.ok(ui.includes(phrase),phrase);
-  assert.ok(html.includes('/personal-ai-bots.js?v=20261109-personal-ai-bots-7'),'Admin Centre script cache version is current');
+  assert.match(ui,/owner-approved appointments are recorded separately in the appointments section/);
+  for(const phrase of ['Corporate board and job-position catalogue','position types','Approved appointments are listed separately in the appointments section','No permissions','No execution authority'])assert.ok(ui.includes(phrase),phrase);
+  assert.doesNotMatch(ui,/No AI has been appointed/,'position catalogue must not contradict the existing appointment workflow');
+  assert.ok(html.includes('/personal-ai-bots.js?v=20261109-personal-ai-bots-8'),'Admin Centre script cache version is current');
   assert.match(service,/PERSONAL_AI_BOT_DEPARTMENTS = Object\.freeze/);
   assert.equal((service.match(/\{code:'[a-z_]+',name:'[^']+'/g)||[]).length>=20,true);
 });
@@ -233,11 +234,12 @@ test('owner Admin Centre exposes corporate vacancy creation and safe status cont
   ]);
   for(const phrase of ['Corporate vacancies','pab-vacancy-form','pab-vacancy-position','pab-vacancy-department','pab-vacancy-title','pab-vacancy-slots','pab-vacancy-requirements','createVacancy','saveVacancy'])assert.ok(ui.includes(phrase),phrase);
   assert.match(ui,/does not create an AI identity, hire or appoint anyone/);
+  assert.match(ui,/shortlisted candidate can be appointed only through the separate owner-approved appointments workflow/);
   assert.match(service,/export function createPersonalAiBotVacancy/);
   assert.ok(service.includes("status:'open'"));
   assert.ok(service.includes('statusHistory'));
   assert.ok(api.includes("root+'/vacancies'"));
-  assert.ok(html.includes('/personal-ai-bots.js?v=20261109-personal-ai-bots-7'));
+  assert.ok(html.includes('/personal-ai-bots.js?v=20261109-personal-ai-bots-8'));
 });
 
 test('owner Admin Centre exposes approval-gated appointments and employment history without activating AI identities',async()=>{
@@ -256,7 +258,7 @@ test('owner Admin Centre exposes approval-gated appointments and employment hist
   assert.ok(service.includes("identityActivationStatus:'unchanged_disabled'"));
   assert.ok(service.includes("position.reportsTo.length"));
   assert.match(ui,/The AI identity stays disabled, no permissions are granted/);
-  assert.ok(html.includes('/personal-ai-bots.js?v=20261109-personal-ai-bots-7'));
+  assert.ok(html.includes('/personal-ai-bots.js?v=20261109-personal-ai-bots-8'));
 });
 
 
@@ -272,6 +274,6 @@ test('owner Admin Centre exposes organizational candidate submission and review 
   assert.match(ui,/Only existing AI identities with population "organizational" can be submitted/);
   assert.ok(service.includes("candidate.population!=='organizational'"));
   assert.ok(api.includes("root+'/applications'"));
-  assert.ok(html.includes('/personal-ai-bots.js?v=20261109-personal-ai-bots-7'));
+  assert.ok(html.includes('/personal-ai-bots.js?v=20261109-personal-ai-bots-8'));
 });
 
