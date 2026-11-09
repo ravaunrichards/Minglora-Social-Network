@@ -20,6 +20,15 @@ test('new AI bot creation captures gender presentation separately from gender id
   assert.match(ui,/genderPresentation:card\.querySelector\('\.pab-bot-gender-presentation'\)\.value/);
 });
 
+test('admin UI lets administrators create and edit all three AI populations',async()=>{
+  const ui=await read('public/personal-ai-bots.js');
+  for(const id of ['independent','organizational','specialized_service']) assert.ok(ui.includes("['"+id+"',")||ui.includes('value="'+id+'"'),id);
+  assert.match(ui,/id="pab-bot-population"/);
+  assert.match(ui,/population:document\.querySelector\('#pab-bot-population'\)\.value/);
+  assert.match(ui,/class="pab-select pab-bot-population"/);
+  assert.match(ui,/population:card\.querySelector\('\.pab-bot-population'\)\.value/);
+});
+
 test('admin UI exposes the complete 15-category starter set and all five autonomy modes',async()=>{
   const [service,ui]=await Promise.all([read('backend/modules/personal-ai-bots/personal-ai-bots-service.js'),read('public/personal-ai-bots.js')]);
   for(const name of ['AI Friends','AI Creators','AI Influencers','AI News','AI Musicians','AI Entertainers','AI Gamers','AI Community Hosts','AI Live Hosts','AI Moderators','AI Support','AI Educators','AI Sports','AI Travel','AI Business']) assert.ok(service.includes("name:'"+name+"'"),name);
