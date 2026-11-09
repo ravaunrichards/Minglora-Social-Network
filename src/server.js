@@ -1993,6 +1993,7 @@ async function route(req, res) {
         }
         const tenorKey=String(process.env.TENOR_API_KEY||'').trim();
         const tenorConfigured=Boolean(tenorKey);
+        const supabaseManagementToken=String(process.env.SUPABASE_ACCESS_TOKEN||'').trim();
         const pushConfigured=Boolean(
           String(process.env.WEB_PUSH_PUBLIC_KEY||'').trim()&&
           String(process.env.WEB_PUSH_PRIVATE_KEY||'').trim()&&
@@ -2004,7 +2005,18 @@ async function route(req, res) {
             return response.ok;
           }catch{return false;}
         };
-        const [githubResponse,tenorConnected,sixConnected,frankfurterConnected]=await Promise.all([
+        const supabaseManagementCheck=supabaseManagementToken
+          ? (async()=>{
+              try{
+                const response=await fetch('https://api.supabase.com/v1/projects/gzycobgbasnqqhnympkr/config/auth',{
+                  headers:{Authorization:'Bearer '+supabaseManagementToken,Accept:'application/json'},
+                  signal:AbortSignal.timeout(4500)
+                });
+                return {ok:response.ok,status:response.status};
+              }catch{return {ok:false,status:0};}
+            })()
+          : Promise.resolve(null);
+        const [githubResponse,tenorConnected,sixConnected,frankfurterConnected,supabaseManagement]=await Promise.all([
           (async()=>{try{
             const response=await fetch('https://api.github.com/repos/ravaunrichards/Minglora-Social-Network',{
               headers:{Accept:'application/vnd.github+json','User-Agent':'Minglora-Admin-Centre'},
@@ -2016,7 +2028,8 @@ async function route(req, res) {
           }catch{return null;}})(),
           tenorConfigured?checkExternal('https://tenor.googleapis.com/v2/featured?key='+encodeURIComponent(tenorKey)+'&limit=1&contentfilter=high'):Promise.resolve(false),
           checkExternal('https://www.six-group.com/dam/download/financial-information/data-center/iso-currrency/lists/list-one.xml','application/xml,text/xml;q=0.9,*/*;q=0.8'),
-          checkExternal('https://api.frankfurter.dev/v2/rate/usd/jmd')
+          checkExternal('https://api.frankfurter.dev/v2/rate/usd/jmd'),
+          supabaseManagementCheck
         ]);
         const supabaseConnected=Boolean(AUTH_PROVIDER==='supabase'&&supabaseAuthConfigured()&&persistence?.ready);
         const renderUrl=String(process.env.RENDER_EXTERNAL_URL||'https://minglora-social-network.onrender.com').trim();
@@ -2027,6 +2040,24 @@ async function route(req, res) {
             detail:supabaseConnected?'Auth and the Minglora database runtime are responding. Storage and Edge Functions are managed in this project.':String(persistence?.error||'Supabase Auth or persistent storage is not ready.'),
             dashboardUrl:'https://supabase.com/dashboard/project/gzycobgbasnqqhnympkr',
             serviceUrl:'https://gzycobgbasnqqhnympkr.supabase.co',
+            checkedAt:new Date().toISOString()
+          },
+          {
+            key:'supabase-management',name:'Supabase Management API',category:'Auth provider administration',
+            status:supabaseManagement?.ok?'connected':supabaseManagementToken?'attention':'not-configured',
+            detail:supabaseManagement?.ok
+              ? 'The Management API authenticated and returned Minglora Auth configuration. The token value remains server-only.'
+              : !supabaseManagementToken
+                ? 'SUPABASE_ACCESS_TOKEN is not configured on the Minglora server; provider settings cannot be read or changed.'
+                : supabaseManagement.status===401
+                  ? 'The Management API rejected the server token (HTTP 401). Replace it with a valid project-scoped token.'
+                  : supabaseManagement.status===403
+                    ? 'The Management API denied access (HTTP 403). Grant Auth Config Read to view provider settings; Auth Config Read-write plus Project Settings Read-write are needed to change them.'
+                    : supabaseManagement.status===0
+                      ? 'The Management API could not be reached from the Minglora server.'
+                      : 'The Management API returned HTTP '+supabaseManagement.status+'. Check the token scope and Minglora project access.',
+            dashboardUrl:'https://supabase.com/dashboard/project/gzycobgbasnqqhnympkr/auth/providers',
+            serviceUrl:null,
             checkedAt:new Date().toISOString()
           },
           {
@@ -2096,7 +2127,7 @@ async function route(req, res) {
           {
             key:'email',name:'Auth email delivery',category:'Email and account recovery',
             status:'managed',
-            detail:'Email sign-in, recovery and confirmation delivery are managed in Supabase Auth. The SMTP provider and delivery test are not exposed by the current Minglora runtime.',
+            detail:'Email sign-in, recovery and confirmation delivery are routed through Supabase Auth. This runtime does not verify the project SMTP provider or email delivery; check Auth SMTP settings in the Supabase dashboard.',
             dashboardUrl:'https://supabase.com/dashboard/project/gzycobgbasnqqhnympkr/auth/settings',
             serviceUrl:null,
             checkedAt:null
