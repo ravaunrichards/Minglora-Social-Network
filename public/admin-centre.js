@@ -145,7 +145,16 @@
     const status=section.querySelector('#admin-audit-log-status');
     const refreshButton=section.querySelector('#admin-audit-log-refresh');
     const displayDate=value=>{const date=new Date(value);return value&&!Number.isNaN(date.getTime())?date.toLocaleString():'Date unavailable';};
-    const actionLabel=value=>({'account.ban':'Account banned','account.unban':'Account unbanned'})[String(value||'')]||String(value||'Administrator action').replace(/[._]/g,' ');
+    const actionLabel=value=>({
+      'account.create':'Member account created',
+      'account.update':'Member account updated',
+      'account.delete':'Member account deleted',
+      'account.delete_failed':'Member account deletion failed',
+      'account.sessions_revoke':'Member sessions revoked',
+      'account.sessions_revoke_failed':'Member session revocation failed',
+      'account.ban':'Account banned',
+      'account.unban':'Account unbanned'
+    })[String(value||'')]||String(value||'Administrator action').replace(/[._]/g,' ');
     const durationLabel=value=>({'1h':'1 hour','24h':'24 hours','7d':'7 days','30d':'30 days','90d':'90 days','876000h':'Permanent (100 years)'})[String(value||'')]||String(value||'');
     const load=async()=>{
       if(!resultList)return;
@@ -160,13 +169,27 @@
           const metadata=record.metadata&&typeof record.metadata==='object'?record.metadata:{};
           const actor=record.actor?.displayName||(record.actor?.username?'@'+record.actor.username:'Minglora owner');
           const target=record.target?.displayName||(record.target?.username?'@'+record.target.username:record.targetId||'Unknown account');
-          const details=[metadata.duration?'Duration: '+durationLabel(metadata.duration):'',
+          const changedFields=Array.isArray(metadata.changedFields)?metadata.changedFields:[];
+          const profileFields=Array.isArray(metadata.profileFields)?metadata.profileFields:[];
+          const details=[
+            metadata.duration?'Duration: '+durationLabel(metadata.duration):'',
             metadata.bannedUntil?'Until: '+displayDate(metadata.bannedUntil):'',
-            metadata.sessionsRevoked?'Global sessions revoked':'Global session revocation not confirmed'].filter(Boolean).join(' · ');
+            changedFields.length?'Changed: '+changedFields.map(field=>field==='password'?'password reset':String(field)).join(', '):'',
+            profileFields.length?'Profile fields: '+profileFields.map(String).join(', '):'',
+            metadata.emailProvided?'Email supplied':'',
+            metadata.phoneProvided?'Phone supplied':'',
+            metadata.deletionMode?'Deletion mode: '+metadata.deletionMode:'',
+            metadata.outcome?'Outcome: '+metadata.outcome:'',
+            metadata.scope==='global'?'Scope: global sessions':metadata.scope==='application_only'?'Scope: Minglora app sessions only':'',
+            record.action==='account.ban'?(metadata.sessionsRevoked?'Global sessions revoked':'Global session revocation not confirmed'):'',
+            record.action==='account.delete' || record.action==='account.delete_failed'
+              ?(metadata.providerRefreshTokensRevoked?'Provider refresh-token sessions revoked':'Provider refresh-token revocation not confirmed'):'',
+            record.action==='account.sessions_revoke_failed'?'Provider session revocation failed':''
+          ].filter(Boolean).join(' · ');
           return '<article class="admin-audit-log-entry"><div class="admin-audit-log-entry-heading"><div><strong>'+
             escapeText(actionLabel(record.action))+'</strong><small>By '+escapeText(actor)+' · Target '+escapeText(target)+
-            '</small></div><time>'+escapeText(displayDate(record.createdAt))+'</time></div><p>'+
-            escapeText(metadata.reason||'No moderation note recorded.')+'</p>'+
+            '</small></div><time>'+escapeText(displayDate(record.createdAt))+'</time></div>'+
+            (metadata.reason?'<p>'+escapeText(metadata.reason)+'</p>':'')+
             (details?'<small class="admin-audit-log-details">'+escapeText(details)+'</small>':'')+'</article>';
         }).join(''):'<p class="admin-audit-log-empty">No matching administrator actions were found.</p>';
         if(status)status.textContent=records.length+' audit record(s) returned. Most recent first.';
@@ -278,13 +301,23 @@
         </section>
         <section class="admin-audit-log admin-control-centre-section" id="admin-audit-log" aria-labelledby="admin-audit-log-title">
           <div class="admin-control-centre-section-heading"><div><h3 id="admin-audit-log-title">Administrator audit log</h3>
-            <p>Review account bans and restores with the acting administrator, affected account, reason, duration and session-revocation outcome.</p></div>
+            <p>Review member account creation, edits, bans, restores, deletions and session revocations with the acting administrator and recorded outcome.</p></div>
             <span class="admin-control-centre-status">Owner-only</span></div>
           <div class="admin-audit-log-controls">
             <label for="admin-audit-log-search">Search audit history</label>
             <input id="admin-audit-log-search" type="search" maxlength="100" autocomplete="off" placeholder="Reason, username, user ID or action">
             <label for="admin-audit-log-action">Action type</label>
-            <select id="admin-audit-log-action"><option value="all">All account actions</option><option value="account.ban">Account bans</option><option value="account.unban">Account restores</option></select>
+            <select id="admin-audit-log-action">
+              <option value="all">All account actions</option>
+              <option value="account.create">Account creation</option>
+              <option value="account.update">Account edits</option>
+              <option value="account.delete">Account deletions</option>
+              <option value="account.delete_failed">Failed deletions</option>
+              <option value="account.sessions_revoke">Session revocations</option>
+              <option value="account.sessions_revoke_failed">Failed session revocations</option>
+              <option value="account.ban">Account bans</option>
+              <option value="account.unban">Account restores</option>
+            </select>
             <button type="button" class="secondary" id="admin-audit-log-refresh">Refresh history</button>
           </div>
           <p id="admin-audit-log-status" class="admin-audit-log-status" role="status" aria-live="polite">Loading administrator history…</p>
