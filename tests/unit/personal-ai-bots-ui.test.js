@@ -192,6 +192,7 @@ test('owner Admin Centre exposes the 20-department catalogue and safe hierarchy 
   ]);
   for(const phrase of ['Corporate departments','pab-department-form','pab-new-department-name','pab-new-department-parent','pab-department-parent','pab-save-department','createDepartment','saveDepartment'])assert.ok(ui.includes(phrase),phrase);
   assert.match(ui,/Leadership assignments and employment workflows remain disabled/);
+  for(const phrase of ['Corporate board and job-position catalogue','20 position types','No appointment','No permissions','No execution authority'])assert.ok(ui.includes(phrase),phrase);
   assert.match(html,/personal-ai-bots\.js\?v=20261109-personal-ai-bots-3/);
   assert.match(service,/PERSONAL_AI_BOT_DEPARTMENTS = Object\.freeze/);
   assert.equal((service.match(/\{code:'[a-z_]+',name:'[^']+'/g)||[]).length>=20,true);
