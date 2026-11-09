@@ -5455,6 +5455,7 @@ async function route(req, res) {
 
         return json(res,200,{
           user:safeUser(target,user.id),
+          profileLocked:target.id===user.id&&getUserSettings(target).privacy.profileVisibility==='private',
           posts:profilePosts,
           timelinePosts,
           profileSections:readProfileSections(target.id),
