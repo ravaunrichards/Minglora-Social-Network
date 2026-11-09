@@ -44,6 +44,56 @@ test('owner overview returns the requested categories without fabricated bots or
   assert.equal(context.res.payload.network.enabled,false);
 });
 
+test('owner creation persists a normalized identity record with separate name fields',async()=>{
+  let persisted=null,saves=0;
+  const context=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots',
+    input:{
+      displayName:'Minglora AI Companion',
+      firstName:'Minglora',middleName:'AI',lastName:'Companion',
+      categoryId:'ai-friends',languages:['English','Jamaican Patois']
+    },
+    persistAiIdentities:async identities=>{persisted=identities;},
+    saveStore:async()=>{saves++;}
+  });
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,201);
+  assert.equal(persisted.length,1);
+  assert.equal(persisted[0].first_name,'Minglora');
+  assert.equal(persisted[0].middle_name,'AI');
+  assert.equal(persisted[0].last_name,'Companion');
+  assert.equal(persisted[0].population,'independent');
+  assert.equal(persisted[0].status,'created');
+  assert.deepEqual(persisted[0].languages,['English','Jamaican Patois']);
+  assert.equal(context.db.users,undefined);
+  assert.equal(saves,1);
+});
+
+test('owner overview reads canonical identity rows from the persistence callback',async()=>{
+  const row={id:'ai-1',firstName:'Minglora',middleName:'AI',lastName:'Companion',username:'ai_minglora_companion',population:'independent',status:'created'};
+  const context=makeContext({listAiIdentities:async options=>{
+    assert.deepEqual(options,{limit:1000,offset:0});
+    return [row];
+  }});
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,200);
+  assert.equal(context.res.payload.identityRecordsSource,'minglora_supabase_postgresql');
+  assert.deepEqual(context.res.payload.identityRecords,[row]);
+});
+
+test('identity persistence failure prevents the admin API from reporting successful creation',async()=>{
+  let saves=0;
+  const context=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots',
+    input:{displayName:'Minglora AI',firstName:'Minglora',lastName:'AI',categoryId:'ai-friends'},
+    persistAiIdentities:async()=>{throw Object.assign(new Error('Canonical identity storage unavailable.'),{status:503});},
+    saveStore:async()=>{saves++;}
+  });
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,503);
+  assert.equal(saves,0);
+});
+
 test('owner can create the disabled starter set; no runtime worker is started',async()=>{
   let saves=0;
   const context=makeContext({
