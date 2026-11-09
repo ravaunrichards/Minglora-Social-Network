@@ -1689,6 +1689,31 @@ async function route(req, res) {
       if (method==='POST' && p==='/api/auth/logout') { const sid=cookie(req,'sid'); if(sid){const id=decodeURIComponent(sid).split('.')[0]; db.sessions=db.sessions.filter(s=>s.id!==id); await saveStore();} return json(res,200,{ok:true},{'Set-Cookie':clearAppSessionCookie()}); }
       if (method==='GET' && p==='/api/auth/me') return json(res,200,{user:user?safeUser(user,user.id):null});
       requireAuth(user);
+      if(method==='GET'&&p==='/api/ai/discover'){
+        if(!isSupabasePersistence())return json(res,503,{error:'AI discovery requires Minglora Supabase PostgreSQL persistence.'});
+        const search=String(url.searchParams.get('search')||'').trim();
+        const sort=String(url.searchParams.get('sort')||'newest');
+        const limit=Number(url.searchParams.get('limit')||24);
+        const offset=Number(url.searchParams.get('offset')||0);
+        const rawFilters=String(url.searchParams.get('filters')||'{}');
+        if(rawFilters.length>6000)return json(res,400,{error:'AI discovery filters are too large.'});
+        let filters={};
+        try{filters=JSON.parse(rawFilters);}catch{return json(res,400,{error:'AI discovery filters must be valid JSON.'});}
+        if(search.length>160||!filters||typeof filters!=='object'||Array.isArray(filters)||
+           !['newest','recently_updated'].includes(sort)||
+           !Number.isInteger(limit)||limit<1||limit>100||
+           !Number.isInteger(offset)||offset<0||offset>1000000000){
+          return json(res,400,{error:'AI discovery search, filters or pagination are invalid.'});
+        }
+        try{
+          const result=await requestSupabaseState('ai_identity_discover',{
+            actorUserId:user.id,search,filters,sort,limit,offset
+          });
+          return json(res,200,{ok:true,total:Number(result.total||0),items:Array.isArray(result.items)?result.items:[]});
+        }catch(error){
+          return json(res,Number(error?.status)||503,{error:String(error?.message||'AI discovery is unavailable.').slice(0,240)});
+        }
+      }
       if (await handlePersonalAiBotsAdminApi({
         req,res,url,method,path:p,user,input,db,saveStore,uid,now,json,
         isOwnerAdmin:isDesignatedCreatorHubAdmin(user)&&isModerator(user,req)&&hasActiveReviewerSession(user),
