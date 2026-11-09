@@ -8,6 +8,12 @@ on:
       - 'public/personal-ai-bots.*'
       - 'supabase/migrations/*ai_bot*'
       - 'tests/unit/personal-ai-bots*.test.js'
+      - 'src/personal-ai-bot-worker.js'
+      - 'src/server.js'
+      - 'package.json'
+      - 'supabase/functions/minglora-runtime-state/index.ts'
+      - 'backend/workers/README.md'
+      - 'MINGLORA_RESUME.md'
       - '.github/workflows/personal-ai-bots.yml'
   push:
     branches: [feat/personal-ai-bots-network-control-center]
@@ -32,20 +38,25 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24'
       - name: Check bot module syntax
         run: |
           node --check backend/modules/personal-ai-bots/personal-ai-bots-service.js
           node --check backend/modules/personal-ai-bots/admin-api.js
+          node --check backend/modules/personal-ai-bots/worker.js
+          node --check src/personal-ai-bot-worker.js
+          node --check src/server.js
           node --check public/personal-ai-bots.js
           node --check tests/unit/personal-ai-bots-ui.test.js
           node --check tests/unit/personal-ai-bots.test.js
           node --check tests/unit/personal-ai-bots-admin-api.test.js
           node --check tests/unit/personal-ai-bots-schema.test.js
+          node --check tests/unit/personal-ai-bots-worker.test.js
       - name: Run Personal AI Bots unit and schema tests
         run: |
           node --test \
             tests/unit/personal-ai-bots.test.js \
             tests/unit/personal-ai-bots-admin-api.test.js \
             tests/unit/personal-ai-bots-schema.test.js \
+            tests/unit/personal-ai-bots-worker.test.js \
             tests/unit/personal-ai-bots-ui.test.js
