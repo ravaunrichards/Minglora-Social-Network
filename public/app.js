@@ -10189,7 +10189,57 @@ function bindNavigation(){
   };
   document.querySelectorAll('[data-logout]').forEach(button=>button.addEventListener('click',logout));
 }
-async function renderSidebar(){try{await loadPeople();await loadGroups();const suggestions=state.people.filter(p=>p.friendship!=='accepted').slice(0,4);$('#suggested-people').innerHTML=suggestions.length?suggestions.map(p=>`<div class="person-row"><button type="button" class="sidebar-profile-target" data-profile="${esc(p.id)}" aria-label="Open ${esc(p.name)}’s profile" style="display:flex;align-items:center;gap:10px;min-width:0;flex:1;border:0;padding:0;background:transparent;text-align:left;color:inherit;cursor:pointer"><img class="avatar" src="${avatar(p)}" alt=""><span class="person-meta"><strong>${esc(p.name)}</strong><small>Suggested for you</small></span></button><button class="mini-btn" data-sidebar-follow="${esc(p.id)}" data-following="${p.following?'true':'false'}">${p.following?'Following':'Follow'}</button><button type="button" class="mini-btn person-dismiss-mini" data-dismiss-suggestion="${esc(p.id)}" aria-label="Remove ${esc(p.name)} from People You May Know" title="Remove suggestion">×</button></div>`).join(''):'<small style="color:var(--muted)">No new suggestions.</small>';bindProfileLinks($('#suggested-people'));bindSuggestionDismissals($('#suggested-people'));$('#suggested-groups').innerHTML=state.groups.slice(0,3).map(g=>`<div class="group-row"><div class="group-icon">◉</div><div class="person-meta"><strong>${esc(g.name)}</strong><small>${g.members.length} members</small></div></div>`).join('')||'<small style="color:var(--muted)">No groups yet.</small>';$('#shortcut-groups').innerHTML=state.groups.filter(g=>g.isMember).slice(0,3).map(g=>`<button class="rail-link" data-shortcut-group="${esc(g.id)}"><span>◉</span>${esc(g.name)}</button>`).join('');document.querySelectorAll('[data-sidebar-follow]').forEach(btn=>btn.onclick=async()=>{try{const following=btn.dataset.following==='true';const result=await api(`/users/${btn.dataset.sidebarFollow}/follow`,{method:following?'DELETE':'POST',body:'{}'});toast(result.friends?'You are now friends through mutual follows.':(following?'Unfollowed member.':'Now following member.'));await loadPeople();await renderSidebar();if(state.view==='friends')await renderFriends();}catch(e){toast(e.message)}});$('#shortcut-groups').querySelectorAll('button').forEach(b=>b.onclick=()=>activateNav('groups'));}catch{}}
+async function renderSidebar(){
+  try{
+    await loadPeopleDiscovery();
+    await loadGroups();
+    const suggestions=(state.people||[]).filter(member=>member.friendship!=='accepted').slice(0,4);
+    const sidebarRoot=$('#suggested-people');
+    if(sidebarRoot){
+      sidebarRoot.innerHTML=suggestions.length?suggestions.map(member=>{
+        const mutualCount=Math.max(0,Number(member.mutualFriendsCount||0));
+        const mutuals=(Array.isArray(member.mutualFriendsPreview)?member.mutualFriendsPreview:[]).slice(0,3);
+        const avatars=mutuals.length
+          ?'<span class="facebook-mutual-stack" aria-hidden="true">'+mutuals.map(friend=>'<img src="'+esc(avatar(friend))+'" alt="" loading="lazy">').join('')+'</span>'
+          :'<span class="facebook-mutual-empty" aria-hidden="true">♧</span>';
+        const mutualText=mutualCount
+          ?mutualCount.toLocaleString()+' mutual '+(mutualCount===1?'friend':'friends')
+          :'No mutual friends';
+        const following=Boolean(member.following);
+        return '<article class="facebook-sidebar-suggestion">'+
+          '<button type="button" class="facebook-sidebar-avatar" data-profile="'+esc(member.id)+'" aria-label="Open '+esc(member.name)+'’s profile"><img src="'+esc(avatar(member))+'" alt="" loading="lazy"></button>'+
+          '<div class="facebook-sidebar-details">'+
+            '<button type="button" class="facebook-sidebar-name" data-profile="'+esc(member.id)+'">'+esc(member.name)+' '+verifiedProfileBadge(member)+'</button>'+
+            '<div class="facebook-sidebar-mutual">'+avatars+'<span>'+esc(mutualText)+'</span></div>'+
+            '<div class="facebook-sidebar-actions">'+
+              '<button class="mini-btn" data-sidebar-follow="'+esc(member.id)+'" data-following="'+(following?'true':'false')+'">'+(following?'Following':'Follow')+'</button>'+
+              '<button type="button" class="mini-btn person-dismiss-mini" data-dismiss-suggestion="'+esc(member.id)+'" aria-label="Remove '+esc(member.name)+' from People You May Know" title="Remove suggestion">Remove</button>'+
+            '</div>'+
+          '</div>'+
+        '</article>';
+      }).join(''):'<small style="color:var(--muted)">No new suggestions.</small>';
+      bindProfileLinks(sidebarRoot);
+      bindSuggestionDismissals(sidebarRoot);
+    }
+    $('#suggested-groups').innerHTML=state.groups.slice(0,3).map(group=>'<div class="group-row"><div class="group-icon">◉</div><div class="person-meta"><strong>'+esc(group.name)+'</strong><small>'+group.members.length+' members</small></div></div>').join('')||'<small style="color:var(--muted)">No groups yet.</small>';
+    $('#shortcut-groups').innerHTML=state.groups.filter(group=>group.isMember).slice(0,3).map(group=>'<button class="rail-link" data-shortcut-group="'+esc(group.id)+'"><span>◉</span>'+esc(group.name)+'</button>').join('');
+    document.querySelectorAll('[data-sidebar-follow]').forEach(button=>{
+      if(button.dataset.sidebarFollowBound==='true')return;
+      button.dataset.sidebarFollowBound='true';
+      button.addEventListener('click',async()=>{
+        try{
+          const following=button.dataset.following==='true';
+          const result=await api('/users/'+encodeURIComponent(button.dataset.sidebarFollow)+'/follow',{method:following?'DELETE':'POST',body:'{}'});
+          toast(result.friends?'You are now friends through mutual follows.':(following?'Unfollowed member.':'Now following member.'));
+          await loadPeopleDiscovery();
+          await renderSidebar();
+          if(state.view==='friends')await renderFriends();
+        }catch(error){toast(error.message);}
+      });
+    });
+    $('#shortcut-groups').querySelectorAll('button').forEach(button=>button.onclick=()=>activateNav('groups'));
+  }catch(error){console.warn('[Minglora] Sidebar suggestions could not be refreshed:',error?.message||error);}
+}
 function bindProfileLinks(root=document){
   if(!root?.querySelectorAll)return;
   root.querySelectorAll('[data-profile]').forEach(element=>{
