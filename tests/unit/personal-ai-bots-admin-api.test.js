@@ -1259,6 +1259,75 @@ test('owner can submit and review an organizational AI candidate application',as
   assert.equal(saves,4);
 });
 
+test('owner appointment route approves only shortlisted candidates and records employment history',async()=>{
+  const db={};let saves=0;
+  const vacancyContext=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/vacancies',
+    input:{positionCode:'board_chair',departmentId:'department-executive_management',title:'Board Chair Appointment'},
+    db,uid:sequenceUid(3100),saveStore:async()=>{saves++;}
+  });
+  await handlePersonalAiBotsAdminApi(vacancyContext);
+  const vacancy=vacancyContext.res.payload.vacancy;
+  const candidate={id:'org-appointed-candidate',population:'organizational',displayName:'Appointed AI',username:'ai_appointed',status:'disabled',enabled:false};
+  db.personalAiBots.push(candidate);
+  const create=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/applications',
+    input:{vacancyId:vacancy.id,identityId:candidate.id},
+    db,uid:sequenceUid(3200),saveStore:async()=>{saves++;}
+  });
+  await handlePersonalAiBotsAdminApi(create);
+  assert.equal(create.res.statusCode,201);
+  const notShortlisted=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/appointments',
+    input:{applicationId:create.res.payload.application.id},db,uid:sequenceUid(3300),saveStore:async()=>{saves++;}
+  });
+  await handlePersonalAiBotsAdminApi(notShortlisted);
+  assert.equal(notShortlisted.res.statusCode,409);
+  const shortlist=makeContext({
+    method:'PATCH',path:'/api/admin/personal-ai-bots/applications/'+create.res.payload.application.id,
+    input:{status:'shortlisted'},db,saveStore:async()=>{saves++;}
+  });
+  await handlePersonalAiBotsAdminApi(shortlist);
+  assert.equal(shortlist.res.statusCode,200);
+  const appoint=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/appointments',
+    input:{applicationId:create.res.payload.application.id},db,uid:sequenceUid(3400),saveStore:async()=>{saves++;}
+  });
+  await handlePersonalAiBotsAdminApi(appoint);
+  assert.equal(appoint.res.statusCode,201);
+  assert.equal(appoint.res.payload.appointment.status,'appointed');
+  assert.deepEqual(appoint.res.payload.appointment.permissions,[]);
+  assert.equal(appoint.res.payload.appointment.permissionGrantStatus,'not_granted');
+  assert.equal(appoint.res.payload.appointment.identityActivationStatus,'unchanged_disabled');
+  assert.equal(candidate.status,'disabled');
+  assert.equal(candidate.enabled,false);
+  assert.equal(create.res.payload.application.status,'submitted');
+  const appointments=makeContext({method:'GET',path:'/api/admin/personal-ai-bots/appointments',db});
+  await handlePersonalAiBotsAdminApi(appointments);
+  assert.equal(appointments.res.payload.appointments.length,1);
+  const history=makeContext({method:'GET',path:'/api/admin/personal-ai-bots/employment-history',db});
+  await handlePersonalAiBotsAdminApi(history);
+  assert.equal(history.res.payload.events.length,1);
+  assert.equal(saves,4);
+});
+
+test('appointment API is owner-only and rejects unsupported appointment fields',async()=>{
+  const blocked=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/appointments',
+    input:{applicationId:'application-1'},isOwnerAdmin:false
+  });
+  await handlePersonalAiBotsAdminApi(blocked);
+  assert.equal(blocked.res.statusCode,403);
+  assert.equal(blocked.db.personalAiBotAppointments,undefined);
+  const unsupported=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/appointments',
+    input:{applicationId:'application-1',permissions:['send_message']}
+  });
+  await handlePersonalAiBotsAdminApi(unsupported);
+  assert.equal(unsupported.res.statusCode,400);
+  assert.deepEqual(unsupported.db.personalAiBotAppointments,[]);
+});
+
 test('candidate application routes are owner-only and reject independent AI identities',async()=>{
   const nonOwner=makeContext({
     method:'POST',path:'/api/admin/personal-ai-bots/applications',
