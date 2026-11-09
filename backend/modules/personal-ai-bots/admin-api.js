@@ -1,4 +1,54 @@
 import { isRelationshipBlocked } from '../relationships/friends.js';
+
+function canonicalAiIdentity(bot) {
+  const parts=String(bot.displayName||'').trim().split(/\\s+/).filter(Boolean);
+  const firstName=String(bot.firstName||parts[0]||'AI').trim();
+  const lastName=String(bot.lastName||parts[parts.length-1]||'Identity').trim();
+  const middleName=String(bot.middleName||parts.slice(1,-1).join(' ')).trim();
+  const lifecycleStatus=bot.status==='enabled'?'active'
+    :bot.status==='paused'?'restricted'
+      :bot.status==='suspended'?'suspended'
+        :bot.status==='archived'?'archived':'created';
+  const supportedGenders=new Set(['female','male','non_binary','other','prefer_not_to_specify']);
+  const gender=String(bot.gender||'prefer_not_to_specify').toLowerCase();
+  return {
+    id:String(bot.id),
+    population:String(bot.population||'independent'),
+    identity_type:String(bot.identityType||'social_personality'),
+    category_id:String(bot.categoryId||''),
+    status:lifecycleStatus,
+    parent_identity_id:bot.parentIdentityId||null,
+    public_profile_slug:String(bot.slug||('ai-'+String(bot.id).replace(/-/g,'').slice(0,12))),
+    public_profile_enabled:false,
+    first_name:firstName,
+    last_name:lastName,
+    middle_name:middleName,
+    full_name:[firstName,middleName,lastName].filter(Boolean).join(' '),
+    display_name:String(bot.displayName||[firstName,middleName,lastName].filter(Boolean).join(' ')),
+    username:String(bot.username||''),
+    biography:String(bot.bio||bot.description||''),
+    introduction:String(bot.introduction||''),
+    gender:supportedGenders.has(gender)?gender:'prefer_not_to_specify',
+    nationality:String(bot.nationality||''),
+    country_of_origin:String(bot.countryOfOrigin||''),
+    current_country:String(bot.currentCountry||''),
+    time_zone:String(bot.activitySchedule?.timezone||bot.timeZone||'America/Jamaica'),
+    personality:String(bot.personality||''),
+    interests:Array.isArray(bot.interests)?bot.interests:[],
+    hobbies:Array.isArray(bot.hobbies)?bot.hobbies:[],
+    profession:String(bot.profession||''),
+    skills:Array.isArray(bot.skills)?bot.skills:[],
+    memory_enabled:bot.memoryEnabled===true,
+    memory_configuration:bot.memoryConfiguration&&typeof bot.memoryConfiguration==='object'?bot.memoryConfiguration:{},
+    visibility:'private',
+    created_at:bot.createdAt||new Date().toISOString()
+  };
+}
+
+async function persistCanonicalIdentities(bots,persistAiIdentities) {
+  if(typeof persistAiIdentities!=='function'||!Array.isArray(bots)||!bots.length)return;
+  await persistAiIdentities(bots.map(canonicalAiIdentity));
+}
 import {
   ensurePersonalAiBotCollections,
   getPersonalAiBotCategories,
@@ -23,7 +73,7 @@ import {
 } from './personal-ai-bots-service.js';
 
 export async function handlePersonalAiBotsAdminApi(context) {
-  const {req,res,url,method,path,user,input,db,saveStore,uid,now,json,isOwnerAdmin,isSameOriginWrite,lookupAdminMember}=context;
+  const {req,res,url,method,path,user,input,db,saveStore,uid,now,json,isOwnerAdmin,isSameOriginWrite,lookupAdminMember,persistAiIdentities,listAiIdentities}=context;
   const root='/api/admin/personal-ai-bots';
   if(path!==root&&!path.startsWith(root+'/'))return false;
   if(!isOwnerAdmin)return (json(res,403,{error:'Only the designated MFA-verified Minglora owner can manage the Personal AI Bots Network.'}),true);
@@ -34,8 +84,11 @@ export async function handlePersonalAiBotsAdminApi(context) {
   try{
     if(method==='GET'&&path===root){
       const overview=getPersonalAiBotOverview(db);
+      const identityRecords=typeof listAiIdentities==='function'?await listAiIdentities({limit:1000,offset:0}):null;
       return (json(res,200,{
         ...overview,
+        identityRecords:Array.isArray(identityRecords)?identityRecords:[],
+        identityRecordsSource:Array.isArray(identityRecords)?'minglora_supabase_postgresql':'legacy_runtime_state',
         categories:getPersonalAiBotCategories(db),
         bots:db.personalAiBots.slice().sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt))),
         tasks:db.personalAiBotTasks.slice(0,100),
@@ -46,11 +99,13 @@ export async function handlePersonalAiBotsAdminApi(context) {
     }
     if(method==='POST'&&path===root){
       const bot=createPersonalAiBot(db,input||{},user.id,stamp,uid);
+      await persistCanonicalIdentities([bot],persistAiIdentities);
       await saveStore();
       return (json(res,201,{ok:true,bot}),true);
     }
     if(method==='POST'&&path===root+'/starter-set'){
       const bots=createPersonalAiBotStarterSet(db,user.id,stamp,uid);
+      await persistCanonicalIdentities(bots,persistAiIdentities);
       await saveStore();
       return (json(res,201,{ok:true,created:bots.length,bots}),true);
     }
@@ -89,6 +144,7 @@ export async function handlePersonalAiBotsAdminApi(context) {
     }
     if(method==='POST'&&path===root+'/emergency-shutdown'){
       const result=emergencyShutdownPersonalAiBots(db,user.id,stamp,uid);
+      await persistCanonicalIdentities(db.personalAiBots,persistAiIdentities);
       await saveStore();
       return (json(res,200,{...result,message:'Emergency shutdown complete. Enabled bots were paused and open tasks were cancelled.'}),true);
     }
@@ -100,12 +156,14 @@ export async function handlePersonalAiBotsAdminApi(context) {
     }
     if(method==='POST'&&path===root+'/bots/bulk'){
       const result=bulkUpdatePersonalAiBots(db,input?.botIds,input?.status,user.id,stamp,uid);
+      await persistCanonicalIdentities(result.bots,persistAiIdentities);
       await saveStore();
       return (json(res,200,{ok:true,...result}),true);
     }
     const botMatch=path.match(/^\/api\/admin\/personal-ai-bots\/bots\/([0-9a-f-]{36})$/i);
     if(botMatch&&method==='PATCH'){
       const bot=updatePersonalAiBot(db,botMatch[1],input||{},user.id,stamp,uid);
+      await persistCanonicalIdentities([bot],persistAiIdentities);
       await saveStore();
       return (json(res,200,{ok:true,bot}),true);
     }
