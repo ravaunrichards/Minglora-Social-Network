@@ -46,7 +46,7 @@ test('login and registration buttons have a direct click path independent of app
 
 test('auth handler loads before the large application bundle', () => {
   const html = fs.readFileSync(path.join(root, 'public/index.html'), 'utf8');
-  assert.ok(html.indexOf('auth-login.js?v=20261105-admin-mfa-enrollment-1') < html.indexOf('/app.js?'));
+  assert.ok(html.indexOf('auth-login.js?v=20261109-oauth-pkce-buttons-1') < html.indexOf('/app.js?'));
   assert.match(serviceWorker, /const CACHE_NAME='minglora-shell-v\d+-[a-z0-9-]+'/);
   assert.match(serviceWorker, /auth-login\.js\?v=20261105-admin-mfa-enrollment-1/);
 });
