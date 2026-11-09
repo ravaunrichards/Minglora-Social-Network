@@ -254,5 +254,5 @@ test('team assignment rejects unknown bots and unbounded input',()=>{
   const db=makeDb();
   const team=createPersonalAiBotTeam(db,{name:'Review Team'},actor,stamp,uid);
   assert.throws(()=>assignPersonalAiBotsToTeam(db,team.id,['not-a-bot'],actor,stamp,uid),/could not be found/);
-  assert.throws(()=>assignPersonalAiBotsToTeam(db,team.id,new Array(101).fill('x'),'owner',stamp,uid),/between 1 and 100/);
+  assert.throws(()=>assignPersonalAiBotsToTeam(db,team.id,new Array(101).fill('x'),actor,stamp,uid),/between 1 and 100/);
 });
