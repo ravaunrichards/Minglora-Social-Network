@@ -65,8 +65,9 @@ export function getPersonalAiBotCategories(db) {
   ensurePersonalAiBotCollections(db);
   const settings=ensurePersonalAiBotCollections(db);
   const disabled=new Set(settings.disabledCategoryIds || []);
+  const overrides=settings.categoryOverrides||{};
   return [
-    ...PERSONAL_AI_BOT_CATEGORIES.map(item => ({ ...item, builtIn:true, enabled:!disabled.has(item.id) })),
+    ...PERSONAL_AI_BOT_CATEGORIES.map(item => ({ ...item, ...(overrides[item.id]||{}), builtIn:true, enabled:!disabled.has(item.id) })),
     ...db.personalAiBotCategories.map(item => ({ ...item, builtIn:false, enabled:!disabled.has(item.id) }))
   ];
 }
@@ -90,6 +91,7 @@ export function createPersonalAiBot(db, input, actorId, timestamp, uid) {
   const displayName = String(input.displayName || '').trim().replace(/\s+/g,' ');
   const categoryId = String(input.categoryId || '').trim();
   const category = getPersonalAiBotCategories(db).find(item => item.id === categoryId);
+  if (!category?.enabled) throw Object.assign(new Error('This bot category is disabled.'), { status:409 });
   if (displayName.length < 2 || displayName.length > 64) throw Object.assign(new Error('Bot name must be between 2 and 64 characters.'), { status:400 });
   if (!category) throw Object.assign(new Error('Choose a valid bot category.'), { status:400 });
   const botId = uid();
@@ -251,8 +253,14 @@ export function updatePersonalAiBotCategory(db, categoryId, input, actorId, time
   ensurePersonalAiBotCollections(db);
   const category=getPersonalAiBotCategories(db).find(item=>item.id===categoryId);
   if(!category)throw Object.assign(new Error('Bot category not found.'),{status:404});
-  const source=category.builtIn?PERSONAL_AI_BOT_CATEGORIES:db.personalAiBotCategories;
-  const stored=source.find(item=>item.id===categoryId);
+  const settings=ensurePersonalAiBotCollections(db);
+  let stored;
+  if(category.builtIn){
+    settings.categoryOverrides ||= {};
+    stored=settings.categoryOverrides[categoryId] ||= {id:categoryId,name:category.name,description:category.description};
+  } else {
+    stored=db.personalAiBotCategories.find(item=>item.id===categoryId);
+  }
   const changes=[];
   if(Object.hasOwn(input,'name')){
     const name=String(input.name||'').trim().replace(/\s+/g,' ');
@@ -266,15 +274,14 @@ export function updatePersonalAiBotCategory(db, categoryId, input, actorId, time
     changes.push('description');
   }
   if(Object.hasOwn(input,'enabled')){
-    const enabled=Boolean(input.enabled);
-    const settings=ensurePersonalAiBotCollections(db);
+    if(typeof input.enabled!=='boolean')throw Object.assign(new Error('Choose whether this category is enabled.'),{status:400});
     const disabled=new Set(settings.disabledCategoryIds||[]);
-    if(enabled)disabled.delete(categoryId);else disabled.add(categoryId);
+    if(input.enabled)disabled.delete(categoryId);else disabled.add(categoryId);
     settings.disabledCategoryIds=[...disabled];
-    changes.push(enabled?'enabled':'disabled');
+    changes.push(input.enabled?'enabled':'disabled');
   }
   if(changes.length)audit(db,actorId,'category.updated','category',categoryId,'Updated '+stored.name+': '+changes.join(', '),timestamp,uid);
-  return {...stored,...category, name:stored.name, description:stored.description, enabled:!new Set(ensurePersonalAiBotCollections(db).disabledCategoryIds||[]).has(categoryId)};
+  return getPersonalAiBotCategories(db).find(item=>item.id===categoryId);
 }
 
 export function setPersonalAiBotCategoryEnabled(db, categoryId, enabled, actorId, timestamp, uid) {
