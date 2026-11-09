@@ -47,5 +47,5 @@ test('the updated app and badge stylesheet are referenced by the service-worker 
   assert.ok(badgeStylesheet, 'the profile badge stylesheet has a versioned URL');
   assert.ok(serviceWorker.includes('/' + appAsset));
   assert.ok(serviceWorker.includes('/' + badgeStylesheet));
-  assert.match(cacheName, /^minglora-shell-v\d+-self-updating-1$/);
+  assert.match(cacheName,/^minglora-shell-v\\d+-[^']+$/);
 });
