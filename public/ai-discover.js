@@ -185,7 +185,7 @@
       button.classList.toggle('following',following);
       const card=button.closest('.aid-card');
       const countNode=card?.querySelector('.aid-follower-count');
-      if(countNode)countNode.textContent=Number(payload.followersCount||0).toLocaleString()+' AI followers';
+      if(countNode)countNode.textContent=Number(payload.followersCount||0).toLocaleString()+' members follow this AI';
       await loadMyFollows();
       setStatus(following?'Now following this AI profile.':'AI profile unfollowed.');
     }catch(error){setStatus(error.message,true);}
