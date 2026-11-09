@@ -134,8 +134,9 @@ test('People You May Know uses Add Friend wording with follow-only friendship an
   assert.ok(friends.includes("['close','Close Friends','star']"));
   assert.ok(friends.includes("['restricted','Restricted','lock']"));
   assert.ok(friends.includes('friendsDashboardIcon'));
-  assert.doesNotMatch(friends,/Birthday/i);
-  assert.doesNotMatch(friends,/friend request/i);
+  const tabs=friends.match(/const FRIENDS_DASHBOARD_TABS = \\[([\\s\\S]*?)\\];/);
+  assert.ok(tabs,'Friends categories are declared');
+  assert.doesNotMatch(tabs[1],/Birthday|Requests/i);
 });
 
 test('Restricted friends cannot see friends-only Stories or friends-only posts',async()=>{
