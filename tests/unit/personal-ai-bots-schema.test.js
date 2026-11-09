@@ -26,6 +26,18 @@ const discoverySql = await readFile(
   new URL('../../supabase/migrations/20261109230000_minglora_ai_identity_discovery.sql', import.meta.url),
   'utf8'
 );
+const safetySql = await readFile(
+  new URL('../../supabase/migrations/20261109250000_minglora_ai_public_profile_safety.sql', import.meta.url),
+  'utf8'
+);
+const profileHtml = await readFile(
+  new URL('../../public/ai-profile.html', import.meta.url),
+  'utf8'
+);
+const profileUi = await readFile(
+  new URL('../../public/ai-profile.js', import.meta.url),
+  'utf8'
+);
 
 const socialSql = await readFile(
   new URL('../../supabase/migrations/20261109240000_minglora_ai_social_follow_and_saved_searches.sql', import.meta.url),
@@ -593,4 +605,63 @@ test('discovery UI supports explicit AI follows and private saved searches',()=>
   assert.ok(discoveryUi.includes("fetch('/api/ai/follows'"));
   assert.ok(discoveryUi.includes("fetch('/api/ai/discovery/saved-searches'"));
   assert.ok(discoveryUi.includes("fetch('/api/ai/discovery/saved-searches/'+encodeURIComponent(id)"));
+});
+
+
+test('AI profile safety tables are isolated, RLS protected and audited',()=>{
+  assert.match(safetySql,/CREATE TABLE IF NOT EXISTS public\.ai_identity_blocks/);
+  assert.match(safetySql,/CREATE TABLE IF NOT EXISTS public\.ai_identity_reports/);
+  assert.match(safetySql,/ALTER TABLE public\.ai_identity_blocks ENABLE ROW LEVEL SECURITY/);
+  assert.match(safetySql,/ALTER TABLE public\.ai_identity_reports ENABLE ROW LEVEL SECURITY/);
+  assert.match(safetySql,/GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public\.ai_identity_blocks TO service_role/);
+  assert.match(safetySql,/GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public\.ai_identity_reports TO service_role/);
+  assert.match(safetySql,/ai_identity_follow_block_guard_trigger/);
+  assert.match(safetySql,/This AI identity is blocked by this member/);
+  assert.match(safetySql,/SET status='removed'/);
+  assert.match(safetySql,/safety\.profile_blocked/);
+  assert.match(safetySql,/safety\.profile_reported/);
+  assert.doesNotMatch(safetySql,/CREATE TABLE IF NOT EXISTS public\.(?:user_blocks|user_follows)/i);
+});
+
+test('public AI profile getter and report RPC only expose active public opted-in profiles',()=>{
+  assert.match(safetySql,/CREATE OR REPLACE FUNCTION public\.minglora_ai_identity_public_profile_get/);
+  assert.match(safetySql,/identity\.status='active'/);
+  assert.match(safetySql,/identity\.public_profile_enabled=true/);
+  assert.match(safetySql,/profile\.visibility='public'/);
+  assert.match(safetySql,/ai_identity_blocks AS block/);
+  assert.match(safetySql,/CREATE OR REPLACE FUNCTION public\.minglora_ai_identity_report_create/);
+  assert.match(safetySql,/status text NOT NULL DEFAULT 'pending'/);
+  assert.match(safetySql,/reviewed_by uuid REFERENCES auth\.users/);
+  assert.match(safetySql,/GRANT EXECUTE ON FUNCTION public\.minglora_ai_identity_public_profile_get\(text,uuid\) TO service_role/);
+});
+
+test('public AI profile and safety endpoints enforce signed-in sessions and server block policy',()=>{
+  const routes=serverSource.slice(serverSource.indexOf("const publicAiProfileMatch"),serverSource.indexOf("if (await handlePersonalAiBotsAdminApi",serverSource.indexOf("const publicAiProfileMatch")));
+  assert.match(routes,/ai_identity_public_profile_get/);
+  assert.match(routes,/blockedBetween\(user\.id,ownerId\)/);
+  assert.match(routes,/ai_identity_block_set/);
+  assert.match(routes,/ai_identity_block_list/);
+  assert.match(routes,/ai_identity_report_create/);
+  assert.match(serverSource,/const publicAiPageMatch=p\.match/);
+  assert.match(serverSource,/path\.join\(publicDir,'ai-profile\.html'\)/);
+  assert.match(serverSource,/requireAuth\(user\);\s*if\(method==='GET'&&p==='\/api\/ai\/discover'/);
+});
+
+test('public AI profile page offers follow, block and report actions with AI disclosure',()=>{
+  assert.match(profileHtml,/AI MEMBER · NOT A HUMAN ACCOUNT/);
+  assert.match(profileHtml,/id="aip-block"/);
+  assert.match(profileHtml,/id="aip-report-form"/);
+  assert.match(profileUi,/fetch\('\/api\/ai\/profiles'\+/);
+  assert.match(profileUi,/fetch\('\/api\/ai\/follows'/);
+  assert.match(profileUi,/fetch\('\/api\/ai\/reports'/);
+  assert.match(profileUi,/method:'POST'/);
+  assert.match(profileUi,/impersonation/);
+  assert.match(profileUi,/inappropriate_content/);
+});
+
+test('AI discovery links profile slugs and includes blocked identity management',()=>{
+  assert.match(discoveryUi,/href="\/ai\/'\+encodeURIComponent\(item\.publicProfileSlug/);
+  assert.match(discoveryUi,/loadBlockedIdentities/);
+  assert.match(discoveryUi,/aid-unblock-item/);
+  assert.match(discoveryUi,/method:'DELETE'/);
 });
