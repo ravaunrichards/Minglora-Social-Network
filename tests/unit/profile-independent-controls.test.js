@@ -32,18 +32,18 @@ test('the regular profile editor retains photo upload, camera and crop workflows
   assert.match(app,/function openEditProfile\(u,mediaOnly=null\)/);
 });
 
-test('admin profile keeps shared owner actions and its standard administrator tools',()=>{
+test('admin profile keeps the regular owner layout and administrator recognition',()=>{
   const relationshipStart=app.indexOf('const relationshipActions=isMe');
-  const adminStart=app.indexOf('const adminToolsMarkup');
-  const adminEnd=app.indexOf('const profileActionMarkup',adminStart);
-  assert.ok(relationshipStart>=0&&adminStart>relationshipStart&&adminEnd>adminStart);
-  const ownerActions=app.slice(relationshipStart,adminStart);
-  const admin=app.slice(adminStart,adminEnd);
+  const profileAction=app.indexOf('const profileActionMarkup=relationshipActions',relationshipStart);
+  assert.ok(relationshipStart>=0&&profileAction>relationshipStart);
+  const ownerActions=app.slice(relationshipStart,profileAction);
   assert.match(ownerActions,/id="edit-profile"/);
   assert.match(ownerActions,/id="profile-add-story"/);
-  assert.match(admin,/data-profile-admin-action="privacy"/);
-  assert.match(admin,/data-profile-admin-action="edit-story"/);
-  assert.doesNotMatch(admin,/profile-edit-admin-cover|Edit Cover/);
+  assert.match(ownerActions,/id="profile-people-toggle"/);
+  assert.ok(app.includes('profile-admin-identity'),'administrator recognition remains in the identity column');
+  assert.ok(app.includes('data-profile-overflow-action="verification-review"'),'administrator-only tools remain reachable through the regular profile menu');
+  assert.doesNotMatch(ownerActions,/profile-edit-admin-cover|Edit Cover/);
+  assert.doesNotMatch(app,/profile-header-card--admin|profile-info--admin/);
 });
 
 test('profile cover and portrait remain independent and the portrait stays left of the identity',()=>{
@@ -62,7 +62,8 @@ test('profile cover and portrait remain independent and the portrait stays left 
   assert.ok(css.includes('position: relative !important'));
 });
 test('profile editing retains centered native dialogs and About section editing',()=>{
-  assert.ok(app.includes("const modal=document.createElement('dialog');modal.className='profile-inline-editor profile-editor-dialog'"));
+  assert.ok(app.includes("modal.id='minglora-profile-editor'"));
+  assert.ok(app.includes("modal.className='profile-inline-editor profile-editor-dialog'"));
   assert.ok(app.includes("const modal=document.createElement('dialog');modal.className='profile-inline-editor about-section-inline-editor profile-editor-dialog'"));
   assert.ok(app.includes('modal.showModal()'));
   assert.ok(app.includes("modal.addEventListener('cancel'"));
