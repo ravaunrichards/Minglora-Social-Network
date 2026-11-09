@@ -7,6 +7,7 @@ on:
       - 'backend/modules/personal-ai-bots/**'
       - 'public/personal-ai-bots.*'
       - 'supabase/migrations/*ai_bot*'
+      - 'supabase/migrations/*ai_provider*'
       - 'tests/unit/personal-ai-bots*.test.js'
       - 'src/personal-ai-bot-worker.js'
       - 'src/server.js'
