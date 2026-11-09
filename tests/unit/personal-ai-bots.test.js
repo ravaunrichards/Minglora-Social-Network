@@ -23,7 +23,7 @@ import {
   createPersonalAiBotTeam,
   updatePersonalAiBotTeam,
   assignPersonalAiBotsToTeam,
-  removePersonalAiBotFromTeam
+  removePersonalAiBotFromTeam,
   PERSONAL_AI_BOT_DEPARTMENTS,
   getPersonalAiBotDepartments,
   createPersonalAiBotDepartment,
