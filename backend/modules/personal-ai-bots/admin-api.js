@@ -11,6 +11,9 @@ import {
   cancelPersonalAiBotTask,
   setPersonalAiBotNetworkSettings,
   setPersonalAiBotCategoryEnabled,
+  updatePersonalAiBotCategory,
+  bulkUpdatePersonalAiBots,
+  emergencyShutdownPersonalAiBots,
   PERSONAL_AI_BOT_CATEGORIES
 } from './personal-ai-bots-service.js';
 
@@ -55,11 +58,21 @@ export async function handlePersonalAiBotsAdminApi(context) {
       await saveStore();
       return (json(res,200,{ok:true,network}),true);
     }
+    if(method==='POST'&&path===root+'/emergency-shutdown'){
+      const result=emergencyShutdownPersonalAiBots(db,user.id,stamp,uid);
+      await saveStore();
+      return (json(res,200,{...result,message:'Emergency shutdown complete. Enabled bots were paused and open tasks were cancelled.'}),true);
+    }
     const categoryMatch=path.match(/^\/api\/admin\/personal-ai-bots\/categories\/([a-z0-9-]+)$/i);
     if(categoryMatch&&method==='PATCH'){
-      const category=setPersonalAiBotCategoryEnabled(db,categoryMatch[1],input?.enabled,user.id,stamp,uid);
+      const category=updatePersonalAiBotCategory(db,categoryMatch[1],input||{},user.id,stamp,uid);
       await saveStore();
       return (json(res,200,{ok:true,category}),true);
+    }
+    if(method==='POST'&&path===root+'/bots/bulk'){
+      const result=bulkUpdatePersonalAiBots(db,input?.botIds,input?.status,user.id,stamp,uid);
+      await saveStore();
+      return (json(res,200,{ok:true,...result}),true);
     }
     const botMatch=path.match(/^\/api\/admin\/personal-ai-bots\/bots\/([0-9a-f-]{36})$/i);
     if(botMatch&&method==='PATCH'){
@@ -89,6 +102,14 @@ export async function handlePersonalAiBotsAdminApi(context) {
     const taskMatch=path.match(/^\/api\/admin\/personal-ai-bots\/tasks\/([0-9a-f-]{36})\/(approve|cancel)$/i);
     if(taskMatch&&method==='POST'){
       const action=taskMatch[2];
+      if(action==='approve'){
+        const existing=db.personalAiBotTasks.find(item=>item.id===taskMatch[1]);
+        const bot=existing?db.personalAiBots.find(item=>item.id===existing.botId):null;
+        const network=db.personalAiBotSettings.find(item=>item.id==='global');
+        const category=bot?getPersonalAiBotCategories(db).find(item=>item.id===bot.categoryId):null;
+        if(!existing||!bot)return (json(res,404,{error:'Instruction or bot not found.'}),true);
+        if(!network?.enabled||!bot.enabled||bot.status!=='enabled'||!category?.enabled)return (json(res,409,{error:'The network, bot and category must all be enabled before an instruction can be approved.'}),true);
+      }
       const task=action==='approve'
         ?approvePersonalAiBotTask(db,taskMatch[1],user.id,stamp,uid)
         :cancelPersonalAiBotTask(db,taskMatch[1],user.id,stamp,uid);
