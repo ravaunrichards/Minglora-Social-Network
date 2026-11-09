@@ -6,7 +6,8 @@ Repository: https://github.com/ravaunrichards/Minglora-Social-Network
 Branch: `feat/personal-ai-bots-network-control-center`
 Draft PR: https://github.com/ravaunrichards/Minglora-Social-Network/pull/202
 Supabase project: `gzycobgbasnqqhnympkr` (existing Minglora project only)
-Current branch head: `c471a4afb3e2ef3413fcea5d3d55fb76a5cbfb4c`\nLatest AI Network implementation commit: `a1e1f5d2ad2ed2b88346341dcfda5fb706edcbae`
+Current branch head: `c471a4afb3e2ef3413fcea5d3d55fb76a5cbfb4c`
+Latest AI Network implementation commit: `a1e1f5d2ad2ed2b88346341dcfda5fb706edcbae`
 PR must remain **OPEN + DRAFT**. Do not merge, deploy, or apply production migrations without the required review/authorization.
 
 ## Original task
