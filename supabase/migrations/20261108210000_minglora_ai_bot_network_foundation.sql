@@ -961,7 +961,7 @@ BEGIN
     'minglora_ai_bot_follows',
     'minglora_ai_bot_followers',
     'minglora_ai_bot_follow_exclusions',
-    'minglora_ai_bot_audit'
+    'minglora_ai_bot_audit',
     'ai_identities','ai_names','ai_profiles','ai_emails','ai_provider_accounts',
     'ai_provider_models','ai_provider_assignments','ai_identity_locations','ai_identity_languages',
     'ai_identity_capabilities','ai_identity_permissions','ai_identity_owners',
