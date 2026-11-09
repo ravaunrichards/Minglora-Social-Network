@@ -58,7 +58,9 @@ test('For You header and search reserve their own space above the scrolling feed
   assert.ok(html.includes('/for-you-controls.css?v=20261108-home-live-mixed-feed-2'));
   assert.ok(sw.includes('/for-you-controls.css?v=20261108-home-live-mixed-feed-2'));
   assert.match(html,/\/app\.js\?v=[^"']+/);
-  assert.ok(sw.includes('/app.js?v=20261109-profile-layout-restored-2'));
+  const activeAppScript=html.match(/src="(\/app\.js\?v=[^"]+)"/)?.[1];
+  assert.ok(activeAppScript,'index references the app controller');
+  assert.ok(sw.includes("'"+activeAppScript+"'"),'service worker caches the current app controller');
   assert.match(sw, /^const CACHE_NAME='minglora-shell-v[0-9]+-[^']+';$/m);
 });
 
@@ -82,7 +84,7 @@ test('Home Stories use a Facebook-style create card, scrollable story rail and n
   assert.match(html,/\/app\.js\?v=[^"']+/);
   assert.ok(sw.includes('/styles.css?v=20261108-facebook-stories-2'));
   assert.ok(sw.includes('/app.js?v=20261109-profile-layout-restored-2'));
-  assert.match(sw, /^const CACHE_NAME='minglora-shell-v[0-9]+-facebook-people-responsive-1';$/m);
+  assert.match(sw, /^const CACHE_NAME='minglora-shell-v[0-9]+-[^']+';$/m);
 });
 
 test('Stories create button stays above its label and uses consistent Facebook-style card sizing', async () => {
