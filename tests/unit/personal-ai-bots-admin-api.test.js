@@ -41,6 +41,8 @@ test('owner overview returns the requested categories without fabricated bots or
   assert.equal(context.res.payload.categories.length,15);
   assert.equal(context.res.payload.departments.length,20);
   assert.equal(context.res.payload.departments.filter(item=>item.builtIn).length,20);
+  assert.equal(context.res.payload.jobPositions.length,20);
+  assert.ok(context.res.payload.jobPositions.every(item=>item.permissions.length===0&&item.appointmentEnabled===false));
   assert.equal(context.res.payload.bots.length,0);
   assert.equal(context.res.payload.tasks.length,0);
   assert.equal(context.res.payload.network.enabled,false);
