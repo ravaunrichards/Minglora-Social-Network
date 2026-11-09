@@ -257,7 +257,7 @@ Deno.serve(async (req: Request) => {
     if (password.length < 8 || password.length > 128) return json(400, { error: "Set a password between 8 and 128 characters." });
     if (!username) return json(400, { error: "Enter a username to create the member profile." });
     if (!/^[a-z0-9_]{3,30}$/.test(username)) return json(400, { error: "Username must be 3–30 lowercase characters and use letters, numbers or underscores." });
-    const { data: usernameOwner, error: usernameLookupError } = await admin.from("profiles").select("id").ilike("username", username).maybeSingle();
+    const { data: usernameOwner, error: usernameLookupError } = await admin.from("profiles").select("id").eq("username", username).maybeSingle();
     if (usernameLookupError) return json(503, { error: "Minglora could not validate username availability." });
     if (usernameOwner) return json(409, { error: "That username is already in use." });
     const { data: created, error: createError } = await admin.auth.admin.createUser({
@@ -376,7 +376,7 @@ Deno.serve(async (req: Request) => {
       profilePatch.username = value;
       if (!/^[a-z0-9_]{3,30}$/.test(value)) return json(400, { error: "Username must be 3–30 lowercase characters and use letters, numbers or underscores." });
       const { data: usernameOwner, error: usernameLookupError } = await admin.from("profiles")
-        .select("id").ilike("username", value).neq("id", userId).maybeSingle();
+        .select("id").eq("username", value).neq("id", userId).maybeSingle();
       if (usernameLookupError) return json(503, { error: "Minglora could not validate username availability." });
       if (usernameOwner) return json(409, { error: "That username is already in use." });
     }
