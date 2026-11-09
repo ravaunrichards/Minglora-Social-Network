@@ -93,6 +93,20 @@ test('every AI identity stores first, middle and last names separately and suppo
   assert.equal(updated.fullName,'Minglora Learning Companion');
 });
 
+test('AI identity creation stores gender identity and gender presentation as separate attributes',()=>{
+  const db=makeDb();
+  const bot=createPersonalAiBot(db,{
+    displayName:'Minglora Culture Guide',
+    firstName:'Minglora',
+    lastName:'Culture Guide',
+    categoryId:'ai-educators',
+    gender:'non_binary',
+    genderPresentation:'androgynous'
+  },actor,stamp,uid);
+  assert.equal(bot.gender,'non_binary');
+  assert.equal(bot.genderPresentation,'androgynous');
+});
+
 test('single-word AI names require explicit separate first and last name fields',()=>{
   const db=makeDb();
   assert.throws(()=>createPersonalAiBot(db,{displayName:'Minglora',categoryId:'ai-friends'},actor,stamp,uid),/both an AI first name and last name/);
