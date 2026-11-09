@@ -121,6 +121,27 @@ jobs:
       - name: Run automated tests
         run: npm test
 
+  admin-centre-viewport:
+    name: Admin Centre real-browser viewport regression
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Install pinned Playwright browser runner
+        run: npm install --no-save --package-lock=false playwright@1.65.0
+      - name: Install Chromium and system dependencies
+        run: npx playwright install --with-deps chromium
+      - name: Verify Admin Centre at phone, tablet and desktop widths
+        run: node --test tests/e2e/admin-centre-layout.test.js
+
   for-you-functional:
     name: For You functional navigation
     runs-on: ubuntu-latest
