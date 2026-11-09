@@ -641,6 +641,10 @@ DECLARE
   v_language_code text;
   v_language_name text;
   v_language_dialect text;
+  v_location jsonb;
+  v_location_type text;
+  v_capability jsonb;
+  v_capability_code text;
 BEGIN
   IF p_identity IS NULL OR pg_catalog.jsonb_typeof(p_identity) <> 'object' OR p_actor_user_id IS NULL THEN
     RAISE EXCEPTION 'A valid identity object and authenticated owner are required.' USING ERRCODE = '22023';
@@ -668,6 +672,20 @@ BEGIN
   IF v_population NOT IN ('independent','organizational','specialized_service') OR
      v_status NOT IN ('proposed','created','under_review','approved','active','restricted','suspended','archived','retired') THEN
     RAISE EXCEPTION 'AI population or lifecycle status is invalid.' USING ERRCODE = '22023';
+  END IF;
+  IF (p_identity ? 'locations' AND (
+        pg_catalog.jsonb_typeof(p_identity->'locations') IS DISTINCT FROM 'array'
+        OR pg_catalog.jsonb_array_length(p_identity->'locations') > 10
+      ))
+     OR (p_identity ? 'education' AND (
+        pg_catalog.jsonb_typeof(p_identity->'education') IS DISTINCT FROM 'array'
+        OR pg_catalog.jsonb_array_length(p_identity->'education') > 50
+      ))
+     OR (p_identity ? 'capabilities' AND (
+        pg_catalog.jsonb_typeof(p_identity->'capabilities') IS DISTINCT FROM 'array'
+        OR pg_catalog.jsonb_array_length(p_identity->'capabilities') > 100
+      )) THEN
+    RAISE EXCEPTION 'AI profile location, education or capability collections exceed their supported format or size.' USING ERRCODE = '22023';
   END IF;
 
   IF v_category IS NOT NULL THEN
@@ -736,26 +754,32 @@ BEGIN
     updated_at=pg_catalog.now();
 
   INSERT INTO public.ai_profiles (
-    identity_id,biography,introduction,gender,nationality,country_of_origin,current_country,
-    time_zone,personality,interests,hobbies,profession,skills,avatar_storage_reference,
-    cover_storage_reference,memory_enabled,memory_configuration,ai_disclosure_visible,
-    fictional_identity,visibility,updated_at
+    identity_id,biography,introduction,gender,gender_presentation,nationality,
+    country_of_origin,current_country,time_zone,personality,communication_style,
+    interests,hobbies,education,profession,skills,avatar_storage_reference,
+    cover_storage_reference,voice_preferences,avatar_preferences,memory_enabled,
+    memory_configuration,ai_disclosure_visible,fictional_identity,visibility,updated_at
   ) VALUES (
     v_id,
     COALESCE(LEFT(p_identity->>'biography',4000),''),
     COALESCE(LEFT(p_identity->>'introduction',2000),''),
     COALESCE(NULLIF(p_identity->>'gender',''),'prefer_not_to_specify'),
+    COALESCE(LEFT(p_identity->>'gender_presentation',80),''),
     COALESCE(p_identity->>'nationality',''),
     COALESCE(p_identity->>'country_of_origin',''),
     COALESCE(p_identity->>'current_country',''),
     COALESCE(NULLIF(p_identity->>'time_zone',''),'UTC'),
     COALESCE(LEFT(p_identity->>'personality',4000),''),
+    COALESCE(LEFT(p_identity->>'communication_style',2000),''),
     CASE WHEN pg_catalog.jsonb_typeof(p_identity->'interests')='array' THEN p_identity->'interests' ELSE '[]'::jsonb END,
     CASE WHEN pg_catalog.jsonb_typeof(p_identity->'hobbies')='array' THEN p_identity->'hobbies' ELSE '[]'::jsonb END,
+    CASE WHEN pg_catalog.jsonb_typeof(p_identity->'education')='array' THEN p_identity->'education' ELSE '[]'::jsonb END,
     COALESCE(p_identity->>'profession',''),
     CASE WHEN pg_catalog.jsonb_typeof(p_identity->'skills')='array' THEN p_identity->'skills' ELSE '[]'::jsonb END,
     NULLIF(p_identity->>'avatar_storage_reference',''),
     NULLIF(p_identity->>'cover_storage_reference',''),
+    CASE WHEN pg_catalog.jsonb_typeof(p_identity->'voice_preferences')='object' THEN p_identity->'voice_preferences' ELSE '{}'::jsonb END,
+    CASE WHEN pg_catalog.jsonb_typeof(p_identity->'avatar_preferences')='object' THEN p_identity->'avatar_preferences' ELSE '{}'::jsonb END,
     COALESCE((p_identity->>'memory_enabled')::boolean,false),
     CASE WHEN pg_catalog.jsonb_typeof(p_identity->'memory_configuration')='object' THEN p_identity->'memory_configuration' ELSE '{}'::jsonb END,
     true,true,
@@ -766,17 +790,22 @@ BEGIN
     biography=EXCLUDED.biography,
     introduction=EXCLUDED.introduction,
     gender=EXCLUDED.gender,
+    gender_presentation=EXCLUDED.gender_presentation,
     nationality=EXCLUDED.nationality,
     country_of_origin=EXCLUDED.country_of_origin,
     current_country=EXCLUDED.current_country,
     time_zone=EXCLUDED.time_zone,
     personality=EXCLUDED.personality,
+    communication_style=EXCLUDED.communication_style,
     interests=EXCLUDED.interests,
     hobbies=EXCLUDED.hobbies,
+    education=EXCLUDED.education,
     profession=EXCLUDED.profession,
     skills=EXCLUDED.skills,
     avatar_storage_reference=EXCLUDED.avatar_storage_reference,
     cover_storage_reference=EXCLUDED.cover_storage_reference,
+    voice_preferences=EXCLUDED.voice_preferences,
+    avatar_preferences=EXCLUDED.avatar_preferences,
     memory_enabled=EXCLUDED.memory_enabled,
     memory_configuration=EXCLUDED.memory_configuration,
     visibility=EXCLUDED.visibility,
@@ -807,6 +836,264 @@ BEGIN
         )
         ON CONFLICT (identity_id,language_code,dialect) DO UPDATE SET
           language_name=EXCLUDED.language_name;
+      END IF;
+    END LOOP;
+  END IF;
+
+  IF p_identity ? 'locations' THEN
+    DELETE FROM public.ai_identity_locations WHERE identity_id=v_id;
+    FOR v_location IN SELECT value FROM pg_catalog.jsonb_array_elements(p_identity->'locations')
+    LOOP
+      IF pg_catalog.jsonb_typeof(v_location) <> 'object' THEN
+        CONTINUE;
+      END IF;
+      v_location_type := COALESCE(NULLIF(v_location->>'locationType',''),NULLIF(v_location->>'location_type',''),'current');
+      IF v_location_type NOT IN ('origin','current','operating','registered') THEN
+        CONTINUE;
+      END IF;
+      INSERT INTO public.ai_identity_locations (
+        identity_id,location_type,country_code,country_name,state_province,district,
+        parish_county,city,town,time_zone,is_primary
+      ) VALUES (
+        v_id,v_location_type,
+        pg_catalog.upper(pg_catalog.left(COALESCE(v_location->>'countryCode',v_location->>'country_code',''),2)),
+        pg_catalog.left(COALESCE(v_location->>'countryName',v_location->>'country_name',''),120),
+        pg_catalog.left(COALESCE(v_location->>'stateProvince',v_location->>'state_province',''),120),
+        pg_catalog.left(COALESCE(v_location->>'district',''),120),
+        pg_catalog.left(COALESCE(v_location->>'parishCounty',v_location->>'parish_county',''),120),
+        pg_catalog.left(COALESCE(v_location->>'city',''),120),
+        pg_catalog.left(COALESCE(v_location->>'town',''),120),
+        pg_catalog.left(COALESCE(v_location->>'timeZone',v_location->>'time_zone','UTC'),80),
+        COALESCE((v_location->>'isPrimary')::boolean,false)
+      )
+      ON CONFLICT (identity_id,location_type) DO UPDATE SET
+        country_code=EXCLUDED.country_code,
+        country_name=EXCLUDED.country_name,
+        state_province=EXCLUDED.state_province,
+        district=EXCLUDED.district,
+        parish_county=EXCLUDED.parish_county,
+        city=EXCLUDED.city,
+        town=EXCLUDED.town,
+        time_zone=EXCLUDED.time_zone,
+        is_primary=EXCLUDED.is_primary,
+        updated_at=pg_catalog.now();
+    END LOOP;
+  END IF;
+
+  IF p_identity ? 'capabilities' THEN
+    DELETE FROM public.ai_identity_capabilities WHERE identity_id=v_id;
+    FOR v_capability IN SELECT value FROM pg_catalog.jsonb_array_elements(p_identity->'capabilities')
+    LOOP
+      IF pg_catalog.jsonb_typeof(v_capability)='string' THEN
+        v_capability_code := pg_catalog.btrim(v_capability #>> '{}');
+      ELSIF pg_catalog.jsonb_typeof(v_capability)='object' THEN
+        v_capability_code := pg_catalog.btrim(COALESCE(v_capability->>'code',v_capability->>'capabilityCode',''));
+      ELSE
+        CONTINUE;
+      END IF;
+      IF v_capability_code ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{1,99}
+  VALUES (v_id,'human_admin',v_owner,true)
+  ON CONFLICT DO NOTHING;
+
+  IF v_is_new OR v_previous_status IS DISTINCT FROM v_status THEN
+    INSERT INTO public.ai_identity_status_history (
+      identity_id,previous_status,new_status,changed_by_user_id,reason
+    ) VALUES (v_id,v_previous_status,v_status,v_owner,'Minglora AI identity create/update');
+  END IF;
+
+  SELECT COALESCE(pg_catalog.max(v.version_number),0)+1 INTO v_version
+  FROM public.ai_identity_versions AS v WHERE v.identity_id=v_id;
+  INSERT INTO public.ai_identity_versions (
+    identity_id,version_number,configuration_snapshot,changed_by_user_id
+  ) VALUES (
+    v_id,v_version,p_identity,v_owner
+  );
+  INSERT INTO public.ai_identity_audit_logs (
+    identity_id,actor_user_id,action,target_type,target_id,summary
+  ) VALUES (
+    v_id,v_owner,CASE WHEN v_is_new THEN 'identity.created' ELSE 'identity.updated' END,
+    'ai_identity',v_id::text,'Persisted canonical Minglora AI identity and separate name fields.'
+  );
+
+  RETURN pg_catalog.jsonb_build_object(
+    'id',v_id,'population',v_population,'status',v_status,
+    'first_name',v_first_name,'last_name',v_last_name,'username',v_username,
+    'public_profile_slug',v_slug,'created',v_is_new
+  );
+END;
+$function$;
+
+
+CREATE OR REPLACE FUNCTION public.minglora_ai_identity_upsert_batch(
+  p_identities jsonb,
+  p_actor_user_id uuid
+) RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = ''
+AS $function$
+DECLARE
+  v_identity jsonb;
+  v_results jsonb := '[]'::jsonb;
+BEGIN
+  IF p_identities IS NULL OR pg_catalog.jsonb_typeof(p_identities) <> 'array' OR
+     pg_catalog.jsonb_array_length(p_identities) < 1 OR
+     pg_catalog.jsonb_array_length(p_identities) > 100 OR p_actor_user_id IS NULL THEN
+    RAISE EXCEPTION 'Provide between 1 and 100 AI identities and a valid owner.' USING ERRCODE = '22023';
+  END IF;
+  FOR v_identity IN SELECT value FROM pg_catalog.jsonb_array_elements(p_identities)
+  LOOP
+    v_results := v_results || pg_catalog.jsonb_build_array(
+      public.minglora_ai_identity_upsert(v_identity,p_actor_user_id)
+    );
+  END LOOP;
+  RETURN v_results;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.minglora_ai_identity_list(
+  p_owner_admin_id uuid,
+  p_limit integer DEFAULT 100,
+  p_offset integer DEFAULT 0
+) RETURNS jsonb
+LANGUAGE sql
+SECURITY INVOKER
+SET search_path = ''
+AS $function$
+  SELECT COALESCE(
+    pg_catalog.jsonb_agg(result.item ORDER BY result.created_at DESC),
+    '[]'::jsonb
+  )
+  FROM (
+    SELECT
+      pg_catalog.jsonb_build_object(
+        'id',i.identity_id,
+        'population',i.population,
+        'identityType',i.identity_type,
+        'categoryId',i.category_id,
+        'categoryName',c.name,
+        'status',i.status,
+        'parentIdentityId',i.parent_identity_id,
+        'publicProfileSlug',i.public_profile_slug,
+        'publicProfileEnabled',i.public_profile_enabled,
+        'firstName',n.first_name,
+        'lastName',n.last_name,
+        'middleName',n.middle_name,
+        'fullName',n.full_name,
+        'displayName',n.display_name,
+        'username',n.username,
+        'publicProfileUrl',n.public_profile_url,
+        'bio',p.biography,
+        'introduction',p.introduction,
+        'gender',p.gender,
+        'genderPresentation',p.gender_presentation,
+        'nationality',p.nationality,
+        'countryOfOrigin',p.country_of_origin,
+        'currentCountry',p.current_country,
+        'timeZone',p.time_zone,
+        'personality',p.personality,
+        'communicationStyle',p.communication_style,
+        'interests',p.interests,
+        'hobbies',p.hobbies,
+        'education',p.education,
+        'profession',p.profession,
+        'skills',p.skills,
+        'avatarStorageReference',p.avatar_storage_reference,
+        'coverStorageReference',p.cover_storage_reference,
+        'voicePreferences',p.voice_preferences,
+        'avatarPreferences',p.avatar_preferences,
+        'locations',COALESCE((
+          SELECT pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
+            'locationType',location.location_type,'countryCode',location.country_code,
+            'countryName',location.country_name,'stateProvince',location.state_province,
+            'district',location.district,'parishCounty',location.parish_county,
+            'city',location.city,'town',location.town,'timeZone',location.time_zone,
+            'isPrimary',location.is_primary
+          ) ORDER BY location.is_primary DESC,location.location_type)
+          FROM public.ai_identity_locations AS location WHERE location.identity_id=i.identity_id
+        ),'[]'::jsonb),
+        'capabilities',COALESCE((
+          SELECT pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
+            'code',capability.capability_code,'enabled',capability.enabled,
+            'configuration',capability.capability_configuration,
+            'verificationStatus',capability.verification_status
+          ) ORDER BY capability.capability_code)
+          FROM public.ai_identity_capabilities AS capability WHERE capability.identity_id=i.identity_id
+        ),'[]'::jsonb),
+        'languages',COALESCE((
+          SELECT pg_catalog.jsonb_agg(l.language_name ORDER BY l.language_name)
+          FROM public.ai_identity_languages AS l WHERE l.identity_id=i.identity_id
+        ),'[]'::jsonb),
+        'memoryEnabled',p.memory_enabled,
+        'createdAt',i.created_at,
+        'updatedAt',i.updated_at
+      ) AS item,
+      i.created_at
+    FROM public.ai_identities AS i
+    JOIN public.ai_names AS n ON n.identity_id=i.identity_id
+    LEFT JOIN public.ai_profiles AS p ON p.identity_id=i.identity_id
+    LEFT JOIN public.minglora_ai_bot_categories AS c ON c.id=i.category_id
+    WHERE i.owner_admin_id=p_owner_admin_id
+    ORDER BY i.created_at DESC
+    LIMIT LEAST(GREATEST(COALESCE(p_limit,100),1),1000)
+    OFFSET GREATEST(COALESCE(p_offset,0),0)
+  ) AS result;
+$function$;
+
+REVOKE ALL ON FUNCTION public.minglora_ai_identity_upsert(jsonb,uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.minglora_ai_identity_upsert(jsonb,uuid) TO service_role;
+REVOKE ALL ON FUNCTION public.minglora_ai_identity_upsert_batch(jsonb,uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.minglora_ai_identity_upsert_batch(jsonb,uuid) TO service_role;
+REVOKE ALL ON FUNCTION public.minglora_ai_identity_list(uuid,integer,integer) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.minglora_ai_identity_list(uuid,integer,integer) TO service_role;
+
+-- Do not expose these tables to anonymous or authenticated clients.
+-- The existing Minglora server-to-Supabase runtime gateway uses service_role.
+DO $$
+DECLARE
+  table_name text;
+BEGIN
+  FOREACH table_name IN ARRAY ARRAY[
+    'minglora_ai_bot_settings',
+    'minglora_ai_bot_categories',
+    'minglora_ai_bots',
+    'minglora_ai_bot_schedules',
+    'minglora_ai_bot_teams',
+    'minglora_ai_bot_team_members',
+    'minglora_ai_bot_tasks',
+    'minglora_ai_bot_follow_targets',
+    'minglora_ai_bot_follows',
+    'minglora_ai_bot_followers',
+    'minglora_ai_bot_follow_exclusions',
+    'minglora_ai_bot_audit',
+    'ai_identities','ai_names','ai_profiles','ai_emails','ai_provider_accounts',
+    'ai_provider_models','ai_provider_assignments','ai_identity_locations','ai_identity_languages',
+    'ai_identity_capabilities','ai_identity_permissions','ai_identity_owners',
+    'ai_identity_status_history','ai_identity_versions','ai_identity_audit_logs'
+  ]
+  LOOP
+    EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', table_name);
+    EXECUTE format('REVOKE ALL ON TABLE public.%I FROM PUBLIC, anon, authenticated', table_name);
+    EXECUTE format('GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.%I TO service_role', table_name);
+  END LOOP;
+END $$;
+
+COMMIT;
+ THEN
+        INSERT INTO public.ai_identity_capabilities (
+          identity_id,capability_code,enabled,capability_configuration,verification_status
+        ) VALUES (
+          v_id,pg_catalog.left(v_capability_code,100),
+          CASE WHEN pg_catalog.jsonb_typeof(v_capability->'enabled')='boolean' THEN (v_capability->>'enabled')::boolean ELSE true END,
+          CASE WHEN pg_catalog.jsonb_typeof(v_capability->'configuration')='object' THEN v_capability->'configuration' ELSE '{}'::jsonb END,
+          'unverified'
+        )
+        ON CONFLICT (identity_id,capability_code) DO UPDATE SET
+          enabled=EXCLUDED.enabled,
+          capability_configuration=EXCLUDED.capability_configuration,
+          verification_status='unverified',
+          last_checked_at=NULL,
+          updated_at=pg_catalog.now();
       END IF;
     END LOOP;
   END IF;
