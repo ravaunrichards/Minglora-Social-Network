@@ -607,7 +607,8 @@ Deno.serve(async (req: Request) => {
     const limit = Number.isFinite(requestedLimit) ? Math.max(1, Math.min(100, requestedLimit)) : 50;
     const search = String(input.search || "").trim().toLowerCase().slice(0, 100);
     const actionFilter = String(input.actionFilter || "all").trim().toLowerCase();
-    if (!new Set(["all","account.ban","account.unban"]).has(actionFilter)) return json(400, { error: "Choose a supported audit action filter." });
+    const allowedAuditActions = new Set(["all","account.create","account.update","account.delete","account.delete_failed","account.sessions_revoke","account.sessions_revoke_failed","account.ban","account.unban"]);
+    if (!allowedAuditActions.has(actionFilter)) return json(400, { error: "Choose a supported audit action filter." });
     let query = admin.from("audit_log").select("id,actor_id,action,target_type,target_id,metadata,created_at")
       .order("created_at", { ascending:false }).limit(search ? 500 : limit);
     if (actionFilter !== "all") query = query.eq("action", actionFilter);
@@ -616,7 +617,10 @@ Deno.serve(async (req: Request) => {
     const rows = (auditRows || []).filter((row:any) => {
       if (!search) return true;
       const metadata = row.metadata && typeof row.metadata === "object" ? row.metadata : {};
-      return [row.action,row.target_type,row.target_id,row.actor_id,metadata.reason,metadata.duration]
+      return [row.action,row.target_type,row.target_id,row.actor_id,metadata.reason,metadata.duration,
+        ...(Array.isArray(metadata.changedFields) ? metadata.changedFields : []),
+        ...(Array.isArray(metadata.profileFields) ? metadata.profileFields : []),
+        metadata.outcome,metadata.deletionMode,metadata.scope]
         .some(value => String(value || "").toLowerCase().includes(search));
     }).slice(0,limit);
     const ids = [...new Set(rows.flatMap((row:any) =>
@@ -629,17 +633,34 @@ Deno.serve(async (req: Request) => {
       if (profileError) return json(503,{error:"Minglora audit account labels could not be loaded."});
       for (const profile of profiles || []) byId.set(String(profile.id),profile);
     }
+    const safeStringList = (value: unknown) => Array.isArray(value)
+      ? value.filter((item: unknown): item is string => typeof item === "string")
+        .map((item: string) => item.slice(0, 64)).slice(0, 24)
+      : [];
     const records = rows.map((row:any) => {
       const metadata = row.metadata && typeof row.metadata === "object" ? row.metadata : {};
       const actorId=String(row.actor_id || ""),targetId=String(row.target_id || "");
       const actor=byId.get(actorId),target=byId.get(targetId);
+      const outcome = ["deleted","rejected"].includes(String(metadata.outcome || "")) ? String(metadata.outcome) : "";
+      const deletionMode = metadata.deletionMode === "hard" ? "hard" : "";
+      const scope = ["global","application_only"].includes(String(metadata.scope || "")) ? String(metadata.scope) : "";
       return {
         id:String(row.id || ""),action:String(row.action || "admin.activity"),
         targetType:String(row.target_type || ""),targetId,createdAt:row.created_at || null,
         actor:actor?{id:actorId,username:String(actor.username || ""),displayName:String(actor.display_name || "")}:{id:actorId,username:"",displayName:""},
         target:target?{id:targetId,username:String(target.username || ""),displayName:String(target.display_name || "")}:{id:targetId,username:"",displayName:""},
-        metadata:{reason:String(metadata.reason || ""),duration:String(metadata.duration || ""),
-          bannedUntil:String(metadata.banned_until || ""),sessionsRevoked:Boolean(metadata.sessions_revoked)}
+        metadata:{
+          reason:String(metadata.reason || "").slice(0, 500),
+          duration:String(metadata.duration || "").slice(0, 24),
+          bannedUntil:String(metadata.banned_until || "").slice(0, 40),
+          sessionsRevoked:Boolean(metadata.sessions_revoked),
+          changedFields:safeStringList(metadata.changedFields),
+          profileFields:safeStringList(metadata.profileFields),
+          emailProvided:metadata.emailProvided === true,
+          phoneProvided:metadata.phoneProvided === true,
+          outcome,deletionMode,scope,
+          providerRefreshTokensRevoked:metadata.providerRefreshTokensRevoked === true
+        }
       };
     });
     return json(200,{records,count:records.length,limit});
