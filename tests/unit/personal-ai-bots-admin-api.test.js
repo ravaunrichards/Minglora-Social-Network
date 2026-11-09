@@ -681,3 +681,44 @@ test('provider assignment API rejects unsupported raw credential fields before p
   assert.match(context.res.payload.error,/unsupported or sensitive/);
   assert.equal(calls,0);
 });
+
+
+test('canonical AI identity synchronization includes full profile and structured location attributes',async()=>{
+  const botId='00000000-0000-4000-8000-000000000701';
+  let persisted=null;
+  const context=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/emails',
+    input:{identityId:botId,emailAddress:'profile.ai@minglora.example',emailType:'primary'},
+    db:{
+      personalAiBotSettings:[{id:'global',enabled:false}],
+      personalAiBots:[{
+        id:botId,createdBy:'owner-1',displayName:'Profile AI',firstName:'Profile',lastName:'AI',
+        categoryId:'ai-support',categoryName:'AI Support',username:'ai_profile',
+        gender:'female',genderPresentation:'Feminine AI presentation',nationality:'Jamaican',
+        countryOfOrigin:'Jamaica',currentCountry:'Jamaica',stateProvince:'Kingston',
+        parishCounty:'Kingston',city:'Kingston',town:'Half Way Tree',originCountryCode:'JM',
+        education:[{institution:'Minglora Learning',qualification:'AI qualification'}],
+        profession:'Educator',communicationStyle:'Clear, warm and concise',
+        voicePreferences:{voice:'neutral'},avatarPreferences:{style:'3d'},
+        capabilities:[{code:'text',enabled:true,configuration:{draftOnly:true}}],
+        locations:[{
+          locationType:'current',countryCode:'JM',countryName:'Jamaica',
+          stateProvince:'Kingston',parishCounty:'Kingston',city:'Kingston',
+          town:'Half Way Tree',timeZone:'America/Jamaica',isPrimary:true
+        }]
+      }]
+    },
+    persistAiIdentities:async identities=>{persisted=identities[0];},
+    persistAiEmailIdentity:async email=>({...email,verificationStatus:'not_verified',provisioningStatus:'not_provisioned'})
+  });
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,201);
+  assert.equal(persisted.gender_presentation,'Feminine AI presentation');
+  assert.equal(persisted.communication_style,'Clear, warm and concise');
+  assert.equal(persisted.education[0].qualification,'AI qualification');
+  assert.deepEqual(persisted.voice_preferences,{voice:'neutral'});
+  assert.deepEqual(persisted.avatar_preferences,{style:'3d'});
+  assert.equal(persisted.locations[0].parishCounty,'Kingston');
+  assert.equal(persisted.locations[0].countryCode,'JM');
+  assert.equal(persisted.capabilities[0].code,'text');
+});
