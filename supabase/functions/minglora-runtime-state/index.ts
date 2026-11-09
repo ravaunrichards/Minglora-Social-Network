@@ -280,8 +280,28 @@ Deno.serve(async (req: Request) => {
     if (contactPhone) profile.contact_phone = contactPhone;
     const profileResult = await admin.from("profiles").upsert(profile, { onConflict: "id" });
     if (profileResult.error) {
-      await admin.auth.admin.deleteUser(userId);
-      return json(503, { error: "The Auth account was created but its Minglora profile could not be saved; the new account was rolled back." });
+      let rollbackSucceeded = false;
+      try {
+        const rollback = await admin.auth.admin.deleteUser(userId);
+        rollbackSucceeded = !rollback.error;
+      } catch {
+        rollbackSucceeded = false;
+      }
+      const auditRecorded = await recordAdminUserAction(actorUserId, userId, "account.create_failed", {
+        outcome: "rejected",
+        profileLinkFailed: true,
+        rollbackSucceeded,
+        emailProvided: Boolean(email),
+        phoneProvided: Boolean(phone)
+      });
+      return json(503, {
+        error: rollbackSucceeded
+          ? "The member profile could not be saved. The temporary Auth account rollback was confirmed."
+          : "The member profile could not be saved and the temporary Auth account rollback could not be confirmed. Review this account in Supabase Auth before retrying.",
+        partial: !rollbackSucceeded,
+        rollbackSucceeded,
+        auditRecorded
+      });
     }
     const auditRecorded = await recordAdminUserAction(actorUserId, userId, "account.create", {
       emailProvided: Boolean(email), phoneProvided: Boolean(phone), profileFields: Object.keys(profile).filter((key) => key !== "id")
@@ -607,7 +627,7 @@ Deno.serve(async (req: Request) => {
     const limit = Number.isFinite(requestedLimit) ? Math.max(1, Math.min(100, requestedLimit)) : 50;
     const search = String(input.search || "").trim().toLowerCase().slice(0, 100);
     const actionFilter = String(input.actionFilter || "all").trim().toLowerCase();
-    const allowedAuditActions = new Set(["all","account.create","account.update","account.delete","account.delete_failed","account.sessions_revoke","account.sessions_revoke_failed","account.ban","account.unban"]);
+    const allowedAuditActions = new Set(["all","account.create","account.create_failed","account.update","account.delete","account.delete_failed","account.sessions_revoke","account.sessions_revoke_failed","account.ban","account.unban"]);
     if (!allowedAuditActions.has(actionFilter)) return json(400, { error: "Choose a supported audit action filter." });
     let query = admin.from("audit_log").select("id,actor_id,action,target_type,target_id,metadata,created_at")
       .order("created_at", { ascending:false }).limit(search ? 500 : limit);
@@ -659,7 +679,9 @@ Deno.serve(async (req: Request) => {
           emailProvided:metadata.emailProvided === true,
           phoneProvided:metadata.phoneProvided === true,
           outcome,deletionMode,scope,
-          providerRefreshTokensRevoked:metadata.providerRefreshTokensRevoked === true
+          providerRefreshTokensRevoked:metadata.providerRefreshTokensRevoked === true,
+          profileLinkFailed:metadata.profileLinkFailed === true,
+          rollbackSucceeded:metadata.rollbackSucceeded === true
         }
       };
     });
