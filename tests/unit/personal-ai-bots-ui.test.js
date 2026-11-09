@@ -210,8 +210,9 @@ test('owner Admin Centre exposes corporate vacancy creation and safe status cont
   for(const phrase of ['Corporate vacancies','pab-vacancy-form','pab-vacancy-position','pab-vacancy-department','pab-vacancy-title','pab-vacancy-slots','pab-vacancy-requirements','createVacancy','saveVacancy'])assert.ok(ui.includes(phrase),phrase);
   assert.match(ui,/does not create an AI identity, hire or appoint anyone/);
   assert.match(service,/export function createPersonalAiBotVacancy/);
-  assert.match(service,/appointmentId/);
-  assert.match(api,/root\\+'\\/vacancies'/);
+  assert.ok(service.includes("status:'open'"));
+  assert.ok(service.includes('statusHistory'));
+  assert.ok(api.includes("root+'/vacancies'"));
   assert.ok(html.includes('/personal-ai-bots.js?v=20261109-personal-ai-bots-5'));
 });
 
