@@ -700,5 +700,7 @@ test('AI bot editor and discovery use the same complete 249-entry ISO country an
   assert.ok(adminBotUi.includes('list="pab-country-options" id="pab-bot-country-origin"'));
   assert.ok(adminBotUi.includes('list="pab-country-options" id="pab-bot-current-country"'));
   assert.match(adminBotUi,/originCountryCode:countryCodeForName/);
+  assert.match(adminBotUi,/countryCode:read\('country-code'\)\.toUpperCase\(\)\|\|countryCodeForName\(read\('country-name'\)\)/);
+
   assert.match(adminBotUi,/currentCountryCode:countryCodeForName/);
 });
