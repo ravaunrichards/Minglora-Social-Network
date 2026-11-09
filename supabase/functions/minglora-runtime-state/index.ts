@@ -72,7 +72,7 @@ Deno.serve(async (req: Request) => {
   const action = input.action;
   const supportedActions = [
     "internal_activity_feed",
-    "admin_users_list", "admin_user_set_ban", "admin_audit_log", "admin_audit_log",
+    "admin_users_list", "admin_user_get", "admin_user_create", "admin_user_update", "admin_user_delete", "admin_user_revoke_sessions", "admin_user_set_ban", "admin_audit_log",
     "streambay_cleanup", "load", "save", "health", "media_sign", "media_upload_prepare", "media_upload_complete", "media_delete",
     "live_broadcast_create", "live_broadcast_end", "live_chat_list", "live_chat_send", "live_chat_delete",
     "live_participant_mark_connected", "live_participant_mark_left", "live_speaker_request", "live_speaker_requests_list", "live_speaker_request_status",
@@ -104,26 +104,38 @@ Deno.serve(async (req: Request) => {
   const fail = (error: any, fallback: string) =>
     json(409, { error: String(error?.message || fallback).slice(0, 240) });
 
+  const adminActorAllowed = (actorUserId: string) => actorUserId === "5b998c21-86b5-4621-ab37-e0808a2657b1";
+  const recordAdminUserAction = async (actorUserId: string, targetUserId: string, actionName: string, metadata: Record<string, unknown> = {}) => {
+    const { error } = await admin.from("audit_log").insert({
+      actor_id: actorUserId,
+      action: actionName,
+      target_type: "user",
+      target_id: targetUserId,
+      request_id: crypto.randomUUID(),
+      metadata
+    });
+    return !error;
+  };
+
   if (action === "admin_users_list") {
     const actorUserId = String(input.actorUserId || "");
-    if (actorUserId !== "5b998c21-86b5-4621-ab37-e0808a2657b1") {
-      return json(403, { error: "Only the designated Minglora owner can manage member accounts." });
-    }
+    if (!adminActorAllowed(actorUserId)) return json(403, { error: "Only the designated Minglora owner can manage member accounts." });
     const search = String(input.search || "").trim().toLowerCase().slice(0, 120);
     const requestedStatus = String(input.status || "all").toLowerCase();
     const allowedStatuses = ["all", "active", "banned", "suspended", "deactivated"];
     if (!allowedStatuses.includes(requestedStatus)) return json(400, { error: "Choose a valid account status filter." });
+    const requestedPage = Math.max(1, Math.min(10000, Math.floor(Number(input.page || 1))));
+    const requestedPageSize = Math.max(10, Math.min(100, Math.floor(Number(input.pageSize || 50))));
     const users: any[] = [];
     const perPage = 1000;
-    const maxPages = search || requestedStatus !== "all" ? 50 : 5;
-    for (let page = 1; page <= maxPages && users.length < 50; page += 1) {
+    for (let page = 1; page <= 50; page += 1) {
       const { data, error } = await admin.auth.admin.listUsers({ page, perPage });
       if (error) return json(503, { error: "Minglora could not load Auth member accounts." });
       const authUsers = Array.isArray(data?.users) ? data.users : [];
       if (!authUsers.length) break;
       const ids = authUsers.map((item: any) => String(item.id || "")).filter((id: string) => validUuid(id));
       const { data: profiles, error: profileError } = await admin.from("profiles")
-        .select("id,username,display_name,avatar_url")
+        .select("id,username,display_name,avatar_url,contact_phone")
         .in("id", ids);
       if (profileError) return json(503, { error: "Minglora member profiles could not be loaded." });
       const profileById = new Map((profiles || []).map((profile: any) => [String(profile.id), profile]));
@@ -143,23 +155,266 @@ Deno.serve(async (req: Request) => {
         const accountStatus = isBanned ? "banned"
           : ["suspended", "deactivated"].includes(restoredStatus) ? restoredStatus : "active";
         if (requestedStatus !== "all" && accountStatus !== requestedStatus) continue;
-        const searchable = [id, email, username, displayName].join(" ").toLowerCase();
+        const searchable = [id, email, authUser.phone, username, displayName].join(" ").toLowerCase();
         if (search && !searchable.includes(search)) continue;
         users.push({
-          id, email, username, displayName,
+          id, email, phone: String(authUser.phone || ""),
+          username, displayName,
           avatarUrl: String(profile.avatar_url || ""),
+          contactPhone: String(profile.contact_phone || metadata.contact_phone || authUser.phone || ""),
           status: accountStatus,
           bannedUntil: isBanned ? bannedUntil : null,
+          emailConfirmedAt: authUser.email_confirmed_at || null,
+          phoneConfirmedAt: authUser.phone_confirmed_at || null,
+          providers: Array.isArray(authUser.app_metadata?.providers) ? authUser.app_metadata.providers : [],
           createdAt: authUser.created_at || null,
+          updatedAt: authUser.updated_at || null,
           lastSignInAt: authUser.last_sign_in_at || null,
           isOwner: id === "5b998c21-86b5-4621-ab37-e0808a2657b1"
         });
-        if (users.length >= 50) break;
       }
       if (authUsers.length < perPage) break;
     }
     users.sort((a: any, b: any) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
-    return json(200, { users, count: users.length, searched: Boolean(search), status: requestedStatus });
+    const offset = (requestedPage - 1) * requestedPageSize;
+    const pageUsers = users.slice(offset, offset + requestedPageSize);
+    return json(200, {
+      users: pageUsers,
+      count: pageUsers.length,
+      totalCount: users.length,
+      page: requestedPage,
+      pageSize: requestedPageSize,
+      hasMore: offset + requestedPageSize < users.length,
+      searched: Boolean(search),
+      status: requestedStatus
+    });
+  }
+
+  if (action === "admin_user_get") {
+    const actorUserId = String(input.actorUserId || "");
+    const userId = String(input.userId || "");
+    if (!adminActorAllowed(actorUserId)) return json(403, { error: "Only the designated Minglora owner can view member accounts." });
+    if (!validUuid(userId)) return json(400, { error: "Choose a valid Minglora account." });
+    const { data: found, error: lookupError } = await admin.auth.admin.getUserById(userId);
+    const user = found?.user;
+    if (lookupError || !user) return json(404, { error: "The selected Minglora account was not found." });
+    const { data: profile, error: profileError } = await admin.from("profiles")
+      .select("id,username,display_name,bio,location,visibility,avatar_url,cover_url,contact_phone,country,county,parish,city,gender,relationship_status,locale,timezone,verification_badge,verification_status,created_at,updated_at")
+      .eq("id", userId).maybeSingle();
+    if (profileError) return json(503, { error: "The selected Minglora profile could not be loaded." });
+    const metadata = user.user_metadata && typeof user.user_metadata === "object" ? user.user_metadata : {};
+    const identities = Array.isArray(user.identities) ? user.identities.map((identity: any) => ({
+      id: String(identity.id || ""),
+      provider: String(identity.provider || ""),
+      createdAt: identity.created_at || null,
+      lastSignInAt: identity.last_sign_in_at || null,
+      email: String(identity.identity_data?.email || "")
+    })) : [];
+    const bannedUntil = user.banned_until ? String(user.banned_until) : null;
+    const isBanned = Boolean(bannedUntil && Date.parse(bannedUntil) > Date.now());
+    const rawStatus = String(metadata.account_status || "active").toLowerCase();
+    const restoredStatus = rawStatus === "banned" ? String(metadata.pre_ban_account_status || "active").toLowerCase() : rawStatus;
+    const status = isBanned ? "banned" : ["suspended", "deactivated"].includes(restoredStatus) ? restoredStatus : "active";
+    return json(200, {
+      user: {
+        id: userId,
+        email: String(user.email || ""),
+        phone: String(user.phone || ""),
+        emailConfirmedAt: user.email_confirmed_at || null,
+        phoneConfirmedAt: user.phone_confirmed_at || null,
+        createdAt: user.created_at || null,
+        updatedAt: user.updated_at || null,
+        lastSignInAt: user.last_sign_in_at || null,
+        bannedUntil: isBanned ? bannedUntil : null,
+        status,
+        providers: Array.isArray(user.app_metadata?.providers) ? user.app_metadata.providers : [],
+        identities,
+        userMetadata: {
+          name: String(metadata.name || metadata.full_name || ""),
+          username: String(metadata.username || ""),
+          contactPhone: String(metadata.contact_phone || metadata.phone_number || "")
+        },
+        profile: profile || null,
+        isOwner: userId === "5b998c21-86b5-4621-ab37-e0808a2657b1"
+      }
+    });
+  }
+
+  if (action === "admin_user_create") {
+    const actorUserId = String(input.actorUserId || "");
+    if (!adminActorAllowed(actorUserId)) return json(403, { error: "Only the designated Minglora owner can create member accounts." });
+    const email = String(input.email || "").trim().toLowerCase();
+    const phone = String(input.phone || "").trim();
+    const password = String(input.password || "");
+    const displayName = String(input.displayName || "").trim().slice(0, 80);
+    const username = String(input.username || "").trim().replace(/^@/, "").slice(0, 30);
+    const contactPhone = String(input.contactPhone || phone).trim().slice(0, 40);
+    if (!email && !phone) return json(400, { error: "Enter an email address or phone number." });
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json(400, { error: "Enter a valid email address." });
+    if (phone && !/^\+[1-9]\d{7,14}$/.test(phone)) return json(400, { error: "Enter the phone number in international format, such as +18765550123." });
+    if (password.length < 8 || password.length > 128) return json(400, { error: "Set a password between 8 and 128 characters." });
+    if (username && !/^[a-zA-Z0-9_.]{3,30}$/.test(username)) return json(400, { error: "Username must be 3–30 characters and use letters, numbers, dots or underscores." });
+    const { data: created, error: createError } = await admin.auth.admin.createUser({
+      ...(email ? { email } : {}),
+      ...(phone ? { phone } : {}),
+      password,
+      email_confirm: Boolean(email && input.emailConfirmed === true),
+      phone_confirm: Boolean(phone && input.phoneConfirmed === true),
+      user_metadata: {
+        ...(displayName ? { name: displayName } : {}),
+        ...(username ? { username } : {}),
+        ...(contactPhone ? { contact_phone: contactPhone, phone_number: contactPhone } : {})
+      }
+    });
+    if (createError || !created?.user) return json(409, { error: String(createError?.message || "Minglora could not create this account.").slice(0, 220) });
+    const userId = String(created.user.id);
+    const profile: Record<string, unknown> = { id: userId };
+    if (displayName) profile.display_name = displayName;
+    if (username) profile.username = username;
+    if (contactPhone) profile.contact_phone = contactPhone;
+    const profileResult = await admin.from("profiles").upsert(profile, { onConflict: "id" });
+    if (profileResult.error) {
+      await admin.auth.admin.deleteUser(userId);
+      return json(503, { error: "The Auth account was created but its Minglora profile could not be saved; the new account was rolled back." });
+    }
+    const auditRecorded = await recordAdminUserAction(actorUserId, userId, "account.create", {
+      emailProvided: Boolean(email), phoneProvided: Boolean(phone), profileFields: Object.keys(profile).filter((key) => key !== "id")
+    });
+    return json(201, {
+      ok: true,
+      user: {
+        id: userId,
+        email: String(created.user.email || ""),
+        phone: String(created.user.phone || ""),
+        createdAt: created.user.created_at || null,
+        emailConfirmedAt: created.user.email_confirmed_at || null,
+        phoneConfirmedAt: created.user.phone_confirmed_at || null
+      },
+      auditRecorded
+    });
+  }
+
+  if (action === "admin_user_update") {
+    const actorUserId = String(input.actorUserId || "");
+    const userId = String(input.userId || "");
+    if (!adminActorAllowed(actorUserId)) return json(403, { error: "Only the designated Minglora owner can update member accounts." });
+    if (!validUuid(userId) || userId === actorUserId) return json(403, { error: "The platform owner account is protected from member edits." });
+    const patch = input.patch && typeof input.patch === "object" && !Array.isArray(input.patch) ? input.patch as Record<string, unknown> : {};
+    const authAttributes: Record<string, unknown> = {};
+    const changedFields: string[] = [];
+    const email = String(patch.email || "").trim().toLowerCase();
+    const phone = String(patch.phone || "").trim();
+    const password = String(patch.password || "");
+    if (Object.hasOwn(patch, "email")) {
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json(400, { error: "Enter a valid email address." });
+      authAttributes.email = email;
+      changedFields.push("email");
+    }
+    if (Object.hasOwn(patch, "phone")) {
+      if (phone && !/^\+[1-9]\d{7,14}$/.test(phone)) return json(400, { error: "Enter the phone number in international format, such as +18765550123." });
+      authAttributes.phone = phone;
+      changedFields.push("phone");
+    }
+    if (password) {
+      if (password.length < 8 || password.length > 128) return json(400, { error: "Password must contain 8–128 characters." });
+      authAttributes.password = password;
+      changedFields.push("password");
+    }
+    if (patch.emailConfirmed === true) {
+      if (!email && !patch.email) authAttributes.email_confirm = true;
+      else authAttributes.email_confirm = true;
+      changedFields.push("email_confirmed");
+    }
+    if (patch.phoneConfirmed === true) {
+      authAttributes.phone_confirm = true;
+      changedFields.push("phone_confirmed");
+    }
+
+    const profileInput = patch.profile && typeof patch.profile === "object" && !Array.isArray(patch.profile)
+      ? patch.profile as Record<string, unknown> : {};
+    const profileFields: Record<string, string> = {
+      displayName: "display_name", username: "username", bio: "bio", location: "location",
+      visibility: "visibility", contactPhone: "contact_phone", country: "country", county: "county",
+      parish: "parish", city: "city", gender: "gender", relationshipStatus: "relationship_status",
+      locale: "locale", timezone: "timezone"
+    };
+    const profilePatch: Record<string, unknown> = {};
+    for (const [field, column] of Object.entries(profileFields)) {
+      if (!Object.hasOwn(profileInput, field)) continue;
+      let value = profileInput[field];
+      if (typeof value === "string") {
+        const maximum = field === "bio" ? 5000 : field === "location" ? 160 : field === "displayName" ? 80 : 120;
+        value = value.trim().slice(0, maximum);
+      }
+      profilePatch[column] = value;
+      changedFields.push(field);
+    }
+    if (Object.hasOwn(profileInput, "username")) {
+      const value = String(profilePatch.username || "");
+      if (value && !/^[a-zA-Z0-9_.]{3,30}$/.test(value)) return json(400, { error: "Username must be 3–30 characters and use letters, numbers, dots or underscores." });
+    }
+    if (Object.keys(profilePatch).length === 0 && Object.keys(authAttributes).length === 0) {
+      return json(400, { error: "Choose at least one account or profile field to update." });
+    }
+    const { data: existing, error: existingError } = await admin.auth.admin.getUserById(userId);
+    if (existingError || !existing?.user) return json(404, { error: "The selected Minglora account was not found." });
+    const oldMetadata = existing.user.user_metadata && typeof existing.user.user_metadata === "object" ? existing.user.user_metadata : {};
+    if (Object.hasOwn(profileInput, "displayName")) authAttributes.user_metadata = { ...oldMetadata, name: String(profilePatch.display_name || "") };
+    if (Object.hasOwn(profileInput, "username")) authAttributes.user_metadata = { ...(authAttributes.user_metadata as Record<string, unknown> || oldMetadata), username: String(profilePatch.username || "") };
+    if (Object.hasOwn(profileInput, "contactPhone")) authAttributes.user_metadata = { ...(authAttributes.user_metadata as Record<string, unknown> || oldMetadata), contact_phone: String(profilePatch.contact_phone || ""), phone_number: String(profilePatch.contact_phone || "") };
+
+    if (Object.keys(profilePatch).length) {
+      const { error: profileError } = await admin.from("profiles").upsert({ id: userId, ...profilePatch }, { onConflict: "id" });
+      if (profileError) return json(409, { error: String(profileError.message || "The Minglora profile could not be saved.").slice(0, 220), partial: false });
+    }
+    if (Object.keys(authAttributes).length) {
+      const { error: updateError } = await admin.auth.admin.updateUserById(userId, authAttributes as any);
+      if (updateError) return json(409, { error: String(updateError.message || "The Supabase Auth account could not be updated.").slice(0, 220), partial: Object.keys(profilePatch).length > 0 });
+    }
+    const auditRecorded = await recordAdminUserAction(actorUserId, userId, "account.update", { changedFields });
+    const { data: refreshed, error: refreshError } = await admin.auth.admin.getUserById(userId);
+    if (refreshError || !refreshed?.user) return json(200, { ok: true, auditRecorded, refreshRequired: true });
+    return json(200, {
+      ok: true,
+      auditRecorded,
+      user: {
+        id: userId,
+        email: String(refreshed.user.email || ""),
+        phone: String(refreshed.user.phone || ""),
+        emailConfirmedAt: refreshed.user.email_confirmed_at || null,
+        phoneConfirmedAt: refreshed.user.phone_confirmed_at || null,
+        updatedAt: refreshed.user.updated_at || null
+      }
+    });
+  }
+
+  if (action === "admin_user_delete") {
+    const actorUserId = String(input.actorUserId || "");
+    const userId = String(input.userId || "");
+    const confirmUserId = String(input.confirmUserId || "");
+    const reason = String(input.reason || "").trim().slice(0, 500);
+    if (!adminActorAllowed(actorUserId)) return json(403, { error: "Only the designated Minglora owner can delete member accounts." });
+    if (!validUuid(userId) || userId === actorUserId || confirmUserId !== userId) return json(403, { error: "The platform owner is protected. Confirm the exact member ID before deletion." });
+    if (reason.length < 3) return json(400, { error: "Enter a deletion reason of at least 3 characters." });
+    const { data: found, error: lookupError } = await admin.auth.admin.getUserById(userId);
+    if (lookupError || !found?.user) return json(404, { error: "The selected Minglora account was not found." });
+    const auditRecorded = await recordAdminUserAction(actorUserId, userId, "account.delete", { reason, deletionMode: "hard" });
+    const { error: deleteError } = await admin.auth.admin.deleteUser(userId);
+    if (deleteError) return json(409, { error: String(deleteError.message || "Minglora could not delete the account.").slice(0, 220), auditRecorded });
+    return json(200, { ok: true, deleted: true, userId, auditRecorded, warning: "Supabase-issued access JWTs may remain valid until their expiry." });
+  }
+
+  if (action === "admin_user_revoke_sessions") {
+    const actorUserId = String(input.actorUserId || "");
+    const userId = String(input.userId || "");
+    const targetJwt = String(input.targetJwt || "");
+    if (!adminActorAllowed(actorUserId)) return json(403, { error: "Only the designated Minglora owner can revoke member sessions." });
+    if (!validUuid(userId) || userId === actorUserId) return json(403, { error: "The platform owner account is protected." });
+    if (targetJwt.length < 20) return json(200, { ok: true, sessionRevoked: false, message: "No current Supabase access token was available to revoke provider sessions." });
+    const { error } = await admin.auth.admin.signOut(targetJwt, "global");
+    if (error) return json(503, { error: String(error.message || "Supabase sessions could not be revoked.").slice(0, 220) });
+    const auditRecorded = await recordAdminUserAction(actorUserId, userId, "account.sessions_revoke", { scope: "global" });
+    return json(200, { ok: true, sessionRevoked: true, auditRecorded });
   }
 
   if (action === "admin_user_set_ban") {
