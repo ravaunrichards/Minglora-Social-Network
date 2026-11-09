@@ -532,6 +532,41 @@ function isAccountBlocked(account){
   if(!account)return false;
   return isAccountBanned(account)||['suspended','deactivated'].includes(account.status);
 }
+async function syncRelationshipAccountStatuses(userIds){
+  if(!isSupabasePersistence())return [];
+  const ids=[...new Set((Array.isArray(userIds)?userIds:[]).map(value=>String(value||'')).filter(Boolean))].slice(0,500);
+  if(!ids.length)return [];
+  const result=await requestSupabaseState('relationship_account_statuses',{userIds:ids});
+  const statuses=result.accountStatuses&&typeof result.accountStatuses==='object'?result.accountStatuses:{};
+  const deletedIds=ids.filter(id=>!Object.prototype.hasOwnProperty.call(statuses,id));
+  let changed=false;
+  for(const id of ids){
+    const member=db.users.find(item=>item.id===id);
+    if(!member||deletedIds.includes(id))continue;
+    const nextStatus=normalizeAccountStatus(statuses[id]);
+    if(String(member.status||'active')!==nextStatus){member.status=nextStatus;changed=true;}
+    if(nextStatus!=='banned'&&member.bannedUntil){member.bannedUntil=null;changed=true;}
+  }
+  if(deletedIds.length){
+    const deleted=new Set(deletedIds);
+    db.users=(db.users||[]).filter(item=>!deleted.has(item.id));
+    db.follows=(db.follows||[]).filter(item=>!deleted.has(item.followerId)&&!deleted.has(item.followedId));
+    db.friendships=(db.friendships||[]).filter(item=>!deleted.has(item.userAId)&&!deleted.has(item.userBId)&&!deleted.has(item.requesterId)&&!deleted.has(item.addresseeId));
+    db.blocks=(db.blocks||[]).filter(item=>!deleted.has(item.blockerId)&&!deleted.has(item.blockedId));
+    db.friendPreferences=(db.friendPreferences||[]).filter(item=>!deleted.has(item.ownerId)&&!deleted.has(item.targetId));
+    db.friendLists=(db.friendLists||[]).filter(item=>!deleted.has(item.ownerId)).map(item=>({...item,memberIds:(item.memberIds||[]).filter(id=>!deleted.has(id))}));
+    db.dismissedPeopleSuggestions=(db.dismissedPeopleSuggestions||[]).filter(item=>!deleted.has(item.userId)&&!deleted.has(item.dismissedUserId));
+    db.sessions=(db.sessions||[]).filter(item=>!deleted.has(item.userId));
+    db.pendingAuth=(db.pendingAuth||[]).filter(item=>!deleted.has(item.userId));
+    db.profileViews=(db.profileViews||[]).filter(item=>!deleted.has(item.targetUserId)&&!deleted.has(item.viewerUserId));
+    db.profileViewPresence=(db.profileViewPresence||[]).filter(item=>!deleted.has(item.targetUserId)&&!deleted.has(item.viewerUserId));
+    db.profileStatuses=(db.profileStatuses||[]).filter(item=>!deleted.has(item.userId));
+    db.profileSections=(db.profileSections||[]).filter(item=>!deleted.has(item.userId));
+    changed=true;
+  }
+  if(changed)await saveStore();
+  return deletedIds;
+}
 function isAccountActiveForRelationships(account){
   if(!account||isAccountBanned(account))return false;
   return normalizeAccountStatus(account.status)==='active';
@@ -4950,7 +4985,10 @@ async function route(req, res) {
       m=p.match(/^\/api\/users\/([^/]+)\/(followers|following|subscribers)$/);
       if(method==='GET'&&m){
         await syncRefundedGiftActivity();
-        const target=db.users.find(member=>member.id===m[1]);
+        let target=db.users.find(member=>member.id===m[1]);
+        if(!target)return json(res,404,{error:'User not found.'});
+        await syncRelationshipAccountStatuses([target.id]);
+        target=db.users.find(member=>member.id===m[1]);
         if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'User not found.'});
         const relationshipType=m[2];
         const listPrivacyKey={followers:'followersListAudience',following:'followingListAudience',subscribers:'subscribersListAudience'}[relationshipType];
@@ -4961,6 +4999,7 @@ async function route(req, res) {
             ?(await requestSupabaseState('subscription_subscribers_list',{creatorId:target.id})).subscriberIds
             :listActiveCreatorSubscriptions(db.creatorSubscriptions,target.id).map(item=>item.subscriberId);
           const uniqueSubscriberIds=[...new Set((Array.isArray(subscriberIds)?subscriberIds:[]).map(String).filter(Boolean))];
+          await syncRelationshipAccountStatuses(uniqueSubscriberIds);
           const users=[];
           for(const id of uniqueSubscriberIds){
             const member=db.users.find(item=>item.id===id);
@@ -4972,9 +5011,13 @@ async function route(req, res) {
         }
         const sourceField=relationshipType==='followers'?'followedId':'followerId';
         const resultField=relationshipType==='followers'?'followerId':'followedId';
-        const ordered=(db.follows||[])
+        let ordered=(db.follows||[])
           .filter(edge=>edge[sourceField]===target.id)
           .sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));
+        await syncRelationshipAccountStatuses([target.id,...ordered.map(edge=>edge[resultField])]);
+        target=db.users.find(member=>member.id===m[1]);
+        if(!target)return json(res,404,{error:'User not found.'});
+        ordered=(db.follows||[]).filter(edge=>edge[sourceField]===target.id).sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));
         const seen=new Set(),users=[];
         for(const edge of ordered){
           const id=edge[resultField];
@@ -5396,10 +5439,17 @@ async function route(req, res) {
       }
       m=p.match(/^\/api\/users\/([^/]+)$/);
       if(method==='GET'&&m){
-        const target=db.users.find(member=>member.id===m[1]);
+        let target=db.users.find(member=>member.id===m[1]);
         // Profile reads stay read-only and fast. Creator League settlement is
         // handled by the scheduled worker; it must never block a profile page
         // on a global reconciliation or persistence write.
+        if(!target)return json(res,404,{error:'User not found.'});
+        await syncRelationshipAccountStatuses([target.id]);
+        target=db.users.find(member=>member.id===m[1]);
+        if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'User not found.'});
+        const relatedIds=(db.follows||[]).filter(edge=>edge.followerId===target.id||edge.followedId===target.id).flatMap(edge=>[edge.followerId,edge.followedId]).filter(id=>id!==target.id);
+        await syncRelationshipAccountStatuses(relatedIds);
+        target=db.users.find(member=>member.id===m[1]);
         if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'User not found.'});
         db.profileViews ||= [];
         db.profileViewPresence ||= [];
@@ -5488,6 +5538,7 @@ async function route(req, res) {
       m=p.match(/^\/api\/friends\/([^/]+)\/(request|accept|decline)$/);
       if(method==='POST'&&m)return json(res,409,{error:'Minglora friendships are automatic. Follow each other to become friends.'});
       if(method==='GET'&&p==='/api/friends/manage'){
+        await syncRelationshipAccountStatuses([user.id,...getMutualFollowIds(db.follows||[],user.id,db.blocks||[])]);
         const follows=db.follows||[],blocks=db.blocks||[];
         const friendIds=getMutualFollowIds(follows,user.id,blocks),friendIdSet=new Set(friendIds);
         const friends=friendIds.map(targetId=>{
