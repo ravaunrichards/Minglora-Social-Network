@@ -6,11 +6,19 @@ export function isBlockedBetween(blocks = [], firstId, secondId) {
   );
 }
 
-export function canViewStory({ viewerId, story, friendships = [], follows = [], blocks = [] }) {
+export function canViewStory({ viewerId, story, friendships = [], follows = [], blocks = [], subscribers = [] }) {
   if (!viewerId || !story?.userId) return false;
   if (viewerId === story.userId) return true;
   if (isBlockedBetween(blocks, viewerId, story.userId)) return false;
+  if (Array.isArray(story.hiddenUserIds) && story.hiddenUserIds.includes(viewerId)) return false;
   if (story.audience === 'public') return true;
+  if (story.audience === 'custom') {
+    return Array.isArray(story.customUserIds) && story.customUserIds.includes(viewerId);
+  }
+  if (story.audience === 'following') {
+    return follows.some(follow => follow.followerId === story.userId && follow.followedId === viewerId);
+  }
+  if (story.audience === 'subscribers') return subscribers.includes(viewerId);
   if (story.audience === 'friends') {
     return friendships.some(friendship => friendship.status === 'accepted' &&
       ((friendship.from === viewerId && friendship.to === story.userId) ||

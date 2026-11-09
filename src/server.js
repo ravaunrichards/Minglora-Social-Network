@@ -262,8 +262,8 @@ function safeUser(u,viewerId=null){
 const APP_COLOR_THEMES=['minglora','ocean','tropical','royal','emerald','rose','golden','lavender','midnight','graphite'];
 const LIVE_ROOM_THEMES=['studio','ocean','tropical','royal','neon','sunset','garden','social'];
 const LIVE_SCREEN_LAYOUTS=['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight','roundtable-1','roundtable-2'];
-const DEFAULT_SETTINGS={privacy:{profileVisibility:'public',allowFriendRequests:true,messageAudience:'everyone',meetWaveAudience:'everyone',friendsListAudience:'public',followersListAudience:'public',followingListAudience:'public',subscribersListAudience:'public',commentAudience:'everyone'},notifications:{inApp:true,friendRequests:true,messages:true,interactions:true,push:true,profileViews:false,calls:true,live:true,gifts:true,meetWave:true,leagues:true,account:true},preferences:{theme:'system',colorTheme:'minglora',liveRoomTheme:'studio',feedSort:'recent',reducedMotion:false,liteMode:false,displayCurrency:'USD',messengerIncomingCallSounds:true,messengerMessageSounds:true,messengerAutoOpenNewMessages:false,messengerActiveStatus:true,profileLayout:'advanced',messengerArchivedConversationIds:[],messengerRestrictedUserIds:[]},experience:DEFAULT_EXPERIENCE_SETTINGS};
-function getUserSettings(user){const saved=user?.settings||{};const preferences={...DEFAULT_SETTINGS.preferences,...(saved.preferences||{})};if(!APP_COLOR_THEMES.includes(preferences.colorTheme))preferences.colorTheme=DEFAULT_SETTINGS.preferences.colorTheme;if(!['standard','advanced','creator'].includes(preferences.profileLayout))preferences.profileLayout=DEFAULT_SETTINGS.preferences.profileLayout;if(!LIVE_ROOM_THEMES.includes(preferences.liveRoomTheme))preferences.liveRoomTheme=DEFAULT_SETTINGS.preferences.liveRoomTheme;for(const key of ['messengerArchivedConversationIds','messengerRestrictedUserIds'])if(!Array.isArray(preferences[key]))preferences[key]=[];const experience=validateExperienceSettingsPatch(DEFAULT_EXPERIENCE_SETTINGS,saved.experience||{}).settings;return {privacy:{...DEFAULT_SETTINGS.privacy,...(saved.privacy||{})},notifications:{...DEFAULT_SETTINGS.notifications,...(saved.notifications||{})},preferences,experience};}
+const DEFAULT_SETTINGS={privacy:{profileVisibility:'public',allowFriendRequests:true,messageAudience:'everyone',meetWaveAudience:'everyone',friendsListAudience:'public',followersListAudience:'public',followingListAudience:'public',subscribersListAudience:'public',commentAudience:'everyone',storyAudience:'public',storyPrivacyMode:'audience',storyCustomUserIds:[],storyHiddenUserIds:[]},notifications:{inApp:true,friendRequests:true,messages:true,interactions:true,push:true,profileViews:false,calls:true,live:true,gifts:true,meetWave:true,leagues:true,account:true},preferences:{theme:'system',colorTheme:'minglora',liveRoomTheme:'studio',feedSort:'recent',reducedMotion:false,liteMode:false,displayCurrency:'USD',messengerIncomingCallSounds:true,messengerMessageSounds:true,messengerAutoOpenNewMessages:false,messengerActiveStatus:true,profileLayout:'advanced',messengerArchivedConversationIds:[],messengerRestrictedUserIds:[]},experience:DEFAULT_EXPERIENCE_SETTINGS};
+function getUserSettings(user){const saved=user?.settings||{};const privacy={...DEFAULT_SETTINGS.privacy,...(saved.privacy||{})};if(!['public','friends','following','followers','subscribers','custom'].includes(privacy.storyAudience))privacy.storyAudience='public';if(!['audience','hide'].includes(privacy.storyPrivacyMode))privacy.storyPrivacyMode='audience';for(const key of ['storyCustomUserIds','storyHiddenUserIds'])if(!Array.isArray(privacy[key]))privacy[key]=[];const preferences={...DEFAULT_SETTINGS.preferences,...(saved.preferences||{})};if(!APP_COLOR_THEMES.includes(preferences.colorTheme))preferences.colorTheme=DEFAULT_SETTINGS.preferences.colorTheme;if(!['standard','advanced','creator'].includes(preferences.profileLayout))preferences.profileLayout=DEFAULT_SETTINGS.preferences.profileLayout;if(!LIVE_ROOM_THEMES.includes(preferences.liveRoomTheme))preferences.liveRoomTheme=DEFAULT_SETTINGS.preferences.liveRoomTheme;for(const key of ['messengerArchivedConversationIds','messengerRestrictedUserIds'])if(!Array.isArray(preferences[key]))preferences[key]=[];const experience=validateExperienceSettingsPatch(DEFAULT_EXPERIENCE_SETTINGS,saved.experience||{}).settings;return {privacy,notifications:{...DEFAULT_SETTINGS.notifications,...(saved.notifications||{})},preferences,experience};}
 function isFriend(firstId,secondId){return (db.follows||[]).some(item=>item.followerId===firstId&&item.followedId===secondId)&&(db.follows||[]).some(item=>item.followerId===secondId&&item.followedId===firstId);}
 function friendPreferenceFor(viewerId,targetId){return (db.friendPreferences||[]).find(item=>item.ownerId===viewerId&&item.targetId===targetId)||null;}
 function isFriendRestricted(viewerId,ownerId){
@@ -321,7 +321,7 @@ function recordProfileActivity(userId,action,summary,targetType='profile',target
 
 function validateSettingsPatch(input,user){
   if(!input||typeof input!=='object'||Array.isArray(input))return {valid:false,error:'Settings must be an object.'};
-  const next=getUserSettings(user);const allowed={privacy:['profileVisibility','allowFriendRequests','messageAudience','meetWaveAudience','friendsListAudience','followersListAudience','followingListAudience','subscribersListAudience','commentAudience'],notifications:['inApp','friendRequests','messages','interactions','push','profileViews','calls','live','gifts','meetWave','leagues','account'],preferences:['theme','colorTheme','liveRoomTheme','feedSort','reducedMotion','liteMode','displayCurrency','messengerIncomingCallSounds','messengerMessageSounds','messengerAutoOpenNewMessages','messengerActiveStatus','profileLayout','messengerArchivedConversationIds','messengerRestrictedUserIds'],experience:Object.keys(DEFAULT_EXPERIENCE_SETTINGS)};
+  const next=getUserSettings(user);const allowed={privacy:['profileVisibility','allowFriendRequests','messageAudience','meetWaveAudience','friendsListAudience','followersListAudience','followingListAudience','subscribersListAudience','commentAudience','storyAudience','storyPrivacyMode','storyCustomUserIds','storyHiddenUserIds'],notifications:['inApp','friendRequests','messages','interactions','push','profileViews','calls','live','gifts','meetWave','leagues','account'],preferences:['theme','colorTheme','liveRoomTheme','feedSort','reducedMotion','liteMode','displayCurrency','messengerIncomingCallSounds','messengerMessageSounds','messengerAutoOpenNewMessages','messengerActiveStatus','profileLayout','messengerArchivedConversationIds','messengerRestrictedUserIds'],experience:Object.keys(DEFAULT_EXPERIENCE_SETTINGS)};
   for(const [section,values] of Object.entries(input)){
     if(!allowed[section]||!values||typeof values!=='object'||Array.isArray(values))return {valid:false,error:'Unsupported settings section.'};
     if(section==='experience'){const result=validateExperienceSettingsPatch(next.experience,values);if(!result.valid)return result;next.experience=result.settings;continue;}
@@ -332,6 +332,15 @@ function validateSettingsPatch(input,user){
       if(section==='privacy'&&key==='meetWaveAudience'&&!['everyone','friends','nobody'].includes(value))return {valid:false,error:'MeetWave invitation audience must be everyone, friends or nobody.'};
       if(section==='privacy'&&['friendsListAudience','followersListAudience','followingListAudience','subscribersListAudience'].includes(key)&&!['public','friends','followers','private'].includes(value))return {valid:false,error:'Choose a valid audience for this relationship list.'};
       if(section==='privacy'&&key==='commentAudience'&&!['everyone','friends','nobody'].includes(value))return {valid:false,error:'Comment audience must be everyone, friends or nobody.'};
+      if(section==='privacy'&&key==='storyAudience'&&!['public','friends','following','followers','subscribers','custom'].includes(value))return {valid:false,error:'Choose a valid Story audience.'};
+      if(section==='privacy'&&key==='storyPrivacyMode'&&!['audience','hide'].includes(value))return {valid:false,error:'Choose a valid Story privacy mode.'};
+      if(section==='privacy'&&['storyCustomUserIds','storyHiddenUserIds'].includes(key)){
+        if(!Array.isArray(value)||value.length>500||value.some(id=>typeof id!=='string'||!id.trim()||id.length>128))return {valid:false,error:'Story audience lists must contain valid member identifiers.'};
+        const ids=[...new Set(value.map(id=>id.trim()))];
+        if(ids.some(id=>id===user.id||!db.users.some(member=>member.id===id)))return {valid:false,error:'Choose existing Minglora members other than yourself.'};
+        next.privacy[key]=ids;
+        continue;
+      }
       if(section==='privacy'&&key==='allowFriendRequests'&&typeof value!=='boolean')return {valid:false,error:'Allow friend requests must be true or false.'};
       if(section==='notifications'&&typeof value!=='boolean')return {valid:false,error:'Notification preferences must be true or false.'};
       if(section==='preferences'&&key==='theme'&&!['system','light','dark'].includes(value))return {valid:false,error:'Theme must be system, light or dark.'};
@@ -895,16 +904,32 @@ function notifyPlatformReviewers(type,applicantId,actorId,text,extra={}){
 const blockedBetween = (firstId, secondId) => firstId !== secondId && (db.blocks || []).some(b => (b.blockerId === firstId && b.blockedId === secondId) || (b.blockerId === secondId && b.blockedId === firstId));
 const pageRole = (pageId, userId) => (db.pageRoles || []).find(role => role.pageId === pageId && role.userId === userId)?.role || null;
 const canManagePage = (pageId, userId) => canManagePagePolicy(db.pageRoles || [], pageId, userId);
-const canViewStory = (viewerId, story) => {
+const canViewStory = async (viewerId, story) => {
   if(!story?.userId)return false;
   if(viewerId!==story.userId&&friendStoriesMuted(viewerId,story.userId))return false;
   if(story.audience==='friends'&&isFriendRestricted(viewerId,story.userId))return false;
+  if(viewerId!==story.userId&&Array.isArray(story.hiddenUserIds)&&story.hiddenUserIds.includes(viewerId))return false;
   if(story.audience==='close_friends')return canViewProfileAudience(viewerId,story.userId,'close_friends');
+  let subscribers=[];
+  if(story.audience==='subscribers'&&viewerId!==story.userId){
+    if(isSupabasePersistence()){
+      try{
+        const access=await requestSupabaseState('subscription_access_check',{userId:viewerId,creatorIds:[story.userId]});
+        if(!(access.authorizedCreatorIds||[]).includes(story.userId))return false;
+        subscribers=[viewerId];
+      }catch(error){
+        console.warn('[Minglora Stories] Subscriber audience lookup failed closed.',String(error?.message||error).slice(0,160));
+        return false;
+      }
+    }else{
+      subscribers=listActiveCreatorSubscriptions(db.creatorSubscriptions,story.userId).map(item=>item.subscriberId);
+    }
+  }
   const mutualFriendships=getMutualFollowIds(db.follows||[],story.userId,db.blocks||[])
     .map(friendId=>({from:friendId,to:story.userId,status:'accepted'}));
   return canViewStoryPolicy({
     viewerId,story,friendships:[...(db.friendships||[]),...mutualFriendships],
-    follows:db.follows||[],blocks:db.blocks||[]
+    follows:db.follows||[],blocks:db.blocks||[],subscribers
   });
 };
 async function pruneExpiredStories() {
@@ -1040,7 +1065,8 @@ async function publicStory(story,viewerId,includeViews=false) {
   }));
   const visibleMedia=mediaItems.filter(Boolean),media=visibleMedia[0]||null;
   const views=(db.storyViews||[]).filter(view=>view.storyId===story.id);
-  return {...story,media,mediaItems:visibleMedia,soundtrack:await publicSoundtrack(story.soundtrack,viewerId),author:safeUser(db.users.find(u=>u.id===story.userId)),viewedByMe:story.userId===viewerId||views.some(view=>view.viewerId===viewerId),viewCount:views.length,
+  const {customUserIds,hiddenUserIds,...safeStory}=story;
+  return {...safeStory,media,mediaItems:visibleMedia,soundtrack:await publicSoundtrack(story.soundtrack,viewerId),author:safeUser(db.users.find(u=>u.id===story.userId)),viewedByMe:story.userId===viewerId||views.some(view=>view.viewerId===viewerId),viewCount:views.length,
     viewers:includeViews&&story.userId===viewerId?views.map(view=>({...view,user:safeUser(db.users.find(u=>u.id===view.viewerId))})):undefined};
 }
 
@@ -4894,7 +4920,7 @@ async function route(req, res) {
           if(timestamp>(activityAt.get(post.userId)||0))activityAt.set(post.userId,timestamp);
         }
         for(const story of db.stories||[]){
-          if(!canViewStory(user.id,story))continue;
+          if(!await canViewStory(user.id,story))continue;
           const timestamp=Date.parse(story.createdAt)||0;
           if(timestamp>(activityAt.get(story.userId)||0))activityAt.set(story.userId,timestamp);
         }
@@ -4914,9 +4940,9 @@ async function route(req, res) {
             .filter(post=>post.userId===member.id&&post.status!=='hidden'&&!post.archivedAt&&!blockedBetween(user.id,post.userId)&&canViewProfileAudience(user.id,post.userId,post.audience||'public')&&!friendPostsMuted(user.id,post.userId))
             .sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
           const recentPosts=await Promise.all(memberPosts.slice(0,2).map(publicDiscoveryPost));
-          const storyRecord=(db.stories||[])
-            .filter(story=>story.userId===member.id&&canViewStory(user.id,story))
-            .sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))[0]||null;
+          const storyCandidates=(db.stories||[]).filter(story=>story.userId===member.id);
+          const storyRecord=(await Promise.all(storyCandidates.map(async story=>await canViewStory(user.id,story)?story:null)))
+            .filter(Boolean).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))[0]||null;
           let latestStory=null;
           if(storyRecord){
             const story=await publicStory(storyRecord,user.id);
@@ -5270,7 +5296,8 @@ async function route(req, res) {
         const target=db.users.find(member=>member.id===profileHighlightsMatch[1]);
         if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'User not found.'});
         const highlights=await Promise.all((db.profileHighlights||[]).filter(item=>item.userId===target.id).map(async item=>{
-          const source=(item.storyIds||[]).map(id=>(db.stories||[]).find(story=>story.id===id)||(db.storyArchives||[]).find(story=>story.id===id)).filter(story=>story&&canViewStory(user.id,story));
+          const storyCandidates=(item.storyIds||[]).map(id=>(db.stories||[]).find(story=>story.id===id)||(db.storyArchives||[]).find(story=>story.id===id)).filter(Boolean);
+          const source=(await Promise.all(storyCandidates.map(async story=>await canViewStory(user.id,story)?story:null))).filter(Boolean);
           if(!source.length)return null;
           const first=source[0],asset=first?.mediaId?(db.mediaAssets||[]).find(media=>media.id===first.mediaId&&media.ownerId===target.id):null;
           let coverUrl=null;if(asset){try{coverUrl=await resolveAssetUrl(asset);}catch{}}
@@ -5703,14 +5730,25 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
       }
       if(method==='GET'&&p==='/api/stories'){
         await pruneExpiredStories();
-        const visible=(db.stories||[]).filter(story=>canViewStory(user.id,story)).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+        const visible=(await Promise.all((db.stories||[]).map(async story=>await canViewStory(user.id,story)?story:null))).filter(Boolean).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
         const stories=await Promise.all(visible.map(story=>publicStory(story,user.id)));
         return json(res,200,{stories});
       }
       if(method==='POST'&&p==='/api/stories'){
         const text=String(input.text||'').trim(),audience=String(input.audience||'public');
+        const textTheme=['ocean','sunrise','violet','midnight','minimal'].includes(input.textTheme)?input.textTheme:'ocean';
         if(input.imageUrl!==undefined&&input.imageUrl!=='')return json(res,400,{error:'Image URLs are not accepted. Choose media from your device.'});
-        if(!['public','friends','close_friends','followers','private'].includes(audience))return json(res,400,{error:'Unsupported story audience.'});
+        if(!['public','friends','close_friends','following','followers','subscribers','custom','private'].includes(audience))return json(res,400,{error:'Unsupported story audience.'});
+        const normalizeAudienceIds=(values)=>{
+          if(!Array.isArray(values)||values.length>500||values.some(id=>typeof id!=='string'||!id.trim()||id.length>128))return null;
+          const ids=[...new Set(values.map(id=>id.trim()))];
+          if(ids.some(id=>id===user.id||!db.users.some(member=>member.id===id)))return null;
+          return ids;
+        };
+        const customUserIds=normalizeAudienceIds(input.customUserIds===undefined?[]:input.customUserIds);
+        const hiddenUserIds=normalizeAudienceIds(input.hiddenUserIds===undefined?[]:input.hiddenUserIds);
+        if(!customUserIds||!hiddenUserIds)return json(res,400,{error:'Choose existing Minglora members for your Story audience.'});
+        if(audience==='custom'&&!customUserIds.length)return json(res,400,{error:'Select at least one person for a Custom Story audience.'});
         if(input.mediaIds!==undefined&&!Array.isArray(input.mediaIds))return json(res,400,{error:'Story media must be provided as a list of uploaded files.'});
         const requestedMediaIds=Array.isArray(input.mediaIds)?input.mediaIds:(input.mediaId?[input.mediaId]:[]);
         const mediaIds=[...new Set(requestedMediaIds.map(value=>String(value||'').trim()).filter(Boolean))];
@@ -5723,7 +5761,7 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
         const totalBytes=assets.reduce((total,asset)=>total+Math.max(0,Number(asset.byteSize)||0),0);
         if(totalBytes>500*1024*1024)return json(res,400,{error:'This combined story upload is larger than 500 MB. Remove some files and try again.'});
         const createdAt=now();
-        const story={id:uid(),userId:user.id,text,mediaIds,mediaId:mediaIds[0]||null,soundtrack,audience,createdAt,expiresAt:new Date(Date.now()+24*60*60*1000).toISOString()};
+        const story={id:uid(),userId:user.id,text,textTheme,mediaIds,mediaId:mediaIds[0]||null,soundtrack,audience,customUserIds,hiddenUserIds,createdAt,expiresAt:new Date(Date.now()+24*60*60*1000).toISOString()};
         assets.forEach(asset=>{asset.status='attached';asset.attachedTo=story.id;});
         db.stories.push(story);await saveStore();return json(res,201,{story:await publicStory(story,user.id)});
       }
@@ -5731,7 +5769,7 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
       if(method==='POST'&&m){
         await pruneExpiredStories();
         const story=db.stories.find(x=>x.id===m[1]);
-        if(!story||!canViewStory(user.id,story))return json(res,404,{error:'Story not found.'});
+        if(!story||!await canViewStory(user.id,story))return json(res,404,{error:'Story not found.'});
         if(story.userId!==user.id&&!(db.storyViews||[]).some(view=>view.storyId===story.id&&view.viewerId===user.id)){
           db.storyViews.push({storyId:story.id,viewerId:user.id,viewedAt:now()});await saveStore();
         }
@@ -5745,11 +5783,21 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
         if(story.userId!==user.id)return json(res,403,{error:'Only the story author can edit this story.'});
         const text=input.text===undefined?String(story.text||''):String(input.text||'').trim();
         const audience=input.audience===undefined?String(story.audience||'public'):String(input.audience||'');
-        if(!['public','friends','close_friends','followers','private'].includes(audience))return json(res,400,{error:'Unsupported story audience.'});
+        if(!['public','friends','close_friends','following','followers','subscribers','custom','private'].includes(audience))return json(res,400,{error:'Unsupported story audience.'});
+        const normalizeAudienceIds=(values)=>{
+          if(!Array.isArray(values)||values.length>500||values.some(id=>typeof id!=='string'||!id.trim()||id.length>128))return null;
+          const ids=[...new Set(values.map(id=>id.trim()))];
+          if(ids.some(id=>id===user.id||!db.users.some(member=>member.id===id)))return null;
+          return ids;
+        };
+        const customUserIds=normalizeAudienceIds(input.customUserIds===undefined?(story.customUserIds||[]):input.customUserIds);
+        const hiddenUserIds=normalizeAudienceIds(input.hiddenUserIds===undefined?(story.hiddenUserIds||[]):input.hiddenUserIds);
+        if(!customUserIds||!hiddenUserIds)return json(res,400,{error:'Choose existing Minglora members for your Story audience.'});
+        if(audience==='custom'&&!customUserIds.length)return json(res,400,{error:'Select at least one person for a Custom Story audience.'});
         if(text.length>1000)return json(res,400,{error:'Story text must be 1000 characters or fewer.'});
         const mediaIds=Array.isArray(story.mediaIds)&&story.mediaIds.length?story.mediaIds:(story.mediaId?[story.mediaId]:[]);
         if(!text&&!mediaIds.length&&!story.soundtrack)return json(res,400,{error:'A story must contain text, media or a sound.'});
-        story.text=text;story.audience=audience;story.updatedAt=now();
+        story.text=text;story.audience=audience;story.customUserIds=customUserIds;story.hiddenUserIds=hiddenUserIds;story.updatedAt=now();
         await saveStore();return json(res,200,{story:await publicStory(story,user.id,true)});
       }
       if(method==='DELETE'&&m){

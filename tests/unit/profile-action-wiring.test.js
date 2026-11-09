@@ -19,9 +19,11 @@ const profile=app.slice(profileStart,profileEnd);
 test('profile owner edit, media and story buttons invoke their real actions',()=>{
   for(const action of [
     "$('#edit-profile')?.addEventListener('click',()=>{\n    showTab('about');\n    const aboutPanel=$('#profile-tab-panel');\n    aboutPanel?.scrollIntoView({behavior:'smooth',block:'start'});\n    aboutPanel?.querySelector('[data-edit-about-section]')?.focus({preventScroll:true});\n  })",
-    "$('#profile-add-story')?.addEventListener('click',()=>openStoryComposer())",
-    "openProfileStoryEditor(u.id)"
+    "$('#profile-add-story')?.addEventListener('click',()=>openStoryComposer())"
   ])assert.ok(profile.includes(action),'Missing profile action: '+action);
+  assert.ok(profile.includes("$('#profile-add-story')?.addEventListener('click',()=>openStoryComposer())"));
+  assert.ok(app.includes("activateSilent('story-create')"),'Add story opens the dedicated creation workspace');
+  assert.ok(app.includes("'/story/create'"),'the creation workspace has a restorable route');
   assert.doesNotMatch(profile,/profile-edit-avatar|profile-edit-cover|profile-edit-admin-cover/);
   assert.match(app,/data-profile-media-section="avatar"/);
   assert.match(app,/data-profile-media-section="cover"/);

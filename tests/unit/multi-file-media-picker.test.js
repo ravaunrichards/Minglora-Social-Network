@@ -34,7 +34,9 @@ test('all shared multi-file publishing surfaces keep their intended attachment c
   assert.match(app, /createMediaPicker\(modal\.querySelector\('\[data-profile-photo-picker\]'\),\{slot:'post',maxFiles:10/);
   assert.match(app, /createMediaPicker\(modal\.querySelector\('#create-video-media-picker'\),\{slot:'post',maxFiles:1,accept:'video\/mp4,video\/webm,video\/quicktime'\}\)/);
   assert.match(app, /function openProfileReelComposer\(profileId\)\{\s*return openVideoComposer\(\{videoFormat:'reel',onPublished:\(\)=>openProfile\(profileId\)\}\);\s*\}/);
-  assert.match(app, /createMediaPicker\(modal\.querySelector\('#story-media-picker'\),\{slot:'story',maxFiles:10,maxTotalBytes:500\*1024\*1024\}\)/);
+  assert.match(app, /createMediaPicker\(mediaFormElement\.querySelector\('#story-media-picker'\),\{slot:'story',maxFiles:10,maxTotalBytes:500\*1024\*1024\}\)/);
+  assert.ok(app.includes('data-story-start="media"'));
+  assert.ok(app.includes('storyAudiencePayload()'));
   assert.match(app, /createMediaPicker\(root,\{slot:'message',maxFiles:5,compact:true\}\)/);
 });
 
@@ -51,13 +53,14 @@ test('Stories accept batches, enforce per-file count and combined size, and reta
     read('../../public/app.js'),
     read('../../src/server.js')
   ]);
-  assert.match(app, /JSON\.stringify\(\{text:values\.get\('text'\),mediaIds,audience:values\.get\('audience'\),soundtrack:track\}\)/);
+  assert.match(app, /JSON\.stringify\(\{text,mediaIds,soundtrack:track,\.\.\.storyAudiencePayload\(\)\}\)/);
+  assert.match(app, /JSON\.stringify\(\{text,mediaIds:\[\],textTheme:state\.storyTextTheme\|\|'ocean',\.\.\.storyAudiencePayload\(\)\}\)/);
   assert.match(server, /const requestedMediaIds=Array\.isArray\(input\.mediaIds\)\?input\.mediaIds:/);
   assert.match(server, /mediaIds\.length>10/);
   assert.match(server, /\['image','video'\]\.includes\(item\.mediaType\)/);
   assert.match(server, /totalBytes>500\*1024\*1024/);
   assert.match(server, /db\.stories\.push\(story\)/);
   assert.match(server, /mediaIds\.forEach\(id=>\{const asset=/);
-  assert.match(app, /const storyMedia=Array\.isArray\(s\.mediaItems\)&&s\.mediaItems\.length\?s\.mediaItems:/);
+  assert.match(app, /activeMedia=Array\.isArray\(s\.mediaItems\)&&s\.mediaItems\.length\?s\.mediaItems:/);
   assert.match(app, /data-story-next/);
 });
