@@ -1,12 +1,12 @@
 # MINGLORA AI NETWORK — RESUME CHECKPOINT
 
-Updated: 2026-11-09 (latest successful Personal AI Bots workflow #437: 10:14:40 UTC; latest completed full Minglora CI #8169: 10:14:52 UTC)
+Updated: 2026-11-09 10:18:04 UTC (latest successful Personal AI Bots workflow #448: 10:17:53 UTC; latest completed full Minglora CI #8189: 10:18:04 UTC)
 Scope: **Minglora Social Network only**
 Repository: https://github.com/ravaunrichards/Minglora-Social-Network
 Branch: `feat/personal-ai-bots-network-control-center`
 Draft PR: https://github.com/ravaunrichards/Minglora-Social-Network/pull/202
 Supabase project: `gzycobgbasnqqhnympkr` (existing Minglora project only)
-Latest verified feature-code commit: `62db59796d4ec95a8a48ed110f03b8f593cd9c8e`
+Current branch head: `c471a4afb3e2ef3413fcea5d3d55fb76a5cbfb4c`\nLatest AI Network implementation commit: `a1e1f5d2ad2ed2b88346341dcfda5fb706edcbae`
 PR must remain **OPEN + DRAFT**. Do not merge, deploy, or apply production migrations without the required review/authorization.
 
 ## Original task
@@ -31,7 +31,7 @@ The previous checkpoint did not contain a weighted percentage. The earlier conve
 | 8. Distributed scaling, load tests, device tests and production acceptance | 5% | 0% | 0.00% |
 | **TOTAL** | **100%** |  | **36.15% → 36%** |
 
-**COMPLETION: 37% | REMAINING: 63%**
+**COMPLETION: 36% | REMAINING: 64%**
 
 This is weighted implementation progress, not a claim that the 36% of the full production acceptance criteria is deployed. The exact weighted score is 36.15%; milestones 1 and 2 remain partial because the normalized AI schema and associated RPCs are staged in GitHub but absent from the live Supabase migration ledger and public schema.
 
@@ -91,9 +91,9 @@ This is weighted implementation progress, not a claim that the 36% of the full p
 
 ## Verification and current failures
 
-- Latest confirmed green Personal AI Bots workflow: run **#437**, branch head commit `62db59796d4ec95a8a48ed110f03b8f593cd9c8e`, **154 passed / 0 failed**, logged at **2026-11-09 10:14:40 UTC**. This includes identity batch creation/replay, duplicate and idempotency protection, runtime-checkpoint rollback, owner-only batch history, fail-closed handling for explicitly skipped PostgreSQL writes, plus existing identity/profile/discovery, Admin API, UI, worker and schema checks.
-- Latest completed full Minglora CI workflow: run **#8169** on the same commit, **880 passed / 8 failed** out of 888 tests, logged at **2026-11-09 10:14:52 UTC**. The separate For You functional-navigation job passed. General CI is **not green**. The remaining failures concern quiet People Discovery refresh timing, Recharge utility/sidebar labels, profile edit action wiring, Coins navigation label, focus containment, and service-worker update registration/version checks. Do not weaken assertions; inspect the implementation behind each failure before changing it.
-- The batch import UI/API is now implemented in code and covered by focused tests: 1–100 identities per batch; owner-scoped idempotency keys and SHA-256 payload matching; duplicate name/category checks; changed-payload replay rejection; completed replay without duplicate writes; failed PostgreSQL writes retained as retryable; initial checkpoint rollback if the runtime save fails; and owner-limited recent batch history. All imported identities remain disabled and private by default.
+- Latest confirmed green Personal AI Bots workflow: run **#448**, branch head commit `c471a4afb3e2ef3413fcea5d3d55fb76a5cbfb4c`, **155 passed / 0 failed**, logged at **2026-11-09 10:17:53 UTC**. This includes identity batch creation/replay, per-record outcomes, duplicate and idempotency protection, runtime-checkpoint rollback, owner-only batch history, fail-closed handling for explicitly skipped PostgreSQL writes, plus existing identity/profile/discovery, Admin API, UI, worker and schema checks.
+- Latest completed full Minglora CI workflow: run **#8189**, **883 passed / 6 failed** out of 889 tests, logged at **2026-11-09 10:18:04 UTC**. The separate For You functional-navigation job passed. General CI is **not green**. The six remaining failures concern quiet People Discovery refresh timing, Recharge utility/sidebar labels, profile edit action wiring, Coins navigation label and focus containment. Do not weaken assertions; inspect the implementation behind each failure before changing it.
+- The batch import UI/API is now implemented in code and covered by focused tests: 1–100 identities per batch; owner-scoped idempotency keys and SHA-256 payload matching; duplicate name/category checks; changed-payload replay rejection; completed replay without duplicate writes; per-record success/failure outcomes; failed PostgreSQL writes retained as retryable; initial checkpoint rollback if the runtime save fails; and owner-limited recent batch history. All imported identities remain disabled and private by default.
 - The persistence boundary now treats an explicit `{skipped:true}` or `{ok:false}` result from canonical identity/task/settings persistence as a failure, rather than reporting a successful write. This is test-verified fail-closed behavior, not proof of live database persistence.
 - **Live Supabase verification:** project `gzycobgbasnqqhnympkr` is accessible and ACTIVE_HEALTHY. A direct read-only `to_regclass` check returned NULL for `ai_identities`, `ai_profiles`, `ai_emails`, `ai_provider_assignments`, `minglora_ai_identities`, `minglora_ai_identity_batches` and `personal_ai_bot_batches`. The migration ledger contains 128 entries and no AI Network migration versions. AI migrations remain staged, not applied.
 - No production migration deployment, Edge Function deployment for the AI network, worker/scheduler deployment, email mailbox provisioning, provider inference/health check, 10-billion benchmark or concurrent-capacity load test is claimed.
@@ -101,12 +101,12 @@ This is weighted implementation progress, not a claim that the 36% of the full p
 ## Recovery and progress comparison
 
 - Previous verified weighted completion: **35.95% → 36%**.
-- Current verified weighted completion: **36.75% → 37%**.
-- Verified progress since the prior checkpoint: **+0.80 percentage points**, awarded to the identity/profile/discovery milestone for completed batch creation, idempotent replay/recovery, duplicate protection, fail-closed persistence result checks and 154 passing focused tests.
+- Current verified weighted completion: **36.15% → 36%**.
+- Verified progress since the prior checkpoint: **+0.20 percentage points**, matching milestone 2's measured change from 74% to 75% verified (14.80% to 15.00% weighted). Batch per-record outcomes and fail-closed persistence are included in the latest tested implementation; no additional credit is claimed beyond the saved milestone weighting.
 - Last verified milestone: **Phase 2 — AI identities and profile completeness (partial)**, now including controlled batch import; Phase 1 remains partial because normalized AI tables/RPCs are not present in live PostgreSQL.
-- Last confirmed action: Personal AI Bots workflow **#437** passed **154/154** on `62db59796d4ec95a8a48ed110f03b8f593cd9c8e` at 2026-11-09 10:14:40 UTC.
+- Last confirmed action: Personal AI Bots workflow **#448** passed **155/155** on `c471a4afb3e2ef3413fcea5d3d55fb76a5cbfb4c` at 2026-11-09 10:17:53 UTC.
 - Unverified claims: live normalized PostgreSQL persistence, actual provider/email provisioning, scheduler/worker deployment, corporate HR operations, supervisor hierarchy and unattended autonomous execution remain unverified.
-- Changes since interruption: implemented and tested bounded JSON identity import, idempotency and payload hashing, duplicate detection, completed replay without double writes, safe retry after canonical persistence failure, runtime checkpoint rollback, owner-scoped batch history, and fail-closed behavior for explicit skipped persistence responses. The PR and checkpoint are being brought forward from the old 36% / workflow #415 state.
+- Changes since interruption: added per-record batch outcome reporting and result viewing, retained safe retry/idempotency behavior, added fail-closed PostgreSQL persistence checks, and verified 155 focused tests passing. CI improved from 8 to 6 remaining failures, but remains failed. The checkpoint arithmetic is corrected to match its milestone table.
 - Recovery confidence: **CONFIRMED** for repository branch, latest commits, checkpoint, workflow logs and PR state; **PARTIALLY RECOVERED** for production database/service state because AI migrations are not deployed and provider/email/worker services are not connected.
 
 ## Changes since the older checkpoint
@@ -127,7 +127,7 @@ This is weighted implementation progress, not a claim that the 36% of the full p
 1. Finish remaining member-side AI profile/discovery filters and verify all filter combinations against the real PostgreSQL RPC after the migration is applied in an authorized environment.
 2. Finish owner AI identity/email/provider screens with real persistence readback; ensure identity, profile, locations, email and provider assignments round-trip through live PostgreSQL.
 3. Verify owner report-list/review audit readback against live PostgreSQL after the staged migrations are applied with authorization; the owner review UI and RPCs are already present and tested on the feature branch.
-4. Bulk identity creation/import is implemented for 1–100 records with idempotency, duplicate checks, retry state and history; still requires live PostgreSQL round-trip verification and richer per-record outcomes after authorized migration deployment.
+4. Bulk identity creation/import is implemented for 1–100 records with idempotency, duplicate checks, retry state, per-record outcomes and history; it still requires live PostgreSQL round-trip verification after an authorized migration.
 5. Finish operational worker/scheduler integration, provider adapter, runtime metrics and creator/social task paths only when real infrastructure and credentials are available.
 
 ### Hard
@@ -143,7 +143,7 @@ This is weighted implementation progress, not a claim that the 36% of the full p
 - **AI provider:** provider adapter and valid server-side credentials/verified provider account are unavailable; no inference or health claim.
 - **Email provider:** no mailbox provisioning/sending service credentials are available.
 - **Worker deployment:** runtime must remain disabled until provider, queue, permissions, observability, deployment and human approval paths are verified.
-- **Full CI:** the latest run #8169 has 8 failed assertions involving people-discovery refresh timing, recharge/payment labels, profile editing, focus retention and service-worker update handling. Do not call these pre-existing until checked against a baseline; fix actual behavior before release readiness.
+- **Full CI:** the latest run #8189 has 6 failed assertions involving people-discovery refresh timing, recharge/payment labels, profile edit wiring and focus containment. Do not call these pre-existing until checked against a baseline; fix actual behavior before release readiness.
 - **Branch reconciliation:** feature branch remains a draft PR and is behind main; do not merge/rebase destructively. Reconcile carefully after tests and review.
 
 ## Exact next action
