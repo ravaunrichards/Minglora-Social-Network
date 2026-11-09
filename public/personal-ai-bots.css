@@ -52,3 +52,17 @@
 .pab-bot-card[hidden]{display:none}
 .pab-category[hidden]{display:none}
 @media(max-width:700px){.pab-category-grid,.pab-roadmap-grid{grid-template-columns:1fr}.pab-category{align-items:center}.pab-category .pab-switch{margin:0}}
+
+
+/* Team management — responsive, content-first cards without floating controls. */
+.pab-team-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;margin-top:12px}
+.pab-team-card{display:grid;gap:11px;min-width:0;padding:14px;border:1px solid var(--line,#dce4ef);border-radius:12px;background:var(--surface,#fff)}
+.pab-team-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.pab-team-top>div{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.pab-team-top .pab-select{width:auto;min-width:110px}
+.pab-team-members{display:grid;gap:7px}
+.pab-team-member{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;border:1px solid var(--line,#dce4ef);border-radius:9px;min-width:0}
+.pab-team-member>span{min-width:0;overflow-wrap:anywhere;font-size:12px;font-weight:700}
+.pab-team-member small{display:inline-block;margin-left:4px;color:var(--muted,#64748b);font-weight:500}
+.pab-team-candidates{width:100%;min-height:92px}
+@media(max-width:700px){.pab-team-grid{grid-template-columns:1fr}.pab-team-card{padding:11px}.pab-team-member{align-items:flex-start}.pab-team-top .pab-select{width:100%}}
