@@ -131,7 +131,7 @@ import {
 } from './personal-ai-bots-service.js';
 
 export async function handlePersonalAiBotsAdminApi(context) {
-  const {req,res,url,method,path,user,input,db,saveStore,uid,now,json,isOwnerAdmin,isSameOriginWrite,lookupAdminMember,persistAiIdentities,listAiIdentities,persistAiBotTasks,listAiBotTasks,getAiBotTaskStats,persistAiBotSettings}=context;
+  const {req,res,url,method,path,user,input,db,saveStore,uid,now,json,isOwnerAdmin,isSameOriginWrite,lookupAdminMember,persistAiIdentities,listAiIdentities,persistAiBotTasks,listAiBotTasks,getAiBotTaskStats,persistAiBotSettings,persistAiProviderAssignment,listAiProviderAssignments}=context;
   const root='/api/admin/personal-ai-bots';
   if(path!==root&&!path.startsWith(root+'/'))return false;
   if(!isOwnerAdmin)return (json(res,403,{error:'Only the designated MFA-verified Minglora owner can manage the Personal AI Bots Network.'}),true);
@@ -145,12 +145,15 @@ export async function handlePersonalAiBotsAdminApi(context) {
       const identityRecords=typeof listAiIdentities==='function'?await listAiIdentities({limit:1000,offset:0}):null;
       const durableTasks=typeof listAiBotTasks==='function'?await listAiBotTasks({limit:100,offset:0}):null;
       const durableTaskStats=typeof getAiBotTaskStats==='function'?await getAiBotTaskStats():null;
+      const providerAssignments=typeof listAiProviderAssignments==='function'?await listAiProviderAssignments({limit:200,offset:0}):null;
       return (json(res,200,{
         ...overview,
         identityRecords:Array.isArray(identityRecords)?identityRecords:[],
         identityRecordsSource:Array.isArray(identityRecords)?'minglora_supabase_postgresql':'legacy_runtime_state',
         taskRecordsSource:Array.isArray(durableTasks)?'minglora_supabase_postgresql':'legacy_runtime_state',
         taskQueueStats:durableTaskStats&&typeof durableTaskStats==='object'?durableTaskStats:null,
+        providerAssignments:Array.isArray(providerAssignments)?providerAssignments:[],
+        providerAssignmentsSource:Array.isArray(providerAssignments)?'minglora_supabase_postgresql':'unavailable',
         categories:getPersonalAiBotCategories(db),
         bots:db.personalAiBots.slice().sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt))),
         tasks:Array.isArray(durableTasks)?durableTasks:db.personalAiBotTasks.slice(0,100),
@@ -198,6 +201,47 @@ export async function handlePersonalAiBotsAdminApi(context) {
       const category=createPersonalAiBotCategory(db,input||{},user.id,stamp,uid);
       await saveStore();
       return (json(res,201,{ok:true,category}),true);
+    }
+    if(method==='POST'&&path===root+'/providers'){
+      if(typeof persistAiProviderAssignment!=='function')return (json(res,503,{error:'Provider assignment storage is not available in this runtime.'}),true);
+      const identityId=String(input?.identityId||'').trim();
+      const bot=db.personalAiBots.find(item=>item.id===identityId);
+      if(!bot)return (json(res,404,{error:'Choose an existing Minglora AI identity before assigning a provider.'}),true);
+      const assignment={
+        identityId,
+        providerName:String(input?.providerName||'').trim(),
+        providerIdentifier:String(input?.providerIdentifier||'').trim().toLowerCase(),
+        providerAccountReference:String(input?.providerAccountReference||'default').trim(),
+        credentialSecretReference:String(input?.credentialSecretReference||'').trim()||null,
+        modelName:String(input?.modelName||'').trim(),
+        modelIdentifier:String(input?.modelIdentifier||'').trim(),
+        modelVersion:String(input?.modelVersion||'').trim(),
+        supportedLanguages:Array.isArray(input?.supportedLanguages)?input.supportedLanguages:[],
+        capabilities:input?.capabilities&&typeof input.capabilities==='object'?input.capabilities:{},
+        textCapable:input?.textCapable!==false,
+        imageCapable:input?.imageCapable===true,
+        audioCapable:input?.audioCapable===true,
+        videoCapable:input?.videoCapable===true,
+        voiceCapable:input?.voiceCapable===true,
+        routingPriority:Number(input?.routingPriority||100),
+        isPrimary:input?.isPrimary===true
+      };
+      if(!assignment.identityId.match(/^[0-9a-f-]{36}$/i)||
+         assignment.providerName.length<2||assignment.providerName.length>80||
+         !/^[A-Za-z0-9][A-Za-z0-9 ._-]{1,78}$/.test(assignment.providerName)||
+         !/^[a-z][a-z0-9._-]{1,79}$/.test(assignment.providerIdentifier)||
+         !/^[A-Za-z0-9._:-]{1,120}$/.test(assignment.providerAccountReference)||
+         (assignment.credentialSecretReference&&!/^env:MINGLORA_AI_PROVIDER_[A-Z0-9_]{2,80}$/.test(assignment.credentialSecretReference))||
+         !assignment.modelName||assignment.modelName.length>160||
+         !/^[A-Za-z0-9][A-Za-z0-9._:/-]{0,199}$/.test(assignment.modelIdentifier)||
+         assignment.modelVersion.length>80||assignment.supportedLanguages.length>100||
+         assignment.supportedLanguages.some(value=>typeof value!=='string'||value.trim().length<2||value.length>20)||
+         !Number.isInteger(assignment.routingPriority)||assignment.routingPriority<1||assignment.routingPriority>1000){
+        return (json(res,400,{error:'Provider/model fields are invalid. Use a secret reference, never a raw API credential.'}),true);
+      }
+      await persistCanonicalIdentities([bot],persistAiIdentities);
+      const saved=await persistAiProviderAssignment(assignment);
+      return (json(res,201,{ok:true,assignment:saved, message:'Provider/model assignment saved as unverified. A real provider credential and server-side health check are still required before dispatch.'}),true);
     }
     if(method==='PUT'&&path===root+'/network'){
       const network=setNetwork(input||{});
