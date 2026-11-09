@@ -12,6 +12,7 @@ const worker=read('public/sw.js');
 const layout=read('public/profile-admin-layout-parity.css');
 const actions=read('public/profile-action-toolbar.css');
 const parity=read('public/profile-admin-layout-parity.css');
+const parity=read('public/profile-admin-layout-parity.css');
 
 test('owner and visitor profiles retain their separate real action sets',()=>{
   const start=app.indexOf('function renderProfile(data){');
