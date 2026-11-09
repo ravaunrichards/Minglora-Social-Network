@@ -502,3 +502,40 @@ Direct service reads during this continuation confirmed:
 - **Final verification:** Resolve or formally accept the 30 full-suite and two For You failures, then complete end-to-end and regression acceptance.
 
 **Exact next action:** obtain authorization for reviewed reconciliation of `src/server.js`, `public/admin-centre.html`, and `public/sw.js`. Keep PR #203 in draft and leave production unchanged until then.
+## Continuation addendum — 2026-11-09 11:46 UTC (latest state)
+
+**Canonical verified completion: 75% | remaining: 25%.** This supersedes older branch-tip and PR-count references in earlier checkpoint paragraphs. The original milestone weights remain unchanged; audit/data-integrity verified credit is now 8% of its 10% weight.
+
+### Latest branch and CI state
+
+- **Current branch tip:** `7f1f2e5f9835e2969ba9e2d34f3be3df6ec4489d`.
+- **PR #203:** open draft; 91 commits, 15 changed files; GitHub reports `mergeable=false`, `mergeable_state=dirty`.
+- **Main:** `2f80e9d997b43e5da6373c385d6ce153ff908e67`; feature branch compares 91 commits ahead and 1 behind. The merge base is `b4a624f72cf961d0dfa9a1b6233dd2b1787c869e`.
+- **Latest completed workflow:** [run #8364](https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/42611567011), at current checkpoint head `7f1f2e5`.
+- General repository tests: **750 total, 720 passed, 30 failed**.
+- For You job: **15 tests, 13 passed, 2 failed** (For You header/search layout and Home Stories layout).
+- Focused Admin Centre tests passed, including the DELETE API 409 mapping on rejected Auth deletion, failed-deletion session/audit disclosure, failed provider session-revocation audit, deletion audit ordering, member manager, owner/MFA provider checks and service connection/secret-safety tests.
+- Dependency audit, repository structure, JavaScript syntax and generated assets steps passed. Overall CI remains failed because of the 30 general-suite and 2 For You failures; do not call the full suite green.
+
+### Latest deletion failure safeguard
+
+The Node DELETE route now returns HTTP 200 only for `result.deleted === true`, otherwise HTTP 409. It deletes local `db.users`, `db.sessions` and `db.pendingAuth` records and saves local state only after successful Supabase Auth deletion. The Edge Function's HTTP 409 payload discloses whether provider refresh-token sessions had been revoked before the deletion failed, whether revocation itself failed, or whether no current token was available. The browser's `adminCentreApi` now throws on that 409 and the selected-account UI displays both the audit result and the session warning instead of displaying a false success message.
+
+Relevant commits: `4bcbd04` (session warnings in Edge response), `073db20` (UI disclosure), `65060ea` (session/audit outcome regression), `48a5c5c` (HTTP 409 response mapping), `9af4031` (HTTP status/UI test), and checkpoint `7f1f2e5`.
+
+### Live service state, re-queried during this continuation
+
+- Minglora Supabase `gzycobgbasnqqhnympkr`: `ACTIVE_HEALTHY`, PostgreSQL 17.11.0.003.
+- Production `minglora-runtime-state`: still active at version 112. The new branch's member CRUD and deletion/session code is not deployed.
+- Render `minglora-social-network`: active Free web service, auto-deploy from `main`; latest listed live deploy is still `2f80e9d997b43e5da6373c385d6ce153ff908e67`.
+- `SUPABASE_ACCESS_TOKEN` remains unavailable/unverified in Render; no secret value was supplied or exposed. Management API GET/PATCH therefore remains unverified in the hosted environment.
+- No production schema, Auth configuration, provider settings, user, balance, role, merge or deployment was changed.
+
+### Remaining work and exact next step
+
+- **Easy:** No known in-scope focused Admin Centre test failure remains in run #8364.
+- **Medium:** Obtain authorization to reconcile the known dirty PR overlap in `src/server.js`, `public/admin-centre.html`, and `public/sw.js`; then run hosted owner/MFA account lifecycle and service-health acceptance.
+- **Hard:** Configure the least-privilege project-scoped `SUPABASE_ACCESS_TOKEN` directly in Render; verify live Management API GET/PATCH; merge and deploy the updated Edge Function only after explicit authorization.
+- **Final:** Resolve or formally accept the 30 general-suite and two For You failures; finish hosted CRUD, audit, session and provider acceptance before claiming 100%.
+
+**Next action:** obtain explicit authorization for reviewed branch reconciliation. Until then keep PR #203 in draft and leave production on its current `main` deployment.
