@@ -32,7 +32,7 @@
     void load();
   };
   const render=providers=>{
-    const groups= new Map();
+    const groups=new Map();
     for(const provider of providers){
       if(!groups.has(provider.category))groups.set(provider.category,[]);
       groups.get(provider.category).push(provider);
@@ -44,26 +44,27 @@
         const disabled=(provider.locked&&!provider.enabled)||(!provider.configured&&!provider.enabled);
         const status=provider.locked?'Plan restricted':provider.enabled?(provider.configured?'Enabled · ready':'Enabled · needs credentials'):(provider.configured?'Disabled · ready to enable':'Disabled · needs setup');
         const detail=provider.reason||provider.note||'Provider credentials are configured in Supabase.';
+        const action=provider.enabled?'Disable':'Enable';
+        const actionAccessibleName=action+' '+provider.label+' sign-in';
         return '<article class="admin-auth-provider-card"><div class="admin-auth-provider-copy"><strong>'+escapeHtml(provider.label)+'</strong><span class="admin-auth-provider-state '+(provider.enabled?'is-enabled':provider.locked?'is-locked':'')+'">'+escapeHtml(status)+'</span><small>'+escapeHtml(detail)+'</small></div>'+
-          '<label class="admin-auth-provider-switch"><span class="sr-only">Enable '+escapeHtml(provider.label)+'</span>'+
-          '<input type="checkbox" role="switch" data-provider="'+escapeHtml(provider.id)+'" '+(provider.enabled?'checked ':'')+(disabled?'disabled':'')+'>'+
-          '<span aria-hidden="true"></span></label></article>';
+          '<button type="button" class="admin-auth-provider-action" data-provider="'+escapeHtml(provider.id)+'" data-enabled="'+(provider.enabled?'true':'false')+'" data-provider-label="'+escapeHtml(provider.label)+'" aria-label="'+escapeHtml(actionAccessibleName)+'" '+(disabled?'disabled':'')+'>'+action+'</button></article>';
       }).join('')+'</div></section>'
     ).join('');
-    container.querySelectorAll('input[data-provider]').forEach(toggle=>{
-      toggle.addEventListener('change',async()=>{
-        const oldValue=!toggle.checked;
-        const provider=toggle.dataset.provider;
-        toggle.disabled=true;
+    container.querySelectorAll('button[data-provider]').forEach(button=>{
+      button.addEventListener('click',async()=>{
+        if(button.disabled)return;
+        const provider=button.dataset.provider;
+        const providerLabel=button.dataset.providerLabel||provider.replace(/_/g,' ');
+        const enabled=button.dataset.enabled!=='true';
+        button.disabled=true;
         const status=panel.querySelector('#admin-auth-provider-status');
-        if(status)status.textContent='Saving '+provider.replace(/_/g,' ')+' provider setting…';
+        if(status)status.textContent='Saving '+providerLabel+' sign-in setting…';
         try{
-          await api('PATCH',{provider,enabled:toggle.checked});
+          await api('PATCH',{provider,enabled});
           await load();
         }catch(error){
-          toggle.checked=oldValue;
           if(status)status.textContent=error.message||'Provider setting could not be saved.';
-          toggle.disabled=false;
+          button.disabled=false;
         }
       });
     });
