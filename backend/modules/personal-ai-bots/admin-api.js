@@ -154,7 +154,7 @@ import {
 } from './personal-ai-bots-service.js';
 
 export async function handlePersonalAiBotsAdminApi(context) {
-  const {req,res,url,method,path,user,input,db,saveStore,uid,now,json,isOwnerAdmin,isSameOriginWrite,lookupAdminMember,persistAiIdentities,listAiIdentities,persistAiBotTasks,listAiBotTasks,getAiBotTaskStats,persistAiBotSettings,persistAiProviderAssignment,listAiProviderAssignments,persistAiEmailIdentity,listAiEmailIdentities}=context;
+  const {req,res,url,method,path,user,input,db,saveStore,uid,now,json,isOwnerAdmin,isSameOriginWrite,lookupAdminMember,persistAiIdentities,listAiIdentities,persistAiBotTasks,listAiBotTasks,getAiBotTaskStats,persistAiBotSettings,persistAiProviderAssignment,listAiProviderAssignments,persistAiEmailIdentity,listAiEmailIdentities,listAiIdentityReports,reviewAiIdentityReport}=context;
   const root='/api/admin/personal-ai-bots';
   if(path!==root&&!path.startsWith(root+'/'))return false;
   if(!isOwnerAdmin)return (json(res,403,{error:'Only the designated MFA-verified Minglora owner can manage the Personal AI Bots Network.'}),true);
@@ -170,6 +170,7 @@ export async function handlePersonalAiBotsAdminApi(context) {
       const durableTaskStats=typeof getAiBotTaskStats==='function'?await getAiBotTaskStats():null;
       const providerAssignments=typeof listAiProviderAssignments==='function'?await listAiProviderAssignments({limit:200,offset:0}):null;
       const emailIdentities=typeof listAiEmailIdentities==='function'?await listAiEmailIdentities({limit:200,offset:0}):null;
+      const safetyReports=typeof listAiIdentityReports==='function'?await listAiIdentityReports({status:'pending',limit:100,offset:0}):null;
       return (json(res,200,{
         ...overview,
         identityRecords:Array.isArray(identityRecords)?identityRecords:[],
@@ -180,6 +181,8 @@ export async function handlePersonalAiBotsAdminApi(context) {
         providerAssignmentsSource:Array.isArray(providerAssignments)?'minglora_supabase_postgresql':'unavailable',
         emailIdentities:Array.isArray(emailIdentities)?emailIdentities:[],
         emailIdentitiesSource:Array.isArray(emailIdentities)?'minglora_supabase_postgresql':'unavailable',
+        safetyReports:Array.isArray(safetyReports)?safetyReports:[],
+        safetyReportsSource:Array.isArray(safetyReports)?'minglora_supabase_postgresql':'unavailable',
         categories:getPersonalAiBotCategories(db),
         bots:db.personalAiBots.slice().sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt))),
         tasks:Array.isArray(durableTasks)?durableTasks:db.personalAiBotTasks.slice(0,100),
@@ -227,6 +230,25 @@ export async function handlePersonalAiBotsAdminApi(context) {
       const category=createPersonalAiBotCategory(db,input||{},user.id,stamp,uid);
       await saveStore();
       return (json(res,201,{ok:true,category}),true);
+    }
+    if(method==='GET'&&path===root+'/safety/reports'){
+      if(typeof listAiIdentityReports!=='function')return (json(res,503,{error:'AI report review storage is unavailable.'}),true);
+      const status=String(url.searchParams.get('status')||'pending');
+      if(!['all','pending','in_review','actioned','dismissed'].includes(status))return (json(res,400,{error:'AI report status filter is invalid.'}),true);
+      const reports=await listAiIdentityReports({status,limit:200,offset:0});
+      return (json(res,200,{ok:true,reports:Array.isArray(reports)?reports:[]}),true);
+    }
+    const safetyReportMatch=path.match(/^\/api\/admin\/personal-ai-bots\/safety\/reports\/([0-9a-f-]{36})$/i);
+    if(safetyReportMatch&&method==='PATCH'){
+      if(typeof reviewAiIdentityReport!=='function')return (json(res,503,{error:'AI report review storage is unavailable.'}),true);
+      const status=String(input?.status||'');
+      const resolutionNote=String(input?.resolutionNote||'').trim();
+      if(!['in_review','actioned','dismissed'].includes(status)||resolutionNote.length>1200){
+        return (json(res,400,{error:'AI report review fields are invalid.'}),true);
+      }
+      const report=await reviewAiIdentityReport({reportId:safetyReportMatch[1],status,resolutionNote});
+      await saveStore();
+      return (json(res,200,{ok:true,report}),true);
     }
     if(method==='POST'&&path===root+'/emails'){
       const allowedEmailFields=new Set(['identityId','emailAddress','emailType','emailProvider','isPrimary']);
