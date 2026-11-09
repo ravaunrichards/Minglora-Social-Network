@@ -45,6 +45,7 @@ export function ensurePersonalAiBotCollections(db) {
       id:'global', enabled:false, hybridEnabled:false,
       defaultAutonomyMode:'administrator_controlled',
       requireAdministratorApproval:true,
+      disabledCategoryIds:[],
       executionProviderConfigured:false,
       executionWorkersConfigured:false,
       createdAt:new Date().toISOString(),
@@ -57,9 +58,11 @@ export function ensurePersonalAiBotCollections(db) {
 
 export function getPersonalAiBotCategories(db) {
   ensurePersonalAiBotCollections(db);
+  const settings=ensurePersonalAiBotCollections(db);
+  const disabled=new Set(settings.disabledCategoryIds || []);
   return [
-    ...PERSONAL_AI_BOT_CATEGORIES.map(item => ({ ...item, builtIn:true, enabled:true })),
-    ...db.personalAiBotCategories.map(item => ({ ...item, builtIn:false }))
+    ...PERSONAL_AI_BOT_CATEGORIES.map(item => ({ ...item, builtIn:true, enabled:!disabled.has(item.id) })),
+    ...db.personalAiBotCategories.map(item => ({ ...item, builtIn:false, enabled:!disabled.has(item.id) }))
   ];
 }
 
@@ -198,10 +201,26 @@ export function createPersonalAiBotCategory(db, input, actorId, timestamp, uid) 
   return category;
 }
 
+export function setPersonalAiBotCategoryEnabled(db, categoryId, enabled, actorId, timestamp, uid) {
+  const settings=ensurePersonalAiBotCollections(db);
+  if(typeof enabled!=='boolean')throw Object.assign(new Error('Choose whether this category is enabled.'),{status:400});
+  const category=getPersonalAiBotCategories(db).find(item=>item.id===categoryId);
+  if(!category)throw Object.assign(new Error('Bot category not found.'),{status:404});
+  const disabled=new Set(settings.disabledCategoryIds || []);
+  if(enabled)disabled.delete(categoryId);else disabled.add(categoryId);
+  settings.disabledCategoryIds=[...disabled];
+  settings.updatedBy=actorId;settings.updatedAt=timestamp;
+  audit(db,actorId,enabled?'category.enabled':'category.disabled','category',categoryId,
+    (enabled?'Enabled ':'Disabled ')+category.name+' category.',timestamp,uid);
+  return {...category,enabled};
+}
+
 export function queuePersonalAiBotInstruction(db, botId, input, actorId, timestamp, uid) {
   ensurePersonalAiBotCollections(db);
   const bot=db.personalAiBots.find(item=>item.id===botId);
   if(!bot)throw Object.assign(new Error('Bot not found.'),{status:404});
+  const category=getPersonalAiBotCategories(db).find(item=>item.id===bot.categoryId);
+  if(!category?.enabled)throw Object.assign(new Error('This bot category is disabled.'),{status:409});
   const taskType=String(input.taskType||'other');
   if(!PERSONAL_AI_BOT_TASK_TYPES.includes(taskType))throw Object.assign(new Error('Choose a supported task type.'),{status:400});
   const instruction=String(input.instruction||'').trim();
