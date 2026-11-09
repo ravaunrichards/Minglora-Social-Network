@@ -5736,6 +5736,7 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
       }
       if(method==='POST'&&p==='/api/stories'){
         const text=String(input.text||'').trim(),audience=String(input.audience||'public');
+        const textTheme=['ocean','sunrise','violet','midnight','minimal'].includes(input.textTheme)?input.textTheme:'ocean';
         if(input.imageUrl!==undefined&&input.imageUrl!=='')return json(res,400,{error:'Image URLs are not accepted. Choose media from your device.'});
         if(!['public','friends','close_friends','following','followers','subscribers','custom','private'].includes(audience))return json(res,400,{error:'Unsupported story audience.'});
         const normalizeAudienceIds=(values)=>{
@@ -5760,7 +5761,7 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
         const totalBytes=assets.reduce((total,asset)=>total+Math.max(0,Number(asset.byteSize)||0),0);
         if(totalBytes>500*1024*1024)return json(res,400,{error:'This combined story upload is larger than 500 MB. Remove some files and try again.'});
         const createdAt=now();
-        const story={id:uid(),userId:user.id,text,mediaIds,mediaId:mediaIds[0]||null,soundtrack,audience,customUserIds,hiddenUserIds,createdAt,expiresAt:new Date(Date.now()+24*60*60*1000).toISOString()};
+        const story={id:uid(),userId:user.id,text,textTheme,mediaIds,mediaId:mediaIds[0]||null,soundtrack,audience,customUserIds,hiddenUserIds,createdAt,expiresAt:new Date(Date.now()+24*60*60*1000).toISOString()};
         assets.forEach(asset=>{asset.status='attached';asset.attachedTo=story.id;});
         db.stories.push(story);await saveStore();return json(res,201,{story:await publicStory(story,user.id)});
       }
