@@ -338,38 +338,7 @@ CREATE TABLE IF NOT EXISTS public.ai_identities (
   owner_admin_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
   source_system text NOT NULL DEFAULT 'minglora' CHECK (char_length(source_system) BETWEEN 2 AND 40),
   source_identity_id uuid,
-  public_profile_slug text NOT NULL UNIQUE CHECK (public_profile_slug ~ '^[a-z0-9]+(-[a-z0-9]+)*
--- The existing Minglora server-to-Supabase runtime gateway uses service_role.
-DO $$
-DECLARE
-  table_name text;
-BEGIN
-  FOREACH table_name IN ARRAY ARRAY[
-    'minglora_ai_bot_settings',
-    'minglora_ai_bot_categories',
-    'minglora_ai_bots',
-    'minglora_ai_bot_schedules',
-    'minglora_ai_bot_teams',
-    'minglora_ai_bot_team_members',
-    'minglora_ai_bot_tasks',
-    'minglora_ai_bot_follow_targets',
-    'minglora_ai_bot_follows',
-    'minglora_ai_bot_followers',
-    'minglora_ai_bot_follow_exclusions',
-    'minglora_ai_bot_audit',
-    'ai_identities','ai_names','ai_profiles','ai_emails','ai_provider_accounts',
-    'ai_provider_models','ai_provider_assignments','ai_identity_locations','ai_identity_languages',
-    'ai_identity_capabilities','ai_identity_permissions','ai_identity_owners',
-    'ai_identity_status_history','ai_identity_versions','ai_identity_audit_logs'
-  ]
-  LOOP
-    EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', table_name);
-    EXECUTE format('REVOKE ALL ON TABLE public.%I FROM PUBLIC, anon, authenticated', table_name);
-    EXECUTE format('GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.%I TO service_role', table_name);
-  END LOOP;
-END $$;
-
-COMMIT;
+  public_profile_slug text NOT NULL UNIQUE CHECK (public_profile_slug ~ '^[a-z0-9]+(-[a-z0-9]+)*$'),
 ),
   public_profile_enabled boolean NOT NULL DEFAULT false,
   created_at timestamptz NOT NULL DEFAULT now(),
@@ -390,34 +359,7 @@ CREATE TABLE IF NOT EXISTS public.ai_names (
   middle_name text NOT NULL DEFAULT '' CHECK (char_length(middle_name) <= 80),
   full_name text NOT NULL CHECK (char_length(btrim(full_name)) BETWEEN 2 AND 180),
   display_name text NOT NULL CHECK (char_length(btrim(display_name)) BETWEEN 2 AND 120),
-  username text NOT NULL UNIQUE CHECK (username = lower(username) AND username ~ '^ai_[a-z0-9_]{2,40}
--- The existing Minglora server-to-Supabase runtime gateway uses service_role.
-DO $$
-DECLARE
-  table_name text;
-BEGIN
-  FOREACH table_name IN ARRAY ARRAY[
-    'minglora_ai_bot_settings',
-    'minglora_ai_bot_categories',
-    'minglora_ai_bots',
-    'minglora_ai_bot_schedules',
-    'minglora_ai_bot_teams',
-    'minglora_ai_bot_team_members',
-    'minglora_ai_bot_tasks',
-    'minglora_ai_bot_follow_targets',
-    'minglora_ai_bot_follows',
-    'minglora_ai_bot_followers',
-    'minglora_ai_bot_follow_exclusions',
-    'minglora_ai_bot_audit'
-  ]
-  LOOP
-    EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', table_name);
-    EXECUTE format('REVOKE ALL ON TABLE public.%I FROM PUBLIC, anon, authenticated', table_name);
-    EXECUTE format('GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.%I TO service_role', table_name);
-  END LOOP;
-END $$;
-
-COMMIT;
+  username text NOT NULL UNIQUE CHECK (username = lower(username) AND username ~ '^ai_[a-z0-9_]{2,40}$'),
 ),
   public_profile_url text NOT NULL UNIQUE CHECK (char_length(public_profile_url) <= 300),
   updated_at timestamptz NOT NULL DEFAULT now()
@@ -550,34 +492,7 @@ CREATE TABLE IF NOT EXISTS public.ai_identity_locations (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   identity_id uuid NOT NULL REFERENCES public.ai_identities(identity_id) ON DELETE CASCADE,
   location_type text NOT NULL CHECK (location_type IN ('origin','current','operating','registered')),
-  country_code text NOT NULL DEFAULT '' CHECK (country_code = '' OR country_code ~ '^[A-Z]{2}
--- The existing Minglora server-to-Supabase runtime gateway uses service_role.
-DO $$
-DECLARE
-  table_name text;
-BEGIN
-  FOREACH table_name IN ARRAY ARRAY[
-    'minglora_ai_bot_settings',
-    'minglora_ai_bot_categories',
-    'minglora_ai_bots',
-    'minglora_ai_bot_schedules',
-    'minglora_ai_bot_teams',
-    'minglora_ai_bot_team_members',
-    'minglora_ai_bot_tasks',
-    'minglora_ai_bot_follow_targets',
-    'minglora_ai_bot_follows',
-    'minglora_ai_bot_followers',
-    'minglora_ai_bot_follow_exclusions',
-    'minglora_ai_bot_audit'
-  ]
-  LOOP
-    EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', table_name);
-    EXECUTE format('REVOKE ALL ON TABLE public.%I FROM PUBLIC, anon, authenticated', table_name);
-    EXECUTE format('GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.%I TO service_role', table_name);
-  END LOOP;
-END $$;
-
-COMMIT;
+  country_code text NOT NULL DEFAULT '' CHECK (country_code = '' OR country_code ~ '^[A-Z]{2}$'),
 ),
   country_name text NOT NULL DEFAULT '',
   state_province text NOT NULL DEFAULT '',
@@ -752,63 +667,7 @@ BEGIN
   IF v_id IS NULL OR v_first_name IS NULL OR v_first_name = '' OR v_last_name IS NULL OR v_last_name = '' THEN
     RAISE EXCEPTION 'AI identity ID, first name and last name are required.' USING ERRCODE = '22023';
   END IF;
-  IF v_username !~ '^ai_[a-z0-9_]{2,40}
--- The existing Minglora server-to-Supabase runtime gateway uses service_role.
-DO $$
-DECLARE
-  table_name text;
-BEGIN
-  FOREACH table_name IN ARRAY ARRAY[
-    'minglora_ai_bot_settings',
-    'minglora_ai_bot_categories',
-    'minglora_ai_bots',
-    'minglora_ai_bot_schedules',
-    'minglora_ai_bot_teams',
-    'minglora_ai_bot_team_members',
-    'minglora_ai_bot_tasks',
-    'minglora_ai_bot_follow_targets',
-    'minglora_ai_bot_follows',
-    'minglora_ai_bot_followers',
-    'minglora_ai_bot_follow_exclusions',
-    'minglora_ai_bot_audit'
-  ]
-  LOOP
-    EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', table_name);
-    EXECUTE format('REVOKE ALL ON TABLE public.%I FROM PUBLIC, anon, authenticated', table_name);
-    EXECUTE format('GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.%I TO service_role', table_name);
-  END LOOP;
-END $$;
-
-COMMIT;
- OR v_slug !~ '^[a-z0-9]+(-[a-z0-9]+)*
--- The existing Minglora server-to-Supabase runtime gateway uses service_role.
-DO $$
-DECLARE
-  table_name text;
-BEGIN
-  FOREACH table_name IN ARRAY ARRAY[
-    'minglora_ai_bot_settings',
-    'minglora_ai_bot_categories',
-    'minglora_ai_bots',
-    'minglora_ai_bot_schedules',
-    'minglora_ai_bot_teams',
-    'minglora_ai_bot_team_members',
-    'minglora_ai_bot_tasks',
-    'minglora_ai_bot_follow_targets',
-    'minglora_ai_bot_follows',
-    'minglora_ai_bot_followers',
-    'minglora_ai_bot_follow_exclusions',
-    'minglora_ai_bot_audit'
-  ]
-  LOOP
-    EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', table_name);
-    EXECUTE format('REVOKE ALL ON TABLE public.%I FROM PUBLIC, anon, authenticated', table_name);
-    EXECUTE format('GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.%I TO service_role', table_name);
-  END LOOP;
-END $$;
-
-COMMIT;
- THEN
+  IF v_username !~ '^ai_[a-z0-9_]{2,40}$' OR v_slug !~ '^[a-z0-9]+(-[a-z0-9]+)*$' THEN
     RAISE EXCEPTION 'AI username or public profile slug is invalid.' USING ERRCODE = '22023';
   END IF;
   IF v_population NOT IN ('independent','organizational','specialized_service') OR
