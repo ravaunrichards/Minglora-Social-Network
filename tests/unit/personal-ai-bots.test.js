@@ -14,6 +14,7 @@ import {
   bulkUpdatePersonalAiBots,
   emergencyShutdownPersonalAiBots,
   queuePersonalAiBotInstruction,
+  queuePersonalAiBotFollowBatch,
   approvePersonalAiBotTask,
   cancelPersonalAiBotTask,
   setPersonalAiBotNetworkSettings,
@@ -268,4 +269,24 @@ test('human-approval mode is supported and cannot retain hybrid autonomous permi
   assert.deepEqual(reviewed.allowedAutonomousActions,[]);
   assert.equal(reviewed.requiresApprovalForEveryTask,true);
   assert.equal(reviewed.requiresApprovalForPublishing,true);
+});
+
+
+test('selected-bot follow batches create separate approval records with a hard target cap',()=>{
+  const db=makeDb();
+  const bots=createPersonalAiBotStarterSet(db,actor,stamp,uid);
+  bulkUpdatePersonalAiBots(db,bots.slice(0,11).map(bot=>bot.id),'enabled',actor,stamp,uid);
+  setPersonalAiBotNetworkSettings(db,{enabled:true},actor,stamp,uid);
+  const first=queuePersonalAiBotFollowBatch(db,{taskType:'follow',targetUserId:'member-1',botIds:[bots[0].id],instruction:'Follow this member only after approval.'},actor,stamp,uid);
+  assert.equal(first.created,1);
+  assert.equal(first.tasks[0].status,'awaiting_administrator_approval');
+  assert.equal(first.tasks[0].executionStatus,'not_dispatched');
+  assert.equal(first.tasks[0].excludeFromHumanEngagementMetrics,true);
+  assert.equal(first.tasks[0].privacyGuardRequired,true);
+  assert.throws(()=>queuePersonalAiBotFollowBatch(db,{taskType:'follow',targetUserId:'member-1',botIds:[bots[0].id]},actor,stamp,uid),/already has an open or completed instruction/);
+  const remaining=queuePersonalAiBotFollowBatch(db,{taskType:'follow',targetUserId:'member-1',botIds:bots.slice(1,10).map(bot=>bot.id)},actor,stamp,uid);
+  assert.equal(remaining.created,9);
+  assert.equal(db.personalAiBotTasks.filter(task=>task.targetUserId==='member-1').length,10);
+  assert.throws(()=>queuePersonalAiBotFollowBatch(db,{taskType:'follow',targetUserId:'member-1',botIds:[bots[10].id]},actor,stamp,uid),/maximum of 10 AI follow\/unfollow instructions/);
+  assert.ok(db.personalAiBotTasks.every(task=>task.status==='awaiting_administrator_approval'));
 });
