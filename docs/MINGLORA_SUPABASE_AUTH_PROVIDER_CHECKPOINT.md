@@ -14,7 +14,7 @@
 - **Verified completion:** 81%.
 - **Remaining:** 19%.
 - **Progress since prior checkpoint:** NO CHANGE. No new live acceptance criterion was verifiably completed in this recovery.
-- **Last successful operation:** branch-head CI completed with the dedicated Auth Provider job and Admin Centre viewport job passing.
+- **Last successful verification:** CI for the tested implementation commit completed with the dedicated Auth Provider job and Admin Centre viewport job passing; later commits only updated this checkpoint.
 - **Production:** no merge, deployment, Supabase configuration write, provider credential write, or production route repair was performed in this continuation.
 - **External blockers still active:** designated MFA-verified owner session unavailable; the Render workspace has not been confirmed for further log inspection; existence/validity of `SUPABASE_ACCESS_TOKEN` is unknown; no real external OAuth Client ID/Secret pair has been supplied or registered; no real provider login has been completed.
 
