@@ -256,3 +256,16 @@ test('team assignment rejects unknown bots and unbounded input',()=>{
   assert.throws(()=>assignPersonalAiBotsToTeam(db,team.id,['not-a-bot'],actor,stamp,uid),/could not be found/);
   assert.throws(()=>assignPersonalAiBotsToTeam(db,team.id,new Array(101).fill('x'),actor,stamp,uid),/between 1 and 100/);
 });
+
+
+test('human-approval mode is supported and cannot retain hybrid autonomous permissions',()=>{
+  const db=makeDb();
+  const bot=createPersonalAiBot(db,{displayName:'Human Review Assistant',categoryId:'ai-friends'},actor,stamp,uid);
+  updatePersonalAiBot(db,bot.id,{autonomyMode:'hybrid'},actor,stamp,uid);
+  updatePersonalAiBot(db,bot.id,{allowedAutonomousActions:['analytics_read']},actor,stamp,uid);
+  const reviewed=updatePersonalAiBot(db,bot.id,{autonomyMode:'human_approval'},actor,stamp,uid);
+  assert.equal(reviewed.autonomyMode,'human_approval');
+  assert.deepEqual(reviewed.allowedAutonomousActions,[]);
+  assert.equal(reviewed.requiresApprovalForEveryTask,true);
+  assert.equal(reviewed.requiresApprovalForPublishing,true);
+});
