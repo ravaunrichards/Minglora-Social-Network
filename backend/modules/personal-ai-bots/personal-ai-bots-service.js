@@ -86,6 +86,16 @@ function slugify(value) {
     .replace(/^-+|-+$/g,'').slice(0,48) || 'ai-bot';
 }
 
+function normalizeAiIdentityName(displayName, input = {}) {
+  const tokens=String(displayName||'').trim().replace(/\s+/g,' ').split(' ').filter(Boolean);
+  const firstName=String(input.firstName ?? tokens[0] ?? '').trim().slice(0,80);
+  const lastName=String(input.lastName ?? tokens[tokens.length-1] ?? '').trim().slice(0,80);
+  const middleName=String(input.middleName ?? tokens.slice(1,-1).join(' ')).trim().slice(0,80);
+  if(!firstName||!lastName)throw Object.assign(new Error('Enter both an AI first name and last name, or provide a display name containing at least two name parts.'),{status:400});
+  const fullName=[firstName,middleName,lastName].filter(Boolean).join(' ').slice(0,180);
+  return {firstName,lastName,middleName,fullName};
+}
+
 export function createPersonalAiBot(db, input, actorId, timestamp, uid) {
   ensurePersonalAiBotCollections(db);
   const displayName = String(input.displayName || '').trim().replace(/\s+/g,' ');
@@ -94,10 +104,11 @@ export function createPersonalAiBot(db, input, actorId, timestamp, uid) {
   if (!category) throw Object.assign(new Error('Choose a valid bot category.'), { status:400 });
   if (!category.enabled) throw Object.assign(new Error('This bot category is disabled.'), { status:409 });
   if (displayName.length < 2 || displayName.length > 64) throw Object.assign(new Error('Bot name must be between 2 and 64 characters.'), { status:400 });
+  const names=normalizeAiIdentityName(displayName,input);
   const botId = uid();
   const bot = {
     id:botId, slug:slugify(displayName)+'-'+botId.slice(0,8),
-    displayName, categoryId, categoryName:category.name,
+    ...names, displayName, categoryId, categoryName:category.name,
     username:'ai_'+slugify(displayName).replace(/-/g,'_').slice(0,32)+'_'+botId.slice(0,6),
     profilePictureAssetId:null,
     bio:String(input.bio || input.description || '').trim().slice(0,600),
@@ -131,9 +142,11 @@ export function createPersonalAiBotStarterSet(db, actorId, timestamp, uid) {
     const existing = db.personalAiBots.find(bot => bot.starterCategoryId === category.id);
     if (existing) continue;
     const id = uid();
+    const displayName=category.name.replace(/ Bots?$/i,'')+' Bot';
+    const names=normalizeAiIdentityName(displayName);
     const bot = {
       id, slug:category.id+'-'+id.slice(0,8),
-      displayName:category.name.replace(/ Bots?$/i,'')+' Bot',
+      ...names, displayName,
       categoryId:category.id, categoryName:category.name,
       description:category.description, personality:'',
       languages:['English'], administratorInstructions:'',
@@ -158,10 +171,18 @@ export function updatePersonalAiBot(db, botId, input, actorId, timestamp, uid) {
   const bot = db.personalAiBots.find(item=>item.id===botId);
   if (!bot) throw Object.assign(new Error('Bot not found.'),{status:404});
   const changes = [];
-  if (Object.hasOwn(input,'displayName')) {
-    const value=String(input.displayName || '').trim().replace(/\s+/g,' ');
+  if (Object.hasOwn(input,'displayName') || Object.hasOwn(input,'firstName') ||
+      Object.hasOwn(input,'lastName') || Object.hasOwn(input,'middleName')) {
+    const value=String(input.displayName ?? bot.displayName ?? '').trim().replace(/\s+/g,' ');
     if(value.length<2||value.length>64)throw Object.assign(new Error('Bot name must be between 2 and 64 characters.'),{status:400});
-    bot.displayName=value;changes.push('name');
+    const names=normalizeAiIdentityName(value,{
+      firstName:Object.hasOwn(input,'firstName')?input.firstName:(Object.hasOwn(input,'displayName')?undefined:bot.firstName),
+      lastName:Object.hasOwn(input,'lastName')?input.lastName:(Object.hasOwn(input,'displayName')?undefined:bot.lastName),
+      middleName:Object.hasOwn(input,'middleName')?input.middleName:(Object.hasOwn(input,'displayName')?undefined:bot.middleName)
+    });
+    bot.displayName=value;
+    Object.assign(bot,names);
+    changes.push('name');
   }
   if (Object.hasOwn(input,'username')) {
     const username=String(input.username||'').trim().toLowerCase();
