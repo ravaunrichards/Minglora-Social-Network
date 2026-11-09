@@ -737,3 +737,62 @@ The Chromium acceptance job passed on `cc5e27f11c2a594d069611ecf5d341062f2529e6`
 ### Exact next action
 
 Continue with a read-only security/contract review of the Admin Centre account-management and service-connection routes on this branch, identifying any safe code-level corrections and focused tests. Keep PR #203 draft and production unchanged until review and deployment authorization are satisfied.
+
+
+## Continuation checkpoint — complete member-action audit coverage
+
+- **Checkpoint:** 2026-11-09 21:21 UTC
+- **Project / repository:** Minglora Social Network; `ravaunrichards/Minglora-Social-Network`
+- **Task / PR:** Minglora Admin Centre member management, service connections and audit acceptance; PR #203.
+- **Branch:** `feat/minglora-admin-user-and-service-centre-20261109`
+- **Verified branch head:** `8bd17e4f7bca081c5ca9579e3cc18115888af36d`
+- **PR status:** open, draft, unmerged; `mergeable=false`. Production, account records, provider configuration, database schema and permissions remain unchanged.
+- **Previous verified completion:** 77%
+- **Current verified completion:** **78%**
+- **Remaining:** **22%**
+- **Progress since previous checkpoint:** **+1 percentage point**, credited only to the distinct acceptance criterion for discoverable and safely rendered member-account audit events. No hosted-operation credit was added.
+
+### Authoritative weighted tracker
+
+| ID | Requirement / acceptance milestone | Priority | Weight | Verified credit | Status |
+|---|---|---:|---:|---:|---|
+| R001 | Owner-only user-management interface: search, select, inspect, create, edit, confirm, ban/unban, revoke sessions and guarded delete | Medium | 20% | 20% | Verified in source and focused tests; live hosted acceptance remains under R002/R007 |
+| R002 | Supabase Auth operations: server-side CRUD, status changes, session handling, confirmation and safe failure/rollback behavior | Hard | 25% | 15% | Partial; production Edge Function is still version 112 |
+| R003 | Designated owner, moderator and active MFA reviewer authorization; same-origin mutation protection; protected owner account | Hard | 15% | 15% | Verified by focused route/contract tests; production hosted test outstanding |
+| R004 | Service-connection registry and secret-safe health/configuration status for required providers | Medium | 15% | 10% | Partial; live Management API token is not verified and full hosted provider acceptance is outstanding |
+| R005 | Account audit, failure outcomes, metadata integrity and safe audit-history filtering/rendering | Medium | 10% | 9% | Partial; CRUD/session event history is implemented and focused-tested; production audit data acceptance outstanding |
+| R006 | Admin Centre implementation documentation, weighted tracker and interruption recovery checkpoint | Easy | 5% | 5% | Verified; this README remains the single authoritative checkpoint |
+| R007 | Complete CI, browser/hosted acceptance, branch review and final regression | Hard | 10% | 4% | Partial; real-browser viewport and basic CI gates pass, repository/For You suites remain red and hosted acceptance is blocked |
+| **Total** |  |  | **100%** | **78%** |  |
+
+### Verified audit-history implementation
+
+- Commit `7e6f298c311565da1abf73dc74dbe7a3aea3860f` expands the server audit filter allowlist to include account create/update/delete/delete-failed and session-revoke/session-revoke-failed events, alongside ban/unban.
+- Commit `197b63cb4bdd977f29da86aaf1195bbe27235130` extends the Edge Function audit query filter and search fields. Its response projects only allowlisted metadata: changed field names, profile field names, booleans for supplied contact fields and provider-session revocation, bounded reason/duration values, and validated outcome/deletion-mode/session-scope labels. Passwords, tokens, raw provider errors and arbitrary metadata are not exposed.
+- Commit `e2c4890ee6e634828a12efca58e917e58246b33f` adds Admin Centre filter options, action labels and safe detail rendering for the member-account and session actions.
+- Commit `8bd17e4f7bca081c5ca9579e3cc18115888af36d` adds a focused regression test covering the server/Edge allowlists, metadata projection and UI labels.
+- Latest workflow: [42701631797](https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/42701631797).
+- Focused Admin Centre evidence: the new audit-history test passed; the Admin Centre responsive/no-clipping test passed; member CRUD/MFA/same-origin, delete/session failure auditing, and service-secret-safety tests passed.
+- Browser job: passed. The prior six-width evidence remains valid because the responsive implementation was unchanged by this audit-only change.
+- General suite: **752 tests, 722 passed, 30 failed**. Syntax, repository-structure check (771 non-empty files across 165 directories), dependency audit step and gift-asset generation passed. The full workflow remains failed due the 30 existing non-Admin-Centre regressions recorded in earlier checkpoints.
+- For You functional-navigation remains **13/15 passed, 2 failed**; these are separate from the Admin Centre audit work and remain unresolved.
+
+### Recovery classification and remaining task queue
+
+- **RECOVERED / VERIFIED:** branch, PR, current source files, Admin Centre browser harness, focused member CRUD/MFA/service/audit tests, healthy Minglora Supabase project and active production Edge Function version 112.
+- **PARTIAL:** Supabase Auth operations and service integrations; code exists on the feature branch but production hosted acceptance is not complete.
+- **FAILED:** overall CI and For You suite as reported above; no Admin Centre-specific focused failure in the latest run.
+- **BLOCKED:** merge/rebase while PR #203 is dirty/diverged and overlapping `src/server.js`, `public/admin-centre.html`, and `public/sw.js` require review; hosted Supabase Management API checks because `SUPABASE_ACCESS_TOKEN` availability in Render is unverified; production feature deployment requires reviewed merge/deployment authorization.
+- **UNKNOWN:** current hosted owner/MFA session acceptance, actual CRUD outcomes against production, and live Management API GET/PATCH result.
+
+**Easy remaining:** no known standalone Admin Centre UI or audit-filter fix remains unverified in the branch. Preserve the 30 general test failures as a separate regression queue; do not alter unrelated Minglora features just to suppress tests.
+
+**Medium remaining:** complete the read-only contract review, then reconcile the three overlapping files against current `main` through reviewed changes. Do not merge/rebase without the required review/authorization.
+
+**Hard remaining:** verify the least-privilege Supabase Management token in the existing Render environment; after authorized deployment, test hosted Auth member CRUD/session/delete behavior, audit persistence, provider config GET/PATCH readback, and restrictive-FK deletion behavior under owner/MFA access.
+
+### Current lock and exact next action
+
+- **IN PROGRESS:** R002/R004 hosted acceptance contract review.
+- **Last successful operation:** latest CI confirmed the focused audit-history regression test and browser viewport test pass.
+- **Exact next action:** continue read-only review of the API/Edge route authorization and failure paths. Make only evidence-backed, reversible code changes with focused tests; keep PR #203 draft and production unchanged until review and deployment authorization are satisfied.
