@@ -38,6 +38,10 @@ const profileUi = await readFile(
   new URL('../../public/ai-profile.js', import.meta.url),
   'utf8'
 );
+const adminBotUi = await readFile(
+  new URL('../../public/personal-ai-bots.js', import.meta.url),
+  'utf8'
+);
 
 const socialSql = await readFile(
   new URL('../../supabase/migrations/20261109240000_minglora_ai_social_follow_and_saved_searches.sql', import.meta.url),
@@ -664,4 +668,24 @@ test('AI discovery links profile slugs and includes blocked identity management'
   assert.match(discoveryUi,/loadBlockedIdentities/);
   assert.match(discoveryUi,/aid-unblock-item/);
   assert.match(discoveryUi,/method:'DELETE'/);
+});
+
+
+test('Personal AI Bots editor creates and saves the complete editable demographic and location profile',()=>{
+  for(const control of [
+    'pab-bot-gender','pab-bot-nationality','pab-bot-country-origin',
+    'pab-bot-current-country','pab-bot-timezone','pab-bot-introduction',
+    'pab-bot-communication','pab-bot-profession','pab-bot-education','pab-bot-skills',
+    'pab-bot-gender-presentation','pab-origin-country-code','pab-origin-state',
+    'pab-origin-district','pab-origin-parish','pab-origin-city','pab-origin-town',
+    'pab-current-country-code','pab-current-state','pab-current-district',
+    'pab-current-parish','pab-current-city','pab-current-town',
+    'pab-bot-voice-preferences','pab-bot-avatar-preferences',
+    'pab-bot-memory-enabled','pab-bot-memory-configuration'
+  ])assert.ok(adminBotUi.includes(control),'missing AI profile editor control '+control);
+  assert.match(adminBotUi,/locations:\[/);
+  assert.match(adminBotUi,/voicePreferences:JSON\.parse/);
+  assert.match(adminBotUi,/memoryConfiguration:JSON\.parse/);
+  assert.match(adminBotUi,/education:csv/);
+  assert.match(adminBotUi,/skills:csv/);
 });
