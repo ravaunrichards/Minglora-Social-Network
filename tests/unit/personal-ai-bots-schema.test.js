@@ -655,8 +655,8 @@ test('public AI profile page offers follow, block and report actions with AI dis
   assert.match(profileUi,/fetch\('\/api\/ai\/follows'/);
   assert.match(profileUi,/fetch\('\/api\/ai\/reports'/);
   assert.match(profileUi,/method:'POST'/);
-  assert.match(profileUi,/impersonation/);
-  assert.match(profileUi,/inappropriate_content/);
+  assert.match(profileHtml,/impersonation/);
+  assert.match(profileHtml,/inappropriate_content/);
 });
 
 test('AI discovery links profile slugs and includes blocked identity management',()=>{
