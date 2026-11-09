@@ -1,7 +1,7 @@
 const $ = s => document.querySelector(s);
-const state = { user:null, view:'feed', feed:[], feedScope:'all', videoFeed:[], videoScope:'for-you', videoSearch:'', videoMode:'videos', videoNextCursor:null, videoHasMore:false, videoLoading:false, videoRequestSequence:0, forYouScope:'for-you', forYouNextCursor:null, forYouHasMore:false, forYouLoading:false, forYouSearch:'', savedPosts:[], savedPostCollections:[], savedFilter:'all', savedCollection:'all', savedType:'all', savedSort:'saved-newest', savedSearch:'', stories:[], people:[], discoveryLiveSessions:[], groups:[], notifications:[], conversations:[], activeConversation:null, messageWindows:[], activeGroup:null, pages:[], activePage:null, profile:null, searchResults:null, settings:null, activeConnections:null, liveStartFormat:'video_audio', messengerFilter:'all', messengerSearch:'', messengerPanelOpen:false, messengerOptionsOpen:false, messengerPanelSection:'chats', messengerComposeMode:false, messengerComposeUsers:null, messengerComposeLoading:false, messengerPresence:{}, messengerTyping:{}, messengerRealtimeConnected:false, rechargeTab:'recharge', rechargeCurrencyMode:'two-way' };
+const state = { user:null, view:'feed', feed:[], feedScope:'all', videoFeed:[], videoScope:'for-you', videoSearch:'', videoMode:'videos', videoNextCursor:null, videoHasMore:false, videoLoading:false, videoRequestSequence:0, forYouScope:'for-you', forYouNextCursor:null, forYouHasMore:false, forYouLoading:false, forYouSearch:'', savedPosts:[], savedPostCollections:[], savedFilter:'all', savedCollection:'all', savedType:'all', savedSort:'saved-newest', savedSearch:'', stories:[], people:[], discoveryLiveSessions:[], groups:[], notifications:[], conversations:[], activeConversation:null, messageWindows:[], activeGroup:null, pages:[], activePage:null, profile:null, searchResults:null, settings:null, activeConnections:null, liveStartFormat:'video_audio', messengerFilter:'all', messengerSearch:'', messengerPanelOpen:false, messengerOptionsOpen:false, messengerPanelSection:'chats', messengerComposeMode:false, messengerComposeUsers:null, messengerComposeLoading:false, messengerPresence:{}, messengerTyping:{}, messengerRealtimeConnected:false, rechargeTab:'recharge', rechargeCurrencyMode:'two-way', storyPrivacy:null, storyPrivacyUsers:[], storyWorkspaceReturn:null, storyComposerFormat:null, storyComposerCleanup:null, storyTextTheme:'ocean' };
 const LAST_VIEW_SESSION_PREFIX='minglora:last-view:v1:';
-const RESTORABLE_VIEWS=new Set(['feed','for-you','more','videos','gifts','gifter-progression','live','live-pro','leagues','coins','creator','friends','groups','messages','saved','pages','meetwave','connections','page','group','profile','search','notifications','calendar','clock-centre','menstrual-health']);
+const RESTORABLE_VIEWS=new Set(['feed','for-you','more','videos','gifts','gifter-progression','live','live-pro','leagues','coins','creator','friends','groups','messages','saved','pages','meetwave','connections','page','group','profile','search','notifications','calendar','clock-centre','menstrual-health','story-create']);
 const MINGLORA_HISTORY_KEY='mingloraNavigation';
 const FOR_YOU_SCOPE_VALUES=new Set(['for-you','friends','subscribers','following']);
 function normalizeForYouScope(value){return FOR_YOU_SCOPE_VALUES.has(value)?value:'for-you';}
@@ -29,6 +29,7 @@ function getBrowserNavigationSnapshot(){
     activeConnections:state.activeConnections||null,
     searchQuery:state.searchQuery||'',
     creatorSection:state.creatorStudio?.section||state.restoreCreatorSection||'overview',
+    storyWorkspaceReturn:state.storyWorkspaceReturn||null,
     rechargeTab:state.rechargeTab||'recharge',
     rechargeCurrencyMode:state.rechargeCurrencyMode||'two-way',
     savedFilter:state.savedFilter||'all',
@@ -46,7 +47,7 @@ function recordBrowserNavigation({replace=false}={}){
   if(!state.user||restoringBrowserNavigation)return;
   const snapshot=getBrowserNavigationSnapshot();
   const current=window.history.state?.[MINGLORA_HISTORY_KEY];
-  const targetUrl=snapshot.view==='for-you'?forYouRoutePath(snapshot.forYouScope):(window.location.pathname.startsWith('/for-you/')?'/':window.location.href);
+  const targetUrl=snapshot.view==='story-create'?'/story/create':snapshot.view==='for-you'?forYouRoutePath(snapshot.forYouScope):((window.location.pathname.startsWith('/for-you/')||window.location.pathname==='/story/create')?'/':window.location.href);
   const targetPath=new URL(targetUrl,window.location.origin).pathname;
   if(current&&JSON.stringify(current)===JSON.stringify(snapshot)&&window.location.pathname===targetPath)return;
   try{
@@ -69,6 +70,7 @@ function initializeBrowserNavigation(){
   if(!state.user)return;
   try{
     const routeScope=forYouScopeFromPath();
+    if(window.location.pathname==='/story/create')state.view='story-create';
     if(routeScope){
       state.view='for-you';
       state.forYouScope=normalizeForYouScope(routeScope);
@@ -94,6 +96,7 @@ async function restoreBrowserNavigation(event){
     state.forYouScope=normalizeForYouScope(saved.forYouScope);
     state.profileTargetId=String(saved.profileId||'');
     state.profileTab=['posts','about','friends','photos','reels','badges','more','gift-gallery','checkins','events','highlights','groups','videos','manage'].includes(saved.profileTab)?saved.profileTab:'posts';
+    state.storyWorkspaceReturn=saved.storyWorkspaceReturn||state.storyWorkspaceReturn||null;
     state.activePage=String(saved.activePage||'')||null;
     state.pageTab=String(saved.pageTab||'posts');
     state.pageDays=[7,30,90].includes(Number(saved.pageDays))?Number(saved.pageDays):30;
@@ -135,6 +138,7 @@ function persistCurrentView(){
       forYouScope:normalizeForYouScope(state.forYouScope),
       profileId:state.profileTargetId||state.profile?.user?.id||'',
       profileTab:state.profileTab||'posts',
+      storyWorkspaceReturn:state.storyWorkspaceReturn||null,
       activePage:state.activePage||'',
       pageTab:state.pageTab||'posts',
       pageDays:state.pageDays||30,
@@ -170,11 +174,13 @@ function readPersistedView(){
 async function restoreLastView(){
   const routeScope=forYouScopeFromPath();
   const persisted=readPersistedView();
-  const saved=routeScope?{...(persisted||{}),view:'for-you',forYouScope:routeScope}:persisted;
+  const storyCreateRoute=window.location.pathname==='/story/create';
+  const saved=storyCreateRoute?{...(persisted||{}),view:'story-create'}:routeScope?{...(persisted||{}),view:'for-you',forYouScope:routeScope}:persisted;
   if(!saved){activateNav('feed');return;}
   state.feedScope=['all','for-you','following','friends'].includes(saved.feedScope)?saved.feedScope:'all';
   state.forYouScope=normalizeForYouScope(saved.forYouScope);
   state.profileTab=['posts','about','friends','photos','reels','badges','more','gift-gallery','checkins','events','highlights','groups','videos','manage'].includes(saved.profileTab)?saved.profileTab:'posts';
+  state.storyWorkspaceReturn=saved.storyWorkspaceReturn||null;
   state.profileTargetId=String(saved.profileId||'');
   state.activePage=String(saved.activePage||'')||null;
   state.pageTab=String(saved.pageTab||'posts');
@@ -7110,25 +7116,257 @@ async function openProfileStoryEditor(profileId){
   }catch(error){toast(error.message||'Could not load your active stories.');}
 }
 
-function openStoryComposer(){
-  const modal=document.createElement('div');modal.className='modal-backdrop';
-  modal.innerHTML='<section class="modal" role="dialog" aria-modal="true" aria-labelledby="story-modal-title"><div class="modal-head"><h2 id="story-modal-title">Create a story</h2><button class="modal-close" aria-label="Close">×</button></div><form class="modal-body" id="story-form"><div class="field"><label for="story-text">Text (optional)</label><textarea id="story-text" name="text" maxlength="1000" placeholder="Share a moment..."></textarea></div><div class="field"><label>Choose photos or videos (up to 10)</label><div id="story-media-picker"></div></div><div class="field"><label>Soundtrack</label><div id="story-soundtrack"></div></div><div class="field"><label for="story-audience">Audience</label><select id="story-audience" name="audience"><option value="public">Public</option><option value="friends">Friends</option><option value="followers">Followers</option><option value="private">Only me</option></select></div><p class="muted">Stories expire automatically after 24 hours.</p><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button type="submit" class="primary">Publish story</button></div></form></section>';
-  document.body.append(modal);
-  const picker=createMediaPicker(modal.querySelector('#story-media-picker'),{slot:'story',maxFiles:10,maxTotalBytes:500*1024*1024});
-  const soundtrack=createSoundtrackEditor(modal.querySelector('#story-soundtrack'));
-  const close=()=>{picker.destroy();soundtrack.destroy();modal.remove();};
-  modal.querySelectorAll('.modal-close,.modal-cancel').forEach(button=>button.onclick=close);
-  modal.addEventListener('click',event=>{if(event.target===modal)close();});
-  modal.querySelector('form').onsubmit=async event=>{
-    event.preventDefault();const button=modal.querySelector('button[type="submit"]');button.disabled=true;
-    try{
-      const values=new FormData(event.currentTarget),mediaIds=await picker.upload(),track=soundtrack.value();
-      if(!String(values.get('text')||'').trim()&&!mediaIds.length&&!track){toast('Write a Story, choose a photo/video or add a sound.');button.disabled=false;return;}
-      await api('/stories',{method:'POST',body:JSON.stringify({text:values.get('text'),mediaIds,audience:values.get('audience'),soundtrack:track})});
-      close();await loadStories();if(state.view==='feed')await renderFeed();toast('Story published for 24 hours.');
-    }catch(error){toast(error.message);button.disabled=false;}
+const STORY_AUDIENCE_LABELS={public:'Public',friends:'Friends',following:'Following',followers:'Followers',subscribers:'Subscribers',custom:'Custom'};
+function storyPrivacyCopy(value=state.storyPrivacy){
+  const privacy=value||{mode:'audience',audience:'public',customUserIds:[],hiddenUserIds:[]};
+  if(privacy.mode==='hide')return 'Hide story from · '+(privacy.hiddenUserIds||[]).length+' selected';
+  if(privacy.audience==='custom')return 'Custom · '+(privacy.customUserIds||[]).length+' selected';
+  return STORY_AUDIENCE_LABELS[privacy.audience]||'Public';
+}
+function storyPrivacyIcon(name){
+  const paths={
+    public:'<circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"></path>',
+    friends:'<circle cx="9" cy="8" r="3"></circle><path d="M3 20a6 6 0 0 1 12 0M16 5a3 3 0 0 1 0 6M17 14a5 5 0 0 1 4 5"></path>',
+    following:'<circle cx="8" cy="8" r="3"></circle><path d="M2.5 20a5.5 5.5 0 0 1 11 0M15 8h6M18 5l3 3-3 3"></path>',
+    followers:'<circle cx="8" cy="8" r="3"></circle><path d="M2.5 20a5.5 5.5 0 0 1 11 0M16 7h5M18.5 4.5 21 7l-2.5 2.5"></path>',
+    subscribers:'<path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.8 1-6.1-4.4-4.3 6.1-.9L12 3Z"></path>',
+    custom:'<circle cx="12" cy="7.5" r="3.5"></circle><path d="M4.5 21a7.5 7.5 0 0 1 15 0"></path>',
+    hide:'<circle cx="9" cy="8" r="3"></circle><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 5l6 6M22 5l-6 6"></path>'
+  };
+  return '<svg class="story-privacy-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">'+(paths[name]||paths.public)+'</svg>';
+}
+function storyPrivacyCopyState(value){
+  return {mode:value?.mode==='hide'?'hide':'audience',audience:STORY_AUDIENCE_LABELS[value?.audience]?value.audience:'public',customUserIds:Array.isArray(value?.customUserIds)?[...new Set(value.customUserIds.map(String))]:[],hiddenUserIds:Array.isArray(value?.hiddenUserIds)?[...new Set(value.hiddenUserIds.map(String))]:[]};
+}
+async function loadStoryWorkspaceData(){
+  if(!state.storyPrivacy){
+    const result=await api('/settings');
+    state.settings=result.settings||state.settings;
+    const privacy=result.settings?.privacy||{};
+    state.storyPrivacy=storyPrivacyCopyState({
+      mode:privacy.storyPrivacyMode,
+      audience:privacy.storyAudience,
+      customUserIds:privacy.storyCustomUserIds,
+      hiddenUserIds:privacy.storyHiddenUserIds
+    });
+  }
+  if(!Array.isArray(state.storyPrivacyUsers)||!state.storyPrivacyUsers.length){
+    try{const result=await api('/users');state.storyPrivacyUsers=Array.isArray(result.users)?result.users:[];}
+    catch(error){state.storyPrivacyUsers=[];toast(error.message||'Member list could not be loaded.');}
+  }
+}
+function storyAudiencePayload(){
+  const privacy=storyPrivacyCopyState(state.storyPrivacy);
+  return {
+    audience:privacy.audience,
+    customUserIds:privacy.audience==='custom'?privacy.customUserIds:[],
+    hiddenUserIds:privacy.mode==='hide'?privacy.hiddenUserIds:[]
   };
 }
+function disposeStoryComposerTools(){
+  if(typeof state.storyComposerCleanup==='function'){
+    try{state.storyComposerCleanup();}catch{}
+  }
+  state.storyComposerCleanup=null;
+}
+async function openStoryComposer(){
+  if(state.view!=='story-create'){
+    state.storyWorkspaceReturn={
+      view:state.view==='profile'?'profile':'feed',
+      profileId:state.profileTargetId||state.profile?.user?.id||'',
+      profileTab:state.profileTab||'posts',
+      feedScope:state.feedScope||'all'
+    };
+  }
+  state.storyComposerFormat=null;
+  state.storyTextTheme='ocean';
+  state.storyPrivacy=null;
+  state.storyPrivacyUsers=[];
+  disposeStoryComposerTools();
+  activateSilent('story-create');
+  await renderStoryCreationWorkspace();
+}
+async function returnFromStoryWorkspace(){
+  disposeStoryComposerTools();
+  const destination=state.storyWorkspaceReturn||{view:'feed',feedScope:'all'};
+  state.storyWorkspaceReturn=null;
+  state.storyComposerFormat=null;
+  state.storyPrivacy=null;
+  state.view=destination.view==='profile'&&destination.profileId?'profile':'feed';
+  state.profileTargetId=state.view==='profile'?destination.profileId:'';
+  state.profileTab=state.view==='profile'?destination.profileTab||'posts':'posts';
+  state.feedScope=['all','for-you','following','friends'].includes(destination.feedScope)?destination.feedScope:'all';
+  syncPageLayout();
+  syncMessageRefreshPolling();
+  syncNavigationActive();
+  persistCurrentView();
+  recordBrowserNavigation({replace:true});
+  if(state.view==='profile')await openProfile(destination.profileId);
+  else{
+    await loadPeople();
+    await loadFeed(state.feedScope);
+    await loadStories();
+    await renderFeed();
+  }
+}
+async function openStoryPrivacyDialog(){
+  await loadStoryWorkspaceData();
+  const original=storyPrivacyCopyState(state.storyPrivacy);
+  const draft=storyPrivacyCopyState(original);
+  const modal=document.createElement('div');
+  modal.className='modal-backdrop story-privacy-backdrop';
+  modal.innerHTML='<section class="modal story-privacy-dialog" role="dialog" aria-modal="true" aria-labelledby="story-privacy-title"><header class="story-privacy-header"><div><span class="story-workspace-eyebrow">YOUR STORY SETTINGS</span><h2 id="story-privacy-title">Story privacy</h2></div><button type="button" class="story-privacy-close" aria-label="Close Story privacy">×</button></header><div class="story-privacy-body"><h3>Who can see your story?</h3><p class="story-privacy-explain">Your story will be visible for 24 hours on Minglora and Messenger.</p><div data-story-privacy-options></div><div data-story-privacy-member-picker></div></div><footer class="story-privacy-actions"><button type="button" class="secondary" data-story-privacy-cancel>Cancel</button><button type="button" class="primary" data-story-privacy-save>Save</button></footer></section>';
+  document.body.append(modal);
+  const optionRows=[
+    ['public','Public','Anyone on or off Minglora'],
+    ['friends','Friends','People who follow each other'],
+    ['following','Following','People you follow'],
+    ['followers','Followers','People who follow you'],
+    ['subscribers','Subscribers','People with an active subscription'],
+    ['custom','Custom','Choose specific people'],
+    ['hide','Hide story from','Choose people who will not see it']
+  ];
+  const close=()=>modal.remove();
+  const render=()=>{
+    const options=modal.querySelector('[data-story-privacy-options]');
+    const selectedName=draft.mode==='hide'?'hide':draft.audience;
+    options.innerHTML='<div class="story-privacy-choice-list" role="radiogroup" aria-label="Who can see your story?">'+optionRows.map(([value,label,description])=>{
+      const selected=value===selectedName;
+      const icon=value==='hide'?'hide':value;
+      return '<button type="button" class="story-privacy-choice '+(selected?'is-selected':'')+'" data-story-privacy-choice="'+value+'" role="radio" aria-checked="'+(selected?'true':'false')+'"><span class="story-privacy-choice-icon">'+storyPrivacyIcon(icon)+'</span><span class="story-privacy-choice-copy"><strong>'+label+'</strong><small>'+description+'</small></span><span class="story-privacy-radio" aria-hidden="true"></span></button>';
+    }).join('')+'</div>';
+    const picker=modal.querySelector('[data-story-privacy-member-picker]');
+    if(draft.mode!=='hide'&&draft.audience!=='custom'){picker.innerHTML='';return;}
+    const selectedIds=draft.mode==='hide'?draft.hiddenUserIds:draft.customUserIds;
+    const users=(state.storyPrivacyUsers||[]).filter(member=>member?.id&&member.id!==state.user?.id);
+    picker.innerHTML='<section class="story-privacy-member-section"><div class="story-privacy-member-heading"><strong>'+(draft.mode==='hide'?'Hide story from':'Share with these people')+'</strong><small>'+selectedIds.length+' selected</small></div><input class="story-privacy-search" type="search" data-story-privacy-search placeholder="Search people" aria-label="Search people"><div class="story-privacy-member-list">'+(users.length?users.map(member=>'<label class="story-privacy-member" data-story-privacy-member-row><input type="checkbox" data-story-privacy-member="'+esc(member.id)+'" '+(selectedIds.includes(member.id)?'checked':'')+'><img src="'+avatar(member)+'" alt=""><span><strong>'+esc(member.name||'Minglora member')+'</strong><small>@'+esc(member.username||'member')+'</small></span></label>').join(''):'<p class="story-privacy-no-members">No member list is available right now.</p>')+'</div></section>';
+    modal.querySelectorAll('[data-story-privacy-member]').forEach(input=>input.addEventListener('change',()=>{
+      const target=draft.mode==='hide'?draft.hiddenUserIds:draft.customUserIds;
+      const id=input.dataset.storyPrivacyMember;
+      if(input.checked&&!target.includes(id))target.push(id);
+      if(!input.checked){const index=target.indexOf(id);if(index>=0)target.splice(index,1);}
+      const count=modal.querySelector('.story-privacy-member-heading small');
+      if(count)count.textContent=target.length+' selected';
+    }));
+    modal.querySelector('[data-story-privacy-search]')?.addEventListener('input',event=>{
+      const query=String(event.target.value||'').trim().toLowerCase();
+      modal.querySelectorAll('[data-story-privacy-member-row]').forEach(row=>{row.hidden=!!query&&!row.textContent.toLowerCase().includes(query);});
+    });
+    const memberList=modal.querySelector('.story-privacy-member-list');
+    if(memberList)memberList.style.maxHeight='240px';
+  };
+  render();
+  modal.querySelectorAll('[data-story-privacy-choice]').forEach(button=>button.addEventListener('click',()=>{
+    const choice=button.dataset.storyPrivacyChoice;
+    if(choice==='hide'){
+      draft.mode='hide';
+      if(!STORY_AUDIENCE_LABELS[draft.audience])draft.audience='public';
+    }else{
+      draft.mode='audience';
+      draft.audience=choice;
+      draft.hiddenUserIds=[];
+      if(choice!=='custom')draft.customUserIds=[];
+    }
+    render();
+    modal.querySelectorAll('[data-story-privacy-choice]').forEach(item=>item.addEventListener('click',()=>{}));
+    modal.querySelectorAll('[data-story-privacy-choice]').forEach(item=>{
+      item.setAttribute('aria-checked',item.dataset.storyPrivacyChoice===(draft.mode==='hide'?'hide':draft.audience)?'true':'false');
+      item.classList.toggle('is-selected',item.dataset.storyPrivacyChoice===(draft.mode==='hide'?'hide':draft.audience));
+    });
+  }));
+  const save=async()=>{
+    if(draft.mode==='audience'&&draft.audience==='custom'&&!draft.customUserIds.length){toast('Select at least one person for your Custom Story audience.');return;}
+    if(draft.mode==='hide'&&!draft.hiddenUserIds.length){toast('Choose at least one person to hide your story from.');return;}
+    const button=modal.querySelector('[data-story-privacy-save]');
+    button.disabled=true;
+    try{
+      const result=await api('/settings',{method:'PATCH',body:JSON.stringify({privacy:{
+        storyAudience:draft.audience,
+        storyPrivacyMode:draft.mode,
+        storyCustomUserIds:draft.customUserIds,
+        storyHiddenUserIds:draft.hiddenUserIds
+      }})});
+      state.settings=result.settings||state.settings;
+      state.storyPrivacy=storyPrivacyCopyState(draft);
+      const summary=$('#story-workspace-privacy-summary');
+      if(summary)summary.textContent=storyPrivacyCopy(state.storyPrivacy);
+      const badge=$('#story-workspace-privacy-note');
+      if(badge)badge.textContent=storyPrivacyCopy(state.storyPrivacy);
+      close();
+      toast('Story privacy saved.');
+    }catch(error){toast(error.message||'Could not save Story privacy.');button.disabled=false;}
+  };
+  modal.querySelector('.story-privacy-close')?.addEventListener('click',close);
+  modal.querySelector('[data-story-privacy-cancel]')?.addEventListener('click',close);
+  modal.querySelector('[data-story-privacy-save]')?.addEventListener('click',save);
+  modal.addEventListener('click',event=>{if(event.target===modal)close();});
+}
+function renderStoryCreationWorkspace(){
+  disposeStoryComposerTools();
+  const format=state.storyComposerFormat;
+  const privacySummary=storyPrivacyCopy();
+  const choiceCards='<div class="story-workspace-choices"><button type="button" class="story-workspace-choice" data-story-start="media"><span class="story-workspace-choice-art story-workspace-choice-art--media"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="5" y="8" width="38" height="32" rx="7"></rect><circle cx="18" cy="20" r="4"></circle><path d="m8 35 10-9 7 6 5-5 10 9"></path><path d="M36 4v10M31 9h10"></path></svg></span><strong>Create a photo or video story</strong><small>Share photos and videos from your device.</small></button><button type="button" class="story-workspace-choice" data-story-start="text"><span class="story-workspace-choice-art story-workspace-choice-art--text"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="7" y="5" width="34" height="38" rx="7"></rect><path d="M16 17h16M16 24h16M16 31h10"></path><path d="M24 5v-3"></path></svg></span><strong>Create a text story</strong><small>Start with a message and a background.</small></button></div>';
+  const mediaForm='<form id="story-media-form" class="story-workspace-form"><div class="story-workspace-form-heading"><div><span class="story-workspace-eyebrow">PHOTO OR VIDEO</span><h2>Create a photo or video story</h2><p>Add up to 10 photos or videos to your story.</p></div><button type="button" class="secondary" data-story-format-back>Back</button></div><div class="story-workspace-field"><label>Choose photos or videos</label><div id="story-media-picker"></div></div><div class="story-workspace-field"><label for="story-media-caption">Add text (optional)</label><textarea id="story-media-caption" name="text" maxlength="1000" placeholder="Write something about this moment…"></textarea></div><div class="story-workspace-field"><label>Soundtrack (optional)</label><div id="story-soundtrack"></div></div><div class="story-workspace-form-actions"><button type="button" class="secondary" data-story-workspace-close>Cancel</button><button type="submit" class="primary">Share to story</button></div></form>';
+  const textForm='<form id="story-text-form" class="story-workspace-form story-workspace-text-form"><div class="story-workspace-form-heading"><div><span class="story-workspace-eyebrow">TEXT STORY</span><h2>Create a text story</h2><p>Write a short update and choose a background.</p></div><button type="button" class="secondary" data-story-format-back>Back</button></div><div class="story-text-editor"><div class="story-text-background story-text-theme-'+esc(state.storyTextTheme||'ocean')+'" id="story-text-preview"><span>Your story text will appear here</span></div><textarea id="story-text-content" name="text" maxlength="1000" required placeholder="Start typing your story…"></textarea><div class="story-text-theme-options" role="group" aria-label="Story background"><button type="button" data-story-text-theme="ocean" aria-pressed="'+((state.storyTextTheme||'ocean')==='ocean'?'true':'false')+'">Ocean</button><button type="button" data-story-text-theme="sunrise" aria-pressed="'+(state.storyTextTheme==='sunrise'?'true':'false')+'">Sunrise</button><button type="button" data-story-text-theme="violet" aria-pressed="'+(state.storyTextTheme==='violet'?'true':'false')+'">Violet</button><button type="button" data-story-text-theme="midnight" aria-pressed="'+(state.storyTextTheme==='midnight'?'true':'false')+'">Midnight</button><button type="button" data-story-text-theme="minimal" aria-pressed="'+(state.storyTextTheme==='minimal'?'true':'false')+'">Minimal</button></div></div><div class="story-workspace-form-actions"><button type="button" class="secondary" data-story-workspace-close>Cancel</button><button type="submit" class="primary">Share to story</button></div></form>';
+  const content=!format?choiceCards:format==='media'?mediaForm:textForm;
+  setContent('<section class="story-workspace-page"><header class="story-workspace-header"><button type="button" class="story-workspace-back" data-story-workspace-close aria-label="Back to profile">←</button><div class="story-workspace-heading"><span class="story-workspace-eyebrow">MINGLORA STORIES</span><h1>Your story</h1><p>Your moment, shared with your audience.</p></div><button type="button" class="story-workspace-settings" id="story-workspace-privacy" aria-label="Story privacy settings" title="Story privacy settings"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-1.7 1.7-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.1h-2.4v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L8 17l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H6.7v-2.4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L8 8.6l1.7-1.7.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.6v-.1h2.4v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1 1.7 1.7-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.1V14h-.1a1.7 1.7 0 0 0-1.6 1Z"></path></svg></button></header><div class="story-workspace-grid"><aside class="story-workspace-sidebar"><section class="story-workspace-account"><div class="story-workspace-account-row"><img src="'+avatar(state.user)+'" alt=""><div><strong>'+esc(state.user?.name||'Your account')+'</strong><small>@'+esc(state.user?.username||'member')+'</small></div></div><div class="story-workspace-privacy"><span class="story-workspace-privacy-label">Story privacy</span><strong id="story-workspace-privacy-summary">'+esc(privacySummary)+'</strong><small id="story-workspace-privacy-note">Your story will be visible for 24 hours on Minglora and Messenger.</small></div><button type="button" class="secondary story-workspace-privacy-button" data-open-story-privacy>'+storyPrivacyIcon('public')+'<span>Change story privacy</span></button></section><section class="story-workspace-help"><strong>Stories disappear after 24 hours</strong><p>You can keep stories in your archive and add them to profile highlights.</p></section></aside><main class="story-workspace-main">'+(format?'':'<div class="story-workspace-section-heading"><div><h2>Create a story</h2><p>Choose how you want to share your moment.</p></div></div>')+content+'</main></div></section>');
+  const root=$('#main-content');
+  root?.querySelector('[data-story-workspace-close]')?.addEventListener('click',()=>void returnFromStoryWorkspace());
+  root?.querySelector('#story-workspace-privacy')?.addEventListener('click',()=>void openStoryPrivacyDialog());
+  root?.querySelector('[data-open-story-privacy]')?.addEventListener('click',()=>void openStoryPrivacyDialog());
+  root?.querySelectorAll('[data-story-start]').forEach(button=>button.addEventListener('click',()=>{
+    state.storyComposerFormat=button.dataset.storyStart;
+    void renderStoryCreationWorkspace();
+  }));
+  root?.querySelectorAll('[data-story-format-back]').forEach(button=>button.addEventListener('click',()=>{
+    disposeStoryComposerTools();
+    state.storyComposerFormat=null;
+    void renderStoryCreationWorkspace();
+  }));
+  const mediaForm=root?.querySelector('#story-media-form');
+  if(mediaForm){
+    const picker=createMediaPicker(mediaForm.querySelector('#story-media-picker'),{slot:'story',maxFiles:10,maxTotalBytes:500*1024*1024});
+    const soundtrack=createSoundtrackEditor(mediaForm.querySelector('#story-soundtrack'));
+    state.storyComposerCleanup=()=>{picker.destroy();soundtrack.destroy();};
+    mediaForm.addEventListener('submit',async event=>{
+      event.preventDefault();
+      const button=mediaForm.querySelector('button[type="submit"]');button.disabled=true;
+      try{
+        const mediaIds=await picker.upload(),track=soundtrack.value();
+        const text=String(new FormData(mediaForm).get('text')||'').trim();
+        if(!mediaIds.length&&!text&&!track){toast('Choose a photo or video, add text, or select a soundtrack.');button.disabled=false;return;}
+        await api('/stories',{method:'POST',body:JSON.stringify({text,mediaIds,soundtrack:track,...storyAudiencePayload()})});
+        toast('Story published for 24 hours.');
+        await returnFromStoryWorkspace();
+      }catch(error){toast(error.message||'Your story could not be published.');button.disabled=false;}
+    });
+  }
+  const textForm=root?.querySelector('#story-text-form');
+  if(textForm){
+    const textArea=textForm.querySelector('#story-text-content'),preview=textForm.querySelector('#story-text-preview');
+    const updatePreview=()=>{if(preview)preview.innerHTML='<span>'+esc(textArea?.value?.trim()||'Your story text will appear here')+'</span>';};
+    textArea?.addEventListener('input',updatePreview);
+    textForm.querySelectorAll('[data-story-text-theme]').forEach(button=>button.addEventListener('click',()=>{
+      state.storyTextTheme=button.dataset.storyTextTheme;
+      preview?.classList.remove('story-text-theme-ocean','story-text-theme-sunrise','story-text-theme-violet','story-text-theme-midnight','story-text-theme-minimal');
+      preview?.classList.add('story-text-theme-'+state.storyTextTheme);
+      textForm.querySelectorAll('[data-story-text-theme]').forEach(item=>item.setAttribute('aria-pressed',item===button?'true':'false'));
+    }));
+    textForm.addEventListener('submit',async event=>{
+      event.preventDefault();
+      const button=textForm.querySelector('button[type="submit"]');button.disabled=true;
+      try{
+        const text=String(new FormData(textForm).get('text')||'').trim();
+        if(!text){toast('Write something before sharing your text story.');button.disabled=false;return;}
+        await api('/stories',{method:'POST',body:JSON.stringify({text,mediaIds:[],...storyAudiencePayload()})});
+        toast('Text story published for 24 hours.');
+        await returnFromStoryWorkspace();
+      }catch(error){toast(error.message||'Your text story could not be published.');button.disabled=false;}
+    });
+    updatePreview();
+  }
+}
+
 
 async function openStory(id){
   let modal=null;
@@ -10108,7 +10346,7 @@ function renderMoreHub(){
     else if(action==='app-metrics')window.dispatchEvent(new CustomEvent('minglora:open-creator-section',{detail:{section:'analytics'}}));
   }));
 }
-async function renderView(){try{if(state.view==='more')renderMoreHub();else if(state.view==='for-you')await renderForYouFeed();else if(state.view==='feed'){await loadPeople();await loadFeed();await loadStories();await renderFeed()}else if(state.view==='videos')await renderVideoCentre();else if(state.view==='gifts')await window.MingloraGifts?.render();else if(state.view==='gifter-progression')await window.MingloraGifterProgression?.render();else if(state.view==='live')await renderLive();else if(state.view==='live-pro')await renderLiveProStudio();else if(state.view==='leagues')await window.MingloraLeagues?.render();else if(state.view==='coins')await renderCoins();else if(state.view==='calendar')await window.MingloraCalendar?.render();else if(state.view==='clock-centre')await window.MingloraClockCentre?.render({user:state.user});else if(state.view==='menstrual-health')await window.MingloraMenstrualHealth?.render();else if(state.view==='creator'){await renderCreator();if(state.restoreCreatorSection&&state.restoreCreatorSection!=='overview')await renderCreatorSection(state.restoreCreatorSection)}else if(state.view==='friends')await renderFriends();else if(state.view==='groups')await renderGroups();else if(state.view==='messages')await renderMessages();else if(state.view==='saved')await renderSavedPosts();else if(state.view==='pages')await renderPages();else if(state.view==='meetwave')await window.MingloraMeetWave?.render();else if(state.view==='connections'&&state.activeConnections)await renderConnections(state.activeConnections.profileId,state.activeConnections.kind);else if(state.view==='page'&&state.activePage)await renderPage(state.activePage,state.pageTab||'posts',state.pageDays||30);else if(state.view==='group'&&state.activeGroup)await renderGroup(state.activeGroup);else if(state.view==='profile'&&state.profileTargetId)await openProfile(state.profileTargetId);else if(state.view==='search'&&state.searchQuery)await renderSearch(state.searchQuery);else if(state.view==='notifications')await renderNotifications();}catch(e){setContent(`<section class="card empty-state"><h3>Could not load this page</h3><p>${esc(e.message)}</p><button class="primary" id="retry-view">Try again</button></section>`);$('#retry-view').onclick=renderView;}}
+async function renderView(){try{if(state.view==='more')renderMoreHub();else if(state.view==='for-you')await renderForYouFeed();else if(state.view==='story-create'){await loadStoryWorkspaceData();renderStoryCreationWorkspace();}else if(state.view==='feed'){await loadPeople();await loadFeed();await loadStories();await renderFeed()}else if(state.view==='videos')await renderVideoCentre();else if(state.view==='gifts')await window.MingloraGifts?.render();else if(state.view==='gifter-progression')await window.MingloraGifterProgression?.render();else if(state.view==='live')await renderLive();else if(state.view==='live-pro')await renderLiveProStudio();else if(state.view==='leagues')await window.MingloraLeagues?.render();else if(state.view==='coins')await renderCoins();else if(state.view==='calendar')await window.MingloraCalendar?.render();else if(state.view==='clock-centre')await window.MingloraClockCentre?.render({user:state.user});else if(state.view==='menstrual-health')await window.MingloraMenstrualHealth?.render();else if(state.view==='creator'){await renderCreator();if(state.restoreCreatorSection&&state.restoreCreatorSection!=='overview')await renderCreatorSection(state.restoreCreatorSection)}else if(state.view==='friends')await renderFriends();else if(state.view==='groups')await renderGroups();else if(state.view==='messages')await renderMessages();else if(state.view==='saved')await renderSavedPosts();else if(state.view==='pages')await renderPages();else if(state.view==='meetwave')await window.MingloraMeetWave?.render();else if(state.view==='connections'&&state.activeConnections)await renderConnections(state.activeConnections.profileId,state.activeConnections.kind);else if(state.view==='page'&&state.activePage)await renderPage(state.activePage,state.pageTab||'posts',state.pageDays||30);else if(state.view==='group'&&state.activeGroup)await renderGroup(state.activeGroup);else if(state.view==='profile'&&state.profileTargetId)await openProfile(state.profileTargetId);else if(state.view==='search'&&state.searchQuery)await renderSearch(state.searchQuery);else if(state.view==='notifications')await renderNotifications();}catch(e){setContent(`<section class="card empty-state"><h3>Could not load this page</h3><p>${esc(e.message)}</p><button class="primary" id="retry-view">Try again</button></section>`);$('#retry-view').onclick=renderView;}}
 let accountSwitcherTopLayerCleanup=null;
 function positionAccountSwitcherTopLayer(){
   const panel=$('#profile-account-menu'),anchor=$('.profile-menu-anchor');
