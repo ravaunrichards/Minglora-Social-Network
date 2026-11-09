@@ -5090,7 +5090,13 @@ function aboutEducationMarkup(entries){
     '</article>'
   ).join('');
 }
-function profileAboutMarkup(u,isMe){
+function profileLockNoticeMarkup(){
+  return '<section class="profile-lock-notice" role="status" aria-label="Profile lock status">'+
+    '<span class="profile-lock-notice__icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><rect x="5" y="10" width="14" height="11" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path><path d="M12 14v3"></path></svg></span>'+
+    '<div class="profile-lock-notice__copy"><h3 class="profile-lock-notice__title">You locked your profile</h3><button type="button" class="profile-lock-notice__learn-more" data-profile-lock-learn-more>Learn more</button></div>'+
+  '</section>';
+}
+function profileAboutMarkup(u,isMe,isProfileLocked=false){
   const sections=u.aboutSections||{};
   const personal={...(sections.personalDetails||{})};
   if(!personal.currentCity)personal.currentCity=u.city||u.location||'';
@@ -5156,7 +5162,8 @@ function profileAboutMarkup(u,isMe){
     const edit=isMe
       ?'<button type="button" class="about-section-edit" data-edit-about-section="'+key+'" aria-label="Edit '+esc(label)+'" title="Edit '+esc(label)+'"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"></path></svg></button>'
       :'';
-    return '<section class="about-section-card" data-about-section="'+key+'"><header><div><h4>'+esc(label)+'</h4><p>'+esc(description)+'</p></div>'+edit+'</header><div class="about-section-content">'+(content||'<p class="about-section-empty">Add your '+esc(label.toLowerCase())+' to complete this section.</p>')+'</div></section>';
+    const lockNotice=isMe&&isProfileLocked&&key==='personalDetails'?profileLockNoticeMarkup():'';
+    return lockNotice+'<section class="about-section-card" data-about-section="'+key+'"><header><div><h4>'+esc(label)+'</h4><p>'+esc(description)+'</p></div>'+edit+'</header><div class="about-section-content">'+(content||'<p class="about-section-empty">Add your '+esc(label.toLowerCase())+' to complete this section.</p>')+'</div></section>';
   }).join('');
 }
 function aboutEditorField(name,label,value='',type='text',placeholder=''){
@@ -5743,6 +5750,12 @@ async function openProfilePrivacySettings(){
     });
   }catch(error){toast(error.message||'Could not load profile settings.');}
 }
+function openProfileLockLearnMore(){
+  openProfileMenuInfo(
+    'Your profile is locked',
+    'Your profile visibility is set to Only me. Other members cannot open your profile while this setting is active. Open the profile menu and choose Unlock profile to make it public again.'
+  );
+}
 async function toggleProfilePrivacyLock(){
   try{
     const current=await api('/settings');const locked=current.settings?.privacy?.profileVisibility==='private';
@@ -5750,6 +5763,10 @@ async function toggleProfilePrivacyLock(){
     const saved=await api('/settings',{method:'PATCH',body:JSON.stringify({privacy:{profileVisibility:next}})});state.settings=saved.settings;
     const label=$('#profile-overflow-menu [data-profile-overflow-action="lock-toggle"] span:last-child');
     if(label)label.textContent=next==='private'?'Unlock profile':'Lock profile';
+    if(state.profile?.user?.id===state.user?.id){
+      state.profile.profileLocked=next==='private';
+      renderProfile(state.profile);
+    }
     toast(next==='private'?'Your profile is now locked.':'Your profile is public again.');
   }catch(error){toast(error.message||'Could not update profile visibility.');}
 }
@@ -5977,7 +5994,7 @@ function renderProfile(data){
   const relationshipActions=isMe
     ?'<div class="profile-actions profile-owner-actions"><button class="primary profile-edit" id="profile-add-story" type="button" aria-label="Add to story"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v8M8 12h8"></path></svg><span>Add to story</span></button><button class="secondary profile-edit" id="edit-profile" type="button" aria-label="Edit profile details in About" aria-controls="profile-tab-panel"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"></path></svg><span>Edit Profile</span></button><button class="secondary profile-people-toggle" id="profile-people-toggle" type="button" aria-label="People you may know" title="People you may know" aria-expanded="false" aria-controls="profile-people-panel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"></path></svg></button></div>'
     :'<div class="profile-actions profile-actions--primary"><button class="primary profile-edit" type="button" id="profile-follow" data-following="'+(data.following?'true':'false')+'" data-friendship="'+esc(data.friendship||'')+'"><svg class="profile-action-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="7" r="4"></circle><path d="M2.5 20a6.5 6.5 0 0 1 13 0M19 8v6M16 11h6"></path></svg>'+(data.following?(data.friendship==='accepted'?'Friends · Following':'Following'):(data.friendship==='accepted'?'Friends':'Follow'))+'</button><button class="primary profile-edit profile-subscribe" type="button" id="profile-subscribe" data-subscription-active="'+(subscriptionAlreadyExists?'true':'false')+'" aria-label="Subscribe to '+esc(u.name)+'"><svg class="profile-action-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3 6.4 20.2l1.1-6.2L3 9.6l6.2-.9Z"></path></svg>'+esc(subscriptionLabel)+'</button><button class="secondary profile-edit" type="button" id="profile-message" aria-label="Start a chat with '+esc(u.name)+'"><svg class="profile-action-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5h16v11H9l-5 3z"></path><path d="M8 10h8M8 13.5h5"></path></svg>Message</button><button class="secondary profile-edit" type="button" data-profile-call="audio" aria-label="Start a voice call with '+esc(u.name)+'"><svg class="profile-action-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3H4.8A1.8 1.8 0 0 0 3 4.8C3 13.8 10.2 21 19.2 21a1.8 1.8 0 0 0 1.8-1.8V17l-5-2-2 2a14 14 0 0 1-4-4l2-2-2-5Z"></path></svg>Voice Calls</button><button class="secondary profile-edit" type="button" data-profile-call="video" aria-label="Start a video call with '+esc(u.name)+'"><svg class="profile-action-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="13" height="12" rx="2"></rect><path d="m16 10 5-3v10l-5-3"></path></svg>Video Calls</button><button class="secondary profile-edit" type="button" id="profile-report" aria-label="Report '+esc(u.name)+'"><svg class="profile-action-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3v18M5 4h12l-2 4 2 4H5"></path></svg>Report</button><button class="secondary profile-edit" type="button" id="profile-block" aria-label="Block '+esc(u.name)+'"><svg class="profile-action-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="m5.6 5.6 12.8 12.8"></path></svg>Block</button></div>';
-  const aboutHtml=profileAboutMarkup(u,isMe);
+  const aboutHtml=profileAboutMarkup(u,isMe,data.profileLocked===true);
   const profileThoughtMarkup=data.profileStatus?.text
     ? '<button type="button" class="ml-profile-thought-bubble" data-view-profile-thought-user="'+esc(u.id)+'" aria-label="View '+esc(u.name)+'’s thought" title="View thought">'+(data.profileStatus.mood?'<span>'+esc(data.profileStatus.mood)+'</span> · ':'')+esc(data.profileStatus.text)+'</button>'
     : (isMe?'<button type="button" class="ml-profile-thought-add" data-edit-profile-thought aria-label="Share a thought">Share a thought…</button>':'');
@@ -5993,6 +6010,7 @@ function renderProfile(data){
     const panel=$('#profile-tab-panel');if(!panel)return;
     panel.innerHTML=profileTabMarkup(data,nextTab,aboutHtml,isMe);
     bindFeed(panel);
+    if(nextTab==='about')panel.querySelector('[data-profile-lock-learn-more]')?.addEventListener('click',openProfileLockLearnMore);
     bindProfileTabActions(panel);
   };
   document.querySelectorAll('.profile-tabs [data-profile-tab]').forEach(button=>button.addEventListener('click',()=>showTab(button.dataset.profileTab)));
