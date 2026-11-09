@@ -62,7 +62,7 @@ test('profile cover and portrait remain independent and the portrait stays left 
   assert.ok(css.includes('position: relative !important'));
 });
 test('profile editing retains centered native dialogs and About section editing',()=>{
-  assert.ok(app.includes("const modal=document.createElement('dialog');modal.className='profile-inline-editor profile-editor-dialog'"));
+  assert.ok(app.includes("const modal=document.createElement('dialog');modal.id='minglora-profile-editor';modal.className='profile-inline-editor profile-editor-dialog'"));
   assert.ok(app.includes("const modal=document.createElement('dialog');modal.className='profile-inline-editor about-section-inline-editor profile-editor-dialog'"));
   assert.ok(app.includes('modal.showModal()'));
   assert.ok(app.includes("modal.addEventListener('cancel'"));
