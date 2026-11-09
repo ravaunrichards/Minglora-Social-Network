@@ -256,7 +256,7 @@ Deno.serve(async (req: Request) => {
     if (password.length < 8 || password.length > 128) return json(400, { error: "Set a password between 8 and 128 characters." });
     if (!username) return json(400, { error: "Enter a username to create the member profile." });
     if (!/^[a-z0-9_]{3,30}$/.test(username)) return json(400, { error: "Username must be 3–30 lowercase characters and use letters, numbers or underscores." });
-    const { data: usernameOwner, error: usernameLookupError } = await admin.from("profiles").select("id").eq("username", username).maybeSingle();
+    const { data: usernameOwner, error: usernameLookupError } = await admin.from("profiles").select("id").ilike("username", username).maybeSingle();
     if (usernameLookupError) return json(503, { error: "Minglora could not validate username availability." });
     if (usernameOwner) return json(409, { error: "That username is already in use." });
     const { data: created, error: createError } = await admin.auth.admin.createUser({
@@ -354,10 +354,19 @@ Deno.serve(async (req: Request) => {
       profilePatch[column] = value;
       changedFields.push(field);
     }
+    if (Object.hasOwn(profileInput, "displayName")) {
+      const value = String(profilePatch.display_name || "").trim();
+      if (value.length < 2) return json(400, { error: "Display name must contain at least 2 characters." });
+      profilePatch.display_name = value;
+    }
     if (Object.hasOwn(profileInput, "username")) {
-      const value = String(profilePatch.username || "").toLowerCase();
+      const value = String(profilePatch.username || "").trim().replace(/^@/, "").toLowerCase();
       profilePatch.username = value;
-      if (value && !/^[a-z0-9_]{3,30}$/.test(value)) return json(400, { error: "Username must be 3–30 lowercase characters and use letters, numbers or underscores." });
+      if (!/^[a-z0-9_]{3,30}$/.test(value)) return json(400, { error: "Username must be 3–30 lowercase characters and use letters, numbers or underscores." });
+      const { data: usernameOwner, error: usernameLookupError } = await admin.from("profiles")
+        .select("id").ilike("username", value).neq("id", userId).maybeSingle();
+      if (usernameLookupError) return json(503, { error: "Minglora could not validate username availability." });
+      if (usernameOwner) return json(409, { error: "That username is already in use." });
     }
     if (Object.keys(profilePatch).length === 0 && Object.keys(authAttributes).length === 0) {
       return json(400, { error: "Choose at least one account or profile field to update." });
