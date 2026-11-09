@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 
 const read = path => readFile(new URL(path, import.meta.url), 'utf8');
 
-const [server, auth, login, admin, adminPage, adminCentre, html, css, worker, flowState] = await Promise.all([
+const [server, auth, login, admin, adminPage, adminCentre, html, css, worker, flowState, routeHelpers] = await Promise.all([
   read('../../src/server.js'),
   read('../../src/supabase-auth.js'),
   read('../../public/auth-login.js'),
@@ -14,7 +14,8 @@ const [server, auth, login, admin, adminPage, adminCentre, html, css, worker, fl
   read('../../public/index.html'),
   read('../../public/auth-oauth.css'),
   read('../../public/sw.js'),
-  read('../../src/oauth-flow-state.js')
+  read('../../src/oauth-flow-state.js'),
+  read('../../src/auth-redirect-routes.js')
 ]);
 
 test('OAuth start route only accepts providers enabled by current Supabase Auth settings', () => {
@@ -79,10 +80,10 @@ test('Admin provider setup writes allowlisted credentials and verifies enable/di
 
 test('Route repair preserves existing redirects and includes the OAuth callback path', () => {
   assert.ok(server.includes("input?.action==='sync-routes'"));
-  assert.ok(server.includes("const allowedRedirectUrls=parseRedirectList(current.uri_allow_list)"));
-  assert.ok(server.includes("for(const requiredRedirect of [siteRedirectUrl,appRedirectUrl])"));
-  assert.ok(server.includes("new URL('/auth/oauth/callback',appSiteUrl)"));
-  assert.ok(server.includes("allowedRedirectUrls.includes(siteRedirectUrl)&&allowedRedirectUrls.includes(appRedirectUrl)"));
+  assert.ok(server.includes("const routePatch=buildMingloraAuthRoutePatch(current,appSiteUrl)"));
+  assert.ok(server.includes("createMingloraAuthRouteState(config,appSiteUrl,providerCallbackUrl)"));
+  assert.ok(routeHelpers.includes("for (const requiredUrl of [siteRedirectUrl, appRedirectUrl])"));
+  assert.ok(routeHelpers.includes("parseAuthRedirectAllowList(config.uri_allow_list)"));
   assert.ok(server.includes("const verified=await callManagement('GET')"));
   assert.ok(admin.includes("Connect / repair routes"));
   assert.ok(admin.includes("Minglora OAuth return route"));
