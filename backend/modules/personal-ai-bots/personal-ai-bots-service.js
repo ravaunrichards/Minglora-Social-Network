@@ -4,6 +4,30 @@ export const PERSONAL_AI_BOT_POPULATIONS = Object.freeze([
   {id:'specialized_service',label:'Specialized AI Service'}
 ]);
 
+
+export const PERSONAL_AI_BOT_DEPARTMENTS = Object.freeze([
+  {code:'executive_management',name:'Executive Management',description:'Platform strategy, executive coordination and governance administration.'},
+  {code:'finance_accounting',name:'Finance and Accounting',description:'Budgets, expenditure records, forecasting and financial reconciliation.'},
+  {code:'human_resources',name:'Human Resources',description:'AI recruitment, appointments, training, performance and employment records.'},
+  {code:'resource_management',name:'Resource Management',description:'Compute, storage, model usage and shared resource allocation.'},
+  {code:'operations',name:'Operations',description:'Operational coordination, service processes and approved task delivery.'},
+  {code:'technology_engineering',name:'Technology and Engineering',description:'Application engineering, platform architecture and technical maintenance.'},
+  {code:'ai_research',name:'AI and Research',description:'Model evaluation, AI research, experiments and capability development.'},
+  {code:'cybersecurity_it',name:'Cybersecurity and IT',description:'Information security, infrastructure protection and access operations.'},
+  {code:'legal_compliance',name:'Legal and Compliance',description:'Policy review, regulatory monitoring and compliance coordination.'},
+  {code:'marketing_advertising',name:'Marketing and Advertising',description:'Brand strategy, marketing operations and advertising governance.'},
+  {code:'sales_business_development',name:'Sales and Business Development',description:'Partnership development, sales operations and commercial planning.'},
+  {code:'customer_support',name:'Customer Support',description:'Member support operations, service quality and issue escalation.'},
+  {code:'community_management',name:'Community Management',description:'Community standards, member experience and community operations.'},
+  {code:'content_creator_management',name:'Content and Creator Management',description:'Creator relations, content operations and creator programme coordination.'},
+  {code:'product_management',name:'Product Management',description:'Product strategy, requirements, prioritization and delivery coordination.'},
+  {code:'quality_assurance',name:'Quality Assurance',description:'Test strategy, release quality, regression and acceptance reviews.'},
+  {code:'logistics_procurement',name:'Logistics and Procurement',description:'Supplier coordination, purchasing requests and logistics operations.'},
+  {code:'training_development',name:'Training and Development',description:'Learning plans, onboarding programmes and workforce development.'},
+  {code:'public_relations',name:'Public Relations',description:'Public communications, media relations and approved announcements.'},
+  {code:'risk_management',name:'Risk Management',description:'Operational risk identification, risk registers and mitigation tracking.'}
+]);
+
 export const PERSONAL_AI_BOT_CATEGORIES = Object.freeze([
   { id:'ai-friends', name:'AI Friends', description:'Clearly identified AI companions and conversational friends.' },
   { id:'ai-creators', name:'AI Creators', description:'Prepare original posts, creative concepts, captions and media briefs.' },
@@ -49,7 +73,7 @@ export const PERSONAL_AI_BOT_HIGH_IMPACT_TASKS = Object.freeze([
 const COLLECTIONS = [
   'personalAiBotCategories','personalAiBots','personalAiBotTasks',
   'personalAiBotAudit','personalAiBotSettings','personalAiBotFollows',
-  'personalAiBotTeams','personalAiBotTeamMembers','personalAiBotSchedules','personalAiBotBatches'
+  'personalAiBotTeams','personalAiBotTeamMembers','personalAiBotSchedules','personalAiBotBatches','personalAiBotDepartments'
 ];
 
 export function ensurePersonalAiBotCollections(db) {
@@ -71,6 +95,18 @@ export function ensurePersonalAiBotCollections(db) {
       updatedAt:new Date().toISOString()
     };
     db.personalAiBotSettings.push(settings);
+  }
+  const existingDepartmentIds=new Set(db.personalAiBotDepartments.map(item=>item.id));
+  const seededAt=new Date().toISOString();
+  for(const department of PERSONAL_AI_BOT_DEPARTMENTS){
+    const id='department-'+department.code;
+    if(!existingDepartmentIds.has(id)){
+      db.personalAiBotDepartments.push({
+        id,code:department.code,name:department.name,description:department.description,
+        builtIn:true,enabled:true,parentDepartmentId:null,
+        createdBy:'system',updatedBy:'system',createdAt:seededAt,updatedAt:seededAt
+      });
+    }
   }
   return settings;
 }
@@ -433,6 +469,84 @@ export function updatePersonalAiBot(db, botId, input, actorId, timestamp, uid) {
   bot.updatedBy=actorId;bot.updatedAt=timestamp;
   if(changes.length)audit(db,actorId,'bot.updated','bot',bot.id,'Updated '+changes.join(', '),timestamp,uid);
   return bot;
+}
+
+
+export function getPersonalAiBotDepartments(db) {
+  ensurePersonalAiBotCollections(db);
+  const order=new Map(PERSONAL_AI_BOT_DEPARTMENTS.map((item,index)=>['department-'+item.code,index]));
+  return db.personalAiBotDepartments.slice().sort((a,b)=>{
+    const aOrder=order.has(a.id)?order.get(a.id):Number.MAX_SAFE_INTEGER;
+    const bOrder=order.has(b.id)?order.get(b.id):Number.MAX_SAFE_INTEGER;
+    if(aOrder!==bOrder)return aOrder-bOrder;
+    return String(a.name||'').localeCompare(String(b.name||''));
+  }).map(item=>({...item,builtIn:item.builtIn===true,enabled:item.enabled!==false}));
+}
+
+export function createPersonalAiBotDepartment(db,input,actorId,timestamp,uid) {
+  ensurePersonalAiBotCollections(db);
+  const name=String(input.name||'').trim().replace(/\s+/g,' ');
+  const description=String(input.description||'').trim().slice(0,600);
+  if(name.length<3||name.length>80)throw Object.assign(new Error('Department name must be between 3 and 80 characters.'),{status:400});
+  if(db.personalAiBotDepartments.some(item=>String(item.name||'').toLowerCase()===name.toLowerCase())){
+    throw Object.assign(new Error('A department with that name already exists.'),{status:409});
+  }
+  const code=slugify(name).replace(/-/g,'_');
+  if(db.personalAiBotDepartments.some(item=>item.code===code)){
+    throw Object.assign(new Error('A department with that code already exists; choose a different name.'),{status:409});
+  }
+  const parentDepartmentId=String(input.parentDepartmentId||'').trim()||null;
+  if(parentDepartmentId&&!db.personalAiBotDepartments.some(item=>item.id===parentDepartmentId)){
+    throw Object.assign(new Error('Choose an existing parent department.'),{status:404});
+  }
+  const department={
+    id:'department-'+uid(),code,name,description,builtIn:false,enabled:true,
+    parentDepartmentId,createdBy:actorId,updatedBy:actorId,
+    createdAt:timestamp,updatedAt:timestamp
+  };
+  db.personalAiBotDepartments.push(department);
+  audit(db,actorId,'department.created','department',department.id,'Created department '+name+'.',timestamp,uid);
+  return department;
+}
+
+export function updatePersonalAiBotDepartment(db,departmentId,input,actorId,timestamp,uid) {
+  ensurePersonalAiBotCollections(db);
+  const department=db.personalAiBotDepartments.find(item=>item.id===departmentId);
+  if(!department)throw Object.assign(new Error('Department not found.'),{status:404});
+  const changes=[];
+  if(Object.hasOwn(input,'name')){
+    const name=String(input.name||'').trim().replace(/\s+/g,' ');
+    if(name.length<3||name.length>80)throw Object.assign(new Error('Department name must be between 3 and 80 characters.'),{status:400});
+    if(db.personalAiBotDepartments.some(item=>item.id!==departmentId&&String(item.name||'').toLowerCase()===name.toLowerCase())){
+      throw Object.assign(new Error('A department with that name already exists.'),{status:409});
+    }
+    department.name=name;changes.push('name');
+  }
+  if(Object.hasOwn(input,'description')){
+    department.description=String(input.description||'').trim().slice(0,600);
+    changes.push('description');
+  }
+  if(Object.hasOwn(input,'enabled')){
+    if(typeof input.enabled!=='boolean')throw Object.assign(new Error('Choose whether this department is enabled.'),{status:400});
+    department.enabled=input.enabled;changes.push(input.enabled?'enabled':'disabled');
+  }
+  if(Object.hasOwn(input,'parentDepartmentId')){
+    const parentDepartmentId=String(input.parentDepartmentId||'').trim()||null;
+    let parent=parentDepartmentId?db.personalAiBotDepartments.find(item=>item.id===parentDepartmentId):null;
+    if(parentDepartmentId&&!parent)throw Object.assign(new Error('Choose an existing parent department.'),{status:404});
+    if(parentDepartmentId===departmentId)throw Object.assign(new Error('A department cannot be its own parent.'),{status:409});
+    const visited=new Set([departmentId]);
+    while(parent){
+      if(visited.has(parent.id))throw Object.assign(new Error('Department hierarchy cannot contain a cycle.'),{status:409});
+      visited.add(parent.id);
+      parent=parent.parentDepartmentId?db.personalAiBotDepartments.find(item=>item.id===parent.parentDepartmentId):null;
+    }
+    department.parentDepartmentId=parentDepartmentId;changes.push('parent');
+  }
+  department.updatedBy=actorId;
+  department.updatedAt=timestamp;
+  if(changes.length)audit(db,actorId,'department.updated','department',department.id,'Updated '+department.name+': '+changes.join(', ')+'.',timestamp,uid);
+  return {...department,builtIn:department.builtIn===true,enabled:department.enabled!==false};
 }
 
 export function createPersonalAiBotCategory(db, input, actorId, timestamp, uid) {
