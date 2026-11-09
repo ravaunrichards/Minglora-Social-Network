@@ -1053,38 +1053,36 @@ function discoveryPostPreview(post,profileId){
     '<span class="person-post-reactions">♡ '+Number(post.reactionCount||0).toLocaleString()+'</span></button></article>';
 }
 function peopleCard(p){
-  const mutual=p.friendship==='accepted';
-  const liveSession=(state.discoveryLiveSessions||[]).find(session=>session.hostId===p.id&&session.viewerCountVerified===true)||null;
-  const story=p.latestStory;
-  const cover=p.cover?'<img class="person-cover-image" loading="lazy" src="'+esc(p.cover)+'" alt="">':'';
-  const storyPreview=story
-    ?'<button type="button" class="person-story-preview" data-open-profile-story="'+esc(story.id)+'" aria-label="View '+esc(p.name)+'’s current story">'+
-      (story.media?.url?renderStoryPreview(story.media):'<span class="person-story-text">'+esc((story.text||'').slice(0,100)||'A new story')+'</span>')+
-      '<span class="person-story-overlay"><strong>STORY</strong><small>'+esc(timeAgo(story.createdAt))+'</small></span></button>'
-    :'';
-  const recent=(p.recentPosts||[]).map(post=>discoveryPostPreview(post,p.id)).join('');
-  const hasActivity=Boolean(storyPreview||recent);
-  const followerCount=Number(p.followersCount||0).toLocaleString();
-  const friendCount=Number(p.friendsCount||0).toLocaleString();
-  const postCount=Number(p.postsCount||0).toLocaleString();
   const following=Boolean(p.following);
-  const followLabel=following?(mutual?'Friends · Following':'Following'):(mutual?'Friends':'Follow');
-  return '<article class="card person-card person-card--immersive">'+
-    '<button type="button" class="person-cover'+(p.cover?' has-cover':'')+'" data-profile="'+esc(p.id)+'" aria-label="Open '+esc(p.name)+'’s profile">'+cover+
-      (liveSession?'<span class="person-live-badge"><i></i> LIVE NOW</span>':story?'<span class="person-story-badge">STORY AVAILABLE</span>':'')+
-      '<span class="person-cover-caption">MINGLORA MEMBER</span></button>'+
-    '<div class="person-card-content">'+
-      '<div class="person-identity"><div class="person-avatar-wrap'+(story?' has-story':'')+'"><button type="button" data-profile="'+esc(p.id)+'" aria-label="View '+esc(p.name)+'’s profile"><img class="avatar" src="'+avatar(p)+'" alt=""></button></div>'+
-      '<div class="person-title-group" data-profile="'+esc(p.id)+'" role="link" tabindex="0" aria-label="Open '+esc(p.name)+'’s profile" style="cursor:pointer"><h3>'+esc(p.name)+'</h3><span>@'+esc(p.username)+' '+verifiedProfileBadge(p)+gifterProfileBadge(p)+'</span></div>'+
-      (liveSession?'<span class="person-live-mini"><i></i> LIVE</span>':'')+'</div>'+
-      '<p class="person-bio">'+(p.bio?esc(p.bio):'<span>No bio added yet.</span>')+'</p>'+
-      '<div class="person-stat-row"><span><strong>'+followerCount+'</strong><small>Followers</small></span><span><strong>'+friendCount+'</strong><small>Friends</small></span><span><strong>'+postCount+'</strong><small>Posts</small></span></div>'+
-      '<div class="person-mutual-context"><span class="person-mutual-glyph" aria-hidden="true">✦</span><span>'+(Number(p.mutualFriendsCount||0)>0?'<strong>'+Number(p.mutualFriendsCount).toLocaleString()+' mutual '+(Number(p.mutualFriendsCount)===1?'connection':'connections')+'</strong>':'No mutual connections yet')+'</span></div>'+
-      (liveSession?'<div class="person-live-strip"><span><i></i><strong>'+Number(liveSession.viewerCount||0).toLocaleString()+'</strong> watching now</span><button type="button" data-watch-live="'+esc(liveSession.id)+'">Watch LIVE <b>↗</b></button></div>':'')+
-      (hasActivity?'<div class="person-activity">'+storyPreview+recent+'</div>':'<div class="person-no-activity"><span class="person-no-activity-icon">✧</span><span><strong>No recent public activity</strong><small>New shared moments will appear here.</small></span></div>')+
-      '<div class="person-card-actions"><button type="button" class="person-connect-btn" data-toggle-follow="'+esc(p.id)+'" data-following="'+(following?'true':'false')+'">'+(following?'<span>✓</span> ':'＋ ')+esc(followLabel)+'</button><button type="button" class="person-view-btn" data-profile="'+esc(p.id)+'">View profile <span>↗</span></button></div>'+
-      '<div class="person-card-secondary-actions"><button type="button" class="person-dismiss-btn" data-dismiss-suggestion="'+esc(p.id)+'">Remove suggestion</button><button type="button" class="person-block-link" data-block-user="'+esc(p.id)+'">Block member</button></div>'+
-    '</div></article>';
+  const isFriend=p.friendship==='accepted';
+  const previews=(Array.isArray(p.mutualFriendsPreview)?p.mutualFriendsPreview:[]).slice(0,3);
+  const mutualCount=Math.max(0,Number(p.mutualFriendsCount||0));
+  const mutualAvatars=previews.length
+    ?'<span class="facebook-mutual-stack" aria-hidden="true">'+previews.map(friend=>
+      '<img src="'+esc(avatar(friend))+'" alt="" loading="lazy">'
+    ).join('')+'</span>'
+    :'<span class="facebook-mutual-empty" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"></circle><path d="M3 20a6 6 0 0 1 12 0M16 5a3 3 0 0 1 0 6M17 14a5 5 0 0 1 4 5"></path></svg></span>';
+  const mutualText=mutualCount
+    ?mutualCount.toLocaleString()+' mutual '+(mutualCount===1?'friend':'friends')
+    :'No mutual friends';
+  const actionLabel=isFriend?'Friends':following?'Following':'Follow';
+  return '<article class="card person-card facebook-person-card">'+
+    '<button type="button" class="facebook-person-photo" data-profile="'+esc(p.id)+'" aria-label="View '+esc(p.name)+'’s profile">'+
+      '<img src="'+esc(avatar(p))+'" alt="" loading="lazy">'+
+    '</button>'+
+    '<div class="facebook-person-details">'+
+      '<button type="button" class="facebook-person-name" data-profile="'+esc(p.id)+'">'+
+        '<span>'+esc(p.name)+'</span>'+verifiedProfileBadge(p)+gifterProfileBadge(p)+
+      '</button>'+
+      '<div class="facebook-person-mutual">'+mutualAvatars+'<span>'+esc(mutualText)+'</span></div>'+
+      '<div class="facebook-person-actions">'+
+        '<button type="button" class="facebook-person-follow" data-toggle-follow="'+esc(p.id)+'" data-following="'+(following?'true':'false')+'" '+(isFriend?'disabled aria-disabled="true"':'')+'>'+
+          (following&&!isFriend?'✓ ':'')+esc(actionLabel)+
+        '</button>'+
+        '<button type="button" class="facebook-person-remove" data-dismiss-suggestion="'+esc(p.id)+'">Remove</button>'+
+      '</div>'+
+    '</div>'+
+  '</article>';
 }
 function peopleGridMarkup(){
   const others=state.people.filter(member=>member.friendship!=='accepted');
