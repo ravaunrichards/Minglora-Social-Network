@@ -1977,6 +1977,130 @@ async function route(req, res) {
         });
       }
 
+      if((method==='GET'||method==='PATCH')&&p==='/api/admin/auth-providers'){
+        if(!isDesignatedCreatorHubAdmin(user)||!isModerator(user,req)||!hasActiveReviewerSession(user)){
+          return json(res,403,{error:'Only the MFA-verified designated Minglora owner can manage authentication providers.'});
+        }
+        if(AUTH_PROVIDER!=='supabase')return json(res,503,{error:'Authentication provider controls require Minglora Supabase Auth.'});
+        const managementToken=String(process.env.SUPABASE_ACCESS_TOKEN||'').trim();
+        if(!managementToken)return json(res,503,{error:'The server-side Supabase Management token is not configured. Add SUPABASE_ACCESS_TOKEN to the Minglora Render environment.'});
+        const projectRef='gzycobgbasnqqhnympkr';
+        const definitions=[
+          {id:'email',label:'Email & password',category:'Core sign-in',flag:'external_email_enabled',keys:[],note:'Controls Supabase email/password and email OTP sign-in. Existing mailer and redirect settings are preserved.'},
+          {id:'phone',label:'Phone (SMS OTP)',category:'Core sign-in',flag:'external_phone_enabled',keys:[],note:'Requires a working SMS provider and credentials in Supabase Auth settings.'},
+          {id:'apple',label:'Apple',category:'Social sign-in',flag:'external_apple_enabled',keys:['external_apple_client_id','external_apple_secret']},
+          {id:'azure',label:'Microsoft Azure',category:'Social sign-in',flag:'external_azure_enabled',keys:['external_azure_client_id','external_azure_secret']},
+          {id:'bitbucket',label:'Bitbucket',category:'Social sign-in',flag:'external_bitbucket_enabled',keys:['external_bitbucket_client_id','external_bitbucket_secret']},
+          {id:'discord',label:'Discord',category:'Social sign-in',flag:'external_discord_enabled',keys:['external_discord_client_id','external_discord_secret']},
+          {id:'facebook',label:'Facebook',category:'Social sign-in',flag:'external_facebook_enabled',keys:['external_facebook_client_id','external_facebook_secret']},
+          {id:'figma',label:'Figma',category:'Social sign-in',flag:'external_figma_enabled',keys:['external_figma_client_id','external_figma_secret']},
+          {id:'github',label:'GitHub',category:'Social sign-in',flag:'external_github_enabled',keys:['external_github_client_id','external_github_secret']},
+          {id:'gitlab',label:'GitLab',category:'Social sign-in',flag:'external_gitlab_enabled',keys:['external_gitlab_client_id','external_gitlab_secret']},
+          {id:'google',label:'Google',category:'Social sign-in',flag:'external_google_enabled',keys:['external_google_client_id','external_google_secret']},
+          {id:'kakao',label:'KakaoTalk',category:'Social sign-in',flag:'external_kakao_enabled',keys:['external_kakao_client_id','external_kakao_secret']},
+          {id:'keycloak',label:'Keycloak (OIDC)',category:'Social sign-in',flag:'external_keycloak_enabled',keys:['external_keycloak_client_id','external_keycloak_secret','external_keycloak_url']},
+          {id:'linkedin_oidc',label:'LinkedIn (OIDC)',category:'Social sign-in',flag:'external_linkedin_oidc_enabled',keys:['external_linkedin_oidc_client_id','external_linkedin_oidc_secret']},
+          {id:'notion',label:'Notion',category:'Social sign-in',flag:'external_notion_enabled',keys:['external_notion_client_id','external_notion_secret']},
+          {id:'slack_oidc',label:'Slack (OIDC)',category:'Social sign-in',flag:'external_slack_oidc_enabled',keys:['external_slack_oidc_client_id','external_slack_oidc_secret'],note:'Current recommended Slack sign-in provider.'},
+          {id:'slack',label:'Slack (legacy)',category:'Social sign-in',flag:'external_slack_enabled',keys:['external_slack_client_id','external_slack_secret'],note:'Legacy Slack provider. Prefer Slack (OIDC) for new integrations.'},
+          {id:'spotify',label:'Spotify',category:'Social sign-in',flag:'external_spotify_enabled',keys:['external_spotify_client_id','external_spotify_secret']},
+          {id:'twitch',label:'Twitch',category:'Social sign-in',flag:'external_twitch_enabled',keys:['external_twitch_client_id','external_twitch_secret']},
+          {id:'x',label:'X / Twitter (OAuth 2.0)',category:'Social sign-in',flag:'external_x_enabled',keys:['external_x_client_id','external_x_secret'],note:'Recommended X sign-in method.'},
+          {id:'twitter',label:'Twitter (OAuth 1.0a, legacy)',category:'Social sign-in',flag:'external_twitter_enabled',keys:['external_twitter_client_id','external_twitter_secret'],note:'Legacy provider; X OAuth 2.0 is recommended.'},
+          {id:'workos',label:'WorkOS',category:'Social sign-in',flag:'external_workos_enabled',keys:['external_workos_client_id','external_workos_secret','external_workos_url']},
+          {id:'zoom',label:'Zoom',category:'Social sign-in',flag:'external_zoom_enabled',keys:['external_zoom_client_id','external_zoom_secret']},
+          {id:'web3_ethereum',label:'Web3 Wallet (Ethereum)',category:'Wallet & enterprise',flag:'external_web3_ethereum_enabled',keys:[],note:'Wallet sign-in uses Ethereum / SIWE. Users approve authentication in their wallet.'},
+          {id:'web3_solana',label:'Web3 Wallet (Solana)',category:'Wallet & enterprise',flag:'external_web3_solana_enabled',keys:[],note:'Wallet sign-in uses Solana wallet authentication.'},
+          {id:'saml',label:'SAML 2.0 SSO',category:'Wallet & enterprise',flag:'saml_enabled',keys:['saml_external_url'],planBlocked:true,note:'Unavailable on Minglora’s current Supabase Free plan. Upgrade the Supabase organization before enabling SAML SSO.'}
+        ];
+        const smsReadiness=(config)=>{
+          const provider=String(config.sms_provider||'').trim().toLowerCase();
+          const requirements={
+            twilio:['sms_twilio_account_sid','sms_twilio_auth_token'],
+            vonage:['sms_vonage_api_key','sms_vonage_api_secret','sms_vonage_from'],
+            messagebird:['sms_messagebird_access_key'],
+            textlocal:['sms_textlocal_api_key']
+          }[provider];
+          return Boolean(requirements&&requirements.every(key=>String(config[key]||'').trim()));
+        };
+        const getProviderState=(config)=>definitions.map(def=>{
+          const configured=def.id==='email'||def.id.startsWith('web3_')
+            ?true
+            :def.id==='phone'
+              ?smsReadiness(config)
+              :def.keys.every(key=>String(config[key]||'').trim().length>0);
+          const enabled=config[def.flag]===true;
+          const locked=Boolean(def.planBlocked);
+          const reason=locked
+            ?def.note
+            :def.id==='phone'&&!configured
+              ?'Configure an SMS provider and its credentials in Supabase Auth before enabling phone sign-in.'
+              :!configured&&def.keys.length
+                ?'Add the provider client ID, client secret, and any required provider URL in Supabase Auth → Providers first.'
+                :null;
+          return {id:def.id,label:def.label,category:def.category,enabled,configured,locked,canEnable:configured&&!locked,note:def.note||null,reason};
+        });
+        const callManagement=async(httpMethod,payload)=>{
+          let response;
+          try{
+            response=await fetch('https://api.supabase.com/v1/projects/'+projectRef+'/config/auth',{
+              method:httpMethod,
+              headers:{Authorization:'Bearer '+managementToken,Accept:'application/json','Content-Type':'application/json'},
+              ...(payload?{body:JSON.stringify(payload)}:{}),
+              signal:AbortSignal.timeout(12000)
+            });
+          }catch{
+            throw Object.assign(new Error('Could not reach the Supabase Management API. No authentication setting was changed.'),{status:503});
+          }
+          const raw=await response.text();
+          let data={};
+          try{data=raw?JSON.parse(raw):{};}catch{}
+          if(!response.ok){
+            const status=response.status===401?401:response.status===403?403:response.status===429?429:502;
+            const message=status===401
+              ?'Supabase rejected the Management token. Check that SUPABASE_ACCESS_TOKEN is current.'
+              :status===403
+                ?'The Supabase token is missing permissions. It needs Auth Config Read and Read-write plus Project Settings Read-write for this project.'
+                :status===429
+                  ?'Supabase is rate-limiting provider configuration requests. Try again shortly.'
+                  :'Supabase could not process the provider configuration request. Existing settings were not intentionally replaced.';
+            throw Object.assign(new Error(message),{status});
+          }
+          return data;
+        };
+        try{
+          if(method==='GET'){
+            const config=await callManagement('GET');
+            return json(res,200,{providers:getProviderState(config),projectRef,tokenConfigured:true});
+          }
+          const providerId=String(input?.provider||''),requestedEnabled=input?.enabled;
+          const definition=definitions.find(item=>item.id===providerId);
+          if(!definition)return json(res,400,{error:'Choose a supported authentication provider.'});
+          if(typeof requestedEnabled!=='boolean')return json(res,400,{error:'Provider enabled must be true or false.'});
+          if(definition.planBlocked&&requestedEnabled)return json(res,403,{error:definition.note});
+          const current=await callManagement('GET');
+          const currentlyEnabled=current[definition.flag]===true;
+          if(requestedEnabled&&!currentlyEnabled){
+            const status=getProviderState(current).find(item=>item.id===providerId);
+            if(!status?.configured)return json(res,409,{error:status?.reason||'Complete this provider’s credentials before enabling it.'});
+          }
+          if(!requestedEnabled&&currentlyEnabled){
+            const enabledCount=definitions.filter(item=>!item.planBlocked&&current[item.flag]===true).length;
+            if(enabledCount<=1)return json(res,409,{error:'Keep at least one configured sign-in method enabled so Minglora members can still access their accounts.'});
+          }
+          if(currentlyEnabled!==requestedEnabled){
+            await callManagement('PATCH',{[definition.flag]:requestedEnabled});
+          }
+          const verified=await callManagement('GET');
+          if((verified[definition.flag]===true)!==requestedEnabled){
+            return json(res,502,{error:'Supabase did not confirm the requested provider change. Refresh the provider list before trying again.'});
+          }
+          return json(res,200,{ok:true,provider:providerId,enabled:requestedEnabled,providers:getProviderState(verified)});
+        }catch(error){
+          return json(res,error.status||502,{error:String(error?.message||'Authentication provider configuration failed.').slice(0,300)});
+        }
+      }
+
       if(method==='GET'&&p==='/api/admin/users'){
         if(!isDesignatedCreatorHubAdmin(user)||!isModerator(user,req)||!hasActiveReviewerSession(user)){
           return json(res,403,{error:'Only the MFA-verified Minglora owner can manage member accounts.'});
