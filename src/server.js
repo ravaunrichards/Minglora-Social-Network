@@ -1706,13 +1706,18 @@ async function route(req, res) {
           return json(res,400,{error:'AI discovery search, filters or pagination are invalid.'});
         }
         try{
-          const result=await requestSupabaseState('ai_identity_discover',{
-            actorUserId:user.id,search,filters,sort,limit,offset
-          });
+          const [result,blockResult]=await Promise.all([
+            requestSupabaseState('ai_identity_discover',{
+              actorUserId:user.id,search,filters,sort,limit,offset
+            }),
+            requestSupabaseState('ai_identity_block_list',{actorUserId:user.id,limit:500,offset:0})
+          ]);
+          const blockedIdentityIds=new Set((Array.isArray(blockResult.blockedIdentities)?blockResult.blockedIdentities:[]).map(item=>String(item.identityId)));
           const visibleItems=(Array.isArray(result.items)?result.items:[])
             .filter(item=>{
               const ownerId=String(item.ownerAdminId||'');
-              return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(ownerId)
+              return !blockedIdentityIds.has(String(item.identityId||'')) &&
+                /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(ownerId)
                 && !blockedBetween(user.id,ownerId);
             })
             .map(({ownerAdminId,...item})=>item);
