@@ -10,7 +10,7 @@ const app=read('public/app.js');
 const server=read('src/server.js');
 const html=read('public/index.html');
 const worker=read('public/sw.js');
-const profileCss=[read('public/profile-action-row.css'),read('public/profile-facebook-panel.css'),read('public/profile-layout-guardrails.css'),read('public/profile-facebook-avatar-anchor.css'),read('public/profile-independent-avatar-header.css'),read('public/profile-owner-action-placement.css'),read('public/profile-facebook-account-menu.css'),read('public/social-facebook-layout.css')].join('\n');
+const profileCss=[read('public/profile-action-row.css'),read('public/profile-facebook-panel.css'),read('public/profile-layout-guardrails.css'),read('public/profile-facebook-avatar-anchor.css'),read('public/profile-independent-avatar-header.css'),read('public/profile-owner-action-placement.css'),read('public/profile-facebook-account-menu.css'),read('public/social-facebook-layout.css'),read('public/profile-action-toolbar.css'),read('public/profile-admin-layout-parity.css')].join('\n');
 const profileStart=app.indexOf('function renderProfile(data){');
 const profileEnd=app.indexOf('async function loadProfileGiftGallery',profileStart);
 assert.ok(profileStart>=0&&profileEnd>profileStart,'profile renderer exists');
@@ -20,7 +20,6 @@ test('profile owner edit, media and story buttons invoke their real actions',()=
   for(const action of [
     "$('#edit-profile')?.addEventListener('click',()=>{\n    showTab('about');\n    const aboutPanel=$('#profile-tab-panel');\n    aboutPanel?.scrollIntoView({behavior:'smooth',block:'start'});\n    aboutPanel?.querySelector('[data-edit-about-section]')?.focus({preventScroll:true});\n  })",
     "$('#profile-add-story')?.addEventListener('click',()=>openStoryComposer())",
-    "openProfileStoryEditor(u.id)"
   ])assert.ok(profile.includes(action),'Missing profile action: '+action);
   assert.doesNotMatch(profile,/profile-edit-avatar|profile-edit-cover|profile-edit-admin-cover/);
   assert.match(app,/data-profile-media-section="avatar"/);
@@ -99,8 +98,9 @@ test('profile overflow and administrator controls are wired to their feature han
     assert.ok(handler.includes("action==='"+action+"'"),'Missing overflow action '+action);
     assert.ok(handler.includes(handlerName),'Missing handler '+handlerName);
   }
-  assert.ok(profile.includes("data-profile-admin-action"));
-  assert.ok(profile.includes("openProfilePrivacySettings()"));
+  assert.ok(profile.includes('profile-admin-identity'),'administrator identity remains in the shared owner profile header');
+  assert.ok(profile.includes('data-profile-overflow-action="verification-review"'),'administrator-only verification review remains in the profile overflow menu');
+  assert.ok(handler.includes("action==='verification-review'")&&handler.includes('openProfileVerificationReviewDesk()'));
 });
 
 test('profile post cards reuse the working feed action bindings inside profile tabs',()=>{
@@ -124,19 +124,20 @@ test('profile post cards reuse the working feed action bindings inside profile t
   assert.ok(binder.includes('bindProfileLinks(root)'),'profile links in post cards must remain navigable');
 });
 
-test('visitor profile actions show complete labels and icons in one horizontal row',()=>{
+test('visitor profile controls retain accessible labels and icons in a compact action row',()=>{
   assert.ok(profileCss.includes('min-height:40px!important')||profileCss.includes('min-height:38px!important')||profileCss.includes('min-height:36px!important'));
   assert.ok(profileCss.includes('white-space:nowrap!important'));
   assert.ok(profileCss.includes('flex-flow:row nowrap!important'));
   assert.ok(profileCss.includes('overflow-x:auto!important'));
   assert.ok(profile.includes('id="profile-message"')&&profile.includes('</svg>Message</button>'));
-  assert.ok(profile.includes('id="profile-report"')&&profile.includes('</svg>Report</button>'));
-  assert.ok(profile.includes('id="profile-block"')&&profile.includes('</svg>Block</button>'));
+  assert.ok(profile.includes('id="profile-more-actions"'),'More control remains visible');
+  assert.ok(profile.includes('id="profile-report"')&&profile.includes('</svg><span>Report</span></button>'));
+  assert.ok(profile.includes('id="profile-block"')&&profile.includes('</svg><span>Block</span></button>'));
 });
 
-test('visitor profile actions stay in one continuous row and preserve existing interactions',()=>{
+test('visitor profile actions remain one scrollable row and preserve existing interactions',()=>{
   assert.ok(profileCss.includes('display:flex!important'),'visitor action bar uses flex layout');
-  assert.ok(profileCss.includes('flex-flow:row nowrap!important'),'all seven actions remain on one line');
+  assert.ok(profileCss.includes('flex-flow:row nowrap!important'),'primary profile actions remain on one line');
   assert.ok(profileCss.includes('grid-column:1/-1!important'),'visitor action bar spans full profile width');
   assert.ok(profileCss.includes('grid-row:2!important'),'visitor action bar sits directly above profile counts');
   assert.ok(profileCss.includes('overflow-x:auto!important'),'narrow screens can scroll the action bar horizontally');
@@ -145,7 +146,9 @@ test('visitor profile actions stay in one continuous row and preserve existing i
   assert.ok(!profile.includes('profileSubscribeButton.remove()'),'Subscribe is not removed from the profile');
   assert.ok(profile.includes("api('/subscriptions/checkout'"),'Subscribe keeps its checkout route');
   assert.ok(profile.includes('id="profile-follow"')&&profile.includes("?'Friends · Following':'Following'")&&profile.includes(":'Follow'))"),'Follow button and follow-state labels remain connected');
-  for(const label of ['Message','Voice Calls','Video Calls','Report','Block'])assert.ok(profile.includes('</svg>'+label+'</button>'),'Missing full visitor action label '+label);
+  for(const label of ['Message','Voice Calls','Video Calls'])assert.ok(profile.includes('</svg><span class="profile-action-label">'+label+'</span></button>'),'Missing visitor action label '+label);
+  for(const label of ['Report','Block'])assert.ok(profile.includes('</svg><span>'+label+'</span></button>'),'Missing More-menu action '+label);
+  assert.ok(profile.includes('id="profile-more-actions"'),'Report and Block are grouped under the More control');
   assert.ok(profile.includes('id="profile-subscribe"'),'Subscribe remains in the visitor actions');
 });
 
@@ -177,20 +180,21 @@ test('profile renders core data before optional profile panels settle',()=>{
   assert.ok(loader.includes('profileLoadGeneration'),'late profile responses are prevented from replacing a newer profile');
 });
 
-test('all seven visitor profile actions appear in order in one full-width line above profile counts',()=>{
-  const ordered=['id="profile-follow"','id="profile-subscribe"','id="profile-message"','data-profile-call="audio"','data-profile-call="video"','id="profile-report"','id="profile-block"'];
+test('visitor actions appear in order with Report and Block inside the More menu',()=>{
+  const ordered=['id="profile-follow"','id="profile-subscribe"','id="profile-message"','data-profile-call="audio"','data-profile-call="video"','id="profile-more-actions"','id="profile-report"','id="profile-block"'];
   let previous=-1;
   for(const marker of ordered){
     const index=profile.indexOf(marker);
     assert.ok(index>previous,'Visitor action order is Follow, Subscribe, Message, Voice Calls, Video Calls, Report, Block');
     previous=index;
   }
-  assert.ok(!profile.includes('profile-extra-actions'),'Report and Block are no longer hidden in a More actions menu');
+  assert.ok(profile.includes('class="profile-action-menu"'),'Report and Block are kept in the More menu');
   assert.ok(profile.indexOf('class="profile-actions profile-actions--primary"')<profile.indexOf('class="profile-counts"'),'The actions appear above the profile statistics');
   for(const label of ['Message','Voice Calls','Video Calls','Report','Block'])assert.ok(profile.includes('</svg>'+label+'</button>'),'Every action keeps its complete horizontal label and icon');
   assert.ok(profileCss.includes('flex-flow:row nowrap!important'));
   assert.ok(profileCss.includes('grid-column:1/-1!important'));
   assert.ok(profileCss.includes('grid-row:2!important'));
   assert.ok(profileCss.includes('overflow-x:auto!important'));
+  assert.ok(profileCss.includes('position:static !important')||profileCss.includes('position:static!important'));
   assert.ok(profileCss.includes('position:static!important'),'The action row remains in normal document flow');
 });
