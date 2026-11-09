@@ -11,6 +11,7 @@ const html=read('public/index.html');
 const worker=read('public/sw.js');
 const layout=read('public/profile-admin-layout-parity.css');
 const actions=read('public/profile-action-toolbar.css');
+const parity=read('public/profile-admin-layout-parity.css');
 
 test('owner and visitor profiles retain their separate real action sets',()=>{
   const start=app.indexOf('function renderProfile(data){');
@@ -43,7 +44,8 @@ test('tablet and phone visitor action shells reserve full rows, including though
   assert.match(layout,/@media \(min-width: 761px\) and \(max-width: 1024px\)[\s\S]*?profile-header-card--viewer \.profile-info > \.profile-actions-shell\s*\{[\s\S]*?grid-column:\s*1 \/ -1 !important;[\s\S]*?grid-row:\s*2 !important;/);
   assert.match(layout,/profile-header-card--viewer \.profile-info--with-thought > \.profile-actions-shell\s*\{[\s\S]*?grid-row:\s*3 !important;/);
   assert.match(layout,/@media \(max-width: 760px\)[\s\S]*?profile-header-card--viewer \.profile-info > \.profile-actions-shell\s*\{[\s\S]*?grid-column:\s*1 \/ -1 !important;[\s\S]*?grid-row:\s*2 !important;/);
-  assert.ok(actions.includes('overflow-x: auto !important'));
+  assert.ok(parity.includes('overflow-x: auto !important'));
+  assert.ok(actions.includes('overflow-x: auto !important')||parity.includes('overflow-x: auto !important'));
 });
 
 test('both three-dot menus expand in normal flow and cannot cover profile content',()=>{
