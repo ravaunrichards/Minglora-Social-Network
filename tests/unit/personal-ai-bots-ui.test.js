@@ -67,3 +67,18 @@ test('provider credentials are labelled as references, not proof of a live secre
   assert.match(source,/Missing reference/);
   assert.match(source,/health check succeeds/);
 });
+
+
+test('AI email identity panel records addresses without claiming inbox provisioning',async()=>{
+  const source=await read('public/personal-ai-bots.js');
+  for(const phrase of [
+    'AI email identity records',
+    'NOT VERIFIED and NOT PROVISIONED',
+    'does not create a mailbox',
+    'Email address','Email type','Set as primary address',
+    'Save AI email identity record','not_provisioned','not_verified'
+  ]) assert.ok(source.includes(phrase),phrase);
+  assert.match(source,/API\+'\/emails'/);
+  assert.match(source,/emailIdentitiesSource/);
+  assert.match(source,/provisioningStatus/);
+});
