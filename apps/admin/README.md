@@ -250,3 +250,62 @@ The branch contains the Supabase Auth provider manager introduced by the newer `
 - **Final:** Resolve or formally accept the 30 full-suite and 2 For You failures; verify the live application before declaring completion.
 
 **Next action:** request authorization to reconcile the feature branch with the newer `main` commit. Until that authorization is given, keep PR #203 in draft and leave production unchanged.
+## Continuation addendum — 2026-11-09 11:34 UTC
+
+**Current verified progress: 74% / 26% remaining.** The previous durable verified checkpoint was 73%. One additional percentage point is credited to audit/data-integrity after the failed Supabase provider-session-revocation path and its Admin Centre disclosure were implemented and passed the focused CI regression test. No credit is assigned for hosted or production behavior that has not been exercised.
+
+### Weighted milestone tracker
+
+| Milestone | Weight | Verified credit |
+|---|---:|---:|
+| User-management interface | 20% | 20% |
+| Supabase Auth operations | 25% | 15% |
+| Owner/MFA authorization | 15% | 15% |
+| Service connections | 15% | 10% |
+| Audit and data integrity | 10% | 7% |
+| Documentation and recovery records | 5% | 5% |
+| Full CI, hosted acceptance and final regression | 10% | 2% |
+| **Total** | **100%** | **74%** |
+
+### Verified changes since the 10:47 UTC checkpoint
+
+- Failed permanent account deletion attempts are recorded as `account.delete_failed` only after Supabase Auth rejects the operation; successful deletion is recorded as `account.delete` only after the Auth delete succeeds. The UI reports whether the failure audit was recorded.
+- When there is no current member access token, known Minglora application sessions can be cleared and the runtime records an `application_only` revocation with `providerRefreshTokensRevoked: false`. The UI does not claim provider refresh-token sessions were revoked.
+- When Supabase Auth rejects a global `signOut` attempt, the Edge Function now records `account.sessions_revoke_failed` with `scope: "global"`, `outcome: "rejected"`, and a non-sensitive reason code. The response returns `auditRecorded`; the selected-account UI explicitly distinguishes an audit write failure from a confirmed audit record.
+- The failed-deletion UI message was corrected to exactly match the assertion and accurately state that a failed attempt was recorded. Its regression test now passes.
+
+### Latest completed CI evidence
+
+- Latest workflow: [GitHub Actions run #8348](https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/42609940529), commit `afa1f77067a2edd09ad55ec52fe5381e4e39f5de`.
+- Repository suite: **748 tests, 718 passed, 30 failed**.
+- For You navigation: **15 tests, 13 passed, 2 failed** (the same For You header/search and Home Stories layout cases that reproduce on the main-branch baseline).
+- All seven focused Admin Centre checks passed, including member manager, deletion audit-warning disclosure, successful/failed deletion audit ordering, local-only session-revocation audit, failed provider session-revocation audit/UI disclosure, Auth provider owner/MFA/same-origin gates, and service-connection secret-safety checks.
+- Dependency audit, zero-vulnerability gate, repository-structure check, JavaScript syntax check, and generated-gift-assets step passed. The overall workflow remains red because of the 30 general-suite failures and two For You failures; they remain unresolved and are not counted as passing.
+
+### Current branch and PR state
+
+- **Repository:** `ravaunrichards/Minglora-Social-Network`.
+- **Branch:** `feat/minglora-admin-user-and-service-centre-20261109`.
+- **Latest verified source/test head:** `afa1f77067a2edd09ad55ec52fe5381e4e39f5de`.
+- **PR #203:** open draft; 75 commits, 15 changed files; GitHub currently reports `mergeable=false` / `dirty`.
+- **Current `main`:** `2f80e9d997b43e5da6373c385d6ce153ff908e67`; the feature branch is 75 commits ahead and one behind. The known overlap remains `src/server.js`, `public/admin-centre.html`, and `public/sw.js`. The Auth-provider JS/CSS contents match main. No merge or rebase was performed.
+
+### Live infrastructure evidence
+
+Live service reads during this continuation reconfirmed:
+
+- Minglora Supabase project `gzycobgbasnqqhnympkr`: `ACTIVE_HEALTHY`, PostgreSQL 17.11.0.003.
+- Production `minglora-runtime-state`: active version 112; the new feature-branch member-management actions are not deployed.
+- Render `minglora-social-network`: active free web service, auto-deploy configured to `main`; latest listed live deploy remains main commit `2f80e9d997b43e5da6373c385d6ce153ff908e67`.
+- No production Edge Function, Auth/provider configuration, database schema, account, balance, role, merge or deployment operation was changed.
+
+### Remaining work and blockers
+
+- **Easy:** No known focused Admin Centre test failure remains in run #8348.
+- **Medium:** Reconcile PR #203's dirty ancestry against the latest main commit after authorized review; test the member CRUD, bans/restores, session revocation, deletion, audit failure, and service-health routes in a hosted owner/MFA session.
+- **Hard:** Supply a least-privilege, project-scoped Supabase Management API token to Render as `SUPABASE_ACCESS_TOKEN`; verify provider GET/PATCH operations; merge and deploy the Edge Function only after explicit authorization; complete hosted account lifecycle and security acceptance.
+- **Final verification:** Resolve or formally accept the 30 general-suite and 2 For You failures, then run the complete integration/regression acceptance.
+
+### Exact next action
+
+Keep PR #203 in draft and production unchanged. Obtain authorization for the reviewed reconciliation of `src/server.js`, `public/admin-centre.html`, and `public/sw.js`; hosted acceptance and deployment remain blocked until that review and the required token setup are available.
