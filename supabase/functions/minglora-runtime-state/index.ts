@@ -94,6 +94,7 @@ Deno.serve(async (req: Request) => {
     "subscription_checkout_attach", "subscription_my", "subscription_access_check", "subscription_cancel_lookup",
     "subscription_cancel_mark", "subscription_paypal_webhook",
     "subscription_bonus_review",
+    "ai_identity_upsert_batch", "ai_identity_list",
   ];
   if (!supportedActions.includes(String(action))) {
     return json(400, { error: "Unsupported action." });
@@ -103,6 +104,67 @@ Deno.serve(async (req: Request) => {
   const validUuid = (value: unknown) => uuidPattern.test(String(value || ""));
   const fail = (error: any, fallback: string) =>
     json(409, { error: String(error?.message || fallback).slice(0, 240) });
+
+  // These RPCs are reachable only through the server-secret-protected gateway.
+  // Re-check the designated owner ID here as a second boundary after the Node
+  // admin API's MFA/session authorization.
+  const AI_NETWORK_OWNER_ID = "5b998c21-86b5-4621-ab37-e0808a2657b1";
+  if (action === "ai_identity_upsert_batch") {
+    const actorUserId = String(input.actorUserId || "");
+    const identities = input.identities;
+    if (actorUserId !== AI_NETWORK_OWNER_ID) {
+      return json(403, { error: "Only the designated Minglora owner can persist AI identity records." });
+    }
+    if (!Array.isArray(identities) || identities.length < 1 || identities.length > 100 ||
+        identities.some((identity: any) => !identity || typeof identity !== "object" || Array.isArray(identity) ||
+          !validUuid(identity.id) || !validUuid(identity.id))) {
+      return json(400, { error: "Provide between 1 and 100 valid AI identity objects." });
+    }
+    const allowedFields = new Set([
+      "id","population","identity_type","category_id","status","parent_identity_id",
+      "public_profile_slug","public_profile_enabled","first_name","last_name","middle_name",
+      "full_name","display_name","username","biography","introduction","gender","nationality",
+      "country_of_origin","current_country","time_zone","personality","interests","hobbies",
+      "profession","skills","memory_enabled","memory_configuration","visibility","created_at"
+    ]);
+    if (identities.some((identity: any) => Object.keys(identity).some((key: string) => !allowedFields.has(key)))) {
+      return json(400, { error: "AI identity payload contains an unsupported field; provider secrets are not accepted." });
+    }
+    const { data, error } = await admin.rpc("minglora_ai_identity_upsert_batch", {
+      p_identities: identities,
+      p_actor_user_id: actorUserId
+    });
+    if (error) {
+      const conflict = ["23505","23503","23514","22023"].includes(String(error.code || ""));
+      return json(conflict ? 409 : 503, {
+        error: conflict ? "AI identity data failed a database constraint." : "Canonical AI identity storage is unavailable.",
+        code: String(error.code || "AI_IDENTITY_STORAGE_ERROR")
+      });
+    }
+    return json(200, { ok: true, identities: data || [] });
+  }
+
+  if (action === "ai_identity_list") {
+    const actorUserId = String(input.actorUserId || "");
+    if (actorUserId !== AI_NETWORK_OWNER_ID) {
+      return json(403, { error: "Only the designated Minglora owner can read AI identity records." });
+    }
+    const limit = Number(input.limit ?? 100);
+    const offset = Number(input.offset ?? 0);
+    if (!Number.isInteger(limit) || limit < 1 || limit > 1000 ||
+        !Number.isInteger(offset) || offset < 0 || offset > 1000000000) {
+      return json(400, { error: "AI identity pagination values are invalid." });
+    }
+    const { data, error } = await admin.rpc("minglora_ai_identity_list", {
+      p_owner_admin_id: actorUserId,
+      p_limit: limit,
+      p_offset: offset
+    });
+    if (error) {
+      return json(503, { error: "Canonical AI identity records could not be loaded.", code: "AI_IDENTITY_SCHEMA_NOT_READY" });
+    }
+    return json(200, { ok: true, identities: Array.isArray(data) ? data : [] });
+  }
 
   if (action === "admin_users_list") {
     const actorUserId = String(input.actorUserId || "");
