@@ -409,6 +409,47 @@ export function queuePersonalAiBotInstruction(db, botId, input, actorId, timesta
   return task;
 }
 
+export function queuePersonalAiBotFollowBatch(db, input, actorId, timestamp, uid) {
+  ensurePersonalAiBotCollections(db);
+  const taskType=String(input.taskType||'follow');
+  if(!['follow','unfollow'].includes(taskType))throw Object.assign(new Error('Choose follow or unfollow.'),{status:400});
+  const targetUserId=String(input.targetUserId||'').trim();
+  if(!targetUserId)throw Object.assign(new Error('Choose one Minglora member account.'),{status:400});
+  if(!Array.isArray(input.botIds)||input.botIds.length<1||input.botIds.length>10)throw Object.assign(new Error('Select between 1 and 10 bots for one target per 24-hour period.'),{status:400});
+  const botIds=[...new Set(input.botIds.map(String))];
+  if(botIds.length!==input.botIds.length)throw Object.assign(new Error('Remove duplicate bot selections before submitting.'),{status:400});
+  const nowMs=Date.parse(timestamp);
+  const targetWindow=db.personalAiBotTasks.filter(task=>
+    task.targetUserId===targetUserId&&['follow','unfollow'].includes(task.taskType)&&
+    Number.isFinite(Date.parse(task.createdAt))&&nowMs-Date.parse(task.createdAt)<24*60*60*1000&&
+    !['cancelled','rejected'].includes(task.status)
+  );
+  if(targetWindow.length+botIds.length>10)throw Object.assign(new Error('This target account reached the maximum of 10 AI follow/unfollow instructions in a rolling 24-hour window.'),{status:429});
+  const bots=botIds.map(id=>db.personalAiBots.find(bot=>bot.id===id));
+  if(bots.some(bot=>!bot))throw Object.assign(new Error('One or more selected AI bots could not be found.'),{status:404});
+  const categories=getPersonalAiBotCategories(db);
+  for(const bot of bots){
+    if(!bot.enabled||bot.status!=='enabled')throw Object.assign(new Error('Every selected bot must be enabled.'),{status:409});
+    if(!categories.some(category=>category.id===bot.categoryId&&category.enabled))throw Object.assign(new Error('Every selected bot must belong to an enabled category.'),{status:409});
+    const duplicate=db.personalAiBotTasks.some(task=>
+      task.botId===bot.id&&task.targetUserId===targetUserId&&task.taskType===taskType&&
+      !['cancelled','rejected'].includes(task.status)
+    );
+    if(duplicate)throw Object.assign(new Error('A selected bot already has an open or completed instruction for this target and operation.'),{status:409});
+    const recent=db.personalAiBotTasks.filter(task=>task.botId===bot.id&&Number.isFinite(Date.parse(task.createdAt))&&nowMs-Date.parse(task.createdAt)<15*60*1000&&task.status!=='cancelled');
+    if(recent.length>=20)throw Object.assign(new Error('One selected bot reached its 15-minute instruction limit.'),{status:429});
+    const pending=db.personalAiBotTasks.filter(task=>task.botId===bot.id&&['awaiting_administrator_approval','approved_waiting_for_worker'].includes(task.status));
+    if(pending.length>=50)throw Object.assign(new Error('One selected bot has too many pending instructions.'),{status:429});
+  }
+  const tasks=bots.map(bot=>queuePersonalAiBotInstruction(db,bot.id,{
+    taskType,targetUserId,
+    instruction:String(input.instruction||((taskType==='follow'?'Follow':'Unfollow')+' the selected Minglora member only after administrator approval.')).trim()
+  },actorId,timestamp,uid));
+  audit(db,actorId,'follow.batch_queued','follow_target',targetUserId,
+    'Queued '+tasks.length+' separately approval-gated '+taskType+' instruction(s); no relationship changes were executed.',timestamp,uid);
+  return {created:tasks.length,tasks,limitPerTargetPer24Hours:10};
+}
+
 export function approvePersonalAiBotTask(db, taskId, actorId, timestamp, uid) {
   ensurePersonalAiBotCollections(db);
   const task=db.personalAiBotTasks.find(item=>item.id===taskId);
