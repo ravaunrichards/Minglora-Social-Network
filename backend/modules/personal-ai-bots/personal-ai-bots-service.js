@@ -169,6 +169,16 @@ export function createPersonalAiBot(db, input, actorId, timestamp, uid) {
   if (!category.enabled) throw Object.assign(new Error('This bot category is disabled.'), { status:409 });
   if (displayName.length < 2 || displayName.length > 64) throw Object.assign(new Error('Bot name must be between 2 and 64 characters.'), { status:400 });
   const names=normalizeAiIdentityName(displayName,input);
+  const gender=String(input.gender||'prefer_not_to_specify').trim().toLowerCase();
+  if(!['female','male','non_binary','other','prefer_not_to_specify'].includes(gender)){
+    throw Object.assign(new Error('Choose a supported AI gender identity.'),{status:400});
+  }
+  const profileTimeZone=String(input.timeZone||'America/Jamaica').trim();
+  if(profileTimeZone.length<1||profileTimeZone.length>80){
+    throw Object.assign(new Error('Choose a valid profile time zone.'),{status:400});
+  }
+  try{new Intl.DateTimeFormat('en',{timeZone:profileTimeZone});}
+  catch{throw Object.assign(new Error('Choose a valid profile time zone.'),{status:400});}
   const botId = uid();
   const bot = {
     id:botId, slug:slugify(displayName)+'-'+botId.slice(0,8),
@@ -178,12 +188,12 @@ export function createPersonalAiBot(db, input, actorId, timestamp, uid) {
     bio:String(input.bio || input.description || '').trim().slice(0,600),
     description:String(input.description || input.bio || '').trim().slice(0,600),
     introduction:String(input.introduction||'').trim().slice(0,2000),
-    gender:['female','male','non_binary','other','prefer_not_to_specify'].includes(String(input.gender||'').toLowerCase())?String(input.gender).toLowerCase():'prefer_not_to_specify',
+    gender,
     genderPresentation:String(input.genderPresentation||'').trim().slice(0,80),
     nationality:String(input.nationality||'').trim().slice(0,120),
     countryOfOrigin:String(input.countryOfOrigin||'').trim().slice(0,120),
     currentCountry:String(input.currentCountry||'').trim().slice(0,120),
-    timeZone:String(input.timeZone||'America/Jamaica').trim().slice(0,80),
+    timeZone:profileTimeZone,
     personality:String(input.personality || '').trim().slice(0,1200),
     communicationStyle:String(input.communicationStyle||'').trim().slice(0,2000),
     interests:Array.isArray(input.interests)?normalizeAiProfileTextList(input.interests,'Interests',30,60):[],
