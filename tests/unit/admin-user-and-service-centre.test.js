@@ -104,12 +104,16 @@ test("account deletion is audited as failed or successful only after the delete 
   const end = runtime.indexOf('if (action === "admin_user_revoke_sessions")', start);
   assert.ok(start >= 0 && end > start);
   const deletion = runtime.slice(start, end);
+  const revokeCall = deletion.indexOf('admin.auth.admin.signOut(targetJwt, "global")');
   const deleteCall = deletion.indexOf("admin.auth.admin.deleteUser(userId)");
   const failedAudit = deletion.indexOf('recordAdminUserAction(actorUserId, userId, "account.delete_failed"');
   const successAudit = deletion.indexOf('recordAdminUserAction(actorUserId, userId, "account.delete"');
-  assert.ok(deleteCall >= 0 && failedAudit > deleteCall && successAudit > failedAudit);
+  assert.ok(revokeCall >= 0 && deleteCall > revokeCall && failedAudit > deleteCall && successAudit > failedAudit);
   assert.match(deletion, /outcome: "rejected"/);
   assert.match(deletion, /outcome: "deleted"/);
+  assert.match(deletion, /providerRefreshTokensRevoked/);
+  assert.match(server, /targetJwt=targetAuth\.access_token/);
+  assert.match(server, /reason:input\.reason,targetJwt/);
 });
 
 test("local-only session revocation is audited when no Supabase token is available", () => {
