@@ -270,3 +270,130 @@ test('follow approval re-checks live relationship blocks before approving',async
   assert.match(context.res.payload.error,/block now prevents/);
   assert.equal(context.db.personalAiBotTasks[0].status,'awaiting_administrator_approval');
 });
+
+
+test('owner instruction creation writes an idempotent task record to the durable queue before success',async()=>{
+  const botId='00000000-0000-4000-8000-000000000301';
+  let persisted=null,saves=0;
+  const context=makeContext({
+    method:'POST',
+    path:'/api/admin/personal-ai-bots/bots/'+botId+'/instructions',
+    input:{taskType:'assistant_request',instruction:'Explain the current Minglora help centre process.'},
+    db:{
+      personalAiBotSettings:[{id:'global',enabled:true}],
+      personalAiBots:[{id:botId,createdBy:'owner-1',displayName:'AI Help Guide',categoryId:'ai-support',categoryName:'AI Support',enabled:true,status:'enabled'}],
+      personalAiBotTasks:[]
+    },
+    persistAiBotTasks:async tasks=>{persisted=tasks;},
+    saveStore:async()=>{saves++;}
+  });
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,201);
+  assert.equal(persisted.length,1);
+  assert.equal(persisted[0].id,context.res.payload.task.id);
+  assert.equal(persisted[0].idempotencyKey,persisted[0].id);
+  assert.equal(persisted[0].botId,botId);
+  assert.equal(persisted[0].taskType,'assistant_request');
+  assert.equal(persisted[0].status,'awaiting_administrator_approval');
+  assert.equal(persisted[0].highImpact,false);
+  assert.equal(persisted[0].excludeFromHumanEngagementMetrics,true);
+  assert.equal(saves,1);
+});
+
+test('approval and cancellation update durable queue records with separate audit actors',async()=>{
+  const botId='00000000-0000-4000-8000-000000000302';
+  const approveId='00000000-0000-4000-8000-000000000303';
+  const cancelId='00000000-0000-4000-8000-000000000304';
+  const task=(id)=>({id,botId,taskType:'assistant_request',instruction:'Review the Minglora help centre policy.',highImpact:false,status:'awaiting_administrator_approval',createdBy:'owner-1',createdAt:'2026-11-09T10:00:00.000Z'});
+  const db={
+    personalAiBotSettings:[{id:'global',enabled:true}],
+    personalAiBots:[{id:botId,createdBy:'owner-1',displayName:'AI Help Guide',categoryId:'ai-support',enabled:true,status:'enabled'}],
+    personalAiBotTasks:[task(approveId),task(cancelId)]
+  };
+  const persisted=[];
+  const persistAiBotTasks=async tasks=>{persisted.push(...tasks);};
+  const approve=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/tasks/'+approveId+'/approve',
+    db,persistAiBotTasks
+  });
+  await handlePersonalAiBotsAdminApi(approve);
+  assert.equal(approve.res.statusCode,200);
+  const durableApproval=persisted.at(-1);
+  assert.equal(durableApproval.id,approveId);
+  assert.equal(durableApproval.status,'approved_waiting_for_worker');
+  assert.equal(durableApproval.approvedBy,'owner-1');
+  assert.equal(durableApproval.approvedAt,'2026-11-09T10:00:00.000Z');
+
+  const cancel=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/tasks/'+cancelId+'/cancel',
+    db,persistAiBotTasks
+  });
+  await handlePersonalAiBotsAdminApi(cancel);
+  assert.equal(cancel.res.statusCode,200);
+  const durableCancellation=persisted.at(-1);
+  assert.equal(durableCancellation.id,cancelId);
+  assert.equal(durableCancellation.status,'cancelled');
+  assert.equal(durableCancellation.cancelledBy,'owner-1');
+  assert.equal(durableCancellation.cancelledAt,'2026-11-09T10:00:00.000Z');
+});
+
+test('owner task overview prefers durable PostgreSQL rows and queue statistics',async()=>{
+  const taskRow={id:'task-1',botId:'bot-1',taskType:'translation',status:'approved_waiting_for_worker'};
+  const stats={pendingApproval:0,approvedWaiting:1,running:0,completedToday:0};
+  const context=makeContext({
+    listAiBotTasks:async options=>{
+      assert.deepEqual(options,{limit:100,offset:0});
+      return [taskRow];
+    },
+    getAiBotTaskStats:async()=>stats
+  });
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,200);
+  assert.equal(context.res.payload.taskRecordsSource,'minglora_supabase_postgresql');
+  assert.deepEqual(context.res.payload.tasks,[taskRow]);
+  assert.deepEqual(context.res.payload.taskQueueStats,stats);
+});
+
+test('durable task persistence failure does not report a queued task or save legacy state',async()=>{
+  const botId='00000000-0000-4000-8000-000000000305';
+  let saves=0;
+  const context=makeContext({
+    method:'POST',
+    path:'/api/admin/personal-ai-bots/bots/'+botId+'/instructions',
+    input:{taskType:'assistant_request',instruction:'Explain the Minglora community rules.'},
+    db:{
+      personalAiBotSettings:[{id:'global',enabled:true}],
+      personalAiBots:[{id:botId,createdBy:'owner-1',displayName:'AI Help Guide',categoryId:'ai-support',enabled:true,status:'enabled'}],
+      personalAiBotTasks:[]
+    },
+    persistAiBotTasks:async()=>{throw Object.assign(new Error('Canonical task storage unavailable.'),{status:503});},
+    saveStore:async()=>{saves++;}
+  });
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,503);
+  assert.match(context.res.payload.error,/Canonical task storage unavailable/);
+  assert.equal(saves,0);
+});
+
+test('emergency shutdown synchronizes every cancelled task to the durable queue',async()=>{
+  const botId='00000000-0000-4000-8000-000000000306';
+  const taskId='00000000-0000-4000-8000-000000000307';
+  let persisted=null,saves=0;
+  const context=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/emergency-shutdown',
+    db:{
+      personalAiBotSettings:[{id:'global',enabled:true}],
+      personalAiBots:[{id:botId,displayName:'AI Help Guide',enabled:true,status:'enabled'}],
+      personalAiBotTasks:[{id:taskId,botId,taskType:'assistant_request',instruction:'Answer the current FAQ.',status:'approved_waiting_for_worker'}]
+    },
+    persistAiBotTasks:async tasks=>{persisted=tasks;},
+    saveStore:async()=>{saves++;}
+  });
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,200);
+  assert.equal(persisted.length,1);
+  assert.equal(persisted[0].id,taskId);
+  assert.equal(persisted[0].status,'cancelled');
+  assert.equal(persisted[0].cancelledBy,'owner-1');
+  assert.equal(saves,1);
+});
