@@ -77,6 +77,12 @@ test("member CRUD and session routes require owner identity, MFA and same-origin
   assert.match(runtime, /The platform owner is protected/);
 });
 
+test("deletion errors disclose whether the failed-attempt audit was recorded", () => {
+  assert.ok(admin.includes("error?.payload?.auditRecorded === false"));
+  assert.ok(admin.includes("the failed deletion audit entry could not be confirmed"));
+  assert.ok(admin.includes("the failed deletion attempt was recorded in the administrator audit log"));
+});
+
 test("account deletion is audited as failed or successful only after the delete result", () => {
   const start = runtime.indexOf('if (action === "admin_user_delete")');
   const end = runtime.indexOf('if (action === "admin_user_revoke_sessions")', start);
