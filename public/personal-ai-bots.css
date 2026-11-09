@@ -78,3 +78,11 @@
 .pab-identity-table th,.pab-identity-table td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--border,#dbe3ee);white-space:nowrap}
 .pab-identity-table th{font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted,#64748b);background:var(--surface-soft,#f8fafc)}
 .pab-identity-table tbody tr:last-child td{border-bottom:0}
+
+
+.pab-report-card{border:1px solid var(--border,#dbe3ee);border-radius:12px;padding:14px;margin:10px 0;background:var(--surface,#fff)}
+.pab-report-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.pab-report-card>p{font-size:12px;line-height:1.5;margin:8px 0;overflow-wrap:anywhere}
+.pab-report-card>small{display:block;color:var(--muted,#64748b);font-size:10px;margin:8px 0}
+.pab-report-resolution-label{display:grid;gap:6px;font-size:11px;font-weight:700;margin:10px 0}
+.pab-report-resolution{min-height:64px}
