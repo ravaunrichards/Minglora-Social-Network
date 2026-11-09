@@ -1693,6 +1693,15 @@ async function route(req, res) {
         req,res,url,method,path:p,user,input,db,saveStore,uid,now,json,
         isOwnerAdmin:isDesignatedCreatorHubAdmin(user)&&isModerator(user,req)&&hasActiveReviewerSession(user),
         isSameOriginWrite:isSameOriginApiWrite(req),
+        persistAiIdentities:async identities=>{
+          if(!isSupabasePersistence())return {ok:true,skipped:true};
+          return requestSupabaseState('ai_identity_upsert_batch',{actorUserId:user.id,identities});
+        },
+        listAiIdentities:async ({limit=100,offset=0}={})=>{
+          if(!isSupabasePersistence())return null;
+          const result=await requestSupabaseState('ai_identity_list',{actorUserId:user.id,limit,offset});
+          return Array.isArray(result.identities)?result.identities:[];
+        },
         lookupAdminMember:async targetUserId=>{
           const local=(db.users||[]).find(member=>member.id===String(targetUserId));
           if(local)return local;
