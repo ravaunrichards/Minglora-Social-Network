@@ -2234,8 +2234,8 @@ async function route(req, res) {
               ?'Supabase rejected the Management token. Check that SUPABASE_ACCESS_TOKEN is current.'
               :status===403
                 ?(httpMethod==='GET'
-                  ?'Supabase token needs the auth_config_read permission for this project.'
-                  :'Supabase token needs auth_config_write and project_admin_write permissions for this project.')
+                  ?'The Supabase Management token needs Auth Read access to this project’s authentication configuration.'
+                  :'The Supabase Management token needs Auth Write access to this project’s authentication configuration.')
                 :status===429
                   ?'Supabase is rate-limiting provider configuration requests. Try again shortly.'
                   :'Supabase could not process the provider configuration request. Existing settings were not intentionally replaced.';
