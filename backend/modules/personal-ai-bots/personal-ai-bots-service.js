@@ -47,7 +47,7 @@ export function ensurePersonalAiBotCollections(db) {
       defaultAutonomyMode:'administrator_controlled',
       requireAdministratorApproval:true,
       disabledCategoryIds:[],
-      identityDesignTarget:8300000000,
+      identityDesignTarget:10000000000,
       concurrentExecutionLimit:0,
       dailyExecutionBudget:0,
       automaticSuspensionEnabled:true,
@@ -582,7 +582,7 @@ export function getPersonalAiBotOverview(db) {
       categories:getPersonalAiBotCategories(db).length,
       activeBots:bots.filter(bot=>bot.status==='enabled'&&bot.lastActiveAt&&Date.parse(bot.lastActiveAt)>Date.now()-5*60*1000).length,
       executingBots:new Set(tasks.filter(task=>task.status==='running').map(task=>task.botId)).size,
-      identityDesignTarget:settings.identityDesignTarget||8300000000,
+      identityDesignTarget:settings.identityDesignTarget||10000000000,
       concurrentExecutionLimit:settings.concurrentExecutionLimit||0,
       totalTeams:db.personalAiBotTeams.length,
       teamMemberships:db.personalAiBotTeamMembers.length
