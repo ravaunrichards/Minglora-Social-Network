@@ -196,6 +196,8 @@ test("Admin Centre content stays visible and reflows without clipping, sticky ov
   assert.ok(resultCopy, "member identity text rules exist");
   assert.doesNotMatch(resultCopy[1], /overflow:\s*hidden|text-overflow:\s*ellipsis|white-space:\s*nowrap/);
   assert.match(resultCopy[1], /overflow-wrap:\s*anywhere/);
+  assert.match(css, /\.admin-control-centre-status\{[^}]*white-space:normal;overflow-wrap:anywhere\}/);
+  assert.match(css, /\.admin-user-status,[\s\S]*?white-space:normal/);
   assert.match(css, /@media\(max-width:900px\)[\s\S]*?\.admin-centre-navigation\s*\{[^}]*display:\s*grid/);
   assert.match(css, /@media\(max-width:560px\)\s*\{\s*\.admin-centre-navigation\s*\{grid-template-columns:minmax\(0,1fr\)/);
   assert.match(authProviderCss, /@media\(max-width:620px\)\s*\{\.admin-auth-provider-grid\s*\{grid-template-columns:1fr/);
