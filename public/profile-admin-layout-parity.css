@@ -122,6 +122,13 @@
    The viewer action shell is the grid item (not its inner button row). Keep it
    out of the identity cell at desktop widths, then reserve a full row at tablet
    and phone widths. Menus stay in document flow and counts use every metric. */
+.minglora-profile-page .profile-header-card.profile-header-card--viewer .profile-info > .profile-actions-shell .profile-actions--primary {
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  overscroll-behavior-x: contain !important;
+  scrollbar-width: thin !important;
+  -webkit-overflow-scrolling: touch;
+}
 .minglora-profile-page .profile-header-card.profile-header-card--viewer .profile-info > .profile-actions-shell {
   grid-column: 3 !important;
   grid-row: 1 !important;
