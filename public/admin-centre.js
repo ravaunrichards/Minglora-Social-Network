@@ -1372,7 +1372,12 @@
       credentials:'same-origin', headers:{'Content-Type':'application/json',...(options.headers || {})}, ...options
     });
     const payload = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(payload.error || 'The administrator request could not be completed.');
+    if (!response.ok) {
+      const error = new Error(payload.error || 'The administrator request could not be completed.');
+      error.status = response.status;
+      error.payload = payload;
+      throw error;
+    }
     return payload;
   }
 
@@ -1501,7 +1506,16 @@
       await loadAdminUserDetails(panel, member.id);
       await loadAdminManagedUsers(panel);
     } catch (error) {
-      if (status) status.textContent = error.message || 'The account changes could not be saved.';
+      if (error?.payload?.partial) {
+        if (status) status.textContent = 'Some profile changes were saved, but the Supabase Auth update failed. Refreshing the selected account to show the saved state…';
+        try {
+          await loadAdminUserDetails(panel, member.id);
+          await loadAdminManagedUsers(panel);
+        } catch {}
+        if (status) status.textContent = 'Partial update: Minglora profile changes were saved, but Supabase Auth changes failed. ' + (error.message || 'Review the account fields and retry the remaining changes.');
+      } else if (status) {
+        status.textContent = error.message || 'The account changes could not be saved.';
+      }
     } finally { button.disabled = false; }
   }
 
