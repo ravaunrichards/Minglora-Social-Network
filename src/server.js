@@ -1721,6 +1721,55 @@ async function route(req, res) {
           return json(res,Number(error?.status)||503,{error:String(error?.message||'AI discovery is unavailable.').slice(0,240)});
         }
       }
+      if(method==='POST'&&p==='/api/ai/follows'){
+        if(!isSupabasePersistence())return json(res,503,{error:'AI follow relationships require Minglora Supabase PostgreSQL persistence.'});
+        const identityId=String(input?.identityId||'').trim();
+        const follow=input?.follow;
+        if(!/^[0-9a-f-]{36}$/i.test(identityId)||typeof follow!=='boolean')return json(res,400,{error:'AI follow request is invalid.'});
+        try{
+          if(follow){
+            const lookup=await requestSupabaseState('ai_identity_public_owner_lookup',{actorUserId:user.id,identityId});
+            const ownerAdminId=String(lookup.ownerAdminId||'');
+            if(!/^[0-9a-f-]{36}$/i.test(ownerAdminId)||ownerAdminId===user.id||blockedBetween(user.id,ownerAdminId)){
+              return json(res,404,{error:'This AI profile is not available to follow.'});
+            }
+          }
+          const result=await requestSupabaseState('ai_identity_follow_set',{actorUserId:user.id,identityId,follow});
+          return json(res,200,{ok:true,identityId,isFollowing:result.isFollowing===true,followersCount:Number(result.followersCount||0),excludeFromHumanFollowCounts:true});
+        }catch(error){
+          return json(res,Number(error?.status)||409,{error:String(error?.message||'AI follow request failed.').slice(0,240)});
+        }
+      }
+      if(method==='GET'&&p==='/api/ai/follows'){
+        if(!isSupabasePersistence())return json(res,503,{error:'AI follow relationships require Minglora Supabase PostgreSQL persistence.'});
+        try{
+          const result=await requestSupabaseState('ai_identity_follow_list',{actorUserId:user.id,limit:200,offset:0});
+          const follows=(Array.isArray(result.follows)?result.follows:[])
+            .filter(item=>{const ownerId=String(item.ownerAdminId||'');return /^[0-9a-f-]{36}$/i.test(ownerId)&&!blockedBetween(user.id,ownerId);})
+            .map(({ownerAdminId,...item})=>item);
+          return json(res,200,{ok:true,follows});
+        }catch(error){return json(res,503,{error:String(error?.message||'AI follow list is unavailable.').slice(0,240)});}
+      }
+      if(method==='GET'&&p==='/api/ai/discovery/saved-searches'){
+        if(!isSupabasePersistence())return json(res,503,{error:'Saved AI discovery searches require Minglora Supabase PostgreSQL persistence.'});
+        try{const result=await requestSupabaseState('ai_discovery_saved_search_list',{actorUserId:user.id});return json(res,200,{ok:true,savedSearches:Array.isArray(result.savedSearches)?result.savedSearches:[]});}
+        catch(error){return json(res,503,{error:String(error?.message||'Saved AI discovery searches are unavailable.').slice(0,240)});}
+      }
+      if(method==='POST'&&p==='/api/ai/discovery/saved-searches'){
+        if(!isSupabasePersistence())return json(res,503,{error:'Saved AI discovery searches require Minglora Supabase PostgreSQL persistence.'});
+        const name=String(input?.name||'').trim(),searchText=String(input?.searchText||'').trim();
+        const filters=input?.filters&&typeof input.filters==='object'&&!Array.isArray(input.filters)?input.filters:{};
+        const sort=String(input?.sort||'newest');
+        if(name.length<2||name.length>80||searchText.length>160||!['newest','recently_updated'].includes(sort))return json(res,400,{error:'Saved AI discovery search fields are invalid.'});
+        try{const result=await requestSupabaseState('ai_discovery_saved_search_upsert',{actorUserId:user.id,name,searchText,filters,sort});return json(res,201,{ok:true,savedSearch:result.savedSearch||{}});}
+        catch(error){return json(res,Number(error?.status)||409,{error:String(error?.message||'Saved AI discovery search could not be saved.').slice(0,240)});}
+      }
+      const savedAiSearchMatch=p.match(/^\/api\/ai\/discovery\/saved-searches\/([0-9a-f-]{36})$/i);
+      if(method==='DELETE'&&savedAiSearchMatch){
+        if(!isSupabasePersistence())return json(res,503,{error:'Saved AI discovery searches require Minglora Supabase PostgreSQL persistence.'});
+        try{const result=await requestSupabaseState('ai_discovery_saved_search_delete',{actorUserId:user.id,searchId:savedAiSearchMatch[1]});return json(res,200,{ok:true,deleted:result.deleted===true});}
+        catch(error){return json(res,503,{error:String(error?.message||'Saved AI discovery search could not be deleted.').slice(0,240)});}
+      }
       if (await handlePersonalAiBotsAdminApi({
         req,res,url,method,path:p,user,input,db,saveStore,uid,now,json,
         isOwnerAdmin:isDesignatedCreatorHubAdmin(user)&&isModerator(user,req)&&hasActiveReviewerSession(user),
