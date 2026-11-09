@@ -247,13 +247,13 @@ Deno.serve(async (req: Request) => {
     const phone = String(input.phone || "").trim();
     const password = String(input.password || "");
     const displayName = String(input.displayName || "").trim().slice(0, 80);
-    const username = String(input.username || "").trim().replace(/^@/, "").slice(0, 30);
+    const username = String(input.username || "").trim().replace(/^@/, "").toLowerCase().slice(0, 30);
     const contactPhone = String(input.contactPhone || phone).trim().slice(0, 40);
     if (!email && !phone) return json(400, { error: "Enter an email address or phone number." });
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json(400, { error: "Enter a valid email address." });
     if (phone && !/^\+[1-9]\d{7,14}$/.test(phone)) return json(400, { error: "Enter the phone number in international format, such as +18765550123." });
     if (password.length < 8 || password.length > 128) return json(400, { error: "Set a password between 8 and 128 characters." });
-    if (username && !/^[a-zA-Z0-9_.]{3,30}$/.test(username)) return json(400, { error: "Username must be 3–30 characters and use letters, numbers, dots or underscores." });
+    if (username && !/^[a-z0-9_]{3,30}$/.test(username)) return json(400, { error: "Username must be 3–30 lowercase characters and use letters, numbers or underscores." });
     const { data: created, error: createError } = await admin.auth.admin.createUser({
       ...(email ? { email } : {}),
       ...(phone ? { phone } : {}),
@@ -343,15 +343,16 @@ Deno.serve(async (req: Request) => {
       if (!Object.hasOwn(profileInput, field)) continue;
       let value = profileInput[field];
       if (typeof value === "string") {
-        const maximum = field === "bio" ? 5000 : field === "location" ? 160 : field === "displayName" ? 80 : 120;
+        const maximum = field === "bio" ? 500 : field === "location" ? 120 : field === "displayName" ? 120 : 120;
         value = value.trim().slice(0, maximum);
       }
       profilePatch[column] = value;
       changedFields.push(field);
     }
     if (Object.hasOwn(profileInput, "username")) {
-      const value = String(profilePatch.username || "");
-      if (value && !/^[a-zA-Z0-9_.]{3,30}$/.test(value)) return json(400, { error: "Username must be 3–30 characters and use letters, numbers, dots or underscores." });
+      const value = String(profilePatch.username || "").toLowerCase();
+      profilePatch.username = value;
+      if (value && !/^[a-z0-9_]{3,30}$/.test(value)) return json(400, { error: "Username must be 3–30 lowercase characters and use letters, numbers or underscores." });
     }
     if (Object.keys(profilePatch).length === 0 && Object.keys(authAttributes).length === 0) {
       return json(400, { error: "Choose at least one account or profile field to update." });
