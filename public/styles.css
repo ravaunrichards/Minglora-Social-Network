@@ -7506,3 +7506,10 @@ dialog#minglora-profile-editor .modal-actions #save-profile-button{
   dialog#minglora-profile-editor #profile-upload-status{margin-inline:14px}
   dialog#minglora-profile-editor .modal-actions{padding:12px 14px 15px}
 }
+
+
+/* Keep every saved profile name and username readable on all screen sizes. */
+.profile-info-main{min-width:0!important;max-width:100%;overflow:visible}
+.profile-name-with-badges{display:flex;align-items:flex-start;flex-wrap:wrap;gap:4px 6px;min-width:0;max-width:100%;white-space:normal;overflow:visible;text-overflow:clip}
+.profile-name-with-badges>span:first-child{display:inline;min-width:0;max-width:100%;white-space:normal;overflow-wrap:anywhere;word-break:normal;overflow:visible;text-overflow:clip}
+.profile-username-line{min-width:0;max-width:100%;white-space:normal;overflow-wrap:anywhere;word-break:normal;overflow:visible;text-overflow:clip}

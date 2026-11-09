@@ -9,6 +9,7 @@ const app=fs.readFileSync(path.join(root,'public/app.js'),'utf8');
 const server=fs.readFileSync(path.join(root,'src/server.js'),'utf8');
 const html=fs.readFileSync(path.join(root,'public/index.html'),'utf8');
 const worker=fs.readFileSync(path.join(root,'public/sw.js'),'utf8');
+const css=fs.readFileSync(path.join(root,'public/styles.css'),'utf8');
 
 test('profile identity stays compact and About information is shown in its own section cards',()=>{
   const renderAt=app.indexOf('function renderProfile(data)');
@@ -77,17 +78,37 @@ test('social profile links are rendered as safe external links with target prote
   }
 });
 
-test('each About section has independent Public, Friends or Only me visibility enforced by the API',()=>{
+test('Names is always public while every other About section retains independent visibility',()=>{
   assert.match(app,/Who can see this section\?/);
+  assert.match(app,/Names visibility/);
+  assert.match(app,/Public — names and usernames always appear on accessible profiles/);
   assert.match(app,/<option value="public"/);
   assert.match(app,/<option value="friends"/);
   assert.match(app,/<option value="private"/);
   assert.match(server,/function canViewAboutSection\(viewerId,target,visibility\)/);
-  assert.match(server,/sectionVisibility\[key\]/);
-  assert.match(server,/if\(!canViewAboutSection\(viewerId,u,sectionVisibility\[key\]\)\)continue/);
+  assert.match(server,/names:'public'/);
+  assert.match(server,/if\(key!=='names'&&!canViewAboutSection\(viewerId,u,sectionVisibility\[key\]\)\)continue/);
   assert.match(server,/aboutSections\[key\]=\{\.\.\.\(u\.aboutSections\?\.\[key\]\|\|\{\}\)\}/);
   assert.match(server,/about_sections:next\.aboutSections/);
   assert.match(server,/about_section_visibility:next\.aboutSectionVisibility/);
+});
+
+test('the Names editor changes the public display name and unique username and renders every saved name',()=>{
+  for(const field of ['profileName','username','firstName','middleName','lastName','preferredName','otherName','nickname','pronunciation','formerName']){
+    assert.ok(app.includes('data-about-field="'+field+'"')||app.includes("aboutEditorField('"+field+"'"),'Missing Names editor field '+field);
+  }
+  assert.match(app,/patch\.name=fieldValue\('profileName'\)/);
+  assert.match(app,/patch\.username=fieldValue\('username'\)/);
+  assert.match(app,/patch\.aboutSectionVisibility\.names='public'/);
+  for(const label of ['Display name','Username','First name','Middle name','Last name','Preferred name','Other name','Nickname','Name pronunciation','Former name']){
+    assert.ok(app.includes("aboutRowMarkup('"+label+"'"),'Missing visible profile name row '+label);
+  }
+});
+
+test('long display names and usernames wrap instead of clipping on profile headers',()=>{
+  assert.match(css,/\.profile-name-with-badges\{[^}]*flex-wrap:wrap/);
+  assert.match(css,/\.profile-username-line\{[^}]*overflow-wrap:anywhere/);
+  assert.match(css,/overflow-wrap:anywhere/);
 });
 
 test('private contact information is only supplied to its owner or viewers allowed by the section audience',()=>{

@@ -125,7 +125,7 @@ function validateAboutSections(input,errors){
     const fields={
       personalDetails:{birthDate:20,pronouns:60,gender:60,relationshipStatus:80,currentCity:120,hometown:120,country:120,county:120,parish:120},
       intro:{bio:500},
-      names:{otherName:120,nickname:80,pronunciation:120,formerName:120},
+      names:{firstName:80,middleName:80,lastName:80,preferredName:80,otherName:120,nickname:80,pronunciation:120,formerName:120},
       details:{favoriteQuote:350,otherDetails:700},
       aboutYou:{description:1200}
     };
