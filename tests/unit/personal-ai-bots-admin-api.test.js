@@ -948,3 +948,68 @@ test('AI identity batch requires canonical persistence and rejects batches large
   assert.equal(tooLarge.res.statusCode,400);
   assert.equal(tooLarge.db.personalAiBots.length,0);
 });
+
+test('AI identity batch completed replay returns recorded IDs without persisting twice',async()=>{
+  const db={};
+  let initialPersistCalls=0,replayPersistCalls=0;
+  const input={idempotencyKey:'identity-batch-replay-0001',items:identityBatchItems};
+  const first=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/batches',input,db,uid:sequenceUid(1100),
+    persistAiIdentities:async()=>{initialPersistCalls++;}
+  });
+  await handlePersonalAiBotsAdminApi(first);
+  assert.equal(first.res.statusCode,201);
+  const originalIds=db.personalAiBots.map(bot=>bot.id);
+  assert.equal(initialPersistCalls,1);
+
+  const replay=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/batches',input,db,uid:sequenceUid(1200),
+    persistAiIdentities:async()=>{replayPersistCalls++;}
+  });
+  await handlePersonalAiBotsAdminApi(replay);
+  assert.equal(replay.res.statusCode,200);
+  assert.equal(replay.res.payload.replayed,true);
+  assert.equal(replay.res.payload.batch.status,'completed');
+  assert.deepEqual(replay.res.payload.batch.identityIds,originalIds);
+  assert.deepEqual(db.personalAiBots.map(bot=>bot.id),originalIds);
+  assert.equal(db.personalAiBots.length,2);
+  assert.equal(replayPersistCalls,0);
+});
+
+test('AI identity batch rolls back its checkpoint when the initial runtime save fails',async()=>{
+  const db={personalAiBots:[],personalAiBotAudit:[],personalAiBotBatches:[]};
+  const originalBots=db.personalAiBots;
+  const originalAudit=db.personalAiBotAudit;
+  const originalBatches=db.personalAiBotBatches;
+  let persistenceCalled=false,saves=0;
+  const context=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/batches',
+    input:{idempotencyKey:'identity-batch-save-failure-01',items:identityBatchItems},
+    db,uid:sequenceUid(1300),
+    persistAiIdentities:async()=>{persistenceCalled=true;},
+    saveStore:async()=>{saves++;throw new Error('runtime checkpoint unavailable');}
+  });
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,503);
+  assert.match(context.res.payload.error,/checkpoint could not be saved/);
+  assert.equal(saves,1);
+  assert.equal(persistenceCalled,false);
+  assert.equal(db.personalAiBots,originalBots);
+  assert.equal(db.personalAiBotAudit,originalAudit);
+  assert.equal(db.personalAiBotBatches,originalBatches);
+  assert.equal(db.personalAiBots.length,0);
+  assert.equal(db.personalAiBotBatches.length,0);
+});
+
+test('AI identity batch history is limited to the authenticated owner',async()=>{
+  const ownerBatch={id:'batch-owner',ownerId:'owner-1',idempotencyKey:'identity-batch-owner-01',status:'completed',totalRecords:2,completedRecords:2};
+  const otherBatch={id:'batch-other',ownerId:'owner-2',idempotencyKey:'identity-batch-other-01',status:'completed',totalRecords:3,completedRecords:3};
+  const context=makeContext({
+    method:'GET',path:'/api/admin/personal-ai-bots/batches',
+    db:{personalAiBotBatches:[otherBatch,ownerBatch]}
+  });
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,200);
+  assert.deepEqual(context.res.payload.batches,[ownerBatch]);
+});
+
