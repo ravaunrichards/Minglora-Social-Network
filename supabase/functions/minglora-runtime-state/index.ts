@@ -368,7 +368,7 @@ Deno.serve(async (req: Request) => {
     }
     if (Object.hasOwn(profileInput, "contactPhone")) {
       const value = String(profilePatch.contact_phone || "").trim();
-      if (value && !/^\\+[1-9]\\d{7,14}$/.test(value)) return json(400, { error: "Enter the contact phone in international format, such as +18765550123." });
+      if (value && !/^\+[1-9]\d{7,14}$/.test(value)) return json(400, { error: "Enter the contact phone in international format, such as +18765550123." });
       profilePatch.contact_phone = value;
     }
     if (Object.hasOwn(profileInput, "username")) {
