@@ -34,6 +34,10 @@ const reportReviewSql = await readFile(
   new URL('../../supabase/migrations/20261109251000_minglora_ai_report_review_rpcs.sql', import.meta.url),
   'utf8'
 );
+const autonomyModesSql = await readFile(
+  new URL('../../supabase/migrations/20261109252000_minglora_ai_bot_autonomy_modes.sql', import.meta.url),
+  'utf8'
+);
 const profileHtml = await readFile(
   new URL('../../public/ai-profile.html', import.meta.url),
   'utf8'
@@ -133,6 +137,7 @@ test('canonical identity RPCs are service-role-only and owner-gated at the gatew
 test('new bots are disabled by default and all tasks are approval-gated',()=>{
   assert.match(sql,/status text NOT NULL DEFAULT 'disabled'/);
   assert.match(sql,/autonomy_mode text NOT NULL DEFAULT 'administrator_controlled'/);
+  for(const mode of ['administrator_controlled','human_approval','supervisor_controlled','hybrid','autonomous_within_limits','restricted_observation']) assert.ok(sql.includes("'"+mode+"'"),mode);
   assert.match(sql,/approval_required boolean NOT NULL DEFAULT true CHECK \(approval_required\)/);
   assert.match(sql,/status text NOT NULL DEFAULT 'awaiting_administrator_approval'/);
 });
@@ -713,6 +718,15 @@ test('AI bot editor and discovery use the same complete 249-entry ISO country an
   assert.match(adminBotUi,/currentCountryCode:countryCodeForName/);
 });
 
+
+test('five operating levels have an additive upgrade migration and remain separately dispatch-gated',()=>{
+  assert.match(autonomyModesSql,/BEGIN;[\s\S]*ALTER TABLE public\.minglora_ai_bots/);
+  assert.match(autonomyModesSql,/DROP CONSTRAINT IF EXISTS minglora_ai_bots_autonomy_mode_check/);
+  assert.match(autonomyModesSql,/ADD CONSTRAINT minglora_ai_bots_autonomy_mode_check/);
+  for(const mode of ['administrator_controlled','human_approval','supervisor_controlled','hybrid','autonomous_within_limits','restricted_observation']) assert.ok(autonomyModesSql.includes("'"+mode+"'"),mode);
+  assert.match(autonomyModesSql,/Worker dispatch remains separately gated/);
+  assert.match(autonomyModesSql,/COMMIT;/);
+});
 
 test('AI report moderation queue is private, owner scoped, bounded and fully audited',()=>{
   assert.match(reportReviewSql,/CREATE OR REPLACE FUNCTION public\.minglora_ai_identity_report_list/);
