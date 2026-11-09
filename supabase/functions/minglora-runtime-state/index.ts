@@ -100,6 +100,7 @@ Deno.serve(async (req: Request) => {
     "ai_email_identity_upsert", "ai_email_identity_list", "ai_identity_discover",
     "ai_identity_public_owner_lookup", "ai_identity_follow_set", "ai_identity_follow_list",
     "ai_discovery_saved_search_upsert", "ai_discovery_saved_search_list", "ai_discovery_saved_search_delete",
+    "ai_identity_public_profile_get", "ai_identity_block_set", "ai_identity_block_list", "ai_identity_report_create",
     "ai_bot_task_upsert_batch", "ai_bot_task_list", "ai_bot_task_stats",
     "ai_bot_task_claim", "ai_bot_task_heartbeat", "ai_bot_task_complete", "ai_bot_task_fail",
   ];
@@ -116,6 +117,80 @@ Deno.serve(async (req: Request) => {
   // Re-check the designated owner ID here as a second boundary after the Node
   // admin API's MFA/session authorization.
   const AI_NETWORK_OWNER_ID = "5b998c21-86b5-4621-ab37-e0808a2657b1";
+  if (action === "ai_identity_public_profile_get") {
+    const actorUserId = String(input.actorUserId || "");
+    const slug = String(input.slug || "").trim();
+    if (!validUuid(actorUserId) || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || slug.length > 120) {
+      return json(400, { error: "Public AI profile slug or viewer ID is invalid." });
+    }
+    const { data, error } = await admin.rpc("minglora_ai_identity_public_profile_get", {
+      p_slug: slug,p_viewer_user_id: actorUserId
+    });
+    if (error) return json(503, { error: "Public AI profile storage is unavailable.", code: "AI_PUBLIC_PROFILE_ERROR" });
+    return json(200, { ok: true, profile: data || null });
+  }
+
+  if (action === "ai_identity_block_set") {
+    const actorUserId = String(input.actorUserId || "");
+    const identityId = String(input.identityId || "");
+    const blocked = input.blocked;
+    const reason = String(input.reason || "").slice(0,300);
+    if (!validUuid(actorUserId) || !validUuid(identityId) || typeof blocked !== "boolean") {
+      return json(400, { error: "AI profile block request values are invalid." });
+    }
+    const { data, error } = await admin.rpc("minglora_ai_identity_block_set", {
+      p_identity_id: identityId,p_user_id: actorUserId,p_block: blocked,p_reason: reason
+    });
+    if (error) {
+      const invalid = ["22023","23503"].includes(String(error.code || ""));
+      return json(invalid ? 404 : 503, {
+        error: invalid ? "AI profile block request could not be applied." : "AI profile block storage is unavailable.",
+        code: String(error.code || "AI_PROFILE_BLOCK_ERROR")
+      });
+    }
+    return json(200, { ok: true, ...(data && typeof data === "object" ? data : {}) });
+  }
+
+  if (action === "ai_identity_block_list") {
+    const actorUserId = String(input.actorUserId || "");
+    const limit = Number(input.limit ?? 100),offset = Number(input.offset ?? 0);
+    if (!validUuid(actorUserId) || !Number.isInteger(limit) || limit < 1 || limit > 500 ||
+        !Number.isInteger(offset) || offset < 0 || offset > 1000000000) {
+      return json(400, { error: "AI profile block list pagination is invalid." });
+    }
+    const { data, error } = await admin.rpc("minglora_ai_identity_block_list", {
+      p_user_id: actorUserId,p_limit: limit,p_offset: offset
+    });
+    if (error) return json(503, { error: "AI profile block list is unavailable.", code: "AI_PROFILE_BLOCK_LIST_ERROR" });
+    return json(200, { ok: true, blockedIdentities: Array.isArray(data) ? data : [] });
+  }
+
+  if (action === "ai_identity_report_create") {
+    const actorUserId = String(input.actorUserId || "");
+    const identityId = String(input.identityId || "");
+    const reason = String(input.reason || "");
+    const details = String(input.details || "").slice(0,2000);
+    const allowedReasons = new Set([
+      "impersonation","spam","misleading_identity","inappropriate_content",
+      "harassment","privacy","other"
+    ]);
+    if (!validUuid(actorUserId) || !validUuid(identityId) || !allowedReasons.has(reason) ||
+        details.length > 2000) {
+      return json(400, { error: "AI profile report values are invalid." });
+    }
+    const { data, error } = await admin.rpc("minglora_ai_identity_report_create", {
+      p_identity_id: identityId,p_reporter_user_id: actorUserId,p_reason: reason,p_details: details
+    });
+    if (error) {
+      const invalid = ["22023","23503"].includes(String(error.code || ""));
+      return json(invalid ? 404 : 503, {
+        error: invalid ? "AI profile is unavailable for reporting." : "AI profile report storage is unavailable.",
+        code: String(error.code || "AI_PROFILE_REPORT_ERROR")
+      });
+    }
+    return json(201, { ok: true, report: data || {} });
+  }
+
   if (action === "ai_identity_public_owner_lookup") {
     const actorUserId = String(input.actorUserId || "");
     const identityId = String(input.identityId || "");
