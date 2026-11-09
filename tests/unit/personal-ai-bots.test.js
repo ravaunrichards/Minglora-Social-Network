@@ -297,7 +297,9 @@ test('owner-approved appointments require shortlisted candidates, valid reportin
   assert.equal(chair.identityActivationStatus,'unchanged_disabled');
   assert.equal(chairCandidate.status,'disabled');
   assert.equal(chairCandidate.enabled,false);
-  assert.equal(chairOpening.application.status,'appointed');
+  const persistedChairApplication=db.personalAiBotApplications.find(item=>item.id===chairOpening.application.id);
+  assert.equal(persistedChairApplication?.status,'appointed');
+  assert.equal(persistedChairApplication?.statusHistory.at(-1)?.status,'appointed');
   assert.equal(getPersonalAiBotAppointments(db).length,1);
   assert.equal(getPersonalAiBotEmploymentHistory(db).length,1);
   assert.equal(db.personalAiBotAudit.filter(item=>item.targetType==='appointment'&&item.targetId===chair.id).length,1);
