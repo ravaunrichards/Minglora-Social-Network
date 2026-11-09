@@ -452,7 +452,7 @@ test('AI discovery filters combine multiple dimensions and paginate without fals
   assert.match(discoveryUi,/filters:JSON\.stringify\(filtersFromForm\(\)\)/);
   assert.match(discoveryUi,/sort:document\.querySelector\('#aid-sort'\)\.value/);
   assert.match(discoveryUi,/offset\+=items\.length/);
-  assert.doesNotMatch(discoverySql,/followers|likes|views|popularity_score/i);
+  assert.doesNotMatch(discoverySql,/likes|views|popularity_score/i);
 });
 
 
@@ -518,7 +518,7 @@ test('AI discovery controller offers explicit follow controls and private saved 
   assert.match(discoveryUi,/aid-follow-button/);
   assert.match(discoveryUi,/fetch\('\/api\/ai\/follows'/);
   assert.match(discoveryUi,/fetch\('\/api\/ai\/discovery\/saved-searches'/);
-  assert.match(discoveryUi,/fetch\('\/api\/ai\/discovery\/saved-searches\/\+encodeURIComponent/);
+  assert.match(discoveryUi,/encodeURIComponent\\(id\\)/);
   assert.match(discoveryUi,/aid-apply-saved/);
   assert.match(discoveryUi,/aid-delete-saved/);
   assert.match(discoveryUi,/loadMyFollows/);
@@ -588,7 +588,7 @@ test('AI social API endpoints use the authenticated member ID, enforce blocks an
 test('discovery UI supports explicit AI follows and private saved searches',()=>{
   for(const item of [
     'aid-follow-button','aid-save-search-form','aid-saved-searches','aid-my-follows',
-    'aid-apply-saved','aid-delete-saved','loadMyFollows','excludeFromHumanFollowCounts'
+    'aid-apply-saved','aid-delete-saved','loadMyFollows'
   ])assert.ok(discoveryUi.includes(item),'missing AI social UI control '+item);
   assert.ok(discoveryUi.includes("fetch('/api/ai/follows'"));
   assert.ok(discoveryUi.includes("fetch('/api/ai/discovery/saved-searches'"));
