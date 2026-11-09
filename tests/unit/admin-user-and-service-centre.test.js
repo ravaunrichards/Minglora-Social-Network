@@ -24,6 +24,10 @@ test("new account creation requires profile fields that the live schema marks NO
   assert.ok(admin.includes('id="admin-user-create-username" name="username" maxlength="30" required'));
   assert.ok(runtime.includes('if (displayName.length < 2) return json(400'));
   assert.ok(runtime.includes('if (!username) return json(400'));
+  assert.ok(runtime.includes('if (usernameOwner) return json(409, { error: "That username is already in use." })'));
+  const usernameLookup = runtime.indexOf('const { data: usernameOwner');
+  const authCreate = runtime.indexOf('admin.auth.admin.createUser');
+  assert.ok(usernameLookup >= 0 && usernameLookup < authCreate, "username availability is checked before creating an Auth identity");
 });
 
 test("member CRUD and session routes require owner identity, MFA and same-origin writes", () => {
