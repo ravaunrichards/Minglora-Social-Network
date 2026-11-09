@@ -198,6 +198,7 @@ export function updatePersonalAiBot(db, botId, input, actorId, timestamp, uid) {
     const visibility=String(input.visibility||'private');
     if(!['public','friends','private'].includes(visibility))throw Object.assign(new Error('Choose a valid AI profile visibility.'),{status:400});
     bot.visibility=visibility;
+    if(visibility!=='public')bot.publicProfileEnabled=false;
     changes.push('profile visibility');
   }
   if (Object.hasOwn(input,'publicProfileEnabled')) {
