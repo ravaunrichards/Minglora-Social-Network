@@ -174,6 +174,47 @@ test('corporate vacancies reject invalid role scopes, disabled departments and u
   assert.throws(()=>createPersonalAiBotVacancy(db,{positionCode:'worker',departmentId:finance.id},actor,stamp,uid),/enabled department/);
 });
 
+test('vacancy lifecycle enforces position/department compatibility and records audited status history',()=>{
+  const db=makeDb();
+  const executive=getPersonalAiBotDepartments(db).find(item=>item.code==='executive_management');
+  const finance=getPersonalAiBotDepartments(db).find(item=>item.code==='finance_accounting');
+  const vacancy=createPersonalAiBotVacancy(db,{
+    positionCode:'ceo',departmentId:executive.id,title:'Chief Executive Officer',slots:2,
+    description:'Lead company operations under owner oversight.',
+    requirements:'Leadership and governance experience.'
+  },actor,stamp,uid);
+  assert.equal(vacancy.status,'open');
+  assert.equal(vacancy.slots,2);
+  assert.equal(vacancy.ownerId,actor);
+  assert.equal(vacancy.statusHistory.length,1);
+  assert.equal(db.personalAiBotAudit[0].action,'vacancy.created');
+  assert.equal(getPersonalAiBotVacancies(db)[0].id,vacancy.id);
+
+  assert.throws(()=>createPersonalAiBotVacancy(db,{
+    positionCode:'cfo',departmentId:executive.id,title:'Finance Executive'
+  },actor,stamp,uid),/different department/);
+  assert.throws(()=>createPersonalAiBotVacancy(db,{
+    positionCode:'ceo',departmentId:finance.id,title:'Finance CEO'
+  },actor,stamp,uid),/different department/);
+  assert.throws(()=>createPersonalAiBotVacancy(db,{
+    positionCode:'ceo',departmentId:executive.id,title:'Chief Executive Officer'
+  },actor,stamp,uid),/already exists/);
+  assert.throws(()=>createPersonalAiBotVacancy(db,{
+    positionCode:'ceo',departmentId:executive.id,title:'Too Many Slots',slots:101
+  },actor,stamp,uid),/between 1 and 100/);
+
+  const paused=updatePersonalAiBotVacancy(db,vacancy.id,{status:'paused',slots:3},actor,stamp,uid);
+  assert.equal(paused.status,'paused');
+  assert.equal(paused.slots,3);
+  assert.equal(paused.statusHistory.length,2);
+  const closed=updatePersonalAiBotVacancy(db,vacancy.id,{status:'closed'},actor,stamp,uid);
+  assert.equal(closed.status,'closed');
+  assert.equal(closed.statusHistory.length,3);
+  assert.throws(()=>updatePersonalAiBotVacancy(db,vacancy.id,{status:'filled'},actor,stamp,uid),/Appointments and filled status are managed separately/);
+  assert.throws(()=>updatePersonalAiBotVacancy(db,vacancy.id,{status:'open'},'another-owner',stamp,uid),/not found/);
+  assert.equal(db.personalAiBotAudit.filter(item=>item.targetType==='vacancy').length,3);
+});
+
 test('starter set creates one disabled administrator-controlled bot per category and is idempotent',()=>{
   const db=makeDb();
   const created=createPersonalAiBotStarterSet(db,actor,stamp,uid);
