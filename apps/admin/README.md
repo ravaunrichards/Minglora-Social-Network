@@ -122,17 +122,16 @@ Live advisors were retrieved on 2026-11-09 at approximately 09:55 UTC:
 - Production Render remains on `main`; the production Supabase Edge Function remains version 112 and does not include this branch's new CRUD actions.
 - Real account CRUD, deletion constraint handling, global session revocation, audit failure behavior, and service checks still require hosted acceptance testing after deployment is authorized.
 
-
-## Current execution checkpoint — 2026-11-09 10:13 UTC
+## Current execution checkpoint — 2026-11-09 10:30 UTC
 
 - **Project:** Minglora Social Network
 - **Repository:** `ravaunrichards/Minglora-Social-Network`
 - **Assigned task:** Admin Centre member management and service connections, PR #203
-- **Branch:** `feat/minglora-admin-user-and-service-centre-20261109`
-- **Current head:** `b75cee573631664802db65d9c7fc16478e70cafe`
-- **PR state:** Open, draft; 36 commits; GitHub reports mergeable=false.
-- **Comparison with main at `2f80e9d997b43e5da6373c385d6ce153ff908e67`:** 36 commits ahead, 1 behind. Diverged; reconciliation remains required.
-- **Completion:** 71% verified / 29% remaining. This retains the established original task weighting; the latest code changes are not credited until automated tests and acceptance checks pass.
+- **Working branch:** `feat/minglora-admin-user-and-service-centre-20261109`
+- **Current head:** `dd0a82209539b44d808da0dae13e0181aebe9332`
+- **PR state:** Open, draft; 57 commits; 15 changed files; GitHub reports mergeable=false.
+- **Branch comparison:** 57 commits ahead and 1 behind the last retrieved current `main` commit `2f80e9d997b43e5da6373c385d6ce153ff908e67`. The branch remains divergent and must be reconciled after review.
+- **Completion:** 73% verified / 27% remaining. The original weighting is preserved. The 2% increase is limited to passing targeted Admin Centre tests, provider-security regression checks, and CI syntax/security-audit steps. It does not represent hosted end-to-end acceptance or a green full repository run.
 
 ### Weighted milestone tracker
 
@@ -144,42 +143,54 @@ Live advisors were retrieved on 2026-11-09 at approximately 09:55 UTC:
 | Service connections | 15% | 10% |
 | Audit and data integrity | 10% | 6% |
 | Documentation and recovery records | 5% | 5% |
-| Full CI, hosted acceptance and final regression | 10% | 0% |
-| **Total** | **100%** | **71%** |
+| Full CI, hosted acceptance and final regression | 10% | 2% |
+| **Total** | **100%** | **73%** |
 
-### Changes verified in this continuation
+### Verified implementation in this continuation
 
-- Edit-member display name now requires at least two characters; edit username is required and constrained to the allowed 3–30 lowercase characters.
-- The Edge Function validates edited display names and usernames against those rules before attempting a profile write.
-- Username uniqueness checks on both create and edit now use case-insensitive matching. Edit excludes the current member ID; duplicate names return HTTP 409.
-- The Admin Centre API wrapper now preserves the server error status and payload. When the server reports a partial update, the edit UI refreshes the selected member and account list, then clearly reports the partial success and failed Auth update.
-- Regression cases were added for edit validation, case-insensitive uniqueness and partial-update reporting.
+- Create and edit forms enforce the live profile requirements: username required, display name at least two characters, username format, and supported contact/profile field lengths.
+- The Edge Function checks username availability before Auth user creation and during edit; normalized usernames use exact matching and exclude the edited account ID.
+- Contact-phone validation uses the corrected international-number regex in create and edit flows.
+- Partial-update state now passes safely from Supabase persistence through the Node API to the browser; the UI refreshes the member record/list and discloses the partial outcome.
+- Create, session-revocation and delete UI messages disclose when audit confirmation is missing.
+- The previously existing Supabase Auth provider manager was restored into Admin Centre by the owner-authored commits `8ccf8a0`, `f7bceb5` and `6145725`. It uses the server-only `SUPABASE_ACCESS_TOKEN` and does not return provider secrets to the browser.
+- The provider PATCH route now requires same-origin writes in addition to designated-owner, moderator and active MFA reviewer checks. Regression coverage verifies the route guard, token handling and provider-manager client request.
+- The new `public/auth-providers-admin.js` is included in the CI JavaScript syntax-check step.
+- Admin Centre asset-version test expectations now match the current Admin Centre script and service-worker cache versions.
 
-### Source verification
+### Latest CI evidence
 
-Current branch files were retrieved from GitHub and 13 checks were confirmed for the updated create/edit forms, server validation, case-insensitive preflight lookup, partial-update reporting, and corresponding regression-test assertions. These are source-level checks only. The project test runner has not passed on this head.
+Latest completed workflow run for current head `dd0a822`:
+- GitHub Actions run: [42601267231](https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/42601267231)
+- Repository test job: **744 tests, 714 passed, 30 failed**.
+- For You functional-navigation job: **13 passed, 2 failed**.
+- All dedicated Admin Centre tests passed, including the member manager, create/edit validation, partial-update propagation, contact/location constraints, owner/MFA member gateway, Auth provider same-origin/MFA gate, and service-connection secret-safety tests.
+- The Admin Centre shell/service-worker asset assertion and the withdrawal tracker Admin Centre script-version assertion both passed after their expected versions were corrected.
+- The CI JavaScript syntax-check step passed, including `node --check public/auth-providers-admin.js`.
+- Dependency audit reported **0 vulnerable packages**.
+- Repository structure check passed: **770 non-empty files across 165 directories**.
+- The For You failures are the same two existing shell-layout/story tests that also failed on the main-branch baseline. The remaining 30 general-suite failures concern existing email handoff, Clock Centre, discovery, For You/Home Stories, LIVE, profile, navigation, service-worker behavior, themes and Supabase persistence retry tests. They remain unresolved and must not be described as passing.
 
-### CI and local test execution
+### Current live infrastructure evidence
 
-- The latest connected GitHub workflow-run and combined-status lookups for this head returned empty results. No fresh CI run or passing status is confirmed.
-- The last detailed historical full-suite run remains 706 passed / 32 failed out of 738, on an earlier commit.
-- The earlier targeted Admin User and Service Centre tests passed in that historical run, but tests added afterward remain unexecuted.
-- A local repository checkout was attempted, but the execution container could not resolve `github.com`; local `npm test` execution was therefore unavailable.
+Historical live reads from 2026-11-09 around 09:39–09:55 UTC:
+- Minglora Supabase project `gzycobgbasnqqhnympkr` was `ACTIVE_HEALTHY`, PostgreSQL 17.11.0.003.
+- Production `minglora-runtime-state` was active at version 112 and did not yet contain the new branch CRUD operations.
+- Render service was configured to auto-deploy from `main`; the last observed live deploy used commit `2f80e9d`.
+- No production schema, permission, account, balance, merge or deployment changes were performed in this continuation.
+- These infrastructure readings are historical at this checkpoint; they have not been re-queried at 10:30 UTC.
 
-### Current execution order
+### Unfinished work and dependencies
 
-- **Easy:** Obtain an actual test run against this exact head and fix any test failures.
-- **Medium:** Reconcile the one-commit divergence with `main`; complete hosted member CRUD, partial failure, service health and audit acceptance.
-- **Hard:** Complete production Supabase Auth integration, session revocation/deletion acceptance and security/data-integrity verification after review and deployment authorization.
-- **Final verification:** Full CI, targeted Admin Centre tests, regression checks, service integration checks and protected-owner verification.
+- **Easy:** No remaining known stale Admin Centre asset-version assertions from the latest CI output. Continue addressing any newly confirmed PR-specific test failure only.
+- **Medium:** Reconcile the one-commit divergence with current `main` after review; complete hosted user-management create/edit/ban/unban/session-revoke/delete and service health checks; verify partial failure and audit behavior against a hosted owner/MFA session.
+- **Hard:** Complete production Edge Function integration and end-to-end account lifecycle/session-revocation/security/data-integrity acceptance after merge and deployment authorization. Supabase provider administration also depends on a properly scoped server-side Management token and provider-side credentials; do not assume it is configured.
+- **Final verification:** Resolve or explicitly classify the remaining 30 full-suite failures and the two baseline For You failures; obtain passing required checks; verify all Admin Centre integrations and owner-protection behavior.
 
-### Live deployment and database state
+### Last confirmed action
 
-- Render is configured to auto-deploy from `main`; the most recently retrieved live deployment was main commit `2f80e9d`. The feature branch is not deployed.
-- Minglora Supabase project was live and healthy when last queried; production `minglora-runtime-state` was active at version 112 and did not contain this branch's new CRUD actions.
-- The live database's `profiles` table requires username and display name, has a case-insensitive unique username index, and contains 86 foreign-key references to profiles. No production schema, permission, user or balance changes were made.
-- No merge or deployment was performed.
+Commit `dd0a82209539b44d808da0dae13e0181aebe9332` adds the new auth-provider JavaScript file to the CI syntax-check list. The corresponding latest workflow run confirms that syntax step passed, although the overall workflow remains failed because of the unrelated/regression suite failures listed above.
 
 ### Exact next action
 
-Run the targeted Admin Centre tests and full CI on commit `b75cee573631664802db65d9c7fc16478e70cafe`. The connected GitHub integration has not exposed a current workflow run, and the local checkout failed because GitHub DNS was unavailable. Continue with source-level checks and other non-production work while this verification dependency is unresolved.
+Keep the PR draft and production untouched. Inspect the remaining CI failures only for regressions introduced by PR #203, then continue hosted acceptance preparation without exposing credentials or mutating production data. Re-query the live infrastructure before relying on the older 09:39–09:55 UTC readings.
