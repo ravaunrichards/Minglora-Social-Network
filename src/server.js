@@ -22,6 +22,7 @@ import { createSessionAuthManager, getAuthTokenExpiresAt } from './session-auth.
 import { createOrResumeSupabaseAccount } from './domain/auth-registration.js';
 import { createOAuthFlowCookie, readOAuthFlowCookie as parseOAuthFlowCookie, clearOAuthFlowCookie as buildClearOAuthFlowCookie } from './oauth-flow-state.js';
 import { createMingloraAuthRouteState, buildMingloraAuthRoutePatch } from './auth-redirect-routes.js';
+import { buildSupabaseProviderCredentialPatch } from './auth-provider-credentials.js';
 import { paginateDescending } from './domain/pagination.js';
 import { rankForYouFeed } from './domain/feed-ranking.js';
 import { rankForYouVideos } from './domain/video-ranking.js';
@@ -2224,34 +2225,7 @@ async function route(req, res) {
         };
         const appSiteUrl=appOrigin(req);
         const routeState=config=>createMingloraAuthRouteState(config,appSiteUrl,providerCallbackUrl);
-        const buildCredentialPatch=(definition,credentials,current)=>{
-          const patch={};
-          if(definition.id==='phone'){
-            const smsProvider=String(credentials.sms_provider||current.sms_provider||'').trim().toLowerCase();
-            const fields=smsProviders[smsProvider];
-            if(!fields)throw Object.assign(new Error('Choose a supported SMS gateway before enabling phone sign-in.'),{status:400});
-            patch.sms_provider=smsProvider;
-            for(const key of [...fields.required,...fields.optional]){
-              const value=String(credentials[key]||'').trim();
-              if(!value)continue;
-              if(value.length>4096)throw Object.assign(new Error(fieldLabel(key)+' is too long.'),{status:400});
-              patch[key]=value;
-            }
-            return patch;
-          }
-          for(const key of [...definition.keys,...(definition.optionalKeys||[])]){
-            const value=String(credentials[key]||'').trim();
-            if(!value)continue;
-            if(value.length>4096)throw Object.assign(new Error(fieldLabel(key)+' is too long.'),{status:400});
-            if(key.endsWith('_url')){
-              let parsed;
-              try{parsed=new URL(value);}catch{throw Object.assign(new Error(fieldLabel(key)+' must be a valid HTTPS URL.'),{status:400});}
-              if(parsed.protocol!=='https:')throw Object.assign(new Error(fieldLabel(key)+' must use HTTPS.'),{status:400});
-            }
-            patch[key]=value;
-          }
-          return patch;
-        };
+
         try{
           if(method==='GET'){
             const config=await callManagement('GET');
@@ -2288,7 +2262,7 @@ async function route(req, res) {
           let credentialPatch={};
           if(requestedEnabled&&!currentlyEnabled){
             const suppliedCredentials=input?.credentials&&typeof input.credentials==='object'&&!Array.isArray(input.credentials);
-            if(suppliedCredentials)credentialPatch=buildCredentialPatch(definition,input.credentials,current);
+            if(suppliedCredentials)credentialPatch=buildSupabaseProviderCredentialPatch({definition,credentials:input.credentials,current,smsProviders,fieldLabel});
             const merged={...current,...credentialPatch};
             const ready=getProviderState(merged).find(item=>item.id===providerId);
             if(!ready?.configured){
