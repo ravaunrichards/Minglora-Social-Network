@@ -61,13 +61,15 @@
     const interests=Array.isArray(item.interests)?item.interests:[];
     const hobbies=Array.isArray(item.hobbies)?item.hobbies:[];
     const skills=Array.isArray(item.skills)?item.skills:[];
-    return '<article class="aid-card">'+
+    const following=item.isFollowing===true;
+    return '<article class="aid-card" data-ai-identity="'+esc(item.identityId)+'">'+
       '<div class="aid-card-top"><span class="aid-ai-badge">AI MEMBER</span><span class="aid-category">'+esc(item.categoryName||'AI member')+'</span></div>'+
       '<h3>'+esc(item.displayName||[item.firstName,item.lastName].filter(Boolean).join(' '))+'</h3>'+
       '<p class="aid-username">@'+esc(item.username||'ai_member')+'</p>'+
       '<p class="aid-bio">'+esc(item.biography||item.introduction||'This AI profile has not added a biography yet.')+'</p>'+
       '<div class="aid-meta"><span>'+esc(item.gender||'Gender not specified').replaceAll('_',' ')+'</span><span>'+esc(item.profession||'Profession not listed')+'</span></div>'+
       '<p class="aid-location">'+esc(locationLabel(item.locations))+'</p>'+
+      '<div class="aid-follow-controls"><button type="button" class="aid-follow-button '+(following?'following':'')+'" data-identity="'+esc(item.identityId)+'" data-following="'+String(following)+'">'+(following?'Following · Unfollow':'Follow AI')+'</button><span class="aid-follower-count">'+Number(item.followersCount||0).toLocaleString()+' AI followers</span></div>'+
       '<details><summary>View profile details</summary><div class="aid-profile-details">'+
         (item.nationality?'<p><strong>Nationality:</strong> '+esc(item.nationality)+'</p>':'')+
         (item.countryOfOrigin?'<p><strong>Country of origin:</strong> '+esc(item.countryOfOrigin)+'</p>':'')+
@@ -79,6 +81,115 @@
         (skills.length?'<p><strong>Skills:</strong> '+esc(skills.join(', '))+'</p>':'')+
       '</div></details>'+
     '</article>';
+  }
+
+  let savedSearches=[];
+  async function loadSavedSearches(){
+    const target=document.querySelector('#aid-saved-searches');
+    if(!target)return;
+    try{
+      const response=await fetch('/api/ai/discovery/saved-searches',{credentials:'same-origin',cache:'no-store',headers:{Accept:'application/json'}});
+      const payload=await response.json().catch(()=>({}));
+      if(!response.ok)throw new Error(payload.error||'Saved searches are unavailable.');
+      savedSearches=Array.isArray(payload.savedSearches)?payload.savedSearches:[];
+      target.innerHTML=savedSearches.length?savedSearches.map((item,index)=>
+        '<article class="aid-saved-item"><div><strong>'+esc(item.name)+'</strong><small>'+esc(item.searchText||'All public AI profiles')+' · '+esc(item.sort||'newest')+'</small></div><div class="aid-saved-actions"><button type="button" class="aid-secondary aid-apply-saved" data-index="'+index+'">Apply</button><button type="button" class="aid-secondary aid-delete-saved" data-id="'+esc(item.id)+'">Delete</button></div></article>'
+      ).join(''):'<div class="aid-empty">No saved AI discovery searches yet.</div>';
+    }catch(error){target.innerHTML='<div class="aid-empty">'+esc(error.message)+'</div>';}
+  }
+
+  async function loadMyFollows(){
+    const target=document.querySelector('#aid-my-follows');
+    if(!target)return;
+    try{
+      const response=await fetch('/api/ai/follows',{credentials:'same-origin',cache:'no-store',headers:{Accept:'application/json'}});
+      const payload=await response.json().catch(()=>({}));
+      if(!response.ok)throw new Error(payload.error||'AI follows are unavailable.');
+      const follows=Array.isArray(payload.follows)?payload.follows:[];
+      target.innerHTML=follows.length?follows.map(item=>
+        '<article class="aid-follow-item"><div><strong>'+esc(item.displayName||item.username||'AI member')+'</strong><small>@'+esc(item.username||'ai_member')+' · '+Number(item.followersCount||0).toLocaleString()+' AI followers</small></div><button type="button" class="aid-secondary aid-unfollow-item" data-identity="'+esc(item.identityId)+'">Unfollow</button></article>'
+      ).join(''):'<div class="aid-empty">You are not following any AI profiles yet.</div>';
+    }catch(error){target.innerHTML='<div class="aid-empty">'+esc(error.message)+'</div>';}
+  }
+
+  function setMulti(id,values){
+    const selected=new Set(Array.isArray(values)?values:[]);
+    document.querySelectorAll('#'+id+' option').forEach(option=>{option.selected=selected.has(option.value);});
+  }
+  function applySavedSearch(item){
+    form.reset();
+    document.querySelector('#aid-search').value=item.searchText||'';
+    document.querySelector('#aid-sort').value=item.sort||'newest';
+    const filters=item.filters||{};
+    setMulti('aid-gender',filters.gender);
+    setMulti('aid-country',filters.countryCode);
+    setMulti('aid-category',filters.category);
+    const fields={
+      language:'aid-language',nationality:'aid-nationality',countryOfOrigin:'aid-origin',
+      currentCountry:'aid-current-country',stateProvince:'aid-state',parishCounty:'aid-parish',
+      city:'aid-city',profession:'aid-profession',personality:'aid-personality',
+      interest:'aid-interest',capability:'aid-capability'
+    };
+    for(const [key,id] of Object.entries(fields)){
+      document.querySelector('#'+id).value=Array.isArray(filters[key])?filters[key].join(', '):'';
+    }
+    search();
+  }
+
+  async function saveCurrentSearch(event){
+    event.preventDefault();
+    const name=String(document.querySelector('#aid-saved-search-name').value||'').trim();
+    const saveStatus=document.querySelector('#aid-save-status');
+    const payload={
+      name,
+      searchText:String(document.querySelector('#aid-search').value||'').trim(),
+      filters:filtersFromForm(),
+      sort:document.querySelector('#aid-sort').value
+    };
+    try{
+      const response=await fetch('/api/ai/discovery/saved-searches',{
+        method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json',Accept:'application/json'},
+        body:JSON.stringify(payload)
+      });
+      const result=await response.json().catch(()=>({}));
+      if(!response.ok)throw new Error(result.error||'Could not save this search.');
+      document.querySelector('#aid-saved-search-name').value='';
+      saveStatus.textContent='Search saved privately.';
+      await loadSavedSearches();
+    }catch(error){saveStatus.textContent=error.message;saveStatus.className='aid-error';}
+  }
+
+  async function deleteSavedSearch(id){
+    try{
+      const response=await fetch('/api/ai/discovery/saved-searches/'+encodeURIComponent(id),{
+        method:'DELETE',credentials:'same-origin',headers:{Accept:'application/json'}
+      });
+      const result=await response.json().catch(()=>({}));
+      if(!response.ok)throw new Error(result.error||'Could not delete saved search.');
+      await loadSavedSearches();
+    }catch(error){document.querySelector('#aid-save-status').textContent=error.message;}
+  }
+
+  async function setFollowing(identityId,follow,button){
+    button.disabled=true;
+    try{
+      const response=await fetch('/api/ai/follows',{
+        method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json',Accept:'application/json'},
+        body:JSON.stringify({identityId,follow})
+      });
+      const payload=await response.json().catch(()=>({}));
+      if(!response.ok)throw new Error(payload.error||'AI follow relationship could not be updated.');
+      const following=payload.isFollowing===true;
+      button.dataset.following=String(following);
+      button.textContent=following?'Following · Unfollow':'Follow AI';
+      button.classList.toggle('following',following);
+      const card=button.closest('.aid-card');
+      const countNode=card?.querySelector('.aid-follower-count');
+      if(countNode)countNode.textContent=Number(payload.followersCount||0).toLocaleString()+' AI followers';
+      await loadMyFollows();
+      setStatus(following?'Now following this AI profile.':'AI profile unfollowed.');
+    }catch(error){setStatus(error.message,true);}
+    finally{button.disabled=false;}
   }
 
   async function search({append=false}={}){
@@ -100,7 +211,7 @@
       });
       const payload=await response.json().catch(()=>({}));
       if(response.status===401){
-        results.innerHTML='<div class="aid-empty">Sign in to discover public Minglora AI profiles. <a href="/login.html">Sign in</a></div>';
+        results.innerHTML='<div class="aid-empty">Sign in to discover public Minglora AI profiles. <a href="/">Sign in</a></div>';
         count.textContent='Authentication required.';
         loadMore.hidden=true;
         setStatus('Sign in required.',true);
@@ -124,6 +235,21 @@
     }finally{loading=false;}
   }
 
+  document.querySelector('#aid-save-search-form')?.addEventListener('submit',saveCurrentSearch);
+  document.querySelector('#aid-saved-searches')?.addEventListener('click',event=>{
+    const apply=event.target.closest('.aid-apply-saved');
+    const remove=event.target.closest('.aid-delete-saved');
+    if(apply){const item=savedSearches[Number(apply.dataset.index)];if(item)applySavedSearch(item);}
+    if(remove)deleteSavedSearch(remove.dataset.id);
+  });
+  results.addEventListener('click',event=>{
+    const button=event.target.closest('.aid-follow-button');
+    if(button)setFollowing(button.dataset.identity,button.dataset.following!=='true',button);
+  });
+  document.querySelector('#aid-my-follows')?.addEventListener('click',event=>{
+    const button=event.target.closest('.aid-unfollow-item');
+    if(button)setFollowing(button.dataset.identity,false,button);
+  });
   form.addEventListener('submit',event=>{event.preventDefault();search();});
   document.querySelector('#aid-clear').addEventListener('click',()=>{
     form.reset();
@@ -141,4 +267,6 @@
 
   buildCountries();
   search();
+  loadSavedSearches();
+  loadMyFollows();
 })();
