@@ -628,15 +628,15 @@ Source audit found that the Admin Centre had two constrained nested scroll areas
 
 ### Regression and CI evidence
 
-Latest completed workflow run on tested implementation head `a7747b7`:
-- Run: [42616577236](https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/42616577236)
+The latest checkpoint workflow ran on commit `d1976e49eda6ac0bba867f58d47a37550617a9d0`:
+- Run: [42616953685](https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/42616953685)
 - General repository suite: **751 tests, 721 passed, 30 failed**.
 - For You functional-navigation suite: **15 tests, 13 passed, 2 failed**.
-- The new Admin Centre responsive/no-clipping test passed.
-- All targeted Admin Centre tests passed, including member management validation, audit/session/deletion handling, same-origin/MFA protections, service-card secret handling and responsive layout checks.
-- No Admin Centre-specific test failures were reported.
-- CI JavaScript syntax check, repository structure check and zero-vulnerability dependency audit passed.
-- The overall workflow remains failed due the 30 other repository tests and the 2 For You/Home Stories tests. They are not counted as passing.
+- All targeted Admin Centre tests passed, including the new responsive/no-clipping regression assertion. No Admin Centre-specific test failures were reported.
+- CI JavaScript syntax check, repository structure check, original gift-asset generation and zero-vulnerability dependency audit passed.
+- The overall workflow remains failed. The general failures are distributed across unrelated email-link, Clock Centre, service-worker cache, profile, Stories, utility rail, theme and Supabase persistence tests. The persistence retry tests include an existing expectation of two saves while the current path performs three. The separate For You failures are stale `app.js` service-worker asset-version assertions.
+- These unrelated failures are recorded, not counted as passing, and are not being changed as part of this Admin Centre task.
+- Earlier tested implementation commit `a7747b7cfcffcc56fc9c7688e8d6f0de0272e9b2` had the same 751/721/30 and 15/13/2 summary; the newest run confirms there has been no CI improvement or regression in the overall counts.
 
 ### Browser-level verification limitation
 
