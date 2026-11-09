@@ -368,8 +368,8 @@
                   <div><label for="admin-user-edit-username">Username</label><input id="admin-user-edit-username" name="username" maxlength="30" required pattern="[a-z0-9_]{3,30}" title="Use 3–30 lowercase letters, numbers or underscores"></div>
                   <div><label for="admin-user-edit-contact-phone">Profile contact phone</label><input id="admin-user-edit-contact-phone" name="contactPhone" maxlength="16" pattern="(\\+[1-9][0-9]{7,14})?"></div>
                   <div><label for="admin-user-edit-location">Location</label><input id="admin-user-edit-location" name="location" maxlength="120"></div>
-                  <div><label for="admin-user-edit-country">Country</label><input id="admin-user-edit-country" name="country" maxlength="120"></div>
-                  <div><label for="admin-user-edit-parish">Parish / State</label><input id="admin-user-edit-parish" name="parish" maxlength="120"></div>
+                  <div><label for="admin-user-edit-country">Country</label><input id="admin-user-edit-country" name="country" maxlength="100"></div>
+                  <div><label for="admin-user-edit-parish">Parish / State</label><input id="admin-user-edit-parish" name="parish" maxlength="100"></div>
                 </div>
                 <label for="admin-user-edit-bio">Bio</label>
                 <textarea id="admin-user-edit-bio" name="bio" rows="3" maxlength="500"></textarea>
