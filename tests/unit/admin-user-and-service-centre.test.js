@@ -77,6 +77,18 @@ test("member CRUD and session routes require owner identity, MFA and same-origin
   assert.match(runtime, /The platform owner is protected/);
 });
 
+test("local-only session revocation is audited when no Supabase token is available", () => {
+  const start = runtime.indexOf('if (action === "admin_user_revoke_sessions")');
+  const end = runtime.indexOf('if (action === "admin_user_set_ban")', start);
+  assert.ok(start >= 0 && end > start);
+  const revoke = runtime.slice(start, end);
+  assert.match(revoke, /targetJwt\.length < 20/);
+  assert.match(revoke, /recordAdminUserAction\(actorUserId, userId, "account\.sessions_revoke"/);
+  assert.match(revoke, /scope: "application_only"/);
+  assert.match(revoke, /providerRefreshTokensRevoked: false/);
+  assert.match(revoke, /sessionRevoked: false/);
+});
+
 test("member updates use server-side Auth admin operations and audit changed fields", () => {
   assert.match(runtime, /admin\.auth\.admin\.updateUserById/);
   assert.match(runtime, /admin\.auth\.admin\.createUser/);
