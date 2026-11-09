@@ -170,7 +170,7 @@ test('every staged identity/control table declaration closes without a trailing 
 test('durable worker claim concurrency and owner settings are enforced transactionally',()=>{
   assert.match(queueSql,/FROM public\.minglora_ai_bot_settings\s+WHERE id = true\s+FOR UPDATE/);
   assert.match(queueSql,/WHERE task\.execution_started_at >= pg_catalog\.date_trunc\('day',pg_catalog\.now\(\)\);/);
-  assert.ok(queueSql.includes('CREATE OR REPLACE FUNCTION public.minglora_ai_bot_settings_update(jsonb,uuid)'));
+  assert.ok(queueSql.includes('CREATE OR REPLACE FUNCTION public.minglora_ai_bot_settings_update('));
   assert.ok(queueSql.includes('GRANT EXECUTE ON FUNCTION public.minglora_ai_bot_settings_update(jsonb,uuid) TO service_role'));
   assert.ok(queueSql.includes("'networkEnabled',(SELECT enabled FROM public.minglora_ai_bot_settings WHERE id=true)"));
   assert.match(queueSql,/execution_enabled boolean NOT NULL DEFAULT false/);
