@@ -40,6 +40,23 @@ test("member create, session-revocation and delete UI disclose missing audit con
   assert.ok(admin.includes("result.auditRecorded === false ? ' Warning: the administrator audit entry could not be confirmed.' : '') + (result.warning"));
 });
 
+test("member creation reports and audits whether failed profile-link rollback succeeded", () => {
+  const start = runtime.indexOf('if (action === "admin_user_create")');
+  const end = runtime.indexOf('if (action === "admin_user_update")', start);
+  assert.ok(start >= 0 && end > start);
+  const create = runtime.slice(start, end);
+  assert.ok(create.includes("let rollbackSucceeded = false"));
+  assert.ok(create.includes("await admin.auth.admin.deleteUser(userId)"));
+  assert.ok(create.includes('recordAdminUserAction(actorUserId, userId, "account.create_failed"'));
+  assert.ok(create.includes("profileLinkFailed: true"));
+  assert.ok(create.includes("rollbackSucceeded,"));
+  assert.ok(create.includes("partial: !rollbackSucceeded"));
+  assert.ok(create.includes("auditRecorded"));
+  assert.ok(admin.includes("The failed-creation audit entry could not be confirmed."));
+  assert.ok(admin.includes("inspect Supabase Auth before retrying."));
+  assert.ok(admin.includes("Auth rollback not confirmed"));
+});
+
 test("member edits enforce required display name and unique case-insensitive username", () => {
   assert.ok(admin.includes('id="admin-user-edit-name" name="displayName" maxlength="80" minlength="2" required'));
   assert.ok(admin.includes('id="admin-user-edit-username" name="username" maxlength="30" required pattern="[a-z0-9_]{3,30}"'));
@@ -269,7 +286,7 @@ test("service connections show Minglora providers without returning secrets", ()
 
 test("administrator audit history filters and displays member CRUD and session operations safely", () => {
   const actions = [
-    "account.create", "account.update", "account.delete", "account.delete_failed",
+    "account.create", "account.create_failed", "account.update", "account.delete", "account.delete_failed",
     "account.sessions_revoke", "account.sessions_revoke_failed", "account.ban", "account.unban"
   ];
   for (const action of actions) {
@@ -277,7 +294,7 @@ test("administrator audit history filters and displays member CRUD and session o
     assert.ok(runtime.includes('"' + action + '"'), "runtime allows audit filter " + action);
     assert.ok(admin.includes("'" + action + "'") || admin.includes('"' + action + '"'), "Admin Centre exposes audit filter " + action);
   }
-  for (const field of ["changedFields", "profileFields", "emailProvided", "phoneProvided", "deletionMode", "outcome", "scope", "providerRefreshTokensRevoked"]) {
+  for (const field of ["changedFields", "profileFields", "emailProvided", "phoneProvided", "deletionMode", "outcome", "scope", "providerRefreshTokensRevoked", "profileLinkFailed", "rollbackSucceeded"]) {
     assert.ok(runtime.includes(field + ":"), "runtime returns allowlisted audit metadata " + field);
   }
   for (const label of ["Member account created", "Member account updated", "Member account deleted", "Member sessions revoked", "Member session revocation failed"]) {
