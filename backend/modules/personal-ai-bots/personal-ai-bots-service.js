@@ -1,3 +1,9 @@
+export const PERSONAL_AI_BOT_POPULATIONS = Object.freeze([
+  {id:'independent',label:'Independent AI'},
+  {id:'organizational',label:'Organizational AI'},
+  {id:'specialized_service',label:'Specialized AI Service'}
+]);
+
 export const PERSONAL_AI_BOT_CATEGORIES = Object.freeze([
   { id:'ai-friends', name:'AI Friends', description:'Clearly identified AI companions and conversational friends.' },
   { id:'ai-creators', name:'AI Creators', description:'Prepare original posts, creative concepts, captions and media briefs.' },
@@ -177,6 +183,10 @@ export function createPersonalAiBot(db, input, actorId, timestamp, uid) {
   if (!category.enabled) throw Object.assign(new Error('This bot category is disabled.'), { status:409 });
   if (displayName.length < 2 || displayName.length > 64) throw Object.assign(new Error('Bot name must be between 2 and 64 characters.'), { status:400 });
   const names=normalizeAiIdentityName(displayName,input);
+  const population=String(input.population||'independent').trim().toLowerCase();
+  if(!PERSONAL_AI_BOT_POPULATIONS.some(item=>item.id===population)){
+    throw Object.assign(new Error('Choose independent, organizational or specialized service AI population.'),{status:400});
+  }
   const gender=String(input.gender||'prefer_not_to_specify').trim().toLowerCase();
   if(!['female','male','non_binary','other','prefer_not_to_specify'].includes(gender)){
     throw Object.assign(new Error('Choose a supported AI gender identity.'),{status:400});
@@ -191,6 +201,8 @@ export function createPersonalAiBot(db, input, actorId, timestamp, uid) {
   const bot = {
     id:botId, slug:slugify(displayName)+'-'+botId.slice(0,8),
     ...names, displayName, categoryId, categoryName:category.name,
+    population,
+    identityType:String(input.identityType||(population==='organizational'?'corporate_employee':population==='specialized_service'?'backend_service':'social_personality')).trim().slice(0,80),
     username:'ai_'+slugify(displayName).replace(/-/g,'_').slice(0,32)+'_'+botId.slice(0,6),
     profilePictureAssetId:null,
     bio:String(input.bio || input.description || '').trim().slice(0,600),
@@ -252,6 +264,7 @@ export function createPersonalAiBotStarterSet(db, actorId, timestamp, uid) {
       id, slug:category.id+'-'+id.slice(0,8),
       ...names, displayName,
       categoryId:category.id, categoryName:category.name,
+      population:'independent',identityType:'social_personality',
       description:category.description, personality:'',
       languages:['English'], administratorInstructions:'',
       profileType:'ai_bot', aiLabel:'AI Bot', aiDisclosureVisible:true, contentDisclosureRequired:true,
@@ -276,6 +289,21 @@ export function updatePersonalAiBot(db, botId, input, actorId, timestamp, uid) {
   const bot = db.personalAiBots.find(item=>item.id===botId);
   if (!bot) throw Object.assign(new Error('Bot not found.'),{status:404});
   const changes = [];
+  if(Object.hasOwn(input,'population')){
+    const population=String(input.population||'').trim().toLowerCase();
+    if(!PERSONAL_AI_BOT_POPULATIONS.some(item=>item.id===population)){
+      throw Object.assign(new Error('Choose independent, organizational or specialized service AI population.'),{status:400});
+    }
+    bot.population=population;
+    if(!Object.hasOwn(input,'identityType'))bot.identityType=population==='organizational'?'corporate_employee':population==='specialized_service'?'backend_service':'social_personality';
+    changes.push('AI population');
+  }
+  if(Object.hasOwn(input,'identityType')){
+    const identityType=String(input.identityType||'').trim();
+    if(identityType.length<2||identityType.length>80)throw Object.assign(new Error('AI identity type must contain 2–80 characters.'),{status:400});
+    bot.identityType=identityType;
+    changes.push('AI identity type');
+  }
   if (Object.hasOwn(input,'displayName') || Object.hasOwn(input,'firstName') ||
       Object.hasOwn(input,'lastName') || Object.hasOwn(input,'middleName')) {
     const value=String(input.displayName ?? bot.displayName ?? '').trim().replace(/\s+/g,' ');
