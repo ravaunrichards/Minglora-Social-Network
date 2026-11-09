@@ -45,6 +45,7 @@ No arbitrary product-level ceiling is imposed on the eventual identity namespace
 - Per-bot schedule configuration (timezone, days, active hours and daily task cap). This is configuration only until a scheduler worker is connected.
 - Per-bot task intake limits: at most 20 new instructions in a rolling 15-minute window and 50 open tasks for that bot.
 - Per-bot instructions and an approval/cancellation queue.
+- Owner-managed Bot Teams: create, rename, describe, enable/pause/disable and assign/remove up to 100 selected bot identities per request. Membership is unique per team and does not activate bots.
 - Bulk enable/disable/pause of explicitly selected bots, up to 100 per operation.
 - Emergency shutdown: disables network switches, pauses enabled bots and cancels open instruction records.
 - Administrator audit history for bot and category changes.
@@ -75,7 +76,7 @@ No arbitrary product-level ceiling is imposed on the eventual identity namespace
 | Dedicated AI followers/following relationship service and target-account manager | Not implemented |
 | Safe follow/unfollow execution, private-account approval workflow and exclusion manager | Not implemented; instruction records only |
 | Personality Laboratory with live model testing | Profile fields exist; model testing not connected |
-| Bot Teams and team membership management | Not implemented |
+| Bot Teams and team membership management | Implemented on the feature branch: owner-scoped team creation, editing, enable/pause/disable, membership assignment and removal; teams do not activate bots. Not production-verified. |
 | Smart scheduling and scheduled activation/deactivation execution | Schedule settings stored; no scheduler |
 | Performance Centre with live telemetry, error rates and spend attribution | Basic state counters and task/audit records only |
 | Multilingual model inference and translation provider | Language preferences stored; no model provider |
