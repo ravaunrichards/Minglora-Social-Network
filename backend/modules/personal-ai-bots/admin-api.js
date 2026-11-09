@@ -152,6 +152,9 @@ import {
   getPersonalAiBotApplications,
   createPersonalAiBotApplication,
   updatePersonalAiBotApplication,
+  getPersonalAiBotAppointments,
+  getPersonalAiBotEmploymentHistory,
+  createPersonalAiBotAppointment,
   createPersonalAiBotDepartment,
   updatePersonalAiBotDepartment,
   getPersonalAiBotOverview,
@@ -209,6 +212,8 @@ export async function handlePersonalAiBotsAdminApi(context) {
         jobPositions:PERSONAL_AI_BOT_JOB_POSITIONS,
         vacancies:getPersonalAiBotVacancies(db),
         applications:getPersonalAiBotApplications(db),
+        appointments:getPersonalAiBotAppointments(db),
+        employmentHistory:getPersonalAiBotEmploymentHistory(db),
         bots:db.personalAiBots.slice().sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt))),
         tasks:Array.isArray(durableTasks)?durableTasks:db.personalAiBotTasks.slice(0,100),
         audit:db.personalAiBotAudit.slice(0,100),
@@ -444,6 +449,23 @@ export async function handlePersonalAiBotsAdminApi(context) {
       const application=updatePersonalAiBotApplication(db,applicationMatch[1],input,user.id,stamp,uid);
       await saveStore();
       return (json(res,200,{ok:true,application}),true);
+    }
+
+    if(method==='GET'&&path===root+'/appointments'){
+      return (json(res,200,{ok:true,appointments:getPersonalAiBotAppointments(db)}),true);
+    }
+    if(method==='GET'&&path===root+'/employment-history'){
+      return (json(res,200,{ok:true,events:getPersonalAiBotEmploymentHistory(db)}),true);
+    }
+    if(method==='POST'&&path===root+'/appointments'){
+      const allowed=new Set(['applicationId','reportingManagerAppointmentId']);
+      if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).some(key=>!allowed.has(key))||
+         !String(input.applicationId||'').trim()){
+        return (json(res,400,{error:'Appointment requests require a shortlisted candidate application and only supported reporting fields.'}),true);
+      }
+      const appointment=createPersonalAiBotAppointment(db,input,user.id,stamp,uid);
+      await saveStore();
+      return (json(res,201,{ok:true,appointment}),true);
     }
 
     if(method==='GET'&&path===root+'/vacancies'){
