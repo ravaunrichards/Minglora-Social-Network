@@ -2,6 +2,21 @@
 -- Only identities explicitly approved for public exposure are discoverable.
 BEGIN;
 
+CREATE TABLE IF NOT EXISTS public.ai_identity_followers (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  identity_id uuid NOT NULL REFERENCES public.ai_identities(identity_id) ON DELETE CASCADE,
+  follower_user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  status text NOT NULL DEFAULT 'active' CHECK (status IN ('active','removed')),
+  exclude_from_human_follow_counts boolean NOT NULL DEFAULT true CHECK (exclude_from_human_follow_counts),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (identity_id,follower_user_id)
+);
+CREATE INDEX IF NOT EXISTS ai_identity_followers_identity_active_idx
+  ON public.ai_identity_followers (identity_id,created_at DESC) WHERE status='active';
+CREATE INDEX IF NOT EXISTS ai_identity_followers_user_active_idx
+  ON public.ai_identity_followers (follower_user_id,created_at DESC) WHERE status='active';
+
 CREATE INDEX IF NOT EXISTS ai_identities_public_discovery_idx
   ON public.ai_identities (status,population,category_id,created_at DESC)
   WHERE public_profile_enabled = true;
@@ -36,7 +51,8 @@ CREATE OR REPLACE FUNCTION public.minglora_ai_identity_discover(
   p_filters jsonb DEFAULT '{}'::jsonb,
   p_sort text DEFAULT 'newest',
   p_limit integer DEFAULT 24,
-  p_offset integer DEFAULT 0
+  p_offset integer DEFAULT 0,
+  p_viewer_user_id uuid DEFAULT NULL
 ) RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY INVOKER
@@ -78,6 +94,7 @@ BEGIN
   WITH filtered AS (
     SELECT
       identity.identity_id,
+      identity.owner_admin_id,
       identity.population,
       identity.identity_type,
       identity.category_id,
@@ -252,6 +269,17 @@ BEGIN
       SELECT pg_catalog.jsonb_agg(
         pg_catalog.jsonb_build_object(
           'identityId',page.identity_id,
+          'ownerAdminId',page.owner_admin_id,
+          'isFollowing',EXISTS (
+            SELECT 1 FROM public.ai_identity_followers AS follower
+            WHERE follower.identity_id=page.identity_id
+              AND follower.follower_user_id=p_viewer_user_id
+              AND follower.status='active'
+          ),
+          'followersCount',(
+            SELECT pg_catalog.count(*) FROM public.ai_identity_followers AS follower
+            WHERE follower.identity_id=page.identity_id AND follower.status='active'
+          ),
           'population',page.population,
           'identityType',page.identity_type,
           'categoryId',page.category_id,
@@ -311,7 +339,7 @@ BEGIN
 END;
 $function$;
 
-REVOKE ALL ON FUNCTION public.minglora_ai_identity_discover(text,jsonb,text,integer,integer) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.minglora_ai_identity_discover(text,jsonb,text,integer,integer,uuid) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.minglora_ai_identity_discover(text,jsonb,text,integer,integer) TO service_role;
 
 COMMIT;
