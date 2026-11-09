@@ -252,8 +252,10 @@ Deno.serve(async (req: Request) => {
     if (!email && !phone) return json(400, { error: "Enter an email address or phone number." });
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json(400, { error: "Enter a valid email address." });
     if (phone && !/^\+[1-9]\d{7,14}$/.test(phone)) return json(400, { error: "Enter the phone number in international format, such as +18765550123." });
+    if (displayName.length < 2) return json(400, { error: "Enter a display name containing at least 2 characters." });
     if (password.length < 8 || password.length > 128) return json(400, { error: "Set a password between 8 and 128 characters." });
-    if (username && !/^[a-z0-9_]{3,30}$/.test(username)) return json(400, { error: "Username must be 3–30 lowercase characters and use letters, numbers or underscores." });
+    if (!username) return json(400, { error: "Enter a username to create the member profile." });
+    if (!/^[a-z0-9_]{3,30}$/.test(username)) return json(400, { error: "Username must be 3–30 lowercase characters and use letters, numbers or underscores." });
     const { data: created, error: createError } = await admin.auth.admin.createUser({
       ...(email ? { email } : {}),
       ...(phone ? { phone } : {}),
