@@ -364,8 +364,8 @@
                 <div class="admin-user-edit-grid">
                   <div><label for="admin-user-edit-email">Login email</label><input id="admin-user-edit-email" name="email" type="email" maxlength="254" autocomplete="off"></div>
                   <div><label for="admin-user-edit-phone">Auth phone (+country code)</label><input id="admin-user-edit-phone" name="phone" type="tel" maxlength="16" autocomplete="off" placeholder="+18765550123"></div>
-                  <div><label for="admin-user-edit-name">Display name</label><input id="admin-user-edit-name" name="displayName" maxlength="80"></div>
-                  <div><label for="admin-user-edit-username">Username</label><input id="admin-user-edit-username" name="username" maxlength="30" pattern="[a-z0-9_]{3,30}" title="Use 3–30 lowercase letters, numbers or underscores"></div>
+                  <div><label for="admin-user-edit-name">Display name</label><input id="admin-user-edit-name" name="displayName" maxlength="80" minlength="2" required></div>
+                  <div><label for="admin-user-edit-username">Username</label><input id="admin-user-edit-username" name="username" maxlength="30" required pattern="[a-z0-9_]{3,30}" title="Use 3–30 lowercase letters, numbers or underscores"></div>
                   <div><label for="admin-user-edit-contact-phone">Profile contact phone</label><input id="admin-user-edit-contact-phone" name="contactPhone" maxlength="16" pattern="(\\+[1-9][0-9]{7,14})?"></div>
                   <div><label for="admin-user-edit-location">Location</label><input id="admin-user-edit-location" name="location" maxlength="120"></div>
                   <div><label for="admin-user-edit-country">Country</label><input id="admin-user-edit-country" name="country" maxlength="120"></div>
