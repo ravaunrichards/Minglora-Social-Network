@@ -1445,7 +1445,7 @@
     if (status) status.textContent = 'Creating Supabase Auth member…';
     try {
       const result = await adminCentreApi('/admin/users', { method:'POST', body:JSON.stringify(payload) });
-      if (status) status.textContent = 'Account created in Supabase Auth and linked to a Minglora profile. New account ID: ' + result.user.id;
+      if (status) status.textContent = 'Account created in Supabase Auth and linked to a Minglora profile. New account ID: ' + result.user.id + (result.auditRecorded === false ? ' Warning: the account was created, but the administrator audit entry could not be confirmed.' : '');
       form.reset();
       panel._mingloraAdminPage = 1;
       panel._mingloraSelectedAdminUser = null;
@@ -1516,7 +1516,7 @@
     try {
       const result = await adminCentreApi('/admin/users/' + encodeURIComponent(member.id) + '/sessions/revoke', { method:'POST', body:'{}' });
       if (status) status.textContent = (result.sessionRevoked ? 'Supabase refresh-token sessions were globally revoked. ' : 'No provider access token was available for global refresh-token revocation. ') +
-        Number(result.appSessionsRevoked || 0) + ' Minglora app session(s) closed.';
+        Number(result.appSessionsRevoked || 0) + ' Minglora app session(s) closed.' + (result.auditRecorded === false ? ' Warning: the administrator audit entry could not be confirmed.' : '');
     } catch (error) {
       if (status) status.textContent = error.message || 'Member sessions could not be revoked.';
     } finally { button.disabled = false; }
@@ -1546,7 +1546,7 @@
       const result = await adminCentreApi('/admin/users/' + encodeURIComponent(member.id), {
         method:'DELETE', body:JSON.stringify({confirmUserId,reason})
       });
-      if (status) status.textContent = 'Supabase Auth account deleted.' + (result.warning ? ' ' + result.warning : '');
+      if (status) status.textContent = 'Supabase Auth account deleted.' + (result.auditRecorded === false ? ' Warning: the administrator audit entry could not be confirmed.' : '') + (result.warning ? ' ' + result.warning : '');
       panel._mingloraSelectedAdminUser = null;
       panel._mingloraAdminUserDetails = null;
       const selection = panel.querySelector('#admin-user-selection');
