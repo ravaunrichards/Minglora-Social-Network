@@ -95,6 +95,7 @@ jobs:
           node --check public/experience-center.js
           node --check src/domain/experience-settings.js
           node --check public/admin-centre.js
+          node --check public/auth-providers-admin.js
           node --check src/server.js
           node --check src/store.js
           node --check backend/modules/relationships/friends.js
