@@ -673,18 +673,15 @@ BEGIN
      v_status NOT IN ('proposed','created','under_review','approved','active','restricted','suspended','archived','retired') THEN
     RAISE EXCEPTION 'AI population or lifecycle status is invalid.' USING ERRCODE = '22023';
   END IF;
-  IF (p_identity ? 'locations' AND (
-        pg_catalog.jsonb_typeof(p_identity->'locations') IS DISTINCT FROM 'array'
-        OR pg_catalog.jsonb_array_length(p_identity->'locations') > 10
-      ))
-     OR (p_identity ? 'education' AND (
-        pg_catalog.jsonb_typeof(p_identity->'education') IS DISTINCT FROM 'array'
-        OR pg_catalog.jsonb_array_length(p_identity->'education') > 50
-      ))
-     OR (p_identity ? 'capabilities' AND (
-        pg_catalog.jsonb_typeof(p_identity->'capabilities') IS DISTINCT FROM 'array'
-        OR pg_catalog.jsonb_array_length(p_identity->'capabilities') > 100
-      )) THEN
+  IF (p_identity ? 'locations' AND
+        CASE WHEN pg_catalog.jsonb_typeof(p_identity->'locations')='array'
+          THEN pg_catalog.jsonb_array_length(p_identity->'locations') > 10 ELSE true END)
+     OR (p_identity ? 'education' AND
+        CASE WHEN pg_catalog.jsonb_typeof(p_identity->'education')='array'
+          THEN pg_catalog.jsonb_array_length(p_identity->'education') > 50 ELSE true END)
+     OR (p_identity ? 'capabilities' AND
+        CASE WHEN pg_catalog.jsonb_typeof(p_identity->'capabilities')='array'
+          THEN pg_catalog.jsonb_array_length(p_identity->'capabilities') > 100 ELSE true END) THEN
     RAISE EXCEPTION 'AI profile location, education or capability collections exceed their supported format or size.' USING ERRCODE = '22023';
   END IF;
 
