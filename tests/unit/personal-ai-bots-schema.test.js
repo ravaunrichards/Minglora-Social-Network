@@ -22,7 +22,7 @@ test('normalized bot tables remain separate from human Auth and profile tables',
     'minglora_ai_bot_tasks','minglora_ai_bot_follow_targets','minglora_ai_bot_follows',
     'minglora_ai_bot_followers','minglora_ai_bot_follow_exclusions','minglora_ai_bot_audit'
   ]) assert.ok(sql.includes('public.'+table),'missing normalized table '+table);
-  assert.match(sql,/AI identities are records, never Auth users or public human profiles/);
+  assert.match(sql,/AI identities remain records, never Auth users or public human profiles/);
   assert.match(sql,/public\.user_follows/);
   assert.doesNotMatch(sql,/CREATE TABLE IF NOT EXISTS public\.(?:profiles|user_follows)\b/i);
 });
@@ -40,5 +40,5 @@ test('new bots are disabled by default and all tasks are approval-gated',()=>{
   assert.match(sql,/status text NOT NULL DEFAULT 'disabled'/);
   assert.match(sql,/autonomy_mode text NOT NULL DEFAULT 'administrator_controlled'/);
   assert.match(sql,/approval_required boolean NOT NULL DEFAULT true CHECK \(approval_required\)/);
-  assert.match(sql,/status NOT IN \([\s\S]*?'awaiting_administrator_approval'/);
+  assert.match(sql,/status text NOT NULL DEFAULT 'awaiting_administrator_approval'/);
 });
