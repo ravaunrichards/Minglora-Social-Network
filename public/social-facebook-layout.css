@@ -161,3 +161,92 @@
   .minglora-profile-page .profile-header-card .profile-avatar-edit-wrap>.avatar{flex-basis:88px!important;width:88px!important;height:88px!important;min-width:88px!important;min-height:88px!important;max-width:88px!important;max-height:88px!important}
 }
 @media(prefers-reduced-motion:reduce){.people-grid.people-discovery-grid{scroll-behavior:auto!important}}
+
+
+/* Visitor profile: seven full icon-and-label actions on one continuous row. */
+.minglora-profile-page .profile-header-card--viewer .profile-actions--primary{
+  position:static!important;
+  inset:auto!important;
+  transform:none!important;
+  grid-column:1/-1!important;
+  grid-row:2!important;
+  display:flex!important;
+  flex-flow:row nowrap!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:7px!important;
+  width:100%!important;
+  max-width:none!important;
+  min-width:0!important;
+  margin:5px 0 0!important;
+  padding:0 0 5px!important;
+  overflow-x:auto!important;
+  overflow-y:hidden!important;
+  overscroll-behavior-x:contain!important;
+  scrollbar-width:thin!important;
+  white-space:nowrap!important;
+}
+.minglora-profile-page .profile-header-card--viewer .profile-actions--primary>.profile-edit{
+  display:inline-flex!important;
+  flex:0 0 auto!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:7px!important;
+  width:auto!important;
+  min-width:max-content!important;
+  max-width:none!important;
+  min-height:42px!important;
+  margin:0!important;
+  padding:8px 10px!important;
+  font-size:12px!important;
+  line-height:1.15!important;
+  white-space:nowrap!important;
+  overflow-wrap:normal!important;
+  word-break:keep-all!important;
+  text-align:center!important;
+}
+.minglora-profile-page .profile-header-card--viewer .profile-actions--primary>.profile-edit .profile-action-icon{
+  display:block!important;
+  flex:0 0 17px!important;
+  width:17px!important;
+  height:17px!important;
+  fill:none!important;
+  stroke:currentColor!important;
+  stroke-width:1.9!important;
+  stroke-linecap:round!important;
+  stroke-linejoin:round!important;
+}
+.minglora-profile-page .profile-header-card--viewer .profile-counts{
+  grid-column:1/-1!important;
+  grid-row:3!important;
+}
+@media(max-width:760px){
+  .minglora-profile-page .profile-header-card--viewer .profile-actions--primary{
+    grid-column:1/-1!important;
+    grid-row:2!important;
+    justify-content:flex-start!important;
+    gap:8px!important;
+    width:100%!important;
+    max-width:none!important;
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+  }
+  .minglora-profile-page .profile-header-card--viewer .profile-actions--primary>.profile-edit{
+    flex:0 0 auto!important;
+    min-height:42px!important;
+    padding:8px 9px!important;
+    font-size:12px!important;
+  }
+}
+@media(max-width:390px){
+  .minglora-profile-page .profile-header-card--viewer .profile-actions--primary>.profile-edit{
+    min-height:40px!important;
+    padding:7px 8px!important;
+    font-size:11px!important;
+  }
+  .minglora-profile-page .profile-header-card--viewer .profile-actions--primary>.profile-edit .profile-action-icon{
+    flex-basis:16px!important;
+    width:16px!important;
+    height:16px!important;
+  }
+}
