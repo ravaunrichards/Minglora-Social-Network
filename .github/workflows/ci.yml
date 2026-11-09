@@ -99,8 +99,10 @@ jobs:
           node --check src/server.js
           node --check src/oauth-flow-state.js
           node --check src/auth-redirect-routes.js
+          node --check src/auth-provider-credentials.js
           node --check tests/unit/oauth-flow-state.test.js
           node --check tests/unit/auth-redirect-routes.test.js
+          node --check tests/unit/auth-provider-credentials.test.js
           node --check src/supabase-auth.js
           node --check src/store.js
           node --check backend/modules/relationships/friends.js
@@ -172,4 +174,5 @@ jobs:
             tests/unit/auth-registration-resume.test.js \
             tests/unit/auth-oauth-flow.test.js \
             tests/unit/oauth-flow-state.test.js \
-            tests/unit/auth-redirect-routes.test.js
+            tests/unit/auth-redirect-routes.test.js \
+            tests/unit/auth-provider-credentials.test.js
