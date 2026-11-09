@@ -63,7 +63,7 @@ test('all 20 corporate departments are seeded in the required order without fake
   assert.equal(PERSONAL_AI_BOT_DEPARTMENTS.length,20);
   assert.equal(departments.length,20);
   assert.ok(departments.every(item=>item.builtIn===true&&item.enabled===true));
-  assert.equal(db.personalAiBots,undefined);
+  assert.deepEqual(db.personalAiBots,[]);
   for(const name of [
     'Executive Management','Finance and Accounting','Human Resources','Resource Management','Operations',
     'Technology and Engineering','AI and Research','Cybersecurity and IT','Legal and Compliance',
