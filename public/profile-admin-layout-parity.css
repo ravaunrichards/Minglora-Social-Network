@@ -116,3 +116,74 @@
     margin: 8px 0 10px !important;
   }
 }
+
+ 
+/* Cross-profile geometry audit:
+   The viewer action shell is the grid item (not its inner button row). Keep it
+   out of the identity cell at desktop widths, then reserve a full row at tablet
+   and phone widths. Menus stay in document flow and counts use every metric. */
+.minglora-profile-page .profile-header-card.profile-header-card--viewer .profile-info > .profile-actions-shell {
+  grid-column: 3 !important;
+  grid-row: 1 !important;
+  justify-self: end !important;
+  align-self: center !important;
+  width: fit-content !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+.minglora-profile-page .profile-header-card.profile-header-card--viewer .profile-info--with-thought > .profile-actions-shell {
+  grid-column: 3 !important;
+  grid-row: 2 !important;
+}
+.minglora-profile-page .profile-header-card .profile-username-line > .profile-blue-verification,
+.minglora-profile-page .profile-header-card .profile-username-line > .profile-live-pro-badge,
+.minglora-profile-page .profile-header-card .profile-username-line > .platform-admin-profile-badge,
+.minglora-profile-page .profile-header-card .profile-username-line > .creator-league-profile-badge {
+  position: static !important;
+  inset: auto !important;
+  transform: none !important;
+  flex: 0 0 auto !important;
+  max-width: 100% !important;
+}
+.minglora-profile-page .profile-header-card .profile-counts {
+  grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+}
+@media (min-width: 761px) and (max-width: 1024px) {
+  .minglora-profile-page .profile-header-card.profile-header-card--viewer .profile-info > .profile-actions-shell {
+    grid-column: 1 / -1 !important;
+    grid-row: 2 !important;
+    justify-self: stretch !important;
+    align-self: start !important;
+    align-items: flex-end !important;
+    width: 100% !important;
+  }
+  .minglora-profile-page .profile-header-card.profile-header-card--viewer .profile-info--with-thought > .profile-actions-shell {
+    grid-row: 3 !important;
+  }
+  .minglora-profile-page .profile-header-card.profile-header-card--viewer .profile-actions--primary {
+    width: 100% !important;
+    max-width: 100% !important;
+    justify-content: flex-end !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+  }
+  .minglora-profile-page .profile-header-card .profile-counts {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}
+@media (max-width: 760px) {
+  .minglora-profile-page .profile-header-card.profile-header-card--viewer .profile-info > .profile-actions-shell {
+    grid-column: 1 / -1 !important;
+    grid-row: 2 !important;
+    justify-self: stretch !important;
+    align-self: start !important;
+    align-items: flex-end !important;
+    width: 100% !important;
+  }
+  .minglora-profile-page .profile-header-card.profile-header-card--viewer .profile-info--with-thought > .profile-actions-shell {
+    grid-row: 3 !important;
+  }
+  .minglora-profile-page .profile-header-card .profile-counts {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}
