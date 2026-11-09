@@ -344,3 +344,44 @@ test('worker marks all provider assignments unavailable when adapter configurati
   assert.ok((workerEntrypoint.match(/healthStatus:'unavailable'/g)||[]).length>=2);
   assert.ok(workerEntrypoint.includes("'ai_provider_health_update'"));
 });
+
+
+test('canonical AI profile upsert persists education, presentation, voice/avatar and communication fields',()=>{
+  for(const column of [
+    'gender_presentation','communication_style','education','voice_preferences',
+    'avatar_preferences','avatar_storage_reference','cover_storage_reference'
+  ]) {
+    assert.ok(sql.includes(column),'missing profile column mapping: '+column);
+    assert.ok(sql.includes(column+'=EXCLUDED.'+column),'missing profile update mapping: '+column);
+  }
+  assert.match(sql,/CASE WHEN pg_catalog\.jsonb_typeof\(p_identity->'education'\)='array' THEN p_identity->'education'/);
+  assert.match(sql,/CASE WHEN pg_catalog\.jsonb_typeof\(p_identity->'voice_preferences'\)='object'/);
+  assert.match(sql,/CASE WHEN pg_catalog\.jsonb_typeof\(p_identity->'avatar_preferences'\)='object'/);
+});
+
+test('canonical AI profile upsert persists structured worldwide locations and regional fields',()=>{
+  assert.match(sql,/INSERT INTO public\.ai_identity_locations/);
+  for(const field of ['country_code','country_name','state_province','district','parish_county','city','town','time_zone']) {
+    assert.ok(sql.includes(field),'missing structured location field '+field);
+  }
+  assert.match(sql,/ON CONFLICT \(identity_id,location_type\) DO UPDATE/);
+  assert.match(sql,/pg_catalog\.jsonb_array_length\(p_identity->'locations'\) > 10/);
+  assert.match(sql,/DELETE FROM public\.ai_identity_locations WHERE identity_id=v_id/);
+});
+
+test('canonical AI capability assignments are persisted as unverified until real checks occur',()=>{
+  assert.match(sql,/INSERT INTO public\.ai_identity_capabilities/);
+  assert.match(sql,/verification_status\)[\s\S]*?'unverified'/);
+  assert.match(sql,/verification_status='unverified'/);
+  assert.match(sql,/last_checked_at=NULL/);
+  assert.match(sql,/pg_catalog\.jsonb_array_length\(p_identity->'capabilities'\) > 100/);
+});
+
+test('canonical identity gateway accepts the complete profile schema without accepting raw secrets',()=>{
+  for(const field of [
+    'gender_presentation','communication_style','education','avatar_storage_reference',
+    'cover_storage_reference','voice_preferences','avatar_preferences','locations','capabilities'
+  ]) assert.ok(gateway.includes('"'+field+'"'),'missing gateway allowlist field '+field);
+  assert.doesNotMatch(gateway,/api_key\s*:/i);
+  assert.doesNotMatch(gateway,/password\s*:/i);
+});
