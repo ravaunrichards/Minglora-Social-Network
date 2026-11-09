@@ -129,7 +129,7 @@ test('visitor profile controls retain accessible labels and icons in a compact a
   assert.ok(profileCss.includes('white-space:nowrap!important'));
   assert.ok(profileCss.includes('flex-flow:row nowrap!important'));
   assert.ok(profileCss.includes('overflow-x:auto!important'));
-  assert.ok(profile.includes('id="profile-message"')&&profile.includes('</svg>Message</button>'));
+  assert.ok(profile.includes('id="profile-message"')&&profile.includes('</svg><span class="profile-action-label">Message</span></button>'));
   assert.ok(profile.includes('id="profile-more-actions"'),'More control remains visible');
   assert.ok(profile.includes('id="profile-report"')&&profile.includes('</svg><span>Report</span></button>'));
   assert.ok(profile.includes('id="profile-block"')&&profile.includes('</svg><span>Block</span></button>'));
