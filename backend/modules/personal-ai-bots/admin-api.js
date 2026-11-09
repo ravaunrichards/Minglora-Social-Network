@@ -198,6 +198,7 @@ export async function handlePersonalAiBotsAdminApi(context) {
         safetyReports:Array.isArray(safetyReports)?safetyReports:[],
         safetyReportsSource:Array.isArray(safetyReports)?'minglora_supabase_postgresql':'unavailable',
         categories:getPersonalAiBotCategories(db),
+        departments:getPersonalAiBotDepartments(db),
         bots:db.personalAiBots.slice().sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt))),
         tasks:Array.isArray(durableTasks)?durableTasks:db.personalAiBotTasks.slice(0,100),
         audit:db.personalAiBotAudit.slice(0,100),
