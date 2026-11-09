@@ -550,7 +550,7 @@
 .admin-promotional-gift-fund{display:grid;gap:12px;margin-top:18px;padding-top:16px;border-top:1px solid var(--line,rgba(127,127,127,.24))}
 .admin-promotional-gift-fund .admin-marketing-form{display:grid;gap:10px;max-width:560px}
 .admin-promotional-gift-fund input{width:100%;min-height:42px;padding:10px 12px;border:1px solid var(--line,rgba(127,127,127,.24));border-radius:10px;background:var(--card,#fff);color:var(--text,#182230);font:inherit}
-#admin-promotional-gift-fund-history{max-height:260px;overflow:auto;font-size:.9rem}
+#admin-promotional-gift-fund-history{min-width:0;font-size:.9rem;overflow-wrap:anywhere}
 #admin-promotional-gift-fund-history ul{display:grid;gap:6px;margin:8px 0;padding-left:20px}
 #admin-promotional-gift-fund-history li{overflow-wrap:anywhere}
 
@@ -691,11 +691,11 @@
 .admin-internal-activity-metric{display:grid;gap:3px;min-width:0;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--surface,var(--card))}
 .admin-internal-activity-metric strong{font-size:18px;line-height:1.2;font-variant-numeric:tabular-nums}
 .admin-internal-activity-metric small{color:var(--muted);font-size:10px}
-.admin-internal-activity-list-wrap{overflow:hidden;border:1px solid var(--line);border-radius:11px}
+.admin-internal-activity-list-wrap{min-width:0;border:1px solid var(--line);border-radius:11px}
 .admin-internal-activity-list-heading{display:flex;justify-content:space-between;gap:10px;padding:11px 12px;border-bottom:1px solid var(--line)}
 .admin-internal-activity-list-heading strong{font-size:12px}
 .admin-internal-activity-list-heading small{font-size:10px;color:var(--muted)}
-.admin-internal-activity-feed{display:grid;max-height:430px;overflow:auto}
+.admin-internal-activity-feed{display:grid;min-width:0;max-height:none;overflow:visible}
 .admin-internal-activity-row{display:grid;grid-template-columns:9px minmax(0,1fr) auto;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line)}
 .admin-internal-activity-row:last-child{border-bottom:0}
 .admin-internal-activity-dot{width:7px;height:7px;border-radius:50%;background:var(--accent,#2878df)}
@@ -814,9 +814,11 @@
 }
 .admin-user-result-copy strong,
 .admin-user-result-copy small{
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
+  min-width:0;
+  overflow:visible;
+  overflow-wrap:anywhere;
+  text-overflow:clip;
+  white-space:normal;
 }
 .admin-user-result-copy strong{font-size:13px}
 .admin-user-result-copy small{
@@ -834,7 +836,9 @@
   color:var(--text,inherit);
   font-size:10px;
   font-weight:800;
-  white-space:nowrap;
+  max-width:100%;
+  overflow-wrap:anywhere;
+  white-space:normal;
 }
 .admin-user-status--active{color:#167344;background:rgba(22,163,74,.08);border-color:rgba(22,163,74,.25)}
 .admin-user-status--banned{color:#b42318;background:rgba(220,38,38,.08);border-color:rgba(220,38,38,.28)}
@@ -1040,15 +1044,15 @@
 .admin-centre-navigation{
   grid-column:1;
   grid-row:3;
-  position:sticky;
-  top:18px;
+  position:static;
+  top:auto;
   display:flex;
   flex-direction:column;
   align-items:stretch;
   flex-wrap:nowrap;
   gap:5px;
-  max-height:calc(100vh - 36px);
-  overflow:auto;
+  max-height:none;
+  overflow:visible;
   padding:10px;
   border:1px solid var(--line,rgba(127,127,127,.16));
   border-radius:15px;
@@ -1154,14 +1158,13 @@
     grid-column:1;
     grid-row:auto;
     position:static;
-    flex-direction:row;
-    align-items:center;
-    flex-wrap:nowrap;
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    align-items:start;
+    gap:12px;
     max-height:none;
-    overflow-x:auto;
-    overflow-y:hidden;
+    overflow:visible;
     padding:8px;
-    scrollbar-width:thin;
   }
   .admin-centre-navigation::before{display:none}
   .admin-centre-navigation a{flex:0 0 auto;min-height:36px}
@@ -1429,4 +1432,76 @@
   .admin-service-connections-grid{grid-template-columns:1fr}
   .admin-service-connection-heading{flex-wrap:wrap}
   .admin-service-status{max-width:100%}
+}
+
+
+/* Admin Centre: keep every panel in normal document flow and let content expand. */
+.admin-control-centre-page{
+  box-sizing:border-box;
+  width:100%;
+  min-width:0;
+  overflow:visible;
+}
+.admin-control-centre-page > section{
+  box-sizing:border-box;
+  min-width:0;
+  max-width:100%;
+  overflow-wrap:anywhere;
+}
+.admin-control-centre-page button,
+.admin-control-centre-page a,
+.admin-control-centre-page input,
+.admin-control-centre-page select,
+.admin-control-centre-page textarea{
+  box-sizing:border-box;
+  max-width:100%;
+  min-width:0;
+}
+.admin-control-centre-page button{
+  white-space:normal;
+  overflow-wrap:anywhere;
+}
+.admin-control-centre-status,
+.admin-user-status,
+.admin-internal-activity-row time,
+#admin-withdrawal-tracker-updated,
+.admin-platform-module-card-heading>strong,
+.admin-member-promotion-amount{
+  max-width:100%;
+  overflow-wrap:anywhere;
+  white-space:normal;
+}
+.admin-centre-navigation{
+  position:static;
+  top:auto;
+  max-height:none;
+  overflow:visible;
+}
+.admin-internal-activity-list-wrap,
+.admin-internal-activity-feed,
+#admin-promotional-gift-fund-history{
+  max-height:none;
+  overflow:visible;
+}
+.admin-user-result-copy strong,
+.admin-user-result-copy small{
+  min-width:0;
+  overflow:visible;
+  overflow-wrap:anywhere;
+  text-overflow:clip;
+  white-space:normal;
+}
+@media(max-width:900px){
+  .admin-centre-navigation{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    grid-row:auto;
+    grid-column:1;
+    align-items:start;
+    overflow:visible;
+  }
+  .admin-control-centre-page > section{grid-column:1}
+}
+@media(max-width:560px){
+  .admin-centre-navigation{grid-template-columns:minmax(0,1fr)}
 }
