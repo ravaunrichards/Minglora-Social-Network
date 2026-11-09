@@ -125,3 +125,17 @@ test('AI profile editor uses all 249 ISO country and territory names with countr
   assert.match(source,/pab-current-country-name" list="pab-country-options"/);
   assert.match(source,/AI_COUNTRY_CODE_BY_NAME\.get/);
 });
+
+
+test('owner Admin Centre exposes a real AI profile report review queue',async()=>{
+  const source=await read('public/personal-ai-bots.js');
+  const css=await read('public/personal-ai-bots.css');
+  assert.match(source,/AI profile safety reports/);
+  assert.match(source,/Mark in review/);
+  assert.match(source,/Mark actioned/);
+  assert.match(source,/Dismiss report/);
+  assert.match(source,/reviewAiProfileReport/);
+  assert.match(source,/API\+'\/safety\/reports\/'\+encodeURIComponent\(reportId\)/);
+  assert.match(css,/\.pab-report-card/);
+  assert.match(css,/\.pab-report-resolution/);
+});
