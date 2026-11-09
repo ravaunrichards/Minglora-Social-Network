@@ -95,7 +95,7 @@ test("ban and unban routes enforce owner MFA, same-origin writes and owner prote
   const actionEnd = runtime.indexOf('if (action === "admin_audit_log")', actionStart);
   assert.ok(actionStart >= 0 && actionEnd > actionStart);
   const action = runtime.slice(actionStart, actionEnd);
-  assert.ok(action.includes("adminActorAllowed(actorUserId)"));
+  assert.ok(action.includes('actorUserId !== "5b998c21-86b5-4621-ab37-e0808a2657b1"'));
   assert.ok(action.includes('userId === actorUserId'));
   assert.ok(action.includes('admin.auth.admin.updateUserById(userId, attributes'));
   assert.ok(action.includes('action: auditAction'));
