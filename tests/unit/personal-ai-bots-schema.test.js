@@ -12,6 +12,11 @@ const gateway = await readFile(
   'utf8'
 );
 
+const providerSql = await readFile(
+  new URL('../../supabase/migrations/20261109213000_minglora_ai_provider_assignment_rpcs.sql', import.meta.url),
+  'utf8'
+);
+
 test('normalized AI bot migration contains all 15 master categories',()=>{
   for(const id of [
     'ai-friends','ai-creators','ai-influencers','ai-news','ai-musicians',
@@ -206,4 +211,43 @@ test('every explicit AI table index references columns declared by that table',(
       if(column)assert.ok(columns.has(column),'index '+indexName+' references missing column '+tableName+'.'+column);
     }
   }
+});
+
+
+test('AI provider assignment migration has owner-scoped provider, model and assignment RPCs',()=>{
+  for(const fragment of [
+    'public.ai_provider_accounts','public.ai_provider_models','public.ai_provider_assignments',
+    'minglora_ai_provider_assignment_upsert(jsonb,uuid)',
+    'minglora_ai_provider_assignment_list(uuid,uuid,integer,integer)',
+    'GRANT EXECUTE ON FUNCTION public.minglora_ai_provider_assignment_upsert(jsonb,uuid) TO service_role',
+    'GRANT EXECUTE ON FUNCTION public.minglora_ai_provider_assignment_list(uuid,uuid,integer,integer) TO service_role'
+  ]) assert.ok(providerSql.includes(fragment),'missing provider assignment requirement: '+fragment);
+  assert.match(providerSql,/SECURITY INVOKER/);
+  assert.match(providerSql,/p_actor_user_id IS DISTINCT FROM '5b998c21-86b5-4621-ab37-e0808a2657b1'/);
+  assert.match(providerSql,/credential_secret_reference/);
+  assert.match(providerSql,/v_secret_reference !~ '\^env:MINGLORA_AI_PROVIDER_/);
+  assert.match(providerSql,/assignment_status,provider_health_status\s*\) VALUES \([\s\S]*?'configured','unknown'/);
+  assert.match(providerSql,/credentialConfigured/);
+  assert.doesNotMatch(providerSql,/credential_secret_reference'\s*,\s*account\.credential_secret_reference/);
+});
+
+test('provider model catalogue is shared and provider account credentials remain references only',()=>{
+  const modelInsert=providerSql.slice(providerSql.indexOf('INSERT INTO public.ai_provider_models'),providerSql.indexOf('IF v_primary'));
+  assert.match(modelInsert,/\) VALUES \(\s*NULL,v_provider_name/);
+  assert.doesNotMatch(modelInsert,/SET provider_account_id = EXCLUDED\.provider_account_id/);
+  assert.match(providerSql,/credentialSecretReference/);
+  assert.match(providerSql,/env:MINGLORA_AI_PROVIDER_/);
+  assert.doesNotMatch(providerSql,/api_key\s+text|apiKey\s+text|secret_value\s+text/i);
+});
+
+test('provider runtime gateway validates owner, allowlisted fields and secret references',()=>{
+  for(const action of ['ai_provider_assignment_upsert','ai_provider_assignment_list']) {
+    assert.ok(gateway.includes(action),'missing provider gateway action: '+action);
+  }
+  assert.match(gateway,/Only the designated Minglora owner can configure AI providers/);
+  assert.match(gateway,/Only the designated Minglora owner can read AI provider assignments/);
+  assert.match(gateway,/^env:MINGLORA_AI_PROVIDER_/m);
+  assert.match(gateway,/admin\.rpc\("minglora_ai_provider_assignment_upsert"/);
+  assert.match(gateway,/admin\.rpc\("minglora_ai_provider_assignment_list"/);
+  assert.doesNotMatch(gateway,/credential_secret_reference\s*:/);
 });
