@@ -183,7 +183,7 @@ test("Admin Centre content stays visible and reflows without clipping, sticky ov
   assert.match(css, /\.admin-control-centre-page\s*\{[^}]*min-width:\s*0/);
   assert.match(css, /\.admin-control-centre-page\s*>\s*section\s*\{[^}]*min-width:\s*0/);
   assert.match(css, /\.admin-control-centre-page\s*>\s*\.admin-control-centre-grid\s*\{[^}]*grid-column:\s*2/);
-  assert.match(css, /\.admin-control-centre-page\s*>\s*\.admin-control-centre-grid\s*\{[^}]*grid-column:\s*1[\s\S]*?@media/);
+  assert.match(css, /@media\(max-width:900px\)[\s\S]*?\.admin-control-centre-page\s*>\s*\.admin-control-centre-grid\s*\{grid-column:1\}/);
   assert.doesNotMatch(css, /\.admin-centre-navigation\s*\{[^}]*position:\s*sticky/);
   assert.doesNotMatch(css, /\.admin-centre-navigation\s*\{[^}]*overflow:\s*auto/);
   assert.doesNotMatch(css, /\.admin-centre-navigation\s*\{[^}]*max-height:\s*calc/);
