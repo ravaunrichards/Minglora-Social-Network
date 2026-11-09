@@ -29,3 +29,26 @@
 @media(max-width:1000px){.pab-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.pab-category-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:700px){.pab-root{padding:12px}.pab-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.pab-inline-controls,.pab-form-grid,.pab-bot-fields{grid-template-columns:1fr}.pab-bot-list,.pab-category-grid{grid-template-columns:1fr}.pab-task{grid-template-columns:1fr}.pab-topbar{align-items:flex-start}.pab-brand small{max-width:150px}.pab-topbar nav{justify-content:flex-end}}
 @media(prefers-reduced-motion:reduce){.pab-switch,.pab-switch:after{transition:none}}
+
+
+/* Expanded Admin Centre controls: category editor, scheduler settings, and roadmap cards. */
+.pab-category-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.pab-category{align-items:flex-start;min-width:0}
+.pab-category-copy{display:grid;gap:7px;flex:1;min-width:0}
+.pab-category-name{font-weight:800}
+.pab-category-description{min-height:56px}
+.pab-category .pab-switch{margin:8px 2px 0 0}
+.pab-bot-head>.pab-check{padding-top:12px}
+.pab-bot-head>.pab-avatar{font-size:12px;letter-spacing:.03em}
+.pab-schedule{border:1px solid var(--line,#dce4ef);border-radius:10px;padding:10px}
+.pab-schedule summary{cursor:pointer;font-size:12px;font-weight:800}
+.pab-schedule[open] summary{margin-bottom:12px}
+.pab-schedule .pab-notice{margin:8px 0 0}
+.pab-roadmap-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.pab-roadmap-card{display:grid;gap:7px;padding:12px;border:1px solid var(--line,#dce4ef);border-radius:11px;min-width:0}
+.pab-roadmap-card strong{font-size:12px}
+.pab-roadmap-card p{margin:0;color:var(--muted,#64748b);font-size:11px;line-height:1.45}
+.pab-roadmap-card .pab-tag{justify-self:start;white-space:normal}
+.pab-bot-card[hidden]{display:none}
+.pab-category[hidden]{display:none}
+@media(max-width:700px){.pab-category-grid,.pab-roadmap-grid{grid-template-columns:1fr}.pab-category{align-items:center}.pab-category .pab-switch{margin:0}}
