@@ -2,14 +2,15 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
-const [runtime, server, admin, css, html, store, authProviders] = await Promise.all([
+const [runtime, server, admin, css, html, store, authProviders, authProviderCss] = await Promise.all([
   readFile(new URL("../../supabase/functions/minglora-runtime-state/index.ts", import.meta.url), "utf8"),
   readFile(new URL("../../src/server.js", import.meta.url), "utf8"),
   readFile(new URL("../../public/admin-centre.js", import.meta.url), "utf8"),
   readFile(new URL("../../public/admin-centre.css", import.meta.url), "utf8"),
   readFile(new URL("../../public/admin-centre.html", import.meta.url), "utf8"),
   readFile(new URL("../../src/store.js", import.meta.url), "utf8"),
-  readFile(new URL("../../public/auth-providers-admin.js", import.meta.url), "utf8")
+  readFile(new URL("../../public/auth-providers-admin.js", import.meta.url), "utf8"),
+  readFile(new URL("../../public/auth-providers-admin.css", import.meta.url), "utf8")
 ]);
 
 test("Minglora Admin Centre exposes the full Supabase-style member manager", () => {
@@ -176,6 +177,27 @@ test("Auth provider settings require owner MFA and same-origin provider writes",
   assert.doesNotMatch(route, /return json\(res,200,\{[^}]*managementToken/);
   assert.ok(html.includes('/auth-providers-admin.js?v=20261109-auth-providers-1'));
   assert.ok(authProviders.includes("api('PATCH',{provider,enabled:toggle.checked})"));
+});
+
+test("Admin Centre content stays visible and reflows without clipping, sticky overlays or nested scroll panels", () => {
+  assert.match(css, /\.admin-control-centre-page\s*\{[^}]*min-width:\s*0/);
+  assert.match(css, /\.admin-control-centre-page\s*>\s*section\s*\{[^}]*min-width:\s*0/);
+  assert.doesNotMatch(css, /\.admin-centre-navigation\s*\{[^}]*position:\s*sticky/);
+  assert.doesNotMatch(css, /\.admin-centre-navigation\s*\{[^}]*overflow:\s*auto/);
+  assert.doesNotMatch(css, /\.admin-centre-navigation\s*\{[^}]*max-height:\s*calc/);
+  assert.match(css, /\.admin-centre-navigation\s*\{[^}]*position:\s*static/);
+  assert.match(css, /\.admin-internal-activity-feed\s*\{[^}]*max-height:\s*none;overflow:\s*visible/);
+  assert.match(css, /#admin-promotional-gift-fund-history\s*\{[^}]*min-width:\s*0/);
+  assert.doesNotMatch(css, /#admin-promotional-gift-fund-history\s*\{[^}]*max-height:\s*\d+px|#admin-promotional-gift-fund-history\s*\{[^}]*overflow:\s*auto/);
+  assert.match(css, /\.admin-internal-activity-list-wrap\s*\{[^}]*min-width:\s*0/);
+  const resultCopy = css.match(/\.admin-user-result-copy strong,\s*\.admin-user-result-copy small\s*\{([^}]*)\}/);
+  assert.ok(resultCopy, "member identity text rules exist");
+  assert.doesNotMatch(resultCopy[1], /overflow:\s*hidden|text-overflow:\s*ellipsis|white-space:\s*nowrap/);
+  assert.match(resultCopy[1], /overflow-wrap:\s*anywhere/);
+  assert.match(css, /@media\(max-width:900px\)[\s\S]*?\.admin-centre-navigation\s*\{[^}]*display:\s*grid/);
+  assert.match(css, /@media\(max-width:560px\)\s*\{\s*\.admin-centre-navigation\s*\{grid-template-columns:minmax\(0,1fr\)/);
+  assert.match(authProviderCss, /@media\(max-width:620px\)\s*\{\.admin-auth-provider-grid\s*\{grid-template-columns:1fr/);
+  assert.match(css, /\.admin-control-centre-page button,[\s\S]*?max-width:\s*100%;/);
 });
 
 test("service connections show Minglora providers without returning secrets", () => {
