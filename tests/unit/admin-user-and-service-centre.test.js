@@ -19,6 +19,13 @@ test("Minglora Admin Centre exposes the full Supabase-style member manager", () 
   assert.match(css, /admin-user-pagination/);
 });
 
+test("new account creation requires profile fields that the live schema marks NOT NULL", () => {
+  assert.ok(admin.includes('id="admin-user-create-name" name="displayName" maxlength="80" minlength="2" autocomplete="name" required'));
+  assert.ok(admin.includes('id="admin-user-create-username" name="username" maxlength="30" required'));
+  assert.ok(runtime.includes('if (displayName.length < 2) return json(400'));
+  assert.ok(runtime.includes('if (!username) return json(400'));
+});
+
 test("member CRUD and session routes require owner identity, MFA and same-origin writes", () => {
   for (const name of ["admin_user_get", "admin_user_create", "admin_user_update", "admin_user_delete", "admin_user_revoke_sessions"]) assert.ok(runtime.includes('"' + name + '"'));
   assert.match(server, /isSameOriginApiWrite\(req\)/);
