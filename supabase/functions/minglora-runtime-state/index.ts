@@ -437,7 +437,18 @@ Deno.serve(async (req: Request) => {
     const targetJwt = String(input.targetJwt || "");
     if (!adminActorAllowed(actorUserId)) return json(403, { error: "Only the designated Minglora owner can revoke member sessions." });
     if (!validUuid(userId) || userId === actorUserId) return json(403, { error: "The platform owner account is protected." });
-    if (targetJwt.length < 20) return json(200, { ok: true, sessionRevoked: false, message: "No current Supabase access token was available to revoke provider sessions." });
+    if (targetJwt.length < 20) {
+      const auditRecorded = await recordAdminUserAction(actorUserId, userId, "account.sessions_revoke", {
+        scope: "application_only",
+        providerRefreshTokensRevoked: false
+      });
+      return json(200, {
+        ok: true,
+        sessionRevoked: false,
+        auditRecorded,
+        message: "Known Minglora app sessions can be closed, but no current Supabase access token was available to revoke provider refresh-token sessions."
+      });
+    }
     const { error } = await admin.auth.admin.signOut(targetJwt, "global");
     if (error) return json(503, { error: String(error.message || "Supabase sessions could not be revoked.").slice(0, 220) });
     const auditRecorded = await recordAdminUserAction(actorUserId, userId, "account.sessions_revoke", { scope: "global" });
