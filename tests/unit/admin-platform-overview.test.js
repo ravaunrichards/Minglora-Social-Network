@@ -83,12 +83,13 @@ test("App shell and service worker load the restored Admin Centre navigation ass
   const version = "20261109-admin-centre-left-sidebar-1";
   assert.ok(index.includes("/admin-centre.css?v=" + version));
   assert.ok(index.includes("/admin-centre.js?v=" + version));
-  assert.ok(index.includes("/app.js?v=" + version));
+  const appScript = index.match(/<script\b[^>]*src="(\/app\.js\?v=[^"]+)"/)?.[1] || '';
+  assert.ok(appScript, 'the current application script must be referenced by the app shell');
+  assert.ok(serviceWorker.includes(appScript), 'the service worker must precache the exact application script URL');
   assert.ok(index.includes("/sidebar-features.js?v=" + version));
   const cacheName = serviceWorker.match(/const CACHE_NAME='([^']+)'/)?.[1] || '';
-  assert.match(cacheName, /^minglora-shell-v\\d+-[a-z0-9-]+$/);
+  assert.ok(/^minglora-shell-v\d+-[a-z0-9-]+$/.test(cacheName), 'the shell cache uses a versioned cache name');
   assert.ok(serviceWorker.includes("/admin-centre.css?v=" + version));
   assert.ok(serviceWorker.includes("/admin-centre.js?v=" + version));
-  assert.ok(serviceWorker.includes("/app.js?v=" + version));
   assert.ok(serviceWorker.includes("/sidebar-features.js?v=" + version));
 });
