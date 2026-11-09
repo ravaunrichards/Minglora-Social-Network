@@ -25,3 +25,33 @@ Member list, detail, create, update, delete, and session-revocation requests are
 The Service Connections workspace reports Minglora's actual services: Supabase, Render, GitHub, LiveKit, PayPal, Tenor, SIX Group's ISO currency directory, Frankfurter exchange rates, browser Web Push, and Supabase Auth email delivery. It shows direct provider dashboards where available. Runtime health checks do not return provider API keys, client secrets, passwords, or session tokens. Email delivery is managed in Supabase Auth; the current app does not expose a separate SMTP provider's health check.
 
 Automated coverage for owner protections, the CRUD gateway, account form controls, and the service registry lives in `tests/unit/admin-user-and-service-centre.test.js`.
+
+## Continuation checkpoint — 2026-11-09
+
+- **Project:** Minglora Social Network
+- **Repository:** `ravaunrichards/Minglora-Social-Network`
+- **Task:** Admin Centre user management and service connections (PR #203)
+- **Working branch:** `feat/minglora-admin-user-and-service-centre-20261109`
+- **Latest checkpoint commit:** `7ca80b8439331ec27908e26d19bba0b39c968526`
+- **Production status:** Not merged or deployed. Render continues to deploy from `main`.
+
+### Verified since the previous checkpoint
+
+- The live Minglora Supabase project is active and healthy; its PostgreSQL database is version 17.
+- The live `public.profiles` schema requires both `username` and `display_name`; neither column has a default. The username validation and create form previously allowed an empty username, and the display-name input did not enforce the database's two-character minimum.
+- The Admin Centre create form now requires a username and a display name of at least two characters.
+- The runtime Edge Function now rejects a missing username or too-short display name before calling Supabase Auth `createUser`.
+- A focused regression assertion was added to `tests/unit/admin-user-and-service-centre.test.js`.
+- The earlier brittle runtime-action assertion was corrected in `tests/unit/admin-platform-overview.test.js`.
+
+### Outstanding verification
+
+- The earlier CI run on the previous commit failed: 738 tests, 706 passing and 32 failing. Its results predate the corrective commits.
+- A new successful CI result for the latest commit has not been retrieved; do not count the new assertions as passing until the test runner reports success.
+- The production `minglora-runtime-state` Edge Function is still version 112 and does not contain the new account create/update/delete operations from this branch.
+- The feature branch still needs reconciliation with the current `main` history and full CI acceptance before merge.
+- Account create/edit/delete/session-revocation and service health checks still need hosted end-to-end verification.
+
+### Next action
+
+Obtain a fresh CI run for the current branch, then address the remaining Admin Centre-specific failures. Do not merge or deploy the production Edge Function until review, CI, and authorization are complete.
