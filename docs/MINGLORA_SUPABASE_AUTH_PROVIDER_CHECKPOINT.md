@@ -2,7 +2,9 @@
 
 ## Active continuation — Auth Providers Enable button (2026-11-09 22:42 UTC)
 
-**Current implementation state:** The disabled-switch regression on the Admin Centre working branch has been fixed. The working branch is `feat/minglora-admin-user-and-service-centre-20261109`, with current source head `e547c4dfae97cfcac5c870c2046f2f385c363ce5`. PR #203 remains open and draft; it has not been merged or deployed.
+**Latest validation follow-up (2026-11-09 22:44 UTC):** Corrected source commit `ad8ea2c3e1600952238a94715e6d56c4786e7a8b` passed the dedicated Auth Provider controls job (17/17) and Admin Centre real-browser viewport regression. The broad test job no longer reports either Auth Provider failure; 30 failures remain elsewhere in Minglora. For You remains 13/15.
+
+**Current implementation state:** The disabled-switch regression on the Admin Centre working branch has been fixed. The working branch is `feat/minglora-admin-user-and-service-centre-20261109`, with current source head `ad8ea2c3e1600952238a94715e6d56c4786e7a8b`. PR #203 remains open and draft; it has not been merged or deployed.
 
 **Verified branch changes:**
 - Restored the full Auth Provider setup UI, including credential forms for OAuth providers and supported SMS gateways. An unconfigured provider's Enable action now opens its setup form instead of rendering an inaccessible disabled switch.
@@ -13,15 +15,15 @@
 - Added the dedicated `auth-provider` CI job to validate the provider helpers, panel, and route behavior.
 
 **Test evidence:**
-- Commit `eed47c3e2e8ce9a3759f84abf2d3539b040721e7`: Auth Provider job PASS — 17/17 tests, 0 failures; all provider source syntax checks passed.
-- Same commit: Admin Centre Playwright viewport regression PASS.
-- Same commit: broad `npm test` FAIL — 739/771 passed, 32 failed. One failure was the Auth Provider mobile-grid selector assertion; the selector structure was corrected in `e547c4dfae97cfcac5c870c2046f2f385c363ce5` and added to the focused test. The rerun for the corrected head is pending at checkpoint time.
-- Same commit: For You functional navigation FAIL — 13/15 passed, 2 failures, unrelated to this Auth Provider repair.
+- Corrected code commit `ad8ea2c3e1600952238a94715e6d56c4786e7a8b`, CI run `42714500786`: Auth Provider job PASS — 17/17 tests, 0 failures; all provider source syntax checks passed.
+- Same run: Admin Centre Playwright viewport regression PASS.
+- Same run: broad `npm test` FAIL — 741/771 passed, 30 failed. The previous Auth Provider Enable-handler assertion and mobile-grid selector assertion are no longer failures. Remaining failures are outside Auth Provider controls (email handoff, Clock Centre, service-worker cache, People/For You/Stories, LIVE cache, profile UI, navigation, background sync, overlay ordering, logout placement, Supabase persistence-retry mocks, and theme previews).
+- Same run: For You functional navigation FAIL — 13/15 passed, 2 failures, unrelated to this Auth Provider repair.
 - Do not count the branch checks as production verification.
 
 **Completion accounting:** Remains **81% verified / 19% remaining**. No increase is credited because the fix is not merged/deployed and live Management API changes, production route repair, owner-session operation, provider-issued credentials, and real external OAuth sign-in remain unverified.
 
-**Exact next action:** Confirm the Auth Provider and Admin Centre viewport jobs on the corrected head `e547c4d`; address any failure within this Auth Provider scope. Then obtain explicit approval before merging/deploying PR #203. After deployment, the designated MFA-verified owner must refresh provider status and run **Connect / repair routes**, then configure one real external provider and complete a real sign-in.
+**Exact next action:** Auth Provider source acceptance and Admin Centre viewport checks pass on `ad8ea2c`. Do not merge or deploy PR #203 without explicit approval. The remaining in-scope work is live: the designated MFA-verified owner must refresh provider status and run **Connect / repair routes**, confirm `redirectReady: true`, configure one real provider with its issued credentials, and complete a real sign-in.
 
 ---
 
@@ -30,7 +32,7 @@
 **Production branch:** `main`  
 **Production source head at prior verified checkpoint:** `a9dceef098d35489ece74cfaa144996a693a17d4`  
 **Current working branch:** `feat/minglora-admin-user-and-service-centre-20261109`  
-**Current working source head:** `e547c4dfae97cfcac5c870c2046f2f385c363ce5`  
+**Current working source head:** `ad8ea2c3e1600952238a94715e6d56c4786e7a8b`  
 **Working pull request:** [#203 — Minglora Admin Centre](https://github.com/ravaunrichards/Minglora-Social-Network/pull/203) — open, draft, not merged or deployed  
 **Supabase project:** `gzycobgbasnqqhnympkr`  
 **Render service:** `minglora-social-network` (`srv-dbi3gvqfngtc73c6hi4g`)  
@@ -38,7 +40,7 @@
 **Checkpoint date:** 2026-11-09  
 **Latest verified deployment:** `dep-dbp3bc83ko5c73eitm6g` — LIVE  
 **Latest Auth acceptance job:** `129439164661` — PASS (54/54)  
-**Prior production-branch broad test job:** `129439165075` — FAIL (755/773; 18 failures). Current working-branch broad test on predecessor commit `eed47c3`: FAIL (739/771; 32 failures); its Auth Provider responsive-grid assertion has now been corrected and is being rerun.  
+**Prior production-branch broad test job:** `129439165075` — FAIL (755/773; 18 failures). Current working-branch broad test on `ad8ea2c`: FAIL (741/771; 30 failures), with the Auth Provider and Admin Centre viewport checks passing.  
 **Current working-branch For You job:** FAIL (13/15; 2 failures; unrelated to Auth Provider controls).
 
 ## Progress
