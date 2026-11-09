@@ -717,6 +717,21 @@ Deno.serve(async (req: Request) => {
             "key": "soundFavorites"
           }
         ]
+      },
+      {
+        "id": "ai-bots",
+        "label": "Personal AI Bots Network",
+        "collections": [
+          { "label": "AI bot categories", "key": "personalAiBotCategories" },
+          { "label": "AI bot identities", "key": "personalAiBots" },
+          { "label": "AI bot instructions", "key": "personalAiBotTasks" },
+          { "label": "AI bot audit history", "key": "personalAiBotAudit" },
+          { "label": "AI bot network settings", "key": "personalAiBotSettings" },
+          { "label": "AI bot follows (reserved)", "key": "personalAiBotFollows" },
+          { "label": "AI bot teams (reserved)", "key": "personalAiBotTeams" },
+          { "label": "AI bot team members (reserved)", "key": "personalAiBotTeamMembers" },
+          { "label": "AI bot schedules (reserved)", "key": "personalAiBotSchedules" }
+        ]
       }
     ];
     const modules = collectionGroups.map((group) => {
