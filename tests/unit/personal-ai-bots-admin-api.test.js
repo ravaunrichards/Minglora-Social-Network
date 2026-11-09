@@ -492,3 +492,85 @@ test('emergency shutdown closes the PostgreSQL dispatch gate before syncing iden
   assert.equal(context.res.statusCode,200);
   assert.deepEqual(order,['settings','identity','tasks','save']);
 });
+
+
+test('owner can save a provider/model assignment only as configured and unverified',async()=>{
+  const botId='00000000-0000-4000-8000-000000000501';
+  const order=[];
+  let assignmentSaved=null,identitySaved=null;
+  const context=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/providers',
+    input:{
+      identityId:botId,providerName:'Example Provider',providerIdentifier:'example_provider',
+      providerAccountReference:'default',credentialSecretReference:'env:MINGLORA_AI_PROVIDER_EXAMPLE_KEY',
+      modelName:'Example Text Model',modelIdentifier:'example/model-v1',modelVersion:'v1',
+      supportedLanguages:['en','jam'],routingPriority:10,isPrimary:true,
+      capabilities:{text:true,image:false,audio:false,video:false,voice:false,tools:false}
+    },
+    db:{
+      personalAiBotSettings:[{id:'global',enabled:false}],
+      personalAiBots:[{
+        id:botId,createdBy:'owner-1',displayName:'Minglora AI Guide',
+        firstName:'Minglora',lastName:'Guide',categoryId:'ai-support',
+        categoryName:'AI Support',username:'ai_minglora_guide',enabled:false,status:'disabled'
+      }]
+    },
+    persistAiIdentities:async identities=>{order.push('identity');identitySaved=identities[0];},
+    persistAiProviderAssignment:async assignment=>{
+      order.push('provider');
+      assignmentSaved={assignmentId:'assignment-1',...assignment,accountStatus:'configured',providerHealthStatus:'unknown',assignmentStatus:'configured',credentialConfigured:true};
+      return assignmentSaved;
+    }
+  });
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,201);
+  assert.deepEqual(order,['identity','provider']);
+  assert.equal(identitySaved.id,botId);
+  assert.equal(assignmentSaved.identityId,botId);
+  assert.equal(assignmentSaved.providerIdentifier,'example_provider');
+  assert.equal(assignmentSaved.modelIdentifier,'example/model-v1');
+  assert.equal(assignmentSaved.assignmentStatus,'configured');
+  assert.equal(assignmentSaved.providerHealthStatus,'unknown');
+  assert.equal(context.res.payload.assignment.assignmentStatus,'configured');
+  assert.match(context.res.payload.message,/unverified/);
+});
+
+test('provider assignment endpoint rejects raw credentials instead of storing them',async()=>{
+  const botId='00000000-0000-4000-8000-000000000502';
+  let persistenceCalls=0;
+  const context=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/providers',
+    input:{
+      identityId:botId,providerName:'Example Provider',providerIdentifier:'example_provider',
+      providerAccountReference:'default',credentialSecretReference:'sk-live-THIS-IS-NOT-A-REFERENCE',
+      modelName:'Example Text Model',modelIdentifier:'example/model-v1'
+    },
+    db:{
+      personalAiBotSettings:[{id:'global',enabled:false}],
+      personalAiBots:[{id:botId,createdBy:'owner-1',displayName:'Minglora AI Guide',categoryId:'ai-support',categoryName:'AI Support',username:'ai_minglora_guide'}]
+    },
+    persistAiIdentities:async()=>{persistenceCalls++;},
+    persistAiProviderAssignment:async()=>{persistenceCalls++;}
+  });
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,400);
+  assert.match(context.res.payload.error,/secret reference/);
+  assert.equal(persistenceCalls,0);
+});
+
+test('owner provider overview reads canonical assignments without exposing credential values',async()=>{
+  const row={
+    assignmentId:'assignment-1',identityId:'bot-1',displayName:'AI Guide',
+    providerName:'Example Provider',modelName:'Example Text Model',
+    credentialConfigured:true,providerHealthStatus:'unknown',assignmentStatus:'configured'
+  };
+  const context=makeContext({listAiProviderAssignments:async options=>{
+    assert.deepEqual(options,{limit:200,offset:0});
+    return [row];
+  }});
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,200);
+  assert.equal(context.res.payload.providerAssignmentsSource,'minglora_supabase_postgresql');
+  assert.deepEqual(context.res.payload.providerAssignments,[row]);
+  assert.equal(JSON.stringify(context.res.payload).includes('sk-live'),false);
+});
