@@ -3,41 +3,6 @@
     '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
   }[char]));
 
-  let checkingAdminAccess = false;
-
-  async function addProfileEntry() {
-    const profileInfo = document.querySelector('.profile-info--admin .profile-info-main');
-    const profile = profileInfo?.closest('.minglora-profile-page');
-    const adminProfile = profile?.querySelector('.profile-info--admin');
-    if (!profileInfo || !adminProfile ||
-        adminProfile.querySelector('[data-open-admin-centre]') || checkingAdminAccess) return;
-
-    checkingAdminAccess = true;
-    try {
-      const response = await fetch('/api/admin/access', {
-        credentials: 'same-origin',
-        headers: { Accept: 'application/json' }
-      });
-      if (!response.ok) return;
-      const access = await response.json();
-      if ((access?.canAccess !== true && access?.setupRequired !== true) ||
-          !profileInfo.isConnected || !adminProfile.isConnected ||
-          adminProfile.querySelector('[data-open-admin-centre]')) return;
-
-      const link = document.createElement('a');
-      link.href = '/admin-centre.html';
-      link.className = 'profile-admin-centre-entry';
-      link.dataset.openAdminCentre = 'true';
-      link.setAttribute('aria-label', 'Open the separate Minglora Admin Centre page');
-      link.innerHTML = '<span class="profile-admin-centre-entry-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v13a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 18.5z"></path><path d="M8 8h8M8 12h8M8 16h4"></path></svg></span><span>Admin Centre</span><span class="profile-admin-centre-entry-arrow" aria-hidden="true">↗</span>';
-      profileInfo.insertAdjacentElement('afterend', link);
-    } catch (error) {
-      console.warn('[Minglora admin] Admin Centre access could not be checked.', error);
-    } finally {
-      checkingAdminAccess = false;
-    }
-  }
-
   function initializeInternalActivityFeed(panel) {
     const section = panel.querySelector('#admin-internal-operations');
     if (!section || section.dataset.initialized === 'true') return;
@@ -216,8 +181,8 @@
     load();
   }
 
-  function addControlCentrePanel() {
-    const root = document.querySelector('#admin-centre-root');
+  function addControlCentrePanel(rootOverride = null) {
+    const root = rootOverride || document.querySelector('#admin-centre-root');
     if (!root || root.querySelector('#admin-control-centre')) return;
     const access = window.__mingloraAdminAccess || {};
     const unlocked = access.canAccess === true;
@@ -234,7 +199,7 @@
         <span class="admin-control-centre-status">${unlocked ? 'Secure session active' : 'MFA required'}</span>
       </div>
       <div class="admin-control-centre-note">
-        This is the private Minglora platform workspace. It opens separately from the administrator profile and member-facing settings. Protected actions require the designated Creator Hub account and an authenticator-verified session.
+        This is the private Minglora platform workspace inside the administrator profile. Protected actions require the designated Creator Hub account and an authenticator-verified session.
       </div>
       <nav class="admin-centre-navigation" aria-label="Admin Centre sections">
         <div class="admin-centre-nav-group">
@@ -2009,7 +1974,7 @@
         return;
       }
       window.__mingloraAdminAccess = access;
-      addControlCentrePanel();
+      addControlCentrePanel(root);
     } catch (error) {
       root.dataset.initialized = 'false';
       root.innerHTML = '<section class="admin-centre-access-denied"><h2>Admin access could not be checked</h2><p>' +
@@ -2018,10 +1983,6 @@
     }
   }
 
+  window.MingloraAdminCentre = Object.freeze({ initialize: initializeAdminCentre });
   if (document.querySelector('#admin-centre-root')) initializeAdminCentre();
-  else {
-    const observer = new MutationObserver(addProfileEntry);
-    observer.observe(document.documentElement, {subtree:true,childList:true});
-    addProfileEntry();
-  }
 })();
