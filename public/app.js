@@ -1071,9 +1071,12 @@ function peopleCard(p){
       '<img src="'+esc(avatar(p))+'" alt="" loading="lazy">'+
     '</button>'+
     '<div class="facebook-person-details">'+
-      '<button type="button" class="facebook-person-name" data-profile="'+esc(p.id)+'">'+
-        '<span>'+esc(p.name)+'</span>'+verifiedProfileBadge(p)+gifterProfileBadge(p)+
-      '</button>'+
+      '<div class="facebook-person-identity">'+
+        '<button type="button" class="facebook-person-name" data-profile="'+esc(p.id)+'">'+
+          '<span>'+esc(p.name)+'</span>'+
+        '</button>'+
+        '<div class="facebook-person-username" data-person-id="'+esc(p.id)+'"><span class="facebook-person-username-text">@'+esc(p.username||'')+'</span>'+verifiedProfileBadge(p)+'</div>'+
+      '</div>'+
       '<div class="facebook-person-mutual">'+mutualAvatars+'<span>'+esc(mutualText)+'</span></div>'+
       '<div class="facebook-person-actions">'+
         '<button type="button" class="facebook-person-follow" data-toggle-follow="'+esc(p.id)+'" data-following="'+(following?'true':'false')+'" '+(isFriend?'disabled aria-disabled="true"':'')+'>'+
@@ -1144,32 +1147,50 @@ function stopPeopleDiscoveryRefresh(){
   peopleDiscoveryRefreshTimer=null;
 }
 function startPeopleDiscoveryRefresh(){
-  // Keep discovery stable while the user browses; reload data when they revisit the view.
   stopPeopleDiscoveryRefresh();
+  if(state.view!=='friends')return;
+  void refreshPeopleDiscovery({quiet:true});
+  peopleDiscoveryRefreshTimer=window.setInterval(()=>void refreshPeopleDiscovery({quiet:true}),15000);
+}
+function syncPeopleDiscoveryVerification(users,grid){
+  const verificationByMember=new Map((Array.isArray(users)?users:[]).map(member=>[
+    String(member.id),
+    member.verificationBadge==='blue'
+  ]));
+  grid.querySelectorAll('.facebook-person-username[data-person-id]').forEach(line=>{
+    const memberId=String(line.dataset.personId||'');
+    if(!verificationByMember.has(memberId))return;
+    const verified=verificationByMember.get(memberId);
+    const existing=line.querySelector('.profile-blue-verification');
+    if(verified&&!existing){
+      line.insertAdjacentHTML('beforeend',verifiedProfileBadge({verificationBadge:'blue'}));
+    }else if(!verified&&existing){
+      existing.remove();
+    }
+  });
 }
 async function refreshPeopleDiscovery({quiet=true}={}){
   if(peopleDiscoveryRefreshBusy||state.view!=='friends'||document.visibilityState!=='visible')return;
   const grid=$('#people-discovery-grid');
   if(!grid)return;
-  const focused=document.activeElement;
-  if(focused&&grid.contains(focused))return;
   peopleDiscoveryRefreshBusy=true;
   try{
-    const [peopleResult,liveResult]=await Promise.all([
-      api('/discovery/people'),
-      api('/live/sessions').catch(()=>({sessions:[]}))
-    ]);
-    if(state.view!=='friends'||document.visibilityState!=='visible')return;
-    state.people=peopleResult.users||[];
-    state.discoveryLiveSessions=liveResult.sessions||[];
-    if(grid.isConnected){grid.innerHTML=peopleGridMarkup();bindPeople(grid);}
+    const result=await api('/discovery/people/verification');
+    if(state.view!=='friends'||document.visibilityState!=='visible'||!grid.isConnected)return;
+    syncPeopleDiscoveryVerification(result.users||[],grid);
   }catch(error){
-    if(!quiet)toast('People could not be updated: '+error.message);
-    else console.warn('[Minglora] People discovery sync failed:',error?.message||error);
+    if(!quiet)toast('Verification status could not be updated: '+error.message);
+    else console.warn('[Minglora] People verification sync failed:',error?.message||error);
   }finally{
     peopleDiscoveryRefreshBusy=false;
   }
 }
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible'&&state.view==='friends')void refreshPeopleDiscovery({quiet:true});
+});
+window.addEventListener('online',()=>{
+  if(state.view==='friends')void refreshPeopleDiscovery({quiet:true});
+});
 
 async function renderFriends(){
   activateSilent('friends');stopPeopleDiscoveryRefresh();

@@ -70,6 +70,38 @@
   text-overflow:ellipsis!important;
   white-space:nowrap!important;
 }
+.facebook-person-identity{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:stretch!important;
+  gap:2px!important;
+  width:100%!important;
+  min-width:0!important;
+}
+.facebook-person-username{
+  display:flex!important;
+  align-items:center!important;
+  gap:0!important;
+  width:100%!important;
+  min-width:0!important;
+  overflow:hidden!important;
+  color:var(--muted)!important;
+  font-size:12px!important;
+  line-height:1.3!important;
+  white-space:nowrap!important;
+}
+.facebook-person-username-text{
+  display:block!important;
+  flex:0 1 auto!important;
+  min-width:0!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+}
+.facebook-person-username .profile-blue-verification{
+  flex:0 0 auto!important;
+  margin-left:6px!important;
+}
 .facebook-person-name .verified-badge,
 .facebook-person-name .profile-verified-badge,
 .facebook-person-name .gifter-profile-badge{

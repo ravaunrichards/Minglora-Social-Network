@@ -41,7 +41,9 @@ test('Friends discovery avoids disruptive background rerenders and refreshes whe
   assert.match(app, /async function loadPeopleDiscovery\(\)[\s\S]*api\('\/discovery\/people'\)/);
   assert.match(app, /function startPeopleDiscoveryRefresh\(\)[\s\S]*stopPeopleDiscoveryRefresh\(\)/);
   assert.match(app, /if\(peopleDiscoveryRefreshBusy\|\|state\.view!=='friends'\|\|document\.visibilityState!=='visible'\)return/);
-  assert.match(app, /focused&&grid\.contains\(focused\)/);
+  assert.match(app, /syncPeopleDiscoveryVerification\(result\.users\|\|\[\],grid\)/);
+  assert.match(app, /api\('\/discovery\/people\/verification'\)/);
+  assert.match(app, /window\.setInterval\(\(\)=>void refreshPeopleDiscovery\(\{quiet:true\}\),15000\)/);
   assert.match(app, /api\('\/live\/sessions'\)/);
   assert.match(app, /openLiveRoom\(session,'viewer'\)/);
   assert.doesNotMatch(app, /id="people-discovery-refresh"/);
@@ -123,4 +125,35 @@ test('People You May Know does not hide discoverable member accounts behind a fi
   const route=server.slice(start,end);
   assert.ok(route.includes('canViewProfile(user.id,member)'),'discovery respects profile visibility');
   assert.ok(!route.includes('.slice(0,24)'),'eligible member accounts are not silently cut off after 24');
+});
+
+
+test('People You May Know puts the name above the username and shows only the verification check beside the username', async () => {
+  const [app, server, css] = await Promise.all([
+    read('public/app.js'),
+    read('src/server.js'),
+    read('public/people-facebook-responsive.css')
+  ]);
+  const start = app.indexOf('function peopleCard(p){');
+  const end = app.indexOf('function peopleGridMarkup(){', start);
+  assert.ok(start >= 0 && end > start, 'People You May Know card renderer exists');
+  const card = app.slice(start, end);
+  const nameStart = card.indexOf('class="facebook-person-name"');
+  const nameEnd = card.indexOf('</button>', nameStart);
+  assert.ok(nameStart >= 0 && nameEnd > nameStart, 'display-name row exists');
+  const nameRow = card.slice(nameStart, nameEnd);
+  assert.match(nameRow, /esc\(p\.name\)/);
+  assert.doesNotMatch(nameRow, /verifiedProfileBadge|gifterProfileBadge|profile-blue-verification/);
+  assert.ok(card.includes('facebook-person-username'));
+  assert.match(card, /esc\(p\.username\|\|''\)/);
+  assert.match(card, /facebook-person-username[^\n]*verifiedProfileBadge\(p\)/);
+  assert.doesNotMatch(card, /gifterProfileBadge\(p\)/);
+  assert.match(app, /const verifiedProfileBadge = member => member\?\.verificationBadge==='blue'/);
+  assert.match(app, /function syncPeopleDiscoveryVerification\(users,grid\)/);
+  assert.match(app, /else if\(!verified&&existing\)\s*\{\s*existing\.remove\(\)/);
+  assert.match(server, /p==='\/api\/discovery\/people\/verification'/);
+  assert.match(server, /getProfileVerificationBadge\(member\)/);
+  assert.match(server, /canViewProfile\(user\.id,member\)/);
+  assert.match(css, /\.facebook-person-identity/);
+  assert.match(css, /\.facebook-person-username-text/);
 });

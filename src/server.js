@@ -4835,6 +4835,13 @@ async function route(req, res) {
       }
       m=p.match(/^\/api\/posts\/([^/]+)\/comments$/);
       if(method==='POST'&&m){const post=db.posts.find(x=>x.id===m[1]);const text=String(input.text||'').trim();if(!post||post.status==='hidden'||post.archivedAt||blockedBetween(user.id,post.userId))return json(res,404,{error:'Post not found.'});if(!text||text.length>2000)return json(res,400,{error:'Comment must contain 1–2000 characters.'});const postOwner=db.users.find(member=>member.id===post.userId);const commentAudience=getUserSettings(postOwner).privacy.commentAudience||'everyone';if(user.id!==post.userId&&(commentAudience==='nobody'||(commentAudience==='friends'&&!isFriend(user.id,post.userId))))return json(res,403,{error:'This creator has limited who can comment on their posts.'});const comment={id:uid(),userId:user.id,text,createdAt:now()};post.comments.push(comment);if(post.userId!==user.id)notify(post.userId,user.id,'comment',`${user.name} commented on your post.`);await saveStore();return json(res,201,{comment:{...comment,author:safeUser(user)}});}
+      if(method==='GET'&&p==='/api/discovery/people/verification'){
+        const dismissedMemberIds=new Set((db.dismissedPeopleSuggestions||[]).filter(item=>item.userId===user.id).map(item=>item.dismissedUserId));
+        const users=db.users
+          .filter(member=>member.id!==user.id&&!dismissedMemberIds.has(member.id)&&!blockedBetween(user.id,member.id)&&canViewProfile(user.id,member))
+          .map(member=>({id:member.id,verificationBadge:getProfileVerificationBadge(member)}));
+        return json(res,200,{users});
+      }
       if(method==='GET'&&p==='/api/discovery/people'){
         await pruneExpiredStories();
         const follows=db.follows||[];
