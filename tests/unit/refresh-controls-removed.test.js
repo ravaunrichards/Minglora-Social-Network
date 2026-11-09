@@ -90,4 +90,3 @@ test('service-worker updates preserve the current session and never force a page
   assert.doesNotMatch(serviceWorker,/self\.skipWaiting\(\)|MINGLORA_ACTIVATE_WHEN_SAFE/);
   assert.match(serviceWorker,/CACHE_NAME='minglora-shell-v\d+-[a-z0-9-]+'/);
 });
-});

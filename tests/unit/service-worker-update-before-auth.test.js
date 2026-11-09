@@ -26,4 +26,3 @@ test('the current app shell registers its worker without forcing an update over 
   assert.ok(clickHandler.indexOf('if(isCall)')<clickHandler.indexOf('const exactTarget=windows.find(client=>client.url===target)'));
   assert.ok(clickHandler.includes('await self.clients.openWindow(target)'));
 });
-});
