@@ -584,43 +584,86 @@ This remains a recorded advisor warning requiring a separate MFA/security review
 - PR #203 remains draft and dirty/diverged (one commit behind main). No merge, rebase, deployment, production Auth setting change, or user-data mutation was performed.
 
 **Next action:** keep PR #203 in draft and obtain explicit authorization for the reviewed branch reconciliation; after that, run hosted account-management and service acceptance with owner/MFA access and a project-scoped Management token.
-## Continuation checkpoint — 2026-11-09 11:48 UTC
 
-**Current verified progress: 75% | remaining: 25%.** This is unchanged from the prior checkpoint; the latest CI re-run validates the saved checkpoint but does not provide additional implementation credit.
+## Continuation checkpoint — 2026-11-09 12:23 UTC
 
-### Latest branch and test evidence
+- **Project:** Minglora Social Network
+- **Repository:** `ravaunrichards/Minglora-Social-Network`
+- **Assigned task:** Admin Centre member management, service connections and responsive no-overlap layout, PR #203
+- **Branch:** `feat/minglora-admin-user-and-service-centre-20261109`
+- **Tested implementation head:** `a7747b7cfcffcc56fc9c7688e8d6f0de0272e9b2`
+- **PR:** open, draft; 101 commits; 15 changed files; GitHub reports `mergeable=false`.
+- **Compared with main `2f80e9d997b43e5da6373c385d6ce153ff908e67`:** 101 commits ahead and 1 behind. The PR remains divergent/dirty. No merge or rebase was performed.
+- **Previous verified completion:** 75%.
+- **Current verified completion:** 76%.
+- **Progress since last checkpoint:** +1 percentage point, credited only to passing responsive-layout regression coverage. This does not include browser screenshot/viewport acceptance or any hosted/production operation.
+- **Remaining:** 24%.
 
-- **Current branch tip:** `e8a89df685e65fd94d955ffcb9ccfd58a1699bd9`.
-- **PR #203:** open draft; 93 commits at latest retrieval; GitHub reports `mergeable=false`, `mergeable_state=dirty`.
-- **Main head:** `2f80e9d997b43e5da6373c385d6ce153ff908e67`; feature branch compares 93 commits ahead and one behind.
-- Latest completed CI workflow: [run #8366](https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/42611896117), on the checkpoint commit.
-- General suite: **750 tests, 720 passed, 30 failed**.
-- For You suite: **15 tests, 13 passed, 2 failed**.
-- All targeted Admin Centre tests passed, including the Supabase-style member manager, delete HTTP 409 behavior, session revocation before deletion, failed-delete session/audit disclosure, audit ordering, local-only session audit, Auth-provider MFA/same-origin checks and Management API/service-card secret safety.
-- The workflow still fails due the 30 general-suite failures and two For You failures; those tests remain unresolved and are not counted as passing.
+### Weighted milestone tracker
 
-### Latest live database/security checks
+| Milestone | Weight | Verified credit |
+|---|---:|---:|
+| User-management interface | 20% | 20% |
+| Supabase Auth operations | 25% | 15% |
+| Owner/MFA authorization | 15% | 15% |
+| Service connections | 15% | 10% |
+| Audit and data integrity | 10% | 8% |
+| Documentation and recovery records | 5% | 5% |
+| Full CI, hosted acceptance and final regression | 10% | 3% |
+| **Total** | **100%** | **76%** |
 
-Read-only checks at approximately 2026-11-09 11:46 UTC confirmed:
+### Responsive layout audit and fixes
 
-- `public.audit_log` contains the expected fields/types for the new audit writer: `actor_id` UUID (FK to `profiles.id`), required `action` and `target_type` text, `target_id`/`request_id` text, required `metadata` JSONB, default generated UUID `id`, and default `created_at`.
-- The live project contained 7 Auth users, 7 profiles and 15 audit rows. No rows were written or modified.
-- `public.minglora_list_my_mfa_factors()` remains `SECURITY DEFINER` with an empty `search_path`; it filters with `auth.uid()`. Its ACL grants execution to `authenticated` and `service_role`; `anon` cannot execute it and the ACL does not grant `PUBLIC`. Supabase's advisor still flags this pattern for review. It was not changed because altering MFA access is outside this task and needs a dedicated security decision.
-- The security advisor reports 36 RLS-enabled tables without policies, including internal audit/runtime tables intended for trusted service-role access. No RLS policies were added and no table had RLS disabled.
-- The advisor also reports leaked-password protection disabled for Supabase Auth. No Auth security setting was changed.
+Source audit found that the Admin Centre had two constrained nested scroll areas, member identities that were ellipsized, legacy sticky/scrolling navigation declarations, and content-grid items that could be auto-placed in the sidebar column. The following scoped fixes are now in the feature branch:
 
-### Production and review state
+- Internal operations activity feed and Admin Campaign promotional gift-fund history now expand in normal document flow; their fixed max-heights and inner scrollbars were removed.
+- Admin Centre navigation is static, not sticky, and does not use a horizontal hidden/scrolling container. At widths up to 900px the navigation reflows into a two-column grid; at widths up to 560px it becomes one column.
+- The moderation/support shortcut tile grid is explicitly placed in the content column on desktop and the single content column on smaller screens.
+- Main panel and section grid items use `min-width:0`, `max-width:100%` and visible overflow. Inputs, buttons and links are constrained to the panel width.
+- Member names and email/username lines now wrap instead of truncating with ellipses.
+- Admin status badges, activity timestamps and long labels can wrap instead of forcing one-line overflow.
+- Supabase Auth provider cards already have a one-column layout at widths up to 620px; this responsive rule is now included in the regression test.
+- The 42px member avatar still uses `overflow:hidden` only to crop the image into its circular avatar; it does not clip text or controls.
+- The Create member account and permanent Delete account forms remain deliberately expandable safety disclosures. They are not clipped behind a panel or inaccessible due to overflow.
 
-- Supabase project `gzycobgbasnqqhnympkr` remains `ACTIVE_HEALTHY`, PostgreSQL 17.11.0.003.
-- Production `minglora-runtime-state` remains active at version 112; feature-branch user CRUD/session changes are not deployed.
-- Render's Minglora service remains on `main`, with latest listed live deployment commit `2f80e9d997b43e5da6373c385d6ce153ff908e67`.
-- `SUPABASE_ACCESS_TOKEN` remains unavailable/unverified in Render; live Management API GET/PATCH is not yet validated.
-- No production merge, rebase, deployment, Auth/provider change, database schema change, user mutation or permission change was performed.
+### Regression and CI evidence
 
-### Remaining work and blocker
+Latest completed workflow run on tested implementation head `a7747b7`:
+- Run: [42616577236](https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/42616577236)
+- General repository suite: **751 tests, 721 passed, 30 failed**.
+- For You functional-navigation suite: **15 tests, 13 passed, 2 failed**.
+- The new Admin Centre responsive/no-clipping test passed.
+- All targeted Admin Centre tests passed, including member management validation, audit/session/deletion handling, same-origin/MFA protections, service-card secret handling and responsive layout checks.
+- No Admin Centre-specific test failures were reported.
+- CI JavaScript syntax check, repository structure check and zero-vulnerability dependency audit passed.
+- The overall workflow remains failed due the 30 other repository tests and the 2 For You/Home Stories tests. They are not counted as passing.
 
-- **Medium:** obtain explicit authorization for reviewed reconciliation of PR #203's overlapping `src/server.js`, `public/admin-centre.html` and `public/sw.js` changes; then carry out hosted owner/MFA account lifecycle/service checks.
-- **Hard:** configure a project-scoped least-privilege Supabase Management token directly in Render; verify Management API GET/PATCH; merge and deploy the runtime only after explicit authorization.
-- **Final:** resolve or formally accept the 30 general-suite and 2 For You failures; complete hosted CRUD, audit, session and provider acceptance.
+### Browser-level verification limitation
 
-**Next action:** wait for explicit authorization to reconcile PR #203 with `main`. Keep the PR draft and production unchanged until authorized.
+- `package.json` exposes the Node unit-test runner; it has no Playwright, Puppeteer, jsdom or similar browser-test dependency.
+- `tests/e2e/README.md` contains a browser-test scope description only; there are no executable E2E test files.
+- Therefore this checkpoint confirms source-level responsive CSS rules and passing CI regression assertions, **not a real browser rendering/screenshot at desktop, tablet and phone widths**. A browser-level visual check remains outstanding.
+
+### Current live/production and review state
+
+Last live Supabase and Render reads in the previous checkpoint were around 2026-11-09 11:46 UTC:
+- Supabase Minglora project `gzycobgbasnqqhnympkr` was `ACTIVE_HEALTHY`; production `minglora-runtime-state` remained active at version 112.
+- Render's `minglora-social-network` service was still configured to auto-deploy from `main`, with production on commit `2f80e9d`.
+- The production Edge Function does not yet contain the feature-branch member CRUD/session operations.
+- `SUPABASE_ACCESS_TOKEN` remained unavailable/unverified in Render; hosted Management API GET/PATCH acceptance is blocked.
+- No production merge, rebase, deployment, user mutation, provider setting change, permission change or database change was performed in this continuation.
+
+### Remaining work
+
+- **Easy:** No known Admin Centre-specific CSS/layout regression remains from the source-level checks and current targeted CI. Browser visual verification is not available in the current repository toolchain.
+- **Medium:** Obtain explicit authorization for reviewed reconciliation of the overlapping `src/server.js`, `public/admin-centre.html` and `public/sw.js` changes against `main`; complete hosted owner/MFA account-management and service checks afterward.
+- **Hard:** Add/run a real browser viewport verification path, verify the server-side Supabase Management API with the required least-privilege project token, and complete hosted account/session/deletion acceptance after merge/deployment authorization.
+- **Final:** Resolve or formally accept the 30 full-suite failures and 2 For You failures; obtain passing required checks and hosted integration evidence.
+
+### Last confirmed action
+
+Commit `a7747b7cfcffcc56fc9c7688e8d6f0de0272e9b2` adds regression assertions that long Admin Centre status labels wrap. The corresponding CI run passed the layout test and all Admin Centre-targeted checks. The one-point progress increase is only for this newly verified layout regression coverage.
+
+### Exact next action
+
+Keep PR #203 in draft and production unchanged. The next task is browser-level verification at desktop/tablet/phone widths once a real browser runner is available, while preserving the current 76% tracker. Reconciliation with `main` still requires explicit authorization.
