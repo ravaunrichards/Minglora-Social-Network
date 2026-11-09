@@ -246,7 +246,7 @@ test('provider runtime gateway validates owner, allowlisted fields and secret re
   }
   assert.match(gateway,/Only the designated Minglora owner can configure AI providers/);
   assert.match(gateway,/Only the designated Minglora owner can read AI provider assignments/);
-  assert.match(gateway,/^env:MINGLORA_AI_PROVIDER_/m);
+  assert.ok(gateway.includes('^env:MINGLORA_AI_PROVIDER_'));
   assert.match(gateway,/admin\.rpc\("minglora_ai_provider_assignment_upsert"/);
   assert.match(gateway,/admin\.rpc\("minglora_ai_provider_assignment_list"/);
   assert.doesNotMatch(gateway,/credential_secret_reference\s*:/);
