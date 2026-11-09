@@ -232,32 +232,7 @@ export async function handlePersonalAiBotsAdminApi(context) {
          !Array.isArray(items)||items.length<1||items.length>100){
         return (json(res,400,{error:'Provide an idempotency key and between 1 and 100 AI identity records.'}),true);
       }
-      const allowedItemKeys=new Set([
-        'displayName','firstName','middleName','lastName','categoryId','population','identityType',
-        'bio','description','introduction','gender','genderPresentation','nationality',
-        'countryOfOrigin','currentCountry','originCountryCode','currentCountryCode','timeZone',
-        'personality','communicationStyle','interests','hobbies','education','profession','skills',
-        'locations','avatarStorageReference','coverStorageReference','voicePreferences',
-        'avatarPreferences','memoryEnabled','memoryConfiguration','capabilities','languages',
-        'administratorInstructions'
-      ]);
-      const normalizedItems=[];
-      for(let index=0;index<items.length;index++){
-        const item=items[index];
-        if(!item||typeof item!=='object'||Array.isArray(item)||
-           Object.keys(item).some(key=>!allowedItemKeys.has(key))){
-          return (json(res,400,{error:'AI identity batch item '+(index+1)+' contains unsupported fields.'}),true);
-        }
-        const normalized={...item};
-        if(!String(normalized.displayName||'').trim()&&normalized.firstName&&normalized.lastName){
-          normalized.displayName=[normalized.firstName,normalized.middleName,normalized.lastName].filter(Boolean).join(' ');
-        }
-        if(!String(normalized.displayName||'').trim()||!String(normalized.categoryId||'').trim()){
-          return (json(res,400,{error:'Every AI identity batch item needs a display name and category.'}),true);
-        }
-        normalizedItems.push(normalized);
-      }
-      const requestHash=createHash('sha256').update(JSON.stringify(normalizedItems)).digest('hex');
+      const requestHash=createHash('sha256').update(JSON.stringify(items)).digest('hex');
       let batch=db.personalAiBotBatches.find(item=>item.ownerId===user.id&&item.idempotencyKey===idempotencyKey)||null;
       let bots=[];
       let isNewBatch=false;
@@ -267,29 +242,34 @@ export async function handlePersonalAiBotsAdminApi(context) {
         if(batch.requestHash!==requestHash){
           return (json(res,409,{error:'This idempotency key was already used for a different AI identity batch.'}),true);
         }
-        const identitiesById=new Map(db.personalAiBots.map(bot=>[String(bot.id),bot]));
-        bots=(batch.identityIds||[]).map(id=>identitiesById.get(String(id))).filter(Boolean);
-        if(bots.length!==Number(batch.totalRecords||0)){
-          return (json(res,409,{error:'The saved AI identity batch is incomplete and cannot be retried safely.'}),true);
+        const identityIds=Array.isArray(batch.identityIds)?batch.identityIds:[];
+        const identitiesById=new Map(db.personalAiBots.map(item=>[String(item.id),item]));
+        bots=identityIds.map(id=>identitiesById.get(String(id))).filter(Boolean);
+        if(bots.length!==identityIds.length){
+          return (json(res,409,{error:'One or more saved AI identity records are missing; this batch cannot be retried safely.'}),true);
         }
-        if(batch.status==='completed'){
-          return (json(res,200,{ok:true,replayed:true,batch}),true);
+        if(['completed','completed_with_errors'].includes(batch.status)){
+          return (json(res,200,{ok:true,replayed:true,batch,results:Array.isArray(batch.results)?batch.results:[]}),true);
         }
-        previousBatch={...batch};
+        previousBatch={...batch,results:Array.isArray(batch.results)?batch.results.map(item=>({...item})):[]};
         batch.status='pending_persistence';
         batch.retryCount=Number(batch.retryCount||0)+1;
         batch.updatedAt=stamp;
         batch.lastErrorCode=null;
+        batch.results=(batch.results||[]).map(result=>result.status==='retryable_failed'
+          ?{...result,status:'created_pending_persistence'}:result);
       }else{
+        const allowedItemKeys=new Set([
+          'displayName','firstName','middleName','lastName','categoryId','population','identityType',
+          'bio','description','introduction','gender','genderPresentation','nationality',
+          'countryOfOrigin','currentCountry','originCountryCode','currentCountryCode','timeZone',
+          'personality','communicationStyle','interests','hobbies','education','profession','skills',
+          'locations','avatarStorageReference','coverStorageReference','voicePreferences',
+          'avatarPreferences','memoryEnabled','memoryConfiguration','capabilities','languages',
+          'administratorInstructions'
+        ]);
         const normalizeName=value=>String(value||'').trim().replace(/\s+/g,' ').toLocaleLowerCase('en');
         const names=new Set(db.personalAiBots.map(bot=>String(bot.categoryId||'')+'::'+normalizeName(bot.displayName)));
-        for(let index=0;index<normalizedItems.length;index++){
-          const item=normalizedItems[index],signature=String(item.categoryId)+'::'+normalizeName(item.displayName);
-          if(names.has(signature)){
-            return (json(res,409,{error:'Duplicate AI identity name in category at batch item '+(index+1)+'. No records were created.'}),true);
-          }
-          names.add(signature);
-        }
         const stagedDb={
           ...db,
           personalAiBots:db.personalAiBots.slice(),
@@ -297,13 +277,50 @@ export async function handlePersonalAiBotsAdminApi(context) {
           personalAiBotBatches:db.personalAiBotBatches.slice()
         };
         const batchId=uid();
-        bots=normalizedItems.map(item=>createPersonalAiBot(stagedDb,item,user.id,stamp,uid));
-        for(const bot of bots)bot.batchId=batchId;
+        const results=[];
+        bots=[];
+        for(let index=0;index<items.length;index++){
+          const item=items[index];
+          const fail=(errorCode,message,status=400)=>results.push({
+            index:index+1,status:'failed',errorCode,message:String(message||'This identity record is invalid.').slice(0,240),httpStatus:status
+          });
+          if(!item||typeof item!=='object'||Array.isArray(item)){
+            fail('INVALID_RECORD','Each batch item must be a JSON object.');
+            continue;
+          }
+          if(Object.keys(item).some(key=>!allowedItemKeys.has(key))){
+            fail('UNSUPPORTED_FIELDS','This record contains unsupported or sensitive fields.');
+            continue;
+          }
+          const normalized={...item};
+          if(!String(normalized.displayName||'').trim()&&normalized.firstName&&normalized.lastName){
+            normalized.displayName=[normalized.firstName,normalized.middleName,normalized.lastName].filter(Boolean).join(' ');
+          }
+          if(!String(normalized.displayName||'').trim()||!String(normalized.categoryId||'').trim()){
+            fail('REQUIRED_FIELDS','A display name and category are required.');
+            continue;
+          }
+          const signature=String(normalized.categoryId)+'::'+normalizeName(normalized.displayName);
+          if(names.has(signature)){
+            fail('DUPLICATE_IDENTITY','An identity with this name already exists in the selected category.',409);
+            continue;
+          }
+          try{
+            const bot=createPersonalAiBot(stagedDb,normalized,user.id,stamp,uid);
+            bot.batchId=batchId;
+            bots.push(bot);
+            names.add(signature);
+            results.push({index:index+1,status:'created_pending_persistence',identityId:bot.id});
+          }catch(error){
+            fail(error.status===409?'CONFLICT':'VALIDATION_FAILED',error.message||'Identity validation failed.',error.status||400);
+          }
+        }
         batch={
           id:batchId,ownerId:user.id,idempotencyKey,requestHash,
           identityIds:bots.map(bot=>bot.id),
-          totalRecords:bots.length,completedRecords:0,failedRecords:0,
-          retryCount:0,status:'pending_persistence',
+          totalRecords:items.length,createdRecords:bots.length,
+          completedRecords:0,failedRecords:results.filter(result=>result.status==='failed').length,
+          retryCount:0,status:'pending_persistence',results,
           lastErrorCode:null,createdAt:stamp,updatedAt:stamp,completedAt:null
         };
         stagedDb.personalAiBotBatches.push(batch);
@@ -317,6 +334,10 @@ export async function handlePersonalAiBotsAdminApi(context) {
         db.personalAiBotBatches=stagedDb.personalAiBotBatches;
         isNewBatch=true;
       }
+      const batchSummary=()=>{
+        const {id,totalRecords,createdRecords,completedRecords,failedRecords,retryCount,status,identityIds,createdAt,completedAt}=batch;
+        return {id,totalRecords,createdRecords,completedRecords,failedRecords,retryCount,status,identityIds,createdAt,completedAt};
+      };
       try{
         await saveStore();
       }catch(error){
@@ -330,29 +351,32 @@ export async function handlePersonalAiBotsAdminApi(context) {
         return (json(res,503,{error:'AI identity batch checkpoint could not be saved; canonical persistence was not attempted.'}),true);
       }
       try{
-        await persistCanonicalIdentities(bots,persistAiIdentities);
+        if(bots.length)await persistCanonicalIdentities(bots,persistAiIdentities);
       }catch(error){
         batch.status='retryable_failed';
-        batch.failedRecords=batch.totalRecords;
         batch.lastErrorCode='CANONICAL_PERSISTENCE_FAILED';
         batch.updatedAt=now();
+        batch.results=(batch.results||[]).map(result=>result.status==='created_pending_persistence'
+          ?{...result,status:'retryable_failed',errorCode:'CANONICAL_PERSISTENCE_FAILED',message:'Canonical PostgreSQL persistence failed; retry the same batch.'}
+          :result);
+        batch.failedRecords=batch.results.filter(result=>['failed','retryable_failed'].includes(result.status)).length;
         try{await saveStore();}catch{}
         return (json(res,503,{
           error:'AI identity batch was saved for recovery, but canonical PostgreSQL persistence failed. Retry with the same idempotency key and identical records.',
-          batch:{id:batch.id,status:batch.status,totalRecords:batch.totalRecords,completedRecords:batch.completedRecords,failedRecords:batch.failedRecords,retryCount:batch.retryCount}
+          batch:batchSummary(),results:batch.results
         }),true);
       }
-      batch.status='completed';
+      batch.results=(batch.results||[]).map(result=>result.status==='created_pending_persistence'
+        ?{...result,status:'persisted'}:result);
       batch.completedRecords=bots.length;
-      batch.failedRecords=0;
+      batch.failedRecords=batch.results.filter(result=>result.status==='failed').length;
+      batch.status=batch.failedRecords?'completed_with_errors':'completed';
       batch.lastErrorCode=null;
       batch.completedAt=now();
       batch.updatedAt=batch.completedAt;
       await saveStore();
       return (json(res,isNewBatch?201:200,{
-        ok:true,replayed:false,
-        batch:{id:batch.id,status:batch.status,totalRecords:batch.totalRecords,completedRecords:batch.completedRecords,failedRecords:batch.failedRecords,retryCount:batch.retryCount,identityIds:batch.identityIds,createdAt:batch.createdAt,completedAt:batch.completedAt},
-        bots
+        ok:true,replayed:false,batch:batchSummary(),results:batch.results,bots
       }),true);
     }
 
