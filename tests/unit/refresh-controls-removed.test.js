@@ -36,7 +36,14 @@ test('Feed, Friends and LIVE quietly sync in the background without replacing ac
   assert.match(app, /peopleDiscoveryRefreshTimer=window\.setInterval\(\(\)=>void refreshPeopleDiscovery\(\{quiet:true\}\),30000\)/);
   assert.match(app, /liveDirectoryRefreshTimer=window\.setInterval\(\(\)=>void refreshLiveDirectorySessions\(\{quiet:true\}\),15000\)/);
   assert.match(app, /focused&&list\.contains\(focused\)/);
-  assert.match(app, /focused&&grid\.contains\(focused\)/);
+  const verificationSyncStart=app.indexOf('function syncPeopleDiscoveryVerification(users,grid){');
+  const verificationSyncEnd=app.indexOf('async function refreshPeopleDiscovery',verificationSyncStart);
+  const verificationSync=app.slice(verificationSyncStart,verificationSyncEnd);
+  assert.ok(verificationSyncStart>=0&&verificationSyncEnd>verificationSyncStart,'people verification refresh has a dedicated in-place updater');
+  assert.match(verificationSync,/grid\.querySelectorAll/);
+  assert.match(verificationSync,/line\.insertAdjacentHTML/);
+  assert.match(app,/!grid\.isConnected/);
+  assert.doesNotMatch(verificationSync,/grid\.innerHTML|grid\.replaceChildren/,'verification sync updates badges without replacing active discovery cards');
   assert.match(app, /document\.visibilityState!=='visible'/);
 });
 
