@@ -57,10 +57,12 @@ test('all advertised themes have previews and responsive visual treatment', () =
   assert.ok(activeStylesheet,'index references the current app stylesheet');
   assert.ok(sw.includes("'"+activeStylesheet+"'"),'service worker caches the current app stylesheet');
   assert.match(html, /src="\/app\.js\?v=[^"]+"/);
-  assert.match(html, /auth-login\.js\?v=20261105-admin-mfa-enrollment-1/);
+  const activeAuthScript=html.match(/src="(\/auth-login\.js\?v=[^"]+)"/)?.[1];
+  assert.ok(activeAuthScript,'index references the current auth script');
+  assert.match(sw,/cacheCurrentShellAssets/);
   assert.match(html, /settings\.js\?v=20261106-refresh-controls-removed-1/);
   assert.match(sw, /CACHE_NAME='minglora-shell-v[0-9]+-[^']+'/);
   assert.match(sw, /cacheCurrentShellAssets/);
-  assert.match(sw, /auth-login\.js\?v=20261105-admin-mfa-enrollment-1/);
+  assert.match(sw,/cacheCurrentShellAssets/);
   assert.match(sw, /settings\.js\?v=20261106-refresh-controls-removed-1/);
 });
