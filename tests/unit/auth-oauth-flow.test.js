@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 
 const read = path => readFile(new URL(path, import.meta.url), 'utf8');
 
-const [server, auth, login, admin, adminPage, adminCentre, html, css, worker, flowState, routeHelpers, credentialHelpers] = await Promise.all([
+const [server, auth, login, admin, adminPage, adminCentre, html, css, worker, flowState, routeHelpers, credentialHelpers, oauthAuthorization] = await Promise.all([
   read('../../src/server.js'),
   read('../../src/supabase-auth.js'),
   read('../../public/auth-login.js'),
@@ -16,18 +16,23 @@ const [server, auth, login, admin, adminPage, adminCentre, html, css, worker, fl
   read('../../public/sw.js'),
   read('../../src/oauth-flow-state.js'),
   read('../../src/auth-redirect-routes.js'),
-  read('../../src/auth-provider-credentials.js')
+  read('../../src/auth-provider-credentials.js'),
+  read('../../src/oauth-authorization.js')
 ]);
 
 test('OAuth start route only accepts providers enabled by current Supabase Auth settings', () => {
   assert.ok(server.includes("const provider=p.slice('/auth/oauth/'.length)"));
   assert.ok(server.includes('OAUTH_PROVIDER_LABELS[provider]'));
   assert.ok(server.includes("settings.external?.[provider]!==true"));
-  assert.ok(server.includes("new URL('https://gzycobgbasnqqhnympkr.supabase.co/auth/v1/authorize')"));
-  assert.ok(server.includes("authorize.searchParams.set('code_challenge',challenge)"));
-  assert.ok(server.includes("authorize.searchParams.set('code_challenge_method','s256')"));
-  assert.ok(server.includes("redirectTarget=new URL('/auth/oauth/callback',appOrigin(req))"));
+
+
+
+
   assert.ok(server.includes("oauthFlowCookie(state,verifier)"));
+  assert.ok(server.includes("createSupabaseOAuthAuthorization("));
+  assert.ok(oauthAuthorization.includes("new URL('/auth/v1/authorize', projectBase.origin)"));
+  assert.ok(oauthAuthorization.includes("authorize.searchParams.set('code_challenge_method', 's256')"));
+  assert.ok(oauthAuthorization.includes("new URL('/auth/oauth/callback', appBase.origin)"));
   assert.ok(server.includes('createOAuthFlowCookie'));
   assert.ok(flowState.includes("const COOKIE_PATH = '/auth/oauth/callback'"));
   assert.ok(flowState.includes('const COOKIE_MAX_AGE_SECONDS = 600'));
