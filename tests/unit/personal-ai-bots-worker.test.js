@@ -12,7 +12,10 @@ const leasedTask={
   approvedBy:'5b998c21-86b5-4621-ab37-e0808a2657b1',
   approvedAt:'2026-11-09T10:00:00.000Z',
   workerId,
-  leaseToken:'00000000-0000-4000-8000-000000000013'
+  leaseToken:'00000000-0000-4000-8000-000000000013',
+  providerAssignmentId:'00000000-0000-4000-8000-000000000014',
+  providerIdentifier:'example_provider',
+  modelIdentifier:'example/model-v1'
 };
 
 function dependencies(overrides={}) {
@@ -23,7 +26,7 @@ function dependencies(overrides={}) {
     heartbeatTask:async()=>{calls.heartbeats++;return true;},
     completeTask:async task=>{calls.completions.push(task);return true;},
     failTask:async task=>{calls.failures.push(task);return {ok:true};},
-    providerAdapter:{provider:'test-provider',model:'test-model',generate:async request=>{
+    providerAdapter:{provider:'test-provider',model:'test-model',providerIdentifier:'example_provider',modelIdentifier:'example/model-v1',generate:async request=>{
       calls.provider.push(request);
       return {text:'Reviewed draft output.'};
     }},
@@ -83,7 +86,7 @@ test('worker does not call a provider after losing its lease heartbeat',async()=
 
 test('provider errors are recorded as bounded retryable failures by default',async()=>{
   const {options,calls}=dependencies({
-    providerAdapter:{generate:async()=>{throw Object.assign(new Error('Temporary provider outage.'),{code:'PROVIDER_TIMEOUT'});}}
+    providerAdapter:{providerIdentifier:'example_provider',modelIdentifier:'example/model-v1',generate:async()=>{throw Object.assign(new Error('Temporary provider outage.'),{code:'PROVIDER_TIMEOUT'});}}
   });
   const worker=createPersonalAiBotWorker(options);
   const result=await worker.runOnce();
@@ -95,7 +98,7 @@ test('provider errors are recorded as bounded retryable failures by default',asy
 
 test('invalid provider output is recorded as a permanent failure',async()=>{
   const {options,calls}=dependencies({
-    providerAdapter:{generate:async()=>''}
+    providerAdapter:{providerIdentifier:'example_provider',modelIdentifier:'example/model-v1',generate:async()=>''}
   });
   const worker=createPersonalAiBotWorker(options);
   const result=await worker.runOnce();
@@ -112,4 +115,44 @@ test('worker can be stopped before claiming new tasks',async()=>{
   const result=await worker.runOnce();
   assert.equal(result.status,'stopped');
   assert.equal(calls.claims,0);
+});
+
+
+test('worker resolves a provider adapter by the exact claimed assignment',async()=>{
+  const {options,calls}=dependencies({
+    providerAdapter:null,
+    resolveProviderAdapter:async task=>{
+      assert.equal(task.providerAssignmentId,leasedTask.providerAssignmentId);
+      assert.equal(task.providerIdentifier,'example_provider');
+      assert.equal(task.modelIdentifier,'example/model-v1');
+      return {
+        providerIdentifier:'example_provider',
+        modelIdentifier:'example/model-v1',
+        generate:async()=>({text:'Assignment-specific model draft.'})
+      };
+    }
+  });
+  const worker=createPersonalAiBotWorker(options);
+  const result=await worker.runOnce();
+  assert.equal(result.status,'completed');
+  assert.equal(calls.completions[0].result.content,'Assignment-specific model draft.');
+});
+
+test('worker refuses a provider adapter for the wrong assigned model',async()=>{
+  const {options,calls}=dependencies({
+    providerAdapter:null,
+    resolveProviderAdapter:async()=>({
+      providerIdentifier:'another_provider',
+      modelIdentifier:'another/model',
+      generate:async()=>({text:'This must never run.'})
+    })
+  });
+  const worker=createPersonalAiBotWorker(options);
+  const result=await worker.runOnce();
+  assert.equal(result.status,'failed');
+  assert.equal(result.errorCode,'AI_PROVIDER_ASSIGNMENT_UNAVAILABLE');
+  assert.equal(calls.provider.length,0);
+  assert.equal(calls.completions.length,0);
+  assert.equal(calls.failures.length,1);
+  assert.equal(calls.failures[0].retryable,false);
 });
