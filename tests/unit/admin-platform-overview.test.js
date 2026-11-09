@@ -44,7 +44,7 @@ test("Admin Centre preserves the existing full platform workspace", () => {
   assert.match(css, /admin-platform-module-grid/);
   assert.match(css, /admin-platform-collection-row/);
   assert.match(html, /Minglora — Admin Centre/);
-  assert.match(html, /20261109-admin-centre-left-sidebar-1/);
+  assert.match(html, /20261109-admin-user-service-centre-1/);
 });
 
 test("Admin Centre is a standalone left-rail feature immediately below Profile", () => {
@@ -80,13 +80,13 @@ test("Only the designated Creator Hub admin identity can receive the Admin Centr
 });
 
 test("App shell and service worker load the restored Admin Centre navigation assets", () => {
-  const version = "20261109-admin-centre-left-sidebar-1";
+  const version = "20261109-admin-user-service-centre-1";
   assert.ok(index.includes("/admin-centre.css?v=" + version));
   assert.ok(index.includes("/admin-centre.js?v=" + version));
   assert.ok(index.includes("/app.js?v=" + version));
   assert.ok(index.includes("/sidebar-features.js?v=" + version));
   const cacheName = serviceWorker.match(/const CACHE_NAME='([^']+)'/)?.[1] || '';
-  assert.equal(cacheName, 'minglora-shell-v255-admin-centre-left-sidebar-restore-1');
+  assert.equal(cacheName, 'minglora-shell-v256-admin-user-service-centre-1');
   assert.ok(serviceWorker.includes("/admin-centre.css?v=" + version));
   assert.ok(serviceWorker.includes("/admin-centre.js?v=" + version));
   assert.ok(serviceWorker.includes("/app.js?v=" + version));
