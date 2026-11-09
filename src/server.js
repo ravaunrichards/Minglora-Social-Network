@@ -1758,9 +1758,9 @@ async function route(req, res) {
       if(method==='POST'&&p==='/api/ai/discovery/saved-searches'){
         if(!isSupabasePersistence())return json(res,503,{error:'Saved AI discovery searches require Minglora Supabase PostgreSQL persistence.'});
         const name=String(input?.name||'').trim(),searchText=String(input?.searchText||'').trim();
-        const filters=input?.filters&&typeof input.filters==='object'&&!Array.isArray(input.filters)?input.filters:{};
+        const filters=input?.filters??{};
         const sort=String(input?.sort||'newest');
-        if(name.length<2||name.length>80||searchText.length>160||!['newest','recently_updated'].includes(sort))return json(res,400,{error:'Saved AI discovery search fields are invalid.'});
+        if(name.length<2||name.length>80||searchText.length>160||!filters||typeof filters!=='object'||Array.isArray(filters)||!['newest','recently_updated'].includes(sort))return json(res,400,{error:'Saved AI discovery search fields are invalid.'});
         try{const result=await requestSupabaseState('ai_discovery_saved_search_upsert',{actorUserId:user.id,name,searchText,filters,sort});return json(res,201,{ok:true,savedSearch:result.savedSearch||{}});}
         catch(error){return json(res,Number(error?.status)||409,{error:String(error?.message||'Saved AI discovery search could not be saved.').slice(0,240)});}
       }
