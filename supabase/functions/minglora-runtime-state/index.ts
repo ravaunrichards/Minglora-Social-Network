@@ -95,6 +95,7 @@ Deno.serve(async (req: Request) => {
     "subscription_cancel_mark", "subscription_paypal_webhook",
     "subscription_bonus_review",
     "ai_identity_upsert_batch", "ai_identity_list",
+    "ai_bot_settings_update",
     "ai_bot_task_upsert_batch", "ai_bot_task_list", "ai_bot_task_stats",
     "ai_bot_task_claim", "ai_bot_task_heartbeat", "ai_bot_task_complete", "ai_bot_task_fail",
   ];
@@ -166,6 +167,46 @@ Deno.serve(async (req: Request) => {
       return json(503, { error: "Canonical AI identity records could not be loaded.", code: "AI_IDENTITY_SCHEMA_NOT_READY" });
     }
     return json(200, { ok: true, identities: Array.isArray(data) ? data : [] });
+  }
+
+  if (action === "ai_bot_settings_update") {
+    const actorUserId = String(input.actorUserId || "");
+    const settings = input.settings;
+    if (actorUserId !== AI_NETWORK_OWNER_ID) {
+      return json(403, { error: "Only the designated Minglora owner can update AI network settings." });
+    }
+    const allowedFields = new Set([
+      "enabled","hybridEnabled","maxConcurrentExecutions",
+      "dailyExecutionBudget","automaticSuspensionEnabled","emergencyShutdownAt"
+    ]);
+    const validDate = (value: unknown) => value === null ||
+      (typeof value === "string" && Number.isFinite(Date.parse(value)));
+    if (!settings || typeof settings !== "object" || Array.isArray(settings) ||
+        Object.keys(settings).some((key: string) => !allowedFields.has(key)) ||
+        (settings.enabled != null && typeof settings.enabled !== "boolean") ||
+        (settings.hybridEnabled != null && typeof settings.hybridEnabled !== "boolean") ||
+        (settings.automaticSuspensionEnabled != null && typeof settings.automaticSuspensionEnabled !== "boolean") ||
+        (settings.maxConcurrentExecutions != null &&
+          (!Number.isInteger(settings.maxConcurrentExecutions) ||
+           settings.maxConcurrentExecutions < 0 || settings.maxConcurrentExecutions > 10000)) ||
+        (settings.dailyExecutionBudget != null &&
+          (!Number.isInteger(settings.dailyExecutionBudget) ||
+           settings.dailyExecutionBudget < 0 || settings.dailyExecutionBudget > 1000000)) ||
+        (Object.hasOwn(settings,"emergencyShutdownAt") && !validDate(settings.emergencyShutdownAt))) {
+      return json(400, { error: "AI network settings contain invalid or unsupported values." });
+    }
+    const { data, error } = await admin.rpc("minglora_ai_bot_settings_update", {
+      p_settings: settings,
+      p_actor_user_id: actorUserId
+    });
+    if (error) {
+      const invalid = ["22023","23514"].includes(String(error.code || ""));
+      return json(invalid ? 400 : 503, {
+        error: invalid ? "AI network settings failed database validation." : "The durable AI network settings are unavailable.",
+        code: String(error.code || "AI_NETWORK_SETTINGS_ERROR")
+      });
+    }
+    return json(200, { ok: true, settings: data || {} });
   }
 
   if (String(action).startsWith("ai_bot_task_")) {
