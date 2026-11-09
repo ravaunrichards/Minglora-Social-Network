@@ -97,6 +97,7 @@ jobs:
           node --check public/admin-centre.js
           node --check public/auth-providers-admin.js
           node --check src/server.js
+          node --check src/supabase-auth.js
           node --check src/store.js
           node --check backend/modules/relationships/friends.js
           node --check tests/unit/friends-domain.test.js
