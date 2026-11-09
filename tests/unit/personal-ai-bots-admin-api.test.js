@@ -131,3 +131,50 @@ test('owner can assign and remove team members using owner-scoped routes',async(
   assert.equal(remove.db.personalAiBotTeamMembers.length,0);
   assert.equal(saves,2);
 });
+
+
+test('owner can queue selected AI bot follow instructions with separate approval and no human follow records',async()=>{
+  let saves=0;
+  const owner='owner-1', target='member-target';
+  const botIds=[
+    '00000000-0000-4000-8000-000000000101',
+    '00000000-0000-4000-8000-000000000102'
+  ];
+  const db={
+    personalAiBotSettings:[{id:'global',enabled:true,hybridEnabled:false}],
+    personalAiBots:botIds.map((id,index)=>({id,createdBy:owner,displayName:'AI Friend '+index,categoryId:'ai-friends',categoryName:'AI Friends',status:'enabled',enabled:true})),
+    users:[{id:target,username:'target_member',displayName:'Target Member',status:'active'}],
+    blocks:[],personalAiBotTasks:[],personalAiBotAudit:[],personalAiBotCategories:[]
+  };
+  const context=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/follow-batch',
+    input:{taskType:'follow',targetUserId:target,botIds,instruction:'Follow this member only after review.'},
+    db,saveStore:async()=>{saves++;}
+  });
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,201);
+  assert.equal(context.res.payload.created,2);
+  assert.ok(context.res.payload.tasks.every(task=>task.status==='awaiting_administrator_approval'));
+  assert.ok(context.res.payload.tasks.every(task=>task.executionStatus==='not_dispatched'));
+  assert.equal(context.db.follows,undefined);
+  assert.equal(saves,1);
+});
+
+test('owner follow batch rejects a target blocked by the administrator account',async()=>{
+  const owner='owner-1',target='blocked-member';
+  const botId='00000000-0000-4000-8000-000000000103';
+  const context=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/follow-batch',
+    input:{taskType:'follow',targetUserId:target,botIds:[botId]},
+    db:{
+      personalAiBotSettings:[{id:'global',enabled:true}],
+      personalAiBots:[{id:botId,createdBy:owner,displayName:'AI Friend',categoryId:'ai-friends',status:'enabled',enabled:true}],
+      users:[{id:target,status:'active'}],
+      blocks:[{blockerId:owner,blockedId:target}]
+    }
+  });
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,409);
+  assert.match(context.res.payload.error,/block exists/);
+  assert.equal(context.db.personalAiBotTasks,undefined);
+});
