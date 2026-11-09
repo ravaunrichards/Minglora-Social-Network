@@ -5503,7 +5503,7 @@ async function route(req, res) {
           const name=String(input.name||'').trim().replace(/\s+/g,' ');
           const normalized=name.toLocaleLowerCase();
           if(name.length<1||name.length>40)return json(res,400,{error:'List names must be 1–40 characters.'});
-          if(['all friends','close friends','favorites','recently added','mutual connections'].includes(normalized))return json(res,400,{error:'That name is reserved for a built-in Friends view.'});
+          if(['all friends','close friends','restricted','favorites','recently added','mutual connections'].includes(normalized))return json(res,400,{error:'That name is reserved for a built-in Friends view.'});
           if((db.friendLists||[]).some(item=>item.ownerId===user.id&&item.id!==list.id&&String(item.name||'').toLocaleLowerCase()===normalized))return json(res,409,{error:'You already have a list with that name.'});
           list.name=name;
         }
