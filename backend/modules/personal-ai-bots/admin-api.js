@@ -52,6 +52,37 @@ async function persistCanonicalIdentities(bots,persistAiIdentities) {
   if(typeof persistAiIdentities!=='function'||!Array.isArray(bots)||!bots.length)return;
   await persistAiIdentities(bots.map(canonicalAiIdentity));
 }
+
+function canonicalAiBotTask(task) {
+  return {
+    id:String(task.id),
+    idempotencyKey:String(task.id),
+    botId:String(task.botId),
+    taskType:String(task.taskType||'other'),
+    instruction:String(task.instruction||''),
+    targetUserId:task.targetUserId||null,
+    highImpact:task.highImpact!==false,
+    status:String(task.status||'awaiting_administrator_approval'),
+    approvedBy:task.approvedBy||null,
+    approvedAt:task.approvedAt||null,
+    cancelledBy:task.cancelledBy||null,
+    cancelledAt:task.cancelledAt||null,
+    createdBy:task.createdBy||null,
+    createdAt:task.createdAt||new Date().toISOString(),
+    privacyGuardRequired:task.privacyGuardRequired===true,
+    blockGuardRequired:task.blockGuardRequired===true,
+    excludeFromHumanEngagementMetrics:true,
+    executionStatus:String(task.executionStatus||'not_dispatched')
+  };
+}
+
+async function persistCanonicalTasks(tasks,persistAiBotTasks) {
+  if(typeof persistAiBotTasks!=='function'||!Array.isArray(tasks)||!tasks.length)return;
+  const normalized=tasks.map(canonicalAiBotTask);
+  for(let offset=0;offset<normalized.length;offset+=100){
+    await persistAiBotTasks(normalized.slice(offset,offset+100));
+  }
+}
 import {
   ensurePersonalAiBotCollections,
   getPersonalAiBotCategories,
@@ -76,7 +107,7 @@ import {
 } from './personal-ai-bots-service.js';
 
 export async function handlePersonalAiBotsAdminApi(context) {
-  const {req,res,url,method,path,user,input,db,saveStore,uid,now,json,isOwnerAdmin,isSameOriginWrite,lookupAdminMember,persistAiIdentities,listAiIdentities}=context;
+  const {req,res,url,method,path,user,input,db,saveStore,uid,now,json,isOwnerAdmin,isSameOriginWrite,lookupAdminMember,persistAiIdentities,listAiIdentities,persistAiBotTasks,listAiBotTasks,getAiBotTaskStats}=context;
   const root='/api/admin/personal-ai-bots';
   if(path!==root&&!path.startsWith(root+'/'))return false;
   if(!isOwnerAdmin)return (json(res,403,{error:'Only the designated MFA-verified Minglora owner can manage the Personal AI Bots Network.'}),true);
@@ -88,13 +119,17 @@ export async function handlePersonalAiBotsAdminApi(context) {
     if(method==='GET'&&path===root){
       const overview=getPersonalAiBotOverview(db);
       const identityRecords=typeof listAiIdentities==='function'?await listAiIdentities({limit:1000,offset:0}):null;
+      const durableTasks=typeof listAiBotTasks==='function'?await listAiBotTasks({limit:100,offset:0}):null;
+      const durableTaskStats=typeof getAiBotTaskStats==='function'?await getAiBotTaskStats():null;
       return (json(res,200,{
         ...overview,
         identityRecords:Array.isArray(identityRecords)?identityRecords:[],
         identityRecordsSource:Array.isArray(identityRecords)?'minglora_supabase_postgresql':'legacy_runtime_state',
+        taskRecordsSource:Array.isArray(durableTasks)?'minglora_supabase_postgresql':'legacy_runtime_state',
+        taskQueueStats:durableTaskStats&&typeof durableTaskStats==='object'?durableTaskStats:null,
         categories:getPersonalAiBotCategories(db),
         bots:db.personalAiBots.slice().sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt))),
-        tasks:db.personalAiBotTasks.slice(0,100),
+        tasks:Array.isArray(durableTasks)?durableTasks:db.personalAiBotTasks.slice(0,100),
         audit:db.personalAiBotAudit.slice(0,100),
         teams:db.personalAiBotTeams.map(team=>({...team,members:db.personalAiBotTeamMembers.filter(member=>member.teamId===team.id).map(member=>({botId:member.botId,botName:db.personalAiBots.find(bot=>bot.id===member.botId)?.displayName||'Unknown bot'}))})),
         templates:PERSONAL_AI_BOT_CATEGORIES
@@ -148,6 +183,7 @@ export async function handlePersonalAiBotsAdminApi(context) {
     if(method==='POST'&&path===root+'/emergency-shutdown'){
       const result=emergencyShutdownPersonalAiBots(db,user.id,stamp,uid);
       await persistCanonicalIdentities(db.personalAiBots,persistAiIdentities);
+      await persistCanonicalTasks(db.personalAiBotTasks.filter(task=>task.status==='cancelled'&&task.cancelledBy===user.id&&task.cancelledAt===stamp),persistAiBotTasks);
       await saveStore();
       return (json(res,200,{...result,message:'Emergency shutdown complete. Enabled bots were paused and open tasks were cancelled.'}),true);
     }
@@ -183,6 +219,7 @@ export async function handlePersonalAiBotsAdminApi(context) {
         return (json(res,409,{error:'A block exists between the administrator account and this target. Follow operations are not allowed.'}),true);
       }
       const result=queuePersonalAiBotFollowBatch(db,input||{},user.id,stamp,uid);
+      await persistCanonicalTasks(result.tasks,persistAiBotTasks);
       await saveStore();
       return (json(res,201,{ok:true,...result,message:result.created+' separate instructions created. Each requires approval; no follow or unfollow action was executed.'}),true);
     }
@@ -205,6 +242,7 @@ export async function handlePersonalAiBotsAdminApi(context) {
         }
       }
       const task=queuePersonalAiBotInstruction(db,instructionMatch[1],input||{},user.id,stamp,uid);
+      await persistCanonicalTasks([task],persistAiBotTasks);
       await saveStore();
       return (json(res,201,{ok:true,task,message:'Instruction saved for administrator approval. No bot action has been executed.'}),true);
     }
@@ -230,6 +268,7 @@ export async function handlePersonalAiBotsAdminApi(context) {
       const task=action==='approve'
         ?approvePersonalAiBotTask(db,taskMatch[1],user.id,stamp,uid)
         :cancelPersonalAiBotTask(db,taskMatch[1],user.id,stamp,uid);
+      await persistCanonicalTasks([task],persistAiBotTasks);
       await saveStore();
       return (json(res,200,{ok:true,task,message:action==='approve'?'Instruction approved and queued, but no worker is configured to execute it yet.':'Instruction cancelled.'}),true);
     }
