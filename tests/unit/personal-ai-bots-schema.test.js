@@ -251,3 +251,37 @@ test('provider runtime gateway validates owner, allowlisted fields and secret re
   assert.match(gateway,/admin\.rpc\("minglora_ai_provider_assignment_list"/);
   assert.doesNotMatch(gateway,/credential_secret_reference\s*:/);
 });
+
+
+test('durable task claims require a healthy text-capable provider assignment for that AI identity',()=>{
+  assert.match(queueSql,/JOIN LATERAL \([\s\S]*?FROM public\.ai_provider_assignments AS assignment/);
+  assert.match(queueSql,/assignment\.assignment_status = 'active'/);
+  assert.match(queueSql,/assignment\.provider_health_status = 'healthy'/);
+  assert.match(queueSql,/account\.account_status = 'active'/);
+  assert.match(queueSql,/account\.provider_health_status = 'healthy'/);
+  assert.match(queueSql,/account\.credential_secret_reference IS NOT NULL/);
+  assert.match(queueSql,/model\.text_capable = true/);
+  assert.match(queueSql,/cardinality\(assignment\.tool_permissions\) = 0/);
+  assert.match(queueSql,/cardinality\(model\.tool_permissions\) = 0/);
+  assert.match(queueSql,/credentialSecretReference',claimed\.credential_secret_reference/);
+});
+
+test('provider runtime health is service-role only, audited and recoverable',()=>{
+  assert.ok(providerSql.includes('minglora_ai_provider_runtime_list(uuid,integer,integer)'));
+  assert.ok(providerSql.includes('minglora_ai_provider_health_update(uuid,text,uuid)'));
+  assert.ok(providerSql.includes('GRANT EXECUTE ON FUNCTION public.minglora_ai_provider_runtime_list(uuid,integer,integer) TO service_role'));
+  assert.ok(providerSql.includes('GRANT EXECUTE ON FUNCTION public.minglora_ai_provider_health_update(uuid,text,uuid) TO service_role'));
+  assert.match(providerSql,/credentialSecretReference/);
+  assert.match(providerSql,/INSERT INTO public\.ai_identity_audit_logs/);
+  assert.match(providerSql,/provider\.health_checked/);
+  assert.match(providerSql,/p_health_status IS NULL/);
+  assert.match(providerSql,/assignment\.assignment_status <> 'disabled'/);
+});
+
+test('provider health runtime actions remain owner-gated in the existing Edge Function',()=>{
+  for(const action of ['ai_provider_runtime_list','ai_provider_health_update']) assert.ok(gateway.includes(action));
+  assert.match(gateway,/Only the designated Minglora owner can request provider runtime configuration/);
+  assert.match(gateway,/Only the designated Minglora owner can update provider health/);
+  assert.match(gateway,/admin\.rpc\("minglora_ai_provider_runtime_list"/);
+  assert.match(gateway,/admin\.rpc\("minglora_ai_provider_health_update"/);
+});
