@@ -242,7 +242,7 @@
       const providers = data.providers.filter(provider =>
         provider &&
         /^[a-z0-9_]+$/.test(String(provider.id || '')) &&
-        /^\\/auth\\/oauth\\/[a-z0-9_]+$/.test(String(provider.href || '')) &&
+        String(provider.href || '') === '/auth/oauth/' + String(provider.id) &&
         String(provider.label || '').length <= 60
       );
       if (!providers.length) return;
@@ -262,7 +262,7 @@
         label.textContent = provider.label;
         button.append(mark, label);
         button.addEventListener('click', () => {
-          if (!/^\\/auth\\/oauth\\/[a-z0-9_]+$/.test(button.dataset.oauthHref || '')) return;
+          if (String(button.dataset.oauthHref || '') !== '/auth/oauth/' + String(provider.id)) return;
           button.disabled = true;
           button.setAttribute('aria-busy', 'true');
           if (providerNote) providerNote.textContent = 'Connecting securely to ' + provider.label + '…';
