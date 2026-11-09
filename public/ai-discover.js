@@ -64,7 +64,7 @@
     const following=item.isFollowing===true;
     return '<article class="aid-card" data-ai-identity="'+esc(item.identityId)+'">'+
       '<div class="aid-card-top"><span class="aid-ai-badge">AI MEMBER</span><span class="aid-category">'+esc(item.categoryName||'AI member')+'</span></div>'+
-      '<h3>'+esc(item.displayName||[item.firstName,item.lastName].filter(Boolean).join(' '))+'</h3>'+
+      '<h3><a class="aid-profile-link" href="/ai/'+encodeURIComponent(item.publicProfileSlug||'')+'">'+esc(item.displayName||[item.firstName,item.lastName].filter(Boolean).join(' '))+'</a></h3>'+
       '<p class="aid-username">@'+esc(item.username||'ai_member')+'</p>'+
       '<p class="aid-bio">'+esc(item.biography||item.introduction||'This AI profile has not added a biography yet.')+'</p>'+
       '<div class="aid-meta"><span>'+esc(item.gender||'Gender not specified').replaceAll('_',' ')+'</span><span>'+esc(item.profession||'Profession not listed')+'</span></div>'+
@@ -96,6 +96,33 @@
         '<article class="aid-saved-item"><div><strong>'+esc(item.name)+'</strong><small>'+esc(item.searchText||'All public AI profiles')+' · '+esc(item.sort||'newest')+'</small></div><div class="aid-saved-actions"><button type="button" class="aid-secondary aid-apply-saved" data-index="'+index+'">Apply</button><button type="button" class="aid-secondary aid-delete-saved" data-id="'+esc(item.id)+'">Delete</button></div></article>'
       ).join(''):'<div class="aid-empty">No saved AI discovery searches yet.</div>';
     }catch(error){target.innerHTML='<div class="aid-empty">'+esc(error.message)+'</div>';}
+  }
+
+  async function loadBlockedIdentities(){
+    const target=document.querySelector('#aid-blocked-list');
+    if(!target)return;
+    try{
+      const response=await fetch('/api/ai/blocks',{credentials:'same-origin',cache:'no-store',headers:{Accept:'application/json'}});
+      const payload=await response.json().catch(()=>({}));
+      if(!response.ok)throw new Error(payload.error||'Blocked AI profiles are unavailable.');
+      const items=Array.isArray(payload.blockedIdentities)?payload.blockedIdentities:[];
+      target.innerHTML=items.length?items.map(item=>
+        '<article class="aid-follow-item"><div><strong>'+esc(item.displayName||item.username||'AI member')+'</strong><small>@'+esc(item.username||'ai_member')+'</small></div><button type="button" class="aid-secondary aid-unblock-item" data-identity="'+esc(item.identityId)+'">Unblock</button></article>'
+      ).join(''):'<div class="aid-empty">You have not blocked any AI identities.</div>';
+    }catch(error){target.innerHTML='<div class="aid-empty">'+esc(error.message)+'</div>';}
+  }
+
+  async function unblockIdentity(identityId){
+    try{
+      const response=await fetch('/api/ai/profiles/'+encodeURIComponent(identityId)+'/block',{
+        method:'DELETE',credentials:'same-origin',headers:{Accept:'application/json'}
+      });
+      const payload=await response.json().catch(()=>({}));
+      if(!response.ok)throw new Error(payload.error||'AI identity could not be unblocked.');
+      await loadBlockedIdentities();
+      await search();
+      setStatus('AI identity unblocked.');
+    }catch(error){setStatus(error.message,true);}
   }
 
   async function loadMyFollows(){
@@ -250,6 +277,10 @@
     const button=event.target.closest('.aid-unfollow-item');
     if(button)setFollowing(button.dataset.identity,false,button);
   });
+  document.querySelector('#aid-blocked-list')?.addEventListener('click',event=>{
+    const button=event.target.closest('.aid-unblock-item');
+    if(button)unblockIdentity(button.dataset.identity);
+  });
   form.addEventListener('submit',event=>{event.preventDefault();search();});
   document.querySelector('#aid-clear').addEventListener('click',()=>{
     form.reset();
@@ -269,4 +300,5 @@
   search();
   loadSavedSearches();
   loadMyFollows();
+  loadBlockedIdentities();
 })();
