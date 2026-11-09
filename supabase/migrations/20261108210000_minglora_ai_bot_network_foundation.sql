@@ -300,12 +300,12 @@ CREATE TABLE IF NOT EXISTS public.minglora_ai_bot_audit (
   summary text NOT NULL DEFAULT '' CHECK (char_length(summary) <= 1000),
   metadata jsonb NOT NULL DEFAULT '{}'::jsonb CHECK (jsonb_typeof(metadata) = 'object'),
   created_at timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT minglora_ai_bot_audit_bot_owner_fk
-    FOREIGN KEY (bot_id,owner_admin_id)
-    REFERENCES public.minglora_ai_bots(id,owner_admin_id) ON DELETE SET NULL,
-  CONSTRAINT minglora_ai_bot_audit_team_owner_fk
-    FOREIGN KEY (team_id,owner_admin_id)
-    REFERENCES public.minglora_ai_bot_teams(id,owner_admin_id) ON DELETE SET NULL
+  CONSTRAINT minglora_ai_bot_audit_bot_fk
+    FOREIGN KEY (bot_id)
+    REFERENCES public.minglora_ai_bots(id) ON DELETE SET NULL,
+  CONSTRAINT minglora_ai_bot_audit_team_fk
+    FOREIGN KEY (team_id)
+    REFERENCES public.minglora_ai_bot_teams(id) ON DELETE SET NULL
 );
 
 CREATE INDEX IF NOT EXISTS minglora_ai_bot_audit_owner_created_idx
