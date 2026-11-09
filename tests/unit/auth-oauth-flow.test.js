@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 
 const read = path => readFile(new URL(path, import.meta.url), 'utf8');
 
-const [server, auth, login, admin, adminPage, adminCentre, html, css, worker] = await Promise.all([
+const [server, auth, login, admin, adminPage, adminCentre, html, css, worker, flowState] = await Promise.all([
   read('../../src/server.js'),
   read('../../src/supabase-auth.js'),
   read('../../public/auth-login.js'),
@@ -13,7 +13,8 @@ const [server, auth, login, admin, adminPage, adminCentre, html, css, worker] = 
   read('../../public/admin-centre.js'),
   read('../../public/index.html'),
   read('../../public/auth-oauth.css'),
-  read('../../public/sw.js')
+  read('../../public/sw.js'),
+  read('../../src/oauth-flow-state.js')
 ]);
 
 test('OAuth start route only accepts providers enabled by current Supabase Auth settings', () => {
@@ -25,7 +26,10 @@ test('OAuth start route only accepts providers enabled by current Supabase Auth 
   assert.ok(server.includes("authorize.searchParams.set('code_challenge_method','s256')"));
   assert.ok(server.includes("redirectTarget=new URL('/auth/oauth/callback',appOrigin(req))"));
   assert.ok(server.includes("oauthFlowCookie(state,verifier)"));
-  assert.ok(server.includes("Path=/auth/oauth/callback; Max-Age=600"));
+  assert.ok(server.includes('createOAuthFlowCookie'));
+  assert.ok(flowState.includes("const COOKIE_PATH = '/auth/oauth/callback'"));
+  assert.ok(flowState.includes('const COOKIE_MAX_AGE_SECONDS = 600'));
+  assert.ok(flowState.includes('; HttpOnly; SameSite=Lax; Path='));
 });
 
 test('OAuth callback verifies signed state, exchanges PKCE code and creates a Minglora session', () => {
