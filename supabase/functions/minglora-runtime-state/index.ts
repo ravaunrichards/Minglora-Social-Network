@@ -109,12 +109,17 @@ Deno.serve(async (req: Request) => {
     const userIds = [...new Set(rawIds.map((value: unknown) => String(value || "")).filter((id: string) => validUuid(id)))].slice(0, 500);
     if (!userIds.length) return json(200, { accountStatuses: {}, deletedIds: [] });
     const { data: profiles, error } = await admin.from("profiles")
-      .select("id,account_status")
+      .select("id,account_status,banned_until,pre_ban_account_status")
       .in("id", userIds);
     if (error) return json(503, { error: "Minglora account status could not be synchronized." });
     const accountStatuses: Record<string, string> = {};
     for (const profile of profiles || []) {
-      const status = String((profile as any).account_status || "active").toLowerCase();
+      let status = String((profile as any).account_status || "active").toLowerCase();
+      const bannedUntil = (profile as any).banned_until ? Date.parse(String((profile as any).banned_until)) : NaN;
+      if (status === "banned" && Number.isFinite(bannedUntil) && bannedUntil <= Date.now()) {
+        const restored = String((profile as any).pre_ban_account_status || "active").toLowerCase();
+        status = ["active", "restricted", "suspended", "deactivated"].includes(restored) ? restored : "active";
+      }
       accountStatuses[String((profile as any).id)] =
         ["active", "banned", "restricted", "suspended", "deactivated"].includes(status) ? status : "active";
     }
