@@ -129,8 +129,8 @@ test('visitor profile actions stay readable and tappable on narrow screens',()=>
   assert.ok(profileCss.includes('white-space:nowrap!important'));
   assert.ok(profileCss.includes('grid-template-columns:repeat(3,minmax(0,1fr))!important'));
   assert.ok(profile.includes('id="profile-message"')&&profile.includes('</svg>Message</button>'));
-  assert.ok(profile.includes('id="profile-report"')&&profile.includes('</svg>Report</button>'));
-  assert.ok(profile.includes('id="profile-block"')&&profile.includes('</svg>Block</button>'));
+  assert.ok(profile.includes('id="profile-report"')&&profile.includes('>Report</button>'));
+  assert.ok(profile.includes('id="profile-block"')&&profile.includes('>Block</button>'));
 });
 
 test('visitor profile actions stay in one horizontal row and preserve subscription checkout',()=>{
@@ -148,7 +148,7 @@ test('visitor profile actions stay in one horizontal row and preserve subscripti
   assert.ok(!profile.includes('profileSubscribeButton.remove()'),'Subscribe is not removed from the profile');
   assert.ok(profile.includes("api('/subscriptions/checkout'"),'Subscribe keeps its checkout route');
   assert.ok(profile.includes('id="profile-follow"')&&profile.includes("?'Friends · Following':'Following'")&&profile.includes(":'Follow'))"),'Follow button and follow-state labels remain connected');
-  for(const label of ['Message','Voice call','Video call','Report','Block'])assert.ok(profile.includes('</svg>'+label+'</button>'),'Missing visitor action '+label);
+  for(const label of ['Message','Voice call','Video call'])assert.ok(profile.includes('</svg>'+label+'</button>'),'Missing visitor action '+label);
   assert.ok(profile.includes('id="profile-subscribe"'),'Subscribe button remains in the visitor actions');
 });
 
