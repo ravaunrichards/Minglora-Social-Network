@@ -26,6 +26,7 @@ import { rankForYouVideos } from './domain/video-ranking.js';
 import { canViewStory as canViewStoryPolicy, removeExpiredStories } from '../backend/modules/stories/service.js';
 import { canPublishGroupPost, canDeleteGroupPost, canLeaveGroup } from '../backend/modules/groups/service.js';
 import { getMutualFollowIds, normalizeFriendPreferences, validateFriendPreferencePatch } from '../backend/modules/relationships/friends.js';
+import { normalizeAccountStatus, accountStatusLabel } from '../backend/modules/moderation/account-status.js';
 import { validatePageInput, validatePageUpdate, canManagePage as canManagePagePolicy, canManagePageTeam as canManagePageTeamPolicy, canViewPageInsights as canViewPageInsightsPolicy, canAssignPageRole as canAssignPageRolePolicy, canChangePageRole as canChangePageRolePolicy, canRemovePageRole as canRemovePageRolePolicy, canDeletePagePost, canDeletePage } from '../backend/modules/pages/service.js';
 import { recordProfileView, touchProfilePresence, getProfileViewStats } from '../backend/modules/profiles/service.js';
 import { getPlatformAdminBadge, getProfileVerificationBadge } from './platform-badges.js';
@@ -201,7 +202,8 @@ function safeUser(u,viewerId=null){
   const visibility={...DEFAULT_ABOUT_VISIBILITY,...(u.aboutVisibility||{})};
   const sectionVisibility={...DEFAULT_ABOUT_SECTION_VISIBILITY,...(u.aboutSectionVisibility||{}),names:'public'};
   const own=viewerId===u.id;
-  const result={id:u.id,name:u.name,username:u.username,bio:'',location:'',avatar:u.avatar||'',cover:u.cover||'',createdAt:u.createdAt,verificationBadge:getProfileVerificationBadge(u),platformBadge:getPlatformAdminBadge(u,viewerId),verificationStatus:u.verificationStatus||'not_submitted',profileLayout:getUserSettings(u).preferences.profileLayout};
+  const accountStatus=isAccountBanned(u)?'banned':normalizeAccountStatus(u.status);
+  const result={id:u.id,name:u.name,username:u.username,accountStatus,accountStatusLabel:accountStatusLabel(accountStatus),bio:'',location:'',avatar:u.avatar||'',cover:u.cover||'',createdAt:u.createdAt,verificationBadge:getProfileVerificationBadge(u),platformBadge:getPlatformAdminBadge(u,viewerId),verificationStatus:u.verificationStatus||'not_submitted',profileLayout:getUserSettings(u).preferences.profileLayout};
   result.liveProBadge=isDesignatedCreatorHubAdmin(u)||(db.liveProGrants||[]).some(grant=>grant.userId===u.id&&grant.status==='active'&&(!grant.expiresAt||new Date(grant.expiresAt).getTime()>Date.now()));
   const profileThought=typeof viewerId==='string'?(db.profileStatuses||[]).filter(item=>item.userId===u.id&&Date.parse(item.expiresAt)>Date.now()&&canViewProfileAudience(viewerId,u.id,item.audience)).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))[0]:null;
   if(profileThought)result.profileThought={text:profileThought.text,mood:profileThought.mood||'',audience:profileThought.audience,createdAt:profileThought.createdAt,expiresAt:profileThought.expiresAt};
@@ -298,6 +300,14 @@ const DEFAULT_PROFILE_SECTIONS={about:true,friends:true,photos:true,reels:true,g
 function readProfileSections(userId){
   const saved=(db.profileSections||[]).find(item=>item.userId===userId);
   return {...DEFAULT_PROFILE_SECTIONS,...(saved?.sections||{})};
+}
+function canViewRelationshipListMember(viewerId,member){
+  if(!member||blockedBetween(viewerId,member.id))return false;
+  if(viewerId===member.id)return true;
+  const visibility=getUserSettings(member).privacy.profileVisibility;
+  if(visibility==='public')return true;
+  if(visibility==='friends')return isFriend(viewerId,member.id);
+  return false;
 }
 function canViewProfileAudience(viewerId,ownerId,audience='public'){
   const owner=(db.users||[]).find(member=>member.id===ownerId);
@@ -484,7 +494,8 @@ function ensureLocalUser(authUser, fallback = {}) {
     if(metadata.about_section_visibility||metadata.aboutSectionVisibility)user.aboutSectionVisibility=metadata.about_section_visibility||metadata.aboutSectionVisibility;
     if(metadata.avatar_url!==undefined)user.avatar=String(metadata.avatar_url||'');
     if(metadata.cover_url!==undefined)user.cover=String(metadata.cover_url||'');
-    if(metadata.account_status!==undefined)user.status=String(metadata.account_status||'active');
+    const savedAccountStatus=String(appMetadata.account_status||metadata.account_status||'active').toLowerCase();
+    if(['active','banned','restricted','suspended','deactivated'].includes(savedAccountStatus))user.status=savedAccountStatus;
     if(Object.hasOwn(authUser,'app_metadata')){
       if(trustedRole)user.role=trustedRole;
       else delete user.role;
@@ -500,8 +511,8 @@ function ensureLocalUser(authUser, fallback = {}) {
   }else{
     user.bannedUntil=null;
     if(user.status==='banned'){
-      const restored=String(metadata.pre_ban_account_status||'active').toLowerCase();
-      user.status=['active','suspended','deactivated'].includes(restored)?restored:'active';
+      const restored=String(appMetadata.pre_ban_account_status||metadata.pre_ban_account_status||'active').toLowerCase();
+      user.status=['active','restricted','suspended','deactivated'].includes(restored)?restored:'active';
     }
   }
   return user;
@@ -520,6 +531,15 @@ function isAccountBanned(account){
 function isAccountBlocked(account){
   if(!account)return false;
   return isAccountBanned(account)||['suspended','deactivated'].includes(account.status);
+}
+function isAccountActiveForRelationships(account){
+  if(!account||isAccountBanned(account))return false;
+  return normalizeAccountStatus(account.status)==='active';
+}
+function activeRelationshipCount(userIds,targetAccount,viewerId){
+  if(!isAccountActiveForRelationships(targetAccount))return 0;
+  return [...new Set((Array.isArray(userIds)?userIds:[]).map(String).filter(Boolean))]
+    .filter(id=>isAccountActiveForRelationships(db.users.find(member=>member.id===id))&&!blockedBetween(viewerId,id)).length;
 }
 function sessionUser(req){
   const session=sessionFromRequest(req);
@@ -1984,7 +2004,7 @@ async function route(req, res) {
         if(AUTH_PROVIDER!=='supabase')return json(res,503,{error:'Account-wide ban controls require Minglora Supabase Auth.'});
         const search=String(url.searchParams.get('search')||'').trim().slice(0,120);
         const status=String(url.searchParams.get('status')||'all').toLowerCase();
-        if(!['all','active','banned','suspended','deactivated'].includes(status))return json(res,400,{error:'Choose a valid account status filter.'});
+        if(!['all','active','banned','restricted','suspended','deactivated'].includes(status))return json(res,400,{error:'Choose a valid account status filter.'});
         const result=await requestSupabaseState('admin_users_list',{actorUserId:user.id,search,status});
         const members=(Array.isArray(result.users)?result.users:[]).map(member=>{
           const local=db.users.find(item=>item.id===member.id);
@@ -1998,7 +2018,7 @@ async function route(req, res) {
         }).filter(member=>status==='all'||member.status===status);
         return json(res,200,{users:members,count:members.length,status});
       }
-      const adminAccountActionMatch=p.match(/^\/api\/admin\/users\/([0-9a-f-]{36})\/(ban|unban)$/i);
+      const adminAccountActionMatch=p.match(/^\/api\/admin\/users\/([0-9a-f-]{36})\/(ban|unban|restrict|unrestrict)$/i);
       if(method==='POST'&&adminAccountActionMatch){
         if(!isSameOriginApiWrite(req))return json(res,403,{error:'This account-management request must come from Minglora.'});
         if(!isDesignatedCreatorHubAdmin(user)||!isModerator(user,req)||!hasActiveReviewerSession(user)){
@@ -2016,7 +2036,8 @@ async function route(req, res) {
         if(operation==='ban'&&(!allowedDurations.has(duration)||reason.length<3)){
           return json(res,400,{error:'Choose a ban duration and enter a reason of at least 3 characters.'});
         }
-        if(operation==='unban'&&reason.length>500)return json(res,400,{error:'The moderation note is too long.'});
+        if(operation==='restrict'&&reason.length<3)return json(res,400,{error:'Enter a restriction reason of at least 3 characters.'});
+        if(['unban','unrestrict'].includes(operation)&&reason.length>500)return json(res,400,{error:'The moderation note is too long.'});
         let targetJwt=null;
         if(operation==='ban'){
           const targetSessions=(db.sessions||[]).filter(item=>item.userId===targetId&&item.authSealed);
@@ -2028,7 +2049,8 @@ async function route(req, res) {
           }
         }
         const target=db.users.find(item=>item.id===targetId);
-        const result=await requestSupabaseState('admin_user_set_ban',{
+        const moderationAction=(operation==='ban'||operation==='unban')?'admin_user_set_ban':'admin_user_set_restriction';
+        const result=await requestSupabaseState(moderationAction,{
           actorUserId:user.id,userId:targetId,operation,duration:operation==='ban'?duration:'none',
           previousAccountStatus:target?.status||'active',reason,targetJwt
         });
@@ -2037,11 +2059,16 @@ async function route(req, res) {
             target.status='banned';
             target.bannedUntil=result.bannedUntil||null;
             target.banReason=reason;
-          }else{
-            const restored=String(result.status||'active').toLowerCase();
-            target.status=['active','suspended','deactivated'].includes(restored)?restored:'active';
+          }else if(operation==='unban'){
+            target.status=['active','restricted','suspended','deactivated'].includes(String(result.status||''))?String(result.status):'active';
             target.bannedUntil=null;
             delete target.banReason;
+          }else if(operation==='restrict'){
+            target.status='restricted';
+            target.restrictionReason=reason;
+          }else{
+            target.status=['active','suspended','deactivated'].includes(String(result.status||''))?String(result.status):'active';
+            delete target.restrictionReason;
           }
         }
         if(operation==='ban'){
@@ -2051,7 +2078,7 @@ async function route(req, res) {
         await saveStore();
         return json(res,200,{
           ok:true,operation,status:result.status||operation,
-          bannedUntil:result.bannedUntil||null,
+          bannedUntil:operation==='ban'?(result.bannedUntil||null):null,
           sessionRevoked:Boolean(result.sessionRevoked),
           auditRecorded:Boolean(result.auditRecorded),
           message:result.message||'Account status updated.'
@@ -2067,7 +2094,7 @@ async function route(req, res) {
         const limit=Number.isFinite(requestedLimit)?Math.max(1,Math.min(100,requestedLimit)):50;
         const search=String(params.get('search')||'').trim().slice(0,100);
         const actionFilter=String(params.get('action')||'all').trim().toLowerCase();
-        if(!['all','account.ban','account.unban'].includes(actionFilter))return json(res,400,{error:'Choose a supported administrator audit action filter.'});
+        if(!['all','account.ban','account.unban','account.restrict','account.unrestrict'].includes(actionFilter))return json(res,400,{error:'Choose a supported administrator audit action filter.'});
         const result=await requestSupabaseState('admin_audit_log',{actorUserId:user.id,limit,search,actionFilter});
         return json(res,200,result);
       }
@@ -4838,7 +4865,7 @@ async function route(req, res) {
       if(method==='GET'&&p==='/api/discovery/people/verification'){
         const dismissedMemberIds=new Set((db.dismissedPeopleSuggestions||[]).filter(item=>item.userId===user.id).map(item=>item.dismissedUserId));
         const users=db.users
-          .filter(member=>member.id!==user.id&&!dismissedMemberIds.has(member.id)&&!blockedBetween(user.id,member.id)&&canViewProfile(user.id,member))
+          .filter(member=>member.id!==user.id&&!dismissedMemberIds.has(member.id)&&isAccountActiveForRelationships(member)&&!blockedBetween(user.id,member.id)&&canViewProfile(user.id,member))
           .map(member=>({id:member.id,verificationBadge:getProfileVerificationBadge(member)}));
         return json(res,200,{users});
       }
@@ -4858,14 +4885,14 @@ async function route(req, res) {
           if(timestamp>(activityAt.get(story.userId)||0))activityAt.set(story.userId,timestamp);
         }
         const candidates=db.users
-          .filter(member=>member.id!==user.id&&!dismissedMemberIds.has(member.id)&&!blockedBetween(user.id,member.id)&&canViewProfile(user.id,member))
+          .filter(member=>member.id!==user.id&&!dismissedMemberIds.has(member.id)&&isAccountActiveForRelationships(member)&&!blockedBetween(user.id,member.id)&&canViewProfile(user.id,member))
           .sort((first,second)=>Math.max(activityAt.get(second.id)||0,Date.parse(second.createdAt)||0)-Math.max(activityAt.get(first.id)||0,Date.parse(first.createdAt)||0));
         const users=await Promise.all(candidates.map(async member=>{
           const memberFriendIds=[...new Set(follows
             .filter(edge=>edge.followedId===member.id&&follows.some(reverse=>reverse.followerId===member.id&&reverse.followedId===edge.followerId))
             .map(edge=>edge.followerId)
             .filter(id=>!blockedBetween(user.id,id)))];
-          const commonFriendIds=memberFriendIds.filter(id=>isFriend(user.id,id));
+          const commonFriendIds=memberFriendIds.filter(id=>isFriend(user.id,id)&&isAccountActiveForRelationships(db.users.find(friend=>friend.id===id)));
           const mutualFriendsPreview=commonFriendIds
             .map(id=>db.users.find(friend=>friend.id===id&&canViewProfile(user.id,friend)))
             .filter(Boolean).slice(0,3).map(friend=>safeUser(friend,user.id));
@@ -4885,9 +4912,9 @@ async function route(req, res) {
             ...safeUser(member,user.id),
             friendship:isFriend(user.id,member.id)?'accepted':null,
             following:follows.some(edge=>edge.followerId===user.id&&edge.followedId===member.id),
-            followersCount:follows.filter(edge=>edge.followedId===member.id&&!blockedBetween(user.id,edge.followerId)).length,
-            followingCount:follows.filter(edge=>edge.followerId===member.id&&!blockedBetween(user.id,edge.followedId)).length,
-            friendsCount:memberFriendIds.length,
+            followersCount:activeRelationshipCount(follows.filter(edge=>edge.followedId===member.id).map(edge=>edge.followerId),member,user.id),
+            followingCount:activeRelationshipCount(follows.filter(edge=>edge.followerId===member.id).map(edge=>edge.followedId),member,user.id),
+            friendsCount:activeRelationshipCount(memberFriendIds,member,user.id),
             mutualFriendsCount:commonFriendIds.length,
             mutualFriendsPreview,
             postsCount:memberPosts.length,
@@ -4917,7 +4944,7 @@ async function route(req, res) {
       }
       if(method==='GET'&&p==='/api/users'){
         const dismissedMemberIds=new Set((db.dismissedPeopleSuggestions||[]).filter(item=>item.userId===user.id).map(item=>item.dismissedUserId));
-        return json(res,200,{users:db.users.filter(u=>u.id!==user.id&&!dismissedMemberIds.has(u.id)&&!blockedBetween(user.id,u.id)&&canViewProfile(user.id,u)).map(u=>({...safeUser(u,user.id),friendship:isFriend(user.id,u.id)?'accepted':null,following:(db.follows||[]).some(f=>f.followerId===user.id&&f.followedId===u.id)}))});
+        return json(res,200,{users:db.users.filter(u=>u.id!==user.id&&!dismissedMemberIds.has(u.id)&&isAccountActiveForRelationships(u)&&!blockedBetween(user.id,u.id)&&canViewProfile(user.id,u)).map(u=>({...safeUser(u,user.id),friendship:isFriend(user.id,u.id)?'accepted':null,following:(db.follows||[]).some(f=>f.followerId===user.id&&f.followedId===u.id)}))});
       }
 
       m=p.match(/^\/api\/users\/([^/]+)\/(followers|following|subscribers)$/);
@@ -4937,10 +4964,11 @@ async function route(req, res) {
           const users=[];
           for(const id of uniqueSubscriberIds){
             const member=db.users.find(item=>item.id===id);
-            if(!member||blockedBetween(user.id,member.id)||!canViewProfile(user.id,member))continue;
+            if(!member||!canViewRelationshipListMember(user.id,member))continue;
             users.push(safeUser(member,user.id));
           }
-          return json(res,200,{users,count:users.length,totalCount:uniqueSubscriberIds.length,relationship:relationshipType});
+          const activeCount=activeRelationshipCount(users.map(member=>member.id),target,user.id);
+          return json(res,200,{users,count:activeCount,activeCount,visibleCount:users.length,totalCount:uniqueSubscriberIds.length,relationship:relationshipType});
         }
         const sourceField=relationshipType==='followers'?'followedId':'followerId';
         const resultField=relationshipType==='followers'?'followerId':'followedId';
@@ -4953,16 +4981,18 @@ async function route(req, res) {
           if(!id||seen.has(id))continue;
           seen.add(id);
           const member=db.users.find(item=>item.id===id);
-          if(!member||blockedBetween(user.id,member.id)||!canViewProfile(user.id,member))continue;
+          if(!member||!canViewRelationshipListMember(user.id,member))continue;
           users.push(safeUser(member,user.id));
         }
-        return json(res,200,{users,count:users.length,relationship:relationshipType});
+        const activeCount=activeRelationshipCount(users.map(member=>member.id),target,user.id);
+        return json(res,200,{users,count:activeCount,activeCount,visibleCount:users.length,relationship:relationshipType});
       }
       m=p.match(/^\/api\/users\/([^/]+)\/follow$/);
       if((method==='POST'||method==='DELETE')&&m){
         const target=db.users.find(u=>u.id===m[1]);
         if(!target||target.id===user.id)return json(res,400,{error:'Choose another valid account.'});
         if(blockedBetween(user.id,target.id))return json(res,403,{error:'This relationship is unavailable.'});
+        if(method==='POST'&&(!isAccountActiveForRelationships(user)||!isAccountActiveForRelationships(target)))return json(res,403,{error:'Following is unavailable while either account is banned, restricted or otherwise inactive.'});
         db.follows ||= [];db.friendships ||= [];
         const exists=db.follows.some(f=>f.followerId===user.id&&f.followedId===target.id);
         if(method==='POST'&&!exists){
@@ -5399,8 +5429,8 @@ async function route(req, res) {
         const profilePhotos=profileMedia.filter(media=>media.mediaType==='image');
         const profileVideos=profileMedia.filter(media=>media.mediaType==='video'&&media.videoFormat!=='reel');
         const profileReels=profileMedia.filter(media=>media.mediaType==='video'&&media.videoFormat==='reel');
-        const profileFriends=[...new Set((db.follows||[]).filter(edge=>edge.followedId===target.id&&(db.follows||[]).some(reverse=>reverse.followerId===target.id&&reverse.followedId===edge.followerId)).map(edge=>edge.followerId))]
-          .map(id=>db.users.find(member=>member.id===id)).filter(member=>member&&!blockedBetween(user.id,member.id)&&canViewProfile(user.id,member)).map(member=>safeUser(member,user.id));
+        const profileFriendIds=[...new Set((db.follows||[]).filter(edge=>edge.followedId===target.id&&(db.follows||[]).some(reverse=>reverse.followerId===target.id&&reverse.followedId===edge.followerId)).map(edge=>edge.followerId))];
+        const profileFriends=profileFriendIds.map(id=>db.users.find(member=>member.id===id)).filter(member=>member&&canViewRelationshipListMember(user.id,member)).map(member=>safeUser(member,user.id));
         // Subscription totals are loaded through the separate, supported creator-subscription
         // endpoint. They are optional profile metadata and must never block the core profile.
         const subscribersCount=isSupabasePersistence()
@@ -5420,9 +5450,9 @@ async function route(req, res) {
           groups:(db.groups||[]).filter(group=>group.ownerId===target.id||(group.members||[]).includes(target.id)).map(group=>({id:group.id,name:group.name,description:group.description||'',memberCount:(group.members||[]).length,isMember:(group.members||[]).includes(target.id)})),
           friendship:isFriend(user.id,target.id)?'accepted':null,
           following:(db.follows||[]).some(f=>f.followerId===user.id&&f.followedId===target.id),
-          followersCount:(db.follows||[]).filter(f=>f.followedId===target.id&&!blockedBetween(user.id,f.followerId)).length,
-          followingCount:(db.follows||[]).filter(f=>f.followerId===target.id&&!blockedBetween(user.id,f.followedId)).length,
-          friendsCount:[...new Set((db.follows||[]).filter(f=>f.followedId===target.id&&(db.follows||[]).some(reverse=>reverse.followerId===target.id&&reverse.followedId===f.followerId)).map(f=>f.followerId).filter(id=>!blockedBetween(user.id,id)))].length,
+          followersCount:activeRelationshipCount((db.follows||[]).filter(f=>f.followedId===target.id).map(f=>f.followerId),target,user.id),
+          followingCount:activeRelationshipCount((db.follows||[]).filter(f=>f.followerId===target.id).map(f=>f.followedId),target,user.id),
+          friendsCount:activeRelationshipCount(profileFriendIds,target,user.id),
           subscribersCount,
           likesCount:profilePosts.reduce((total,post)=>total+Object.values(post.reactions||{}).filter(reaction=>reaction==='like').length,0),
           ...(profileInsights?{profileInsights}:{})
@@ -5462,19 +5492,20 @@ async function route(req, res) {
         const friendIds=getMutualFollowIds(follows,user.id,blocks),friendIdSet=new Set(friendIds);
         const friends=friendIds.map(targetId=>{
           const member=db.users.find(item=>item.id===targetId);
-          if(!member||blockedBetween(user.id,targetId)||!canViewProfile(user.id,member))return null;
+          if(!member||!canViewRelationshipListMember(user.id,member))return null;
           const preferences=normalizeFriendPreferences(friendPreferenceFor(user.id,targetId));
           const outgoing=follows.find(edge=>edge.followerId===user.id&&edge.followedId===targetId);
           const incoming=follows.find(edge=>edge.followerId===targetId&&edge.followedId===user.id);
           const dates=[outgoing?.createdAt,incoming?.createdAt].map(value=>Date.parse(value||'')).filter(Number.isFinite);
           const targetFriendIds=getMutualFollowIds(follows,targetId,blocks);
-          const commonFriendIds=targetFriendIds.filter(id=>friendIdSet.has(id));
+          const commonFriendIds=targetFriendIds.filter(id=>friendIdSet.has(id)&&isAccountActiveForRelationships(db.users.find(friend=>friend.id===id)));
           const mutualFriendsPreview=commonFriendIds
-            .map(id=>db.users.find(friend=>friend.id===id&&canViewProfile(user.id,friend)))
+            .map(id=>db.users.find(friend=>friend.id===id&&canViewRelationshipListMember(user.id,friend)))
             .filter(Boolean).slice(0,3).map(friend=>safeUser(friend,user.id));
           return {...safeUser(member,user.id),...preferences,friendSince:dates.length?new Date(Math.max(...dates)).toISOString():null,mutualFriendsCount:commonFriendIds.length,mutualFriendsPreview};
         }).filter(Boolean).sort((a,b)=>Date.parse(b.friendSince||0)-Date.parse(a.friendSince||0));
-        return json(res,200,{friends,count:friends.length});
+        const activeCount=activeRelationshipCount(friendIds,user,user.id);
+        return json(res,200,{friends,count:activeCount,activeCount,visibleCount:friends.length});
       }
       if(method==='GET'&&p==='/api/friends/lists'){
         db.friendLists||=[];
@@ -5483,7 +5514,7 @@ async function route(req, res) {
         const lists=db.friendLists.filter(item=>item.ownerId===user.id).map(item=>{
           const memberIds=[...new Set((item.memberIds||[]).filter(id=>currentFriendIds.has(id)))];
           if(memberIds.length!==(item.memberIds||[]).length){item.memberIds=memberIds;item.updatedAt=now();changed=true;}
-          return {id:item.id,name:item.name,description:item.description||'',memberIds,memberCount:memberIds.length,createdAt:item.createdAt,updatedAt:item.updatedAt||item.createdAt};
+          return {id:item.id,name:item.name,description:item.description||'',memberIds,memberCount:activeRelationshipCount(memberIds,user,user.id),visibleMemberCount:memberIds.length,createdAt:item.createdAt,updatedAt:item.updatedAt||item.createdAt};
         }).sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt));
         if(changed)await saveStore();
         return json(res,200,{lists});
