@@ -71,7 +71,14 @@ async function refreshProviderHealth() {
     return providerAdapters;
   }
   if(!createAdapter){
-    console.warn('[Minglora AI Bot Worker] No provider adapter module configured; all assignments remain non-executable.');
+    for(const assignment of assignments){
+      try{
+        await gatewayRequest('ai_provider_health_update',{
+          assignmentId:assignment.assignmentId,healthStatus:'unavailable'
+        });
+      }catch{}
+    }
+    console.warn('[Minglora AI Bot Worker] No provider adapter module configured; all assignments are marked unavailable.');
     return providerAdapters;
   }
 
