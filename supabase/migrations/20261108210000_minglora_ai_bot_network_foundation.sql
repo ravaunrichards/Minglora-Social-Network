@@ -879,17 +879,50 @@ BEGIN
 
   IF p_identity ? 'capabilities' THEN
     DELETE FROM public.ai_identity_capabilities WHERE identity_id=v_id;
-    FOR v_capability IN SELECT value FROM pg_catalog.jsonb_array_elements(p_identity->'capabilities')
+    FOR v_capability IN
+      SELECT value FROM pg_catalog.jsonb_array_elements(p_identity->'capabilities')
     LOOP
       IF pg_catalog.jsonb_typeof(v_capability)='string' THEN
         v_capability_code := pg_catalog.btrim(v_capability #>> '{}');
       ELSIF pg_catalog.jsonb_typeof(v_capability)='object' THEN
-        v_capability_code := pg_catalog.btrim(COALESCE(v_capability->>'code',v_capability->>'capabilityCode',''));
+        v_capability_code := pg_catalog.btrim(
+          COALESCE(v_capability->>'code',v_capability->>'capabilityCode','')
+        );
       ELSE
         CONTINUE;
       END IF;
-      IF v_capability_code ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{1,99}
-  VALUES (v_id,'human_admin',v_owner,true)
+
+      IF v_capability_code ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{1,99}$' THEN
+        INSERT INTO public.ai_identity_capabilities (
+          identity_id,capability_code,enabled,capability_configuration,
+          verification_status,last_checked_at
+        ) VALUES (
+          v_id,
+          v_capability_code,
+          false,
+          CASE
+            WHEN pg_catalog.jsonb_typeof(v_capability->'configuration')='object'
+              THEN v_capability->'configuration'
+            WHEN pg_catalog.jsonb_typeof(v_capability->'capabilityConfiguration')='object'
+              THEN v_capability->'capabilityConfiguration'
+            ELSE '{}'::jsonb
+          END,
+          'unverified',
+          NULL
+        )
+        ON CONFLICT (identity_id,capability_code) DO UPDATE SET
+          enabled=false,
+          capability_configuration=EXCLUDED.capability_configuration,
+          verification_status='unverified',
+          last_checked_at=NULL,
+          updated_at=pg_catalog.now();
+      END IF;
+    END LOOP;
+  END IF;
+
+  INSERT INTO public.ai_identity_owners (
+    identity_id,owner_type,owner_user_id,is_primary
+  ) VALUES (v_id,'human_admin',v_owner,true)
   ON CONFLICT DO NOTHING;
 
   IF v_is_new OR v_previous_status IS DISTINCT FROM v_status THEN
