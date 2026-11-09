@@ -1730,6 +1730,16 @@ async function route(req, res) {
           const result=await requestSupabaseState('ai_provider_assignment_list',{actorUserId:user.id,identityId,limit,offset});
           return Array.isArray(result.assignments)?result.assignments:[];
         },
+        persistAiEmailIdentity:async email=>{
+          if(!isSupabasePersistence())throw Object.assign(new Error('AI email identity records require Minglora Supabase PostgreSQL persistence.'),{status:503});
+          const result=await requestSupabaseState('ai_email_identity_upsert',{actorUserId:user.id,email});
+          return result.email||null;
+        },
+        listAiEmailIdentities:async ({identityId=null,limit=100,offset=0}={})=>{
+          if(!isSupabasePersistence())return null;
+          const result=await requestSupabaseState('ai_email_identity_list',{actorUserId:user.id,identityId,limit,offset});
+          return Array.isArray(result.emails)?result.emails:[];
+        },
         lookupAdminMember:async targetUserId=>{
           const local=(db.users||[]).find(member=>member.id===String(targetUserId));
           if(local)return local;
