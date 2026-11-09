@@ -144,6 +144,9 @@ async function persistCanonicalBotSettings(settings,persistAiBotSettings) {
 import {
   ensurePersonalAiBotCollections,
   getPersonalAiBotCategories,
+  getPersonalAiBotDepartments,
+  createPersonalAiBotDepartment,
+  updatePersonalAiBotDepartment,
   getPersonalAiBotOverview,
   createPersonalAiBot,
   createPersonalAiBotStarterSet,
@@ -409,6 +412,34 @@ export async function handlePersonalAiBotsAdminApi(context) {
       await saveStore();
       return (json(res,200,result),true);
     }
+    if(method==='GET'&&path===root+'/departments'){
+      return (json(res,200,{ok:true,departments:getPersonalAiBotDepartments(db)}),true);
+    }
+    if(method==='POST'&&path===root+'/departments'){
+      const allowed=new Set(['name','description','parentDepartmentId']);
+      if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).some(key=>!allowed.has(key))){
+        return (json(res,400,{error:'Department payload contains unsupported fields.'}),true);
+      }
+      const department=createPersonalAiBotDepartment(db,input,user.id,stamp,uid);
+      await saveStore();
+      return (json(res,201,{ok:true,department}),true);
+    }
+    const departmentMatch=path.match(/^\/api\/admin\/personal-ai-bots\/departments\/([a-z0-9-]+)$/i);
+    if(departmentMatch&&method==='PATCH'){
+      const allowed=new Set(['name','description','enabled','parentDepartmentId']);
+      if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).some(key=>!allowed.has(key))||!Object.keys(input).length){
+        return (json(res,400,{error:'Department update contains unsupported or missing fields.'}),true);
+      }
+      const department=updatePersonalAiBotDepartment(db,departmentMatch[1],input,user.id,stamp,uid);
+      await saveStore();
+      return (json(res,200,{ok:true,department}),true);
+    }
+    if(departmentMatch&&method==='DELETE'){
+      const department=updatePersonalAiBotDepartment(db,departmentMatch[1],{enabled:false},user.id,stamp,uid);
+      await saveStore();
+      return (json(res,200,{ok:true,department}),true);
+    }
+
     if(method==='POST'&&path===root+'/categories'){
       const category=createPersonalAiBotCategory(db,input||{},user.id,stamp,uid);
       await saveStore();
