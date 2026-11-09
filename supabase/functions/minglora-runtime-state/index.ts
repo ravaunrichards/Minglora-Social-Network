@@ -438,11 +438,16 @@ Deno.serve(async (req: Request) => {
       const auditRecorded = await recordAdminUserAction(actorUserId, userId, "account.delete_failed", {
         reason, outcome: "rejected", providerRefreshTokensRevoked, sessionRevokeError
       });
+      const warning = providerRefreshTokensRevoked
+        ? "Supabase refresh-token sessions were globally revoked, but account deletion was rejected."
+        : sessionRevokeError
+          ? "Supabase session revocation failed before account deletion was rejected: " + sessionRevokeError
+          : "No current Supabase access token was available, so provider refresh-token sessions were not globally revoked.";
       return json(409, {
         error: String(deleteError.message || "Minglora could not delete the account.").slice(0, 220),
         auditRecorded,
         sessionRevoked: providerRefreshTokensRevoked,
-        warning: sessionRevokeError
+        warning
       });
     }
     const auditRecorded = await recordAdminUserAction(actorUserId, userId, "account.delete", {
