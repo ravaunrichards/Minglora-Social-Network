@@ -7255,8 +7255,10 @@ async function openStoryPrivacyDialog(){
     const memberList=modal.querySelector('.story-privacy-member-list');
     if(memberList)memberList.style.maxHeight='240px';
   };
-  render();
-  modal.querySelectorAll('[data-story-privacy-choice]').forEach(button=>button.addEventListener('click',()=>{
+  const optionsContainer=modal.querySelector('[data-story-privacy-options]');
+  optionsContainer?.addEventListener('click',event=>{
+    const button=event.target.closest('[data-story-privacy-choice]');
+    if(!button)return;
     const choice=button.dataset.storyPrivacyChoice;
     if(choice==='hide'){
       draft.mode='hide';
@@ -7268,12 +7270,8 @@ async function openStoryPrivacyDialog(){
       if(choice!=='custom')draft.customUserIds=[];
     }
     render();
-    modal.querySelectorAll('[data-story-privacy-choice]').forEach(item=>item.addEventListener('click',()=>{}));
-    modal.querySelectorAll('[data-story-privacy-choice]').forEach(item=>{
-      item.setAttribute('aria-checked',item.dataset.storyPrivacyChoice===(draft.mode==='hide'?'hide':draft.audience)?'true':'false');
-      item.classList.toggle('is-selected',item.dataset.storyPrivacyChoice===(draft.mode==='hide'?'hide':draft.audience));
-    });
-  }));
+  });
+  render();
   const save=async()=>{
     if(draft.mode==='audience'&&draft.audience==='custom'&&!draft.customUserIds.length){toast('Select at least one person for your Custom Story audience.');return;}
     if(draft.mode==='hide'&&!draft.hiddenUserIds.length){toast('Choose at least one person to hide your story from.');return;}
