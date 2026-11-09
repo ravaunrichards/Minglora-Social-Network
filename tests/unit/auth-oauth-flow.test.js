@@ -4,11 +4,13 @@ import { readFile } from 'node:fs/promises';
 
 const read = path => readFile(new URL(path, import.meta.url), 'utf8');
 
-const [server, auth, login, admin, html, css, worker] = await Promise.all([
+const [server, auth, login, admin, adminPage, adminCentre, html, css, worker] = await Promise.all([
   read('../../src/server.js'),
   read('../../src/supabase-auth.js'),
   read('../../public/auth-login.js'),
   read('../../public/auth-providers-admin.js'),
+  read('../../public/admin-centre.html'),
+  read('../../public/admin-centre.js'),
   read('../../public/index.html'),
   read('../../public/auth-oauth.css'),
   read('../../public/sw.js')
@@ -98,4 +100,17 @@ test('Social login UI loads before app.js and is available in the offline app sh
   assert.ok(worker.includes('auth-login.js?v=20261109-oauth-pkce-buttons-1'));
   assert.ok(css.includes('.auth-social-provider'));
   assert.ok(css.includes('@media(max-width:420px)'));
+});
+
+test('Standalone Admin Centre loads and mounts provider controls after owner access is verified', () => {
+  assert.ok(adminPage.includes('id="admin-centre-root"'));
+  assert.ok(adminPage.includes('auth-providers-admin.css?v=20261109-auth-providers-1'));
+  assert.ok(adminPage.includes('auth-providers-admin.js?v=20261109-auth-providers-1'));
+  assert.ok(adminPage.indexOf('admin-centre.js?v=20261109-admin-centre-left-sidebar-1') <
+    adminPage.indexOf('auth-providers-admin.js?v=20261109-auth-providers-1'));
+  assert.ok(adminCentre.includes("window.__mingloraAdminAccess = access;"));
+  assert.ok(adminCentre.includes('addControlCentrePanel(root)'));
+  assert.ok(admin.includes("const root=document.querySelector('#admin-centre-root')"));
+  assert.ok(admin.includes('new MutationObserver(mount)'));
+  assert.ok(admin.includes("const settings=document.querySelector('#admin-centre-settings')"));
 });
