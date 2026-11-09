@@ -35,6 +35,7 @@ test('friend preferences default without altering relationship state', () => {
   assert.deepEqual(normalizeFriendPreferences(), {
     isFavorite: false,
     isCloseFriend: false,
+    isRestricted: false,
     isMutedPosts: false,
     isMutedStories: false,
     snoozedUntil: null
@@ -45,10 +46,12 @@ test('friend preference patches accept supported flags and a bounded snooze', ()
   const now = Date.parse('2026-11-06T20:00:00.000Z');
   const valid = validateFriendPreferencePatch({
     isFavorite: true,
+    isRestricted: true,
     snoozedUntil: '2026-11-13T20:00:00.000Z'
   }, now);
   assert.equal(valid.valid, true);
   assert.equal(valid.value.isFavorite, true);
+  assert.equal(valid.value.isRestricted, true);
   assert.equal(valid.value.snoozedUntil, '2026-11-13T20:00:00.000Z');
 });
 
