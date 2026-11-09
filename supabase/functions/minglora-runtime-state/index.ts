@@ -252,6 +252,7 @@ Deno.serve(async (req: Request) => {
     if (!email && !phone) return json(400, { error: "Enter an email address or phone number." });
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json(400, { error: "Enter a valid email address." });
     if (phone && !/^\+[1-9]\d{7,14}$/.test(phone)) return json(400, { error: "Enter the phone number in international format, such as +18765550123." });
+    if (contactPhone && !/^\+[1-9]\d{7,14}$/.test(contactPhone)) return json(400, { error: "Enter the contact phone in international format, such as +18765550123." });
     if (displayName.length < 2) return json(400, { error: "Enter a display name containing at least 2 characters." });
     if (password.length < 8 || password.length > 128) return json(400, { error: "Set a password between 8 and 128 characters." });
     if (!username) return json(400, { error: "Enter a username to create the member profile." });
@@ -348,7 +349,13 @@ Deno.serve(async (req: Request) => {
       if (!Object.hasOwn(profileInput, field)) continue;
       let value = profileInput[field];
       if (typeof value === "string") {
-        const maximum = field === "bio" ? 500 : field === "location" ? 120 : field === "displayName" ? 120 : 120;
+        const maximum = field === "bio" ? 500
+          : field === "location" ? 120
+          : ["country", "county", "parish", "city"].includes(field) ? 100
+          : ["gender", "relationshipStatus"].includes(field) ? 80
+          : field === "displayName" ? 120
+          : field === "contactPhone" ? 16
+          : 120;
         value = value.trim().slice(0, maximum);
       }
       profilePatch[column] = value;
@@ -358,6 +365,11 @@ Deno.serve(async (req: Request) => {
       const value = String(profilePatch.display_name || "").trim();
       if (value.length < 2) return json(400, { error: "Display name must contain at least 2 characters." });
       profilePatch.display_name = value;
+    }
+    if (Object.hasOwn(profileInput, "contactPhone")) {
+      const value = String(profilePatch.contact_phone || "").trim();
+      if (value && !/^\\+[1-9]\\d{7,14}$/.test(value)) return json(400, { error: "Enter the contact phone in international format, such as +18765550123." });
+      profilePatch.contact_phone = value;
     }
     if (Object.hasOwn(profileInput, "username")) {
       const value = String(profilePatch.username || "").trim().replace(/^@/, "").toLowerCase();
