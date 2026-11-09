@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { isRelationshipBlocked } from '../relationships/friends.js';
 
 function canonicalAiIdentity(bot) {
@@ -197,6 +198,154 @@ export async function handlePersonalAiBotsAdminApi(context) {
       await saveStore();
       return (json(res,201,{ok:true,bot}),true);
     }
+
+    if(method==='GET'&&path===root+'/batches'){
+      const batches=db.personalAiBotBatches
+        .filter(batch=>batch.ownerId===user.id)
+        .slice()
+        .sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')))
+        .slice(0,50);
+      return (json(res,200,{ok:true,batches}),true);
+    }
+    if(method==='POST'&&path===root+'/batches'){
+      if(typeof persistAiIdentities!=='function'){
+        return (json(res,503,{error:'Canonical AI identity persistence is unavailable; no batch was created.'}),true);
+      }
+      const allowedRequestKeys=new Set(['idempotencyKey','items']);
+      if(!input||typeof input!=='object'||Array.isArray(input)||
+         Object.keys(input).some(key=>!allowedRequestKeys.has(key))){
+        return (json(res,400,{error:'AI identity batch request contains unsupported fields.'}),true);
+      }
+      const idempotencyKey=String(input.idempotencyKey||'').trim();
+      const items=input.items;
+      if(!/^[A-Za-z0-9][A-Za-z0-9._:-]{7,119}$/.test(idempotencyKey)||
+         !Array.isArray(items)||items.length<1||items.length>100){
+        return (json(res,400,{error:'Provide an idempotency key and between 1 and 100 AI identity records.'}),true);
+      }
+      const allowedItemKeys=new Set([
+        'displayName','firstName','middleName','lastName','categoryId','population','identityType',
+        'bio','description','introduction','gender','genderPresentation','nationality',
+        'countryOfOrigin','currentCountry','originCountryCode','currentCountryCode','timeZone',
+        'personality','communicationStyle','interests','hobbies','education','profession','skills',
+        'locations','avatarStorageReference','coverStorageReference','voicePreferences',
+        'avatarPreferences','memoryEnabled','memoryConfiguration','capabilities','languages',
+        'administratorInstructions'
+      ]);
+      const normalizedItems=[];
+      for(let index=0;index<items.length;index++){
+        const item=items[index];
+        if(!item||typeof item!=='object'||Array.isArray(item)||
+           Object.keys(item).some(key=>!allowedItemKeys.has(key))){
+          return (json(res,400,{error:'AI identity batch item '+(index+1)+' contains unsupported fields.'}),true);
+        }
+        const normalized={...item};
+        if(!String(normalized.displayName||'').trim()&&normalized.firstName&&normalized.lastName){
+          normalized.displayName=[normalized.firstName,normalized.middleName,normalized.lastName].filter(Boolean).join(' ');
+        }
+        if(!String(normalized.displayName||'').trim()||!String(normalized.categoryId||'').trim()){
+          return (json(res,400,{error:'Every AI identity batch item needs a display name and category.'}),true);
+        }
+        normalizedItems.push(normalized);
+      }
+      const requestHash=createHash('sha256').update(JSON.stringify(normalizedItems)).digest('hex');
+      let batch=db.personalAiBotBatches.find(item=>item.ownerId===user.id&&item.idempotencyKey===idempotencyKey)||null;
+      let bots=[];
+      let isNewBatch=false;
+      let previousBatch=null;
+      let previousCollections=null;
+      if(batch){
+        if(batch.requestHash!==requestHash){
+          return (json(res,409,{error:'This idempotency key was already used for a different AI identity batch.'}),true);
+        }
+        const identitiesById=new Map(db.personalAiBots.map(bot=>[String(bot.id),bot]));
+        bots=(batch.identityIds||[]).map(id=>identitiesById.get(String(id))).filter(Boolean);
+        if(bots.length!==Number(batch.totalRecords||0)){
+          return (json(res,409,{error:'The saved AI identity batch is incomplete and cannot be retried safely.'}),true);
+        }
+        if(batch.status==='completed'){
+          return (json(res,200,{ok:true,replayed:true,batch}),true);
+        }
+        previousBatch={...batch};
+        batch.status='pending_persistence';
+        batch.retryCount=Number(batch.retryCount||0)+1;
+        batch.updatedAt=stamp;
+        batch.lastErrorCode=null;
+      }else{
+        const normalizeName=value=>String(value||'').trim().replace(/\s+/g,' ').toLocaleLowerCase('en');
+        const names=new Set(db.personalAiBots.map(bot=>String(bot.categoryId||'')+'::'+normalizeName(bot.displayName)));
+        for(let index=0;index<normalizedItems.length;index++){
+          const item=normalizedItems[index],signature=String(item.categoryId)+'::'+normalizeName(item.displayName);
+          if(names.has(signature)){
+            return (json(res,409,{error:'Duplicate AI identity name in category at batch item '+(index+1)+'. No records were created.'}),true);
+          }
+          names.add(signature);
+        }
+        const stagedDb={
+          ...db,
+          personalAiBots:db.personalAiBots.slice(),
+          personalAiBotAudit:db.personalAiBotAudit.slice(),
+          personalAiBotBatches:db.personalAiBotBatches.slice()
+        };
+        const batchId=uid();
+        bots=normalizedItems.map(item=>createPersonalAiBot(stagedDb,item,user.id,stamp,uid));
+        for(const bot of bots)bot.batchId=batchId;
+        batch={
+          id:batchId,ownerId:user.id,idempotencyKey,requestHash,
+          identityIds:bots.map(bot=>bot.id),
+          totalRecords:bots.length,completedRecords:0,failedRecords:0,
+          retryCount:0,status:'pending_persistence',
+          lastErrorCode:null,createdAt:stamp,updatedAt:stamp,completedAt:null
+        };
+        stagedDb.personalAiBotBatches.push(batch);
+        previousCollections={
+          personalAiBots:db.personalAiBots,
+          personalAiBotAudit:db.personalAiBotAudit,
+          personalAiBotBatches:db.personalAiBotBatches
+        };
+        db.personalAiBots=stagedDb.personalAiBots;
+        db.personalAiBotAudit=stagedDb.personalAiBotAudit;
+        db.personalAiBotBatches=stagedDb.personalAiBotBatches;
+        isNewBatch=true;
+      }
+      try{
+        await saveStore();
+      }catch(error){
+        if(isNewBatch&&previousCollections){
+          db.personalAiBots=previousCollections.personalAiBots;
+          db.personalAiBotAudit=previousCollections.personalAiBotAudit;
+          db.personalAiBotBatches=previousCollections.personalAiBotBatches;
+        }else if(batch&&previousBatch){
+          Object.assign(batch,previousBatch);
+        }
+        return (json(res,503,{error:'AI identity batch checkpoint could not be saved; canonical persistence was not attempted.'}),true);
+      }
+      try{
+        await persistCanonicalIdentities(bots,persistAiIdentities);
+      }catch(error){
+        batch.status='retryable_failed';
+        batch.failedRecords=batch.totalRecords;
+        batch.lastErrorCode='CANONICAL_PERSISTENCE_FAILED';
+        batch.updatedAt=now();
+        try{await saveStore();}catch{}
+        return (json(res,503,{
+          error:'AI identity batch was saved for recovery, but canonical PostgreSQL persistence failed. Retry with the same idempotency key and identical records.',
+          batch:{id:batch.id,status:batch.status,totalRecords:batch.totalRecords,completedRecords:batch.completedRecords,failedRecords:batch.failedRecords,retryCount:batch.retryCount}
+        }),true);
+      }
+      batch.status='completed';
+      batch.completedRecords=bots.length;
+      batch.failedRecords=0;
+      batch.lastErrorCode=null;
+      batch.completedAt=now();
+      batch.updatedAt=batch.completedAt;
+      await saveStore();
+      return (json(res,isNewBatch?201:200,{
+        ok:true,replayed:false,
+        batch:{id:batch.id,status:batch.status,totalRecords:batch.totalRecords,completedRecords:batch.completedRecords,failedRecords:batch.failedRecords,retryCount:batch.retryCount,identityIds:batch.identityIds,createdAt:batch.createdAt,completedAt:batch.completedAt},
+        bots
+      }),true);
+    }
+
     if(method==='POST'&&path===root+'/starter-set'){
       const bots=createPersonalAiBotStarterSet(db,user.id,stamp,uid);
       await persistCanonicalIdentities(bots,persistAiIdentities);
