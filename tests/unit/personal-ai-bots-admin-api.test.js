@@ -789,3 +789,52 @@ test('AI profile PATCH persists demographic, career, location and preference fie
   assert.equal(persisted.cover_storage_reference,'ai/profile/cover-801');
   assert.equal(saves,1);
 });
+
+
+test('owner safety report queue returns pending reports from canonical storage',async()=>{
+  const reports=[{reportId:'report-1',identityId:'ai-1',reason:'spam',status:'pending'}];
+  let options=null;
+  const context=makeContext({
+    listAiIdentityReports:async value=>{options=value;return reports;}
+  });
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,200);
+  assert.deepEqual(options,{status:'pending',limit:100,offset:0});
+  assert.deepEqual(context.res.payload.safetyReports,reports);
+  assert.equal(context.res.payload.safetyReportsSource,'minglora_supabase_postgresql');
+});
+
+test('owner can move an AI safety report into review or close it with an audit note',async()=>{
+  let received=null,saves=0;
+  const context=makeContext({
+    method:'PATCH',
+    path:'/api/admin/personal-ai-bots/safety/reports/00000000-0000-4000-8000-000000000701',
+    input:{status:'actioned',resolutionNote:'Reviewed and action recorded.'},
+    reviewAiIdentityReport:async value=>{received=value;return {reportId:value.reportId,status:value.status};},
+    saveStore:async()=>{saves++;}
+  });
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,200);
+  assert.deepEqual(received,{
+    reportId:'00000000-0000-4000-8000-000000000701',
+    status:'actioned',resolutionNote:'Reviewed and action recorded.'
+  });
+  assert.equal(context.res.payload.report.status,'actioned');
+  assert.equal(saves,1);
+});
+
+test('AI report review rejects unsupported statuses and oversized resolution notes',async()=>{
+  for(const input of [
+    {status:'deleted',resolutionNote:''},
+    {status:'dismissed',resolutionNote:'x'.repeat(1201)}
+  ]){
+    const context=makeContext({
+      method:'PATCH',
+      path:'/api/admin/personal-ai-bots/safety/reports/00000000-0000-4000-8000-000000000702',
+      input,
+      reviewAiIdentityReport:async()=>{throw new Error('must not be called');}
+    });
+    await handlePersonalAiBotsAdminApi(context);
+    assert.equal(context.res.statusCode,400);
+  }
+});
