@@ -36,18 +36,18 @@ test('People You May Know uses Facebook-style photo, name, mutual-friend and Fol
   assert.match(server,/mutualFriendsCount:commonFriendIds\.length/);
   assert.match(app,/member\.friendship!=='accepted'/);
 });
-test('Friends discovery updates quietly in the background while the screen is visible', async () => {
+test('Friends discovery avoids disruptive background rerenders and refreshes when opened', async () => {
   const app = await read('public/app.js');
-  assert.match(app, /peopleDiscoveryRefreshTimer=window.setInterval\(\(\)=>void refreshPeopleDiscovery\(\{quiet:true\}\),30000\)/);
-  assert.match(app, /state\.view!=='friends'/);
-  assert.match(app, /document\.visibilityState!=='visible'/);
+  assert.match(app, /async function loadPeopleDiscovery\(\)[\s\S]*api\('\/discovery\/people'\)/);
+  assert.match(app, /function startPeopleDiscoveryRefresh\(\)[\s\S]*stopPeopleDiscoveryRefresh\(\)/);
+  assert.match(app, /if\(peopleDiscoveryRefreshBusy\|\|state\.view!=='friends'\|\|document\.visibilityState!=='visible'\)return/);
   assert.match(app, /focused&&grid\.contains\(focused\)/);
   assert.match(app, /api\('\/live\/sessions'\)/);
   assert.match(app, /openLiveRoom\(session,'viewer'\)/);
   assert.doesNotMatch(app, /id="people-discovery-refresh"/);
 });
 test('Facebook-style people cards have responsive sizing and reduced-motion treatment', async () => {
-  const css=await read('public/social-facebook-layout.css');
+  const css=await read('public/people-facebook-responsive.css');
   assert.match(css,/\.facebook-person-card/);
   assert.match(css,/\.facebook-person-photo/);
   assert.match(css,/\.facebook-sidebar-suggestion/);
@@ -63,7 +63,8 @@ test('static shell cache includes the active discovery app assets', async () => 
     html.match(/href="(\/styles\.css\?v=[^"]+)"/)?.[1],
     html.match(/src="(\/app\.js\?v=[^"]+)"/)?.[1],
     html.match(/src="(\/friends-advanced\.js\?v=[^"]+)"/)?.[1],
-    html.match(/href="(\/social-facebook-layout\.css\?v=[^"]+)"/)?.[1]
+    html.match(/href="(\/social-facebook-layout\.css\?v=[^"]+)"/)?.[1],
+    html.match(/href="(\/people-facebook-responsive\.css\?v=[^"]+)"/)?.[1]
   ].filter(Boolean);
   assert.ok(worker.includes("const CACHE_NAME='minglora-shell-v"),'service-worker cache is versioned');
   for(const asset of assets)assert.ok(worker.includes("'"+asset+"'"),'service worker caches '+asset);
@@ -71,7 +72,7 @@ test('static shell cache includes the active discovery app assets', async () => 
 
 test('People You May Know cards keep Facebook-style square photo proportions on desktop and mobile',async()=>{
   const app=await read('public/app.js');
-  const css=await read('public/social-facebook-layout.css');
+  const css=await read('public/people-facebook-responsive.css');
   assert.ok(app.includes('facebook-person-photo'));
   assert.ok(app.includes('facebook-person-follow'));
   assert.ok(app.includes('facebook-person-remove'));
