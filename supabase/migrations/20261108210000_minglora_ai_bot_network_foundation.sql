@@ -940,6 +940,34 @@ COMMIT;
 END;
 $function$;
 
+
+CREATE OR REPLACE FUNCTION public.minglora_ai_identity_upsert_batch(
+  p_identities jsonb,
+  p_actor_user_id uuid
+) RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = ''
+AS $function$
+DECLARE
+  v_identity jsonb;
+  v_results jsonb := '[]'::jsonb;
+BEGIN
+  IF p_identities IS NULL OR pg_catalog.jsonb_typeof(p_identities) <> 'array' OR
+     pg_catalog.jsonb_array_length(p_identities) < 1 OR
+     pg_catalog.jsonb_array_length(p_identities) > 100 OR p_actor_user_id IS NULL THEN
+    RAISE EXCEPTION 'Provide between 1 and 100 AI identities and a valid owner.' USING ERRCODE = '22023';
+  END IF;
+  FOR v_identity IN SELECT value FROM pg_catalog.jsonb_array_elements(p_identities)
+  LOOP
+    v_results := v_results || pg_catalog.jsonb_build_array(
+      public.minglora_ai_identity_upsert(v_identity,p_actor_user_id)
+    );
+  END LOOP;
+  RETURN v_results;
+END;
+$function$;
+
 CREATE OR REPLACE FUNCTION public.minglora_ai_identity_list(
   p_owner_admin_id uuid,
   p_limit integer DEFAULT 100,
@@ -999,6 +1027,8 @@ $function$;
 
 REVOKE ALL ON FUNCTION public.minglora_ai_identity_upsert(jsonb,uuid) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.minglora_ai_identity_upsert(jsonb,uuid) TO service_role;
+REVOKE ALL ON FUNCTION public.minglora_ai_identity_upsert_batch(jsonb,uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.minglora_ai_identity_upsert_batch(jsonb,uuid) TO service_role;
 REVOKE ALL ON FUNCTION public.minglora_ai_identity_list(uuid,integer,integer) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.minglora_ai_identity_list(uuid,integer,integer) TO service_role;
 
