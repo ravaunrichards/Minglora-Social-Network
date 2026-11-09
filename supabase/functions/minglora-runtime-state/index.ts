@@ -97,6 +97,7 @@ Deno.serve(async (req: Request) => {
     "ai_identity_upsert_batch", "ai_identity_list",
     "ai_bot_settings_update", "ai_provider_assignment_upsert", "ai_provider_assignment_list",
     "ai_provider_runtime_list", "ai_provider_health_update",
+    "ai_email_identity_upsert", "ai_email_identity_list",
     "ai_bot_task_upsert_batch", "ai_bot_task_list", "ai_bot_task_stats",
     "ai_bot_task_claim", "ai_bot_task_heartbeat", "ai_bot_task_complete", "ai_bot_task_fail",
   ];
@@ -168,6 +169,56 @@ Deno.serve(async (req: Request) => {
       return json(503, { error: "Canonical AI identity records could not be loaded.", code: "AI_IDENTITY_SCHEMA_NOT_READY" });
     }
     return json(200, { ok: true, identities: Array.isArray(data) ? data : [] });
+  }
+
+  if (action === "ai_email_identity_upsert") {
+    const actorUserId = String(input.actorUserId || "");
+    const email = input.email;
+    const allowed = new Set(["identityId","emailAddress","emailType","emailProvider","isPrimary"]);
+    if (actorUserId !== AI_NETWORK_OWNER_ID) {
+      return json(403, { error: "Only the designated Minglora owner can manage AI email identities." });
+    }
+    if (!email || typeof email !== "object" || Array.isArray(email) ||
+        Object.keys(email).some((key: string) => !allowed.has(key)) ||
+        !validUuid(email.identityId) ||
+        typeof email.emailAddress !== "string" ||
+        email.emailAddress.length < 3 || email.emailAddress.length > 320 ||
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.emailAddress) ||
+        (email.emailType != null && !["primary","recovery","notification","other"].includes(String(email.emailType))) ||
+        (email.emailProvider != null && (typeof email.emailProvider !== "string" || email.emailProvider.length > 80)) ||
+        (email.isPrimary != null && typeof email.isPrimary !== "boolean")) {
+      return json(400, { error: "AI email identity fields are invalid. Verification and mailbox provisioning are provider-confirmed states." });
+    }
+    const { data, error } = await admin.rpc("minglora_ai_email_identity_upsert", {
+      p_email: email,p_actor_user_id: actorUserId
+    });
+    if (error) {
+      const conflict = ["23505","23503","23514","22023"].includes(String(error.code || ""));
+      return json(conflict ? 409 : 503, {
+        error: conflict ? "AI email address is already assigned or failed validation." : "AI email identity storage is unavailable.",
+        code: String(error.code || "AI_EMAIL_IDENTITY_ERROR")
+      });
+    }
+    return json(200, { ok: true, email: data || {} });
+  }
+
+  if (action === "ai_email_identity_list") {
+    const actorUserId = String(input.actorUserId || "");
+    const identityId = input.identityId == null ? null : String(input.identityId);
+    const limit = Number(input.limit ?? 100),offset = Number(input.offset ?? 0);
+    if (actorUserId !== AI_NETWORK_OWNER_ID) {
+      return json(403, { error: "Only the designated Minglora owner can read AI email identities." });
+    }
+    if ((identityId !== null && !validUuid(identityId)) ||
+        !Number.isInteger(limit) || limit < 1 || limit > 500 ||
+        !Number.isInteger(offset) || offset < 0 || offset > 1000000000) {
+      return json(400, { error: "AI email identity pagination values are invalid." });
+    }
+    const { data, error } = await admin.rpc("minglora_ai_email_identity_list", {
+      p_owner_admin_id: actorUserId,p_identity_id: identityId,p_limit: limit,p_offset: offset
+    });
+    if (error) return json(503, { error: "AI email identity records could not be loaded.", code: "AI_EMAIL_IDENTITY_SCHEMA_NOT_READY" });
+    return json(200, { ok: true, emails: Array.isArray(data) ? data : [] });
   }
 
   if (action === "ai_provider_runtime_list") {
