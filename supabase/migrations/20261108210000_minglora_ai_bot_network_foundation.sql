@@ -727,6 +727,10 @@ DECLARE
   v_display_name text;
   v_version bigint;
   v_is_new boolean;
+  v_language jsonb;
+  v_language_code text;
+  v_language_name text;
+  v_language_dialect text;
 BEGIN
   IF p_identity IS NULL OR pg_catalog.jsonb_typeof(p_identity) <> 'object' OR p_actor_user_id IS NULL THEN
     RAISE EXCEPTION 'A valid identity object and authenticated owner are required.' USING ERRCODE = '22023';
@@ -908,6 +912,35 @@ COMMIT;
     visibility=EXCLUDED.visibility,
     updated_at=pg_catalog.now();
 
+
+  DELETE FROM public.ai_identity_languages WHERE identity_id=v_id;
+  IF pg_catalog.jsonb_typeof(p_identity->'languages')='array' THEN
+    FOR v_language IN SELECT value FROM pg_catalog.jsonb_array_elements(p_identity->'languages')
+    LOOP
+      IF pg_catalog.jsonb_typeof(v_language)='object' THEN
+        v_language_name := COALESCE(NULLIF(pg_catalog.btrim(v_language->>'name'),''),NULLIF(pg_catalog.btrim(v_language->>'language_name'),''),NULLIF(pg_catalog.btrim(v_language->>'code'),''));
+        v_language_code := COALESCE(NULLIF(pg_catalog.lower(pg_catalog.btrim(v_language->>'code')),''),pg_catalog.lower(pg_catalog.regexp_replace(v_language_name,'[^a-zA-Z0-9]+','-','g')));
+        v_language_dialect := COALESCE(pg_catalog.btrim(v_language->>'dialect'),'');
+      ELSIF pg_catalog.jsonb_typeof(v_language)='string' THEN
+        v_language_name := pg_catalog.btrim(v_language #>> '{}');
+        v_language_code := pg_catalog.lower(pg_catalog.regexp_replace(v_language_name,'[^a-zA-Z0-9]+','-','g'));
+        v_language_dialect := '';
+      ELSE
+        CONTINUE;
+      END IF;
+      IF v_language_code IS NOT NULL AND v_language_code<>'' AND v_language_name IS NOT NULL AND v_language_name<>'' THEN
+        INSERT INTO public.ai_identity_languages (
+          identity_id,language_code,language_name,dialect,is_primary
+        ) VALUES (
+          v_id,pg_catalog.left(v_language_code,20),pg_catalog.left(v_language_name,80),
+          pg_catalog.left(COALESCE(v_language_dialect,''),80),false
+        )
+        ON CONFLICT (identity_id,language_code,dialect) DO UPDATE SET
+          language_name=EXCLUDED.language_name;
+      END IF;
+    END LOOP;
+  END IF;
+
   INSERT INTO public.ai_identity_owners (identity_id,owner_type,owner_user_id,is_primary)
   VALUES (v_id,'human_admin',v_owner,true)
   ON CONFLICT DO NOTHING;
@@ -1010,6 +1043,10 @@ AS $function$
         'hobbies',p.hobbies,
         'profession',p.profession,
         'skills',p.skills,
+        'languages',COALESCE((
+          SELECT pg_catalog.jsonb_agg(l.language_name ORDER BY l.language_name)
+          FROM public.ai_identity_languages AS l WHERE l.identity_id=i.identity_id
+        ),'[]'::jsonb),
         'memoryEnabled',p.memory_enabled,
         'createdAt',i.created_at,
         'updatedAt',i.updated_at
