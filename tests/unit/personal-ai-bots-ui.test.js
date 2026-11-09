@@ -110,3 +110,18 @@ test('signed-in AI discovery page loads its controller and supports ISO country 
   assert.match(script,/fetch\('\/api\/ai\/discover\?/);
   assert.match(index,/href="\/ai-discover\.html"[^>]*aria-label="Discover AI members"/);
 });
+
+
+test('AI profile editor uses all 249 ISO country and territory names with country-code mapping',async()=>{
+  const source=await read('public/personal-ai-bots.js');
+  const match=source.match(/const AI_COUNTRY_CODES='([^']+)'\.split\(' '\)/);
+  assert.ok(match,'AI profile country catalogue is missing');
+  const codes=match[1].split(' ');
+  assert.equal(codes.length,249);
+  assert.equal(new Set(codes).size,249);
+  assert.match(source,/new Intl\.DisplayNames\(\['en'\],\{type:'region'\}\)/);
+  assert.match(source,/id="pab-country-options"/);
+  assert.match(source,/pab-origin-country-name" list="pab-country-options"/);
+  assert.match(source,/pab-current-country-name" list="pab-country-options"/);
+  assert.match(source,/AI_COUNTRY_CODE_BY_NAME\.get/);
+});
