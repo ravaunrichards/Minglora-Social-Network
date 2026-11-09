@@ -59,3 +59,11 @@ test('provider assignment controls distinguish a stored assignment from a live p
   assert.match(ui,/API\+'\/providers'/);
   assert.match(ui,/identityId:document\.querySelector\('#pab-provider-identity'\)/);
 });
+
+
+test('provider credentials are labelled as references, not proof of a live secret',async()=>{
+  const source=await read('public/personal-ai-bots.js');
+  assert.match(source,/Reference saved/);
+  assert.match(source,/Missing reference/);
+  assert.match(source,/health check succeeds/);
+});
