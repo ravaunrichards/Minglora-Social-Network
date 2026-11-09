@@ -8,6 +8,7 @@ on:
       - 'public/personal-ai-bots.*'
       - 'supabase/migrations/*ai_bot*'
       - 'supabase/migrations/*ai_provider*'
+      - 'supabase/migrations/*ai_email*'
       - 'tests/unit/personal-ai-bots*.test.js'
       - 'src/personal-ai-bot-worker.js'
       - 'src/server.js'
