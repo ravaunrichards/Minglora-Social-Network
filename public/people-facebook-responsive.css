@@ -1,0 +1,269 @@
+/* Minglora: responsive Facebook-style People You May Know and compact profile sizing. */
+.people-grid.people-discovery-grid{
+  display:grid!important;
+  grid-template-columns:repeat(auto-fill,minmax(180px,210px))!important;
+  justify-content:start!important;
+  align-items:stretch!important;
+  gap:14px!important;
+  width:100%!important;
+  min-width:0!important;
+}
+.people-grid.people-discovery-grid>.facebook-person-card{
+  display:flex!important;
+  flex-direction:column!important;
+  width:100%!important;
+  max-width:210px!important;
+  min-width:0!important;
+  overflow:hidden!important;
+}
+.facebook-person-photo{
+  display:block!important;
+  width:100%!important;
+  aspect-ratio:1/1!important;
+  max-height:210px!important;
+  overflow:hidden!important;
+}
+.facebook-person-photo img{
+  display:block!important;
+  width:100%!important;
+  height:100%!important;
+  object-fit:cover!important;
+}
+.facebook-person-details{
+  display:flex!important;
+  flex:1 1 auto!important;
+  flex-direction:column!important;
+  align-items:stretch!important;
+  gap:8px!important;
+  min-width:0!important;
+  padding:11px!important;
+}
+.facebook-person-name{
+  display:flex!important;
+  flex-flow:row nowrap!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  gap:5px!important;
+  width:100%!important;
+  min-width:0!important;
+  max-width:100%!important;
+  overflow:hidden!important;
+  white-space:nowrap!important;
+  text-align:left!important;
+}
+.facebook-person-name>span:first-child{
+  display:block!important;
+  flex:0 1 auto!important;
+  min-width:0!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+}
+.facebook-person-name .verified-badge,
+.facebook-person-name .profile-verified-badge,
+.facebook-person-name .gifter-profile-badge{flex:0 0 auto!important;white-space:nowrap!important}
+.facebook-person-mutual,.facebook-friend-mutual{
+  display:flex!important;
+  flex-flow:row nowrap!important;
+  align-items:center!important;
+  gap:7px!important;
+  min-width:0!important;
+  width:100%!important;
+  overflow:hidden!important;
+  white-space:nowrap!important;
+}
+.facebook-person-mutual>span:last-child,.facebook-friend-mutual>span:last-child{
+  min-width:0!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+}
+.facebook-mutual-stack{
+  display:inline-flex!important;
+  flex:0 0 auto!important;
+  align-items:center!important;
+  white-space:nowrap!important;
+}
+.facebook-mutual-stack img{
+  display:block!important;
+  width:22px!important;
+  height:22px!important;
+  flex:0 0 22px!important;
+  object-fit:cover!important;
+  border-radius:50%!important;
+}
+.facebook-person-actions{
+  display:grid!important;
+  grid-template-columns:minmax(0,1.25fr) minmax(0,.85fr)!important;
+  gap:7px!important;
+  width:100%!important;
+  margin-top:auto!important;
+}
+.facebook-person-actions button{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  width:100%!important;
+  min-width:0!important;
+  min-height:36px!important;
+  padding:7px 8px!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+}
+.facebook-person-follow{background:#0866ff!important;color:#fff!important}
+.facebook-person-remove{background:#e4e6eb!important;color:#1c1e21!important}
+
+/* Right-rail suggestions use the same horizontal name and mutual-friend line. */
+.facebook-sidebar-suggestion{
+  display:grid!important;
+  grid-template-columns:52px minmax(0,1fr)!important;
+  align-items:center!important;
+  gap:9px!important;
+  width:100%!important;
+  min-width:0!important;
+  padding:8px 0!important;
+  border-bottom:1px solid var(--line,#dadde1)!important;
+}
+.facebook-sidebar-avatar{
+  display:block!important;
+  width:52px!important;
+  height:52px!important;
+  padding:0!important;
+  overflow:hidden!important;
+  border:0!important;
+  border-radius:50%!important;
+  background:#e4e6eb!important;
+}
+.facebook-sidebar-avatar img{display:block!important;width:100%!important;height:100%!important;object-fit:cover!important}
+.facebook-sidebar-details{display:flex!important;flex-direction:column!important;gap:5px!important;min-width:0!important}
+.facebook-sidebar-name{
+  display:block!important;
+  width:100%!important;
+  min-width:0!important;
+  overflow:hidden!important;
+  border:0!important;
+  padding:0!important;
+  background:transparent!important;
+  color:var(--text)!important;
+  font-size:13px!important;
+  font-weight:700!important;
+  text-align:left!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+}
+.facebook-sidebar-mutual{
+  display:flex!important;
+  flex-flow:row nowrap!important;
+  align-items:center!important;
+  gap:6px!important;
+  min-width:0!important;
+  overflow:hidden!important;
+  color:var(--muted)!important;
+  font-size:11px!important;
+  white-space:nowrap!important;
+}
+.facebook-sidebar-mutual>span:last-child{min-width:0!important;overflow:hidden!important;text-overflow:ellipsis!important}
+.facebook-sidebar-mutual .facebook-mutual-stack img{width:18px!important;height:18px!important;flex-basis:18px!important}
+.facebook-sidebar-actions{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;gap:6px!important}
+.facebook-sidebar-actions button{
+  min-width:0!important;
+  min-height:30px!important;
+  padding:5px 7px!important;
+  overflow:hidden!important;
+  border:0!important;
+  border-radius:6px!important;
+  font-size:11px!important;
+  font-weight:700!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+}
+.facebook-sidebar-actions [data-sidebar-follow]{background:#0866ff!important;color:#fff!important}
+.facebook-sidebar-actions [data-dismiss-suggestion]{background:#e4e6eb!important;color:#1c1e21!important}
+
+/* Keep all Minglora profile names on one horizontal line and cap header size. */
+.minglora-profile-page{
+  width:100%!important;
+  max-width:1120px!important;
+  min-width:0!important;
+  margin-inline:auto!important;
+}
+.minglora-profile-page .profile-header-card{
+  width:100%!important;
+  max-width:1120px!important;
+  min-width:0!important;
+  overflow:visible!important;
+}
+.minglora-profile-page .profile-name-with-badges{
+  display:flex!important;
+  flex-flow:row nowrap!important;
+  align-items:center!important;
+  gap:7px!important;
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+  overflow:hidden!important;
+  white-space:nowrap!important;
+}
+.minglora-profile-page .profile-name-with-badges>span:first-child{
+  display:block!important;
+  flex:0 1 auto!important;
+  min-width:0!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+}
+.minglora-profile-page .profile-name-with-badges .verified-badge,
+.minglora-profile-page .profile-name-with-badges .profile-verified-badge{flex:0 0 auto!important}
+.minglora-profile-page .profile-info-main,
+.minglora-profile-page .profile-header-card .profile-info{min-width:0!important;max-width:100%!important}
+
+@media(max-width:760px){
+  .people-grid.people-discovery-grid{
+    grid-template-columns:minmax(0,1fr)!important;
+    gap:9px!important;
+  }
+  .people-grid.people-discovery-grid>.facebook-person-card{
+    display:grid!important;
+    grid-template-columns:76px minmax(0,1fr)!important;
+    align-items:center!important;
+    gap:0!important;
+    width:100%!important;
+    max-width:none!important;
+    min-height:94px!important;
+    border-radius:9px!important;
+  }
+  .facebook-person-photo{
+    width:76px!important;
+    height:76px!important;
+    aspect-ratio:1/1!important;
+    align-self:center!important;
+    justify-self:center!important;
+    border-radius:50%!important;
+  }
+  .facebook-person-photo img{border-radius:50%!important}
+  .facebook-person-details{
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:stretch!important;
+    gap:6px!important;
+    min-width:0!important;
+    padding:9px 10px!important;
+  }
+  .facebook-person-name{font-size:14px!important}
+  .facebook-person-mutual{font-size:11px!important}
+  .facebook-person-actions{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;gap:6px!important}
+  .facebook-person-actions button{min-height:32px!important;padding:6px 7px!important;font-size:12px!important}
+  .facebook-sidebar-suggestion{grid-template-columns:44px minmax(0,1fr)!important;gap:8px!important}
+  .facebook-sidebar-avatar{width:44px!important;height:44px!important}
+  .facebook-friend-grid{grid-template-columns:1fr!important;gap:9px!important}
+}
+@media(max-width:360px){
+  .people-grid.people-discovery-grid>.facebook-person-card{grid-template-columns:64px minmax(0,1fr)!important}
+  .facebook-person-photo{width:64px!important;height:64px!important}
+  .facebook-person-details{padding:8px!important}
+  .facebook-person-actions button{font-size:11px!important}
+}
+@media(prefers-reduced-motion:reduce){
+  .people-grid.people-discovery-grid{scroll-behavior:auto!important}
+}
