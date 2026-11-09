@@ -210,7 +210,7 @@ export async function handlePersonalAiBotsAdminApi(context) {
       // Turn off the durable dispatch gate before synchronizing cancelled tasks.
       await persistCanonicalBotSettings(result.network,persistAiBotSettings);
       await persistCanonicalIdentities(db.personalAiBots,persistAiIdentities);
-      await persistCanonicalTasks(db.personalAiBotTasks.filter(task=>task.status==='cancelled'&&task.cancelledBy===user.id&&task.cancelledAt===stamp),persistAiBotTasks,db.personalAiBots,persistAiIdentities);
+      await persistCanonicalTasks(db.personalAiBotTasks.filter(task=>task.status==='cancelled'&&task.cancelledBy===user.id&&task.cancelledAt===stamp),persistAiBotTasks,db.personalAiBots,null);
       await saveStore();
       return (json(res,200,{...result,message:'Emergency shutdown complete. Enabled bots were paused and open tasks were cancelled.'}),true);
     }
