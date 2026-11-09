@@ -242,3 +242,25 @@ test("service connections show Minglora providers without returning secrets", ()
   assert.match(html, /admin-user-service-centre-1/);
   assert.match(css, /admin-service-connections-grid/);
 });
+
+test("administrator audit history filters and displays member CRUD and session operations safely", () => {
+  const actions = [
+    "account.create", "account.update", "account.delete", "account.delete_failed",
+    "account.sessions_revoke", "account.sessions_revoke_failed", "account.ban", "account.unban"
+  ];
+  for (const action of actions) {
+    assert.ok(server.includes("'" + action + "'"), "server allows audit filter " + action);
+    assert.ok(runtime.includes('"' + action + '"'), "runtime allows audit filter " + action);
+    assert.ok(admin.includes("'" + action + "'") || admin.includes('"' + action + '"'), "Admin Centre exposes audit filter " + action);
+  }
+  for (const field of ["changedFields", "profileFields", "emailProvided", "phoneProvided", "deletionMode", "outcome", "scope", "providerRefreshTokensRevoked"]) {
+    assert.ok(runtime.includes(field + ":"), "runtime returns allowlisted audit metadata " + field);
+  }
+  for (const label of ["Member account created", "Member account updated", "Member account deleted", "Member sessions revoked", "Member session revocation failed"]) {
+    assert.ok(admin.includes(label), "Admin Centre labels audit event " + label);
+  }
+  assert.ok(admin.includes("Profile fields: "));
+  assert.ok(admin.includes("Changed: "));
+  assert.ok(admin.includes("password reset"));
+  assert.ok(admin.includes("(metadata.reason?"));
+});
