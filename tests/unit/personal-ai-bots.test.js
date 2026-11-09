@@ -32,6 +32,9 @@ import {
   getPersonalAiBotVacancies,
   createPersonalAiBotVacancy,
   updatePersonalAiBotVacancy,
+  getPersonalAiBotApplications,
+  createPersonalAiBotApplication,
+  updatePersonalAiBotApplication,
 } from '../../backend/modules/personal-ai-bots/personal-ai-bots-service.js';
 
 const makeDb=()=>({});
@@ -213,6 +216,55 @@ test('vacancy lifecycle enforces position/department compatibility and records a
   assert.throws(()=>updatePersonalAiBotVacancy(db,vacancy.id,{status:'filled'},actor,stamp,uid),/Appointments and filled status are managed separately/);
   assert.throws(()=>updatePersonalAiBotVacancy(db,vacancy.id,{status:'open'},'another-owner',stamp,uid),/not found/);
   assert.equal(db.personalAiBotAudit.filter(item=>item.targetType==='vacancy').length,3);
+});
+
+test('organizational AI candidate applications support audited screening without appointments',()=>{
+  const db=makeDb();
+  const category=getPersonalAiBotCategories(db)[0];
+  const candidate=createPersonalAiBot(db,{
+    displayName:'Organizational Applicant',firstName:'Organizational',lastName:'Applicant',
+    categoryId:category.id,population:'organizational'
+  },actor,stamp,uid);
+  const department=getPersonalAiBotDepartments(db).find(item=>item.code==='finance_accounting');
+  const vacancy=createPersonalAiBotVacancy(db,{
+    positionCode:'worker',departmentId:department.id,title:'Finance Operations Worker'
+  },actor,stamp,uid);
+  const application=createPersonalAiBotApplication(db,{identityId:candidate.id,vacancyId:vacancy.id},actor,stamp,uid);
+  assert.equal(application.status,'submitted');
+  assert.equal(application.identityId,candidate.id);
+  assert.equal(application.vacancyId,vacancy.id);
+  assert.equal(application.population,'organizational');
+  assert.equal(Object.hasOwn(application,'appointmentId'),false);
+  assert.equal(Object.hasOwn(application,'employeeId'),false);
+  assert.equal(Object.hasOwn(application,'permissions'),false);
+  assert.equal(application.statusHistory.length,1);
+  assert.equal(getPersonalAiBotApplications(db).length,1);
+  assert.throws(()=>createPersonalAiBotApplication(db,{identityId:candidate.id,vacancyId:vacancy.id},actor,stamp,uid),/already has an application/);
+  assert.equal(updatePersonalAiBotApplication(db,application.id,{status:'in_review'},actor,stamp,uid).status,'in_review');
+  assert.equal(updatePersonalAiBotApplication(db,application.id,{status:'shortlisted'},actor,stamp,uid).status,'shortlisted');
+  assert.equal(updatePersonalAiBotApplication(db,application.id,{status:'rejected'},actor,stamp,uid).status,'rejected');
+  assert.throws(()=>updatePersonalAiBotApplication(db,application.id,{status:'submitted'},actor,stamp,uid),/transition is not permitted/);
+});
+
+test('candidate applications require existing organizational identities and open vacancies',()=>{
+  const db=makeDb();
+  const category=getPersonalAiBotCategories(db)[0];
+  const independent=createPersonalAiBot(db,{
+    displayName:'Independent Applicant',firstName:'Independent',lastName:'Applicant',
+    categoryId:category.id,population:'independent'
+  },actor,stamp,uid);
+  const department=getPersonalAiBotDepartments(db).find(item=>item.code==='finance_accounting');
+  const vacancy=createPersonalAiBotVacancy(db,{
+    positionCode:'worker',departmentId:department.id,title:'Finance Worker Applicant Check'
+  },actor,stamp,uid);
+  assert.throws(()=>createPersonalAiBotApplication(db,{identityId:'missing-ai',vacancyId:vacancy.id},actor,stamp,uid),/existing organizational AI identity/);
+  assert.throws(()=>createPersonalAiBotApplication(db,{identityId:independent.id,vacancyId:vacancy.id},actor,stamp,uid),/Only an existing organizational AI identity/);
+  updatePersonalAiBotVacancy(db,vacancy.id,{status:'paused'},actor,stamp,uid);
+  const organizational=createPersonalAiBot(db,{
+    displayName:'Eligible Organizational Applicant',firstName:'Eligible',lastName:'Applicant',
+    categoryId:category.id,population:'organizational'
+  },actor,stamp,uid);
+  assert.throws(()=>createPersonalAiBotApplication(db,{identityId:organizational.id,vacancyId:vacancy.id},actor,stamp,uid),/only be submitted to open vacancies/);
 });
 
 test('starter set creates one disabled administrator-controlled bot per category and is idempotent',()=>{
