@@ -199,6 +199,9 @@ export async function requestSupabaseState(action, extra = {}) {
     const error = new Error(payload.error || ('Minglora Supabase persistence request failed (HTTP ' + response.status + ').'));
     error.status = response.status;
     error.code = payload.code || null;
+    // Preserve the explicit partial-commit signal for account/profile updates.
+    // Do not attach or forward arbitrary provider error payloads.
+    if (payload.partial === true) error.partial = true;
     throw error;
   }
 
