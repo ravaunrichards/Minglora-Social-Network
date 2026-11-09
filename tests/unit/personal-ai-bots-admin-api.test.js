@@ -1270,6 +1270,6 @@ test('candidate application routes are owner-only and reject independent AI iden
   });
   await handlePersonalAiBotsAdminApi(attempt);
   assert.equal(attempt.res.statusCode,409);
-  assert.equal(attempt.db.personalAiBotApplications,undefined);
+  assert.equal(attempt.db.personalAiBotApplications.length,0);
 });
 
