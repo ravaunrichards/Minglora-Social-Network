@@ -25,6 +25,7 @@ import {
   assignPersonalAiBotsToTeam,
   removePersonalAiBotFromTeam,
   PERSONAL_AI_BOT_DEPARTMENTS,
+  PERSONAL_AI_BOT_JOB_POSITIONS,
   getPersonalAiBotDepartments,
   createPersonalAiBotDepartment,
   updatePersonalAiBotDepartment,
@@ -94,6 +95,34 @@ test('department catalogue supports safe custom CRUD, built-in edits and acyclic
   const builtIn=updatePersonalAiBotDepartment(db,'department-executive_management',{name:'Executive Office',enabled:true},actor,stamp,uid);
   assert.equal(builtIn.builtIn,true);
   assert.equal(builtIn.code,'executive_management');
+});
+
+test('corporate job-position catalogue defines the board-to-worker hierarchy without granting authority',()=>{
+  const positions=PERSONAL_AI_BOT_JOB_POSITIONS;
+  assert.equal(positions.length,20);
+  const codes=new Set(positions.map(position=>position.code));
+  assert.equal(codes.size,positions.length);
+  for(const position of positions){
+    assert.equal(Object.isFrozen(position),true);
+    assert.equal(Object.isFrozen(position.permissions),true);
+    assert.deepEqual(position.permissions,[]);
+    assert.equal(position.canApproveActions,false);
+    assert.equal(position.canDelegate,false);
+    assert.equal(position.canHire,false);
+    assert.equal(position.canManageBudgets,false);
+    assert.equal(position.canExecuteExternalActions,false);
+    assert.equal(position.appointmentEnabled,false);
+    assert.ok(position.reportsTo.every(code=>codes.has(code)),position.code+' has valid reporting references');
+    assert.ok(position.level>=1&&position.level<=12);
+  }
+  for(const title of [
+    'Chairperson / Board President','Board Director','Chief Executive Officer (CEO)',
+    'Chief Operating Officer (COO)','Chief Financial Officer (CFO)','Chief Technology Officer (CTO)',
+    'Chief Human Resources Officer (CHRO)','Chief Information Security Officer (CISO)',
+    'Chief Marketing Officer (CMO)','Other Executive Officer','Department Director',
+    'Deputy Department Director','Department Manager','Regional Manager','Team Leader',
+    'Supervisor','Senior Specialist','Junior Specialist','Assistant','Worker'
+  ])assert.ok(positions.some(position=>position.title===title),title+' position should exist');
 });
 
 test('starter set creates one disabled administrator-controlled bot per category and is idempotent',()=>{
