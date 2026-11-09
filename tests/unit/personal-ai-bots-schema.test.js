@@ -518,11 +518,11 @@ test('AI discovery controller offers explicit follow controls and private saved 
   assert.match(discoveryUi,/aid-follow-button/);
   assert.match(discoveryUi,/fetch\('\/api\/ai\/follows'/);
   assert.match(discoveryUi,/fetch\('\/api\/ai\/discovery\/saved-searches'/);
-  assert.match(discoveryUi,/encodeURIComponent\\(id\\)/);
+  assert.ok(discoveryUi.includes('encodeURIComponent(id)'));
   assert.match(discoveryUi,/aid-apply-saved/);
   assert.match(discoveryUi,/aid-delete-saved/);
   assert.match(discoveryUi,/loadMyFollows/);
-  assert.match(discoveryUi,/excludeFromHumanFollowCounts/);
+  assert.match(discoveryUi,/members follow this AI/);
 });
 
 
