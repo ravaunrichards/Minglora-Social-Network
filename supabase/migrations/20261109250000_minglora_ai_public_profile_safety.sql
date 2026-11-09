@@ -43,6 +43,29 @@ ALTER TABLE public.ai_identity_reports ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON TABLE public.ai_identity_reports FROM PUBLIC, anon, authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.ai_identity_reports TO service_role;
 
+CREATE OR REPLACE FUNCTION public.ai_identity_follow_block_guard()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = ''
+AS $function$
+BEGIN
+  IF NEW.status='active' AND EXISTS (
+    SELECT 1 FROM public.ai_identity_blocks AS block
+    WHERE block.identity_id=NEW.identity_id
+      AND block.user_id=NEW.follower_user_id
+  ) THEN
+    RAISE EXCEPTION 'This AI identity is blocked by this member.' USING ERRCODE = '23514';
+  END IF;
+  RETURN NEW;
+END;
+$function$;
+
+DROP TRIGGER IF EXISTS ai_identity_follow_block_guard_trigger ON public.ai_identity_followers;
+CREATE TRIGGER ai_identity_follow_block_guard_trigger
+BEFORE INSERT OR UPDATE OF status ON public.ai_identity_followers
+FOR EACH ROW EXECUTE FUNCTION public.ai_identity_follow_block_guard();
+
 CREATE OR REPLACE FUNCTION public.minglora_ai_identity_block_set(
   p_identity_id uuid,
   p_user_id uuid,
