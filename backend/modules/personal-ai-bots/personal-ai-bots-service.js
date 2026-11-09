@@ -98,7 +98,7 @@ export function createPersonalAiBot(db, input, actorId, timestamp, uid) {
   const bot = {
     id:botId, slug:slugify(displayName)+'-'+botId.slice(0,8),
     displayName, categoryId, categoryName:category.name,
-    username:'ai_'+slugify(displayName).replace(/-/g,'_').slice(0,36)+'_'+botId.slice(0,6),
+    username:'ai_'+slugify(displayName).replace(/-/g,'_').slice(0,32)+'_'+botId.slice(0,6),
     profilePictureAssetId:null,
     bio:String(input.bio || input.description || '').trim().slice(0,600),
     description:String(input.description || input.bio || '').trim().slice(0,600),
