@@ -1169,6 +1169,7 @@
   .admin-centre-navigation::before{display:none}
   .admin-centre-navigation a{flex:0 0 auto;min-height:36px}
   .admin-control-centre-page > section{grid-column:1}
+  .admin-control-centre-page > .admin-control-centre-grid{grid-column:1}
 }
 @media(max-width:560px){
   .admin-centre-topbar{padding:12px 15px}
@@ -1447,6 +1448,11 @@
   min-width:0;
   max-width:100%;
   overflow-wrap:anywhere;
+}
+.admin-control-centre-page > .admin-control-centre-grid{
+  grid-column:2;
+  min-width:0;
+  max-width:100%;
 }
 .admin-control-centre-page button,
 .admin-control-centre-page a,
