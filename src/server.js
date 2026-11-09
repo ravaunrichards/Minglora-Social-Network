@@ -4863,7 +4863,7 @@ async function route(req, res) {
         }else if(saved){
           saved.isFavorite=false;
           saved.updatedAt=now();
-          const hasOtherSavedState=Boolean(saved.collectionId||String(saved.note||'').trim()||(Array.isArray(saved.tags)&&saved.tags.length)||saved.readLater);
+          const hasOtherSavedState=Boolean(saved.isSaved!==false||saved.collectionId||String(saved.note||'').trim()||(Array.isArray(saved.tags)&&saved.tags.length)||saved.readLater);
           if(!hasOtherSavedState)db.savedPosts=db.savedPosts.filter(item=>item.id!==saved.id);
         }
         await saveStore();
