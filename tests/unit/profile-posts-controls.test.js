@@ -47,8 +47,26 @@ test('profile post pinning is owner-only and allows only one pinned post per pro
 test('profile post assets are versioned and cached together', async () => {
   const html = await read('public/index.html');
   const sw = await read('public/sw.js');
-  const appAsset = '/app.js?v=20261108-facebook-profile-posts-1';
-  const cssAsset = '/profile-facebook-panel.css?v=20261108-facebook-inline-profile-shell-8';
+  const appAsset = '/app.js?v=20261109-facebook-profile-lock-notice-1';
+  const cssAsset = '/profile-facebook-panel.css?v=20261109-facebook-profile-lock-notice-1';
   assert.ok(html.includes(appAsset) && sw.includes("'" + appAsset + "'"));
   assert.ok(html.includes(cssAsset) && sw.includes("'" + cssAsset + "'"));
+});
+
+
+test('locked profiles show an owner-only Facebook-style notice above Personal details', async () => {
+  const app = await read('public/app.js');
+  const css = await read('public/profile-facebook-panel.css');
+  const server = await read('src/server.js');
+  assert.ok(app.includes('function profileLockNoticeMarkup'));
+  assert.ok(app.includes('You locked your profile'));
+  assert.ok(app.includes('data-profile-lock-learn-more'));
+  assert.ok(app.includes('profileAboutMarkup(u,isMe,data.profileLocked===true)'));
+  assert.match(app,/isMe&&isProfileLocked&&key==='personalDetails'/);
+  assert.ok(app.includes('function openProfileLockLearnMore'));
+  assert.ok(app.includes("state.profile.profileLocked=next==='private'"));
+  assert.ok(server.includes("profileLocked:target.id===user.id&&getUserSettings(target).privacy.profileVisibility==='private'"));
+  assert.ok(css.includes('.profile-lock-notice'));
+  assert.ok(css.includes('grid-column:1/-1'));
+  assert.ok(css.includes('border:1px solid var(--line'));
 });
