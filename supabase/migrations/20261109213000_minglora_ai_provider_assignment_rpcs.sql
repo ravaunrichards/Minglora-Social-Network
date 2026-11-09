@@ -136,13 +136,12 @@ BEGIN
     capabilities,supported_languages,text_capable,image_capable,audio_capable,
     video_capable,voice_capable,tool_permissions,assignment_status
   ) VALUES (
-    v_account_id,v_provider_name,v_model_name,v_model_identifier,v_model_version,
+    NULL,v_provider_name,v_model_name,v_model_identifier,v_model_version,
     v_capabilities,v_supported_languages,v_text,v_image,v_audio,v_video,v_voice,
     ARRAY[]::text[],'available'
   )
   ON CONFLICT (provider_name,model_identifier,model_version) DO UPDATE
-    SET provider_account_id = EXCLUDED.provider_account_id,
-        model_name = EXCLUDED.model_name,
+    SET model_name = EXCLUDED.model_name,
         capabilities = EXCLUDED.capabilities,
         supported_languages = EXCLUDED.supported_languages,
         text_capable = EXCLUDED.text_capable,
