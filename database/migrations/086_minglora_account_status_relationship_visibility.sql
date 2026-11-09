@@ -3,7 +3,9 @@ BEGIN;
 -- Account states are public relationship metadata, not a reason to destroy
 -- follows/friendships. Auth remains the source of truth for these states.
 ALTER TABLE public.profiles
-  ADD COLUMN IF NOT EXISTS account_status text NOT NULL DEFAULT 'active';
+  ADD COLUMN IF NOT EXISTS account_status text NOT NULL DEFAULT 'active',
+  ADD COLUMN IF NOT EXISTS banned_until timestamptz,
+  ADD COLUMN IF NOT EXISTS pre_ban_account_status text;
 
 DO $$
 BEGIN
@@ -27,7 +29,7 @@ CREATE OR REPLACE FUNCTION private.minglora_account_status_from_auth(
 )
 RETURNS text
 LANGUAGE plpgsql
-IMMUTABLE
+STABLE
 SET search_path = ''
 AS $$
 DECLARE
@@ -85,6 +87,15 @@ BEGIN
     coalesce(auth_user.raw_user_meta_data, '{}'::jsonb),
     auth_user.banned_until
   );
+  NEW.banned_until := auth_user.banned_until;
+  NEW.pre_ban_account_status := CASE
+    WHEN NEW.account_status = 'banned' THEN lower(coalesce(
+      auth_user.raw_app_meta_data ->> 'pre_ban_account_status',
+      auth_user.raw_user_meta_data ->> 'pre_ban_account_status',
+      'active'
+    ))
+    ELSE NULL
+  END;
   RETURN NEW;
 END;
 $$;
@@ -92,7 +103,7 @@ $$;
 REVOKE ALL ON FUNCTION private.enforce_minglora_profile_account_status() FROM PUBLIC, anon, authenticated;
 DROP TRIGGER IF EXISTS protect_minglora_profile_account_status ON public.profiles;
 CREATE TRIGGER protect_minglora_profile_account_status
-  BEFORE INSERT OR UPDATE OF account_status ON public.profiles
+  BEFORE INSERT OR UPDATE OF account_status, banned_until, pre_ban_account_status ON public.profiles
   FOR EACH ROW EXECUTE FUNCTION private.enforce_minglora_profile_account_status();
 
 CREATE OR REPLACE FUNCTION private.sync_minglora_profile_account_status()
@@ -112,18 +123,43 @@ BEGIN
 
   UPDATE public.profiles
      SET account_status = next_status,
+         banned_until = NEW.banned_until,
+         pre_ban_account_status = CASE
+           WHEN next_status = 'banned' THEN lower(coalesce(
+             NEW.raw_app_meta_data ->> 'pre_ban_account_status',
+             NEW.raw_user_meta_data ->> 'pre_ban_account_status',
+             'active'
+           ))
+           ELSE NULL
+         END,
          updated_at = now()
    WHERE id = NEW.id
-     AND account_status IS DISTINCT FROM next_status;
+     AND (
+       account_status IS DISTINCT FROM next_status
+       OR banned_until IS DISTINCT FROM NEW.banned_until
+       OR pre_ban_account_status IS DISTINCT FROM CASE
+         WHEN next_status = 'banned' THEN lower(coalesce(
+           NEW.raw_app_meta_data ->> 'pre_ban_account_status',
+           NEW.raw_user_meta_data ->> 'pre_ban_account_status',
+           'active'
+         ))
+         ELSE NULL
+       END
+     );
 
   RETURN NEW;
 END;
 $$;
 
 REVOKE ALL ON FUNCTION private.sync_minglora_profile_account_status() FROM PUBLIC, anon, authenticated;
-DROP TRIGGER IF EXISTS on_minglora_auth_user_status_synced ON auth.users;
-CREATE TRIGGER on_minglora_auth_user_status_synced
-  AFTER INSERT OR UPDATE OF raw_app_meta_data, raw_user_meta_data, banned_until
+DROP TRIGGER IF EXISTS on_minglora_auth_user_status_created ON auth.users;
+CREATE TRIGGER on_minglora_auth_user_status_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION private.sync_minglora_profile_account_status();
+
+DROP TRIGGER IF EXISTS on_minglora_auth_user_status_updated ON auth.users;
+CREATE TRIGGER on_minglora_auth_user_status_updated
+  AFTER UPDATE OF raw_app_meta_data, raw_user_meta_data, banned_until
   ON auth.users
   FOR EACH ROW EXECUTE FUNCTION private.sync_minglora_profile_account_status();
 
