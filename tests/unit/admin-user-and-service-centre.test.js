@@ -159,6 +159,16 @@ test("service connections show Minglora providers without returning secrets", ()
   assert.match(server, /api\.supabase\.com\/v1\/projects\/gzycobgbasnqqhnympkr\/config\/auth/);
   assert.match(server, /Auth Config Read-write plus Project Settings Read-write/);
   assert.match(server, /token value remains server-only/);
+  const managementStart = server.indexOf("const supabaseManagementCheck=");
+  const managementEnd = server.indexOf("const [githubResponse", managementStart);
+  assert.ok(managementStart >= 0 && managementEnd > managementStart);
+  const managementProbe = server.slice(managementStart, managementEnd);
+  assert.match(managementProbe, /AbortSignal\.timeout\(4500\)/);
+  assert.doesNotMatch(managementProbe, /response\.(json|text)\(/);
+  assert.match(server, /status:supabaseManagement\?\.ok\?'connected':supabaseManagementToken\?'attention':'not-configured'/);
+  assert.ok(server.includes("supabaseManagement.status===401"));
+  assert.ok(server.includes("supabaseManagement.status===403"));
+  assert.ok(server.includes("supabaseManagement.status===0"));
   assert.match(server, /WEB_PUSH_PRIVATE_KEY/);
   assert.match(server, /paypalToken\(\)/);
   assert.match(server, /verifyLiveKitConnection/);
