@@ -95,6 +95,8 @@ Deno.serve(async (req: Request) => {
     "subscription_cancel_mark", "subscription_paypal_webhook",
     "subscription_bonus_review",
     "ai_identity_upsert_batch", "ai_identity_list",
+    "ai_bot_task_upsert_batch", "ai_bot_task_list", "ai_bot_task_stats",
+    "ai_bot_task_claim", "ai_bot_task_heartbeat", "ai_bot_task_complete", "ai_bot_task_fail",
   ];
   if (!supportedActions.includes(String(action))) {
     return json(400, { error: "Unsupported action." });
@@ -164,6 +166,149 @@ Deno.serve(async (req: Request) => {
       return json(503, { error: "Canonical AI identity records could not be loaded.", code: "AI_IDENTITY_SCHEMA_NOT_READY" });
     }
     return json(200, { ok: true, identities: Array.isArray(data) ? data : [] });
+  }
+
+  if (String(action).startsWith("ai_bot_task_")) {
+    const actorUserId = String(input.actorUserId || "");
+    if (actorUserId !== AI_NETWORK_OWNER_ID) {
+      return json(403, { error: "Only the designated Minglora owner can access the AI task queue." });
+    }
+
+    if (action === "ai_bot_task_upsert_batch") {
+      const tasks = input.tasks;
+      const allowedFields = new Set([
+        "id","botId","taskType","instruction","targetUserId","highImpact","status",
+        "approvedBy","approvedAt","cancelledBy","cancelledAt","createdBy","createdAt",
+        "idempotencyKey","privacyGuardRequired","blockGuardRequired",
+        "excludeFromHumanEngagementMetrics","executionStatus"
+      ]);
+      const allowedTypes = new Set([
+        "assistant_request","draft_post","share_media","create_reel","draft_comment","draft_reply",
+        "follow","unfollow","react","join_group","send_message","event_participation",
+        "customer_service_draft","support_draft","moderation_review","analytics_report",
+        "automation_request","community_event_draft","live_show_plan","translation","other"
+      ]);
+      const validDate = (value: unknown) => value == null || value === "" ||
+        (typeof value === "string" && Number.isFinite(Date.parse(value)));
+      if (!Array.isArray(tasks) || tasks.length < 1 || tasks.length > 100 ||
+          tasks.some((task: any) => !task || typeof task !== "object" || Array.isArray(task) ||
+            Object.keys(task).some((key: string) => !allowedFields.has(key)) ||
+            !validUuid(task.id) || !validUuid(task.botId) ||
+            !allowedTypes.has(String(task.taskType || "")) ||
+            typeof task.instruction !== "string" || task.instruction.trim().length < 5 ||
+            task.instruction.length > 4000 ||
+            (task.targetUserId != null && !validUuid(task.targetUserId)) ||
+            (task.status != null && !["awaiting_administrator_approval","approved_waiting_for_worker","cancelled","rejected"].includes(String(task.status))) ||
+            (task.approvedBy != null && !validUuid(task.approvedBy)) ||
+            (task.cancelledBy != null && !validUuid(task.cancelledBy)) ||
+            !validDate(task.approvedAt) || !validDate(task.cancelledAt) || !validDate(task.createdAt) ||
+            (task.highImpact != null && typeof task.highImpact !== "boolean"))) {
+        return json(400, { error: "Provide 1–100 valid, supported AI task records. Provider secrets and arbitrary task fields are not accepted." });
+      }
+      const { data, error } = await admin.rpc("minglora_ai_bot_task_upsert_batch", {
+        p_tasks: tasks,
+        p_actor_user_id: actorUserId
+      });
+      if (error) {
+        const conflict = ["23505","23503","23514","22023"].includes(String(error.code || ""));
+        return json(conflict ? 409 : 503, {
+          error: conflict ? "AI task data failed a database constraint." : "The durable AI task queue is unavailable.",
+          code: String(error.code || "AI_TASK_QUEUE_ERROR")
+        });
+      }
+      return json(200, { ok: true, tasks: Array.isArray(data) ? data : [] });
+    }
+
+    if (action === "ai_bot_task_list") {
+      const limit = Number(input.limit ?? 100);
+      const offset = Number(input.offset ?? 0);
+      if (!Number.isInteger(limit) || limit < 1 || limit > 100 ||
+          !Number.isInteger(offset) || offset < 0 || offset > 1000000000) {
+        return json(400, { error: "AI task pagination values are invalid." });
+      }
+      const { data, error } = await admin.rpc("minglora_ai_bot_task_list", {
+        p_owner_admin_id: actorUserId,p_limit: limit,p_offset: offset
+      });
+      if (error) return json(503, { error: "The durable AI task records could not be loaded.", code: "AI_TASK_SCHEMA_NOT_READY" });
+      return json(200, { ok: true, tasks: Array.isArray(data) ? data : [] });
+    }
+
+    if (action === "ai_bot_task_stats") {
+      const { data, error } = await admin.rpc("minglora_ai_bot_task_stats", {
+        p_owner_admin_id: actorUserId
+      });
+      if (error) return json(503, { error: "The durable AI task statistics are unavailable.", code: "AI_TASK_STATS_UNAVAILABLE" });
+      return json(200, { ok: true, stats: data || {} });
+    }
+
+    if (action === "ai_bot_task_claim") {
+      const workerId = String(input.workerId || "");
+      const limit = Number(input.limit ?? 1);
+      const leaseSeconds = Number(input.leaseSeconds ?? 180);
+      if (!/^[A-Za-z0-9._:-]{3,80}$/.test(workerId) ||
+          !Number.isInteger(limit) || limit < 1 || limit > 25 ||
+          !Number.isInteger(leaseSeconds) || leaseSeconds < 30 || leaseSeconds > 300) {
+        return json(400, { error: "Worker ID, batch size or lease duration is invalid." });
+      }
+      const { data, error } = await admin.rpc("minglora_ai_bot_task_claim", {
+        p_worker_id: workerId,p_limit: limit,p_lease_seconds: leaseSeconds,p_actor_user_id: actorUserId
+      });
+      if (error) return json(503, { error: "The durable task claim operation is unavailable.", code: "AI_TASK_CLAIM_FAILED" });
+      return json(200, { ok: true, tasks: Array.isArray(data) ? data : [] });
+    }
+
+    if (action === "ai_bot_task_heartbeat") {
+      const taskId = String(input.taskId || ""),workerId = String(input.workerId || "");
+      const leaseToken = String(input.leaseToken || ""),leaseSeconds = Number(input.leaseSeconds ?? 180);
+      if (!validUuid(taskId) || !validUuid(leaseToken) ||
+          !/^[A-Za-z0-9._:-]{3,80}$/.test(workerId) ||
+          !Number.isInteger(leaseSeconds) || leaseSeconds < 30 || leaseSeconds > 300) {
+        return json(400, { error: "Worker heartbeat fields are invalid." });
+      }
+      const { data, error } = await admin.rpc("minglora_ai_bot_task_heartbeat", {
+        p_task_id: taskId,p_worker_id: workerId,p_lease_token: leaseToken,
+        p_lease_seconds: leaseSeconds,p_actor_user_id: actorUserId
+      });
+      if (error) return json(503, { error: "The durable task heartbeat failed.", code: "AI_TASK_HEARTBEAT_FAILED" });
+      return json(200, { ok: data === true });
+    }
+
+    if (action === "ai_bot_task_complete") {
+      const taskId = String(input.taskId || ""),workerId = String(input.workerId || "");
+      const leaseToken = String(input.leaseToken || "");
+      const result = input.result;
+      if (!validUuid(taskId) || !validUuid(leaseToken) ||
+          !/^[A-Za-z0-9._:-]{3,80}$/.test(workerId) ||
+          !result || typeof result !== "object" || Array.isArray(result) ||
+          new TextEncoder().encode(JSON.stringify(result)).byteLength > 32768) {
+        return json(400, { error: "Worker completion fields are invalid." });
+      }
+      const { data, error } = await admin.rpc("minglora_ai_bot_task_complete", {
+        p_task_id: taskId,p_worker_id: workerId,p_lease_token: leaseToken,
+        p_result: result,p_actor_user_id: actorUserId
+      });
+      if (error) return json(503, { error: "The durable task completion failed.", code: "AI_TASK_COMPLETION_FAILED" });
+      return json(200, { ok: data === true });
+    }
+
+    if (action === "ai_bot_task_fail") {
+      const taskId = String(input.taskId || ""),workerId = String(input.workerId || "");
+      const leaseToken = String(input.leaseToken || "");
+      const retryable = input.retryable;
+      const errorCode = String(input.errorCode || "WORKER_EXECUTION_FAILED").slice(0,80);
+      const errorMessage = String(input.errorMessage || "The AI task failed.").slice(0,500);
+      if (!validUuid(taskId) || !validUuid(leaseToken) ||
+          !/^[A-Za-z0-9._:-]{3,80}$/.test(workerId) || typeof retryable !== "boolean") {
+        return json(400, { error: "Worker failure fields are invalid." });
+      }
+      const { data, error } = await admin.rpc("minglora_ai_bot_task_fail", {
+        p_task_id: taskId,p_worker_id: workerId,p_lease_token: leaseToken,
+        p_retryable: retryable,p_error_code: errorCode,p_error_message: errorMessage,
+        p_actor_user_id: actorUserId
+      });
+      if (error) return json(503, { error: "The durable task failure handler is unavailable.", code: "AI_TASK_FAILURE_HANDLER_FAILED" });
+      return json(200, data || { ok: false });
+    }
   }
 
   if (action === "admin_users_list") {
