@@ -78,6 +78,30 @@ test("member CRUD and session routes require owner identity, MFA and same-origin
   assert.match(runtime, /The platform owner is protected/);
 });
 
+test("ban and unban routes enforce owner MFA, same-origin writes and owner protection", () => {
+  const routeStart = server.indexOf("const adminAccountActionMatch=");
+  const routeEnd = server.indexOf("if(method==='GET'&&p==='/api/admin/audit-log')", routeStart);
+  assert.ok(routeStart >= 0 && routeEnd > routeStart);
+  const route = server.slice(routeStart, routeEnd);
+  assert.ok(route.includes("isSameOriginApiWrite(req)"));
+  assert.ok(route.includes("isDesignatedCreatorHubAdmin(user)"));
+  assert.ok(route.includes("isModerator(user,req)"));
+  assert.ok(route.includes("hasActiveReviewerSession(user)"));
+  assert.ok(route.includes("targetId===CREATOR_HUB_ADMIN_USER_ID"));
+  assert.ok(route.includes("new Set(['1h','24h','7d','30d','90d','876000h'])"));
+  assert.ok(route.includes("requestSupabaseState('admin_user_set_ban'"));
+  assert.ok(route.includes("await saveStore()"));
+  const actionStart = runtime.indexOf('if (action === "admin_user_set_ban")');
+  const actionEnd = runtime.indexOf('if (action === "admin_audit_log")', actionStart);
+  assert.ok(actionStart >= 0 && actionEnd > actionStart);
+  const action = runtime.slice(actionStart, actionEnd);
+  assert.ok(action.includes("adminActorAllowed(actorUserId)"));
+  assert.ok(action.includes('userId === actorUserId'));
+  assert.ok(action.includes('admin.auth.admin.updateUserById(userId, attributes'));
+  assert.ok(action.includes('action: auditAction'));
+  assert.ok(action.includes("auditRecorded: !auditError"));
+});
+
 test("deletion errors disclose whether the failed-attempt audit was recorded", () => {
   assert.ok(admin.includes("error?.payload?.auditRecorded === false"));
   assert.ok(admin.includes("the failed deletion audit entry could not be confirmed"));
