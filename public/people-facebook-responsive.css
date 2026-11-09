@@ -1,6 +1,6 @@
 /* Minglora People You May Know — Facebook-proportioned responsive cards.
-   Desktop uses full photo cards; phones use the familiar full-width suggestion row.
-   The relationship action remains Follow because mutual follows create friendships. */
+   Desktop uses full photo cards; phones use compact full-width suggestion rows.
+   Add Friend calls Follow; reciprocal follows alone create friendships. */
 .people-grid.people-discovery-grid{
   display:grid!important;
   grid-template-columns:repeat(3,minmax(0,1fr))!important;
@@ -267,17 +267,18 @@
   }
   .people-grid.people-discovery-grid>.facebook-person-card{
     display:grid!important;
-    grid-template-columns:96px minmax(0,1fr)!important;
+    grid-template-columns:76px minmax(0,1fr)!important;
     align-items:center!important;
     gap:0!important;
     width:100%!important;
     max-width:none!important;
-    min-height:118px!important;
+    min-height:108px!important;
+    max-height:210px!important;
     border-radius:9px!important;
   }
   .facebook-person-photo{
-    width:82px!important;
-    height:82px!important;
+    width:64px!important;
+    height:64px!important;
     aspect-ratio:1/1!important;
     align-self:center!important;
     justify-self:center!important;
@@ -299,14 +300,14 @@
   .facebook-friend-grid{grid-template-columns:1fr!important;gap:9px!important}
 }
 @media(max-width:390px){
-  .people-grid.people-discovery-grid>.facebook-person-card{grid-template-columns:82px minmax(0,1fr)!important;min-height:110px!important}
-  .facebook-person-photo{width:72px!important;height:72px!important}
+  .people-grid.people-discovery-grid>.facebook-person-card{grid-template-columns:70px minmax(0,1fr)!important;min-height:104px!important;max-height:210px!important}
+  .facebook-person-photo{width:58px!important;height:58px!important}
   .facebook-person-details{padding:9px 9px 9px 2px!important;gap:6px!important}
   .facebook-person-actions button{min-height:32px!important;font-size:11px!important;padding:6px 5px!important}
 }
 @media(max-width:340px){
-  .people-grid.people-discovery-grid>.facebook-person-card{grid-template-columns:70px minmax(0,1fr)!important}
-  .facebook-person-photo{width:62px!important;height:62px!important}
+  .people-grid.people-discovery-grid>.facebook-person-card{grid-template-columns:66px minmax(0,1fr)!important}
+  .facebook-person-photo{width:54px!important;height:54px!important}
   .facebook-person-actions{gap:5px!important}
 }
 @media(prefers-reduced-motion:reduce){
