@@ -1,12 +1,12 @@
 # MINGLORA AI NETWORK — RESUME CHECKPOINT
 
-Updated: 2026-11-09 10:18:04 UTC (latest successful Personal AI Bots workflow #448: 10:17:53 UTC; latest completed full Minglora CI #8189: 10:18:04 UTC)
+Updated: 2026-11-09 10:27:20 UTC (latest successful Personal AI Bots workflow #482: 10:27:07 UTC; latest successful full Minglora CI #8242: 10:27:20 UTC)
 Scope: **Minglora Social Network only**
 Repository: https://github.com/ravaunrichards/Minglora-Social-Network
 Branch: `feat/personal-ai-bots-network-control-center`
 Draft PR: https://github.com/ravaunrichards/Minglora-Social-Network/pull/202
 Supabase project: `gzycobgbasnqqhnympkr` (existing Minglora project only)
-Current branch head: `c471a4afb3e2ef3413fcea5d3d55fb76a5cbfb4c`
+Current branch head: `e04cd2bb6c23602dedf587e94da62c8404454d75`
 Latest AI Network implementation commit: `a1e1f5d2ad2ed2b88346341dcfda5fb706edcbae`
 PR must remain **OPEN + DRAFT**. Do not merge, deploy, or apply production migrations without the required review/authorization.
 
@@ -24,17 +24,17 @@ The previous checkpoint did not contain a weighted percentage. The earlier conve
 |---|---:|---:|---:|
 | 1. Relational foundation and backend persistence integration | 25% | 35% | 8.75% |
 | 2. AI identities, profiles, worldwide discovery and member follow graph | 20% | 75% | 15.00% |
-| 3. Corporate governance, organizational charts and HR lifecycle | 15% | 0% | 0.00% |
+| 3. Corporate governance, organizational charts and HR lifecycle | 15% | 15% | 2.25% |
 | 4. Supervision, bounded autonomy, queues, teams and collaboration | 10% | 65% | 6.50% |
 | 5. AI social participation and creator ecosystem | 10% | 25% | 2.50% |
 | 6. Security, governance, finance and resource controls | 8% | 25% | 2.00% |
 | 7. Model intelligence, memory, provider operations and analytics | 7% | 20% | 1.40% |
 | 8. Distributed scaling, load tests, device tests and production acceptance | 5% | 0% | 0.00% |
-| **TOTAL** | **100%** |  | **36.15% → 36%** |
+| **TOTAL** | **100%** |  | **38.40% → 38%** |
 
-**COMPLETION: 36% | REMAINING: 64%**
+**COMPLETION: 38% | REMAINING: 62%**
 
-This is weighted implementation progress, not a claim that the 36% of the full production acceptance criteria is deployed. The exact weighted score is 36.15%; milestones 1 and 2 remain partial because the normalized AI schema and associated RPCs are staged in GitHub but absent from the live Supabase migration ledger and public schema.
+This is weighted implementation progress, not a claim that 38.40% of the full production acceptance criteria is deployed. Milestones 1 and 2 remain partial because normalized AI tables/RPCs are staged but absent from the live Supabase migration ledger and public schema. Milestone 3 receives only 15% credit for the tested department catalogue/admin controls; it does not include HR, employee records, appointments, organizational reporting or canonical PostgreSQL persistence.
 
 ## Recovered and project-verified implementation
 
@@ -78,6 +78,12 @@ This is weighted implementation progress, not a claim that the 36% of the full p
 - The initial schema constraint and a separate additive migration `20261109252000_minglora_ai_bot_autonomy_modes.sql` accept the expanded values.
 - **This is configuration support, not proof of operational autonomy.** The deployed worker is not verified; current queue/task approvals remain enforced and the worker only accepts explicitly approved, low-impact draft/text tasks. Supervisor hierarchy, task delegation and unattended execution are not yet operational.
 
+### Corporate department foundation — partial, runtime-state-backed
+- The owner Admin Centre and API now expose the required 20 built-in corporate departments, with custom department creation, edit, enable/deactivate, parent assignment and cycle/duplicate validation.
+- Owner-only API routes reject non-owner and cross-origin writes; changes save through the existing runtime state store and are covered by service, Admin API and UI tests.
+- The department list is now returned in the main overview. No AI workers, employees, executives, managers, budgets or appointments are fabricated.
+- **Not yet canonical database-backed:** no dedicated normalized AI department table/RPC or runtime Edge Function adapter exists. There are no HR appointments, leadership assignments, employee lifecycle, org chart or department task-delegation workflows.
+
 ### Supervision, tasks and teams
 - Bot teams, assignment/removal, approvals, audit, bulk selected bot controls, daily budgets/caps and emergency shutdown exist in the feature branch.
 - Queue/worker foundation has idempotency, bounded retries, leases, heartbeat/recovery and dead-letter handling in staged SQL/code.
@@ -92,22 +98,22 @@ This is weighted implementation progress, not a claim that the 36% of the full p
 
 ## Verification and current failures
 
-- Latest confirmed green Personal AI Bots workflow: run **#448**, branch head commit `c471a4afb3e2ef3413fcea5d3d55fb76a5cbfb4c`, **155 passed / 0 failed**, logged at **2026-11-09 10:17:53 UTC**. This includes identity batch creation/replay, per-record outcomes, duplicate and idempotency protection, runtime-checkpoint rollback, owner-only batch history, fail-closed handling for explicitly skipped PostgreSQL writes, plus existing identity/profile/discovery, Admin API, UI, worker and schema checks.
-- Latest completed full Minglora CI workflow: run **#8189**, **883 passed / 6 failed** out of 889 tests, logged at **2026-11-09 10:18:04 UTC**. The separate For You functional-navigation job passed. General CI is **not green**. The six remaining failures concern quiet People Discovery refresh timing, Recharge utility/sidebar labels, profile edit action wiring, Coins navigation label and focus containment. Do not weaken assertions; inspect the implementation behind each failure before changing it.
+- Latest confirmed green Personal AI Bots workflow: run **#482** on branch head `e04cd2bb6c23602dedf587e94da62c8404454d75`, **160 passed / 0 failed**, logged at **2026-11-09 10:27:07 UTC**. This includes AI identity/population/profile/discovery/batch, owner Admin API, report review, department catalogue/CRUD, UI, worker and schema tests.
+- Latest completed full Minglora CI workflow: run **#8242** on the same branch head, **894 passed / 0 failed**, logged at **2026-11-09 10:27:20 UTC**. The For You functional-navigation job also passed. Full repository CI is green on this commit.
 - The batch import UI/API is now implemented in code and covered by focused tests: 1–100 identities per batch; owner-scoped idempotency keys and SHA-256 payload matching; duplicate name/category checks; changed-payload replay rejection; completed replay without duplicate writes; per-record success/failure outcomes; failed PostgreSQL writes retained as retryable; initial checkpoint rollback if the runtime save fails; and owner-limited recent batch history. All imported identities remain disabled and private by default.
 - The persistence boundary now treats an explicit `{skipped:true}` or `{ok:false}` result from canonical identity/task/settings persistence as a failure, rather than reporting a successful write. This is test-verified fail-closed behavior, not proof of live database persistence.
-- **Live Supabase verification:** project `gzycobgbasnqqhnympkr` is accessible and ACTIVE_HEALTHY. A direct read-only `to_regclass` check returned NULL for `ai_identities`, `ai_profiles`, `ai_emails`, `ai_provider_assignments`, `minglora_ai_identities`, `minglora_ai_identity_batches` and `personal_ai_bot_batches`. The migration ledger contains 128 entries and no AI Network migration versions. AI migrations remain staged, not applied.
+- **Live Supabase verification:** project `gzycobgbasnqqhnympkr` was accessible and ACTIVE_HEALTHY in the last read-only check. The public schema/migration ledger had no AI Network schema applied; all AI migrations remain staged, not applied. No department-specific canonical table or gateway was found in the current feature branch.
 - No production migration deployment, Edge Function deployment for the AI network, worker/scheduler deployment, email mailbox provisioning, provider inference/health check, 10-billion benchmark or concurrent-capacity load test is claimed.
 
 ## Recovery and progress comparison
 
-- Previous verified weighted completion: **35.95% → 36%**.
-- Current verified weighted completion: **36.15% → 36%**.
-- Verified progress since the prior checkpoint: **+0.20 percentage points**, matching milestone 2's measured change from 74% to 75% verified (14.80% to 15.00% weighted). Batch per-record outcomes and fail-closed persistence are included in the latest tested implementation; no additional credit is claimed beyond the saved milestone weighting.
-- Last verified milestone: **Phase 2 — AI identities and profile completeness (partial)**, now including controlled batch import; Phase 1 remains partial because normalized AI tables/RPCs are not present in live PostgreSQL.
-- Last confirmed action: Personal AI Bots workflow **#448** passed **155/155** on `c471a4afb3e2ef3413fcea5d3d55fb76a5cbfb4c` at 2026-11-09 10:17:53 UTC.
-- Unverified claims: live normalized PostgreSQL persistence, actual provider/email provisioning, scheduler/worker deployment, corporate HR operations, supervisor hierarchy and unattended autonomous execution remain unverified.
-- Changes since interruption: added per-record batch outcome reporting and result viewing, retained safe retry/idempotency behavior, added fail-closed PostgreSQL persistence checks, and verified 155 focused tests passing. CI improved from 8 to 6 remaining failures, but remains failed. The checkpoint arithmetic is corrected to match its milestone table.
+- Previous verified weighted completion: **36.15% → 36%**.
+- Current verified weighted completion: **38.40% → 38%**.
+- Verified progress since the prior checkpoint: **+2.25 percentage points**, corresponding only to 15% completion of the 15%-weighted Phase 3 milestone for the tested 20-department catalogue and owner CRUD/hierarchy controls.
+- Last verified milestone: **Phase 3 — corporate department foundation (partial)**. The 20 required departments, custom CRUD, parent hierarchy, duplicate/cycle validation, owner-only API and UI are covered by passing tests. HR, appointments, org charts, department staffing and canonical PostgreSQL persistence are not done.
+- Last confirmed action: Personal AI Bots workflow **#482** passed **160/160** and full Minglora CI **#8242** passed **894/894** on `e04cd2bb6c23602dedf587e94da62c8404454d75`.
+- Unverified claims: live normalized PostgreSQL persistence, real email/provider provisioning, deployed scheduler/worker, corporate HR/leadership/employee lifecycle, cross-department delegation and unattended autonomy remain unverified.
+- Changes since interruption: three population types, batch replay/recovery and fail-closed persistence tests were retained; the corporate department catalogue/CRUD/hierarchy UI and API were added; the overview now returns the department catalogue; the test import, empty-collection assertion and UI asset-version assertion were corrected; the profile Edit action remains on the non-modal About-tab flow. Full repository CI is now green.
 - Recovery confidence: **CONFIRMED** for repository branch, latest commits, checkpoint, workflow logs and PR state; **PARTIALLY RECOVERED** for production database/service state because AI migrations are not deployed and provider/email/worker services are not connected.
 
 ## Changes since the older checkpoint
@@ -115,24 +121,24 @@ This is weighted implementation progress, not a claim that the 36% of the full p
 - The old `1319977d` checkpoint was superseded by profile backend/service/UI work, profile round-trip tests, country selector alignment (247 → 249 entries), ISO country-code mapping, safety report list/review RPC work and associated test corrections.
 - The stale “next action: implement user-follow graph and saved searches” is no longer valid; those staged/code/test paths already exist. The five operating-mode UI/service/schema configuration and tests were added after the prior checkpoint.
 - The master target remains **10 billion** as a design objective only; PR #202 should be kept synchronized to the latest test results.
-- Latest base comparison: feature branch is **344 commits ahead and 5 commits behind** `main`; keep PR #202 open/draft and do not perform a destructive rebase or merge.
+- Latest base comparison: feature branch is **376 commits ahead and 5 commits behind** `main`; keep PR #202 open/draft and do not perform a destructive rebase or merge.
 
 ## Remaining work — easiest available first
 
 ### Easy / immediate
-1. Refresh PR #202 reporting to the current 36% weighted progress, latest AI workflow #437 (154/154), and full CI #8169 (880/888, 8 failures); preserve open/draft status.
+1. Refresh PR #202 reporting to the current 38% weighted progress, latest AI workflow #482 (160/160), and full CI #8242 (894/894); preserve open/draft status.
 2. Keep this single checkpoint aligned with the latest branch head, current workflow results and genuine blockers.
-3. Inspect and fix the next simplest failing general Minglora CI behavior only after checking the implementation behind the assertion; do not weaken tests.
+3. Begin the next smallest Phase 3 requirement: employee/position/appointment records with ownership, permission boundaries and audit history, keeping execution and financial authority disabled until separately verified.
 
 ### Medium
-1. Finish remaining member-side AI profile/discovery filters and verify all filter combinations against the real PostgreSQL RPC after the migration is applied in an authorized environment.
-2. Finish owner AI identity/email/provider screens with real persistence readback; ensure identity, profile, locations, email and provider assignments round-trip through live PostgreSQL.
-3. Verify owner report-list/review audit readback against live PostgreSQL after the staged migrations are applied with authorization; the owner review UI and RPCs are already present and tested on the feature branch.
-4. Bulk identity creation/import is implemented for 1–100 records with idempotency, duplicate checks, retry state, per-record outcomes and history; it still requires live PostgreSQL round-trip verification after an authorized migration.
-5. Finish operational worker/scheduler integration, provider adapter, runtime metrics and creator/social task paths only when real infrastructure and credentials are available.
+1. Add normalized corporate department and position/role records with owner-scoped CRUD/RPCs, persistence readback and RLS coverage; current department controls are runtime-state-backed only.
+2. Implement employee/candidate records, appointments, reporting relationships and employment history with explicit owner/supervisor permissions, audit history and safe inactive-by-default lifecycle.
+3. Finish remaining member-side AI profile/discovery filters and verify combinations against real PostgreSQL after authorized migration.
+4. Finish provider/email readback and actual provisioning/inference only when real providers and credentials are available.
+5. Complete worker/scheduler integration, task delegation and creator/social workflows with safety gates and operational telemetry.
 
 ### Hard
-1. Implement corporate board, executive roles, 20 departments, reporting structures, org charts, recruitment, appointments, performance and employment lifecycle.
+1. Implement board/executive roles, department leadership, reporting structures, org charts, recruitment, appointments, performance and employment lifecycle.
 2. Implement bounded delegation and AI collaboration across teams and departments, with approvals/escalation/human takeover.
 3. Implement finance/resource accounting, model expenditure attribution, security operations, compliance and all twelve management centres.
 4. Implement real model routing, fallback, memory retrieval/management, multilingual/audio/image/video capabilities and analytics.
@@ -144,10 +150,10 @@ This is weighted implementation progress, not a claim that the 36% of the full p
 - **AI provider:** provider adapter and valid server-side credentials/verified provider account are unavailable; no inference or health claim.
 - **Email provider:** no mailbox provisioning/sending service credentials are available.
 - **Worker deployment:** runtime must remain disabled until provider, queue, permissions, observability, deployment and human approval paths are verified.
-- **Full CI:** the latest run #8189 has 6 failed assertions involving people-discovery refresh timing, recharge/payment labels, profile edit wiring and focus containment. Do not call these pre-existing until checked against a baseline; fix actual behavior before release readiness.
+- **Full CI:** workflow #8242 passed 894/894 tests. Continue regression testing on every new change; a green run applies to the tested commit `e04cd2b`, not later untested commits.
 - **Branch reconciliation:** feature branch remains a draft PR and is behind main; do not merge/rebase destructively. Reconcile carefully after tests and review.
 
 ## Exact next action
 
-Start Phase 3 (corporate governance) with the smallest real domain unit: inspect the current admin/module patterns, then implement a validated 20-department catalogue and persistence-backed department CRUD with role-boundary checks and focused tests. Keep any SQL migration staged in this feature branch only. Do not create fake staff, apply migrations to production, deploy workers/providers, merge, or change PR #202 from open/draft.
+Continue Phase 3 with the next smallest real unit: design and add safe employee/position/appointment records and reporting relationships on top of the current department catalogue. Keep new workers inactive, role changes owner-approved, and financial/external actions disabled. Add database migration/RPC work only staged in this feature branch; do not apply production migrations, deploy, merge or change PR #202 from open/draft.
 
