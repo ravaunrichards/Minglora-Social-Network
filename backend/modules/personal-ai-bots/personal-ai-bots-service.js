@@ -163,6 +163,12 @@ export function updatePersonalAiBot(db, botId, input, actorId, timestamp, uid) {
     if(value.length<2||value.length>64)throw Object.assign(new Error('Bot name must be between 2 and 64 characters.'),{status:400});
     bot.displayName=value;changes.push('name');
   }
+  if (Object.hasOwn(input,'username')) {
+    const username=String(input.username||'').trim().toLowerCase();
+    if(!/^ai_[a-z0-9_]{2,40}$/.test(username))throw Object.assign(new Error('AI usernames must start with ai_ and contain 5–43 letters, numbers or underscores.'),{status:400});
+    if(db.personalAiBots.some(item=>item.id!==botId&&String(item.username||'').toLowerCase()===username))throw Object.assign(new Error('That AI username is already in use.'),{status:409});
+    bot.username=username;changes.push('username');
+  }
   if (Object.hasOwn(input,'description')) { bot.description=String(input.description||'').trim().slice(0,600);changes.push('description'); }
   if (Object.hasOwn(input,'personality')) { bot.personality=String(input.personality||'').trim().slice(0,1200);changes.push('personality'); }
   if (Object.hasOwn(input,'bio')) { bot.bio=String(input.bio||'').trim().slice(0,600);changes.push('bio'); }
@@ -395,7 +401,7 @@ export function bulkUpdatePersonalAiBots(db, botIds, status, actorId, timestamp,
   }
   for(const bot of bots){
     bot.status=status;bot.enabled=status==='enabled';bot.updatedBy=actorId;bot.updatedAt=timestamp;
-    if(status!=='enabled')bot.pausedAt=status==='paused'?timestamp:null;
+    bot.pausedAt=status==='paused'?timestamp:null;
   }
   audit(db,actorId,'bot.bulk_status_updated','bot',uniqueIds.join(','),'Set '+bots.length+' selected bots to '+status+'.',timestamp,uid);
   return {updated:bots.length,bots};
