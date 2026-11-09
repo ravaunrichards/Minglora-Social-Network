@@ -84,3 +84,76 @@ test('new bots are disabled by default and all tasks are approval-gated',()=>{
   assert.match(sql,/approval_required boolean NOT NULL DEFAULT true CHECK \(approval_required\)/);
   assert.match(sql,/status text NOT NULL DEFAULT 'awaiting_administrator_approval'/);
 });
+
+const queueSql = await readFile(
+  new URL('../../supabase/migrations/20261109200000_minglora_ai_bot_durable_task_queue.sql', import.meta.url),
+  'utf8'
+);
+const worker = await readFile(
+  new URL('../../backend/modules/personal-ai-bots/worker.js', import.meta.url),
+  'utf8'
+);
+const workerEntrypoint = await readFile(
+  new URL('../../src/personal-ai-bot-worker.js', import.meta.url),
+  'utf8'
+);
+
+test('identity foundation migration is one complete transaction with RLS after every table declaration',()=>{
+  assert.equal((sql.match(/COMMIT;/g)||[]).length,1);
+  assert.equal((sql.match(/FOREACH table_name IN ARRAY ARRAY\[/g)||[]).length,1);
+  assert.match(sql,/public_profile_slug text NOT NULL UNIQUE CHECK \(public_profile_slug ~ '\^\[a-z0-9\]\+\(-\[a-z0-9\]\+\)\*\$'\)/);
+  assert.match(sql,/username text NOT NULL UNIQUE CHECK \(username = lower\(username\) AND username ~ '\^ai_\[a-z0-9_\]\{2,40\}\$'\)/);
+  assert.match(sql,/country_code text NOT NULL DEFAULT '' CHECK \(country_code = '' OR country_code ~ '\^\[A-Z\]\{2\}\$'\)/);
+  assert.ok(sql.includes("'ai_identities','ai_names','ai_profiles','ai_emails','ai_provider_accounts'"));
+  assert.ok(sql.includes("'ai_identity_status_history','ai_identity_versions','ai_identity_audit_logs'"));
+  assert.ok(sql.includes('DEFAULT 10000000000'));
+});
+
+test('durable queue migration adds owner-scoped identities, leases, retries and idempotency',()=>{
+  for(const fragment of [
+    'minglora_ai_bot_task_upsert_batch',
+    'minglora_ai_bot_task_claim',
+    'minglora_ai_bot_task_heartbeat',
+    'minglora_ai_bot_task_complete',
+    'minglora_ai_bot_task_fail',
+    'minglora_ai_bot_task_list',
+    'minglora_ai_bot_task_stats',
+    'lease_token','lease_expires_at','heartbeat_at','attempt_count',
+    'max_attempts','next_attempt_at','dead_lettered_at','idempotency_key',
+    'FOR UPDATE OF task SKIP LOCKED',
+    "'dead_lettered'",
+    'GRANT EXECUTE ON FUNCTION public.minglora_ai_bot_task_claim(text,integer,integer,uuid) TO service_role'
+  ]) assert.ok(queueSql.includes(fragment),'missing durable queue requirement: '+fragment);
+  assert.match(queueSql,/execution_enabled boolean NOT NULL DEFAULT false/);
+  assert.match(queueSql,/provider_ready boolean NOT NULL DEFAULT false/);
+  assert.match(queueSql,/task\.high_impact = false/);
+  assert.match(queueSql,/task\.task_type IN \('assistant_request','moderation_review','analytics_report','translation'\)/);
+  assert.match(queueSql,/approved_by = p_actor_user_id/);
+  assert.match(queueSql,/attempt_count >= task\.max_attempts/);
+  assert.match(queueSql,/CREATE OR REPLACE FUNCTION public\.minglora_ai_bot_task_upsert/);
+  assert.match(queueSql,/REFERENCES public\.ai_identities\(identity_id,owner_admin_id\)/);
+});
+
+test('runtime gateway exposes only allowlisted owner-gated durable queue operations',()=>{
+  for(const action of [
+    'ai_bot_task_upsert_batch','ai_bot_task_list','ai_bot_task_stats',
+    'ai_bot_task_claim','ai_bot_task_heartbeat','ai_bot_task_complete','ai_bot_task_fail'
+  ]) assert.ok(gateway.includes(action),'missing runtime gateway action: '+action);
+  assert.match(gateway,/Only the designated Minglora owner can access the AI task queue/);
+  assert.match(gateway,/provider secrets and arbitrary task fields are not accepted/i);
+  assert.match(gateway,/admin\.rpc\("minglora_ai_bot_task_claim"/);
+  assert.match(gateway,/admin\.rpc\("minglora_ai_bot_task_complete"/);
+});
+
+test('worker remains provider-gated and draft-only, with no social action task types',()=>{
+  for(const type of ['assistant_request','moderation_review','analytics_report','translation']) assert.ok(worker.includes("'"+type+"'"));
+  for(const forbidden of ['draft_post','follow','unfollow','send_message','react','join_group','event_participation','live_show_plan']) {
+    assert.ok(!worker.includes("'"+forbidden+"'"),'worker must not execute '+forbidden);
+  }
+  assert.ok(worker.includes('externalActionsAllowed: false'));
+  assert.ok(worker.includes('tools: []'));
+  assert.ok(worker.includes("outputType: 'human_review_draft'"));
+  assert.ok(workerEntrypoint.includes("MINGLORA_AI_BOT_WORKER_ENABLED"));
+  assert.ok(workerEntrypoint.includes('MINGLORA_AI_BOT_PROVIDER_MODULE'));
+  assert.ok(workerEntrypoint.includes("'ai_bot_task_claim'"));
+});
