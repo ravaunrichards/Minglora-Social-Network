@@ -13,6 +13,10 @@ import {
   updatePersonalAiBotCategory,
   bulkUpdatePersonalAiBots,
   emergencyShutdownPersonalAiBots,
+  createPersonalAiBotTeam,
+  updatePersonalAiBotTeam,
+  assignPersonalAiBotsToTeam,
+  removePersonalAiBotFromTeam,
   PERSONAL_AI_BOT_CATEGORIES
 } from './personal-ai-bots-service.js';
 
@@ -34,6 +38,7 @@ export async function handlePersonalAiBotsAdminApi(context) {
         bots:db.personalAiBots.slice().sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt))),
         tasks:db.personalAiBotTasks.slice(0,100),
         audit:db.personalAiBotAudit.slice(0,100),
+        teams:db.personalAiBotTeams.map(team=>({...team,members:db.personalAiBotTeamMembers.filter(member=>member.teamId===team.id).map(member=>({botId:member.botId,botName:db.personalAiBots.find(bot=>bot.id===member.botId)?.displayName||'Unknown bot'}))})),
         templates:PERSONAL_AI_BOT_CATEGORIES
       }),true);
     }
@@ -46,6 +51,29 @@ export async function handlePersonalAiBotsAdminApi(context) {
       const bots=createPersonalAiBotStarterSet(db,user.id,stamp,uid);
       await saveStore();
       return (json(res,201,{ok:true,created:bots.length,bots}),true);
+    }
+    if(method==='POST'&&path===root+'/teams'){
+      const team=createPersonalAiBotTeam(db,input||{},user.id,stamp,uid);
+      await saveStore();
+      return (json(res,201,{ok:true,team}),true);
+    }
+    const teamMatch=path.match(/^\/api\/admin\/personal-ai-bots\/teams\/([0-9a-f-]{36})$/i);
+    if(teamMatch&&method==='PATCH'){
+      const team=updatePersonalAiBotTeam(db,teamMatch[1],input||{},user.id,stamp,uid);
+      await saveStore();
+      return (json(res,200,{ok:true,team}),true);
+    }
+    const teamMembersMatch=path.match(/^\/api\/admin\/personal-ai-bots\/teams\/([0-9a-f-]{36})\/members$/i);
+    if(teamMembersMatch&&method==='POST'){
+      const result=assignPersonalAiBotsToTeam(db,teamMembersMatch[1],input?.botIds,user.id,stamp,uid);
+      await saveStore();
+      return (json(res,200,{ok:true,...result}),true);
+    }
+    const teamMemberRemoveMatch=path.match(/^\/api\/admin\/personal-ai-bots\/teams\/([0-9a-f-]{36})\/members\/([0-9a-f-]{36})$/i);
+    if(teamMemberRemoveMatch&&method==='DELETE'){
+      const result=removePersonalAiBotFromTeam(db,teamMemberRemoveMatch[1],teamMemberRemoveMatch[2],user.id,stamp,uid);
+      await saveStore();
+      return (json(res,200,result),true);
     }
     if(method==='POST'&&path===root+'/categories'){
       const category=createPersonalAiBotCategory(db,input||{},user.id,stamp,uid);
