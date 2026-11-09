@@ -24,16 +24,16 @@ The previous checkpoint did not contain a weighted percentage. The earlier conve
 | 1. Relational foundation and backend persistence integration | 25% | 35% | 8.75% |
 | 2. AI identities, profiles, worldwide discovery and member follow graph | 20% | 70% | 14.00% |
 | 3. Corporate governance, organizational charts and HR lifecycle | 15% | 0% | 0.00% |
-| 4. Supervision, bounded autonomy, queues, teams and collaboration | 10% | 55% | 5.50% |
+| 4. Supervision, bounded autonomy, queues, teams and collaboration | 10% | 65% | 6.50% |
 | 5. AI social participation and creator ecosystem | 10% | 25% | 2.50% |
 | 6. Security, governance, finance and resource controls | 8% | 25% | 2.00% |
 | 7. Model intelligence, memory, provider operations and analytics | 7% | 20% | 1.40% |
 | 8. Distributed scaling, load tests, device tests and production acceptance | 5% | 0% | 0.00% |
-| **TOTAL** | **100%** |  | **34.15% → 34%** |
+| **TOTAL** | **100%** |  | **35.15% → 35%** |
 
-**COMPLETION: 34% | REMAINING: 66%**
+**COMPLETION: 35% | REMAINING: 65%**
 
-This is weighted implementation progress, not a claim that the 34% of the full production acceptance criteria is deployed. Milestones 1 and 2 remain partial because the normalized AI schema and associated RPCs are staged in GitHub but absent from the live Supabase migration ledger and public schema.
+This is weighted implementation progress, not a claim that the 35% of the full production acceptance criteria is deployed. Milestones 1 and 2 remain partial because the normalized AI schema and associated RPCs are staged in GitHub but absent from the live Supabase migration ledger and public schema.
 
 ## Recovered and project-verified implementation
 
@@ -68,6 +68,13 @@ This is weighted implementation progress, not a claim that the 34% of the full p
 - Saved discovery searches are member-scoped and have bounded validated filters.
 - Block/report records and owner-only report review RPCs are staged and tested. Report queue uses status `open` to include pending and in-review items.
 
+### Five AI operating levels — configuration and guardrails verified
+- Backend and Admin Centre now expose five distinct modes: fully supervised (`administrator_controlled`), supervisor controlled, hybrid autonomy, autonomous within limits and restricted observation.
+- The former `human_approval` value remains accepted as a backwards-compatible alias and normalizes to fully supervised.
+- Low-risk permissions may only be selected in hybrid or autonomous-within-limits modes; changing to fully supervised, supervisor-controlled or restricted-observation clears those permissions.
+- The initial schema constraint and a separate additive migration `20261109252000_minglora_ai_bot_autonomy_modes.sql` accept the expanded values.
+- **This is configuration support, not proof of operational autonomy.** The deployed worker is not verified; current queue/task approvals remain enforced and the worker only accepts explicitly approved, low-impact draft/text tasks. Supervisor hierarchy, task delegation and unattended execution are not yet operational.
+
 ### Supervision, tasks and teams
 - Bot teams, assignment/removal, approvals, audit, bulk selected bot controls, daily budgets/caps and emergency shutdown exist in the feature branch.
 - Queue/worker foundation has idempotency, bounded retries, leases, heartbeat/recovery and dead-letter handling in staged SQL/code.
@@ -82,17 +89,17 @@ This is weighted implementation progress, not a claim that the 34% of the full p
 
 ## Verification and current failures
 
-- Latest confirmed green Personal AI Bots workflow: run **#354**, commit `16d61aea32bbbb3c0bb370ea8a4a0004afdc4ac5`, **137 passed / 0 failed**, logged at 2026-11-09 09:47:39 UTC.
-- A later commit changed owner report listing to `open` (pending + in-review). Workflow **#358** then failed 2 of 137 tests because old assertions still expected `pending` only. The API/schema tests were aligned and committed at `247ab2005b7981ff0ac44b28c75ddecd443243eb`; rerun on that exact latest checkpoint still needs confirmation.
-- Full Minglora CI remains red on existing For You navigation, profile editing/layout, Stories, service-worker cache/version/bootstrap, responsive stacking, logout/settings and theme assertions. Do not suppress these tests. They are not represented as passing.
-- Earlier successful AI workflow #334 had 131/131 tests; that is historical, superseded by #354.
+- Latest confirmed green Personal AI Bots workflow: run **#384**, commit `a9995c3066ee369c444c8b86134ef233bd582882`, **139 passed / 0 failed**, logged at 2026-11-09 09:57:21 UTC. This includes the five-mode service, UI and migration tests.
+- An earlier workflow #382 failed 1/139 because a legacy test expected an old validation error string; the assertion was aligned with the new bounded-mode message. Run #384 is the green rerun.
+- Full Minglora CI run #8088 is still in progress at the latest check. Its For You functional navigation job is now **passing** after the service-worker cache/version assertions were reconciled. The main repository test job had not yet completed at the last check; do not label full CI green.
+- Earlier successful AI workflow #354 had 137/137 tests; it is historical, superseded by #384.
 - Supabase live verification: project remains accessible; no AI network tables or AI migration-ledger entries were present at the latest read.
 - No production migration deployment, Edge Function deployment, worker deployment, email provisioning, provider inference, 10-billion benchmark or concurrent-capacity load test is claimed.
 
 ## Changes since the older checkpoint
 
 - The old `1319977d` checkpoint was superseded by profile backend/service/UI work, profile round-trip tests, country selector alignment (247 → 249 entries), ISO country-code mapping, safety report list/review RPC work and associated test corrections.
-- The stale “next action: implement user-follow graph and saved searches” is no longer valid; those staged/code/test paths already exist.
+- The stale “next action: implement user-follow graph and saved searches” is no longer valid; those staged/code/test paths already exist. The five operating-mode UI/service/schema configuration and tests were added after the prior checkpoint.
 - The PR description and older docs still contain an obsolete **8.3-billion** statement; the current task target of **10 billion** supersedes it and the PR body should be corrected without changing its draft status.
 - PR base comparison at the last check: 4 commits behind `main`; continue to re-check before any future merge review.
 
@@ -129,4 +136,4 @@ This is weighted implementation progress, not a claim that the 34% of the full p
 
 ## Exact next action
 
-Recover the latest PR head and the workflow run triggered by `247ab2005b7981ff0ac44b28c75ddecd443243eb`. Verify AI workflow passes after switching report queue status to `open`. Then update PR description/capacity wording and continue the next available feature task. Keep PR #202 draft and leave production DB/services untouched.
+Recover the latest PR head and confirm Personal AI Bots workflow #384 remains green. Inspect the completion of full CI run #8088 and fix the next simplest genuine Minglora regression. Then continue the next unfinished AI Network requirement. Keep PR #202 draft and leave production DB/services untouched.
