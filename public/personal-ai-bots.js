@@ -28,7 +28,7 @@
         root.innerHTML='<section class="pab-access-denied"><h1>Private Personal AI Bots Network</h1><p>Sign in with the designated Minglora owner account and complete authenticator verification in Admin Centre.</p><a class="pab-btn secondary" href="/admin-centre.html">Return to Admin Centre</a></section>';
         return;
       }
-      state=await request(API);render();
+      state=await request(API);const batchResult=await request(API+'/batches');state.batchHistory=Array.isArray(batchResult.batches)?batchResult.batches:[];render();
     }catch(error){
       root.innerHTML='<section class="pab-access-denied"><h1>Could not open Personal AI Bots Network</h1><p>'+esc(error.message)+'</p><a class="pab-btn secondary" href="/admin-centre.html">Return to Admin Centre</a></section>';
     }
@@ -117,6 +117,14 @@
     else if(!identityRecords.length)html+='<div class="pab-empty">No canonical AI identity rows have been returned yet. Create an AI identity to persist its individual database record.</div>';
     else html+='<div class="pab-identity-table-wrap"><table class="pab-identity-table"><thead><tr><th>First name</th><th>Middle name</th><th>Last name</th><th>Username</th><th>Population</th><th>Lifecycle</th><th>Category</th></tr></thead><tbody>'+identityRecords.map(identity=>'<tr><td>'+esc(identity.firstName||'—')+'</td><td>'+esc(identity.middleName||'—')+'</td><td>'+esc(identity.lastName||'—')+'</td><td>@'+esc(identity.username||'—')+'</td><td>'+esc(identity.population||'—')+'</td><td>'+esc(identity.status||'—')+'</td><td>'+esc(identity.categoryName||identity.categoryId||'—')+'</td></tr>').join('')+'</tbody></table></div>';
     html+='</section>';
+
+    const batchHistory=Array.isArray(state.batchHistory)?state.batchHistory:[];
+    html+='<section class="pab-panel"><div class="pab-heading"><div><h2>Bulk AI identity generation and import</h2><p>Import 1–100 individual AI identities per batch. Every row becomes a separate disabled identity, with its own first and last name, category and persistent record.</p></div><span class="pab-tag">Maximum 100 per batch</span></div>';
+    html+='<div class="pab-warning">Use a JSON array of identity objects. Each item needs a displayName and categoryId (or firstName and lastName plus categoryId). Optional population values: independent, organizational or specialized_service. Duplicate names within a category are rejected. A failed database write can be retried with the same key and unchanged JSON.</div>';
+    html+='<form id="pab-batch-form" class="pab-form-grid"><div class="pab-field full"><label for="pab-batch-items">AI identity records (JSON array)</label><textarea class="pab-textarea pab-batch-json" id="pab-batch-items" rows="8" required spellcheck="false" placeholder=\'[{"displayName":"AI Learning Guide","firstName":"AI","lastName":"Guide","categoryId":"ai-educators","population":"independent"},{"displayName":"AI Service Analyst","firstName":"AI","lastName":"Analyst","categoryId":"ai-support","population":"specialized_service"}]\'></textarea><small class="pab-notice">Supported fields include name fields, category, population, gender, nationality, country, languages, personality, interests, education, profession, skills and profile preferences.</small></div><div class="pab-field"><label for="pab-batch-key">Idempotency key (generated on first submit)</label><input class="pab-input" id="pab-batch-key" maxlength="120" autocomplete="off" placeholder="Generated automatically; keep it unchanged when retrying"></div><div class="pab-field full"><button class="pab-btn" type="submit">Create and persist AI identity batch</button><span id="pab-batch-status" class="pab-notice">Creation is not activation. New AI identities remain disabled and private.</span></div></form>';
+    html+='<div class="pab-divider"></div><div class="pab-heading"><div><h3>Recent identity batches</h3><p>Saved batches can be safely replayed using the same idempotency key and original records after a persistence interruption.</p></div></div>';
+    html+=batchHistory.length?'<div class="pab-audit">'+batchHistory.map(batch=>'<div class="pab-audit-row"><strong>'+esc(batch.status||'unknown')+' · '+esc(batch.completedRecords||0)+'/'+esc(batch.totalRecords||0)+' persisted · '+esc(batch.failedRecords||0)+' failed</strong><span>'+esc(date(batch.createdAt))+' · retries '+esc(batch.retryCount||0)+'</span></div>').join('')+'</div>':'<div class="pab-empty">No identity batches have been submitted.</div>';
+    html+='</section>';
     const providerAssignments=Array.isArray(state.providerAssignments)?state.providerAssignments:[];
     const providerSource=state.providerAssignmentsSource==='minglora_supabase_postgresql';
     const emailIdentities=Array.isArray(state.emailIdentities)?state.emailIdentities:[];
@@ -166,6 +174,7 @@
     document.querySelector('#pab-create-starters')?.addEventListener('click',createStarters);
     document.querySelector('#pab-create-form')?.addEventListener('submit',createBot);
     document.querySelector('#pab-provider-form')?.addEventListener('submit',saveProviderAssignment);
+    document.querySelector('#pab-batch-form')?.addEventListener('submit',createIdentityBatch);
     document.querySelector('#pab-email-form')?.addEventListener('submit',saveEmailIdentity);
     document.querySelector('#pab-team-create-form')?.addEventListener('submit',createTeam);
     document.querySelector('#pab-follow-search-button')?.addEventListener('click',searchFollowTargets);
@@ -295,13 +304,49 @@
     catch(error){notice('pab-category-status',error.message,'error');}
   }
   function filterBots(){const value=String(document.querySelector('#pab-bot-filter')?.value||'').trim().toLowerCase();const population=String(document.querySelector('#pab-population-filter')?.value||'all');document.querySelectorAll('[data-bot-card]').forEach(card=>{const searchMatches=String(card.dataset.search||'').includes(value);const populationMatches=population==='all'||card.dataset.population===population;card.hidden=!(searchMatches&&populationMatches);});}
-  async function refresh(){try{state=await request(API);render();}catch(error){notice('pab-network-status',error.message,'error');}}
+  async function refresh(){try{state=await request(API);const batchResult=await request(API+'/batches');state.batchHistory=Array.isArray(batchResult.batches)?batchResult.batches:[];render();}catch(error){notice('pab-network-status',error.message,'error');}}
   async function saveNetwork(){
     const enabled=!!document.querySelector('#pab-master-switch')?.checked,hybridEnabled=!!document.querySelector('#pab-hybrid-switch')?.checked;
     try{await request(API+'/network',{method:'PUT',body:JSON.stringify({enabled,hybridEnabled})});notice('pab-network-status','Network controls saved. Bots still require explicit instructions and approval.','success');await refresh();}
     catch(error){notice('pab-network-status',error.message,'error');}
   }
   async function toggleCategory(id,enabled){try{await request(API+'/categories/'+encodeURIComponent(id),{method:'PATCH',body:JSON.stringify({enabled})});notice('pab-network-status','Category control saved.','success');await refresh();}catch(error){notice('pab-network-status',error.message,'error');await refresh();}}
+
+  async function createIdentityBatch(event){
+    event.preventDefault();
+    const form=event.currentTarget;
+    const button=form.querySelector('button[type="submit"]');
+    const raw=document.querySelector('#pab-batch-items').value;
+    const keyInput=document.querySelector('#pab-batch-key');
+    let items;
+    try{items=JSON.parse(raw);}catch{
+      notice('pab-batch-status','Enter a valid JSON array of AI identity objects.','error');return;
+    }
+    if(!Array.isArray(items)||items.length<1||items.length>100){
+      notice('pab-batch-status','Provide between 1 and 100 identity objects.','error');return;
+    }
+    let idempotencyKey=String(keyInput.value||'').trim();
+    if(!idempotencyKey){
+      const generated=window.crypto?.randomUUID?.();
+      if(!generated){
+        notice('pab-batch-status','A secure random key could not be generated. Enter an idempotency key before submitting.','error');return;
+      }
+      idempotencyKey=generated;
+      keyInput.value=idempotencyKey;
+    }
+    if(button)button.disabled=true;
+    try{
+      const result=await request(API+'/batches',{method:'POST',body:JSON.stringify({idempotencyKey,items})});
+      await refresh();
+      const batch=result.batch||{};
+      notice('pab-batch-status',(result.replayed?'Previously completed batch verified. ':'')+
+        'Persisted '+Number(batch.completedRecords||0)+' of '+Number(batch.totalRecords||items.length)+' identities. All new identities remain disabled.','success');
+      keyInput.value='';
+    }catch(error){
+      notice('pab-batch-status',error.message+' Keep this idempotency key and the exact same JSON when retrying.','error');
+    }finally{if(button)button.disabled=false;}
+  }
+
   async function createStarters(){
     const button=document.querySelector('#pab-create-starters');if(button)button.disabled=true;
     try{const result=await request(API+'/starter-set',{method:'POST',body:'{}'});await refresh();notice('pab-create-status',result.created+' disabled starter bots created. They are not running or posting.','success');}
