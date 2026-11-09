@@ -101,6 +101,7 @@ Deno.serve(async (req: Request) => {
     "ai_identity_public_owner_lookup", "ai_identity_follow_set", "ai_identity_follow_list",
     "ai_discovery_saved_search_upsert", "ai_discovery_saved_search_list", "ai_discovery_saved_search_delete",
     "ai_identity_public_profile_get", "ai_identity_block_set", "ai_identity_block_list", "ai_identity_report_create",
+    "ai_identity_report_list", "ai_identity_report_review",
     "ai_bot_task_upsert_batch", "ai_bot_task_list", "ai_bot_task_stats",
     "ai_bot_task_claim", "ai_bot_task_heartbeat", "ai_bot_task_complete", "ai_bot_task_fail",
   ];
@@ -117,6 +118,50 @@ Deno.serve(async (req: Request) => {
   // Re-check the designated owner ID here as a second boundary after the Node
   // admin API's MFA/session authorization.
   const AI_NETWORK_OWNER_ID = "5b998c21-86b5-4621-ab37-e0808a2657b1";
+  if (action === "ai_identity_report_list") {
+    const actorUserId = String(input.actorUserId || "");
+    const status = String(input.status || "pending");
+    const limit = Number(input.limit ?? 100),offset = Number(input.offset ?? 0);
+    if (actorUserId !== AI_NETWORK_OWNER_ID) {
+      return json(403, { error: "Only the designated Minglora owner can review AI identity reports." });
+    }
+    if (!["all","pending","in_review","actioned","dismissed"].includes(status) ||
+        !Number.isInteger(limit) || limit < 1 || limit > 200 ||
+        !Number.isInteger(offset) || offset < 0 || offset > 1000000000) {
+      return json(400, { error: "AI report review filter or pagination values are invalid." });
+    }
+    const { data,error } = await admin.rpc("minglora_ai_identity_report_list", {
+      p_owner_admin_id: actorUserId,p_status: status,p_limit: limit,p_offset: offset
+    });
+    if(error) return json(503,{error:"AI profile report queue is unavailable.",code:"AI_REPORT_QUEUE_UNAVAILABLE"});
+    return json(200,{ok:true,reports:Array.isArray(data)?data:[]});
+  }
+
+  if (action === "ai_identity_report_review") {
+    const actorUserId = String(input.actorUserId || "");
+    const reportId = String(input.reportId || "");
+    const status = String(input.status || "");
+    const resolutionNote = String(input.resolutionNote || "").slice(0,1200);
+    if(actorUserId !== AI_NETWORK_OWNER_ID) {
+      return json(403,{error:"Only the designated Minglora owner can review AI identity reports."});
+    }
+    if(!validUuid(reportId)||!["in_review","actioned","dismissed"].includes(status)||
+       resolutionNote.length>1200) {
+      return json(400,{error:"AI report review values are invalid."});
+    }
+    const {data,error}=await admin.rpc("minglora_ai_identity_report_review",{
+      p_report_id:reportId,p_status:status,p_resolution_note:resolutionNote,p_actor_user_id:actorUserId
+    });
+    if(error){
+      const invalid=["22023","23503"].includes(String(error.code||""));
+      return json(invalid?409:503,{
+        error:invalid?"AI report could not be reviewed or is already closed.":"AI report review storage is unavailable.",
+        code:String(error.code||"AI_REPORT_REVIEW_ERROR")
+      });
+    }
+    return json(200,{ok:true,report:data||{}});
+  }
+
   if (action === "ai_identity_public_profile_get") {
     const actorUserId = String(input.actorUserId || "");
     const slug = String(input.slug || "").trim();
