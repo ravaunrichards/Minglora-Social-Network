@@ -99,6 +99,19 @@ test("failed provider session revocation is audited and the UI discloses audit s
   assert.ok(admin.includes("The failed session-revocation attempt was recorded in the administrator audit log"));
 });
 
+test("failed account deletion discloses both session and audit outcomes", () => {
+  const start = runtime.indexOf('if (action === "admin_user_delete")');
+  const end = runtime.indexOf('if (action === "admin_user_revoke_sessions")', start);
+  assert.ok(start >= 0 && end > start);
+  const deletion = runtime.slice(start, end);
+  const failedResponse = deletion.slice(deletion.indexOf("if (deleteError)"), deletion.indexOf("const auditRecorded = await recordAdminUserAction(actorUserId, userId, \"account.delete\""));
+  assert.match(failedResponse, /sessionRevoked: providerRefreshTokensRevoked/);
+  assert.match(failedResponse, /warning/);
+  assert.match(failedResponse, /No current Supabase access token was available/);
+  assert.match(failedResponse, /Supabase refresh-token sessions were globally revoked/);
+  assert.ok(admin.includes("error?.payload?.warning"));
+});
+
 test("account deletion is audited as failed or successful only after the delete result", () => {
   const start = runtime.indexOf('if (action === "admin_user_delete")');
   const end = runtime.indexOf('if (action === "admin_user_revoke_sessions")', start);
