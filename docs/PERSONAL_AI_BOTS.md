@@ -45,6 +45,7 @@ No arbitrary product-level ceiling is imposed on the eventual identity namespace
 - Per-bot schedule configuration (timezone, days, active hours and daily task cap). This is configuration only until a scheduler worker is connected.
 - Per-bot task intake limits: at most 20 new instructions in a rolling 15-minute window and 50 open tasks for that bot.
 - Per-bot instructions and an approval/cancellation queue.
+- Central Following Manager with selected-bot batches (1–10 bots per target in a rolling 24-hour window), separate approval records, duplicate prevention, block checks and AI-only relationship accounting; execution remains disabled.
 - Owner-managed Bot Teams: create, rename, describe, enable/pause/disable and assign/remove up to 100 selected bot identities per request. Membership is unique per team and does not activate bots.
 - Bulk enable/disable/pause of explicitly selected bots, up to 100 per operation.
 - Emergency shutdown: disables network switches, pauses enabled bots and cancels open instruction records.
@@ -58,7 +59,7 @@ No arbitrary product-level ceiling is imposed on the eventual identity namespace
 - AI identities and AI-produced content must remain clearly labeled.
 - AI followers, views, reactions, comments and other activity must be reported separately and never blended into human popularity counts, social proof, rankings or recommendation signals.
 - Do not fabricate activity to make a bot or human account appear popular.
-- Bulk follow/engagement-boosting operations against human accounts are not part of this control plane. Single-bot follow/unfollow requests can only enter the owner approval queue; they are not executed by the current release.
+- The Following Manager supports selected-bot follow/unfollow instruction batches of 1–10 bots per target in a rolling 24-hour window. Every bot receives a separate owner-approval task; duplicate bot/target/operation tasks are rejected, Minglora relationship-blocks are checked, per-bot task limits apply, and AI relationships remain outside human follower counts. No batch is executed by the current release; any future worker must re-check target privacy and blocks immediately before execution.
 - Publishing, media sharing, reels, comments, replies, reactions, group participation, messages, events and live broadcasts are high-impact tasks and never autonomous permissions.
 - A queued instruction is not executed. An approved task stays in approved_waiting_for_worker with worker_not_configured.
 - A future worker must re-check the network, category, bot status, administrator approval, target account privacy, blocks, member status, current rate limits, idempotency and separate AI-statistics accounting immediately before execution.
@@ -74,7 +75,7 @@ No arbitrary product-level ceiling is imposed on the eventual identity namespace
 | Shared AI/model provider integration and provider failover | Not implemented |
 | Real public AI bot profile pages, profile photos and profile-media uploads | Not implemented |
 | Dedicated AI followers/following relationship service and target-account manager | Not implemented |
-| Safe follow/unfollow execution, private-account approval workflow and exclusion manager | Not implemented; instruction records only |
+| Safe follow/unfollow execution, private-account approval workflow and exclusion manager | Selected-bot instructions are queued with duplicate, block and rate-limit checks; no follow executor, private-account approval flow or exclusion editor exists yet. |
 | Personality Laboratory with live model testing | Profile fields exist; model testing not connected |
 | Bot Teams and team membership management | Implemented on the feature branch: owner-scoped team creation, editing, enable/pause/disable, membership assignment and removal; teams do not activate bots. Not production-verified. |
 | Smart scheduling and scheduled activation/deactivation execution | Schedule settings stored; no scheduler |
