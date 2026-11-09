@@ -943,3 +943,73 @@
   .profile-post-toolbar-actions{gap:6px}
   .profile-post-control-button{padding:7px 8px;font-size:12px}
 }
+
+
+/* Facebook-style locked-profile notice, aligned above Personal details in About. */
+.profile-lock-notice{
+  grid-column:1/-1;
+  display:flex;
+  align-items:center;
+  gap:14px;
+  min-width:0;
+  border:1px solid var(--line,#e4e6eb);
+  border-radius:13px;
+  background:var(--card,#fff);
+  padding:14px 16px;
+  box-shadow:0 2px 8px #17203308;
+}
+.profile-lock-notice__icon{
+  display:grid;
+  place-items:center;
+  flex:0 0 42px;
+  width:42px;
+  height:42px;
+  border:1px solid var(--line,#e4e6eb);
+  border-radius:50%;
+  background:var(--surface-soft,#f0f2f5);
+  color:var(--ink,#1c1e21);
+}
+.profile-lock-notice__icon svg{
+  width:21px;
+  height:21px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:1.8;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+.profile-lock-notice__copy{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  min-width:0;
+}
+.profile-lock-notice__title{
+  margin:0;
+  color:var(--ink,#1c1e21);
+  font-size:14px;
+  font-weight:750;
+  line-height:1.35;
+}
+.profile-lock-notice__learn-more{
+  align-self:flex-start;
+  border:0;
+  background:none;
+  padding:0;
+  color:var(--blue,#1877f2);
+  font:inherit;
+  font-size:13px;
+  font-weight:650;
+  text-decoration:none;
+  cursor:pointer;
+}
+.profile-lock-notice__learn-more:hover{text-decoration:underline}
+.profile-lock-notice__learn-more:focus-visible{
+  outline:2px solid var(--blue,#1877f2);
+  outline-offset:3px;
+  border-radius:3px;
+}
+@media(max-width:480px){
+  .profile-lock-notice{gap:11px;padding:12px}
+  .profile-lock-notice__icon{flex-basis:38px;width:38px;height:38px}
+}
