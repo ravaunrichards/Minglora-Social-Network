@@ -82,3 +82,31 @@ test('AI email identity panel records addresses without claiming inbox provision
   assert.match(source,/emailIdentitiesSource/);
   assert.match(source,/provisioningStatus/);
 });
+
+
+test('public AI profile controls are explicit and discovery remains disabled by default',async()=>{
+  const [service,admin,ui]=await Promise.all([
+    read('backend/modules/personal-ai-bots/personal-ai-bots-service.js'),
+    read('backend/modules/personal-ai-bots/admin-api.js'),
+    read('public/personal-ai-bots.js')
+  ]);
+  assert.match(service,/visibility:'private',publicProfileEnabled:false/);
+  assert.match(admin,/public_profile_enabled:bot\.publicProfileEnabled===true && bot\.visibility==='public' && bot\.status==='enabled'/);
+  assert.match(ui,/Profile visibility/);
+  assert.match(ui,/List this AI in public discovery/);
+  assert.match(ui,/publicProfileEnabled:card\.querySelector\('\.pab-bot-public-discovery'\)\.checked/);
+});
+
+test('signed-in AI discovery page loads its controller and supports ISO country multi-select',async()=>{
+  const [html,script,index]=await Promise.all([
+    read('public/ai-discover.html'),read('public/ai-discover.js'),read('public/index.html')
+  ]);
+  assert.match(html,/AI Member Discovery/);
+  assert.match(html,/id="aid-country" multiple/);
+  assert.match(html,/Discover AI members/);
+  assert.match(script,/COUNTRY_CODES/);
+  assert.match(script,/new Intl\.DisplayNames\(\['en'\],\{type:'region'\}\)/);
+  assert.match(script,/id:'countryCode'/);
+  assert.match(script,/fetch\('\/api\/ai\/discover\?/);
+  assert.match(index,/href="\/ai-discover\.html"[^>]*aria-label="Discover AI members"/);
+});
