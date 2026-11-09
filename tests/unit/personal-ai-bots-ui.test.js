@@ -240,3 +240,19 @@ test('owner Admin Centre exposes corporate vacancy creation and safe status cont
   assert.ok(html.includes('/personal-ai-bots.js?v=20261109-personal-ai-bots-5'));
 });
 
+
+
+test('owner Admin Centre exposes organizational candidate submission and review controls',async()=>{
+  const [ui,service,api,html]=await Promise.all([
+    read('public/personal-ai-bots.js'),
+    read('backend/modules/personal-ai-bots/personal-ai-bots-service.js'),
+    read('backend/modules/personal-ai-bots/admin-api.js'),
+    read('public/personal-ai-bots.html')
+  ]);
+  for(const phrase of ['AI candidate applications and review','pab-application-form','pab-application-candidate','pab-application-vacancy','createApplication','saveApplication','pab-save-application'])assert.ok(ui.includes(phrase),phrase);
+  assert.match(ui,/Only existing AI identities with population "organizational" can be submitted/);
+  assert.ok(service.includes('population!==\\'organizational\\''));
+  assert.ok(api.includes("root+'/applications'"));
+  assert.ok(html.includes('/personal-ai-bots.js?v=20261109-personal-ai-bots-6'));
+});
+
