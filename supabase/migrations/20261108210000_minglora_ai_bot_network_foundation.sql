@@ -82,7 +82,7 @@ CREATE TABLE IF NOT EXISTS public.minglora_ai_bots (
   status text NOT NULL DEFAULT 'disabled'
     CHECK (status IN ('disabled','enabled','paused','suspended')),
   autonomy_mode text NOT NULL DEFAULT 'administrator_controlled'
-    CHECK (autonomy_mode IN ('administrator_controlled','human_approval','hybrid')),
+    CHECK (autonomy_mode IN ('administrator_controlled','human_approval','supervisor_controlled','hybrid','autonomous_within_limits','restricted_observation')),
   allowed_autonomous_actions text[] NOT NULL DEFAULT ARRAY[]::text[]
     CHECK (allowed_autonomous_actions <@ ARRAY[
       'analytics_read','moderation_flag','draft_content','translate_content','prepare_faq_draft'
