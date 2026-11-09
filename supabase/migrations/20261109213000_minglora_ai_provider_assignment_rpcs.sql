@@ -279,9 +279,143 @@ AS $function$
   ) AS result;
 $function$;
 
+CREATE OR REPLACE FUNCTION public.minglora_ai_provider_runtime_list(
+  p_owner_admin_id uuid,
+  p_limit integer DEFAULT 200,
+  p_offset integer DEFAULT 0
+) RETURNS jsonb
+LANGUAGE sql
+SECURITY INVOKER
+SET search_path = ''
+AS $function$
+  SELECT COALESCE(
+    pg_catalog.jsonb_agg(result.item ORDER BY result.created_at DESC),
+    '[]'::jsonb
+  )
+  FROM (
+    SELECT pg_catalog.jsonb_build_object(
+      'assignmentId',assignment.id,
+      'identityId',identity.identity_id,
+      'providerName',account.provider_name,
+      'providerIdentifier',account.provider_identifier,
+      'providerAccountReference',account.provider_account_reference,
+      'credentialSecretReference',account.credential_secret_reference,
+      'modelName',model.model_name,
+      'modelIdentifier',model.model_identifier,
+      'modelVersion',model.model_version,
+      'textCapable',model.text_capable,
+      'assignmentStatus',assignment.assignment_status,
+      'providerHealthStatus',assignment.provider_health_status
+    ) AS item,
+    assignment.created_at
+    FROM public.ai_provider_assignments AS assignment
+    JOIN public.ai_identities AS identity ON identity.identity_id = assignment.identity_id
+    JOIN public.ai_provider_accounts AS account ON account.id = assignment.provider_account_id
+    JOIN public.ai_provider_models AS model ON model.id = assignment.model_id
+    WHERE identity.owner_admin_id = p_owner_admin_id
+      AND identity.status NOT IN ('suspended','archived','retired')
+      AND assignment.assignment_status NOT IN ('disabled','error')
+    ORDER BY assignment.created_at DESC
+    LIMIT LEAST(GREATEST(COALESCE(p_limit,200),1),500)
+    OFFSET GREATEST(COALESCE(p_offset,0),0)
+  ) AS result;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.minglora_ai_provider_health_update(
+  p_assignment_id uuid,
+  p_health_status text,
+  p_actor_user_id uuid
+) RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = ''
+AS $function$
+DECLARE
+  v_identity_id uuid;
+  v_provider_identifier text;
+  v_model_identifier text;
+  v_account_id uuid;
+  v_credential_reference text;
+  v_model_text_capable boolean;
+  v_assignment_status text;
+BEGIN
+  IF p_actor_user_id IS DISTINCT FROM '5b998c21-86b5-4621-ab37-e0808a2657b1'::uuid THEN
+    RAISE EXCEPTION 'Only the designated Minglora owner may update provider health.' USING ERRCODE = '42501';
+  END IF;
+  IF p_assignment_id IS NULL OR p_health_status NOT IN ('healthy','degraded','unavailable','error') THEN
+    RAISE EXCEPTION 'Provider health update values are invalid.' USING ERRCODE = '22023';
+  END IF;
+
+  SELECT assignment.identity_id,account.id,account.credential_secret_reference,
+         account.provider_identifier,model.model_identifier,model.text_capable
+  INTO v_identity_id,v_account_id,v_credential_reference,v_provider_identifier,
+       v_model_identifier,v_model_text_capable
+  FROM public.ai_provider_assignments AS assignment
+  JOIN public.ai_identities AS identity ON identity.identity_id = assignment.identity_id
+  JOIN public.ai_provider_accounts AS account ON account.id = assignment.provider_account_id
+  JOIN public.ai_provider_models AS model ON model.id = assignment.model_id
+  WHERE assignment.id = p_assignment_id
+    AND identity.owner_admin_id = p_actor_user_id
+  FOR UPDATE OF assignment,account;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Provider assignment not found for the designated owner.' USING ERRCODE = '23503';
+  END IF;
+  IF p_health_status = 'healthy' AND (v_credential_reference IS NULL OR NOT v_model_text_capable) THEN
+    RAISE EXCEPTION 'A configured server-side credential reference and text-capable model are required before marking an assignment healthy.' USING ERRCODE = '22023';
+  END IF;
+
+  v_assignment_status := CASE p_health_status
+    WHEN 'healthy' THEN 'active'
+    WHEN 'degraded' THEN 'restricted'
+    ELSE 'error'
+  END;
+
+  UPDATE public.ai_provider_accounts
+  SET account_status = CASE WHEN p_health_status = 'healthy' THEN 'active'
+                            WHEN p_health_status = 'degraded' THEN 'restricted'
+                            ELSE 'error' END,
+      provider_health_status = p_health_status,
+      last_checked_at = pg_catalog.now(),
+      updated_at = pg_catalog.now()
+  WHERE id = v_account_id;
+
+  UPDATE public.ai_provider_assignments
+  SET assignment_status = v_assignment_status,
+      provider_health_status = p_health_status,
+      last_checked_at = pg_catalog.now(),
+      updated_at = pg_catalog.now()
+  WHERE id = p_assignment_id;
+
+  INSERT INTO public.ai_identity_audit_logs (
+    identity_id,actor_user_id,action,target_type,target_id,summary,metadata
+  ) VALUES (
+    v_identity_id,p_actor_user_id,'provider.health_checked','provider_assignment',
+    p_assignment_id::text,'Recorded server-side provider health check: '||p_health_status||'.',
+    pg_catalog.jsonb_build_object(
+      'providerIdentifier',v_provider_identifier,
+      'modelIdentifier',v_model_identifier,
+      'healthStatus',p_health_status,
+      'assignmentStatus',v_assignment_status
+    )
+  );
+
+  RETURN pg_catalog.jsonb_build_object(
+    'assignmentId',p_assignment_id,
+    'providerHealthStatus',p_health_status,
+    'assignmentStatus',v_assignment_status,
+    'lastCheckedAt',pg_catalog.now()
+  );
+END;
+$function$;
+
 REVOKE ALL ON FUNCTION public.minglora_ai_provider_assignment_upsert(jsonb,uuid) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.minglora_ai_provider_assignment_upsert(jsonb,uuid) TO service_role;
 REVOKE ALL ON FUNCTION public.minglora_ai_provider_assignment_list(uuid,uuid,integer,integer) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.minglora_ai_provider_assignment_list(uuid,uuid,integer,integer) TO service_role;
+REVOKE ALL ON FUNCTION public.minglora_ai_provider_runtime_list(uuid,integer,integer) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.minglora_ai_provider_runtime_list(uuid,integer,integer) TO service_role;
+REVOKE ALL ON FUNCTION public.minglora_ai_provider_health_update(uuid,text,uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.minglora_ai_provider_health_update(uuid,text,uuid) TO service_role;
 
 COMMIT;
