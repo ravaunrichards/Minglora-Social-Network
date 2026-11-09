@@ -17,7 +17,9 @@ const [runtime, admin, css, html, store, index, serviceWorker, app, sidebar, ser
 ]);
 
 test("runtime gateway accepts the audit action called by the owner dashboard", () => {
-  assert.match(runtime, /"admin_users_list",\s*"admin_user_set_ban",\s*"admin_audit_log"/);
+  for (const action of ["admin_users_list", "admin_user_set_ban", "admin_audit_log"]) {
+    assert.ok(runtime.includes('"' + action + '"'), "runtime gateway supports " + action);
+  }
   assert.match(runtime, /if \(action === "admin_audit_log"\)/);
 });
 
