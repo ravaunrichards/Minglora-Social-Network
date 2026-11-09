@@ -149,6 +149,9 @@ import {
   getPersonalAiBotVacancies,
   createPersonalAiBotVacancy,
   updatePersonalAiBotVacancy,
+  getPersonalAiBotApplications,
+  createPersonalAiBotApplication,
+  updatePersonalAiBotApplication,
   createPersonalAiBotDepartment,
   updatePersonalAiBotDepartment,
   getPersonalAiBotOverview,
@@ -205,6 +208,7 @@ export async function handlePersonalAiBotsAdminApi(context) {
         departments:getPersonalAiBotDepartments(db),
         jobPositions:PERSONAL_AI_BOT_JOB_POSITIONS,
         vacancies:getPersonalAiBotVacancies(db),
+        applications:getPersonalAiBotApplications(db),
         bots:db.personalAiBots.slice().sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt))),
         tasks:Array.isArray(durableTasks)?durableTasks:db.personalAiBotTasks.slice(0,100),
         audit:db.personalAiBotAudit.slice(0,100),
@@ -419,6 +423,29 @@ export async function handlePersonalAiBotsAdminApi(context) {
       await saveStore();
       return (json(res,200,result),true);
     }
+    if(method==='GET'&&path===root+'/applications'){
+      return (json(res,200,{ok:true,applications:getPersonalAiBotApplications(db)}),true);
+    }
+    if(method==='POST'&&path===root+'/applications'){
+      const allowed=new Set(['vacancyId','identityId']);
+      if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).some(key=>!allowed.has(key))){
+        return (json(res,400,{error:'Candidate application payload contains unsupported fields.'}),true);
+      }
+      const application=createPersonalAiBotApplication(db,input,user.id,stamp,uid);
+      await saveStore();
+      return (json(res,201,{ok:true,application}),true);
+    }
+    const applicationMatch=path.match(/^\/api\/admin\/personal-ai-bots\/applications\/([a-z0-9_-]+)$/i);
+    if(applicationMatch&&method==='PATCH'){
+      const allowed=new Set(['status']);
+      if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).some(key=>!allowed.has(key))||!Object.keys(input).length){
+        return (json(res,400,{error:'Candidate application update contains unsupported or missing fields.'}),true);
+      }
+      const application=updatePersonalAiBotApplication(db,applicationMatch[1],input,user.id,stamp,uid);
+      await saveStore();
+      return (json(res,200,{ok:true,application}),true);
+    }
+
     if(method==='GET'&&path===root+'/vacancies'){
       return (json(res,200,{ok:true,vacancies:getPersonalAiBotVacancies(db)}),true);
     }
