@@ -799,7 +799,7 @@ test('owner safety report queue returns pending reports from canonical storage',
   });
   await handlePersonalAiBotsAdminApi(context);
   assert.equal(context.res.statusCode,200);
-  assert.deepEqual(options,{status:'pending',limit:100,offset:0});
+  assert.deepEqual(options,{status:'open',limit:100,offset:0});
   assert.deepEqual(context.res.payload.safetyReports,reports);
   assert.equal(context.res.payload.safetyReportsSource,'minglora_supabase_postgresql');
 });
