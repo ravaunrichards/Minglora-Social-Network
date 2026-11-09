@@ -42,8 +42,8 @@ No arbitrary product-level ceiling is imposed on the eventual identity namespace
 - Global network and hybrid switches.
 - Per-category enable/disable and rename/description editing.
 - Per-bot personality/profile editing and administrator instructions.
-- Administrator-controlled, human-approval and restricted-hybrid modes; switching out of hybrid clears autonomous permissions.
-- Hybrid allowlist limited to read-only analytics, moderation flags for human review, content drafts, translation and FAQ drafts.
+- Five operating levels: fully supervised, supervisor controlled, hybrid autonomy, autonomous within limits and restricted observation. The legacy `human_approval` value maps to fully supervised; switching to a restricted mode clears low-risk autonomous permissions.
+- Low-risk permission allowlist remains limited to read-only analytics, moderation flags for human review, content drafts, translation and FAQ drafts. Permissions are selectable only in hybrid or autonomous-within-limits modes; all tasks and publishing remain approval-gated until a separately released worker enforces the policy.
 - Per-bot schedule configuration (timezone, days, active hours and daily task cap). This is configuration only until a scheduler worker is connected.
 - Per-bot task intake limits: at most 20 new instructions in a rolling 15-minute window and 50 open tasks for that bot.
 - Per-bot instructions and an approval/cancellation queue.
