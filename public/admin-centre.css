@@ -1507,6 +1507,7 @@
     overflow:visible;
   }
   .admin-control-centre-page > section{grid-column:1}
+  .admin-control-centre-page > .admin-control-centre-grid{grid-column:1}
 }
 @media(max-width:560px){
   .admin-centre-navigation{grid-template-columns:minmax(0,1fr)}
