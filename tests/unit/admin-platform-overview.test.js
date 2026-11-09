@@ -80,23 +80,14 @@ test("administrator profile shows Admin Centre as a feature tab without a header
 });
 
 test("app shell and service worker load the profile feature Admin Centre assets", () => {
-  assert.match(index, /admin-centre\.css\?v=20261108-admin-workspace-2/);
-  assert.match(index, /admin-centre\.js\?v=20261108-admin-profile-feature-tab-1/);
-  assert.match(index, /app\.js\?v=20261108-admin-centre-profile-feature-tab-1/);
+  assert.match(index, /admin-centre\\.css\\?v=20261108-admin-workspace-2/);
+  assert.match(index, /admin-centre\\.js\\?v=20261108-admin-profile-feature-tab-1/);
+  assert.match(index, /app\\.js\\?v=20261108-admin-centre-profile-feature-tab-1/);
   const cacheName = serviceWorker.match(/const CACHE_NAME='([^']+)'/)?.[1] || '';
-  assert.match(cacheName, /^minglora-shell-v\d+-/);
+  assert.match(cacheName, /^minglora-shell-v\\d+-/);
   assert.equal(cacheName, 'minglora-shell-v254-admin-profile-admin-centre-feature-1');
-  assert.match(serviceWorker, /admin-centre\.css\?v=20261108-admin-workspace-2/);
-  assert.match(serviceWorker, /admin-centre\.js\?v=20261108-admin-profile-feature-tab-1/);
-  assert.match(serviceWorker, /admin-profile-layout\.css\?v=20261108-admin-profile-feature-tab-1/);
-  assert.match(serviceWorker, /app\.js\?v=20261108-admin-centre-profile-feature-tab-1/);
-});
-
-  assert.match(index, /admin-centre\.css\?v=20261108-admin-workspace-2/);
-  assert.match(index, /admin-centre\.js\?v=20261108-admin-workspace-2/);
-  const cacheName = serviceWorker.match(/const CACHE_NAME='([^']+)'/)?.[1] || '';
-  assert.match(cacheName, /^minglora-shell-v\d+-/);
-  assert.notEqual(cacheName, 'minglora-shell-v236-admin-workspace-1');
-  assert.match(serviceWorker, /admin-centre\.css\?v=20261108-admin-workspace-2/);
-  assert.match(serviceWorker, /admin-centre\.js\?v=20261108-admin-workspace-2/);
+  assert.match(serviceWorker, /admin-centre\\.css\\?v=20261108-admin-workspace-2/);
+  assert.match(serviceWorker, /admin-centre\\.js\\?v=20261108-admin-profile-feature-tab-1/);
+  assert.match(serviceWorker, /admin-profile-layout\\.css\\?v=20261108-admin-profile-feature-tab-1/);
+  assert.match(serviceWorker, /app\\.js\\?v=20261108-admin-centre-profile-feature-tab-1/);
 });
