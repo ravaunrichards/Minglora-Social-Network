@@ -1065,7 +1065,7 @@ function peopleCard(p){
   const mutualText=mutualCount
     ?mutualCount.toLocaleString()+' mutual '+(mutualCount===1?'friend':'friends')
     :'No mutual friends';
-  const actionLabel=isFriend?'Friends':following?'Following':'Follow';
+  const actionLabel=isFriend?'Friends':following?'Following':'Add Friend';
   return '<article class="card person-card facebook-person-card">'+
     '<button type="button" class="facebook-person-photo" data-profile="'+esc(p.id)+'" aria-label="View '+esc(p.name)+'’s profile">'+
       '<img src="'+esc(avatar(p))+'" alt="" loading="lazy">'+
