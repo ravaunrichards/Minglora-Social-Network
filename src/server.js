@@ -1702,6 +1702,20 @@ async function route(req, res) {
           const result=await requestSupabaseState('ai_identity_list',{actorUserId:user.id,limit,offset});
           return Array.isArray(result.identities)?result.identities:[];
         },
+        persistAiBotTasks:async tasks=>{
+          if(!isSupabasePersistence())return {ok:true,skipped:true};
+          return requestSupabaseState('ai_bot_task_upsert_batch',{actorUserId:user.id,tasks});
+        },
+        listAiBotTasks:async ({limit=100,offset=0}={})=>{
+          if(!isSupabasePersistence())return null;
+          const result=await requestSupabaseState('ai_bot_task_list',{actorUserId:user.id,limit,offset});
+          return Array.isArray(result.tasks)?result.tasks:[];
+        },
+        getAiBotTaskStats:async ()=>{
+          if(!isSupabasePersistence())return null;
+          const result=await requestSupabaseState('ai_bot_task_stats',{actorUserId:user.id});
+          return result.stats||null;
+        },
         lookupAdminMember:async targetUserId=>{
           const local=(db.users||[]).find(member=>member.id===String(targetUserId));
           if(local)return local;
