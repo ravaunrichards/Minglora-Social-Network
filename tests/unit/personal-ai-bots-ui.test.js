@@ -26,15 +26,17 @@ test('dashboard contains global, category, individual, bulk and emergency contro
   for(const phrase of ['Master network switch','Category manager','Create 15 starter bots','Bot directory','Apply to selected bots','Emergency shutdown','Bot Teams','Personality','Activity schedule and daily limits']) assert.ok(ui.includes(phrase),phrase);
 });
 
-test('central Following Manager only submits supervised one-bot instructions',async()=>{
+test('central Following Manager supports selected-bot batches with supervised approval',async()=>{
   const ui=await read('public/personal-ai-bots.js');
   assert.match(ui,/Following Manager/);
   assert.match(ui,/Search members/);
   assert.match(ui,/submitFollowInstruction/);
-  assert.match(ui,/targetUserId,instruction/);
+  assert.match(ui,/id=\"pab-follow-bot\" class=\"pab-select\" multiple size=\"5\"/);
+  assert.match(ui,/follow-batch/);
+  assert.match(ui,/10 instructions per rolling 24 hours/);
   assert.match(ui,/No relationship changed/);
   assert.match(ui,/AI follow graph only/);
-  assert.doesNotMatch(ui,/Bulk follow|Follow all bots|Mass follow/i);
+  assert.match(ui,/Select no more than 10 bots/);
 });
 
 test('team assignment UI explicitly keeps membership separate from bot activation',async()=>{
