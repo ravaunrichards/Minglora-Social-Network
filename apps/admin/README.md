@@ -345,3 +345,48 @@ SMTP, Resend, SendGrid, Sentry and OTLP variables in `.env.example` are not acti
 - **Final:** Complete hosted CRUD, audit, revocation and service checks; resolve or formally accept the 30+2 existing repository failures before a 100% claim.
 
 **Exact next action:** review the latest CI run for the new Management API health-card test, then re-check live Supabase/Render state. Keep the PR in draft and production unchanged.
+## Continuation addendum — 2026-11-09 11:37 UTC
+
+**Verified completion remains 74% / 26% remaining.** No extra service-integration credit is claimed yet: the Supabase Management API health check is implemented and its static regression test passes, but the real Management API request still depends on a configured server-side token and has not been exercised in the hosted application.
+
+### Latest owner-authored Service Connections improvement
+
+- Commit `3dbbdcbddf37e436d156beef0e0ca4fffeb8faee` adds a dedicated **Supabase Management API** card to the owner-only `/api/admin/integrations` response.
+- The server reads `SUPABASE_ACCESS_TOKEN` only from its server environment and makes a GET request to `https://api.supabase.com/v1/projects/gzycobgbasnqqhnympkr/config/auth` with a bearer header. It stores only the HTTP success/status result; it does not read or return the Auth configuration body or token.
+- The service card distinguishes `not-configured`, `connected`, and `attention` states, with separate guidance for HTTP 401, HTTP 403, connectivity failures and other status codes.
+- The existing Auth email-delivery card was clarified: Supabase Auth manages the email flow, but the current runtime does not verify SMTP provider readiness or actual message delivery.
+- Commit `a57886e6ec4b8b708ded3c975bfe48537df7b401` adds regression assertions for the new provider card, endpoint, server-only token handling and scope guidance.
+
+### Current official Supabase permission requirements
+
+- GET `/v1/projects/{ref}/config/auth`: fine-grained permission `auth_config_read` (OAuth scope `auth:read`).
+- PATCH `/v1/projects/{ref}/config/auth`: fine-grained permissions `auth_config_write` and `project_admin_write` (OAuth scope `auth:write`). The PAT permission matrix presents the write requirement as Auth Config (Read-write) plus Project Settings (Read-write).
+- Sources, retrieved 2026-11-09: [GET Auth config](https://supabase.com/docs/reference/api/v1-get-auth-service-config), [PATCH Auth config](https://supabase.com/docs/reference/api/v1-update-auth-service-config), and [PAT permission matrix](https://supabase.com/docs/guides/platform/personal-access-tokens).
+
+No `SUPABASE_ACCESS_TOKEN` value was supplied or confirmed in Render. The management health card can therefore only report `not-configured` until the owner configures the scoped token in the Render service environment. Never put the token in the repo, client, logs or progress report.
+
+### Latest test evidence
+
+- Latest completed source/test workflow: [run #8351](https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/42610335262), on commit `a57886e6ec4b8b708ded3c975bfe48537df7b401`.
+- General suite: **748 tests, 718 passed, 30 failed**.
+- For You job: **15 tests, 13 passed, 2 failed** (the For You header/search layout and Home Stories layout failures).
+- All seven focused Admin Centre tests passed, including the new Supabase Management API health-card/token-secrecy test, failed session-revocation audit, failed-deletion audit, local-only session audit, owner/MFA route, and service connections checks.
+- Dependency audit, zero-vulnerability gate, repository structure, JavaScript syntax and asset generation steps passed. Workflow conclusion remains failure due the 30 general-suite and 2 For You failures.
+
+### Current branch state and deployment
+
+- **Current branch head at this checkpoint:** `a57886e6ec4b8b708ded3c975bfe48537df7b401`.
+- **PR #203:** open draft; 78 commits, 15 changed files; GitHub reports `mergeable=false` / `dirty`.
+- **Main head:** `2f80e9d997b43e5da6373c385d6ce153ff908e67`; feature branch is 78 commits ahead and one behind.
+- The PR overlap remains in `src/server.js`, `public/admin-centre.html`, and `public/sw.js`. Auth-provider JS/CSS files match main. No merge/rebase has been done.
+- Production Supabase `minglora-runtime-state` remains active at version 112; new member CRUD actions are not deployed. Render remains configured to deploy from `main`; latest listed live deploy remains commit `2f80e9d997b43e5da6373c385d6ce153ff908e67`.
+- No production Auth setting, database schema, account, balance, role, merge, or deployment was changed.
+
+### Remaining work and next action
+
+- **Easy:** No known focused Admin Centre test failure remains in run #8351.
+- **Medium:** Resolve PR #203's dirty history through reviewed reconciliation after authorization; test hosted CRUD, account protection, bans/restores, session revocation, deletion and service-health states in an owner/MFA session.
+- **Hard:** Configure the scoped `SUPABASE_ACCESS_TOKEN` in Render; validate the Management API GET/PATCH against the live project; merge and deploy only after explicit authorization; complete hosted Edge Function and account lifecycle acceptance.
+- **Final:** Resolve or formally accept the 30 full-suite failures and two For You failures; run complete regression and live acceptance checks.
+
+**Exact next action:** obtain authorization for reviewed reconciliation of `src/server.js`, `public/admin-centre.html` and `public/sw.js`. Keep PR #203 draft and production unchanged until then.
