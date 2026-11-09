@@ -39,6 +39,8 @@ test('owner overview returns the requested categories without fabricated bots or
   assert.equal(handled,true);
   assert.equal(context.res.statusCode,200);
   assert.equal(context.res.payload.categories.length,15);
+  assert.equal(context.res.payload.departments.length,20);
+  assert.equal(context.res.payload.departments.filter(item=>item.builtIn).length,20);
   assert.equal(context.res.payload.bots.length,0);
   assert.equal(context.res.payload.tasks.length,0);
   assert.equal(context.res.payload.network.enabled,false);
@@ -1079,5 +1081,74 @@ test('AI identity batch marks an explicitly skipped PostgreSQL write retryable i
   assert.equal(db.personalAiBots.length,2);
   assert.ok(db.personalAiBots.every(bot=>bot.enabled===false&&bot.visibility==='private'));
   assert.equal(saves,2);
+});
+
+
+test('only the designated owner can create, edit and deactivate corporate departments',async()=>{
+  const db={};
+  let saves=0;
+  const createRoot=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/departments',
+    input:{name:'Regional Partnerships',description:'Regional teams and partnerships.'},
+    db,uid:sequenceUid(1800),saveStore:async()=>{saves++;}
+  });
+  await handlePersonalAiBotsAdminApi(createRoot);
+  assert.equal(createRoot.res.statusCode,201);
+  const root=createRoot.res.payload.department;
+  assert.equal(root.enabled,true);
+  assert.equal(root.builtIn,false);
+  const createChild=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/departments',
+    input:{name:'Caribbean Partnerships',parentDepartmentId:root.id},
+    db,uid:sequenceUid(1900),saveStore:async()=>{saves++;}
+  });
+  await handlePersonalAiBotsAdminApi(createChild);
+  assert.equal(createChild.res.statusCode,201);
+  const child=createChild.res.payload.department;
+  assert.equal(child.parentDepartmentId,root.id);
+  const update=makeContext({
+    method:'PATCH',path:'/api/admin/personal-ai-bots/departments/'+root.id,
+    input:{name:'Global Partnerships',description:'Global partners.',enabled:false},
+    db,uid:sequenceUid(2000),saveStore:async()=>{saves++;}
+  });
+  await handlePersonalAiBotsAdminApi(update);
+  assert.equal(update.res.statusCode,200);
+  assert.equal(update.res.payload.department.name,'Global Partnerships');
+  assert.equal(update.res.payload.department.enabled,false);
+  const deactivate=makeContext({
+    method:'DELETE',path:'/api/admin/personal-ai-bots/departments/'+child.id,
+    db,uid:sequenceUid(2100),saveStore:async()=>{saves++;}
+  });
+  await handlePersonalAiBotsAdminApi(deactivate);
+  assert.equal(deactivate.res.statusCode,200);
+  assert.equal(deactivate.res.payload.department.enabled,false);
+  assert.equal(saves,4);
+  const cycle=makeContext({
+    method:'PATCH',path:'/api/admin/personal-ai-bots/departments/'+root.id,
+    input:{parentDepartmentId:child.id},db,saveStore:async()=>{throw new Error('must not save a cycle');}
+  });
+  await handlePersonalAiBotsAdminApi(cycle);
+  assert.equal(cycle.res.statusCode,409);
+});
+
+test('department write routes reject non-owner and cross-origin callers before persisting',async()=>{
+  let saves=0;
+  const nonOwner=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/departments',
+    input:{name:'Unauthorized Department'},isOwnerAdmin:false,
+    saveStore:async()=>{saves++;}
+  });
+  await handlePersonalAiBotsAdminApi(nonOwner);
+  assert.equal(nonOwner.res.statusCode,403);
+  assert.equal(nonOwner.db.personalAiBotDepartments,undefined);
+  const crossOrigin=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/departments',
+    input:{name:'Cross Origin Department'},isSameOriginWrite:false,
+    saveStore:async()=>{saves++;}
+  });
+  await handlePersonalAiBotsAdminApi(crossOrigin);
+  assert.equal(crossOrigin.res.statusCode,403);
+  assert.equal(crossOrigin.db.personalAiBotDepartments,undefined);
+  assert.equal(saves,0);
 });
 
