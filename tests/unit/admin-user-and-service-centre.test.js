@@ -77,6 +77,19 @@ test("member CRUD and session routes require owner identity, MFA and same-origin
   assert.match(runtime, /The platform owner is protected/);
 });
 
+test("account deletion is audited as failed or successful only after the delete result", () => {
+  const start = runtime.indexOf('if (action === "admin_user_delete")');
+  const end = runtime.indexOf('if (action === "admin_user_revoke_sessions")', start);
+  assert.ok(start >= 0 && end > start);
+  const deletion = runtime.slice(start, end);
+  const deleteCall = deletion.indexOf("admin.auth.admin.deleteUser(userId)");
+  const failedAudit = deletion.indexOf('recordAdminUserAction(actorUserId, userId, "account.delete_failed"');
+  const successAudit = deletion.indexOf('recordAdminUserAction(actorUserId, userId, "account.delete"');
+  assert.ok(deleteCall >= 0 && failedAudit > deleteCall && successAudit > failedAudit);
+  assert.match(deletion, /outcome: "rejected"/);
+  assert.match(deletion, /outcome: "deleted"/);
+});
+
 test("local-only session revocation is audited when no Supabase token is available", () => {
   const start = runtime.indexOf('if (action === "admin_user_revoke_sessions")');
   const end = runtime.indexOf('if (action === "admin_user_set_ban")', start);
