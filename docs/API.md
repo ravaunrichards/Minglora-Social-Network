@@ -42,7 +42,7 @@ All endpoints are same-origin and use JSON request/response bodies unless noted.
 | POST/DELETE | `/api/users/:id/block` | Block or unblock a member |
 | GET | `/api/blocks` | List accounts currently blocked by the caller |
 
-Profile About data is saved by section using `aboutSections` and `aboutSectionVisibility`. Supported sections are Personal details, Intro, Work, Education, Hobbies, Interests, Travel, Links, Contact info, Names, Details and About you. Each section has an independent `public`, `friends` or `private` audience. Social profile links must use complete HTTP(S) URLs; contact email and phone values are validated server-side. The API returns only sections the signed-in viewer is permitted to see.
+Profile About data is saved by section using `aboutSections` and `aboutSectionVisibility`. Supported sections are Personal details, Intro, Work, Education, Hobbies, Interests, Travel, Links, Contact info, Names, Details and About you. The Names section stores first, middle, last, preferred, other, nickname, pronunciation and former names; it is always returned on accessible profiles. Display name and unique username are editable through `PATCH /api/users/me`. Other sections retain independent `public`, `friends` or `private` audiences. Social profile links must use complete HTTP(S) URLs; contact email and phone values are validated server-side. The API returns only sections the signed-in viewer is permitted to see.
 
 ## Marketplace
 
