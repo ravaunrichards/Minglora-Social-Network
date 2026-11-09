@@ -182,3 +182,16 @@ test('owner Admin Centre exposes bounded JSON identity batch import with retry h
   assert.match(service,/personalAiBotBatches/);
 });
 
+
+
+test('owner Admin Centre exposes the 20-department catalogue and safe hierarchy controls',async()=>{
+  const [ui,service]=await Promise.all([
+    read('public/personal-ai-bots.js'),
+    read('backend/modules/personal-ai-bots/personal-ai-bots-service.js')
+  ]);
+  for(const phrase of ['Corporate departments','pab-department-form','pab-new-department-name','pab-new-department-parent','pab-department-parent','pab-save-department','createDepartment','saveDepartment'])assert.ok(ui.includes(phrase),phrase);
+  assert.match(ui,/Leadership assignments and employment workflows remain disabled/);
+  assert.match(service,/PERSONAL_AI_BOT_DEPARTMENTS = Object\.freeze/);
+  assert.equal((service.match(/\{code:'[a-z_]+',name:'[^']+'/g)||[]).length>=20,true);
+});
+
