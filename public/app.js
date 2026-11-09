@@ -5946,9 +5946,7 @@ function renderProfile(data){
     if(action==='edit-story')void openProfileStoryEditor(u.id);
   }));
 
-  $('#edit-profile')?.addEventListener('click',()=>{
-    openEditProfile(u);
-  });
+  $('#edit-profile')?.addEventListener('click',()=>openEditProfile(u));
   const peopleToggle=$('#profile-people-toggle');
   const peoplePanel=$('#profile-people-panel');
   const peopleTrack=$('#profile-people-track');
