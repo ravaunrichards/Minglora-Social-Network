@@ -311,13 +311,13 @@
               <label for="admin-user-create-name">Display name</label>
               <input id="admin-user-create-name" name="displayName" maxlength="80" autocomplete="name" required>
               <label for="admin-user-create-username">Username</label>
-              <input id="admin-user-create-username" name="username" maxlength="30" autocomplete="off" placeholder="username">
+              <input id="admin-user-create-username" name="username" maxlength="30" pattern="[a-zA-Z0-9_]{3,30}" title="Use 3–30 letters, numbers or underscores; the saved username will be lowercase" autocomplete="off" placeholder="username">
               <label for="admin-user-create-email">Email address</label>
               <input id="admin-user-create-email" name="email" type="email" maxlength="254" autocomplete="email">
               <label for="admin-user-create-phone">Phone (international format)</label>
               <input id="admin-user-create-phone" name="phone" type="tel" maxlength="16" placeholder="+18765550123" autocomplete="tel">
               <label for="admin-user-create-contact-phone">Contact phone (optional)</label>
-              <input id="admin-user-create-contact-phone" name="contactPhone" type="tel" maxlength="40">
+              <input id="admin-user-create-contact-phone" name="contactPhone" type="tel" maxlength="16" pattern="(\\+[1-9][0-9]{7,14})?">
               <label for="admin-user-create-password">Temporary password</label>
               <input id="admin-user-create-password" name="password" type="password" minlength="8" maxlength="128" autocomplete="new-password" required>
               <label class="admin-user-inline-check"><input type="checkbox" name="emailConfirmed" checked> Confirm email immediately</label>
@@ -365,14 +365,14 @@
                   <div><label for="admin-user-edit-email">Login email</label><input id="admin-user-edit-email" name="email" type="email" maxlength="254" autocomplete="off"></div>
                   <div><label for="admin-user-edit-phone">Auth phone (+country code)</label><input id="admin-user-edit-phone" name="phone" type="tel" maxlength="16" autocomplete="off" placeholder="+18765550123"></div>
                   <div><label for="admin-user-edit-name">Display name</label><input id="admin-user-edit-name" name="displayName" maxlength="80"></div>
-                  <div><label for="admin-user-edit-username">Username</label><input id="admin-user-edit-username" name="username" maxlength="30"></div>
-                  <div><label for="admin-user-edit-contact-phone">Profile contact phone</label><input id="admin-user-edit-contact-phone" name="contactPhone" maxlength="40"></div>
-                  <div><label for="admin-user-edit-location">Location</label><input id="admin-user-edit-location" name="location" maxlength="160"></div>
+                  <div><label for="admin-user-edit-username">Username</label><input id="admin-user-edit-username" name="username" maxlength="30" pattern="[a-z0-9_]{3,30}" title="Use 3–30 lowercase letters, numbers or underscores"></div>
+                  <div><label for="admin-user-edit-contact-phone">Profile contact phone</label><input id="admin-user-edit-contact-phone" name="contactPhone" maxlength="16" pattern="(\\+[1-9][0-9]{7,14})?"></div>
+                  <div><label for="admin-user-edit-location">Location</label><input id="admin-user-edit-location" name="location" maxlength="120"></div>
                   <div><label for="admin-user-edit-country">Country</label><input id="admin-user-edit-country" name="country" maxlength="120"></div>
                   <div><label for="admin-user-edit-parish">Parish / State</label><input id="admin-user-edit-parish" name="parish" maxlength="120"></div>
                 </div>
                 <label for="admin-user-edit-bio">Bio</label>
-                <textarea id="admin-user-edit-bio" name="bio" rows="3" maxlength="5000"></textarea>
+                <textarea id="admin-user-edit-bio" name="bio" rows="3" maxlength="500"></textarea>
                 <div class="admin-user-confirmation-controls">
                   <label class="admin-user-inline-check"><input type="checkbox" name="emailConfirmed"> Confirm email now</label>
                   <label class="admin-user-inline-check"><input type="checkbox" name="phoneConfirmed"> Confirm phone now</label>
