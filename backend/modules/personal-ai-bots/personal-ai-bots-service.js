@@ -588,7 +588,12 @@ export function getPersonalAiBotVacancies(db) {
   return db.personalAiBotVacancies.slice().sort((a,b)=>{
     const priority=(statuses[a.status]??9)-(statuses[b.status]??9);
     return priority||String(b.updatedAt||'').localeCompare(String(a.updatedAt||''));
-  }).map(item=>({...item,statusHistory:(item.statusHistory||[]).map(change=>({...change}))}));
+  }).map(item=>{
+    const filledSlots=db.personalAiBotAppointments.filter(appointment=>
+      appointment.ownerId===item.ownerId&&appointment.vacancyId===item.id&&['appointed','suspended'].includes(appointment.status)
+    ).length;
+    return {...item,filledSlots,remainingSlots:Math.max(0,Number(item.slots||1)-filledSlots),statusHistory:(item.statusHistory||[]).map(change=>({...change}))};
+  });
 }
 
 export function createPersonalAiBotVacancy(db,input,actorId,timestamp,uid) {
@@ -684,6 +689,10 @@ export function createPersonalAiBotApplication(db,input,actorId,timestamp,uid) {
   const vacancy=db.personalAiBotVacancies.find(item=>item.id===String(input.vacancyId||'').trim()&&item.ownerId===actorId);
   if(!vacancy)throw Object.assign(new Error('Open vacancy not found.'),{status:404});
   if(vacancy.status!=='open')throw Object.assign(new Error('Applications can only be submitted to open vacancies.'),{status:409});
+  const filledSlots=db.personalAiBotAppointments.filter(appointment=>
+    appointment.ownerId===actorId&&appointment.vacancyId===vacancy.id&&['appointed','suspended'].includes(appointment.status)
+  ).length;
+  if(filledSlots>=Number(vacancy.slots||1))throw Object.assign(new Error('This vacancy has reached its approved appointment capacity.'),{status:409});
   const identityId=String(input.identityId||'').trim();
   const candidate=db.personalAiBots.find(item=>item.id===identityId);
   if(!candidate)throw Object.assign(new Error('Choose an existing organizational AI identity.'),{status:404});
@@ -774,8 +783,8 @@ export function createPersonalAiBotAppointment(db,input,actorId,timestamp,uid) {
   if(!candidate||candidate.population!=='organizational'){
     throw Object.assign(new Error('Appointment requires an existing organizational AI identity.'),{status:409});
   }
-  if(['suspended','restricted','archived','retired','enabled'].includes(String(candidate.status||'').toLowerCase())||candidate.enabled===true){
-    throw Object.assign(new Error('The candidate must remain an existing disabled organizational AI identity before appointment.'),{status:409});
+  if(String(candidate.status||'').toLowerCase()!=='disabled'||candidate.enabled!==false){
+    throw Object.assign(new Error('The candidate must be an existing disabled organizational AI identity before appointment.'),{status:409});
   }
   const position=PERSONAL_AI_BOT_JOB_POSITIONS.find(item=>item.code===vacancy.positionCode);
   const department=db.personalAiBotDepartments.find(item=>item.id===vacancy.departmentId&&item.enabled!==false);
@@ -799,7 +808,7 @@ export function createPersonalAiBotAppointment(db,input,actorId,timestamp,uid) {
   let reportingManager=null;
   if(position.reportsTo.length){
     reportingManager=db.personalAiBotAppointments.find(item=>
-      item.id===reportingManagerId&&item.ownerId===actorId&&activeStatuses.has(item.status)
+      item.id===reportingManagerId&&item.ownerId===actorId&&item.status==='appointed'
     );
     if(!reportingManager){
       throw Object.assign(new Error('Choose an existing active reporting-manager appointment for this position.'),{status:409});
