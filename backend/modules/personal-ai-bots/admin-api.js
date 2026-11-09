@@ -206,6 +206,10 @@ export async function handlePersonalAiBotsAdminApi(context) {
       return (json(res,201,{ok:true,category}),true);
     }
     if(method==='POST'&&path===root+'/emails'){
+      const allowedEmailFields=new Set(['identityId','emailAddress','emailType','emailProvider','isPrimary']);
+      if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).some(key=>!allowedEmailFields.has(key))){
+        return (json(res,400,{error:'AI email payload contains unsupported or sensitive fields.'}),true);
+      }
       if(typeof persistAiEmailIdentity!=='function')return (json(res,503,{error:'AI email identity storage is not available in this runtime.'}),true);
       const identityId=String(input?.identityId||'').trim();
       const bot=db.personalAiBots.find(item=>item.id===identityId);
@@ -233,6 +237,15 @@ export async function handlePersonalAiBotsAdminApi(context) {
       }),true);
     }
     if(method==='POST'&&path===root+'/providers'){
+      const allowedProviderFields=new Set([
+        'identityId','providerName','providerIdentifier','providerAccountReference',
+        'credentialSecretReference','modelName','modelIdentifier','modelVersion',
+        'supportedLanguages','capabilities','textCapable','imageCapable','audioCapable',
+        'videoCapable','voiceCapable','routingPriority','isPrimary'
+      ]);
+      if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).some(key=>!allowedProviderFields.has(key))){
+        return (json(res,400,{error:'Provider payload contains unsupported or sensitive fields.'}),true);
+      }
       if(typeof persistAiProviderAssignment!=='function')return (json(res,503,{error:'Provider assignment storage is not available in this runtime.'}),true);
       const identityId=String(input?.identityId||'').trim();
       const bot=db.personalAiBots.find(item=>item.id===identityId);
