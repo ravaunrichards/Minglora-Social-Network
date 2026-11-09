@@ -47,7 +47,7 @@ test('profile post assets are versioned and cached together', async () => {
   const html = await read('public/index.html');
   const sw = await read('public/sw.js');
   const appAsset = '/app.js?v=20261108-facebook-profile-posts-1';
-  const cssAsset = '/profile-facebook-panel.css?v=20261108-facebook-inline-profile-shell-7';
+  const cssAsset = '/profile-facebook-panel.css?v=20261108-facebook-inline-profile-shell-8';
   assert.ok(html.includes(appAsset) && sw.includes("'" + appAsset + "'"));
   assert.ok(html.includes(cssAsset) && sw.includes("'" + cssAsset + "'"));
 });
