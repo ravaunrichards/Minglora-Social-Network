@@ -176,5 +176,5 @@ test('owner follow batch rejects a target blocked by the administrator account',
   await handlePersonalAiBotsAdminApi(context);
   assert.equal(context.res.statusCode,409);
   assert.match(context.res.payload.error,/block exists/);
-  assert.equal(context.db.personalAiBotTasks,undefined);
+  assert.equal(context.db.personalAiBotTasks.length,0);
 });
