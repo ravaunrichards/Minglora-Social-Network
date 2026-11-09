@@ -45,7 +45,7 @@ No arbitrary product-level ceiling is imposed on the eventual identity namespace
 - Per-bot schedule configuration (timezone, days, active hours and daily task cap). This is configuration only until a scheduler worker is connected.
 - Per-bot task intake limits: at most 20 new instructions in a rolling 15-minute window and 50 open tasks for that bot.
 - Per-bot instructions and an approval/cancellation queue.
-- Central Following Manager with selected-bot batches (1–10 bots per target in a rolling 24-hour window), separate approval records, duplicate prevention, block checks and AI-only relationship accounting; execution remains disabled.
+- Central Following Manager with selected-bot batches (1–10 bots per target in a rolling 24-hour window), separate approval records, duplicate prevention, the existing owner-authorized Supabase member lookup, account-status and block checks, and AI-only relationship accounting; execution remains disabled.
 - Owner-managed Bot Teams: create, rename, describe, enable/pause/disable and assign/remove up to 100 selected bot identities per request. Membership is unique per team and does not activate bots.
 - Bulk enable/disable/pause of explicitly selected bots, up to 100 per operation.
 - Emergency shutdown: disables network switches, pauses enabled bots and cancels open instruction records.
