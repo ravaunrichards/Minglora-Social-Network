@@ -58,7 +58,9 @@ test('For You header and search reserve their own space above the scrolling feed
   assert.ok(html.includes('/for-you-controls.css?v=20261108-home-live-mixed-feed-2'));
   assert.ok(sw.includes('/for-you-controls.css?v=20261108-home-live-mixed-feed-2'));
   assert.match(html,/\/app\.js\?v=[^"']+/);
-  assert.ok(sw.includes('/app.js?v=20261109-profile-layout-restored-2'));
+  const appAsset=html.match(/src="(\/app\.js\?v=[^"]+)"/)?.[1];
+  assert.ok(appAsset,'app script is versioned in HTML');
+  assert.ok(sw.includes(appAsset),'service worker caches the current app script');
   assert.match(sw, /^const CACHE_NAME='minglora-shell-v[0-9]+-[^']+';$/m);
 });
 
@@ -81,7 +83,9 @@ test('Home Stories use a Facebook-style create card, scrollable story rail and n
   assert.ok(html.includes('/styles.css?v=20261108-facebook-stories-2'));
   assert.match(html,/\/app\.js\?v=[^"']+/);
   assert.ok(sw.includes('/styles.css?v=20261108-facebook-stories-2'));
-  assert.ok(sw.includes('/app.js?v=20261109-profile-layout-restored-2'));
+  const appAsset=html.match(/src="(\/app\.js\?v=[^"]+)"/)?.[1];
+  assert.ok(appAsset,'app script is versioned in HTML');
+  assert.ok(sw.includes(appAsset),'service worker caches the current app script');
   assert.match(sw, /^const CACHE_NAME='minglora-shell-v[0-9]+-facebook-people-responsive-1';$/m);
 });
 
