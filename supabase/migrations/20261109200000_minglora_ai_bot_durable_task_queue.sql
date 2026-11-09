@@ -43,6 +43,21 @@ ALTER TABLE public.minglora_ai_bot_tasks
   ADD COLUMN IF NOT EXISTS dead_lettered_at timestamptz,
   ADD COLUMN IF NOT EXISTS result jsonb NOT NULL DEFAULT '{}'::jsonb;
 
+-- A missing lease cannot be allowed to strand a pre-existing "running" row.
+UPDATE public.minglora_ai_bot_tasks
+SET status = CASE WHEN attempt_count >= max_attempts THEN 'dead_lettered' ELSE 'approved_waiting_for_worker' END,
+    worker_id = NULL,
+    lease_token = NULL,
+    lease_expires_at = NULL,
+    heartbeat_at = NULL,
+    dead_lettered_at = CASE WHEN attempt_count >= max_attempts THEN now() ELSE dead_lettered_at END,
+    next_attempt_at = now(),
+    error_code = 'WORKER_LEASE_MISSING',
+    error_message = 'Recovered a running task that had no valid worker lease.',
+    updated_at = now()
+WHERE status = 'running'
+  AND (worker_id IS NULL OR lease_token IS NULL OR lease_expires_at IS NULL);
+
 ALTER TABLE public.minglora_ai_bot_tasks
   ADD CONSTRAINT minglora_ai_bot_tasks_attempts_check
     CHECK (attempt_count BETWEEN 0 AND max_attempts AND max_attempts BETWEEN 1 AND 8),
@@ -64,21 +79,6 @@ WHERE idempotency_key IS NULL;
 ALTER TABLE public.minglora_ai_bot_tasks
   ALTER COLUMN idempotency_key SET DEFAULT gen_random_uuid(),
   ALTER COLUMN idempotency_key SET NOT NULL;
-
--- A missing lease cannot be allowed to strand a pre-existing "running" row.
-UPDATE public.minglora_ai_bot_tasks
-SET status = CASE WHEN attempt_count >= max_attempts THEN 'dead_lettered' ELSE 'approved_waiting_for_worker' END,
-    worker_id = NULL,
-    lease_token = NULL,
-    lease_expires_at = NULL,
-    heartbeat_at = NULL,
-    dead_lettered_at = CASE WHEN attempt_count >= max_attempts THEN now() ELSE dead_lettered_at END,
-    next_attempt_at = now(),
-    error_code = 'WORKER_LEASE_MISSING',
-    error_message = 'Recovered a running task that had no valid worker lease.',
-    updated_at = now()
-WHERE status = 'running'
-  AND (worker_id IS NULL OR lease_token IS NULL OR lease_expires_at IS NULL);
 
 ALTER TABLE public.minglora_ai_bot_settings
   ADD COLUMN IF NOT EXISTS execution_enabled boolean NOT NULL DEFAULT false,
@@ -343,8 +343,8 @@ BEGIN
       AND identity.population = 'independent'
       AND identity.status = 'active'
     ORDER BY task.next_attempt_at ASC,task.created_at ASC
-    FOR UPDATE OF task SKIP LOCKED
     LIMIT v_claim_limit
+    FOR UPDATE OF task SKIP LOCKED
   ),
   claimed AS (
     UPDATE public.minglora_ai_bot_tasks AS task
