@@ -293,6 +293,73 @@ export function updatePersonalAiBotCategory(db, categoryId, input, actorId, time
   return getPersonalAiBotCategories(db).find(item=>item.id===categoryId);
 }
 
+export function createPersonalAiBotTeam(db, input, actorId, timestamp, uid) {
+  ensurePersonalAiBotCollections(db);
+  const name=String(input.name||'').trim().replace(/\s+/g,' ');
+  const description=String(input.description||'').trim().slice(0,600);
+  if(name.length<3||name.length>64)throw Object.assign(new Error('Team name must be between 3 and 64 characters.'),{status:400});
+  if(db.personalAiBotTeams.some(team=>team.ownerId===actorId&&team.name.toLowerCase()===name.toLowerCase()))throw Object.assign(new Error('You already have a team with that name.'),{status:409});
+  const team={
+    id:uid(),ownerId:actorId,name,description,
+    status:'enabled',enabled:true,
+    createdAt:timestamp,updatedAt:timestamp,createdBy:actorId,updatedBy:actorId
+  };
+  db.personalAiBotTeams.push(team);
+  audit(db,actorId,'team.created','team',team.id,'Created bot team '+name+'.',timestamp,uid);
+  return team;
+}
+
+export function updatePersonalAiBotTeam(db, teamId, input, actorId, timestamp, uid) {
+  ensurePersonalAiBotCollections(db);
+  const team=db.personalAiBotTeams.find(item=>item.id===teamId&&item.ownerId===actorId);
+  if(!team)throw Object.assign(new Error('Bot team not found.'),{status:404});
+  const changes=[];
+  if(Object.hasOwn(input,'name')){
+    const name=String(input.name||'').trim().replace(/\s+/g,' ');
+    if(name.length<3||name.length>64)throw Object.assign(new Error('Team name must be between 3 and 64 characters.'),{status:400});
+    if(db.personalAiBotTeams.some(item=>item.id!==teamId&&item.ownerId===actorId&&item.name.toLowerCase()===name.toLowerCase()))throw Object.assign(new Error('You already have a team with that name.'),{status:409});
+    team.name=name;changes.push('name');
+  }
+  if(Object.hasOwn(input,'description')){team.description=String(input.description||'').trim().slice(0,600);changes.push('description');}
+  if(Object.hasOwn(input,'status')){
+    const status=String(input.status);
+    if(!['enabled','disabled','paused'].includes(status))throw Object.assign(new Error('Choose enabled, disabled or paused.'),{status:400});
+    team.status=status;team.enabled=status==='enabled';changes.push('status');
+  }
+  team.updatedAt=timestamp;team.updatedBy=actorId;
+  if(changes.length)audit(db,actorId,'team.updated','team',team.id,'Updated '+team.name+': '+changes.join(', '),timestamp,uid);
+  return team;
+}
+
+export function assignPersonalAiBotsToTeam(db, teamId, botIds, actorId, timestamp, uid) {
+  ensurePersonalAiBotCollections(db);
+  const team=db.personalAiBotTeams.find(item=>item.id===teamId&&item.ownerId===actorId);
+  if(!team)throw Object.assign(new Error('Bot team not found.'),{status:404});
+  if(!Array.isArray(botIds)||botIds.length<1||botIds.length>100)throw Object.assign(new Error('Select between 1 and 100 bots to assign to a team.'),{status:400});
+  const ids=[...new Set(botIds.map(String))];
+  const bots=ids.map(id=>db.personalAiBots.find(bot=>bot.id===id&&bot.createdBy===actorId));
+  if(bots.some(bot=>!bot))throw Object.assign(new Error('One or more selected bots could not be found under your administrator account.'),{status:404});
+  const added=[];
+  for(const bot of bots){
+    if(db.personalAiBotTeamMembers.some(member=>member.teamId===teamId&&member.botId===bot.id))continue;
+    const membership={id:uid(),ownerId:actorId,teamId,botId:bot.id,addedBy:actorId,addedAt:timestamp};
+    db.personalAiBotTeamMembers.push(membership);added.push(membership);
+  }
+  audit(db,actorId,'team.members_assigned','team',team.id,'Assigned '+added.length+' bot(s) to '+team.name+'.',timestamp,uid);
+  return {added:added.length,members:db.personalAiBotTeamMembers.filter(member=>member.teamId===teamId)};
+}
+
+export function removePersonalAiBotFromTeam(db, teamId, botId, actorId, timestamp, uid) {
+  ensurePersonalAiBotCollections(db);
+  const team=db.personalAiBotTeams.find(item=>item.id===teamId&&item.ownerId===actorId);
+  if(!team)throw Object.assign(new Error('Bot team not found.'),{status:404});
+  const index=db.personalAiBotTeamMembers.findIndex(member=>member.teamId===teamId&&member.botId===botId&&member.ownerId===actorId);
+  if(index<0)throw Object.assign(new Error('That bot is not a member of this team.'),{status:404});
+  db.personalAiBotTeamMembers.splice(index,1);
+  audit(db,actorId,'team.member_removed','team',team.id,'Removed a bot from '+team.name+'.',timestamp,uid);
+  return {ok:true,teamId,botId,memberCount:db.personalAiBotTeamMembers.filter(member=>member.teamId===teamId).length};
+}
+
 export function setPersonalAiBotCategoryEnabled(db, categoryId, enabled, actorId, timestamp, uid) {
   const settings=ensurePersonalAiBotCollections(db);
   if(typeof enabled!=='boolean')throw Object.assign(new Error('Choose whether this category is enabled.'),{status:400});
@@ -452,7 +519,9 @@ export function getPersonalAiBotOverview(db) {
       activeBots:bots.filter(bot=>bot.status==='enabled'&&bot.lastActiveAt&&Date.parse(bot.lastActiveAt)>Date.now()-5*60*1000).length,
       executingBots:new Set(tasks.filter(task=>task.status==='running').map(task=>task.botId)).size,
       identityDesignTarget:settings.identityDesignTarget||8300000000,
-      concurrentExecutionLimit:settings.concurrentExecutionLimit||0
+      concurrentExecutionLimit:settings.concurrentExecutionLimit||0,
+      totalTeams:db.personalAiBotTeams.length,
+      teamMemberships:db.personalAiBotTeamMembers.length
     }
   };
 }
