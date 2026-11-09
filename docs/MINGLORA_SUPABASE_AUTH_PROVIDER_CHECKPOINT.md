@@ -3,15 +3,15 @@
 **Project:** Minglora Social Network  
 **Repository:** `ravaunrichards/Minglora-Social-Network`  
 **Branch:** `main`  
-**Current source head:** `dc63c330f3f12bf606743de250124f3e6ba4a8ff`  
+**Current source head:** `99b106b8dedd95bca04235e42a10e6946bfec8d8`  
 **Supabase project:** `gzycobgbasnqqhnympkr`  
 **Render service:** `minglora-social-network` (`srv-dbi3gvqfngtc73c6hi4g`)  
 **Production URL:** https://minglora-social-network.onrender.com  
 **Checkpoint date:** 2026-11-09  
-**Latest verified deployment:** `dep-dbp2e0f4trjc73bn3940` — LIVE  
-**Latest Auth acceptance job:** `129404209484` — PASS (34/34)  
-**Latest broad test job:** `129404209726` — FAIL (716/746; 30 failures)  
-**Latest For You job:** `129404208938` — FAIL (13/15; 2 failures)
+**Latest verified deployment:** `dep-dbp2ptip08gs73a4f600` — LIVE  
+**Latest Auth acceptance job:** `129418492158` — PASS (34/34)  
+**Latest broad test job:** `129418492096` — FAIL (733/753; 20 failures)  
+**Latest For You job:** `129418492679` — FAIL (13/15; 2 failures)
 
 ## Progress
 
@@ -77,26 +77,26 @@ The Auth/provider implementation listed in the preceding checkpoint is preserved
 
 ### GitHub Actions
 
-Current source head: [`dc63c330f3f12bf606743de250124f3e6ba4a8ff`](https://github.com/ravaunrichards/Minglora-Social-Network/commit/dc63c330f3f12bf606743de250124f3e6ba4a8ff).
+Current source head: [`99b106b8dedd95bca04235e42a10e6946bfec8d8`](https://github.com/ravaunrichards/Minglora-Social-Network/commit/99b106b8dedd95bca04235e42a10e6946bfec8d8).
 
-- Dedicated **Supabase Auth provider acceptance** job `129404209484`: PASS — 34 tests, 34 passed, 0 failed. Includes provider-route safeguards, PKCE helper, login-shell order, standalone Admin Centre mount, password recovery, and registration regression cases.
-- Broad **test** job `129404209726`: FAIL — 746 tests, 716 passed, 30 failed. Examples include Admin withdrawal tracking, Clock Centre navigation, People/profile layout and actions, Stories, For You layout, wallet navigation, background feed sync, responsive stacking/logout, persistence retry mocks, and theme preview assertions. The Admin Centre app-shell/service-worker asset test is PASS in this run.
-- **For You functional navigation** job `129404208938`: FAIL — 15 tests, 13 passed, 2 failed (For You header/search spacing and Stories viewer assertions).
+- Dedicated **Supabase Auth provider acceptance** job `129418492158`: PASS — 34 tests, 34 passed, 0 failed. Includes provider-route safeguards, PKCE helper, login-shell order, standalone Admin Centre mount, password recovery, and registration regression cases.
+- Broad **test** job `129418492096`: FAIL — 753 tests, 733 passed, 20 failed. Examples include Admin withdrawal tracking, Clock Centre navigation, People/profile layout and actions, Stories, For You layout, wallet navigation, background feed sync, responsive stacking/logout, persistence retry mocks, and theme preview assertions. The Admin Centre app-shell/service-worker asset test is PASS in this run.
+- **For You functional navigation** job `129418492679`: FAIL — 15 tests, 13 passed, 2 failed (For You header/search spacing and Stories viewer assertions).
 - Do not describe the repository-wide workflow as passing. The failures above are separate from the dedicated Auth acceptance job; the broader suite remains a regression limitation.
 
 ### Render
 
 - Service is connected to this repository and `main`, auto-deploys from commits, and is on Render Free.
-- Deploy `dep-dbp2e0f4trjc73bn3940` for commit `dc63c330f3f12bf606743de250124f3e6ba4a8ff` is **LIVE** (finished 2026-11-09T20:04:24Z).
+- Deploy `dep-dbp2ptip08gs73a4f600` for commit `99b106b8dedd95bca04235e42a10e6946bfec8d8` is **LIVE** (finished 2026-11-09T20:30:03Z).
 - Runtime logs report the service listening on port 10000; Supabase Auth configured; Supabase persistence durable and ready; LiveKit configured and connected.
-- Production request logs for `/api/admin/auth-providers`, `/api/auth/providers`, and `/auth/oauth/*` returned no entries in the inspected window 2026-11-09 20:02–20:06 UTC. This is evidence that no owner provider action or OAuth flow was recorded in that window, not proof of a permanent absence.
+- Production request logs for `/api/admin/auth-providers`, `/api/auth/providers`, and `/auth/oauth/*` returned no entries in the inspected window 2026-11-09 20:04–20:34 UTC. Combined with the Auth identity-table results, no production OAuth login or provider-admin operation was independently verified. This is windowed evidence, not proof of permanent absence.
 
 ### Supabase
 
 - Project `gzycobgbasnqqhnympkr` is **ACTIVE_HEALTHY**, region `us-east-1`, Postgres 17.11.
 - Project URL confirmed as `https://gzycobgbasnqqhnympkr.supabase.co`.
 - Publishable and legacy anon keys exist; these are public client keys. This does **not** establish that the server-side `SUPABASE_ACCESS_TOKEN` exists.
-- Supabase security advisors also report a warning that leaked-password protection is disabled, 36 informational RLS-enabled/no-policy findings, and anonymous-access policy warnings. No broad RLS or Auth security changes were made under this narrow provider-controls assignment. Review those findings separately before modifying existing access policy.
+- Read-only Auth database inspection: `auth.identities` contains 7 email-provider identities and no OAuth-provider identities; `auth.custom_oauth_providers` contains no configured custom OAuth providers. `auth.instances` has no rows, so it cannot be used here to read Auth runtime flags. These results do not reveal or establish standard external-provider flags, credentials, Site URL, or redirect allow-list.\n- Supabase security advisors also report a warning that leaked-password protection is disabled, 36 informational RLS-enabled/no-policy findings, and anonymous-access policy warnings. No broad RLS or Auth security changes were made under this narrow provider-controls assignment. Review those findings separately before modifying existing access policy.
 - The Auth configuration endpoint could not be queried using the available Supabase project tools; the current external-provider flags, site URL, and redirect allow-list remain unknown.
 
 ## Remaining work — dependency ordered
