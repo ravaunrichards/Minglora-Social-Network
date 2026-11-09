@@ -66,3 +66,9 @@
 .pab-team-member small{display:inline-block;margin-left:4px;color:var(--muted,#64748b);font-weight:500}
 .pab-team-candidates{width:100%;min-height:92px}
 @media(max-width:700px){.pab-team-grid{grid-template-columns:1fr}.pab-team-card{padding:11px}.pab-team-member{align-items:flex-start}.pab-team-top .pab-select{width:100%}}
+
+
+/* Supervised AI Following Manager */
+#pab-follow-results{max-height:220px;overflow:auto}
+#pab-follow-target[readonly]{background:var(--surface-secondary,#f8fafc);cursor:default}
+#pab-follow-target-label{display:block}
