@@ -105,7 +105,7 @@ export const PERSONAL_AI_BOT_HIGH_IMPACT_TASKS = Object.freeze([
 const COLLECTIONS = [
   'personalAiBotCategories','personalAiBots','personalAiBotTasks',
   'personalAiBotAudit','personalAiBotSettings','personalAiBotFollows',
-  'personalAiBotTeams','personalAiBotTeamMembers','personalAiBotSchedules','personalAiBotBatches','personalAiBotDepartments'
+  'personalAiBotTeams','personalAiBotTeamMembers','personalAiBotSchedules','personalAiBotBatches','personalAiBotDepartments','personalAiBotVacancies'
 ];
 
 export function ensurePersonalAiBotCollections(db) {
@@ -579,6 +579,96 @@ export function updatePersonalAiBotDepartment(db,departmentId,input,actorId,time
   department.updatedAt=timestamp;
   if(changes.length)audit(db,actorId,'department.updated','department',department.id,'Updated '+department.name+': '+changes.join(', ')+'.',timestamp,uid);
   return {...department,builtIn:department.builtIn===true,enabled:department.enabled!==false};
+}
+
+
+export function getPersonalAiBotVacancies(db) {
+  ensurePersonalAiBotCollections(db);
+  const statuses={open:0,paused:1,closed:2};
+  return db.personalAiBotVacancies.slice().sort((a,b)=>{
+    const priority=(statuses[a.status]??9)-(statuses[b.status]??9);
+    return priority||String(b.updatedAt||'').localeCompare(String(a.updatedAt||''));
+  }).map(item=>({...item,statusHistory:(item.statusHistory||[]).map(change=>({...change}))}));
+}
+
+export function createPersonalAiBotVacancy(db,input,actorId,timestamp,uid) {
+  ensurePersonalAiBotCollections(db);
+  const position=PERSONAL_AI_BOT_JOB_POSITIONS.find(item=>item.code===String(input.positionCode||'').trim());
+  if(!position)throw Object.assign(new Error('Choose a valid corporate job position.'),{status:400});
+  const department=db.personalAiBotDepartments.find(item=>item.id===String(input.departmentId||'').trim());
+  if(!department||department.enabled===false)throw Object.assign(new Error('Choose an existing enabled department.'),{status:404});
+  if(position.departmentScope!=='any_department'&&position.departmentScope!==department.code){
+    throw Object.assign(new Error('This position is scoped to a different department.'),{status:409});
+  }
+  const title=String(input.title||position.title).trim().replace(/\s+/g,' ');
+  const description=String(input.description||'').trim().slice(0,1200);
+  const requirements=String(input.requirements||'').trim().slice(0,2000);
+  const slots=Number(input.slots??1);
+  if(title.length<3||title.length>100)throw Object.assign(new Error('Vacancy title must be between 3 and 100 characters.'),{status:400});
+  if(!Number.isInteger(slots)||slots<1||slots>100)throw Object.assign(new Error('Vacancy slots must be a whole number between 1 and 100.'),{status:400});
+  const key=value=>String(value||'').trim().replace(/\s+/g,' ').toLocaleLowerCase('en');
+  if(db.personalAiBotVacancies.some(item=>item.departmentId===department.id&&item.positionCode===position.code&&key(item.title)===key(title)&&item.status!=='closed')){
+    throw Object.assign(new Error('An open or paused vacancy with this title already exists for the selected position and department.'),{status:409});
+  }
+  const vacancy={
+    id:'vacancy-'+uid(),
+    positionCode:position.code,
+    positionTitle:position.title,
+    departmentId:department.id,
+    departmentCode:department.code,
+    departmentName:department.name,
+    title,
+    description,
+    requirements,
+    slots,
+    status:'open',
+    ownerId:actorId,
+    createdBy:actorId,
+    updatedBy:actorId,
+    createdAt:timestamp,
+    updatedAt:timestamp,
+    statusHistory:[{status:'open',actorId,createdAt:timestamp}]
+  };
+  db.personalAiBotVacancies.push(vacancy);
+  audit(db,actorId,'vacancy.created','vacancy',vacancy.id,'Opened '+title+' ('+position.title+') in '+department.name+'.',timestamp,uid);
+  return {...vacancy,statusHistory:vacancy.statusHistory.map(item=>({...item}))};
+}
+
+export function updatePersonalAiBotVacancy(db,vacancyId,input,actorId,timestamp,uid) {
+  ensurePersonalAiBotCollections(db);
+  const vacancy=db.personalAiBotVacancies.find(item=>item.id===vacancyId&&item.ownerId===actorId);
+  if(!vacancy)throw Object.assign(new Error('Vacancy not found.'),{status:404});
+  const changes=[];
+  if(Object.hasOwn(input,'title')){
+    const title=String(input.title||'').trim().replace(/\s+/g,' ');
+    if(title.length<3||title.length>100)throw Object.assign(new Error('Vacancy title must be between 3 and 100 characters.'),{status:400});
+    const key=value=>String(value||'').trim().replace(/\s+/g,' ').toLocaleLowerCase('en');
+    if(db.personalAiBotVacancies.some(item=>item.id!==vacancyId&&item.departmentId===vacancy.departmentId&&item.positionCode===vacancy.positionCode&&key(item.title)===key(title)&&item.status!=='closed')){
+      throw Object.assign(new Error('An open or paused vacancy with this title already exists for the selected position and department.'),{status:409});
+    }
+    vacancy.title=title;changes.push('title');
+  }
+  if(Object.hasOwn(input,'description')){vacancy.description=String(input.description||'').trim().slice(0,1200);changes.push('description');}
+  if(Object.hasOwn(input,'requirements')){vacancy.requirements=String(input.requirements||'').trim().slice(0,2000);changes.push('requirements');}
+  if(Object.hasOwn(input,'slots')){
+    const slots=Number(input.slots);
+    if(!Number.isInteger(slots)||slots<1||slots>100)throw Object.assign(new Error('Vacancy slots must be a whole number between 1 and 100.'),{status:400});
+    vacancy.slots=slots;changes.push('slots');
+  }
+  if(Object.hasOwn(input,'status')){
+    const status=String(input.status||'');
+    if(!['open','paused','closed'].includes(status))throw Object.assign(new Error('Vacancy status must be open, paused or closed. Appointments and filled status are managed separately.'),{status:400});
+    if(vacancy.status!==status){
+      vacancy.status=status;
+      vacancy.statusHistory||=[];
+      vacancy.statusHistory.push({status,actorId,createdAt:timestamp});
+      changes.push('status '+status);
+    }
+  }
+  vacancy.updatedBy=actorId;
+  vacancy.updatedAt=timestamp;
+  if(changes.length)audit(db,actorId,'vacancy.updated','vacancy',vacancy.id,'Updated '+vacancy.title+': '+changes.join(', ')+'.',timestamp,uid);
+  return {...vacancy,statusHistory:(vacancy.statusHistory||[]).map(item=>({...item}))};
 }
 
 export function createPersonalAiBotCategory(db, input, actorId, timestamp, uid) {
