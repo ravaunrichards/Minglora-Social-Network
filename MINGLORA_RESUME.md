@@ -1,12 +1,12 @@
 # MINGLORA AI NETWORK — RESUME CHECKPOINT
 
-Updated: 2026-11-09 (latest successful AI workflow timestamp: 09:47:39 UTC; later report-status test correction committed after that run)
+Updated: 2026-11-09 (latest successful AI workflow timestamp: 10:00:32 UTC)
 Scope: **Minglora Social Network only**
 Repository: https://github.com/ravaunrichards/Minglora-Social-Network
 Branch: `feat/personal-ai-bots-network-control-center`
 Draft PR: https://github.com/ravaunrichards/Minglora-Social-Network/pull/202
 Supabase project: `gzycobgbasnqqhnympkr` (existing Minglora project only)
-Latest known branch commit when this checkpoint was prepared: `247ab2005b7981ff0ac44b28c75ddecd443243eb`
+Latest verified branch commit: `7b8bc356c860f9576633cc3e9af9e183668bcb10`
 PR must remain **OPEN + DRAFT**. Do not merge, deploy, or apply production migrations without the required review/authorization.
 
 ## Original task
@@ -22,18 +22,18 @@ The previous checkpoint did not contain a weighted percentage. The earlier conve
 | Milestone | Weight | Verified portion | Earned |
 |---|---:|---:|---:|
 | 1. Relational foundation and backend persistence integration | 25% | 35% | 8.75% |
-| 2. AI identities, profiles, worldwide discovery and member follow graph | 20% | 70% | 14.00% |
+| 2. AI identities, profiles, worldwide discovery and member follow graph | 20% | 72% | 14.40% |
 | 3. Corporate governance, organizational charts and HR lifecycle | 15% | 0% | 0.00% |
 | 4. Supervision, bounded autonomy, queues, teams and collaboration | 10% | 65% | 6.50% |
 | 5. AI social participation and creator ecosystem | 10% | 25% | 2.50% |
 | 6. Security, governance, finance and resource controls | 8% | 25% | 2.00% |
 | 7. Model intelligence, memory, provider operations and analytics | 7% | 20% | 1.40% |
 | 8. Distributed scaling, load tests, device tests and production acceptance | 5% | 0% | 0.00% |
-| **TOTAL** | **100%** |  | **35.15% → 35%** |
+| **TOTAL** | **100%** |  | **35.55% → 36%** |
 
-**COMPLETION: 35% | REMAINING: 65%**
+**COMPLETION: 36% | REMAINING: 64%**
 
-This is weighted implementation progress, not a claim that the 35% of the full production acceptance criteria is deployed. Milestones 1 and 2 remain partial because the normalized AI schema and associated RPCs are staged in GitHub but absent from the live Supabase migration ledger and public schema.
+This is weighted implementation progress, not a claim that the 36% of the full production acceptance criteria is deployed. Milestones 1 and 2 remain partial because the normalized AI schema and associated RPCs are staged in GitHub but absent from the live Supabase migration ledger and public schema.
 
 ## Recovered and project-verified implementation
 
@@ -43,6 +43,7 @@ This is weighted implementation progress, not a claim that the 35% of the full p
 - Admin create/edit controls now include gender, gender presentation, nationality, country of origin, current country, IANA time zone, introduction, communication style, profession, education, skills, profile and cover storage references, voice/avatar preferences, memory preferences and structured origin/current locations.
 - The admin profile editor and AI discovery now use the same **249-entry ISO country/territory catalogue** with localized country names. Country names map back to ISO-2 codes on create and edit.
 - Service validation rejects unsupported gender values, invalid time zones, malformed location objects, unsupported location types, duplicate location types and excessive profile data.
+- Initial creation now stores gender identity and gender presentation as separate attributes; the Admin Centre create form, edit form, service and dedicated tests cover the separate fields.
 - Profile changes have service-level and Admin API-to-canonical-mapper regression coverage.
 
 ### Canonical database foundation (staged only)
@@ -89,12 +90,23 @@ This is weighted implementation progress, not a claim that the 35% of the full p
 
 ## Verification and current failures
 
-- Latest confirmed green Personal AI Bots workflow: run **#384**, commit `a9995c3066ee369c444c8b86134ef233bd582882`, **139 passed / 0 failed**, logged at 2026-11-09 09:57:21 UTC. This includes the five-mode service, UI and migration tests.
-- An earlier workflow #382 failed 1/139 because a legacy test expected an old validation error string; the assertion was aligned with the new bounded-mode message. Run #384 is the green rerun.
-- Full Minglora CI run #8088 is still in progress at the latest check. Its For You functional navigation job is now **passing** after the service-worker cache/version assertions were reconciled. The main repository test job had not yet completed at the last check; do not label full CI green.
-- Earlier successful AI workflow #354 had 137/137 tests; it is historical, superseded by #384.
+- Latest confirmed green Personal AI Bots workflow: run **#391**, commit `7b8bc356c860f9576633cc3e9af9e183668bcb10`, **141 passed / 0 failed**, logged at 2026-11-09 10:00:32 UTC. This covers the five-mode service/UI/migration guards and separate gender-presentation create/edit persistence.
+- Earlier workflow #384 passed 139/139 before the gender-presentation create field and service test were added; it is superseded by #391.
+- Full Minglora CI run **#8097** is in progress at the latest check. Its For You functional navigation job is **passing**; the main repository test job had not yet completed. Previous full CI #8088 recorded **850 passed / 23 failed**. Do not mark full CI green.
+- Prior stale cache/version assertions in theme and live-profile badge tests have been aligned with the current asset/cache naming strategy; their latest full CI outcome is pending.
+
 - Supabase live verification: project remains accessible; no AI network tables or AI migration-ledger entries were present at the latest read.
 - No production migration deployment, Edge Function deployment, worker deployment, email provisioning, provider inference, 10-billion benchmark or concurrent-capacity load test is claimed.
+
+## Recovery and progress comparison
+- Previous verified weighted completion: **35.15% → 35%**.
+- Current verified weighted completion: **35.55% → 36%**.
+- Verified progress since the prior checkpoint: **+0.40 percentage points** (separate gender-presentation capture/persistence in AI create flow and its dedicated passing tests).
+- Last verified milestone: **Phase 2 — AI identities and profile completeness (partial)**; the five operating-mode foundation is also now tested under Phase 4.
+- Last confirmed action: Personal AI Bots workflow #391 passed 141/141 on `7b8bc356c860f9576633cc3e9af9e183668bcb10`.
+- Unverified claims: live normalized PostgreSQL persistence, actual provider/email provisioning, scheduler/worker deployment and unattended autonomous execution remain unverified.
+- Changes since interruption: five operating levels plus additive migration; 249-country ISO mapping on create/edit; report-review status/test corrections; service-worker asset-version test reconciliation; gender-presentation capture on create; checkpoint and draft PR status refreshed.
+- Recovery confidence: **CONFIRMED** for branch/checkpoint/CI evidence; **PARTIALLY RECOVERED** for live DB/hosted service state (AI migrations not deployed).
 
 ## Changes since the older checkpoint
 
@@ -136,4 +148,4 @@ This is weighted implementation progress, not a claim that the 35% of the full p
 
 ## Exact next action
 
-Recover the latest PR head and confirm Personal AI Bots workflow #384 remains green. Inspect the completion of full CI run #8088 and fix the next simplest genuine Minglora regression. Then continue the next unfinished AI Network requirement. Keep PR #202 draft and leave production DB/services untouched.
+Recover the latest PR head and confirm Personal AI Bots workflow #391 remains green. Inspect the completion of full CI run #8097 and fix the next simplest genuine Minglora regression. Then continue the next unfinished AI Network requirement. Keep PR #202 draft and leave production DB/services untouched.
