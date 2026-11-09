@@ -10,6 +10,7 @@ import {
   approvePersonalAiBotTask,
   cancelPersonalAiBotTask,
   setPersonalAiBotNetworkSettings,
+  setPersonalAiBotCategoryEnabled,
   PERSONAL_AI_BOT_CATEGORIES
 } from './personal-ai-bots-service.js';
 
@@ -53,6 +54,12 @@ export async function handlePersonalAiBotsAdminApi(context) {
       const network=setNetwork(input||{});
       await saveStore();
       return (json(res,200,{ok:true,network}),true);
+    }
+    const categoryMatch=path.match(/^\/api\/admin\/personal-ai-bots\/categories\/([a-z0-9-]+)$/i);
+    if(categoryMatch&&method==='PATCH'){
+      const category=setPersonalAiBotCategoryEnabled(db,categoryMatch[1],input?.enabled,user.id,stamp,uid);
+      await saveStore();
+      return (json(res,200,{ok:true,category}),true);
     }
     const botMatch=path.match(/^\/api\/admin\/personal-ai-bots\/bots\/([0-9a-f-]{36})$/i);
     if(botMatch&&method==='PATCH'){
