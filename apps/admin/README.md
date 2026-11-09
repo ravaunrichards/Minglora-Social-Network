@@ -359,8 +359,9 @@ SMTP, Resend, SendGrid, Sentry and OTLP variables in `.env.example` are not acti
 
 ### Current official Supabase permission requirements
 
-- GET `/v1/projects/{ref}/config/auth`: fine-grained permission `auth_config_read` (OAuth scope `auth:read`).
-- PATCH `/v1/projects/{ref}/config/auth`: fine-grained permissions `auth_config_write` and `project_admin_write` (OAuth scope `auth:write`). The PAT permission matrix presents the write requirement as Auth Config (Read-write) plus Project Settings (Read-write).
+- GET `/v1/projects/{ref}/config/auth`: **Auth Config — Read**.
+- PATCH `/v1/projects/{ref}/config/auth`: **Auth Config — Read-write** plus **Project Settings — Read-write**.
+- These are the permission labels in the current Supabase PAT permission matrix. Scoped PATs are in public alpha and may not yet be available to every account. Prefer a project-scoped token with only the required permissions. Classic PATs are broad across the account's organizations/projects and must not be placed in Render without a separate security review.
 - Sources, retrieved 2026-11-09: [GET Auth config](https://supabase.com/docs/reference/api/v1-get-auth-service-config), [PATCH Auth config](https://supabase.com/docs/reference/api/v1-update-auth-service-config), and [PAT permission matrix](https://supabase.com/docs/guides/platform/personal-access-tokens).
 
 No `SUPABASE_ACCESS_TOKEN` value was supplied or confirmed in Render. The management health card can therefore only report `not-configured` until the owner configures the scoped token in the Render service environment. Never put the token in the repo, client, logs or progress report.
@@ -390,3 +391,51 @@ No `SUPABASE_ACCESS_TOKEN` value was supplied or confirmed in Render. The manage
 - **Final:** Resolve or formally accept the 30 full-suite failures and two For You failures; run complete regression and live acceptance checks.
 
 **Exact next action:** obtain authorization for reviewed reconciliation of `src/server.js`, `public/admin-centre.html` and `public/sw.js`. Keep PR #203 draft and production unchanged until then.
+## Continuation checkpoint — 2026-11-09 11:44 UTC
+
+**Canonical verified completion: 74% | remaining: 26%.** The existing weighted progress baseline is retained. No extra credit is claimed for source changes until the related focused test or hosted acceptance passes.
+
+### Latest verified implementation and changes
+
+- Supabase-style member management remains integrated into the existing Admin Centre: paginated Auth user search, detailed account records, create/edit, profile/contact management, email/phone confirmation, password replacement, ban/unban, session revocation, and permanent deletion with exact-ID confirmation.
+- Member and provider routes are guarded by the designated Creator Hub owner identity, moderator/MFA reviewer authorization, and same-origin checks for writes. The owner Auth account is protected from edit, ban, revoke and delete.
+- Failed and successful member deletion outcomes are audited separately. Before deletion, the Node API reads the selected member's sealed server-side session, uses Minglora's session manager to refresh a near-expiry token where possible, and passes the access token only to the protected runtime gateway. The Edge Function attempts `admin.auth.admin.signOut(targetJwt, "global")` before `admin.auth.admin.deleteUser(userId)`.
+- The deletion audit records whether provider refresh-token revocation succeeded. If no current token exists or the sign-out request fails, the response explicitly discloses that provider sessions were not globally revoked. Existing Supabase access JWTs can remain valid until expiry.
+- A rejected Supabase deletion is logged as `account.delete_failed`, returns HTTP 409 through the Node route, and is not reported to the UI as a successful deletion. The UI displays the session-revocation and audit outcome warnings.
+- The Service Connections API includes the Supabase Management API read-only health check, alongside the active provider cards. It never returns the Management token or the Auth config body.
+
+### Latest CI verification
+
+- Latest completed workflow run: [run #8362](https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/42611344015), on branch head `9af4031e9993d07e0d14fd22452fa0505da0b01d`.
+- Repository test job: **750 tests, 720 passed, 30 failed**.
+- Separate For You functional-navigation job: **15 tests, 13 passed, 2 failed** (For You header/search layout and Home Stories layout).
+- All targeted Admin Centre tests passed, including failed session-revocation audit, failed deletion disclosure, deletion audit ordering, local-only session audit, service-connection Management API card/token secrecy, member manager and MFA/provider gates.
+- The workflow remains failed due the 30 non-Admin repository tests and 2 For You tests. They are not being represented as passes or counted as completed work.
+
+### Branch, PR and deployment status
+
+- **Project:** Minglora Social Network.
+- **Repository:** `ravaunrichards/Minglora-Social-Network`.
+- **Branch:** `feat/minglora-admin-user-and-service-centre-20261109`.
+- **Latest verified branch head at this checkpoint:** `9af4031e9993d07e0d14fd22452fa0505da0b01d`.
+- **PR #203:** open draft, 89 commits at latest retrieval, `mergeable=false`, `mergeable_state=dirty`; the feature branch is divergent and one commit behind main. The known overlap remains `src/server.js`, `public/admin-centre.html`, and `public/sw.js`. No merge or rebase was performed.
+- **Live Supabase:** project `gzycobgbasnqqhnympkr` returned `ACTIVE_HEALTHY`, PostgreSQL 17.11.0.003.
+- **Production Edge Function:** `minglora-runtime-state` remains active at version 112; the feature branch's new member CRUD and deletion/session logic are not deployed.
+- **Live Render:** Minglora service remains on `main`, with latest listed live deployment at `2f80e9d997b43e5da6373c385d6ce153ff908e67`. The Management API token was not supplied or verified; the Render integration tool does not expose secret values.
+- No production Auth settings, service credentials, user accounts, balances, database schema, permissions, merge or deployment were changed.
+
+### Accurate Supabase Management API permissions
+
+- GET Auth config: **Auth Config — Read**.
+- PATCH Auth config: **Auth Config — Read-write** plus **Project Settings — Read-write**.
+- Supabase scoped PATs are in public alpha and may not be visible to every account. Use a token scoped to the Minglora project with only these permissions when possible. Classic PATs grant broad account-wide access and require a separate security review before use in Render.
+- Official references: [GET Auth config](https://supabase.com/docs/reference/api/v1-get-auth-service-config), [PATCH Auth config](https://supabase.com/docs/reference/api/v1-update-auth-service-config), [PAT permissions](https://supabase.com/docs/guides/platform/personal-access-tokens).
+
+### Remaining work
+
+- **Easy:** Keep the latest deletion/session warning behavior and test expectations aligned if the owner makes further source changes.
+- **Medium:** Obtain authorization for a reviewed reconciliation of PR #203 with the newer main history; then run hosted create/edit/ban/unban/revoke/delete and service-status acceptance under the owner/MFA session.
+- **Hard:** Have the owner configure `SUPABASE_ACCESS_TOKEN` directly in Render's server environment using a properly scoped token; verify real Management API GET and PATCH after authorization; merge and deploy the Edge Function only with explicit authorization.
+- **Final:** Resolve or formally accept the 30 general-suite and 2 For You failures, verify hosted user lifecycle/session behavior and all live service connections.
+
+**Exact next action:** obtain explicit authorization for reviewed branch reconciliation. Until then keep PR #203 in draft and production on the current `main` deployment.
