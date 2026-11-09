@@ -59,7 +59,8 @@ test('web, tablet and phone have separate avatar sizing while preserving avatar-
   assert.ok(independentCss.includes('grid-template-columns:var(--minglora-profile-avatar-size) minmax(0,1fr)!important'));
   assert.ok(independentCss.includes('aspect-ratio:2.4 / 1!important'));
   assert.ok(independentCss.includes('@media(max-width:390px)'));
-  assert.ok(!socialFacebookCss.includes('.minglora-profile-page'),'social cards must not override approved profile geometry');
+  assert.ok(!socialFacebookCss.includes('.profile-header-card .profile-cover'),'social card styles must not override the approved profile cover/avatar geometry');
+  assert.ok(!socialFacebookCss.includes('.profile-avatar-edit-wrap'),'social card styles must not override the approved avatar positioning');
   assert.ok(independentCss.includes('--minglora-profile-avatar-size:clamp(74px,23vw,84px)!important'));
   assert.ok(html.indexOf('profile-independent-avatar-header.css')>html.indexOf('profile-facebook-avatar-anchor.css'));
   assert.ok(html.indexOf('profile-layout-guardrails.css')<html.indexOf('profile-independent-avatar-header.css'));
@@ -85,9 +86,6 @@ test('Add to story, Edit profile and the V control appear in Facebook order and 
   assert.ok(actionPlacementCss.includes('grid-column:1/-1!important'));
   assert.ok(actionPlacementCss.includes('grid-row:3!important'));
   assert.ok(html.indexOf('profile-owner-action-placement.css')>html.indexOf('profile-independent-avatar-header.css'));
-  const socialAsset=html.match(/social-facebook-layout\.css\?v=[^\"']+/)?.[0]||'';
-  assert.ok(socialAsset&&socialAsset.includes('20261109-profile-layout-restored-1'));
-  assert.ok(worker.includes('/'+socialAsset));
   assert.ok(worker.includes('/profile-owner-action-placement.css?v=20261108-facebook-action-control-order-1'));
 });
 

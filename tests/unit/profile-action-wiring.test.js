@@ -124,31 +124,29 @@ test('profile post cards reuse the working feed action bindings inside profile t
   assert.ok(binder.includes('bindProfileLinks(root)'),'profile links in post cards must remain navigable');
 });
 
-test('visitor profile keeps five primary actions and a separate More actions menu',()=>{
-  const ordered=['id="profile-follow"','id="profile-subscribe"','id="profile-message"','data-profile-call="audio"','data-profile-call="video"'];
-  let previous=-1; for(const marker of ordered){const index=profile.indexOf(marker);assert.ok(index>previous,'Primary action order is Follow, Subscribe, Message, Voice call, Video call');previous=index;}
-  assert.ok(profile.includes('<details class="profile-extra-actions">'));
-  assert.ok(profile.includes('aria-label="More profile actions"'));
-  assert.ok(profile.includes('More actions</summary>'));
-  assert.ok(profile.includes('id="profile-report"')&&profile.includes('id="profile-block"'));
-  assert.ok(profileCss.includes('grid-template-columns:repeat(3,minmax(0,1fr))!important'));
+test('visitor profile actions show complete labels and icons in one horizontal row',()=>{
+  assert.ok(profileCss.includes('min-height:40px!important')||profileCss.includes('min-height:38px!important')||profileCss.includes('min-height:36px!important'));
+  assert.ok(profileCss.includes('white-space:nowrap!important'));
+  assert.ok(profileCss.includes('flex-flow:row nowrap!important'));
+  assert.ok(profileCss.includes('overflow-x:auto!important'));
+  assert.ok(profile.includes('id="profile-message"')&&profile.includes('</svg>Message</button>'));
+  assert.ok(profile.includes('id="profile-report"')&&profile.includes('</svg>Report</button>'));
+  assert.ok(profile.includes('id="profile-block"')&&profile.includes('</svg>Block</button>'));
 });
 
-test('visitor primary actions use the responsive three-over-two grid with secondary actions in More',()=>{
-  assert.ok(profileCss.includes('display:grid!important'));
-  assert.ok(profileCss.includes('grid-template-columns:repeat(3,minmax(0,1fr))!important'));
-  assert.ok(profileCss.includes('width:min(100%,390px)!important'));
-  assert.ok(profileCss.includes('min-height:44px!important'));
-  assert.ok(profileCss.includes('@media(max-width:760px)'));
-  assert.ok(profileCss.includes('@media(max-width:390px)'));
-  assert.ok(profileCss.includes('profile-extra-actions-menu'));
-  assert.ok(profile.includes("profileSubscribeButton.disabled=subscriptionAlreadyExists"));
-  assert.ok(!profile.includes('profileSubscribeButton.remove()'));
-  assert.ok(profile.includes("api('/subscriptions/checkout'"));
-  assert.ok(profile.includes('id="profile-follow"')&&profile.includes("?'Friends · Following':'Following'")&&profile.includes(":'Follow'))"));
-  assert.ok(profile.includes('id="profile-subscribe"'));
-  assert.ok(profile.includes('Voice call</button>')&&profile.includes('Video call</button>'));
-  assert.ok(profile.includes('More actions</summary>'));
+test('visitor profile actions stay in one continuous row and preserve existing interactions',()=>{
+  assert.ok(profileCss.includes('display:flex!important'),'visitor action bar uses flex layout');
+  assert.ok(profileCss.includes('flex-flow:row nowrap!important'),'all seven actions remain on one line');
+  assert.ok(profileCss.includes('grid-column:1/-1!important'),'visitor action bar spans full profile width');
+  assert.ok(profileCss.includes('grid-row:2!important'),'visitor action bar sits directly above profile counts');
+  assert.ok(profileCss.includes('overflow-x:auto!important'),'narrow screens can scroll the action bar horizontally');
+  assert.ok(profileCss.includes('white-space:nowrap!important'),'action labels never wrap');
+  assert.ok(profile.includes("profileSubscribeButton.disabled=subscriptionAlreadyExists"),'Subscribe remains available unless a subscription already exists');
+  assert.ok(!profile.includes('profileSubscribeButton.remove()'),'Subscribe is not removed from the profile');
+  assert.ok(profile.includes("api('/subscriptions/checkout'"),'Subscribe keeps its checkout route');
+  assert.ok(profile.includes('id="profile-follow"')&&profile.includes("?'Friends · Following':'Following'")&&profile.includes(":'Follow'))"),'Follow button and follow-state labels remain connected');
+  for(const label of ['Message','Voice Calls','Video Calls','Report','Block'])assert.ok(profile.includes('</svg>'+label+'</button>'),'Missing full visitor action label '+label);
+  assert.ok(profile.includes('id="profile-subscribe"'),'Subscribe remains in the visitor actions');
 });
 
 test('HTML and service worker load the current profile-action script and cache generation',()=>{
@@ -179,13 +177,20 @@ test('profile renders core data before optional profile panels settle',()=>{
   assert.ok(loader.includes('profileLoadGeneration'),'late profile responses are prevented from replacing a newer profile');
 });
 
-test('visitor profile actions preserve the approved five-action layout and More menu',()=>{
-  const ordered=['id="profile-follow"','id="profile-subscribe"','id="profile-message"','data-profile-call="audio"','data-profile-call="video"','class="profile-extra-actions"'];
-  let previous=-1;for(const marker of ordered){const index=profile.indexOf(marker);assert.ok(index>previous,'Visitor actions keep their primary order and More menu');previous=index;}
-  assert.ok(!profile.includes('Voice Calls</button>'));
-  assert.ok(!profile.includes('Video Calls</button>'));
-  assert.ok(profile.includes('id="profile-report"')&&profile.includes('id="profile-block"'));
-  assert.ok(profile.indexOf('class="profile-actions profile-actions--primary"')<profile.indexOf('class="profile-counts"'));
-  assert.ok(profileCss.includes('grid-template-columns:repeat(3,minmax(0,1fr))!important'));
-  assert.ok(profileCss.includes('overflow:visible!important'));
+test('all seven visitor profile actions appear in order in one full-width line above profile counts',()=>{
+  const ordered=['id="profile-follow"','id="profile-subscribe"','id="profile-message"','data-profile-call="audio"','data-profile-call="video"','id="profile-report"','id="profile-block"'];
+  let previous=-1;
+  for(const marker of ordered){
+    const index=profile.indexOf(marker);
+    assert.ok(index>previous,'Visitor action order is Follow, Subscribe, Message, Voice Calls, Video Calls, Report, Block');
+    previous=index;
+  }
+  assert.ok(!profile.includes('profile-extra-actions'),'Report and Block are no longer hidden in a More actions menu');
+  assert.ok(profile.indexOf('class="profile-actions profile-actions--primary"')<profile.indexOf('class="profile-counts"'),'The actions appear above the profile statistics');
+  for(const label of ['Message','Voice Calls','Video Calls','Report','Block'])assert.ok(profile.includes('</svg>'+label+'</button>'),'Every action keeps its complete horizontal label and icon');
+  assert.ok(profileCss.includes('flex-flow:row nowrap!important'));
+  assert.ok(profileCss.includes('grid-column:1/-1!important'));
+  assert.ok(profileCss.includes('grid-row:2!important'));
+  assert.ok(profileCss.includes('overflow-x:auto!important'));
+  assert.ok(profileCss.includes('position:static!important'),'The action row remains in normal document flow');
 });
