@@ -1434,6 +1434,89 @@ async function route(req, res) {
     }
   }
 
+  if(method==='GET'&&/^\/auth\/oauth\/[a-z0-9_]+$/.test(p)){
+    const provider=p.slice('/auth/oauth/'.length);
+    if(AUTH_PROVIDER!=='supabase'||!OAUTH_PROVIDER_LABELS[provider])return redirectOAuthResult(res,'oauth_error=provider_unavailable');
+    try{
+      const settings=await supabaseGetAuthSettings();
+      if(settings.external?.[provider]!==true)return redirectOAuthResult(res,'oauth_error=provider_not_enabled');
+      const state=crypto.randomBytes(24).toString('base64url');
+      const verifier=crypto.randomBytes(32).toString('base64url');
+      const challenge=crypto.createHash('sha256').update(verifier).digest('base64url');
+      const redirectTarget=new URL('/auth/oauth/callback',appOrigin(req));
+      redirectTarget.searchParams.set('state',state);
+      const authorize=new URL('https://gzycobgbasnqqhnympkr.supabase.co/auth/v1/authorize');
+      authorize.searchParams.set('provider',provider);
+      authorize.searchParams.set('redirect_to',redirectTarget.toString());
+      authorize.searchParams.set('code_challenge',challenge);
+      authorize.searchParams.set('code_challenge_method','s256');
+      res.writeHead(302,{
+        Location:authorize.toString(),
+        'Cache-Control':'no-store',
+        'Set-Cookie':oauthFlowCookie(state,verifier),
+        ...SECURITY_HEADERS
+      });
+      res.end();
+      return;
+    }catch(error){
+      console.warn('[Minglora OAuth start] Provider authorization could not start:',String(error?.message||'unknown error').slice(0,160));
+      return redirectOAuthResult(res,'oauth_error=provider_unavailable',[clearOAuthFlowCookie()]);
+    }
+  }
+  if(method==='GET'&&p==='/auth/oauth/callback'){
+    const flow=readOAuthFlowCookie(req);
+    const returnedState=String(url.searchParams.get('state')||'');
+    const authorizationCode=String(url.searchParams.get('code')||'');
+    const providerError=String(url.searchParams.get('error')||'');
+    const clearCookie=clearOAuthFlowCookie();
+    if(!flow||!returnedState||returnedState!==flow.state){
+      return redirectOAuthResult(res,'oauth_error=invalid_or_expired',[clearCookie]);
+    }
+    if(providerError||!authorizationCode){
+      return redirectOAuthResult(res,'oauth_error=provider_cancelled',[clearCookie]);
+    }
+    try{
+      const authenticated=await supabaseExchangeOAuthCode({code:authorizationCode,codeVerifier:flow.verifier});
+      let verifiedUser=authenticated?.user;
+      if(!verifiedUser?.id||!verifiedUser?.email){
+        if(!authenticated?.access_token)throw Object.assign(new Error('Supabase did not return a sign-in token.'),{status:502});
+        verifiedUser=await supabaseGetUser(authenticated.access_token);
+      }
+      if(!verifiedUser?.id||!verifiedUser?.email)throw Object.assign(new Error('The identity provider did not return a verified email address.'),{status:403});
+      const account=ensureLocalUser(verifiedUser);
+      if(isAccountBanned(account)||account.status==='suspended'){
+        return redirectOAuthResult(res,'oauth_error=account_restricted',[clearCookie]);
+      }
+      const accessToken=String(authenticated.access_token||'');
+      if(accessToken.length<20)throw Object.assign(new Error('Supabase did not issue a valid sign-in token.'),{status:502});
+      const factors=await supabaseListFactors(accessToken);
+      const verifiedTotp=(factors.factors||[]).find(factor=>factor.factor_type==='totp'&&factor.status==='verified')||null;
+      if(verifiedTotp&&tokenAal(accessToken)!=='aal2'){
+        const pendingId=uid();
+        db.pendingAuth.push({
+          id:pendingId,userId:account.id,factorId:verifiedTotp.id,
+          authSealed:sealSessionAuth(authenticated),createdAt:now(),
+          expiresAt:new Date(Date.now()+5*60*1000).toISOString(),
+          userAgent:String(req.headers['user-agent']||'Unknown device').slice(0,240)
+        });
+        await saveStore();
+        return redirectOAuthResult(res,'oauth-mfa='+encodeURIComponent(pendingId),[clearCookie]);
+      }
+      if(account.status==='deactivated'){
+        account.status='active';
+        await supabaseUpdateUserMetadata(accessToken,{account_status:'active'});
+      }
+      const sessionCookie=await createAppSession(account,authenticated,req);
+      return redirectOAuthResult(
+        res,
+        isDesignatedCreatorHubAdmin(account)&&!verifiedTotp?'mfa-setup=required':'',
+        [...sessionCookie,clearCookie]
+      );
+    }catch(error){
+      console.warn('[Minglora OAuth callback] Sign-in handoff failed:',String(error?.message||'unknown error').slice(0,180));
+      return redirectOAuthResult(res,'oauth_error=callback_failed',[clearCookie]);
+    }
+  }
   if (p.startsWith('/api/')) {
     let input; try { if (!['GET','HEAD'].includes(method)) input=await body(req,1_000_000); } catch(e) { return json(res,e.status||400,{error:e.message}); }
     const user = sessionUser(req);
