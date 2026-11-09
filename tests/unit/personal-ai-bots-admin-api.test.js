@@ -42,6 +42,7 @@ test('owner overview returns the requested categories without fabricated bots or
   assert.equal(context.res.payload.departments.length,20);
   assert.equal(context.res.payload.departments.filter(item=>item.builtIn).length,20);
   assert.equal(context.res.payload.jobPositions.length,20);
+  assert.deepEqual(context.res.payload.vacancies,[]);
   assert.ok(context.res.payload.jobPositions.every(item=>item.permissions.length===0&&item.appointmentEnabled===false));
   assert.equal(context.res.payload.bots.length,0);
   assert.equal(context.res.payload.tasks.length,0);
@@ -1152,5 +1153,66 @@ test('department write routes reject non-owner and cross-origin callers before p
   assert.equal(crossOrigin.res.statusCode,403);
   assert.equal(crossOrigin.db.personalAiBotDepartments,undefined);
   assert.equal(saves,0);
+});
+
+
+test('owner can create, list, pause and close a scoped corporate vacancy',async()=>{
+  const db={};let saves=0;
+  const departmentId='department-finance_accounting';
+  const create=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/vacancies',
+    input:{positionCode:'department_manager',departmentId,title:'Finance Operations Manager',slots:2,requirements:'Accounting and reconciliation.'},
+    db,uid:sequenceUid(2200),saveStore:async()=>{saves++;}
+  });
+  await handlePersonalAiBotsAdminApi(create);
+  assert.equal(create.res.statusCode,201);
+  const vacancy=create.res.payload.vacancy;
+  assert.equal(vacancy.status,'open');
+  assert.equal(vacancy.slots,2);
+  assert.equal(Object.hasOwn(vacancy,'employeeId'),false);
+  const list=makeContext({method:'GET',path:'/api/admin/personal-ai-bots/vacancies',db});
+  await handlePersonalAiBotsAdminApi(list);
+  assert.equal(list.res.statusCode,200);
+  assert.equal(list.res.payload.vacancies.length,1);
+  const pause=makeContext({
+    method:'PATCH',path:'/api/admin/personal-ai-bots/vacancies/'+vacancy.id,
+    input:{status:'paused'},db,saveStore:async()=>{saves++;}
+  });
+  await handlePersonalAiBotsAdminApi(pause);
+  assert.equal(pause.res.statusCode,200);
+  assert.equal(pause.res.payload.vacancy.status,'paused');
+  const close=makeContext({
+    method:'DELETE',path:'/api/admin/personal-ai-bots/vacancies/'+vacancy.id,
+    db,saveStore:async()=>{saves++;}
+  });
+  await handlePersonalAiBotsAdminApi(close);
+  assert.equal(close.res.statusCode,200);
+  assert.equal(close.res.payload.vacancy.status,'closed');
+  assert.equal(saves,3);
+});
+
+test('vacancy API rejects non-owner writes and unsupported filled status',async()=>{
+  const nonOwner=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/vacancies',
+    input:{positionCode:'worker',departmentId:'department-finance_accounting'},
+    isOwnerAdmin:false
+  });
+  await handlePersonalAiBotsAdminApi(nonOwner);
+  assert.equal(nonOwner.res.statusCode,403);
+  assert.equal(nonOwner.db.personalAiBotVacancies,undefined);
+  const filled=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/vacancies',
+    input:{positionCode:'worker',departmentId:'department-finance_accounting',title:'Vacant worker'},
+    db:{}
+  });
+  await handlePersonalAiBotsAdminApi(filled);
+  assert.equal(filled.res.statusCode,201);
+  const id=filled.res.payload.vacancy.id;
+  const attempt=makeContext({
+    method:'PATCH',path:'/api/admin/personal-ai-bots/vacancies/'+id,
+    input:{status:'filled'},db:filled.db
+  });
+  await handlePersonalAiBotsAdminApi(attempt);
+  assert.equal(attempt.res.statusCode,400);
 });
 
