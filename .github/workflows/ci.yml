@@ -155,3 +155,34 @@ jobs:
           package-manager-cache: false
       - name: Verify real tab clicks, audience connections and direct routes
         run: node --test tests/unit/for-you-scope-clicks.test.js tests/unit/for-you-controls-layout.test.js tests/unit/for-you-home-live-feed.test.js
+
+  auth-provider:
+    name: Supabase Auth provider controls
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Check Auth provider source syntax
+        run: |
+          node --check src/server.js
+          node --check src/auth-provider-credentials.js
+          node --check src/auth-redirect-routes.js
+          node --check public/auth-providers-admin.js
+          node --check tests/unit/auth-provider-credentials.test.js
+          node --check tests/unit/auth-redirect-routes.test.js
+          node --check tests/unit/auth-providers-admin-ui.test.js
+      - name: Run Auth provider acceptance tests
+        run: |
+          node --test \
+            tests/unit/auth-provider-credentials.test.js \
+            tests/unit/auth-redirect-routes.test.js \
+            tests/unit/auth-providers-admin-ui.test.js
