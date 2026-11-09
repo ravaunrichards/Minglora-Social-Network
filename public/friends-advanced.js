@@ -12,6 +12,9 @@ let friendsDashboardState = {
 
 const FRIENDS_DASHBOARD_TABS = [
   ['all','All friends','people'],
+  ['recent','Recently added','clock'],
+  ['mutual','Mutual friends','users'],
+  ['favorites','Favorites','heart'],
   ['close','Close Friends','star'],
   ['restricted','Restricted','lock'],
   ['lists','Custom lists','list'],
@@ -35,6 +38,9 @@ function friendsDashboardMutualMarkup(member) {
 function friendsDashboardVisibleFriends() {
   const query=friendsDashboardState.query.trim().toLowerCase().replace(/^@/,'');
   let rows=[...friendsDashboardState.friends];
+  if(friendsDashboardState.tab==='recent') rows.sort((a,b)=>Date.parse(b.friendSince||0)-Date.parse(a.friendSince||0));
+  if(friendsDashboardState.tab==='mutual') rows=rows.filter(member=>Number(member.mutualFriendsCount||0)>0);
+  if(friendsDashboardState.tab==='favorites') rows=rows.filter(member=>member.isFavorite===true);
   if(friendsDashboardState.tab==='close') rows=rows.filter(member=>member.isCloseFriend===true);
   if(friendsDashboardState.tab==='restricted') rows=rows.filter(member=>member.isRestricted===true);
   if(friendsDashboardState.tab==='lists'&&friendsDashboardState.selectedListId) {
@@ -49,6 +55,10 @@ function friendsDashboardVisibleFriends() {
 function friendsDashboardCard(member,listId=null) {
   const close=member.isCloseFriend===true;
   const restricted=member.isRestricted===true;
+  const favorite=member.isFavorite===true;
+  const mutedPosts=member.isMutedPosts===true;
+  const mutedStories=member.isMutedStories===true;
+  const snoozed=Boolean(member.snoozedUntil&&Date.parse(member.snoozedUntil)>Date.now());
   const previews=Array.isArray(member.mutualFriendsPreview)?member.mutualFriendsPreview:[];
   const actions=listId
     ?'<button type="button" class="facebook-friend-remove-list" data-remove-friend-list="'+esc(listId)+'" data-member-id="'+esc(member.id)+'">Remove from list</button>'
@@ -67,6 +77,10 @@ function friendsDashboardCard(member,listId=null) {
       '<div class="facebook-friend-preferences">'+
         '<button type="button" class="facebook-friend-pref '+(close?'is-active':'')+'" data-friend-pref="'+esc(member.id)+'" data-pref-key="isCloseFriend" data-pref-value="'+(!close)+'" aria-pressed="'+close+'"><span aria-hidden="true">★</span> '+(close?'Close Friends':'Add to Close Friends')+'</button>'+
         '<button type="button" class="facebook-friend-pref '+(restricted?'is-active':'')+'" data-friend-pref="'+esc(member.id)+'" data-pref-key="isRestricted" data-pref-value="'+(!restricted)+'" aria-pressed="'+restricted+'"><span aria-hidden="true">🔒</span> '+(restricted?'Restricted':'Add to Restricted')+'</button>'+
+        '<button type="button" class="facebook-friend-pref '+(favorite?'is-active':'')+'" data-friend-pref="'+esc(member.id)+'" data-pref-key="isFavorite" data-pref-value="'+(!favorite)+'" aria-pressed="'+favorite+'"><span aria-hidden="true">♥</span> '+(favorite?'Favorite':'Add favorite')+'</button>'+
+        '<button type="button" class="facebook-friend-pref '+(mutedPosts?'is-active':'')+'" data-friend-pref="'+esc(member.id)+'" data-pref-key="isMutedPosts" data-pref-value="'+(!mutedPosts)+'" aria-pressed="'+mutedPosts+'">'+(mutedPosts?'Unmute posts':'Mute posts')+'</button>'+
+        '<button type="button" class="facebook-friend-pref '+(mutedStories?'is-active':'')+'" data-friend-pref="'+esc(member.id)+'" data-pref-key="isMutedStories" data-pref-value="'+(!mutedStories)+'" aria-pressed="'+mutedStories+'">'+(mutedStories?'Unmute stories':'Mute stories')+'</button>'+
+        '<button type="button" class="facebook-friend-pref '+(snoozed?'is-active':'')+'" data-friend-snooze="'+esc(member.id)+'" data-snoozed="'+snoozed+'" aria-pressed="'+snoozed+'">'+(snoozed?'End snooze':'Snooze 7 days')+'</button>'+
       '</div>'+
       '<div class="facebook-friend-list-actions">'+actions+
         '<button type="button" class="facebook-friend-remove" data-unfollow-friend="'+esc(member.id)+'">Remove</button>'+
@@ -88,7 +102,7 @@ function friendsDashboardListCards() {
 
 function friendsDashboardTabMarkup() {
   return '<nav class="facebook-friends-tabs" aria-label="Friends categories">'+FRIENDS_DASHBOARD_TABS.map(([key,label,icon])=>
-    '<button type="button" data-friends-tab="'+key+'" class="'+(friendsDashboardState.tab===key?'is-active':'')+'" aria-current="'+(friendsDashboardState.tab===key?'page':'false')+'"><span aria-hidden="true">'+({people:'♧',star:'★',lock:'▣',list:'☷','user-plus':'＋'}[icon])+'</span>'+label+'</button>'
+    '<button type="button" data-friends-tab="'+key+'" class="'+(friendsDashboardState.tab===key?'is-active':'')+'" aria-current="'+(friendsDashboardState.tab===key?'page':'false')+'"><span aria-hidden="true">'+({people:'♧',clock:'◷',users:'♧',heart:'♥',star:'★',lock:'🔒',list:'☷','user-plus':'＋'}[icon])+'</span>'+label+'</button>'
   ).join('')+'</nav>';
 }
 
@@ -101,6 +115,9 @@ function friendsDashboardMainMarkup() {
     return '<section class="facebook-friends-section"><div class="facebook-friends-section-heading"><div><h2>Your lists</h2><p>Keep your friends organised with private custom lists.</p></div><button type="button" class="primary" id="friends-create-list">＋ Create list</button></div>'+friendsDashboardListCards()+'</section>';
   }
   let title='All friends',listId=null;
+  if(tab==='recent')title='Recently Added';
+  if(tab==='mutual')title='Mutual Friends';
+  if(tab==='favorites')title='Favorites';
   if(tab==='close')title='Close Friends';
   if(tab==='restricted')title='Restricted';
   if(tab==='lists') {
@@ -171,6 +188,11 @@ function friendsDashboardBind() {
   root.querySelectorAll('[data-friend-pref]').forEach(button=>button.addEventListener('click',()=>friendsDashboardUpdatePreference(
     button.dataset.friendPref,button.dataset.prefKey,button.dataset.prefValue==='true'
   )));
+  root.querySelectorAll('[data-friend-snooze]').forEach(button=>button.addEventListener('click',()=>{
+    const clearing=button.dataset.snoozed==='true';
+    const until=clearing?null:new Date(Date.now()+7*24*60*60*1000).toISOString();
+    friendsDashboardUpdatePreference(button.dataset.friendSnooze,'snoozedUntil',until);
+  }));
   root.querySelectorAll('[data-friend-list-select]').forEach(select=>select.addEventListener('change',async()=>{
     if(!select.value)return;
     await friendsDashboardChangeListMember(select.value,select.dataset.friendListSelect,true);
