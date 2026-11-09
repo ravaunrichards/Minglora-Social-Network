@@ -16,9 +16,9 @@
 ## Progress
 
 **Previous verified completion:** 78%  
-**Current verified completion:** 78%  
-**Remaining:** 22%  
-**Progress since previous checkpoint:** 0 percentage points  
+**Current verified completion:** 79%  
+**Remaining:** 21%  
+**Progress since previous checkpoint:** +1 percentage point  
 **Why no percentage increase:** the current changes repaired app-shell cache integrity and the associated regression test, but did not complete the remaining production Management API write, route-sync, provider-credential, or real external OAuth acceptance requirements. These are not double-counted as new completion.
 
 Original milestone weighting is preserved (weights total 100):
@@ -30,8 +30,8 @@ Original milestone weighting is preserved (weights total 100):
 | Secure credential configuration and enable/disable API | 25% | 18% | MFA/designated-owner gate, server-side allowlisted Management API GET/PATCH, readiness checks, no-secret response, minimum-one-login guard, and read-back verification are implemented and tested. No live Management API transaction was observed or completed. |
 | Supabase callback and Minglora redirect-route controls | 20% | 15% | Displays/copies callback, Site URL, and app return route; route sync preserves allow-list entries and checks read-back. Production route sync was not executed. |
 | Status, access restrictions, and regression safeguards | 10% | 8% | Owner/MFA checks, same-origin and secret-handling safeguards, provider refresh, route validation, and Admin Centre shell/cache checks pass static or CI verification. No actual owner browser session was exercised. |
-| End-to-end external provider sign-in acceptance | 15% | 7% | Provider discovery, PKCE, signed short-lived HttpOnly state cookie, server-side exchange, account restrictions, session creation, and MFA continuation are implemented with mocked acceptance tests. No real identity-provider sign-in has completed. |
-| **Total** | **100%** | **78%** | **22% remains unverified or externally blocked.** |
+| End-to-end external provider sign-in acceptance | 15% | 8% | Provider discovery, PKCE exchange, signed/expiring HttpOnly state-cookie behavior, server-side exchange, account restrictions, session creation, and MFA continuation have code-level, mocked, and direct cookie behavior tests. No real identity-provider sign-in has completed. |
+| **Total** | **100%** | **79%** | **21% remains unverified or externally blocked.** |
 
 ## Master acceptance checklist
 
