@@ -157,6 +157,14 @@ export async function handlePersonalAiBotsAdminApi(context) {
         const category=bot?getPersonalAiBotCategories(db).find(item=>item.id===bot.categoryId):null;
         if(!existing||!bot)return (json(res,404,{error:'Instruction or bot not found.'}),true);
         if(!network?.enabled||!bot.enabled||bot.status!=='enabled'||!category?.enabled)return (json(res,409,{error:'The network, bot and category must all be enabled before an instruction can be approved.'}),true);
+        if(['follow','unfollow'].includes(existing.taskType)){
+          const target=typeof lookupAdminMember==='function'
+            ?await lookupAdminMember(existing.targetUserId)
+            :(db.users||[]).find(member=>member.id===existing.targetUserId);
+          if(!target)return (json(res,404,{error:'The follow target no longer exists or is unavailable.'}),true);
+          if(['banned','suspended','deactivated','deleted'].includes(String(target.status||'').toLowerCase()))return (json(res,409,{error:'The follow target is no longer an active Minglora member.'}),true);
+          if(isRelationshipBlocked(db.blocks||[],user.id,existing.targetUserId))return (json(res,409,{error:'A Minglora block now prevents this follow operation.'}),true);
+        }
       }
       const task=action==='approve'
         ?approvePersonalAiBotTask(db,taskMatch[1],user.id,stamp,uid)
