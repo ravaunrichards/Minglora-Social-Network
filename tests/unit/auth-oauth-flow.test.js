@@ -28,7 +28,7 @@ test('OAuth start route only accepts providers enabled by current Supabase Auth 
 
 
 
-  assert.ok(server.includes("oauthFlowCookie(state,verifier)"));
+  assert.ok(server.includes("oauthFlowCookie(authorization.state,authorization.verifier)"));
   assert.ok(server.includes("createSupabaseOAuthAuthorization("));
   assert.ok(oauthAuthorization.includes("new URL('/auth/v1/authorize', projectBase.origin)"));
   assert.ok(oauthAuthorization.includes("authorize.searchParams.set('code_challenge_method', 's256')"));
