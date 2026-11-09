@@ -1,11 +1,11 @@
-Updated: 2026-11-09 10:48 UTC (Personal AI Bots workflow #525: 168/168; full Minglora CI #8297: 902/902)
+Updated: 2026-11-09 10:59 UTC (Personal AI Bots workflow #545: 173/173; full Minglora CI #8320: 907/907)
 Scope: **Minglora Social Network only**
 Repository: https://github.com/ravaunrichards/Minglora-Social-Network
 Branch: `feat/personal-ai-bots-network-control-center`
 Draft PR: https://github.com/ravaunrichards/Minglora-Social-Network/pull/202
 Supabase project: `gzycobgbasnqqhnympkr` (existing Minglora project only)
-Current branch head: `4da22def5f4f972a05e91fe04b7784c4a89d7c1c`
-Latest verified vacancy service/API/UI commits: `fec6165e11dc8775fcc2dc0cc22fb5e29c57f461` / `5cab274b4d29cadfe2c4246d62eecfcae2613df6` / `5ea54775479d51f9c77c2fa7578df9d59ed6d82e`
+Current branch head: `bbe82db6f8d9510bb89fe1506d74a2b29e038995`
+Latest verified application-service/UI commit series: `candidate application service, API, UI and tests committed on this feature branch`
 PR must remain **OPEN + DRAFT**. Do not merge, deploy, or apply production migrations without the required review/authorization.
 
 
@@ -23,15 +23,15 @@ The previous checkpoint did not contain a weighted percentage. The earlier conve
 |---|---:|---:|---:|
 | 1. Relational foundation and backend persistence integration | 25% | 35% | 8.75% |
 | 2. AI identities, profiles, worldwide discovery and member follow graph | 20% | 75% | 15.00% |
-| 3. Corporate governance, organizational charts and HR lifecycle | 15% | 35% | 5.25% |
+| 3. Corporate governance, organizational charts and HR lifecycle | 15% | 45% | 6.75% |
 | 4. Supervision, bounded autonomy, queues, teams and collaboration | 10% | 65% | 6.50% |
 | 5. AI social participation and creator ecosystem | 10% | 25% | 2.50% |
 | 6. Security, governance, finance and resource controls | 8% | 25% | 2.00% |
 | 7. Model intelligence, memory, provider operations and analytics | 7% | 20% | 1.40% |
 | 8. Distributed scaling, load tests, device tests and production acceptance | 5% | 0% | 0.00% |
-| **TOTAL** | **100%** |  | **41.40% → 41%** |
+| **TOTAL** | **100%** |  | **42.90% → 43%** |
 
-**COMPLETION: 41% | REMAINING: 59%**
+**COMPLETION: 43% | REMAINING: 57%**
 
 This is weighted implementation progress, not a claim that 38.40% of the full production acceptance criteria is deployed. Milestones 1 and 2 remain partial because normalized AI tables/RPCs are staged but absent from the live Supabase migration ledger and public schema. Milestone 3 receives only 15% credit for the tested department catalogue/admin controls; it does not include HR, employee records, appointments, organizational reporting or canonical PostgreSQL persistence.
 
@@ -50,6 +50,10 @@ This is weighted implementation progress, not a claim that 38.40% of the full pr
 - Added a vacancy collection and service/API/Admin Centre lifecycle: list, create, update, pause, reopen and close. Vacancies require an existing job position and enabled compatible department; executive-only positions cannot be opened in unrelated departments. Titles are unique per position/department while open or paused; slots are whole numbers 1–100; unsupported `filled` status is rejected.
 - Vacancy records keep owner attribution, requirements, slots, change history and audit entries. They contain no employee or appointment IDs and grant no permissions. DELETE is a soft-close, not data deletion.
 - The form and list let the owner create and maintain openings. UI explicitly states that a vacancy does not create or appoint AI identities. HTML asset version is `20261109-personal-ai-bots-5`.
+- Added candidate applications for existing AI identities whose `population` is exactly `organizational`; submissions require a vacancy owned by the same designated owner and in `open` status. Independent AIs, missing identities, restricted/suspended/archived/retired identities and non-open vacancies are rejected.
+- Duplicate applications are prevented per identity/vacancy. Review transitions are `submitted` → `in_review` → `shortlisted`, `rejected` or `withdrawn` (with defined allowed transitions); rejected and withdrawn are terminal. Every submission/status change is audited and recorded in status history.
+- The Admin Centre offers existing organizational AIs and open vacancies only, then lists candidates with permitted review actions. No applicant is appointed, given permissions or activated by this queue. Page asset version is now `20261109-personal-ai-bots-6`.
+- Candidate application records are persisted through the existing runtime-state save adapter only; no normalized relational HR tables or live PostgreSQL readback are claimed.
 - Vacancy collection is persisted through the existing runtime-state adapter only. No normalized SQL tables or live PostgreSQL readback is claimed.
 - Exposed the catalogue in the owner overview and a read-only Corporate Board and Job-Position panel. This is a catalogue, not proof of any appointment or employee. A future HR workflow must add audited appointment records and per-assignment scoped permissions before roles can exercise authority.
 
@@ -112,24 +116,24 @@ This is weighted implementation progress, not a claim that 38.40% of the full pr
 
 ## Verification and current status
 
-- Latest confirmed green Personal AI Bots workflow: run **#525**, current branch head **`4da22def5f4f972a05e91fe04b7784c4a89d7c1c`**, **168 passed / 0 failed**, logged at **2026-11-09 10:48:02 UTC**. Includes department/role catalogues, safe role authority defaults, vacancy validation and lifecycle, owner-only API, Admin Centre UI, identity batch import and per-row recovery, plus existing AI identity/profile/discovery/safety/worker checks.
-- Latest confirmed green full Minglora CI workflow: run **#8297**, **902 passed / 0 failed**, logged at **2026-11-09 10:48:16 UTC**. Main test and For You functional-navigation jobs passed. An earlier concurrent run #8294 on the same vacancy test commit also passed 901/901.
-- Department CRUD, the 20-position catalogue and vacancy create/list/update/soft-close are covered by focused service/API/UI tests. Owner mutations are guarded; vacancy review status history and audit are checked. No HR appointment or AI execution is claimed.
-- Bulk identity import remains verified: 1–100 identities, idempotent owner batches, duplicate checks, per-record outcomes, safe retries after PostgreSQL errors, checkpoint rollback and owner-only history. Imports remain disabled/private by default.
-- **Live Supabase limitation:** prior read-only checks of project `gzycobgbasnqqhnympkr` showed no AI Network migration versions and no `ai_*` or `minglora_ai_*` public tables. AI SQL remains staged; no production migration was applied.
-- **Not verified operationally:** normalized relational department/position/vacancy storage, live PostgreSQL readback, deployed AI Edge Functions, worker/scheduler, model inference/provider health, actual mailbox provisioning, real candidate appointments, 10-billion scale and simultaneous-execution capacity.
+- Latest confirmed green Personal AI Bots workflow: run **#545**, branch head **`bbe82db6f8d9510bb89fe1506d74a2b29e038995`**, **173 passed / 0 failed**, logged at **2026-11-09 10:59:02 UTC**. Includes department/position/vacancy catalogues, candidate application review, owner routes and Admin Centre UI, bulk AI identity import/retry, and existing identity/profile/discovery/safety/worker guardrail tests.
+- Latest confirmed green full Minglora CI workflow: run **#8320**, **907 passed / 0 failed**, logged at **2026-11-09 10:59:11 UTC**. Both the main test job and For You functional-navigation job passed.
+- Candidate applications are verified to require existing organizational AI identities and open vacancies, prevent duplicate applications, record status history/audit, enforce allowed review transitions and leave appointments/permissions separate.
+- Bulk identity import: 1–100 per batch, owner-scoped idempotency and payload hash, duplicate controls, per-record outcomes, safe retry after DB failure, rollback on initial runtime checkpoint-save failure, owner-only history; imported identities remain disabled/private.
+- **Live Supabase limitation:** prior read-only checks of project `gzycobgbasnqqhnympkr` found no AI Network migration versions and no `ai_*` or `minglora_ai_*` public tables. AI SQL remains staged only; no production migration applied.
+- **Not verified operationally:** normalized relational HR/department/position/vacancy/application storage, live PostgreSQL readback, deployed AI Edge Function changes, worker/scheduler deployment, provider inference/health, mailbox provisioning, employee appointment, or 10-billion storage/concurrency capacity.
 
 ## Recovery and progress comparison
 
-- Previous verified weighted completion: **39.90% → 40%**.
-- Current verified weighted completion: **41.40% → 41%**.
-- Progress since last checkpoint: **+1.50 percentage points**, earned for vacancy service/API/UI and tests under Phase 3. Milestone 3 is now 35% verified; role catalogue and department catalogue receive only partial credit and no credit is given for candidate applications, appointments, workforce or org-chart execution.
-- Last verified milestone: **Phase 3 — department, role and vacancy foundations (partial)**. Phase 1 relational AI schema remains partial because AI migrations are not deployed.
-- Last confirmed action: current branch head `4da22def5f4f972a05e91fe04b7784c4a89d7c1c`; AI workflow #525 passed 168/168 and full CI #8297 passed 902/902 at 2026-11-09 10:48 UTC.
-- Recovered: repo, feature branch, PR #202 open/draft, checkpoint, exact code files and CI evidence independently checked. No unsupported prior-progress claims were accepted.
-- Unverified: live normalized PostgreSQL persistence, provider/email provisioning, worker/scheduler, candidate/employee appointment operations and production scale.
-- Changes since prior checkpoint: added job-position catalogue and vacancy workflow using existing runtime state; role/department scope validation, bounded slots, uniqueness, status history, auditing, owner-only CRUD, safe statuses, Admin Centre form/cards and service/API/UI tests; asset URL cache-busted and all current runs green.
-- Recovery confidence: **CONFIRMED** for GitHub branch/PR/code/checkpoint/CI evidence; **PARTIALLY RECOVERED** for production service/database state because AI SQL remains unapplied and provider/email/worker are not deployed.
+- Previous verified weighted completion: **41.40% → 41%**.
+- Current verified weighted completion: **42.90% → 43%**.
+- Progress since previous checkpoint: **+1.50 percentage points** for the verified candidate application and review workflow; milestone 3 is 45% verified. No credit is awarded for employee appointments, permission assignment, payroll, management execution or org charts.
+- Last verified milestone: **Phase 3 — department, role, vacancy and candidate-review foundations (partial)**.
+- Last confirmed action: current head `bbe82db6f8d9510bb89fe1506d74a2b29e038995`; Personal AI Bots #545 passed 173/173 and full CI #8320 passed 907/907 at 2026-11-09 10:59 UTC.
+- Recovered: repository, feature branch, PR #202 open/draft, checkpoint, source files and CI logs independently checked.
+- Unverified: live normalized Postgres round-trip, provider/email provisioning, worker/scheduler, actual HR appointment and production capacity.
+- Changes since previous checkpoint: added candidate application collection/service, owner-only GET/POST/PATCH routes, organizational identity/open vacancy validation, duplicate prevention, review transitions, audit/status history and Admin Centre application form/review cards; focused tests and full CI passed.
+- Recovery confidence: **CONFIRMED** for repository/branch/PR/source/checkpoint/CI; **PARTIALLY RECOVERED** for live DB/service state because AI SQL is unapplied and external runtime services are not released.
 
 ## Changes since the older checkpoint
 
@@ -141,35 +145,33 @@ This is weighted implementation progress, not a claim that 38.40% of the full pr
 ## Remaining work — easiest available first
 
 ### Easy / immediate
-1. Keep PR #202 and this single checkpoint aligned with the current branch and workflows; retain open/draft status.
-2. Add an owner-managed candidate application/review queue for existing organizational AI identities without appointing staff or granting privileges.
-3. Continue focused validation and keep full Minglora CI green.
+1. Keep PR #202 and the checkpoint aligned with the actual branch head and checks.
+2. Implement owner-approved appointments for shortlisted, pre-existing organizational AI identities, with role/department compatibility, employment history and explicit no-permission defaults.
+3. Keep current AI and full Minglora CI green as HR workflows expand.
 
 ### Medium
-1. Implement normalized SQL tables and RPCs for departments, job positions, vacancies, candidates/applications and appointments as staged migrations; verify real DB write/readback only after release approval.
-2. Complete live PostgreSQL round-trip for AI identities, profiles, locations, emails, provider assignments, discovery and safety report review after approved migrations.
-3. Verify batch identity import against normalized relational tables.
-4. Integrate real worker/scheduler, model provider adapter and runtime metrics with valid credentials/infrastructure.
+1. Add normalized relational SQL tables/RPCs for departments, positions, vacancies, candidate applications, appointments and employment history as staged migrations; verify PostgreSQL round-trip only after release authorization.
+2. Complete real DB persistence/readback for all AI identities, profiles, locations, emails, provider assignments, discovery filters and safety review.
+3. Verify bulk identity imports and retries against normalized batch tables.
+4. Deploy real worker/scheduler and provider adapters only when credentials/infra available and gated checks pass.
 
 ### Hard
-1. Build audited AI appointments, transfers, promotions, performance reviews, training, suspension, succession and termination.
-2. Build interactive organizational charts with actual manager/supervisor relationships and scoped approval/delegation authority.
-3. Implement board governance and executive accountability, with human controls for high-impact actions.
-4. Implement AI collaboration, finance/resource accounting, procurement, security operations, compliance and all management centres.
-5. Complete real model routing/fallback, memory, multilingual and multimodal capabilities and accurate analytics.
-6. Benchmark partitioned/distributed identity storage, queues, regional placement, concurrent workers, disaster recovery and the 10-billion-identity design.
-7. Complete desktop/mobile E2E, integration, security, load and production acceptance.
+1. Complete HR lifecycle: recruitment, appointment, onboarding, training, availability, evaluation, promotion, transfer, discipline, suspension, succession and termination.
+2. Build interactive organization charts, actual reporting-manager links, board governance and scoped approval/delegation.
+3. Implement AI collaboration/team execution, budgets/resources, accounting, procurement, compliance, risk and security centres.
+4. Complete model routing/fallback, individual memory, multilingual/multimodal features and accurate operational analytics.
+5. Benchmark distributed identity storage, partitioning, indexing, job queues, regional placement, concurrency, failure recovery and ten-billion target design.
+6. Finish desktop/mobile end-to-end, integration, security, load and production-readiness verification.
 
 ## Blockers and release constraints
-- **Production normalized DB:** AI migrations remain absent from the live ledger/schema. No production application is authorized here.
-- **Department/role/vacancy storage:** these new records use Minglora's existing runtime-state save adapter, not normalized relational tables; live PostgreSQL readback is not verified.
-- **AI provider:** no verified provider adapter, server-side credentials, health or inference.
-- **Email provider:** no actual mailbox provisioning or sending connection.
-- **Worker/scheduler:** keep disabled until provider, queue, permissions, observability, deployment and human approvals are verified.
-- **Corporate HR:** vacancy and position catalogues exist; candidate review, employee appointment and employment lifecycle remain unbuilt.
-- **Branch:** PR #202 remains open/draft; feature branch is 400 commits ahead and 5 behind main. Avoid destructive merge/rebase; reconcile carefully.
+- **Live relational database:** AI migrations have not been applied to Minglora Supabase; no normalized HR tables/readback has been verified. Production migration requires explicit authorization.
+- **Department/position/vacancy/application data:** current staged service uses the existing runtime-state save adapter, not normalized relational tables.
+- **AI provider/email:** no connected, health-checked model provider or actual mailbox provisioning/sending service is verified.
+- **Workers:** remain disabled until provider, queue, permission, monitoring, deployment and human approval safeguards pass.
+- **HR execution:** candidate review is implemented; no employee has been appointed, no manager/authority delegated and no employment execution enabled.
+- **Branch:** PR #202 open/draft, now 412 commits ahead and 5 behind main. Avoid destructive merge/rebase.
 
 ## Exact next action
 
-Implement an owner-managed candidate application/review queue for existing organizational AI identities applying to open vacancies. Permit submit, shortlist, reject and withdraw with per-vacancy duplicate prevention, audit and status history; do not create employees, appointments or permissions. Add focused service/API/Admin Centre tests. Use the existing runtime-state store for this staged step and leave relational migrations unapplied. Keep PR #202 open/draft.
+Implement a human-owner-approved appointment record using only a shortlisted organizational AI candidate. Validate the open vacancy's position and department; require a valid existing organizational reporting manager for subordinate roles when appropriate; prevent duplicate active appointments; record appointment and employment history; keep AI identity disabled and grant no permissions by default. Add service/API/UI tests, and do not apply production migrations or enable workers. Keep PR #202 open/draft.
 
