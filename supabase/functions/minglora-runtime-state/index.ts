@@ -72,7 +72,7 @@ Deno.serve(async (req: Request) => {
   const action = input.action;
   const supportedActions = [
     "internal_activity_feed",
-    "admin_users_list", "admin_user_set_ban", "admin_audit_log", "admin_audit_log",
+    "admin_users_list", "admin_user_set_ban", "admin_user_set_restriction", "admin_audit_log", "admin_audit_log",
     "streambay_cleanup", "load", "save", "health", "media_sign", "media_upload_prepare", "media_upload_complete", "media_delete",
     "live_broadcast_create", "live_broadcast_end", "live_chat_list", "live_chat_send", "live_chat_delete",
     "live_participant_mark_connected", "live_participant_mark_left", "live_speaker_request", "live_speaker_requests_list", "live_speaker_request_status",
@@ -104,6 +104,84 @@ Deno.serve(async (req: Request) => {
   const fail = (error: any, fallback: string) =>
     json(409, { error: String(error?.message || fallback).slice(0, 240) });
 
+  if (action === "admin_user_set_restriction") {
+    const actorUserId = String(input.actorUserId || "");
+    const userId = String(input.userId || "");
+    const operation = String(input.operation || "");
+    if (actorUserId !== "5b998c21-86b5-4621-ab37-e0808a2657b1") {
+      return json(403, { error: "Only the designated Minglora owner can manage member accounts." });
+    }
+    if (!validUuid(userId) || userId === actorUserId) {
+      return json(400, { error: "Choose a valid member account. The owner account is protected." });
+    }
+    if (operation !== "restrict" && operation !== "unrestrict") {
+      return json(400, { error: "Choose whether to restrict or restore this member." });
+    }
+    const reason = String(input.reason || "").trim().slice(0, 500);
+    if (operation === "restrict" && reason.length < 3) {
+      return json(400, { error: "Enter a restriction reason of at least 3 characters." });
+    }
+    const { data: found, error: lookupError } = await admin.auth.admin.getUserById(userId);
+    const target = found?.user;
+    if (lookupError || !target) return json(404, { error: "The selected Minglora account was not found." });
+    if (target.id === "5b998c21-86b5-4621-ab37-e0808a2657b1") {
+      return json(403, { error: "The platform owner account cannot be restricted from this control." });
+    }
+    const appMetadata = target.app_metadata && typeof target.app_metadata === "object" ? target.app_metadata : {};
+    const userMetadata = target.user_metadata && typeof target.user_metadata === "object" ? target.user_metadata : {};
+    const currentStatus = String(appMetadata.account_status || userMetadata.account_status || "active").toLowerCase();
+    let nextStatus = "active";
+    let nextAppMetadata: Record<string, unknown>;
+    if (operation === "restrict") {
+      if (currentStatus !== "active") {
+        return json(409, { error: currentStatus === "restricted" ? "This account is already restricted." : "Only an active account can receive a feature restriction." });
+      }
+      nextStatus = "restricted";
+      nextAppMetadata = {
+        ...appMetadata,
+        account_status: "restricted",
+        pre_restriction_account_status: currentStatus,
+        restriction_reason: reason,
+        restricted_at: new Date().toISOString()
+      };
+    } else {
+      if (currentStatus !== "restricted") {
+        return json(409, { error: "This account does not currently have a feature restriction." });
+      }
+      const restored = String(appMetadata.pre_restriction_account_status || "active").toLowerCase();
+      nextStatus = ["active", "suspended", "deactivated"].includes(restored) ? restored : "active";
+      nextAppMetadata = { ...appMetadata, account_status: nextStatus };
+      delete (nextAppMetadata as any).pre_restriction_account_status;
+      delete (nextAppMetadata as any).restriction_reason;
+      delete (nextAppMetadata as any).restricted_at;
+    }
+    const nextUserMetadata = { ...userMetadata, account_status: nextStatus };
+    const { data: updated, error: updateError } = await admin.auth.admin.updateUserById(userId, {
+      app_metadata: nextAppMetadata,
+      user_metadata: nextUserMetadata
+    });
+    if (updateError || !updated?.user) {
+      return json(503, { error: String(updateError?.message || "Minglora could not update this account's restriction status.").slice(0, 240) });
+    }
+    const auditAction = operation === "restrict" ? "account.restrict" : "account.unrestrict";
+    const { error: auditError } = await admin.from("audit_log").insert({
+      actor_id: actorUserId,
+      action: auditAction,
+      target_type: "user",
+      target_id: userId,
+      request_id: crypto.randomUUID(),
+      metadata: { reason: reason || null, status: nextStatus }
+    });
+    return json(200, {
+      ok: true,
+      operation,
+      userId,
+      status: nextStatus,
+      auditRecorded: !auditError,
+      message: operation === "restrict" ? "The account restriction was saved." : "The account restriction was removed."
+    });
+  }
+
   if (action === "admin_users_list") {
     const actorUserId = String(input.actorUserId || "");
     if (actorUserId !== "5b998c21-86b5-4621-ab37-e0808a2657b1") {
@@ -111,7 +189,7 @@ Deno.serve(async (req: Request) => {
     }
     const search = String(input.search || "").trim().toLowerCase().slice(0, 120);
     const requestedStatus = String(input.status || "all").toLowerCase();
-    const allowedStatuses = ["all", "active", "banned", "suspended", "deactivated"];
+    const allowedStatuses = ["all", "active", "banned", "restricted", "suspended", "deactivated"];
     if (!allowedStatuses.includes(requestedStatus)) return json(400, { error: "Choose a valid account status filter." });
     const users: any[] = [];
     const perPage = 1000;
@@ -130,18 +208,19 @@ Deno.serve(async (req: Request) => {
       for (const authUser of authUsers) {
         const id = String(authUser.id || "");
         const metadata = authUser.user_metadata && typeof authUser.user_metadata === "object" ? authUser.user_metadata : {};
+        const appMetadata = authUser.app_metadata && typeof authUser.app_metadata === "object" ? authUser.app_metadata : {};
         const profile: any = profileById.get(id) || {};
         const username = String(profile.username || metadata.username || "");
         const displayName = String(profile.display_name || metadata.name || metadata.full_name || username || "Minglora member");
         const email = String(authUser.email || "");
         const bannedUntil = authUser.banned_until ? String(authUser.banned_until) : null;
         const isBanned = Boolean(bannedUntil && Date.parse(bannedUntil) > Date.now());
-        const rawAccountStatus = String(metadata.account_status || "active").toLowerCase();
+        const rawAccountStatus = String(appMetadata.account_status || metadata.account_status || "active").toLowerCase();
         const restoredStatus = rawAccountStatus === "banned"
-          ? String(metadata.pre_ban_account_status || "active").toLowerCase()
+          ? String(appMetadata.pre_ban_account_status || metadata.pre_ban_account_status || "active").toLowerCase()
           : rawAccountStatus;
         const accountStatus = isBanned ? "banned"
-          : ["suspended", "deactivated"].includes(restoredStatus) ? restoredStatus : "active";
+          : ["restricted", "suspended", "deactivated"].includes(restoredStatus) ? restoredStatus : "active";
         if (requestedStatus !== "all" && accountStatus !== requestedStatus) continue;
         const searchable = [id, email, username, displayName].join(" ").toLowerCase();
         if (search && !searchable.includes(search)) continue;
@@ -192,39 +271,34 @@ Deno.serve(async (req: Request) => {
       return json(403, { error: "The platform owner account cannot be banned from this control." });
     }
     const metadata = target.user_metadata && typeof target.user_metadata === "object" ? target.user_metadata : {};
+    const appMetadata = target.app_metadata && typeof target.app_metadata === "object" ? target.app_metadata : {};
     let attributes: Record<string, unknown>;
     let restoredAccountStatus = "active";
     if (operation === "ban") {
-      const currentStatus = String(metadata.account_status || "active").toLowerCase();
+      const currentStatus = String(appMetadata.account_status || metadata.account_status || "active").toLowerCase();
       const suppliedPreviousStatus = String(input.previousAccountStatus || "").toLowerCase();
-      const validPreviousStatuses = ["active", "suspended", "deactivated"];
-      const storedPreviousStatus = String(metadata.pre_ban_account_status || "").toLowerCase();
+      const validPreviousStatuses = ["active", "restricted", "suspended", "deactivated"];
+      const storedPreviousStatus = String(appMetadata.pre_ban_account_status || metadata.pre_ban_account_status || "").toLowerCase();
       const previousStatus = currentStatus === "banned"
         ? (validPreviousStatuses.includes(storedPreviousStatus)
             ? storedPreviousStatus
             : (validPreviousStatuses.includes(suppliedPreviousStatus) ? suppliedPreviousStatus : "active"))
-        : (currentStatus === "suspended" || currentStatus === "deactivated"
+        : (validPreviousStatuses.includes(currentStatus)
             ? currentStatus
-            : (suppliedPreviousStatus === "suspended" || suppliedPreviousStatus === "deactivated"
-                ? suppliedPreviousStatus
-                : "active"));
+            : (validPreviousStatuses.includes(suppliedPreviousStatus) ? suppliedPreviousStatus : "active"));
       attributes = {
         ban_duration: duration,
-        user_metadata: {
-          ...metadata,
-          account_status: "banned",
-          pre_ban_account_status: previousStatus
-        }
+        app_metadata: { ...appMetadata, account_status: "banned", pre_ban_account_status: previousStatus },
+        user_metadata: { ...metadata, account_status: "banned", pre_ban_account_status: previousStatus }
       };
     } else {
-      restoredAccountStatus = String(metadata.pre_ban_account_status || "active").toLowerCase();
-      if (!["active", "suspended", "deactivated"].includes(restoredAccountStatus)) restoredAccountStatus = "active";
+      restoredAccountStatus = String(appMetadata.pre_ban_account_status || metadata.pre_ban_account_status || "active").toLowerCase();
+      if (!["active", "restricted", "suspended", "deactivated"].includes(restoredAccountStatus)) restoredAccountStatus = "active";
       const nextMetadata = { ...metadata, account_status: restoredAccountStatus };
+      const nextAppMetadata = { ...appMetadata, account_status: restoredAccountStatus };
       delete (nextMetadata as any).pre_ban_account_status;
-      attributes = {
-        ban_duration: "none",
-        user_metadata: nextMetadata
-      };
+      delete (nextAppMetadata as any).pre_ban_account_status;
+      attributes = { ban_duration: "none", user_metadata: nextMetadata, app_metadata: nextAppMetadata };
     }
     const { data: updated, error: updateError } = await admin.auth.admin.updateUserById(userId, attributes as any);
     if (updateError || !updated?.user) {
@@ -274,7 +348,7 @@ Deno.serve(async (req: Request) => {
     const limit = Number.isFinite(requestedLimit) ? Math.max(1, Math.min(100, requestedLimit)) : 50;
     const search = String(input.search || "").trim().toLowerCase().slice(0, 100);
     const actionFilter = String(input.actionFilter || "all").trim().toLowerCase();
-    if (!new Set(["all","account.ban","account.unban"]).has(actionFilter)) return json(400, { error: "Choose a supported audit action filter." });
+    if (!new Set(["all","account.ban","account.unban","account.restrict","account.unrestrict"]).has(actionFilter)) return json(400, { error: "Choose a supported audit action filter." });
     let query = admin.from("audit_log").select("id,actor_id,action,target_type,target_id,metadata,created_at")
       .order("created_at", { ascending:false }).limit(search ? 500 : limit);
     if (actionFilter !== "all") query = query.eq("action", actionFilter);
