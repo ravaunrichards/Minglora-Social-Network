@@ -574,3 +574,86 @@ test('owner provider overview reads canonical assignments without exposing crede
   assert.deepEqual(context.res.payload.providerAssignments,[row]);
   assert.equal(JSON.stringify(context.res.payload).includes('sk-live'),false);
 });
+
+
+test('owner can record an AI email address and receives explicit unprovisioned status',async()=>{
+  const botId='00000000-0000-4000-8000-000000000601';
+  const order=[];
+  let emailSaved=null,identitySaved=null;
+  const context=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/emails',
+    input:{
+      identityId:botId,emailAddress:'ai.guide@minglora.example',
+      emailType:'primary',emailProvider:'example-provider',isPrimary:true
+    },
+    db:{
+      personalAiBotSettings:[{id:'global',enabled:false}],
+      personalAiBots:[{
+        id:botId,createdBy:'owner-1',displayName:'Minglora AI Guide',
+        firstName:'Minglora',lastName:'Guide',categoryId:'ai-support',
+        categoryName:'AI Support',username:'ai_minglora_guide',enabled:false,status:'disabled'
+      }]
+    },
+    persistAiIdentities:async identities=>{order.push('identity');identitySaved=identities[0];},
+    persistAiEmailIdentity:async email=>{
+      order.push('email');
+      emailSaved={
+        id:'email-record-1',...email,verificationStatus:'not_verified',
+        provisioningStatus:'not_provisioned',status:'active'
+      };
+      return emailSaved;
+    },
+    saveStore:async()=>{order.push('save');}
+  });
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,201);
+  assert.deepEqual(order,['identity','email']);
+  assert.equal(identitySaved.id,botId);
+  assert.equal(emailSaved.identityId,botId);
+  assert.equal(emailSaved.emailAddress,'ai.guide@minglora.example');
+  assert.equal(emailSaved.verificationStatus,'not_verified');
+  assert.equal(emailSaved.provisioningStatus,'not_provisioned');
+  assert.match(context.res.payload.message,/not a verified mailbox/);
+  assert.match(context.res.payload.message,/no email provider has provisioned an inbox/);
+});
+
+test('AI email API rejects verification, provisioning and credential fields from clients',async()=>{
+  const botId='00000000-0000-4000-8000-000000000602';
+  let calls=0;
+  const context=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/emails',
+    input:{
+      identityId:botId,emailAddress:'ai.guide@minglora.example',
+      verificationStatus:'verified',provisioningStatus:'provisioned',
+      password:'do-not-store',apiKey:'never-accept'
+    },
+    db:{
+      personalAiBotSettings:[{id:'global',enabled:false}],
+      personalAiBots:[{id:botId,createdBy:'owner-1',displayName:'AI Guide',categoryId:'ai-support',username:'ai_guide'}]
+    },
+    persistAiIdentities:async()=>{calls++;},
+    persistAiEmailIdentity:async()=>{calls++;}
+  });
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,400);
+  assert.match(context.res.payload.error,/invalid/);
+  assert.equal(calls,0);
+});
+
+test('AI email overview reads PostgreSQL records and preserves provisioning truth',async()=>{
+  const row={
+    id:'email-record-1',identityId:'bot-1',emailAddress:'ai.guide@minglora.example',
+    verificationStatus:'not_verified',provisioningStatus:'not_provisioned'
+  };
+  const context=makeContext({
+    listAiEmailIdentities:async options=>{
+      assert.deepEqual(options,{limit:200,offset:0});
+      return [row];
+    }
+  });
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,200);
+  assert.equal(context.res.payload.emailIdentitiesSource,'minglora_supabase_postgresql');
+  assert.deepEqual(context.res.payload.emailIdentities,[row]);
+  assert.equal(context.res.payload.emailIdentities[0].provisioningStatus,'not_provisioned');
+});
