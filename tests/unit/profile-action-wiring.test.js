@@ -190,7 +190,8 @@ test('visitor actions appear in order with Report and Block inside the More menu
   }
   assert.ok(profile.includes('class="profile-action-menu"'),'Report and Block are kept in the More menu');
   assert.ok(profile.indexOf('class="profile-actions profile-actions--primary"')<profile.indexOf('class="profile-counts"'),'The actions appear above the profile statistics');
-  for(const label of ['Message','Voice Calls','Video Calls','Report','Block'])assert.ok(profile.includes('</svg>'+label+'</button>'),'Every action keeps its complete horizontal label and icon');
+  for(const label of ['Message','Voice Calls','Video Calls'])assert.ok(profile.includes('</svg><span class="profile-action-label">'+label+'</span></button>'),'Every primary action keeps its accessible label');
+  for(const label of ['Report','Block'])assert.ok(profile.includes('</svg><span>'+label+'</span></button>'),'Every More-menu action keeps its label');
   assert.ok(profileCss.includes('flex-flow:row nowrap!important'));
   assert.ok(profileCss.includes('grid-column:1/-1!important'));
   assert.ok(profileCss.includes('grid-row:2!important'));
