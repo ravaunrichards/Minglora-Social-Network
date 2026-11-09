@@ -358,7 +358,7 @@ CREATE TABLE IF NOT EXISTS public.ai_names (
   full_name text NOT NULL CHECK (char_length(btrim(full_name)) BETWEEN 2 AND 180),
   display_name text NOT NULL CHECK (char_length(btrim(display_name)) BETWEEN 2 AND 120),
   username text NOT NULL UNIQUE CHECK (username = lower(username) AND username ~ '^ai_[a-z0-9_]{2,40}$'),
-  public_profile_url text NOT NULL UNIQUE CHECK (char_length(public_profile_url) <= 300),
+  public_profile_url text NOT NULL UNIQUE CHECK (char_length(public_profile_url) <= 300)
 );
 CREATE INDEX IF NOT EXISTS ai_names_first_last_idx ON public.ai_names (lower(last_name),lower(first_name));
 
