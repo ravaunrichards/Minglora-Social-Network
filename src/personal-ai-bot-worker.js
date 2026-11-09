@@ -43,18 +43,80 @@ async function gatewayRequest(action,extra={}) {
   throw new Error('The Minglora runtime gateway retry policy was exhausted.');
 }
 
-async function loadProviderAdapter() {
+async function loadProviderAdapterFactory() {
   const moduleName=String(process.env.MINGLORA_AI_BOT_PROVIDER_MODULE||'').trim();
-  if(!moduleName)throw new Error('MINGLORA_AI_BOT_PROVIDER_MODULE must point to a verified server-side provider adapter.');
+  if(!moduleName)return null;
   const absolutePath=path.isAbsolute(moduleName)?moduleName:path.resolve(process.cwd(),moduleName);
   const loaded=await import(pathToFileURL(absolutePath).href);
-  const adapter=typeof loaded.createProviderAdapter==='function'
-    ?await loaded.createProviderAdapter()
-    :(loaded.default||loaded.providerAdapter||loaded);
-  if(!adapter||typeof adapter.generate!=='function') {
-    throw new Error('The configured AI provider module must export a generate() method.');
+  if(typeof loaded.createProviderAdapter!=='function') {
+    throw new Error('The server-side provider module must export createProviderAdapter().');
   }
-  return adapter;
+  return loaded.createProviderAdapter;
+}
+
+async function refreshProviderHealth() {
+  const providerAdapters=new Map();
+  const runtime=await gatewayRequest('ai_provider_runtime_list',{limit:500,offset:0});
+  const assignments=Array.isArray(runtime.assignments)?runtime.assignments:[];
+  if(!assignments.length)return providerAdapters;
+
+  let createAdapter;
+  try{
+    createAdapter=await loadProviderAdapterFactory();
+  }catch{
+    for(const assignment of assignments){
+      try{await gatewayRequest('ai_provider_health_update',{assignmentId:assignment.assignmentId,healthStatus:'unavailable'});}catch{}
+    }
+    console.warn('[Minglora AI Bot Worker] Provider adapter module is not available; no assignments are executable.');
+    return providerAdapters;
+  }
+  if(!createAdapter){
+    console.warn('[Minglora AI Bot Worker] No provider adapter module configured; all assignments remain non-executable.');
+    return providerAdapters;
+  }
+
+  for(const assignment of assignments){
+    const reference=String(assignment.credentialSecretReference||'');
+    const match=reference.match(/^env:(MINGLORA_AI_PROVIDER_[A-Z0-9_]{2,80})$/);
+    const credentialName=match?.[1]||'';
+    const credential=credentialName?String(process.env[credentialName]||''):'';
+    if(!credential){
+      try{await gatewayRequest('ai_provider_health_update',{assignmentId:assignment.assignmentId,healthStatus:'unavailable'});}catch{}
+      continue;
+    }
+    try{
+      const adapter=await createAdapter({
+        provider:{
+          name:String(assignment.providerName||''),
+          identifier:String(assignment.providerIdentifier||'')
+        },
+        model:{
+          name:String(assignment.modelName||''),
+          identifier:String(assignment.modelIdentifier||''),
+          version:String(assignment.modelVersion||'')
+        },
+        credential,
+        credentialEnvironmentVariable:credentialName,
+        tools:[],
+        toolAccess:'disabled',
+        externalActionsAllowed:false
+      });
+      if(!adapter||typeof adapter.generate!=='function'||typeof adapter.healthCheck!=='function'||
+         String(adapter.providerIdentifier||'')!==String(assignment.providerIdentifier||'')||
+         String(adapter.modelIdentifier||'')!==String(assignment.modelIdentifier||'')){
+        throw new Error('Provider adapter contract does not match the assigned provider and model.');
+      }
+      const health=await adapter.healthCheck({signal:AbortSignal.timeout(15000)});
+      if(health!==true&&health?.ok!==true)throw new Error('Provider health check did not confirm availability.');
+      await gatewayRequest('ai_provider_health_update',{
+        assignmentId:assignment.assignmentId,healthStatus:'healthy'
+      });
+      providerAdapters.set(String(assignment.assignmentId),adapter);
+    }catch{
+      try{await gatewayRequest('ai_provider_health_update',{assignmentId:assignment.assignmentId,healthStatus:'error'});}catch{}
+    }
+  }
+  return providerAdapters;
 }
 
 async function main() {
@@ -66,11 +128,12 @@ async function main() {
     throw new Error('The AI task worker requires PERSISTENCE_DRIVER=supabase.');
   }
 
-  const providerAdapter=await loadProviderAdapter();
+  let providerAdapters=await refreshProviderHealth();
   const workerId=String(process.env.MINGLORA_AI_BOT_WORKER_ID||('minglora-ai-'+os.hostname()+':'+process.pid)).slice(0,80);
   const leaseSeconds=Math.min(300,Math.max(30,Number(process.env.MINGLORA_AI_BOT_LEASE_SECONDS||180)));
   const worker=createPersonalAiBotWorker({
-    workerId,leaseSeconds,providerAdapter,
+    workerId,leaseSeconds,
+    resolveProviderAdapter:async task=>providerAdapters.get(String(task.providerAssignmentId))||null,
     claimTasks:async args=>{
       const result=await gatewayRequest('ai_bot_task_claim',args);
       return result.tasks||[];
@@ -101,8 +164,13 @@ async function main() {
   process.once('SIGTERM',stop);
 
   const idlePollMs=Math.min(30000,Math.max(1000,Number(process.env.MINGLORA_AI_BOT_POLL_MS||2500)));
-  console.info('[Minglora AI Bot Worker] Started in draft-only mode.',{workerId,leaseSeconds});
+  let nextProviderHealthCheck=Date.now()+5*60*1000;
+  console.info('[Minglora AI Bot Worker] Started in draft-only mode.',{workerId,leaseSeconds,healthyProviderAssignments:providerAdapters.size});
   while(!stopping){
+    if(Date.now()>=nextProviderHealthCheck){
+      providerAdapters=await refreshProviderHealth();
+      nextProviderHealthCheck=Date.now()+5*60*1000;
+    }
     const result=await worker.runOnce();
     if(result.status==='failed'||result.status==='lease_invalid'||result.status==='lease_lost'){
       console.warn('[Minglora AI Bot Worker] Task attempt did not complete.',{
