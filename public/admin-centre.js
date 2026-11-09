@@ -230,6 +230,10 @@
           <a href="#moderator-support-workspace">Support inbox</a>
         </div>` : ''}
         <div class="admin-centre-nav-group">
+          <span class="admin-centre-nav-heading">AI &amp; automation</span>
+          <a href="/personal-ai-bots.html">Personal AI Bots Network</a>
+        </div>
+        <div class="admin-centre-nav-group">
           <span class="admin-centre-nav-heading">Administration</span>
           <a href="#admin-centre-settings">Admin settings</a>
         </div>
