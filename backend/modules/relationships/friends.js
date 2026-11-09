@@ -1,6 +1,7 @@
 export const FRIEND_PREFERENCE_DEFAULTS = Object.freeze({
   isFavorite: false,
   isCloseFriend: false,
+  isRestricted: false,
   isMutedPosts: false,
   isMutedStories: false,
   snoozedUntil: null
