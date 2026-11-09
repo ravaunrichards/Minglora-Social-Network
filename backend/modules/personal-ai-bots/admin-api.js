@@ -9,6 +9,7 @@ import {
   queuePersonalAiBotInstruction,
   approvePersonalAiBotTask,
   cancelPersonalAiBotTask,
+  setPersonalAiBotNetworkSettings,
   PERSONAL_AI_BOT_CATEGORIES
 } from './personal-ai-bots-service.js';
 
@@ -50,6 +51,7 @@ export async function handlePersonalAiBotsAdminApi(context) {
     }
     if(method==='PUT'&&path===root+'/network'){
       const network=setNetwork(input||{});
+      await saveStore();
       return (json(res,200,{ok:true,network}),true);
     }
     const botMatch=path.match(/^\/api\/admin\/personal-ai-bots\/bots\/([0-9a-f-]{36})$/i);
@@ -62,7 +64,8 @@ export async function handlePersonalAiBotsAdminApi(context) {
     if(instructionMatch&&method==='POST'){
       const bot= db.personalAiBots.find(item=>item.id===instructionMatch[1]);
       if(!bot)return (json(res,404,{error:'Bot not found.'}),true);
-      if(!bot.enabled||bot.status!=='enabled')return (json(res,409,{error:'Enable this bot before assigning an instruction. The network master switch must also be enabled before any future execution.'}),true);
+      const network=db.personalAiBotSettings.find(item=>item.id==='global');
+      if(!network?.enabled||!bot.enabled||bot.status!=='enabled')return (json(res,409,{error:'Enable the network and this bot before assigning an instruction.'}),true);
       const task=queuePersonalAiBotInstruction(db,instructionMatch[1],input||{},user.id,stamp,uid);
       await saveStore();
       return (json(res,201,{ok:true,task,message:'Instruction saved for administrator approval. No bot action has been executed.'}),true);
