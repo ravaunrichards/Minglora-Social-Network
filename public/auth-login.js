@@ -208,6 +208,93 @@
     if (input?.name === 'email') showError('Enter the email address registered with Minglora.');
     else if (input?.name === 'password') showError('Enter your Minglora password.');
   }, true);
+
+  const oauthErrorMessages = {
+    provider_unavailable: 'Social sign-in is temporarily unavailable. Use your email and password or try again later.',
+    provider_not_enabled: 'That social sign-in method is not enabled in Minglora yet.',
+    invalid_or_expired: 'Your social sign-in session expired or could not be verified. Please try again.',
+    provider_cancelled: 'Social sign-in was cancelled. You can try again.',
+    account_restricted: 'This Minglora account is restricted. Contact support to appeal.',
+    callback_failed: 'Minglora could not complete social sign-in. Please try again.'
+  };
+  const pageUrl = new URL(window.location.href);
+  const oauthError = pageUrl.searchParams.get('oauth_error');
+  if (oauthError) {
+    showError(oauthErrorMessages[oauthError] || oauthErrorMessages.callback_failed);
+    pageUrl.searchParams.delete('oauth_error');
+    window.history.replaceState(null, '', pageUrl.pathname + pageUrl.search + pageUrl.hash);
+  }
+
+  const providerSection = document.querySelector('#auth-social-signin');
+  const providerList = document.querySelector('#auth-social-providers');
+  const providerNote = document.querySelector('#auth-social-note');
+  const loadSocialProviders = async () => {
+    if (!providerSection || !providerList) return;
+    try {
+      const response = await fetch('/api/auth/providers', {
+        method: 'GET',
+        credentials: 'same-origin',
+        cache: 'no-store',
+        headers: { Accept: 'application/json' }
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !Array.isArray(data.providers)) return;
+      const providers = data.providers.filter(provider =>
+        provider &&
+        /^[a-z0-9_]+$/.test(String(provider.id || '')) &&
+        /^\\/auth\\/oauth\\/[a-z0-9_]+$/.test(String(provider.href || '')) &&
+        String(provider.label || '').length <= 60
+      );
+      if (!providers.length) return;
+      providerList.replaceChildren();
+      providers.forEach(provider => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'auth-social-provider';
+        button.dataset.oauthHref = provider.href;
+        button.setAttribute('aria-label', 'Continue with ' + provider.label);
+        const mark = document.createElement('span');
+        mark.className = 'auth-social-provider-mark';
+        mark.setAttribute('aria-hidden', 'true');
+        mark.textContent = provider.label.slice(0, 1);
+        const label = document.createElement('span');
+        label.className = 'auth-social-provider-label';
+        label.textContent = provider.label;
+        button.append(mark, label);
+        button.addEventListener('click', () => {
+          if (!/^\\/auth\\/oauth\\/[a-z0-9_]+$/.test(button.dataset.oauthHref || '')) return;
+          button.disabled = true;
+          button.setAttribute('aria-busy', 'true');
+          if (providerNote) providerNote.textContent = 'Connecting securely to ' + provider.label + '…';
+          window.location.assign(button.dataset.oauthHref);
+        });
+        providerList.append(button);
+      });
+      providerSection.hidden = providerList.childElementCount === 0;
+    } catch {
+      // Password, registration and email-link sign-in remain available when
+      // the social-provider status endpoint is temporarily unreachable.
+    }
+  };
+  void loadSocialProviders();
+
+  const pendingOAuthMfa = pageUrl.searchParams.get('oauth-mfa');
+  if (pendingOAuthMfa && /^[a-zA-Z0-9_-]{8,128}$/.test(pendingOAuthMfa)) {
+    pageUrl.searchParams.delete('oauth-mfa');
+    window.history.replaceState(null, '', pageUrl.pathname + pageUrl.search + pageUrl.hash);
+    void (async () => {
+      const verified = await requestMfa(pendingOAuthMfa);
+      if (!verified) {
+        showError('Sign-in verification was closed. Start social sign-in again.');
+        return;
+      }
+      try {
+        await enterMingloraSession(verified.user);
+      } catch (error) {
+        showError(error.message || 'Minglora could not finish your social sign-in.');
+      }
+    })();
+  }
 })();
 
 
