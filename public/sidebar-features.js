@@ -4,6 +4,51 @@
 
   const list = document.getElementById('left-rail-feature-list');
   const toggle = document.getElementById('left-rail-see-toggle');
+  const adminCentreLink = document.getElementById('admin-centre-sidebar-link');
+  let adminAccessCheck = 0;
+
+  const hideAdminCentre = () => {
+    adminAccessCheck += 1;
+    if (!adminCentreLink) return;
+    adminCentreLink.hidden = true;
+    adminCentreLink.classList.add('hidden');
+    adminCentreLink.setAttribute('aria-hidden', 'true');
+  };
+
+  const refreshAdminCentreVisibility = async () => {
+    if (!adminCentreLink) return;
+    const check = ++adminAccessCheck;
+    hideAdminCentreLinkOnly();
+    try {
+      const response = await fetch('/api/admin/access', {
+        credentials: 'same-origin',
+        cache: 'no-store',
+        headers: { Accept: 'application/json' }
+      });
+      const access = await response.json().catch(() => ({}));
+      if (check !== adminAccessCheck) return;
+      const isDesignatedAdmin = response.ok &&
+        (access.canAccess === true || access.setupRequired === true);
+      adminCentreLink.hidden = !isDesignatedAdmin;
+      adminCentreLink.classList.toggle('hidden', !isDesignatedAdmin);
+      adminCentreLink.setAttribute('aria-hidden', String(!isDesignatedAdmin));
+    } catch {
+      if (check === adminAccessCheck) hideAdminCentreLinkOnly();
+    }
+  };
+
+  function hideAdminCentreLinkOnly() {
+    if (!adminCentreLink) return;
+    adminCentreLink.hidden = true;
+    adminCentreLink.classList.add('hidden');
+    adminCentreLink.setAttribute('aria-hidden', 'true');
+  }
+
+  window.addEventListener('minglora:session-ready', refreshAdminCentreVisibility);
+  window.addEventListener('minglora:session-ended', hideAdminCentre);
+  if (document.getElementById('app') && !document.getElementById('app').classList.contains('hidden')) {
+    void refreshAdminCentreVisibility();
+  }
 
   if (list && toggle && toggle.dataset.bound !== 'true') {
     toggle.dataset.bound = 'true';

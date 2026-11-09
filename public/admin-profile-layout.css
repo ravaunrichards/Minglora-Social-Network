@@ -68,24 +68,6 @@
 }
 .profile-header-card--viewer .profile-info--with-thought .profile-counts{grid-row:4!important}
 
-/* Keep the Admin Centre as a profile feature tab, not a separate header shortcut. */
-.profile-tabs .profile-admin-centre-tab{
-  display:inline-flex;
-  align-items:center;
-  gap:7px;
-  font-weight:820;
-}
-.profile-tabs .profile-admin-centre-tab::before{
-  content:"";
-  display:inline-block;
-  width:7px;
-  height:7px;
-  flex:0 0 7px;
-  border-radius:50%;
-  background:var(--blue);
-  box-shadow:0 0 0 3px color-mix(in srgb,var(--blue) 12%,transparent);
-}
-.profile-tabs .profile-admin-centre-tab:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
 .profile-story-edit-modal .modal-body>p{line-height:1.5}
 .profile-story-edit-preview{
   display:grid;
