@@ -60,8 +60,8 @@ test("partial member edits preserve and disclose the server's partial-update res
 test("member contact and location fields respect live profile constraints", () => {
   assert.ok(admin.includes('id="admin-user-edit-country" name="country" maxlength="100"'));
   assert.ok(admin.includes('id="admin-user-edit-parish" name="parish" maxlength="100"'));
-  assert.ok(runtime.includes('if (contactPhone && !/^\\\\+[1-9]\\\\d{7,14}$/.test(contactPhone))'));
-  assert.ok(runtime.includes('if (value && !/^\\\\+[1-9]\\\\d{7,14}$/.test(value))'));
+  assert.ok(runtime.includes('if (contactPhone && !/^\\+[1-9]\\d{7,14}$/.test(contactPhone))'));
+  assert.ok(runtime.includes('if (value && !/^\\+[1-9]\\d{7,14}$/.test(value))'));
   assert.ok(runtime.includes('["country", "county", "parish", "city"].includes(field) ? 100'));
   assert.ok(runtime.includes('["gender", "relationshipStatus"].includes(field) ? 80'));
 });
