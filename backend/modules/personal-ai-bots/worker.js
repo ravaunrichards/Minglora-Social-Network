@@ -48,6 +48,7 @@ export function createPersonalAiBotWorker({
   completeTask,
   failTask,
   providerAdapter,
+  resolveProviderAdapter,
   leaseSeconds = 180,
   logger = console
 }) {
@@ -65,7 +66,8 @@ export function createPersonalAiBotWorker({
 
   async function runOnce() {
     if (stopped) return { status: 'stopped', claimed: 0 };
-    if (!providerAdapter || typeof providerAdapter.generate !== 'function') {
+    if ((!providerAdapter || typeof providerAdapter.generate !== 'function') &&
+        typeof resolveProviderAdapter !== 'function') {
       return { status: 'disabled', reason: 'provider_adapter_not_configured', claimed: 0 };
     }
     if (running) return { status: 'busy', claimed: 0 };
@@ -96,6 +98,19 @@ export function createPersonalAiBotWorker({
         return { status: 'policy_blocked', claimed: 1 };
       }
 
+      const adapter = typeof resolveProviderAdapter === 'function'
+        ? await resolveProviderAdapter(task)
+        : providerAdapter;
+      if (!adapter || typeof adapter.generate !== 'function' ||
+          !task.providerAssignmentId ||
+          String(adapter.providerIdentifier || '') !== String(task.providerIdentifier || '') ||
+          String(adapter.modelIdentifier || '') !== String(task.modelIdentifier || '')) {
+        throw Object.assign(new Error('No verified provider adapter matches the claimed AI identity model assignment.'), {
+          code: 'AI_PROVIDER_ASSIGNMENT_UNAVAILABLE',
+          retryable: false
+        });
+      }
+
       const heartbeatOk = await heartbeatTask({
         ...leasedTask,
         workerId: id,
@@ -103,7 +118,7 @@ export function createPersonalAiBotWorker({
       });
       if (heartbeatOk !== true) return { status: 'lease_lost', claimed: 1 };
 
-      const generated = await providerAdapter.generate({
+      const generated = await adapter.generate({
         task: {
           id: String(task.id),
           botId: String(task.botId || ''),
@@ -118,7 +133,7 @@ export function createPersonalAiBotWorker({
       }, {
         signal: AbortSignal.timeout(90000)
       });
-      const result = normalizeProviderOutput(generated, providerAdapter);
+      const result = normalizeProviderOutput(generated, adapter);
       const completed = await completeTask({
         ...leasedTask,
         workerId: id,
