@@ -592,8 +592,8 @@ This remains a recorded advisor warning requiring a separate MFA/security review
 - **Assigned task:** Admin Centre member management, service connections and responsive no-overlap layout, PR #203
 - **Branch:** `feat/minglora-admin-user-and-service-centre-20261109`
 - **Tested implementation head:** `a7747b7cfcffcc56fc9c7688e8d6f0de0272e9b2`
-- **PR:** open, draft; 101 commits; 15 changed files; GitHub reports `mergeable=false`.
-- **Compared with main `2f80e9d997b43e5da6373c385d6ce153ff908e67`:** 101 commits ahead and 1 behind. The PR remains divergent/dirty. No merge or rebase was performed.
+- **PR:** open, draft; 15 changed files; GitHub reports `mergeable=false`.
+- **Branch/main status:** PR #203 remains divergent/dirty against `main`; its overlapping `src/server.js`, `public/admin-centre.html` and `public/sw.js` changes remain unreconciled. No merge or rebase was performed.
 - **Previous verified completion:** 75%.
 - **Current verified completion:** 76%.
 - **Progress since last checkpoint:** +1 percentage point, credited only to passing responsive-layout regression coverage. This does not include browser screenshot/viewport acceptance or any hosted/production operation.
