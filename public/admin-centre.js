@@ -205,7 +205,7 @@
         <div class="admin-centre-nav-group">
           <span class="admin-centre-nav-heading">Dashboard</span>
           <a href="#admin-control-centre">Overview</a>
-          ${unlocked ? `<a href="#admin-internal-operations">Internal operations</a><a href="#admin-platform-overview">Platform overview</a>` : ''}
+          ${unlocked ? `<a href="#admin-internal-operations">Internal operations</a><a href="#admin-platform-overview">Platform overview</a><a href="#admin-service-connections">Service connections</a>` : ''}
         </div>
         ${unlocked ? `
         <div class="admin-centre-nav-group">
@@ -264,6 +264,18 @@
           </div>
           <p class="admin-platform-overview-footnote">This inventory reports record counts only. It does not expose private message contents, passwords, authentication tokens, media URLs or payment credentials. Moderation, support and financial details remain in their dedicated protected workspaces.</p>
         </section>
+        <section class="admin-service-connections admin-control-centre-section" id="admin-service-connections" aria-labelledby="admin-service-connections-title">
+          <div class="admin-control-centre-section-heading">
+            <div><h3 id="admin-service-connections-title">Minglora service connections</h3>
+              <p>Verified provider status and direct dashboards for the websites and APIs used by Minglora. Credentials remain on the server.</p></div>
+            <button type="button" class="secondary" id="admin-service-connections-refresh">Refresh service checks</button>
+          </div>
+          <p id="admin-service-connections-status" class="admin-user-management-status" role="status" aria-live="polite">Checking service connections…</p>
+          <div id="admin-service-connections-grid" class="admin-service-connections-grid" aria-live="polite">
+            <p class="admin-platform-inventory-empty">Connecting to Minglora's service registry…</p>
+          </div>
+          <p id="admin-service-connections-runtime" class="admin-platform-overview-footnote">Provider status is checked by the Minglora server. “Configured” means a setting is present; it does not necessarily mean the provider was contacted.</p>
+        </section>
         <section class="admin-audit-log admin-control-centre-section" id="admin-audit-log" aria-labelledby="admin-audit-log-title">
           <div class="admin-control-centre-section-heading"><div><h3 id="admin-audit-log-title">Administrator audit log</h3>
             <p>Review account bans and restores with the acting administrator, affected account, reason, duration and session-revocation outcome.</p></div>
@@ -293,6 +305,27 @@
               <p>Search Minglora accounts by name, @username, email or user ID. Select one account to review its status and manage access.</p></div>
             <span class="admin-control-centre-status">Owner-only</span>
           </div>
+          <details class="admin-user-create-panel">
+            <summary>Create a member account</summary>
+            <form id="admin-user-create-form" class="admin-user-create-form">
+              <label for="admin-user-create-name">Display name</label>
+              <input id="admin-user-create-name" name="displayName" maxlength="80" autocomplete="name" required>
+              <label for="admin-user-create-username">Username</label>
+              <input id="admin-user-create-username" name="username" maxlength="30" autocomplete="off" placeholder="username">
+              <label for="admin-user-create-email">Email address</label>
+              <input id="admin-user-create-email" name="email" type="email" maxlength="254" autocomplete="email">
+              <label for="admin-user-create-phone">Phone (international format)</label>
+              <input id="admin-user-create-phone" name="phone" type="tel" maxlength="16" placeholder="+18765550123" autocomplete="tel">
+              <label for="admin-user-create-contact-phone">Contact phone (optional)</label>
+              <input id="admin-user-create-contact-phone" name="contactPhone" type="tel" maxlength="40">
+              <label for="admin-user-create-password">Temporary password</label>
+              <input id="admin-user-create-password" name="password" type="password" minlength="8" maxlength="128" autocomplete="new-password" required>
+              <label class="admin-user-inline-check"><input type="checkbox" name="emailConfirmed" checked> Confirm email immediately</label>
+              <label class="admin-user-inline-check"><input type="checkbox" name="phoneConfirmed"> Confirm phone immediately</label>
+              <button type="submit" class="primary" id="admin-user-create-submit">Create account</button>
+              <p id="admin-user-create-status" role="status" aria-live="polite"></p>
+            </form>
+          </details>
           <div class="admin-user-management-search">
             <div class="admin-user-search-field">
               <label for="admin-user-search">Find any member account</label>
@@ -314,11 +347,52 @@
           <div id="admin-user-management-results" class="admin-user-management-results" aria-live="polite">
             <p class="settings-empty">Loading member accounts…</p>
           </div>
+          <div class="admin-user-pagination" aria-label="Member account pages">
+            <button type="button" class="secondary" id="admin-user-page-previous" disabled>Previous</button>
+            <span id="admin-user-page-label" aria-live="polite">Page 1</span>
+            <button type="button" class="secondary" id="admin-user-page-next" disabled>Next</button>
+          </div>
           <section id="admin-user-selection" class="admin-user-selection" aria-labelledby="admin-user-selection-title" hidden>
             <div class="admin-user-selection-heading">
               <div><h4 id="admin-user-selection-title">Selected account</h4>
                 <div id="admin-user-selected-summary"></div></div>
               <span id="admin-user-selected-status" class="admin-user-status">Select an account</span>
+            </div>
+            <div class="admin-user-details-panel">
+              <div class="admin-user-detail-meta" id="admin-user-detail-meta">Loading Supabase Auth account details…</div>
+              <form id="admin-user-edit-form" class="admin-user-edit-form">
+                <div class="admin-user-edit-grid">
+                  <div><label for="admin-user-edit-email">Login email</label><input id="admin-user-edit-email" name="email" type="email" maxlength="254" autocomplete="off"></div>
+                  <div><label for="admin-user-edit-phone">Auth phone (+country code)</label><input id="admin-user-edit-phone" name="phone" type="tel" maxlength="16" autocomplete="off" placeholder="+18765550123"></div>
+                  <div><label for="admin-user-edit-name">Display name</label><input id="admin-user-edit-name" name="displayName" maxlength="80"></div>
+                  <div><label for="admin-user-edit-username">Username</label><input id="admin-user-edit-username" name="username" maxlength="30"></div>
+                  <div><label for="admin-user-edit-contact-phone">Profile contact phone</label><input id="admin-user-edit-contact-phone" name="contactPhone" maxlength="40"></div>
+                  <div><label for="admin-user-edit-location">Location</label><input id="admin-user-edit-location" name="location" maxlength="160"></div>
+                  <div><label for="admin-user-edit-country">Country</label><input id="admin-user-edit-country" name="country" maxlength="120"></div>
+                  <div><label for="admin-user-edit-parish">Parish / State</label><input id="admin-user-edit-parish" name="parish" maxlength="120"></div>
+                </div>
+                <label for="admin-user-edit-bio">Bio</label>
+                <textarea id="admin-user-edit-bio" name="bio" rows="3" maxlength="5000"></textarea>
+                <div class="admin-user-confirmation-controls">
+                  <label class="admin-user-inline-check"><input type="checkbox" name="emailConfirmed"> Confirm email now</label>
+                  <label class="admin-user-inline-check"><input type="checkbox" name="phoneConfirmed"> Confirm phone now</label>
+                </div>
+                <label for="admin-user-edit-password">Set a new password (leave blank to keep current)</label>
+                <input id="admin-user-edit-password" name="password" type="password" minlength="8" maxlength="128" autocomplete="new-password">
+                <button type="submit" class="primary" id="admin-user-edit-submit">Save account changes</button>
+              </form>
+              <div class="admin-user-account-actions">
+                <button type="button" class="secondary" id="admin-user-revoke-sessions">Sign out all member sessions</button>
+              </div>
+              <details class="admin-user-delete-panel">
+                <summary>Delete this account permanently</summary>
+                <p>Irreversible: this removes the Supabase Auth identity. Related records may be subject to database foreign-key rules. Existing access JWTs may remain valid until expiry.</p>
+                <label for="admin-user-delete-confirm">Type this exact account ID to confirm</label>
+                <input id="admin-user-delete-confirm" autocomplete="off" spellcheck="false">
+                <label for="admin-user-delete-reason">Reason for deletion</label>
+                <textarea id="admin-user-delete-reason" rows="2" maxlength="500" placeholder="Record the account deletion reason"></textarea>
+                <button type="button" class="admin-user-danger-button" id="admin-user-delete-submit">Permanently delete account</button>
+              </details>
             </div>
             <div class="admin-user-ban-controls">
               <form id="admin-user-ban-form">
@@ -1286,6 +1360,7 @@
     loadAdminSecuritySettings(panel);
     if (unlocked) {
       initializeAdminUserManagement(panel);
+      initializeAdminServiceConnections(panel);
       initializeAdminAuditLog(panel);
       loadAdminModerationQueue(panel);
       loadAdminSupportInbox(panel);
