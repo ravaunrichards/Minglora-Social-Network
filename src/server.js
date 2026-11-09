@@ -988,8 +988,9 @@ async function publicPost(p,viewerId) {
     try{return {id:asset.id,mimeType:asset.mimeType,mediaType:asset.mediaType,url:await resolveAssetUrl(asset),byteSize:asset.byteSize};}catch{return null;}
   }));
   const {imageUrl,...cleanPost}=p;
+  const savedRecord=(db.savedPosts||[]).find(saved=>saved.userId===viewerId&&saved.postId===p.id);
   return {...cleanPost,media:media.filter(item=>item?.url),soundtrack:await publicSoundtrack(p.soundtrack,viewerId),author:safeUser(author),taggedUsers:(p.taggedUserIds||[]).map(id=>db.users.find(member=>member.id===id)).filter(Boolean).map(member=>safeUser(member,viewerId)),reactions:p.reactions||{},reactionCount:Object.values(p.reactions||{}).length,myReaction:(p.reactions||{})[viewerId]||null,
-    isSaved:(db.savedPosts||[]).some(saved=>saved.userId===viewerId&&saved.postId===p.id),
+    isSaved:Boolean(savedRecord),isFavorite:Boolean(savedRecord?.isFavorite),
     isWatchLater:(db.savedPosts||[]).some(saved=>saved.userId===viewerId&&saved.postId===p.id&&saved.readLater===true),
     comments:(p.comments||[]).map(c=>({...c,author:safeUser(db.users.find(u=>u.id===c.userId))}))};
 }
@@ -4822,8 +4823,48 @@ async function route(req, res) {
         if(method==='DELETE'&&exists)db.savedPosts=db.savedPosts.filter(saved=>!(saved.userId===user.id&&saved.postId===post.id));
         await saveStore();return json(res,200,{saved:method==='POST'});
       }
+
+      m=p.match(/^\/api\/posts\/([^/]+)\/pin$/);
+      if(method==='POST'&&m){
+        const post=(db.posts||[]).find(item=>item.id===m[1]);
+        if(!post||post.status==='hidden'||post.archivedAt||blockedBetween(user.id,post.userId))return json(res,404,{error:'Post not found.'});
+        if(post.userId!==user.id)return json(res,403,{error:'Only the author can pin a post to this profile.'});
+        if(typeof input.pinned!=='boolean')return json(res,400,{error:'Choose whether to pin or unpin this post.'});
+        if(input.pinned){
+          (db.posts||[]).filter(item=>item.userId===user.id&&item.id!==post.id).forEach(item=>{delete item.isPinned;delete item.pinnedAt;});
+          post.isPinned=true;
+          post.pinnedAt=now();
+        }else{
+          delete post.isPinned;
+          delete post.pinnedAt;
+        }
+        await saveStore();
+        return json(res,200,{pinned:Boolean(post.isPinned),postId:post.id});
+      }
+      m=p.match(/^\/api\/posts\/([^/]+)\/favorite$/);
+      if((method==='POST'||method==='DELETE')&&m){
+        const post=(db.posts||[]).find(item=>item.id===m[1]);
+        if(!post||post.status==='hidden'||post.archivedAt||blockedBetween(user.id,post.userId)||!canViewProfile(user.id,db.users.find(member=>member.id===post.userId))||!canViewProfileAudience(user.id,post.userId,post.audience||'public'))return json(res,404,{error:'Post not found.'});
+        let saved=(db.savedPosts||[]).find(item=>item.userId===user.id&&item.postId===post.id);
+        if(method==='POST'){
+          if(!saved){
+            db.savedPosts ||= [];
+            saved={id:uid(),userId:user.id,postId:post.id,createdAt:now(),collectionId:null,note:'',tags:[],isFavorite:false,readLater:false};
+            db.savedPosts.push(saved);
+          }
+          saved.isFavorite=true;
+          saved.updatedAt=now();
+        }else if(saved){
+          saved.isFavorite=false;
+          saved.updatedAt=now();
+          const hasOtherSavedState=Boolean(saved.collectionId||String(saved.note||'').trim()||(Array.isArray(saved.tags)&&saved.tags.length)||saved.readLater);
+          if(!hasOtherSavedState)db.savedPosts=db.savedPosts.filter(item=>item.id!==saved.id);
+        }
+        await saveStore();
+        return json(res,200,{favorite:method==='POST',postId:post.id});
+      }
       m=p.match(/^\/api\/posts\/([^/]+)\/reactions$/);
-      if(method==='POST'&&m){const post=db.posts.find(x=>x.id===m[1]);if(!post||post.status==='hidden'||post.archivedAt||blockedBetween(user.id,post.userId))return json(res,404,{error:'Post not found.'});post.reactions ||= {};const reaction=String(input.reaction||'like');if(!['like','love','care','haha','wow','sad','angry'].includes(reaction))return json(res,400,{error:'Unsupported reaction.'});if(post.reactions[user.id]===reaction)delete post.reactions[user.id];else post.reactions[user.id]=reaction;if(post.userId!==user.id)notify(post.userId,user.id,'reaction',`${user.name} reacted to your post.`);await saveStore();return json(res,200,{post:await publicPost(post,user.id)});}
+      if(method==='POST'&&m){const post=db.posts.find(x=>x.id===m[1]);if(!post||post.status==='hidden'||post.archivedAt||blockedBetween(user.id,post.userId))return json(res,404,{error:'Post not found.'});post.reactions ||= {};const reaction=String(input.reaction||'like');if(!['like','love','care','haha','wow','sad','angry'].includes(reaction))return json(res,400,{error:'Unsupported reaction.'});const previousReaction=post.reactions[user.id]||null;if(previousReaction===reaction)delete post.reactions[user.id];else post.reactions[user.id]=reaction;if(post.userId!==user.id&&post.reactions[user.id]&&previousReaction!==reaction)notify(post.userId,user.id,'reaction',`${user.name} reacted to your post.`);await saveStore();return json(res,200,{post:await publicPost(post,user.id)});}
       m=p.match(/^\/api\/posts\/([^/]+)\/comments\/([^/]+)$/);
       if(method==='DELETE'&&m){
         const post=db.posts.find(x=>x.id===m[1]);
@@ -5377,7 +5418,11 @@ async function route(req, res) {
         const profileInsights=target.id===user.id
           ?getProfileViewStats({views:db.profileViews.filter(view=>view.historyEligible===true),presence:db.profileViewPresence,targetUserId:target.id})
           :undefined;
-        const profilePosts=await Promise.all(db.posts.filter(post=>post.status!=='hidden'&&!post.archivedAt&&post.userId===target.id&&!blockedBetween(user.id,post.userId)&&canViewProfileAudience(user.id,post.userId,post.audience||'public')&&!friendPostsMuted(user.id,post.userId)).map(post=>publicPost(post,user.id)));
+        const ownedProfilePosts=(db.posts||[]).filter(post=>post.status!=='hidden'&&!post.archivedAt&&post.userId===target.id&&!blockedBetween(user.id,post.userId)&&canViewProfileAudience(user.id,post.userId,post.audience||'public')&&!friendPostsMuted(user.id,post.userId)).sort((first,second)=>(Number(Boolean(second.isPinned))-Number(Boolean(first.isPinned)))||new Date(second.createdAt)-new Date(first.createdAt));
+        const profilePosts=await Promise.all(ownedProfilePosts.map(post=>publicPost(post,user.id)));
+        const taggedSourcePosts=(db.posts||[]).filter(post=>post.userId!==target.id&&Array.isArray(post.taggedUserIds)&&post.taggedUserIds.includes(target.id)&&post.status!=='hidden'&&!post.archivedAt&&!blockedBetween(user.id,post.userId)&&!blockedBetween(target.id,post.userId)&&canViewProfile(user.id,db.users.find(member=>member.id===post.userId))&&canViewProfile(target.id,db.users.find(member=>member.id===post.userId))&&canViewProfileAudience(user.id,post.userId,post.audience||'public')&&canViewProfileAudience(target.id,post.userId,post.audience||'public')&&!friendPostsMuted(user.id,post.userId)&&!friendPostsMuted(target.id,post.userId));
+        const taggedProfilePosts=await Promise.all(taggedSourcePosts.map(post=>publicPost(post,user.id)));
+        const timelinePosts=[...profilePosts.map(post=>({...post,isPinnedForProfile:Boolean(post.isPinned)})),...taggedProfilePosts.map(post=>({...post,isTaggedPost:true,isPinnedForProfile:false}))].sort((first,second)=>(Number(Boolean(second.isPinnedForProfile))-Number(Boolean(first.isPinnedForProfile)))||new Date(second.createdAt)-new Date(first.createdAt));
         const viewerIsFriend=isFriend(user.id,target.id);
         const profileAlbums=await Promise.all((db.albums||[]).filter(album=>album.ownerId===target.id&&(user.id===target.id||album.visibility==='public'||(album.visibility==='friends'&&viewerIsFriend))).map(async album=>{
           const ordered=[...(album.items||[])].sort((a,b)=>new Date(a.addedAt||0)-new Date(b.addedAt||0));
@@ -5405,6 +5450,7 @@ async function route(req, res) {
         return json(res,200,{
           user:safeUser(target,user.id),
           posts:profilePosts,
+          timelinePosts,
           profileSections:readProfileSections(target.id),
           albums:profileAlbums,
           photos:profilePhotos,
