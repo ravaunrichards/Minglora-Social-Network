@@ -1532,7 +1532,12 @@
       if (status) status.textContent = (result.sessionRevoked ? 'Supabase refresh-token sessions were globally revoked. ' : 'No provider access token was available for global refresh-token revocation. ') +
         Number(result.appSessionsRevoked || 0) + ' Minglora app session(s) closed.' + (result.auditRecorded === false ? ' Warning: the administrator audit entry could not be confirmed.' : '');
     } catch (error) {
-      if (status) status.textContent = error.message || 'Member sessions could not be revoked.';
+      const auditWarning = error?.payload?.auditRecorded === false
+        ? ' Warning: the failed session-revocation audit entry could not be confirmed.'
+        : error?.payload?.auditRecorded === true
+          ? ' The failed session-revocation attempt was recorded in the administrator audit log.'
+          : '';
+      if (status) status.textContent = (error.message || 'Member sessions could not be revoked.') + auditWarning;
     } finally { button.disabled = false; }
   }
 
