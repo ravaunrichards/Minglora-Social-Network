@@ -1991,12 +1991,33 @@ async function route(req, res) {
           try{await paypalToken();paypalAuthenticated=true;}
           catch(error){paypalError=String(error?.message||'PayPal authentication failed.').slice(0,160);}
         }
-        const tenorConfigured=Boolean(String(process.env.TENOR_API_KEY||'').trim());
+        const tenorKey=String(process.env.TENOR_API_KEY||'').trim();
+        const tenorConfigured=Boolean(tenorKey);
         const pushConfigured=Boolean(
           String(process.env.WEB_PUSH_PUBLIC_KEY||'').trim()&&
           String(process.env.WEB_PUSH_PRIVATE_KEY||'').trim()&&
           String(process.env.WEB_PUSH_SUBJECT||'').trim()
         );
+        const checkExternal=async(target,accept='application/json')=>{
+          try{
+            const response=await fetch(target,{headers:{Accept:accept},signal:AbortSignal.timeout(4500)});
+            return response.ok;
+          }catch{return false;}
+        };
+        const [githubResponse,tenorConnected,sixConnected,frankfurterConnected]=await Promise.all([
+          (async()=>{try{
+            const response=await fetch('https://api.github.com/repos/ravaunrichards/Minglora-Social-Network',{
+              headers:{Accept:'application/vnd.github+json','User-Agent':'Minglora-Admin-Centre'},
+              signal:AbortSignal.timeout(4500)
+            });
+            if(!response.ok)return null;
+            const data=await response.json();
+            return {defaultBranch:String(data.default_branch||'main'),updatedAt:data.pushed_at||null};
+          }catch{return null;}})(),
+          tenorConfigured?checkExternal('https://tenor.googleapis.com/v2/featured?key='+encodeURIComponent(tenorKey)+'&limit=1&contentfilter=high'):Promise.resolve(false),
+          checkExternal('https://www.six-group.com/dam/download/financial-information/data-center/iso-currrency/lists/list-one.xml','application/xml,text/xml;q=0.9,*/*;q=0.8'),
+          checkExternal('https://api.frankfurter.dev/v2/rate/usd/jmd')
+        ]);
         const supabaseConnected=Boolean(AUTH_PROVIDER==='supabase'&&supabaseAuthConfigured()&&persistence?.ready);
         const renderUrl=String(process.env.RENDER_EXTERNAL_URL||'https://minglora-social-network.onrender.com').trim();
         const services=[
@@ -2018,8 +2039,8 @@ async function route(req, res) {
           },
           {
             key:'github',name:'GitHub',category:'Source code and deployment',
-            status:'linked',
-            detail:'The Render service is linked to the Minglora Social Network repository on the main branch with automatic deploys.',
+            status:githubResponse?'connected':'attention',
+            detail:githubResponse?'GitHub responded successfully. The Render service deploys this repository from the '+githubResponse.defaultBranch+' branch.':'The repository is configured as the Render deployment source, but the GitHub API check did not respond.',
             dashboardUrl:'https://github.com/ravaunrichards/Minglora-Social-Network',
             serviceUrl:'https://github.com/ravaunrichards/Minglora-Social-Network',
             checkedAt:new Date().toISOString()
@@ -2045,10 +2066,25 @@ async function route(req, res) {
           {
             key:'tenor',name:'Tenor',category:'GIF and sticker search',
             status:tenorConfigured?'configured':'not-configured',
-            detail:tenorConfigured?'The server-side Tenor API key is present. The key is never returned to this dashboard.':'TENOR_API_KEY is not configured on the Minglora server.',
+            status:tenorConnected?'connected':tenorConfigured?'attention':'not-configured',
+            detail:tenorConnected?'The Tenor GIF search API responded successfully. Its key is never returned to this dashboard.':tenorConfigured?'The Tenor key is present, but its API health check did not succeed.':'TENOR_API_KEY is not configured on the Minglora server.',
             dashboardUrl:'https://tenor.com/gifapi/documentation',
             serviceUrl:null,
             checkedAt:new Date().toISOString()
+          },
+          {
+            key:'six-group',name:'SIX Group',category:'Currency reference data',
+            status:sixConnected?'connected':'attention',
+            detail:sixConnected?'SIX Group’s ISO 4217 currency directory responded successfully.':'The current SIX Group currency directory could not be reached; Minglora can fall back to Frankfurter data.',
+            dashboardUrl:'https://www.six-group.com/en/products-services/financial-information/market-reference-data/data-standards.html',
+            serviceUrl:null,checkedAt:new Date().toISOString()
+          },
+          {
+            key:'frankfurter',name:'Frankfurter',category:'Exchange-rate API',
+            status:frankfurterConnected?'connected':'attention',
+            detail:frankfurterConnected?'The Frankfurter reference-rate API responded successfully.':'Frankfurter exchange-rate data is currently unreachable from the Minglora server.',
+            dashboardUrl:'https://frankfurter.dev/',
+            serviceUrl:null,checkedAt:new Date().toISOString()
           },
           {
             key:'web-push',name:'Browser push notifications',category:'Notifications',
