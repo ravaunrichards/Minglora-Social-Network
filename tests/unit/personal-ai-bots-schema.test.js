@@ -285,3 +285,19 @@ test('provider health runtime actions remain owner-gated in the existing Edge Fu
   assert.match(gateway,/admin\.rpc\("minglora_ai_provider_runtime_list"/);
   assert.match(gateway,/admin\.rpc\("minglora_ai_provider_health_update"/);
 });
+
+
+test('worker provider preflight resolves env secret references, health-checks and caches exact assignments',()=>{
+  assert.ok(workerEntrypoint.includes('MINGLORA_AI_BOT_PROVIDER_MODULE'));
+  assert.ok(workerEntrypoint.includes("'ai_provider_runtime_list'"));
+  assert.ok(workerEntrypoint.includes("'ai_provider_health_update'"));
+  assert.ok(workerEntrypoint.includes('process.env[credentialName]'));
+  assert.ok(workerEntrypoint.includes('adapter.healthCheck'));
+  assert.ok(workerEntrypoint.includes('providerAdapters.set(String(assignment.assignmentId),adapter)'));
+  assert.ok(workerEntrypoint.includes('nextProviderHealthCheck=Date.now()+5*60*1000'));
+  assert.doesNotMatch(workerEntrypoint,/console\.(?:log|info|warn)\([^\n]*credential\b/i);
+  assert.match(worker,/resolveProviderAdapter/);
+  assert.match(worker,/task\.providerAssignmentId/);
+  assert.match(worker,/adapter\.providerIdentifier/);
+  assert.match(worker,/adapter\.modelIdentifier/);
+});
