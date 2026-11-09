@@ -88,10 +88,12 @@ function slugify(value) {
 
 function normalizeAiIdentityName(displayName, input = {}) {
   const tokens=String(displayName||'').trim().replace(/\s+/g,' ').split(' ').filter(Boolean);
-  const firstName=String(input.firstName ?? tokens[0] ?? '').trim().slice(0,80);
-  const lastName=String(input.lastName ?? tokens[tokens.length-1] ?? '').trim().slice(0,80);
+  const hasFirstName=String(input.firstName||'').trim().length>0;
+  const hasLastName=String(input.lastName||'').trim().length>0;
+  const firstName=String(hasFirstName?input.firstName:(tokens[0]||'')).trim().slice(0,80);
+  const lastName=String(hasLastName?input.lastName:(tokens[tokens.length-1]||'')).trim().slice(0,80);
   const middleName=String(input.middleName ?? tokens.slice(1,-1).join(' ')).trim().slice(0,80);
-  if(!firstName||!lastName)throw Object.assign(new Error('Enter both an AI first name and last name, or provide a display name containing at least two name parts.'),{status:400});
+  if(!firstName||!lastName||((!hasFirstName||!hasLastName)&&tokens.length<2))throw Object.assign(new Error('Enter both an AI first name and last name, or provide a display name containing at least two name parts.'),{status:400});
   const fullName=[firstName,middleName,lastName].filter(Boolean).join(' ').slice(0,180);
   return {firstName,lastName,middleName,fullName};
 }
