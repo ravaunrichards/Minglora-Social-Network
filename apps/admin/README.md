@@ -122,16 +122,18 @@ Live advisors were retrieved on 2026-11-09 at approximately 09:55 UTC:
 - Production Render remains on `main`; the production Supabase Edge Function remains version 112 and does not include this branch's new CRUD actions.
 - Real account CRUD, deletion constraint handling, global session revocation, audit failure behavior, and service checks still require hosted acceptance testing after deployment is authorized.
 
-## Current execution checkpoint — 2026-11-09 10:37 UTC
+## Current execution checkpoint — 2026-11-09 10:40 UTC
 
 - **Project:** Minglora Social Network
 - **Repository:** `ravaunrichards/Minglora-Social-Network`
 - **Assigned task:** Admin Centre member management and service connections, PR #203
 - **Working branch:** `feat/minglora-admin-user-and-service-centre-20261109`
-- **Implementation snapshot head:** `75eb2c01f09dffeec4b6f32c67450ecce4971e24`
-- **PR state:** Open, draft; 60 commits; 15 changed files; GitHub reports mergeable=false / dirty.
-- **Branch comparison:** 60 commits ahead and 1 behind the last retrieved `main` commit `2f80e9d997b43e5da6373c385d6ce153ff908e67`. The PR has conflicting/diverged history around the Auth provider files now also present on `main`; do not merge or rebase without authorization.
-- **Completion:** 73% verified / 27% remaining. Original milestone weights are preserved. Target Admin Centre tests and syntax/security steps pass; hosted acceptance and full regression remain incomplete.
+- **PR tip / checkpoint commit:** `afd2a80001a806adc0f1432cfc9ad521725dbece`
+- **Latest code change:** `159d2113f46c27460350754efa9d06fe6431ebf8` (deletion audit outcome is recorded after the actual Supabase delete result)
+- **Latest regression-test change:** `20269121d8cd9f4a135976b61407bbaab7392c2b`
+- **PR state:** Open, draft; 63 commits; 15 changed files; GitHub reports `mergeable=false`, `mergeable_state=dirty`.
+- **Branch comparison:** 63 commits ahead and 1 behind the last retrieved `main` commit `2f80e9d997b43e5da6373c385d6ce153ff908e67`. The branch is diverged; no merge or rebase was performed.
+- **Completion:** 73% verified / 27% remaining. Original milestone weighting remains unchanged.
 
 ### Weighted milestone tracker
 
@@ -146,56 +148,59 @@ Live advisors were retrieved on 2026-11-09 at approximately 09:55 UTC:
 | Full CI, hosted acceptance and final regression | 10% | 2% |
 | **Total** | **100%** | **73%** |
 
-### Verified implementation
+### Verified implementation and audit safeguards
 
-- Account create/edit forms and the server enforce required username and display-name rules from the live profiles schema; username availability is checked before create and edit using normalized exact lookups.
-- Contact phone and profile field validation/lengths align with the live database constraints.
-- Partial-update metadata is preserved from Supabase persistence through the Node API to the Admin Centre UI; the browser refreshes member details and clearly labels partial success.
-- Create, session-revocation and delete UI disclose missing audit confirmation.
-- When no target Supabase access token is available for revocation, the runtime now audits an `application_only` action and records `providerRefreshTokensRevoked: false` and `sessionRevoked: false`. It does not falsely claim Supabase refresh-token sessions were revoked.
-- The Supabase Auth provider manager is present in the Admin Centre; provider PATCH operations require same-origin validation, designated owner, moderator authorization and active MFA reviewer session. Provider Management tokens remain server-only.
-- The CI workflow explicitly syntax-checks `public/auth-providers-admin.js`.
-- The two direct Admin Centre asset-version test expectations were updated to match the current HTML script and service-worker cache versions.
+- Create and edit forms/server validation enforce the live profile schema requirements for username, display name, contact phone, and location/profile lengths.
+- Normalized username availability checks run before Auth account creation and before username edits; they use exact matching and exclude the account being edited.
+- Partial profile/Auth update outcomes propagate through Supabase persistence, the Node API and Admin Centre UI. The selected account and results list are refreshed, and partial success is called out explicitly.
+- Create, session-revocation and delete actions disclose missing audit confirmation.
+- When a target Supabase access token is unavailable, session revocation closes known Minglora app sessions and records a metadata-only audit action with `scope: "application_only"`, `providerRefreshTokensRevoked: false` and `sessionRevoked: false`. The UI does not claim provider refresh-token sessions were revoked.
+- Account deletion audit is now outcome-based: the runtime attempts the Auth delete first; failed deletes write `account.delete_failed` with `outcome: "rejected"`, while successful deletes write `account.delete` with `outcome: "deleted"`.
+- The restored Supabase Auth provider manager uses the server-only Management token; its PATCH route requires same-origin writes, designated-owner identity, moderator access and an active MFA reviewer session.
+- The provider-manager script is explicitly included in CI syntax checking.
+- Current Admin Centre script and service-worker cache versions are reflected in the asset regression tests.
 
 ### Latest CI evidence
 
-Latest completed workflow run on implementation head `75eb2c0`:
-- Run: [42602182133](https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/42602182133)
-- General test job: **745 tests, 715 passed, 30 failed**.
-- The For You navigation job remains **13 passed, 2 failed** (the same two failing For You/Home Stories layout tests seen on the main-branch baseline).
-- Dedicated Admin Centre tests passed: workspace/navigation, member manager, schema-required create/edit fields, username uniqueness, partial-update reporting, contact/location rules, application-only session-revocation audit, owner/MFA and same-origin member actions, Auth provider security gate, and service-connection secret-safety checks.
-- Admin Centre shell/service-worker asset-version and withdrawal-tracker asset-version tests passed.
+Latest completed workflow run on PR tip `afd2a80`:
+- GitHub Actions run: [42602578904](https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/42602578904)
+- General suite: **746 tests, 716 passed, 30 failed**.
+- For You functional navigation: **15 tests, 13 passed, 2 failed**.
+- All dedicated Admin Centre tests passed, including member create/edit, username uniqueness, partial-update handling, contact/location constraints, local-only session-revocation audit, outcome-based deletion audit, owner/MFA and same-origin protections, Auth provider security, and service-connection secret-safety checks.
+- The Admin Centre shell/cache and withdrawal tracker asset-version tests passed.
 - CI JavaScript syntax check passed, including `node --check public/auth-providers-admin.js`.
-- Dependency audit returned **0 vulnerable packages**.
-- Repository structure check and required path validation passed.
-- All 30 remaining general-suite failures are also present in the main-branch baseline test set; the one main-branch failure for the old Admin Centre withdrawal asset version has been corrected. For You's two failures also reproduce on main. The remaining failures concern other existing app areas and Supabase persistence retry expectations; they remain unresolved and are not counted as passes.
+- Dependency audit reported **0 vulnerable packages**.
+- Repository structure and required-path checks passed.
+- The 30 remaining general-suite failures are the same set as the main-branch baseline, which had 31 failures before the Admin Centre asset-version fixture was corrected. The two For You/Home Stories layout failures also reproduce on main. These remain failed and are not counted as successful acceptance.
 
-### Concurrent owner change recovered and preserved
+### Recovered main/PR overlap
 
-The repository owner added commits after the previous checkpoint. These were inspected and preserved:
-- `e574c49` audits local-only member session revocation when no provider token is available.
-- `75eb2c0` adds a regression assertion for that behavior.
-No existing owner changes were overwritten.
+The latest main commit includes the Auth provider manager, which is also present in this branch:
+- `public/auth-providers-admin.js` and `public/auth-providers-admin.css` have identical blob content on `main` and the feature branch.
+- `src/server.js` differs because the feature branch also contains member-management endpoints and the same-origin provider PATCH guard.
+- `public/admin-centre.html` differs in Admin Centre CSS/JS asset versions while both versions load the provider-manager assets.
+- `public/sw.js` differs because the feature branch advances the shell cache and includes provider-manager assets.
+GitHub marks the PR dirty. These overlaps identify the reconciliation work, but no merge/rebase was performed because it is not authorized.
 
-### Live infrastructure evidence
+### Live infrastructure status
 
-Last re-queried around 2026-11-09 10:34 UTC:
-- Minglora Supabase project `gzycobgbasnqqhnympkr`: `ACTIVE_HEALTHY`, PostgreSQL 17.11.0.003.
-- Production `minglora-runtime-state` Edge Function: active version 112; branch CRUD actions remain undeployed.
-- Render service `minglora-social-network`: configured auto-deploy from `main`; latest observed live deployment still uses main commit `2f80e9d`.
-- No production schema, provider settings, accounts, balances, permissions, merge or deployment were changed.
+Re-queried around 2026-11-09 10:34 UTC:
+- Supabase Minglora project `gzycobgbasnqqhnympkr`: `ACTIVE_HEALTHY`, PostgreSQL 17.11.0.003.
+- Production `minglora-runtime-state` Edge Function: active version 112; the new member CRUD actions remain undeployed.
+- Render `minglora-social-network`: auto-deploys from `main`; latest observed live deployment still runs main commit `2f80e9d`.
+- No production database, provider settings, account records, balances, permissions, merge or deployment were changed.
 
 ### Remaining work and blockers
 
-- **Easy:** No known Admin Centre-specific fixture failures remain from the latest completed CI; continue checking only newly exposed in-scope regressions.
-- **Medium:** Resolve PR/main divergence through reviewed reconciliation; verify hosted create/edit/ban/unban/session-revoke/delete and service-connection behavior with the required owner/MFA session; confirm partial error and audit behavior against hosted services.
-- **Hard:** Deploy the new Supabase Edge Function and verify account lifecycle, Auth session revocation, deletion restrictions, provider-management permissions and secret handling after merge and explicit deployment authorization.
-- **Final verification:** Full repository CI still has 30 baseline failures and the separate For You job has 2 baseline failures. These need separate resolution or documented acceptance before calling the complete PR green.
+- **Easy:** No outstanding Admin Centre-specific test failures were identified in the latest CI. Keep checking newly surfaced in-scope failures only.
+- **Medium:** Reconcile the dirty PR/main overlap after authorization; complete hosted member-management CRUD/ban/unban/session/deletion and service-health acceptance with owner/MFA access.
+- **Hard:** Deploy and verify the updated Supabase Edge Function after merge/deployment approval; validate provider Management API permissions, account lifecycle, token/session behavior and deletion restrictions.
+- **Final verification:** Resolve or document the 30 general-suite failures and 2 For You failures; obtain accepted checks and hosted integration evidence.
 
 ### Last confirmed action
 
-The runtime session-revocation no-token branch writes a metadata-only audit event with `scope: "application_only"` and explicitly records that provider refresh-token revocation did not occur. Its new targeted regression test passed in run `42602182133`.
+The latest owner-authored code change ensures the deletion audit records success or failure only after the Supabase Auth delete result. Its regression test passed in run `42602578904`.
 
 ### Exact next action
 
-Keep PR #203 in draft and production untouched. Inspect the reported dirty merge state and identify the exact overlapping main/PR changes for a safe, reviewable reconciliation plan; do not merge or rebase without authorization. Continue with non-production hosted-acceptance preparation while retaining the 73% tracker.
+Keep PR #203 open and draft. Do not merge, rebase or deploy. The next authorized step is a reviewed reconciliation of the identified `main`/PR overlap, followed by hosted acceptance after the necessary deployment authorization.
