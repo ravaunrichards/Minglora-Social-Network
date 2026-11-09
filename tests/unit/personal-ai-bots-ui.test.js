@@ -45,3 +45,17 @@ test('team assignment UI explicitly keeps membership separate from bot activatio
   assert.match(ui,/Team membership does not activate the bot/);
   assert.match(ui,/Remove this AI bot from the team/);
 });
+
+
+test('provider assignment controls distinguish a stored assignment from a live provider connection',async()=>{
+  const ui=await read('public/personal-ai-bots.js');
+  for(const phrase of [
+    'AI provider and model assignments',
+    'Provider name','Provider identifier','Model name','Model identifier',
+    'Server-side credential reference','Do not paste an API key here',
+    'New assignments are saved as configured and unverified',
+    'credentialConfigured','providerHealthStatus'
+  ]) assert.ok(ui.includes(phrase),phrase);
+  assert.match(ui,/API\+'\/providers'/);
+  assert.match(ui,/identityId:document\.querySelector\('#pab-provider-identity'\)/);
+});
