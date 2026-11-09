@@ -61,6 +61,6 @@ test('Stories accept batches, enforce per-file count and combined size, and reta
   assert.match(server, /totalBytes>500\*1024\*1024/);
   assert.match(server, /db\.stories\.push\(story\)/);
   assert.match(server, /mediaIds\.forEach\(id=>\{const asset=/);
-  assert.match(app, /const storyMedia=Array\.isArray\(s\.mediaItems\)&&s\.mediaItems\.length\?s\.mediaItems:/);
+  assert.match(app, /activeMedia=Array\.isArray\(s\.mediaItems\)&&s\.mediaItems\.length\?s\.mediaItems:/);
   assert.match(app, /data-story-next/);
 });
