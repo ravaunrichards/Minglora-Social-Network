@@ -26,6 +26,14 @@ export const PERSONAL_AI_BOT_HYBRID_ACTIONS = Object.freeze([
   'analytics_read','moderation_flag','draft_content','translate_content','prepare_faq_draft'
 ]);
 
+export const PERSONAL_AI_BOT_AUTONOMY_MODES = Object.freeze([
+  {id:'administrator_controlled',label:'Fully supervised'},
+  {id:'supervisor_controlled',label:'Supervisor controlled'},
+  {id:'hybrid',label:'Hybrid autonomy'},
+  {id:'autonomous_within_limits',label:'Autonomous within limits'},
+  {id:'restricted_observation',label:'Restricted observation'}
+]);
+
 export const PERSONAL_AI_BOT_HIGH_IMPACT_TASKS = Object.freeze([
   'draft_post','share_media','create_reel','draft_comment','draft_reply','follow','unfollow','react',
   'join_group','send_message','event_participation','customer_service_draft','support_draft',
@@ -374,10 +382,13 @@ export function updatePersonalAiBot(db, botId, input, actorId, timestamp, uid) {
     bot.status=status;bot.enabled=status==='enabled';bot.pausedAt=status==='paused'?timestamp:null;changes.push('status');
   }
   if (Object.hasOwn(input,'autonomyMode')) {
-    const mode=String(input.autonomyMode);
-    if(!['administrator_controlled','human_approval','hybrid'].includes(mode))throw Object.assign(new Error('Choose administrator-controlled, human-approval or hybrid mode.'),{status:400});
+    const requestedMode=String(input.autonomyMode||'');
+    // Backward-compatible alias: the former human_approval mode is now the
+    // fully supervised owner-controlled level.
+    const mode=requestedMode==='human_approval'?'administrator_controlled':requestedMode;
+    if(!PERSONAL_AI_BOT_AUTONOMY_MODES.some(item=>item.id===mode))throw Object.assign(new Error('Choose one of the five supported AI operating modes.'),{status:400});
     bot.autonomyMode=mode;
-    if(mode!=='hybrid')bot.allowedAutonomousActions=[];
+    if(!['hybrid','autonomous_within_limits'].includes(mode))bot.allowedAutonomousActions=[];
     changes.push('autonomy mode');
   }
   if (Object.hasOwn(input,'allowedAutonomousActions')) {
@@ -385,7 +396,7 @@ export function updatePersonalAiBot(db, botId, input, actorId, timestamp, uid) {
     const requested=[...new Set(input.allowedAutonomousActions.map(String))];
     const invalid=requested.filter(action=>!PERSONAL_AI_BOT_HYBRID_ACTIONS.includes(action));
     if(invalid.length)throw Object.assign(new Error('Only explicitly approved low-risk hybrid actions can be enabled.'),{status:400});
-    if(bot.autonomyMode!=='hybrid'&&requested.length)throw Object.assign(new Error('Switch the bot to hybrid mode before allowing routine actions.'),{status:409});
+    if(!['hybrid','autonomous_within_limits'].includes(bot.autonomyMode)&&requested.length)throw Object.assign(new Error('Choose Hybrid autonomy or Autonomous within limits before allowing low-risk actions.'),{status:409});
     bot.allowedAutonomousActions=requested;
     changes.push('hybrid permissions');
   }
