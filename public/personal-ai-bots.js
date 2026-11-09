@@ -394,7 +394,7 @@
           const read=field=>card.querySelector('.pab-'+prefix+'-'+field)?.value.trim()||'';
           const location={
             locationType:type,
-            countryCode:read('country-code').toUpperCase(),
+            countryCode:read('country-code').toUpperCase()||countryCodeForName(read('country-name')) ,
             countryName:read('country-name'),
             stateProvince:read('state'),
             district:read('district'),
