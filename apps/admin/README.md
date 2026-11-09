@@ -204,3 +204,67 @@ The latest owner-authored code change ensures the deletion audit records success
 ### Exact next action
 
 Keep PR #203 open and draft. Do not merge, rebase or deploy. The next authorized step is a reviewed reconciliation of the identified `main`/PR overlap, followed by hosted acceptance after the necessary deployment authorization.
+
+## Continuation addendum — 2026-11-09 10:40 UTC
+
+**Current verified progress: 74% / 26% remaining.** This retains the existing 100-point milestone model. The prior durable checkpoint was 73%; one additional audit/data-integrity point is now credited because the deletion audit outcome changes and their regression tests passed in CI.
+
+### Weighted milestone tracker
+
+| Milestone | Weight | Verified credit |
+|---|---:|---:|
+| User-management interface | 20% | 20% |
+| Supabase Auth operations | 25% | 15% |
+| Owner/MFA authorization | 15% | 15% |
+| Service connections | 15% | 10% |
+| Audit and data integrity | 10% | 7% |
+| Documentation and recovery records | 5% | 5% |
+| Full CI, hosted acceptance and final regression | 10% | 2% |
+| **Total** | **100%** | **74%** |
+
+### Verified since the 10:37 UTC checkpoint
+
+- The `admin_user_delete` runtime action now calls Supabase Auth deletion before recording a successful `account.delete` audit event. If Supabase rejects the deletion (for example, because retained profile/ledger records restrict it), the runtime instead records `account.delete_failed` with `outcome: "rejected"`. This prevents a blocked deletion from being recorded as successful.
+- The no-token session-revocation fallback records `account.sessions_revoke` with `scope: "application_only"` and `providerRefreshTokensRevoked: false`; the UI/API does not claim Supabase refresh-token revocation occurred.
+- Regression tests verify that delete outcomes are audited only after the Auth delete result and that local-only session revocation is separately audited.
+- The test runner also verifies the Admin Centre member manager, required profile fields, exact case-insensitive username checks, partial-update propagation, contact/location constraints, owner/MFA/same-origin authorization, Auth provider controls, and service-connection secret safety.
+
+### Latest CI evidence
+
+- Latest completed GitHub Actions run: [run #8272](https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/42602578904), on checkpoint head `afd2a80001a806adc0f1432cfc9ad521725dbece`.
+- Repository test job: **746 tests, 716 passed, 30 failed**.
+- For You navigation job: **13 passed, 2 failed**; the two remaining failures are the For You header/search layout and Home Stories layout tests.
+- The focused new Admin Centre tests passed, including both recent audit-outcome tests, the member CRUD/MFA checks, Auth-provider same-origin checks, and service-connection secret-safety checks.
+- The full workflow remains red. The 30 unresolved tests concern other application areas (email recovery, Clock Centre, discovery, For You/Home Stories, LIVE, profile, navigation, service-worker, Supabase persistence retries, and themes); they are not being counted as successful verification.
+
+### Supabase Auth provider-management prerequisite
+
+The provider settings panel calls the Supabase Management API `/v1/projects/{ref}/config/auth`. Before it can load or change Auth provider flags, the Minglora Render service needs a server-side `SUPABASE_ACCESS_TOKEN` value. Use a scoped Personal Access Token restricted to the Minglora project, and keep it only in the Render environment; it must never be committed or returned to the browser.
+
+Required fine-grained permissions from current Supabase endpoint documentation:
+- GET Auth config: `auth_config_read`.
+- PATCH Auth config: `auth_config_write` and `project_admin_write`.
+
+Official references: [Supabase GET Auth service config](https://supabase.com/docs/reference/api/v1-get-auth-service-config), [Supabase PATCH Auth service config](https://supabase.com/docs/reference/api/v1-update-auth-service-config), and [Supabase Personal Access Tokens](https://supabase.com/docs/guides/platform/personal-access-tokens).
+
+The connected Render environment tool does not expose secret values, and no Management token was supplied or verified in this execution. Therefore the provider panel's live GET/PATCH operation remains **not end-to-end verified**; its code and authorization tests pass, but actual configuration changes have not been attempted.
+
+### Current repository and deployment state
+
+- **Repository:** `ravaunrichards/Minglora-Social-Network`.
+- **Feature branch:** `feat/minglora-admin-user-and-service-centre-20261109`.
+- **Checkpoint commit:** `afd2a80001a806adc0f1432cfc9ad521725dbece`.
+- **PR #203:** open draft; GitHub reports `mergeable=false` / `dirty`, 63 commits on the PR at the latest retrieval. The feature branch is 63 commits ahead and one commit behind `main` (`2f80e9d997b43e5da6373c385d6ce153ff908e67`). Auth-provider content from the newer `main` commit has been copied into the feature branch, but branch ancestry still needs safe reconciliation.
+- **Live Supabase:** project `gzycobgbasnqqhnympkr` returned `ACTIVE_HEALTHY`, PostgreSQL 17.11.0.003 on the latest read.
+- **Production Edge Function:** `minglora-runtime-state` remains active at version 112. It does not yet contain this feature branch's account-management actions.
+- **Live Render service:** `minglora-social-network` is active and configured for auto-deploy from `main`; the latest listed live deployment uses commit `2f80e9d997b43e5da6373c385d6ce153ff908e67`.
+- No branch merge, production deployment, Supabase permission/configuration change, user/account mutation, or balance change was performed.
+
+### Remaining work and next action
+
+- **Easy:** No known failing Admin Centre-specific test remains in run #8272. Keep new tests aligned when further code changes are made.
+- **Medium:** Reconcile PR #203's dirty ancestry against the newer `main` commit using a reviewed merge/rebase strategy; complete hosted owner/MFA acceptance of user create/edit/ban/unban/delete/session revocation and service checks.
+- **Hard:** Obtain/configure the scoped `SUPABASE_ACCESS_TOKEN` in Render, verify Auth provider GET/PATCH against the live Supabase Management API, and deploy the updated Edge Function only after merge and explicit deployment authorization.
+- **Final verification:** Resolve or document the 30 full-suite failures and two For You baseline failures; run hosted acceptance and security/data-integrity checks before claiming completion.
+
+**Exact next action:** obtain authorization for a reviewed branch reconciliation; keep PR #203 in draft and production unchanged until that is approved.
