@@ -89,6 +89,33 @@ export function supabaseSignUp({ email, password, name, username, phoneNumber })
 export function supabaseSignIn({ email, password }) {
   return authRequest('token?grant_type=password', { email, password });
 }
+export function supabaseExchangeOAuthCode({ code, codeVerifier }) {
+  const authorizationCode=String(code||'').trim();
+  const verifier=String(codeVerifier||'').trim();
+  if(authorizationCode.length<8||authorizationCode.length>4096||verifier.length<43||verifier.length>128){
+    throw Object.assign(new Error('The OAuth sign-in response is incomplete or expired. Please try again.'),{status:400});
+  }
+  return authRequest('token?grant_type=pkce',{auth_code:authorizationCode,code_verifier:verifier});
+}
+export async function supabaseGetAuthSettings() {
+  requireConfig();
+  const {url:baseUrl,key:apiKey}=supabaseConfig();
+  let response;
+  try{
+    response=await fetch(baseUrl+'/auth/v1/settings',{
+      method:'GET',
+      headers:{apikey:apiKey,Authorization:'Bearer '+apiKey,Accept:'application/json'},
+      signal:AbortSignal.timeout(10000)
+    });
+  }catch{
+    throw Object.assign(new Error('Could not reach Minglora Supabase Auth settings.'),{status:503});
+  }
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok){
+    throw Object.assign(new Error('Minglora could not read the current Supabase sign-in provider settings.'),{status:response.status>=500?503:502});
+  }
+  return data&&typeof data==='object'?data:{};
+}
 export function supabaseGetUser(accessToken) {
   return authenticatedRequest('user',accessToken,'GET');
 }
