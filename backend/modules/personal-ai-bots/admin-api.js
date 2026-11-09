@@ -73,6 +73,15 @@ export async function handlePersonalAiBotsAdminApi(context) {
       if(!bot)return (json(res,404,{error:'Bot not found.'}),true);
       const network=db.personalAiBotSettings.find(item=>item.id==='global');
       if(!network?.enabled||!bot.enabled||bot.status!=='enabled')return (json(res,409,{error:'Enable the network and this bot before assigning an instruction.'}),true);
+      const taskType=String(input?.taskType||'other');
+      if(['follow','unfollow'].includes(taskType)){
+        const targetUserId=String(input?.targetUserId||'');
+        const targetMember=(db.users||[]).find(member=>member.id===targetUserId);
+        if(!targetMember)return (json(res,404,{error:'The selected Minglora member account could not be found.'}),true);
+        if(['banned','suspended','deactivated','deleted'].includes(String(targetMember.status||'').toLowerCase())){
+          return (json(res,409,{error:'This member account is not eligible for following operations.'}),true);
+        }
+      }
       const task=queuePersonalAiBotInstruction(db,instructionMatch[1],input||{},user.id,stamp,uid);
       await saveStore();
       return (json(res,201,{ok:true,task,message:'Instruction saved for administrator approval. No bot action has been executed.'}),true);
