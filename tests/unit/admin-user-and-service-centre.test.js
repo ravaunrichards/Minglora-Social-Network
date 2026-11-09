@@ -30,6 +30,12 @@ test("new account creation requires profile fields that the live schema marks NO
   assert.ok(usernameLookup >= 0 && usernameLookup < authCreate, "username availability is checked before creating an Auth identity");
 });
 
+test("member create, session-revocation and delete UI disclose missing audit confirmation", () => {
+  assert.ok(admin.includes("the account was created, but the administrator audit entry could not be confirmed"));
+  assert.ok(admin.includes("result.auditRecorded === false ? ' Warning: the administrator audit entry could not be confirmed."));
+  assert.ok(admin.includes("result.auditRecorded === false ? ' Warning: the administrator audit entry could not be confirmed.' : '') + (result.warning"));
+});
+
 test("member CRUD and session routes require owner identity, MFA and same-origin writes", () => {
   for (const name of ["admin_user_get", "admin_user_create", "admin_user_update", "admin_user_delete", "admin_user_revoke_sessions"]) assert.ok(runtime.includes('"' + name + '"'));
   assert.match(server, /isSameOriginApiWrite\(req\)/);
