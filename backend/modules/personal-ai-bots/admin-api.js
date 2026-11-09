@@ -35,7 +35,7 @@ function canonicalAiIdentity(bot) {
     status:lifecycleStatus,
     parent_identity_id:bot.parentIdentityId||null,
     public_profile_slug:String(bot.slug||('ai-'+String(bot.id).replace(/-/g,'').slice(0,12))),
-    public_profile_enabled:false,
+    public_profile_enabled:bot.publicProfileEnabled===true && bot.visibility==='public' && bot.status==='enabled',
     first_name:firstName,
     last_name:lastName,
     middle_name:middleName,
