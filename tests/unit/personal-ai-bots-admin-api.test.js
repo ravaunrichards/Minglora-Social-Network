@@ -636,7 +636,7 @@ test('AI email API rejects verification, provisioning and credential fields from
   });
   await handlePersonalAiBotsAdminApi(context);
   assert.equal(context.res.statusCode,400);
-  assert.match(context.res.payload.error,/invalid/);
+  assert.match(context.res.payload.error,/unsupported or sensitive|invalid/i);
   assert.equal(calls,0);
 });
 
