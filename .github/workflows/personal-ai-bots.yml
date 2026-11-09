@@ -47,4 +47,5 @@ jobs:
           node --test \
             tests/unit/personal-ai-bots.test.js \
             tests/unit/personal-ai-bots-admin-api.test.js \
-            tests/unit/personal-ai-bots-schema.test.js
+            tests/unit/personal-ai-bots-schema.test.js \
+            tests/unit/personal-ai-bots-ui.test.js
