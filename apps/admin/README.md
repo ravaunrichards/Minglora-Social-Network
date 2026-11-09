@@ -439,3 +439,66 @@ No `SUPABASE_ACCESS_TOKEN` value was supplied or confirmed in Render. The manage
 - **Final:** Resolve or formally accept the 30 general-suite and 2 For You failures, verify hosted user lifecycle/session behavior and all live service connections.
 
 **Exact next action:** obtain explicit authorization for reviewed branch reconciliation. Until then keep PR #203 in draft and production on the current `main` deployment.
+## Continuation addendum — 2026-11-09 11:44 UTC
+
+**Current verified progress: 75% / 25% remaining.** Previous durable verified completion was 74%. One additional point is credited to audit/data integrity because failed Supabase Auth account deletions now produce an HTTP failure response, the Admin Centre displays the session/audit outcome, local user/session records are retained unless deletion actually succeeds, and the focused regression tests passed in CI.
+
+### Weighted milestone tracker
+
+| Milestone | Weight | Verified credit |
+|---|---:|---:|
+| User-management interface | 20% | 20% |
+| Supabase Auth operations | 25% | 15% |
+| Owner/MFA authorization | 15% | 15% |
+| Service connections | 15% | 10% |
+| Audit and data integrity | 10% | 8% |
+| Documentation and recovery records | 5% | 5% |
+| Full CI, hosted acceptance and final regression | 10% | 2% |
+| **Total** | **100%** | **75%** |
+
+### Verified account-deletion lifecycle correction
+
+Previous implementation defect: the Supabase Edge Function could return `{ error, auditRecorded, sessionRevoked, warning }` when deletion failed, but the Node DELETE route always returned HTTP 200. The browser's `adminCentreApi` therefore did not throw, and the deletion UI could display a success message even though the Auth identity was not deleted.
+
+Corrected implementation:
+- `src/server.js` now returns HTTP 200 only when `result.deleted` is true; otherwise it returns HTTP 409 with the original result payload.
+- Local `db.users`, `db.sessions`, and `db.pendingAuth` collections are changed only after a confirmed `result.deleted === true` response.
+- The Edge Function's failed-delete result now always describes session revocation: previously revoked before deletion rejection, revocation failed, or no current provider access token was available.
+- `public/admin-centre.js` displays both the audit-record outcome and the session-revocation warning when the DELETE API returns an error.
+- Regression test asserts the DELETE route maps a failed Supabase Auth deletion to HTTP 409, only calls `saveStore()` after confirmed deletion, and the UI consumes the session warning.
+
+Files updated: `src/server.js`, `supabase/functions/minglora-runtime-state/index.ts`, `public/admin-centre.js`, and `tests/unit/admin-user-and-service-centre.test.js`.
+
+### Latest CI evidence
+
+- Latest completed workflow: [run #8362](https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/42611344015), commit `9af4031e9993d07e0d14fd22452fa0505da0b01d`.
+- Repository suite: **750 tests, 720 passed, 30 failed**.
+- For You navigation suite: **15 tests, 13 passed, 2 failed** (For You header/search layout and Home Stories layout).
+- Focused Admin Centre tests passed, including: failed account deletion status mapping; failed deletion audit/session disclosure; session revocation before deletion; successful/failed deletion audit ordering; local-only session-revocation audit; provider-session-revocation failure audit; owner/MFA restrictions; Auth-provider same-origin checks; and service-connection secret handling.
+- Dependency audit and zero-vulnerability gate, repository structure, JavaScript syntax and generated gift assets passed. Overall CI remains failed due the 30 general-suite failures and two For You failures; they are still not counted as passing.
+
+### Current repository state
+
+- **Repository:** `ravaunrichards/Minglora-Social-Network`.
+- **Branch:** `feat/minglora-admin-user-and-service-centre-20261109`.
+- **Latest verified branch head:** `9af4031e9993d07e0d14fd22452fa0505da0b01d`.
+- **PR #203:** open draft; 89 commits, 15 changed files; GitHub reports `mergeable=false`, `mergeable_state=dirty`.
+- **Main:** `2f80e9d997b43e5da6373c385d6ce153ff908e67`; branch compares 89 commits ahead and 1 behind. The known overlapping files remain `src/server.js`, `public/admin-centre.html`, and `public/sw.js`. No merge or rebase was performed.
+
+### Latest live infrastructure verification
+
+Direct service reads during this continuation confirmed:
+- Minglora Supabase project `gzycobgbasnqqhnympkr` is `ACTIVE_HEALTHY`, PostgreSQL 17.11.0.003.
+- Production `minglora-runtime-state` remains active at version 112. The feature branch's new user-management actions are not deployed.
+- Render `minglora-social-network` remains an active Free web service configured for auto-deploy from `main`. Its latest listed live deployment uses `2f80e9d997b43e5da6373c385d6ce153ff908e67` and remains `live`.
+- The Supabase Management API health card and provider manager require `SUPABASE_ACCESS_TOKEN`; no such value was supplied or verified in Render. The production token/environment was not changed.
+- No production database, Auth/provider configuration, account, balance, permissions, merge, or deployment was changed.
+
+### Remaining work and blockers
+
+- **Easy:** No known Admin Centre-specific test failure remains from run #8362.
+- **Medium:** Obtain authorization for reviewed reconciliation of PR #203's dirty history; run hosted owner/MFA acceptance for create/edit/ban/restore/delete/session revocation, audit outcomes and service connections.
+- **Hard:** Configure a least-privilege, project-scoped Supabase Management token in Render; verify actual Management API GET/PATCH; merge and deploy the Edge Function only after explicit authorization; complete hosted account lifecycle and security acceptance.
+- **Final verification:** Resolve or formally accept the 30 full-suite and two For You failures, then complete end-to-end and regression acceptance.
+
+**Exact next action:** obtain authorization for reviewed reconciliation of `src/server.js`, `public/admin-centre.html`, and `public/sw.js`. Keep PR #203 in draft and leave production unchanged until then.
