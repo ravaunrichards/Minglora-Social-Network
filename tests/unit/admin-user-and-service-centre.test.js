@@ -2,13 +2,14 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
-const [runtime, server, admin, css, html, store] = await Promise.all([
+const [runtime, server, admin, css, html, store, authProviders] = await Promise.all([
   readFile(new URL("../../supabase/functions/minglora-runtime-state/index.ts", import.meta.url), "utf8"),
   readFile(new URL("../../src/server.js", import.meta.url), "utf8"),
   readFile(new URL("../../public/admin-centre.js", import.meta.url), "utf8"),
   readFile(new URL("../../public/admin-centre.css", import.meta.url), "utf8"),
   readFile(new URL("../../public/admin-centre.html", import.meta.url), "utf8"),
-  readFile(new URL("../../src/store.js", import.meta.url), "utf8")
+  readFile(new URL("../../src/store.js", import.meta.url), "utf8"),
+  readFile(new URL("../../public/auth-providers-admin.js", import.meta.url), "utf8")
 ]);
 
 test("Minglora Admin Centre exposes the full Supabase-style member manager", () => {
@@ -83,6 +84,22 @@ test("member updates use server-side Auth admin operations and audit changed fie
   assert.match(runtime, /changedFields/);
   assert.doesNotMatch(runtime, /app_metadata:\s*patch/);
   assert.match(runtime, /recordAdminUserAction/);
+});
+
+test("Auth provider settings require owner MFA and same-origin provider writes", () => {
+  const start = server.indexOf("if((method==='GET'||method==='PATCH')&&p==='/api/admin/auth-providers')");
+  const end = server.indexOf("if(method==='GET'&&p==='/api/admin/users')", start);
+  assert.ok(start >= 0 && end > start, "Auth provider route is present");
+  const route = server.slice(start, end);
+  assert.match(route, /method==='PATCH'&&!isSameOriginApiWrite\(req\)/);
+  assert.match(route, /isDesignatedCreatorHubAdmin\(user\)/);
+  assert.match(route, /isModerator\(user,req\)/);
+  assert.match(route, /hasActiveReviewerSession\(user\)/);
+  assert.match(route, /SUPABASE_ACCESS_TOKEN/);
+  assert.match(route, /Authorization:'Bearer '\+managementToken/);
+  assert.doesNotMatch(route, /return json\(res,200,\{[^}]*managementToken/);
+  assert.ok(html.includes('/auth-providers-admin.js?v=20261109-auth-providers-1'));
+  assert.ok(authProviders.includes("api('PATCH',{provider,enabled:toggle.checked})"));
 });
 
 test("service connections show Minglora providers without returning secrets", () => {
