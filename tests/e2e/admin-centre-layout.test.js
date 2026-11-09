@@ -49,6 +49,22 @@ function startStaticServer() {
 
 function mockAdminPayload(pathname) {
   if (pathname === "/api/admin/access") return { canAccess: true, setupRequired: false };
+  if (pathname === "/api/admin/users/viewport-test-member") {
+    return {
+      user: {
+        id: "viewport-test-member",
+        displayName: "M".repeat(80),
+        username: "member_" + "x".repeat(22),
+        email: "member@example.test",
+        phone: null,
+        status: "active",
+        avatarUrl: null,
+        isOwner: false,
+        profile: { display_name: "M".repeat(80), username: "member_" + "x".repeat(22), contact_phone: null },
+        userMetadata: {}
+      }
+    };
+  }
   if (pathname === "/api/admin/users") {
     const longDomain = Array.from({ length: 18 }, (_, index) => "segment" + String(index).padStart(2, "0")).join(".");
     return {
@@ -186,6 +202,8 @@ test("Admin Centre renders without viewport overflow, clipped content, fixed ove
       assert.deepEqual(measurement.fixedOrSticky, [], viewport.label + ": a fixed/sticky element can cover Admin Centre content");
     }
 
+    await page.locator('[data-admin-user-select="viewport-test-member"]').click();
+    await page.locator("#admin-user-selection").waitFor({ state: "visible" });
     const createDetails = page.locator("details").filter({ has: page.locator("#admin-user-create-form") });
     const deleteDetails = page.locator("details").filter({ has: page.locator("#admin-user-delete-submit") });
     assert.equal(await createDetails.count(), 1, "create-member form remains within its explicit disclosure");
