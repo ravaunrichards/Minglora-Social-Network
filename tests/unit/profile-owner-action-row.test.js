@@ -34,7 +34,8 @@ test('profile cover and portrait are separate blocks with a clear gap and indepe
   assert.ok(app.includes('esc(u.cover)'));
   assert.ok(app.includes('avatar(u)'));
   assert.ok(app.includes('class="profile-avatar-edit-wrap"><img class="avatar"'));
-  assert.ok(app.includes("profileBioMarkup+(data.profileStatus?"));
+  assert.ok(app.includes("const profileThoughtMarkup=data.profileStatus?.text"));
+  assert.ok(app.includes("profile-thought-slot"));
   assert.ok(app.includes("[['posts','Posts'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Reels'],['more','More']]"));
 });
 
@@ -99,7 +100,9 @@ test('picture and cover remain editable in the normal Edit profile dialog',()=>{
   assert.match(app,/id="edit-cover-camera-button"/);
   assert.match(app,/uploadProfileImage\('avatar',edited/);
   assert.match(app,/uploadProfileImage\('cover',edited/);
-  assert.match(app,/\$\('#edit-profile'\)\?\.addEventListener\('click',\(\)=>openEditProfile\(u\)\)/);
+  assert.ok(app.includes("$('#edit-profile')?.addEventListener('click',()=>{"));
+  assert.ok(app.includes("showTab('about');"));
+  assert.ok(app.includes("aboutPanel?.querySelector('[data-edit-about-section]')?.focus({preventScroll:true});"));
 });
 
 test('profile Posts retains the Facebook-style Intro sidebar, composer and timeline',()=>{

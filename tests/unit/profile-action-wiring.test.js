@@ -10,6 +10,8 @@ const app=read('public/app.js');
 const server=read('src/server.js');
 const html=read('public/index.html');
 const worker=read('public/sw.js');
+const adminCentre=read('public/admin-centre.js');
+const adminProfileCss=read('public/admin-profile-layout.css');
 const profileCss=[read('public/profile-action-row.css'),read('public/profile-facebook-panel.css'),read('public/profile-layout-guardrails.css'),read('public/profile-facebook-avatar-anchor.css'),read('public/profile-independent-avatar-header.css'),read('public/profile-owner-action-placement.css'),read('public/profile-facebook-account-menu.css'),read('public/social-facebook-layout.css')].join('\n');
 const profileStart=app.indexOf('function renderProfile(data){');
 const profileEnd=app.indexOf('async function loadProfileGiftGallery',profileStart);
@@ -20,7 +22,7 @@ test('profile owner edit, media and story buttons invoke their real actions',()=
   for(const action of [
     "$('#edit-profile')?.addEventListener('click',()=>{\n    showTab('about');\n    const aboutPanel=$('#profile-tab-panel');\n    aboutPanel?.scrollIntoView({behavior:'smooth',block:'start'});\n    aboutPanel?.querySelector('[data-edit-about-section]')?.focus({preventScroll:true});\n  })",
     "$('#profile-add-story')?.addEventListener('click',()=>openStoryComposer())",
-    "openProfileStoryEditor(u.id)"
+    "$('#profile-add-story')?.addEventListener('click',()=>openStoryComposer())"
   ])assert.ok(profile.includes(action),'Missing profile action: '+action);
   assert.doesNotMatch(profile,/profile-edit-avatar|profile-edit-cover|profile-edit-admin-cover/);
   assert.match(app,/data-profile-media-section="avatar"/);
@@ -99,8 +101,12 @@ test('profile overflow and administrator controls are wired to their feature han
     assert.ok(handler.includes("action==='"+action+"'"),'Missing overflow action '+action);
     assert.ok(handler.includes(handlerName),'Missing handler '+handlerName);
   }
-  assert.ok(profile.includes("data-profile-admin-action"));
-  assert.ok(profile.includes("openProfilePrivacySettings()"));
+  assert.doesNotMatch(profile,/data-profile-admin-action|adminToolsMarkup/,'administrator-only controls are not embedded in the member profile');
+  assert.ok(adminCentre.includes("link.href = '/admin-centre.html'"));
+  assert.ok(adminCentre.includes("link.className = 'profile-admin-centre-entry'"));
+  assert.ok(adminCentre.includes("profileInfo.insertAdjacentElement('afterend', link)"));
+  assert.ok(adminCentre.includes("fetch('/api/admin/access'"));
+  assert.ok(adminProfileCss.includes('.profile-admin-centre-entry{'));
 });
 
 test('profile post cards reuse the working feed action bindings inside profile tabs',()=>{

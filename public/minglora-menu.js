@@ -37,7 +37,8 @@
       items: [
         { label: 'Your Ad Activity', detail: 'Review ads associated with your account', icon: 'activity', action: 'coming-soon', pending: true },
         { label: 'Memories', detail: 'Revisit moments you have shared', icon: 'restore', action: 'coming-soon', pending: true },
-        { label: 'Saved', detail: 'Find posts and videos you saved', icon: 'saved', action: 'saved' }
+        { label: 'Saved', detail: 'Find posts and videos you saved', icon: 'saved', action: 'saved' },
+        { label: 'Clock Centre', detail: 'Alarms, world clocks, timers and focus tools', icon: 'calendar', action: 'clock-centre' }
       ]
     },
     {
@@ -227,6 +228,7 @@
         reels: 'videos',
         videos: 'videos',
         payments: 'coins',
+        'clock-centre': 'clock-centre',
         saved: 'saved',
         creator: 'creator'
       };

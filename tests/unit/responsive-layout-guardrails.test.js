@@ -138,7 +138,7 @@ test('floating windows, dialogs, media viewers and calls follow a safe stacking 
   const activeCall = z('.call-overlay');
   const incomingCall = z('.call-ringing-overlay');
   assert.ok(modal > messageDock, 'dialogs must cover floating message windows');
-  assert.equal(storyViewer, modal, 'story dialogs must not sit behind message windows');
+  assert.ok(storyViewer > modal && storyViewer > messageDock, 'the full-screen story viewer must cover ordinary dialogs and floating message windows');
   assert.ok(camera > modal, 'device camera must remain above the editor that launched it');
   assert.ok(imageViewer > camera, 'image viewer must remain above ordinary camera controls');
   assert.ok(activeCall > imageViewer, 'an active call must not be hidden by an image viewer');

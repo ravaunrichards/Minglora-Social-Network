@@ -11,12 +11,15 @@ const html = read('public/index.html');
 const clock = read('public/clock-centre.js');
 const css = read('public/clock-centre.css');
 const moduleDocs = read('backend/modules/clock-centre/README.md');
+const menu = read('public/minglora-menu.js');
 
 test('Clock Centre is an independent Minglora route in desktop and mobile navigation', () => {
   assert.match(app, /state\.view==='clock-centre'\)await window\.MingloraClockCentre\?\.render\(\{user:state\.user\}\)/);
   assert.match(app, /view:'clock-centre'/);
   assert.match(app, /'clock-centre','menstrual-health'/);
   assert.match(html, /data-view="clock-centre"/);
+  assert.match(menu, /label: 'Clock Centre'.*action: 'clock-centre'/);
+  assert.match(menu, /'clock-centre': 'clock-centre'/);
   assert.match(html, /clock-centre\.css/);
   assert.match(html, /clock-centre\.js/);
   assert.ok(html.indexOf('/clock-centre.js') < html.indexOf('/app.js'), 'Clock Centre module loads before the app router');

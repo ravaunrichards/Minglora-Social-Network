@@ -846,8 +846,8 @@ function stopFeedAutoSync(){
   feedAutoSyncTimer=null;
 }
 function startFeedAutoSync(){
-  // Do not replace the user's feed while they are reading; refresh on navigation or action.
   stopFeedAutoSync();
+  feedAutoSyncTimer=window.setInterval(()=>void syncFeedAutomatically(),30000);
 }
 async function syncFeedAutomatically(){
   if(feedAutoSyncBusy||state.view!=='feed'||document.visibilityState!=='visible')return;
@@ -1178,8 +1178,8 @@ function stopPeopleDiscoveryRefresh(){
   peopleDiscoveryRefreshTimer=null;
 }
 function startPeopleDiscoveryRefresh(){
-  // Keep discovery stable while the user browses; reload data when they revisit the view.
   stopPeopleDiscoveryRefresh();
+  peopleDiscoveryRefreshTimer=window.setInterval(()=>void refreshPeopleDiscovery({quiet:true}),30000);
 }
 async function refreshPeopleDiscovery({quiet=true}={}){
   if(peopleDiscoveryRefreshBusy||state.view!=='friends'||document.visibilityState!=='visible')return;

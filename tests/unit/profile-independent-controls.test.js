@@ -10,6 +10,8 @@ const app=read('public/app.js');
 const css=read('public/profile-layout-guardrails.css');
 const avatarCss=read('public/profile-facebook-avatar-anchor.css');
 const independentCss=read('public/profile-independent-avatar-header.css');
+const adminCentre=read('public/admin-centre.js');
+const adminProfileCss=read('public/admin-profile-layout.css');
 
 test('profile header does not render separate profile-picture or cover-picture edit controls',()=>{
   assert.doesNotMatch(app,/id="profile-edit-avatar"|id="profile-edit-cover"|id="profile-edit-admin-cover"/);
@@ -32,20 +34,20 @@ test('the regular profile editor retains photo upload, camera and crop workflows
   assert.match(app,/function openEditProfile\(u,mediaOnly=null\)/);
 });
 
-test('admin profile keeps shared owner actions and its standard administrator tools',()=>{
+test('administrator access stays outside the member profile in the protected Admin Centre',()=>{
   const relationshipStart=app.indexOf('const relationshipActions=isMe');
-  const adminStart=app.indexOf('const adminToolsMarkup');
-  const adminEnd=app.indexOf('const profileActionMarkup',adminStart);
-  assert.ok(relationshipStart>=0&&adminStart>relationshipStart&&adminEnd>adminStart);
-  const ownerActions=app.slice(relationshipStart,adminStart);
-  const admin=app.slice(adminStart,adminEnd);
+  const profileActionStart=app.indexOf('const profileActionMarkup=relationshipActions',relationshipStart);
+  assert.ok(relationshipStart>=0&&profileActionStart>relationshipStart,'profile owner and visitor actions share the relationship-action renderer');
+  const ownerActions=app.slice(relationshipStart,profileActionStart);
   assert.match(ownerActions,/id="edit-profile"/);
   assert.match(ownerActions,/id="profile-add-story"/);
-  assert.match(admin,/data-profile-admin-action="privacy"/);
-  assert.match(admin,/data-profile-admin-action="edit-story"/);
-  assert.doesNotMatch(admin,/profile-edit-admin-cover|Edit Cover/);
+  assert.doesNotMatch(app,/const adminToolsMarkup|data-profile-admin-action/,'private administrator tools are not injected into member-facing profile markup');
+  assert.ok(adminCentre.includes("link.href = '/admin-centre.html'"));
+  assert.ok(adminCentre.includes("link.dataset.openAdminCentre = 'true'"));
+  assert.ok(adminCentre.includes("fetch('/api/admin/access'"));
+  assert.ok(adminCentre.includes("access?.canAccess !== true && access?.setupRequired !== true"));
+  assert.ok(adminProfileCss.includes('.profile-admin-centre-entry{'));
 });
-
 test('profile cover and portrait remain independent and the portrait stays left of the identity',()=>{
   assert.ok(independentCss.includes('margin:0 0 18px!important'));
   assert.ok(independentCss.includes('margin:0!important'));
@@ -62,7 +64,7 @@ test('profile cover and portrait remain independent and the portrait stays left 
   assert.ok(css.includes('position: relative !important'));
 });
 test('profile editing retains centered native dialogs and About section editing',()=>{
-  assert.ok(app.includes("const modal=document.createElement('dialog');modal.className='profile-inline-editor profile-editor-dialog'"));
+  assert.ok(app.includes("const modal=document.createElement('dialog');modal.id='minglora-profile-editor';modal.className='profile-inline-editor profile-editor-dialog'"));
   assert.ok(app.includes("const modal=document.createElement('dialog');modal.className='profile-inline-editor about-section-inline-editor profile-editor-dialog'"));
   assert.ok(app.includes('modal.showModal()'));
   assert.ok(app.includes("modal.addEventListener('cancel'"));

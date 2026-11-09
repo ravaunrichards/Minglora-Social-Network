@@ -35,7 +35,7 @@ test('profile picture remains in the avatar column and upload is controlled from
   const details=app.indexOf('profile-info-main',imageEnd);
   assert.ok(wrapper>=0&&avatar>wrapper&&imageEnd>avatar&&details>imageEnd);
   assert.doesNotMatch(app,/profile-avatar-inline-edit|profile-inline-media-edit|profile-media-action-row/);
-  assert.match(app,/id="edit-profile" type="button" aria-label="Edit profile"/);
+  assert.match(app,/id="edit-profile" type="button" aria-label="Edit profile(?: details in About)?"/);
   assert.match(app,/data-profile-media-section="avatar"/);
   assert.match(app,/id="edit-avatar-file"/);
   assert.match(profileCss,/\.profile-avatar-edit-wrap/);

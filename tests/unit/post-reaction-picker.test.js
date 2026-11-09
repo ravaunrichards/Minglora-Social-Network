@@ -21,7 +21,8 @@ test('reaction picker submits the selected reaction to the existing persisted AP
   assert.match(app, /JSON\.stringify\(\{reaction\}\)/);
   assert.match(app, /currentReaction\|\|'like'/);
   assert.match(server, /\['like','love','care','haha','wow','sad','angry'\]/);
-  assert.match(server, /if\(post\.reactions\[user\.id\]===reaction\)delete post\.reactions\[user\.id\]/);
+  assert.match(server, /const previousReaction=post\.reactions\[user\.id\]\|\|null/);
+  assert.match(server, /if\(previousReaction===reaction\)delete post\.reactions\[user\.id\];else post\.reactions\[user\.id\]=reaction/);
 });
 
 test('reaction picker has mobile-sized controls and visible keyboard focus', async () => {

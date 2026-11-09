@@ -2,10 +2,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
-const [runtime, admin, css, html, store, index, serviceWorker, app] = await Promise.all([
+const [runtime, admin, css, adminProfileCss, html, store, index, serviceWorker, app] = await Promise.all([
   readFile(new URL("../../supabase/functions/minglora-runtime-state/index.ts", import.meta.url), "utf8"),
   readFile(new URL("../../public/admin-centre.js", import.meta.url), "utf8"),
   readFile(new URL("../../public/admin-centre.css", import.meta.url), "utf8"),
+  readFile(new URL("../../public/admin-profile-layout.css", import.meta.url), "utf8"),
   readFile(new URL("../../public/admin-centre.html", import.meta.url), "utf8"),
   readFile(new URL("../../src/store.js", import.meta.url), "utf8"),
   readFile(new URL("../../public/index.html", import.meta.url), "utf8"),
@@ -46,7 +47,10 @@ test("admin centre renders module and per-collection totals from the live snapsh
 
 test("Admin Centre opens as its own page from the authorized administrator profile", () => {
   assert.ok(admin.includes("link.href = '/admin-centre.html'"));
-  assert.ok(admin.includes("adminGrid.append(link)"));
+  assert.ok(admin.includes("link.className = 'profile-admin-centre-entry'"));
+  assert.ok(admin.includes("link.dataset.openAdminCentre = 'true'"));
+  assert.ok(admin.includes("profileInfo.insertAdjacentElement('afterend', link)"));
+  assert.ok(admin.includes("fetch('/api/admin/access'"));
   assert.ok(!admin.includes("insertAdjacentElement('afterend', root)"));
   assert.ok(admin.includes("authenticator-verified session"));
   assert.ok(html.includes('id="admin-centre-root"'));
@@ -68,7 +72,7 @@ test("administrator profile has no duplicate profile-management controls and kee
   assert.ok(admin.includes("adminProfile.querySelector('[data-open-admin-centre]')"));
   assert.ok(admin.includes("access?.canAccess !== true && access?.setupRequired !== true"));
   assert.ok(admin.includes("profileInfo.insertAdjacentElement('afterend', link)"));
-  assert.ok(css.includes(".profile-admin-centre-entry{"));
+  assert.ok(adminProfileCss.includes(".profile-admin-centre-entry{"));
   assert.ok(!css.includes("profile-admin-tools"));
   assert.ok(!css.includes("profile-admin-tool"));
   assert.ok(app.includes("profile-admin-identity-mark--owner"));
