@@ -92,6 +92,8 @@ BEGIN
     WHEN NEW.account_status = 'banned' THEN lower(coalesce(
       auth_user.raw_app_meta_data ->> 'pre_ban_account_status',
       auth_user.raw_user_meta_data ->> 'pre_ban_account_status',
+      CASE WHEN TG_OP = 'UPDATE' AND OLD.account_status <> 'banned' THEN OLD.account_status END,
+      CASE WHEN TG_OP = 'UPDATE' THEN OLD.pre_ban_account_status END,
       'active'
     ))
     ELSE NULL
@@ -103,7 +105,7 @@ $$;
 REVOKE ALL ON FUNCTION private.enforce_minglora_profile_account_status() FROM PUBLIC, anon, authenticated;
 DROP TRIGGER IF EXISTS protect_minglora_profile_account_status ON public.profiles;
 CREATE TRIGGER protect_minglora_profile_account_status
-  BEFORE INSERT OR UPDATE OF account_status, banned_until, pre_ban_account_status ON public.profiles
+  BEFORE INSERT OR UPDATE ON public.profiles
   FOR EACH ROW EXECUTE FUNCTION private.enforce_minglora_profile_account_status();
 
 CREATE OR REPLACE FUNCTION private.sync_minglora_profile_account_status()
@@ -128,6 +130,7 @@ BEGIN
            WHEN next_status = 'banned' THEN lower(coalesce(
              NEW.raw_app_meta_data ->> 'pre_ban_account_status',
              NEW.raw_user_meta_data ->> 'pre_ban_account_status',
+             (SELECT profile.account_status FROM public.profiles AS profile WHERE profile.id = NEW.id AND profile.account_status <> 'banned'),
              'active'
            ))
            ELSE NULL
