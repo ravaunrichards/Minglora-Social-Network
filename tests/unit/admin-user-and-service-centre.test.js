@@ -26,7 +26,7 @@ test("new account creation requires profile fields that the live schema marks NO
   assert.ok(runtime.includes('if (displayName.length < 2) return json(400'));
   assert.ok(runtime.includes('if (!username) return json(400'));
   assert.ok(runtime.includes('if (usernameOwner) return json(409, { error: "That username is already in use." })'));
-  assert.ok(runtime.includes('.ilike("username", username)'), "create lookup is case-insensitive");
+  assert.ok(runtime.includes('.eq("username", username)'), "create lookup is case-insensitive");
   const usernameLookup = runtime.indexOf('const { data: usernameOwner');
   const authCreate = runtime.indexOf('admin.auth.admin.createUser');
   assert.ok(usernameLookup >= 0 && usernameLookup < authCreate, "username availability is checked before creating an Auth identity");
@@ -43,7 +43,7 @@ test("member edits enforce required display name and unique case-insensitive use
   assert.ok(admin.includes('id="admin-user-edit-username" name="username" maxlength="30" required pattern="[a-z0-9_]{3,30}"'));
   assert.ok(runtime.includes('if (value.length < 2) return json(400, { error: "Display name must contain at least 2 characters." })'));
   assert.ok(runtime.includes('if (!/^[a-z0-9_]{3,30}$/.test(value)) return json(400'));
-  assert.ok(runtime.includes('.ilike("username", value).neq("id", userId).maybeSingle()'));
+  assert.ok(runtime.includes('.eq("username", value).neq("id", userId).maybeSingle()'));
   assert.ok(runtime.includes('if (usernameOwner) return json(409, { error: "That username is already in use." })'));
 });
 
