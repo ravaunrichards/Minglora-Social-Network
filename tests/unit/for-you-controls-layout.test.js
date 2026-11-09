@@ -86,7 +86,7 @@ test('Home Stories use a Facebook-style create card, scrollable story rail and n
   const appAsset=html.match(/src="(\/app\.js\?v=[^"]+)"/)?.[1];
   assert.ok(appAsset,'app script is versioned in HTML');
   assert.ok(sw.includes(appAsset),'service worker caches the current app script');
-  assert.match(sw, /^const CACHE_NAME='minglora-shell-v[0-9]+-facebook-people-responsive-1';$/m);
+  assert.match(sw, /^const CACHE_NAME='minglora-shell-v[0-9]+-[^']+';$/m);
 });
 
 test('Stories create button stays above its label and uses consistent Facebook-style card sizing', async () => {

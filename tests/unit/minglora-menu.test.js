@@ -15,7 +15,7 @@ test('Minglora Menu beside Messenger has a clean single-row header', () => {
   assert.ok(html.includes('id="minglora-menu-toggle"'));
   assert.ok(html.includes('id="minglora-menu-panel"'));
   assert.ok(html.includes('minglora-menu.css?v=20261108-menu-search-removed-1'));
-  assert.ok(html.includes('minglora-menu.js?v=20261108-menu-search-removed-1'));
+  assert.ok(html.includes('minglora-menu.js?v=20261109-clock-centre-menu-1'));
   for (const label of ['Social','Entertainment','Shopping','Personal','Professional','More from Meta','Create']) {
     assert.ok(script.includes(label), 'Menu contains ' + label);
   }

@@ -18,8 +18,9 @@ const [app, html, css, worker, server, runtime, migration, balanceMigration] = a
   read('supabase/migrations/20261104220917_minglora_creator_money_balance_lifetime_total.sql')
 ]);
 
-test('the Coins destination is presented as Recharge in navigation', () => {
-  assert.match(html, /data-view="coins"[^>]*>[\s\S]*?Recharge<\/button>/);
+test('the Coins destination retains its existing label and uses the dedicated Recharge icon', () => {
+  assert.match(html, /data-view="coins"[^>]*>[\s\S]*?Coins &amp; Payments<\/span>/);
+  assert.match(html, /navigation-3d\.svg\?v=20261104-recharge-wallet-3d-3#recharge/);
   assert.match(app, /label:'Recharge',detail:'Buy Coins or exchange available money balance for Minglora Coins',view:'coins'/);
   assert.match(app, /<h1>Wallet &amp; earnings<\/h1>/);
 });

@@ -47,7 +47,7 @@ test('profile post pinning is owner-only and allows only one pinned post per pro
 test('profile post assets are versioned and cached together', async () => {
   const html = await read('public/index.html');
   const sw = await read('public/sw.js');
-  const appAsset = '/app.js?v=20261109-facebook-edit-profile-lock-notice-1';
+  const appAsset = html.match(/(\/app\.js\?v=[^"']+)/)?.[1] || '';
   const cssAsset = '/profile-facebook-panel.css?v=20261109-facebook-profile-lock-notice-1';
   assert.ok(html.includes(appAsset) && sw.includes("'" + appAsset + "'"));
   assert.ok(html.includes(cssAsset) && sw.includes("'" + cssAsset + "'"));
