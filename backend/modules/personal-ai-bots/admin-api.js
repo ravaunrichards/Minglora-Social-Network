@@ -1,7 +1,7 @@
 import { isRelationshipBlocked } from '../relationships/friends.js';
 
 function canonicalAiIdentity(bot) {
-  const parts=String(bot.displayName||'').trim().split(/\\s+/).filter(Boolean);
+  const parts=String(bot.displayName||'').trim().split(/\s+/).filter(Boolean);
   const firstName=String(bot.firstName||parts[0]||'AI').trim();
   const lastName=String(bot.lastName||parts[parts.length-1]||'Identity').trim();
   const middleName=String(bot.middleName||parts.slice(1,-1).join(' ')).trim();
@@ -36,6 +36,7 @@ function canonicalAiIdentity(bot) {
     personality:String(bot.personality||''),
     interests:Array.isArray(bot.interests)?bot.interests:[],
     hobbies:Array.isArray(bot.hobbies)?bot.hobbies:[],
+    languages:Array.isArray(bot.languages)?bot.languages:[],
     profession:String(bot.profession||''),
     skills:Array.isArray(bot.skills)?bot.skills:[],
     memory_enabled:bot.memoryEnabled===true,
