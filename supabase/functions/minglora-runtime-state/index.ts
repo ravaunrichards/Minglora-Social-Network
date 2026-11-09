@@ -460,7 +460,17 @@ Deno.serve(async (req: Request) => {
       });
     }
     const { error } = await admin.auth.admin.signOut(targetJwt, "global");
-    if (error) return json(503, { error: String(error.message || "Supabase sessions could not be revoked.").slice(0, 220) });
+    if (error) {
+      const auditRecorded = await recordAdminUserAction(actorUserId, userId, "account.sessions_revoke_failed", {
+        scope: "global",
+        outcome: "rejected",
+        reason: "supabase_admin_signout_failed"
+      });
+      return json(503, {
+        error: String(error.message || "Supabase sessions could not be revoked.").slice(0, 220),
+        auditRecorded
+      });
+    }
     const auditRecorded = await recordAdminUserAction(actorUserId, userId, "account.sessions_revoke", { scope: "global" });
     return json(200, { ok: true, sessionRevoked: true, auditRecorded });
   }
