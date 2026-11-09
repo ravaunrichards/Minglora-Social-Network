@@ -1572,7 +1572,7 @@
       const auditWarning = error?.payload?.auditRecorded === false
         ? ' Warning: the failed deletion audit entry could not be confirmed.'
         : error?.payload?.auditRecorded === true
-          ? ' Audit status: the failed deletion attempt was recorded in the administrator audit log.'
+          ? ' Audit status: The failed deletion attempt was recorded in the administrator audit log.'
           : '';
       if (status) status.textContent = (error.message || 'The account could not be deleted.') + auditWarning;
     } finally { button.disabled = false; }
