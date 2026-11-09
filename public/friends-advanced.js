@@ -59,14 +59,14 @@ function friendsDashboardCard(member,listId=null) {
       '<div class="facebook-friend-name-line"><button type="button" class="facebook-friend-name" data-friend-view="'+esc(member.id)+'">'+esc(member.name)+' '+verifiedProfileBadge(member)+'</button></div>'+
       '<div class="facebook-friend-username">@'+esc(member.username||'')+'</div>'+
       friendsDashboardMutualMarkup(member)+
-      '<div class="facebook-friend-status">'+(close?'<span class="facebook-friend-status-close" title="Close Friends"><span aria-hidden="true">★</span> Close Friends</span>':'')+(restricted?'<span class="facebook-friend-status-restricted" title="Restricted"><span aria-hidden="true">▣</span> Restricted</span>':'')+'</div>'+
+      '<div class="facebook-friend-status">'+(close?'<span class="facebook-friend-status-close" title="Close Friends"><span aria-hidden="true">★</span> Close Friends</span>':'')+(restricted?'<span class="facebook-friend-status-restricted" title="Restricted"><span aria-hidden="true">🔒</span> Restricted</span>':'')+'</div>'+
       '<div class="facebook-friend-actions">'+
         '<button type="button" class="facebook-friend-view" data-friend-view="'+esc(member.id)+'">View profile</button>'+
         '<button type="button" class="facebook-friend-message" data-friend-message="'+esc(member.id)+'">Message</button>'+
       '</div>'+
       '<div class="facebook-friend-preferences">'+
         '<button type="button" class="facebook-friend-pref '+(close?'is-active':'')+'" data-friend-pref="'+esc(member.id)+'" data-pref-key="isCloseFriend" data-pref-value="'+(!close)+'" aria-pressed="'+close+'"><span aria-hidden="true">★</span> '+(close?'Close Friends':'Add to Close Friends')+'</button>'+
-        '<button type="button" class="facebook-friend-pref '+(restricted?'is-active':'')+'" data-friend-pref="'+esc(member.id)+'" data-pref-key="isRestricted" data-pref-value="'+(!restricted)+'" aria-pressed="'+restricted+'"><span aria-hidden="true">▣</span> '+(restricted?'Restricted':'Add to Restricted')+'</button>'+
+        '<button type="button" class="facebook-friend-pref '+(restricted?'is-active':'')+'" data-friend-pref="'+esc(member.id)+'" data-pref-key="isRestricted" data-pref-value="'+(!restricted)+'" aria-pressed="'+restricted+'"><span aria-hidden="true">🔒</span> '+(restricted?'Restricted':'Add to Restricted')+'</button>'+
       '</div>'+
       '<div class="facebook-friend-list-actions">'+actions+
         '<button type="button" class="facebook-friend-remove" data-unfollow-friend="'+esc(member.id)+'">Remove</button>'+
@@ -78,7 +78,7 @@ function friendsDashboardCard(member,listId=null) {
 function friendsDashboardListCards() {
   const builtins=[
     {id:'close',name:'Close Friends',icon:'★',count:friendsDashboardState.friends.filter(member=>member.isCloseFriend).length},
-    {id:'restricted',name:'Restricted',icon:'▣',count:friendsDashboardState.friends.filter(member=>member.isRestricted).length}
+    {id:'restricted',name:'Restricted',icon:'🔒',count:friendsDashboardState.friends.filter(member=>member.isRestricted).length}
   ];
   return '<div class="facebook-friend-list-grid">'+
     builtins.map(item=>'<button type="button" class="facebook-friend-list-tile" data-open-built-in-list="'+item.id+'"><span class="facebook-friend-list-icon facebook-friend-list-icon--'+item.id+'" aria-hidden="true">'+item.icon+'</span><span><strong>'+item.name+'</strong><small>'+item.count.toLocaleString()+' friends</small></span><span class="facebook-friend-list-arrow" aria-hidden="true">›</span></button>').join('')+
@@ -124,7 +124,7 @@ function friendsDashboardPaint() {
   setContent('<div class="friends-advanced facebook-friends-page">'+
     '<header class="facebook-friends-head"><div><h1>Friends</h1><p>'+friendCount.toLocaleString()+' '+(friendCount===1?'friend':'friends')+'</p></div></header>'+
     friendsDashboardTabMarkup()+
-    '<div class="facebook-friends-toolbar">'+search+(friendsDashboardState.tab==='lists'&&!friendsDashboardState.selectedListId?'<button type="button" class="primary" id="friends-create-list">＋ Create list</button>':'')+'</div>'+
+    '<div class="facebook-friends-toolbar">'+search+'</div>'+
     friendsDashboardMainMarkup()+
     '<p class="facebook-friends-note">Minglora friendships are automatic: following each other makes you friends. There are no friend requests.</p>'+
   '</div>');
