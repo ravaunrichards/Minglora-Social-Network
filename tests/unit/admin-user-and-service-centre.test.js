@@ -151,9 +151,14 @@ test("Auth provider settings require owner MFA and same-origin provider writes",
 
 test("service connections show Minglora providers without returning secrets", () => {
   assert.match(server, /\/api\/admin\/integrations/);
-  for (const provider of ["Supabase", "Render", "GitHub", "LiveKit", "PayPal", "Tenor", "SIX Group", "Frankfurter"]) {
+  for (const provider of ["Supabase", "Supabase Management API", "Render", "GitHub", "LiveKit", "PayPal", "Tenor", "SIX Group", "Frankfurter"]) {
     assert.ok(server.includes("name:'" + provider + "'"), "missing service card: " + provider);
   }
+  assert.match(server, /const supabaseManagementToken=String\(process\.env\.SUPABASE_ACCESS_TOKEN/);
+  assert.match(server, /Authorization:'Bearer '\+supabaseManagementToken/);
+  assert.match(server, /api\.supabase\.com\/v1\/projects\/gzycobgbasnqqhnympkr\/config\/auth/);
+  assert.match(server, /Auth Config Read-write plus Project Settings Read-write/);
+  assert.match(server, /token value remains server-only/);
   assert.match(server, /WEB_PUSH_PRIVATE_KEY/);
   assert.match(server, /paypalToken\(\)/);
   assert.match(server, /verifyLiveKitConnection/);
