@@ -1579,7 +1579,8 @@
         : error?.payload?.auditRecorded === true
           ? ' Audit status: The failed deletion attempt was recorded in the administrator audit log.'
           : '';
-      if (status) status.textContent = (error.message || 'The account could not be deleted.') + auditWarning;
+      const sessionWarning = error?.payload?.warning ? ' ' + error.payload.warning : '';
+      if (status) status.textContent = (error.message || 'The account could not be deleted.') + auditWarning + sessionWarning;
     } finally { button.disabled = false; }
   }
 
