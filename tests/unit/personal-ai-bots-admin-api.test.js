@@ -1261,7 +1261,7 @@ test('candidate application routes are owner-only and reject independent AI iden
   assert.equal(nonOwner.res.statusCode,403);
   assert.equal(nonOwner.db.personalAiBotApplications,undefined);
   const db={personalAiBots:[{id:'independent-001',population:'independent',displayName:'Independent'}],personalAiBotVacancies:[{
-    id:'vacancy-001',ownerId:'admin-1',title:'Position',positionCode:'worker',positionTitle:'Worker',
+    id:'vacancy-001',ownerId:'owner-1',title:'Position',positionCode:'worker',positionTitle:'Worker',
     departmentId:'department-finance_accounting',departmentName:'Finance and Accounting',status:'open'
   }]};
   const attempt=makeContext({
