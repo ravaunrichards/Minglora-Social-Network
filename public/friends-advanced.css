@@ -72,3 +72,17 @@
 }
 
 /* Base dashboard styles retained for older embedded contexts. */
+
+
+/* Platform moderation states remain visible without counting as active relationships. */
+.facebook-friend-card--unavailable{border-color:var(--border,#d8dee8);background:var(--surface-2,#f7f8fa)}
+.facebook-friend-photo--unavailable{cursor:default;opacity:.72}
+.facebook-friend-name--unavailable{cursor:default;color:var(--text)}
+.facebook-friend-account-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 8px;border-radius:999px;font-size:10px;font-weight:850;letter-spacing:.02em;background:var(--surface-3,#eceff4);color:var(--muted,#586273)}
+.facebook-friend-account-badge--banned,.facebook-friend-account-state--banned strong{color:#a8202c;background:#fdebed}
+.facebook-friend-account-badge--restricted,.facebook-friend-account-state--restricted strong{color:#8a5a00;background:#fff1cc}
+.facebook-friend-account-badge--suspended,.facebook-friend-account-state--suspended strong{color:#85520a;background:#fff1cc}
+.facebook-friend-account-badge--deactivated,.facebook-friend-account-state--deactivated strong{color:#596579;background:#e9edf3}
+.facebook-friend-account-state{display:grid;gap:3px;padding:9px 11px;border:1px solid var(--border,#d8dee8);border-radius:10px;background:var(--surface,#fff);font-size:11px;color:var(--muted,#687487)}
+.facebook-friend-account-state strong{width:max-content;padding:3px 7px;border-radius:99px;font-size:10px}
+.facebook-friend-account-note{font-size:10px;color:var(--muted,#687487);font-weight:700}
