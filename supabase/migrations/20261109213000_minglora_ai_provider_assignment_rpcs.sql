@@ -314,7 +314,7 @@ AS $function$
     JOIN public.ai_provider_models AS model ON model.id = assignment.model_id
     WHERE identity.owner_admin_id = p_owner_admin_id
       AND identity.status NOT IN ('suspended','archived','retired')
-      AND assignment.assignment_status NOT IN ('disabled','error')
+      AND assignment.assignment_status <> 'disabled'
     ORDER BY assignment.created_at DESC
     LIMIT LEAST(GREATEST(COALESCE(p_limit,200),1),500)
     OFFSET GREATEST(COALESCE(p_offset,0),0)
@@ -342,7 +342,7 @@ BEGIN
   IF p_actor_user_id IS DISTINCT FROM '5b998c21-86b5-4621-ab37-e0808a2657b1'::uuid THEN
     RAISE EXCEPTION 'Only the designated Minglora owner may update provider health.' USING ERRCODE = '42501';
   END IF;
-  IF p_assignment_id IS NULL OR p_health_status NOT IN ('healthy','degraded','unavailable','error') THEN
+  IF p_assignment_id IS NULL OR p_health_status IS NULL OR p_health_status NOT IN ('healthy','degraded','unavailable','error') THEN
     RAISE EXCEPTION 'Provider health update values are invalid.' USING ERRCODE = '22023';
   END IF;
 
