@@ -16,7 +16,7 @@ test('Clock Centre is an independent Minglora route in desktop and mobile naviga
   assert.match(app, /state\.view==='clock-centre'\)await window\.MingloraClockCentre\?\.render\(\{user:state\.user\}\)/);
   assert.match(app, /view:'clock-centre'/);
   assert.match(app, /'clock-centre','menstrual-health'/);
-  assert.match(html, /data-view="clock-centre"/);
+  assert.match(app,/label:'Clock Centre'[^}]+view:'clock-centre'/);
   assert.match(html, /clock-centre\.css/);
   assert.match(html, /clock-centre\.js/);
   assert.ok(html.indexOf('/clock-centre.js') < html.indexOf('/app.js'), 'Clock Centre module loads before the app router');
