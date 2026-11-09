@@ -1977,6 +1977,186 @@ async function route(req, res) {
         });
       }
 
+      if(method==='GET'&&p==='/api/admin/integrations'){
+        if(!isDesignatedCreatorHubAdmin(user)||!isModerator(user,req)||!hasActiveReviewerSession(user)){
+          return json(res,403,{error:'Only the MFA-verified Minglora owner can view service connections.'});
+        }
+        const [persistence,liveKit]=await Promise.all([
+          persistenceHealth().catch(()=>({ready:false,error:'Supabase persistence health check failed.'})),
+          verifyLiveKitConnection().catch(()=>({configured:false,connected:false,error:'LiveKit health check failed.'}))
+        ]);
+        const paypal=paypalConfig();
+        let paypalAuthenticated=false,paypalError=null;
+        if(paypal.configured){
+          try{await paypalToken();paypalAuthenticated=true;}
+          catch(error){paypalError=String(error?.message||'PayPal authentication failed.').slice(0,160);}
+        }
+        const tenorConfigured=Boolean(String(process.env.TENOR_API_KEY||'').trim());
+        const pushConfigured=Boolean(
+          String(process.env.WEB_PUSH_PUBLIC_KEY||'').trim()&&
+          String(process.env.WEB_PUSH_PRIVATE_KEY||'').trim()&&
+          String(process.env.WEB_PUSH_SUBJECT||'').trim()
+        );
+        const supabaseConnected=Boolean(AUTH_PROVIDER==='supabase'&&supabaseAuthConfigured()&&persistence?.ready);
+        const renderUrl=String(process.env.RENDER_EXTERNAL_URL||'https://minglora-social-network.onrender.com').trim();
+        const services=[
+          {
+            key:'supabase',name:'Supabase',category:'Backend platform',
+            status:supabaseConnected?'connected':'attention',
+            detail:supabaseConnected?'Auth and the Minglora database runtime are responding. Storage and Edge Functions are managed in this project.':String(persistence?.error||'Supabase Auth or persistent storage is not ready.'),
+            dashboardUrl:'https://supabase.com/dashboard/project/gzycobgbasnqqhnympkr',
+            serviceUrl:'https://gzycobgbasnqqhnympkr.supabase.co',
+            checkedAt:new Date().toISOString()
+          },
+          {
+            key:'render',name:'Render',category:'Application hosting',
+            status:'connected',
+            detail:'This live Admin Centre is being served by Minglora’s Render web service.',
+            dashboardUrl:'https://dashboard.render.com/web/srv-dbi3gvqfngtc73c6hi4g',
+            serviceUrl:renderUrl,
+            checkedAt:new Date().toISOString()
+          },
+          {
+            key:'github',name:'GitHub',category:'Source code and deployment',
+            status:'linked',
+            detail:'The Render service is linked to the Minglora Social Network repository on the main branch with automatic deploys.',
+            dashboardUrl:'https://github.com/ravaunrichards/Minglora-Social-Network',
+            serviceUrl:'https://github.com/ravaunrichards/Minglora-Social-Network',
+            checkedAt:new Date().toISOString()
+          },
+          {
+            key:'livekit',name:'LiveKit',category:'Real-time audio and video',
+            status:liveKit.connected?'connected':liveKit.configured?'attention':'not-configured',
+            detail:liveKit.connected?'The Minglora LiveKit server accepted an authenticated room-service health check.':String(liveKit.error||'LiveKit server credentials are not configured for Minglora.'),
+            dashboardUrl:'https://cloud.livekit.io/',
+            serviceUrl:null,
+            checkedAt:liveKit.checkedAt||null
+          },
+          {
+            key:'paypal',name:'PayPal',category:'Payments and payouts',
+            status:paypalAuthenticated?'connected':paypal.configured?'attention':'not-configured',
+            detail:paypalAuthenticated?'PayPal API authentication succeeded. Webhook readiness is shown separately.':paypalError||'PayPal API credentials are not configured on the Minglora server.',
+            dashboardUrl:'https://developer.paypal.com/dashboard/',
+            serviceUrl:null,
+            mode:paypal.mode,
+            webhookConfigured:Boolean(paypal.webhookId),
+            checkedAt:new Date().toISOString()
+          },
+          {
+            key:'tenor',name:'Tenor',category:'GIF and sticker search',
+            status:tenorConfigured?'configured':'not-configured',
+            detail:tenorConfigured?'The server-side Tenor API key is present. The key is never returned to this dashboard.':'TENOR_API_KEY is not configured on the Minglora server.',
+            dashboardUrl:'https://tenor.com/gifapi/documentation',
+            serviceUrl:null,
+            checkedAt:new Date().toISOString()
+          },
+          {
+            key:'web-push',name:'Browser push notifications',category:'Notifications',
+            status:pushConfigured?'configured':'not-configured',
+            detail:pushConfigured?'VAPID public/private keys and the contact subject are present. Browser push subscriptions use their respective push services.':'One or more Web Push VAPID settings are missing from the Minglora server.',
+            dashboardUrl:null,
+            serviceUrl:null,
+            checkedAt:new Date().toISOString()
+          },
+          {
+            key:'email',name:'Auth email delivery',category:'Email and account recovery',
+            status:'managed',
+            detail:'Email sign-in, recovery and confirmation delivery are managed in Supabase Auth. The SMTP provider and delivery test are not exposed by the current Minglora runtime.',
+            dashboardUrl:'https://supabase.com/dashboard/project/gzycobgbasnqqhnympkr/auth/settings',
+            serviceUrl:null,
+            checkedAt:null
+          }
+        ];
+        return json(res,200,{
+          services,
+          checkedAt:new Date().toISOString(),
+          runtime:{
+            authProvider:AUTH_PROVIDER,
+            persistenceReady:Boolean(persistence?.ready),
+            liveKitConfigured:Boolean(liveKit.configured),
+            renderService:renderUrl,
+            renderCommit:String(process.env.RENDER_GIT_COMMIT||'').slice(0,40)||null
+          }
+        });
+      }
+
+      const adminUserIdMatch=p.match(/^\/api\/admin\/users\/([0-9a-f-]{36})$/i);
+      if(method==='GET'&&adminUserIdMatch){
+        if(!isDesignatedCreatorHubAdmin(user)||!isModerator(user,req)||!hasActiveReviewerSession(user)){
+          return json(res,403,{error:'Only the MFA-verified Minglora owner can view member accounts.'});
+        }
+        if(AUTH_PROVIDER!=='supabase')return json(res,503,{error:'Account management requires Minglora Supabase Auth.'});
+        const targetId=String(adminUserIdMatch[1]||'').toLowerCase();
+        const result=await requestSupabaseState('admin_user_get',{actorUserId:user.id,userId:targetId});
+        return json(res,200,result);
+      }
+
+      if(method==='POST'&&p==='/api/admin/users'){
+        if(!isSameOriginApiWrite(req))return json(res,403,{error:'This account-management request must come from Minglora.'});
+        if(!isDesignatedCreatorHubAdmin(user)||!isModerator(user,req)||!hasActiveReviewerSession(user)){
+          return json(res,403,{error:'Only the MFA-verified Minglora owner can create member accounts.'});
+        }
+        if(AUTH_PROVIDER!=='supabase')return json(res,503,{error:'Account creation requires Minglora Supabase Auth.'});
+        const result=await requestSupabaseState('admin_user_create',{
+          actorUserId:user.id,email:input.email,phone:input.phone,password:input.password,
+          displayName:input.displayName,username:input.username,contactPhone:input.contactPhone,
+          emailConfirmed:input.emailConfirmed===true,phoneConfirmed:input.phoneConfirmed===true
+        });
+        return json(res,201,result);
+      }
+
+      if(method==='PATCH'&&adminUserIdMatch){
+        if(!isSameOriginApiWrite(req))return json(res,403,{error:'This account-management request must come from Minglora.'});
+        if(!isDesignatedCreatorHubAdmin(user)||!isModerator(user,req)||!hasActiveReviewerSession(user)){
+          return json(res,403,{error:'Only the MFA-verified Minglora owner can update member accounts.'});
+        }
+        if(AUTH_PROVIDER!=='supabase')return json(res,503,{error:'Account updates require Minglora Supabase Auth.'});
+        const targetId=String(adminUserIdMatch[1]||'').toLowerCase();
+        const result=await requestSupabaseState('admin_user_update',{actorUserId:user.id,userId:targetId,patch:input});
+        return json(res,200,result);
+      }
+
+      if(method==='DELETE'&&adminUserIdMatch){
+        if(!isSameOriginApiWrite(req))return json(res,403,{error:'This account-management request must come from Minglora.'});
+        if(!isDesignatedCreatorHubAdmin(user)||!isModerator(user,req)||!hasActiveReviewerSession(user)){
+          return json(res,403,{error:'Only the MFA-verified Minglora owner can delete member accounts.'});
+        }
+        if(AUTH_PROVIDER!=='supabase')return json(res,503,{error:'Account deletion requires Minglora Supabase Auth.'});
+        const targetId=String(adminUserIdMatch[1]||'').toLowerCase();
+        const result=await requestSupabaseState('admin_user_delete',{
+          actorUserId:user.id,userId:targetId,confirmUserId:input.confirmUserId,reason:input.reason
+        });
+        if(result.deleted){
+          db.users=(db.users||[]).filter(item=>item.id!==targetId);
+          db.sessions=(db.sessions||[]).filter(item=>item.userId!==targetId);
+          db.pendingAuth=(db.pendingAuth||[]).filter(item=>item.userId!==targetId);
+          await saveStore();
+        }
+        return json(res,200,result);
+      }
+
+      const adminRevokeSessionMatch=p.match(/^\/api\/admin\/users\/([0-9a-f-]{36})\/sessions\/revoke$/i);
+      if(method==='POST'&&adminRevokeSessionMatch){
+        if(!isSameOriginApiWrite(req))return json(res,403,{error:'This account-management request must come from Minglora.'});
+        if(!isDesignatedCreatorHubAdmin(user)||!isModerator(user,req)||!hasActiveReviewerSession(user)){
+          return json(res,403,{error:'Only the MFA-verified Minglora owner can revoke member sessions.'});
+        }
+        if(AUTH_PROVIDER!=='supabase')return json(res,503,{error:'Session revocation requires Minglora Supabase Auth.'});
+        const targetId=String(adminRevokeSessionMatch[1]||'').toLowerCase();
+        if(targetId===CREATOR_HUB_ADMIN_USER_ID)return json(res,403,{error:'The platform owner session is protected.'});
+        const targetSessions=(db.sessions||[]).filter(item=>item.userId===targetId&&item.authSealed);
+        let targetJwt=null;
+        for(const savedSession of targetSessions){
+          try{const targetAuth=await sessionAuth(savedSession);if(targetAuth?.access_token){targetJwt=targetAuth.access_token;break;}}catch{}
+        }
+        const result=await requestSupabaseState('admin_user_revoke_sessions',{actorUserId:user.id,userId:targetId,targetJwt});
+        const appSessionsBefore=(db.sessions||[]).filter(item=>item.userId===targetId).length;
+        db.sessions=(db.sessions||[]).filter(item=>item.userId!==targetId);
+        db.pendingAuth=(db.pendingAuth||[]).filter(item=>item.userId!==targetId);
+        await saveStore();
+        return json(res,200,{...result,appSessionsRevoked:appSessionsBefore});
+      }
+
       if(method==='GET'&&p==='/api/admin/users'){
         if(!isDesignatedCreatorHubAdmin(user)||!isModerator(user,req)||!hasActiveReviewerSession(user)){
           return json(res,403,{error:'Only the MFA-verified Minglora owner can manage member accounts.'});
@@ -1984,8 +2164,10 @@ async function route(req, res) {
         if(AUTH_PROVIDER!=='supabase')return json(res,503,{error:'Account-wide ban controls require Minglora Supabase Auth.'});
         const search=String(url.searchParams.get('search')||'').trim().slice(0,120);
         const status=String(url.searchParams.get('status')||'all').toLowerCase();
+        const page=Math.max(1,Math.min(10000,Math.floor(Number(url.searchParams.get('page')||1))));
+        const pageSize=Math.max(10,Math.min(100,Math.floor(Number(url.searchParams.get('pageSize')||50))));
         if(!['all','active','banned','suspended','deactivated'].includes(status))return json(res,400,{error:'Choose a valid account status filter.'});
-        const result=await requestSupabaseState('admin_users_list',{actorUserId:user.id,search,status});
+        const result=await requestSupabaseState('admin_users_list',{actorUserId:user.id,search,status,page,pageSize});
         const members=(Array.isArray(result.users)?result.users:[]).map(member=>{
           const local=db.users.find(item=>item.id===member.id);
           if(local){
@@ -1995,8 +2177,8 @@ async function route(req, res) {
             if(!member.avatarUrl&&local.avatar)member.avatarUrl=local.avatar;
           }
           return member;
-        }).filter(member=>status==='all'||member.status===status);
-        return json(res,200,{users:members,count:members.length,status});
+        });
+        return json(res,200,{...result,users:members,status});
       }
       const adminAccountActionMatch=p.match(/^\/api\/admin\/users\/([0-9a-f-]{36})\/(ban|unban)$/i);
       if(method==='POST'&&adminAccountActionMatch){
