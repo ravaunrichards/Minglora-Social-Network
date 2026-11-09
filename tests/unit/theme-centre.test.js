@@ -53,7 +53,9 @@ test('all advertised themes have previews and responsive visual treatment', () =
     assert.ok(css.includes('live-theme-art-' + theme), 'missing LIVE preview ' + theme);
     if (theme !== 'studio') assert.ok(css.includes('live-theme-' + theme), 'missing LIVE room style ' + theme);
   }
-  assert.ok(html.includes('styles.css?v=20261108-facebook-profile-sidebar-1'));
+  const stylesAsset=html.match(/href="(\/styles\.css\?v=[^"]+)"/)?.[1];
+  assert.ok(stylesAsset,'main stylesheet is versioned in HTML');
+  assert.ok(sw.includes(stylesAsset),'service worker caches the current main stylesheet');
   assert.match(html, /src="\/app\.js\?v=[^"]+"/);
   assert.match(html, /auth-login\.js\?v=20261105-admin-mfa-enrollment-1/);
   assert.match(html, /settings\.js\?v=20261106-refresh-controls-removed-1/);
