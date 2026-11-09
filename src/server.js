@@ -5089,14 +5089,23 @@ async function route(req, res) {
       }
       m=p.match(/^\/api\/users\/([^/]+)\/(followers|following|friends)$/);
       if(method==='GET'&&m){
-        const target=db.users.find(u=>u.id===m[1]);
+        let target=db.users.find(u=>u.id===m[1]);
+        if(!target)return json(res,404,{error:'User not found.'});
+        await syncRelationshipAccountStatuses([target.id]);
+        target=db.users.find(u=>u.id===m[1]);
         if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'User not found.'});
         const listAudience=getUserSettings(target).privacy.friendsListAudience||'public';
         if(!canViewProfileAudience(user.id,target.id,listAudience))return json(res,404,{error:'This friends list is not available.'});
-        const rows=m[2]==='friends'?(db.follows||[]).filter(f=>f.followedId===target.id&&(db.follows||[]).some(reverse=>reverse.followerId===target.id&&reverse.followedId===f.followerId)):(m[2]==='followers'?(db.follows||[]).filter(f=>f.followedId===target.id):(db.follows||[]).filter(f=>f.followerId===target.id));
-        const ids=rows.map(edge=>m[2]==='following'?edge.followedId:edge.followerId);
-        const users=[...new Set(ids)].map(id=>db.users.find(u=>u.id===id)).filter(u=>u&&!blockedBetween(user.id,u.id)&&canViewProfile(user.id,u)).map(safeUser);
-        return json(res,200,{users,count:users.length});
+        let rows=m[2]==='friends'?(db.follows||[]).filter(f=>f.followedId===target.id&&(db.follows||[]).some(reverse=>reverse.followerId===target.id&&reverse.followedId===f.followerId)):(m[2]==='followers'?(db.follows||[]).filter(f=>f.followedId===target.id):(db.follows||[]).filter(f=>f.followerId===target.id));
+        let ids=rows.map(edge=>m[2]==='following'?edge.followedId:edge.followerId);
+        await syncRelationshipAccountStatuses(ids);
+        target=db.users.find(u=>u.id===m[1]);
+        if(!target)return json(res,404,{error:'User not found.'});
+        rows=m[2]==='friends'?(db.follows||[]).filter(f=>f.followedId===target.id&&(db.follows||[]).some(reverse=>reverse.followerId===target.id&&reverse.followedId===f.followerId)):(m[2]==='followers'?(db.follows||[]).filter(f=>f.followedId===target.id):(db.follows||[]).filter(f=>f.followerId===target.id));
+        ids=rows.map(edge=>m[2]==='following'?edge.followedId:edge.followerId);
+        const users=[...new Set(ids)].map(id=>db.users.find(u=>u.id===id)).filter(u=>u&&canViewRelationshipListMember(user.id,u)).map(member=>safeUser(member,user.id));
+        const activeCount=activeRelationshipCount(users.map(member=>member.id),target,user.id);
+        return json(res,200,{users,count:activeCount,activeCount,visibleCount:users.length});
       }
       m=p.match(/^\/api\/users\/([^/]+)\/profile-presence$/);
       if(method==='POST'&&m){
