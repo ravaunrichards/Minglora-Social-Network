@@ -199,3 +199,24 @@ test('follow batch resolves remote Supabase members through the existing owner-a
   assert.equal(context.res.statusCode,201);
   assert.equal(context.res.payload.created,1);
 });
+
+
+test('follow approval re-checks live relationship blocks before approving',async()=>{
+  const taskId='00000000-0000-4000-8000-000000000201';
+  const botId='00000000-0000-4000-8000-000000000202';
+  const target='member-now-blocked';
+  const context=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/tasks/'+taskId+'/approve',
+    db:{
+      personalAiBotSettings:[{id:'global',enabled:true}],
+      personalAiBots:[{id:botId,displayName:'AI Friend',categoryId:'ai-friends',enabled:true,status:'enabled'}],
+      personalAiBotTasks:[{id:taskId,botId,taskType:'follow',targetUserId:target,status:'awaiting_administrator_approval'}],
+      users:[{id:target,status:'active'}],
+      blocks:[{blockerId:'owner-1',blockedId:target}]
+    }
+  });
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,409);
+  assert.match(context.res.payload.error,/block now prevents/);
+  assert.equal(context.db.personalAiBotTasks[0].status,'awaiting_administrator_approval');
+});
