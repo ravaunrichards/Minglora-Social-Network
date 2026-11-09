@@ -89,13 +89,14 @@
       :'<span class="admin-auth-provider-route-warning">Minglora return URL needs connecting</span>';
     host.innerHTML=
       '<div class="admin-auth-provider-route-row"><div><strong>Provider callback URL</strong><small>Paste this exact URL into the provider’s Authorized redirect URI / Callback URL field.</small><code id="admin-auth-provider-callback">'+escapeHtml(routes.providerCallbackUrl)+'</code></div><button type="button" class="secondary" data-copy-auth-route="callback">Copy</button></div>'+
-      '<div class="admin-auth-provider-route-row"><div><strong>Minglora return URL</strong><small>Supabase redirects users back to this production address after provider authentication.</small><code id="admin-auth-provider-return">'+escapeHtml(routes.appRedirectUrl)+'</code></div><button type="button" class="secondary" data-copy-auth-route="return">Copy</button></div>'+
+      '<div class="admin-auth-provider-route-row"><div><strong>Minglora Site URL</strong><small>Homepage used by Supabase for the production project.</small><code>'+escapeHtml(routes.siteRedirectUrl||routes.appSiteUrl)+'</code></div><button type="button" class="secondary" data-copy-auth-route="site">Copy</button></div>'+
+      '<div class="admin-auth-provider-route-row"><div><strong>Minglora OAuth return route</strong><small>Supabase redirects users here so Minglora can exchange the PKCE code and create the signed-in session.</small><code id="admin-auth-provider-return">'+escapeHtml(routes.appRedirectUrl)+'</code></div><button type="button" class="secondary" data-copy-auth-route="return">Copy</button></div>'+
       '<div class="admin-auth-provider-route-footer">'+redirectState+'<button type="button" class="primary" id="admin-auth-provider-sync-routes">Connect / repair routes</button></div>'+
-      '<small class="admin-auth-provider-route-note">Connecting routes sets the production Site URL and adds the exact Minglora return URL to Supabase’s redirect allow-list. Existing allowed redirect URLs are preserved.</small>';
+      '<small class="admin-auth-provider-route-note">Connecting routes sets the production Site URL and adds the homepage and exact OAuth callback route to Supabase’s redirect allow-list. Existing allowed redirect URLs are preserved.</small>';
     host.querySelectorAll('[data-copy-auth-route]').forEach(button=>{
       button.addEventListener('click',async()=>{
         const type=button.dataset.copyAuthRoute;
-        const text=type==='callback'?routes.providerCallbackUrl:routes.appRedirectUrl;
+        const text=type==='callback'?routes.providerCallbackUrl:type==='site'?(routes.siteRedirectUrl||routes.appSiteUrl):routes.appRedirectUrl;
         try{
           if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(text);
           else{
