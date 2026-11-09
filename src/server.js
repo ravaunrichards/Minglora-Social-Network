@@ -1985,11 +1985,13 @@ async function route(req, res) {
         const managementToken=String(process.env.SUPABASE_ACCESS_TOKEN||'').trim();
         if(!managementToken)return json(res,503,{error:'The server-side Supabase Management token is not configured. Add SUPABASE_ACCESS_TOKEN to the Minglora Render environment.'});
         const projectRef='gzycobgbasnqqhnympkr';
+        const projectUrl='https://'+projectRef+'.supabase.co';
+        const providerCallbackUrl=projectUrl+'/auth/v1/callback';
         const definitions=[
           {id:'email',label:'Email & password',category:'Core sign-in',flag:'external_email_enabled',keys:[],note:'Controls Supabase email/password and email OTP sign-in. Existing mailer and redirect settings are preserved.'},
-          {id:'phone',label:'Phone (SMS OTP)',category:'Core sign-in',flag:'external_phone_enabled',keys:[],note:'Requires a working SMS provider and credentials in Supabase Auth settings.'},
-          {id:'apple',label:'Apple',category:'Social sign-in',flag:'external_apple_enabled',keys:['external_apple_client_id','external_apple_secret']},
-          {id:'azure',label:'Microsoft Azure',category:'Social sign-in',flag:'external_azure_enabled',keys:['external_azure_client_id','external_azure_secret']},
+          {id:'phone',label:'Phone (SMS OTP)',category:'Core sign-in',flag:'external_phone_enabled',keys:[],note:'Choose an SMS gateway and add its provider credentials before enabling phone sign-in.'},
+          {id:'apple',label:'Apple',category:'Social sign-in',flag:'external_apple_enabled',keys:['external_apple_client_id','external_apple_secret'],optionalKeys:['external_apple_additional_client_ids']},
+          {id:'azure',label:'Microsoft Azure',category:'Social sign-in',flag:'external_azure_enabled',keys:['external_azure_client_id','external_azure_secret'],optionalKeys:['external_azure_url']},
           {id:'bitbucket',label:'Bitbucket',category:'Social sign-in',flag:'external_bitbucket_enabled',keys:['external_bitbucket_client_id','external_bitbucket_secret']},
           {id:'discord',label:'Discord',category:'Social sign-in',flag:'external_discord_enabled',keys:['external_discord_client_id','external_discord_secret']},
           {id:'facebook',label:'Facebook',category:'Social sign-in',flag:'external_facebook_enabled',keys:['external_facebook_client_id','external_facebook_secret']},
@@ -2013,17 +2015,33 @@ async function route(req, res) {
           {id:'web3_solana',label:'Web3 Wallet (Solana)',category:'Wallet & enterprise',flag:'external_web3_solana_enabled',keys:[],note:'Wallet sign-in uses Solana wallet authentication.'},
           {id:'saml',label:'SAML 2.0 SSO',category:'Wallet & enterprise',flag:'saml_enabled',keys:['saml_external_url'],planBlocked:true,note:'Unavailable on Minglora’s current Supabase Free plan. Upgrade the Supabase organization before enabling SAML SSO.'}
         ];
-        const smsReadiness=(config)=>{
-          const provider=String(config.sms_provider||'').trim().toLowerCase();
-          const requirements={
-            twilio:['sms_twilio_account_sid','sms_twilio_auth_token'],
-            vonage:['sms_vonage_api_key','sms_vonage_api_secret','sms_vonage_from'],
-            messagebird:['sms_messagebird_access_key'],
-            textlocal:['sms_textlocal_api_key']
-          }[provider];
-          return Boolean(requirements&&requirements.every(key=>String(config[key]||'').trim()));
+        const smsProviders={
+          twilio:{required:['sms_twilio_account_sid','sms_twilio_auth_token'],optional:['sms_twilio_message_service_sid']},
+          vonage:{required:['sms_vonage_api_key','sms_vonage_api_secret','sms_vonage_from'],optional:[]},
+          messagebird:{required:['sms_messagebird_access_key'],optional:['sms_messagebird_originator']},
+          textlocal:{required:['sms_textlocal_api_key'],optional:['sms_textlocal_sender']}
         };
-        const getProviderState=(config)=>definitions.map(def=>{
+        const fieldLabel=key=>{
+          if(key.endsWith('_client_id'))return 'OAuth Client ID';
+          if(key.endsWith('_secret')||key.endsWith('_auth_token'))return key.includes('vonage')?'API Secret':'Client Secret / API Token';
+          if(key.endsWith('_url'))return 'Issuer / Provider URL';
+          if(key.endsWith('_additional_client_ids'))return 'Additional Client IDs (optional)';
+          if(key==='sms_twilio_account_sid')return 'Twilio Account SID';
+          if(key==='sms_twilio_message_service_sid')return 'Twilio Messaging Service SID (optional)';
+          if(key==='sms_vonage_api_key')return 'Vonage API Key';
+          if(key==='sms_vonage_from')return 'Vonage Sender ID';
+          if(key==='sms_messagebird_access_key')return 'MessageBird Access Key';
+          if(key==='sms_messagebird_originator')return 'MessageBird Originator (optional)';
+          if(key==='sms_textlocal_api_key')return 'Textlocal API Key';
+          if(key==='sms_textlocal_sender')return 'Textlocal Sender (optional)';
+          return key.replace(/^sms_/,'').replace(/_/g,' ');
+        };
+        const smsReadiness=config=>{
+          const provider=String(config.sms_provider||'').trim().toLowerCase();
+          const required=smsProviders[provider]?.required;
+          return Boolean(required&&required.every(key=>String(config[key]||'').trim()));
+        };
+        const getProviderState=config=>definitions.map(def=>{
           const configured=def.id==='email'||def.id.startsWith('web3_')
             ?true
             :def.id==='phone'
@@ -2034,12 +2052,26 @@ async function route(req, res) {
           const reason=locked
             ?def.note
             :def.id==='phone'&&!configured
-              ?'Configure an SMS provider and its credentials in Supabase Auth before enabling phone sign-in.'
+              ?'Choose Twilio, Vonage, MessageBird, or Textlocal and add the required SMS credentials.'
               :!configured&&def.keys.length
-                ?'Add the provider client ID, client secret, and any required provider URL in Supabase Auth → Providers first.'
+                ?'Provider setup is required. Add the provider-issued Client ID and Client Secret, plus any required URL.'
                 :null;
-          return {id:def.id,label:def.label,category:def.category,enabled,configured,locked,canEnable:configured&&!locked,note:def.note||null,reason};
+          const setupFields=def.keys.map(key=>({key,label:fieldLabel(key),type:key.endsWith('_secret')||key.endsWith('_token')?'password':'text',configured:Boolean(String(config[key]||'').trim()),required:true}));
+          const optionalFields=(def.optionalKeys||[]).map(key=>({key,label:fieldLabel(key),type:'text',configured:Boolean(String(config[key]||'').trim()),required:false}));
+          const smsProvider=String(config.sms_provider||'').trim().toLowerCase();
+          const smsFields=smsProvider&&smsProviders[smsProvider]
+            ?[...smsProviders[smsProvider].required.map(key=>({key,label:fieldLabel(key),type:key.endsWith('_secret')||key.endsWith('_token')?'password':'text',configured:Boolean(String(config[key]||'').trim()),required:true})),...smsProviders[smsProvider].optional.map(key=>({key,label:fieldLabel(key),type:'text',configured:Boolean(String(config[key]||'').trim()),required:false}))]
+            :[];
+          return {
+            id:def.id,label:def.label,category:def.category,enabled,configured,locked,
+            canEnable:configured&&!locked,note:def.note||null,reason,
+            setupFields:[...setupFields,...optionalFields],
+            smsProvider:smsProvider||null,
+            smsProviders:Object.keys(smsProviders),
+            smsFields
+          };
         });
+        const parseRedirectList=value=>String(value||'').split(',').map(item=>item.trim()).filter(Boolean);
         const callManagement=async(httpMethod,payload)=>{
           let response;
           try{
@@ -2060,7 +2092,9 @@ async function route(req, res) {
             const message=status===401
               ?'Supabase rejected the Management token. Check that SUPABASE_ACCESS_TOKEN is current.'
               :status===403
-                ?'The Supabase token is missing permissions. It needs Auth Config Read and Read-write plus Project Settings Read-write for this project.'
+                ?(httpMethod==='GET'
+                  ?'Supabase token needs the auth_config_read permission for this project.'
+                  :'Supabase token needs auth_config_write and project_admin_write permissions for this project.')
                 :status===429
                   ?'Supabase is rate-limiting provider configuration requests. Try again shortly.'
                   :'Supabase could not process the provider configuration request. Existing settings were not intentionally replaced.';
@@ -2068,10 +2102,72 @@ async function route(req, res) {
           }
           return data;
         };
+        const appSiteUrl=appOrigin(req);
+        const appRedirectUrl=new URL('/',appSiteUrl).toString();
+        const routeState=config=>{
+          const allowedRedirectUrls=parseRedirectList(config.uri_allow_list);
+          return {
+            providerCallbackUrl,
+            appSiteUrl,
+            appRedirectUrl,
+            configuredSiteUrl:String(config.site_url||''),
+            allowedRedirectUrls,
+            redirectReady:String(config.site_url||'').replace(/\/+$/,'')===appSiteUrl&&allowedRedirectUrls.includes(appRedirectUrl)
+          };
+        };
+        const buildCredentialPatch=(definition,credentials,current)=>{
+          const patch={};
+          if(definition.id==='phone'){
+            const smsProvider=String(credentials.sms_provider||current.sms_provider||'').trim().toLowerCase();
+            const fields=smsProviders[smsProvider];
+            if(!fields)throw Object.assign(new Error('Choose a supported SMS gateway before enabling phone sign-in.'),{status:400});
+            patch.sms_provider=smsProvider;
+            for(const key of [...fields.required,...fields.optional]){
+              const value=String(credentials[key]||'').trim();
+              if(!value)continue;
+              if(value.length>4096)throw Object.assign(new Error(fieldLabel(key)+' is too long.'),{status:400});
+              patch[key]=value;
+            }
+            return patch;
+          }
+          for(const key of [...definition.keys,...(definition.optionalKeys||[])]){
+            const value=String(credentials[key]||'').trim();
+            if(!value)continue;
+            if(value.length>4096)throw Object.assign(new Error(fieldLabel(key)+' is too long.'),{status:400});
+            if(key.endsWith('_url')){
+              let parsed;
+              try{parsed=new URL(value);}catch{throw Object.assign(new Error(fieldLabel(key)+' must be a valid HTTPS URL.'),{status:400});}
+              if(parsed.protocol!=='https:')throw Object.assign(new Error(fieldLabel(key)+' must use HTTPS.'),{status:400});
+            }
+            patch[key]=value;
+          }
+          return patch;
+        };
         try{
           if(method==='GET'){
             const config=await callManagement('GET');
-            return json(res,200,{providers:getProviderState(config),projectRef,tokenConfigured:true});
+            return json(res,200,{
+              providers:getProviderState(config),
+              projectRef,
+              projectUrl,
+              tokenConfigured:true,
+              routes:routeState(config)
+            });
+          }
+          if(input?.action==='sync-routes'){
+            const current=await callManagement('GET');
+            const allowedRedirectUrls=parseRedirectList(current.uri_allow_list);
+            if(!allowedRedirectUrls.includes(appRedirectUrl))allowedRedirectUrls.push(appRedirectUrl);
+            const routePatch={};
+            if(String(current.site_url||'').replace(/\/+$/,'')!==appSiteUrl)routePatch.site_url=appSiteUrl;
+            if(String(current.uri_allow_list||'')!==allowedRedirectUrls.join(','))routePatch.uri_allow_list=allowedRedirectUrls.join(',');
+            if(Object.keys(routePatch).length)await callManagement('PATCH',routePatch);
+            const verified=await callManagement('GET');
+            const routes=routeState(verified);
+            if(!routes.redirectReady){
+              return json(res,502,{error:'Supabase did not confirm the Minglora site and allowed redirect URL. Refresh the routes before retrying.',routes});
+            }
+            return json(res,200,{ok:true,routes});
           }
           const providerId=String(input?.provider||''),requestedEnabled=input?.enabled;
           const definition=definitions.find(item=>item.id===providerId);
@@ -2080,20 +2176,29 @@ async function route(req, res) {
           if(definition.planBlocked&&requestedEnabled)return json(res,403,{error:definition.note});
           const current=await callManagement('GET');
           const currentlyEnabled=current[definition.flag]===true;
-          if(requestedEnabled&&!currentlyEnabled){
-            const status=getProviderState(current).find(item=>item.id===providerId);
-            if(!status?.configured)return json(res,409,{error:status?.reason||'Complete this provider’s credentials before enabling it.'});
-          }
           if(!requestedEnabled&&currentlyEnabled){
             const enabledCount=definitions.filter(item=>!item.planBlocked&&current[item.flag]===true).length;
             if(enabledCount<=1)return json(res,409,{error:'Keep at least one configured sign-in method enabled so Minglora members can still access their accounts.'});
           }
-          if(currentlyEnabled!==requestedEnabled){
-            await callManagement('PATCH',{[definition.flag]:requestedEnabled});
+          let credentialPatch={};
+          if(requestedEnabled&&!currentlyEnabled){
+            const suppliedCredentials=input?.credentials&&typeof input.credentials==='object'&&!Array.isArray(input.credentials);
+            if(suppliedCredentials)credentialPatch=buildCredentialPatch(definition,input.credentials,current);
+            const merged={...current,...credentialPatch};
+            const ready=getProviderState(merged).find(item=>item.id===providerId);
+            if(!ready?.configured){
+              return json(res,409,{error:ready?.reason||'Complete this provider’s credentials before enabling it. Credentials are saved only in Supabase.'});
+            }
           }
+          const requestedPatch={...credentialPatch,[definition.flag]:requestedEnabled};
+          const hasPatch=Object.keys(credentialPatch).length>0||currentlyEnabled!==requestedEnabled;
+          if(hasPatch)await callManagement('PATCH',requestedPatch);
           const verified=await callManagement('GET');
           if((verified[definition.flag]===true)!==requestedEnabled){
             return json(res,502,{error:'Supabase did not confirm the requested provider change. Refresh the provider list before trying again.'});
+          }
+          if(requestedEnabled&&!getProviderState(verified).find(item=>item.id===providerId)?.configured){
+            return json(res,502,{error:'Supabase accepted the provider update but did not retain all required credentials. The provider state was not confirmed; refresh before trying again.'});
           }
           return json(res,200,{ok:true,provider:providerId,enabled:requestedEnabled,providers:getProviderState(verified)});
         }catch(error){
