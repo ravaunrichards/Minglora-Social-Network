@@ -1706,6 +1706,10 @@ async function route(req, res) {
           if(!isSupabasePersistence())return {ok:true,skipped:true};
           return requestSupabaseState('ai_bot_task_upsert_batch',{actorUserId:user.id,tasks});
         },
+        persistAiBotSettings:async settings=>{
+          if(!isSupabasePersistence())return {ok:true,skipped:true};
+          return requestSupabaseState('ai_bot_settings_update',{actorUserId:user.id,settings});
+        },
         listAiBotTasks:async ({limit=100,offset=0}={})=>{
           if(!isSupabasePersistence())return null;
           const result=await requestSupabaseState('ai_bot_task_list',{actorUserId:user.id,limit,offset});
