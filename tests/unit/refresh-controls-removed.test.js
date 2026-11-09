@@ -81,18 +81,17 @@ test('automatic-update assets are versioned consistently in HTML and the service
   assert.match(serviceWorker,/CACHE_NAME='minglora-shell-v\d+-/);
 });
 
-test('service-worker updates check regularly and reload only after the current interaction is safe', () => {
+test('service-worker updates use the normal browser lifecycle without forced refresh or page reload', () => {
   assert.equal((app.match(/navigator\.serviceWorker\.register\('\/sw\.js\?v=/g)||[]).length,1);
   assert.match(app,/updateViaCache:'none'/);
-  assert.match(app,/registration\.update\(\)/);
-  assert.match(app,/MINGLORA_UPDATE_CHECK_INTERVAL_MS=5\*60\*1000/);
-  assert.match(app,/MINGLORA_UPDATE_IDLE_MS=45\*1000/);
-  assert.match(app,/querySelectorAll\('video,audio'\)/);
-  assert.match(app,/'wheel','scroll'/);
-  assert.match(app,/activeCallRoom\|\|activeCallOverlay\|\|activeLiveRoom/);
-  assert.match(app,/MingloraMeetWave\.canAutoUpdate\(\)/);
-  assert.match(app,/scheduleMingloraSafeReload/);
-  const messageHandler=serviceWorker.slice(serviceWorker.indexOf("self.addEventListener('message'"));
-  assert.ok(messageHandler.indexOf('MINGLORA_ACTIVATE_WHEN_SAFE')<messageHandler.indexOf('self.skipWaiting()'));
+  assert.match(app,/function startMingloraServiceWorkerUpdates\(registration\)/);
+  assert.match(app,/mingloraUpdateRegistration=registration/);
+  assert.match(app,/Use the browser's normal service-worker lifecycle/);
+  assert.doesNotMatch(app,/registration\.update\(\)/);
+  assert.doesNotMatch(app,/MINGLORA_UPDATE_CHECK_INTERVAL_MS|MINGLORA_UPDATE_IDLE_MS/);
+  assert.doesNotMatch(app,/scheduleMingloraSafeReload/);
+  assert.match(serviceWorker,/No skipWaiting message handler/);
+  assert.doesNotMatch(serviceWorker,/self\.skipWaiting\(\)/);
   assert.match(serviceWorker,/self\.clients\.claim\(\)/);
+  assert.match(serviceWorker,/cacheCurrentShellAssets/);
 });
