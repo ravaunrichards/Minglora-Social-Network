@@ -2,12 +2,13 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
-const [runtime, server, admin, css, html] = await Promise.all([
+const [runtime, server, admin, css, html, store] = await Promise.all([
   readFile(new URL("../../supabase/functions/minglora-runtime-state/index.ts", import.meta.url), "utf8"),
   readFile(new URL("../../src/server.js", import.meta.url), "utf8"),
   readFile(new URL("../../public/admin-centre.js", import.meta.url), "utf8"),
   readFile(new URL("../../public/admin-centre.css", import.meta.url), "utf8"),
-  readFile(new URL("../../public/admin-centre.html", import.meta.url), "utf8")
+  readFile(new URL("../../public/admin-centre.html", import.meta.url), "utf8"),
+  readFile(new URL("../../src/store.js", import.meta.url), "utf8")
 ]);
 
 test("Minglora Admin Centre exposes the full Supabase-style member manager", () => {
@@ -47,6 +48,8 @@ test("member edits enforce required display name and unique case-insensitive use
 });
 
 test("partial member edits preserve and disclose the server's partial-update result", () => {
+  assert.match(store, /if \(payload\.partial === true\) error\.partial = true/);
+  assert.match(server, /if \(e\.partial === true\) failure\.partial = true/);
   assert.ok(admin.includes("error.payload = payload"));
   assert.ok(admin.includes("if (error?.payload?.partial)"));
   assert.ok(admin.includes("Partial update: Minglora profile changes were saved, but Supabase Auth changes failed."));
