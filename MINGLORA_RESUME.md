@@ -1,94 +1,99 @@
 # MINGLORA Resume Checkpoint
 
-Updated: 2026-11-09 01:55 America/Jamaica
+Updated: 2026-11-09
 Project scope: **Minglora Social Network only**
 Repository: https://github.com/ravaunrichards/Minglora-Social-Network
 Active work branch: `feat/personal-ai-bots-network-control-center`
+Current branch checkpoint: `f781e5edd7454fe817d53fea233ef96596698fb7`
 Draft PR: https://github.com/ravaunrichards/Minglora-Social-Network/pull/202
-Supabase project: `gzycobgbasnqqhnympkr` (Minglora, us-east-1)
+Supabase project: `gzycobgbasnqqhnympkr` (Minglora)
 
 ## Original task and acceptance criteria
 
-Continue and complete the existing Minglora Personal AI Bots Network implementation from the current feature branch. Preserve the original product boundary, requirements, existing Minglora account system, data, services and user-facing features. Do not create a second application, Supabase project, human-account system or separate bot social network.
+Continue and complete the Minglora AI Bot Network from the existing Personal AI Bots feature branch. Preserve the existing Minglora app, repository, Supabase project, services, accounts and user data. Do not create a second app, repository, Supabase project, independent human-account system or duplicate infrastructure.
 
-Acceptance requires:
-- All 15 built-in AI categories plus non-destructive custom category management.
-- Owner-only, MFA-protected Admin Centre and API; same-origin write checks; immutable/auditable administrative controls.
-- Clearly labeled AI-only identities, distinct from human Auth users and human social metrics.
-- Personality Laboratory, bot teams, smart scheduling, performance centre, multilingual capabilities, AI Creator Studio, AI Security and Trust Centre, opt-in AI companionship, AI community events, and centralized command centre.
-- Per-bot controls, human approval, least privilege, usage budgets, emergency pause/recovery, separate AI relationship/accounting and no fabricated engagement.
-- Durable, retryable, idempotent background execution with bounded concurrency, spend/provider limits, observability and safe shutdown.
-- Real provider/model integration and honest failure states; no simulated or placeholder execution.
-- Real public AI profiles and media, dedicated AI relationship/follow controls, privacy/block checks, and member-facing disclosure/report/block controls.
-- Tests and verification for implementation; never report staged, un-deployed or untested work as production-complete.
+The master specification remains authoritative: three distinct AI populations; persistent AI-only identities with separate first/middle/last names; individual profiles, email and provider/model assignments; worldwide categories and discovery; 15 original categories; corporate governance/HR/departments; supervised and bounded-autonomous operation; collaboration; finance/resource management; security/governance; the ten specialized AI systems; twelve administration centres; actual analytics; and a scalable 10-billion identity design target with real measured capacity kept separate from registered identity count.
 
-High-impact publishing, media sharing, reels, comments, replies, reactions, follows/unfollows, group participation, messages, events and live broadcasts must never become autonomous permissions. A queued/approved task is not an executed task. Before execution, re-check authorization, approval, bot/network/category state, target privacy, blocks, member status, limits and idempotency.
+Acceptance is not met by schema-only work. Each feature must have real persistence, backend wiring, working UI controls, security policy and targeted tests. Production rollout, provider health, mailbox provisioning, capacity or execution must never be claimed without direct evidence.
 
-## Repository and deployment state inspected
+## Repository and deployment state
 
-- Repository access and push permission confirmed.
-- Branch tip at checkpoint: `591348345843f50ba4ff403d79ff93f3913770be`.
-- Latest branch commit: `docs(ai): clarify canonical identity integration and production rollout state`.
-- Draft PR #202 is open and intentionally remains a draft.
-- Branch contains the owner-only Admin API, service layer, control-centre UI, tests, a bot-specific CI workflow and staged migration `supabase/migrations/20261108210000_minglora_ai_bot_network_foundation.sql`.
-- Existing live Supabase project is ACTIVE_HEALTHY. Its applied migration history currently ends at `085_minglora_full_circle_default_avatar`; the AI bot foundation migration is not applied.
-- The live project does not yet contain the staged `ai_*` bot identity tables. Do not apply the production migration or deploy the changed Edge Function without a release/production authorization gate and verification.
-- Existing Edge Function: `minglora-runtime-state`, active version 112. Feature-branch gateway changes are not production-deployed.
-- `backend/workers/README.md` confirms no durable job queue or dedicated worker is connected.
-- The branch has no provider account, model request, credential reference, failover, or mailbox provisioning configured. Do not claim inference, email provisioning, or autonomous actions work.
+- Existing repository and branch are confirmed; PR #202 remains **open and draft**.
+- Branch checkpoint is `f781e5edd7454fe817d53fea233ef96596698fb7`.
+- Existing Supabase project is the supplied Minglora project. It was healthy when inspected.
+- The AI identity and durable-queue migrations remain staged only. The live Supabase schema previously inspected did not contain the AI identity/queue tables.
+- The existing `minglora-runtime-state` Edge Function changes are staged on the feature branch; they have not been deployed.
+- Existing Render Minglora web service is separate from the branch review. No AI worker service has been deployed.
+- No email provider/mailbox, AI provider account, model credential reference, provider health check, or real AI inference has been configured or verified.
+- Do not apply migrations, deploy the Edge Function, deploy/enable a worker, or change production services without the required release authorization and verification.
 
-## Completed on this branch (not yet production-verified)
+## Completed and verified on this feature branch (not production-deployed)
 
-- Owner-only MFA gate and same-origin validation for writes.
-- Fifteen built-in categories and custom categories; bot profiles and AI disclosure metadata.
-- Disabled-by-default bot creation, per-bot enable/pause state, global/hybrid switches and restrictive hybrid allowlist.
-- Owner instruction intake, approval/cancellation queue, rate limits and emergency shutdown.
-- Selected-bot follow/unfollow instruction batching with per-bot approvals and duplicate/block/account-status checks; execution remains disabled.
-- Owner-managed teams and membership assignment/removal; teams do not activate bots.
-- Bulk bot controls, scheduling configuration, capacity/task budgets and audit history.
-- Staged canonical PostgreSQL identity schema, batch upsert/list RPCs, server-secret-protected runtime gateway integration, and Admin Centre canonical identity readback. These are staged only and fail closed until release deployment.
-- Separate first/middle/last-name fields, languages, identity ownership/lifecycle/version/audit metadata.
-- Bot-specific CI run #74 succeeded at checkpoint (commit `591348345843f50ba4ff403d79ff93f3913770be`).
+### Existing Personal AI Bots foundation
+- Owner-only API protected by the designated MFA-verified Minglora administrator and same-origin write checks.
+- Fifteen built-in AI categories plus custom category management.
+- AI identities remain separate from human Auth users and human engagement metrics.
+- First, middle and last name fields; AI usernames; AI disclosure; profile/personality fields; disabled-by-default bot creation.
+- Per-bot/category/network controls, restricted hybrid modes, budgets, schedules as configuration, bulk controls, emergency pause, audit, and team creation/membership.
+- Selected-bot follow/unfollow requests remain separate approval records; no follow executor is enabled.
+- Bot Teams do not automatically activate member bots.
 
-## Remaining requirements (not completed)
+### Canonical identity foundation
+- Staged migration `supabase/migrations/20261108210000_minglora_ai_bot_network_foundation.sql`.
+- Canonical tables cover AI identity, names, profiles, emails, provider accounts/models/assignments, locations, languages, capabilities, permissions, owners, status history, versions and audit logs.
+- Separate first/last names persist independently. No artificial Supabase Auth user is created for an AI identity.
+- Batch upsert/list RPCs use service-role-only grants; the existing server-secret-protected gateway validates the designated owner and an explicit field allowlist.
+- Repaired interrupted identity-table declarations and RLS placement; regression checks now verify all 27 table declarations close without trailing commas and that RLS is applied at the migration end.
+- Identity design target is 10,000,000,000. This is a design target, not 10 billion existing identities or a proven live capacity.
 
-1. Durable distributed queue, worker lifecycle, leases, retries, idempotency, dead-letter handling, concurrency limits and recovery.
-2. Provider/model account management, secret references, inference adapters, health checks, budgets and provider failover.
-3. Real AI email identity-provider integration and mailbox provisioning.
-4. Public AI bot profile pages, profile media, upload policies and disclosure/member block/report pathways.
-5. Dedicated AI followers/following relationship store, target-account manager, private-account approval and exclusion management; execution remains gated.
-6. Smart scheduling with timezone/DST-safe scheduling, activation/deactivation and missed-run recovery.
-7. Performance Centre with verified runtime telemetry, queue latency, failures, provider spend attribution and per-bot metrics.
-8. Multilingual inference/translation, language quality checks and provider routing.
-9. AI Creator Studio for generated drafts/assets with explicit review and publication boundaries.
-10. Security and Trust Centre: anomaly detection, consent, risk rules, suspension/appeals, audit exports and incident recovery.
-11. Opt-in AI friendship/companion sessions with clear AI identity, consent and member controls.
-12. Community events, quizzes and competitions with approval, scheduling and anti-spam limits.
-13. Controlled execution of permitted low-impact work; high-impact social interactions remain approval-gated.
-14. Load, stress, multi-worker concurrency, failure/restart and recovery drills.
+### Durable queue, settings and worker
+- Staged migration `supabase/migrations/20261109200000_minglora_ai_bot_durable_task_queue.sql`.
+- Queue records have stable idempotency keys, retry counters, bounded attempts, backoff, worker leases, lease expiry/heartbeat, expired-lease recovery and dead-letter status.
+- Claiming uses transactional row locks and `SKIP LOCKED`; the singleton settings row is locked during claims so multiple workers cannot overrun the concurrency cap.
+- Daily execution accounting includes failed attempts, not only successful tasks.
+- Owner-only task RPCs support batch upsert, claim, heartbeat, complete, fail, list and stats.
+- The server-secret-protected runtime gateway exposes the queue RPCs only to the designated Minglora owner.
+- Admin API task submission, bulk-follow instructions, approval/cancellation, queue readback and emergency shutdown are connected to PostgreSQL when Supabase persistence is active.
+- Parent canonical AI identity records are persisted before task rows, protecting the AI-identity foreign key for previously-created bot records.
+- Owner network settings (network switch, hybrid switch, concurrency, daily budget, auto-suspension and emergency-shutdown timestamp) synchronize to PostgreSQL. Emergency shutdown closes the durable dispatch gate before task/identity cancellation writes.
+- Normal Admin API settings cannot toggle the separate database-only `execution_enabled` and `provider_ready` gates; both default to false.
+- A separately launched worker core and `npm run worker:personal-ai-bots` entry point are staged. It requires Supabase persistence, an explicitly configured server-side provider adapter and a release-controlled worker flag. It only accepts approved, low-impact text tasks (`assistant_request`, `moderation_review`, `analytics_report`, `translation`), has no tools or external-action permission, and saves human-review drafts. It cannot publish, follow, message, react, join groups, attend events or perform live actions.
+- No provider adapter is currently configured; therefore the worker remains disabled and no task is executing.
 
-## CI and verification snapshot
+## CI and verification evidence
 
-- Bot-specific Personal AI Bots CI for the current branch tip: **success** (run 42575605694).
-- General repository CI for the same commit: **failure** in the broad automated test suite and the separate For You navigation test job.
-- Observed general-suite failures concern existing service-worker cache naming/update checks, profile edit selector, story media structure, story-dialog z-index, top Settings control, auth bootstrap ordering, theme preview checks, and For You header/story navigation checks. These are outside the bot module; compare against `main` before changing unrelated files.
-- Dependency audit, repository structure check, JS syntax check and original gift asset generation passed in the general CI run; automated tests failed.
-- Bot-specific workflow covers bot module/UI syntax and bot tests, but currently runs Node 22 while the repository engine is Node 24. Review and align toolchain before release verification.
-- No production migration, Edge Function deployment, live owner-browser acceptance test, provider execution, or real worker execution has been verified.
+- Latest dedicated Personal AI Bots workflow: **run #128, success**, commit `f781e5edd7454fe817d53fea233ef96596698fb7`.
+- Dedicated suite: **74 passed, 0 failed**. It includes admin API task/settings lifecycle, identity dependency ordering, migration/schema safeguards, 10-billion target assertion, draft-only worker behavior and UI checks.
+- The workflow uses Node 24 and syntax-checks the worker, server entry point, gateway path coverage and bot module.
+- Full repository CI on the same commit: **failure** in the general automated-test and For You navigation jobs. The previous run showed broad pre-existing UI/navigation/profile/service-worker/theme failures (28 general-suite failures and 2 For You failures); these are not suppressed and are outside this AI-network implementation. Keep them separate unless a failure is demonstrated to have been introduced by this branch.
+- No live DB migration, hosted Edge Function deployment, provider request, worker process execution, mailbox provisioning, owner-browser acceptance, load test or production readiness test has been completed.
 
-## Current work in progress
+## Remaining master requirements
 
-Resume the Personal AI Bots Network at the highest-priority unfinished dependency: **durable execution infrastructure**. Preserve the current JSONB compatibility collections until normalized queue/tasks/settings/team migrations are safely staged and reconciled. Do not let a new worker execute a task merely because it is present or approved.
+1. Provider/model account management API and real server-side adapters, credential references, model assignment, provider health and failover.
+2. Real AI email identity provider and mailbox provisioning; schema-only email records are not operational mailboxes.
+3. Public AI profile pages/media, member-facing AI disclosure, block/report and privacy controls.
+4. Dedicated AI followers/following and relationship manager; private-account approvals/exclusions and any executor remain gated.
+5. Personality Laboratory with live model testing; multilingual provider inference and quality checks.
+6. Smart activity scheduler with timezone/DST handling, activation/deactivation and recovery.
+7. Performance Centre with real queue/runtime telemetry, provider costs and task outcomes.
+8. AI Creator Studio, approved draft/media flows and explicit publication boundaries.
+9. Security and Trust Centre, risk/anomaly rules, consent, suspension/appeals, incident recovery and audit exports.
+10. Opt-in AI friendship/companion sessions and community events.
+11. Corporate AI population: board/executives, 20 departments, org charts, recruitment/appointments, HR lifecycle, delegation and department permissions.
+12. Finance/resource management, model spend attribution and approved budget controls.
+13. The remaining specialized systems/admin centres and analytics.
+14. Real load, multi-worker concurrency, failure/restart, recovery, security, mobile/desktop and production verification.
 
 ## Exact next action
 
-1. Re-fetch the current branch tip, this checkpoint, `docs/PERSONAL_AI_BOTS.md`, the staged AI migration, gateway code and current bot tests.
-2. Design and implement the durable queue schema/RPCs and worker around the existing Minglora Supabase runtime gateway, with transactional claiming/lease expiry, idempotency, bounded retries and dead-letter handling.
-3. Keep task execution disabled by default until a real approved provider adapter and all preflight authorization checks are configured. Do not write an in-memory-only or fake worker.
-4. Add migration/schema and unit/integration tests; run bot CI and general CI; fix regressions caused by this branch without disabling tests.
-5. Update this checkpoint at each milestone with commit SHA, files, checks, failures and the next exact action.
-6. Keep PR #202 draft and do not merge/deploy production resources unless separately authorized and verified.
+Inspect existing Minglora runtime/Render configuration for already-provisioned provider integrations without exposing secret values. Then:
+1. If a real provider credential and supported provider service already exist, implement and health-check a server-side adapter that references the secret securely; persist the selected provider/model assignment to the canonical AI tables.
+2. If no provider credential/service exists, keep dispatch disabled, build only the provider-adapter/credential-reference contract and record the exact external credential/provider blocker. Do not invent a key or report inference as connected.
+3. Add provider routing, failure/fallback and usage-budget tests; keep the worker's no-tools, human-review-only boundary.
+4. Update this checkpoint after each verified milestone.
+5. Keep PR #202 draft; do not merge or deploy production changes without release authorization.
 
 ## Resume rules
 
-On reconnection, inspect the actual branch and latest commits first, then read this file and `docs/PERSONAL_AI_BOTS.md`. Trust repository/CI/database evidence over this checkpoint if the state has changed. Resume from the first unverified remaining item, do not repeat completed work, and keep all work within Minglora Social Network.
+On reconnection, inspect the latest branch tip, CI and this checkpoint first. Trust actual repository, CI and database state over this file if they differ. Continue the first unverified requirement, preserve completed work, do not repeat completed steps, stay exclusively on Minglora Social Network, and never claim staged/deployed/operational functionality without evidence.
