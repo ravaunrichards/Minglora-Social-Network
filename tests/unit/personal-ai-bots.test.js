@@ -10,6 +10,9 @@ import {
   createPersonalAiBotStarterSet,
   updatePersonalAiBot,
   setPersonalAiBotCategoryEnabled,
+  updatePersonalAiBotCategory,
+  bulkUpdatePersonalAiBots,
+  emergencyShutdownPersonalAiBots,
   queuePersonalAiBotInstruction,
   approvePersonalAiBotTask,
   cancelPersonalAiBotTask,
@@ -38,7 +41,7 @@ test('the requested 15 categories are defined and initially enabled',()=>{
   assert.equal(PERSONAL_AI_BOT_CATEGORIES.length,15);
   assert.equal(categories.length,15);
   assert.ok(categories.every(category=>category.enabled===true));
-  for(const name of ['Assistant Bots','Moderation Bots','Customer Service Bots','Automation Bots','Analytics Bots','Companion Bots','Creators','Influencers','Friends','News','Entertainers','Musicians','Community Hosts','Supports','Live Hosts']){
+  for(const name of ['AI Friends','AI Moderators','AI Support','AI Business','AI News','AI Friends','AI Creators','AI Influencers','AI Friends','AI News','AI Entertainers','AI Musicians','AI Community Hosts','AI Support','AI Live Hosts']){
     assert.ok(categories.some(category=>category.name===name),name+' category should exist');
   }
 });
@@ -59,7 +62,7 @@ test('starter set creates one disabled administrator-controlled bot per category
 
 test('individual bot creation always starts disabled with no autonomous permissions',()=>{
   const db=makeDb();
-  const bot=createPersonalAiBot(db,{displayName:'Minglora Help Desk',categoryId:'assistant-bots'},actor,stamp,uid);
+  const bot=createPersonalAiBot(db,{displayName:'Minglora Help Desk',categoryId:'ai-friends'},actor,stamp,uid);
   assert.equal(bot.status,'disabled');
   assert.equal(bot.enabled,false);
   assert.equal(bot.autonomyMode,'administrator_controlled');
@@ -70,19 +73,19 @@ test('individual bot creation always starts disabled with no autonomous permissi
 test('category controls are persistent and prevent new instructions in disabled categories',()=>{
   const db=makeDb();
   createPersonalAiBotStarterSet(db,actor,stamp,uid);
-  const category=setPersonalAiBotCategoryEnabled(db,'creators',false,actor,stamp,uid);
+  const category=setPersonalAiBotCategoryEnabled(db,'ai-creators',false,actor,stamp,uid);
   assert.equal(category.enabled,false);
-  assert.equal(getPersonalAiBotCategories(db).find(item=>item.id==='creators').enabled,false);
-  const bot=db.personalAiBots.find(item=>item.categoryId==='creators');
+  assert.equal(getPersonalAiBotCategories(db).find(item=>item.id==='ai-creators').enabled,false);
+  const bot=db.personalAiBots.find(item=>item.categoryId==='ai-creators');
   bot.enabled=true;bot.status='enabled';
   assert.throws(()=>queuePersonalAiBotInstruction(db,bot.id,{taskType:'draft_post',instruction:'Prepare a new draft'},actor,stamp,uid),/category is disabled/);
-  setPersonalAiBotCategoryEnabled(db,'creators',true,actor,stamp,uid);
-  assert.equal(getPersonalAiBotCategories(db).find(item=>item.id==='creators').enabled,true);
+  setPersonalAiBotCategoryEnabled(db,'ai-creators',true,actor,stamp,uid);
+  assert.equal(getPersonalAiBotCategories(db).find(item=>item.id==='ai-creators').enabled,true);
 });
 
 test('hybrid mode accepts only the defined low-risk permission allowlist',()=>{
   const db=makeDb();
-  const bot=createPersonalAiBot(db,{displayName:'Analytics Guide',categoryId:'analytics-bots'},actor,stamp,uid);
+  const bot=createPersonalAiBot(db,{displayName:'Analytics Guide',categoryId:'ai-business'},actor,stamp,uid);
   assert.throws(()=>updatePersonalAiBot(db,bot.id,{allowedAutonomousActions:['analytics_read']},actor,stamp,uid),/Switch the bot to hybrid mode/);
   updatePersonalAiBot(db,bot.id,{autonomyMode:'hybrid'},actor,stamp,uid);
   const updated=updatePersonalAiBot(db,bot.id,{allowedAutonomousActions:['analytics_read','draft_content']},actor,stamp,uid);
@@ -93,7 +96,7 @@ test('hybrid mode accepts only the defined low-risk permission allowlist',()=>{
 
 test('returning to administrator-controlled mode clears autonomous permissions',()=>{
   const db=makeDb();
-  const bot=createPersonalAiBot(db,{displayName:'Analytics Guide',categoryId:'analytics-bots'},actor,stamp,uid);
+  const bot=createPersonalAiBot(db,{displayName:'Analytics Guide',categoryId:'ai-business'},actor,stamp,uid);
   updatePersonalAiBot(db,bot.id,{autonomyMode:'hybrid'},actor,stamp,uid);
   updatePersonalAiBot(db,bot.id,{allowedAutonomousActions:['analytics_read']},actor,stamp,uid);
   const updated=updatePersonalAiBot(db,bot.id,{autonomyMode:'administrator_controlled'},actor,stamp,uid);
@@ -112,7 +115,7 @@ test('network switch cannot remove the administrator approval requirement',()=>{
 
 test('instructions are pending approval and approval does not execute without a worker',()=>{
   const db=makeDb();
-  const bot=createPersonalAiBot(db,{displayName:'Content Creator',categoryId:'creators'},actor,stamp,uid);
+  const bot=createPersonalAiBot(db,{displayName:'Content Creator',categoryId:'ai-creators'},actor,stamp,uid);
   updatePersonalAiBot(db,bot.id,{status:'enabled'},actor,stamp,uid);
   setPersonalAiBotNetworkSettings(db,{enabled:true},actor,stamp,uid);
   const task=queuePersonalAiBotInstruction(db,bot.id,{taskType:'draft_post',instruction:'Prepare a draft about the Minglora community.'},actor,stamp,uid);
@@ -126,7 +129,7 @@ test('instructions are pending approval and approval does not execute without a 
 
 test('follow and unfollow instructions require a selected target account',()=>{
   const db=makeDb();
-  const bot=createPersonalAiBot(db,{displayName:'Assistant',categoryId:'assistant-bots'},actor,stamp,uid);
+  const bot=createPersonalAiBot(db,{displayName:'Assistant',categoryId:'ai-friends'},actor,stamp,uid);
   updatePersonalAiBot(db,bot.id,{status:'enabled'},actor,stamp,uid);
   setPersonalAiBotNetworkSettings(db,{enabled:true},actor,stamp,uid);
   assert.throws(()=>queuePersonalAiBotInstruction(db,bot.id,{taskType:'follow',instruction:'Follow this account'},actor,stamp,uid),/member account/);
@@ -137,7 +140,7 @@ test('follow and unfollow instructions require a selected target account',()=>{
 
 test('pending instructions can be cancelled and cannot be approved twice',()=>{
   const db=makeDb();
-  const bot=createPersonalAiBot(db,{displayName:'Assistant',categoryId:'assistant-bots'},actor,stamp,uid);
+  const bot=createPersonalAiBot(db,{displayName:'Assistant',categoryId:'ai-friends'},actor,stamp,uid);
   updatePersonalAiBot(db,bot.id,{status:'enabled'},actor,stamp,uid);
   setPersonalAiBotNetworkSettings(db,{enabled:true},actor,stamp,uid);
   const task=queuePersonalAiBotInstruction(db,bot.id,{taskType:'assistant_request',instruction:'Answer this administrative question.'},actor,stamp,uid);
@@ -155,4 +158,58 @@ test('overview reports real configured bot and queue counts without synthetic us
   assert.equal(overview.counts.enabledBots,0);
   assert.equal(overview.counts.pendingInstructions,0);
   assert.equal(overview.network.enabled,false);
+});
+
+
+test('category names and descriptions can be edited without losing bot assignment',()=>{
+  const db=makeDb();
+  const bot=createPersonalAiBot(db,{displayName:'Creator Assistant',categoryId:'ai-creators'},actor,stamp,uid);
+  const renamed=updatePersonalAiBotCategory(db,'ai-creators',{name:'AI Creative Studio',description:'Original creative planning.'},actor,stamp,uid);
+  assert.equal(renamed.name,'AI Creative Studio');
+  assert.equal(db.personalAiBots.find(item=>item.id===bot.id).categoryName,'AI Creative Studio');
+  assert.equal(getPersonalAiBotCategories(db).find(item=>item.id==='ai-creators').name,'AI Creative Studio');
+});
+
+test('bulk activation changes only selected bot configuration and respects category switches',()=>{
+  const db=makeDb();
+  const bots=createPersonalAiBotStarterSet(db,actor,stamp,uid);
+  const result=bulkUpdatePersonalAiBots(db,[bots[0].id,bots[1].id],'enabled',actor,stamp,uid);
+  assert.equal(result.updated,2);
+  assert.ok(result.bots.every(bot=>bot.enabled&&bot.status==='enabled'));
+  setPersonalAiBotCategoryEnabled(db,bots[2].categoryId,false,actor,stamp,uid);
+  assert.throws(()=>bulkUpdatePersonalAiBots(db,[bots[2].id],'enabled',actor,stamp,uid),/disabled category/);
+  assert.throws(()=>bulkUpdatePersonalAiBots(db,new Array(101).fill(bots[0].id),'paused',actor,stamp,uid),/between 1 and 100/);
+});
+
+test('emergency shutdown disables the network, pauses enabled bots and cancels open tasks',()=>{
+  const db=makeDb();
+  const bot=createPersonalAiBot(db,{displayName:'AI Friend',categoryId:'ai-friends'},actor,stamp,uid);
+  updatePersonalAiBot(db,bot.id,{status:'enabled'},actor,stamp,uid);
+  setPersonalAiBotNetworkSettings(db,{enabled:true,hybridEnabled:true},actor,stamp,uid);
+  const task=queuePersonalAiBotInstruction(db,bot.id,{taskType:'assistant_request',instruction:'Prepare a response to this instruction.'},actor,stamp,uid);
+  const result=emergencyShutdownPersonalAiBots(db,actor,stamp,uid);
+  assert.equal(result.paused,1);
+  assert.equal(result.cancelled,1);
+  assert.equal(result.network.enabled,false);
+  assert.equal(result.network.hybridEnabled,false);
+  assert.equal(db.personalAiBots[0].status,'paused');
+  assert.equal(db.personalAiBotTasks.find(item=>item.id===task.id).status,'cancelled');
+});
+
+test('AI username updates are validated and unique across bot identities',()=>{
+  const db=makeDb();
+  const first=createPersonalAiBot(db,{displayName:'First Bot',categoryId:'ai-friends'},actor,stamp,uid);
+  const second=createPersonalAiBot(db,{displayName:'Second Bot',categoryId:'ai-friends'},actor,stamp,uid);
+  assert.equal(updatePersonalAiBot(db,first.id,{username:'ai_first_friend'},actor,stamp,uid).username,'ai_first_friend');
+  assert.throws(()=>updatePersonalAiBot(db,second.id,{username:'ai_first_friend'},actor,stamp,uid),/already in use/);
+  assert.throws(()=>updatePersonalAiBot(db,second.id,{username:'human_account'},actor,stamp,uid),/start with ai_/);
+});
+
+test('instruction queue has per-bot rate limits and bounded pending work',()=>{
+  const db=makeDb();
+  const bot=createPersonalAiBot(db,{displayName:'AI Friend',categoryId:'ai-friends'},actor,stamp,uid);
+  updatePersonalAiBot(db,bot.id,{status:'enabled'},actor,stamp,uid);
+  setPersonalAiBotNetworkSettings(db,{enabled:true},actor,stamp,uid);
+  for(let i=0;i<20;i++)queuePersonalAiBotInstruction(db,bot.id,{taskType:'assistant_request',instruction:'Prepare answer number '+i},actor,stamp,uid);
+  assert.throws(()=>queuePersonalAiBotInstruction(db,bot.id,{taskType:'assistant_request',instruction:'One more instruction'},actor,stamp,uid),/rate limit/);
 });
