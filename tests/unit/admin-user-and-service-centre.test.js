@@ -262,5 +262,14 @@ test("administrator audit history filters and displays member CRUD and session o
   assert.ok(admin.includes("Profile fields: "));
   assert.ok(admin.includes("Changed: "));
   assert.ok(admin.includes("password reset"));
-  assert.ok(admin.includes("(metadata.reason?"));
+  const projectionStart = runtime.indexOf("const records = rows.map");
+  const projectionEnd = runtime.indexOf("return json(200,{records,count:records.length,limit});", projectionStart);
+  assert.ok(projectionStart >= 0 && projectionEnd > projectionStart, "audit response uses an explicit metadata projection");
+  const projection = runtime.slice(projectionStart, projectionEnd);
+  assert.doesNotMatch(projection, /\.\.\.metadata/, "raw audit metadata must never be spread into the browser response");
+  for (const secret of ["password", "access_token", "refresh_token", "sessionRevokeError", "providerSecret"]) {
+    assert.doesNotMatch(projection, new RegExp(secret, "i"), "audit response must not expose " + secret);
+  }
+  assert.match(runtime, /metadata\.changedFields/);
+  assert.match(runtime, /metadata\.profileFields/);
 });
