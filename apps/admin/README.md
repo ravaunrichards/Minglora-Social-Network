@@ -539,3 +539,48 @@ Relevant commits: `4bcbd04` (session warnings in Edge response), `073db20` (UI d
 - **Final:** Resolve or formally accept the 30 general-suite and two For You failures; finish hosted CRUD, audit, session and provider acceptance before claiming 100%.
 
 **Next action:** obtain explicit authorization for reviewed branch reconciliation. Until then keep PR #203 in draft and leave production on its current `main` deployment.
+## Continuation addendum — 2026-11-09 11:47 UTC
+
+**Verified completion remains 75% | remaining 25%.** No progress increase is claimed for the read-only database/security checks in this continuation.
+
+### Live audit-schema acceptance
+
+Read-only SQL inspection of the live Minglora Supabase project `gzycobgbasnqqhnympkr` at approximately 2026-11-09 11:46:36 UTC confirmed that the new Edge Function audit insert matches `public.audit_log`:
+
+- `actor_id`: nullable UUID referencing `public.profiles(id)`.
+- `action` and `target_type`: required text fields.
+- `target_id` and `request_id`: nullable text fields.
+- `metadata`: required JSONB with `{}` default.
+- `id`: UUID with `gen_random_uuid()` default; `created_at` has `now()` default.
+- Live counts at inspection: **7 `auth.users`, 7 `public.profiles`, 15 `public.audit_log` rows**.
+
+No audit rows or member records were inserted, changed or deleted during this check.
+
+### MFA and Supabase security-advisor review
+
+The live Supabase security advisor reported 36 RLS-enabled tables without policies, including `public.audit_log`, `public.minglora_platform_staff`, `public.minglora_runtime_api_secrets`, and `public.minglora_runtime_state`. These sensitive internal records are intended for the trusted server/Edge Function service-role gateway; no broad policy or RLS-disable change was made. The account-management runtime must continue using only its server-side privileged client and must not expose these tables directly to browser users.
+
+The advisor also flagged `public.minglora_list_my_mfa_factors()` as a `SECURITY DEFINER` function executable by authenticated users. Live definition/ACL inspection confirmed:
+
+- `SECURITY DEFINER` is enabled and `search_path` is set to the empty string.
+- The query filters MFA factor rows by `(select auth.uid())`, so an authenticated caller only receives their own factor rows.
+- The explicit ACL grants `EXECUTE` to `authenticated` and `service_role`; `anon` cannot execute it and the ACL does not grant `PUBLIC` execution.
+
+This remains a recorded advisor warning requiring a separate MFA/security review; it was not modified as part of this Admin Centre task. The advisor also reports that leaked-password protection is disabled in Auth. No Auth security setting was changed.
+
+### Latest CI at current checkpoint
+
+- Current checkpoint branch tip: `e639e2ec4d91e241db1845e5e0e221c69bd46aca`.
+- Latest completed workflow: [run #8365](https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/42611755916).
+- General suite: **750 tests, 720 passed, 30 failed**.
+- For You navigation: **15 tests, 13 passed, 2 failed**.
+- Focused Admin Centre tests pass, including failed account-delete HTTP status mapping, session-revocation-before-delete ordering, deletion/session/audit warnings, audit ordering, provider gates, and service connection/token secrecy. The overall workflow remains red due the 30 general-suite failures and two For You failures.
+
+### Current deployment and blockers
+
+- Supabase project remains `ACTIVE_HEALTHY` (PostgreSQL 17.11.0.003); production `minglora-runtime-state` remains active at version 112.
+- Render continues to deploy from `main`; latest live deployment remains commit `2f80e9d997b43e5da6373c385d6ce153ff908e67`.
+- `SUPABASE_ACCESS_TOKEN` remains unavailable/unverified in the Render environment, so live Supabase Management API GET/PATCH acceptance is blocked.
+- PR #203 remains draft and dirty/diverged (one commit behind main). No merge, rebase, deployment, production Auth setting change, or user-data mutation was performed.
+
+**Next action:** keep PR #203 in draft and obtain explicit authorization for the reviewed branch reconciliation; after that, run hosted account-management and service acceptance with owner/MFA access and a project-scoped Management token.
