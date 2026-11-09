@@ -1,25 +1,25 @@
 export const PERSONAL_AI_BOT_CATEGORIES = Object.freeze([
-  { id:'assistant-bots', name:'Assistant Bots', description:'General-purpose personal assistants that act only on direct instructions.' },
-  { id:'moderation-bots', name:'Moderation Bots', description:'Review content, identify possible policy issues and prepare moderation recommendations.' },
-  { id:'customer-service-bots', name:'Customer Service Bots', description:'Prepare account, product and service responses for administrator or staff review.' },
-  { id:'automation-bots', name:'Automation Bots', description:'Manage explicitly configured, approved and time-bounded workflows.' },
-  { id:'analytics-bots', name:'Analytics Bots', description:'Prepare read-only reports and explain platform metrics.' },
-  { id:'companion-bots', name:'Companion Bots', description:'Optional AI companions for members who choose to interact with them.' },
-  { id:'creators', name:'Creators', description:'Prepare original posts, creative concepts, captions and media briefs.' },
-  { id:'influencers', name:'Influencers', description:'Prepare trend ideas and creator campaign drafts; no undisclosed endorsements.' },
-  { id:'friends', name:'Friends', description:'Conversational AI friends that clearly identify as AI.' },
-  { id:'news', name:'News', description:'Prepare sourced news summaries for editorial review.' },
-  { id:'entertainers', name:'Entertainers', description:'Prepare jokes, quizzes, games and entertainment activities.' },
-  { id:'musicians', name:'Musicians', description:'Support music discovery, discussion and original music planning.' },
-  { id:'community-hosts', name:'Community Hosts', description:'Prepare and coordinate community discussions and events.' },
-  { id:'supports', name:'Supports', description:'Help members navigate Minglora and prepare troubleshooting guidance.' },
-  { id:'live-hosts', name:'Live Hosts', description:'Prepare AI-led live show plans; live broadcasting always requires explicit approval.' }
+  { id:'ai-friends', name:'AI Friends', description:'Clearly identified AI companions and conversational friends.' },
+  { id:'ai-creators', name:'AI Creators', description:'Prepare original posts, creative concepts, captions and media briefs.' },
+  { id:'ai-influencers', name:'AI Influencers', description:'Create disclosed AI creator campaigns and trend commentary; never fake endorsements or engagement.' },
+  { id:'ai-news', name:'AI News', description:'Prepare sourced news summaries for editorial review and publication approval.' },
+  { id:'ai-musicians', name:'AI Musicians', description:'Support music discovery, original music planning and disclosed musical content.' },
+  { id:'ai-entertainers', name:'AI Entertainers', description:'Prepare jokes, quizzes, games and entertainment activities.' },
+  { id:'ai-gamers', name:'AI Gamers', description:'Support gaming communities, game guides, challenges and event planning.' },
+  { id:'ai-community-hosts', name:'AI Community Hosts', description:'Prepare and coordinate community discussions and events.' },
+  { id:'ai-live-hosts', name:'AI Live Hosts', description:'Prepare clearly identified AI-led live show plans; broadcasts require explicit approval.' },
+  { id:'ai-moderators', name:'AI Moderators', description:'Identify possible policy issues and prepare moderation recommendations for human review.' },
+  { id:'ai-support', name:'AI Support', description:'Help members navigate Minglora and prepare support responses for review.' },
+  { id:'ai-educators', name:'AI Educators', description:'Prepare learning activities, explanations and quizzes with source-aware guidance.' },
+  { id:'ai-sports', name:'AI Sports', description:'Prepare sports information, explainers and community discussion prompts.' },
+  { id:'ai-travel', name:'AI Travel', description:'Prepare travel inspiration, destination explainers and itinerary drafts.' },
+  { id:'ai-business', name:'AI Business', description:'Prepare business education, customer-service drafts and small-business resources.' }
 ]);
 
 export const PERSONAL_AI_BOT_TASK_TYPES = Object.freeze([
-  'assistant_request','draft_post','draft_comment','draft_reply','follow','unfollow',
-  'customer_service_draft','support_draft','moderation_review','analytics_report',
-  'automation_request','community_event_draft','live_show_plan','translation','other'
+  'assistant_request','draft_post','share_media','create_reel','draft_comment','draft_reply','follow','unfollow',
+  'react','join_group','send_message','event_participation','customer_service_draft','support_draft',
+  'moderation_review','analytics_report','automation_request','community_event_draft','live_show_plan','translation','other'
 ]);
 
 export const PERSONAL_AI_BOT_HYBRID_ACTIONS = Object.freeze([
@@ -27,8 +27,9 @@ export const PERSONAL_AI_BOT_HYBRID_ACTIONS = Object.freeze([
 ]);
 
 export const PERSONAL_AI_BOT_HIGH_IMPACT_TASKS = Object.freeze([
-  'draft_post','draft_comment','draft_reply','follow','unfollow','customer_service_draft',
-  'support_draft','automation_request','community_event_draft','live_show_plan'
+  'draft_post','share_media','create_reel','draft_comment','draft_reply','follow','unfollow','react',
+  'join_group','send_message','event_participation','customer_service_draft','support_draft',
+  'automation_request','community_event_draft','live_show_plan'
 ]);
 
 const COLLECTIONS = [
@@ -46,6 +47,10 @@ export function ensurePersonalAiBotCollections(db) {
       defaultAutonomyMode:'administrator_controlled',
       requireAdministratorApproval:true,
       disabledCategoryIds:[],
+      identityDesignTarget:8300000000,
+      concurrentExecutionLimit:0,
+      dailyExecutionBudget:0,
+      automaticSuspensionEnabled:true,
       executionProviderConfigured:false,
       executionWorkersConfigured:false,
       createdAt:new Date().toISOString(),
@@ -91,13 +96,19 @@ export function createPersonalAiBot(db, input, actorId, timestamp, uid) {
   const bot = {
     id:botId, slug:slugify(displayName)+'-'+botId.slice(0,8),
     displayName, categoryId, categoryName:category.name,
-    description:String(input.description || '').trim().slice(0,600),
+    username:'ai_'+slugify(displayName).replace(/-/g,'_').slice(0,36)+'_'+botId.slice(0,6),
+    profilePictureAssetId:null,
+    bio:String(input.bio || input.description || '').trim().slice(0,600),
+    description:String(input.description || input.bio || '').trim().slice(0,600),
     personality:String(input.personality || '').trim().slice(0,1200),
+    interests:Array.isArray(input.interests)?[...new Set(input.interests.map(value=>String(value).trim().slice(0,60)).filter(Boolean))].slice(0,30):[],
+    hobbies:Array.isArray(input.hobbies)?[...new Set(input.hobbies.map(value=>String(value).trim().slice(0,60)).filter(Boolean))].slice(0,30):[],
     languages:Array.isArray(input.languages)
       ? [...new Set(input.languages.map(value=>String(value).trim().slice(0,40)).filter(Boolean))].slice(0,12)
       : ['English'],
+    activitySchedule:{timezone:'America/Jamaica',daysOfWeek:[1,2,3,4,5,6,7],startTime:'00:00',endTime:'23:59',maxTasksPerDay:0},
     administratorInstructions:String(input.administratorInstructions || '').trim().slice(0,4000),
-    profileType:'ai_bot', aiLabel:'AI Bot',
+    profileType:'ai_bot', aiLabel:'AI Bot', aiDisclosureVisible:true, contentDisclosureRequired:true,
     status:'disabled', enabled:false,
     autonomyMode:'administrator_controlled',
     allowedAutonomousActions:[],
@@ -124,7 +135,10 @@ export function createPersonalAiBotStarterSet(db, actorId, timestamp, uid) {
       categoryId:category.id, categoryName:category.name,
       description:category.description, personality:'',
       languages:['English'], administratorInstructions:'',
-      profileType:'ai_bot', aiLabel:'AI Bot',
+      profileType:'ai_bot', aiLabel:'AI Bot', aiDisclosureVisible:true, contentDisclosureRequired:true,
+      username:'ai_'+slugify(category.id).replace(/-/g,'_')+'_'+id.slice(0,6),
+      profilePictureAssetId:null, bio:category.description, interests:[], hobbies:[],
+      activitySchedule:{timezone:'America/Jamaica',daysOfWeek:[1,2,3,4,5,6,7],startTime:'00:00',endTime:'23:59',maxTasksPerDay:0},
       status:'disabled', enabled:false, starterCategoryId:category.id,
       autonomyMode:'administrator_controlled', allowedAutonomousActions:[],
       requiresApprovalForEveryTask:true, requiresApprovalForPublishing:true,
@@ -149,6 +163,38 @@ export function updatePersonalAiBot(db, botId, input, actorId, timestamp, uid) {
   }
   if (Object.hasOwn(input,'description')) { bot.description=String(input.description||'').trim().slice(0,600);changes.push('description'); }
   if (Object.hasOwn(input,'personality')) { bot.personality=String(input.personality||'').trim().slice(0,1200);changes.push('personality'); }
+  if (Object.hasOwn(input,'bio')) { bot.bio=String(input.bio||'').trim().slice(0,600);changes.push('bio'); }
+  if (Object.hasOwn(input,'interests')) {
+    if(!Array.isArray(input.interests))throw Object.assign(new Error('Interests must be a list.'),{status:400});
+    bot.interests=[...new Set(input.interests.map(value=>String(value).trim().slice(0,60)).filter(Boolean))].slice(0,30);
+    changes.push('interests');
+  }
+  if (Object.hasOwn(input,'hobbies')) {
+    if(!Array.isArray(input.hobbies))throw Object.assign(new Error('Hobbies must be a list.'),{status:400});
+    bot.hobbies=[...new Set(input.hobbies.map(value=>String(value).trim().slice(0,60)).filter(Boolean))].slice(0,30);
+    changes.push('hobbies');
+  }
+  if (Object.hasOwn(input,'activitySchedule')) {
+    const schedule=input.activitySchedule;
+    const validDays=Array.isArray(schedule?.daysOfWeek)&&schedule.daysOfWeek.every(day=>Number.isInteger(day)&&day>=1&&day<=7);
+    const validTime=value=>typeof value==='string'&&/^([01]\d|2[0-3]):[0-5]\d$/.test(value);
+    if(!schedule||!validDays||!validTime(schedule.startTime)||!validTime(schedule.endTime)||typeof schedule.timezone!=='string'||schedule.timezone.length>80)throw Object.assign(new Error('Enter a valid activity schedule, timezone and days of week.'),{status:400});
+    try{new Intl.DateTimeFormat('en',{timeZone:schedule.timezone});}catch{throw Object.assign(new Error('Choose a valid activity schedule timezone.'),{status:400});}
+    const maxTasksPerDay=Number(schedule.maxTasksPerDay||0);
+    if(!Number.isInteger(maxTasksPerDay)||maxTasksPerDay<0||maxTasksPerDay>500)throw Object.assign(new Error('Daily task cap must be between 0 and 500.'),{status:400});
+    bot.activitySchedule={timezone:schedule.timezone,daysOfWeek:[...new Set(schedule.daysOfWeek)],startTime:schedule.startTime,endTime:schedule.endTime,maxTasksPerDay};
+    changes.push('activity schedule');
+  }
+  if (Object.hasOwn(input,'scheduledActivationAt')) {
+    const value=input.scheduledActivationAt?Date.parse(input.scheduledActivationAt):null;
+    if(value!==null&&!Number.isFinite(value))throw Object.assign(new Error('Enter a valid scheduled activation time.'),{status:400});
+    bot.scheduledActivationAt=value===null?null:new Date(value).toISOString();changes.push('scheduled activation');
+  }
+  if (Object.hasOwn(input,'scheduledDeactivationAt')) {
+    const value=input.scheduledDeactivationAt?Date.parse(input.scheduledDeactivationAt):null;
+    if(value!==null&&!Number.isFinite(value))throw Object.assign(new Error('Enter a valid scheduled deactivation time.'),{status:400});
+    bot.scheduledDeactivationAt=value===null?null:new Date(value).toISOString();changes.push('scheduled deactivation');
+  }
   if (Object.hasOwn(input,'administratorInstructions')) { bot.administratorInstructions=String(input.administratorInstructions||'').trim().slice(0,4000);changes.push('instructions'); }
   if (Object.hasOwn(input,'categoryId')) {
     const category=getPersonalAiBotCategories(db).find(item=>item.id===String(input.categoryId));
@@ -221,6 +267,11 @@ export function queuePersonalAiBotInstruction(db, botId, input, actorId, timesta
   if(!bot)throw Object.assign(new Error('Bot not found.'),{status:404});
   const category=getPersonalAiBotCategories(db).find(item=>item.id===bot.categoryId);
   if(!category?.enabled)throw Object.assign(new Error('This bot category is disabled.'),{status:409});
+  const nowMs=Date.parse(timestamp);
+  const recentTasks=db.personalAiBotTasks.filter(task=>task.botId===botId&&Number.isFinite(Date.parse(task.createdAt))&&nowMs-Date.parse(task.createdAt)<15*60*1000&&task.status!=='cancelled');
+  if(recentTasks.length>=20)throw Object.assign(new Error('This bot reached its instruction rate limit. Try again after the 15-minute window.'),{status:429});
+  const pendingTasks=db.personalAiBotTasks.filter(task=>task.botId===botId&&['awaiting_administrator_approval','approved_waiting_for_worker'].includes(task.status));
+  if(pendingTasks.length>=50)throw Object.assign(new Error('This bot has too many pending instructions. Review or cancel existing tasks first.'),{status:429});
   const taskType=String(input.taskType||'other');
   if(!PERSONAL_AI_BOT_TASK_TYPES.includes(taskType))throw Object.assign(new Error('Choose a supported task type.'),{status:400});
   const instruction=String(input.instruction||'').trim();
@@ -292,7 +343,11 @@ export function getPersonalAiBotOverview(db) {
       pausedBots:bots.filter(bot=>bot.status==='paused').length,
       pendingInstructions:tasks.filter(task=>task.status==='awaiting_administrator_approval').length,
       approvedWaitingForWorker:tasks.filter(task=>task.status==='approved_waiting_for_worker').length,
-      categories:getPersonalAiBotCategories(db).length
+      categories:getPersonalAiBotCategories(db).length,
+      activeBots:bots.filter(bot=>bot.status==='active').length,
+      executingBots:new Set(tasks.filter(task=>task.status==='running').map(task=>task.botId)).size,
+      identityDesignTarget:settings.identityDesignTarget||8300000000,
+      concurrentExecutionLimit:settings.concurrentExecutionLimit||0
     }
   };
 }
