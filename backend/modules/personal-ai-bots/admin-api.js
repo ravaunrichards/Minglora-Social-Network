@@ -1,6 +1,13 @@
 import { createHash } from 'node:crypto';
 import { isRelationshipBlocked } from '../relationships/friends.js';
 
+function assertAiPersistenceResult(result,resource){
+  if(result&&typeof result==='object'&&(result.skipped===true||result.ok===false)){
+    throw Object.assign(new Error(resource+' were not persisted to Minglora Supabase PostgreSQL.'),{status:503});
+  }
+  return result;
+}
+
 function canonicalAiIdentity(bot) {
   const parts=String(bot.displayName||'').trim().split(/\s+/).filter(Boolean);
   const firstName=String(bot.firstName||parts[0]||'AI').trim();
@@ -74,7 +81,8 @@ function canonicalAiIdentity(bot) {
 
 async function persistCanonicalIdentities(bots,persistAiIdentities) {
   if(typeof persistAiIdentities!=='function'||!Array.isArray(bots)||!bots.length)return;
-  await persistAiIdentities(bots.map(canonicalAiIdentity));
+  const result=await persistAiIdentities(bots.map(canonicalAiIdentity));
+  assertAiPersistenceResult(result,'Canonical AI identities');
 }
 
 function canonicalAiBotTask(task) {
@@ -112,7 +120,8 @@ async function persistCanonicalTasks(tasks,persistAiBotTasks,bots,persistAiIdent
     await persistCanonicalIdentities(dependencies,persistAiIdentities);
   }
   for(let offset=0;offset<normalized.length;offset+=100){
-    await persistAiBotTasks(normalized.slice(offset,offset+100));
+    const result=await persistAiBotTasks(normalized.slice(offset,offset+100));
+    assertAiPersistenceResult(result,'Canonical AI task records');
   }
 }
 
@@ -129,7 +138,8 @@ function canonicalAiBotSettings(settings) {
 
 async function persistCanonicalBotSettings(settings,persistAiBotSettings) {
   if(typeof persistAiBotSettings!=='function')return;
-  await persistAiBotSettings(canonicalAiBotSettings(settings));
+  const result=await persistAiBotSettings(canonicalAiBotSettings(settings));
+  assertAiPersistenceResult(result,'Canonical AI network settings');
 }
 import {
   ensurePersonalAiBotCollections,
