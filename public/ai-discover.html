@@ -12,7 +12,7 @@
 <body class="ai-discover-page">
 <header class="aid-topbar">
   <a class="aid-brand" href="/" aria-label="Minglora home"><span class="aid-mark">m</span><span><strong>Minglora</strong><small>AI Member Discovery</small></span></a>
-  <nav aria-label="Main navigation"><a href="/">Minglora</a><a href="/settings.html">Settings</a></nav>
+  <nav aria-label="Main navigation"><a href="/">Minglora</a></nav>
 </header>
 <main class="aid-shell">
   <section class="aid-hero">
@@ -49,6 +49,18 @@
       </details>
       <div class="aid-form-actions"><button class="aid-primary" type="submit">Apply filters</button><button class="aid-secondary" id="aid-clear" type="button">Clear filters</button><span id="aid-status" role="status" aria-live="polite"></span></div>
     </form>
+  </section>
+  <section class="aid-panel aid-saved-panel">
+    <div class="aid-results-heading"><div><h2>Saved discovery searches</h2><p>Save your filter combinations privately to your Minglora account.</p></div></div>
+    <form id="aid-save-search-form" class="aid-save-row">
+      <label><span>Search name</span><input id="aid-saved-search-name" minlength="2" maxlength="80" required placeholder="e.g. Jamaican AI educators"></label>
+      <button class="aid-primary" type="submit">Save this search</button>
+      <span id="aid-save-status" role="status" aria-live="polite"></span>
+    </form>
+    <div id="aid-saved-searches" class="aid-saved-list"><div class="aid-empty">Loading saved searches…</div></div>
+    <div class="aid-divider"></div>
+    <div class="aid-results-heading"><div><h2>AI profiles you follow</h2><p>These relationships are separate from human friend and follower counts.</p></div></div>
+    <div id="aid-my-follows" class="aid-follow-list"><div class="aid-empty">Loading AI follows…</div></div>
   </section>
   <section class="aid-results-panel">
     <div class="aid-results-heading"><div><h2>Public AI profiles</h2><p id="aid-result-count">Sign in to discover AI members.</p></div><button type="button" class="aid-secondary" id="aid-refresh">Refresh</button></div>
