@@ -12,7 +12,7 @@
   const request=async(path,options={})=>{
     const response=await fetch(path.startsWith('/api/')?path:API+path,{credentials:'same-origin',cache:'no-store',headers:{Accept:'application/json','Content-Type':'application/json',...(options.headers||{})},...options});
     const payload=await response.json().catch(()=>({}));
-    if(!response.ok)throw new Error(payload.error||'The administrator request failed.');
+    if(!response.ok){const error=new Error(payload.error||'The administrator request failed.');error.status=response.status;error.payload=payload;throw error;}
     return payload;
   };
   const notice=(id,message,type='')=>{const node=document.querySelector('#'+id);if(node){node.textContent=message;node.className='pab-notice'+(type?' '+type:'');}};
@@ -124,6 +124,7 @@
     html+='<form id="pab-batch-form" class="pab-form-grid"><div class="pab-field full"><label for="pab-batch-items">AI identity records (JSON array)</label><textarea class="pab-textarea pab-batch-json" id="pab-batch-items" rows="8" required spellcheck="false" placeholder=\'[{"displayName":"AI Learning Guide","firstName":"AI","lastName":"Guide","categoryId":"ai-educators","population":"independent"},{"displayName":"AI Service Analyst","firstName":"AI","lastName":"Analyst","categoryId":"ai-support","population":"specialized_service"}]\'></textarea><small class="pab-notice">Supported fields include name fields, category, population, gender, nationality, country, languages, personality, interests, education, profession, skills and profile preferences.</small></div><div class="pab-field"><label for="pab-batch-key">Idempotency key (generated on first submit)</label><input class="pab-input" id="pab-batch-key" maxlength="120" autocomplete="off" placeholder="Generated automatically; keep it unchanged when retrying"></div><div class="pab-field full"><button class="pab-btn" type="submit">Create and persist AI identity batch</button><span id="pab-batch-status" class="pab-notice">Creation is not activation. New AI identities remain disabled and private.</span></div></form>';
     html+='<div class="pab-divider"></div><div class="pab-heading"><div><h3>Recent identity batches</h3><p>Saved batches can be safely replayed using the same idempotency key and original records after a persistence interruption.</p></div></div>';
     html+=batchHistory.length?'<div class="pab-audit">'+batchHistory.map(batch=>'<div class="pab-audit-row"><strong>'+esc(batch.status||'unknown')+' · '+esc(batch.completedRecords||0)+'/'+esc(batch.totalRecords||0)+' persisted · '+esc(batch.failedRecords||0)+' failed</strong><span>'+esc(date(batch.createdAt))+' · retries '+esc(batch.retryCount||0)+'</span></div>').join('')+'</div>':'<div class="pab-empty">No identity batches have been submitted.</div>';
+    html+='<div id="pab-batch-results" class="pab-audit" aria-live="polite"></div>';
     html+='</section>';
     const providerAssignments=Array.isArray(state.providerAssignments)?state.providerAssignments:[];
     const providerSource=state.providerAssignmentsSource==='minglora_supabase_postgresql';
@@ -312,6 +313,14 @@
   }
   async function toggleCategory(id,enabled){try{await request(API+'/categories/'+encodeURIComponent(id),{method:'PATCH',body:JSON.stringify({enabled})});notice('pab-network-status','Category control saved.','success');await refresh();}catch(error){notice('pab-network-status',error.message,'error');await refresh();}}
 
+  function renderBatchResults(results){
+    const container=document.querySelector('#pab-batch-results');
+    if(!container)return;
+    const rows=Array.isArray(results)?results:[];
+    container.innerHTML=rows.length
+      ?rows.map(result=>'<div class="pab-audit-row"><strong>Record '+esc(result.index)+' · '+esc(String(result.status||'unknown').replaceAll('_',' '))+'</strong><span>'+esc(result.identityId||result.errorCode||'')+(result.message?' · '+esc(result.message):'')+'</span></div>').join('')
+      :'';
+  }
   async function createIdentityBatch(event){
     event.preventDefault();
     const form=event.currentTarget;
@@ -338,12 +347,18 @@
     try{
       const result=await request(API+'/batches',{method:'POST',body:JSON.stringify({idempotencyKey,items})});
       await refresh();
+      renderBatchResults(result.results);
       const batch=result.batch||{};
-      notice('pab-batch-status',(result.replayed?'Previously completed batch verified. ':'')+
-        'Persisted '+Number(batch.completedRecords||0)+' of '+Number(batch.totalRecords||items.length)+' identities. All new identities remain disabled.','success');
+      const failed=Number(batch.failedRecords||0);
+      notice('pab-batch-status',(result.replayed?'Previously recorded batch results loaded. ':'')+
+        'Persisted '+Number(batch.completedRecords||0)+' of '+Number(batch.totalRecords||items.length)+
+        ' records; '+failed+' failed. New identities remain disabled.',
+        failed?'error':'success');
       keyInput.value='';
     }catch(error){
-      notice('pab-batch-status',error.message+' Keep this idempotency key and the exact same JSON when retrying.','error');
+      await refresh();
+      renderBatchResults(error.payload?.results);
+      notice('pab-batch-status',error.message+' Keep this idempotency key and the exact same JSON when retrying a persistence failure.','error');
     }finally{if(button)button.disabled=false;}
   }
 
