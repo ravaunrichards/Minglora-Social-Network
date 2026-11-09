@@ -16,7 +16,11 @@ import {
   queuePersonalAiBotInstruction,
   approvePersonalAiBotTask,
   cancelPersonalAiBotTask,
-  setPersonalAiBotNetworkSettings
+  setPersonalAiBotNetworkSettings,
+  createPersonalAiBotTeam,
+  updatePersonalAiBotTeam,
+  assignPersonalAiBotsToTeam,
+  removePersonalAiBotFromTeam
 } from '../../backend/modules/personal-ai-bots/personal-ai-bots-service.js';
 
 const makeDb=()=>({});
@@ -212,4 +216,43 @@ test('instruction queue has per-bot rate limits and bounded pending work',()=>{
   setPersonalAiBotNetworkSettings(db,{enabled:true},actor,stamp,uid);
   for(let i=0;i<20;i++)queuePersonalAiBotInstruction(db,bot.id,{taskType:'assistant_request',instruction:'Prepare answer number '+i},actor,stamp,uid);
   assert.throws(()=>queuePersonalAiBotInstruction(db,bot.id,{taskType:'assistant_request',instruction:'One more instruction'},actor,stamp,uid),/rate limit/);
+});
+
+
+test('bot teams can be created, renamed, paused and described by their owner',()=>{
+  const db=makeDb();
+  const team=createPersonalAiBotTeam(db,{name:'Learning Team',description:'Education and language support.'},actor,stamp,uid);
+  assert.equal(team.ownerId,actor);
+  assert.equal(team.status,'enabled');
+  const updated=updatePersonalAiBotTeam(db,team.id,{name:'Global Learning Team',description:'Multilingual learning.',status:'paused'},actor,stamp,uid);
+  assert.equal(updated.name,'Global Learning Team');
+  assert.equal(updated.description,'Multilingual learning.');
+  assert.equal(updated.status,'paused');
+  assert.throws(()=>updatePersonalAiBotTeam(db,team.id,{name:'Another name'},'other-owner',stamp,uid),/not found/);
+  assert.throws(()=>createPersonalAiBotTeam(db,{name:'Global Learning Team'},actor,stamp,uid),/already have a team/);
+});
+
+test('team assignments are owner-scoped, unique and removable without changing bot activation',()=>{
+  const db=makeDb();
+  const team=createPersonalAiBotTeam(db,{name:'Creator Team'},actor,stamp,uid);
+  const bots=[
+    createPersonalAiBot(db,{displayName:'Creator One',categoryId:'ai-creators'},actor,stamp,uid),
+    createPersonalAiBot(db,{displayName:'Creator Two',categoryId:'ai-creators'},actor,stamp,uid)
+  ];
+  const result=assignPersonalAiBotsToTeam(db,team.id,[bots[0].id,bots[1].id,bots[0].id],actor,stamp,uid);
+  assert.equal(result.added,2);
+  assert.equal(result.members.length,2);
+  assert.equal(assignPersonalAiBotsToTeam(db,team.id,[bots[0].id],actor,stamp,uid).added,0);
+  assert.ok(bots.every(bot=>bot.enabled===false&&bot.status==='disabled'));
+  assert.throws(()=>assignPersonalAiBotsToTeam(db,team.id,[bots[0].id],'other-owner',stamp,uid),/not found/);
+  const removed=removePersonalAiBotFromTeam(db,team.id,bots[0].id,actor,stamp,uid);
+  assert.equal(removed.memberCount,1);
+  assert.equal(db.personalAiBots.find(bot=>bot.id===bots[0].id).status,'disabled');
+});
+
+test('team assignment rejects unknown bots and unbounded input',()=>{
+  const db=makeDb();
+  const team=createPersonalAiBotTeam(db,{name:'Review Team'},actor,stamp,uid);
+  assert.throws(()=>assignPersonalAiBotsToTeam(db,team.id,['not-a-bot'],actor,stamp,uid),/could not be found/);
+  assert.throws(()=>assignPersonalAiBotsToTeam(db,team.id,new Array(101).fill('x'),'owner',stamp,uid),/between 1 and 100/);
 });
