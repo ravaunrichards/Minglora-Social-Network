@@ -894,12 +894,11 @@ BEGIN
 
       IF v_capability_code ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{1,99}$' THEN
         INSERT INTO public.ai_identity_capabilities (
-          identity_id,capability_code,enabled,capability_configuration,
-          verification_status,last_checked_at
+          identity_id,capability_code,capability_configuration,verification_status,
+          enabled,last_checked_at
         ) VALUES (
           v_id,
           v_capability_code,
-          false,
           CASE
             WHEN pg_catalog.jsonb_typeof(v_capability->'configuration')='object'
               THEN v_capability->'configuration'
@@ -908,6 +907,7 @@ BEGIN
             ELSE '{}'::jsonb
           END,
           'unverified',
+          false,
           NULL
         )
         ON CONFLICT (identity_id,capability_code) DO UPDATE SET
