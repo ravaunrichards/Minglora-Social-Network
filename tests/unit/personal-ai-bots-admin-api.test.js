@@ -95,3 +95,39 @@ test('owner bulk bot controls are limited to selected bot records',async()=>{
   assert.equal(context.db.personalAiBots[0].status,'paused');
   assert.equal(saves,1);
 });
+
+
+test('owner can create and retrieve a bot team without activating bots',async()=>{
+  const context=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/teams',
+    input:{name:'Learning Team',description:'Multilingual education assistants.'}
+  });
+  const handled=await handlePersonalAiBotsAdminApi(context);
+  assert.equal(handled,true);
+  assert.equal(context.res.statusCode,201);
+  assert.equal(context.res.payload.team.name,'Learning Team');
+  assert.equal(context.db.personalAiBotTeams.length,1);
+  assert.equal(context.res.payload.team.enabled,true);
+});
+
+test('owner can assign and remove team members using owner-scoped routes',async()=>{
+  const owner='owner-1';
+  const teamId='00000000-0000-4000-8000-000000000010';
+  const botId='00000000-0000-4000-8000-000000000011';
+  const db={
+    personalAiBotTeams:[{id:teamId,ownerId:owner,name:'Learning Team',status:'enabled',enabled:true}],
+    personalAiBots:[{id:botId,createdBy:owner,displayName:'AI Tutor',status:'disabled',enabled:false}],
+    personalAiBotTeamMembers:[]
+  };
+  let saves=0;
+  const add=makeContext({method:'POST',path:'/api/admin/personal-ai-bots/teams/'+teamId+'/members',input:{botIds:[botId]},db,saveStore:async()=>{saves++;}});
+  await handlePersonalAiBotsAdminApi(add);
+  assert.equal(add.res.statusCode,200);
+  assert.equal(add.res.payload.added,1);
+  assert.equal(add.db.personalAiBots[0].enabled,false);
+  const remove=makeContext({method:'DELETE',path:'/api/admin/personal-ai-bots/teams/'+teamId+'/members/'+botId,db,saveStore:async()=>{saves++;}});
+  await handlePersonalAiBotsAdminApi(remove);
+  assert.equal(remove.res.statusCode,200);
+  assert.equal(remove.db.personalAiBotTeamMembers.length,0);
+  assert.equal(saves,2);
+});
