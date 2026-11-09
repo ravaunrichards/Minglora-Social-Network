@@ -91,9 +91,9 @@ export function createPersonalAiBot(db, input, actorId, timestamp, uid) {
   const displayName = String(input.displayName || '').trim().replace(/\s+/g,' ');
   const categoryId = String(input.categoryId || '').trim();
   const category = getPersonalAiBotCategories(db).find(item => item.id === categoryId);
-  if (!category?.enabled) throw Object.assign(new Error('This bot category is disabled.'), { status:409 });
-  if (displayName.length < 2 || displayName.length > 64) throw Object.assign(new Error('Bot name must be between 2 and 64 characters.'), { status:400 });
   if (!category) throw Object.assign(new Error('Choose a valid bot category.'), { status:400 });
+  if (!category.enabled) throw Object.assign(new Error('This bot category is disabled.'), { status:409 });
+  if (displayName.length < 2 || displayName.length > 64) throw Object.assign(new Error('Bot name must be between 2 and 64 characters.'), { status:400 });
   const botId = uid();
   const bot = {
     id:botId, slug:slugify(displayName)+'-'+botId.slice(0,8),
@@ -207,6 +207,7 @@ export function updatePersonalAiBot(db, botId, input, actorId, timestamp, uid) {
   if (Object.hasOwn(input,'categoryId')) {
     const category=getPersonalAiBotCategories(db).find(item=>item.id===String(input.categoryId));
     if(!category)throw Object.assign(new Error('Choose a valid bot category.'),{status:400});
+    if(!category.enabled)throw Object.assign(new Error('This bot category is disabled.'),{status:409});
     bot.categoryId=category.id;bot.categoryName=category.name;changes.push('category');
   }
   if (Object.hasOwn(input,'languages')) {
@@ -217,7 +218,9 @@ export function updatePersonalAiBot(db, botId, input, actorId, timestamp, uid) {
   if (Object.hasOwn(input,'status')) {
     const status=String(input.status);
     if(!['enabled','disabled','paused'].includes(status))throw Object.assign(new Error('Choose enabled, disabled or paused.'),{status:400});
-    bot.status=status;bot.enabled=status==='enabled';changes.push('status');
+    const category=getPersonalAiBotCategories(db).find(item=>item.id===bot.categoryId);
+    if(status==='enabled'&&!category?.enabled)throw Object.assign(new Error('This bot category is disabled.'),{status:409});
+    bot.status=status;bot.enabled=status==='enabled';bot.pausedAt=status==='paused'?timestamp:null;changes.push('status');
   }
   if (Object.hasOwn(input,'autonomyMode')) {
     const mode=String(input.autonomyMode);
