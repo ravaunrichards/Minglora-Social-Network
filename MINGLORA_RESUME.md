@@ -1,10 +1,10 @@
-Updated: 2026-11-09 19:08 UTC (Personal AI Bots workflow #568: 177/177; full Minglora CI #8418: 911/911)
+Updated: 2026-11-09 19:14 UTC (Personal AI Bots workflow #569: 177/177; full Minglora CI #8419: 911/911)
 Scope: **Minglora Social Network only**
 Repository: https://github.com/ravaunrichards/Minglora-Social-Network
 Branch: `feat/personal-ai-bots-network-control-center`
 Draft PR: https://github.com/ravaunrichards/Minglora-Social-Network/pull/202
 Supabase project: `gzycobgbasnqqhnympkr` (existing Minglora project only)
-Current branch head: `b6bb2f536e5781848ed471ba4d72cbf63d112da9`
+Latest verified implementation source commit: `b6bb2f536e5781848ed471ba4d72cbf63d112da9` (the subsequent checkpoint-only commit is recorded in the branch history).
 Latest verified appointment workflow and regression-test commit: `b6bb2f536e5781848ed471ba4d72cbf63d112da9` (`test(ai): assert persisted appointment application status`).
 PR must remain **OPEN + DRAFT**. Do not merge, deploy, or apply production migrations without the required review/authorization.
 
@@ -119,8 +119,8 @@ This is weighted feature-branch implementation progress, not a claim that 44.40%
 
 ## Verification and current status
 
-- Latest confirmed green Personal AI Bots workflow: run **#568**, branch head **`b6bb2f536e5781848ed471ba4d72cbf63d112da9`**, **177 passed / 0 failed**, completed **2026-11-09 19:08:16 UTC**. Includes the owner-approved appointment service, API route, UI and HR workflow test coverage.
-- Latest confirmed green full Minglora CI workflow: run **#8418**, **911 passed / 0 failed**, completed **2026-11-09 19:08:29 UTC**. Both the main test job and For You functional-navigation job passed. The current dependency audit reported **0 vulnerable packages**.
+- Latest confirmed green Personal AI Bots workflow: run **#569**, implementation source commit **`b6bb2f536e5781848ed471ba4d72cbf63d112da9`**, **177 passed / 0 failed**, completed **2026-11-09 19:14:13 UTC**. Includes the owner-approved appointment service, API route, UI and HR workflow test coverage.
+- Latest confirmed green full Minglora CI workflow: run **#8419**, **911 passed / 0 failed**, completed **2026-11-09 19:14:22 UTC**. Both the main test job and For You functional-navigation job passed. The current dependency audit reported **0 vulnerable packages**.
 - Candidate applications are verified to require existing organizational AI identities and open vacancies, prevent duplicate applications, record status history/audit and enforce allowed review transitions.
 - Owner-approved appointment service/API/UI paths are covered by the 177-test focused workflow and 911-test full CI. Appointments require shortlisted applicants and valid manager hierarchy, prevent duplicate active appointments and overfilled vacancies, record employment history/audit, and leave AI identities disabled with no permissions.
 - Bulk identity import: 1–100 per batch, owner-scoped idempotency and payload hash, duplicate controls, per-record outcomes, safe retry after DB failure, rollback on initial runtime checkpoint-save failure, owner-only history; imported identities remain disabled/private.
@@ -133,7 +133,7 @@ This is weighted feature-branch implementation progress, not a claim that 44.40%
 - Current verified weighted completion: **44.40% → 44%**.
 - Progress since previous checkpoint: **+1.50 percentage points** from the newly verified owner-approved appointment service/API/UI workflow and its employment-history/audit records; milestone 3 is now 55% verified. No credit is awarded for normalized HR persistence, employee lifecycle, position permissions, payroll, management execution or org charts.
 - Last verified milestone: **Phase 3 — department, role, vacancy, candidate review and owner-approved appointment foundations (partial)**.
-- Last confirmed action: commit `b6bb2f536e5781848ed471ba4d72cbf63d112da9`; Personal AI Bots #568 passed 177/177 and full CI #8418 passed 911/911 on 2026-11-09 at 19:08 UTC.
+- Last confirmed action: commit `b6bb2f536e5781848ed471ba4d72cbf63d112da9` fixed the stale-copy assertion; checkpoint-only commit `0dcde6bc818490b85ffe1f0a4f2f200aefdd2667` was then verified by Personal AI Bots #569 (177/177) and full CI #8419 (911/911) at 2026-11-09 19:14 UTC.
 - Recovered: repository, feature branch, PR #202 open/draft, checkpoint, source files, Supabase project status and CI logs independently checked.
 - Unverified: live normalized Postgres HR round-trip, provider/email provisioning, worker/scheduler, manager authorization/delegation and production capacity.
 - Changes since previous checkpoint: added the owner-approved appointment flow and employment-history UI/route/service support; repaired the stale copied-application assertion in the test, then confirmed both workflows green.
@@ -168,6 +168,7 @@ This is weighted feature-branch implementation progress, not a claim that 44.40%
 
 ## Blockers and release constraints
 - **Live relational database:** AI migrations have not been applied to Minglora Supabase; no normalized HR tables/readback has been verified. Production migration requires explicit authorization.
+- **Safe database development environment:** Supabase branch listing returned no development branches. The current execution container has Node/npm and Git but no Supabase CLI installed. The draft PR explicitly prohibits applying migrations to production without review. Therefore new relational HR migrations cannot be safely created/validated end-to-end in the current environment. Do not create a billable Supabase branch or apply production DDL without an approved development environment and required authorization.
 - **Department/position/vacancy/application data:** current staged service uses the existing runtime-state save adapter, not normalized relational tables.
 - **AI provider/email:** no connected, health-checked model provider or actual mailbox provisioning/sending service is verified.
 - **Workers:** remain disabled until provider, queue, permission, monitoring, deployment and human approval safeguards pass.
@@ -176,5 +177,5 @@ This is weighted feature-branch implementation progress, not a claim that 44.40%
 
 ## Exact next action
 
-Design and stage normalized relational HR/organization tables and owner-only RPCs for departments, job positions, vacancies, candidate applications, appointments, reporting-manager links and employment history. Preserve current runtime-state compatibility until an explicitly reviewed migration and dual-read/write plan exists. Do not apply production migrations, deploy workers/providers or enable autonomous execution. Keep PR #202 open/draft.
+Provision an approved non-production Supabase development environment and make the Supabase CLI available alongside a working Minglora repository checkout. Then create and validate staged normalized HR/organization tables and owner-only RPCs for departments, job positions, vacancies, candidate applications, appointments, reporting-manager links and employment history. Preserve current runtime-state compatibility until an explicitly reviewed migration and dual-read/write plan exists. Do not apply production migrations, deploy workers/providers or enable autonomous execution. Keep PR #202 open/draft.
 
