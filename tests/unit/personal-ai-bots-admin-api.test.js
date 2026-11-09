@@ -902,35 +902,68 @@ test('AI identity batch retries use the same identities after canonical persiste
   assert.equal(db.personalAiBots.length,2);
 });
 
-test('AI identity batch rejects duplicate names and changed idempotency payloads without extra records',async()=>{
+test('AI identity batch returns per-record outcomes and rejects changed idempotency payloads',async()=>{
   const db={};
-  const input={idempotencyKey:'identity-batch-duplicate-01',items:identityBatchItems};
+  const duplicateInput={idempotencyKey:'identity-batch-duplicate-01',items:[
+    {displayName:'Same AI Name',categoryId:'ai-support'},
+    {displayName:' same   ai name ',categoryId:'ai-support'},
+    {displayName:'Invalid AI Name',categoryId:'unknown-category'}
+  ]};
   const first=makeContext({
-    method:'POST',path:'/api/admin/personal-ai-bots/batches',input,db,uid:sequenceUid(1000),
+    method:'POST',path:'/api/admin/personal-ai-bots/batches',
+    input:duplicateInput,db,uid:sequenceUid(1000),
     persistAiIdentities:async()=>{}
   });
   await handlePersonalAiBotsAdminApi(first);
   assert.equal(first.res.statusCode,201);
+  assert.equal(first.res.payload.batch.status,'completed_with_errors');
+  assert.equal(first.res.payload.batch.totalRecords,3);
+  assert.equal(first.res.payload.batch.createdRecords,1);
+  assert.equal(first.res.payload.batch.completedRecords,1);
+  assert.equal(first.res.payload.batch.failedRecords,2);
+  assert.deepEqual(first.res.payload.results.map(result=>result.status),['persisted','failed','failed']);
+  assert.equal(first.res.payload.results[1].errorCode,'DUPLICATE_IDENTITY');
+  assert.equal(db.personalAiBots.length,1);
+
   const changed=makeContext({
     method:'POST',path:'/api/admin/personal-ai-bots/batches',
-    input:{idempotencyKey:input.idempotencyKey,items:[{...identityBatchItems[0],displayName:'Changed Name'}]},
+    input:{idempotencyKey:duplicateInput.idempotencyKey,items:[{displayName:'Changed Name',categoryId:'ai-support'}]},
     db,persistAiIdentities:async()=>{throw new Error('must not be called');}
   });
   await handlePersonalAiBotsAdminApi(changed);
   assert.equal(changed.res.statusCode,409);
-  const duplicate=makeContext({
-    method:'POST',path:'/api/admin/personal-ai-bots/batches',
-    input:{idempotencyKey:'identity-batch-duplicate-02',items:[
-      {displayName:'Same AI Name',categoryId:'ai-support'},
-      {displayName:' same   ai name ',categoryId:'ai-support'}
-    ]},
-    db,persistAiIdentities:async()=>{throw new Error('must not be called');}
-  });
-  await handlePersonalAiBotsAdminApi(duplicate);
-  assert.equal(duplicate.res.statusCode,409);
-  assert.equal(db.personalAiBots.length,2);
+  assert.equal(db.personalAiBots.length,1);
 });
 
+test('AI identity batch retries only created rows and retains failed row outcomes',async()=>{
+  const db={};
+  const input={idempotencyKey:'identity-batch-row-retry-01',items:[
+    {displayName:'Retry Valid AI',categoryId:'ai-support'},
+    {displayName:'Invalid Category AI',categoryId:'missing-category'}
+  ]};
+  let calls=0;
+  const first=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/batches',input,db,uid:sequenceUid(1400),
+    persistAiIdentities:async()=>{calls++;throw new Error('temporary database failure');}
+  });
+  await handlePersonalAiBotsAdminApi(first);
+  assert.equal(first.res.statusCode,503);
+  assert.equal(first.res.payload.batch.status,'retryable_failed');
+  assert.deepEqual(first.res.payload.results.map(result=>result.status),['retryable_failed','failed']);
+  const originalIds=db.personalAiBots.map(bot=>bot.id);
+  const retry=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/batches',input,db,uid:sequenceUid(1500),
+    persistAiIdentities:async rows=>{calls++;assert.deepEqual(rows.map(row=>row.id),originalIds);}
+  });
+  await handlePersonalAiBotsAdminApi(retry);
+  assert.equal(retry.res.statusCode,200);
+  assert.equal(retry.res.payload.batch.status,'completed_with_errors');
+  assert.deepEqual(retry.res.payload.results.map(result=>result.status),['persisted','failed']);
+  assert.equal(retry.res.payload.batch.completedRecords,1);
+  assert.equal(retry.res.payload.batch.failedRecords,1);
+  assert.equal(db.personalAiBots.length,1);
+  assert.equal(calls,2);
+});
 test('AI identity batch requires canonical persistence and rejects batches larger than 100',async()=>{
   const noPersistence=makeContext({
     method:'POST',path:'/api/admin/personal-ai-bots/batches',
