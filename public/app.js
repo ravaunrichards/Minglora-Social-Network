@@ -7304,9 +7304,9 @@ function renderStoryCreationWorkspace(){
   const format=state.storyComposerFormat;
   const privacySummary=storyPrivacyCopy();
   const choiceCards='<div class="story-workspace-choices"><button type="button" class="story-workspace-choice" data-story-start="media"><span class="story-workspace-choice-art story-workspace-choice-art--media"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="5" y="8" width="38" height="32" rx="7"></rect><circle cx="18" cy="20" r="4"></circle><path d="m8 35 10-9 7 6 5-5 10 9"></path><path d="M36 4v10M31 9h10"></path></svg></span><strong>Create a photo or video story</strong><small>Share photos and videos from your device.</small></button><button type="button" class="story-workspace-choice" data-story-start="text"><span class="story-workspace-choice-art story-workspace-choice-art--text"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="7" y="5" width="34" height="38" rx="7"></rect><path d="M16 17h16M16 24h16M16 31h10"></path><path d="M24 5v-3"></path></svg></span><strong>Create a text story</strong><small>Start with a message and a background.</small></button></div>';
-  const mediaForm='<form id="story-media-form" class="story-workspace-form"><div class="story-workspace-form-heading"><div><span class="story-workspace-eyebrow">PHOTO OR VIDEO</span><h2>Create a photo or video story</h2><p>Add up to 10 photos or videos to your story.</p></div><button type="button" class="secondary" data-story-format-back>Back</button></div><div class="story-workspace-field"><label>Choose photos or videos</label><div id="story-media-picker"></div></div><div class="story-workspace-field"><label for="story-media-caption">Add text (optional)</label><textarea id="story-media-caption" name="text" maxlength="1000" placeholder="Write something about this moment…"></textarea></div><div class="story-workspace-field"><label>Soundtrack (optional)</label><div id="story-soundtrack"></div></div><div class="story-workspace-form-actions"><button type="button" class="secondary" data-story-workspace-close>Cancel</button><button type="submit" class="primary">Share to story</button></div></form>';
-  const textForm='<form id="story-text-form" class="story-workspace-form story-workspace-text-form"><div class="story-workspace-form-heading"><div><span class="story-workspace-eyebrow">TEXT STORY</span><h2>Create a text story</h2><p>Write a short update and choose a background.</p></div><button type="button" class="secondary" data-story-format-back>Back</button></div><div class="story-text-editor"><div class="story-text-background story-text-theme-'+esc(state.storyTextTheme||'ocean')+'" id="story-text-preview"><span>Your story text will appear here</span></div><textarea id="story-text-content" name="text" maxlength="1000" required placeholder="Start typing your story…"></textarea><div class="story-text-theme-options" role="group" aria-label="Story background"><button type="button" data-story-text-theme="ocean" aria-pressed="'+((state.storyTextTheme||'ocean')==='ocean'?'true':'false')+'">Ocean</button><button type="button" data-story-text-theme="sunrise" aria-pressed="'+(state.storyTextTheme==='sunrise'?'true':'false')+'">Sunrise</button><button type="button" data-story-text-theme="violet" aria-pressed="'+(state.storyTextTheme==='violet'?'true':'false')+'">Violet</button><button type="button" data-story-text-theme="midnight" aria-pressed="'+(state.storyTextTheme==='midnight'?'true':'false')+'">Midnight</button><button type="button" data-story-text-theme="minimal" aria-pressed="'+(state.storyTextTheme==='minimal'?'true':'false')+'">Minimal</button></div></div><div class="story-workspace-form-actions"><button type="button" class="secondary" data-story-workspace-close>Cancel</button><button type="submit" class="primary">Share to story</button></div></form>';
-  const content=!format?choiceCards:format==='media'?mediaForm:textForm;
+  const mediaFormMarkup='<form id="story-media-form" class="story-workspace-form"><div class="story-workspace-form-heading"><div><span class="story-workspace-eyebrow">PHOTO OR VIDEO</span><h2>Create a photo or video story</h2><p>Add up to 10 photos or videos to your story.</p></div><button type="button" class="secondary" data-story-format-back>Back</button></div><div class="story-workspace-field"><label>Choose photos or videos</label><div id="story-media-picker"></div></div><div class="story-workspace-field"><label for="story-media-caption">Add text (optional)</label><textarea id="story-media-caption" name="text" maxlength="1000" placeholder="Write something about this moment…"></textarea></div><div class="story-workspace-field"><label>Soundtrack (optional)</label><div id="story-soundtrack"></div></div><div class="story-workspace-form-actions"><button type="button" class="secondary" data-story-workspace-close>Cancel</button><button type="submit" class="primary">Share to story</button></div></form>';
+  const textFormMarkup='<form id="story-text-form" class="story-workspace-form story-workspace-text-form"><div class="story-workspace-form-heading"><div><span class="story-workspace-eyebrow">TEXT STORY</span><h2>Create a text story</h2><p>Write a short update and choose a background.</p></div><button type="button" class="secondary" data-story-format-back>Back</button></div><div class="story-text-editor"><div class="story-text-background story-text-theme-'+esc(state.storyTextTheme||'ocean')+'" id="story-text-preview"><span>Your story text will appear here</span></div><textarea id="story-text-content" name="text" maxlength="1000" required placeholder="Start typing your story…"></textarea><div class="story-text-theme-options" role="group" aria-label="Story background"><button type="button" data-story-text-theme="ocean" aria-pressed="'+((state.storyTextTheme||'ocean')==='ocean'?'true':'false')+'">Ocean</button><button type="button" data-story-text-theme="sunrise" aria-pressed="'+(state.storyTextTheme==='sunrise'?'true':'false')+'">Sunrise</button><button type="button" data-story-text-theme="violet" aria-pressed="'+(state.storyTextTheme==='violet'?'true':'false')+'">Violet</button><button type="button" data-story-text-theme="midnight" aria-pressed="'+(state.storyTextTheme==='midnight'?'true':'false')+'">Midnight</button><button type="button" data-story-text-theme="minimal" aria-pressed="'+(state.storyTextTheme==='minimal'?'true':'false')+'">Minimal</button></div></div><div class="story-workspace-form-actions"><button type="button" class="secondary" data-story-workspace-close>Cancel</button><button type="submit" class="primary">Share to story</button></div></form>';
+  const content=!format?choiceCards:format==='media'?mediaFormMarkup:textFormMarkup;
   setContent('<section class="story-workspace-page"><header class="story-workspace-header"><button type="button" class="story-workspace-back" data-story-workspace-close aria-label="Back to profile">←</button><div class="story-workspace-heading"><span class="story-workspace-eyebrow">MINGLORA STORIES</span><h1>Your story</h1><p>Your moment, shared with your audience.</p></div><button type="button" class="story-workspace-settings" id="story-workspace-privacy" aria-label="Story privacy settings" title="Story privacy settings"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-1.7 1.7-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.1h-2.4v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L8 17l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H6.7v-2.4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L8 8.6l1.7-1.7.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.6v-.1h2.4v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1 1.7 1.7-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.1V14h-.1a1.7 1.7 0 0 0-1.6 1Z"></path></svg></button></header><div class="story-workspace-grid"><aside class="story-workspace-sidebar"><section class="story-workspace-account"><div class="story-workspace-account-row"><img src="'+avatar(state.user)+'" alt=""><div><strong>'+esc(state.user?.name||'Your account')+'</strong><small>@'+esc(state.user?.username||'member')+'</small></div></div><div class="story-workspace-privacy"><span class="story-workspace-privacy-label">Story privacy</span><strong id="story-workspace-privacy-summary">'+esc(privacySummary)+'</strong><small id="story-workspace-privacy-note">Your story will be visible for 24 hours on Minglora and Messenger.</small></div><button type="button" class="secondary story-workspace-privacy-button" data-open-story-privacy>'+storyPrivacyIcon('public')+'<span>Change story privacy</span></button></section><section class="story-workspace-help"><strong>Stories disappear after 24 hours</strong><p>You can keep stories in your archive and add them to profile highlights.</p></section></aside><main class="story-workspace-main">'+(format?'':'<div class="story-workspace-section-heading"><div><h2>Create a story</h2><p>Choose how you want to share your moment.</p></div></div>')+content+'</main></div></section>');
   const root=$('#main-content');
   root?.querySelector('[data-story-workspace-close]')?.addEventListener('click',()=>void returnFromStoryWorkspace());
@@ -7321,17 +7321,17 @@ function renderStoryCreationWorkspace(){
     state.storyComposerFormat=null;
     void renderStoryCreationWorkspace();
   }));
-  const mediaForm=root?.querySelector('#story-media-form');
-  if(mediaForm){
-    const picker=createMediaPicker(mediaForm.querySelector('#story-media-picker'),{slot:'story',maxFiles:10,maxTotalBytes:500*1024*1024});
-    const soundtrack=createSoundtrackEditor(mediaForm.querySelector('#story-soundtrack'));
+  const mediaFormElement=root?.querySelector('#story-media-form');
+  if(mediaFormElement){
+    const picker=createMediaPicker(mediaFormElement.querySelector('#story-media-picker'),{slot:'story',maxFiles:10,maxTotalBytes:500*1024*1024});
+    const soundtrack=createSoundtrackEditor(mediaFormElement.querySelector('#story-soundtrack'));
     state.storyComposerCleanup=()=>{picker.destroy();soundtrack.destroy();};
-    mediaForm.addEventListener('submit',async event=>{
+    mediaFormElement.addEventListener('submit',async event=>{
       event.preventDefault();
-      const button=mediaForm.querySelector('button[type="submit"]');button.disabled=true;
+      const button=mediaFormElement.querySelector('button[type="submit"]');button.disabled=true;
       try{
         const mediaIds=await picker.upload(),track=soundtrack.value();
-        const text=String(new FormData(mediaForm).get('text')||'').trim();
+        const text=String(new FormData(mediaFormElement).get('text')||'').trim();
         if(!mediaIds.length&&!text&&!track){toast('Choose a photo or video, add text, or select a soundtrack.');button.disabled=false;return;}
         await api('/stories',{method:'POST',body:JSON.stringify({text,mediaIds,soundtrack:track,...storyAudiencePayload()})});
         toast('Story published for 24 hours.');
@@ -7339,22 +7339,22 @@ function renderStoryCreationWorkspace(){
       }catch(error){toast(error.message||'Your story could not be published.');button.disabled=false;}
     });
   }
-  const textForm=root?.querySelector('#story-text-form');
-  if(textForm){
-    const textArea=textForm.querySelector('#story-text-content'),preview=textForm.querySelector('#story-text-preview');
+  const textFormElement=root?.querySelector('#story-text-form');
+  if(textFormElement){
+    const textArea=textFormElement.querySelector('#story-text-content'),preview=textFormElement.querySelector('#story-text-preview');
     const updatePreview=()=>{if(preview)preview.innerHTML='<span>'+esc(textArea?.value?.trim()||'Your story text will appear here')+'</span>';};
     textArea?.addEventListener('input',updatePreview);
-    textForm.querySelectorAll('[data-story-text-theme]').forEach(button=>button.addEventListener('click',()=>{
+    textFormElement.querySelectorAll('[data-story-text-theme]').forEach(button=>button.addEventListener('click',()=>{
       state.storyTextTheme=button.dataset.storyTextTheme;
       preview?.classList.remove('story-text-theme-ocean','story-text-theme-sunrise','story-text-theme-violet','story-text-theme-midnight','story-text-theme-minimal');
       preview?.classList.add('story-text-theme-'+state.storyTextTheme);
-      textForm.querySelectorAll('[data-story-text-theme]').forEach(item=>item.setAttribute('aria-pressed',item===button?'true':'false'));
+      textFormElement.querySelectorAll('[data-story-text-theme]').forEach(item=>item.setAttribute('aria-pressed',item===button?'true':'false'));
     }));
-    textForm.addEventListener('submit',async event=>{
+    textFormElement.addEventListener('submit',async event=>{
       event.preventDefault();
-      const button=textForm.querySelector('button[type="submit"]');button.disabled=true;
+      const button=textFormElement.querySelector('button[type="submit"]');button.disabled=true;
       try{
-        const text=String(new FormData(textForm).get('text')||'').trim();
+        const text=String(new FormData(textFormElement).get('text')||'').trim();
         if(!text){toast('Write something before sharing your text story.');button.disabled=false;return;}
         await api('/stories',{method:'POST',body:JSON.stringify({text,mediaIds:[],...storyAudiencePayload()})});
         toast('Text story published for 24 hours.');
