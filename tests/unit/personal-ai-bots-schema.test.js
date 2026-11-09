@@ -30,6 +30,10 @@ const safetySql = await readFile(
   new URL('../../supabase/migrations/20261109250000_minglora_ai_public_profile_safety.sql', import.meta.url),
   'utf8'
 );
+const reportReviewSql = await readFile(
+  new URL('../../supabase/migrations/20261109251000_minglora_ai_report_review_rpcs.sql', import.meta.url),
+  'utf8'
+);
 const profileHtml = await readFile(
   new URL('../../public/ai-profile.html', import.meta.url),
   'utf8'
@@ -703,4 +707,31 @@ test('AI bot editor and discovery use the same complete 249-entry ISO country an
   assert.match(adminBotUi,/countryCode:read\('country-code'\)\.toUpperCase\(\)\|\|countryCodeForName\(read\('country-name'\)\)/);
 
   assert.match(adminBotUi,/currentCountryCode:countryCodeForName/);
+});
+
+
+test('AI report moderation queue is private, owner scoped, bounded and fully audited',()=>{
+  assert.match(reportReviewSql,/CREATE OR REPLACE FUNCTION public\.minglora_ai_identity_report_list/);
+  assert.match(reportReviewSql,/p_owner_admin_id IS DISTINCT FROM '5b998c21-86b5-4621-ab37-e0808a2657b1'/);
+  assert.match(reportReviewSql,/p_status NOT IN \('all','pending','in_review','actioned','dismissed'\)/);
+  assert.match(reportReviewSql,/LIMIT p_limit OFFSET p_offset/);
+  assert.match(reportReviewSql,/CREATE OR REPLACE FUNCTION public\.minglora_ai_identity_report_review/);
+  assert.match(reportReviewSql,/p_status NOT IN \('in_review','actioned','dismissed'\)/);
+  assert.match(reportReviewSql,/status IN \('pending','in_review'\)/);
+  assert.match(reportReviewSql,/reviewed_by=p_actor_user_id/);
+  assert.match(reportReviewSql,/safety\.report_reviewed/);
+  assert.match(reportReviewSql,/GRANT EXECUTE ON FUNCTION public\.minglora_ai_identity_report_list\(uuid,text,integer,integer\) TO service_role/);
+  assert.match(reportReviewSql,/GRANT EXECUTE ON FUNCTION public\.minglora_ai_identity_report_review\(uuid,text,text,uuid\) TO service_role/);
+});
+
+test('AI report review gateway and owner API only permit the designated owner',()=>{
+  assert.ok(gateway.includes('ai_identity_report_list'));
+  assert.ok(gateway.includes('ai_identity_report_review'));
+  assert.match(gateway,/Only the designated Minglora owner can review AI identity reports/);
+  assert.match(gateway,/admin\.rpc\("minglora_ai_identity_report_list"/);
+  assert.match(gateway,/admin\.rpc\("minglora_ai_identity_report_review"/);
+  assert.match(serverSource,/listAiIdentityReports/);
+  assert.match(serverSource,/reviewAiIdentityReport/);
+  assert.match(serverSource,/path===root\+'\/safety\/reports'/);
+  assert.match(serverSource,/safetyReportMatch&&method==='PATCH'/);
 });
