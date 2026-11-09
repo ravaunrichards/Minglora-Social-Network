@@ -237,7 +237,26 @@ test('owner Admin Centre exposes corporate vacancy creation and safe status cont
   assert.ok(service.includes("status:'open'"));
   assert.ok(service.includes('statusHistory'));
   assert.ok(api.includes("root+'/vacancies'"));
-  assert.ok(html.includes('/personal-ai-bots.js?v=20261109-personal-ai-bots-6'));
+  assert.ok(html.includes('/personal-ai-bots.js?v=20261109-personal-ai-bots-7'));
+});
+
+test('owner Admin Centre exposes approval-gated appointments and employment history without activating AI identities',async()=>{
+  const [ui,service,api,html]=await Promise.all([
+    read('public/personal-ai-bots.js'),
+    read('backend/modules/personal-ai-bots/personal-ai-bots-service.js'),
+    read('backend/modules/personal-ai-bots/admin-api.js'),
+    read('public/personal-ai-bots.html')
+  ]);
+  for(const phrase of ['Owner-approved corporate appointments','pab-appointment-form','pab-appointment-application','pab-appointment-manager','createAppointment','syncAppointmentManagerRequirement','employmentHistory'])assert.ok(ui.includes(phrase),phrase);
+  assert.ok(api.includes("root+'/appointments'"));
+  assert.ok(api.includes("root+'/employment-history'"));
+  assert.ok(service.includes("application.status!=='shortlisted'"));
+  assert.ok(service.includes("candidate.enabled!==false"));
+  assert.ok(service.includes("permissionGrantStatus:'not_granted'"));
+  assert.ok(service.includes("identityActivationStatus:'unchanged_disabled'"));
+  assert.ok(service.includes("position.reportsTo.length"));
+  assert.match(ui,/The AI identity stays disabled, no permissions are granted/);
+  assert.ok(html.includes('/personal-ai-bots.js?v=20261109-personal-ai-bots-7'));
 });
 
 
