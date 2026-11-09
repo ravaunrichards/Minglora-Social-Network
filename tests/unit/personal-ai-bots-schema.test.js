@@ -717,7 +717,7 @@ test('AI bot editor and discovery use the same complete 249-entry ISO country an
 test('AI report moderation queue is private, owner scoped, bounded and fully audited',()=>{
   assert.match(reportReviewSql,/CREATE OR REPLACE FUNCTION public\.minglora_ai_identity_report_list/);
   assert.match(reportReviewSql,/p_owner_admin_id IS DISTINCT FROM '5b998c21-86b5-4621-ab37-e0808a2657b1'/);
-  assert.match(reportReviewSql,/p_status NOT IN \('all','pending','in_review','actioned','dismissed'\)/);
+  assert.match(reportReviewSql,/p_status NOT IN \('all','open','pending','in_review','actioned','dismissed'\)/);
   assert.match(reportReviewSql,/LIMIT p_limit OFFSET p_offset/);
   assert.match(reportReviewSql,/CREATE OR REPLACE FUNCTION public\.minglora_ai_identity_report_review/);
   assert.match(reportReviewSql,/p_status NOT IN \('in_review','actioned','dismissed'\)/);
