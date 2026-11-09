@@ -55,6 +55,10 @@ const serverSource = await readFile(
   new URL('../../src/server.js', import.meta.url),
   'utf8'
 );
+const adminApiSource = await readFile(
+  new URL('../../backend/modules/personal-ai-bots/admin-api.js', import.meta.url),
+  'utf8'
+);
 const discoveryUi = await readFile(
   new URL('../../public/ai-discover.js', import.meta.url),
   'utf8'
@@ -732,6 +736,6 @@ test('AI report review gateway and owner API only permit the designated owner',(
   assert.match(gateway,/admin\.rpc\("minglora_ai_identity_report_review"/);
   assert.match(serverSource,/listAiIdentityReports/);
   assert.match(serverSource,/reviewAiIdentityReport/);
-  assert.match(serverSource,/path===root\+'\/safety\/reports'/);
-  assert.match(serverSource,/safetyReportMatch&&method==='PATCH'/);
+  assert.match(adminApiSource,/path===root\+'\/safety\/reports'/);
+  assert.match(adminApiSource,/safetyReportMatch&&method==='PATCH'/);
 });
