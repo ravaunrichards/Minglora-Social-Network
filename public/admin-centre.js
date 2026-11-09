@@ -3,7 +3,7 @@
     '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
   }[char]));
 
-  function initializeInternalActivityFeed(panel) {  function initializeInternalActivityFeed(panel) {
+  function initializeInternalActivityFeed(panel) {
     const section = panel.querySelector('#admin-internal-operations');
     if (!section || section.dataset.initialized === 'true') return;
     section.dataset.initialized = 'true';
