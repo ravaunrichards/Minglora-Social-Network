@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   PERSONAL_AI_BOT_CATEGORIES,
   PERSONAL_AI_BOT_HYBRID_ACTIONS,
+  PERSONAL_AI_BOT_AUTONOMY_MODES,
   ensurePersonalAiBotCollections,
   getPersonalAiBotCategories,
   getPersonalAiBotOverview,
@@ -305,12 +306,44 @@ test('human-approval mode is supported and cannot retain hybrid autonomous permi
   updatePersonalAiBot(db,bot.id,{autonomyMode:'hybrid'},actor,stamp,uid);
   updatePersonalAiBot(db,bot.id,{allowedAutonomousActions:['analytics_read']},actor,stamp,uid);
   const reviewed=updatePersonalAiBot(db,bot.id,{autonomyMode:'human_approval'},actor,stamp,uid);
-  assert.equal(reviewed.autonomyMode,'human_approval');
+  assert.equal(reviewed.autonomyMode,'administrator_controlled');
   assert.deepEqual(reviewed.allowedAutonomousActions,[]);
   assert.equal(reviewed.requiresApprovalForEveryTask,true);
   assert.equal(reviewed.requiresApprovalForPublishing,true);
 });
 
+
+test('all five autonomy levels are supported and restricted levels cannot retain autonomous permissions',()=>{
+  const db=makeDb();
+  assert.deepEqual(PERSONAL_AI_BOT_AUTONOMY_MODES.map(mode=>mode.id),[
+    'administrator_controlled','supervisor_controlled','hybrid',
+    'autonomous_within_limits','restricted_observation'
+  ]);
+  const bot=createPersonalAiBot(db,{displayName:'Bounded Operating Modes AI',categoryId:'ai-support'},actor,stamp,uid);
+
+  for(const mode of ['hybrid','autonomous_within_limits']){
+    const configured=updatePersonalAiBot(db,bot.id,{autonomyMode:mode},actor,stamp,uid);
+    assert.equal(configured.autonomyMode,mode);
+    const permitted=updatePersonalAiBot(db,bot.id,{allowedAutonomousActions:['analytics_read','draft_content']},actor,stamp,uid);
+    assert.deepEqual(permitted.allowedAutonomousActions,['analytics_read','draft_content']);
+    assert.equal(permitted.requiresApprovalForEveryTask,true);
+    assert.equal(permitted.requiresApprovalForPublishing,true);
+  }
+
+  for(const mode of ['administrator_controlled','supervisor_controlled','restricted_observation']){
+    const restricted=updatePersonalAiBot(db,bot.id,{autonomyMode:mode},actor,stamp,uid);
+    assert.equal(restricted.autonomyMode,mode);
+    assert.deepEqual(restricted.allowedAutonomousActions,[]);
+    assert.equal(restricted.requiresApprovalForEveryTask,true);
+    assert.equal(restricted.requiresApprovalForPublishing,true);
+    assert.throws(()=>updatePersonalAiBot(db,bot.id,{allowedAutonomousActions:['analytics_read']},actor,stamp,uid),/Hybrid autonomy or Autonomous within limits/);
+  }
+
+  // Former stored/API value remains accepted but resolves to fully supervised.
+  const legacy=updatePersonalAiBot(db,bot.id,{autonomyMode:'human_approval'},actor,stamp,uid);
+  assert.equal(legacy.autonomyMode,'administrator_controlled');
+  assert.deepEqual(legacy.allowedAutonomousActions,[]);
+});
 
 test('selected-bot follow batches create separate approval records with a hard target cap',()=>{
   const db=makeDb();
