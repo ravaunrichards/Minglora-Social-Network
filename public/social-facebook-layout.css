@@ -250,3 +250,14 @@
     height:16px!important;
   }
 }
+
+
+/* A visitor thought bubble occupies its own top grid row; keep the seven-action
+   bar full-width in the following row, immediately before the statistics. */
+.minglora-profile-page .profile-header-card--viewer .profile-thought-slot~.profile-actions--primary{
+  grid-column:1/-1!important;
+  grid-row:3!important;
+}
+.minglora-profile-page .profile-header-card--viewer .profile-thought-slot~.profile-counts{
+  grid-row:4!important;
+}
