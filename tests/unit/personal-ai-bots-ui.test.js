@@ -7,7 +7,7 @@ const read=path=>readFile(new URL(path,root),'utf8');
 
 test('Personal AI Bots page loads the dedicated responsive controller and styles',async()=>{
   const html=await read('public/personal-ai-bots.html');
-  assert.match(html,/personal-ai-bots\.css/);
+  assert.match(html,/personal-ai-bots\.js\?v=20261109-personal-ai-bots-4/);
   assert.match(html,/personal-ai-bots\.js/);
   assert.match(html,/id="pab-root"/);
   assert.match(html,/noindex,nofollow/);
