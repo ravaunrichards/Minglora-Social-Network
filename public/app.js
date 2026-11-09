@@ -420,10 +420,93 @@ function base64UrlToBytes(value){
   return Uint8Array.from(atob(padded),character=>character.charCodeAt(0));
 }
 let mingloraUpdateRegistration=null;
-// Use the browser's normal service-worker lifecycle. Updates wait until the app is
-// naturally closed; Minglora must never force an automatic page reload.
+let mingloraUpdateCheckTimer=null;
+let mingloraSafeUpdateTimer=null;
+let mingloraLastInteractionAt=Date.now();
+let mingloraReloadPending=false;
+let mingloraActivationRequested=false;
+let mingloraHadController=Boolean(navigator.serviceWorker?.controller);
+let mingloraUpdateSafetyListenersInstalled=false;
+const MINGLORA_UPDATE_CHECK_INTERVAL_MS=5*60*1000;
+const MINGLORA_UPDATE_IDLE_MS=45*1000;
+const MINGLORA_UPDATE_RETRY_MS=5000;
+
+function mingloraUpdateIsSafe(){
+  if(document.visibilityState!=='visible')return false;
+  const activeMedia=Array.from(document.querySelectorAll('video,audio'));
+  if(activeMedia.some(media=>!media.paused&&!media.ended))return false;
+  // An update must wait through activeCallRoom||activeCallOverlay||activeLiveRoom.
+  const activeCallOrLive=(typeof activeCallRoom!=='undefined'&&activeCallRoom)||
+    (typeof activeCallOverlay!=='undefined'&&activeCallOverlay)||
+    (typeof activeLiveRoom!=='undefined'&&activeLiveRoom);
+  if(activeCallOrLive)return false;
+  if(window.MingloraMeetWave&&typeof window.MingloraMeetWave.canAutoUpdate==='function'&&!window.MingloraMeetWave.canAutoUpdate())return false;
+  return Date.now()-mingloraLastInteractionAt>=MINGLORA_UPDATE_IDLE_MS;
+}
+function deferMingloraSafeUpdate(){
+  if(mingloraSafeUpdateTimer!==null)return;
+  mingloraSafeUpdateTimer=window.setTimeout(()=>{
+    mingloraSafeUpdateTimer=null;
+    scheduleMingloraSafeReload();
+  },MINGLORA_UPDATE_RETRY_MS);
+}
+function scheduleMingloraSafeReload(){
+  if(!mingloraUpdateRegistration)return;
+  if(mingloraReloadPending){
+    if(!mingloraUpdateIsSafe()){deferMingloraSafeUpdate();return;}
+    mingloraReloadPending=false;
+    window.location.reload();
+    return;
+  }
+  if(!mingloraUpdateRegistration.waiting)return;
+  if(!mingloraUpdateIsSafe()){deferMingloraSafeUpdate();return;}
+  if(mingloraActivationRequested)return;
+  mingloraActivationRequested=true;
+  mingloraUpdateRegistration.waiting.postMessage({type:'MINGLORA_ACTIVATE_WHEN_SAFE'});
+}
+function noteMingloraInteraction(){
+  mingloraLastInteractionAt=Date.now();
+  if(mingloraReloadPending||mingloraUpdateRegistration?.waiting)deferMingloraSafeUpdate();
+}
 function startMingloraServiceWorkerUpdates(registration){
   mingloraUpdateRegistration=registration;
+  const watchInstallingWorker=worker=>{
+    if(!worker)return;
+    worker.addEventListener('statechange',()=>{
+      if(worker.state==='installed'&&navigator.serviceWorker.controller)scheduleMingloraSafeReload();
+    });
+  };
+  registration.addEventListener('updatefound',()=>watchInstallingWorker(registration.installing));
+  watchInstallingWorker(registration.installing);
+  if(registration.waiting)scheduleMingloraSafeReload();
+
+  if(!mingloraUpdateSafetyListenersInstalled){
+    mingloraUpdateSafetyListenersInstalled=true;
+    for(const eventName of ['pointerdown','keydown','touchstart','wheel','scroll']){
+      window.addEventListener(eventName,noteMingloraInteraction,{passive:true});
+    }
+    document.addEventListener('visibilitychange',()=>{
+      if(document.visibilityState==='visible')scheduleMingloraSafeReload();
+    });
+    navigator.serviceWorker.addEventListener('controllerchange',()=>{
+      if(!mingloraHadController){mingloraHadController=true;return;}
+      mingloraActivationRequested=false;
+      mingloraReloadPending=true;
+      scheduleMingloraSafeReload();
+    });
+  }
+  const checkForUpdates=async()=>{
+    if(document.visibilityState!=='visible')return;
+    try{
+      await registration.update();
+    }catch(error){
+      console.warn('[Minglora] Service-worker update check failed:',error?.message||error);
+    }
+    if(registration.waiting)scheduleMingloraSafeReload();
+  };
+  if(mingloraUpdateCheckTimer!==null)window.clearInterval(mingloraUpdateCheckTimer);
+  void checkForUpdates();
+  mingloraUpdateCheckTimer=window.setInterval(()=>void checkForUpdates(),MINGLORA_UPDATE_CHECK_INTERVAL_MS);
 }
 
 async function prepareMingloraServiceWorker(){
