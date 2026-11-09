@@ -6031,7 +6031,9 @@ function renderProfile(data){
   if(profileSubscribeButton){
     // Keep Subscribe visible on every visitor profile. The checkout route remains
     // connected; the server validates creator approval and the active billing tier.
-    profileSubscribeButton.textContent=subscriptionLabel;
+    const profileSubscribeLabel=profileSubscribeButton.querySelector('.profile-action-label');
+    if(profileSubscribeLabel)profileSubscribeLabel.textContent=subscriptionLabel;
+    else profileSubscribeButton.textContent=subscriptionLabel;
     profileSubscribeButton.disabled=subscriptionAlreadyExists;
     profileSubscribeButton.dataset.subscriptionEnabled=subscriptionEnabled?'true':'false';
     profileSubscribeButton.dataset.subscriptionActive=subscriptionAlreadyExists?'true':'false';
