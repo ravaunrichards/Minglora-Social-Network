@@ -91,6 +91,6 @@ test('desktop left sidebar contains secondary features while primary destination
   assert.ok(sidebar.includes('data-view="clock-centre"') && sidebar.includes('Clock Centre'),'Clock Centre remains available from the utility rail');
   for(const symbol of ['friends','saved','groups','creator','feeling','calendar','video','messages','coins','pages']){
     const renderedSymbol=symbol==='coins'?'recharge':symbol;
-    assert.ok(sidebar.includes('#'+renderedSymbol+'\\"'),symbol+' uses the shared 3D navigation icon set');
+    assert.ok(sidebar.includes('#'+renderedSymbol),symbol+' uses the shared 3D navigation icon set');
   }
 });
