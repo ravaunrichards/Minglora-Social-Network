@@ -58,3 +58,40 @@ test('owner can create the disabled starter set; no runtime worker is started',a
   assert.equal(context.res.payload.bots.every(bot=>bot.requiresApprovalForPublishing===true),true);
   assert.equal(saves,1);
 });
+
+
+test('owner emergency shutdown pauses configured bots and cancels queued instructions',async()=>{
+  let saves=0;
+  const context=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/emergency-shutdown',
+    db:{
+      personalAiBots:[{id:'bot-1',status:'enabled',enabled:true}],
+      personalAiBotTasks:[{id:'task-1',botId:'bot-1',status:'awaiting_administrator_approval'}]
+    },
+    saveStore:async()=>{saves++;}
+  });
+  const handled=await handlePersonalAiBotsAdminApi(context);
+  assert.equal(handled,true);
+  assert.equal(context.res.statusCode,200);
+  assert.equal(context.res.payload.paused,1);
+  assert.equal(context.res.payload.cancelled,1);
+  assert.equal(context.db.personalAiBots[0].status,'paused');
+  assert.equal(context.db.personalAiBotTasks[0].status,'cancelled');
+  assert.equal(saves,1);
+});
+
+test('owner bulk bot controls are limited to selected bot records',async()=>{
+  let saves=0;
+  const context=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/bots/bulk',
+    input:{botIds:['bot-1'],status:'paused'},
+    db:{personalAiBots:[{id:'bot-1',status:'enabled',enabled:true}]},
+    saveStore:async()=>{saves++;}
+  });
+  const handled=await handlePersonalAiBotsAdminApi(context);
+  assert.equal(handled,true);
+  assert.equal(context.res.statusCode,200);
+  assert.equal(context.res.payload.updated,1);
+  assert.equal(context.db.personalAiBots[0].status,'paused');
+  assert.equal(saves,1);
+});
