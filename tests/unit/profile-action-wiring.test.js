@@ -127,7 +127,7 @@ test('profile post cards reuse the working feed action bindings inside profile t
 test('visitor profile actions stay readable and tappable on narrow screens',()=>{
   assert.ok(profileCss.includes('min-height:40px!important')||profileCss.includes('min-height:38px!important')||profileCss.includes('min-height:36px!important'));
   assert.ok(profileCss.includes('white-space:nowrap!important'));
-  assert.ok(profileCss.includes('flex-flow:row wrap!important'));
+  assert.ok(profileCss.includes('grid-template-columns:repeat(3,minmax(0,1fr))!important'));
   assert.ok(profile.includes('id="profile-message" aria-label="Start a chat with \'+esc(u.name)+\'">Message</button>'));
   assert.ok(profile.includes('id="profile-report" aria-label="Report \'+esc(u.name)+\'">Report</button>'));
   assert.ok(profile.includes('id="profile-block" aria-label="Block \'+esc(u.name)+\'">Block</button>'));
@@ -140,15 +140,15 @@ test('visitor profile actions stay in one horizontal row and preserve subscripti
   assert.ok(profileCss.includes('[data-subscription-active="true"]'),'active subscription state is represented in the button');
   assert.ok(profile.includes("data-friendship=")&&profile.includes("esc(data.friendship||'')"),'accepted friendship is represented as active');
   assert.ok(profile.includes("data-subscription-active=")&&profile.includes("subscriptionAlreadyExists?'true':'false'")&&profile.includes("['active','past_due'].includes(subscriptionStatus)"),'active subscription state is wired to the button color');
-  assert.ok(profileCss.includes('display: flex !important'),'visitor actions use a horizontal flex row');
-  assert.ok(profileCss.includes('flex-flow: row wrap !important'),'visitor actions never wrap into vertical rows');
-  assert.ok(profileCss.includes('flex-flow: row wrap !important'),'narrow screens scroll horizontally to reach every action');
+  assert.ok(profileCss.includes('display:grid!important'),'visitor actions use a horizontal grid');
+  assert.ok(profileCss.includes('grid-template-columns:repeat(3,minmax(0,1fr))!important'),'primary actions use three columns');
+  assert.ok(profileCss.includes('grid-column:1/-1!important'),'More actions remains in its own row');
   assert.ok(profileCss.includes('white-space: nowrap !important'),'action labels remain on one line');
   assert.ok(profile.includes("profileSubscribeButton.disabled=subscriptionAlreadyExists"),'Subscribe remains available unless a subscription already exists');
   assert.ok(!profile.includes('profileSubscribeButton.remove()'),'Subscribe is not removed from the profile');
   assert.ok(profile.includes("api('/subscriptions/checkout'"),'Subscribe keeps its checkout route');
   assert.ok(profile.includes('id="profile-follow"')&&profile.includes("?'Friends · Following':'Following'")&&profile.includes(":'Follow'))"),'Follow button and follow-state labels remain connected');
-  for(const label of ['Message','Voice call','Video call','Report','Block'])assert.ok(profile.includes('>'+label+'</button>'),'Missing visitor action '+label);
+  for(const label of ['Message','Voice call','Video call','Report','Block'])assert.ok(profile.includes('</svg>'+label+'</button>'),'Missing visitor action '+label);
   assert.ok(profile.includes('id="profile-subscribe"'),'Subscribe button remains in the visitor actions');
 });
 
