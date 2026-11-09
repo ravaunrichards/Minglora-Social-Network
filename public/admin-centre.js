@@ -1421,7 +1421,8 @@
       form.querySelectorAll('input,textarea,button').forEach(control => {
         if (control.name !== 'password') control.disabled = protectedOwner;
       });
-      form.querySelector('#admin-user-edit-password')?.setAttribute('disabled', protectedOwner ? 'disabled' : '');
+      const passwordInput = form.querySelector('#admin-user-edit-password');
+      if (passwordInput) passwordInput.disabled = protectedOwner;
       const revoke = panel.querySelector('#admin-user-revoke-sessions');
       if (revoke) revoke.disabled = protectedOwner;
       const deleteButton = panel.querySelector('#admin-user-delete-submit');
