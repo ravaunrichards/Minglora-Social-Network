@@ -187,7 +187,7 @@ const DEFAULT_ABOUT_VISIBILITY={bio:true,location:true,country:false,county:fals
 const ABOUT_SECTION_KEYS=['personalDetails','intro','work','education','hobbies','interests','travel','links','contactInfo','names','details','aboutYou'];
 const DEFAULT_ABOUT_SECTION_VISIBILITY={
   personalDetails:'friends',intro:'public',work:'public',education:'public',hobbies:'public',
-  interests:'public',travel:'public',links:'public',contactInfo:'private',names:'friends',
+  interests:'public',travel:'public',links:'public',contactInfo:'private',names:'public',
   details:'friends',aboutYou:'public'
 };
 function canViewAboutSection(viewerId,target,visibility){
@@ -199,7 +199,7 @@ function canViewAboutSection(viewerId,target,visibility){
 function safeUser(u,viewerId=null){
   if(!u)return null;
   const visibility={...DEFAULT_ABOUT_VISIBILITY,...(u.aboutVisibility||{})};
-  const sectionVisibility={...DEFAULT_ABOUT_SECTION_VISIBILITY,...(u.aboutSectionVisibility||{})};
+  const sectionVisibility={...DEFAULT_ABOUT_SECTION_VISIBILITY,...(u.aboutSectionVisibility||{}),names:'public'};
   const own=viewerId===u.id;
   const result={id:u.id,name:u.name,username:u.username,bio:'',location:'',avatar:u.avatar||'',cover:u.cover||'',createdAt:u.createdAt,verificationBadge:getProfileVerificationBadge(u),platformBadge:getPlatformAdminBadge(u,viewerId),verificationStatus:u.verificationStatus||'not_submitted',profileLayout:getUserSettings(u).preferences.profileLayout};
   result.liveProBadge=isDesignatedCreatorHubAdmin(u)||(db.liveProGrants||[]).some(grant=>grant.userId===u.id&&grant.status==='active'&&(!grant.expiresAt||new Date(grant.expiresAt).getTime()>Date.now()));
@@ -232,7 +232,7 @@ function safeUser(u,viewerId=null){
   }
   const aboutSections={};
   for(const key of ABOUT_SECTION_KEYS){
-    if(!canViewAboutSection(viewerId,u,sectionVisibility[key]))continue;
+    if(key!=='names'&&!canViewAboutSection(viewerId,u,sectionVisibility[key]))continue;
     aboutSections[key]={...(u.aboutSections?.[key]||{})};
   }
   const legacyPersonal={
@@ -5434,7 +5434,7 @@ async function route(req, res) {
         const next={...user,...validation.value,
           aboutVisibility:{...DEFAULT_ABOUT_VISIBILITY,...(user.aboutVisibility||{}),...(validation.value.aboutVisibility||{})},
           aboutSections:{...(user.aboutSections||{}),...(validation.value.aboutSections||{})},
-          aboutSectionVisibility:{...DEFAULT_ABOUT_SECTION_VISIBILITY,...(user.aboutSectionVisibility||{}),...(validation.value.aboutSectionVisibility||{})}
+          aboutSectionVisibility:{...DEFAULT_ABOUT_SECTION_VISIBILITY,...(user.aboutSectionVisibility||{}),...(validation.value.aboutSectionVisibility||{}),names:'public'}
         };
         if(AUTH_PROVIDER==='supabase'){
           const currentSession=sessionFromRequest(req),auth=await sessionAuth(currentSession);
