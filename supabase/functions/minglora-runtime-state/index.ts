@@ -96,6 +96,7 @@ Deno.serve(async (req: Request) => {
     "subscription_bonus_review",
     "ai_identity_upsert_batch", "ai_identity_list",
     "ai_bot_settings_update", "ai_provider_assignment_upsert", "ai_provider_assignment_list",
+    "ai_provider_runtime_list", "ai_provider_health_update",
     "ai_bot_task_upsert_batch", "ai_bot_task_list", "ai_bot_task_stats",
     "ai_bot_task_claim", "ai_bot_task_heartbeat", "ai_bot_task_complete", "ai_bot_task_fail",
   ];
@@ -167,6 +168,47 @@ Deno.serve(async (req: Request) => {
       return json(503, { error: "Canonical AI identity records could not be loaded.", code: "AI_IDENTITY_SCHEMA_NOT_READY" });
     }
     return json(200, { ok: true, identities: Array.isArray(data) ? data : [] });
+  }
+
+  if (action === "ai_provider_runtime_list") {
+    const actorUserId = String(input.actorUserId || "");
+    const limit = Number(input.limit ?? 200);
+    const offset = Number(input.offset ?? 0);
+    if (actorUserId !== AI_NETWORK_OWNER_ID) {
+      return json(403, { error: "Only the designated Minglora owner can request provider runtime configuration." });
+    }
+    if (!Number.isInteger(limit) || limit < 1 || limit > 500 ||
+        !Number.isInteger(offset) || offset < 0 || offset > 1000000000) {
+      return json(400, { error: "Provider runtime pagination values are invalid." });
+    }
+    const { data, error } = await admin.rpc("minglora_ai_provider_runtime_list", {
+      p_owner_admin_id: actorUserId,p_limit: limit,p_offset: offset
+    });
+    if (error) return json(503, { error: "Provider runtime configuration is unavailable.", code: "AI_PROVIDER_RUNTIME_NOT_READY" });
+    return json(200, { ok: true, assignments: Array.isArray(data) ? data : [] });
+  }
+
+  if (action === "ai_provider_health_update") {
+    const actorUserId = String(input.actorUserId || "");
+    const assignmentId = String(input.assignmentId || "");
+    const healthStatus = String(input.healthStatus || "");
+    if (actorUserId !== AI_NETWORK_OWNER_ID) {
+      return json(403, { error: "Only the designated Minglora owner can update provider health." });
+    }
+    if (!validUuid(assignmentId) || !["healthy","degraded","unavailable","error"].includes(healthStatus)) {
+      return json(400, { error: "Provider health update fields are invalid." });
+    }
+    const { data, error } = await admin.rpc("minglora_ai_provider_health_update", {
+      p_assignment_id: assignmentId,p_health_status: healthStatus,p_actor_user_id: actorUserId
+    });
+    if (error) {
+      const invalid = ["22023","23503"].includes(String(error.code || ""));
+      return json(invalid ? 409 : 503, {
+        error: invalid ? "Provider health could not be accepted without a valid assignment and credential reference." : "Provider health storage is unavailable.",
+        code: String(error.code || "AI_PROVIDER_HEALTH_ERROR")
+      });
+    }
+    return json(200, { ok: true, health: data || {} });
   }
 
   if (action === "ai_provider_assignment_upsert") {
