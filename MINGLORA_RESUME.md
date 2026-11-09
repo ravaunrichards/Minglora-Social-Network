@@ -1,12 +1,12 @@
 # MINGLORA AI NETWORK — RESUME CHECKPOINT
 
-Updated: 2026-11-09 (latest successful AI workflow timestamp: 10:00:32 UTC)
+Updated: 2026-11-09 (latest successful Personal AI Bots workflow #415: 10:06:42 UTC; latest completed full Minglora CI #8135: 10:06:57 UTC)
 Scope: **Minglora Social Network only**
 Repository: https://github.com/ravaunrichards/Minglora-Social-Network
 Branch: `feat/personal-ai-bots-network-control-center`
 Draft PR: https://github.com/ravaunrichards/Minglora-Social-Network/pull/202
 Supabase project: `gzycobgbasnqqhnympkr` (existing Minglora project only)
-Latest verified branch commit: `7b8bc356c860f9576633cc3e9af9e183668bcb10`
+Latest verified feature-code commit: `c846cc1fe2683df31dc5f891543cac5f24711862`
 PR must remain **OPEN + DRAFT**. Do not merge, deploy, or apply production migrations without the required review/authorization.
 
 ## Original task
@@ -22,24 +22,25 @@ The previous checkpoint did not contain a weighted percentage. The earlier conve
 | Milestone | Weight | Verified portion | Earned |
 |---|---:|---:|---:|
 | 1. Relational foundation and backend persistence integration | 25% | 35% | 8.75% |
-| 2. AI identities, profiles, worldwide discovery and member follow graph | 20% | 72% | 14.40% |
+| 2. AI identities, profiles, worldwide discovery and member follow graph | 20% | 74% | 14.80% |
 | 3. Corporate governance, organizational charts and HR lifecycle | 15% | 0% | 0.00% |
 | 4. Supervision, bounded autonomy, queues, teams and collaboration | 10% | 65% | 6.50% |
 | 5. AI social participation and creator ecosystem | 10% | 25% | 2.50% |
 | 6. Security, governance, finance and resource controls | 8% | 25% | 2.00% |
 | 7. Model intelligence, memory, provider operations and analytics | 7% | 20% | 1.40% |
 | 8. Distributed scaling, load tests, device tests and production acceptance | 5% | 0% | 0.00% |
-| **TOTAL** | **100%** |  | **35.55% → 36%** |
+| **TOTAL** | **100%** |  | **35.95% → 36%** |
 
 **COMPLETION: 36% | REMAINING: 64%**
 
-This is weighted implementation progress, not a claim that the 36% of the full production acceptance criteria is deployed. Milestones 1 and 2 remain partial because the normalized AI schema and associated RPCs are staged in GitHub but absent from the live Supabase migration ledger and public schema.
+This is weighted implementation progress, not a claim that the 36% of the full production acceptance criteria is deployed. The exact weighted score is 35.95%; milestones 1 and 2 remain partial because the normalized AI schema and associated RPCs are staged in GitHub but absent from the live Supabase migration ledger and public schema.
 
 ## Recovered and project-verified implementation
 
 ### AI Bot administration and identity
 - Existing owner-only Personal AI Bots Admin Centre and API; designated MFA-verified Minglora owner gate and same-origin write checks.
 - Original 15 AI categories, custom category management, disabled-by-default identities, unique `ai_` usernames and separate first/middle/last-name fields.
+- AI population is now selectable at creation and editable later: `independent`, `organizational` or `specialized_service`. The service validates these values, assigns a matching default identity type, and maps the population into the staged canonical identity payload. Tests cover all three values, invalid values and the disabled/private creation defaults.
 - Admin create/edit controls now include gender, gender presentation, nationality, country of origin, current country, IANA time zone, introduction, communication style, profession, education, skills, profile and cover storage references, voice/avatar preferences, memory preferences and structured origin/current locations.
 - The admin profile editor and AI discovery now use the same **249-entry ISO country/territory catalogue** with localized country names. Country names map back to ISO-2 codes on create and edit.
 - Service validation rejects unsupported gender values, invalid time zones, malformed location objects, unsupported location types, duplicate location types and excessive profile data.
@@ -90,43 +91,42 @@ This is weighted implementation progress, not a claim that the 36% of the full p
 
 ## Verification and current failures
 
-- Latest confirmed green Personal AI Bots workflow: run **#391**, commit `7b8bc356c860f9576633cc3e9af9e183668bcb10`, **141 passed / 0 failed**, logged at 2026-11-09 10:00:32 UTC. This covers the five-mode service/UI/migration guards and separate gender-presentation create/edit persistence.
-- Earlier workflow #384 passed 139/139 before the gender-presentation create field and service test were added; it is superseded by #391.
-- Full Minglora CI run **#8097** is in progress at the latest check. Its For You functional navigation job is **passing**; the main repository test job had not yet completed. Previous full CI #8088 recorded **850 passed / 23 failed**. Do not mark full CI green.
-- Prior stale cache/version assertions in theme and live-profile badge tests have been aligned with the current asset/cache naming strategy; their latest full CI outcome is pending.
+- Latest confirmed green Personal AI Bots workflow: run **#415**, commit `c846cc1fe2683df31dc5f891543cac5f24711862`, **147 passed / 0 failed**, logged at 2026-11-09 10:06:42 UTC. This includes AI identity population create/edit validation and the focused service, Admin API, UI, worker and schema tests.
+- Earlier green run #410 passed 143/143; run #415 is the newer verification on the current feature-code commit.
+- Latest completed full Minglora CI run **#8135** is **failed**: **868 passed / 13 failed** out of 881 tests, logged at 2026-11-09 10:06:57 UTC. The For You functional navigation job passed. Remaining failures include existing recharge/profile-story/profile-editor/feed-sync/service-worker/settings/auth-bootstrap assertions; they must be investigated and fixed without weakening behavior or removing assertions.
+- The full repository CI is not green. The dedicated AI Bot Network workflow is green.
 
 - Supabase live verification: project remains accessible; no AI network tables or AI migration-ledger entries were present at the latest read.
 - No production migration deployment, Edge Function deployment, worker deployment, email provisioning, provider inference, 10-billion benchmark or concurrent-capacity load test is claimed.
 
 ## Recovery and progress comparison
-- Previous verified weighted completion: **35.15% → 35%**.
-- Current verified weighted completion: **35.55% → 36%**.
-- Verified progress since the prior checkpoint: **+0.40 percentage points** (separate gender-presentation capture/persistence in AI create flow and its dedicated passing tests).
-- Last verified milestone: **Phase 2 — AI identities and profile completeness (partial)**; the five operating-mode foundation is also now tested under Phase 4.
-- Last confirmed action: Personal AI Bots workflow #391 passed 141/141 on `7b8bc356c860f9576633cc3e9af9e183668bcb10`.
-- Unverified claims: live normalized PostgreSQL persistence, actual provider/email provisioning, scheduler/worker deployment and unattended autonomous execution remain unverified.
-- Changes since interruption: five operating levels plus additive migration; 249-country ISO mapping on create/edit; report-review status/test corrections; service-worker asset-version test reconciliation; gender-presentation capture on create; checkpoint and draft PR status refreshed.
-- Recovery confidence: **CONFIRMED** for branch/checkpoint/CI evidence; **PARTIALLY RECOVERED** for live DB/hosted service state (AI migrations not deployed).
+- Previous verified weighted completion: **35.55% → 36%**.
+- Current verified weighted completion: **35.95% → 36%**.
+- Verified progress since the prior checkpoint: **+0.40 percentage points** (three AI populations now flow through creation, editing, service validation and canonical mapping, with passing focused tests).
+- Last verified milestone: **Phase 2 — AI identities and profile completeness (partial)**; the five operating-mode foundation remains tested under Phase 4.
+- Last confirmed action: Personal AI Bots workflow #415 passed 147/147 on `c846cc1fe2683df31dc5f891543cac5f24711862`.
+- Unverified claims: live normalized PostgreSQL persistence, actual provider/email provisioning, scheduler/worker deployment, corporate HR operations and unattended autonomous execution remain unverified.
+- Changes since interruption: population types added to create/edit/service/persistence mapping; tests added for all three types and invalid inputs; Bot Teams roadmap text corrected; population classification documented. The report-review queue and its audited RPCs are already staged and tested; live DB readback remains blocked by unapplied migrations.
+- Recovery confidence: **CONFIRMED** for branch/checkpoint/CI evidence; **PARTIALLY RECOVERED** for production database/service state (AI migrations not deployed).
 
 ## Changes since the older checkpoint
 
 - The old `1319977d` checkpoint was superseded by profile backend/service/UI work, profile round-trip tests, country selector alignment (247 → 249 entries), ISO country-code mapping, safety report list/review RPC work and associated test corrections.
 - The stale “next action: implement user-follow graph and saved searches” is no longer valid; those staged/code/test paths already exist. The five operating-mode UI/service/schema configuration and tests were added after the prior checkpoint.
-- The PR description and older docs still contain an obsolete **8.3-billion** statement; the current task target of **10 billion** supersedes it and the PR body should be corrected without changing its draft status.
-- PR base comparison at the last check: 4 commits behind `main`; continue to re-check before any future merge review.
+- The current master target and technical documentation correctly specify **10 billion** as a design target; the PR body still has stale 34% / 137-test reporting and must be refreshed without changing its draft status.
+- Latest base comparison: feature branch is **325 commits ahead and 5 commits behind** `main`; keep PR #202 open/draft and do not perform a destructive rebase or merge.
 
 ## Remaining work — easiest available first
 
 ### Easy / immediate
-1. Fetch latest PR head and run statuses; rerun/confirm Personal AI Bots CI on the latest commit `247ab2005b7981ff0ac44b28c75ddecd443243eb` (or a newer head if the branch advanced).
-2. Fix any new AI workflow failures without weakening or removing assertions.
-3. Update the draft PR body and documentation to remove the obsolete 8.3-billion figure and reflect 10 billion as a design target, not live capacity.
-4. Keep the existing single resume checkpoint synchronized with the actual branch head, tests, blockers and next action.
+1. Refresh PR #202 reporting to the current 36% weighted progress, latest AI workflow #415 (147/147), and full CI #8135 (868/881, 13 failures); preserve open/draft status.
+2. Keep this single checkpoint aligned with the latest branch head, current workflow results and genuine blockers.
+3. Inspect and fix the next simplest failing general Minglora CI behavior only after checking the implementation behind the assertion; do not weaken tests.
 
 ### Medium
 1. Finish remaining member-side AI profile/discovery filters and verify all filter combinations against the real PostgreSQL RPC after the migration is applied in an authorized environment.
 2. Finish owner AI identity/email/provider screens with real persistence readback; ensure identity, profile, locations, email and provider assignments round-trip through live PostgreSQL.
-3. Complete operational report triage UI (list pending/in-review, owner review, close/dismiss) and verify report audit readback.
+3. Verify owner report-list/review audit readback against live PostgreSQL after the staged migrations are applied with authorization; the owner review UI and RPCs are already present and tested on the feature branch.
 4. Implement full category-based bulk identity creation/import, idempotent retry and batch progress/error recovery.
 5. Finish operational worker/scheduler integration, provider adapter, runtime metrics and creator/social task paths only when real infrastructure and credentials are available.
 
@@ -143,9 +143,9 @@ This is weighted implementation progress, not a claim that the 36% of the full p
 - **AI provider:** provider adapter and valid server-side credentials/verified provider account are unavailable; no inference or health claim.
 - **Email provider:** no mailbox provisioning/sending service credentials are available.
 - **Worker deployment:** runtime must remain disabled until provider, queue, permissions, observability, deployment and human approval paths are verified.
-- **Full CI:** unrelated Minglora regression assertions remain failing and must be resolved before release readiness.
+- **Full CI:** the latest run #8135 has 13 failed assertions across recharge, profile/story editing, feed synchronization, service-worker updates, settings and auth bootstrap. Do not call these pre-existing until checked against a baseline; fix actual behavior before release readiness.
 - **Branch reconciliation:** feature branch remains a draft PR and is behind main; do not merge/rebase destructively. Reconcile carefully after tests and review.
 
 ## Exact next action
 
-Recover the latest PR head and confirm Personal AI Bots workflow #391 remains green. Inspect the completion of full CI run #8097 and fix the next simplest genuine Minglora regression. Then continue the next unfinished AI Network requirement. Keep PR #202 draft and leave production DB/services untouched.
+Continue with the next easiest unfinished AI Network requirement: implement controlled batch identity creation/import with stable idempotency, duplicate detection, per-record outcomes and safe retry using the existing normalized batch-upsert path. Keep all new identities disabled/private and add service/API/UI tests. Do not apply production migrations or deploy services; keep PR #202 open and in draft.
