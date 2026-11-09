@@ -76,12 +76,36 @@ function canonicalAiBotTask(task) {
   };
 }
 
-async function persistCanonicalTasks(tasks,persistAiBotTasks) {
+async function persistCanonicalTasks(tasks,persistAiBotTasks,bots,persistAiIdentities) {
   if(typeof persistAiBotTasks!=='function'||!Array.isArray(tasks)||!tasks.length)return;
   const normalized=tasks.map(canonicalAiBotTask);
+  if(typeof persistAiIdentities==='function'&&Array.isArray(bots)){
+    const requiredBotIds=new Set(normalized.map(task=>task.botId));
+    const dependencies=bots.filter(bot=>requiredBotIds.has(String(bot.id)));
+    if(dependencies.length!==requiredBotIds.size){
+      throw Object.assign(new Error('One or more AI bot identity dependencies are unavailable.'),{status:409});
+    }
+    await persistCanonicalIdentities(dependencies,persistAiIdentities);
+  }
   for(let offset=0;offset<normalized.length;offset+=100){
     await persistAiBotTasks(normalized.slice(offset,offset+100));
   }
+}
+
+function canonicalAiBotSettings(settings) {
+  return {
+    enabled:settings.enabled===true,
+    hybridEnabled:settings.hybridEnabled===true,
+    maxConcurrentExecutions:Number(settings.concurrentExecutionLimit||0),
+    dailyExecutionBudget:Number(settings.dailyExecutionBudget||0),
+    automaticSuspensionEnabled:settings.automaticSuspensionEnabled!==false,
+    emergencyShutdownAt:settings.emergencyShutdownAt||null
+  };
+}
+
+async function persistCanonicalBotSettings(settings,persistAiBotSettings) {
+  if(typeof persistAiBotSettings!=='function')return;
+  await persistAiBotSettings(canonicalAiBotSettings(settings));
 }
 import {
   ensurePersonalAiBotCollections,
@@ -107,7 +131,7 @@ import {
 } from './personal-ai-bots-service.js';
 
 export async function handlePersonalAiBotsAdminApi(context) {
-  const {req,res,url,method,path,user,input,db,saveStore,uid,now,json,isOwnerAdmin,isSameOriginWrite,lookupAdminMember,persistAiIdentities,listAiIdentities,persistAiBotTasks,listAiBotTasks,getAiBotTaskStats}=context;
+  const {req,res,url,method,path,user,input,db,saveStore,uid,now,json,isOwnerAdmin,isSameOriginWrite,lookupAdminMember,persistAiIdentities,listAiIdentities,persistAiBotTasks,listAiBotTasks,getAiBotTaskStats,persistAiBotSettings}=context;
   const root='/api/admin/personal-ai-bots';
   if(path!==root&&!path.startsWith(root+'/'))return false;
   if(!isOwnerAdmin)return (json(res,403,{error:'Only the designated MFA-verified Minglora owner can manage the Personal AI Bots Network.'}),true);
@@ -177,13 +201,16 @@ export async function handlePersonalAiBotsAdminApi(context) {
     }
     if(method==='PUT'&&path===root+'/network'){
       const network=setNetwork(input||{});
+      await persistCanonicalBotSettings(network,persistAiBotSettings);
       await saveStore();
       return (json(res,200,{ok:true,network}),true);
     }
     if(method==='POST'&&path===root+'/emergency-shutdown'){
       const result=emergencyShutdownPersonalAiBots(db,user.id,stamp,uid);
+      // Turn off the durable dispatch gate before synchronizing cancelled tasks.
+      await persistCanonicalBotSettings(result.network,persistAiBotSettings);
       await persistCanonicalIdentities(db.personalAiBots,persistAiIdentities);
-      await persistCanonicalTasks(db.personalAiBotTasks.filter(task=>task.status==='cancelled'&&task.cancelledBy===user.id&&task.cancelledAt===stamp),persistAiBotTasks);
+      await persistCanonicalTasks(db.personalAiBotTasks.filter(task=>task.status==='cancelled'&&task.cancelledBy===user.id&&task.cancelledAt===stamp),persistAiBotTasks,db.personalAiBots,persistAiIdentities);
       await saveStore();
       return (json(res,200,{...result,message:'Emergency shutdown complete. Enabled bots were paused and open tasks were cancelled.'}),true);
     }
@@ -219,7 +246,7 @@ export async function handlePersonalAiBotsAdminApi(context) {
         return (json(res,409,{error:'A block exists between the administrator account and this target. Follow operations are not allowed.'}),true);
       }
       const result=queuePersonalAiBotFollowBatch(db,input||{},user.id,stamp,uid);
-      await persistCanonicalTasks(result.tasks,persistAiBotTasks);
+      await persistCanonicalTasks(result.tasks,persistAiBotTasks,db.personalAiBots,persistAiIdentities);
       await saveStore();
       return (json(res,201,{ok:true,...result,message:result.created+' separate instructions created. Each requires approval; no follow or unfollow action was executed.'}),true);
     }
@@ -242,7 +269,7 @@ export async function handlePersonalAiBotsAdminApi(context) {
         }
       }
       const task=queuePersonalAiBotInstruction(db,instructionMatch[1],input||{},user.id,stamp,uid);
-      await persistCanonicalTasks([task],persistAiBotTasks);
+      await persistCanonicalTasks([task],persistAiBotTasks,db.personalAiBots,persistAiIdentities);
       await saveStore();
       return (json(res,201,{ok:true,task,message:'Instruction saved for administrator approval. No bot action has been executed.'}),true);
     }
@@ -268,7 +295,7 @@ export async function handlePersonalAiBotsAdminApi(context) {
       const task=action==='approve'
         ?approvePersonalAiBotTask(db,taskMatch[1],user.id,stamp,uid)
         :cancelPersonalAiBotTask(db,taskMatch[1],user.id,stamp,uid);
-      await persistCanonicalTasks([task],persistAiBotTasks);
+      await persistCanonicalTasks([task],persistAiBotTasks,db.personalAiBots,persistAiIdentities);
       await saveStore();
       return (json(res,200,{ok:true,task,message:action==='approve'?'Instruction approved and queued, but no worker is configured to execute it yet.':'Instruction cancelled.'}),true);
     }
