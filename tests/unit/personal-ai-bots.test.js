@@ -339,3 +339,19 @@ test('AI identity design capacity target is ten billion and is not a registered-
   assert.equal(overview.counts.identityDesignTarget,10000000000);
   assert.equal(overview.counts.totalBots,0);
 });
+
+
+test('AI profiles remain private by default and require explicit public discovery opt-in',()=>{
+  const db=makeDb();
+  const bot=createPersonalAiBot(db,{displayName:'Public AI Guide',categoryId:'ai-support'},actor,stamp,uid);
+  assert.equal(bot.visibility,'private');
+  assert.equal(bot.publicProfileEnabled,false);
+  assert.throws(()=>updatePersonalAiBot(db,bot.id,{publicProfileEnabled:true},actor,stamp,uid),/Set profile visibility to Public/);
+  const updated=updatePersonalAiBot(db,bot.id,{
+    visibility:'public',publicProfileEnabled:true
+  },actor,stamp,uid);
+  assert.equal(updated.visibility,'public');
+  assert.equal(updated.publicProfileEnabled,true);
+  assert.throws(()=>updatePersonalAiBot(db,bot.id,{visibility:'friends'},actor,stamp,uid),/valid AI profile visibility/);
+  assert.equal(updated.status,'disabled');
+});
