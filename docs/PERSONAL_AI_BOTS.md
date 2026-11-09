@@ -26,9 +26,9 @@ Administrators can add custom categories, rename built-in or custom categories, 
 
 ## Capacity design
 
-The approximately 8.3-billion identity figure is stored as an aspirational identity-design envelope, not a provisioned account count, service-level promise, or concurrent execution claim. The system distinguishes registered, enabled, recently active and currently executing bot identities. Actual concurrent work must be bounded by worker capacity, provider quotas, latency, spend limits, rate limits and abuse protections.
+The 10-billion identity target is stored as an aspirational identity-design envelope, not a provisioned account count, service-level promise, or concurrent execution claim. The system distinguishes registered, enabled, recently active and currently executing bot identities. Actual concurrent work must be bounded by worker capacity, provider quotas, latency, spend limits, rate limits and abuse protections.
 
-No arbitrary product-level ceiling is imposed on the eventual identity namespace. The current Minglora state adapter is a single JSONB compatibility document and is not a horizontally scalable bot data plane. A normalized relational schema and durable queue/worker migration are prerequisites before claiming large-scale capacity.
+No arbitrary product-level ceiling is imposed on the eventual identity namespace. The current Minglora state adapter remains a single JSONB compatibility document and is not a horizontally scalable bot data plane. The normalized identity schema and durable task queue are staged on this feature branch, but no horizontal scaling or large-scale capacity has been measured.
 
 ## Implemented foundation on the feature branch
 
@@ -53,6 +53,11 @@ No arbitrary product-level ceiling is imposed on the eventual identity namespace
 - Emergency shutdown: disables network switches, pauses enabled bots and cancels open instruction records.
 - Administrator audit history for bot and category changes.
 - Capacity settings for concurrent execution and daily task budgets. A zero execution limit keeps work dispatch disabled.
+- Durable PostgreSQL task queue migration staged with stable idempotency keys, bounded attempts, retry backoff, lease tokens/expiry, heartbeats, expired-lease recovery, dead-letter status, owner-scoped RPCs, and transactional SKIP LOCKED claims.
+- Task submission, bulk-follow instruction, approval, cancellation and emergency shutdown now mirror to the durable queue through the existing owner-only runtime gateway. The Admin Centre reads durable queue records and real queue statistics when Supabase persistence is active.
+- Task records persist their parent AI identity before insert, preserving the canonical identity foreign key for previously created bot records. Network enabled/hybrid/capacity/budget/automatic-suspension settings are synchronized to the PostgreSQL singleton settings row; emergency shutdown closes this database dispatch gate before task cancellation sync.
+- A separate worker core and npm run worker:personal-ai-bots entry point are staged. It is disabled by default, requires a verified server-side provider adapter and Supabase persistence, only accepts four low-impact text task types, has no tools or external-action permissions, and saves results as human-review drafts. It cannot publish, follow, message, react, join groups, attend events or execute live actions.
+- Queue dispatch requires two independent database-only controls, execution_enabled=false and provider_ready=false, to be explicitly provisioned by a reviewed backend release; the ordinary admin settings API cannot toggle either gate. The network switch, a human approval and provider health are independent controls.
 - AI bot state is stored in dedicated bot collections, not the human users collection, so these records do not become human accounts or human engagement.
 
 ## Mandatory operating safeguards
@@ -73,7 +78,7 @@ No arbitrary product-level ceiling is imposed on the eventual identity namespace
 | Phase/system | Current state |
 |---|---|
 | Canonical AI identity records (names, profile and core metadata) | Migration and service-role-only batch/list RPCs are staged on this feature branch; owner API reads/writes through the existing runtime gateway when enabled. Not production-deployed or live-verified. Bot task/team/settings state still uses the existing JSONB compatibility adapter. |
-| Durable distributed queue and background workers | Not implemented |
+| Durable PostgreSQL task queue, lease/retry RPCs and worker core | Implemented and tested on the feature branch; not production-deployed. Worker remains disabled and has no provider adapter. |
 | Email identity management and real email provisioning | `ai_emails` schema supports separate address, provider, verification and provisioning states. No email provider is connected and no mailbox is provisioned. |
 | Provider/model assignment and real AI inference | Provider account/model/assignment tables are staged; no provider account, runtime request, credential reference or failover is connected. |
 | Real public AI bot profile pages, profile photos and profile-media uploads | Not implemented |
@@ -93,29 +98,29 @@ No arbitrary product-level ceiling is imposed on the eventual identity namespace
 
 ## State persistence boundary
 
-The following collections remain inside the legacy `minglora_runtime_state` JSONB compatibility document:
+The following bot configuration collections remain inside the legacy `minglora_runtime_state` JSONB compatibility document:
 
 - personalAiBotCategories
 - personalAiBots
-- personalAiBotTasks
+- personalAiBotTasks (legacy compatibility copy; task lifecycle writes are mirrored to public.minglora_ai_bot_tasks when Supabase persistence is active)
 - personalAiBotAudit
-- personalAiBotSettings
+- personalAiBotSettings (network settings are also synchronized to public.minglora_ai_bot_settings; provider/worker dispatch gates remain database-only and fail closed)
 - personalAiBotFollows (reserved; not an executing relationship store)
 - personalAiBotTeams
 - personalAiBotTeamMembers
 - personalAiBotSchedules (reserved; current schedules are stored on bot records)
 
-The normalized `ai_*` tables are a separate canonical identity store, not a replacement for JSONB tasks, teams or settings. The admin API persists canonical identity rows before saving runtime state. If canonical identity persistence fails, the API returns an error rather than reporting success. A full normalized migration of queues, tasks, schedules, teams, departments and HR records remains future work.
+The normalized `ai_*` tables are a separate canonical identity store. The durable task queue is normalized in public.minglora_ai_bot_tasks, and its owner-controlled network settings are stored in public.minglora_ai_bot_settings; bot/category/team/schedule/audit configuration still retains the JSONB compatibility representation. Task writes first upsert the referenced canonical AI identity, then persist the queue row. If canonical identity, task or network-settings persistence fails, the Admin API returns an error rather than reporting success. A full normalized migration of bot profiles, schedules, teams, departments and HR records remains future work.
 
 ## Database migration and rollout status
 
-The migration `supabase/migrations/20261108210000_minglora_ai_bot_network_foundation.sql` stages both bot-control tables and the canonical AI identity data areas: `ai_identities`, `ai_names`, `ai_profiles`, `ai_emails`, `ai_provider_accounts`, `ai_provider_models`, `ai_provider_assignments`, `ai_identity_locations`, `ai_identity_languages`, `ai_identity_capabilities`, `ai_identity_permissions`, `ai_identity_owners`, `ai_identity_status_history`, `ai_identity_versions` and `ai_identity_audit_logs`.
+The migrations `supabase/migrations/20261108210000_minglora_ai_bot_network_foundation.sql` and `supabase/migrations/20261109200000_minglora_ai_bot_durable_task_queue.sql` stage bot-control tables, canonical AI identity data areas and the durable approval-gated task queue: `ai_identities`, `ai_names`, `ai_profiles`, `ai_emails`, `ai_provider_accounts`, `ai_provider_models`, `ai_provider_assignments`, `ai_identity_locations`, `ai_identity_languages`, `ai_identity_capabilities`, `ai_identity_permissions`, `ai_identity_owners`, `ai_identity_status_history`, `ai_identity_versions` and `ai_identity_audit_logs`.
 
 The create/update and 1–100 record batch upsert functions write identity, separate first/middle/last name fields, profile, languages, ownership, lifecycle history, configuration version and audit rows transactionally. A paginated list function supplies the owner-only Admin Centre table. Functions use `SECURITY INVOKER`, an empty `search_path`, and execute grants only for `service_role`; tables have RLS enabled and are revoked from `PUBLIC`, `anon` and `authenticated`. The existing server-secret-protected runtime gateway validates the designated owner and allows only an explicit identity field list.
 
-**Production state: not deployed.** The existing Minglora Supabase project was inspected and these AI identity tables were absent. The migration has not been applied and the Edge Function changes have not been deployed. Until both are deployed, canonical database reads/writes fail closed rather than claiming the new PostgreSQL storage works. Do not run the migration or deploy the function without production authorization and release verification.
+**Production state: not deployed.** The existing Minglora Supabase project was inspected and these AI identity/queue tables were absent. Neither migration has been applied and the Edge Function changes have not been deployed. Until these are deployed, canonical database reads/writes fail closed rather than claiming the new PostgreSQL storage works. Do not run the migrations or deploy the function without production authorization and release verification.
 
-This bridge persists canonical core identity rows. Child-table workflows for email addresses, provider/model assignments, locations, capabilities, permissions and related data are not yet connected to the Admin API. No email mailbox, model provider, runtime health or AI execution worker is claimed as operational.
+This bridge persists canonical core identity rows. Child-table workflows for email addresses, provider/model assignments, locations, capabilities, permissions and related data are not yet connected to the Admin API. No email mailbox or model provider is connected. The worker code is staged but not deployed or enabled; no AI inference, worker health or task execution is claimed as operational.
 
 ## Routes
 
@@ -136,7 +141,7 @@ All routes are under /api/admin/personal-ai-bots and are protected by the owner-
 
 ## Verification
 
-CI is configured to run syntax checks for the new bot module/UI/tests, npm run check:repo, dependency audit and npm test. A passing GitHub Actions result is required before marking this phase verified. The draft PR must remain unmerged and un-deployed until review.
+The dedicated Personal AI Bots CI now uses Node 24 and checks the standalone worker, server adapter, gateway and bot module syntax, plus admin API lifecycle, identity schema, queue/worker safeguards and UI tests. The complete repository CI also runs, but its currently known failures are in unrelated existing UI/navigation/profile/service-worker tests. The draft PR must remain unmerged and un-deployed until review.
 
 Recommended local release gate:
 
