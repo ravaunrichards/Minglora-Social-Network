@@ -584,3 +584,43 @@ This remains a recorded advisor warning requiring a separate MFA/security review
 - PR #203 remains draft and dirty/diverged (one commit behind main). No merge, rebase, deployment, production Auth setting change, or user-data mutation was performed.
 
 **Next action:** keep PR #203 in draft and obtain explicit authorization for the reviewed branch reconciliation; after that, run hosted account-management and service acceptance with owner/MFA access and a project-scoped Management token.
+## Continuation checkpoint — 2026-11-09 11:48 UTC
+
+**Current verified progress: 75% | remaining: 25%.** This is unchanged from the prior checkpoint; the latest CI re-run validates the saved checkpoint but does not provide additional implementation credit.
+
+### Latest branch and test evidence
+
+- **Current branch tip:** `e8a89df685e65fd94d955ffcb9ccfd58a1699bd9`.
+- **PR #203:** open draft; 93 commits at latest retrieval; GitHub reports `mergeable=false`, `mergeable_state=dirty`.
+- **Main head:** `2f80e9d997b43e5da6373c385d6ce153ff908e67`; feature branch compares 93 commits ahead and one behind.
+- Latest completed CI workflow: [run #8366](https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/42611896117), on the checkpoint commit.
+- General suite: **750 tests, 720 passed, 30 failed**.
+- For You suite: **15 tests, 13 passed, 2 failed**.
+- All targeted Admin Centre tests passed, including the Supabase-style member manager, delete HTTP 409 behavior, session revocation before deletion, failed-delete session/audit disclosure, audit ordering, local-only session audit, Auth-provider MFA/same-origin checks and Management API/service-card secret safety.
+- The workflow still fails due the 30 general-suite failures and two For You failures; those tests remain unresolved and are not counted as passing.
+
+### Latest live database/security checks
+
+Read-only checks at approximately 2026-11-09 11:46 UTC confirmed:
+
+- `public.audit_log` contains the expected fields/types for the new audit writer: `actor_id` UUID (FK to `profiles.id`), required `action` and `target_type` text, `target_id`/`request_id` text, required `metadata` JSONB, default generated UUID `id`, and default `created_at`.
+- The live project contained 7 Auth users, 7 profiles and 15 audit rows. No rows were written or modified.
+- `public.minglora_list_my_mfa_factors()` remains `SECURITY DEFINER` with an empty `search_path`; it filters with `auth.uid()`. Its ACL grants execution to `authenticated` and `service_role`; `anon` cannot execute it and the ACL does not grant `PUBLIC`. Supabase's advisor still flags this pattern for review. It was not changed because altering MFA access is outside this task and needs a dedicated security decision.
+- The security advisor reports 36 RLS-enabled tables without policies, including internal audit/runtime tables intended for trusted service-role access. No RLS policies were added and no table had RLS disabled.
+- The advisor also reports leaked-password protection disabled for Supabase Auth. No Auth security setting was changed.
+
+### Production and review state
+
+- Supabase project `gzycobgbasnqqhnympkr` remains `ACTIVE_HEALTHY`, PostgreSQL 17.11.0.003.
+- Production `minglora-runtime-state` remains active at version 112; feature-branch user CRUD/session changes are not deployed.
+- Render's Minglora service remains on `main`, with latest listed live deployment commit `2f80e9d997b43e5da6373c385d6ce153ff908e67`.
+- `SUPABASE_ACCESS_TOKEN` remains unavailable/unverified in Render; live Management API GET/PATCH is not yet validated.
+- No production merge, rebase, deployment, Auth/provider change, database schema change, user mutation or permission change was performed.
+
+### Remaining work and blocker
+
+- **Medium:** obtain explicit authorization for reviewed reconciliation of PR #203's overlapping `src/server.js`, `public/admin-centre.html` and `public/sw.js` changes; then carry out hosted owner/MFA account lifecycle/service checks.
+- **Hard:** configure a project-scoped least-privilege Supabase Management token directly in Render; verify Management API GET/PATCH; merge and deploy the runtime only after explicit authorization.
+- **Final:** resolve or formally accept the 30 general-suite and 2 For You failures; complete hosted CRUD, audit, session and provider acceptance.
+
+**Next action:** wait for explicit authorization to reconcile PR #203 with `main`. Keep the PR draft and production unchanged until authorized.
