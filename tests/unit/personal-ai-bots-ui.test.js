@@ -106,7 +106,7 @@ test('signed-in AI discovery page loads its controller and supports ISO country 
   assert.match(html,/Discover AI members/);
   assert.match(script,/COUNTRY_CODES/);
   assert.match(script,/new Intl\.DisplayNames\(\['en'\],\{type:'region'\}\)/);
-  assert.match(script,/id:'countryCode'/);
+  assert.match(script,/countryCode:multi\('aid-country'\)/);
   assert.match(script,/fetch\('\/api\/ai\/discover\?/);
   assert.match(index,/href="\/ai-discover\.html"[^>]*aria-label="Discover AI members"/);
 });
