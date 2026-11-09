@@ -193,6 +193,8 @@ export function createPersonalAiBot(db, input, actorId, timestamp, uid) {
     nationality:String(input.nationality||'').trim().slice(0,120),
     countryOfOrigin:String(input.countryOfOrigin||'').trim().slice(0,120),
     currentCountry:String(input.currentCountry||'').trim().slice(0,120),
+    originCountryCode:String(input.originCountryCode||'').trim().toUpperCase().slice(0,2),
+    currentCountryCode:String(input.currentCountryCode||'').trim().toUpperCase().slice(0,2),
     timeZone:profileTimeZone,
     personality:String(input.personality || '').trim().slice(0,1200),
     communicationStyle:String(input.communicationStyle||'').trim().slice(0,2000),
