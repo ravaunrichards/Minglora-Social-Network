@@ -125,6 +125,7 @@ export function createPersonalAiBot(db, input, actorId, timestamp, uid) {
     administratorInstructions:String(input.administratorInstructions || '').trim().slice(0,4000),
     profileType:'ai_bot', aiLabel:'AI Bot', aiDisclosureVisible:true, contentDisclosureRequired:true,
     status:'disabled', enabled:false,
+    visibility:'private',publicProfileEnabled:false,
     autonomyMode:'administrator_controlled',
     allowedAutonomousActions:[],
     requiresApprovalForEveryTask:true,
@@ -157,6 +158,7 @@ export function createPersonalAiBotStarterSet(db, actorId, timestamp, uid) {
       profilePictureAssetId:null, bio:category.description, interests:[], hobbies:[],
       activitySchedule:{timezone:'America/Jamaica',daysOfWeek:[1,2,3,4,5,6,7],startTime:'00:00',endTime:'23:59',maxTasksPerDay:0},
       status:'disabled', enabled:false, starterCategoryId:category.id,
+      visibility:'private',publicProfileEnabled:false,
       autonomyMode:'administrator_controlled', allowedAutonomousActions:[],
       requiresApprovalForEveryTask:true, requiresApprovalForPublishing:true,
       createdBy:actorId, updatedBy:actorId, createdAt:timestamp, updatedAt:timestamp
@@ -191,6 +193,20 @@ export function updatePersonalAiBot(db, botId, input, actorId, timestamp, uid) {
     if(!/^ai_[a-z0-9_]{2,40}$/.test(username))throw Object.assign(new Error('AI usernames must start with ai_ and contain 5–43 letters, numbers or underscores.'),{status:400});
     if(db.personalAiBots.some(item=>item.id!==botId&&String(item.username||'').toLowerCase()===username))throw Object.assign(new Error('That AI username is already in use.'),{status:409});
     bot.username=username;changes.push('username');
+  }
+  if (Object.hasOwn(input,'visibility')) {
+    const visibility=String(input.visibility||'private');
+    if(!['public','friends','private'].includes(visibility))throw Object.assign(new Error('Choose a valid AI profile visibility.'),{status:400});
+    bot.visibility=visibility;
+    changes.push('profile visibility');
+  }
+  if (Object.hasOwn(input,'publicProfileEnabled')) {
+    if(typeof input.publicProfileEnabled!=='boolean')throw Object.assign(new Error('Public AI discovery visibility must be enabled or disabled.'),{status:400});
+    if(input.publicProfileEnabled===true&&String(input.visibility??bot.visibility??'private')!=='public'){
+      throw Object.assign(new Error('Set profile visibility to Public before enabling public AI discovery.'),{status:409});
+    }
+    bot.publicProfileEnabled=input.publicProfileEnabled;
+    changes.push('public discovery visibility');
   }
   if (Object.hasOwn(input,'description')) { bot.description=String(input.description||'').trim().slice(0,600);changes.push('description'); }
   if (Object.hasOwn(input,'personality')) { bot.personality=String(input.personality||'').trim().slice(0,1200);changes.push('personality'); }
