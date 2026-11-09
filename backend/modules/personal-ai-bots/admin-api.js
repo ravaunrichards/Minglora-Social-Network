@@ -131,7 +131,7 @@ import {
 } from './personal-ai-bots-service.js';
 
 export async function handlePersonalAiBotsAdminApi(context) {
-  const {req,res,url,method,path,user,input,db,saveStore,uid,now,json,isOwnerAdmin,isSameOriginWrite,lookupAdminMember,persistAiIdentities,listAiIdentities,persistAiBotTasks,listAiBotTasks,getAiBotTaskStats,persistAiBotSettings,persistAiProviderAssignment,listAiProviderAssignments}=context;
+  const {req,res,url,method,path,user,input,db,saveStore,uid,now,json,isOwnerAdmin,isSameOriginWrite,lookupAdminMember,persistAiIdentities,listAiIdentities,persistAiBotTasks,listAiBotTasks,getAiBotTaskStats,persistAiBotSettings,persistAiProviderAssignment,listAiProviderAssignments,persistAiEmailIdentity,listAiEmailIdentities}=context;
   const root='/api/admin/personal-ai-bots';
   if(path!==root&&!path.startsWith(root+'/'))return false;
   if(!isOwnerAdmin)return (json(res,403,{error:'Only the designated MFA-verified Minglora owner can manage the Personal AI Bots Network.'}),true);
@@ -146,6 +146,7 @@ export async function handlePersonalAiBotsAdminApi(context) {
       const durableTasks=typeof listAiBotTasks==='function'?await listAiBotTasks({limit:100,offset:0}):null;
       const durableTaskStats=typeof getAiBotTaskStats==='function'?await getAiBotTaskStats():null;
       const providerAssignments=typeof listAiProviderAssignments==='function'?await listAiProviderAssignments({limit:200,offset:0}):null;
+      const emailIdentities=typeof listAiEmailIdentities==='function'?await listAiEmailIdentities({limit:200,offset:0}):null;
       return (json(res,200,{
         ...overview,
         identityRecords:Array.isArray(identityRecords)?identityRecords:[],
@@ -154,6 +155,8 @@ export async function handlePersonalAiBotsAdminApi(context) {
         taskQueueStats:durableTaskStats&&typeof durableTaskStats==='object'?durableTaskStats:null,
         providerAssignments:Array.isArray(providerAssignments)?providerAssignments:[],
         providerAssignmentsSource:Array.isArray(providerAssignments)?'minglora_supabase_postgresql':'unavailable',
+        emailIdentities:Array.isArray(emailIdentities)?emailIdentities:[],
+        emailIdentitiesSource:Array.isArray(emailIdentities)?'minglora_supabase_postgresql':'unavailable',
         categories:getPersonalAiBotCategories(db),
         bots:db.personalAiBots.slice().sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt))),
         tasks:Array.isArray(durableTasks)?durableTasks:db.personalAiBotTasks.slice(0,100),
@@ -201,6 +204,33 @@ export async function handlePersonalAiBotsAdminApi(context) {
       const category=createPersonalAiBotCategory(db,input||{},user.id,stamp,uid);
       await saveStore();
       return (json(res,201,{ok:true,category}),true);
+    }
+    if(method==='POST'&&path===root+'/emails'){
+      if(typeof persistAiEmailIdentity!=='function')return (json(res,503,{error:'AI email identity storage is not available in this runtime.'}),true);
+      const identityId=String(input?.identityId||'').trim();
+      const bot=db.personalAiBots.find(item=>item.id===identityId);
+      if(!bot)return (json(res,404,{error:'Choose an existing Minglora AI identity before recording an email address.'}),true);
+      const email={
+        identityId,
+        emailAddress:String(input?.emailAddress||'').trim().toLowerCase(),
+        emailType:String(input?.emailType||'primary'),
+        emailProvider:String(input?.emailProvider||'').trim(),
+        isPrimary:input?.isPrimary===true
+      };
+      if(!/^[0-9a-f-]{36}$/i.test(email.identityId)||
+         email.emailAddress.length<3||email.emailAddress.length>320||
+         !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.emailAddress)||
+         !['primary','recovery','notification','other'].includes(email.emailType)||
+         email.emailProvider.length>80){
+        return (json(res,400,{error:'AI email identity fields are invalid.'}),true);
+      }
+      // The canonical AI identity must exist before its child email row is inserted.
+      await persistCanonicalIdentities([bot],persistAiIdentities);
+      const saved=await persistAiEmailIdentity(email);
+      return (json(res,201,{
+        ok:true,email:saved,
+        message:'Email identity record saved. The address is not a verified mailbox and no email provider has provisioned an inbox.'
+      }),true);
     }
     if(method==='POST'&&path===root+'/providers'){
       if(typeof persistAiProviderAssignment!=='function')return (json(res,503,{error:'Provider assignment storage is not available in this runtime.'}),true);
