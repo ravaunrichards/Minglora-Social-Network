@@ -357,3 +357,82 @@ test('AI profiles remain private by default and require explicit public discover
   assert.equal(privateAgain.publicProfileEnabled,false);
   assert.equal(updated.status,'disabled');
 });
+
+
+test('AI identity creation and edits persist complete demographic, career, language and location profile fields',()=>{
+  const db=makeDb();
+  const created=createPersonalAiBot(db,{
+    displayName:'Global Learning Companion',
+    firstName:'Global',middleName:'Learning',lastName:'Companion',
+    categoryId:'ai-educators',
+    gender:'female',genderPresentation:'Feminine AI presentation',
+    nationality:'Jamaican',countryOfOrigin:'Jamaica',currentCountry:'Canada',
+    timeZone:'America/Toronto',
+    introduction:'A multilingual learning companion.',
+    communicationStyle:'Clear, patient and encouraging.',
+    profession:'Educator',
+    education:[{institution:'Minglora Learning',qualification:'AI Education Certificate'}],
+    skills:['Teaching','Research'],
+    locations:[
+      {locationType:'origin',countryCode:'JM',countryName:'Jamaica',parishCounty:'Kingston',city:'Kingston',timeZone:'America/Jamaica'},
+      {locationType:'current',countryCode:'CA',countryName:'Canada',stateProvince:'Ontario',city:'Toronto',timeZone:'America/Toronto',isPrimary:true}
+    ],
+    voicePreferences:{voice:'neutral'},avatarPreferences:{style:'3d'},
+    memoryEnabled:true,memoryConfiguration:{retentionDays:30},
+    avatarStorageReference:'ai-media/avatar-1',coverStorageReference:'ai-media/cover-1'
+  },actor,stamp,uid);
+  assert.equal(created.gender,'female');
+  assert.equal(created.nationality,'Jamaican');
+  assert.equal(created.countryOfOrigin,'Jamaica');
+  assert.equal(created.currentCountry,'Canada');
+  assert.equal(created.timeZone,'America/Toronto');
+  assert.equal(created.education[0].qualification,'AI Education Certificate');
+  assert.deepEqual(created.skills,['Teaching','Research']);
+  assert.equal(created.locations[1].city,'Toronto');
+  assert.deepEqual(created.voicePreferences,{voice:'neutral'});
+  assert.equal(created.memoryEnabled,true);
+
+  const updated=updatePersonalAiBot(db,created.id,{
+    gender:'non_binary',
+    genderPresentation:'Androgynous AI presentation',
+    nationality:'Canadian',
+    countryOfOrigin:'Jamaica',
+    currentCountry:'United Kingdom',
+    timeZone:'Europe/London',
+    introduction:'Updated introduction.',
+    communicationStyle:'Direct and respectful.',
+    profession:'Researcher',
+    education:['Research methods','Machine learning'],
+    skills:['Research','Data analysis'],
+    locations:[{locationType:'current',countryCode:'GB',countryName:'United Kingdom',stateProvince:'England',city:'London',timeZone:'Europe/London',isPrimary:true}],
+    avatarStorageReference:'ai-media/avatar-2',
+    coverStorageReference:'ai-media/cover-2',
+    voicePreferences:{voice:'warm'},
+    avatarPreferences:{style:'realistic-3d'},
+    memoryEnabled:false,
+    memoryConfiguration:{retentionDays:7}
+  },actor,stamp,uid);
+  assert.equal(updated.gender,'non_binary');
+  assert.equal(updated.genderPresentation,'Androgynous AI presentation');
+  assert.equal(updated.nationality,'Canadian');
+  assert.equal(updated.currentCountry,'United Kingdom');
+  assert.equal(updated.timeZone,'Europe/London');
+  assert.deepEqual(updated.education,['Research methods','Machine learning']);
+  assert.deepEqual(updated.skills,['Research','Data analysis']);
+  assert.equal(updated.locations[0].city,'London');
+  assert.equal(updated.avatarStorageReference,'ai-media/avatar-2');
+  assert.equal(updated.memoryEnabled,false);
+  assert.deepEqual(updated.memoryConfiguration,{retentionDays:7});
+});
+
+test('AI profile updates reject unsupported gender, invalid time zones and duplicate location types',()=>{
+  const db=makeDb();
+  const bot=createPersonalAiBot(db,{displayName:'Profile Validation AI',categoryId:'ai-support'},actor,stamp,uid);
+  assert.throws(()=>updatePersonalAiBot(db,bot.id,{gender:'unknown'},actor,stamp,uid),/supported AI gender/);
+  assert.throws(()=>updatePersonalAiBot(db,bot.id,{timeZone:'Not/A_Time_Zone'},actor,stamp,uid),/valid profile time zone/);
+  assert.throws(()=>updatePersonalAiBot(db,bot.id,{locations:[
+    {locationType:'current',countryCode:'JM',timeZone:'America/Jamaica'},
+    {locationType:'current',countryCode:'CA',timeZone:'America/Toronto'}
+  ]},actor,stamp,uid),/unique location types/);
+  assert.throws(()=>createPersonalAiBot(db,{displayName:'Invalid Timezone AI',categoryId:'ai-support',timeZone:'Bad/Timezone'},actor,stamp,uid),/valid profile time zone/);
+});
