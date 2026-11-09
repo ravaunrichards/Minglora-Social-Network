@@ -17,6 +17,11 @@ const providerSql = await readFile(
   'utf8'
 );
 
+const emailSql = await readFile(
+  new URL('../../supabase/migrations/20261109220000_minglora_ai_email_identity_rpcs.sql', import.meta.url),
+  'utf8'
+);
+
 test('normalized AI bot migration contains all 15 master categories',()=>{
   for(const id of [
     'ai-friends','ai-creators','ai-influencers','ai-news','ai-musicians',
@@ -300,4 +305,30 @@ test('worker provider preflight resolves env secret references, health-checks an
   assert.match(worker,/task\.providerAssignmentId/);
   assert.match(worker,/adapter\.providerIdentifier/);
   assert.match(worker,/adapter\.modelIdentifier/);
+});
+
+
+test('AI email identity RPC stores only address records and defaults to not verified/not provisioned',()=>{
+  assert.ok(sql.includes('CREATE TABLE IF NOT EXISTS public.ai_emails'));
+  assert.match(sql,/provisioning_status text NOT NULL DEFAULT 'not_provisioned'/);
+  assert.match(sql,/verification_status text NOT NULL DEFAULT 'not_verified'/);
+  assert.match(emailSql,/minglora_ai_email_identity_upsert/);
+  assert.match(emailSql,/minglora_ai_email_identity_list/);
+  assert.match(emailSql,/ON CONFLICT \(lower\(email_address\)\)/);
+  assert.match(emailSql,/Only the designated Minglora owner may manage AI email identities/);
+  assert.match(emailSql,/Verification and provisioning states cannot be self-declared/);
+  assert.match(emailSql,/No mailbox has been provisioned or verified/);
+  assert.match(emailSql,/GRANT EXECUTE ON FUNCTION public\.minglora_ai_email_identity_upsert\(jsonb,uuid\) TO service_role/);
+  assert.match(emailSql,/GRANT EXECUTE ON FUNCTION public\.minglora_ai_email_identity_list\(uuid,uuid,integer,integer\) TO service_role/);
+});
+
+test('email identity gateway is owner-only and excludes client-declared mailbox state and raw secrets',()=>{
+  assert.ok(gateway.includes('ai_email_identity_upsert'));
+  assert.ok(gateway.includes('ai_email_identity_list'));
+  assert.match(gateway,/Only the designated Minglora owner can manage AI email identities/);
+  assert.match(gateway,/Only the designated Minglora owner can read AI email identities/);
+  assert.match(gateway,/admin\.rpc\("minglora_ai_email_identity_upsert"/);
+  assert.match(gateway,/admin\.rpc\("minglora_ai_email_identity_list"/);
+  const handler=gateway.slice(gateway.indexOf('if (action === "ai_email_identity_upsert")'),gateway.indexOf('if (action === "ai_provider_runtime_list")'));
+  assert.doesNotMatch(handler,/verificationStatus|provisioningStatus|password|apiKey|secretValue/i);
 });
