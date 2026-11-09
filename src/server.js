@@ -266,6 +266,10 @@ const DEFAULT_SETTINGS={privacy:{profileVisibility:'public',allowFriendRequests:
 function getUserSettings(user){const saved=user?.settings||{};const preferences={...DEFAULT_SETTINGS.preferences,...(saved.preferences||{})};if(!APP_COLOR_THEMES.includes(preferences.colorTheme))preferences.colorTheme=DEFAULT_SETTINGS.preferences.colorTheme;if(!['standard','advanced','creator'].includes(preferences.profileLayout))preferences.profileLayout=DEFAULT_SETTINGS.preferences.profileLayout;if(!LIVE_ROOM_THEMES.includes(preferences.liveRoomTheme))preferences.liveRoomTheme=DEFAULT_SETTINGS.preferences.liveRoomTheme;for(const key of ['messengerArchivedConversationIds','messengerRestrictedUserIds'])if(!Array.isArray(preferences[key]))preferences[key]=[];const experience=validateExperienceSettingsPatch(DEFAULT_EXPERIENCE_SETTINGS,saved.experience||{}).settings;return {privacy:{...DEFAULT_SETTINGS.privacy,...(saved.privacy||{})},notifications:{...DEFAULT_SETTINGS.notifications,...(saved.notifications||{})},preferences,experience};}
 function isFriend(firstId,secondId){return (db.follows||[]).some(item=>item.followerId===firstId&&item.followedId===secondId)&&(db.follows||[]).some(item=>item.followerId===secondId&&item.followedId===firstId);}
 function friendPreferenceFor(viewerId,targetId){return (db.friendPreferences||[]).find(item=>item.ownerId===viewerId&&item.targetId===targetId)||null;}
+function isFriendRestricted(viewerId,ownerId){
+  if(!viewerId||!ownerId||viewerId===ownerId||!isFriend(viewerId,ownerId))return false;
+  return friendPreferenceFor(ownerId,viewerId)?.isRestricted===true;
+}
 function friendUpdatesSnoozed(viewerId,targetId){
   if(!viewerId||!targetId||viewerId===targetId||!isFriend(viewerId,targetId))return false;
   const until=Date.parse(friendPreferenceFor(viewerId,targetId)?.snoozedUntil||'');
@@ -301,10 +305,10 @@ function canViewProfileAudience(viewerId,ownerId,audience='public'){
   if(viewerId===ownerId)return true;
   if(blockedBetween(viewerId,ownerId))return false;
   if(audience==='public')return true;
-  if(audience==='friends')return isFriend(viewerId,ownerId);
+  if(audience==='friends')return isFriend(viewerId,ownerId)&&!isFriendRestricted(viewerId,ownerId);
   if(audience==='followers')return (db.follows||[]).some(edge=>edge.followerId===viewerId&&edge.followedId===ownerId);
   if(audience==='close_friends'){
-    if(!isFriend(viewerId,ownerId))return false;
+    if(!isFriend(viewerId,ownerId)||isFriendRestricted(viewerId,ownerId))return false;
     return Boolean((db.friendPreferences||[]).some(item=>item.ownerId===ownerId&&item.targetId===viewerId&&item.isCloseFriend===true));
   }
   return false;
@@ -4854,6 +4858,10 @@ async function route(req, res) {
             .filter(edge=>edge.followedId===member.id&&follows.some(reverse=>reverse.followerId===member.id&&reverse.followedId===edge.followerId))
             .map(edge=>edge.followerId)
             .filter(id=>!blockedBetween(user.id,id)))];
+          const commonFriendIds=memberFriendIds.filter(id=>isFriend(user.id,id));
+          const mutualFriendsPreview=commonFriendIds
+            .map(id=>db.users.find(friend=>friend.id===id&&canViewProfile(user.id,friend)))
+            .filter(Boolean).slice(0,3).map(friend=>safeUser(friend,user.id));
           const memberPosts=(db.posts||[])
             .filter(post=>post.userId===member.id&&post.status!=='hidden'&&!post.archivedAt&&!blockedBetween(user.id,post.userId)&&canViewProfileAudience(user.id,post.userId,post.audience||'public')&&!friendPostsMuted(user.id,post.userId))
             .sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
@@ -4873,7 +4881,8 @@ async function route(req, res) {
             followersCount:follows.filter(edge=>edge.followedId===member.id&&!blockedBetween(user.id,edge.followerId)).length,
             followingCount:follows.filter(edge=>edge.followerId===member.id&&!blockedBetween(user.id,edge.followedId)).length,
             friendsCount:memberFriendIds.length,
-            mutualFriendsCount:memberFriendIds.filter(id=>isFriend(user.id,id)).length,
+            mutualFriendsCount:commonFriendIds.length,
+            mutualFriendsPreview,
             postsCount:memberPosts.length,
             recentPosts,
             latestStory
@@ -5452,8 +5461,11 @@ async function route(req, res) {
           const incoming=follows.find(edge=>edge.followerId===targetId&&edge.followedId===user.id);
           const dates=[outgoing?.createdAt,incoming?.createdAt].map(value=>Date.parse(value||'')).filter(Number.isFinite);
           const targetFriendIds=getMutualFollowIds(follows,targetId,blocks);
-          const mutualFriendsCount=targetFriendIds.filter(id=>friendIdSet.has(id)).length;
-          return {...safeUser(member,user.id),...preferences,friendSince:dates.length?new Date(Math.max(...dates)).toISOString():null,mutualFriendsCount};
+          const commonFriendIds=targetFriendIds.filter(id=>friendIdSet.has(id));
+          const mutualFriendsPreview=commonFriendIds
+            .map(id=>db.users.find(friend=>friend.id===id&&canViewProfile(user.id,friend)))
+            .filter(Boolean).slice(0,3).map(friend=>safeUser(friend,user.id));
+          return {...safeUser(member,user.id),...preferences,friendSince:dates.length?new Date(Math.max(...dates)).toISOString():null,mutualFriendsCount:commonFriendIds.length,mutualFriendsPreview};
         }).filter(Boolean).sort((a,b)=>Date.parse(b.friendSince||0)-Date.parse(a.friendSince||0));
         return json(res,200,{friends,count:friends.length});
       }
@@ -5475,7 +5487,7 @@ async function route(req, res) {
         const description=String(input.description||'').trim();
         const normalized=name.toLocaleLowerCase();
         if(name.length<1||name.length>40||description.length>120)return json(res,400,{error:'List names must be 1–40 characters and descriptions no longer than 120 characters.'});
-        if(['all friends','close friends','favorites','recently added','mutual connections'].includes(normalized))return json(res,400,{error:'That name is reserved for a built-in Friends view.'});
+        if(['all friends','close friends','restricted','favorites','recently added','mutual connections'].includes(normalized))return json(res,400,{error:'That name is reserved for a built-in Friends view.'});
         const ownedLists=db.friendLists.filter(item=>item.ownerId===user.id);
         if(ownedLists.length>=50)return json(res,409,{error:'You can create up to 50 custom friend lists.'});
         if(ownedLists.some(item=>String(item.name||'').toLocaleLowerCase()===normalized))return json(res,409,{error:'You already have a list with that name.'});
