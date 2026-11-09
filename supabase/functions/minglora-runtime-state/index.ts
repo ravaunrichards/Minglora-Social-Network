@@ -97,7 +97,7 @@ Deno.serve(async (req: Request) => {
     "ai_identity_upsert_batch", "ai_identity_list",
     "ai_bot_settings_update", "ai_provider_assignment_upsert", "ai_provider_assignment_list",
     "ai_provider_runtime_list", "ai_provider_health_update",
-    "ai_email_identity_upsert", "ai_email_identity_list",
+    "ai_email_identity_upsert", "ai_email_identity_list", "ai_identity_discover",
     "ai_bot_task_upsert_batch", "ai_bot_task_list", "ai_bot_task_stats",
     "ai_bot_task_claim", "ai_bot_task_heartbeat", "ai_bot_task_complete", "ai_bot_task_fail",
   ];
@@ -114,6 +114,43 @@ Deno.serve(async (req: Request) => {
   // Re-check the designated owner ID here as a second boundary after the Node
   // admin API's MFA/session authorization.
   const AI_NETWORK_OWNER_ID = "5b998c21-86b5-4621-ab37-e0808a2657b1";
+  if (action === "ai_identity_discover") {
+    const actorUserId = String(input.actorUserId || "");
+    const search = String(input.search || "").trim();
+    const filters = input.filters ?? {};
+    const sort = String(input.sort || "newest");
+    const limit = Number(input.limit ?? 24);
+    const offset = Number(input.offset ?? 0);
+    const filterFields = new Set([
+      "gender","nationality","countryOfOrigin","currentCountry","countryCode",
+      "stateProvince","parishCounty","city","language","category","profession",
+      "personality","interest","capability"
+    ]);
+    if (!validUuid(actorUserId)) {
+      return json(401, { error: "Sign in to discover public Minglora AI identities." });
+    }
+    if (search.length > 160 || !filters || typeof filters !== "object" || Array.isArray(filters) ||
+        Object.keys(filters).some((key: string) => !filterFields.has(key) ||
+          !Array.isArray(filters[key]) || filters[key].length > 50 ||
+          filters[key].some((value: any) => typeof value !== "string" || value.trim().length < 1 || value.length > 120)) ||
+        !["newest","recently_updated"].includes(sort) ||
+        !Number.isInteger(limit) || limit < 1 || limit > 100 ||
+        !Number.isInteger(offset) || offset < 0 || offset > 1000000000) {
+      return json(400, { error: "AI discovery search, filters or pagination values are invalid." });
+    }
+    const { data, error } = await admin.rpc("minglora_ai_identity_discover", {
+      p_search: search,p_filters: filters,p_sort: sort,p_limit: limit,p_offset: offset
+    });
+    if (error) {
+      const invalid = ["22023","22P02"].includes(String(error.code || ""));
+      return json(invalid ? 400 : 503, {
+        error: invalid ? "AI discovery filters failed validation." : "Minglora AI discovery storage is unavailable.",
+        code: String(error.code || "AI_DISCOVERY_UNAVAILABLE")
+      });
+    }
+    return json(200, { ok: true, ...(data && typeof data === "object" ? data : {total:0,items:[]}) });
+  }
+
   if (action === "ai_identity_upsert_batch") {
     const actorUserId = String(input.actorUserId || "");
     const identities = input.identities;
