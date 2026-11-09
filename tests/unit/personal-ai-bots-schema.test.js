@@ -736,6 +736,6 @@ test('AI report review gateway and owner API only permit the designated owner',(
   assert.match(gateway,/admin\.rpc\("minglora_ai_identity_report_review"/);
   assert.match(serverSource,/listAiIdentityReports/);
   assert.match(serverSource,/reviewAiIdentityReport/);
-  assert.match(adminApiSource,/path===root\+'\/safety\/reports'/);
+  assert.match(adminApiSource,/method==='GET'&&path===root\+'\/safety\/reports'/);
   assert.match(adminApiSource,/safetyReportMatch&&method==='PATCH'/);
 });
