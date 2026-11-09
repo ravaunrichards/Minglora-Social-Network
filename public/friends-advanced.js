@@ -59,32 +59,44 @@ function friendsDashboardCard(member,listId=null) {
   const mutedPosts=member.isMutedPosts===true;
   const mutedStories=member.isMutedStories===true;
   const snoozed=Boolean(member.snoozedUntil&&Date.parse(member.snoozedUntil)>Date.now());
+  const status=String(member.accountStatus||'active');
+  const accountActive=status==='active';
+  const statusLabel=String(member.accountStatusLabel||({banned:'Banned',restricted:'Restricted',suspended:'Suspended',deactivated:'Deactivated'}[status]||'Unavailable'));
   const previews=Array.isArray(member.mutualFriendsPreview)?member.mutualFriendsPreview:[];
-  const actions=listId
-    ?'<button type="button" class="facebook-friend-remove-list" data-remove-friend-list="'+esc(listId)+'" data-member-id="'+esc(member.id)+'">Remove from list</button>'
-    :'<select class="facebook-friend-list-select" aria-label="Add '+esc(member.name)+' to a custom list" data-friend-list-select="'+esc(member.id)+'"><option value="">Add to list…</option>'+friendsDashboardState.lists.map(list=>'<option value="'+esc(list.id)+'">'+esc(list.name)+'</option>').join('')+'</select>';
-  return '<article class="friend-manager-card facebook-friend-card">'+
-    '<button type="button" class="facebook-friend-photo" data-friend-view="'+esc(member.id)+'" aria-label="View '+esc(member.name)+' profile"><img src="'+esc(avatar(member))+'" alt="" loading="lazy"></button>'+
-    '<div class="facebook-friend-body">'+
-      '<div class="facebook-friend-name-line"><button type="button" class="facebook-friend-name" data-friend-view="'+esc(member.id)+'">'+esc(member.name)+' '+verifiedProfileBadge(member)+'</button></div>'+
-      '<div class="facebook-friend-username">@'+esc(member.username||'')+'</div>'+
-      friendsDashboardMutualMarkup(member)+
-      '<div class="facebook-friend-status">'+(close?'<span class="facebook-friend-status-close" title="Close Friends"><span aria-hidden="true">★</span> Close Friends</span>':'')+(restricted?'<span class="facebook-friend-status-restricted" title="Restricted"><span aria-hidden="true">🔒</span> Restricted</span>':'')+'</div>'+
-      '<div class="facebook-friend-actions">'+
-        '<button type="button" class="facebook-friend-view" data-friend-view="'+esc(member.id)+'">View profile</button>'+
-        '<button type="button" class="facebook-friend-message" data-friend-message="'+esc(member.id)+'">Message</button>'+
-      '</div>'+
-      '<div class="facebook-friend-preferences">'+
+  const actions=!accountActive
+    ?'<span class="facebook-friend-account-note">Connection preserved · not counted as an active friend</span>'
+    :listId
+      ?'<button type="button" class="facebook-friend-remove-list" data-remove-friend-list="'+esc(listId)+'" data-member-id="'+esc(member.id)+'">Remove from list</button>'
+      :'<select class="facebook-friend-list-select" aria-label="Add '+esc(member.name)+' to a custom list" data-friend-list-select="'+esc(member.id)+'"><option value="">Add to list…</option>'+friendsDashboardState.lists.map(list=>'<option value="'+esc(list.id)+'">'+esc(list.name)+'</option>').join('')+'</select>';
+  const identity=accountActive
+    ?'<button type="button" class="facebook-friend-photo" data-friend-view="'+esc(member.id)+'" aria-label="View '+esc(member.name)+' profile"><img src="'+esc(avatar(member))+'" alt="" loading="lazy"></button>'
+    :'<div class="facebook-friend-photo facebook-friend-photo--unavailable" aria-label="'+esc(statusLabel)+' account"><img src="'+esc(avatar(member))+'" alt="" loading="lazy"></div>';
+  const name=accountActive
+    ?'<button type="button" class="facebook-friend-name" data-friend-view="'+esc(member.id)+'">'+esc(member.name)+' '+verifiedProfileBadge(member)+'</button>'
+    :'<span class="facebook-friend-name facebook-friend-name--unavailable">'+esc(member.name)+' '+verifiedProfileBadge(member)+'</span>';
+  const preferences=accountActive
+    ?'<div class="facebook-friend-preferences">'+
         '<button type="button" class="facebook-friend-pref '+(close?'is-active':'')+'" data-friend-pref="'+esc(member.id)+'" data-pref-key="isCloseFriend" data-pref-value="'+(!close)+'" aria-pressed="'+close+'"><span aria-hidden="true">★</span> '+(close?'Close Friends':'Add to Close Friends')+'</button>'+
         '<button type="button" class="facebook-friend-pref '+(restricted?'is-active':'')+'" data-friend-pref="'+esc(member.id)+'" data-pref-key="isRestricted" data-pref-value="'+(!restricted)+'" aria-pressed="'+restricted+'"><span aria-hidden="true">🔒</span> '+(restricted?'Restricted':'Add to Restricted')+'</button>'+
         '<button type="button" class="facebook-friend-pref '+(favorite?'is-active':'')+'" data-friend-pref="'+esc(member.id)+'" data-pref-key="isFavorite" data-pref-value="'+(!favorite)+'" aria-pressed="'+favorite+'"><span aria-hidden="true">♥</span> '+(favorite?'Favorite':'Add favorite')+'</button>'+
         '<button type="button" class="facebook-friend-pref '+(mutedPosts?'is-active':'')+'" data-friend-pref="'+esc(member.id)+'" data-pref-key="isMutedPosts" data-pref-value="'+(!mutedPosts)+'" aria-pressed="'+mutedPosts+'">'+(mutedPosts?'Unmute posts':'Mute posts')+'</button>'+
         '<button type="button" class="facebook-friend-pref '+(mutedStories?'is-active':'')+'" data-friend-pref="'+esc(member.id)+'" data-pref-key="isMutedStories" data-pref-value="'+(!mutedStories)+'" aria-pressed="'+mutedStories+'">'+(mutedStories?'Unmute stories':'Mute stories')+'</button>'+
         '<button type="button" class="facebook-friend-pref '+(snoozed?'is-active':'')+'" data-friend-snooze="'+esc(member.id)+'" data-snoozed="'+snoozed+'" aria-pressed="'+snoozed+'">'+(snoozed?'End snooze':'Snooze 7 days')+'</button>'+
-      '</div>'+
-      '<div class="facebook-friend-list-actions">'+actions+
-        '<button type="button" class="facebook-friend-remove" data-unfollow-friend="'+esc(member.id)+'">Remove</button>'+
-      '</div>'+
+      '</div>'
+    :'';
+  const socialActions=accountActive
+    ?'<div class="facebook-friend-actions"><button type="button" class="facebook-friend-view" data-friend-view="'+esc(member.id)+'">View profile</button><button type="button" class="facebook-friend-message" data-friend-message="'+esc(member.id)+'">Message</button></div>'
+    :'<div class="facebook-friend-account-state facebook-friend-account-state--'+esc(status)+'"><strong>'+esc(statusLabel)+' account</strong><span>This account remains visible in your list, but is not included in active totals.</span></div>';
+  return '<article class="friend-manager-card facebook-friend-card '+(accountActive?'':'facebook-friend-card--unavailable')+'">'+
+    identity+
+    '<div class="facebook-friend-body">'+
+      '<div class="facebook-friend-name-line">'+name+'</div>'+
+      '<div class="facebook-friend-username">@'+esc(member.username||'')+'</div>'+
+      friendsDashboardMutualMarkup(member)+
+      '<div class="facebook-friend-status">'+(!accountActive?'<span class="facebook-friend-account-badge facebook-friend-account-badge--'+esc(status)+'">'+esc(statusLabel)+'</span>':'')+(close?'<span class="facebook-friend-status-close" title="Close Friends"><span aria-hidden="true">★</span> Close Friends</span>':'')+(restricted?'<span class="facebook-friend-status-restricted" title="Personal Restricted list"><span aria-hidden="true">🔒</span> Restricted</span>':'')+'</div>'+
+      socialActions+
+      preferences+
+      '<div class="facebook-friend-list-actions">'+actions+(accountActive?'<button type="button" class="facebook-friend-remove" data-unfollow-friend="'+esc(member.id)+'">Remove</button>':'')+'</div>'+
     '</div>'+
   '</article>';
 }
@@ -96,8 +108,8 @@ function friendsDashboardListCards() {
     custom: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M8 6h12M8 12h12M8 18h12"></path><circle cx="4" cy="6" r="1"></circle><circle cx="4" cy="12" r="1"></circle><circle cx="4" cy="18" r="1"></circle></svg>'
   };
   const builtins = [
-    {id:'restricted',name:'Restricted',icon:icons.restricted,count:friendsDashboardState.friends.filter(member=>member.isRestricted).length},
-    {id:'close',name:'Close Friends',icon:icons.close,count:friendsDashboardState.friends.filter(member=>member.isCloseFriend).length}
+    {id:'restricted',name:'Restricted',icon:icons.restricted,count:friendsDashboardState.friends.filter(member=>member.accountStatus==='active'&&member.isRestricted).length},
+    {id:'close',name:'Close Friends',icon:icons.close,count:friendsDashboardState.friends.filter(member=>member.accountStatus==='active'&&member.isCloseFriend).length}
   ];
   return '<div class="facebook-friend-list-grid">'+
     builtins.map(item=>'<button type="button" class="facebook-friend-list-tile" data-open-built-in-list="'+item.id+'" aria-label="Open '+item.name+' list"><span class="facebook-friend-list-icon facebook-friend-list-icon--'+item.id+'" aria-hidden="true">'+item.icon+'</span><span><strong>'+item.name+'</strong><small>'+item.count.toLocaleString()+' friends</small></span><span class="facebook-friend-list-arrow" aria-hidden="true">›</span></button>').join('')+
@@ -131,20 +143,23 @@ function friendsDashboardMainMarkup() {
     listId=friendsDashboardState.selectedListId;
   }
   const rows=friendsDashboardVisibleFriends();
+  const activeRows=rows.filter(member=>String(member.accountStatus||'active')==='active').length;
+  const unavailableRows=rows.length-activeRows;
   const tools=listId
     ?'<div class="facebook-friends-section-tools"><button type="button" id="friends-back-lists">← All lists</button><button type="button" id="friends-rename-list">Rename</button><button type="button" id="friends-delete-list" class="is-danger">Delete list</button></div>'
     :'';
-  return '<section class="facebook-friends-section"><div class="facebook-friends-section-heading"><div><h2>'+title+'</h2><p>'+rows.length.toLocaleString()+' '+(rows.length===1?'friend':'friends')+'</p></div>'+tools+'</div>'+
+  return '<section class="facebook-friends-section"><div class="facebook-friends-section-heading"><div><h2>'+title+'</h2><p>'+activeRows.toLocaleString()+' '+(activeRows===1?'friend':'friends')+(unavailableRows?' · '+unavailableRows.toLocaleString()+' unavailable':'')+'</p></div>'+tools+'</div>'+
     (rows.length?'<div class="friends-advanced-grid facebook-friend-grid">'+rows.map(member=>friendsDashboardCard(member,listId)).join('')+'</div>':'<div class="friends-empty facebook-friends-empty"><h3>'+(tab==='close'?'No Close Friends yet':tab==='restricted'?'No restricted friends':'No friends to show')+'</h3><p>Friends appear here automatically when you and another member follow each other.</p></div>')+
   '</section>';
 }
 
 function friendsDashboardPaint() {
-  const friendCount=friendsDashboardState.friends.length;
+  const friendCount=friendsDashboardState.friends.filter(member=>String(member.accountStatus||'active')==='active').length;
+  const unavailableCount=friendsDashboardState.friends.length-friendCount;
   const showSearch=friendsDashboardState.tab!=='suggestions'&&!(friendsDashboardState.tab==='lists'&&!friendsDashboardState.selectedListId);
   const search=showSearch?'<label class="facebook-friends-search"><span aria-hidden="true">⌕</span><input id="friends-advanced-search" type="search" placeholder="Search friends" value="'+esc(friendsDashboardState.query)+'" aria-label="Search friends"></label>':'';
   setContent('<div class="friends-advanced facebook-friends-page">'+
-    '<header class="facebook-friends-head"><div><h1>Friends</h1><p>'+friendCount.toLocaleString()+' '+(friendCount===1?'friend':'friends')+'</p></div></header>'+
+    '<header class="facebook-friends-head"><div><h1>Friends</h1><p>'+friendCount.toLocaleString()+' '+(friendCount===1?'friend':'friends')+(unavailableCount?' · '+unavailableCount.toLocaleString()+' unavailable':'')+'</p></div></header>'+
     friendsDashboardTabMarkup()+
     '<div class="facebook-friends-toolbar">'+search+'</div>'+
     friendsDashboardMainMarkup()+
