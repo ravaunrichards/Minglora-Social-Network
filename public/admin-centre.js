@@ -147,6 +147,7 @@
     const displayDate=value=>{const date=new Date(value);return value&&!Number.isNaN(date.getTime())?date.toLocaleString():'Date unavailable';};
     const actionLabel=value=>({
       'account.create':'Member account created',
+      'account.create_failed':'Member account creation failed',
       'account.update':'Member account updated',
       'account.delete':'Member account deleted',
       'account.delete_failed':'Member account deletion failed',
@@ -178,6 +179,8 @@
             profileFields.length?'Profile fields: '+profileFields.map(String).join(', '):'',
             metadata.emailProvided?'Email supplied':'',
             metadata.phoneProvided?'Phone supplied':'',
+            metadata.profileLinkFailed?'Minglora profile link failed':'',
+            metadata.profileLinkFailed?(metadata.rollbackSucceeded?'Auth rollback confirmed':'Auth rollback not confirmed'):'',
             metadata.deletionMode?'Deletion mode: '+metadata.deletionMode:'',
             metadata.outcome?'Outcome: '+metadata.outcome:'',
             metadata.scope==='global'?'Scope: global sessions':metadata.scope==='application_only'?'Scope: Minglora app sessions only':'',
@@ -310,6 +313,7 @@
             <select id="admin-audit-log-action">
               <option value="all">All account actions</option>
               <option value="account.create">Account creation</option>
+              <option value="account.create_failed">Failed account creation</option>
               <option value="account.update">Account edits</option>
               <option value="account.delete">Account deletions</option>
               <option value="account.delete_failed">Failed deletions</option>
@@ -1491,7 +1495,19 @@
       if (selection) selection.hidden = true;
       await loadAdminManagedUsers(panel);
     } catch (error) {
-      if (status) status.textContent = error.message || 'The member account could not be created.';
+      if (status) {
+        const rollback = error?.payload?.partial
+          ? ' A temporary Auth account may still exist; inspect Supabase Auth before retrying.'
+          : error?.payload?.rollbackSucceeded === true
+            ? ' The temporary Auth account rollback was confirmed.'
+            : '';
+        const audit = error?.payload?.auditRecorded === false
+          ? ' The failed-creation audit entry could not be confirmed.'
+          : error?.payload?.auditRecorded === true
+            ? ' The failed creation was recorded in the administrator audit log.'
+            : '';
+        status.textContent = (error.message || 'The member account could not be created.') + rollback + audit;
+      }
     } finally { button.disabled = false; }
   }
 
