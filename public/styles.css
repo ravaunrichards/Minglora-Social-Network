@@ -7513,3 +7513,46 @@ dialog#minglora-profile-editor .modal-actions #save-profile-button{
 .profile-name-with-badges{display:flex;align-items:flex-start;flex-wrap:wrap;gap:4px 6px;min-width:0;max-width:100%;white-space:normal;overflow:visible;text-overflow:clip}
 .profile-name-with-badges>span:first-child{display:inline;min-width:0;max-width:100%;white-space:normal;overflow-wrap:anywhere;word-break:normal;overflow:visible;text-overflow:clip}
 .profile-username-line{min-width:0;max-width:100%;white-space:normal;overflow-wrap:anywhere;word-break:normal;overflow:visible;text-overflow:clip}
+
+
+/* Account moderation states are visible, never presented as online/active. */
+.profile-account-status-badge,
+.connection-row-account-status{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:5px;
+  width:max-content;
+  max-width:100%;
+  padding:4px 9px;
+  border:1px solid var(--border,#d8dee8);
+  border-radius:999px;
+  background:var(--surface-2,#f3f5f8);
+  color:var(--muted,#596579);
+  font-size:10px;
+  font-weight:850;
+  line-height:1.35;
+  overflow-wrap:anywhere;
+}
+.profile-account-status-badge--banned,
+.connection-row-account-status--banned{
+  border-color:#f3c3c8;
+  background:#fdebed;
+  color:#9d1b29;
+}
+.profile-account-status-badge--restricted,
+.connection-row-account-status--restricted,
+.profile-account-status-badge--suspended,
+.connection-row-account-status--suspended{
+  border-color:#f0d59a;
+  background:#fff4d9;
+  color:#855500;
+}
+.profile-account-status-badge--deactivated,
+.connection-row-account-status--deactivated{
+  border-color:#d5dbe5;
+  background:#edf0f5;
+  color:#536174;
+}
+.profile-actions--unavailable{display:flex;align-items:center;justify-content:flex-start;min-width:0}
+.connection-row-unavailable-avatar{opacity:.72;cursor:default}
