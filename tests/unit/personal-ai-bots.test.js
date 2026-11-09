@@ -330,3 +330,12 @@ test('selected-bot follow batches create separate approval records with a hard t
   assert.throws(()=>queuePersonalAiBotFollowBatch(db,{taskType:'follow',targetUserId:'member-1',botIds:[bots[10].id]},actor,stamp,uid),/maximum of 10 AI follow\/unfollow instructions/);
   assert.ok(db.personalAiBotTasks.every(task=>task.status==='awaiting_administrator_approval'));
 });
+
+
+test('AI identity design capacity target is ten billion and is not a registered-count claim',()=>{
+  const db={};
+  const overview=getPersonalAiBotOverview(db);
+  assert.equal(overview.network.identityDesignTarget,10000000000);
+  assert.equal(overview.counts.identityDesignTarget,10000000000);
+  assert.equal(overview.counts.totalBots,0);
+});
