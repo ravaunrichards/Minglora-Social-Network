@@ -1,0 +1,49 @@
+name: Personal AI Bots Network CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'backend/modules/personal-ai-bots/**'
+      - 'public/personal-ai-bots.*'
+      - 'supabase/migrations/*ai_bot*'
+      - 'tests/unit/personal-ai-bots*.test.js'
+      - '.github/workflows/personal-ai-bots.yml'
+  push:
+    branches: [feat/personal-ai-bots-network-control-center]
+    paths:
+      - 'backend/modules/personal-ai-bots/**'
+      - 'public/personal-ai-bots.*'
+      - 'supabase/migrations/*ai_bot*'
+      - 'tests/unit/personal-ai-bots*.test.js'
+      - '.github/workflows/personal-ai-bots.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  personal-ai-bots:
+    name: Personal AI Bots tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Minglora
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check bot module syntax
+        run: |
+          node --check backend/modules/personal-ai-bots/personal-ai-bots-service.js
+          node --check backend/modules/personal-ai-bots/admin-api.js
+          node --check public/personal-ai-bots.js
+          node --check tests/unit/personal-ai-bots.test.js
+          node --check tests/unit/personal-ai-bots-admin-api.test.js
+          node --check tests/unit/personal-ai-bots-schema.test.js
+      - name: Run Personal AI Bots unit and schema tests
+        run: |
+          node --test \
+            tests/unit/personal-ai-bots.test.js \
+            tests/unit/personal-ai-bots-admin-api.test.js \
+            tests/unit/personal-ai-bots-schema.test.js
