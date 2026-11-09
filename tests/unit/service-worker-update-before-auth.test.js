@@ -9,7 +9,7 @@ const meetwave = fs.readFileSync(new URL('../../public/meetwave.js', import.meta
 
 test('registers before auth and refreshes the client automatically at safe idle points', () => {
   const registerCall = app.indexOf('void prepareMingloraServiceWorker();');
-  const authBootstrap = app.indexOf("(async()=>{await finishPasswordRecoveryFromLink();if(await finishMagicLinkFromUrl())return;try{const me=await api('/auth/me')");
+  const authBootstrap=app.indexOf('await finishPasswordRecoveryFromLink();');
   assert.notEqual(registerCall, -1, 'service-worker registration must start at app boot');
   assert.notEqual(authBootstrap, -1, 'auth bootstrap must exist');
   assert.ok(registerCall < authBootstrap, 'registration must remain available before auth bootstrap');

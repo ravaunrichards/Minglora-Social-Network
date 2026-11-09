@@ -4,7 +4,7 @@ import { execFileSync } from 'node:child_process';
 
 const storeUrl = new URL('../../src/store.js', import.meta.url).href;
 const collections = [
-  'users', 'posts', 'friendships', 'follows', 'blocks', 'friendLists', 'friendPreferences', 'savedPosts', 'savedPostCollections', 'mediaAssets',
+  'users', 'posts', 'friendships', 'follows', 'blocks', 'friendLists', 'friendPreferences', 'savedPosts', 'savedPostCollections', 'videoWatchEvents', 'videoFeedback', 'mediaAssets',
   
    'groups', 'groupPosts', 'stories', 'storyViews', 'pages',
   'pageRoles', 'pageFollows', 'pagePosts', 'pageViews',
@@ -17,7 +17,9 @@ const collections = [
   'liveFanClubMemberships', 'liveFanClubEvents',
   'creatorSubscriptions', 'giftGalleryEvents', 'giftGallerySettings', 'giftGalleryPreferences',
   'sounds', 'soundFavorites', 'dismissedPeopleSuggestions', 'meetWaveProviderCleanupQueue',
-  'profileSections', 'profileStatuses', 'profileHighlights', 'storyArchives', 'profileActivity', 'checkIns', 'events', 'eventRsvps'
+  'profileSections', 'profileStatuses', 'profileHighlights', 'storyArchives', 'profileActivity', 'checkIns', 'events', 'eventRsvps',
+  'personalAiBotCategories', 'personalAiBots', 'personalAiBotTasks', 'personalAiBotAudit',
+  'personalAiBotSettings', 'personalAiBotFollows', 'personalAiBotTeams', 'personalAiBotTeamMembers', 'personalAiBotSchedules'
 ];
 const baseState = Object.fromEntries(collections.map(key => [key, []]));
 

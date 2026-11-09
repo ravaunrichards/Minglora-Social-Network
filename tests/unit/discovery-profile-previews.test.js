@@ -43,7 +43,7 @@ test('Friends discovery avoids disruptive background rerenders and refreshes whe
   assert.match(app, /if\(peopleDiscoveryRefreshBusy\|\|state\.view!=='friends'\|\|document\.visibilityState!=='visible'\)return/);
   assert.match(app, /syncPeopleDiscoveryVerification\(result\.users\|\|\[\],grid\)/);
   assert.match(app, /api\('\/discovery\/people\/verification'\)/);
-  assert.match(app, /window\.setInterval\(\(\)=>void refreshPeopleDiscovery\(\{quiet:true\}\),15000\)/);
+  assert.match(app, /window\.setInterval\(\(\)=>void refreshPeopleDiscovery\(\{quiet:true\}\),30000\)/);
   assert.match(app, /api\('\/live\/sessions'\)/);
   assert.match(app, /openLiveRoom\(session,'viewer'\)/);
   assert.doesNotMatch(app, /id="people-discovery-refresh"/);
@@ -80,8 +80,11 @@ test('People You May Know cards keep Facebook-style square photo proportions on 
   assert.ok(app.includes('facebook-person-remove'));
   assert.ok(css.includes('.facebook-person-photo{'));
   assert.ok(css.includes('aspect-ratio:1/1!important'));
-  assert.ok(css.includes('grid-template-columns:76px minmax(0,1fr)!important'));
-  assert.ok(css.includes('max-height:210px!important'));
+  assert.ok(css.includes('aspect-ratio:1/1!important'));
+  assert.ok(css.includes('grid-template-columns:96px minmax(0,1fr)!important'));
+  assert.ok(css.includes('max-height:none!important'));
+  assert.ok(css.includes('.facebook-person-photo{width:72px!important;height:72px!important}'));
+  assert.ok(css.includes('.facebook-person-photo{width:62px!important;height:62px!important}'));
   assert.ok(css.includes('.people-grid.people-discovery-grid>.facebook-person-card'));
 });
 test('Supabase sign-in without profile metadata preserves the saved public name and username', async () => {

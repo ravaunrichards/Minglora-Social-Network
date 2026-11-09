@@ -17,7 +17,7 @@ test('LIVE client, compact room stylesheet and service-worker cache are versione
   const appAsset = html.match(/src="(\/app\.js\?v=[^"]+)"/)?.[1] || '';
   assert.ok(appAsset, 'HTML must request a versioned Minglora client');
   assert.ok(html.includes('/live-room-compact.css?v=' + cssAsset), 'HTML must request the compact room layout');
-  assert.match(worker, /CACHE_NAME='minglora-shell-v\d+-self-updating-1'/, 'service worker must activate a new cache');
+  assert.match(worker,/CACHE_NAME='minglora-shell-v[0-9]+-[^']+'/, 'service worker must activate a new cache');
   assert.ok(worker.includes("'" + appAsset + "'"), 'precache must include the current client');
   assert.ok(worker.includes('/live-room-compact.css?v=' + cssAsset), 'precache must include the compact room stylesheet');
 });

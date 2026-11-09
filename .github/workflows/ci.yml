@@ -95,6 +95,12 @@ jobs:
           node --check public/experience-center.js
           node --check src/domain/experience-settings.js
           node --check public/admin-centre.js
+          node --check public/personal-ai-bots.js
+          node --check backend/modules/personal-ai-bots/personal-ai-bots-service.js
+          node --check backend/modules/personal-ai-bots/admin-api.js
+          node --check tests/unit/personal-ai-bots.test.js
+          node --check tests/unit/personal-ai-bots-admin-api.test.js
+          node --check tests/unit/personal-ai-bots-schema.test.js
           node --check src/server.js
           node --check src/store.js
           node --check backend/modules/relationships/friends.js

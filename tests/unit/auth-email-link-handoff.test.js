@@ -8,6 +8,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const login = fs.readFileSync(path.join(root, 'public/auth-login.js'), 'utf8');
 const serviceWorker = fs.readFileSync(path.join(root, 'public/sw.js'), 'utf8');
 const setup = fs.readFileSync(path.join(root, 'docs/SUPABASE_SETUP.md'), 'utf8');
+const html = fs.readFileSync(path.join(root, 'public/index.html'), 'utf8');
 
 test('email verification links wait for a person before opening Supabase one-time URLs', () => {
   assert.match(login, /auth_confirmation/);
@@ -17,7 +18,8 @@ test('email verification links wait for a person before opening Supabase one-tim
   assert.match(login, /validRedirect/);
   assert.match(setup, /\.ConfirmationURL \| urlquery/);
   assert.match(setup, /#auth_confirmation=/);
-  assert.match(serviceWorker, /email-link handoff refresh/);
+  assert.ok(html.includes('/auth-login.js?v='),'index references the current auth handler');
+  assert.match(serviceWorker,/cacheCurrentShellAssets/);
 });
 
 
@@ -31,8 +33,8 @@ test('independent auth handler owns both sign-in and account registration', () =
 
 test('account-auth script and service-worker shell caches use the refreshed version', () => {
   assert.match(login, /submitRegistration\(form\)/);
-  assert.match(serviceWorker, /const CACHE_NAME='minglora-shell-v\d+-[a-z0-9-]+'/);
-  assert.match(serviceWorker, /auth-login\.js\?v=20261105-admin-mfa-enrollment-1/);
+  assert.match(serviceWorker,/const CACHE_NAME='minglora-shell-v[0-9]+-[a-z0-9-]+'/);
+  assert.match(serviceWorker,/cacheCurrentShellAssets/);
 });
 
 
@@ -45,8 +47,9 @@ test('login and registration buttons have a direct click path independent of app
 });
 
 test('auth handler loads before the large application bundle', () => {
-  const html = fs.readFileSync(path.join(root, 'public/index.html'), 'utf8');
-  assert.ok(html.indexOf('auth-login.js?v=20261105-admin-mfa-enrollment-1') < html.indexOf('/app.js?'));
-  assert.match(serviceWorker, /const CACHE_NAME='minglora-shell-v\d+-[a-z0-9-]+'/);
-  assert.match(serviceWorker, /auth-login\.js\?v=20261105-admin-mfa-enrollment-1/);
+  const authIndex=html.indexOf('/auth-login.js?v=');
+  const appIndex=html.indexOf('/app.js?');
+  assert.ok(authIndex>=0&&authIndex<appIndex);
+  assert.match(serviceWorker,/const CACHE_NAME='minglora-shell-v[0-9]+-[a-z0-9-]+'/);
+  assert.match(serviceWorker,/cacheCurrentShellAssets/);
 });

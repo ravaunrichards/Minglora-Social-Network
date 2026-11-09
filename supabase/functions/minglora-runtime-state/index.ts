@@ -94,6 +94,16 @@ Deno.serve(async (req: Request) => {
     "subscription_checkout_attach", "subscription_my", "subscription_access_check", "subscription_cancel_lookup",
     "subscription_cancel_mark", "subscription_paypal_webhook",
     "subscription_bonus_review",
+    "ai_identity_upsert_batch", "ai_identity_list",
+    "ai_bot_settings_update", "ai_provider_assignment_upsert", "ai_provider_assignment_list",
+    "ai_provider_runtime_list", "ai_provider_health_update",
+    "ai_email_identity_upsert", "ai_email_identity_list", "ai_identity_discover",
+    "ai_identity_public_owner_lookup", "ai_identity_follow_set", "ai_identity_follow_list",
+    "ai_discovery_saved_search_upsert", "ai_discovery_saved_search_list", "ai_discovery_saved_search_delete",
+    "ai_identity_public_profile_get", "ai_identity_block_set", "ai_identity_block_list", "ai_identity_report_create",
+    "ai_identity_report_list", "ai_identity_report_review",
+    "ai_bot_task_upsert_batch", "ai_bot_task_list", "ai_bot_task_stats",
+    "ai_bot_task_claim", "ai_bot_task_heartbeat", "ai_bot_task_complete", "ai_bot_task_fail",
   ];
   if (!supportedActions.includes(String(action))) {
     return json(400, { error: "Unsupported action." });
@@ -103,6 +113,671 @@ Deno.serve(async (req: Request) => {
   const validUuid = (value: unknown) => uuidPattern.test(String(value || ""));
   const fail = (error: any, fallback: string) =>
     json(409, { error: String(error?.message || fallback).slice(0, 240) });
+
+  // These RPCs are reachable only through the server-secret-protected gateway.
+  // Re-check the designated owner ID here as a second boundary after the Node
+  // admin API's MFA/session authorization.
+  const AI_NETWORK_OWNER_ID = "5b998c21-86b5-4621-ab37-e0808a2657b1";
+  if (action === "ai_identity_report_list") {
+    const actorUserId = String(input.actorUserId || "");
+    const status = String(input.status || "pending");
+    const limit = Number(input.limit ?? 100),offset = Number(input.offset ?? 0);
+    if (actorUserId !== AI_NETWORK_OWNER_ID) {
+      return json(403, { error: "Only the designated Minglora owner can review AI identity reports." });
+    }
+    if (!["all","open","pending","in_review","actioned","dismissed"].includes(status) ||
+        !Number.isInteger(limit) || limit < 1 || limit > 200 ||
+        !Number.isInteger(offset) || offset < 0 || offset > 1000000000) {
+      return json(400, { error: "AI report review filter or pagination values are invalid." });
+    }
+    const { data,error } = await admin.rpc("minglora_ai_identity_report_list", {
+      p_owner_admin_id: actorUserId,p_status: status,p_limit: limit,p_offset: offset
+    });
+    if(error) return json(503,{error:"AI profile report queue is unavailable.",code:"AI_REPORT_QUEUE_UNAVAILABLE"});
+    return json(200,{ok:true,reports:Array.isArray(data)?data:[]});
+  }
+
+  if (action === "ai_identity_report_review") {
+    const actorUserId = String(input.actorUserId || "");
+    const reportId = String(input.reportId || "");
+    const status = String(input.status || "");
+    const resolutionNote = String(input.resolutionNote || "").slice(0,1200);
+    if(actorUserId !== AI_NETWORK_OWNER_ID) {
+      return json(403,{error:"Only the designated Minglora owner can review AI identity reports."});
+    }
+    if(!validUuid(reportId)||!["in_review","actioned","dismissed"].includes(status)||
+       resolutionNote.length>1200) {
+      return json(400,{error:"AI report review values are invalid."});
+    }
+    const {data,error}=await admin.rpc("minglora_ai_identity_report_review",{
+      p_report_id:reportId,p_status:status,p_resolution_note:resolutionNote,p_actor_user_id:actorUserId
+    });
+    if(error){
+      const invalid=["22023","23503"].includes(String(error.code||""));
+      return json(invalid?409:503,{
+        error:invalid?"AI report could not be reviewed or is already closed.":"AI report review storage is unavailable.",
+        code:String(error.code||"AI_REPORT_REVIEW_ERROR")
+      });
+    }
+    return json(200,{ok:true,report:data||{}});
+  }
+
+  if (action === "ai_identity_public_profile_get") {
+    const actorUserId = String(input.actorUserId || "");
+    const slug = String(input.slug || "").trim();
+    if (!validUuid(actorUserId) || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || slug.length > 120) {
+      return json(400, { error: "Public AI profile slug or viewer ID is invalid." });
+    }
+    const { data, error } = await admin.rpc("minglora_ai_identity_public_profile_get", {
+      p_slug: slug,p_viewer_user_id: actorUserId
+    });
+    if (error) return json(503, { error: "Public AI profile storage is unavailable.", code: "AI_PUBLIC_PROFILE_ERROR" });
+    return json(200, { ok: true, profile: data || null });
+  }
+
+  if (action === "ai_identity_block_set") {
+    const actorUserId = String(input.actorUserId || "");
+    const identityId = String(input.identityId || "");
+    const blocked = input.blocked;
+    const reason = String(input.reason || "").slice(0,300);
+    if (!validUuid(actorUserId) || !validUuid(identityId) || typeof blocked !== "boolean") {
+      return json(400, { error: "AI profile block request values are invalid." });
+    }
+    const { data, error } = await admin.rpc("minglora_ai_identity_block_set", {
+      p_identity_id: identityId,p_user_id: actorUserId,p_block: blocked,p_reason: reason
+    });
+    if (error) {
+      const invalid = ["22023","23503"].includes(String(error.code || ""));
+      return json(invalid ? 404 : 503, {
+        error: invalid ? "AI profile block request could not be applied." : "AI profile block storage is unavailable.",
+        code: String(error.code || "AI_PROFILE_BLOCK_ERROR")
+      });
+    }
+    return json(200, { ok: true, ...(data && typeof data === "object" ? data : {}) });
+  }
+
+  if (action === "ai_identity_block_list") {
+    const actorUserId = String(input.actorUserId || "");
+    const limit = Number(input.limit ?? 100),offset = Number(input.offset ?? 0);
+    if (!validUuid(actorUserId) || !Number.isInteger(limit) || limit < 1 || limit > 500 ||
+        !Number.isInteger(offset) || offset < 0 || offset > 1000000000) {
+      return json(400, { error: "AI profile block list pagination is invalid." });
+    }
+    const { data, error } = await admin.rpc("minglora_ai_identity_block_list", {
+      p_user_id: actorUserId,p_limit: limit,p_offset: offset
+    });
+    if (error) return json(503, { error: "AI profile block list is unavailable.", code: "AI_PROFILE_BLOCK_LIST_ERROR" });
+    return json(200, { ok: true, blockedIdentities: Array.isArray(data) ? data : [] });
+  }
+
+  if (action === "ai_identity_report_create") {
+    const actorUserId = String(input.actorUserId || "");
+    const identityId = String(input.identityId || "");
+    const reason = String(input.reason || "");
+    const details = String(input.details || "").slice(0,2000);
+    const allowedReasons = new Set([
+      "impersonation","spam","misleading_identity","inappropriate_content",
+      "harassment","privacy","other"
+    ]);
+    if (!validUuid(actorUserId) || !validUuid(identityId) || !allowedReasons.has(reason) ||
+        details.length > 2000) {
+      return json(400, { error: "AI profile report values are invalid." });
+    }
+    const { data, error } = await admin.rpc("minglora_ai_identity_report_create", {
+      p_identity_id: identityId,p_reporter_user_id: actorUserId,p_reason: reason,p_details: details
+    });
+    if (error) {
+      const invalid = ["22023","23503"].includes(String(error.code || ""));
+      return json(invalid ? 404 : 503, {
+        error: invalid ? "AI profile is unavailable for reporting." : "AI profile report storage is unavailable.",
+        code: String(error.code || "AI_PROFILE_REPORT_ERROR")
+      });
+    }
+    return json(201, { ok: true, report: data || {} });
+  }
+
+  if (action === "ai_identity_public_owner_lookup") {
+    const actorUserId = String(input.actorUserId || "");
+    const identityId = String(input.identityId || "");
+    if (!validUuid(actorUserId) || !validUuid(identityId)) {
+      return json(400, { error: "AI identity or signed-in viewer ID is invalid." });
+    }
+    const { data, error } = await admin.rpc("minglora_ai_identity_public_owner_lookup", {
+      p_identity_id: identityId,p_viewer_user_id: actorUserId
+    });
+    if (error) return json(503, { error: "AI profile relationship policy is unavailable.", code: "AI_IDENTITY_PRIVACY_CHECK_FAILED" });
+    return json(200, { ok: true, ownerAdminId: data || null });
+  }
+
+  if (action === "ai_identity_follow_set") {
+    const actorUserId = String(input.actorUserId || "");
+    const identityId = String(input.identityId || "");
+    const follow = input.follow;
+    if (!validUuid(actorUserId) || !validUuid(identityId) || typeof follow !== "boolean") {
+      return json(400, { error: "AI follow request fields are invalid." });
+    }
+    const { data, error } = await admin.rpc("minglora_ai_identity_follow_set", {
+      p_identity_id: identityId,p_follower_user_id: actorUserId,p_follow: follow
+    });
+    if (error) {
+      const invalid = ["22023","23503"].includes(String(error.code || ""));
+      return json(invalid ? 409 : 503, {
+        error: invalid ? "This public AI profile cannot be followed." : "AI follow relationship storage is unavailable.",
+        code: String(error.code || "AI_FOLLOW_ERROR")
+      });
+    }
+    return json(200, { ok: true, ...(data && typeof data === "object" ? data : {}) });
+  }
+
+  if (action === "ai_identity_follow_list") {
+    const actorUserId = String(input.actorUserId || "");
+    const limit = Number(input.limit ?? 100),offset = Number(input.offset ?? 0);
+    if (!validUuid(actorUserId) || !Number.isInteger(limit) || limit < 1 || limit > 500 ||
+        !Number.isInteger(offset) || offset < 0 || offset > 1000000000) {
+      return json(400, { error: "AI follow list pagination values are invalid." });
+    }
+    const { data, error } = await admin.rpc("minglora_ai_identity_follow_list", {
+      p_follower_user_id: actorUserId,p_limit: limit,p_offset: offset
+    });
+    if (error) return json(503, { error: "AI follow list is unavailable.", code: "AI_FOLLOW_LIST_ERROR" });
+    return json(200, { ok: true, follows: Array.isArray(data) ? data : [] });
+  }
+
+  if (action === "ai_discovery_saved_search_upsert") {
+    const actorUserId = String(input.actorUserId || "");
+    const name = String(input.name || "").trim();
+    const searchText = String(input.searchText || "").trim();
+    const filters = input.filters ?? {};
+    const sort = String(input.sort || "newest");
+    const allowedFilters = new Set([
+      "gender","nationality","countryOfOrigin","currentCountry","countryCode",
+      "stateProvince","parishCounty","city","language","category","profession",
+      "personality","interest","capability"
+    ]);
+    if (!validUuid(actorUserId) || name.length < 2 || name.length > 80 || searchText.length > 160 ||
+        !filters || typeof filters !== "object" || Array.isArray(filters) ||
+        Object.keys(filters).some((key: string) => !allowedFilters.has(key) ||
+          !Array.isArray(filters[key]) || filters[key].length > 50 ||
+          filters[key].some((value: any) => typeof value !== "string" || value.trim().length < 1 || value.length > 120)) ||
+        !["newest","recently_updated"].includes(sort)) {
+      return json(400, { error: "Saved AI discovery search values are invalid." });
+    }
+    const { data, error } = await admin.rpc("minglora_ai_discovery_saved_search_upsert", {
+      p_user_id: actorUserId,p_name: name,p_search_text: searchText,p_filters: filters,p_sort: sort
+    });
+    if (error) {
+      const invalid = ["22023","23505"].includes(String(error.code || ""));
+      return json(invalid ? 409 : 503, {
+        error: invalid ? "Saved AI discovery search failed validation or the save limit." : "Saved AI discovery search storage is unavailable.",
+        code: String(error.code || "AI_DISCOVERY_SAVE_ERROR")
+      });
+    }
+    return json(200, { ok: true, savedSearch: data || {} });
+  }
+
+  if (action === "ai_discovery_saved_search_list") {
+    const actorUserId = String(input.actorUserId || "");
+    if (!validUuid(actorUserId)) return json(400, { error: "Signed-in member ID is invalid." });
+    const { data, error } = await admin.rpc("minglora_ai_discovery_saved_search_list", {
+      p_user_id: actorUserId
+    });
+    if (error) return json(503, { error: "Saved AI discovery searches are unavailable.", code: "AI_DISCOVERY_SAVE_LIST_ERROR" });
+    return json(200, { ok: true, savedSearches: Array.isArray(data) ? data : [] });
+  }
+
+  if (action === "ai_discovery_saved_search_delete") {
+    const actorUserId = String(input.actorUserId || "");
+    const searchId = String(input.searchId || "");
+    if (!validUuid(actorUserId) || !validUuid(searchId)) return json(400, { error: "Saved AI discovery search ID is invalid." });
+    const { data, error } = await admin.rpc("minglora_ai_discovery_saved_search_delete", {
+      p_user_id: actorUserId,p_search_id: searchId
+    });
+    if (error) return json(503, { error: "Saved AI discovery search could not be removed.", code: "AI_DISCOVERY_SAVE_DELETE_ERROR" });
+    return json(200, { ok: true, deleted: data === true });
+  }
+
+  if (action === "ai_identity_discover") {
+    const actorUserId = String(input.actorUserId || "");
+    const search = String(input.search || "").trim();
+    const filters = input.filters ?? {};
+    const sort = String(input.sort || "newest");
+    const limit = Number(input.limit ?? 24);
+    const offset = Number(input.offset ?? 0);
+    const filterFields = new Set([
+      "gender","nationality","countryOfOrigin","currentCountry","countryCode",
+      "stateProvince","parishCounty","city","language","category","profession",
+      "personality","interest","capability"
+    ]);
+    if (!validUuid(actorUserId)) {
+      return json(401, { error: "Sign in to discover public Minglora AI identities." });
+    }
+    if (search.length > 160 || !filters || typeof filters !== "object" || Array.isArray(filters) ||
+        Object.keys(filters).some((key: string) => !filterFields.has(key) ||
+          !Array.isArray(filters[key]) || filters[key].length > 50 ||
+          filters[key].some((value: any) => typeof value !== "string" || value.trim().length < 1 || value.length > 120)) ||
+        !["newest","recently_updated"].includes(sort) ||
+        !Number.isInteger(limit) || limit < 1 || limit > 100 ||
+        !Number.isInteger(offset) || offset < 0 || offset > 1000000000) {
+      return json(400, { error: "AI discovery search, filters or pagination values are invalid." });
+    }
+    const { data, error } = await admin.rpc("minglora_ai_identity_discover", {
+      p_search: search,p_filters: filters,p_sort: sort,p_limit: limit,p_offset: offset,p_viewer_user_id: actorUserId
+    });
+    if (error) {
+      const invalid = ["22023","22P02"].includes(String(error.code || ""));
+      return json(invalid ? 400 : 503, {
+        error: invalid ? "AI discovery filters failed validation." : "Minglora AI discovery storage is unavailable.",
+        code: String(error.code || "AI_DISCOVERY_UNAVAILABLE")
+      });
+    }
+    return json(200, { ok: true, ...(data && typeof data === "object" ? data : {total:0,items:[]}) });
+  }
+
+  if (action === "ai_identity_upsert_batch") {
+    const actorUserId = String(input.actorUserId || "");
+    const identities = input.identities;
+    if (actorUserId !== AI_NETWORK_OWNER_ID) {
+      return json(403, { error: "Only the designated Minglora owner can persist AI identity records." });
+    }
+    if (!Array.isArray(identities) || identities.length < 1 || identities.length > 100 ||
+        identities.some((identity: any) => !identity || typeof identity !== "object" || Array.isArray(identity) ||
+          !validUuid(identity.id))) {
+      return json(400, { error: "Provide between 1 and 100 valid AI identity objects." });
+    }
+    const allowedFields = new Set([
+      "id","population","identity_type","category_id","category_name","category_description","status","parent_identity_id",
+      "public_profile_slug","public_profile_enabled","first_name","last_name","middle_name",
+      "full_name","display_name","username","biography","introduction","gender","nationality",
+      "country_of_origin","current_country","time_zone","personality","gender_presentation",
+      "communication_style","interests","hobbies","education","profession","skills","languages",
+      "avatar_storage_reference","cover_storage_reference","voice_preferences","avatar_preferences",
+      "locations","capabilities","memory_enabled","memory_configuration","visibility","created_at"
+    ]);
+    if (identities.some((identity: any) => Object.keys(identity).some((key: string) => !allowedFields.has(key)))) {
+      return json(400, { error: "AI identity payload contains an unsupported field; provider secrets are not accepted." });
+    }
+    const { data, error } = await admin.rpc("minglora_ai_identity_upsert_batch", {
+      p_identities: identities,
+      p_actor_user_id: actorUserId
+    });
+    if (error) {
+      const conflict = ["23505","23503","23514","22023"].includes(String(error.code || ""));
+      return json(conflict ? 409 : 503, {
+        error: conflict ? "AI identity data failed a database constraint." : "Canonical AI identity storage is unavailable.",
+        code: String(error.code || "AI_IDENTITY_STORAGE_ERROR")
+      });
+    }
+    return json(200, { ok: true, identities: data || [] });
+  }
+
+  if (action === "ai_identity_list") {
+    const actorUserId = String(input.actorUserId || "");
+    if (actorUserId !== AI_NETWORK_OWNER_ID) {
+      return json(403, { error: "Only the designated Minglora owner can read AI identity records." });
+    }
+    const limit = Number(input.limit ?? 100);
+    const offset = Number(input.offset ?? 0);
+    if (!Number.isInteger(limit) || limit < 1 || limit > 1000 ||
+        !Number.isInteger(offset) || offset < 0 || offset > 1000000000) {
+      return json(400, { error: "AI identity pagination values are invalid." });
+    }
+    const { data, error } = await admin.rpc("minglora_ai_identity_list", {
+      p_owner_admin_id: actorUserId,
+      p_limit: limit,
+      p_offset: offset
+    });
+    if (error) {
+      return json(503, { error: "Canonical AI identity records could not be loaded.", code: "AI_IDENTITY_SCHEMA_NOT_READY" });
+    }
+    return json(200, { ok: true, identities: Array.isArray(data) ? data : [] });
+  }
+
+  if (action === "ai_email_identity_upsert") {
+    const actorUserId = String(input.actorUserId || "");
+    const email = input.email;
+    const allowed = new Set(["identityId","emailAddress","emailType","emailProvider","isPrimary"]);
+    if (actorUserId !== AI_NETWORK_OWNER_ID) {
+      return json(403, { error: "Only the designated Minglora owner can manage AI email identities." });
+    }
+    if (!email || typeof email !== "object" || Array.isArray(email) ||
+        Object.keys(email).some((key: string) => !allowed.has(key)) ||
+        !validUuid(email.identityId) ||
+        typeof email.emailAddress !== "string" ||
+        email.emailAddress.length < 3 || email.emailAddress.length > 320 ||
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.emailAddress) ||
+        (email.emailType != null && !["primary","recovery","notification","other"].includes(String(email.emailType))) ||
+        (email.emailProvider != null && (typeof email.emailProvider !== "string" || email.emailProvider.length > 80)) ||
+        (email.isPrimary != null && typeof email.isPrimary !== "boolean")) {
+      return json(400, { error: "AI email identity fields are invalid. Verification and mailbox provisioning are provider-confirmed states." });
+    }
+    const { data, error } = await admin.rpc("minglora_ai_email_identity_upsert", {
+      p_email: email,p_actor_user_id: actorUserId
+    });
+    if (error) {
+      const conflict = ["23505","23503","23514","22023"].includes(String(error.code || ""));
+      return json(conflict ? 409 : 503, {
+        error: conflict ? "AI email address is already assigned or failed validation." : "AI email identity storage is unavailable.",
+        code: String(error.code || "AI_EMAIL_IDENTITY_ERROR")
+      });
+    }
+    return json(200, { ok: true, email: data || {} });
+  }
+
+  if (action === "ai_email_identity_list") {
+    const actorUserId = String(input.actorUserId || "");
+    const identityId = input.identityId == null ? null : String(input.identityId);
+    const limit = Number(input.limit ?? 100),offset = Number(input.offset ?? 0);
+    if (actorUserId !== AI_NETWORK_OWNER_ID) {
+      return json(403, { error: "Only the designated Minglora owner can read AI email identities." });
+    }
+    if ((identityId !== null && !validUuid(identityId)) ||
+        !Number.isInteger(limit) || limit < 1 || limit > 500 ||
+        !Number.isInteger(offset) || offset < 0 || offset > 1000000000) {
+      return json(400, { error: "AI email identity pagination values are invalid." });
+    }
+    const { data, error } = await admin.rpc("minglora_ai_email_identity_list", {
+      p_owner_admin_id: actorUserId,p_identity_id: identityId,p_limit: limit,p_offset: offset
+    });
+    if (error) return json(503, { error: "AI email identity records could not be loaded.", code: "AI_EMAIL_IDENTITY_SCHEMA_NOT_READY" });
+    return json(200, { ok: true, emails: Array.isArray(data) ? data : [] });
+  }
+
+  if (action === "ai_provider_runtime_list") {
+    const actorUserId = String(input.actorUserId || "");
+    const limit = Number(input.limit ?? 200);
+    const offset = Number(input.offset ?? 0);
+    if (actorUserId !== AI_NETWORK_OWNER_ID) {
+      return json(403, { error: "Only the designated Minglora owner can request provider runtime configuration." });
+    }
+    if (!Number.isInteger(limit) || limit < 1 || limit > 500 ||
+        !Number.isInteger(offset) || offset < 0 || offset > 1000000000) {
+      return json(400, { error: "Provider runtime pagination values are invalid." });
+    }
+    const { data, error } = await admin.rpc("minglora_ai_provider_runtime_list", {
+      p_owner_admin_id: actorUserId,p_limit: limit,p_offset: offset
+    });
+    if (error) return json(503, { error: "Provider runtime configuration is unavailable.", code: "AI_PROVIDER_RUNTIME_NOT_READY" });
+    return json(200, { ok: true, assignments: Array.isArray(data) ? data : [] });
+  }
+
+  if (action === "ai_provider_health_update") {
+    const actorUserId = String(input.actorUserId || "");
+    const assignmentId = String(input.assignmentId || "");
+    const healthStatus = String(input.healthStatus || "");
+    if (actorUserId !== AI_NETWORK_OWNER_ID) {
+      return json(403, { error: "Only the designated Minglora owner can update provider health." });
+    }
+    if (!validUuid(assignmentId) || !["healthy","degraded","unavailable","error"].includes(healthStatus)) {
+      return json(400, { error: "Provider health update fields are invalid." });
+    }
+    const { data, error } = await admin.rpc("minglora_ai_provider_health_update", {
+      p_assignment_id: assignmentId,p_health_status: healthStatus,p_actor_user_id: actorUserId
+    });
+    if (error) {
+      const invalid = ["22023","23503"].includes(String(error.code || ""));
+      return json(invalid ? 409 : 503, {
+        error: invalid ? "Provider health could not be accepted without a valid assignment and credential reference." : "Provider health storage is unavailable.",
+        code: String(error.code || "AI_PROVIDER_HEALTH_ERROR")
+      });
+    }
+    return json(200, { ok: true, health: data || {} });
+  }
+
+  if (action === "ai_provider_assignment_upsert") {
+    const actorUserId = String(input.actorUserId || "");
+    const assignment = input.assignment;
+    if (actorUserId !== AI_NETWORK_OWNER_ID) {
+      return json(403, { error: "Only the designated Minglora owner can configure AI providers." });
+    }
+    const allowed = new Set([
+      "identityId","providerName","providerIdentifier","providerAccountReference",
+      "credentialSecretReference","modelName","modelIdentifier","modelVersion",
+      "supportedLanguages","capabilities","textCapable","imageCapable","audioCapable",
+      "videoCapable","voiceCapable","routingPriority","isPrimary"
+    ]);
+    const caps = assignment?.capabilities;
+    const capKeys = new Set(["text","image","audio","video","voice","embeddings","tools"]);
+    if (!assignment || typeof assignment !== "object" || Array.isArray(assignment) ||
+        Object.keys(assignment).some((key: string) => !allowed.has(key)) ||
+        !validUuid(assignment.identityId) ||
+        typeof assignment.providerName !== "string" || !/^[A-Za-z0-9][A-Za-z0-9 ._-]{1,78}$/.test(assignment.providerName) ||
+        typeof assignment.providerIdentifier !== "string" || !/^[a-z][a-z0-9._-]{1,79}$/.test(assignment.providerIdentifier) ||
+        typeof assignment.providerAccountReference !== "string" || !/^[A-Za-z0-9._:-]{1,120}$/.test(assignment.providerAccountReference) ||
+        (assignment.credentialSecretReference != null &&
+          (typeof assignment.credentialSecretReference !== "string" ||
+           !/^env:MINGLORA_AI_PROVIDER_[A-Z0-9_]{2,80}$/.test(assignment.credentialSecretReference))) ||
+        typeof assignment.modelName !== "string" || assignment.modelName.trim().length < 1 || assignment.modelName.length > 160 ||
+        typeof assignment.modelIdentifier !== "string" || !/^[A-Za-z0-9][A-Za-z0-9._:/-]{0,199}$/.test(assignment.modelIdentifier) ||
+        (assignment.modelVersion != null && (typeof assignment.modelVersion !== "string" || assignment.modelVersion.length > 80)) ||
+        (assignment.supportedLanguages != null &&
+          (!Array.isArray(assignment.supportedLanguages) || assignment.supportedLanguages.length > 100 ||
+           assignment.supportedLanguages.some((language: any) => typeof language !== "string" || language.trim().length < 2 || language.length > 20))) ||
+        (caps != null && (!caps || typeof caps !== "object" || Array.isArray(caps) ||
+          Object.keys(caps).some((key: string) => !capKeys.has(key)) ||
+          Object.values(caps).some((value: any) => typeof value !== "boolean"))) ||
+        ["textCapable","imageCapable","audioCapable","videoCapable","voiceCapable","isPrimary"].some(
+          (key: string) => assignment[key] != null && typeof assignment[key] !== "boolean"
+        ) ||
+        (assignment.routingPriority != null &&
+          (!Number.isInteger(assignment.routingPriority) || assignment.routingPriority < 1 || assignment.routingPriority > 1000))) {
+      return json(400, { error: "Provider/model assignment fields are invalid. Supply a secret reference, never a raw credential." });
+    }
+    const { data, error } = await admin.rpc("minglora_ai_provider_assignment_upsert", {
+      p_config: assignment,
+      p_actor_user_id: actorUserId
+    });
+    if (error) {
+      const invalid = ["23505","23503","23514","22023"].includes(String(error.code || ""));
+      return json(invalid ? 409 : 503, {
+        error: invalid ? "Provider/model assignment failed a database constraint." : "AI provider assignment storage is unavailable.",
+        code: String(error.code || "AI_PROVIDER_ASSIGNMENT_ERROR")
+      });
+    }
+    return json(200, { ok: true, assignment: data || {} });
+  }
+
+  if (action === "ai_provider_assignment_list") {
+    const actorUserId = String(input.actorUserId || "");
+    if (actorUserId !== AI_NETWORK_OWNER_ID) {
+      return json(403, { error: "Only the designated Minglora owner can read AI provider assignments." });
+    }
+    const identityId = input.identityId == null ? null : String(input.identityId);
+    const limit = Number(input.limit ?? 100);
+    const offset = Number(input.offset ?? 0);
+    if ((identityId !== null && !validUuid(identityId)) ||
+        !Number.isInteger(limit) || limit < 1 || limit > 500 ||
+        !Number.isInteger(offset) || offset < 0 || offset > 1000000000) {
+      return json(400, { error: "AI provider assignment pagination or identity filter is invalid." });
+    }
+    const { data, error } = await admin.rpc("minglora_ai_provider_assignment_list", {
+      p_owner_admin_id: actorUserId,p_identity_id: identityId,p_limit: limit,p_offset: offset
+    });
+    if (error) return json(503, { error: "AI provider assignments could not be loaded.", code: "AI_PROVIDER_ASSIGNMENT_SCHEMA_NOT_READY" });
+    return json(200, { ok: true, assignments: Array.isArray(data) ? data : [] });
+  }
+
+  if (action === "ai_bot_settings_update") {
+    const actorUserId = String(input.actorUserId || "");
+    const settings = input.settings;
+    if (actorUserId !== AI_NETWORK_OWNER_ID) {
+      return json(403, { error: "Only the designated Minglora owner can update AI network settings." });
+    }
+    const allowedFields = new Set([
+      "enabled","hybridEnabled","maxConcurrentExecutions",
+      "dailyExecutionBudget","automaticSuspensionEnabled","emergencyShutdownAt"
+    ]);
+    const validDate = (value: unknown) => value === null ||
+      (typeof value === "string" && Number.isFinite(Date.parse(value)));
+    if (!settings || typeof settings !== "object" || Array.isArray(settings) ||
+        Object.keys(settings).some((key: string) => !allowedFields.has(key)) ||
+        (settings.enabled != null && typeof settings.enabled !== "boolean") ||
+        (settings.hybridEnabled != null && typeof settings.hybridEnabled !== "boolean") ||
+        (settings.automaticSuspensionEnabled != null && typeof settings.automaticSuspensionEnabled !== "boolean") ||
+        (settings.maxConcurrentExecutions != null &&
+          (!Number.isInteger(settings.maxConcurrentExecutions) ||
+           settings.maxConcurrentExecutions < 0 || settings.maxConcurrentExecutions > 10000)) ||
+        (settings.dailyExecutionBudget != null &&
+          (!Number.isInteger(settings.dailyExecutionBudget) ||
+           settings.dailyExecutionBudget < 0 || settings.dailyExecutionBudget > 1000000)) ||
+        (Object.hasOwn(settings,"emergencyShutdownAt") && !validDate(settings.emergencyShutdownAt))) {
+      return json(400, { error: "AI network settings contain invalid or unsupported values." });
+    }
+    const { data, error } = await admin.rpc("minglora_ai_bot_settings_update", {
+      p_settings: settings,
+      p_actor_user_id: actorUserId
+    });
+    if (error) {
+      const invalid = ["22023","23514"].includes(String(error.code || ""));
+      return json(invalid ? 400 : 503, {
+        error: invalid ? "AI network settings failed database validation." : "The durable AI network settings are unavailable.",
+        code: String(error.code || "AI_NETWORK_SETTINGS_ERROR")
+      });
+    }
+    return json(200, { ok: true, settings: data || {} });
+  }
+
+  if (String(action).startsWith("ai_bot_task_")) {
+    const actorUserId = String(input.actorUserId || "");
+    if (actorUserId !== AI_NETWORK_OWNER_ID) {
+      return json(403, { error: "Only the designated Minglora owner can access the AI task queue." });
+    }
+
+    if (action === "ai_bot_task_upsert_batch") {
+      const tasks = input.tasks;
+      const allowedFields = new Set([
+        "id","botId","taskType","instruction","targetUserId","highImpact","status",
+        "approvedBy","approvedAt","cancelledBy","cancelledAt","createdBy","createdAt",
+        "idempotencyKey","privacyGuardRequired","blockGuardRequired",
+        "excludeFromHumanEngagementMetrics","executionStatus"
+      ]);
+      const allowedTypes = new Set([
+        "assistant_request","draft_post","share_media","create_reel","draft_comment","draft_reply",
+        "follow","unfollow","react","join_group","send_message","event_participation",
+        "customer_service_draft","support_draft","moderation_review","analytics_report",
+        "automation_request","community_event_draft","live_show_plan","translation","other"
+      ]);
+      const validDate = (value: unknown) => value == null || value === "" ||
+        (typeof value === "string" && Number.isFinite(Date.parse(value)));
+      if (!Array.isArray(tasks) || tasks.length < 1 || tasks.length > 100 ||
+          tasks.some((task: any) => !task || typeof task !== "object" || Array.isArray(task) ||
+            Object.keys(task).some((key: string) => !allowedFields.has(key)) ||
+            !validUuid(task.id) || !validUuid(task.botId) ||
+            !allowedTypes.has(String(task.taskType || "")) ||
+            typeof task.instruction !== "string" || task.instruction.trim().length < 5 ||
+            task.instruction.length > 4000 ||
+            (task.targetUserId != null && !validUuid(task.targetUserId)) ||
+            (task.status != null && !["awaiting_administrator_approval","approved_waiting_for_worker","cancelled","rejected"].includes(String(task.status))) ||
+            (task.approvedBy != null && !validUuid(task.approvedBy)) ||
+            (task.cancelledBy != null && !validUuid(task.cancelledBy)) ||
+            !validDate(task.approvedAt) || !validDate(task.cancelledAt) || !validDate(task.createdAt) ||
+            (task.highImpact != null && typeof task.highImpact !== "boolean"))) {
+        return json(400, { error: "Provide 1–100 valid, supported AI task records. Provider secrets and arbitrary task fields are not accepted." });
+      }
+      const { data, error } = await admin.rpc("minglora_ai_bot_task_upsert_batch", {
+        p_tasks: tasks,
+        p_actor_user_id: actorUserId
+      });
+      if (error) {
+        const conflict = ["23505","23503","23514","22023"].includes(String(error.code || ""));
+        return json(conflict ? 409 : 503, {
+          error: conflict ? "AI task data failed a database constraint." : "The durable AI task queue is unavailable.",
+          code: String(error.code || "AI_TASK_QUEUE_ERROR")
+        });
+      }
+      return json(200, { ok: true, tasks: Array.isArray(data) ? data : [] });
+    }
+
+    if (action === "ai_bot_task_list") {
+      const limit = Number(input.limit ?? 100);
+      const offset = Number(input.offset ?? 0);
+      if (!Number.isInteger(limit) || limit < 1 || limit > 100 ||
+          !Number.isInteger(offset) || offset < 0 || offset > 1000000000) {
+        return json(400, { error: "AI task pagination values are invalid." });
+      }
+      const { data, error } = await admin.rpc("minglora_ai_bot_task_list", {
+        p_owner_admin_id: actorUserId,p_limit: limit,p_offset: offset
+      });
+      if (error) return json(503, { error: "The durable AI task records could not be loaded.", code: "AI_TASK_SCHEMA_NOT_READY" });
+      return json(200, { ok: true, tasks: Array.isArray(data) ? data : [] });
+    }
+
+    if (action === "ai_bot_task_stats") {
+      const { data, error } = await admin.rpc("minglora_ai_bot_task_stats", {
+        p_owner_admin_id: actorUserId
+      });
+      if (error) return json(503, { error: "The durable AI task statistics are unavailable.", code: "AI_TASK_STATS_UNAVAILABLE" });
+      return json(200, { ok: true, stats: data || {} });
+    }
+
+    if (action === "ai_bot_task_claim") {
+      const workerId = String(input.workerId || "");
+      const limit = Number(input.limit ?? 1);
+      const leaseSeconds = Number(input.leaseSeconds ?? 180);
+      if (!/^[A-Za-z0-9._:-]{3,80}$/.test(workerId) ||
+          !Number.isInteger(limit) || limit < 1 || limit > 25 ||
+          !Number.isInteger(leaseSeconds) || leaseSeconds < 30 || leaseSeconds > 300) {
+        return json(400, { error: "Worker ID, batch size or lease duration is invalid." });
+      }
+      const { data, error } = await admin.rpc("minglora_ai_bot_task_claim", {
+        p_worker_id: workerId,p_limit: limit,p_lease_seconds: leaseSeconds,p_actor_user_id: actorUserId
+      });
+      if (error) return json(503, { error: "The durable task claim operation is unavailable.", code: "AI_TASK_CLAIM_FAILED" });
+      return json(200, { ok: true, tasks: Array.isArray(data) ? data : [] });
+    }
+
+    if (action === "ai_bot_task_heartbeat") {
+      const taskId = String(input.taskId || ""),workerId = String(input.workerId || "");
+      const leaseToken = String(input.leaseToken || ""),leaseSeconds = Number(input.leaseSeconds ?? 180);
+      if (!validUuid(taskId) || !validUuid(leaseToken) ||
+          !/^[A-Za-z0-9._:-]{3,80}$/.test(workerId) ||
+          !Number.isInteger(leaseSeconds) || leaseSeconds < 30 || leaseSeconds > 300) {
+        return json(400, { error: "Worker heartbeat fields are invalid." });
+      }
+      const { data, error } = await admin.rpc("minglora_ai_bot_task_heartbeat", {
+        p_task_id: taskId,p_worker_id: workerId,p_lease_token: leaseToken,
+        p_lease_seconds: leaseSeconds,p_actor_user_id: actorUserId
+      });
+      if (error) return json(503, { error: "The durable task heartbeat failed.", code: "AI_TASK_HEARTBEAT_FAILED" });
+      return json(200, { ok: data === true });
+    }
+
+    if (action === "ai_bot_task_complete") {
+      const taskId = String(input.taskId || ""),workerId = String(input.workerId || "");
+      const leaseToken = String(input.leaseToken || "");
+      const result = input.result;
+      if (!validUuid(taskId) || !validUuid(leaseToken) ||
+          !/^[A-Za-z0-9._:-]{3,80}$/.test(workerId) ||
+          !result || typeof result !== "object" || Array.isArray(result) ||
+          new TextEncoder().encode(JSON.stringify(result)).byteLength > 32768) {
+        return json(400, { error: "Worker completion fields are invalid." });
+      }
+      const { data, error } = await admin.rpc("minglora_ai_bot_task_complete", {
+        p_task_id: taskId,p_worker_id: workerId,p_lease_token: leaseToken,
+        p_result: result,p_actor_user_id: actorUserId
+      });
+      if (error) return json(503, { error: "The durable task completion failed.", code: "AI_TASK_COMPLETION_FAILED" });
+      return json(200, { ok: data === true });
+    }
+
+    if (action === "ai_bot_task_fail") {
+      const taskId = String(input.taskId || ""),workerId = String(input.workerId || "");
+      const leaseToken = String(input.leaseToken || "");
+      const retryable = input.retryable;
+      const errorCode = String(input.errorCode || "WORKER_EXECUTION_FAILED").slice(0,80);
+      const errorMessage = String(input.errorMessage || "The AI task failed.").slice(0,500);
+      if (!validUuid(taskId) || !validUuid(leaseToken) ||
+          !/^[A-Za-z0-9._:-]{3,80}$/.test(workerId) || typeof retryable !== "boolean") {
+        return json(400, { error: "Worker failure fields are invalid." });
+      }
+      const { data, error } = await admin.rpc("minglora_ai_bot_task_fail", {
+        p_task_id: taskId,p_worker_id: workerId,p_lease_token: leaseToken,
+        p_retryable: retryable,p_error_code: errorCode,p_error_message: errorMessage,
+        p_actor_user_id: actorUserId
+      });
+      if (error) return json(503, { error: "The durable task failure handler is unavailable.", code: "AI_TASK_FAILURE_HANDLER_FAILED" });
+      return json(200, data || { ok: false });
+    }
+  }
 
   if (action === "admin_users_list") {
     const actorUserId = String(input.actorUserId || "");
@@ -716,6 +1391,21 @@ Deno.serve(async (req: Request) => {
             "label": "Sound favorites",
             "key": "soundFavorites"
           }
+        ]
+      },
+      {
+        "id": "ai-bots",
+        "label": "Personal AI Bots Network",
+        "collections": [
+          { "label": "AI bot categories", "key": "personalAiBotCategories" },
+          { "label": "AI bot identities", "key": "personalAiBots" },
+          { "label": "AI bot instructions", "key": "personalAiBotTasks" },
+          { "label": "AI bot audit history", "key": "personalAiBotAudit" },
+          { "label": "AI bot network settings", "key": "personalAiBotSettings" },
+          { "label": "AI bot follows (reserved)", "key": "personalAiBotFollows" },
+          { "label": "AI bot teams (reserved)", "key": "personalAiBotTeams" },
+          { "label": "AI bot team members (reserved)", "key": "personalAiBotTeamMembers" },
+          { "label": "AI bot schedules (reserved)", "key": "personalAiBotSchedules" }
         ]
       }
     ];

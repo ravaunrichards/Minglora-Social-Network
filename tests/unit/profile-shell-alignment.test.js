@@ -19,6 +19,6 @@ test('profile header, tab panel and body share the same established canvas width
   assert.match(lock,/\.minglora-profile-page > #profile-tab-panel \.profile-body\s*\{[\s\S]*?width:100%!important;[\s\S]*?max-width:100%!important/);
   assert.ok(html.includes('/people-facebook-responsive.css?v=20261108-profile-shell-alignment-1'));
   assert.ok(sw.includes('/people-facebook-responsive.css?v=20261108-profile-shell-alignment-1'));
-  assert.match(sw,/minglora-shell-v252-facebook-people-responsive-1/);
+  assert.match(sw,/^const CACHE_NAME='minglora-shell-v[0-9]+-[^']+';$/m);
   assert.doesNotMatch(lock,/--minglora-profile-avatar-size|\.profile-avatar-edit-wrap|\.profile-cover-image|\.profile-info-main/);
 });

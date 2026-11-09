@@ -420,10 +420,93 @@ function base64UrlToBytes(value){
   return Uint8Array.from(atob(padded),character=>character.charCodeAt(0));
 }
 let mingloraUpdateRegistration=null;
-// Use the browser's normal service-worker lifecycle. Updates wait until the app is
-// naturally closed; Minglora must never force an automatic page reload.
+let mingloraUpdateCheckTimer=null;
+let mingloraSafeUpdateTimer=null;
+let mingloraLastInteractionAt=Date.now();
+let mingloraReloadPending=false;
+let mingloraActivationRequested=false;
+let mingloraHadController=Boolean(navigator.serviceWorker?.controller);
+let mingloraUpdateSafetyListenersInstalled=false;
+const MINGLORA_UPDATE_CHECK_INTERVAL_MS=5*60*1000;
+const MINGLORA_UPDATE_IDLE_MS=45*1000;
+const MINGLORA_UPDATE_RETRY_MS=5000;
+
+function mingloraUpdateIsSafe(){
+  if(document.visibilityState!=='visible')return false;
+  const activeMedia=Array.from(document.querySelectorAll('video,audio'));
+  if(activeMedia.some(media=>!media.paused&&!media.ended))return false;
+  // An update must wait through activeCallRoom||activeCallOverlay||activeLiveRoom.
+  const activeCallOrLive=(typeof activeCallRoom!=='undefined'&&activeCallRoom)||
+    (typeof activeCallOverlay!=='undefined'&&activeCallOverlay)||
+    (typeof activeLiveRoom!=='undefined'&&activeLiveRoom);
+  if(activeCallOrLive)return false;
+  if(window.MingloraMeetWave&&typeof window.MingloraMeetWave.canAutoUpdate==='function'&&!window.MingloraMeetWave.canAutoUpdate())return false;
+  return Date.now()-mingloraLastInteractionAt>=MINGLORA_UPDATE_IDLE_MS;
+}
+function deferMingloraSafeUpdate(){
+  if(mingloraSafeUpdateTimer!==null)return;
+  mingloraSafeUpdateTimer=window.setTimeout(()=>{
+    mingloraSafeUpdateTimer=null;
+    scheduleMingloraSafeReload();
+  },MINGLORA_UPDATE_RETRY_MS);
+}
+function scheduleMingloraSafeReload(){
+  if(!mingloraUpdateRegistration)return;
+  if(mingloraReloadPending){
+    if(!mingloraUpdateIsSafe()){deferMingloraSafeUpdate();return;}
+    mingloraReloadPending=false;
+    window.location.reload();
+    return;
+  }
+  if(!mingloraUpdateRegistration.waiting)return;
+  if(!mingloraUpdateIsSafe()){deferMingloraSafeUpdate();return;}
+  if(mingloraActivationRequested)return;
+  mingloraActivationRequested=true;
+  mingloraUpdateRegistration.waiting.postMessage({type:'MINGLORA_ACTIVATE_WHEN_SAFE'});
+}
+function noteMingloraInteraction(){
+  mingloraLastInteractionAt=Date.now();
+  if(mingloraReloadPending||mingloraUpdateRegistration?.waiting)deferMingloraSafeUpdate();
+}
 function startMingloraServiceWorkerUpdates(registration){
   mingloraUpdateRegistration=registration;
+  const watchInstallingWorker=worker=>{
+    if(!worker)return;
+    worker.addEventListener('statechange',()=>{
+      if(worker.state==='installed'&&navigator.serviceWorker.controller)scheduleMingloraSafeReload();
+    });
+  };
+  registration.addEventListener('updatefound',()=>watchInstallingWorker(registration.installing));
+  watchInstallingWorker(registration.installing);
+  if(registration.waiting)scheduleMingloraSafeReload();
+
+  if(!mingloraUpdateSafetyListenersInstalled){
+    mingloraUpdateSafetyListenersInstalled=true;
+    for(const eventName of ['pointerdown','keydown','touchstart','wheel','scroll']){
+      window.addEventListener(eventName,noteMingloraInteraction,{passive:true});
+    }
+    document.addEventListener('visibilitychange',()=>{
+      if(document.visibilityState==='visible')scheduleMingloraSafeReload();
+    });
+    navigator.serviceWorker.addEventListener('controllerchange',()=>{
+      if(!mingloraHadController){mingloraHadController=true;return;}
+      mingloraActivationRequested=false;
+      mingloraReloadPending=true;
+      scheduleMingloraSafeReload();
+    });
+  }
+  const checkForUpdates=async()=>{
+    if(document.visibilityState!=='visible')return;
+    try{
+      await registration.update();
+    }catch(error){
+      console.warn('[Minglora] Service-worker update check failed:',error?.message||error);
+    }
+    if(registration.waiting)scheduleMingloraSafeReload();
+  };
+  if(mingloraUpdateCheckTimer!==null)window.clearInterval(mingloraUpdateCheckTimer);
+  void checkForUpdates();
+  mingloraUpdateCheckTimer=window.setInterval(()=>void checkForUpdates(),MINGLORA_UPDATE_CHECK_INTERVAL_MS);
 }
 
 async function prepareMingloraServiceWorker(){
@@ -812,8 +895,9 @@ function stopFeedAutoSync(){
   feedAutoSyncTimer=null;
 }
 function startFeedAutoSync(){
-  // Do not replace the user's feed while they are reading; refresh on navigation or action.
   stopFeedAutoSync();
+  if(state.view!=='feed')return;
+  feedAutoSyncTimer=window.setInterval(()=>void syncFeedAutomatically(),30000);
 }
 async function syncFeedAutomatically(){
   if(feedAutoSyncBusy||state.view!=='feed'||document.visibilityState!=='visible')return;
@@ -1150,7 +1234,7 @@ function startPeopleDiscoveryRefresh(){
   stopPeopleDiscoveryRefresh();
   if(state.view!=='friends')return;
   void refreshPeopleDiscovery({quiet:true});
-  peopleDiscoveryRefreshTimer=window.setInterval(()=>void refreshPeopleDiscovery({quiet:true}),15000);
+  peopleDiscoveryRefreshTimer=window.setInterval(()=>void refreshPeopleDiscovery({quiet:true}),30000);
 }
 function syncPeopleDiscoveryVerification(users,grid){
   const verificationByMember=new Map((Array.isArray(users)?users:[]).map(member=>[
@@ -5792,6 +5876,7 @@ async function handleProfileOverflowAction(action,u,data){
   if(action==='create-post'){openComposer({returnToProfile:u.id});return;}
   if(action==='archive'){await openProfileArchiveManager(u.id);return;}
   if(action==='story-archive'){await openStoryArchiveManager(u.id);return;}
+  if(action==='edit-stories'){await openProfileStoryEditor(u.id);return;}
   if(action==='activity'){await openProfileActivityLog(u.id);return;}
   if(action==='privacy'){await openProfilePrivacySettings();return;}
   if(action==='lock-toggle'){await toggleProfilePrivacyLock();return;}
@@ -5813,17 +5898,20 @@ function renderProfile(data){
     : '';
   const subscriptionLabel=subscriptionAlreadyExists?(subscriptionStatus==='past_due'?'Payment issue':'Subscribed'):subscriptionStatus==='incomplete'?'Continue payment':'Subscribe'+subscriptionPriceLabel;
   const relationshipActions=isMe
-    ?'<div class="profile-actions profile-owner-actions"><button class="primary profile-edit" id="profile-add-story" type="button" aria-label="Add to story"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v8M8 12h8"></path></svg><span>Add to story</span></button><button class="secondary profile-edit" id="edit-profile" type="button" aria-label="Edit profile details in About" aria-controls="profile-tab-panel"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"></path></svg><span>Edit Profile</span></button><button class="secondary profile-people-toggle" id="profile-people-toggle" type="button" aria-label="People you may know" title="People you may know" aria-expanded="false" aria-controls="profile-people-panel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"></path></svg></button></div>'
+    ?'<div class="profile-actions profile-owner-actions"><button class="primary profile-edit" id="profile-add-story" type="button" aria-label="Add to story"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v8M8 12h8"></path></svg><span>Add to story</span></button><button class="secondary profile-edit" id="edit-profile" type="button" aria-label="Edit profile" aria-controls="profile-tab-panel"><svg class="profile-control-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"></path></svg><span>Edit Profile</span></button><button class="secondary profile-people-toggle" id="profile-people-toggle" type="button" aria-label="People you may know" title="People you may know" aria-expanded="false" aria-controls="profile-people-panel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"></path></svg></button></div>'
     :'<div class="profile-actions profile-actions--primary"><button class="primary profile-edit" type="button" id="profile-follow" data-following="'+(data.following?'true':'false')+'" data-friendship="'+esc(data.friendship||'')+'"><svg class="profile-action-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="7" r="4"></circle><path d="M2.5 20a6.5 6.5 0 0 1 13 0M19 8v6M16 11h6"></path></svg>'+(data.following?(data.friendship==='accepted'?'Friends · Following':'Following'):(data.friendship==='accepted'?'Friends':'Follow'))+'</button><button class="primary profile-edit profile-subscribe" type="button" id="profile-subscribe" data-subscription-active="'+(subscriptionAlreadyExists?'true':'false')+'" aria-label="Subscribe to '+esc(u.name)+'"><svg class="profile-action-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3 6.4 20.2l1.1-6.2L3 9.6l6.2-.9Z"></path></svg>'+esc(subscriptionLabel)+'</button><button class="secondary profile-edit" type="button" id="profile-message" aria-label="Start a chat with '+esc(u.name)+'"><svg class="profile-action-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5h16v11H9l-5 3z"></path><path d="M8 10h8M8 13.5h5"></path></svg>Message</button><button class="secondary profile-edit" type="button" data-profile-call="audio" aria-label="Start a voice call with '+esc(u.name)+'"><svg class="profile-action-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3H4.8A1.8 1.8 0 0 0 3 4.8C3 13.8 10.2 21 19.2 21a1.8 1.8 0 0 0 1.8-1.8V17l-5-2-2 2a14 14 0 0 1-4-4l2-2-2-5Z"></path></svg>Voice Calls</button><button class="secondary profile-edit" type="button" data-profile-call="video" aria-label="Start a video call with '+esc(u.name)+'"><svg class="profile-action-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="13" height="12" rx="2"></rect><path d="m16 10 5-3v10l-5-3"></path></svg>Video Calls</button><button class="secondary profile-edit" type="button" id="profile-report" aria-label="Report '+esc(u.name)+'"><svg class="profile-action-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3v18M5 4h12l-2 4 2 4H5"></path></svg>Report</button><button class="secondary profile-edit" type="button" id="profile-block" aria-label="Block '+esc(u.name)+'"><svg class="profile-action-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="m5.6 5.6 12.8 12.8"></path></svg>Block</button></div>';
   const aboutHtml=profileAboutMarkup(u,isMe);
   const profileThoughtMarkup=data.profileStatus?.text
     ? '<button type="button" class="ml-profile-thought-bubble" data-view-profile-thought-user="'+esc(u.id)+'" aria-label="View '+esc(u.name)+'’s thought" title="View thought">'+(data.profileStatus.mood?'<span>'+esc(data.profileStatus.mood)+'</span> · ':'')+esc(data.profileStatus.text)+'</button>'
     : (isMe?'<button type="button" class="ml-profile-thought-add" data-edit-profile-thought aria-label="Share a thought">Share a thought…</button>':'');
   const isAdminProfile=Boolean(isMe&&(u.platformBadge==='admin'||['platform_owner','admin','moderator'].includes(u.platformRole)));
-  const profileActionMarkup=relationshipActions;
+  const adminToolsMarkup=isAdminProfile
+    ? '<div class="profile-admin-tools" aria-label="Administrator profile tools"><button type="button" class="secondary profile-admin-tool" data-profile-admin-action="privacy">Profile privacy settings</button><button type="button" class="secondary profile-admin-tool" data-profile-admin-action="edit-story">Manage active stories</button></div>'
+    : '';
+  const profileActionMarkup=relationshipActions+adminToolsMarkup;
   const requestedTab=state.profileTab||'posts';
   const tab=requestedTab;
-  setContent('<div class="minglora-profile-page"><section class="card profile-header-card profile-layout-'+(['standard','advanced','creator'].includes(u.profileLayout)?u.profileLayout:'advanced')+(isMe?' profile-header-card--owner':' profile-header-card--viewer')+(isAdminProfile?' profile-header-card--admin':'')+'" style="padding:0"><div class="profile-cover">'+(u.cover?'<img class="profile-cover-image" data-view-image="'+esc(u.cover)+'" data-image-label="'+esc(u.name)+' cover photo" src="'+esc(u.cover)+'" alt="">':'<img class="profile-cover-image profile-cover-image--default" src="'+DEFAULT_PROFILE_COVER+'" alt="Minglora default cover">')+'</div>'+''+'<div class="profile-info'+(isAdminProfile?' profile-info--admin':'')+(profileThoughtMarkup?' profile-info--with-thought':'')+'">'+(profileThoughtMarkup?'<div class="profile-thought-slot">'+profileThoughtMarkup+'</div>':'')+'<div class="profile-avatar-edit-wrap"><img class="avatar"'+(u.avatar?' data-view-image="'+esc(u.avatar)+'" data-image-label="'+esc(u.name)+' profile picture"':'')+' src="'+avatar(u)+'" alt="">'+'</div><div class="profile-info-main"><h1 class="profile-name-with-badges"><span>'+esc(u.name)+'</span>'+platformAdminProfileBadge(u)+'</h1><p class="profile-username-line">@'+esc(u.username)+' '+verifiedProfileBadge(u)+liveProProfileBadge(u)+'</p>'+(isAdminProfile?'<div class="profile-admin-identity" aria-label="Administrator identity"><span class="profile-admin-identity-mark profile-admin-identity-mark--owner" title="Platform owner"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 8 4 3 5-6 5 6 4-3-2 11H5L3 8Z"></path><path d="M6 21h12"></path></svg><small>Owner</small></span><span class="profile-admin-identity-mark profile-admin-identity-mark--security" title="Protected administrator"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 4 5v6c0 5 3.2 8.5 8 11 4.8-2.5 8-6 8-11V5l-8-3Z"></path><path d="m8.5 12 2.2 2.2 4.8-5"></path></svg><small>Protected</small></span><span class="profile-admin-identity-mark profile-admin-identity-mark--control" title="Platform administration"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"></rect><path d="M8 9h8M8 13h5M8 17h3"></path></svg><small>Admin</small></span></div>':'')+(data.profileStatus?'<p class="profile-status-badge sr-only" aria-label="Profile status">'+(data.profileStatus.mood?'<strong>'+esc(data.profileStatus.mood)+'</strong> · ':'')+esc(data.profileStatus.text)+' <small>· Expires '+esc(profileDate(data.profileStatus.expiresAt))+'</small></p>':'')+'</div>'+profileActionMarkup+'<div class="profile-counts" aria-label="Profile counts"><button type="button" class="connection-count" data-open-connections="followers"><strong>'+Number(data.followersCount||0)+'</strong><span>Followers</span></button><button type="button" class="connection-count" data-open-connections="following"><strong>'+Number(data.followingCount||0)+'</strong><span>Following</span></button><button type="button" class="connection-count" data-open-connections="friends"><strong>'+Number(data.friendsCount||0)+'</strong><span>Friends</span></button><button type="button" class="connection-count" data-open-connections="subscribers" aria-label="Open subscribers"><strong>'+Number(data.subscribersCount||0).toLocaleString()+'</strong><span>Subscribers</span></button><div class="profile-count-item"><strong>'+(data.posts||[]).length+'</strong><span>Posts</span></div><div class="profile-count-item"><strong>'+Number(data.likesCount||0).toLocaleString()+'</strong><span>Likes</span></div></div>'+'</div>'+(isMe?'<section class="profile-people-panel" id="profile-people-panel" hidden aria-label="People you may know"><div class="profile-people-heading"><div><h2>People you may know</h2><p>Discover Minglora members and connect with them</p></div><button type="button" class="text-button" data-profile-people-more>View more</button></div><div class="profile-people-carousel"><button type="button" class="profile-people-scroll profile-people-scroll--left" data-profile-people-scroll="-1" aria-label="Scroll recommendations left">‹</button><div class="profile-people-track" id="profile-people-track"><p class="profile-people-placeholder">Open this panel to load recommendations.</p></div><button type="button" class="profile-people-scroll profile-people-scroll--right" data-profile-people-scroll="1" aria-label="Scroll recommendations right">›</button></div></section>':'')+'<nav class="profile-tabs" aria-label="Profile sections"><div class="profile-tabs-list">'+[['posts','Posts'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Reels'],['more','More']].map(([key,label])=>'<button type="button" data-profile-tab="'+key+'" class="'+(tab===key?'active':'')+'" aria-current="'+(tab===key?'page':'false')+'">'+label+'</button>').join('')+'</div>'+(isMe?'<div class="profile-tabs-overflow"><button type="button" id="profile-overflow-trigger" class="profile-overflow-trigger" aria-label="More profile actions" aria-haspopup="menu" aria-expanded="false"><span aria-hidden="true">···</span></button><div id="profile-overflow-menu" class="profile-overflow-menu" role="menu" aria-label="Profile actions" hidden><button type="button" role="menuitem" data-profile-overflow-action="view-as"><span aria-hidden="true">◉</span><span>View as</span></button><button type="button" role="menuitem" data-profile-overflow-action="search"><span aria-hidden="true">⌕</span><span>Search</span></button><button type="button" role="menuitem" data-profile-overflow-action="highlights"><span aria-hidden="true">✧</span><span>Add Highlights</span></button><button type="button" role="menuitem" data-profile-overflow-action="create-post" aria-label="Create a post"><span aria-hidden="true">✎</span><span>Create post</span></button><div class="profile-overflow-divider"></div><button type="button" role="menuitem" data-profile-overflow-action="archive"><span aria-hidden="true">▣</span><span>Archive</span></button><button type="button" role="menuitem" data-profile-overflow-action="story-archive"><span aria-hidden="true">◷</span><span>Story archive</span></button><button type="button" role="menuitem" data-profile-overflow-action="activity"><span aria-hidden="true">≡</span><span>Activity log</span></button><button type="button" role="menuitem" data-profile-overflow-action="privacy"><span aria-hidden="true">⚙</span><span>Profile and tagging settings</span></button><button type="button" role="menuitem" data-profile-overflow-action="lock-toggle"><span aria-hidden="true">▣</span><span>Lock profile</span></button>'+(u.platformRole&&['platform_owner','admin','moderator'].includes(u.platformRole)?'<button type="button" role="menuitem" data-profile-overflow-action="verification-review"><span aria-hidden="true">✓</span><span>Profile verification review</span></button>':'')+'<div class="profile-overflow-divider"></div><button type="button" role="menuitem" data-profile-overflow-action="verified"><span aria-hidden="true">✔</span><span>Minglora Verified ✔️</span></button></div></div>':'')+'</nav></section><div id="profile-tab-panel"></div></div>');
+  setContent('<div class="minglora-profile-page"><section class="card profile-header-card profile-layout-'+(['standard','advanced','creator'].includes(u.profileLayout)?u.profileLayout:'advanced')+(isMe?' profile-header-card--owner':' profile-header-card--viewer')+(isAdminProfile?' profile-header-card--admin':'')+'" style="padding:0"><div class="profile-cover">'+(u.cover?'<img class="profile-cover-image" data-view-image="'+esc(u.cover)+'" data-image-label="'+esc(u.name)+' cover photo" src="'+esc(u.cover)+'" alt="">':'<img class="profile-cover-image profile-cover-image--default" src="'+DEFAULT_PROFILE_COVER+'" alt="Minglora default cover">')+'</div>'+''+'<div class="profile-info'+(isAdminProfile?' profile-info--admin':'')+(profileThoughtMarkup?' profile-info--with-thought':'')+'">'+(profileThoughtMarkup?'<div class="profile-thought-slot">'+profileThoughtMarkup+'</div>':'')+'<div class="profile-avatar-edit-wrap"><img class="avatar"'+(u.avatar?' data-view-image="'+esc(u.avatar)+'" data-image-label="'+esc(u.name)+' profile picture"':'')+' src="'+avatar(u)+'" alt="">'+'</div><div class="profile-info-main"><h1 class="profile-name-with-badges"><span>'+esc(u.name)+'</span>'+platformAdminProfileBadge(u)+'</h1><p class="profile-username-line">@'+esc(u.username)+' '+verifiedProfileBadge(u)+liveProProfileBadge(u)+'</p>'+(isAdminProfile?'<div class="profile-admin-identity" aria-label="Administrator identity"><span class="profile-admin-identity-mark profile-admin-identity-mark--owner" title="Platform owner"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 8 4 3 5-6 5 6 4-3-2 11H5L3 8Z"></path><path d="M6 21h12"></path></svg><small>Owner</small></span><span class="profile-admin-identity-mark profile-admin-identity-mark--security" title="Protected administrator"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 4 5v6c0 5 3.2 8.5 8 11 4.8-2.5 8-6 8-11V5l-8-3Z"></path><path d="m8.5 12 2.2 2.2 4.8-5"></path></svg><small>Protected</small></span><span class="profile-admin-identity-mark profile-admin-identity-mark--control" title="Platform administration"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"></rect><path d="M8 9h8M8 13h5M8 17h3"></path></svg><small>Admin</small></span></div>':'')+(data.profileStatus?'<p class="profile-status-badge sr-only" aria-label="Profile status">'+(data.profileStatus.mood?'<strong>'+esc(data.profileStatus.mood)+'</strong> · ':'')+esc(data.profileStatus.text)+' <small>· Expires '+esc(profileDate(data.profileStatus.expiresAt))+'</small></p>':'')+'</div>'+profileActionMarkup+'<div class="profile-counts" aria-label="Profile counts"><button type="button" class="connection-count" data-open-connections="followers"><strong>'+Number(data.followersCount||0)+'</strong><span>Followers</span></button><button type="button" class="connection-count" data-open-connections="following"><strong>'+Number(data.followingCount||0)+'</strong><span>Following</span></button><button type="button" class="connection-count" data-open-connections="friends"><strong>'+Number(data.friendsCount||0)+'</strong><span>Friends</span></button><button type="button" class="connection-count" data-open-connections="subscribers" aria-label="Open subscribers"><strong>'+Number(data.subscribersCount||0).toLocaleString()+'</strong><span>Subscribers</span></button><div class="profile-count-item"><strong>'+(data.posts||[]).length+'</strong><span>Posts</span></div><div class="profile-count-item"><strong>'+Number(data.likesCount||0).toLocaleString()+'</strong><span>Likes</span></div></div>'+'</div>'+(isMe?'<section class="profile-people-panel" id="profile-people-panel" hidden aria-label="People you may know"><div class="profile-people-heading"><div><h2>People you may know</h2><p>Discover Minglora members and connect with them</p></div><button type="button" class="text-button" data-profile-people-more>View more</button></div><div class="profile-people-carousel"><button type="button" class="profile-people-scroll profile-people-scroll--left" data-profile-people-scroll="-1" aria-label="Scroll recommendations left">‹</button><div class="profile-people-track" id="profile-people-track"><p class="profile-people-placeholder">Open this panel to load recommendations.</p></div><button type="button" class="profile-people-scroll profile-people-scroll--right" data-profile-people-scroll="1" aria-label="Scroll recommendations right">›</button></div></section>':'')+'<nav class="profile-tabs" aria-label="Profile sections"><div class="profile-tabs-list">'+[['posts','Posts'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Reels'],['more','More']].map(([key,label])=>'<button type="button" data-profile-tab="'+key+'" class="'+(tab===key?'active':'')+'" aria-current="'+(tab===key?'page':'false')+'">'+label+'</button>').join('')+'</div>'+(isMe?'<div class="profile-tabs-overflow"><button type="button" id="profile-overflow-trigger" class="profile-overflow-trigger" aria-label="More profile actions" aria-haspopup="menu" aria-expanded="false"><span aria-hidden="true">···</span></button><div id="profile-overflow-menu" class="profile-overflow-menu" role="menu" aria-label="Profile actions" hidden><button type="button" role="menuitem" data-profile-overflow-action="view-as"><span aria-hidden="true">◉</span><span>View as</span></button><button type="button" role="menuitem" data-profile-overflow-action="search"><span aria-hidden="true">⌕</span><span>Search</span></button><button type="button" role="menuitem" data-profile-overflow-action="highlights"><span aria-hidden="true">✧</span><span>Add Highlights</span></button><button type="button" role="menuitem" data-profile-overflow-action="create-post" aria-label="Create a post"><span aria-hidden="true">✎</span><span>Create post</span></button><div class="profile-overflow-divider"></div><button type="button" role="menuitem" data-profile-overflow-action="archive"><span aria-hidden="true">▣</span><span>Archive</span></button><button type="button" role="menuitem" data-profile-overflow-action="story-archive"><span aria-hidden="true">◷</span><span>Story archive</span></button><button type="button" role="menuitem" data-profile-overflow-action="edit-stories"><span aria-hidden="true">✎</span><span>Edit active stories</span></button><button type="button" role="menuitem" data-profile-overflow-action="activity"><span aria-hidden="true">≡</span><span>Activity log</span></button><button type="button" role="menuitem" data-profile-overflow-action="privacy"><span aria-hidden="true">⚙</span><span>Profile and tagging settings</span></button><button type="button" role="menuitem" data-profile-overflow-action="lock-toggle"><span aria-hidden="true">▣</span><span>Lock profile</span></button>'+(u.platformRole&&['platform_owner','admin','moderator'].includes(u.platformRole)?'<button type="button" role="menuitem" data-profile-overflow-action="verification-review"><span aria-hidden="true">✓</span><span>Profile verification review</span></button>':'')+'<div class="profile-overflow-divider"></div><button type="button" role="menuitem" data-profile-overflow-action="verified"><span aria-hidden="true">✔</span><span>Minglora Verified ✔️</span></button></div></div>':'')+'</nav></section><div id="profile-tab-panel"></div></div>');
   const showTab=nextTab=>{
     state.profileTab=nextTab;
     persistCurrentView();
@@ -5847,7 +5935,16 @@ function renderProfile(data){
       }catch{}
     }
   });
-  overflowMenu?.querySelectorAll('[data-profile-overflow-action]').forEach(button=>button.addEventListener('click',()=>handleProfileOverflowAction(button.dataset.profileOverflowAction,u,data)));
+  overflowMenu?.querySelectorAll('[data-profile-overflow-action]').forEach(button=>button.addEventListener('click',()=>{
+    const action=button.dataset.profileOverflowAction;
+    if(action==='edit-stories'){void openProfileStoryEditor(u.id);return;}
+    void handleProfileOverflowAction(action,u,data);
+  }));
+  document.querySelectorAll('[data-profile-admin-action]').forEach(button=>button.addEventListener('click',()=>{
+    const action=button.dataset.profileAdminAction;
+    if(action==='privacy')void openProfilePrivacySettings();
+    if(action==='edit-story')void openProfileStoryEditor(u.id);
+  }));
 
   $('#edit-profile')?.addEventListener('click',()=>{
     showTab('about');

@@ -17,7 +17,9 @@ const COLLECTIONS = [
   'reports', 'supportTickets', 'supportMessages', 'moderationActions', 'auditLog', 'pendingAuth', 'calls', 'callParticipants', 'meetWaveRooms', 'meetWaveInvitations', 'meetWaveMessages', 'meetWaveAttendance', 'meetWaveProviderCleanupQueue', 'dataRightsRequests', 'pushSubscriptions', 'profileViews', 'profileViewPresence', 'albums',
     'creatorLeagueProfiles', 'creatorLeagueGiftLedger', 'creatorLeagueDailyScores', 'creatorLeagueDailySettlements', 'creatorLeagueMatches', 'creatorLeaguePowerupUses', 'creatorLeagueEvents', 'gifterProgressionLedger', 'gifterBadgeAdminOverrides', 'gifterBadgeAdminAudit',
     'liveFanClubMemberships', 'liveFanClubEvents',
-  'creatorSubscriptions', 'giftGalleryEvents', 'giftGallerySettings', 'giftGalleryPreferences', 'sounds', 'soundFavorites', 'profileSections', 'profileStatuses', 'profileHighlights', 'storyArchives', 'profileActivity', 'checkIns', 'events', 'eventRsvps'
+  'creatorSubscriptions', 'giftGalleryEvents', 'giftGallerySettings', 'giftGalleryPreferences', 'sounds', 'soundFavorites', 'profileSections', 'profileStatuses', 'profileHighlights', 'storyArchives', 'profileActivity', 'checkIns', 'events', 'eventRsvps',
+  'personalAiBotCategories', 'personalAiBots', 'personalAiBotTasks', 'personalAiBotAudit',
+  'personalAiBotSettings', 'personalAiBotFollows', 'personalAiBotTeams', 'personalAiBotTeamMembers', 'personalAiBotSchedules'
 ];
 
 const requestedDriver = String(process.env.PERSISTENCE_DRIVER || '').trim().toLowerCase();
