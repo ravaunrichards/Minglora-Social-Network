@@ -178,3 +178,32 @@ test('durable worker claim concurrency and owner settings are enforced transacti
   assert.doesNotMatch(queueSql,/SET execution_enabled\s*=/i);
   assert.doesNotMatch(queueSql,/SET provider_ready\s*=/i);
 });
+
+
+test('AI identity location schema includes every region key used by its indexes',()=>{
+  assert.match(sql,/parish_county text NOT NULL DEFAULT ''/);
+  assert.match(sql,/ON public\.ai_identity_locations \(country_code,state_province,parish_county,city\)/);
+});
+
+test('every explicit AI table index references columns declared by that table',()=>{
+  const tableColumns=new Map();
+  for(const match of sql.matchAll(/CREATE TABLE IF NOT EXISTS public\.([a-z0-9_]+)\s*\(([\s\S]*?)\n\);/g)){
+    const columns=new Set();
+    for(const line of match[2].split('\n')){
+      const declaration=line.trim().match(/^([a-z][a-z0-9_]*)\s+/i);
+      if(declaration&&!['constraint','primary','unique','check','foreign'].includes(declaration[1].toLowerCase())){
+        columns.add(declaration[1].toLowerCase());
+      }
+    }
+    tableColumns.set(match[1],columns);
+  }
+  const indexes=[...sql.matchAll(/CREATE (?:UNIQUE )?INDEX IF NOT EXISTS\s+([a-z0-9_]+)\s+ON public\.([a-z0-9_]+)\s*\(([^;]+?)\)\s*(?:WHERE [^;]+)?;/g)];
+  for(const [,indexName,tableName,expressions] of indexes){
+    const columns=tableColumns.get(tableName);
+    assert.ok(columns,'index table is not declared: '+tableName);
+    for(const expression of expressions.split(',')){
+      const column=expression.trim().match(/^(?:lower\()?([a-z][a-z0-9_]*)/i)?.[1]?.toLowerCase();
+      if(column)assert.ok(columns.has(column),'index '+indexName+' references missing column '+tableName+'.'+column);
+    }
+  }
+});
