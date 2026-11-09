@@ -121,3 +121,65 @@ Live advisors were retrieved on 2026-11-09 at approximately 09:55 UTC:
 - The branch remains divergent from current `main` by one commit; do not merge without reconciling and reviewing it.
 - Production Render remains on `main`; the production Supabase Edge Function remains version 112 and does not include this branch's new CRUD actions.
 - Real account CRUD, deletion constraint handling, global session revocation, audit failure behavior, and service checks still require hosted acceptance testing after deployment is authorized.
+
+
+## Current execution checkpoint — 2026-11-09 10:13 UTC
+
+- **Project:** Minglora Social Network
+- **Repository:** `ravaunrichards/Minglora-Social-Network`
+- **Assigned task:** Admin Centre member management and service connections, PR #203
+- **Branch:** `feat/minglora-admin-user-and-service-centre-20261109`
+- **Current head:** `b75cee573631664802db65d9c7fc16478e70cafe`
+- **PR state:** Open, draft; 36 commits; GitHub reports mergeable=false.
+- **Comparison with main at `2f80e9d997b43e5da6373c385d6ce153ff908e67`:** 36 commits ahead, 1 behind. Diverged; reconciliation remains required.
+- **Completion:** 71% verified / 29% remaining. This retains the established original task weighting; the latest code changes are not credited until automated tests and acceptance checks pass.
+
+### Weighted milestone tracker
+
+| Milestone | Weight | Verified credit |
+|---|---:|---:|
+| User-management interface | 20% | 20% |
+| Supabase Auth operations | 25% | 15% |
+| Owner/MFA authorization | 15% | 15% |
+| Service connections | 15% | 10% |
+| Audit and data integrity | 10% | 6% |
+| Documentation and recovery records | 5% | 5% |
+| Full CI, hosted acceptance and final regression | 10% | 0% |
+| **Total** | **100%** | **71%** |
+
+### Changes verified in this continuation
+
+- Edit-member display name now requires at least two characters; edit username is required and constrained to the allowed 3–30 lowercase characters.
+- The Edge Function validates edited display names and usernames against those rules before attempting a profile write.
+- Username uniqueness checks on both create and edit now use case-insensitive matching. Edit excludes the current member ID; duplicate names return HTTP 409.
+- The Admin Centre API wrapper now preserves the server error status and payload. When the server reports a partial update, the edit UI refreshes the selected member and account list, then clearly reports the partial success and failed Auth update.
+- Regression cases were added for edit validation, case-insensitive uniqueness and partial-update reporting.
+
+### Source verification
+
+Current branch files were retrieved from GitHub and 13 checks were confirmed for the updated create/edit forms, server validation, case-insensitive preflight lookup, partial-update reporting, and corresponding regression-test assertions. These are source-level checks only. The project test runner has not passed on this head.
+
+### CI and local test execution
+
+- The latest connected GitHub workflow-run and combined-status lookups for this head returned empty results. No fresh CI run or passing status is confirmed.
+- The last detailed historical full-suite run remains 706 passed / 32 failed out of 738, on an earlier commit.
+- The earlier targeted Admin User and Service Centre tests passed in that historical run, but tests added afterward remain unexecuted.
+- A local repository checkout was attempted, but the execution container could not resolve `github.com`; local `npm test` execution was therefore unavailable.
+
+### Current execution order
+
+- **Easy:** Obtain an actual test run against this exact head and fix any test failures.
+- **Medium:** Reconcile the one-commit divergence with `main`; complete hosted member CRUD, partial failure, service health and audit acceptance.
+- **Hard:** Complete production Supabase Auth integration, session revocation/deletion acceptance and security/data-integrity verification after review and deployment authorization.
+- **Final verification:** Full CI, targeted Admin Centre tests, regression checks, service integration checks and protected-owner verification.
+
+### Live deployment and database state
+
+- Render is configured to auto-deploy from `main`; the most recently retrieved live deployment was main commit `2f80e9d`. The feature branch is not deployed.
+- Minglora Supabase project was live and healthy when last queried; production `minglora-runtime-state` was active at version 112 and did not contain this branch's new CRUD actions.
+- The live database's `profiles` table requires username and display name, has a case-insensitive unique username index, and contains 86 foreign-key references to profiles. No production schema, permission, user or balance changes were made.
+- No merge or deployment was performed.
+
+### Exact next action
+
+Run the targeted Admin Centre tests and full CI on commit `b75cee573631664802db65d9c7fc16478e70cafe`. The connected GitHub integration has not exposed a current workflow run, and the local checkout failed because GitHub DNS was unavailable. Continue with source-level checks and other non-production work while this verification dependency is unresolved.
