@@ -17,7 +17,7 @@ BEGIN
   IF p_owner_admin_id IS DISTINCT FROM '5b998c21-86b5-4621-ab37-e0808a2657b1'::uuid THEN
     RAISE EXCEPTION 'Only the designated Minglora owner may review AI identity reports.' USING ERRCODE = '42501';
   END IF;
-  IF p_status IS NULL OR p_status NOT IN ('all','pending','in_review','actioned','dismissed') OR
+  IF p_status IS NULL OR p_status NOT IN ('all','open','pending','in_review','actioned','dismissed') OR
      p_limit IS NULL OR p_limit NOT BETWEEN 1 AND 200 OR
      p_offset IS NULL OR p_offset NOT BETWEEN 0 AND 1000000000 THEN
     RAISE EXCEPTION 'AI report review filters are invalid.' USING ERRCODE = '22023';
@@ -45,7 +45,7 @@ BEGIN
     FROM public.ai_identity_reports AS report
     JOIN public.ai_identities AS identity ON identity.identity_id=report.identity_id
     LEFT JOIN public.ai_names AS names ON names.identity_id=identity.identity_id
-    WHERE p_status='all' OR report.status=p_status
+    WHERE p_status='all' OR (p_status='open' AND report.status IN ('pending','in_review')) OR report.status=p_status
     ORDER BY report.created_at DESC
     LIMIT p_limit OFFSET p_offset
   ) AS result;
