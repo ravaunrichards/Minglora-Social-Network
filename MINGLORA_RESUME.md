@@ -31,7 +31,7 @@ The previous checkpoint did not contain a weighted percentage. The earlier conve
 | 8. Distributed scaling, load tests, device tests and production acceptance | 5% | 0% | 0.00% |
 | **TOTAL** | **100%** |  | **36.15% → 36%** |
 
-**COMPLETION: 36% | REMAINING: 64%**
+**COMPLETION: 37% | REMAINING: 63%**
 
 This is weighted implementation progress, not a claim that the 36% of the full production acceptance criteria is deployed. The exact weighted score is 36.15%; milestones 1 and 2 remain partial because the normalized AI schema and associated RPCs are staged in GitHub but absent from the live Supabase migration ledger and public schema.
 
@@ -91,24 +91,23 @@ This is weighted implementation progress, not a claim that the 36% of the full p
 
 ## Verification and current failures
 
-- Latest confirmed green Personal AI Bots workflow: run **#437**, commit `62db59796d4ec95a8a48ed110f03b8f593cd9c8e`, **154 passed / 0 failed**, logged at 2026-11-09 10:14:40 UTC. This includes population classification, bounded batch creation, successful replay, idempotent retry, duplicate rejection, owner-isolated batch history, checkpoint rollback and fail-closed PostgreSQL persistence guards.
-- Latest completed full Minglora CI run **#8169** is **failed**: **880 passed / 8 failed** out of 888 tests, logged at 2026-11-09 10:14:52 UTC. The For You functional navigation job passed. Remaining failures include people-discovery refresh timing, recharge/payment labels, profile editing, focus retention, and service-worker update assertions.
-- The full repository CI is not green. The dedicated AI Bot Network workflow is green.
-
-- Supabase live verification: project remains accessible; no AI network tables or AI migration-ledger entries were present at the latest read.
-- No production migration deployment, Edge Function deployment, worker deployment, email provisioning, provider inference, 10-billion benchmark or concurrent-capacity load test is claimed.
+- Latest confirmed green Personal AI Bots workflow: run **#437**, branch head commit `62db59796d4ec95a8a48ed110f03b8f593cd9c8e`, **154 passed / 0 failed**, logged at **2026-11-09 10:14:40 UTC**. This includes identity batch creation/replay, duplicate and idempotency protection, runtime-checkpoint rollback, owner-only batch history, fail-closed handling for explicitly skipped PostgreSQL writes, plus existing identity/profile/discovery, Admin API, UI, worker and schema checks.
+- Latest completed full Minglora CI workflow: run **#8169** on the same commit, **880 passed / 8 failed** out of 888 tests, logged at **2026-11-09 10:14:52 UTC**. The separate For You functional-navigation job passed. General CI is **not green**. The remaining failures concern quiet People Discovery refresh timing, Recharge utility/sidebar labels, profile edit action wiring, Coins navigation label, focus containment, and service-worker update registration/version checks. Do not weaken assertions; inspect the implementation behind each failure before changing it.
+- The batch import UI/API is now implemented in code and covered by focused tests: 1–100 identities per batch; owner-scoped idempotency keys and SHA-256 payload matching; duplicate name/category checks; changed-payload replay rejection; completed replay without duplicate writes; failed PostgreSQL writes retained as retryable; initial checkpoint rollback if the runtime save fails; and owner-limited recent batch history. All imported identities remain disabled and private by default.
+- The persistence boundary now treats an explicit `{skipped:true}` or `{ok:false}` result from canonical identity/task/settings persistence as a failure, rather than reporting a successful write. This is test-verified fail-closed behavior, not proof of live database persistence.
+- **Live Supabase verification:** project `gzycobgbasnqqhnympkr` is accessible and ACTIVE_HEALTHY. A direct read-only `to_regclass` check returned NULL for `ai_identities`, `ai_profiles`, `ai_emails`, `ai_provider_assignments`, `minglora_ai_identities`, `minglora_ai_identity_batches` and `personal_ai_bot_batches`. The migration ledger contains 128 entries and no AI Network migration versions. AI migrations remain staged, not applied.
+- No production migration deployment, Edge Function deployment for the AI network, worker/scheduler deployment, email mailbox provisioning, provider inference/health check, 10-billion benchmark or concurrent-capacity load test is claimed.
 
 ## Recovery and progress comparison
-- Previous verified weighted completion: **35.55% → 36%**.
-- Current verified weighted completion: **35.95% → 36%**.
+
 - Previous verified weighted completion: **35.95% → 36%**.
-- Current verified weighted completion: **36.15% → 36%**.
-- Verified progress since the prior checkpoint: **+0.20 percentage points** (the existing batch-import vertical slice is now verified for replay, checkpoint rollback, owner isolation and explicit PostgreSQL-skip failure; the write guard prevents false success).
-- Last verified milestone: **Phase 2 — AI identities, profiles, discovery and batch creation (partial)**; five operating modes and the bounded task foundation remain tested under Phase 4.
-- Last confirmed action: Personal AI Bots workflow #437 passed 154/154 on `62db59796d4ec95a8a48ed110f03b8f593cd9c8e`.
-- Unverified claims: live normalized PostgreSQL persistence, real provider/email provisioning, scheduler/worker deployment, corporate HR operations and unattended autonomous execution remain unverified.
-- Changes since interruption: three population types added to create/edit/service mapping; Bot Teams roadmap corrected; documented population classification; batch replay/rollback/owner-scope tests added; persistence helpers now reject explicit `{skipped:true}` or `{ok:false}` results for identity/task/settings writes. Bulk AI identity creation/import already exists (1–100 records) with duplicate checks, hashed idempotency, retry state and batch history; it is not live-DB verified.
-- Recovery confidence: **CONFIRMED** for branch/checkpoint/CI evidence; **PARTIALLY RECOVERED** for production database/service state (AI migrations not deployed).
+- Current verified weighted completion: **36.75% → 37%**.
+- Verified progress since the prior checkpoint: **+0.80 percentage points**, awarded to the identity/profile/discovery milestone for completed batch creation, idempotent replay/recovery, duplicate protection, fail-closed persistence result checks and 154 passing focused tests.
+- Last verified milestone: **Phase 2 — AI identities and profile completeness (partial)**, now including controlled batch import; Phase 1 remains partial because normalized AI tables/RPCs are not present in live PostgreSQL.
+- Last confirmed action: Personal AI Bots workflow **#437** passed **154/154** on `62db59796d4ec95a8a48ed110f03b8f593cd9c8e` at 2026-11-09 10:14:40 UTC.
+- Unverified claims: live normalized PostgreSQL persistence, actual provider/email provisioning, scheduler/worker deployment, corporate HR operations, supervisor hierarchy and unattended autonomous execution remain unverified.
+- Changes since interruption: implemented and tested bounded JSON identity import, idempotency and payload hashing, duplicate detection, completed replay without double writes, safe retry after canonical persistence failure, runtime checkpoint rollback, owner-scoped batch history, and fail-closed behavior for explicit skipped persistence responses. The PR and checkpoint are being brought forward from the old 36% / workflow #415 state.
+- Recovery confidence: **CONFIRMED** for repository branch, latest commits, checkpoint, workflow logs and PR state; **PARTIALLY RECOVERED** for production database/service state because AI migrations are not deployed and provider/email/worker services are not connected.
 
 ## Changes since the older checkpoint
 
@@ -149,4 +148,5 @@ This is weighted implementation progress, not a claim that the 36% of the full p
 
 ## Exact next action
 
-Continue with the next easiest available work: inspect the eight remaining full-CI failures against the current Minglora implementation and correct the smallest real behavior defect without weakening tests. Then start the Phase 3 organizational foundation using the existing AI schema/repository architecture. Keep PR #202 open/draft; do not apply production migrations or deploy services.
+Start Phase 3 (corporate governance) with the smallest real domain unit: inspect the current admin/module patterns, then implement a validated 20-department catalogue and persistence-backed department CRUD with role-boundary checks and focused tests. Keep any SQL migration staged in this feature branch only. Do not create fake staff, apply migrations to production, deploy workers/providers, merge, or change PR #202 from open/draft.
+
