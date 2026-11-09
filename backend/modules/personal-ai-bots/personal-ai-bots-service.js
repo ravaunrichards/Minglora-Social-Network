@@ -105,7 +105,7 @@ export const PERSONAL_AI_BOT_HIGH_IMPACT_TASKS = Object.freeze([
 const COLLECTIONS = [
   'personalAiBotCategories','personalAiBots','personalAiBotTasks',
   'personalAiBotAudit','personalAiBotSettings','personalAiBotFollows',
-  'personalAiBotTeams','personalAiBotTeamMembers','personalAiBotSchedules','personalAiBotBatches','personalAiBotDepartments','personalAiBotVacancies'
+  'personalAiBotTeams','personalAiBotTeamMembers','personalAiBotSchedules','personalAiBotBatches','personalAiBotDepartments','personalAiBotVacancies','personalAiBotApplications'
 ];
 
 export function ensurePersonalAiBotCollections(db) {
@@ -669,6 +669,79 @@ export function updatePersonalAiBotVacancy(db,vacancyId,input,actorId,timestamp,
   vacancy.updatedAt=timestamp;
   if(changes.length)audit(db,actorId,'vacancy.updated','vacancy',vacancy.id,'Updated '+vacancy.title+': '+changes.join(', ')+'.',timestamp,uid);
   return {...vacancy,statusHistory:(vacancy.statusHistory||[]).map(item=>({...item}))};
+}
+
+
+export function getPersonalAiBotApplications(db) {
+  ensurePersonalAiBotCollections(db);
+  return db.personalAiBotApplications.slice()
+    .sort((a,b)=>String(b.updatedAt||'').localeCompare(String(a.updatedAt||'')))
+    .map(item=>({...item,statusHistory:(item.statusHistory||[]).map(entry=>({...entry}))}));
+}
+
+export function createPersonalAiBotApplication(db,input,actorId,timestamp,uid) {
+  ensurePersonalAiBotCollections(db);
+  const vacancy=db.personalAiBotVacancies.find(item=>item.id===String(input.vacancyId||'').trim()&&item.ownerId===actorId);
+  if(!vacancy)throw Object.assign(new Error('Open vacancy not found.'),{status:404});
+  if(vacancy.status!=='open')throw Object.assign(new Error('Applications can only be submitted to open vacancies.'),{status:409});
+  const identityId=String(input.identityId||'').trim();
+  const candidate=db.personalAiBots.find(item=>item.id===identityId);
+  if(!candidate)throw Object.assign(new Error('Choose an existing organizational AI identity.'),{status:404});
+  if(candidate.population!=='organizational'){
+    throw Object.assign(new Error('Only an existing organizational AI identity can apply for a corporate vacancy.'),{status:409});
+  }
+  if(['suspended','restricted','archived','retired'].includes(String(candidate.status||'').toLowerCase())){
+    throw Object.assign(new Error('This organizational AI identity is not eligible for a vacancy application.'),{status:409});
+  }
+  if(db.personalAiBotApplications.some(item=>item.vacancyId===vacancy.id&&item.identityId===candidate.id)){
+    throw Object.assign(new Error('This organizational AI identity already has an application for the selected vacancy.'),{status:409});
+  }
+  const application={
+    id:'application-'+uid(),
+    vacancyId:vacancy.id,
+    vacancyTitle:vacancy.title,
+    positionCode:vacancy.positionCode,
+    positionTitle:vacancy.positionTitle,
+    departmentId:vacancy.departmentId,
+    departmentName:vacancy.departmentName,
+    identityId:candidate.id,
+    candidateDisplayName:candidate.displayName,
+    candidateUsername:candidate.username,
+    population:candidate.population,
+    status:'submitted',
+    ownerId:actorId,
+    submittedBy:actorId,
+    createdAt:timestamp,
+    updatedAt:timestamp,
+    statusHistory:[{status:'submitted',actorId,createdAt:timestamp}]
+  };
+  db.personalAiBotApplications.push(application);
+  audit(db,actorId,'application.submitted','application',application.id,'Submitted '+candidate.displayName+' for '+vacancy.title+'.',timestamp,uid);
+  return {...application,statusHistory:application.statusHistory.map(entry=>({...entry}))};
+}
+
+export function updatePersonalAiBotApplication(db,applicationId,input,actorId,timestamp,uid) {
+  ensurePersonalAiBotCollections(db);
+  const application=db.personalAiBotApplications.find(item=>item.id===applicationId&&item.ownerId===actorId);
+  if(!application)throw Object.assign(new Error('Candidate application not found.'),{status:404});
+  const transitions={
+    submitted:['in_review','shortlisted','rejected','withdrawn'],
+    in_review:['submitted','shortlisted','rejected','withdrawn'],
+    shortlisted:['in_review','rejected','withdrawn'],
+    rejected:[],
+    withdrawn:[]
+  };
+  const status=String(input.status||'');
+  if(!Object.hasOwn(transitions,application.status)||!transitions[application.status].includes(status)){
+    throw Object.assign(new Error('Candidate application status transition is not permitted. Appointments are handled separately.'),{status:409});
+  }
+  application.status=status;
+  application.updatedBy=actorId;
+  application.updatedAt=timestamp;
+  application.statusHistory||=[];
+  application.statusHistory.push({status,actorId,createdAt:timestamp});
+  audit(db,actorId,'application.status_changed','application',application.id,'Updated application for '+application.candidateDisplayName+' to '+status+'.',timestamp,uid);
+  return {...application,statusHistory:application.statusHistory.map(entry=>({...entry}))};
 }
 
 export function createPersonalAiBotCategory(db, input, actorId, timestamp, uid) {
