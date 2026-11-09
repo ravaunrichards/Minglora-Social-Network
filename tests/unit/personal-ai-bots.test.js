@@ -61,8 +61,48 @@ test('starter set creates one disabled administrator-controlled bot per category
   assert.ok(created.every(bot=>bot.allowedAutonomousActions.length===0));
   assert.ok(created.every(bot=>bot.requiresApprovalForEveryTask===true&&bot.requiresApprovalForPublishing===true));
   assert.ok(created.every(bot=>bot.profileType==='ai_bot'&&bot.aiLabel==='AI Bot'));
+  assert.ok(created.every(bot=>bot.firstName&&bot.lastName));
+  assert.ok(created.every(bot=>bot.firstName!==undefined&&bot.lastName!==undefined));
   assert.equal(createPersonalAiBotStarterSet(db,actor,stamp,uid).length,0);
   assert.equal(db.personalAiBots.length,15);
+});
+
+test('every AI identity stores first, middle and last names separately and supports edits',()=>{
+  const db=makeDb();
+  const bot=createPersonalAiBot(db,{
+    displayName:'Minglora AI Companion',
+    firstName:'Minglora',
+    middleName:'AI',
+    lastName:'Companion',
+    categoryId:'ai-friends'
+  },actor,stamp,uid);
+  assert.equal(bot.firstName,'Minglora');
+  assert.equal(bot.middleName,'AI');
+  assert.equal(bot.lastName,'Companion');
+  assert.equal(bot.fullName,'Minglora AI Companion');
+  const updated=updatePersonalAiBot(db,bot.id,{
+    displayName:'Minglora Learning Companion',
+    firstName:'Minglora',
+    middleName:'Learning',
+    lastName:'Companion'
+  },actor,stamp,uid);
+  assert.equal(updated.firstName,'Minglora');
+  assert.equal(updated.middleName,'Learning');
+  assert.equal(updated.lastName,'Companion');
+  assert.equal(updated.fullName,'Minglora Learning Companion');
+});
+
+test('single-word AI names require explicit separate first and last name fields',()=>{
+  const db=makeDb();
+  assert.throws(()=>createPersonalAiBot(db,{displayName:'Minglora',categoryId:'ai-friends'},actor,stamp,uid),/both an AI first name and last name/);
+  const bot=createPersonalAiBot(db,{
+    displayName:'Minglora',
+    firstName:'Minglora',
+    lastName:'Companion',
+    categoryId:'ai-friends'
+  },actor,stamp,uid);
+  assert.equal(bot.firstName,'Minglora');
+  assert.equal(bot.lastName,'Companion');
 });
 
 test('individual bot creation always starts disabled with no autonomous permissions',()=>{
@@ -134,7 +174,7 @@ test('instructions are pending approval and approval does not execute without a 
 
 test('follow and unfollow instructions require a selected target account',()=>{
   const db=makeDb();
-  const bot=createPersonalAiBot(db,{displayName:'Assistant',categoryId:'ai-friends'},actor,stamp,uid);
+  const bot=createPersonalAiBot(db,{displayName:'AI Assistant',categoryId:'ai-friends'},actor,stamp,uid);
   updatePersonalAiBot(db,bot.id,{status:'enabled'},actor,stamp,uid);
   setPersonalAiBotNetworkSettings(db,{enabled:true},actor,stamp,uid);
   assert.throws(()=>queuePersonalAiBotInstruction(db,bot.id,{taskType:'follow',instruction:'Follow this account'},actor,stamp,uid),/member account/);
@@ -145,7 +185,7 @@ test('follow and unfollow instructions require a selected target account',()=>{
 
 test('pending instructions can be cancelled and cannot be approved twice',()=>{
   const db=makeDb();
-  const bot=createPersonalAiBot(db,{displayName:'Assistant',categoryId:'ai-friends'},actor,stamp,uid);
+  const bot=createPersonalAiBot(db,{displayName:'AI Assistant',categoryId:'ai-friends'},actor,stamp,uid);
   updatePersonalAiBot(db,bot.id,{status:'enabled'},actor,stamp,uid);
   setPersonalAiBotNetworkSettings(db,{enabled:true},actor,stamp,uid);
   const task=queuePersonalAiBotInstruction(db,bot.id,{taskType:'assistant_request',instruction:'Answer this administrative question.'},actor,stamp,uid);
