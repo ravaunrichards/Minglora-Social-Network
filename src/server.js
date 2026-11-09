@@ -1520,6 +1520,18 @@ async function route(req, res) {
   if (p.startsWith('/api/')) {
     let input; try { if (!['GET','HEAD'].includes(method)) input=await body(req,1_000_000); } catch(e) { return json(res,e.status||400,{error:e.message}); }
     const user = sessionUser(req);
+    if(method==='GET'&&p==='/api/auth/providers'){
+      if(AUTH_PROVIDER!=='supabase')return json(res,503,{error:'Social sign-in requires Minglora Supabase Auth.',providers:[]});
+      try{
+        const settings=await supabaseGetAuthSettings();
+        const enabled=OAUTH_PROVIDER_ORDER
+          .filter(provider=>settings.external?.[provider]===true)
+          .map(id=>({id,label:OAUTH_PROVIDER_LABELS[id],href:'/auth/oauth/'+encodeURIComponent(id)}));
+        return json(res,200,{providers:enabled,callbackUrl:new URL('/auth/oauth/callback',appOrigin(req)).toString()});
+      }catch(error){
+        return json(res,error.status||503,{error:'Minglora could not load enabled social sign-in providers.',providers:[]});
+      }
+    }
     // Roll the signed-in device session forward during normal API activity. The
     // cookie and persisted session expire together; persist activity at most daily.
     const activeSession = user ? sessionFromRequest(req) : null;
