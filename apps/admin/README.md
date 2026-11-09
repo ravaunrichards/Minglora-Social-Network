@@ -55,3 +55,41 @@ Automated coverage for owner protections, the CRUD gateway, account form control
 ### Next action
 
 Obtain a fresh CI run for the current branch, then address the remaining Admin Centre-specific failures. Do not merge or deploy the production Edge Function until review, CI, and authorization are complete.
+
+
+## Continuation addendum — 2026-11-09
+
+**Progress checkpoint:** 71% verified implementation credit / 29% remaining. No percentage increase is claimed because the new account-creation safeguards have not yet passed the project test runner or hosted acceptance tests.
+
+### Additional project-verified correction
+
+Live database inspection confirmed the case-insensitive unique index `profiles_username_lower_uq` on `lower(username)`. The account-creation path now:
+- Requires a display name of at least two characters and a non-empty username in the form.
+- Enforces the same requirements in the Edge Function before creating an Auth identity.
+- Checks whether the normalized username is already present and returns HTTP 409 before `createUser`; the database unique index remains the final protection against concurrent duplicate requests.
+- Includes a regression assertion that checks the required fields and that the availability lookup precedes Auth user creation.
+
+Relevant commits:
+- `a2d5d22` — require username in the create form
+- `352ac5e` — validate required identity fields server-side
+- `0d1591b` — enforce the display-name minimum in the form
+- `7ca80b8` — add required-field regression assertions
+- `f138e29` — check username availability before Auth creation
+- `6d51932` — test username preflight ordering and conflict handling
+
+### Current branch and CI state
+
+- Current feature-branch head at this addendum: `6d5193296ef90bf6709a398ae5f31d696b80c017`.
+- Comparison against current `main` head `2f80e9d`: feature branch is 27 commits ahead and 1 commit behind; it is divergent and still requires careful reconciliation.
+- The connected GitHub status/run lookup returned no CI status or workflow-run record for this latest commit. This is **not** evidence of a passing run.
+- The previously observed 738-test run remains the last detailed CI result: 706 passed, 32 failed, before these corrections.
+
+### Live deployment state
+
+- Render's Minglora service is configured to auto-deploy from `main`; its latest observed live deploy is commit `2f80e9d`.
+- The production `minglora-runtime-state` function remains active at version 112; the new account-create/update/delete implementation has not been deployed.
+- No merge, production deployment, schema change, or member-data mutation was performed.
+
+### Next action
+
+Obtain an actual CI run on the current branch and verify the Admin Centre-specific checks. Then reconcile the single missing `main` commit and perform hosted account-management acceptance testing after the required review and deployment authorization.
