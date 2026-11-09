@@ -5,6 +5,38 @@ export const PERSONAL_AI_BOT_POPULATIONS = Object.freeze([
 ]);
 
 
+export const PERSONAL_AI_BOT_JOB_POSITIONS = Object.freeze([
+  {code:'board_chair',title:'Chairperson / Board President',level:1,group:'board',departmentScope:'executive_management',reportsTo:[],description:'Leads the Board of Directors and its governance agenda.'},
+  {code:'board_director',title:'Board Director',level:1,group:'board',departmentScope:'executive_management',reportsTo:['board_chair'],description:'Provides board oversight, governance challenge and strategic direction.'},
+  {code:'ceo',title:'Chief Executive Officer (CEO)',level:2,group:'executive',departmentScope:'executive_management',reportsTo:['board_chair','board_director'],description:'Coordinates executive leadership and accountable delivery of the approved company strategy.'},
+  {code:'coo',title:'Chief Operating Officer (COO)',level:2,group:'executive',departmentScope:'executive_management',reportsTo:['ceo'],description:'Coordinates approved operational services and operating performance.'},
+  {code:'cfo',title:'Chief Financial Officer (CFO)',level:2,group:'executive',departmentScope:'finance_accounting',reportsTo:['ceo'],description:'Oversees financial planning, accounting controls and reporting.'},
+  {code:'cto',title:'Chief Technology Officer (CTO)',level:2,group:'executive',departmentScope:'technology_engineering',reportsTo:['ceo'],description:'Sets technical architecture and engineering direction.'},
+  {code:'chro',title:'Chief Human Resources Officer (CHRO)',level:2,group:'executive',departmentScope:'human_resources',reportsTo:['ceo'],description:'Owns workforce policy, recruitment governance and employment controls.'},
+  {code:'ciso',title:'Chief Information Security Officer (CISO)',level:2,group:'executive',departmentScope:'cybersecurity_it',reportsTo:['ceo'],description:'Leads information-security strategy, risk controls and incident governance.'},
+  {code:'cmo',title:'Chief Marketing Officer (CMO)',level:2,group:'executive',departmentScope:'marketing_advertising',reportsTo:['ceo'],description:'Directs approved marketing, communications and brand strategy.'},
+  {code:'other_executive_officer',title:'Other Executive Officer',level:2,group:'executive',departmentScope:'any_department',reportsTo:['ceo'],description:'Represents other formally defined C-suite or executive officer roles.'},
+  {code:'department_director',title:'Department Director',level:3,group:'department_leadership',departmentScope:'any_department',reportsTo:['ceo','other_executive_officer'],description:'Leads a designated department under an approved executive reporting line.'},
+  {code:'deputy_department_director',title:'Deputy Department Director',level:4,group:'department_leadership',departmentScope:'any_department',reportsTo:['department_director'],description:'Supports a department director and provides delegated coordination when formally appointed.'},
+  {code:'department_manager',title:'Department Manager',level:5,group:'management',departmentScope:'any_department',reportsTo:['department_director','deputy_department_director'],description:'Coordinates a defined department function and its approved workload.'},
+  {code:'regional_manager',title:'Regional Manager',level:6,group:'management',departmentScope:'any_department',reportsTo:['department_manager'],description:'Coordinates a designated geographic region within a department.'},
+  {code:'team_leader',title:'Team Leader',level:7,group:'management',departmentScope:'any_department',reportsTo:['department_manager','regional_manager'],description:'Coordinates a defined team and escalates work through its reporting manager.'},
+  {code:'supervisor',title:'Supervisor',level:8,group:'supervision',departmentScope:'any_department',reportsTo:['team_leader','department_manager'],description:'Reviews assigned work and escalates issues under explicitly granted supervision rules.'},
+  {code:'senior_specialist',title:'Senior Specialist',level:9,group:'specialist',departmentScope:'any_department',reportsTo:['supervisor','team_leader'],description:'Provides advanced expertise and may mentor specialists when authorized.'},
+  {code:'junior_specialist',title:'Junior Specialist',level:10,group:'specialist',departmentScope:'any_department',reportsTo:['senior_specialist','supervisor'],description:'Performs scoped specialist tasks under an assigned reviewer.'},
+  {code:'assistant',title:'Assistant',level:11,group:'support',departmentScope:'any_department',reportsTo:['supervisor','department_manager'],description:'Supports approved administrative and departmental workflows.'},
+  {code:'worker',title:'Worker',level:12,group:'workforce',departmentScope:'any_department',reportsTo:['supervisor','team_leader'],description:'Performs a defined set of approved operational tasks.'}
+].map(position=>Object.freeze({
+  ...position,
+  permissions:Object.freeze([]),
+  canApproveActions:false,
+  canDelegate:false,
+  canHire:false,
+  canManageBudgets:false,
+  canExecuteExternalActions:false,
+  appointmentEnabled:false
+})));
+
 export const PERSONAL_AI_BOT_DEPARTMENTS = Object.freeze([
   {code:'executive_management',name:'Executive Management',description:'Platform strategy, executive coordination and governance administration.'},
   {code:'finance_accounting',name:'Finance and Accounting',description:'Budgets, expenditure records, forecasting and financial reconciliation.'},
