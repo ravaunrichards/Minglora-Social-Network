@@ -31,6 +31,7 @@ test('profile post reactions remain one-per-member and favorites reuse saved-pos
   assert.ok(server.includes('isFavorite:Boolean(savedRecord?.isFavorite)'));
   assert.ok(server.includes('isSaved:Boolean(savedRecord&&savedRecord.isSaved!==false)'));
   assert.ok(server.includes('saved.isSaved=false'));
+  assert.ok(server.includes('saved.isSaved!==false||saved.collectionId'));
   assert.ok(server.includes('/favorite$/'));
 });
 
