@@ -49,7 +49,7 @@ function canonicalAiIdentity(bot) {
     nationality:String(bot.nationality||''),
     country_of_origin:String(bot.countryOfOrigin||''),
     current_country:String(bot.currentCountry||''),
-    time_zone:String(bot.activitySchedule?.timezone||bot.timeZone||'America/Jamaica'),
+    time_zone:String(bot.timeZone||bot.activitySchedule?.timezone||'America/Jamaica'),
     personality:String(bot.personality||''),
     communication_style:String(bot.communicationStyle||bot.communicationStyleDescription||''),
     interests:Array.isArray(bot.interests)?bot.interests:[],
