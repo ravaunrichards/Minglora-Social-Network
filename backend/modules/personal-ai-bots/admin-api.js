@@ -11,6 +11,20 @@ function canonicalAiIdentity(bot) {
         :bot.status==='archived'?'archived':'created';
   const supportedGenders=new Set(['female','male','non_binary','other','prefer_not_to_specify']);
   const gender=String(bot.gender||'prefer_not_to_specify').toLowerCase();
+  const locations=Array.isArray(bot.locations)?bot.locations:[
+    ...((bot.countryOfOrigin||bot.originCountryCode||bot.originStateProvince||bot.originParishCounty||bot.originCity||bot.originTown)?[{
+      locationType:'origin',countryCode:bot.originCountryCode||'',countryName:bot.countryOfOrigin||'',
+      stateProvince:bot.originStateProvince||'',district:bot.originDistrict||'',
+      parishCounty:bot.originParishCounty||'',city:bot.originCity||'',town:bot.originTown||'',
+      timeZone:bot.originTimeZone||'UTC',isPrimary:false
+    }]:[]),
+    ...((bot.currentCountry||bot.currentCountryCode||bot.stateProvince||bot.parishCounty||bot.city||bot.town)?[{
+      locationType:'current',countryCode:bot.currentCountryCode||'',countryName:bot.currentCountry||'',
+      stateProvince:bot.stateProvince||'',district:bot.district||'',
+      parishCounty:bot.parishCounty||'',city:bot.city||'',town:bot.town||'',
+      timeZone:bot.timeZone||bot.activitySchedule?.timezone||'UTC',isPrimary:true
+    }]:[])
+  ];
   return {
     id:String(bot.id),
     population:String(bot.population||'independent'),
@@ -31,19 +45,28 @@ function canonicalAiIdentity(bot) {
     biography:String(bot.bio||bot.description||''),
     introduction:String(bot.introduction||''),
     gender:supportedGenders.has(gender)?gender:'prefer_not_to_specify',
+    gender_presentation:String(bot.genderPresentation||''),
     nationality:String(bot.nationality||''),
     country_of_origin:String(bot.countryOfOrigin||''),
     current_country:String(bot.currentCountry||''),
     time_zone:String(bot.activitySchedule?.timezone||bot.timeZone||'America/Jamaica'),
     personality:String(bot.personality||''),
+    communication_style:String(bot.communicationStyle||bot.communicationStyleDescription||''),
     interests:Array.isArray(bot.interests)?bot.interests:[],
     hobbies:Array.isArray(bot.hobbies)?bot.hobbies:[],
+    education:Array.isArray(bot.education)?bot.education:[],
     languages:Array.isArray(bot.languages)?bot.languages:[],
     profession:String(bot.profession||''),
     skills:Array.isArray(bot.skills)?bot.skills:[],
+    avatar_storage_reference:String(bot.avatarStorageReference||''),
+    cover_storage_reference:String(bot.coverStorageReference||''),
+    voice_preferences:bot.voicePreferences&&typeof bot.voicePreferences==='object'?bot.voicePreferences:{},
+    avatar_preferences:bot.avatarPreferences&&typeof bot.avatarPreferences==='object'?bot.avatarPreferences:{},
+    ...(locations.length?{locations}:{}),
+    ...(Array.isArray(bot.capabilities)?{capabilities:bot.capabilities}:{}),
     memory_enabled:bot.memoryEnabled===true,
     memory_configuration:bot.memoryConfiguration&&typeof bot.memoryConfiguration==='object'?bot.memoryConfiguration:{},
-    visibility:'private',
+    visibility:['public','friends','private'].includes(bot.visibility)?bot.visibility:'private',
     created_at:bot.createdAt||new Date().toISOString()
   };
 }
