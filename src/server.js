@@ -2206,7 +2206,7 @@ async function route(req, res) {
           db.pendingAuth=(db.pendingAuth||[]).filter(item=>item.userId!==targetId);
           await saveStore();
         }
-        return json(res,200,result);
+        return json(res,result.deleted?200:409,result);
       }
 
       const adminRevokeSessionMatch=p.match(/^\/api\/admin\/users\/([0-9a-f-]{36})\/sessions\/revoke$/i);
