@@ -34,7 +34,7 @@ test('profile cover and portrait are separate blocks with a clear gap and indepe
   assert.ok(app.includes('esc(u.cover)'));
   assert.ok(app.includes('avatar(u)'));
   assert.ok(app.includes('class="profile-avatar-edit-wrap"><img class="avatar"'));
-  assert.ok(app.includes("profileBioMarkup+(data.profileStatus?"));
+  assert.ok(app.includes("(profileThoughtMarkup?'<div class=\"profile-thought-slot\">'"));
   assert.ok(app.includes("[['posts','Posts'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Reels'],['more','More']]"));
 });
 
