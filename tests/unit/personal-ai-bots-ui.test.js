@@ -198,3 +198,20 @@ test('owner Admin Centre exposes the 20-department catalogue and safe hierarchy 
   assert.equal((service.match(/\{code:'[a-z_]+',name:'[^']+'/g)||[]).length>=20,true);
 });
 
+
+
+test('owner Admin Centre exposes corporate vacancy creation and safe status controls',async()=>{
+  const [ui,service,api,html]=await Promise.all([
+    read('public/personal-ai-bots.js'),
+    read('backend/modules/personal-ai-bots/personal-ai-bots-service.js'),
+    read('backend/modules/personal-ai-bots/admin-api.js'),
+    read('public/personal-ai-bots.html')
+  ]);
+  for(const phrase of ['Corporate vacancies','pab-vacancy-form','pab-vacancy-position','pab-vacancy-department','pab-vacancy-title','pab-vacancy-slots','pab-vacancy-requirements','createVacancy','saveVacancy'])assert.ok(ui.includes(phrase),phrase);
+  assert.match(ui,/does not create an AI identity, hire or appoint anyone/);
+  assert.match(service,/export function createPersonalAiBotVacancy/);
+  assert.match(service,/appointmentId/);
+  assert.match(api,/root\\+'\\/vacancies'/);
+  assert.ok(html.includes('/personal-ai-bots.js?v=20261109-personal-ai-bots-5'));
+});
+
