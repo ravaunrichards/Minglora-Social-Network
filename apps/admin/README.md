@@ -202,3 +202,51 @@ The latest functional addition audits deletion outcomes only after Supabase Auth
 ### Exact next action
 
 Keep PR #203 open and draft. Do not merge or rebase without authorization. The next authorized step is reviewed reconciliation of the known `src/server.js`, `public/admin-centre.html` and `public/sw.js` overlap, followed by hosted acceptance after deployment approval.
+
+## Continuation addendum — 2026-11-09 10:47 UTC
+
+**Canonical verified progress remains 73% / 27% remaining.** This retains the previously recorded weighted milestone credits; no hosted Auth CRUD or provider-management operation has yet been executed successfully against production. A provisional higher chat estimate is superseded by this durable evidence-based checkpoint.
+
+### Latest branch and CI snapshot
+
+- **Branch tip:** `891925730f17390c3b297a295e7cf15924435880`.
+- **PR #203:** open draft; GitHub reports `mergeable=false`, `mergeable_state=dirty`; 66 commits, 15 changed files.
+- **Comparison:** feature branch is 66 commits ahead and one commit behind `main` (`2f80e9d997b43e5da6373c385d6ce153ff908e67`).
+- **Latest completed workflow:** [run #8293](https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/42603739693).
+- **General suite:** 746 tests, 716 passed, 30 failed.
+- **For You functional navigation:** 15 tests, 13 passed, 2 failed (For You header/search layout and Home Stories layout).
+- Admin Centre-focused tests pass, including member CRUD authorization, deletion audit ordering, local-only session-revocation audit, Auth-provider same-origin/MFA checks, service cards and secret-safety assertions.
+- JavaScript syntax, dependency audit (0 reported vulnerable packages), repository-structure and required-path checks pass. The overall workflow remains failed due the unrelated 30-test and 2-test groups; these are not counted as passes.
+
+### Provider Management API configuration
+
+The Admin Centre's Supabase Auth provider panel uses `SUPABASE_ACCESS_TOKEN` on the Minglora Render service to call the Supabase Management API. Configure a project-scoped Personal Access Token with the least required permissions:
+
+- `auth_config_read` for GET `/v1/projects/{ref}/config/auth`.
+- `auth_config_write` and `project_admin_write` for PATCH `/v1/projects/{ref}/config/auth`.
+
+Official current documentation: [GET Auth service config](https://supabase.com/docs/reference/api/v1-get-auth-service-config), [PATCH Auth service config](https://supabase.com/docs/reference/api/v1-update-auth-service-config), and [Personal Access Tokens](https://supabase.com/docs/guides/platform/personal-access-tokens).
+
+The token must be stored only in Render's server-side environment; it is never sent to the browser or written to source control. No token was supplied or verified in this execution, and the connected Render tool does not reveal secret environment values. The provider panel therefore remains **configured in code but not end-to-end verified** until a scoped token and provider-side client credentials are present.
+
+### Latest live infrastructure verification
+
+Direct service reads on 2026-11-09 during this continuation confirmed:
+
+- Supabase project `gzycobgbasnqqhnympkr` is `ACTIVE_HEALTHY`, with PostgreSQL 17.11.0.003.
+- Production `minglora-runtime-state` remains `ACTIVE`, version 112. This production function does not yet contain the feature branch's member CRUD actions.
+- Render service `minglora-social-network` is active, configured for auto-deploy from `main`, and its latest listed live deployment is commit `2f80e9d997b43e5da6373c385d6ce153ff908e67` (status `live`).
+- No production Auth settings, provider settings, member accounts, balances, database schema, permissions, merge or deployment were changed.
+
+### PR reconciliation state
+
+The branch contains the Supabase Auth provider manager introduced by the newer `main` commit. The Auth-provider JS file has the same Git blob SHA on `main` and the feature branch. The dirty merge overlaps are `src/server.js`, `public/admin-centre.html`, and `public/sw.js`: the feature branch includes the owner/MFA-protected provider route and member routes, updated asset versions, and cache v257. GitHub still marks PR #203 dirty, so manual/reviewed reconciliation is required. No merge or rebase has been performed.
+
+### Remaining work and exact next action
+
+- **Easy:** No known Admin Centre-specific CI failure remains; preserve the existing focused regression coverage.
+- **Medium:** Obtain authorization for a reviewed reconciliation of `src/server.js`, `public/admin-centre.html`, and `public/sw.js`; then test hosted owner/MFA user CRUD, partial failures, audit outcomes, ban/unban and session revocation.
+- **Hard:** Configure the scoped Supabase Management token, verify real provider GET/PATCH requests, merge only after authorized review, deploy the Edge Function and complete hosted acceptance.
+- **Final:** Resolve or formally accept the 30 full-suite and 2 For You failures; verify the live application before declaring completion.
+
+**Next action:** request authorization to reconcile the feature branch with the newer `main` commit. Until that authorization is given, keep PR #203 in draft and leave production unchanged.
