@@ -425,20 +425,35 @@ Deno.serve(async (req: Request) => {
     if (reason.length < 3) return json(400, { error: "Enter a deletion reason of at least 3 characters." });
     const { data: found, error: lookupError } = await admin.auth.admin.getUserById(userId);
     if (lookupError || !found?.user) return json(404, { error: "The selected Minglora account was not found." });
+    const targetJwt = String(input.targetJwt || "");
+    let providerRefreshTokensRevoked = false;
+    let sessionRevokeError: string | null = null;
+    if (targetJwt.length >= 20) {
+      const { error: revokeError } = await admin.auth.admin.signOut(targetJwt, "global");
+      if (!revokeError) providerRefreshTokensRevoked = true;
+      else sessionRevokeError = String(revokeError.message || "Supabase sessions could not be revoked.").slice(0, 180);
+    }
     const { error: deleteError } = await admin.auth.admin.deleteUser(userId);
     if (deleteError) {
       const auditRecorded = await recordAdminUserAction(actorUserId, userId, "account.delete_failed", {
-        reason, outcome: "rejected"
+        reason, outcome: "rejected", providerRefreshTokensRevoked, sessionRevokeError
       });
       return json(409, {
         error: String(deleteError.message || "Minglora could not delete the account.").slice(0, 220),
-        auditRecorded
+        auditRecorded,
+        sessionRevoked: providerRefreshTokensRevoked,
+        warning: sessionRevokeError
       });
     }
     const auditRecorded = await recordAdminUserAction(actorUserId, userId, "account.delete", {
-      reason, deletionMode: "hard", outcome: "deleted"
+      reason, deletionMode: "hard", outcome: "deleted", providerRefreshTokensRevoked, sessionRevokeError
     });
-    return json(200, { ok: true, deleted: true, userId, auditRecorded, warning: "Supabase-issued access JWTs may remain valid until their expiry." });
+    const warning = providerRefreshTokensRevoked
+      ? "Supabase refresh-token sessions were globally revoked before deletion. Previously issued access JWTs may remain valid until expiry."
+      : sessionRevokeError
+        ? "The account was deleted, but Supabase session revocation failed: " + sessionRevokeError
+        : "No current Supabase access token was available, so provider refresh-token sessions were not globally revoked. Previously issued access JWTs may remain valid until expiry.";
+    return json(200, { ok: true, deleted: true, userId, auditRecorded, sessionRevoked: providerRefreshTokensRevoked, warning });
   }
 
   if (action === "admin_user_revoke_sessions") {
