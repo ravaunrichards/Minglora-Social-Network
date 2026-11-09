@@ -722,3 +722,70 @@ test('canonical AI identity synchronization includes full profile and structured
   assert.equal(persisted.locations[0].countryCode,'JM');
   assert.equal(persisted.capabilities[0].code,'text');
 });
+
+
+test('AI profile PATCH persists demographic, career, location and preference fields to canonical PostgreSQL records',async()=>{
+  const botId='00000000-0000-4000-8000-000000000801';
+  let persisted=null,saves=0;
+  const context=makeContext({
+    method:'PATCH',
+    path:'/api/admin/personal-ai-bots/bots/'+botId,
+    input:{
+      firstName:'Profile',middleName:'Global',lastName:'Guide',
+      gender:'non_binary',genderPresentation:'Androgynous AI identity',
+      nationality:'Jamaican',countryOfOrigin:'Jamaica',currentCountry:'United Kingdom',
+      timeZone:'Europe/London',
+      introduction:'A global AI learning guide.',
+      communicationStyle:'Clear and encouraging.',
+      profession:'Educator',
+      education:[{institution:'Minglora Academy',qualification:'AI Education Certificate'}],
+      skills:['Teaching','Research'],
+      locations:[{
+        locationType:'current',countryCode:'GB',countryName:'United Kingdom',
+        stateProvince:'England',district:'Greater London',city:'London',
+        timeZone:'Europe/London',isPrimary:true
+      }],
+      voicePreferences:{voice:'neutral'},avatarPreferences:{style:'3d'},
+      memoryEnabled:true,memoryConfiguration:{retentionDays:14},
+      avatarStorageReference:'ai/profile/avatar-801',
+      coverStorageReference:'ai/profile/cover-801'
+    },
+    db:{
+      personalAiBotSettings:[{id:'global',enabled:false}],
+      personalAiBots:[{
+        id:botId,createdBy:'owner-1',displayName:'Profile Global Guide',
+        firstName:'Profile',middleName:'Global',lastName:'Guide',
+        categoryId:'ai-support',categoryName:'AI Support',
+        username:'ai_profile_global_guide',status:'disabled',enabled:false,
+        visibility:'private',publicProfileEnabled:false
+      }]
+    },
+    persistAiIdentities:async identities=>{persisted=identities[0];},
+    saveStore:async()=>{saves++;}
+  });
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,200);
+  assert.equal(context.res.payload.ok,true);
+  assert.equal(persisted.first_name,'Profile');
+  assert.equal(persisted.middle_name,'Global');
+  assert.equal(persisted.last_name,'Guide');
+  assert.equal(persisted.gender,'non_binary');
+  assert.equal(persisted.gender_presentation,'Androgynous AI identity');
+  assert.equal(persisted.nationality,'Jamaican');
+  assert.equal(persisted.country_of_origin,'Jamaica');
+  assert.equal(persisted.current_country,'United Kingdom');
+  assert.equal(persisted.time_zone,'Europe/London');
+  assert.equal(persisted.communication_style,'Clear and encouraging.');
+  assert.equal(persisted.profession,'Educator');
+  assert.equal(persisted.education[0].qualification,'AI Education Certificate');
+  assert.deepEqual(persisted.skills,['Teaching','Research']);
+  assert.equal(persisted.locations[0].countryCode,'GB');
+  assert.equal(persisted.locations[0].city,'London');
+  assert.deepEqual(persisted.voice_preferences,{voice:'neutral'});
+  assert.deepEqual(persisted.avatar_preferences,{style:'3d'});
+  assert.equal(persisted.memory_enabled,true);
+  assert.deepEqual(persisted.memory_configuration,{retentionDays:14});
+  assert.equal(persisted.avatar_storage_reference,'ai/profile/avatar-801');
+  assert.equal(persisted.cover_storage_reference,'ai/profile/cover-801');
+  assert.equal(saves,1);
+});
