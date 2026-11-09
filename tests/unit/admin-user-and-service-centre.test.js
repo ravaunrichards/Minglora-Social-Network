@@ -202,6 +202,12 @@ test("Admin Centre content stays visible and reflows without clipping, sticky ov
   assert.match(css, /@media\(max-width:560px\)\s*\{\s*\.admin-centre-navigation\s*\{grid-template-columns:minmax\(0,1fr\)/);
   assert.match(authProviderCss, /@media\(max-width:620px\)\s*\{\.admin-auth-provider-grid\s*\{grid-template-columns:1fr/);
   assert.match(css, /\.admin-control-centre-page button,[\s\S]*?max-width:\s*100%;/);
+  assert.doesNotMatch(css, /position:\s*(?:fixed|sticky)\b/, "Admin Centre styles must not create fixed or sticky overlays");
+  assert.doesNotMatch(css, /text-overflow:\s*ellipsis\b/, "Admin Centre content must not be ellipsized");
+  const clippedBlocks = [...css.matchAll(/([^{}]+)\{([^{}]*\boverflow:\s*hidden\b[^{}]*)\}/g)];
+  assert.equal(clippedBlocks.length, 1, "only the circular member avatar may crop overflow");
+  assert.match(clippedBlocks[0][1], /\.admin-user-result-avatar/);
+  assert.match(css, /\.admin-internal-activity-row time,\s*#admin-withdrawal-tracker-updated,\s*\.admin-platform-module-card-heading>strong,\s*\.admin-member-promotion-amount\s*\{[^}]*overflow-wrap:\s*anywhere;\s*white-space:\s*normal;/);
 });
 
 test("service connections show Minglora providers without returning secrets", () => {
