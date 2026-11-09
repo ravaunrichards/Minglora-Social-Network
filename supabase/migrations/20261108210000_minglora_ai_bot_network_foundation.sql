@@ -492,6 +492,7 @@ CREATE TABLE IF NOT EXISTS public.ai_identity_locations (
   country_name text NOT NULL DEFAULT '',
   state_province text NOT NULL DEFAULT '',
   district text NOT NULL DEFAULT '',
+  parish_county text NOT NULL DEFAULT '',
   city text NOT NULL DEFAULT '',
   town text NOT NULL DEFAULT '',
   time_zone text NOT NULL DEFAULT 'UTC',
