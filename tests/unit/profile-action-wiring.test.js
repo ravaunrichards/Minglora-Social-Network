@@ -10,7 +10,7 @@ const app=read('public/app.js');
 const server=read('src/server.js');
 const html=read('public/index.html');
 const worker=read('public/sw.js');
-const profileCss=[read('public/profile-action-row.css'),read('public/profile-facebook-panel.css'),read('public/profile-layout-guardrails.css'),read('public/profile-facebook-avatar-anchor.css'),read('public/profile-independent-avatar-header.css'),read('public/profile-owner-action-placement.css'),read('public/profile-facebook-account-menu.css')].join('\n');
+const profileCss=[read('public/profile-action-row.css'),read('public/profile-facebook-panel.css'),read('public/profile-layout-guardrails.css'),read('public/profile-facebook-avatar-anchor.css'),read('public/profile-independent-avatar-header.css'),read('public/profile-owner-action-placement.css'),read('public/profile-facebook-account-menu.css'),read('public/social-facebook-layout.css')].join('\n');
 const profileStart=app.indexOf('function renderProfile(data){');
 const profileEnd=app.indexOf('async function loadProfileGiftGallery',profileStart);
 assert.ok(profileStart>=0&&profileEnd>profileStart,'profile renderer exists');
@@ -124,32 +124,29 @@ test('profile post cards reuse the working feed action bindings inside profile t
   assert.ok(binder.includes('bindProfileLinks(root)'),'profile links in post cards must remain navigable');
 });
 
-test('visitor profile actions stay readable and tappable on narrow screens',()=>{
+test('visitor profile actions show complete labels and icons in one horizontal row',()=>{
   assert.ok(profileCss.includes('min-height:40px!important')||profileCss.includes('min-height:38px!important')||profileCss.includes('min-height:36px!important'));
   assert.ok(profileCss.includes('white-space:nowrap!important'));
-  assert.ok(profileCss.includes('grid-template-columns:repeat(3,minmax(0,1fr))!important'));
+  assert.ok(profileCss.includes('flex-flow:row nowrap!important'));
+  assert.ok(profileCss.includes('overflow-x:auto!important'));
   assert.ok(profile.includes('id="profile-message"')&&profile.includes('</svg>Message</button>'));
-  assert.ok(profile.includes('id="profile-report"')&&profile.includes('>Report</button>'));
-  assert.ok(profile.includes('id="profile-block"')&&profile.includes('>Block</button>'));
+  assert.ok(profile.includes('id="profile-report"')&&profile.includes('</svg>Report</button>'));
+  assert.ok(profile.includes('id="profile-block"')&&profile.includes('</svg>Block</button>'));
 });
 
-test('visitor profile actions stay in one horizontal row and preserve subscription checkout',()=>{
-  assert.ok(profileCss.includes('background:var(--blue)!important'),'inactive profile actions use Minglora theme blue');
-  assert.ok(profileCss.includes('background:var(--danger,#c43d4b)!important'),'active profile actions use semantic danger color');
-  assert.ok(profileCss.includes('[data-following="true"]'),'follow state is represented in the button');
-  assert.ok(profileCss.includes('[data-subscription-active="true"]'),'active subscription state is represented in the button');
-  assert.ok(profile.includes("data-friendship=")&&profile.includes("esc(data.friendship||'')"),'accepted friendship is represented as active');
-  assert.ok(profile.includes("data-subscription-active=")&&profile.includes("subscriptionAlreadyExists?'true':'false'")&&profile.includes("['active','past_due'].includes(subscriptionStatus)"),'active subscription state is wired to the button color');
-  assert.ok(profileCss.includes('display:grid!important'),'visitor actions use a horizontal grid');
-  assert.ok(profileCss.includes('grid-template-columns:repeat(3,minmax(0,1fr))!important'),'primary actions use three columns');
-  assert.ok(profileCss.includes('grid-column:1/-1!important'),'More actions remains in its own row');
-  assert.ok(profileCss.includes('white-space: nowrap !important'),'action labels remain on one line');
+test('visitor profile actions stay in one continuous row and preserve existing interactions',()=>{
+  assert.ok(profileCss.includes('display:flex!important'),'visitor action bar uses flex layout');
+  assert.ok(profileCss.includes('flex-flow:row nowrap!important'),'all seven actions remain on one line');
+  assert.ok(profileCss.includes('grid-column:1/-1!important'),'visitor action bar spans full profile width');
+  assert.ok(profileCss.includes('grid-row:2!important'),'visitor action bar sits directly above profile counts');
+  assert.ok(profileCss.includes('overflow-x:auto!important'),'narrow screens can scroll the action bar horizontally');
+  assert.ok(profileCss.includes('white-space:nowrap!important'),'action labels never wrap');
   assert.ok(profile.includes("profileSubscribeButton.disabled=subscriptionAlreadyExists"),'Subscribe remains available unless a subscription already exists');
   assert.ok(!profile.includes('profileSubscribeButton.remove()'),'Subscribe is not removed from the profile');
   assert.ok(profile.includes("api('/subscriptions/checkout'"),'Subscribe keeps its checkout route');
   assert.ok(profile.includes('id="profile-follow"')&&profile.includes("?'Friends · Following':'Following'")&&profile.includes(":'Follow'))"),'Follow button and follow-state labels remain connected');
-  for(const label of ['Message','Voice call','Video call'])assert.ok(profile.includes('</svg>'+label+'</button>'),'Missing visitor action '+label);
-  assert.ok(profile.includes('id="profile-subscribe"'),'Subscribe button remains in the visitor actions');
+  for(const label of ['Message','Voice Calls','Video Calls','Report','Block'])assert.ok(profile.includes('</svg>'+label+'</button>'),'Missing full visitor action label '+label);
+  assert.ok(profile.includes('id="profile-subscribe"'),'Subscribe remains in the visitor actions');
 });
 
 test('HTML and service worker load the current profile-action script and cache generation',()=>{
@@ -180,18 +177,20 @@ test('profile renders core data before optional profile panels settle',()=>{
   assert.ok(loader.includes('profileLoadGeneration'),'late profile responses are prevented from replacing a newer profile');
 });
 
-test('all five primary visitor actions are visible in a three-over-two horizontal grid',()=>{
-  const ordered=['id="profile-follow"','id="profile-subscribe"','id="profile-message"','data-profile-call="audio"','data-profile-call="video"'];
+test('all seven visitor profile actions appear in order in one full-width line above profile counts',()=>{
+  const ordered=['id="profile-follow"','id="profile-subscribe"','id="profile-message"','data-profile-call="audio"','data-profile-call="video"','id="profile-report"','id="profile-block"'];
   let previous=-1;
   for(const marker of ordered){
     const index=profile.indexOf(marker);
-    assert.ok(index>previous,'Primary action order is Follow, Subscribe, Message, Voice call, Video call');
+    assert.ok(index>previous,'Visitor action order is Follow, Subscribe, Message, Voice Calls, Video Calls, Report, Block');
     previous=index;
   }
-  const more=profile.indexOf('class="profile-extra-actions"');
-  assert.ok(more>previous,'Report and Block remain available after the five primary actions');
-  assert.ok(profileCss.includes('.profile-actions--primary'));
-  assert.ok(profileCss.includes('grid-template-columns:repeat(3,minmax(0,1fr))!important'));
+  assert.ok(!profile.includes('profile-extra-actions'),'Report and Block are no longer hidden in a More actions menu');
+  assert.ok(profile.indexOf('class="profile-actions profile-actions--primary"')<profile.indexOf('class="profile-counts"'),'The actions appear above the profile statistics');
+  for(const label of ['Message','Voice Calls','Video Calls','Report','Block'])assert.ok(profile.includes('</svg>'+label+'</button>'),'Every action keeps its complete horizontal label and icon');
+  assert.ok(profileCss.includes('flex-flow:row nowrap!important'));
   assert.ok(profileCss.includes('grid-column:1/-1!important'));
-  assert.ok(profileCss.includes('position:static!important'),'More actions expand in normal document flow instead of covering profile content');
+  assert.ok(profileCss.includes('grid-row:2!important'));
+  assert.ok(profileCss.includes('overflow-x:auto!important'));
+  assert.ok(profileCss.includes('position:static!important'),'The action row remains in normal document flow');
 });
