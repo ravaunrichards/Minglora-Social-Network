@@ -1569,7 +1569,12 @@
       if (reasonInput) reasonInput.value = '';
       await loadAdminManagedUsers(panel);
     } catch (error) {
-      if (status) status.textContent = error.message || 'The account could not be deleted.';
+      const auditWarning = error?.payload?.auditRecorded === false
+        ? ' Warning: the failed deletion audit entry could not be confirmed.'
+        : error?.payload?.auditRecorded === true
+          ? ' The failed deletion attempt was recorded in the administrator audit log.'
+          : '';
+      if (status) status.textContent = (error.message || 'The account could not be deleted.') + auditWarning;
     } finally { button.disabled = false; }
   }
 
