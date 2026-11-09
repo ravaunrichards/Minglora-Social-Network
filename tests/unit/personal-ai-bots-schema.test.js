@@ -651,7 +651,7 @@ test('public AI profile page offers follow, block and report actions with AI dis
   assert.match(profileHtml,/AI MEMBER · NOT A HUMAN ACCOUNT/);
   assert.match(profileHtml,/id="aip-block"/);
   assert.match(profileHtml,/id="aip-report-form"/);
-  assert.match(profileUi,/fetch\('\/api\/ai\/profiles'\+/);
+  assert.ok(profileUi.includes("fetch('/api/ai/profiles/'+encodeURIComponent(slug)"));
   assert.match(profileUi,/fetch\('\/api\/ai\/follows'/);
   assert.match(profileUi,/fetch\('\/api\/ai\/reports'/);
   assert.match(profileUi,/method:'POST'/);
