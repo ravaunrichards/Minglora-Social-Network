@@ -178,3 +178,24 @@ test('owner follow batch rejects a target blocked by the administrator account',
   assert.match(context.res.payload.error,/block exists/);
   assert.equal(context.db.personalAiBotTasks.length,0);
 });
+
+
+test('follow batch resolves remote Supabase members through the existing owner-authorized lookup',async()=>{
+  const owner='owner-1',target='remote-member';
+  const botId='00000000-0000-4000-8000-000000000104';
+  let lookedUp='';
+  const context=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/follow-batch',
+    input:{taskType:'follow',targetUserId:target,botIds:[botId]},
+    db:{
+      personalAiBotSettings:[{id:'global',enabled:true}],
+      personalAiBots:[{id:botId,createdBy:owner,displayName:'AI Friend',categoryId:'ai-friends',status:'enabled',enabled:true}],
+      users:[],blocks:[]
+    },
+    lookupAdminMember:async id=>{lookedUp=id;return id===target?{id,username:'remote_user',status:'active'}:null;}
+  });
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(lookedUp,target);
+  assert.equal(context.res.statusCode,201);
+  assert.equal(context.res.payload.created,1);
+});
