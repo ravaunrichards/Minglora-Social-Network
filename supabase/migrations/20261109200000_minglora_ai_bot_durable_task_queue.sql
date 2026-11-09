@@ -325,7 +325,10 @@ BEGIN
   END IF;
 
   WITH candidates AS (
-    SELECT task.id
+    SELECT task.id,
+      provider.assignment_id,provider.provider_name,provider.provider_identifier,
+      provider.model_id,provider.model_name,provider.model_identifier,provider.model_version,
+      provider.credential_secret_reference
     FROM public.minglora_ai_bot_tasks AS task
     JOIN public.ai_identities AS identity
       ON identity.identity_id = task.bot_id
@@ -333,6 +336,27 @@ BEGIN
     JOIN public.minglora_ai_bot_categories AS category
       ON category.id = identity.category_id
      AND category.enabled = true
+    JOIN LATERAL (
+      SELECT assignment.id AS assignment_id,
+        account.provider_name,account.provider_identifier,
+        account.credential_secret_reference,
+        model.id AS model_id,model.model_name,model.model_identifier,model.model_version
+      FROM public.ai_provider_assignments AS assignment
+      JOIN public.ai_provider_accounts AS account ON account.id = assignment.provider_account_id
+      JOIN public.ai_provider_models AS model ON model.id = assignment.model_id
+      WHERE assignment.identity_id = identity.identity_id
+        AND assignment.assignment_status = 'active'
+        AND assignment.provider_health_status = 'healthy'
+        AND account.account_status = 'active'
+        AND account.provider_health_status = 'healthy'
+        AND account.credential_secret_reference IS NOT NULL
+        AND model.assignment_status = 'available'
+        AND model.text_capable = true
+        AND pg_catalog.cardinality(assignment.tool_permissions) = 0
+        AND pg_catalog.cardinality(model.tool_permissions) = 0
+      ORDER BY assignment.is_primary DESC,assignment.routing_priority ASC,assignment.assigned_at DESC
+      LIMIT 1
+    ) AS provider ON true
     WHERE task.owner_admin_id = p_actor_user_id
       AND task.status = 'approved_waiting_for_worker'
       AND task.next_attempt_at <= pg_catalog.now()
@@ -361,7 +385,10 @@ BEGIN
     WHERE task.id = candidates.id
     RETURNING task.id,task.bot_id,task.task_type,task.instruction,task.payload,
       task.high_impact,task.approved_by,task.approved_at,task.attempt_count,
-      task.max_attempts,task.worker_id,task.lease_token,task.lease_expires_at
+      task.max_attempts,task.worker_id,task.lease_token,task.lease_expires_at,
+      candidates.assignment_id,candidates.provider_name,candidates.provider_identifier,
+      candidates.model_id,candidates.model_name,candidates.model_identifier,candidates.model_version,
+      candidates.credential_secret_reference
   )
   SELECT COALESCE(
     pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
@@ -370,7 +397,12 @@ BEGIN
       'highImpact',claimed.high_impact,'approvedBy',claimed.approved_by,
       'approvedAt',claimed.approved_at,'attemptCount',claimed.attempt_count,
       'maxAttempts',claimed.max_attempts,'workerId',claimed.worker_id,
-      'leaseToken',claimed.lease_token,'leaseExpiresAt',claimed.lease_expires_at
+      'leaseToken',claimed.lease_token,'leaseExpiresAt',claimed.lease_expires_at,
+      'providerAssignmentId',claimed.assignment_id,
+      'providerName',claimed.provider_name,'providerIdentifier',claimed.provider_identifier,
+      'modelId',claimed.model_id,'modelName',claimed.model_name,
+      'modelIdentifier',claimed.model_identifier,'modelVersion',claimed.model_version,
+      'credentialSecretReference',claimed.credential_secret_reference
     ) ORDER BY claimed.id),
     '[]'::jsonb
   ) INTO v_result
