@@ -689,3 +689,16 @@ test('Personal AI Bots editor creates and saves the complete editable demographi
   assert.match(adminBotUi,/education:csv/);
   assert.match(adminBotUi,/skills:csv/);
 });
+
+
+test('AI bot editor and discovery use the same complete 249-entry ISO country and territory catalogue',()=>{
+  const adminCodes=adminBotUi.match(/const AI_COUNTRY_CODES='([^']+)'\.split\(' '\)/)?.[1].split(' ')||[];
+  const discoveryCodes=discoveryUi.match(/const COUNTRY_CODES='([^']+)'\.split\(' '\)/)?.[1].split(' ')||[];
+  assert.equal(adminCodes.length,249);
+  assert.equal(new Set(adminCodes).size,249);
+  assert.deepEqual(adminCodes,discoveryCodes);
+  assert.ok(adminBotUi.includes('list="pab-country-options" id="pab-bot-country-origin"'));
+  assert.ok(adminBotUi.includes('list="pab-country-options" id="pab-bot-current-country"'));
+  assert.match(adminBotUi,/originCountryCode:countryCodeForName/);
+  assert.match(adminBotUi,/currentCountryCode:countryCodeForName/);
+});
