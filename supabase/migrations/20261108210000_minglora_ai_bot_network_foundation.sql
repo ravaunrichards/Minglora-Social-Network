@@ -339,7 +339,6 @@ CREATE TABLE IF NOT EXISTS public.ai_identities (
   source_system text NOT NULL DEFAULT 'minglora' CHECK (char_length(source_system) BETWEEN 2 AND 40),
   source_identity_id uuid,
   public_profile_slug text NOT NULL UNIQUE CHECK (public_profile_slug ~ '^[a-z0-9]+(-[a-z0-9]+)*$'),
-  public_profile_enabled boolean NOT NULL DEFAULT false,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE (owner_admin_id,source_system,source_identity_id)
@@ -360,7 +359,6 @@ CREATE TABLE IF NOT EXISTS public.ai_names (
   display_name text NOT NULL CHECK (char_length(btrim(display_name)) BETWEEN 2 AND 120),
   username text NOT NULL UNIQUE CHECK (username = lower(username) AND username ~ '^ai_[a-z0-9_]{2,40}$'),
   public_profile_url text NOT NULL UNIQUE CHECK (char_length(public_profile_url) <= 300),
-  updated_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS ai_names_first_last_idx ON public.ai_names (lower(last_name),lower(first_name));
 
@@ -493,7 +491,6 @@ CREATE TABLE IF NOT EXISTS public.ai_identity_locations (
   country_code text NOT NULL DEFAULT '' CHECK (country_code = '' OR country_code ~ '^[A-Z]{2}$'),
   country_name text NOT NULL DEFAULT '',
   state_province text NOT NULL DEFAULT '',
-  parish_county text NOT NULL DEFAULT '',
   district text NOT NULL DEFAULT '',
   city text NOT NULL DEFAULT '',
   town text NOT NULL DEFAULT '',
