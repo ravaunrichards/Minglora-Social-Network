@@ -283,9 +283,11 @@ BEGIN
     RAISE EXCEPTION 'Worker ID, batch size or lease duration is invalid.' USING ERRCODE = '22023';
   END IF;
 
+  -- Serialize claimers on the settings row to enforce the concurrency cap.
   SELECT * INTO v_settings
   FROM public.minglora_ai_bot_settings
-  WHERE id = true;
+  WHERE id = true
+  FOR UPDATE;
   IF NOT FOUND OR NOT v_settings.enabled OR NOT v_settings.execution_enabled OR
      NOT v_settings.provider_ready OR v_settings.emergency_shutdown_at IS NOT NULL OR
      v_settings.max_concurrent_executions <= 0 OR v_settings.daily_execution_budget <= 0 THEN
@@ -315,8 +317,7 @@ BEGIN
   WHERE task.status = 'running' AND task.lease_expires_at > pg_catalog.now();
   SELECT pg_catalog.count(*)::integer INTO v_used_today
   FROM public.minglora_ai_bot_tasks AS task
-  WHERE task.execution_started_at >= pg_catalog.date_trunc('day',pg_catalog.now())
-    AND task.status IN ('running','completed');
+  WHERE task.execution_started_at >= pg_catalog.date_trunc('day',pg_catalog.now());
   v_available := GREATEST(v_settings.max_concurrent_executions - v_running,0);
   v_claim_limit := LEAST(p_limit,v_available,GREATEST(v_settings.daily_execution_budget - v_used_today,0));
   IF v_claim_limit <= 0 THEN
@@ -544,11 +545,116 @@ AS $function$
     'completedToday',(SELECT pg_catalog.count(*) FROM public.minglora_ai_bot_tasks WHERE owner_admin_id=p_owner_admin_id AND status='completed' AND completed_at >= pg_catalog.date_trunc('day',pg_catalog.now())),
     'failed',(SELECT pg_catalog.count(*) FROM public.minglora_ai_bot_tasks WHERE owner_admin_id=p_owner_admin_id AND status='failed'),
     'deadLettered',(SELECT pg_catalog.count(*) FROM public.minglora_ai_bot_tasks WHERE owner_admin_id=p_owner_admin_id AND status='dead_lettered'),
+    'networkEnabled',(SELECT enabled FROM public.minglora_ai_bot_settings WHERE id=true),
+    'hybridEnabled',(SELECT hybrid_enabled FROM public.minglora_ai_bot_settings WHERE id=true),
+    'emergencyShutdownAt',(SELECT emergency_shutdown_at FROM public.minglora_ai_bot_settings WHERE id=true),
+    'automaticSuspensionEnabled',(SELECT automatic_suspension_enabled FROM public.minglora_ai_bot_settings WHERE id=true),
     'executionEnabled',(SELECT execution_enabled FROM public.minglora_ai_bot_settings WHERE id=true),
     'providerReady',(SELECT provider_ready FROM public.minglora_ai_bot_settings WHERE id=true),
     'maxConcurrent',(SELECT max_concurrent_executions FROM public.minglora_ai_bot_settings WHERE id=true),
     'dailyExecutionBudget',(SELECT daily_execution_budget FROM public.minglora_ai_bot_settings WHERE id=true)
   );
+$function$;
+
+CREATE OR REPLACE FUNCTION public.minglora_ai_bot_settings_update(
+  p_settings jsonb,
+  p_actor_user_id uuid
+) RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = ''
+AS $function$
+DECLARE
+  v_row public.minglora_ai_bot_settings;
+BEGIN
+  IF p_actor_user_id IS DISTINCT FROM '5b998c21-86b5-4621-ab37-e0808a2657b1'::uuid THEN
+    RAISE EXCEPTION 'Only the designated Minglora owner may update AI network settings.' USING ERRCODE = '42501';
+  END IF;
+  IF p_settings IS NULL OR pg_catalog.jsonb_typeof(p_settings) <> 'object' THEN
+    RAISE EXCEPTION 'AI network settings must be an object.' USING ERRCODE = '22023';
+  END IF;
+  IF EXISTS (
+    SELECT 1
+    FROM pg_catalog.jsonb_object_keys(p_settings) AS supplied(key)
+    WHERE key NOT IN (
+      'enabled','hybridEnabled','maxConcurrentExecutions',
+      'dailyExecutionBudget','automaticSuspensionEnabled','emergencyShutdownAt'
+    )
+  ) THEN
+    RAISE EXCEPTION 'The AI network settings payload contains an unsupported field.' USING ERRCODE = '22023';
+  END IF;
+  IF (p_settings ? 'enabled' AND pg_catalog.jsonb_typeof(p_settings->'enabled') IS DISTINCT FROM 'boolean')
+     OR (p_settings ? 'hybridEnabled' AND pg_catalog.jsonb_typeof(p_settings->'hybridEnabled') IS DISTINCT FROM 'boolean')
+     OR (p_settings ? 'automaticSuspensionEnabled' AND pg_catalog.jsonb_typeof(p_settings->'automaticSuspensionEnabled') IS DISTINCT FROM 'boolean')
+     OR (p_settings ? 'maxConcurrentExecutions' AND (
+       pg_catalog.jsonb_typeof(p_settings->'maxConcurrentExecutions') IS DISTINCT FROM 'number'
+       OR (p_settings->>'maxConcurrentExecutions') !~ '^[0-9]+(jsonb,uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.minglora_ai_bot_task_upsert(jsonb,uuid) TO service_role;
+REVOKE ALL ON FUNCTION public.minglora_ai_bot_task_upsert_batch(jsonb,uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.minglora_ai_bot_task_upsert_batch(jsonb,uuid) TO service_role;
+REVOKE ALL ON FUNCTION public.minglora_ai_bot_task_claim(text,integer,integer,uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.minglora_ai_bot_task_claim(text,integer,integer,uuid) TO service_role;
+REVOKE ALL ON FUNCTION public.minglora_ai_bot_task_heartbeat(uuid,text,uuid,integer,uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.minglora_ai_bot_task_heartbeat(uuid,text,uuid,integer,uuid) TO service_role;
+REVOKE ALL ON FUNCTION public.minglora_ai_bot_task_complete(uuid,text,uuid,jsonb,uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.minglora_ai_bot_task_complete(uuid,text,uuid,jsonb,uuid) TO service_role;
+REVOKE ALL ON FUNCTION public.minglora_ai_bot_task_fail(uuid,text,uuid,boolean,text,text,uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.minglora_ai_bot_task_fail(uuid,text,uuid,boolean,text,text,uuid) TO service_role;
+REVOKE ALL ON FUNCTION public.minglora_ai_bot_task_list(uuid,integer,integer) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.minglora_ai_bot_task_list(uuid,integer,integer) TO service_role;
+REVOKE ALL ON FUNCTION public.minglora_ai_bot_task_stats(uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.minglora_ai_bot_task_stats(uuid) TO service_role;
+REVOKE ALL ON FUNCTION public.minglora_ai_bot_settings_update(jsonb,uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.minglora_ai_bot_settings_update(jsonb,uuid) TO service_role;
+
+COMMIT;
+
+       OR (p_settings->>'maxConcurrentExecutions')::integer NOT BETWEEN 0 AND 10000
+     ))
+     OR (p_settings ? 'dailyExecutionBudget' AND (
+       pg_catalog.jsonb_typeof(p_settings->'dailyExecutionBudget') IS DISTINCT FROM 'number'
+       OR (p_settings->>'dailyExecutionBudget') !~ '^[0-9]+(jsonb,uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.minglora_ai_bot_task_upsert(jsonb,uuid) TO service_role;
+REVOKE ALL ON FUNCTION public.minglora_ai_bot_task_upsert_batch(jsonb,uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.minglora_ai_bot_task_upsert_batch(jsonb,uuid) TO service_role;
+REVOKE ALL ON FUNCTION public.minglora_ai_bot_task_claim(text,integer,integer,uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.minglora_ai_bot_task_claim(text,integer,integer,uuid) TO service_role;
+REVOKE ALL ON FUNCTION public.minglora_ai_bot_task_heartbeat(uuid,text,uuid,integer,uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.minglora_ai_bot_task_heartbeat(uuid,text,uuid,integer,uuid) TO service_role;
+REVOKE ALL ON FUNCTION public.minglora_ai_bot_task_complete(uuid,text,uuid,jsonb,uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.minglora_ai_bot_task_complete(uuid,text,uuid,jsonb,uuid) TO service_role;
+REVOKE ALL ON FUNCTION public.minglora_ai_bot_task_fail(uuid,text,uuid,boolean,text,text,uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.minglora_ai_bot_task_fail(uuid,text,uuid,boolean,text,text,uuid) TO service_role;
+REVOKE ALL ON FUNCTION public.minglora_ai_bot_task_list(uuid,integer,integer) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.minglora_ai_bot_task_list(uuid,integer,integer) TO service_role;
+REVOKE ALL ON FUNCTION public.minglora_ai_bot_task_stats(uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.minglora_ai_bot_task_stats(uuid) TO service_role;
+
+COMMIT;
+
+       OR (p_settings->>'dailyExecutionBudget')::integer NOT BETWEEN 0 AND 1000000
+     ))
+     OR (p_settings ? 'emergencyShutdownAt' AND
+       pg_catalog.jsonb_typeof(p_settings->'emergencyShutdownAt') NOT IN ('null','string')) THEN
+    RAISE EXCEPTION 'One or more AI network settings values are invalid.' USING ERRCODE = '22023';
+  END IF;
+
+  UPDATE public.minglora_ai_bot_settings
+  SET enabled = CASE WHEN p_settings ? 'enabled' THEN (p_settings->>'enabled')::boolean ELSE enabled END,
+      hybrid_enabled = CASE WHEN p_settings ? 'hybridEnabled' THEN (p_settings->>'hybridEnabled')::boolean ELSE hybrid_enabled END,
+      max_concurrent_executions = CASE WHEN p_settings ? 'maxConcurrentExecutions' THEN (p_settings->>'maxConcurrentExecutions')::integer ELSE max_concurrent_executions END,
+      daily_execution_budget = CASE WHEN p_settings ? 'dailyExecutionBudget' THEN (p_settings->>'dailyExecutionBudget')::integer ELSE daily_execution_budget END,
+      automatic_suspension_enabled = CASE WHEN p_settings ? 'automaticSuspensionEnabled' THEN (p_settings->>'automaticSuspensionEnabled')::boolean ELSE automatic_suspension_enabled END,
+      emergency_shutdown_at = CASE WHEN p_settings ? 'emergencyShutdownAt' THEN NULLIF(p_settings->>'emergencyShutdownAt','')::timestamptz ELSE emergency_shutdown_at END,
+      updated_at = pg_catalog.now()
+  WHERE id = true
+  RETURNING * INTO v_row;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'The Minglora AI network settings row is missing.' USING ERRCODE = 'P0002';
+  END IF;
+  RETURN pg_catalog.to_jsonb(v_row);
+END;
 $function$;
 
 REVOKE ALL ON FUNCTION public.minglora_ai_bot_task_upsert(jsonb,uuid) FROM PUBLIC, anon, authenticated;
