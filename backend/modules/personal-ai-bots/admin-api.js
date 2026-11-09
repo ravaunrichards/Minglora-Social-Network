@@ -1,3 +1,4 @@
+import { isRelationshipBlocked } from '../relationships/friends.js';
 import {
   ensurePersonalAiBotCollections,
   getPersonalAiBotCategories,
@@ -7,6 +8,7 @@ import {
   updatePersonalAiBot,
   createPersonalAiBotCategory,
   queuePersonalAiBotInstruction,
+  queuePersonalAiBotFollowBatch,
   approvePersonalAiBotTask,
   cancelPersonalAiBotTask,
   setPersonalAiBotNetworkSettings,
@@ -107,6 +109,22 @@ export async function handlePersonalAiBotsAdminApi(context) {
       await saveStore();
       return (json(res,200,{ok:true,bot}),true);
     }
+    if(method==='POST'&&path===root+'/follow-batch'){
+      const network=db.personalAiBotSettings.find(item=>item.id==='global');
+      if(!network?.enabled)return (json(res,409,{error:'Enable the global bot network before submitting follow instructions.'}),true);
+      const targetUserId=String(input?.targetUserId||'').trim();
+      const targetMember=(db.users||[]).find(member=>member.id===targetUserId);
+      if(!targetMember)return (json(res,404,{error:'The selected Minglora member account could not be found.'}),true);
+      if(['banned','suspended','deactivated','deleted'].includes(String(targetMember.status||'').toLowerCase())){
+        return (json(res,409,{error:'This member account is not eligible for following operations.'}),true);
+      }
+      if(isRelationshipBlocked(db.blocks||[],user.id,targetUserId)){
+        return (json(res,409,{error:'A block exists between the administrator account and this target. Follow operations are not allowed.'}),true);
+      }
+      const result=queuePersonalAiBotFollowBatch(db,input||{},user.id,stamp,uid);
+      await saveStore();
+      return (json(res,201,{ok:true,...result,message:result.created+' separate instructions created. Each requires approval; no follow or unfollow action was executed.'}),true);
+    }
     const instructionMatch=path.match(/^\/api\/admin\/personal-ai-bots\/bots\/([0-9a-f-]{36})\/instructions$/i);
     if(instructionMatch&&method==='POST'){
       const bot= db.personalAiBots.find(item=>item.id===instructionMatch[1]);
@@ -120,6 +138,9 @@ export async function handlePersonalAiBotsAdminApi(context) {
         if(!targetMember)return (json(res,404,{error:'The selected Minglora member account could not be found.'}),true);
         if(['banned','suspended','deactivated','deleted'].includes(String(targetMember.status||'').toLowerCase())){
           return (json(res,409,{error:'This member account is not eligible for following operations.'}),true);
+        }
+        if(isRelationshipBlocked(db.blocks||[],user.id,targetUserId)){
+          return (json(res,409,{error:'A block exists between the administrator account and this target. Follow operations are not allowed.'}),true);
         }
       }
       const task=queuePersonalAiBotInstruction(db,instructionMatch[1],input||{},user.id,stamp,uid);
