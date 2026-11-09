@@ -2189,8 +2189,16 @@ async function route(req, res) {
         }
         if(AUTH_PROVIDER!=='supabase')return json(res,503,{error:'Account deletion requires Minglora Supabase Auth.'});
         const targetId=String(adminUserIdMatch[1]||'').toLowerCase();
+        let targetJwt=null;
+        const targetSessions=(db.sessions||[]).filter(item=>item.userId===targetId&&item.authSealed);
+        for(const savedSession of targetSessions){
+          try{
+            const targetAuth=await sessionAuth(savedSession);
+            if(targetAuth?.access_token){targetJwt=targetAuth.access_token;break;}
+          }catch{}
+        }
         const result=await requestSupabaseState('admin_user_delete',{
-          actorUserId:user.id,userId:targetId,confirmUserId:input.confirmUserId,reason:input.reason
+          actorUserId:user.id,userId:targetId,confirmUserId:input.confirmUserId,reason:input.reason,targetJwt
         });
         if(result.deleted){
           db.users=(db.users||[]).filter(item=>item.id!==targetId);
