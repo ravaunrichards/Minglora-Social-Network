@@ -124,3 +124,32 @@ test('People You May Know does not hide discoverable member accounts behind a fi
   assert.ok(route.includes('canViewProfile(user.id,member)'),'discovery respects profile visibility');
   assert.ok(!route.includes('.slice(0,24)'),'eligible member accounts are not silently cut off after 24');
 });
+
+
+test('Facebook-style Minglora friend suggestions use Add Friend and responsive friend cards',async()=>{
+  const app=await read('public/app.js');
+  const css=await read('public/social-facebook-layout.css');
+  const friends=await read('public/friends-advanced.js');
+  assert.ok(app.includes("const actionLabel=isFriend?'Friends':following?'Following':'Add Friend';"));
+  assert.ok(app.includes('data-toggle-follow='));
+  assert.ok(app.includes('data-dismiss-suggestion='));
+  assert.ok(css.includes('.facebook-person-photo{'));
+  assert.ok(css.includes('aspect-ratio:1 / 1!important'));
+  assert.ok(css.includes('@media(max-width:600px)'));
+  assert.ok(friends.includes("['close','Close Friends','star']"));
+  assert.ok(friends.includes("['restricted','Restricted','lock']"));
+  const tabs=friends.match(/const FRIENDS_DASHBOARD_TABS\s*=\s*\[([\s\S]*?)\];/);
+  assert.ok(tabs,'Friends categories are declared');
+  assert.doesNotMatch(tabs[1],/Birthday|Requests/i);
+});
+
+test('Restricted friends cannot view friends-only Stories',async()=>{
+  const server=await read('src/server.js');
+  const storyStart=server.indexOf('const canViewStory =');
+  const storyEnd=server.indexOf('async function pruneExpiredStories',storyStart);
+  assert.ok(storyStart>=0&&storyEnd>storyStart);
+  assert.ok(server.slice(storyStart,storyEnd).includes("story.audience==='friends'&&isFriendRestricted(viewerId,story.userId)"));
+  const audienceStart=server.indexOf('function canViewProfileAudience(');
+  const audienceEnd=server.indexOf('function recordProfileActivity',audienceStart);
+  assert.ok(server.slice(audienceStart,audienceEnd).includes("audience==='friends')return isFriend(viewerId,ownerId)&&!isFriendRestricted(viewerId,ownerId)"));
+});
