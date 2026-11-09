@@ -105,7 +105,7 @@ export const PERSONAL_AI_BOT_HIGH_IMPACT_TASKS = Object.freeze([
 const COLLECTIONS = [
   'personalAiBotCategories','personalAiBots','personalAiBotTasks',
   'personalAiBotAudit','personalAiBotSettings','personalAiBotFollows',
-  'personalAiBotTeams','personalAiBotTeamMembers','personalAiBotSchedules','personalAiBotBatches','personalAiBotDepartments','personalAiBotVacancies','personalAiBotApplications'
+  'personalAiBotTeams','personalAiBotTeamMembers','personalAiBotSchedules','personalAiBotBatches','personalAiBotDepartments','personalAiBotVacancies','personalAiBotApplications','personalAiBotAppointments','personalAiBotEmploymentHistory'
 ];
 
 export function ensurePersonalAiBotCollections(db) {
@@ -742,6 +742,130 @@ export function updatePersonalAiBotApplication(db,applicationId,input,actorId,ti
   application.statusHistory.push({status,actorId,createdAt:timestamp});
   audit(db,actorId,'application.status_changed','application',application.id,'Updated application for '+application.candidateDisplayName+' to '+status+'.',timestamp,uid);
   return {...application,statusHistory:application.statusHistory.map(entry=>({...entry}))};
+}
+
+export function getPersonalAiBotAppointments(db) {
+  ensurePersonalAiBotCollections(db);
+  return db.personalAiBotAppointments.slice()
+    .sort((a,b)=>String(b.appointedAt||'').localeCompare(String(a.appointedAt||'')))
+    .map(item=>({...item,statusHistory:(item.statusHistory||[]).map(event=>({...event}))}));
+}
+
+export function getPersonalAiBotEmploymentHistory(db) {
+  ensurePersonalAiBotCollections(db);
+  return db.personalAiBotEmploymentHistory.slice()
+    .sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')))
+    .map(item=>({...item}));
+}
+
+export function createPersonalAiBotAppointment(db,input,actorId,timestamp,uid) {
+  ensurePersonalAiBotCollections(db);
+  const applicationId=String(input.applicationId||'').trim();
+  const application=db.personalAiBotApplications.find(item=>item.id===applicationId&&item.ownerId===actorId);
+  if(!application)throw Object.assign(new Error('Candidate application not found.'),{status:404});
+  if(application.status!=='shortlisted'){
+    throw Object.assign(new Error('Only a shortlisted organizational AI candidate can be appointed by the owner.'),{status:409});
+  }
+  const vacancy=db.personalAiBotVacancies.find(item=>item.id===application.vacancyId&&item.ownerId===actorId);
+  if(!vacancy||vacancy.status!=='open'){
+    throw Object.assign(new Error('The candidate vacancy must still be open before appointment.'),{status:409});
+  }
+  const candidate=db.personalAiBots.find(item=>item.id===application.identityId);
+  if(!candidate||candidate.population!=='organizational'){
+    throw Object.assign(new Error('Appointment requires an existing organizational AI identity.'),{status:409});
+  }
+  if(['suspended','restricted','archived','retired','enabled'].includes(String(candidate.status||'').toLowerCase())||candidate.enabled===true){
+    throw Object.assign(new Error('The candidate must remain an existing disabled organizational AI identity before appointment.'),{status:409});
+  }
+  const position=PERSONAL_AI_BOT_JOB_POSITIONS.find(item=>item.code===vacancy.positionCode);
+  const department=db.personalAiBotDepartments.find(item=>item.id===vacancy.departmentId&&item.enabled!==false);
+  if(!position||!department||
+     application.positionCode!==position.code||
+     application.departmentId!==department.id||
+     (position.departmentScope!=='any_department'&&position.departmentScope!==department.code)){
+    throw Object.assign(new Error('The application position and department no longer match an enabled corporate role.'),{status:409});
+  }
+  const activeStatuses=new Set(['appointed','suspended']);
+  if(db.personalAiBotAppointments.some(item=>item.ownerId===actorId&&item.identityId===candidate.id&&activeStatuses.has(item.status))){
+    throw Object.assign(new Error('This organizational AI identity already has an active appointment.'),{status:409});
+  }
+  const activeVacancyAppointments=db.personalAiBotAppointments.filter(item=>
+    item.ownerId===actorId&&item.vacancyId===vacancy.id&&activeStatuses.has(item.status)
+  ).length;
+  if(activeVacancyAppointments>=Number(vacancy.slots||1)){
+    throw Object.assign(new Error('This vacancy has reached its approved appointment capacity.'),{status:409});
+  }
+  const reportingManagerId=String(input.reportingManagerAppointmentId||'').trim();
+  let reportingManager=null;
+  if(position.reportsTo.length){
+    reportingManager=db.personalAiBotAppointments.find(item=>
+      item.id===reportingManagerId&&item.ownerId===actorId&&activeStatuses.has(item.status)
+    );
+    if(!reportingManager){
+      throw Object.assign(new Error('Choose an existing active reporting-manager appointment for this position.'),{status:409});
+    }
+    if(!position.reportsTo.includes(reportingManager.positionCode)||reportingManager.identityId===candidate.id){
+      throw Object.assign(new Error('The reporting manager must hold an allowed parent position and cannot be the candidate.'),{status:409});
+    }
+  }else if(reportingManagerId){
+    throw Object.assign(new Error('This board position does not require a reporting manager.'),{status:400});
+  }
+  const appointment={
+    id:'appointment-'+uid(),
+    applicationId:application.id,
+    vacancyId:vacancy.id,
+    vacancyTitle:vacancy.title,
+    positionCode:position.code,
+    positionTitle:position.title,
+    positionLevel:position.level,
+    departmentId:department.id,
+    departmentCode:department.code,
+    departmentName:department.name,
+    identityId:candidate.id,
+    candidateDisplayName:candidate.displayName,
+    candidateUsername:candidate.username||'',
+    population:'organizational',
+    reportingManagerAppointmentId:reportingManager?.id||null,
+    reportingManagerIdentityId:reportingManager?.identityId||null,
+    reportingManagerName:reportingManager?.candidateDisplayName||null,
+    status:'appointed',
+    ownerId:actorId,
+    approvedBy:actorId,
+    approvedAt:timestamp,
+    appointedAt:timestamp,
+    createdAt:timestamp,
+    updatedAt:timestamp,
+    permissions:[],
+    permissionGrantStatus:'not_granted',
+    identityActivationStatus:'unchanged_disabled',
+    statusHistory:[{status:'appointed',actorId,createdAt:timestamp}],
+    employmentHistory:[{eventType:'appointed',actorId,createdAt:timestamp,notes:'Human-owner-approved appointment record. AI identity remains disabled and has no granted permissions.'}]
+  };
+  db.personalAiBotAppointments.push(appointment);
+  const employmentEvent={
+    id:'employment-'+uid(),
+    appointmentId:appointment.id,
+    applicationId:application.id,
+    identityId:candidate.id,
+    vacancyId:vacancy.id,
+    eventType:'appointed',
+    actorId,
+    createdAt:timestamp,
+    notes:'Human-owner-approved appointment record; no identity activation or permissions were granted.'
+  };
+  db.personalAiBotEmploymentHistory.push(employmentEvent);
+  application.status='appointed';
+  application.updatedAt=timestamp;
+  application.updatedBy=actorId;
+  application.statusHistory||=[];
+  application.statusHistory.push({status:'appointed',actorId,createdAt:timestamp,appointmentId:appointment.id});
+  audit(db,actorId,'appointment.created','appointment',appointment.id,'Appointed '+candidate.displayName+' as '+position.title+' in '+department.name+'. Identity remains disabled and has no permissions.',timestamp,uid);
+  audit(db,actorId,'employment.appointed','employment_history',employmentEvent.id,'Recorded owner-approved appointment for '+candidate.displayName+'.',timestamp,uid);
+  return {
+    ...appointment,
+    statusHistory:appointment.statusHistory.map(event=>({...event})),
+    employmentHistory:appointment.employmentHistory.map(event=>({...event}))
+  };
 }
 
 export function createPersonalAiBotCategory(db, input, actorId, timestamp, uid) {
