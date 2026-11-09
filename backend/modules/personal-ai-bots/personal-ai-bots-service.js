@@ -98,6 +98,68 @@ function normalizeAiIdentityName(displayName, input = {}) {
   return {firstName,lastName,middleName,fullName};
 }
 
+function normalizeAiProfileTextList(value, label, maxItems, maxLength) {
+  if(!Array.isArray(value))throw Object.assign(new Error(label+' must be a list.'),{status:400});
+  if(value.length>maxItems)throw Object.assign(new Error(label+' cannot contain more than '+maxItems+' entries.'),{status:400});
+  const cleaned=value.map(item=>{
+    if(typeof item!=='string')throw Object.assign(new Error(label+' entries must be text.'),{status:400});
+    return item.trim().slice(0,maxLength);
+  }).filter(Boolean);
+  return [...new Set(cleaned)];
+}
+
+function normalizeAiProfileEducation(value) {
+  if(!Array.isArray(value)||value.length>50)throw Object.assign(new Error('Education must be a list with no more than 50 entries.'),{status:400});
+  return value.map(item=>{
+    if(typeof item==='string')return item.trim().slice(0,200);
+    if(!item||typeof item!=='object'||Array.isArray(item))throw Object.assign(new Error('Education entries must be text or structured education records.'),{status:400});
+    const allowed=new Set(['institution','qualification','fieldOfStudy','completionYear']);
+    if(Object.keys(item).some(key=>!allowed.has(key)))throw Object.assign(new Error('Education records contain unsupported fields.'),{status:400});
+    return {
+      ...(item.institution!=null?{institution:String(item.institution).trim().slice(0,160)}:{}),
+      ...(item.qualification!=null?{qualification:String(item.qualification).trim().slice(0,160)}:{}),
+      ...(item.fieldOfStudy!=null?{fieldOfStudy:String(item.fieldOfStudy).trim().slice(0,160)}:{}),
+      ...(item.completionYear!=null?{completionYear:String(item.completionYear).trim().slice(0,20)}:{})
+    };
+  }).filter(item=>typeof item==='string'?Boolean(item):Object.values(item).some(Boolean));
+}
+
+function normalizeAiProfileLocations(value) {
+  if(!Array.isArray(value)||value.length>4)throw Object.assign(new Error('Provide up to four AI profile locations.'),{status:400});
+  const allowedTypes=new Set(['origin','current','operating','registered']);
+  const seen=new Set();
+  return value.map(item=>{
+    if(!item||typeof item!=='object'||Array.isArray(item))throw Object.assign(new Error('Each AI profile location must be an object.'),{status:400});
+    const locationType=String(item.locationType||'current').trim().toLowerCase();
+    if(!allowedTypes.has(locationType)||seen.has(locationType))throw Object.assign(new Error('AI profile locations must use unique supported location types.'),{status:400});
+    seen.add(locationType);
+    const countryCode=String(item.countryCode||'').trim().toUpperCase();
+    if(countryCode&&!/^[A-Z]{2}$/.test(countryCode))throw Object.assign(new Error('Location country codes must use two-letter ISO format.'),{status:400});
+    const timeZone=String(item.timeZone||'UTC').trim();
+    if(timeZone.length<1||timeZone.length>80)throw Object.assign(new Error('Location time zone is invalid.'),{status:400});
+    try{new Intl.DateTimeFormat('en',{timeZone});}catch{throw Object.assign(new Error('Choose a valid time zone for each AI profile location.'),{status:400});}
+    const field=(name,max=120)=>String(item[name]||'').trim().slice(0,max);
+    return {
+      locationType,countryCode,
+      countryName:field('countryName'),
+      stateProvince:field('stateProvince'),
+      district:field('district'),
+      parishCounty:field('parishCounty'),
+      city:field('city'),
+      town:field('town'),
+      timeZone,
+      isPrimary:item.isPrimary===true
+    };
+  });
+}
+
+function normalizeAiProfileObject(value,label) {
+  if(value==null)return {};
+  if(typeof value!=='object'||Array.isArray(value))throw Object.assign(new Error(label+' must be a JSON object.'),{status:400});
+  if(JSON.stringify(value).length>3000)throw Object.assign(new Error(label+' is too large.'),{status:400});
+  return JSON.parse(JSON.stringify(value));
+}
+
 export function createPersonalAiBot(db, input, actorId, timestamp, uid) {
   ensurePersonalAiBotCollections(db);
   const displayName = String(input.displayName || '').trim().replace(/\s+/g,' ');
@@ -115,11 +177,30 @@ export function createPersonalAiBot(db, input, actorId, timestamp, uid) {
     profilePictureAssetId:null,
     bio:String(input.bio || input.description || '').trim().slice(0,600),
     description:String(input.description || input.bio || '').trim().slice(0,600),
+    introduction:String(input.introduction||'').trim().slice(0,2000),
+    gender:['female','male','non_binary','other','prefer_not_to_specify'].includes(String(input.gender||'').toLowerCase())?String(input.gender).toLowerCase():'prefer_not_to_specify',
+    genderPresentation:String(input.genderPresentation||'').trim().slice(0,80),
+    nationality:String(input.nationality||'').trim().slice(0,120),
+    countryOfOrigin:String(input.countryOfOrigin||'').trim().slice(0,120),
+    currentCountry:String(input.currentCountry||'').trim().slice(0,120),
+    timeZone:String(input.timeZone||'America/Jamaica').trim().slice(0,80),
     personality:String(input.personality || '').trim().slice(0,1200),
-    interests:Array.isArray(input.interests)?[...new Set(input.interests.map(value=>String(value).trim().slice(0,60)).filter(Boolean))].slice(0,30):[],
-    hobbies:Array.isArray(input.hobbies)?[...new Set(input.hobbies.map(value=>String(value).trim().slice(0,60)).filter(Boolean))].slice(0,30):[],
+    communicationStyle:String(input.communicationStyle||'').trim().slice(0,2000),
+    interests:Array.isArray(input.interests)?normalizeAiProfileTextList(input.interests,'Interests',30,60):[],
+    hobbies:Array.isArray(input.hobbies)?normalizeAiProfileTextList(input.hobbies,'Hobbies',30,60):[],
+    education:Array.isArray(input.education)?normalizeAiProfileEducation(input.education):[],
+    profession:String(input.profession||'').trim().slice(0,160),
+    skills:Array.isArray(input.skills)?normalizeAiProfileTextList(input.skills,'Skills',100,100):[],
+    ...(Array.isArray(input.locations)?{locations:normalizeAiProfileLocations(input.locations)}:{}),
+    avatarStorageReference:String(input.avatarStorageReference||'').trim().slice(0,300),
+    coverStorageReference:String(input.coverStorageReference||'').trim().slice(0,300),
+    voicePreferences:normalizeAiProfileObject(input.voicePreferences,'Voice preferences'),
+    avatarPreferences:normalizeAiProfileObject(input.avatarPreferences,'Avatar preferences'),
+    memoryEnabled:input.memoryEnabled===true,
+    memoryConfiguration:normalizeAiProfileObject(input.memoryConfiguration,'Memory configuration'),
+    capabilities:Array.isArray(input.capabilities)?input.capabilities.slice(0,100):[],
     languages:Array.isArray(input.languages)
-      ? [...new Set(input.languages.map(value=>String(value).trim().slice(0,40)).filter(Boolean))].slice(0,12)
+      ? normalizeAiProfileTextList(input.languages,'Languages',12,40)
       : ['English'],
     activitySchedule:{timezone:'America/Jamaica',daysOfWeek:[1,2,3,4,5,6,7],startTime:'00:00',endTime:'23:59',maxTasksPerDay:0},
     administratorInstructions:String(input.administratorInstructions || '').trim().slice(0,4000),
@@ -210,18 +291,36 @@ export function updatePersonalAiBot(db, botId, input, actorId, timestamp, uid) {
     changes.push('public discovery visibility');
   }
   if (Object.hasOwn(input,'description')) { bot.description=String(input.description||'').trim().slice(0,600);changes.push('description'); }
-  if (Object.hasOwn(input,'personality')) { bot.personality=String(input.personality||'').trim().slice(0,1200);changes.push('personality'); }
   if (Object.hasOwn(input,'bio')) { bot.bio=String(input.bio||'').trim().slice(0,600);changes.push('bio'); }
-  if (Object.hasOwn(input,'interests')) {
-    if(!Array.isArray(input.interests))throw Object.assign(new Error('Interests must be a list.'),{status:400});
-    bot.interests=[...new Set(input.interests.map(value=>String(value).trim().slice(0,60)).filter(Boolean))].slice(0,30);
-    changes.push('interests');
+  if (Object.hasOwn(input,'introduction')) { bot.introduction=String(input.introduction||'').trim().slice(0,2000);changes.push('introduction'); }
+  if (Object.hasOwn(input,'gender')) {
+    const gender=String(input.gender||'prefer_not_to_specify').trim().toLowerCase();
+    if(!['female','male','non_binary','other','prefer_not_to_specify'].includes(gender))throw Object.assign(new Error('Choose a supported AI gender identity.'),{status:400});
+    bot.gender=gender;changes.push('gender');
   }
-  if (Object.hasOwn(input,'hobbies')) {
-    if(!Array.isArray(input.hobbies))throw Object.assign(new Error('Hobbies must be a list.'),{status:400});
-    bot.hobbies=[...new Set(input.hobbies.map(value=>String(value).trim().slice(0,60)).filter(Boolean))].slice(0,30);
-    changes.push('hobbies');
+  if (Object.hasOwn(input,'genderPresentation')) { bot.genderPresentation=String(input.genderPresentation||'').trim().slice(0,80);changes.push('gender presentation'); }
+  for(const [field,max,label] of [['nationality',120,'nationality'],['countryOfOrigin',120,'country of origin'],['currentCountry',120,'current country'],['profession',160,'profession'],['communicationStyle',2000,'communication style']]) {
+    if(Object.hasOwn(input,field)){bot[field]=String(input[field]||'').trim().slice(0,max);changes.push(label);}
   }
+  if(Object.hasOwn(input,'timeZone')) {
+    const timeZone=String(input.timeZone||'').trim();
+    if(timeZone.length<1||timeZone.length>80)throw Object.assign(new Error('Choose a valid profile time zone.'),{status:400});
+    try{new Intl.DateTimeFormat('en',{timeZone});}catch{throw Object.assign(new Error('Choose a valid profile time zone.'),{status:400});}
+    bot.timeZone=timeZone;changes.push('profile time zone');
+  }
+  if(Object.hasOwn(input,'education')) { bot.education=normalizeAiProfileEducation(input.education);changes.push('education'); }
+  if(Object.hasOwn(input,'skills')) { bot.skills=normalizeAiProfileTextList(input.skills,'Skills',100,100);changes.push('skills'); }
+  if(Object.hasOwn(input,'locations')) { bot.locations=normalizeAiProfileLocations(input.locations);changes.push('profile locations'); }
+  if(Object.hasOwn(input,'avatarStorageReference')) { bot.avatarStorageReference=String(input.avatarStorageReference||'').trim().slice(0,300);changes.push('profile image reference'); }
+  if(Object.hasOwn(input,'coverStorageReference')) { bot.coverStorageReference=String(input.coverStorageReference||'').trim().slice(0,300);changes.push('cover image reference'); }
+  if(Object.hasOwn(input,'voicePreferences')) { bot.voicePreferences=normalizeAiProfileObject(input.voicePreferences,'Voice preferences');changes.push('voice preferences'); }
+  if(Object.hasOwn(input,'avatarPreferences')) { bot.avatarPreferences=normalizeAiProfileObject(input.avatarPreferences,'Avatar preferences');changes.push('avatar preferences'); }
+  if(Object.hasOwn(input,'memoryEnabled')) { if(typeof input.memoryEnabled!=='boolean')throw Object.assign(new Error('Memory enabled must be true or false.'),{status:400});bot.memoryEnabled=input.memoryEnabled;changes.push('memory setting'); }
+  if(Object.hasOwn(input,'memoryConfiguration')) { bot.memoryConfiguration=normalizeAiProfileObject(input.memoryConfiguration,'Memory configuration');changes.push('memory configuration'); }
+  if(Object.hasOwn(input,'capabilities')) { if(!Array.isArray(input.capabilities)||input.capabilities.length>100)throw Object.assign(new Error('Capabilities must be a list of up to 100 entries.'),{status:400});bot.capabilities=input.capabilities;changes.push('capabilities'); }
+  if (Object.hasOwn(input,'personality')) { bot.personality=String(input.personality||'').trim().slice(0,1200);changes.push('personality'); }
+  if (Object.hasOwn(input,'interests')) { bot.interests=normalizeAiProfileTextList(input.interests,'Interests',30,60);changes.push('interests'); }
+  if (Object.hasOwn(input,'hobbies')) { bot.hobbies=normalizeAiProfileTextList(input.hobbies,'Hobbies',30,60);changes.push('hobbies'); }
   if (Object.hasOwn(input,'activitySchedule')) {
     const schedule=input.activitySchedule;
     const validDays=Array.isArray(schedule?.daysOfWeek)&&schedule.daysOfWeek.length>=1&&schedule.daysOfWeek.length<=7&&schedule.daysOfWeek.every(day=>Number.isInteger(day)&&day>=1&&day<=7);
