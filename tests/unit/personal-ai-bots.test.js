@@ -24,6 +24,10 @@ import {
   updatePersonalAiBotTeam,
   assignPersonalAiBotsToTeam,
   removePersonalAiBotFromTeam
+  PERSONAL_AI_BOT_DEPARTMENTS,
+  getPersonalAiBotDepartments,
+  createPersonalAiBotDepartment,
+  updatePersonalAiBotDepartment,
 } from '../../backend/modules/personal-ai-bots/personal-ai-bots-service.js';
 
 const makeDb=()=>({});
@@ -51,6 +55,45 @@ test('the requested 15 categories are defined and initially enabled',()=>{
   for(const name of ['AI Friends','AI Creators','AI Influencers','AI News','AI Musicians','AI Entertainers','AI Gamers','AI Community Hosts','AI Live Hosts','AI Moderators','AI Support','AI Educators','AI Sports','AI Travel','AI Business']){
     assert.ok(categories.some(category=>category.name===name),name+' category should exist');
   }
+});
+
+test('all 20 corporate departments are seeded in the required order without fake employees',()=>{
+  const db=makeDb();
+  const departments=getPersonalAiBotDepartments(db);
+  assert.equal(PERSONAL_AI_BOT_DEPARTMENTS.length,20);
+  assert.equal(departments.length,20);
+  assert.ok(departments.every(item=>item.builtIn===true&&item.enabled===true));
+  assert.equal(db.personalAiBots,undefined);
+  for(const name of [
+    'Executive Management','Finance and Accounting','Human Resources','Resource Management','Operations',
+    'Technology and Engineering','AI and Research','Cybersecurity and IT','Legal and Compliance',
+    'Marketing and Advertising','Sales and Business Development','Customer Support','Community Management',
+    'Content and Creator Management','Product Management','Quality Assurance','Logistics and Procurement',
+    'Training and Development','Public Relations','Risk Management'
+  ])assert.ok(departments.some(item=>item.name===name),name+' department should exist');
+});
+
+test('department catalogue supports safe custom CRUD, built-in edits and acyclic hierarchy',()=>{
+  const db=makeDb();
+  const root=createPersonalAiBotDepartment(db,{name:'Regional Partnerships',description:'Regional relationships.'},actor,stamp,uid);
+  const child=createPersonalAiBotDepartment(db,{name:'Caribbean Partnerships',parentDepartmentId:root.id},actor,stamp,uid);
+  assert.equal(root.enabled,true);
+  assert.equal(root.builtIn,false);
+  assert.equal(child.parentDepartmentId,root.id);
+  const updated=updatePersonalAiBotDepartment(db,root.id,{
+    name:'International Partnerships',description:'Global partner coordination.',enabled:false
+  },actor,stamp,uid);
+  assert.equal(updated.name,'International Partnerships');
+  assert.equal(updated.enabled,false);
+  assert.equal(updated.code,'regional_partnerships');
+  assert.throws(()=>createPersonalAiBotDepartment(db,{name:'international partnerships'},actor,stamp,uid),/already exists/);
+  assert.throws(()=>updatePersonalAiBotDepartment(db,root.id,{parentDepartmentId:child.id},actor,stamp,uid),/cycle/);
+  assert.throws(()=>updatePersonalAiBotDepartment(db,root.id,{parentDepartmentId:'missing-department'},actor,stamp,uid),/existing parent/);
+  assert.throws(()=>createPersonalAiBotDepartment(db,{name:'Missing Parent',parentDepartmentId:'missing-department'},actor,stamp,uid),/existing parent/);
+  assert.equal(getPersonalAiBotDepartments(db).length,22);
+  const builtIn=updatePersonalAiBotDepartment(db,'department-executive_management',{name:'Executive Office',enabled:true},actor,stamp,uid);
+  assert.equal(builtIn.builtIn,true);
+  assert.equal(builtIn.code,'executive_management');
 });
 
 test('starter set creates one disabled administrator-controlled bot per category and is idempotent',()=>{
