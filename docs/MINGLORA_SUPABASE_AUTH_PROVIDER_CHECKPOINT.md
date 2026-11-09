@@ -3,23 +3,23 @@
 **Project:** Minglora Social Network  
 **Repository:** `ravaunrichards/Minglora-Social-Network`  
 **Branch:** `main`  
-**Current source head:** `99b106b8dedd95bca04235e42a10e6946bfec8d8`  
+**Current source head:** `a9dceef098d35489ece74cfaa144996a693a17d4`  
 **Supabase project:** `gzycobgbasnqqhnympkr`  
 **Render service:** `minglora-social-network` (`srv-dbi3gvqfngtc73c6hi4g`)  
 **Production URL:** https://minglora-social-network.onrender.com  
 **Checkpoint date:** 2026-11-09  
-**Latest verified deployment:** `dep-dbp2ptip08gs73a4f600` — LIVE  
-**Latest Auth acceptance job:** `129418492158` — PASS (34/34)  
-**Latest broad test job:** `129418492096` — FAIL (733/753; 20 failures)  
-**Latest For You job:** `129418492679` — FAIL (13/15; 2 failures)
+**Latest verified deployment:** `dep-dbp3bc83ko5c73eitm6g` — LIVE  
+**Latest Auth acceptance job:** `129439164661` — PASS (54/54)  
+**Latest broad test job:** `129439165075` — FAIL (755/773; 18 failures)  
+**Latest For You job:** `129439165372` — FAIL (13/15; 2 failures)
 
 ## Progress
 
-**Previous verified completion:** 78%  
-**Current verified completion:** 79%  
-**Remaining:** 21%  
-**Progress since previous checkpoint:** +1 percentage point  
-**Why no percentage increase:** the current changes repaired app-shell cache integrity and the associated regression test, but did not complete the remaining production Management API write, route-sync, provider-credential, or real external OAuth acceptance requirements. These are not double-counted as new completion.
+**Previous verified completion:** 79%  
+**Current verified completion:** 81%  
+**Remaining:** 19%  
+**Progress since previous checkpoint:** +2 percentage points  
+**Why no percentage increase:** deterministic redirect-route and credential-patch behavior is now directly tested, but production Management API writes, live route-sync, provider credentials, and a real external OAuth sign-in remain unverified. These are not double-counted as new completion.
 
 Original milestone weighting is preserved (weights total 100):
 
@@ -27,11 +27,11 @@ Original milestone weighting is preserved (weights total 100):
 |---|---:|---:|---|
 | Recover and preserve the provider-label correction | 15% | 15% | Provider label appears once; action button text is only Enable or Disable. |
 | Provider actions and setup UI | 15% | 15% | Missing credentials open setup forms; OAuth and SMS setup forms exist; standalone Admin Centre loads the controls after access initialization. Static acceptance passes. |
-| Secure credential configuration and enable/disable API | 25% | 18% | MFA/designated-owner gate, server-side allowlisted Management API GET/PATCH, readiness checks, no-secret response, minimum-one-login guard, and read-back verification are implemented and tested. No live Management API transaction was observed or completed. |
-| Supabase callback and Minglora redirect-route controls | 20% | 15% | Displays/copies callback, Site URL, and app return route; route sync preserves allow-list entries and checks read-back. Production route sync was not executed. |
+| Secure credential configuration and enable/disable API | 25% | 19% | MFA/designated-owner gate, server-side allowlisted Management API GET/PATCH, readiness checks, no-secret response, minimum-one-login guard, and read-back verification are implemented and tested. No live Management API transaction was observed or completed. |
+| Supabase callback and Minglora redirect-route controls | 20% | 16% | Displays/copies callback, Site URL, and app return route; route sync preserves allow-list entries and checks read-back. Production route sync was not executed. |
 | Status, access restrictions, and regression safeguards | 10% | 8% | Owner/MFA checks, same-origin and secret-handling safeguards, provider refresh, route validation, and Admin Centre shell/cache checks pass static or CI verification. No actual owner browser session was exercised. |
 | End-to-end external provider sign-in acceptance | 15% | 8% | Provider discovery, PKCE exchange, signed/expiring HttpOnly state-cookie behavior, server-side exchange, account restrictions, session creation, and MFA continuation have code-level, mocked, and direct cookie behavior tests. No real identity-provider sign-in has completed. |
-| **Total** | **100%** | **79%** | **21% remains unverified or externally blocked.** |
+| **Total** | **100%** | **81%** | **19% remains unverified or externally blocked.** |
 
 ## Master acceptance checklist
 
@@ -58,6 +58,8 @@ Statuses are based on the latest repository, workflow, deployment, and log evide
 | AUTH-17 | Designated MFA-verified owner performs route repair and a live provider enable/disable round trip | Easy/Medium / owner session + Management token | BLOCKED | No owner browser interaction or request to `/api/admin/auth-providers` is present in the inspected production request-log interval. |
 | AUTH-18 | A real external provider login returns through callback and establishes a working Minglora session (including MFA where enabled) | Hard / AUTH-09, AUTH-16, AUTH-17 | BLOCKED | No live request to `/auth/oauth/*` was observed; only mocked tests have passed. |
 | AUTH-19 | OAuth state cookie validates signature, state/verifier shape, expiry, HttpOnly/SameSite/Secure scope, and cleanup behavior | Easy / none | PASS | Six direct unit tests in `tests/unit/oauth-flow-state.test.js`; Auth CI 40/40 passed. This is not a substitute for live OAuth acceptance. |
+| AUTH-20 | Minglora route repair preserves existing redirects, adds the exact homepage and OAuth callback, normalizes duplicates, and reports readiness accurately | Easy / none | PASS (helper behavior) | Seven direct tests in `tests/unit/auth-redirect-routes.test.js`; route helper is used by `/api/admin/auth-providers`. Production Management API GET/PATCH and `redirectReady` remain unverified. |
+| AUTH-21 | Provider credential patches accept only allow-listed fields, preserve saved secrets on blank inputs, enforce HTTPS URL and length rules, and restrict SMS fields to supported gateways | Medium / none | PASS (helper behavior) | Seven direct tests in `tests/unit/auth-provider-credentials.test.js`; server route uses the tested helper. No production Management API write/read-back has run. |
 
 ### New verified OAuth state-cookie work
 
@@ -66,7 +68,17 @@ Statuses are based on the latest repository, workflow, deployment, and log evide
 - `tests/unit/oauth-flow-state.test.js` adds six direct behavioral tests: round-trip, HttpOnly/SameSite/Secure attributes, tampered payload/signature rejection, expiry/future/malformed rejection, weak secret/invalid verifier rejection, and scoped cleanup.
 - `.github/workflows/ci.yml` runs the new module syntax check and tests in the dedicated Auth job.
 - `tests/unit/auth-oauth-flow.test.js` was updated to assert the extracted helper rather than the removed inline cookie string.
-- Latest Auth CI run: 40 tests, 40 passed, 0 failed. This strengthens PKCE state handling but does not count as live third-party sign-in.
+- Earlier Auth state-cookie run: 40 tests, 40 passed, 0 failed; latest combined Auth run now passes 54/54 after adding redirect-route and credential-patch tests. Neither substitutes for live third-party sign-in.
+
+### New verified redirect-route and credential-validation work
+
+- `src/auth-redirect-routes.js` now contains the tested parser, readiness calculation, and minimal patch builder used by the protected admin route. The patch preserves unrelated allow-list entries, adds only the homepage and exact OAuth callback, and is idempotent after configuration.
+- `tests/unit/auth-redirect-routes.test.js` adds seven direct tests for trimming/deduplication, preserving other redirects, exact route append, idempotence, readiness, missing-callback failure, and invalid origins.
+- `src/server.js` now uses `createMingloraAuthRouteState` and `buildMingloraAuthRoutePatch`.
+- `src/auth-provider-credentials.js` now owns the allow-listed credential patch builder used by the admin route.
+- `tests/unit/auth-provider-credentials.test.js` adds seven direct tests for allow-listed fields, blank-secret preservation, HTTPS URL validation, 4096-character limit, supported SMS gateway fields, invalid gateway rejection, and payload shape.
+- `.github/workflows/ci.yml` checks both helper modules and includes both test files in the dedicated Auth job.
+- Auth CI on commit `a9dceef`: 54 tests passed, 0 failed. The helper behaviors are verified; the production Management API writes and owner-gated route transaction are still partial.
 
 ### Scope notes
 
@@ -87,17 +99,17 @@ The Auth/provider implementation listed in the preceding checkpoint is preserved
 
 ### GitHub Actions
 
-Current source head: [`99b106b8dedd95bca04235e42a10e6946bfec8d8`](https://github.com/ravaunrichards/Minglora-Social-Network/commit/99b106b8dedd95bca04235e42a10e6946bfec8d8).
+Current source head: [`a9dceef098d35489ece74cfaa144996a693a17d4`](https://github.com/ravaunrichards/Minglora-Social-Network/commit/a9dceef098d35489ece74cfaa144996a693a17d4).
 
-- Dedicated **Supabase Auth provider acceptance** job `129418492158`: PASS — 34 tests, 34 passed, 0 failed. Includes provider-route safeguards, PKCE helper, login-shell order, standalone Admin Centre mount, password recovery, and registration regression cases.
-- Broad **test** job `129418492096`: FAIL — 753 tests, 733 passed, 20 failed. Examples include Admin withdrawal tracking, Clock Centre navigation, People/profile layout and actions, Stories, For You layout, wallet navigation, background feed sync, responsive stacking/logout, persistence retry mocks, and theme preview assertions. The Admin Centre app-shell/service-worker asset test is PASS in this run.
-- **For You functional navigation** job `129418492679`: FAIL — 15 tests, 13 passed, 2 failed (For You header/search spacing and Stories viewer assertions).
+- Dedicated **Supabase Auth provider acceptance** job `129439164661`: PASS — 54 tests, 54 passed, 0 failed. Includes provider controls, six OAuth state-cookie behavior cases, seven redirect-route cases, and seven provider-credential patch cases.
+- Broad **test** job `129439165075`: FAIL — 773 tests, 755 passed, 18 failed. Examples include Admin withdrawal tracking, Clock Centre navigation, People/profile layout and actions, Stories, For You layout, wallet navigation, background feed sync, responsive stacking/logout, persistence retry mocks, and theme preview assertions. The Admin Centre app-shell/service-worker asset test is PASS in this run.
+- **For You functional navigation** job `129439165372`: FAIL — 15 tests, 13 passed, 2 failed (For You header/search spacing and Stories viewer assertions).
 - Do not describe the repository-wide workflow as passing. The failures above are separate from the dedicated Auth acceptance job; the broader suite remains a regression limitation.
 
 ### Render
 
 - Service is connected to this repository and `main`, auto-deploys from commits, and is on Render Free.
-- Deploy `dep-dbp2ptip08gs73a4f600` for commit `99b106b8dedd95bca04235e42a10e6946bfec8d8` is **LIVE** (finished 2026-11-09T20:30:03Z).
+- Deploy `dep-dbp3bc83ko5c73eitm6g` for commit `a9dceef098d35489ece74cfaa144996a693a17d4` is **LIVE** (finished 2026-11-09T21:07:18Z).
 - Runtime logs report the service listening on port 10000; Supabase Auth configured; Supabase persistence durable and ready; LiveKit configured and connected.
 - Production request logs for `/api/admin/auth-providers`, `/api/auth/providers`, and `/auth/oauth/*` returned no entries in the inspected window 2026-11-09 20:04–20:34 UTC. Combined with the Auth identity-table results, no production OAuth login or provider-admin operation was independently verified. This is windowed evidence, not proof of permanent absence.
 
@@ -137,8 +149,8 @@ Current source head: [`99b106b8dedd95bca04235e42a10e6946bfec8d8`](https://github
 
 ## Last action and exact next step
 
-**Last confirmed action:** extracted OAuth flow cookie state into `src/oauth-flow-state.js`; server now uses the helper; six direct behavior tests pass for valid round-trip, HttpOnly/SameSite/Secure attributes, tampering, expiry/future timestamps, malformed input, weak secrets, and scoped cleanup. Dedicated Auth CI passes 40/40; Render deploy `dep-dbp310navr4c73e6eckg` is LIVE; Supabase project is ACTIVE_HEALTHY.
+**Last confirmed action:** extracted and tested OAuth state-cookie, redirect-route, and provider credential-patch helpers; server uses all three. Dedicated Auth CI passes 54/54; Render deploy `dep-dbp3bc83ko5c73eitm6g` is LIVE; Supabase project is ACTIVE_HEALTHY.
 
-**Exact next action:** the designated owner must open the deployed standalone Admin Centre with an MFA-verified session, refresh provider status, and run **Connect / repair routes**. The response will establish whether `SUPABASE_ACCESS_TOKEN` is present and has Auth Read/Auth Write permissions. Then configure one real external provider and perform an actual provider sign-in.
+**Exact next action:** the designated owner must open the deployed standalone Admin Centre with an MFA-verified session, refresh provider status, and run **Connect / repair routes**. The tested patch builder is deployed; the owner transaction will establish whether `SUPABASE_ACCESS_TOKEN` is present and has Auth Read/Auth Write permissions. Then configure one real external provider and perform an actual provider sign-in.
 
 **Do not declare 100% until AUTH-05 through AUTH-12 and AUTH-16 through AUTH-18 have the required live acceptance evidence, and all in-scope regression failures are resolved.**
