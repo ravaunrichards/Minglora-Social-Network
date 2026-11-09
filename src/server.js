@@ -2244,16 +2244,18 @@ async function route(req, res) {
           return data;
         };
         const appSiteUrl=appOrigin(req);
-        const appRedirectUrl=new URL('/',appSiteUrl).toString();
+        const siteRedirectUrl=new URL('/',appSiteUrl).toString();
+        const appRedirectUrl=new URL('/auth/oauth/callback',appSiteUrl).toString();
         const routeState=config=>{
           const allowedRedirectUrls=parseRedirectList(config.uri_allow_list);
           return {
             providerCallbackUrl,
             appSiteUrl,
+            siteRedirectUrl,
             appRedirectUrl,
             configuredSiteUrl:String(config.site_url||''),
             allowedRedirectUrls,
-            redirectReady:String(config.site_url||'').replace(/\/+$/,'')===appSiteUrl&&allowedRedirectUrls.includes(appRedirectUrl)
+            redirectReady:String(config.site_url||'').replace(/\/+$/,'')===appSiteUrl&&allowedRedirectUrls.includes(siteRedirectUrl)&&allowedRedirectUrls.includes(appRedirectUrl)
           };
         };
         const buildCredentialPatch=(definition,credentials,current)=>{
@@ -2298,7 +2300,7 @@ async function route(req, res) {
           if(input?.action==='sync-routes'){
             const current=await callManagement('GET');
             const allowedRedirectUrls=parseRedirectList(current.uri_allow_list);
-            if(!allowedRedirectUrls.includes(appRedirectUrl))allowedRedirectUrls.push(appRedirectUrl);
+            for(const requiredRedirect of [siteRedirectUrl,appRedirectUrl])if(!allowedRedirectUrls.includes(requiredRedirect))allowedRedirectUrls.push(requiredRedirect);
             const routePatch={};
             if(String(current.site_url||'').replace(/\/+$/,'')!==appSiteUrl)routePatch.site_url=appSiteUrl;
             if(String(current.uri_allow_list||'')!==allowedRedirectUrls.join(','))routePatch.uri_allow_list=allowedRedirectUrls.join(',');
