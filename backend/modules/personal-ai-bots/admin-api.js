@@ -146,6 +146,9 @@ import {
   getPersonalAiBotCategories,
   getPersonalAiBotDepartments,
   PERSONAL_AI_BOT_JOB_POSITIONS,
+  getPersonalAiBotVacancies,
+  createPersonalAiBotVacancy,
+  updatePersonalAiBotVacancy,
   createPersonalAiBotDepartment,
   updatePersonalAiBotDepartment,
   getPersonalAiBotOverview,
@@ -201,6 +204,7 @@ export async function handlePersonalAiBotsAdminApi(context) {
         categories:getPersonalAiBotCategories(db),
         departments:getPersonalAiBotDepartments(db),
         jobPositions:PERSONAL_AI_BOT_JOB_POSITIONS,
+        vacancies:getPersonalAiBotVacancies(db),
         bots:db.personalAiBots.slice().sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt))),
         tasks:Array.isArray(durableTasks)?durableTasks:db.personalAiBotTasks.slice(0,100),
         audit:db.personalAiBotAudit.slice(0,100),
@@ -415,6 +419,34 @@ export async function handlePersonalAiBotsAdminApi(context) {
       await saveStore();
       return (json(res,200,result),true);
     }
+    if(method==='GET'&&path===root+'/vacancies'){
+      return (json(res,200,{ok:true,vacancies:getPersonalAiBotVacancies(db)}),true);
+    }
+    if(method==='POST'&&path===root+'/vacancies'){
+      const allowed=new Set(['positionCode','departmentId','title','description','requirements','slots']);
+      if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).some(key=>!allowed.has(key))){
+        return (json(res,400,{error:'Vacancy payload contains unsupported fields.'}),true);
+      }
+      const vacancy=createPersonalAiBotVacancy(db,input,user.id,stamp,uid);
+      await saveStore();
+      return (json(res,201,{ok:true,vacancy}),true);
+    }
+    const vacancyMatch=path.match(/^\/api\/admin\/personal-ai-bots\/vacancies\/([a-z0-9_-]+)$/i);
+    if(vacancyMatch&&method==='PATCH'){
+      const allowed=new Set(['title','description','requirements','slots','status']);
+      if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).some(key=>!allowed.has(key))||!Object.keys(input).length){
+        return (json(res,400,{error:'Vacancy update contains unsupported or missing fields.'}),true);
+      }
+      const vacancy=updatePersonalAiBotVacancy(db,vacancyMatch[1],input,user.id,stamp,uid);
+      await saveStore();
+      return (json(res,200,{ok:true,vacancy}),true);
+    }
+    if(vacancyMatch&&method==='DELETE'){
+      const vacancy=updatePersonalAiBotVacancy(db,vacancyMatch[1],{status:'closed'},user.id,stamp,uid);
+      await saveStore();
+      return (json(res,200,{ok:true,vacancy}),true);
+    }
+
     if(method==='GET'&&path===root+'/departments'){
       return (json(res,200,{ok:true,departments:getPersonalAiBotDepartments(db)}),true);
     }
