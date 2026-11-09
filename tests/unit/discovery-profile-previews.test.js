@@ -50,7 +50,9 @@ test('Facebook-style people cards have responsive sizing and reduced-motion trea
   const css=await read('public/social-facebook-layout.css');
   assert.match(css,/\.facebook-person-card/);
   assert.match(css,/\.facebook-person-photo/);
-  assert.match(css,/aspect-ratio:1 \/ 1/);
+  assert.match(css,/\.facebook-sidebar-suggestion/);
+  assert.match(css,/white-space:nowrap!important/);
+  assert.match(css,/aspect-ratio:1\/1/);
   assert.match(css,/@media\(max-width:600px\)/);
   assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
 });
