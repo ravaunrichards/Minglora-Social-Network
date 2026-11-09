@@ -22,6 +22,12 @@ on:
       - 'public/personal-ai-bots.*'
       - 'supabase/migrations/*ai_bot*'
       - 'tests/unit/personal-ai-bots*.test.js'
+      - 'src/personal-ai-bot-worker.js'
+      - 'src/server.js'
+      - 'package.json'
+      - 'supabase/functions/minglora-runtime-state/index.ts'
+      - 'backend/workers/README.md'
+      - 'MINGLORA_RESUME.md'
       - '.github/workflows/personal-ai-bots.yml'
   workflow_dispatch:
 
