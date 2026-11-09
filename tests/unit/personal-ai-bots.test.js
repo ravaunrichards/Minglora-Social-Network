@@ -132,7 +132,7 @@ test('category controls are persistent and prevent new instructions in disabled 
 test('hybrid mode accepts only the defined low-risk permission allowlist',()=>{
   const db=makeDb();
   const bot=createPersonalAiBot(db,{displayName:'Analytics Guide',categoryId:'ai-business'},actor,stamp,uid);
-  assert.throws(()=>updatePersonalAiBot(db,bot.id,{allowedAutonomousActions:['analytics_read']},actor,stamp,uid),/Switch the bot to hybrid mode/);
+  assert.throws(()=>updatePersonalAiBot(db,bot.id,{allowedAutonomousActions:['analytics_read']},actor,stamp,uid),/Hybrid autonomy or Autonomous within limits/);
   updatePersonalAiBot(db,bot.id,{autonomyMode:'hybrid'},actor,stamp,uid);
   const updated=updatePersonalAiBot(db,bot.id,{allowedAutonomousActions:['analytics_read','draft_content']},actor,stamp,uid);
   assert.deepEqual(updated.allowedAutonomousActions,['analytics_read','draft_content']);
