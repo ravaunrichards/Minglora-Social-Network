@@ -128,9 +128,9 @@ test('visitor profile actions stay readable and tappable on narrow screens',()=>
   assert.ok(profileCss.includes('min-height:40px!important')||profileCss.includes('min-height:38px!important')||profileCss.includes('min-height:36px!important'));
   assert.ok(profileCss.includes('white-space:nowrap!important'));
   assert.ok(profileCss.includes('grid-template-columns:repeat(3,minmax(0,1fr))!important'));
-  assert.ok(profile.includes('id="profile-message" aria-label="Start a chat with \'+esc(u.name)+\'">Message</button>'));
-  assert.ok(profile.includes('id="profile-report" aria-label="Report \'+esc(u.name)+\'">Report</button>'));
-  assert.ok(profile.includes('id="profile-block" aria-label="Block \'+esc(u.name)+\'">Block</button>'));
+  assert.ok(profile.includes('id="profile-message" aria-label="Start a chat with \'+esc(u.name)+\'""><svg'));
+  assert.ok(profile.includes('id="profile-report" aria-label="Report \'+esc(u.name)+\'""><svg'));
+  assert.ok(profile.includes('id="profile-block" aria-label="Block \'+esc(u.name)+\'""><svg'));
 });
 
 test('visitor profile actions stay in one horizontal row and preserve subscription checkout',()=>{
