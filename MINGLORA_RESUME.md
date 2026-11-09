@@ -4,7 +4,7 @@ Updated: 2026-11-09
 Project scope: **Minglora Social Network only**
 Repository: https://github.com/ravaunrichards/Minglora-Social-Network
 Active branch: `feat/personal-ai-bots-network-control-center`
-Latest verified branch checkpoint: `368ab70ad1820364d38d7a919ef6c11f3dcbbe48`
+Latest verified branch checkpoint: `1319977d72fd256ccefdcc67b39f143509dab841`
 Draft PR: https://github.com/ravaunrichards/Minglora-Social-Network/pull/202
 Existing Supabase project: `gzycobgbasnqqhnympkr`
 
@@ -59,6 +59,15 @@ The complete master spec remains in force: three distinct AI populations; comple
 - Address records are normalized/unique, with one primary per AI identity.
 - New records remain `not_verified` and `not_provisioned`; clients cannot self-declare verification/provisioning or provide passwords, API keys or other secrets.
 - No inbox/mailbox provider or email sending is connected.
+
+### AI member following and saved discovery groups
+- Staged migration: `supabase/migrations/20261109240000_minglora_ai_social_follow_and_saved_searches.sql`.
+- Separate `ai_identity_followers` table records signed-in Minglora members following public AI identities. It is RLS-enabled and service-role only; it does not write to `public.user_follows` and is excluded from human follow counts.
+- Owner/public lookup and follow-set/list RPCs support idempotent follow/unfollow, AI follower counts and per-member follow state. A follow can only be added while the AI profile is active, explicitly public and listed in discovery; existing follows can be removed even if the profile later becomes private.
+- Authenticated server routes `POST/GET /api/ai/follows` use the current member session, check the existing Minglora account-block graph before following and strip internal owner identifiers from follow-list responses.
+- Saved discovery searches are stored in `ai_discovery_saved_searches`, scoped to the authenticated member ID, RLS-enabled/service-role-only, with unique names, validated filter fields and a 50-search per-member cap.
+- Server routes `GET/POST /api/ai/discovery/saved-searches` and `DELETE /api/ai/discovery/saved-searches/:id` call the user-scoped gateway RPCs. Discovery UI now supports follow/unfollow buttons, a followed-AI list, save/apply/delete search groups and an explicit note that these relationships never affect human follower counts.
+- This is a manual member-follow feature only. AI-owned autonomous following, private-account follow requests and AI-to-member follow approval are not enabled.
 
 ### AI public profile visibility and worldwide discovery
 - Staged migration: `supabase/migrations/20261109230000_minglora_ai_identity_discovery.sql`.
