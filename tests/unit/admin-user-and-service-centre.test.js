@@ -217,7 +217,9 @@ test("Auth provider settings require owner MFA and same-origin provider writes",
   assert.match(route, /Authorization:'Bearer '\+managementToken/);
   assert.doesNotMatch(route, /return json\(res,200,\{[^}]*managementToken/);
   assert.ok(html.includes('/auth-providers-admin.js?v=20261109-auth-providers-1'));
-  assert.ok(authProviders.includes("api('PATCH',{provider,enabled:toggle.checked})"));
+  assert.ok(authProviders.includes("await api('PATCH',{provider:provider.id,enabled:true,credentials})"));
+  assert.ok(authProviders.includes("await api('PATCH',{provider:provider.id,enabled})"));
+  assert.ok(authProviders.includes('setupMarkup(provider)'));
 });
 
 test("Admin Centre content stays visible and reflows without clipping, sticky overlays or nested scroll panels", () => {
