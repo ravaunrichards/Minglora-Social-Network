@@ -3,153 +3,132 @@
 **Project:** Minglora Social Network  
 **Repository:** `ravaunrichards/Minglora-Social-Network`  
 **Branch:** `main`  
+**Current source head:** `dc63c330f3f12bf606743de250124f3e6ba4a8ff`  
 **Supabase project:** `gzycobgbasnqqhnympkr`  
-**Render service:** `minglora-social-network`  
+**Render service:** `minglora-social-network` (`srv-dbi3gvqfngtc73c6hi4g`)  
 **Production URL:** https://minglora-social-network.onrender.com  
 **Checkpoint date:** 2026-11-09  
-**Latest verified implementation/test commit:** `d3e3fe5a253eba37f415a87cc657834f4dcc309d`  
-**Previous checkpoint commit:** `1bfc0275f27b9e15161498cf21c584cd4815c2b7`
+**Latest verified deployment:** `dep-dbp2e0f4trjc73bn3940` — LIVE  
+**Latest Auth acceptance job:** `129404209484` — PASS (34/34)  
+**Latest broad test job:** `129404209726` — FAIL (716/746; 30 failures)  
+**Latest For You job:** `129404208938` — FAIL (13/15; 2 failures)
 
 ## Progress
 
-**Previous verified completion:** 60%  
+**Previous verified completion:** 78%  
 **Current verified completion:** 78%  
 **Remaining:** 22%  
-**Progress since previous checkpoint:** +18 percentage points  
-**Recovery confidence:** CONFIRMED for repository, source, isolated Auth CI, and latest Render deployment; PARTIALLY RECOVERED for live Supabase Management API configuration; UNKNOWN for the Render `SUPABASE_ACCESS_TOKEN` value/presence and provider-issued credentials.
+**Progress since previous checkpoint:** 0 percentage points  
+**Why no percentage increase:** the current changes repaired app-shell cache integrity and the associated regression test, but did not complete the remaining production Management API write, route-sync, provider-credential, or real external OAuth acceptance requirements. These are not double-counted as new completion.
 
-Weighted milestones (weights total 100%; original weighting preserved):
+Original milestone weighting is preserved (weights total 100):
 
-| Milestone | Weight | Verified credit | Evidence / limitation |
+| Milestone | Weight | Verified credit | Current evidence / limitation |
 |---|---:|---:|---|
-| Recover and preserve the original provider-label correction | 15% | 15% | Provider name appears once; visible action button text is only Enable or Disable. |
-| Correct provider actions and expose setup instead of disabling Enable | 15% | 15% | Enable opens setup for incomplete providers; Save and Enable submits credentials; admin standalone page loads the provider script after access initialization. Latest Render source lineage is live. |
-| Secure credential configuration and enable/disable API | 25% | 18% | Protected server-side allowlisted credential patch, readiness checks, no secret response, minimum-one-sign-in-method guard, Management API GET/PATCH and post-write read-back are implemented and covered by dedicated acceptance tests. Actual live Management API write/read remains untested. |
-| Supabase callback and Minglora redirect-route controls | 20% | 15% | Displays/copies Supabase provider callback, Site URL, and Minglora OAuth return route; route-sync preserves existing redirects and verifies the resulting config. Production route sync has not been executed. |
-| Status refresh, access restrictions, and regression safeguards | 10% | 8% | MFA/designated-owner gate, same-origin protection, secure secret handling, Auth Read/Auth Write diagnostics, status refresh, and at-least-one-provider guard pass static and targeted checks. Browser interaction under the actual owner session remains unverified. |
-| End-to-end external provider sign-in acceptance | 15% | 7% | Enabled OAuth provider discovery, login buttons, PKCE start/callback, signed short-lived HttpOnly state cookie, server-side exchange, account restriction checks, Minglora session creation and MFA continuation are implemented. Tests mock Supabase; no real third-party provider login has completed. |
+| Recover and preserve the provider-label correction | 15% | 15% | Provider label appears once; action button text is only Enable or Disable. |
+| Provider actions and setup UI | 15% | 15% | Missing credentials open setup forms; OAuth and SMS setup forms exist; standalone Admin Centre loads the controls after access initialization. Static acceptance passes. |
+| Secure credential configuration and enable/disable API | 25% | 18% | MFA/designated-owner gate, server-side allowlisted Management API GET/PATCH, readiness checks, no-secret response, minimum-one-login guard, and read-back verification are implemented and tested. No live Management API transaction was observed or completed. |
+| Supabase callback and Minglora redirect-route controls | 20% | 15% | Displays/copies callback, Site URL, and app return route; route sync preserves allow-list entries and checks read-back. Production route sync was not executed. |
+| Status, access restrictions, and regression safeguards | 10% | 8% | Owner/MFA checks, same-origin and secret-handling safeguards, provider refresh, route validation, and Admin Centre shell/cache checks pass static or CI verification. No actual owner browser session was exercised. |
+| End-to-end external provider sign-in acceptance | 15% | 7% | Provider discovery, PKCE, signed short-lived HttpOnly state cookie, server-side exchange, account restrictions, session creation, and MFA continuation are implemented with mocked acceptance tests. No real identity-provider sign-in has completed. |
+| **Total** | **100%** | **78%** | **22% remains unverified or externally blocked.** |
 
-## Recovered previous work
+## Master acceptance checklist
 
-The previous checkpoint at 60% contained the corrected provider-label UI, provider setup forms, Supabase Management API writer, callback/redirect controls, and preliminary tests/deployment. All valid changes were preserved. The original 60% milestone weighting remains unchanged.
+Statuses are based on the latest repository, workflow, deployment, and log evidence. “Partial” is not counted as complete.
 
-## Current implementation
+| ID | Acceptance requirement | Priority / dependency | Status | Evidence / remaining work |
+|---|---|---|---|---|
+| AUTH-01 | Provider names are shown once and the action is clearly Enable or Disable | Easy / none | PASS | `public/auth-providers-admin.js`; prior Auth acceptance coverage. |
+| AUTH-02 | Clicking Enable for an unconfigured provider opens its setup form instead of disabling the action | Easy / none | PASS | Provider setup forms and Save and Enable path; Auth acceptance job. |
+| AUTH-03 | Standalone Admin Centre loads the provider panel after owner-access initialization | Medium / owner gate | PASS (source/CI) | `public/admin-centre.html`, `public/admin-centre.js`, MutationObserver mount; Auth test “Standalone Admin Centre loads and mounts provider controls after owner access is verified”. Actual owner browser interaction remains untested. |
+| AUTH-04 | OAuth and SMS setup input is validated and sent only to the protected server route | Medium / none | PASS (source/CI) | `public/auth-providers-admin.js`; server allow-list and input validation; Auth suite. |
+| AUTH-05 | Provider credentials are written only to Supabase Management API and never echoed back to the browser | Hard / valid Management token + Auth Write permission | PARTIAL | Server route and no-secret response are implemented and source-tested. Actual production GET/PATCH and post-write read-back have not run. |
+| AUTH-06 | Provider readiness is checked before enable; disabling the final enabled sign-in method is refused | Medium / live config | PARTIAL | Guard and readiness code are covered by Auth acceptance checks. No live enable/disable round trip. |
+| AUTH-07 | Owner-only and MFA-verified access is enforced on provider configuration | Hard / owner session | PARTIAL | Protected route and static acceptance tests pass. No designated owner browser session was observed. |
+| AUTH-08 | Provider status refresh reflects actual Supabase configuration and exposes no secrets | Medium / Management token | PARTIAL | Status route exists. Production provider state remains unknown because no authenticated admin request was made. |
+| AUTH-09 | Supabase callback, production Site URL, and Minglora OAuth return URL are displayed and can be repaired without deleting existing redirects | Medium / Management token + owner session | PARTIAL | Route-sync and read-back implementation are covered in acceptance tests. Production route sync has not been executed; `redirectReady` is unverified. |
+| AUTH-10 | Member login lists only enabled standard OAuth providers and starts the correct Minglora OAuth route | Medium / live provider config | PARTIAL | `public/auth-login.js`, `/api/auth/providers`, and OAuth-start route are implemented; Auth suite passes. Live provider flags and a browser click have not been verified. |
+| AUTH-11 | OAuth initiation uses PKCE and a signed, short-lived HttpOnly state cookie | Hard / enabled provider | PASS (mock/source acceptance) | Auth flow tests pass; no live identity-provider round trip. |
+| AUTH-12 | OAuth callback exchanges the code server-side, validates the user and account restrictions, creates a Minglora session, and preserves MFA continuation | Hard / provider credentials + valid routes | PARTIAL | Callback and MFA logic pass mocked/source acceptance. No real provider sign-in, callback, or session has been verified. |
+| AUTH-13 | Current social-login scripts/styles and active app bundle are available from the app shell/service worker | Easy / deploy | PASS | Auth CI 34/34. Admin Centre shell test passes in the broad suite. Current `public/index.html` app bundle URL equals the service-worker precache URL. |
+| AUTH-14 | Production deployment starts with Supabase Auth and durable Supabase persistence | Hard / Render deployment | PASS | Render deploy `dep-dbp2e0f4trjc73bn3940` is LIVE. Logs report `authProvider=supabase`, `authConfigured=true`, `persistenceDriver=supabase`, `persistenceDurable=true`, and `persistenceReady=true`. |
+| AUTH-15 | Dedicated Auth acceptance and relevant regression tests pass | Final / code and CI | PARTIAL | Dedicated Auth job: 34 tests, 34 passed, 0 failed. Broad job: 746 tests, 716 passed, 30 failed in other Minglora product areas. For You job: 15 tests, 13 passed, 2 failed. The Admin Centre shell/cache test itself now passes. |
+| AUTH-16 | Real provider-issued Client ID/Secret is stored, provider enabled, and retained after refresh | Medium / external provider console + owner session | BLOCKED | No real provider credential pair was supplied or created. Do not use placeholders. |
+| AUTH-17 | Designated MFA-verified owner performs route repair and a live provider enable/disable round trip | Easy/Medium / owner session + Management token | BLOCKED | No owner browser interaction or request to `/api/admin/auth-providers` is present in the inspected production request-log interval. |
+| AUTH-18 | A real external provider login returns through callback and establishes a working Minglora session (including MFA where enabled) | Hard / AUTH-09, AUTH-16, AUTH-17 | BLOCKED | No live request to `/auth/oauth/*` was observed; only mocked tests have passed. |
 
-Files changed:
+### Scope notes
 
-- `public/auth-providers-admin.js`
-  - Provider name appears once; button text is only Enable or Disable.
-  - Missing credentials open the provider-specific setup form instead of disabling Enable.
-  - OAuth credential and SMS gateway setup forms submit to the protected server route.
-  - Credentials are not returned to the browser.
-  - Shows/copies Supabase callback, Minglora Site URL, and Minglora OAuth return route.
-  - Connect / repair routes invokes the protected route-sync operation.
+- Phone/SMS OTP and Web3 wallet modes are distinct Supabase Auth methods. The Admin Centre can configure their provider toggles/setup, but the current member-facing public provider list and PKCE flow cover standard OAuth providers. Dedicated phone OTP and wallet sign-in UX are not verified as part of this OAuth assignment; if they are required as member-facing login methods, they need separate flows and acceptance criteria.
+- SAML 2.0 is plan-restricted in the current project configuration and is intentionally locked in the admin UI.
+- The current checkpoint does not count those distinct flows as completed OAuth requirements.
 
-- `public/auth-providers-admin.css`
-  - Responsive provider setup forms, route details, and action controls.
+## Latest implementation and correction
 
-- `public/admin-centre.html`
-  - Loads the provider stylesheet and provider script after `admin-centre.js`.
-  - Provides the `#admin-centre-root` used by the mount routine.
+The Auth/provider implementation listed in the preceding checkpoint is preserved. Additional verified cache corrections made during this continuation:
 
-- `public/admin-centre.js`
-  - Verifies `/api/admin/access`, sets `window.__mingloraAdminAccess`, then builds the settings section.
-  - The provider panel's MutationObserver mounts after the settings section is inserted.
+- `public/sw.js`: the app-shell precache now uses the exact current `app.js` URL referenced by `public/index.html`.
+- `tests/unit/admin-platform-overview.test.js`: the cache test extracts the current app bundle URL from the HTML and asserts that the service worker precaches that exact URL; it no longer assumes that app.js and Admin Centre assets share the same query-version string.
+- The later profile-layout app-shell refresh on `main` updated both HTML and service worker to `/app.js?v=20261109-admin-profile-parity-2`. They were independently re-fetched and confirmed to match.
+- The Admin Centre shell/cache test passed in the broad CI run after this correction.
 
-- `src/server.js`
-  - Keeps the MFA-verified designated-owner permission gate.
-  - Uses server-only `SUPABASE_ACCESS_TOKEN` to call the Supabase Management API auth configuration endpoint.
-  - Validates allowlisted flags/credential fields, checks provider readiness, protects against disabling the last active sign-in method, verifies post-write state, and never returns provider secrets.
-  - Exposes only enabled OAuth provider names to the public sign-in screen.
-  - Adds OAuth start/callback routes, PKCE challenge generation, signed short-lived HttpOnly state cookie, server-side code exchange, account restriction checks, Minglora session creation, and MFA handoff.
-  - Route sync sets the Site URL and appends the homepage and Minglora OAuth callback route while preserving existing allowed redirects.
-  - Permission diagnostics use Supabase's documented Auth Read/Auth Write terminology.
+## Latest verification evidence
 
-- `src/supabase-auth.js`
-  - Adds PKCE code exchange and public Auth settings lookup.
+### GitHub Actions
 
-- `public/index.html`, `public/auth-login.js`, `public/auth-oauth.css`
-  - Adds responsive social sign-in area.
-  - Loads only providers Supabase reports as enabled.
-  - Buttons navigate through Minglora's OAuth start route.
-  - Handles OAuth errors and MFA continuation.
+Current source head: [`dc63c330f3f12bf606743de250124f3e6ba4a8ff`](https://github.com/ravaunrichards/Minglora-Social-Network/commit/dc63c330f3f12bf606743de250124f3e6ba4a8ff).
 
-- `public/sw.js`
-  - Includes the versioned OAuth login script and stylesheet in the offline app shell and updates its cache generation.
+- Dedicated **Supabase Auth provider acceptance** job `129404209484`: PASS — 34 tests, 34 passed, 0 failed. Includes provider-route safeguards, PKCE helper, login-shell order, standalone Admin Centre mount, password recovery, and registration regression cases.
+- Broad **test** job `129404209726`: FAIL — 746 tests, 716 passed, 30 failed. Examples include Admin withdrawal tracking, Clock Centre navigation, People/profile layout and actions, Stories, For You layout, wallet navigation, background feed sync, responsive stacking/logout, persistence retry mocks, and theme preview assertions. The Admin Centre app-shell/service-worker asset test is PASS in this run.
+- **For You functional navigation** job `129404208938`: FAIL — 15 tests, 13 passed, 2 failed (For You header/search spacing and Stories viewer assertions).
+- Do not describe the repository-wide workflow as passing. The failures above are separate from the dedicated Auth acceptance job; the broader suite remains a regression limitation.
 
-- `tests/supabase-auth.test.js`
-  - Tests PKCE exchange, malformed-input rejection, and public Auth settings lookup.
+### Render
 
-- `tests/unit/auth-oauth-flow.test.js`
-  - Tests OAuth start/callback, signed state, PKCE, MFA, enabled provider discovery, admin credential-write safeguards, route repair, login/offline assets, and standalone Admin Centre script mounting.
+- Service is connected to this repository and `main`, auto-deploys from commits, and is on Render Free.
+- Deploy `dep-dbp2e0f4trjc73bn3940` for commit `dc63c330f3f12bf606743de250124f3e6ba4a8ff` is **LIVE** (finished 2026-11-09T20:04:24Z).
+- Runtime logs report the service listening on port 10000; Supabase Auth configured; Supabase persistence durable and ready; LiveKit configured and connected.
+- Production request logs for `/api/admin/auth-providers`, `/api/auth/providers`, and `/auth/oauth/*` returned no entries in the inspected window 2026-11-09 20:02–20:06 UTC. This is evidence that no owner provider action or OAuth flow was recorded in that window, not proof of a permanent absence.
 
-- `tests/unit/auth-email-link-handoff.test.js` and `tests/unit/share-thoughts-and-messenger-routes.test.js`
-  - Updated stale login asset-version references and corrected the cache-version regex assertion.
+### Supabase
 
-- `.github/workflows/ci.yml`
-  - Adds a dedicated Supabase Auth provider acceptance job independent of the broader repository jobs.
+- Project `gzycobgbasnqqhnympkr` is **ACTIVE_HEALTHY**, region `us-east-1`, Postgres 17.11.
+- Project URL confirmed as `https://gzycobgbasnqqhnympkr.supabase.co`.
+- Publishable and legacy anon keys exist; these are public client keys. This does **not** establish that the server-side `SUPABASE_ACCESS_TOKEN` exists.
+- Supabase security advisors also report a warning that leaked-password protection is disabled, 36 informational RLS-enabled/no-policy findings, and anonymous-access policy warnings. No broad RLS or Auth security changes were made under this narrow provider-controls assignment. Review those findings separately before modifying existing access policy.
+- The Auth configuration endpoint could not be queried using the available Supabase project tools; the current external-provider flags, site URL, and redirect allow-list remain unknown.
 
-## Verification evidence
+## Remaining work — dependency ordered
 
-**Dedicated Auth CI:** PASS  
-Workflow run: `42678536542`  
-Job: `129366415603` — `Supabase Auth provider acceptance`  
-Result: **34 tests, 34 passed, 0 failed**  
-Includes:
-- Supabase environment alias tests.
-- Password recovery error and redirect tests.
-- PKCE exchange with mocked Supabase Auth response.
-- Malformed PKCE rejection before network call.
-- Public Auth settings lookup.
-- Email verification handoff and login/registration form handling.
-- OAuth start/callback, signed state, MFA continuation, live enabled-provider filtering, credential-write safeguard, and redirect route synchronization source-contract tests.
-- Admin Centre mount test verifying root element, provider script/style links, script order, owner access initialization, and mutation observer.
-- Node syntax checks for server, Supabase Auth helpers, login/admin scripts, service worker, and OAuth-flow tests.
+### Easy (owner-authorized)
+1. Sign in to the deployed standalone Admin Centre using the designated owner account and a current MFA-verified session: https://minglora-social-network.onrender.com/admin-centre.html
+2. Refresh provider status and click **Connect / repair routes**. Confirm the response reports `redirectReady: true`.
 
-**General repository CI:** FAIL  
-The broad workflow still reports unrelated existing profile/layout/story/navigation/persistence/theme and For You assertion failures. The dedicated Auth job passed within the same run. Do not report the general repository CI as passing.
-
-**Render deployment:** DEPLOYED AND VERIFIED  
-Latest commit `d3e3fe5a253eba37f415a87cc657834f4dcc309d` — deploy `dep-dbp1elcs728c73bhf0l0` — status `live`.  
-Render logs at 2026-11-09 18:57 UTC show:
-- Build started and completed successfully.
-- `npm start` and `node src/server.js` launched.
-- `Minglora listening on port 10000`.
-- Readiness: `authProvider=supabase`, `authConfigured=true`, `persistenceDriver=supabase`, `persistenceDurable=true`, `persistenceReady=true`.
-- LiveKit verification: configured and connected.
-- Render emitted `Your service is live` and the primary URL.
-
-**Live admin endpoint usage:** UNVERIFIED  
-Render request logs for `/api/admin/auth-providers`, `/api/auth/providers`, and `/auth/oauth/*` were empty in the inspected request window. No authenticated owner or member browser interaction was observed during this execution.
-
-## Unverified / blocked requirements
-
-1. Render service metadata does not expose environment-variable values. Whether `SUPABASE_ACCESS_TOKEN` exists and is valid for the Minglora Supabase project is UNKNOWN. The protected admin API was not invoked in an authenticated owner session.
-2. The route-sync action has not been executed with the designated MFA-verified owner account. The live Supabase `site_url` and `uri_allow_list` therefore remain unverified.
-3. Apple, Google, Facebook and other OAuth providers require provider-issued Client IDs and Client Secrets. No provider credential pairs were supplied or created during this work. Do not invent placeholders.
-4. No real production provider enable/disable transaction or member OAuth login/callback/session has been completed.
-5. Phone SMS OTP and Web3 wallet providers are configured as distinct Supabase auth methods, not regular OAuth buttons. The current public sign-in list exposes OAuth providers; dedicated phone OTP and wallet sign-in UI flows are not part of the current OAuth implementation.
-6. SAML 2.0 SSO remains plan-restricted on the current Supabase plan.
-7. The broader repository CI is still failing on unrelated existing product tests. These should remain distinct from the passing Auth suite.
-
-## Remaining work — easiest first
-
-### Easy
-- Open the deployed Admin Centre using the designated MFA-verified owner account and refresh provider state.
-- Click Connect / repair routes and verify the panel reports `redirectReady: true`.
-- If the panel reports missing token or permission, securely configure Render `SUPABASE_ACCESS_TOKEN` with Supabase Auth Read and Auth Write access as applicable.
-
-### Medium
-- Enter one real provider-issued Client ID/Secret through the setup form and Save and Enable.
-- Refresh provider state and verify Supabase retained the credentials/configuration without exposing them.
-- Disable that provider and confirm only its enabled flag changes; confirm at least one sign-in method remains enabled.
+### Medium (server permission and provider credentials)
+1. If the admin route reports a missing token or permission, set `SUPABASE_ACCESS_TOKEN` securely in the Minglora Render environment. The token must have Supabase Management **Auth Read** and **Auth Write** access as required. Do not paste it into chat or commit it.
+2. Register the Minglora production callback URL in the selected identity provider console, obtain its real Client ID/Secret, enter them in the provider setup form, and Save and Enable.
+3. Refresh state and verify the provider flag and configured state. Then disable/enable it once and verify that the credential values remain saved and at least one sign-in method stays enabled.
 
 ### Hard / final acceptance
-- Complete a real provider sign-in through the external provider and back through Minglora's `/auth/oauth/callback` to a valid signed-in Minglora session.
-- Verify MFA continuation for an MFA-protected account if configured.
-- Add separate member-facing phone OTP and Web3 wallet sign-in flows if those Supabase provider toggles are intended to be offered as login methods.
-- Run broader regression tests and resolve only failures within the assigned task scope; continue reporting unrelated existing suite failures separately.
+1. Use a real external account to sign in through the member UI, complete the identity provider consent/login, return to `/auth/oauth/callback`, and verify a Minglora session is established.
+2. Verify MFA continuation on an MFA-protected account if applicable.
+3. Inspect relevant production logs and rerun the dedicated Auth tests plus relevant regression tests.
+4. Address broad product test failures only when those failures are confirmed within the assigned provider-controls scope; keep unrelated failures clearly separated.
 
-## Exact next action
+## Blockers and unknowns
 
-Use the designated MFA-verified owner account in the deployed standalone Admin Centre: refresh provider status, click **Connect / repair routes**, and confirm `redirectReady`. If the endpoint reports a missing token or permission, add `SUPABASE_ACCESS_TOKEN` in the Minglora Render environment using the secure Supabase token flow. Then enter real provider credentials through the setup form and verify an enable/disable round trip. Never paste credentials into chat or Git.
+1. **Owner session unavailable:** no designated MFA-verified owner browser session was available to invoke the protected Admin Centre actions.
+2. **Management token unknown:** Render service metadata does not expose environment-variable values, so the existence and validity of `SUPABASE_ACCESS_TOKEN` is UNKNOWN.
+3. **Provider-issued credentials unavailable:** no real OAuth Client ID/Secret pair was supplied or registered during this execution.
+4. **Live config and callback unknown:** production Supabase external-provider flags, `site_url`, and `uri_allow_list` have not been read back or changed through the Management API.
+5. **Real end-to-end sign-in untested:** mocked PKCE/session tests passed, but no third-party identity provider completed a login into Minglora.
+6. **Broader CI failures:** 30 general tests and 2 For You tests still fail outside the passing Auth job; the Admin Centre shell-cache check now passes.
+
+## Last action and exact next step
+
+**Last confirmed action:** current HTML and service-worker bundle URLs independently verified identical; current Admin Centre shell/cache regression test passes; dedicated Auth job passes 34/34; latest Render deployment is LIVE and Supabase project is ACTIVE_HEALTHY.
+
+**Exact next action:** the designated owner must open the deployed standalone Admin Centre with an MFA-verified session, refresh provider status, and run **Connect / repair routes**. The response will establish whether `SUPABASE_ACCESS_TOKEN` is present and has Auth Read/Auth Write permissions. Then configure one real external provider and perform an actual provider sign-in.
+
+**Do not declare 100% until AUTH-05 through AUTH-12 and AUTH-16 through AUTH-18 have the required live acceptance evidence, and all in-scope regression failures are resolved.**
