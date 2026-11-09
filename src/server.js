@@ -898,6 +898,7 @@ const canManagePage = (pageId, userId) => canManagePagePolicy(db.pageRoles || []
 const canViewStory = (viewerId, story) => {
   if(!story?.userId)return false;
   if(viewerId!==story.userId&&friendStoriesMuted(viewerId,story.userId))return false;
+  if(story.audience==='friends'&&isFriendRestricted(viewerId,story.userId))return false;
   if(story.audience==='close_friends')return canViewProfileAudience(viewerId,story.userId,'close_friends');
   const mutualFriendships=getMutualFollowIds(db.follows||[],story.userId,db.blocks||[])
     .map(friendId=>({from:friendId,to:story.userId,status:'accepted'}));
