@@ -1720,6 +1720,16 @@ async function route(req, res) {
           const result=await requestSupabaseState('ai_bot_task_stats',{actorUserId:user.id});
           return result.stats||null;
         },
+        persistAiProviderAssignment:async assignment=>{
+          if(!isSupabasePersistence())throw Object.assign(new Error('Provider assignments require Minglora Supabase PostgreSQL persistence.'),{status:503});
+          const result=await requestSupabaseState('ai_provider_assignment_upsert',{actorUserId:user.id,assignment});
+          return result.assignment||null;
+        },
+        listAiProviderAssignments:async ({identityId=null,limit=100,offset=0}={})=>{
+          if(!isSupabasePersistence())return null;
+          const result=await requestSupabaseState('ai_provider_assignment_list',{actorUserId:user.id,identityId,limit,offset});
+          return Array.isArray(result.assignments)?result.assignments:[];
+        },
         lookupAdminMember:async targetUserId=>{
           const local=(db.users||[]).find(member=>member.id===String(targetUserId));
           if(local)return local;
