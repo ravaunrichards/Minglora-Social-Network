@@ -15,7 +15,7 @@ export function createMingloraAuthRouteState(config = {}, appSiteUrl, providerCa
     configuredSiteUrl: String(config.site_url || ''),
     allowedRedirectUrls,
     redirectReady:
-      String(config.site_url || '').replace(/\\/+$/, '') === siteOrigin &&
+      String(config.site_url || '').replace(/\/+$/, '') === siteOrigin &&
       allowedRedirectUrls.includes(siteRedirectUrl) &&
       allowedRedirectUrls.includes(appRedirectUrl)
   };
@@ -31,7 +31,7 @@ export function buildMingloraAuthRoutePatch(config = {}, appSiteUrl) {
   }
 
   const patch = {};
-  if (String(config.site_url || '').replace(/\\/+$/, '') !== siteOrigin) {
+  if (String(config.site_url || '').replace(/\/+$/, '') !== siteOrigin) {
     patch.site_url = siteOrigin;
   }
   if (String(config.uri_allow_list || '') !== allowedRedirectUrls.join(',')) {
