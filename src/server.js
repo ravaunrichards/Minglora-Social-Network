@@ -990,7 +990,7 @@ async function publicPost(p,viewerId) {
   const {imageUrl,...cleanPost}=p;
   const savedRecord=(db.savedPosts||[]).find(saved=>saved.userId===viewerId&&saved.postId===p.id);
   return {...cleanPost,media:media.filter(item=>item?.url),soundtrack:await publicSoundtrack(p.soundtrack,viewerId),author:safeUser(author),taggedUsers:(p.taggedUserIds||[]).map(id=>db.users.find(member=>member.id===id)).filter(Boolean).map(member=>safeUser(member,viewerId)),reactions:p.reactions||{},reactionCount:Object.values(p.reactions||{}).length,myReaction:(p.reactions||{})[viewerId]||null,
-    isSaved:Boolean(savedRecord),isFavorite:Boolean(savedRecord?.isFavorite),
+    isSaved:Boolean(savedRecord&&savedRecord.isSaved!==false),isFavorite:Boolean(savedRecord?.isFavorite),
     isWatchLater:(db.savedPosts||[]).some(saved=>saved.userId===viewerId&&saved.postId===p.id&&saved.readLater===true),
     comments:(p.comments||[]).map(c=>({...c,author:safeUser(db.users.find(u=>u.id===c.userId))}))};
 }
@@ -4727,7 +4727,7 @@ async function route(req, res) {
         let saved=(db.savedPosts||[]).find(item=>item.userId===user.id&&item.postId===post.id);
         if(method==='POST'){
           if(!saved){
-            saved={id:uid(),userId:user.id,postId:post.id,createdAt:now(),collectionId:null,note:'',tags:[],isFavorite:false,readLater:false};
+            saved={id:uid(),userId:user.id,postId:post.id,createdAt:now(),collectionId:null,note:'',tags:[],isFavorite:false,readLater:false,isSaved:false};
             db.savedPosts.push(saved);
           }
           saved.readLater=true;
@@ -4818,9 +4818,15 @@ async function route(req, res) {
       if((method==='POST'||method==='DELETE')&&m){
         const post=db.posts.find(x=>x.id===m[1]);
         if(!post||post.status==='hidden'||post.archivedAt||blockedBetween(user.id,post.userId)||!canViewProfile(user.id,db.users.find(profile=>profile.id===post.userId)))return json(res,404,{error:'Post not found.'});
-        const exists=(db.savedPosts||[]).some(saved=>saved.userId===user.id&&saved.postId===post.id);
-        if(method==='POST'&&!exists)db.savedPosts.push({id:uid(),userId:user.id,postId:post.id,createdAt:now(),collectionId:null,note:'',tags:[],isFavorite:false,readLater:false});
-        if(method==='DELETE'&&exists)db.savedPosts=db.savedPosts.filter(saved=>!(saved.userId===user.id&&saved.postId===post.id));
+        let saved=(db.savedPosts||[]).find(item=>item.userId===user.id&&item.postId===post.id);
+        if(method==='POST'){
+          if(!saved){db.savedPosts ||= [];saved={id:uid(),userId:user.id,postId:post.id,createdAt:now(),collectionId:null,note:'',tags:[],isFavorite:false,readLater:false,isSaved:true};db.savedPosts.push(saved);}
+          saved.isSaved=true;saved.updatedAt=now();
+        }else if(saved){
+          saved.isSaved=false;saved.updatedAt=now();
+          const hasOtherSavedState=Boolean(saved.isFavorite||saved.readLater||saved.collectionId||String(saved.note||'').trim()||(Array.isArray(saved.tags)&&saved.tags.length));
+          if(!hasOtherSavedState)db.savedPosts=db.savedPosts.filter(item=>item.id!==saved.id);
+        }
         await saveStore();return json(res,200,{saved:method==='POST'});
       }
 
@@ -4849,7 +4855,7 @@ async function route(req, res) {
         if(method==='POST'){
           if(!saved){
             db.savedPosts ||= [];
-            saved={id:uid(),userId:user.id,postId:post.id,createdAt:now(),collectionId:null,note:'',tags:[],isFavorite:false,readLater:false};
+            saved={id:uid(),userId:user.id,postId:post.id,createdAt:now(),collectionId:null,note:'',tags:[],isFavorite:false,readLater:false,isSaved:false};
             db.savedPosts.push(saved);
           }
           saved.isFavorite=true;
