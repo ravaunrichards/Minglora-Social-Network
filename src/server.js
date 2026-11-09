@@ -908,6 +908,7 @@ const canViewStory = async (viewerId, story) => {
   if(!story?.userId)return false;
   if(viewerId!==story.userId&&friendStoriesMuted(viewerId,story.userId))return false;
   if(story.audience==='friends'&&isFriendRestricted(viewerId,story.userId))return false;
+  if(viewerId!==story.userId&&Array.isArray(story.hiddenUserIds)&&story.hiddenUserIds.includes(viewerId))return false;
   if(story.audience==='close_friends')return canViewProfileAudience(viewerId,story.userId,'close_friends');
   let subscribers=[];
   if(story.audience==='subscribers'&&viewerId!==story.userId){
@@ -5736,7 +5737,7 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
       if(method==='POST'&&p==='/api/stories'){
         const text=String(input.text||'').trim(),audience=String(input.audience||'public');
         if(input.imageUrl!==undefined&&input.imageUrl!=='')return json(res,400,{error:'Image URLs are not accepted. Choose media from your device.'});
-        if(!['public','friends','following','followers','subscribers','custom'].includes(audience))return json(res,400,{error:'Unsupported story audience.'});
+        if(!['public','friends','close_friends','following','followers','subscribers','custom','private'].includes(audience))return json(res,400,{error:'Unsupported story audience.'});
         const normalizeAudienceIds=(values)=>{
           if(!Array.isArray(values)||values.length>500||values.some(id=>typeof id!=='string'||!id.trim()||id.length>128))return null;
           const ids=[...new Set(values.map(id=>id.trim()))];
@@ -5781,7 +5782,7 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
         if(story.userId!==user.id)return json(res,403,{error:'Only the story author can edit this story.'});
         const text=input.text===undefined?String(story.text||''):String(input.text||'').trim();
         const audience=input.audience===undefined?String(story.audience||'public'):String(input.audience||'');
-        if(!['public','friends','close_friends','following','followers','subscribers','custom'].includes(audience))return json(res,400,{error:'Unsupported story audience.'});
+        if(!['public','friends','close_friends','following','followers','subscribers','custom','private'].includes(audience))return json(res,400,{error:'Unsupported story audience.'});
         const normalizeAudienceIds=(values)=>{
           if(!Array.isArray(values)||values.length>500||values.some(id=>typeof id!=='string'||!id.trim()||id.length>128))return null;
           const ids=[...new Set(values.map(id=>id.trim()))];
