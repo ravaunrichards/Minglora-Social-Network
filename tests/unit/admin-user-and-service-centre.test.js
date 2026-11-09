@@ -57,6 +57,15 @@ test("partial member edits preserve and disclose the server's partial-update res
   assert.ok(admin.includes("await loadAdminManagedUsers(panel)"));
 });
 
+test("member contact and location fields respect live profile constraints", () => {
+  assert.ok(admin.includes('id="admin-user-edit-country" name="country" maxlength="100"'));
+  assert.ok(admin.includes('id="admin-user-edit-parish" name="parish" maxlength="100"'));
+  assert.ok(runtime.includes('if (contactPhone && !/^\\\\+[1-9]\\\\d{7,14}$/.test(contactPhone))'));
+  assert.ok(runtime.includes('if (value && !/^\\\\+[1-9]\\\\d{7,14}$/.test(value))'));
+  assert.ok(runtime.includes('["country", "county", "parish", "city"].includes(field) ? 100'));
+  assert.ok(runtime.includes('["gender", "relationshipStatus"].includes(field) ? 80'));
+});
+
 test("member CRUD and session routes require owner identity, MFA and same-origin writes", () => {
   for (const name of ["admin_user_get", "admin_user_create", "admin_user_update", "admin_user_delete", "admin_user_revoke_sessions"]) assert.ok(runtime.includes('"' + name + '"'));
   assert.match(server, /isSameOriginApiWrite\(req\)/);
