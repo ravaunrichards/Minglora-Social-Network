@@ -184,7 +184,7 @@ export function updatePersonalAiBot(db, botId, input, actorId, timestamp, uid) {
   }
   if (Object.hasOwn(input,'activitySchedule')) {
     const schedule=input.activitySchedule;
-    const validDays=Array.isArray(schedule?.daysOfWeek)&&schedule.daysOfWeek.every(day=>Number.isInteger(day)&&day>=1&&day<=7);
+    const validDays=Array.isArray(schedule?.daysOfWeek)&&schedule.daysOfWeek.length>=1&&schedule.daysOfWeek.length<=7&&schedule.daysOfWeek.every(day=>Number.isInteger(day)&&day>=1&&day<=7);
     const validTime=value=>typeof value==='string'&&/^([01]\d|2[0-3]):[0-5]\d$/.test(value);
     if(!schedule||!validDays||!validTime(schedule.startTime)||!validTime(schedule.endTime)||typeof schedule.timezone!=='string'||schedule.timezone.length>80)throw Object.assign(new Error('Enter a valid activity schedule, timezone and days of week.'),{status:400});
     try{new Intl.DateTimeFormat('en',{timeZone:schedule.timezone});}catch{throw Object.assign(new Error('Choose a valid activity schedule timezone.'),{status:400});}
@@ -325,6 +325,9 @@ export function queuePersonalAiBotInstruction(db, botId, input, actorId, timesta
     id:uid(),botId,botName:bot.displayName,categoryId:bot.categoryId,
     taskType,instruction,targetUserId,
     highImpact:PERSONAL_AI_BOT_HIGH_IMPACT_TASKS.includes(taskType),
+    privacyGuardRequired:['follow','unfollow','send_message'].includes(taskType),
+    blockGuardRequired:['follow','unfollow','send_message','comment','draft_reply'].includes(taskType),
+    excludeFromHumanEngagementMetrics:true,
     status:'awaiting_administrator_approval',
     executionStatus:'not_dispatched',
     createdBy:actorId,createdAt:timestamp,
