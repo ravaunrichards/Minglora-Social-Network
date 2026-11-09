@@ -237,7 +237,7 @@ test('OAuth code exchange rejects missing and malformed PKCE inputs before calli
     process.env.SUPABASE_URL = 'https://minglora-unit-test.supabase.co';
     process.env.SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_test-key';
     globalThis.fetch = async () => { calls++; return new Response('{}'); };
-    await assert.rejects(supabaseExchangeOAuthCode({ code: '', codeVerifier: 'short' }), error => error.status === 400);
+    assert.throws(() => supabaseExchangeOAuthCode({ code: '', codeVerifier: 'short' }), error => error.status === 400);
     assert.equal(calls, 0);
   } finally {
     if (saved.url === undefined) delete process.env.SUPABASE_URL; else process.env.SUPABASE_URL = saved.url;
