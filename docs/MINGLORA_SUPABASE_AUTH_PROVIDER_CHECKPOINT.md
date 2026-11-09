@@ -1,3 +1,29 @@
+# Latest recovery — 2026-11-09
+
+## Current verified state
+
+- **Project:** Minglora Social Network — ravaunrichards/Minglora-Social-Network
+- **Branch:** `feat/minglora-admin-user-and-service-centre-20261109`
+- **Branch head:** `d4f15343af7c85702c5a7a47046d049a27e7a966` (checkpoint-only commit after the tested source commit `ad8ea2c3e1600952238a94715e6d56c4786e7a8b`).
+- **PR:** [#203](https://github.com/ravaunrichards/Minglora-Social-Network/pull/203) remains OPEN and DRAFT, not merged; reported mergeable=false.
+- **Latest CI run for branch head:** [42714965643](https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/42714965643).
+  - **Supabase Auth provider controls:** PASS — job completed successfully; provider source syntax and focused acceptance tests passed (17 tests, per the CI result captured during the prior continuation).
+  - **Admin Centre real-browser viewport regression:** PASS.
+  - **Repository-wide test job:** FAIL — failures are outside the Auth Provider control scope.
+  - **For You functional navigation:** FAIL — failures are outside the Auth Provider control scope.
+- **Verified completion:** 81%.
+- **Remaining:** 19%.
+- **Progress since prior checkpoint:** NO CHANGE. No new live acceptance criterion was verifiably completed in this recovery.
+- **Last successful operation:** branch-head CI completed with the dedicated Auth Provider job and Admin Centre viewport job passing.
+- **Production:** no merge, deployment, Supabase configuration write, provider credential write, or production route repair was performed in this continuation.
+- **External blockers still active:** designated MFA-verified owner session unavailable; the Render workspace has not been confirmed for further log inspection; existence/validity of `SUPABASE_ACCESS_TOKEN` is unknown; no real external OAuth Client ID/Secret pair has been supplied or registered; no real provider login has been completed.
+
+## Exact next action
+
+Obtain confirmation to use the Render **My Workspace** connection for read-only production request-log inspection. Then, with the designated owner using an active MFA-verified Admin Centre session and a valid server-side Supabase Management API token, verify provider status, repair the production Site URL/redirect allow-list, configure one real OAuth provider, and complete a live enable/disable round trip. Finally complete a real external OAuth sign-in and verify session/MFA continuation. Do not paste secrets into chat or commit them. Keep the 81% completion credit unchanged until those live acceptance checks pass.
+
+---
+
 # Minglora Supabase Auth Provider Controls — Recovery Checkpoint
 
 ## Active continuation — Auth Providers Enable button (2026-11-09 22:42 UTC)
