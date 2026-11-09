@@ -178,4 +178,5 @@ jobs:
             tests/unit/oauth-flow-state.test.js \
             tests/unit/oauth-authorization.test.js \
             tests/unit/auth-redirect-routes.test.js \
-            tests/unit/auth-provider-credentials.test.js
+            tests/unit/auth-provider-credentials.test.js \
+            tests/unit/service-worker-update-before-auth.test.js
