@@ -46,6 +46,14 @@ test("member edits enforce required display name and unique case-insensitive use
   assert.ok(runtime.includes('if (usernameOwner) return json(409, { error: "That username is already in use." })'));
 });
 
+test("partial member edits preserve and disclose the server's partial-update result", () => {
+  assert.ok(admin.includes("error.payload = payload"));
+  assert.ok(admin.includes("if (error?.payload?.partial)"));
+  assert.ok(admin.includes("Partial update: Minglora profile changes were saved, but Supabase Auth changes failed."));
+  assert.ok(admin.includes("await loadAdminUserDetails(panel, member.id)"));
+  assert.ok(admin.includes("await loadAdminManagedUsers(panel)"));
+});
+
 test("member CRUD and session routes require owner identity, MFA and same-origin writes", () => {
   for (const name of ["admin_user_get", "admin_user_create", "admin_user_update", "admin_user_delete", "admin_user_revoke_sessions"]) assert.ok(runtime.includes('"' + name + '"'));
   assert.match(server, /isSameOriginApiWrite\(req\)/);
