@@ -7356,7 +7356,7 @@ function renderStoryCreationWorkspace(){
       try{
         const text=String(new FormData(textFormElement).get('text')||'').trim();
         if(!text){toast('Write something before sharing your text story.');button.disabled=false;return;}
-        await api('/stories',{method:'POST',body:JSON.stringify({text,mediaIds:[],...storyAudiencePayload()})});
+        await api('/stories',{method:'POST',body:JSON.stringify({text,mediaIds:[],textTheme:state.storyTextTheme||'ocean',...storyAudiencePayload()})});
         toast('Text story published for 24 hours.');
         await returnFromStoryWorkspace();
       }catch(error){toast(error.message||'Your text story could not be published.');button.disabled=false;}
@@ -7483,7 +7483,8 @@ async function openStory(id){
     const progress=group.map((item,index)=>'<span class="story-progress-segment '+(index<groupPosition?'is-complete':index===groupPosition?'is-active':'')+'"></span>').join('');
     const viewers=isOwner&&Array.isArray(s.viewers)?s.viewers.filter(v=>v.user).map(v=>'<li>'+esc(v.user.name)+' <small>'+new Date(v.viewedAt).toLocaleString()+'</small></li>').join(''):'';
     const viewerStats=isOwner?'<details class="story-viewer-viewers"><summary>'+Number(s.viewCount||0)+' views</summary>'+(viewers?'<ul>'+viewers+'</ul>':'<p>No other viewers yet.</p>')+'</details><button type="button" class="story-viewer-delete" id="delete-story">Delete story</button>':'<button type="button" class="story-viewer-report" id="report-story">Report story</button>';
-    const mediaMarkup=activeMedia.length?renderStoryMedia():'<div class="story-viewer-text story-viewer-text-standalone">'+esc(s.text||'')+'</div>';
+    const textTheme=['ocean','sunrise','violet','midnight','minimal'].includes(s.textTheme)?s.textTheme:'ocean';
+    const mediaMarkup=activeMedia.length?renderStoryMedia():'<div class="story-viewer-text story-viewer-text-standalone story-text-theme-'+textTheme+'">'+esc(s.text||'')+'</div>';
     const caption=s.text&&activeMedia.length?'<p class="story-viewer-caption">'+esc(s.text)+'</p>':'';
     const previousDisabled=activeIndex<=0?' disabled':'';
     const nextDisabled=activeIndex>=storySequence.length-1?' disabled':'';
