@@ -61,3 +61,14 @@ test('friend preference patches reject unknown, mistyped, and excessive snooze v
   assert.equal(validateFriendPreferencePatch({ isFavorite: 'yes' }, now).valid, false);
   assert.equal(validateFriendPreferencePatch({ snoozedUntil: '2027-01-01T00:00:00.000Z' }, now).valid, false);
 });
+
+test('Restricted is a supported friend preference and does not change reciprocal-follow membership', () => {
+  const follows = [
+    { followerId: 'me', followedId: 'a' },
+    { followerId: 'a', followedId: 'me' }
+  ];
+  const patch = validateFriendPreferencePatch({ isRestricted: true });
+  assert.equal(patch.valid, true);
+  assert.equal(patch.value.isRestricted, true);
+  assert.deepEqual(getMutualFollowIds(follows, 'me'), ['a']);
+});
