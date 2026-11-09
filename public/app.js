@@ -1201,11 +1201,19 @@ async function renderFriends(){
   ]);
   state.discoveryLiveSessions=liveResult.sessions||[];
   const friends=result.friends||[];
+  const activeFriendCount=friends.filter(member=>String(member.accountStatus||'active')==='active').length;
+  const unavailableFriendCount=friends.length-activeFriendCount;
+  const friendRows=friends.map(member=>{
+    const accountStatus=String(member.accountStatus||'active');
+    const accountActive=accountStatus==='active';
+    const statusLabel=String(member.accountStatusLabel||({banned:'Banned',restricted:'Restricted',suspended:'Suspended',deactivated:'Deactivated'}[accountStatus]||'Unavailable'));
+    return '<div class="person-row" style="margin:12px 0"><img class="avatar"'+(accountActive?' data-profile="'+esc(member.id)+'"':'')+' alt="'+(accountActive?'View '+esc(member.name)+'’s profile':esc(statusLabel)+' account')+'" src="'+avatar(member)+'"><div class="person-meta"><strong'+(accountActive?' data-profile="'+esc(member.id)+'"':'')+'>'+esc(member.name)+'</strong><small>@'+esc(member.username)+' '+verifiedProfileBadge(member)+(accountActive?'':' · '+esc(statusLabel))+'</small></div>'+(accountActive?'<span class="muted">Mutual follow</span><button class="mini-btn" data-profile="'+esc(member.id)+'">View profile</button>':'<span class="connection-row-account-status connection-row-account-status--'+esc(accountStatus)+'">'+esc(statusLabel)+'</span>')+'</div>';
+  }).join('');
   setContent('<div class="page-heading"><div><h1>Friends</h1><p class="muted">Discover members through the moments they choose to share.</p></div></div>'+
     '<div class="feed-header"><h2>People you may know</h2></div>'+
     '<div id="people-discovery-grid" class="people-grid people-discovery-grid">'+peopleGridMarkup()+'</div>'+
-    '<section class="card friends-list"><h2>Friends ('+friends.length+')</h2>'+
-    (friends.length?friends.map(member=>'<div class="person-row" style="margin:12px 0"><img class="avatar" data-profile="'+esc(member.id)+'" alt="View '+esc(member.name)+'’s profile" src="'+avatar(member)+'"><div class="person-meta"><strong data-profile="'+esc(member.id)+'">'+esc(member.name)+'</strong><small>@'+esc(member.username)+' '+verifiedProfileBadge(member)+'</small></div><span class="muted">Mutual follow</span><button class="mini-btn" data-profile="'+esc(member.id)+'">View profile</button></div>').join(''):'<p class="muted">Follow each other to become friends. Your mutual connections will appear here.</p>')+'</section>');
+    '<section class="card friends-list"><h2>Friends ('+activeFriendCount+(unavailableFriendCount?' · '+unavailableFriendCount+' unavailable':'')+')</h2>'+
+    (friends.length?friendRows:'<p class="muted">Follow each other to become friends. Your mutual connections will appear here.</p>')+'</section>');
   bindPeople(document);
   startPeopleDiscoveryRefresh();
 }
@@ -4150,7 +4158,12 @@ function creatorPublishMarkup(){
 function creatorAudienceMarkup(){
   const s=state.creatorStudio,p=s.profile||{};
   const followers=s.followers||[],following=s.following||[];
-  const rows=(items,error)=>error?creatorEmpty('Audience list unavailable',error,'friends'):items.length?items.map(person=>"<article class='creator-audience-row'><img src='"+avatar(person)+"' alt=''><span><strong>"+esc(person.name||"Minglora member")+"</strong><small>@"+esc(person.username||"member")+"</small></span><button type='button' class='secondary' data-creator-view-profile='"+esc(person.id)+"'>View profile</button></article>").join(""):creatorEmpty("No members to show","This list is empty. Minglora does not add sample users or follower records.","friends");
+  const rows=(items,error)=>error?creatorEmpty('Audience list unavailable',error,'friends'):items.length?items.map(person=>{
+    const status=String(person.accountStatus||'active');
+    const active=status==='active';
+    const label=String(person.accountStatusLabel||({banned:'Banned',restricted:'Restricted',suspended:'Suspended',deactivated:'Deactivated'}[status]||'Unavailable'));
+    return "<article class='creator-audience-row'><img src='"+avatar(person)+"' alt=''><span><strong>"+esc(person.name||"Minglora member")+"</strong><small>@"+esc(person.username||"member")+(active?"":" · "+esc(label)+" account")+"</small></span>"+(active?"<button type='button' class='secondary' data-creator-view-profile='"+esc(person.id)+"'>View profile</button>":"<span class='connection-row-account-status connection-row-account-status--"+esc(status)+"'>"+esc(label)+"</span>")+"</article>";
+  }).join(""):creatorEmpty("No members to show","This list is empty. Minglora does not add sample users or follower records.","friends");
   return "<div class='creator-subpage-heading'><div><span class='creator-eyebrow'>YOUR COMMUNITY</span><h2>Audience</h2><p>Real follower and following relationships from your Minglora account.</p></div></div>"+
     "<div class='creator-audience-summary'>"+creatorMetric("Followers",creatorNumber(p.followersCount),"Members following your profile","friends")+creatorMetric("Following",creatorNumber(p.followingCount),"Profiles you follow","profile")+"</div>"+
     "<div class='creator-audience-columns'><section class='creator-studio-panel'><div class='creator-panel-heading'><div><span class='creator-eyebrow'>YOUR COMMUNITY</span><h3>Followers</h3></div><span class='creator-panel-count'>"+creatorNumber(p.followersCount)+"</span></div><div class='creator-audience-list'>"+rows(followers,s.audienceError)+"</div></section><section class='creator-studio-panel'><div class='creator-panel-heading'><div><span class='creator-eyebrow'>YOUR NETWORK</span><h3>Following</h3></div><span class='creator-panel-count'>"+creatorNumber(p.followingCount)+"</span></div><div class='creator-audience-list'>"+rows(following,s.followingError)+"</div></section></div>";
@@ -4991,8 +5004,18 @@ async function renderConnections(profileId,kind){
   try{
     const results=await Promise.all([api('/users/'+encodeURIComponent(profileId)+'/'+kind),api('/users/'+encodeURIComponent(profileId))]);
     const data=results[0],profile=results[1],users=data.users||[];
-    const rows=users.map(member=>'<div class="settings-blocked-person connection-row"><img data-profile="'+esc(member.id)+'" src="'+avatar(member)+'" alt="View '+esc(member.name)+'’s profile"><div><strong data-profile="'+esc(member.id)+'" role="link" tabindex="0">'+esc(member.name)+'</strong><small data-profile="'+esc(member.id)+'" role="link" tabindex="0">@'+esc(member.username)+' '+verifiedProfileBadge(member)+'</small></div><button class="secondary" type="button" data-profile="'+esc(member.id)+'">View profile</button></div>').join('');
-    setContent('<div class="page-heading"><div><h1>'+({followers:'Followers',following:'Following',friends:'Friends',subscribers:'Subscribers'})[kind]+'</h1><p class="muted">'+esc(profile.user.name)+' · '+data.count+' '+kind+'</p></div><button class="secondary" id="connections-back">Back to profile</button></div><section class="card">'+(rows||'<div class="empty-state"><h3>No '+kind+' yet</h3><p>'+(kind==='subscribers'?'Active subscribers will appear here when members subscribe.':'This list will appear when members connect.')+'</p></div>')+'</section>');
+    const rows=users.map(member=>{
+      const accountStatus=String(member.accountStatus||'active');
+      const accountActive=accountStatus==='active';
+      const statusLabel=String(member.accountStatusLabel||({banned:'Banned',restricted:'Restricted',suspended:'Suspended',deactivated:'Deactivated'}[accountStatus]||'Unavailable'));
+      const avatarMarkup='<img'+(accountActive?' data-profile="'+esc(member.id)+'"':' class="connection-row-unavailable-avatar"')+' src="'+avatar(member)+'" alt="'+(accountActive?'View '+esc(member.name)+'’s profile':esc(statusLabel)+' account')+'">';
+      const nameMarkup=accountActive?'<strong data-profile="'+esc(member.id)+'" role="link" tabindex="0">'+esc(member.name)+'</strong>':'<strong>'+esc(member.name)+'</strong>';
+      const actionMarkup=accountActive?'<button class="secondary" type="button" data-profile="'+esc(member.id)+'">View profile</button>':'<span class="connection-row-account-status connection-row-account-status--'+esc(accountStatus)+'">'+esc(statusLabel)+'</span>';
+      return '<div class="settings-blocked-person connection-row">'+avatarMarkup+'<div>'+nameMarkup+'<small>'+(member.username?'@'+esc(member.username)+' ':'')+verifiedProfileBadge(member)+(accountActive?'':' · '+esc(statusLabel)+' account')+'</small></div>'+actionMarkup+'</div>';
+    }).join('');
+    const unavailableCount=Math.max(0,users.length-Number(data.count||0));
+    const countText=String(data.count||0)+' '+kind+(unavailableCount?' · '+unavailableCount+' unavailable':'');
+    setContent('<div class="page-heading"><div><h1>'+({followers:'Followers',following:'Following',friends:'Friends',subscribers:'Subscribers'})[kind]+'</h1><p class="muted">'+esc(profile.user.name)+' · '+countText+'</p></div><button class="secondary" id="connections-back">Back to profile</button></div><section class="card">'+(rows||'<div class="empty-state"><h3>No '+kind+' yet</h3><p>'+(kind==='subscribers'?'Active subscribers will appear here when members subscribe.':'This list will appear when members connect.')+'</p></div>')+'</section>');
     $('#connections-back')?.addEventListener('click',()=>openProfile(profileId));
     bindProfileLinks($('#main-content'));
   }catch(error){
