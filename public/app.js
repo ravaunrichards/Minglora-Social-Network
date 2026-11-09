@@ -5946,7 +5946,12 @@ function renderProfile(data){
     if(action==='edit-story')void openProfileStoryEditor(u.id);
   }));
 
-  $('#edit-profile')?.addEventListener('click',()=>openEditProfile(u));
+  $('#edit-profile')?.addEventListener('click',()=>{
+    showTab('about');
+    const aboutPanel=$('#profile-tab-panel');
+    aboutPanel?.scrollIntoView({behavior:'smooth',block:'start'});
+    aboutPanel?.querySelector('[data-edit-about-section]')?.focus({preventScroll:true});
+  });
   const peopleToggle=$('#profile-people-toggle');
   const peoplePanel=$('#profile-people-panel');
   const peopleTrack=$('#profile-people-track');
