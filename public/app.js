@@ -5031,7 +5031,7 @@ const ABOUT_SECTION_DEFINITIONS=[
 ];
 const DEFAULT_ABOUT_SECTION_VISIBILITY_UI={
   personalDetails:'friends',intro:'public',work:'public',education:'public',hobbies:'public',
-  interests:'public',travel:'public',links:'public',contactInfo:'private',names:'friends',
+  interests:'public',travel:'public',links:'public',contactInfo:'private',names:'public',
   details:'friends',aboutYou:'public'
 };
 function aboutRowMarkup(label,value,extraClass=''){
@@ -5124,6 +5124,12 @@ function profileAboutMarkup(u,isMe){
       contact.preferredContact?aboutRowMarkup('Preferred contact',contact.preferredContact):''
     ].join(''),
     names:[
+      aboutRowMarkup('Display name',u.name||u.username),
+      aboutRowMarkup('Username',u.username?'@'+u.username:''),
+      aboutRowMarkup('First name',sections.names?.firstName),
+      aboutRowMarkup('Middle name',sections.names?.middleName),
+      aboutRowMarkup('Last name',sections.names?.lastName),
+      aboutRowMarkup('Preferred name',sections.names?.preferredName),
       aboutRowMarkup('Other name',sections.names?.otherName),
       aboutRowMarkup('Nickname',sections.names?.nickname),
       aboutRowMarkup('Name pronunciation',sections.names?.pronunciation),
@@ -5217,7 +5223,13 @@ function openAboutSectionEditor(sectionKey,u){
       aboutEditorField('website','Website',contact.website||'','url','https://...')+
       aboutEditorField('preferredContact','Preferred way to contact you',contact.preferredContact||'');
   }else if(sectionKey==='names'){
-    fields=aboutEditorField('otherName','Other name',saved.otherName)+
+    fields='<label class="field about-editor-field"><span>Profile display name</span><input type="text" data-about-field="profileName" value="'+esc(u.name||'')+'" minlength="2" maxlength="120" required></label>'+
+      '<label class="field about-editor-field"><span>Username</span><input type="text" data-about-field="username" value="'+esc(u.username||'')+'" minlength="3" maxlength="30" pattern="[A-Za-z0-9_]{3,30}" autocomplete="username" required><small>Your unique @username stays visible beneath your profile name.</small></label>'+
+      aboutEditorField('firstName','First name',saved.firstName)+
+      aboutEditorField('middleName','Middle name',saved.middleName)+
+      aboutEditorField('lastName','Last name',saved.lastName)+
+      aboutEditorField('preferredName','Preferred name',saved.preferredName)+
+      aboutEditorField('otherName','Other name',saved.otherName)+
       aboutEditorField('nickname','Nickname',saved.nickname)+
       aboutEditorField('pronunciation','How to pronounce your name',saved.pronunciation)+
       aboutEditorField('formerName','Former name',saved.formerName);
@@ -5228,8 +5240,11 @@ function openAboutSectionEditor(sectionKey,u){
   }else if(sectionKey==='aboutYou'){
     fields=aboutEditorTextarea('description','About you',saved.description,'Tell people a little more about yourself');
   }
+  const audienceControl=sectionKey==='names'
+    ?'<label class="field about-audience-field"><span>Names visibility</span><strong>Public — names and usernames always appear on accessible profiles.</strong><input type="hidden" name="audience" value="public"></label>'
+    :'<label class="field about-audience-field"><span>Who can see this section?</span><select name="audience"><option value="public" '+(audience==='public'?'selected':'')+'>Public — everyone</option><option value="friends" '+(audience==='friends'?'selected':'')+'>Friends</option><option value="private" '+(audience==='private'?'selected':'')+'>Only me</option></select></label>';
   const modal=document.createElement('dialog');modal.className='profile-inline-editor about-section-inline-editor profile-editor-dialog';modal.setAttribute('aria-labelledby','about-section-editor-title');modal.tabIndex=-1;
-  modal.innerHTML='<div class="about-section-inline-head"><div><h2 id="about-section-editor-title">Edit '+esc(label)+'</h2><small class="muted">'+esc(description)+'</small></div><button type="button" class="secondary about-inline-close">Close editor</button></div><form class="modal-body" id="about-section-editor-form">'+fields+'<label class="field about-audience-field"><span>Who can see this section?</span><select name="audience"><option value="public" '+(audience==='public'?'selected':'')+'>Public — everyone</option><option value="friends" '+(audience==='friends'?'selected':'')+'>Friends</option><option value="private" '+(audience==='private'?'selected':'')+'>Only me</option></select></label><p class="about-editor-status muted" role="status"></p><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button type="submit" class="primary">Save '+esc(label)+'</button></div></form>';
+  modal.innerHTML='<div class="about-section-inline-head"><div><h2 id="about-section-editor-title">Edit '+esc(label)+'</h2><small class="muted">'+esc(description)+'</small></div><button type="button" class="secondary about-inline-close">Close editor</button></div><form class="modal-body" id="about-section-editor-form">'+fields+audienceControl+'<p class="about-editor-status muted" role="status"></p><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button type="submit" class="primary">Save '+esc(label)+'</button></div></form>';
   document.body.append(modal);document.body.classList.add('profile-dialog-open');
   const previousFocus=document.activeElement;
   let dialogClosed=false;
@@ -5288,13 +5303,18 @@ function openAboutSectionEditor(sectionKey,u){
       }else if(sectionKey==='contactInfo'){
         for(const key of ['email','phone','whatsapp','website','preferredContact'])section[key]=fieldValue(key);
       }else if(sectionKey==='names'){
-        for(const key of ['otherName','nickname','pronunciation','formerName'])section[key]=fieldValue(key);
+        for(const key of ['firstName','middleName','lastName','preferredName','otherName','nickname','pronunciation','formerName'])section[key]=fieldValue(key);
       }else if(sectionKey==='details'){
         section.languages=fieldLines('languages');section.favoriteQuote=fieldValue('favoriteQuote');section.otherDetails=fieldValue('otherDetails');
       }else if(sectionKey==='aboutYou'){
         section.description=fieldValue('description');
       }
       const patch={aboutSections:{[sectionKey]:section},aboutSectionVisibility:{[sectionKey]:form.elements.audience.value}};
+      if(sectionKey==='names'){
+        patch.name=fieldValue('profileName');
+        patch.username=fieldValue('username').replace(/^@/,'');
+        patch.aboutSectionVisibility.names='public';
+      }
       if(sectionKey==='intro')patch.bio=section.bio;
       if(sectionKey==='personalDetails'){
         patch.location=section.currentCity;patch.city=section.currentCity;
