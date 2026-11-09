@@ -894,8 +894,7 @@ BEGIN
 
       IF v_capability_code ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{1,99}$' THEN
         INSERT INTO public.ai_identity_capabilities (
-          identity_id,capability_code,capability_configuration,verification_status,
-          enabled,last_checked_at
+          identity_id,capability_code,capability_configuration,verification_status
         ) VALUES (
           v_id,
           v_capability_code,
@@ -906,9 +905,7 @@ BEGIN
               THEN v_capability->'capabilityConfiguration'
             ELSE '{}'::jsonb
           END,
-          'unverified',
-          false,
-          NULL
+          'unverified'
         )
         ON CONFLICT (identity_id,capability_code) DO UPDATE SET
           enabled=false,
