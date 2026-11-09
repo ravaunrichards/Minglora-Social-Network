@@ -165,3 +165,19 @@ test('owner Admin Centre exposes a real AI profile report review queue',async()=
   assert.match(css,/\.pab-report-card/);
   assert.match(css,/\.pab-report-resolution/);
 });
+
+
+test('owner Admin Centre exposes bounded JSON identity batch import with retry history',async()=>{
+  const [ui,api,service]=await Promise.all([
+    read('public/personal-ai-bots.js'),
+    read('backend/modules/personal-ai-bots/admin-api.js'),
+    read('backend/modules/personal-ai-bots/personal-ai-bots-service.js')
+  ]);
+  for(const phrase of ['Bulk AI identity generation and import','id="pab-batch-form"','id="pab-batch-items"','id="pab-batch-key"','Recent identity batches','createIdentityBatch','API+\\'/batches\\'']) assert.ok(ui.includes(phrase),phrase);
+  assert.match(api,/identity batch was saved for recovery/);
+  assert.match(api,/idempotencyKey/);
+  assert.match(api,/CANONICAL_PERSISTENCE_FAILED/);
+  assert.match(api,/between 1 and 100/);
+  assert.match(service,/personalAiBotBatches/);
+});
+
