@@ -95,7 +95,7 @@ Deno.serve(async (req: Request) => {
     "subscription_cancel_mark", "subscription_paypal_webhook",
     "subscription_bonus_review",
     "ai_identity_upsert_batch", "ai_identity_list",
-    "ai_bot_settings_update",
+    "ai_bot_settings_update", "ai_provider_assignment_upsert", "ai_provider_assignment_list",
     "ai_bot_task_upsert_batch", "ai_bot_task_list", "ai_bot_task_stats",
     "ai_bot_task_claim", "ai_bot_task_heartbeat", "ai_bot_task_complete", "ai_bot_task_fail",
   ];
@@ -167,6 +167,79 @@ Deno.serve(async (req: Request) => {
       return json(503, { error: "Canonical AI identity records could not be loaded.", code: "AI_IDENTITY_SCHEMA_NOT_READY" });
     }
     return json(200, { ok: true, identities: Array.isArray(data) ? data : [] });
+  }
+
+  if (action === "ai_provider_assignment_upsert") {
+    const actorUserId = String(input.actorUserId || "");
+    const assignment = input.assignment;
+    if (actorUserId !== AI_NETWORK_OWNER_ID) {
+      return json(403, { error: "Only the designated Minglora owner can configure AI providers." });
+    }
+    const allowed = new Set([
+      "identityId","providerName","providerIdentifier","providerAccountReference",
+      "credentialSecretReference","modelName","modelIdentifier","modelVersion",
+      "supportedLanguages","capabilities","textCapable","imageCapable","audioCapable",
+      "videoCapable","voiceCapable","routingPriority","isPrimary"
+    ]);
+    const caps = assignment?.capabilities;
+    const capKeys = new Set(["text","image","audio","video","voice","embeddings","tools"]);
+    if (!assignment || typeof assignment !== "object" || Array.isArray(assignment) ||
+        Object.keys(assignment).some((key: string) => !allowed.has(key)) ||
+        !validUuid(assignment.identityId) ||
+        typeof assignment.providerName !== "string" || !/^[A-Za-z0-9][A-Za-z0-9 ._-]{1,78}$/.test(assignment.providerName) ||
+        typeof assignment.providerIdentifier !== "string" || !/^[a-z][a-z0-9._-]{1,79}$/.test(assignment.providerIdentifier) ||
+        typeof assignment.providerAccountReference !== "string" || !/^[A-Za-z0-9._:-]{1,120}$/.test(assignment.providerAccountReference) ||
+        (assignment.credentialSecretReference != null &&
+          (typeof assignment.credentialSecretReference !== "string" ||
+           !/^env:MINGLORA_AI_PROVIDER_[A-Z0-9_]{2,80}$/.test(assignment.credentialSecretReference))) ||
+        typeof assignment.modelName !== "string" || assignment.modelName.trim().length < 1 || assignment.modelName.length > 160 ||
+        typeof assignment.modelIdentifier !== "string" || !/^[A-Za-z0-9][A-Za-z0-9._:/-]{0,199}$/.test(assignment.modelIdentifier) ||
+        (assignment.modelVersion != null && (typeof assignment.modelVersion !== "string" || assignment.modelVersion.length > 80)) ||
+        (assignment.supportedLanguages != null &&
+          (!Array.isArray(assignment.supportedLanguages) || assignment.supportedLanguages.length > 100 ||
+           assignment.supportedLanguages.some((language: any) => typeof language !== "string" || language.trim().length < 2 || language.length > 20))) ||
+        (caps != null && (!caps || typeof caps !== "object" || Array.isArray(caps) ||
+          Object.keys(caps).some((key: string) => !capKeys.has(key)) ||
+          Object.values(caps).some((value: any) => typeof value !== "boolean"))) ||
+        ["textCapable","imageCapable","audioCapable","videoCapable","voiceCapable","isPrimary"].some(
+          (key: string) => assignment[key] != null && typeof assignment[key] !== "boolean"
+        ) ||
+        (assignment.routingPriority != null &&
+          (!Number.isInteger(assignment.routingPriority) || assignment.routingPriority < 1 || assignment.routingPriority > 1000))) {
+      return json(400, { error: "Provider/model assignment fields are invalid. Supply a secret reference, never a raw credential." });
+    }
+    const { data, error } = await admin.rpc("minglora_ai_provider_assignment_upsert", {
+      p_config: assignment,
+      p_actor_user_id: actorUserId
+    });
+    if (error) {
+      const invalid = ["23505","23503","23514","22023"].includes(String(error.code || ""));
+      return json(invalid ? 409 : 503, {
+        error: invalid ? "Provider/model assignment failed a database constraint." : "AI provider assignment storage is unavailable.",
+        code: String(error.code || "AI_PROVIDER_ASSIGNMENT_ERROR")
+      });
+    }
+    return json(200, { ok: true, assignment: data || {} });
+  }
+
+  if (action === "ai_provider_assignment_list") {
+    const actorUserId = String(input.actorUserId || "");
+    if (actorUserId !== AI_NETWORK_OWNER_ID) {
+      return json(403, { error: "Only the designated Minglora owner can read AI provider assignments." });
+    }
+    const identityId = input.identityId == null ? null : String(input.identityId);
+    const limit = Number(input.limit ?? 100);
+    const offset = Number(input.offset ?? 0);
+    if ((identityId !== null && !validUuid(identityId)) ||
+        !Number.isInteger(limit) || limit < 1 || limit > 500 ||
+        !Number.isInteger(offset) || offset < 0 || offset > 1000000000) {
+      return json(400, { error: "AI provider assignment pagination or identity filter is invalid." });
+    }
+    const { data, error } = await admin.rpc("minglora_ai_provider_assignment_list", {
+      p_owner_admin_id: actorUserId,p_identity_id: identityId,p_limit: limit,p_offset: offset
+    });
+    if (error) return json(503, { error: "AI provider assignments could not be loaded.", code: "AI_PROVIDER_ASSIGNMENT_SCHEMA_NOT_READY" });
+    return json(200, { ok: true, assignments: Array.isArray(data) ? data : [] });
   }
 
   if (action === "ai_bot_settings_update") {
