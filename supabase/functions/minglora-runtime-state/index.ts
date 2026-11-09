@@ -125,7 +125,7 @@ Deno.serve(async (req: Request) => {
     if (actorUserId !== AI_NETWORK_OWNER_ID) {
       return json(403, { error: "Only the designated Minglora owner can review AI identity reports." });
     }
-    if (!["all","pending","in_review","actioned","dismissed"].includes(status) ||
+    if (!["all","open","pending","in_review","actioned","dismissed"].includes(status) ||
         !Number.isInteger(limit) || limit < 1 || limit > 200 ||
         !Number.isInteger(offset) || offset < 0 || offset > 1000000000) {
       return json(400, { error: "AI report review filter or pagination values are invalid." });
