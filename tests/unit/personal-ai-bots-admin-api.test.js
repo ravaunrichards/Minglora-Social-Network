@@ -1013,3 +1013,38 @@ test('AI identity batch history is limited to the authenticated owner',async()=>
   assert.deepEqual(context.res.payload.batches,[ownerBatch]);
 });
 
+test('explicitly skipped PostgreSQL identity writes are never reported as completed',async()=>{
+  let saves=0;
+  const context=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots',
+    input:{displayName:'Skipped AI Identity',firstName:'Skipped',lastName:'Identity',categoryId:'ai-support'},
+    persistAiIdentities:async()=>({ok:true,skipped:true}),
+    saveStore:async()=>{saves++;}
+  });
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,503);
+  assert.match(context.res.payload.error,/not persisted to Minglora Supabase PostgreSQL/);
+  assert.equal(saves,0);
+});
+
+test('AI identity batch marks an explicitly skipped PostgreSQL write retryable instead of completed',async()=>{
+  const db={};
+  let saves=0;
+  const context=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/batches',
+    input:{idempotencyKey:'identity-batch-skipped-01',items:identityBatchItems},
+    db,uid:sequenceUid(1400),
+    persistAiIdentities:async()=>({ok:true,skipped:true}),
+    saveStore:async()=>{saves++;}
+  });
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,503);
+  assert.equal(context.res.payload.batch.status,'retryable_failed');
+  assert.equal(context.res.payload.batch.completedRecords,0);
+  assert.equal(context.res.payload.batch.failedRecords,2);
+  assert.equal(db.personalAiBotBatches[0].status,'retryable_failed');
+  assert.equal(db.personalAiBots.length,2);
+  assert.ok(db.personalAiBots.every(bot=>bot.enabled===false&&bot.visibility==='private'));
+  assert.equal(saves,2);
+});
+
