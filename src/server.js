@@ -29,6 +29,7 @@ import { getMutualFollowIds, normalizeFriendPreferences, validateFriendPreferenc
 import { validatePageInput, validatePageUpdate, canManagePage as canManagePagePolicy, canManagePageTeam as canManagePageTeamPolicy, canViewPageInsights as canViewPageInsightsPolicy, canAssignPageRole as canAssignPageRolePolicy, canChangePageRole as canChangePageRolePolicy, canRemovePageRole as canRemovePageRolePolicy, canDeletePagePost, canDeletePage } from '../backend/modules/pages/service.js';
 import { recordProfileView, touchProfilePresence, getProfileViewStats } from '../backend/modules/profiles/service.js';
 import { getPlatformAdminBadge, getProfileVerificationBadge } from './platform-badges.js';
+import { handlePersonalAiBotsAdminApi } from '../backend/modules/personal-ai-bots/admin-api.js';
 import { listActiveCreatorSubscriptions } from '../backend/modules/subscriptions/service.js';
 import { SOUND_AUDIO_MIME_TYPES, validateSoundInput, normalizeSoundtrackInput, canUseSound, soundUsageCounts } from '../backend/modules/sounds/service.js';
 import { getGiftGallery, giftGalleryTimeZone, recordGiftGalleryEvent, updateGiftGallerySettings } from '../backend/modules/gift-gallery/service.js';
@@ -1688,6 +1689,11 @@ async function route(req, res) {
       if (method==='POST' && p==='/api/auth/logout') { const sid=cookie(req,'sid'); if(sid){const id=decodeURIComponent(sid).split('.')[0]; db.sessions=db.sessions.filter(s=>s.id!==id); await saveStore();} return json(res,200,{ok:true},{'Set-Cookie':clearAppSessionCookie()}); }
       if (method==='GET' && p==='/api/auth/me') return json(res,200,{user:user?safeUser(user,user.id):null});
       requireAuth(user);
+      if (await handlePersonalAiBotsAdminApi({
+        req,res,url,method,path:p,user,input,db,saveStore,uid,now,json,
+        isOwnerAdmin:isDesignatedCreatorHubAdmin(user)&&isModerator(user,req)&&hasActiveReviewerSession(user),
+        isSameOriginWrite:isSameOriginApiWrite(req)
+      })) return;
       if(p==='/api/menstrual-health'||p.startsWith('/api/menstrual-health/')){
         if(AUTH_PROVIDER!=='supabase')return json(res,503,{error:'Menstrual Health requires Minglora Supabase Auth and private database storage.'});
         const healthSession=sessionFromRequest(req),healthAuth=await sessionAuth(healthSession);
