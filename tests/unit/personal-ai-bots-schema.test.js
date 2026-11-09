@@ -371,7 +371,7 @@ test('canonical AI profile upsert persists structured worldwide locations and re
 
 test('canonical AI capability assignments are persisted as unverified until real checks occur',()=>{
   assert.match(sql,/INSERT INTO public\.ai_identity_capabilities/);
-  assert.match(sql,/verification_status\)[\s\S]*?'unverified'/);
+  assert.match(sql,/capability_configuration,verification_status\s*\) VALUES[\s\S]*?'unverified'/);
   assert.match(sql,/verification_status='unverified'/);
   assert.match(sql,/last_checked_at=NULL/);
   assert.match(sql,/pg_catalog\.jsonb_array_length\(p_identity->'capabilities'\) > 100/);
