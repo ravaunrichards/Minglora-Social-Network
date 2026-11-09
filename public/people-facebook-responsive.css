@@ -312,3 +312,36 @@
 @media(prefers-reduced-motion:reduce){
   .people-grid.people-discovery-grid{scroll-behavior:auto!important}
 }
+
+
+/* Minglora profile shell alignment lock.
+   Keep the established 851px canvas and make the cover/header and profile body
+   occupy exactly the same available width. No child, avatar, cover, type, or
+   control dimensions are changed here. */
+.minglora-profile-page{
+  display:block!important;
+  box-sizing:border-box!important;
+  width:100%!important;
+  max-width:851px!important;
+  min-width:0!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+}
+.minglora-profile-page > .profile-header-card,
+.minglora-profile-page > #profile-tab-panel{
+  display:block!important;
+  box-sizing:border-box!important;
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+  margin-left:0!important;
+  margin-right:0!important;
+}
+.minglora-profile-page > #profile-tab-panel .profile-body{
+  box-sizing:border-box!important;
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+  margin-left:0!important;
+  margin-right:0!important;
+}
