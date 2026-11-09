@@ -2,7 +2,7 @@
 
 ## Product boundary
 
-The Personal AI Bots Network belongs inside **Minglora Social Network**. It uses the existing repository, designated owner-only Admin Centre and current Minglora state persistence adapter. It is not a separate social network and must not create a second Supabase project or independent human-account system.
+The Personal AI Bots Network belongs inside **Minglora Social Network**. It uses the existing repository, designated owner-only Admin Centre, existing Minglora Supabase project and existing runtime gateway. It is not a separate social network and must not create a second Supabase project or independent human-account system.
 
 ## Master category set
 
@@ -36,6 +36,8 @@ No arbitrary product-level ceiling is imposed on the eventual identity namespace
 - Same-origin verification for write requests.
 - Fifteen built-in categories and custom categories.
 - Unique AI-only username namespace (ai_...), visible AI disclosure metadata, biography, personality, interests, hobbies and language preferences.
+- AI identity records carry separate first, middle and last name fields plus a full-name value; creation requires first and last names (or a multi-part display name), and editing exposes all three fields.
+- The staged normalized identity schema includes profile/name/email/provider/model/location/language/capability/permission/owner/lifecycle/version/audit tables, batch upsert and paginated list RPCs. The owner API calls these through the existing server-secret-protected Supabase runtime gateway when Supabase persistence is active; the Admin Centre displays returned canonical PostgreSQL identity rows.
 - Per-bot enable, disable and pause state.
 - Global network and hybrid switches.
 - Per-category enable/disable and rename/description editing.
@@ -70,9 +72,10 @@ No arbitrary product-level ceiling is imposed on the eventual identity namespace
 
 | Phase/system | Current state |
 |---|---|
-| Database normalization, dedicated tables and RLS for bot entities | Additive service-role-only migration is staged in `supabase/migrations`; not applied to the live project and not yet wired to the API. Current app persistence still uses the runtime-state adapter. |
+| Canonical AI identity records (names, profile and core metadata) | Migration and service-role-only batch/list RPCs are staged on this feature branch; owner API reads/writes through the existing runtime gateway when enabled. Not production-deployed or live-verified. Bot task/team/settings state still uses the existing JSONB compatibility adapter. |
 | Durable distributed queue and background workers | Not implemented |
-| Shared AI/model provider integration and provider failover | Not implemented |
+| Email identity management and real email provisioning | `ai_emails` schema supports separate address, provider, verification and provisioning states. No email provider is connected and no mailbox is provisioned. |
+| Provider/model assignment and real AI inference | Provider account/model/assignment tables are staged; no provider account, runtime request, credential reference or failover is connected. |
 | Real public AI bot profile pages, profile photos and profile-media uploads | Not implemented |
 | Dedicated AI followers/following relationship service and target-account manager | Not implemented |
 | Safe follow/unfollow execution, private-account approval workflow and exclusion manager | Selected-bot instructions are queued with duplicate, block and rate-limit checks; no follow executor, private-account approval flow or exclusion editor exists yet. |
@@ -88,23 +91,31 @@ No arbitrary product-level ceiling is imposed on the eventual identity namespace
 | Social interaction execution (posts, reels, comments, messages, reactions, groups, events, live) | Not implemented; no worker connected |
 | Horizontal scaling, load/stress testing and recovery drills | Not implemented |
 
-## Data collections added to the existing state model
+## State persistence boundary
+
+The following collections remain inside the legacy `minglora_runtime_state` JSONB compatibility document:
 
 - personalAiBotCategories
 - personalAiBots
 - personalAiBotTasks
 - personalAiBotAudit
 - personalAiBotSettings
-- personalAiBotFollows (reserved; not yet an executing relationship store)
-- personalAiBotTeams (reserved; team manager not yet implemented)
-- personalAiBotTeamMembers (reserved)
+- personalAiBotFollows (reserved; not an executing relationship store)
+- personalAiBotTeams
+- personalAiBotTeamMembers
 - personalAiBotSchedules (reserved; current schedules are stored on bot records)
 
-The current src/store.js adapter serializes runtime state into the existing Minglora Supabase JSONB compatibility document. Do not claim normalized tables, independent row-level policies, a distributed queue or multi-instance writes have been delivered.
+The normalized `ai_*` tables are a separate canonical identity store, not a replacement for JSONB tasks, teams or settings. The admin API persists canonical identity rows before saving runtime state. If canonical identity persistence fails, the API returns an error rather than reporting success. A full normalized migration of queues, tasks, schedules, teams, departments and HR records remains future work.
 
-## Database migration status
+## Database migration and rollout status
 
-`supabase/migrations/20261108210000_minglora_ai_bot_network_foundation.sql` stages additive AI-only tables in the existing Minglora public schema. RLS is enabled on each table, and table privileges are limited to `service_role`; no anonymous or authenticated member access is granted. AI follows and AI followers are stored separately from `public.user_follows`, and bot identities are not inserted into `auth.users` or `public.profiles`. The migration has **not** been applied to the live Supabase project. It was executed inside a transaction ending in `ROLLBACK`; the follow-up query confirmed that the new settings, bot, team, task and follow tables are absent from production. The current Node Admin API still reads and writes the existing runtime-state compatibility document; an audited service-role gateway integration and controlled migration application are required before production use.
+The migration `supabase/migrations/20261108210000_minglora_ai_bot_network_foundation.sql` stages both bot-control tables and the canonical AI identity data areas: `ai_identities`, `ai_names`, `ai_profiles`, `ai_emails`, `ai_provider_accounts`, `ai_provider_models`, `ai_provider_assignments`, `ai_identity_locations`, `ai_identity_languages`, `ai_identity_capabilities`, `ai_identity_permissions`, `ai_identity_owners`, `ai_identity_status_history`, `ai_identity_versions` and `ai_identity_audit_logs`.
+
+The create/update and 1–100 record batch upsert functions write identity, separate first/middle/last name fields, profile, languages, ownership, lifecycle history, configuration version and audit rows transactionally. A paginated list function supplies the owner-only Admin Centre table. Functions use `SECURITY INVOKER`, an empty `search_path`, and execute grants only for `service_role`; tables have RLS enabled and are revoked from `PUBLIC`, `anon` and `authenticated`. The existing server-secret-protected runtime gateway validates the designated owner and allows only an explicit identity field list.
+
+**Production state: not deployed.** The existing Minglora Supabase project was inspected and these AI identity tables were absent. The migration has not been applied and the Edge Function changes have not been deployed. Until both are deployed, canonical database reads/writes fail closed rather than claiming the new PostgreSQL storage works. Do not run the migration or deploy the function without production authorization and release verification.
+
+This bridge persists canonical core identity rows. Child-table workflows for email addresses, provider/model assignments, locations, capabilities, permissions and related data are not yet connected to the Admin API. No email mailbox, model provider, runtime health or AI execution worker is claimed as operational.
 
 ## Routes
 
