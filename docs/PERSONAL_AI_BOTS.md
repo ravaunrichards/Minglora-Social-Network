@@ -69,7 +69,7 @@ No arbitrary product-level ceiling is imposed on the eventual identity namespace
 
 | Phase/system | Current state |
 |---|---|
-| Database normalization, dedicated tables and RLS for bot entities | Not implemented; data is in the existing runtime-state adapter |
+| Database normalization, dedicated tables and RLS for bot entities | Additive service-role-only migration is staged in `supabase/migrations`; not applied to the live project and not yet wired to the API. Current app persistence still uses the runtime-state adapter. |
 | Durable distributed queue and background workers | Not implemented |
 | Shared AI/model provider integration and provider failover | Not implemented |
 | Real public AI bot profile pages, profile photos and profile-media uploads | Not implemented |
@@ -100,6 +100,10 @@ No arbitrary product-level ceiling is imposed on the eventual identity namespace
 - personalAiBotSchedules (reserved; current schedules are stored on bot records)
 
 The current src/store.js adapter serializes runtime state into the existing Minglora Supabase JSONB compatibility document. Do not claim normalized tables, independent row-level policies, a distributed queue or multi-instance writes have been delivered.
+
+## Database migration status
+
+`supabase/migrations/20261108210000_minglora_ai_bot_network_foundation.sql` stages additive AI-only tables in the existing Minglora public schema. RLS is enabled on each table, and table privileges are limited to `service_role`; no anonymous or authenticated member access is granted. AI follows and AI followers are stored separately from `public.user_follows`, and bot identities are not inserted into `auth.users` or `public.profiles`. The migration has **not** been applied to the live Supabase project. The current Node Admin API still reads and writes the existing runtime-state compatibility document; an audited service-role gateway integration and migration verification are required before production use.
 
 ## Routes
 
