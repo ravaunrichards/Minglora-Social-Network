@@ -145,7 +145,7 @@
     const status=section.querySelector('#admin-audit-log-status');
     const refreshButton=section.querySelector('#admin-audit-log-refresh');
     const displayDate=value=>{const date=new Date(value);return value&&!Number.isNaN(date.getTime())?date.toLocaleString():'Date unavailable';};
-    const actionLabel=value=>({'account.ban':'Account banned','account.unban':'Account unbanned'})[String(value||'')]||String(value||'Administrator action').replace(/[._]/g,' ');
+    const actionLabel=value=>({'account.ban':'Account banned','account.unban':'Account unbanned','account.restrict':'Account restricted','account.unrestrict':'Account restriction removed'})[String(value||'')]||String(value||'Administrator action').replace(/[._]/g,' ');
     const durationLabel=value=>({'1h':'1 hour','24h':'24 hours','7d':'7 days','30d':'30 days','90d':'90 days','876000h':'Permanent (100 years)'})[String(value||'')]||String(value||'');
     const load=async()=>{
       if(!resultList)return;
@@ -272,7 +272,7 @@
             <label for="admin-audit-log-search">Search audit history</label>
             <input id="admin-audit-log-search" type="search" maxlength="100" autocomplete="off" placeholder="Reason, username, user ID or action">
             <label for="admin-audit-log-action">Action type</label>
-            <select id="admin-audit-log-action"><option value="all">All account actions</option><option value="account.ban">Account bans</option><option value="account.unban">Account restores</option></select>
+            <select id="admin-audit-log-action"><option value="all">All account actions</option><option value="account.ban">Account bans</option><option value="account.unban">Account restores</option><option value="account.restrict">Account restrictions</option><option value="account.unrestrict">Restriction removals</option></select>
             <button type="button" class="secondary" id="admin-audit-log-refresh">Refresh history</button>
           </div>
           <p id="admin-audit-log-status" class="admin-audit-log-status" role="status" aria-live="polite">Loading administrator history…</p>
@@ -304,6 +304,7 @@
                 <option value="all">All accounts</option>
                 <option value="active">Active</option>
                 <option value="banned">Banned</option>
+                <option value="restricted">Restricted</option>
                 <option value="suspended">Suspended</option>
                 <option value="deactivated">Deactivated</option>
               </select>
@@ -340,9 +341,19 @@
                 <textarea id="admin-user-unban-note" rows="3" maxlength="500" placeholder="Reason for restoring access"></textarea>
                 <button type="button" class="secondary" id="admin-user-unban-button">Unban selected account</button>
               </div>
+              <form id="admin-user-restrict-form">
+                <label for="admin-user-restrict-reason">Reason for feature restriction</label>
+                <textarea id="admin-user-restrict-reason" rows="3" maxlength="500" required placeholder="Explain which social interaction rule was violated"></textarea>
+                <button type="submit" class="secondary" id="admin-user-restrict-submit">Restrict selected account</button>
+              </form>
+              <div class="admin-user-unrestrict-controls">
+                <label for="admin-user-unrestrict-note">Restriction review note (optional)</label>
+                <textarea id="admin-user-unrestrict-note" rows="3" maxlength="500" placeholder="Reason for restoring account features"></textarea>
+                <button type="button" class="secondary" id="admin-user-unrestrict-button">Remove account restriction</button>
+              </div>
             </div>
             <p id="admin-user-action-status" class="admin-user-management-status" role="status" aria-live="polite"></p>
-            <p class="admin-user-safety-note">Bans do not delete an account or its posts, photos, messages or other content. Minglora revokes saved app sessions and blocks app access; already-issued Supabase access tokens can remain valid for direct database requests until their expiry, even after refresh tokens are revoked.</p>
+            <p class="admin-user-safety-note">Bans and restrictions do not delete accounts or relationship records. Banned, restricted, suspended and deactivated accounts remain visible in relationship lists but are excluded from active totals. A feature restriction preserves sign-in while disabling new follow relationships.</p>
           </section>
         </section>
         <section class="admin-marketing-budget admin-badge-controls" id="admin-badge-controls" aria-labelledby="admin-badge-controls-title">
@@ -1550,7 +1561,7 @@
   }
 
   function adminUserStatusLabel(status) {
-    return ({active:'Active',banned:'Banned',suspended:'Suspended',deactivated:'Deactivated'})[status] || 'Unknown';
+    return ({active:'Active',banned:'Banned',restricted:'Restricted',suspended:'Suspended',deactivated:'Deactivated'})[status] || 'Unknown';
   }
 
   function renderAdminUserSelection(panel, member) {
@@ -1561,7 +1572,11 @@
     const banButton = panel.querySelector('#admin-user-ban-submit');
     const unbanButton = panel.querySelector('#admin-user-unban-button');
     const unbanControls = panel.querySelector('.admin-user-unban-controls');
-    if (!selection || !summary || !status || !banForm || !unbanButton) return;
+    const restrictForm = panel.querySelector('#admin-user-restrict-form');
+    const restrictButton = panel.querySelector('#admin-user-restrict-submit');
+    const unrestrictButton = panel.querySelector('#admin-user-unrestrict-button');
+    const unrestrictControls = panel.querySelector('.admin-user-unrestrict-controls');
+    if (!selection || !summary || !status || !banForm || !unbanButton || !restrictForm || !unrestrictButton) return;
     if (!member) {
       selection.hidden = true;
       return;
@@ -1577,10 +1592,18 @@
     banForm.hidden = ownerProtected || member.status === 'banned';
     if (unbanControls) unbanControls.hidden = ownerProtected || member.status !== 'banned';
     unbanButton.hidden = ownerProtected || member.status !== 'banned';
+    restrictForm.hidden = ownerProtected || member.status !== 'active';
+    if (unrestrictControls) unrestrictControls.hidden = ownerProtected || member.status !== 'restricted';
+    unrestrictButton.hidden = ownerProtected || member.status !== 'restricted';
     if (banButton) banButton.disabled = ownerProtected || member.status === 'banned';
-    const reason = panel.querySelector('#admin-user-ban-reason');
-    if (reason) reason.required = !ownerProtected && member.status !== 'banned';
+    if (restrictButton) restrictButton.disabled = ownerProtected || member.status !== 'active';
+    const banReason = panel.querySelector('#admin-user-ban-reason');
+    if (banReason) banReason.required = !ownerProtected && member.status !== 'banned';
+    const restrictionReason = panel.querySelector('#admin-user-restrict-reason');
+    if (restrictionReason) restrictionReason.required = !ownerProtected && member.status === 'active';
   }
+
+
 
   async function loadAdminManagedUsers(panel) {
     const searchInput = panel.querySelector('#admin-user-search');
@@ -1627,36 +1650,58 @@
     const member = panel._mingloraSelectedAdminUser;
     const actionStatus = panel.querySelector('#admin-user-action-status');
     if (!member || !member.id || member.isOwner) return;
-    const reasonField = panel.querySelector(operation === 'ban' ? '#admin-user-ban-reason' : '#admin-user-unban-note');
+    const reasonSelector = ({
+      ban:'#admin-user-ban-reason',
+      unban:'#admin-user-unban-note',
+      restrict:'#admin-user-restrict-reason',
+      unrestrict:'#admin-user-unrestrict-note'
+    })[operation];
+    const reasonField = reasonSelector ? panel.querySelector(reasonSelector) : null;
     const reason = String(reasonField?.value || '').trim();
     const duration = String(panel.querySelector('#admin-user-ban-duration')?.value || '7d');
-    if (operation === 'ban' && reason.length < 3) {
-      if (actionStatus) actionStatus.textContent = 'Enter a reason of at least 3 characters before applying a ban.';
+    const requiresReason = operation === 'ban' || operation === 'restrict';
+    if (requiresReason && reason.length < 3) {
+      if (actionStatus) actionStatus.textContent = 'Enter a reason of at least 3 characters before applying this action.';
       return;
     }
-    const permanent = operation === 'ban' && duration === '876000h';
-    const confirmation = operation === 'ban'
-      ? 'Ban ' + (member.username ? '@' + member.username : member.displayName) + ' for ' +
-        (permanent ? '100 years (permanent)' : duration) + '? This will end their saved Minglora sessions.'
-      : 'Unban ' + (member.username ? '@' + member.username : member.displayName) + ' and restore the account status recorded before the ban?';
+    const actionLabels = {
+      ban:'Ban',unban:'Unban',restrict:'Restrict',unrestrict:'Remove restriction from'
+    };
+    const targetName = member.username ? '@' + member.username : member.displayName;
+    const detail = operation === 'ban'
+      ? ' for ' + (duration === '876000h' ? '100 years (permanent)' : duration) + '? This will end saved Minglora sessions.'
+      : operation === 'restrict'
+        ? '? The account can still sign in, but it cannot create new follow relationships.'
+        : '?';
+    const confirmation = actionLabels[operation] + ' ' + targetName + detail;
     if (!window.confirm(confirmation)) return;
     const buttons = [
       panel.querySelector('#admin-user-ban-submit'),
-      panel.querySelector('#admin-user-unban-button')
+      panel.querySelector('#admin-user-unban-button'),
+      panel.querySelector('#admin-user-restrict-submit'),
+      panel.querySelector('#admin-user-unrestrict-button')
     ].filter(Boolean);
     buttons.forEach(button => { button.disabled = true; });
-    if (actionStatus) actionStatus.textContent = operation === 'ban' ? 'Applying account ban…' : 'Removing account ban…';
+    if (actionStatus) actionStatus.textContent = operation === 'ban' ? 'Applying account ban…'
+      : operation === 'unban' ? 'Removing account ban…'
+      : operation === 'restrict' ? 'Applying account restriction…'
+      : 'Removing account restriction…';
     try {
       const result = await adminCentreApi('/admin/users/' + encodeURIComponent(member.id) + '/' + operation, {
         method:'POST',
         body:JSON.stringify({duration,reason})
       });
-      const nextStatus = String(result.status || (operation === 'ban' ? 'banned' : 'active'));
+      const nextStatus = String(result.status || ({
+        ban:'banned',restrict:'restricted',unban:'active',unrestrict:'active'
+      })[operation]);
       member.status = nextStatus;
       member.bannedUntil = result.bannedUntil || null;
       panel._mingloraSelectedAdminUser = member;
       if (actionStatus) {
-        let message = operation === 'ban' ? 'Account banned successfully.' : 'Account unbanned successfully.';
+        let message = operation === 'ban' ? 'Account banned successfully.'
+          : operation === 'unban' ? 'Account ban removed successfully.'
+          : operation === 'restrict' ? 'Account restricted successfully.'
+          : 'Account restriction removed successfully.';
         if (operation === 'ban' && !result.sessionRevoked) {
           message += ' No live Supabase session token was available to confirm global refresh-token revocation; Minglora app sessions were still closed.';
         }
@@ -1674,6 +1719,8 @@
     }
   }
 
+
+
   function initializeAdminUserManagement(panel) {
     const searchInput = panel.querySelector('#admin-user-search');
     const searchButton = panel.querySelector('#admin-user-search-button');
@@ -1681,7 +1728,9 @@
     const results = panel.querySelector('#admin-user-management-results');
     const banForm = panel.querySelector('#admin-user-ban-form');
     const unbanButton = panel.querySelector('#admin-user-unban-button');
-    if (!searchInput || !searchButton || !statusFilter || !results || !banForm || !unbanButton) return;
+    const restrictForm = panel.querySelector('#admin-user-restrict-form');
+    const unrestrictButton = panel.querySelector('#admin-user-unrestrict-button');
+    if (!searchInput || !searchButton || !statusFilter || !results || !banForm || !unbanButton || !restrictForm || !unrestrictButton) return;
     const search = () => loadAdminManagedUsers(panel);
     searchButton.addEventListener('click', search);
     statusFilter.addEventListener('change', search);
@@ -1706,6 +1755,13 @@
     });
     unbanButton.addEventListener('click', () => {
       void runAdminAccountAction(panel, 'unban');
+    });
+    restrictForm.addEventListener('submit', event => {
+      event.preventDefault();
+      void runAdminAccountAction(panel, 'restrict');
+    });
+    unrestrictButton.addEventListener('click', () => {
+      void runAdminAccountAction(panel, 'unrestrict');
     });
     void loadAdminManagedUsers(panel);
   }
