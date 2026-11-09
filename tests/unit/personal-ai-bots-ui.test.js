@@ -7,7 +7,7 @@ const read=path=>readFile(new URL(path,root),'utf8');
 
 test('Personal AI Bots page loads the dedicated responsive controller and styles',async()=>{
   const html=await read('public/personal-ai-bots.html');
-  assert.match(html,/personal-ai-bots\.js\?v=20261109-personal-ai-bots-5/);
+  assert.match(html,/personal-ai-bots\.js\?v=20261109-personal-ai-bots-6/);
   assert.match(html,/personal-ai-bots\.js/);
   assert.match(html,/id="pab-root"/);
   assert.match(html,/noindex,nofollow/);
@@ -217,7 +217,7 @@ test('owner Admin Centre exposes the 20-department catalogue and safe hierarchy 
   for(const phrase of ['Corporate departments','pab-department-form','pab-new-department-name','pab-new-department-parent','pab-department-parent','pab-save-department','createDepartment','saveDepartment'])assert.ok(ui.includes(phrase),phrase);
   assert.match(ui,/Leadership assignments and employment workflows remain disabled/);
   for(const phrase of ['Corporate board and job-position catalogue','position types','No appointment','No permissions','No execution authority'])assert.ok(ui.includes(phrase),phrase);
-  assert.ok(html.includes('/personal-ai-bots.js?v=20261109-personal-ai-bots-5'),'Admin Centre script cache version is current');
+  assert.ok(html.includes('/personal-ai-bots.js?v=20261109-personal-ai-bots-6'),'Admin Centre script cache version is current');
   assert.match(service,/PERSONAL_AI_BOT_DEPARTMENTS = Object\.freeze/);
   assert.equal((service.match(/\{code:'[a-z_]+',name:'[^']+'/g)||[]).length>=20,true);
 });
@@ -237,7 +237,7 @@ test('owner Admin Centre exposes corporate vacancy creation and safe status cont
   assert.ok(service.includes("status:'open'"));
   assert.ok(service.includes('statusHistory'));
   assert.ok(api.includes("root+'/vacancies'"));
-  assert.ok(html.includes('/personal-ai-bots.js?v=20261109-personal-ai-bots-5'));
+  assert.ok(html.includes('/personal-ai-bots.js?v=20261109-personal-ai-bots-6'));
 });
 
 
