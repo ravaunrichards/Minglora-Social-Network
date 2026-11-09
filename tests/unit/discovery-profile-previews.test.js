@@ -43,7 +43,7 @@ test('Friends discovery avoids disruptive background rerenders and refreshes whe
   assert.match(app, /if\(peopleDiscoveryRefreshBusy\|\|state\.view!=='friends'\|\|document\.visibilityState!=='visible'\)return/);
   assert.match(app, /syncPeopleDiscoveryVerification\(result\.users\|\|\[\],grid\)/);
   assert.match(app, /api\('\/discovery\/people\/verification'\)/);
-  assert.match(app, /window\.setInterval\(\(\)=>void refreshPeopleDiscovery\(\{quiet:true\}\),15000\)/);
+  assert.match(app, /window\.setInterval\(\(\)=>void refreshPeopleDiscovery\(\{quiet:true\}\),30000\)/);
   assert.match(app, /api\('\/live\/sessions'\)/);
   assert.match(app, /openLiveRoom\(session,'viewer'\)/);
   assert.doesNotMatch(app, /id="people-discovery-refresh"/);
