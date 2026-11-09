@@ -170,7 +170,7 @@ export async function handlePersonalAiBotsAdminApi(context) {
       const durableTaskStats=typeof getAiBotTaskStats==='function'?await getAiBotTaskStats():null;
       const providerAssignments=typeof listAiProviderAssignments==='function'?await listAiProviderAssignments({limit:200,offset:0}):null;
       const emailIdentities=typeof listAiEmailIdentities==='function'?await listAiEmailIdentities({limit:200,offset:0}):null;
-      const safetyReports=typeof listAiIdentityReports==='function'?await listAiIdentityReports({status:'pending',limit:100,offset:0}):null;
+      const safetyReports=typeof listAiIdentityReports==='function'?await listAiIdentityReports({status:'open',limit:100,offset:0}):null;
       return (json(res,200,{
         ...overview,
         identityRecords:Array.isArray(identityRecords)?identityRecords:[],
@@ -234,7 +234,7 @@ export async function handlePersonalAiBotsAdminApi(context) {
     if(method==='GET'&&path===root+'/safety/reports'){
       if(typeof listAiIdentityReports!=='function')return (json(res,503,{error:'AI report review storage is unavailable.'}),true);
       const status=String(url.searchParams.get('status')||'pending');
-      if(!['all','pending','in_review','actioned','dismissed'].includes(status))return (json(res,400,{error:'AI report status filter is invalid.'}),true);
+      if(!['all','open','pending','in_review','actioned','dismissed'].includes(status))return (json(res,400,{error:'AI report status filter is invalid.'}),true);
       const reports=await listAiIdentityReports({status,limit:200,offset:0});
       return (json(res,200,{ok:true,reports:Array.isArray(reports)?reports:[]}),true);
     }
