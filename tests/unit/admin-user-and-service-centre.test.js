@@ -83,6 +83,22 @@ test("deletion errors disclose whether the failed-attempt audit was recorded", (
   assert.ok(admin.includes("The failed deletion attempt was recorded in the administrator audit log"));
 });
 
+test("failed provider session revocation is audited and the UI discloses audit status", () => {
+  const start = runtime.indexOf('if (action === "admin_user_revoke_sessions")');
+  const end = runtime.indexOf('if (action === "admin_user_set_ban")', start);
+  assert.ok(start >= 0 && end > start);
+  const revoke = runtime.slice(start, end);
+  const signOut = revoke.indexOf('admin.auth.admin.signOut(targetJwt, "global")');
+  const failedAudit = revoke.indexOf('recordAdminUserAction(actorUserId, userId, "account.sessions_revoke_failed"');
+  assert.ok(signOut >= 0 && failedAudit > signOut);
+  assert.match(revoke, /scope: "global"/);
+  assert.match(revoke, /outcome: "rejected"/);
+  assert.match(revoke, /auditRecorded/);
+  assert.ok(admin.includes("error?.payload?.auditRecorded === false"));
+  assert.ok(admin.includes("the failed session-revocation audit entry could not be confirmed"));
+  assert.ok(admin.includes("The failed session-revocation attempt was recorded in the administrator audit log"));
+});
+
 test("account deletion is audited as failed or successful only after the delete result", () => {
   const start = runtime.indexOf('if (action === "admin_user_delete")');
   const end = runtime.indexOf('if (action === "admin_user_revoke_sessions")', start);
