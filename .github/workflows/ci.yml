@@ -135,3 +135,35 @@ jobs:
           package-manager-cache: false
       - name: Verify real tab clicks, audience connections and direct routes
         run: node --test tests/unit/for-you-scope-clicks.test.js tests/unit/for-you-controls-layout.test.js tests/unit/for-you-home-live-feed.test.js
+
+  auth-provider:
+    name: Supabase Auth provider acceptance
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Check Auth and OAuth source syntax
+        run: |
+          node --check src/server.js
+          node --check src/supabase-auth.js
+          node --check public/auth-login.js
+          node --check public/auth-providers-admin.js
+          node --check public/sw.js
+          node --check tests/unit/auth-oauth-flow.test.js
+      - name: Run Auth and OAuth acceptance tests
+        run: |
+          node --test \
+            tests/supabase-auth.test.js \
+            tests/unit/auth-email-link-handoff.test.js \
+            tests/unit/auth-password-recovery-redirect.test.js \
+            tests/unit/auth-registration-resume.test.js \
+            tests/unit/auth-oauth-flow.test.js
