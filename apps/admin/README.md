@@ -697,3 +697,43 @@ Keep PR #203 in draft and production unchanged. The next task is browser-level v
 ### Exact next action
 
 Retrieve and inspect the new `admin-centre-viewport` Chromium job result for head `1ed0dbe6b0151022242403c1c27c635902518667`. If it fails, fix only the measured Admin Centre viewport regression and rerun. If it passes, record the six-viewport browser evidence; keep the 76% tracker until the remaining hosted integration, dirty-branch reconciliation/review and final acceptance criteria are completed with authorization.
+
+
+## Continuation checkpoint — verified Admin Centre browser acceptance
+
+- **Checkpoint:** 2026-11-09 21:12 UTC
+- **Project / repository:** Minglora Social Network; `ravaunrichards/Minglora-Social-Network`
+- **Assignment:** Admin Centre member management, service connections, responsive no-overlap layout and acceptance testing; PR #203.
+- **Branch:** `feat/minglora-admin-user-and-service-centre-20261109`
+- **Branch head:** `cc5e27f11c2a594d069611ecf5d341062f2529e6`
+- **PR state:** Open, draft, unmerged. No rebase, merge, production deployment, account mutation, provider-setting change or database change was performed.
+- **Verified completion:** **77%**; remaining **23%**. Previous verified completion **76%**; progress **+1%**.
+- **Weighting unchanged:** User-management interface 20/20; Supabase Auth operations 25/15; owner/MFA authorization 15/15; service connections 15/10; audit/data integrity 10/8; documentation/recovery 5/5; full CI/hosted acceptance/regression 10/4. **Total weight 100; verified credit 77.**
+- The one-point increase credits a distinct, completed browser acceptance criterion within the existing 10% CI/acceptance milestone. All unverified hosted operations remain uncredited.
+
+### Verified since the 17:01 UTC checkpoint
+
+- Commit `e01a615be1905aef0f17faa6ca2135de0d6f03d7` fixes the Admin Centre shortcut grid's mobile placement: the final `max-width:900px` override now puts the grid in column 1 after the later desktop rule that sets column 2.
+- Commit `221067a5fac9c797e3b44090a6dfd8c2e3601401` adds a regression assertion that checks the final mobile rule appears after the desktop rule.
+- Commit `cc5e27f11c2a594d069611ecf5d341062f2529e6` corrects the browser-test fixture. The test now selects its non-owner mock member before opening the selected-account delete disclosure; all API writes remain explicitly rejected by the fixture.
+- Successful browser workflow run: [42700294941](https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/42700294941), job `129442903091`.
+- Chromium viewport test: **1 test passed, 0 failed**. Viewports checked: 320, 360, 390, 768, 1024 and 1440 CSS pixels. At each size the document width equalled viewport width, the panel remained in bounds, no direct sibling overlaps were detected, no controls extended outside the panel, and no fixed/sticky descendants were detected. Both the Create member and selected-member Delete account disclosures were expanded successfully. The test recorded no browser page errors and no write requests.
+- The full test job reports **751 tests, 721 passed, 30 failed**. Admin Centre member-management, CSS layout/cascade and service-connection tests passed, including the updated cascade-order assertion. Syntax, repository structure, gift-asset generation and the zero-vulnerability dependency audit steps passed. The 30 remaining failures are existing failures outside this Admin Centre change and receive no completion credit.
+- For You functional-navigation job remains **13/15 passed, 2 failed** on stale shell/service-worker version expectations; it is outside this assignment.
+- Direct Supabase project recheck: `gzycobgbasnqqhnympkr` is `ACTIVE_HEALTHY`, PostgreSQL 17.11.0.003. Production `minglora-runtime-state` remains active at **version 112**. The feature branch's added Auth member CRUD actions are not deployed to production.
+
+### Remaining work / blockers
+
+- **Medium:** Review and safely reconcile PR #203 with current `main`. GitHub still reports `mergeable=false`; overlapping `src/server.js`, `public/admin-centre.html` and `public/sw.js` changes require explicit review. No merge or rebase has been performed.
+- **Hard:** Obtain the required least-privilege `SUPABASE_ACCESS_TOKEN` in the existing Render environment before hosted Supabase Management API GET/PATCH checks. Its availability has not been confirmed.
+- **Hard:** After reviewed merge/deployment authorization, deploy the updated `minglora-runtime-state` function and verify account create/edit/delete, ban/unban, session revocation, audit behavior, restrictive-FK deletion response, and real provider/service health with the owner/MFA session.
+- **Final acceptance:** Re-run full CI and record the resolution or accepted scope of the 30 general-suite failures and the 2 For You failures; complete hosted integration, security and regression verification.
+- No production setting, user account, database record, permission or service was altered.
+
+### Last successful operation
+
+The Chromium acceptance job passed on `cc5e27f11c2a594d069611ecf5d341062f2529e6` with the six viewport measurements above.
+
+### Exact next action
+
+Continue with a read-only security/contract review of the Admin Centre account-management and service-connection routes on this branch, identifying any safe code-level corrections and focused tests. Keep PR #203 draft and production unchanged until review and deployment authorization are satisfied.
