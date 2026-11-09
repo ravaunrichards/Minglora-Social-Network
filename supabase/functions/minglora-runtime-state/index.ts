@@ -98,6 +98,8 @@ Deno.serve(async (req: Request) => {
     "ai_bot_settings_update", "ai_provider_assignment_upsert", "ai_provider_assignment_list",
     "ai_provider_runtime_list", "ai_provider_health_update",
     "ai_email_identity_upsert", "ai_email_identity_list", "ai_identity_discover",
+    "ai_identity_public_owner_lookup", "ai_identity_follow_set", "ai_identity_follow_list",
+    "ai_discovery_saved_search_upsert", "ai_discovery_saved_search_list", "ai_discovery_saved_search_delete",
     "ai_bot_task_upsert_batch", "ai_bot_task_list", "ai_bot_task_stats",
     "ai_bot_task_claim", "ai_bot_task_heartbeat", "ai_bot_task_complete", "ai_bot_task_fail",
   ];
@@ -114,6 +116,106 @@ Deno.serve(async (req: Request) => {
   // Re-check the designated owner ID here as a second boundary after the Node
   // admin API's MFA/session authorization.
   const AI_NETWORK_OWNER_ID = "5b998c21-86b5-4621-ab37-e0808a2657b1";
+  if (action === "ai_identity_public_owner_lookup") {
+    const actorUserId = String(input.actorUserId || "");
+    const identityId = String(input.identityId || "");
+    if (!validUuid(actorUserId) || !validUuid(identityId)) {
+      return json(400, { error: "AI identity or signed-in viewer ID is invalid." });
+    }
+    const { data, error } = await admin.rpc("minglora_ai_identity_public_owner_lookup", {
+      p_identity_id: identityId,p_viewer_user_id: actorUserId
+    });
+    if (error) return json(503, { error: "AI profile relationship policy is unavailable.", code: "AI_IDENTITY_PRIVACY_CHECK_FAILED" });
+    return json(200, { ok: true, ownerAdminId: data || null });
+  }
+
+  if (action === "ai_identity_follow_set") {
+    const actorUserId = String(input.actorUserId || "");
+    const identityId = String(input.identityId || "");
+    const follow = input.follow;
+    if (!validUuid(actorUserId) || !validUuid(identityId) || typeof follow !== "boolean") {
+      return json(400, { error: "AI follow request fields are invalid." });
+    }
+    const { data, error } = await admin.rpc("minglora_ai_identity_follow_set", {
+      p_identity_id: identityId,p_follower_user_id: actorUserId,p_follow: follow
+    });
+    if (error) {
+      const invalid = ["22023","23503"].includes(String(error.code || ""));
+      return json(invalid ? 409 : 503, {
+        error: invalid ? "This public AI profile cannot be followed." : "AI follow relationship storage is unavailable.",
+        code: String(error.code || "AI_FOLLOW_ERROR")
+      });
+    }
+    return json(200, { ok: true, ...(data && typeof data === "object" ? data : {}) });
+  }
+
+  if (action === "ai_identity_follow_list") {
+    const actorUserId = String(input.actorUserId || "");
+    const limit = Number(input.limit ?? 100),offset = Number(input.offset ?? 0);
+    if (!validUuid(actorUserId) || !Number.isInteger(limit) || limit < 1 || limit > 500 ||
+        !Number.isInteger(offset) || offset < 0 || offset > 1000000000) {
+      return json(400, { error: "AI follow list pagination values are invalid." });
+    }
+    const { data, error } = await admin.rpc("minglora_ai_identity_follow_list", {
+      p_follower_user_id: actorUserId,p_limit: limit,p_offset: offset
+    });
+    if (error) return json(503, { error: "AI follow list is unavailable.", code: "AI_FOLLOW_LIST_ERROR" });
+    return json(200, { ok: true, follows: Array.isArray(data) ? data : [] });
+  }
+
+  if (action === "ai_discovery_saved_search_upsert") {
+    const actorUserId = String(input.actorUserId || "");
+    const name = String(input.name || "").trim();
+    const searchText = String(input.searchText || "").trim();
+    const filters = input.filters ?? {};
+    const sort = String(input.sort || "newest");
+    const allowedFilters = new Set([
+      "gender","nationality","countryOfOrigin","currentCountry","countryCode",
+      "stateProvince","parishCounty","city","language","category","profession",
+      "personality","interest","capability"
+    ]);
+    if (!validUuid(actorUserId) || name.length < 2 || name.length > 80 || searchText.length > 160 ||
+        !filters || typeof filters !== "object" || Array.isArray(filters) ||
+        Object.keys(filters).some((key: string) => !allowedFilters.has(key) ||
+          !Array.isArray(filters[key]) || filters[key].length > 50 ||
+          filters[key].some((value: any) => typeof value !== "string" || value.trim().length < 1 || value.length > 120)) ||
+        !["newest","recently_updated"].includes(sort)) {
+      return json(400, { error: "Saved AI discovery search values are invalid." });
+    }
+    const { data, error } = await admin.rpc("minglora_ai_discovery_saved_search_upsert", {
+      p_user_id: actorUserId,p_name: name,p_search_text: searchText,p_filters: filters,p_sort: sort
+    });
+    if (error) {
+      const invalid = ["22023","23505"].includes(String(error.code || ""));
+      return json(invalid ? 409 : 503, {
+        error: invalid ? "Saved AI discovery search failed validation or the save limit." : "Saved AI discovery search storage is unavailable.",
+        code: String(error.code || "AI_DISCOVERY_SAVE_ERROR")
+      });
+    }
+    return json(200, { ok: true, savedSearch: data || {} });
+  }
+
+  if (action === "ai_discovery_saved_search_list") {
+    const actorUserId = String(input.actorUserId || "");
+    if (!validUuid(actorUserId)) return json(400, { error: "Signed-in member ID is invalid." });
+    const { data, error } = await admin.rpc("minglora_ai_discovery_saved_search_list", {
+      p_user_id: actorUserId
+    });
+    if (error) return json(503, { error: "Saved AI discovery searches are unavailable.", code: "AI_DISCOVERY_SAVE_LIST_ERROR" });
+    return json(200, { ok: true, savedSearches: Array.isArray(data) ? data : [] });
+  }
+
+  if (action === "ai_discovery_saved_search_delete") {
+    const actorUserId = String(input.actorUserId || "");
+    const searchId = String(input.searchId || "");
+    if (!validUuid(actorUserId) || !validUuid(searchId)) return json(400, { error: "Saved AI discovery search ID is invalid." });
+    const { data, error } = await admin.rpc("minglora_ai_discovery_saved_search_delete", {
+      p_user_id: actorUserId,p_search_id: searchId
+    });
+    if (error) return json(503, { error: "Saved AI discovery search could not be removed.", code: "AI_DISCOVERY_SAVE_DELETE_ERROR" });
+    return json(200, { ok: true, deleted: data === true });
+  }
+
   if (action === "ai_identity_discover") {
     const actorUserId = String(input.actorUserId || "");
     const search = String(input.search || "").trim();
@@ -139,7 +241,7 @@ Deno.serve(async (req: Request) => {
       return json(400, { error: "AI discovery search, filters or pagination values are invalid." });
     }
     const { data, error } = await admin.rpc("minglora_ai_identity_discover", {
-      p_search: search,p_filters: filters,p_sort: sort,p_limit: limit,p_offset: offset
+      p_search: search,p_filters: filters,p_sort: sort,p_limit: limit,p_offset: offset,p_viewer_user_id: actorUserId
     });
     if (error) {
       const invalid = ["22023","22P02"].includes(String(error.code || ""));
