@@ -23,6 +23,7 @@ test('provider setup supports optional saved credentials and keeps secrets out o
   assert.ok(admin.includes('data-config-key'));
   assert.ok(admin.includes('render(Array.isArray(data.providers)?data.providers:[])'));
   assert.ok(css.includes('.admin-auth-provider-setup'));
+  assert.match(css, /@media\(max-width:620px\)\s*\{\s*\.admin-auth-provider-grid\{grid-template-columns:1fr/);
 });
 
 test('provider writes remain owner/MFA gated, same-origin, allow-listed and read-back verified', () => {
