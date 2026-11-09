@@ -80,8 +80,14 @@ test('People You May Know cards keep Facebook-style square photo proportions on 
   assert.ok(app.includes('facebook-person-remove'));
   assert.ok(css.includes('.facebook-person-photo{'));
   assert.ok(css.includes('aspect-ratio:1/1!important'));
-  assert.ok(css.includes('grid-template-columns:76px minmax(0,1fr)!important'));
-  assert.ok(css.includes('max-height:210px!important'));
+  assert.ok(css.includes('grid-template-columns:96px minmax(0,1fr)!important'));
+  assert.ok(css.includes('grid-template-columns:82px minmax(0,1fr)!important'));
+  assert.ok(css.includes('grid-template-columns:70px minmax(0,1fr)!important'));
+  assert.ok(css.includes('width:82px!important'));
+  assert.ok(css.includes('height:82px!important'));
+  assert.ok(css.includes('width:72px!important'));
+  assert.ok(css.includes('height:72px!important'));
+  assert.ok(css.includes('max-height:none!important'));
   assert.ok(css.includes('.people-grid.people-discovery-grid>.facebook-person-card'));
 });
 test('Supabase sign-in without profile metadata preserves the saved public name and username', async () => {
