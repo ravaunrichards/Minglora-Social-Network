@@ -352,6 +352,8 @@ test('AI profiles remain private by default and require explicit public discover
   },actor,stamp,uid);
   assert.equal(updated.visibility,'public');
   assert.equal(updated.publicProfileEnabled,true);
-  assert.throws(()=>updatePersonalAiBot(db,bot.id,{visibility:'friends'},actor,stamp,uid),/valid AI profile visibility/);
+  const privateAgain=updatePersonalAiBot(db,bot.id,{visibility:'friends'},actor,stamp,uid);
+  assert.equal(privateAgain.visibility,'friends');
+  assert.equal(privateAgain.publicProfileEnabled,false);
   assert.equal(updated.status,'disabled');
 });
