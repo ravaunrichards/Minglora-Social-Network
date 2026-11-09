@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { supabaseAuthConfigured, supabaseRequestPasswordReset } from '../src/supabase-auth.js';
+import { supabaseAuthConfigured, supabaseRequestPasswordReset, supabaseExchangeOAuthCode, supabaseGetAuthSettings } from '../src/supabase-auth.js';
 
 const ENV_KEYS = [
   'SUPABASE_URL',
@@ -181,6 +181,93 @@ test('password recovery sends the explicit HTTPS Minglora redirect to Supabase',
       'https://minglora-social-network.onrender.com/?password-recovery=1'
     );
     assert.equal(JSON.parse(observed.options.body).email, 'member@example.test');
+  } finally {
+    if (saved.url === undefined) delete process.env.SUPABASE_URL; else process.env.SUPABASE_URL = saved.url;
+    if (saved.key === undefined) delete process.env.SUPABASE_PUBLISHABLE_KEY; else process.env.SUPABASE_PUBLISHABLE_KEY = saved.key;
+    globalThis.fetch = saved.fetch;
+  }
+});
+
+test('OAuth callback exchanges the provider code with the matching PKCE verifier', async () => {
+  const saved = {
+    url: process.env.SUPABASE_URL,
+    key: process.env.SUPABASE_PUBLISHABLE_KEY,
+    fetch: globalThis.fetch
+  };
+  let observed;
+  try {
+    process.env.SUPABASE_URL = 'https://minglora-unit-test.supabase.co';
+    process.env.SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_test-key';
+    globalThis.fetch = async (url, options) => {
+      observed = { url: new URL(String(url)), options };
+      return new Response(JSON.stringify({
+        access_token: 'test-access-token-long-enough',
+        refresh_token: 'test-refresh-token',
+        token_type: 'bearer',
+        expires_in: 3600,
+        user: { id: 'member-id', email: 'member@example.test' }
+      }), { status: 200, headers: { 'content-type': 'application/json' } });
+    };
+    const result = await supabaseExchangeOAuthCode({
+      code: 'provider-authorization-code-123456',
+      codeVerifier: 'a'.repeat(43)
+    });
+    assert.equal(observed.url.pathname, '/auth/v1/token');
+    assert.equal(observed.url.searchParams.get('grant_type'), 'pkce');
+    assert.equal(observed.options.method, 'POST');
+    assert.equal(observed.options.headers.apikey, 'sb_publishable_test-key');
+    assert.equal(JSON.parse(observed.options.body).auth_code, 'provider-authorization-code-123456');
+    assert.equal(JSON.parse(observed.options.body).code_verifier, 'a'.repeat(43));
+    assert.equal(result.user.email, 'member@example.test');
+  } finally {
+    if (saved.url === undefined) delete process.env.SUPABASE_URL; else process.env.SUPABASE_URL = saved.url;
+    if (saved.key === undefined) delete process.env.SUPABASE_PUBLISHABLE_KEY; else process.env.SUPABASE_PUBLISHABLE_KEY = saved.key;
+    globalThis.fetch = saved.fetch;
+  }
+});
+
+test('OAuth code exchange rejects missing and malformed PKCE inputs before calling Supabase', async () => {
+  const saved = {
+    url: process.env.SUPABASE_URL,
+    key: process.env.SUPABASE_PUBLISHABLE_KEY,
+    fetch: globalThis.fetch
+  };
+  let calls = 0;
+  try {
+    process.env.SUPABASE_URL = 'https://minglora-unit-test.supabase.co';
+    process.env.SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_test-key';
+    globalThis.fetch = async () => { calls++; return new Response('{}'); };
+    await assert.rejects(supabaseExchangeOAuthCode({ code: '', codeVerifier: 'short' }), error => error.status === 400);
+    assert.equal(calls, 0);
+  } finally {
+    if (saved.url === undefined) delete process.env.SUPABASE_URL; else process.env.SUPABASE_URL = saved.url;
+    if (saved.key === undefined) delete process.env.SUPABASE_PUBLISHABLE_KEY; else process.env.SUPABASE_PUBLISHABLE_KEY = saved.key;
+    globalThis.fetch = saved.fetch;
+  }
+});
+
+test('public Auth settings expose enabled provider flags without returning credentials', async () => {
+  const saved = {
+    url: process.env.SUPABASE_URL,
+    key: process.env.SUPABASE_PUBLISHABLE_KEY,
+    fetch: globalThis.fetch
+  };
+  let observed;
+  try {
+    process.env.SUPABASE_URL = 'https://minglora-unit-test.supabase.co';
+    process.env.SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_test-key';
+    globalThis.fetch = async (url, options) => {
+      observed = { url: new URL(String(url)), options };
+      return new Response(JSON.stringify({
+        external: { google: true, apple: false, github: true }
+      }), { status: 200, headers: { 'content-type': 'application/json' } });
+    };
+    const settings = await supabaseGetAuthSettings();
+    assert.equal(observed.url.pathname, '/auth/v1/settings');
+    assert.equal(observed.options.method, 'GET');
+    assert.equal(settings.external.google, true);
+    assert.equal(settings.external.apple, false);
+    assert.equal(Object.hasOwn(settings, 'external_google_secret'), false);
   } finally {
     if (saved.url === undefined) delete process.env.SUPABASE_URL; else process.env.SUPABASE_URL = saved.url;
     if (saved.key === undefined) delete process.env.SUPABASE_PUBLISHABLE_KEY; else process.env.SUPABASE_PUBLISHABLE_KEY = saved.key;
