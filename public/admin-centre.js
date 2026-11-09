@@ -1376,6 +1376,237 @@
     return payload;
   }
 
+  async function loadAdminUserDetails(panel, userId) {
+    const target = panel.querySelector('#admin-user-detail-meta');
+    const form = panel.querySelector('#admin-user-edit-form');
+    if (!target || !form || !userId) return;
+    target.textContent = 'Loading Supabase Auth account details…';
+    try {
+      const result = await adminCentreApi('/admin/users/' + encodeURIComponent(userId));
+      const user = result.user;
+      if (!user || panel._mingloraSelectedAdminUser?.id !== userId) return;
+      panel._mingloraAdminUserDetails = user;
+      const profile = user.profile || {};
+      const value = (name, field) => {
+        const input = form.elements.namedItem(name);
+        if (input) input.value = field == null ? '' : String(field);
+      };
+      value('email', user.email);
+      value('phone', user.phone);
+      value('displayName', profile.display_name || user.userMetadata?.name || '');
+      value('username', profile.username || user.userMetadata?.username || '');
+      value('contactPhone', profile.contact_phone || user.userMetadata?.contactPhone || '');
+      value('location', profile.location);
+      value('country', profile.country);
+      value('parish', profile.parish);
+      value('bio', profile.bio);
+      value('password', '');
+      const emailConfirm = form.elements.namedItem('emailConfirmed');
+      const phoneConfirm = form.elements.namedItem('phoneConfirmed');
+      if (emailConfirm) emailConfirm.checked = false;
+      if (phoneConfirm) phoneConfirm.checked = false;
+      const formatDate = date => date && !Number.isNaN(new Date(date).getTime()) ? new Date(date).toLocaleString() : 'Not recorded';
+      const providers = Array.isArray(user.providers) && user.providers.length ? user.providers.join(', ') : 'No linked provider list';
+      target.innerHTML = '<div class="admin-user-detail-meta-grid">' +
+        '<div><small>Supabase Auth ID</small><strong>' + escapeText(user.id) + '</strong></div>' +
+        '<div><small>Email status</small><strong>' + escapeText(user.emailConfirmedAt ? 'Confirmed' : 'Not confirmed') + '</strong></div>' +
+        '<div><small>Phone status</small><strong>' + escapeText(user.phoneConfirmedAt ? 'Confirmed' : 'Not confirmed') + '</strong></div>' +
+        '<div><small>Sign-in providers</small><strong>' + escapeText(providers) + '</strong></div>' +
+        '<div><small>Created</small><strong>' + escapeText(formatDate(user.createdAt)) + '</strong></div>' +
+        '<div><small>Last sign-in</small><strong>' + escapeText(formatDate(user.lastSignInAt)) + '</strong></div>' +
+        '<div><small>Last updated</small><strong>' + escapeText(formatDate(user.updatedAt)) + '</strong></div>' +
+        '<div><small>Phone confirmed</small><strong>' + escapeText(formatDate(user.phoneConfirmedAt)) + '</strong></div>' +
+        '</div>';
+      const protectedOwner = Boolean(user.isOwner);
+      form.querySelectorAll('input,textarea,button').forEach(control => {
+        if (control.name !== 'password') control.disabled = protectedOwner;
+      });
+      form.querySelector('#admin-user-edit-password')?.setAttribute('disabled', protectedOwner ? 'disabled' : '');
+      const revoke = panel.querySelector('#admin-user-revoke-sessions');
+      if (revoke) revoke.disabled = protectedOwner;
+      const deleteButton = panel.querySelector('#admin-user-delete-submit');
+      if (deleteButton) deleteButton.disabled = protectedOwner;
+      const deletePanel = panel.querySelector('.admin-user-delete-panel');
+      if (deletePanel) deletePanel.hidden = protectedOwner;
+    } catch (error) {
+      target.textContent = error.message || 'Account details could not be loaded.';
+    }
+  }
+
+  async function createAdminUser(panel, form) {
+    const status = panel.querySelector('#admin-user-create-status');
+    const button = panel.querySelector('#admin-user-create-submit');
+    const values = new FormData(form);
+    const payload = Object.fromEntries(values.entries());
+    payload.emailConfirmed = values.get('emailConfirmed') === 'on';
+    payload.phoneConfirmed = values.get('phoneConfirmed') === 'on';
+    button.disabled = true;
+    if (status) status.textContent = 'Creating Supabase Auth member…';
+    try {
+      const result = await adminCentreApi('/admin/users', { method:'POST', body:JSON.stringify(payload) });
+      if (status) status.textContent = 'Account created in Supabase Auth and linked to a Minglora profile. New account ID: ' + result.user.id;
+      form.reset();
+      panel._mingloraAdminPage = 1;
+      panel._mingloraSelectedAdminUser = null;
+      const selection = panel.querySelector('#admin-user-selection');
+      if (selection) selection.hidden = true;
+      await loadAdminManagedUsers(panel);
+    } catch (error) {
+      if (status) status.textContent = error.message || 'The member account could not be created.';
+    } finally { button.disabled = false; }
+  }
+
+  async function saveAdminUserDetails(panel, form) {
+    const member = panel._mingloraSelectedAdminUser;
+    const current = panel._mingloraAdminUserDetails;
+    const status = panel.querySelector('#admin-user-action-status');
+    const button = panel.querySelector('#admin-user-edit-submit');
+    if (!member?.id || member.isOwner || !current) return;
+    const values = new FormData(form);
+    const field = name => String(values.get(name) || '').trim();
+    const profile = current.profile || {};
+    const patch = {};
+    if (field('email') !== String(current.email || '')) patch.email = field('email');
+    if (field('phone') !== String(current.phone || '')) patch.phone = field('phone');
+    if (field('password')) patch.password = field('password');
+    if (values.get('emailConfirmed') === 'on') patch.emailConfirmed = true;
+    if (values.get('phoneConfirmed') === 'on') patch.phoneConfirmed = true;
+    const profilePatch = {};
+    const currentProfileValues = {
+      displayName: profile.display_name || current.userMetadata?.name || '',
+      username: profile.username || current.userMetadata?.username || '',
+      contactPhone: profile.contact_phone || current.userMetadata?.contactPhone || '',
+      location: profile.location || '', country: profile.country || '', parish: profile.parish || '', bio: profile.bio || ''
+    };
+    for (const name of Object.keys(currentProfileValues)) {
+      if (field(name) !== String(currentProfileValues[name] || '')) profilePatch[name] = field(name);
+    }
+    if (Object.keys(profilePatch).length) patch.profile = profilePatch;
+    if (!Object.keys(patch).length) {
+      if (status) status.textContent = 'No account changes to save.';
+      return;
+    }
+    if (!window.confirm('Save these account and profile changes for ' + (member.username ? '@' + member.username : member.displayName || member.id) + '?')) return;
+    button.disabled = true;
+    if (status) status.textContent = 'Saving account changes to Supabase Auth and Minglora profile…';
+    try {
+      const result = await adminCentreApi('/admin/users/' + encodeURIComponent(member.id), {
+        method:'PATCH', body:JSON.stringify({patch})
+      });
+      if (status) status.textContent = result.auditRecorded === false
+        ? 'Changes saved, but the administrator audit entry could not be confirmed.'
+        : 'Account changes saved and recorded in the administrator audit log.';
+      form.querySelector('#admin-user-edit-password').value = '';
+      await loadAdminUserDetails(panel, member.id);
+      await loadAdminManagedUsers(panel);
+    } catch (error) {
+      if (status) status.textContent = error.message || 'The account changes could not be saved.';
+    } finally { button.disabled = false; }
+  }
+
+  async function revokeAdminUserSessions(panel) {
+    const member = panel._mingloraSelectedAdminUser;
+    const status = panel.querySelector('#admin-user-action-status');
+    const button = panel.querySelector('#admin-user-revoke-sessions');
+    if (!member?.id || member.isOwner) return;
+    if (!window.confirm('Sign out all known Minglora sessions for ' + (member.username ? '@' + member.username : member.displayName || member.id) + '?')) return;
+    button.disabled = true;
+    if (status) status.textContent = 'Revoking member sessions…';
+    try {
+      const result = await adminCentreApi('/admin/users/' + encodeURIComponent(member.id) + '/sessions/revoke', { method:'POST', body:'{}' });
+      if (status) status.textContent = (result.sessionRevoked ? 'Supabase refresh-token sessions were globally revoked. ' : 'No provider access token was available for global refresh-token revocation. ') +
+        Number(result.appSessionsRevoked || 0) + ' Minglora app session(s) closed.';
+    } catch (error) {
+      if (status) status.textContent = error.message || 'Member sessions could not be revoked.';
+    } finally { button.disabled = false; }
+  }
+
+  async function deleteAdminUser(panel) {
+    const member = panel._mingloraSelectedAdminUser;
+    const status = panel.querySelector('#admin-user-action-status');
+    const button = panel.querySelector('#admin-user-delete-submit');
+    const confirmInput = panel.querySelector('#admin-user-delete-confirm');
+    const reasonInput = panel.querySelector('#admin-user-delete-reason');
+    if (!member?.id || member.isOwner) return;
+    const confirmUserId = String(confirmInput?.value || '').trim();
+    const reason = String(reasonInput?.value || '').trim();
+    if (confirmUserId !== member.id) {
+      if (status) status.textContent = 'Type the exact selected account ID before deletion.';
+      return;
+    }
+    if (reason.length < 3) {
+      if (status) status.textContent = 'Enter a reason of at least 3 characters.';
+      return;
+    }
+    if (!window.confirm('Permanently delete this Supabase Auth account? This cannot be undone.')) return;
+    button.disabled = true;
+    if (status) status.textContent = 'Deleting account…';
+    try {
+      const result = await adminCentreApi('/admin/users/' + encodeURIComponent(member.id), {
+        method:'DELETE', body:JSON.stringify({confirmUserId,reason})
+      });
+      if (status) status.textContent = 'Supabase Auth account deleted.' + (result.warning ? ' ' + result.warning : '');
+      panel._mingloraSelectedAdminUser = null;
+      panel._mingloraAdminUserDetails = null;
+      const selection = panel.querySelector('#admin-user-selection');
+      if (selection) selection.hidden = true;
+      if (confirmInput) confirmInput.value = '';
+      if (reasonInput) reasonInput.value = '';
+      await loadAdminManagedUsers(panel);
+    } catch (error) {
+      if (status) status.textContent = error.message || 'The account could not be deleted.';
+    } finally { button.disabled = false; }
+  }
+
+  function initializeAdminServiceConnections(panel) {
+    const grid = panel.querySelector('#admin-service-connections-grid');
+    const status = panel.querySelector('#admin-service-connections-status');
+    const runtime = panel.querySelector('#admin-service-connections-runtime');
+    const refresh = panel.querySelector('#admin-service-connections-refresh');
+    if (!grid || panel._mingloraServiceConnectionsInitialized) return;
+    panel._mingloraServiceConnectionsInitialized = true;
+    const labels = {
+      connected:'Connected', linked:'Linked', configured:'Configured',
+      managed:'Managed in Supabase', attention:'Needs attention', 'not-configured':'Not configured'
+    };
+    const load = async () => {
+      refresh.disabled = true;
+      if (status) status.textContent = 'Checking Minglora service connections…';
+      try {
+        const result = await adminCentreApi('/admin/integrations');
+        const services = Array.isArray(result.services) ? result.services : [];
+        grid.innerHTML = services.map(service => {
+          const safeDashboard = /^https:\/\//.test(String(service.dashboardUrl || '')) ? String(service.dashboardUrl) : '';
+          const safeService = /^https:\/\//.test(String(service.serviceUrl || '')) ? String(service.serviceUrl) : '';
+          const links = [
+            safeDashboard ? '<a href="' + escapeText(safeDashboard) + '" target="_blank" rel="noopener noreferrer">Open provider dashboard</a>' : '',
+            safeService && safeService !== safeDashboard ? '<a href="' + escapeText(safeService) + '" target="_blank" rel="noopener noreferrer">Open service</a>' : ''
+          ].filter(Boolean).join('');
+          return '<article class="admin-service-connection-card">' +
+            '<div class="admin-service-connection-heading"><div><small>' + escapeText(service.category || 'Service') + '</small><h4>' + escapeText(service.name || 'Minglora service') + '</h4></div>' +
+            '<span class="admin-service-status admin-service-status--' + escapeText(service.status || 'attention') + '">' + escapeText(labels[service.status] || 'Unknown') + '</span></div>' +
+            '<p>' + escapeText(service.detail || 'No status details were returned.') + '</p>' +
+            (service.mode ? '<small class="admin-service-connection-meta">Environment: ' + escapeText(service.mode) + '</small>' : '') +
+            (service.webhookConfigured !== undefined ? '<small class="admin-service-connection-meta">Webhook: ' + (service.webhookConfigured ? 'Configured' : 'Not configured') + '</small>' : '') +
+            '<div class="admin-service-connection-links">' + links + '</div></article>';
+        }).join('') || '<p class="admin-platform-inventory-empty">No service connections were returned.</p>';
+        const checked = result.checkedAt ? new Date(result.checkedAt).toLocaleString() : 'just now';
+        if (status) status.textContent = services.length + ' Minglora service connections checked · ' + checked;
+        if (runtime) {
+          const commit = result.runtime?.renderCommit ? ' · Render commit ' + result.runtime.renderCommit.slice(0,12) : '';
+          runtime.textContent = 'Authentication: ' + String(result.runtime?.authProvider || 'unknown') +
+            ' · Supabase persistence: ' + (result.runtime?.persistenceReady ? 'ready' : 'not ready') +
+            ' · LiveKit configured: ' + (result.runtime?.liveKitConfigured ? 'yes' : 'no') + commit;
+        }
+      } catch (error) {
+        if (grid) grid.innerHTML = '<p class="admin-platform-inventory-empty">' + escapeText(error.message || 'Service connections could not be checked.') + '</p>';
+        if (status) status.textContent = 'Service checks unavailable.';
+      } finally { refresh.disabled = false; }
+    };
+    refresh?.addEventListener('click', load);
+    void load();
+  }
+
   function formatAdminEarningsMoney(minor) {
     const amount = Number(minor || 0);
     return new Intl.NumberFormat('en-US', {style:'currency',currency:'USD'}).format((Number.isFinite(amount) ? amount : 0) / 100);
@@ -1662,16 +1893,21 @@
     const statusFilter = panel.querySelector('#admin-user-status-filter');
     const results = panel.querySelector('#admin-user-management-results');
     const status = panel.querySelector('#admin-user-management-status');
+    const previous = panel.querySelector('#admin-user-page-previous');
+    const next = panel.querySelector('#admin-user-page-next');
+    const pageLabel = panel.querySelector('#admin-user-page-label');
     if (!searchInput || !statusFilter || !results || !status) return;
     const search = String(searchInput.value || '').trim();
     const filter = String(statusFilter.value || 'all');
-    status.textContent = 'Searching Minglora accounts…';
+    const page = Math.max(1, Number(panel._mingloraAdminPage || 1));
+    status.textContent = 'Loading Supabase Auth member accounts…';
     results.innerHTML = '<p class="settings-empty">Loading matching accounts…</p>';
     try {
-      const query = new URLSearchParams({search,status:filter});
+      const query = new URLSearchParams({search,status:filter,page:String(page),pageSize:'50'});
       const response = await adminCentreApi('/admin/users?' + query.toString());
       const members = Array.isArray(response.users) ? response.users : [];
       panel._mingloraAdminUsers = members;
+      panel._mingloraAdminHasMore = Boolean(response.hasMore);
       const selectedId = panel._mingloraSelectedAdminUser?.id;
       const updatedSelected = members.find(member => member.id === selectedId);
       if (updatedSelected) panel._mingloraSelectedAdminUser = updatedSelected;
@@ -1681,20 +1917,30 @@
         const avatar = member.avatarUrl
           ? '<img src="' + escapeText(member.avatarUrl) + '" alt="" loading="lazy">'
           : '<span class="admin-user-avatar-fallback">' + escapeText((member.displayName || 'M').slice(0,1).toUpperCase()) + '</span>';
+        const verified = member.emailConfirmedAt ? 'Email verified' : 'Email pending';
         return '<button type="button" class="admin-user-result' + (selected ? ' is-selected' : '') +
           '" data-admin-user-select="' + escapeText(member.id) + '">' +
           '<span class="admin-user-result-avatar">' + avatar + '</span>' +
           '<span class="admin-user-result-copy"><strong>' + escapeText(member.displayName || 'Minglora member') +
-          '</strong><small>' + escapeText(username) + ' · ' + escapeText(member.email || 'No email') + '</small></span>' +
+          '</strong><small>' + escapeText(username) + ' · ' + escapeText(member.email || member.phone || 'No login contact') +
+          ' · ' + escapeText(verified) + '</small></span>' +
           '<span class="admin-user-status admin-user-status--' + escapeText(member.status || 'unknown') + '">' +
           escapeText(adminUserStatusLabel(member.status)) + '</span></button>';
       }).join('') || '<p class="settings-empty">No matching Minglora accounts were found.</p>';
-      if (updatedSelected) renderAdminUserSelection(panel, updatedSelected);
-      status.textContent = members.length + ' account' + (members.length === 1 ? '' : 's') +
-        ' shown. Select an account to manage its access.';
+      if (updatedSelected) {
+        renderAdminUserSelection(panel, updatedSelected);
+        void loadAdminUserDetails(panel, updatedSelected.id);
+      }
+      if (previous) previous.disabled = page <= 1;
+      if (next) next.disabled = !response.hasMore;
+      if (pageLabel) pageLabel.textContent = 'Page ' + page + ' · ' + Number(response.totalCount || 0).toLocaleString() + ' total accounts';
+      status.textContent = members.length.toLocaleString() + ' account(s) on this page · ' +
+        Number(response.totalCount || 0).toLocaleString() + ' total Supabase Auth account(s). Select an account to inspect or manage it.';
     } catch (error) {
       results.innerHTML = '<p class="settings-empty">' + escapeText(error.message || 'Accounts could not be loaded.') + '</p>';
       status.textContent = 'Account search unavailable.';
+      if (previous) previous.disabled = true;
+      if (next) next.disabled = true;
     }
   }
 
@@ -1756,15 +2002,27 @@
     const results = panel.querySelector('#admin-user-management-results');
     const banForm = panel.querySelector('#admin-user-ban-form');
     const unbanButton = panel.querySelector('#admin-user-unban-button');
+    const createForm = panel.querySelector('#admin-user-create-form');
+    const editForm = panel.querySelector('#admin-user-edit-form');
+    const previous = panel.querySelector('#admin-user-page-previous');
+    const next = panel.querySelector('#admin-user-page-next');
+    const revokeButton = panel.querySelector('#admin-user-revoke-sessions');
+    const deleteButton = panel.querySelector('#admin-user-delete-submit');
     if (!searchInput || !searchButton || !statusFilter || !results || !banForm || !unbanButton) return;
-    const search = () => loadAdminManagedUsers(panel);
+    const search = () => { panel._mingloraAdminPage = 1; void loadAdminManagedUsers(panel); };
     searchButton.addEventListener('click', search);
     statusFilter.addEventListener('change', search);
     searchInput.addEventListener('keydown', event => {
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        search();
-      }
+      if (event.key === 'Enter') { event.preventDefault(); search(); }
+    });
+    previous?.addEventListener('click', () => {
+      panel._mingloraAdminPage = Math.max(1, Number(panel._mingloraAdminPage || 1) - 1);
+      void loadAdminManagedUsers(panel);
+    });
+    next?.addEventListener('click', () => {
+      if (!panel._mingloraAdminHasMore) return;
+      panel._mingloraAdminPage = Number(panel._mingloraAdminPage || 1) + 1;
+      void loadAdminManagedUsers(panel);
     });
     results.addEventListener('click', event => {
       const button = event.target.closest('[data-admin-user-select]');
@@ -1774,14 +2032,23 @@
       panel._mingloraSelectedAdminUser = member;
       results.querySelectorAll('[data-admin-user-select]').forEach(item => item.classList.toggle('is-selected', item === button));
       renderAdminUserSelection(panel, member);
+      void loadAdminUserDetails(panel, member.id);
     });
     banForm.addEventListener('submit', event => {
       event.preventDefault();
       void runAdminAccountAction(panel, 'ban');
     });
-    unbanButton.addEventListener('click', () => {
-      void runAdminAccountAction(panel, 'unban');
+    unbanButton.addEventListener('click', () => { void runAdminAccountAction(panel, 'unban'); });
+    createForm?.addEventListener('submit', event => {
+      event.preventDefault();
+      void createAdminUser(panel, createForm);
     });
+    editForm?.addEventListener('submit', event => {
+      event.preventDefault();
+      void saveAdminUserDetails(panel, editForm);
+    });
+    revokeButton?.addEventListener('click', () => { void revokeAdminUserSessions(panel); });
+    deleteButton?.addEventListener('click', () => { void deleteAdminUser(panel); });
     void loadAdminManagedUsers(panel);
   }
 
