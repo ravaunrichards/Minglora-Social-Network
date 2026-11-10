@@ -1567,15 +1567,20 @@
       await loadAdminUserDetails(panel, member.id);
       await loadAdminManagedUsers(panel);
     } catch (error) {
+      const auditNote = error?.payload?.auditRecorded === true
+        ? ' This failed or partial update was recorded in the administrator audit log.'
+        : error?.payload?.auditRecorded === false
+          ? ' Warning: the failed or partial update audit entry could not be confirmed.'
+          : '';
       if (error?.payload?.partial) {
         if (status) status.textContent = 'Some profile changes were saved, but the Supabase Auth update failed. Refreshing the selected account to show the saved state…';
         try {
           await loadAdminUserDetails(panel, member.id);
           await loadAdminManagedUsers(panel);
         } catch {}
-        if (status) status.textContent = 'Partial update: Minglora profile changes were saved, but Supabase Auth changes failed. ' + (error.message || 'Review the account fields and retry the remaining changes.');
+        if (status) status.textContent = 'Partial update: Minglora profile changes were saved, but Supabase Auth changes failed. ' + (error.message || 'Review the account fields and retry the remaining changes.') + auditNote;
       } else if (status) {
-        status.textContent = error.message || 'The account changes could not be saved.';
+        status.textContent = (error.message || 'The account changes could not be saved.') + auditNote;
       }
     } finally { button.disabled = false; }
   }
