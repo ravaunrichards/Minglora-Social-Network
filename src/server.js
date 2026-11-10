@@ -7,7 +7,7 @@ import webpush from 'web-push';
 import { fileURLToPath } from 'node:url';
 import { DEFAULT_EXPERIENCE_SETTINGS, validateExperienceSettingsPatch } from './domain/experience-settings.js';
 import { promisify } from 'node:util';
-import { appOrigin, isAllowedAppOrigin } from './app-origin.js';
+import { appOrigin, isAllowedAppOrigin, isSameOriginAdminWrite } from './app-origin.js';
 import { db, saveStore, uid, now, persistenceHealth, requestSupabaseState, isSupabasePersistence } from './store.js';
 import { broadcastLiveKitData, createLiveKitToken, deleteLiveKitRoom, ensureLiveKitRoom, isLiveKitConfigured, listLiveKitParticipants, removeLiveKitParticipant, verifyLiveKitConnection, LIVEKIT_TRACK_SOURCE } from '../backend/modules/live/livekit.js';
 import { LIVE_MODES, broadcastTypeForLiveMode, getLivePublishSourceNames, normalizeLiveSettings } from '../backend/modules/live/settings.js';
@@ -2160,7 +2160,7 @@ async function route(req, res) {
       }
 
       if(method==='POST'&&p==='/api/admin/users'){
-        if(!isSameOriginApiWrite(req))return json(res,403,{error:'This account-management request must come from Minglora.'});
+        if(!isSameOriginAdminWrite(req))return json(res,403,{error:'This account-management request must come from Minglora.'});
         if(!isDesignatedCreatorHubAdmin(user)||!isModerator(user,req)||!hasActiveReviewerSession(user)){
           return json(res,403,{error:'Only the MFA-verified Minglora owner can create member accounts.'});
         }
@@ -2174,7 +2174,7 @@ async function route(req, res) {
       }
 
       if(method==='PATCH'&&adminUserIdMatch){
-        if(!isSameOriginApiWrite(req))return json(res,403,{error:'This account-management request must come from Minglora.'});
+        if(!isSameOriginAdminWrite(req))return json(res,403,{error:'This account-management request must come from Minglora.'});
         if(!isDesignatedCreatorHubAdmin(user)||!isModerator(user,req)||!hasActiveReviewerSession(user)){
           return json(res,403,{error:'Only the MFA-verified Minglora owner can update member accounts.'});
         }
@@ -2185,7 +2185,7 @@ async function route(req, res) {
       }
 
       if(method==='DELETE'&&adminUserIdMatch){
-        if(!isSameOriginApiWrite(req))return json(res,403,{error:'This account-management request must come from Minglora.'});
+        if(!isSameOriginAdminWrite(req))return json(res,403,{error:'This account-management request must come from Minglora.'});
         if(!isDesignatedCreatorHubAdmin(user)||!isModerator(user,req)||!hasActiveReviewerSession(user)){
           return json(res,403,{error:'Only the MFA-verified Minglora owner can delete member accounts.'});
         }
@@ -2213,7 +2213,7 @@ async function route(req, res) {
 
       const adminRevokeSessionMatch=p.match(/^\/api\/admin\/users\/([0-9a-f-]{36})\/sessions\/revoke$/i);
       if(method==='POST'&&adminRevokeSessionMatch){
-        if(!isSameOriginApiWrite(req))return json(res,403,{error:'This account-management request must come from Minglora.'});
+        if(!isSameOriginAdminWrite(req))return json(res,403,{error:'This account-management request must come from Minglora.'});
         if(!isDesignatedCreatorHubAdmin(user)||!isModerator(user,req)||!hasActiveReviewerSession(user)){
           return json(res,403,{error:'Only the MFA-verified Minglora owner can revoke member sessions.'});
         }
@@ -2234,7 +2234,7 @@ async function route(req, res) {
       }
 
 if((method==='GET'||method==='PATCH')&&p==='/api/admin/auth-providers'){
-        if(method==='PATCH'&&!isSameOriginApiWrite(req))return json(res,403,{error:'This authentication-provider change must come from Minglora.'});
+        if(method==='PATCH'&&!isSameOriginAdminWrite(req))return json(res,403,{error:'This authentication-provider change must come from Minglora.'});
         if(!isDesignatedCreatorHubAdmin(user)||!isModerator(user,req)||!hasActiveReviewerSession(user)){
           return json(res,403,{error:'Only the MFA-verified designated Minglora owner can manage authentication providers.'});
         }
@@ -2445,7 +2445,7 @@ if((method==='GET'||method==='PATCH')&&p==='/api/admin/auth-providers'){
       }
       const adminAccountActionMatch=p.match(/^\/api\/admin\/users\/([0-9a-f-]{36})\/(ban|unban)$/i);
       if(method==='POST'&&adminAccountActionMatch){
-        if(!isSameOriginApiWrite(req))return json(res,403,{error:'This account-management request must come from Minglora.'});
+        if(!isSameOriginAdminWrite(req))return json(res,403,{error:'This account-management request must come from Minglora.'});
         if(!isDesignatedCreatorHubAdmin(user)||!isModerator(user,req)||!hasActiveReviewerSession(user)){
           return json(res,403,{error:'Only the MFA-verified Minglora owner can manage member accounts.'});
         }
