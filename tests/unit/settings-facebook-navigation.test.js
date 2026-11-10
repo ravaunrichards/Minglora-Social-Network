@@ -11,8 +11,8 @@ const index=read('public/index.html');
 const css=read('public/settings-navigation.css');
 const oauthFlow=read('src/oauth-flow-state.js');
 test('Facebook-style Settings & Privacy navigation includes nested menu pages and back routes',()=>{
- for(const page of ['home','settings','help-support','report-support','display-accessibility','keyboard','language','privacy-checkup','privacy-center','ad-preferences','advertising','ad-choices','cookies','terms','help-center','scam-protection','account-status','about','career','developers','information'])assert.ok(settings.includes('data-settings-page="'+page+'"'),'missing page '+page);
- for(const item of ['Settings &amp; privacy','Help &amp; Support','Report &amp; Support','Display &amp; Accessibility','Privacy Checkup','Privacy Center','Your ad preferences','Scam Protection Center','Account Status','Support Inbox','Activity Center','Content Preferences','Accessibility Settings'])assert.ok(settings.includes(item),'missing menu item '+item);
+ for(const page of ['home','settings','help-support','report-support','display-accessibility','keyboard','language','privacy-checkup','privacy-center','information-use','ad-preferences','advertising','ad-choices','cookies','terms','help-center','scam-protection','account-status','about','career','developers','information'])assert.ok(settings.includes('data-settings-page="'+page+'"'),'missing page '+page);
+ for(const item of ['Settings &amp; privacy','Help &amp; Support','Report &amp; Support','Display &amp; Accessibility','Privacy Checkup','Privacy Center','Use and information controls','How Minglora uses information','Your ad preferences','Scam Protection Center','Account Status','Support Inbox','Activity Center','Content Preferences','Accessibility Settings'])assert.ok(settings.includes(item),'missing menu item '+item);
  assert.ok(settings.includes('data-settings-back-page="home"'));
  assert.ok(settings.includes('settings-detail-back'));
  assert.ok(settings.includes('settings-more-menu'));
@@ -21,6 +21,9 @@ test('Facebook-style Settings & Privacy navigation includes nested menu pages an
  assert.ok(settings.includes('data-settings-page="advertising"'));
  assert.ok(settings.includes('data-settings-page="ad-choices"'));
  assert.ok(settings.includes('data-settings-page="ad-preferences"'));
+ assert.ok(settings.includes('data-settings-page="information-use"'));
+ assert.ok(settings.includes('Watch, comment, search, advertising, mention and content-reuse histories are not currently tracked'));
+ assert.ok(settings.includes('not a complete published Privacy Policy'));
  assert.ok(settings.includes('data-settings-back-page="home"'));
  assert.ok(index.includes('settings-navigation.css?v=20261110-facebook-settings-privacy-1'));
 });
