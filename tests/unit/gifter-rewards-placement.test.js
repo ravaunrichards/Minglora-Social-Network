@@ -30,7 +30,7 @@ test('Gifters Level Up remains inside the separate Gifter Progression page', () 
 });
 
 test('Gifters Rewards image route serves the exact repository artwork', () => {
-  assert.match(server, /if\(p==='\/assets\/gifters-rewards\.png'\)[\s\S]*?path\.join\(__dirname,'\.\.' ,'assets','Gifters Rewards\.png'\)/);
+  assert.match(server, /if\(p==='\/assets\/gifters-rewards\.png'\)[\s\S]*?path\.join\(__dirname,'\.\.','assets','Gifters Rewards\.png'\)/);
   assert.match(server, /Content-Type':'image\/png'/);
   assert.match(server, /Gifters rewards artwork not found/);
 });
