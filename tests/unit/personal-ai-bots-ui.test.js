@@ -197,6 +197,10 @@ test('owner Admin Centre exposes vacancy creation and safe lifecycle management'
     'pab-save-vacancy','createVacancy','saveVacancy','vacancyCard'
   ])assert.ok(ui.includes(phrase),phrase);
   assert.match(ui,/vacancies\.map\(vacancyCard\)/);
+  assert.match(ui,/Filled slots:/);
+  assert.match(ui,/Remaining:/);
+  assert.match(ui,/vacancy\.filledSlots/);
+  assert.match(ui,/vacancy\.remainingSlots/);
   assert.match(ui,/No AI identity or appointment was created/);
   assert.match(ui,/No employee appointed/);
   assert.match(api,/path===root\+'\/vacancies'/);
@@ -217,6 +221,8 @@ test('owner Admin Centre exposes the 20-department catalogue and safe hierarchy 
   for(const phrase of ['Corporate departments','pab-department-form','pab-new-department-name','pab-new-department-parent','pab-department-parent','pab-save-department','createDepartment','saveDepartment'])assert.ok(ui.includes(phrase),phrase);
   assert.match(ui,/owner-approved appointments are recorded separately in the appointments section/);
   for(const phrase of ['Corporate board and job-position catalogue','position types','Approved appointments are listed separately in the appointments section','No permissions','No execution authority'])assert.ok(ui.includes(phrase),phrase);
+  assert.match(ui,/Recorded appointments:/);
+  assert.match(ui,/position\.code&&\['appointed','suspended'\]\.includes\(item\.status\)/);
   assert.doesNotMatch(ui,/No AI has been appointed/,'position catalogue must not contradict the existing appointment workflow');
   assert.ok(html.includes('/personal-ai-bots.js?v=20261109-personal-ai-bots-8'),'Admin Centre script cache version is current');
   assert.match(service,/PERSONAL_AI_BOT_DEPARTMENTS = Object\.freeze/);
@@ -258,6 +264,7 @@ test('owner Admin Centre exposes approval-gated appointments and employment hist
   assert.ok(service.includes("identityActivationStatus:'unchanged_disabled'"));
   assert.ok(service.includes("position.reportsTo.length"));
   assert.match(ui,/The AI identity stays disabled, no permissions are granted/);
+  assert.match(ui,/reportingManagerPositionTitle\|\|'Position unavailable'/);
   assert.ok(html.includes('/personal-ai-bots.js?v=20261109-personal-ai-bots-8'));
 });
 
