@@ -1178,6 +1178,8 @@ async function refreshPeopleDiscovery({quiet=true}={}){
   if(peopleDiscoveryRefreshBusy||state.view!=='friends'||document.visibilityState!=='visible')return;
   const grid=$('#people-discovery-grid');
   if(!grid)return;
+  const focused=document.activeElement;
+  if(focused&&grid.contains(focused))return;
   peopleDiscoveryRefreshBusy=true;
   try{
     const result=await api('/discovery/people/verification');
