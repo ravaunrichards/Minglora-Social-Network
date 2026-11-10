@@ -67,7 +67,8 @@ test('utility rail and header actions use the matching rendered icon assets', ()
   assert.ok(html.includes('class="top-search-submit"') && html.includes('class="nav-search-icon"'), 'the top bar search action has a visible icon');
   assert.ok(appScript.includes("$('#top-search-form')?.addEventListener('submit'"), 'global search submits through the app search handler');
   assert.ok(appScript.includes("await renderSearch(q)"), 'global search loads actual Minglora search results');
-  assert.ok(!menuScript.includes("sprite('search')") && !menuScript.includes('minglora-menu-search'), 'the app menu does not contain a duplicate Search field');
+  assert.ok(menuScript.includes("sprite('search')") && menuScript.includes('minglora-menu-search'), 'the nine-dot Menu has its own Search Menu field');
+  assert.ok(menuScript.includes('placeholder="Search menu"'), 'the Menu search is distinct from global Search Minglora');
 });
 
 test('the SVG sprite contains finished dimensional artwork for primary and supporting actions', () => {
