@@ -50,12 +50,15 @@
     const department=position.departmentScope==='any_department'
       ?'Any department'
       :((state.departments||[]).find(item=>item.code===position.departmentScope)?.name||'Executive Management');
-    return '<article class="pab-roadmap-card"><strong>'+esc(position.title)+'</strong><p>'+esc(position.description||'')+'</p><span class="pab-tag">Level '+esc(position.level)+' · '+esc(String(position.group||'role').replaceAll('_',' '))+'</span><p><small>Department: '+esc(department)+'<br>Reports to: '+esc(parentLabels.join(', ')||'Board governance')+'</small></p><div class="pab-warning">Catalogue only · No appointment · No permissions · No execution authority</div></article>';
+    const appointedCount=(state.appointments||[]).filter(item=>item.positionCode===position.code&&['appointed','suspended'].includes(item.status)).length;
+    return '<article class="pab-roadmap-card"><strong>'+esc(position.title)+'</strong><p>'+esc(position.description||'')+'</p><span class="pab-tag">Level '+esc(position.level)+' · '+esc(String(position.group||'role').replaceAll('_',' '))+'</span><p><small>Department: '+esc(department)+'<br>Reports to: '+esc(parentLabels.join(', ')||'Board governance')+'<br>Recorded appointments: '+esc(appointedCount)+'</small></p><div class="pab-warning">Position template only · No permissions · No execution authority</div></article>';
   }
 
   function vacancyCard(vacancy){
     const statusOptions=['open','paused','closed'].map(status=>'<option value="'+status+'" '+(vacancy.status===status?'selected':'')+'>'+status+'</option>').join('');
-    return '<article class="pab-category" data-vacancy-card="'+esc(vacancy.id)+'"><div class="pab-category-copy"><strong>'+esc(vacancy.title)+'</strong><p>'+esc(vacancy.positionTitle)+' · '+esc(vacancy.departmentName)+'</p><label>Vacancy title<input class="pab-input pab-vacancy-title" maxlength="100" value="'+esc(vacancy.title)+'"></label><label>Slots<input class="pab-input pab-vacancy-slots" type="number" min="1" max="100" step="1" value="'+esc(vacancy.slots)+'"></label><label>Description<textarea class="pab-textarea pab-vacancy-description" maxlength="1200">'+esc(vacancy.description||'')+'</textarea></label><label>Required skills / qualifications<textarea class="pab-textarea pab-vacancy-requirements" maxlength="2000">'+esc(vacancy.requirements||'')+'</textarea></label><label>Status<select class="pab-select pab-vacancy-status">'+statusOptions+'</select></label><div class="pab-actions"><button type="button" class="pab-btn secondary pab-save-vacancy" data-vacancy="'+esc(vacancy.id)+'">Save vacancy</button></div><small>Created '+esc(date(vacancy.createdAt))+' · No employee appointed</small></div></article>';
+    const filledSlots=Math.max(0,Number(vacancy.filledSlots||0));
+    const remainingSlots=Math.max(0,Number(vacancy.remainingSlots??(Number(vacancy.slots||1)-filledSlots)));
+    return '<article class="pab-category" data-vacancy-card="'+esc(vacancy.id)+'"><div class="pab-category-copy"><strong>'+esc(vacancy.title)+'</strong><p>'+esc(vacancy.positionTitle)+' · '+esc(vacancy.departmentName)+'</p><p class="pab-notice">Filled slots: '+esc(filledSlots)+' / '+esc(vacancy.slots)+' · Remaining: '+esc(remainingSlots)+'</p><label>Vacancy title<input class="pab-input pab-vacancy-title" maxlength="100" value="'+esc(vacancy.title)+'"></label><label>Slots<input class="pab-input pab-vacancy-slots" type="number" min="1" max="100" step="1" value="'+esc(vacancy.slots)+'"></label><label>Description<textarea class="pab-textarea pab-vacancy-description" maxlength="1200">'+esc(vacancy.description||'')+'</textarea></label><label>Required skills / qualifications<textarea class="pab-textarea pab-vacancy-requirements" maxlength="2000">'+esc(vacancy.requirements||'')+'</textarea></label><label>Status<select class="pab-select pab-vacancy-status">'+statusOptions+'</select></label><div class="pab-actions"><button type="button" class="pab-btn secondary pab-save-vacancy" data-vacancy="'+esc(vacancy.id)+'">Save vacancy</button></div><small>Created '+esc(date(vacancy.createdAt))+'</small></div></article>';
   }
 
   function applicationCard(application){
@@ -74,7 +77,7 @@
   }
 
   function appointmentCard(appointment){
-    const manager=appointment.reportingManagerName?appointment.reportingManagerName+' · '+(appointment.positionTitle||''): 'No reporting manager';
+    const manager=appointment.reportingManagerName?appointment.reportingManagerName+' · '+(appointment.reportingManagerPositionTitle||'Position unavailable'): 'No reporting manager';
     return '<article class="pab-category" data-appointment-card="'+esc(appointment.id)+'"><div class="pab-category-copy"><strong>'+esc(appointment.candidateDisplayName)+'</strong><p>'+esc(appointment.positionTitle)+' · '+esc(appointment.departmentName)+'</p><span class="pab-tag">'+esc(appointment.status)+'</span><p><small>Reporting manager: '+esc(manager)+'<br>Approved by: '+esc(appointment.approvedBy||'')+' · '+esc(date(appointment.appointedAt))+'</small></p><div class="pab-warning">Identity status: unchanged disabled · Permissions: none granted · External execution: not enabled</div></div></article>';
   }
 
