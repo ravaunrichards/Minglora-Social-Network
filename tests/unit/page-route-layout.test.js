@@ -79,11 +79,13 @@ test('Notifications opens and restores as its own standalone destination',()=>{
     'Notifications must not duplicate the history entry created by its route transition');
 });
 
-test('Messenger opens as a dedicated page instead of a floating Home-side panel',()=>{
-  assert.ok(app.includes("if(messengerButton)messengerButton.onclick=()=>activateNav('messages');"),
-    'The global Messenger action opens the full Messenger destination');
+test('Messenger keeps Facebook-style quick access and a standalone inbox route',()=>{
+  assert.ok(app.includes("if(messengerButton)messengerButton.onclick=()=>{void toggleMessengerPanel().catch(error=>toast(error.message||'Messenger could not open.'));};"),
+    'The Messenger header action keeps its Facebook-style quick-access panel');
+  assert.ok(html.includes('data-view="messages"'),
+    'The Messenger feature destination remains available as a full page');
   assert.ok(app.includes("async function renderMessages(){\n  if(state.view!=='messages')activateSilent('messages');"),
-    'Messenger keeps page state synchronized without duplicating navigation history');
+    'The full-page inbox route synchronizes navigation without duplicate history entries');
 });
 
 test('Admin Centre initializes dedicated page routing after building its feature sections',()=>{
