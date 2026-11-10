@@ -51,9 +51,11 @@
   const byId = new Map(catalog.map(item => [item.id, item]));
   let context = null;
   let loopTimer = null;
+  let playGeneration = 0;
   let activeNodes = [];
 
   function stopAll() {
+    playGeneration += 1;
     if (loopTimer !== null) {
       clearTimeout(loopTimer);
       loopTimer = null;
@@ -72,13 +74,14 @@
     if (!AudioContextClass) return false;
 
     stopAll();
+    const generation = playGeneration;
     if (!context) context = new AudioContextClass();
     const shouldLoop = options.loop === true;
     const volume = Math.max(0, Math.min(1, Number(options.volume ?? 0.8)));
     if (volume === 0) return false;
 
     const schedule = () => {
-      if (!context || context.state !== 'running') return;
+      if (generation !== playGeneration || !context || context.state !== 'running') return;
       let cursor = context.currentTime + 0.035;
       for (const step of tone.sequence) {
         const duration = Math.max(0.06, Number(step.duration) || 0.15);
