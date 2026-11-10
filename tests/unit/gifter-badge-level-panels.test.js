@@ -49,7 +49,7 @@ test("level artwork route is an explicit allow-list and serves JPEG without expo
   const server = read("src/server.js");
   assert.match(server, /gifter-badge-level-panels\/levels-1-4\.jpg/);
   assert.match(server, /gifter-badge-level-panels\/levels-50\.jpg/);
-  assert.match(server, /path\.join\(__dirname,'\.\.', 'assets'/);
+  assert.match(server, /path\.join\(__dirname,'\.\.',\s*'assets','Gifters Badge Levels'/);
   assert.match(server, /'Content-Type':'image\/jpeg'/);
   assert.match(server, /Gifter badge level artwork not found/);
 });
