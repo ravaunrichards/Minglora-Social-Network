@@ -5,11 +5,11 @@
 - Repository: `ravaunrichards/Minglora-Social-Network`
 - Branch: `feat/minglora-admin-user-and-service-centre-20261109`
 - Latest code commit: `80cae14069bf6b78036eb64451f9cd85b395a156` (exact Management API permissions diagnostic)
-- Latest focused-test commit / branch head: `cda004b4d6b557e677c5ad994e013b72f7925d16`
+- Latest focused-test commit: `cda004b4d6b557e677c5ad994e013b72f7925d16`; latest checkpoint-only branch head: `be6d52cb3493a74186077a8cb6ebad14c6883bbb`.
 - PR #203 remains OPEN and DRAFT; not merged or deployed.
 - Verified weighted completion remains **81%**; remaining **19%**; no live acceptance criterion has changed status in this pass.
 - New code change: HTTP 403 errors from the Supabase Management API now specify `auth_config_read` for reads and both `auth_config_write` and `project_admin_write` for writes. Added a source acceptance test for these exact diagnostics.
-- CI for the focused-test commit: run [42730618991](https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/42730618991) was queued at last inspection; the preceding code-commit run [42730599986](https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/42730599986) was in progress. Do not credit this diagnostic-only fix toward the original weighted acceptance completion.
+- CI run [42730618991](https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/42730618991) on the focused-test commit completed: **Supabase Auth provider controls PASS**; **Admin Centre real-browser viewport regression PASS**. Repository-wide `test` and `For You functional navigation` jobs remain FAIL outside this Auth Provider scope. Do not credit this diagnostic-only fix toward original weighted acceptance completion.
 - Supabase project `gzycobgbasnqqhnympkr` is `ACTIVE_HEALTHY`. Read-only schema inspection confirmed `auth.custom_oauth_providers` currently has zero records. No secret-bearing fields were selected.
 - Public app/Supabase HTTP endpoints could not be fetched through the available web route; this does not establish service downtime.
 - No production settings, secrets, redirects or provider toggles have been changed. No deployment or PR merge occurred.
