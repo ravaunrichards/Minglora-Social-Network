@@ -58,11 +58,13 @@ test('mobile header keeps the requested five primary tabs visible below logo and
   assert.ok(!html.includes('id="mobile-more-menu"'), 'the cramped floating More menu is removed');
 });
 test('utility rail and header actions use the matching rendered icon assets', () => {
-  for (const icon of ['live', 'recharge', 'creator', 'friends', 'groups', 'pages', 'messages', 'saved', 'activity', 'settings']) {
+  for (const icon of ['live', 'recharge', 'creator', 'friends', 'groups', 'pages', 'messages', 'saved', 'activity']) {
     assert.ok(html.includes(useIcon(icon)), `utility icon ${icon} is wired into the interface`);
   }
   assert.ok(html.includes('id="notifications-btn"') && html.includes(useIcon('activity')));
-  assert.ok(html.includes('id="settings-btn"') && html.includes(useIcon('settings')));
+  assert.doesNotMatch(html, /id="settings-btn"/, 'Settings is not a separate header control beside Personalise Minglora');
+  assert.match(menuScript, /label: 'Settings & Privacy',[^\n]+icon: 'settings'/, 'the profile dropdown reuses the existing 3D Settings icon');
+  assert.match(menuScript, /sprite\(item\.icon, 'nav-3d-icon'\)/, 'account menu rows use the existing 3D icon treatment');
   assert.ok(html.includes('id="top-search-form"') && html.includes('id="top-search-input"'), 'the top bar has a real Search Minglora field');
   assert.ok(html.includes('class="top-search-submit"') && html.includes('class="nav-search-icon"'), 'the top bar search action has a visible icon');
   assert.ok(appScript.includes("$('#top-search-form')?.addEventListener('submit'"), 'global search submits through the app search handler');
@@ -155,7 +157,9 @@ test('Facebook-style top bar keeps logo, Search, five navigation tabs and accoun
     assert.ok(at > last, marker + ' appears in the intended left-to-right position');
     last = at;
   }
-  assert.ok(header.includes('id="palette-toggle"') && header.includes('id="settings-btn"'), 'palette and settings controls remain available');
+  assert.ok(header.includes('id="palette-toggle"') && header.includes('id="profile-menu"'), 'palette and profile dropdown controls remain available');
+  assert.doesNotMatch(header, /id="settings-btn"/, 'Settings & Privacy is reached through the profile dropdown');
+  assert.equal((menuScript.match(/label: 'Settings & Privacy'/g) || []).length, 1, 'one Settings & Privacy dropdown action exists');
 });
 
 test('top bar gives navigation and action icons consistent dimensions at desktop, tablet and mobile widths', () => {

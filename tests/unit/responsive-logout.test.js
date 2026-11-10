@@ -8,6 +8,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const html = fs.readFileSync(path.join(root, 'public/index.html'), 'utf8');
 const app = fs.readFileSync(path.join(root, 'public/app.js'), 'utf8');
 const settings = fs.readFileSync(path.join(root, 'public/settings.js'), 'utf8');
+const menu = fs.readFileSync(path.join(root, 'public/minglora-menu.js'), 'utf8');
 const css = fs.readFileSync(path.join(root, 'public/styles.css'), 'utf8');
 const serviceWorker = fs.readFileSync(path.join(root, 'public/sw.js'), 'utf8');
 const mobileCss = fs.readFileSync(path.join(root, 'public/mobile-layout.css'), 'utf8');
@@ -31,7 +32,8 @@ test('logout is kept out of mobile and tablet primary navigation and placed in S
   const sideRail = html.slice(sideRailStart, sideRailEnd);
   assert.doesNotMatch(sideRail, /data-logout|logout-rail-link|Log out/);
 
-  assert.match(html, /id="settings-btn"[^>]*aria-label="Settings & privacy"/, "Settings button is available in the top action area");
+  assert.doesNotMatch(html, /id="settings-btn"/, 'the separate top-bar Settings gear is removed');
+  assert.equal((menu.match(/label: 'Settings & Privacy'/g) || []).length, 1, 'Settings & Privacy is available once in the profile dropdown');
   assert.match(settings, /id="settings-signout"/);
   assert.match(settings, /id="settings-logout-btn"/);
   assert.match(settings, /sectionHeading\('Log out'\)/);

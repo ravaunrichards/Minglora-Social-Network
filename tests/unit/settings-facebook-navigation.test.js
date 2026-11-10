@@ -15,7 +15,7 @@ test('Facebook-style Settings & Privacy navigation includes nested menu pages an
  assert.ok(settings.includes('data-settings-back-page="home"'));
  assert.ok(settings.includes('settings-detail-back'));
  assert.ok(settings.includes('settings-more-menu'));
- assert.ok(index.includes('settings-navigation.css?v=20261110-settings-privacy-menu-icons-1'));
+ assert.ok(index.includes('settings-navigation.css?v=20261110-facebook-settings-privacy-1'));
  assert.ok(settings.includes('#settings'));
  assert.ok(settings.includes('#request'));
  assert.ok(settings.includes('#activity'));
