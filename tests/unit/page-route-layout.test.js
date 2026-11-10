@@ -43,7 +43,7 @@ test('Home navigation and global navigation remain present',()=>{
     'The mobile primary navigation remains available');
   assert.ok(html.includes('class="left-rail-features"'),
     'Home retains its feature rail markup');
-  assert.match(app,/const standalone=state\.view!=='feed';/,
+  assert.ok(app.includes("const standalone=state.view!=='feed';"),
     'Only the Home feed keeps the feature rail');
   const navStart=app.indexOf('function syncNavigationActive(){');
   assert.ok(app.slice(navStart,navStart+100).includes('syncPageLayout();'),
@@ -54,7 +54,7 @@ test('Home navigation and global navigation remain present',()=>{
 
 test('Settings is a real restorable page and uses the shared standalone layout',()=>{
   const settings=fs.readFileSync(path.join(root,'public/settings.js'),'utf8');
-  assert.match(app,/const RESTORABLE_VIEWS=new Set\([^\n]*'settings'\)/,
+  assert.ok(app.includes("const RESTORABLE_VIEWS=new Set(")&&app.includes("'settings']);"),
     'Settings can be restored after a page reload');
   assert.ok(app.includes("window.MingloraActivateSilentView=view=>activateSilent(view);"),
     'Dedicated pages can update shared navigation state without rendering twice');
@@ -71,7 +71,7 @@ test('Settings is a real restorable page and uses the shared standalone layout',
 });
 
 test('Notifications opens and restores as its own standalone destination',()=>{
-  assert.match(app,/async function renderNotifications\(\)\{if\(state\.view!=='notifications'\)activateSilent\('notifications'\);/,
+  assert.ok(app.includes("async function renderNotifications(){if(state.view!=='notifications')activateSilent('notifications');"),
     'Every direct notification entry synchronizes the active route and hides Home rails');
   assert.ok(app.includes("else if(state.view==='notifications')await renderNotifications();"),
     'Notifications is still supported by shared route restoration');
@@ -82,7 +82,7 @@ test('Notifications opens and restores as its own standalone destination',()=>{
 test('Messenger opens as a dedicated page instead of a floating Home-side panel',()=>{
   assert.ok(app.includes("if(messengerButton)messengerButton.onclick=()=>activateNav('messages');"),
     'The global Messenger action opens the full Messenger destination');
-  assert.match(app,/async function renderMessages\(\)\{\s*if\(state\.view!=='messages'\)activateSilent\('messages'\);/,
+  assert.ok(app.includes("async function renderMessages(){\n  if(state.view!=='messages')activateSilent('messages');"),
     'Messenger keeps page state synchronized without duplicating navigation history');
 });
 
