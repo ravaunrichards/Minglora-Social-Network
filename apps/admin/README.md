@@ -984,3 +984,12 @@ No production Edge deployment, user/account operation, OAuth credential write, d
 ### Next safe action
 
 Inspect the Render Minglora service only after explicit selection of `My Workspace` for read-only access. Then establish whether the server-side Management API token is configured (never expose its value). Keep PR #203 draft and production unchanged until branch reconciliation, required access, MFA and deployment authorization are resolved.
+
+
+### Additional read-only database compatibility check — 2026-11-10 06:21 UTC
+
+The live `public.audit_log` column definitions were rechecked through a read-only information-schema query:
+- `target_id`: nullable `text` — supports an audited Auth creation rejection before a target account exists.
+- `action`: non-null `text` — supports the new `account.update_failed`, `account.update_partial`, `account.ban_failed` and `account.unban_failed` event names without a schema migration.
+- `metadata`: non-null `jsonb` — supports the allowlisted outcome and boolean fields.
+No audit rows, schema, policies, users or production settings were changed. Production Edge Function remains v112; this schema check does not mean new branch actions are deployed.
