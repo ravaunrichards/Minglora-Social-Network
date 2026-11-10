@@ -149,12 +149,16 @@
       'account.create':'Member account created',
       'account.create_failed':'Member account creation failed',
       'account.update':'Member account updated',
+      'account.update_failed':'Member account update failed',
+      'account.update_partial':'Member account update partially applied',
       'account.delete':'Member account deleted',
       'account.delete_failed':'Member account deletion failed',
       'account.sessions_revoke':'Member sessions revoked',
       'account.sessions_revoke_failed':'Member session revocation failed',
       'account.ban':'Account banned',
-      'account.unban':'Account unbanned'
+      'account.ban_failed':'Account ban failed',
+      'account.unban':'Account unbanned',
+      'account.unban_failed':'Account restore failed'
     })[String(value||'')]||String(value||'Administrator action').replace(/[._]/g,' ');
     const durationLabel=value=>({'1h':'1 hour','24h':'24 hours','7d':'7 days','30d':'30 days','90d':'90 days','876000h':'Permanent (100 years)'})[String(value||'')]||String(value||'');
     const load=async()=>{
@@ -181,9 +185,13 @@
             metadata.phoneProvided?'Phone supplied':'',
             metadata.profileLinkFailed?'Minglora profile link failed':'',
             metadata.profileLinkFailed?(metadata.rollbackSucceeded?'Auth rollback confirmed':'Auth rollback not confirmed'):'',
+            metadata.profileApplied?'Profile changes committed':'',
+            metadata.authUpdateFailed?'Supabase Auth update failed':'',
             metadata.deletionMode?'Deletion mode: '+metadata.deletionMode:'',
             metadata.outcome?'Outcome: '+metadata.outcome:'',
             metadata.scope==='global'?'Scope: global sessions':metadata.scope==='application_only'?'Scope: Minglora app sessions only':'',
+            record.action==='account.ban_failed'?'Ban operation was rejected':'',
+            record.action==='account.unban_failed'?'Restore operation was rejected':'',
             record.action==='account.ban'?(metadata.sessionsRevoked?'Global sessions revoked':'Global session revocation not confirmed'):'',
             record.action==='account.delete' || record.action==='account.delete_failed'
               ?(metadata.providerRefreshTokensRevoked?'Provider refresh-token sessions revoked':'Provider refresh-token revocation not confirmed'):'',
@@ -315,12 +323,16 @@
               <option value="account.create">Account creation</option>
               <option value="account.create_failed">Failed account creation</option>
               <option value="account.update">Account edits</option>
+              <option value="account.update_failed">Failed account edits</option>
+              <option value="account.update_partial">Partially applied edits</option>
               <option value="account.delete">Account deletions</option>
               <option value="account.delete_failed">Failed deletions</option>
               <option value="account.sessions_revoke">Session revocations</option>
               <option value="account.sessions_revoke_failed">Failed session revocations</option>
               <option value="account.ban">Account bans</option>
+              <option value="account.ban_failed">Failed account bans</option>
               <option value="account.unban">Account restores</option>
+              <option value="account.unban_failed">Failed account restores</option>
             </select>
             <button type="button" class="secondary" id="admin-audit-log-refresh">Refresh history</button>
           </div>
