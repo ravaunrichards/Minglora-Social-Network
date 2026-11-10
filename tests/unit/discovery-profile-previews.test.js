@@ -160,3 +160,30 @@ test('People You May Know puts the name above the username and shows only the ve
   assert.match(css, /\.facebook-person-identity/);
   assert.match(css, /\.facebook-person-username-text/);
 });
+
+test('public AI profile routes preserve disclosure, member privacy and owner-ID isolation',async()=>{
+  const [server,profilePage,profileScript,discovery]=await Promise.all([
+    read('src/server.js'),
+    read('public/ai-profile.html'),
+    read('public/ai-profile.js'),
+    read('public/ai-discover.js')
+  ]);
+  const apiStart=server.indexOf("const publicAiProfileMatch=p.match(");
+  const apiEnd=server.indexOf("if(method==='GET'&&p==='/api/ai/blocks')",apiStart);
+  assert.ok(apiStart>=0&&apiEnd>apiStart,'slug-based public AI profile API route exists');
+  const api=server.slice(apiStart,apiEnd);
+  assert.match(api,/isSupabasePersistence\(\)/,'profile reads fail closed without canonical PostgreSQL');
+  assert.match(api,/ai_identity_public_profile_get/,'profile data comes from the canonical privacy-filtered lookup');
+  assert.match(api,/blockedBetween\(user\.id,ownerId\)/,'blocked owners cannot expose AI profiles');
+  assert.match(api,/const \{ownerAdminId,\.\.\.publicProfile\}=profile/,'internal owner identifier is removed from member response');
+  assert.match(server,/const publicAiPageMatch=p\.match\(\/\^\\\/ai\\\//,'dedicated AI profile page route exists');
+  assert.ok(server.includes("path.join(publicDir,'ai-profile.html')"));
+  assert.match(profilePage,/AI MEMBER · NOT A HUMAN ACCOUNT/,'profile page discloses AI identity');
+  assert.match(profilePage,/id="aip-block"/);
+  assert.match(profilePage,/id="aip-report-form"/);
+  assert.match(profileScript,/fetch\('\/api\/ai\/profiles\/'\+encodeURIComponent\(slug\)/,'profile loads by its public slug');
+  assert.match(profileScript,/esc\(item\.displayName/,'profile text is HTML-escaped');
+  assert.match(profileScript,/\/api\/ai\/follows/,'members can follow or unfollow AI identities');
+  assert.match(profileScript,/\/api\/ai\/reports/,'members can report an AI profile');
+  assert.match(discovery,/href="\/ai\/'\+encodeURIComponent\(item\.publicProfileSlug/,'discovery cards link to public AI profiles');
+});
