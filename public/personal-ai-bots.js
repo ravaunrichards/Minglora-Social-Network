@@ -230,7 +230,7 @@
     html+='<form id="pab-email-form" class="pab-form-grid"><div class="pab-field"><label for="pab-email-identity">AI identity</label><select class="pab-select" id="pab-email-identity" required>'+bots.map(bot=>'<option value="'+esc(bot.id)+'">'+esc(bot.displayName)+' (@'+esc(bot.username||'AI')+')</option>').join('')+'</select></div><div class="pab-field"><label for="pab-email-address">Email address</label><input class="pab-input" id="pab-email-address" type="email" maxlength="320" required placeholder="ai.name@example.com"></div><div class="pab-field"><label for="pab-email-type">Email type</label><select class="pab-select" id="pab-email-type"><option value="primary">Primary</option><option value="recovery">Recovery</option><option value="notification">Notification</option><option value="other">Other</option></select></div><div class="pab-field"><label for="pab-email-provider">Email provider label (optional)</label><input class="pab-input" id="pab-email-provider" maxlength="80" placeholder="Provider name, if selected"></div><div class="pab-field"><label class="pab-check"><span>Set as primary address</span><input type="checkbox" id="pab-email-primary" checked></label></div><div class="pab-field full"><button class="pab-btn" type="submit" '+(emailSource&&bots.length?'':'disabled')+'>Save AI email identity record</button><span id="pab-email-status" class="pab-notice">This records an address only; it does not provision a mailbox.</span></div></form></section>';
     html+='<section class="pab-panel"><div class="pab-heading"><div><h2>AI profile safety reports</h2><p>Review member-submitted reports about public AI identities. Review decisions are audited and never automatically delete an identity.</p></div><span class="pab-status '+(safetyReportsSource?'':'off')+'">'+(safetyReportsSource?'POSTGRESQL':'STORAGE UNAVAILABLE')+'</span></div>';
     if(!safetyReportsSource)html+='<div class="pab-empty">AI report review requires the staged safety/report migration and runtime gateway release.</div>';
-    else html+='<div id="pab-safety-report-list" class="pab-audit">'+(safetyReports.length?safetyReports.map(safetyReportCard).join(''):'<div class="pab-empty">No pending AI profile reports are awaiting review.</div>')+'</div><div class="pab-pagination"><button type="button" class="pab-btn secondary" id="pab-load-more-reports" '+(safetyReportsHasMore?'':'hidden')+'>Load more reports</button></div>';
+    else html+='<div class="pab-field pab-report-filter"><label for="pab-safety-report-filter">Report status</label><select class="pab-select" id="pab-safety-report-filter"><option value="open" selected>Open reports (pending and in review)</option><option value="pending">Pending</option><option value="in_review">In review</option><option value="all">All reports</option><option value="actioned">Actioned</option><option value="dismissed">Dismissed</option></select></div><div id="pab-safety-report-list" class="pab-audit" aria-live="polite">'+(safetyReports.length?safetyReports.map(safetyReportCard).join(''):'<div class="pab-empty">No reports match this status.</div>')+'</div><div class="pab-pagination"><button type="button" class="pab-btn secondary" id="pab-load-more-reports" '+(safetyReportsHasMore?'':'hidden')+'>Load more reports</button></div>';
     html+='<span id="pab-report-review-status" class="pab-notice">Report handling updates review status and audit history. Account suspension remains a separate owner action.</span></section>';
     html+='<section class="pab-panel"><div class="pab-heading"><div><h2>Network overview and global controls</h2><p>Identity design target: '+esc(Number(counts.identityDesignTarget||10000000000).toLocaleString())+' potential identity slots as an architectural aspiration, not a promise of live concurrent capacity. Actual capacity depends on configured workers, budgets and infrastructure.</p></div><span class="pab-status '+(network.enabled?'':'off')+'">'+(network.enabled?'ON':'OFF')+'</span></div><div class="pab-inline-controls"><label class="pab-control"><span><strong>Master network switch</strong><small>Enable or disable instruction intake across the network.</small></span><input id="pab-master-switch" class="pab-switch" type="checkbox" '+(network.enabled?'checked':'')+'></label><label class="pab-control"><span><strong>Hybrid mode availability</strong><small>Enable bounded low-risk permissions; every task remains approval-gated and dispatch stays off until the worker is released.</small></span><input id="pab-hybrid-switch" class="pab-switch" type="checkbox" '+(network.hybridEnabled?'checked':'')+'></label></div><div class="pab-form-grid"><div class="pab-field"><label for="pab-capacity">Concurrent execution limit (0 = no execution)</label><input id="pab-capacity" class="pab-input" type="number" min="0" max="10000" value="'+esc(network.concurrentExecutionLimit||0)+'"></div><div class="pab-field"><label for="pab-daily-budget">Daily task budget (0 = no dispatch)</label><input id="pab-daily-budget" class="pab-input" type="number" min="0" max="1000000" value="'+esc(network.dailyExecutionBudget||0)+'"></div></div><div class="pab-actions"><button class="pab-btn secondary" id="pab-save-capacity">Save network controls</button><button class="pab-btn secondary" id="pab-refresh">Refresh network</button><button class="pab-btn danger" id="pab-emergency-shutdown">Emergency shutdown</button><span class="pab-notice" id="pab-network-status">Automatic suspension: '+(network.automaticSuspensionEnabled===false?'off':'on')+'. Worker dispatch is unavailable until a worker is integrated.</span></div></section>';
     html+='<section class="pab-panel"><div class="pab-heading"><div><h2>Category manager</h2><p>Rename, edit, enable or deactivate built-in and custom categories. Disabling a category blocks new bot instructions in that area.</p></div></div><div class="pab-category-grid">'+(state.categories||[]).map(categoryCard).join('')+'</div><form id="pab-category-form" class="pab-form-grid"><div class="pab-field"><label for="pab-new-category">New category name</label><input class="pab-input" id="pab-new-category" maxlength="56" required placeholder="e.g. AI Research"></div><div class="pab-field"><label for="pab-new-category-description">Description</label><input class="pab-input" id="pab-new-category-description" maxlength="600" placeholder="Category responsibilities"></div><div class="pab-field full"><button class="pab-btn secondary" type="submit">Create custom category</button><span class="pab-notice" id="pab-category-status"></span></div></form></section>';
@@ -286,6 +286,7 @@
     document.querySelector('#pab-refresh')?.addEventListener('click',refresh);
     document.querySelectorAll('.pab-review-report').forEach(node=>node.addEventListener('click',()=>reviewAiProfileReport(node.dataset.report,node.dataset.status)));
     document.querySelector('#pab-load-more-reports')?.addEventListener('click',loadMoreSafetyReports);
+    document.querySelector('#pab-safety-report-filter')?.addEventListener('change',()=>void loadMoreSafetyReports());
 
     document.querySelector('#pab-master-switch')?.addEventListener('change',saveNetwork);
     document.querySelector('#pab-hybrid-switch')?.addEventListener('change',saveNetwork);
@@ -520,27 +521,47 @@
     }catch(error){notice('pab-email-status',error.message,'error');}
   }
 
-  async function loadMoreSafetyReports(){
+  async function loadMoreSafetyReports({append=false}={}){
     const button=document.querySelector('#pab-load-more-reports');
     const list=document.querySelector('#pab-safety-report-list');
+    const filter=document.querySelector('#pab-safety-report-filter');
     if(!button||!list||button.disabled||state.safetyReportsLoading)return;
+    const status=filter?.value||'open';
     state.safetyReportsLoading=true;
     button.disabled=true;
+    if(filter)filter.disabled=true;
+    if(!append){
+      state.safetyReports=[];
+      state.safetyReportsNextOffset=0;
+      state.safetyReportsHasMore=false;
+      list.innerHTML='<div class="pab-empty">Loading AI profile reports…</div>';
+    }
     try{
-      const params=new URLSearchParams({status:'open',limit:'100',offset:String(Math.max(0,Number(state.safetyReportsNextOffset)||0))});
+      const params=new URLSearchParams({status,limit:'100',offset:String(Math.max(0,Number(state.safetyReportsNextOffset)||0))});
       const result=await request(API+'/safety/reports?'+params.toString());
       const incoming=Array.isArray(result.reports)?result.reports:[];
       const existing=new Set((state.safetyReports||[]).map(item=>String(item.reportId)));
       const added=incoming.filter(item=>!existing.has(String(item.reportId)));
-      if(added.length)list.insertAdjacentHTML('beforeend',added.map(safetyReportCard).join(''));
+      if(!append)list.innerHTML='';
+      if(added.length){
+        list.querySelector('.pab-empty')?.remove();
+        list.insertAdjacentHTML('beforeend',added.map(safetyReportCard).join(''));
+      }
       state.safetyReports=[...(state.safetyReports||[]),...added];
+      state.safetyReportsStatus=status;
       const nextOffset=Number(result.nextOffset);
       state.safetyReportsNextOffset=Number.isInteger(nextOffset)&&nextOffset>=0?nextOffset:state.safetyReportsNextOffset+incoming.length;
       state.safetyReportsHasMore=result.hasMore===true;
       button.hidden=!state.safetyReportsHasMore;
-      if(!list.children.length)list.innerHTML='<div class="pab-empty">No pending AI profile reports are awaiting review.</div>';
-    }catch(error){notice('pab-report-review-status',error.message,'error');}
-    finally{state.safetyReportsLoading=false;button.disabled=false;}
+      if(!list.children.length)list.innerHTML='<div class="pab-empty">No reports match this status.</div>';
+    }catch(error){
+      if(!append)list.innerHTML='<div class="pab-empty pab-error">'+esc(error.message)+'</div>';
+      notice('pab-report-review-status',error.message,'error');
+    }finally{
+      state.safetyReportsLoading=false;
+      button.disabled=false;
+      if(filter)filter.disabled=false;
+    }
   }
 
   async function reviewAiProfileReport(reportId,status){
