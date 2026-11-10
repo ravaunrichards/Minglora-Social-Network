@@ -204,6 +204,8 @@ export async function handlePersonalAiBotsAdminApi(context) {
         taskRecordsSource:Array.isArray(durableTasks)?'minglora_supabase_postgresql':'legacy_runtime_state',
         tasksNextOffset:Array.isArray(durableTasks)?durableTasks.length:0,
         tasksHasMore:Array.isArray(durableTasks)&&durableTasks.length===100,
+        tasksNextOffset:Array.isArray(durableTasks)?durableTasks.length:0,
+        tasksHasMore:Array.isArray(durableTasks)&&durableTasks.length===100,
         taskQueueStats:durableTaskStats&&typeof durableTaskStats==='object'?durableTaskStats:null,
         providerAssignments:Array.isArray(providerAssignments)?providerAssignments:[],
         providerAssignmentsSource:Array.isArray(providerAssignments)?'minglora_supabase_postgresql':'unavailable',
@@ -238,6 +240,17 @@ export async function handlePersonalAiBotsAdminApi(context) {
       return (json(res,201,{ok:true,bot}),true);
     }
 
+    if(method==='GET'&&path===root+'/tasks'){
+      if(typeof listAiBotTasks!=='function')return (json(res,503,{error:'Durable AI task storage is unavailable.'}),true);
+      const limit=Number(url.searchParams.get('limit')||100);
+      const offset=Number(url.searchParams.get('offset')||0);
+      if(!Number.isInteger(limit)||limit<1||limit>100||!Number.isInteger(offset)||offset<0||offset>1000000000){
+        return (json(res,400,{error:'AI task pagination is invalid.'}),true);
+      }
+      const result=await listAiBotTasks({limit,offset});
+      if(!Array.isArray(result))return (json(res,503,{error:'Durable AI task storage is unavailable.'}),true);
+      return (json(res,200,{ok:true,tasks:result,nextOffset:offset+result.length,hasMore:result.length===limit}),true);
+    }
     if(method==='GET'&&path===root+'/tasks'){
       if(typeof listAiBotTasks!=='function')return (json(res,503,{error:'Durable AI task storage is unavailable.'}),true);
       const limit=Number(url.searchParams.get('limit')||100);
