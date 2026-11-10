@@ -391,7 +391,7 @@ let browserNotificationPrimed=false;
 let webPushSubscriptionActive=false;
 let incomingCallPollingTimer=null,incomingCallPollBusy=false,incomingCallOverlay=null,incomingCallStatusTimer=null;
 let incomingCallLastErrorAt=0;
-let outgoingCallOverlay=null,outgoingCallPending=null,callRingtoneCache={loadedAt:0,ringtone:null};
+let outgoingCallOverlay=null,outgoingCallPending=null,callRingtoneCache={loadedAt:0,ringtones:{voice:null,video:null}};
 let callRingtoneAudio=null,callToneContext=null,callToneNodes=[],callToneTimer=null;
 window.addEventListener('minglora:call-ringtone-updated',()=>{callRingtoneCache={loadedAt:0,ringtone:null};});
 function toast(message){const el=$('#toast');el.textContent=message;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2800)}
@@ -8503,6 +8503,7 @@ async function renderMessages(){
 function stopCallTone(){
  if(callToneTimer){clearInterval(callToneTimer);callToneTimer=null;}
  if(callRingtoneAudio){callRingtoneAudio.pause();callRingtoneAudio.currentTime=0;callRingtoneAudio=null;}
+ window.MingloraCallRingtones?.stopAll?.();
  try{navigator.vibrate?.(0);}catch{}
  for(const node of callToneNodes){try{node.stop?.();node.disconnect?.();}catch{}}
  callToneNodes=[];
@@ -8527,15 +8528,24 @@ function startCallRingback(call=null){
  if(experience?.soundMode==='mute'||experience?.soundMode==='vibrate'||soundEnabled===false||window.MingloraExperience?.shouldSilenceNotifications?.('call')){stopCallTone();return;}
  stopCallTone();const pulse=()=>playCallTone([440,480],1850);setTimeout(pulse,120);callToneTimer=setInterval(pulse,6000);
 }
-async function getCallRingtone(force=false){
- if(!force&&Date.now()-callRingtoneCache.loadedAt<300000)return callRingtoneCache.ringtone;
- try{const result=await api('/calls/ringtone');callRingtoneCache={loadedAt:Date.now(),ringtone:result.ringtone||null};}
- catch{callRingtoneCache={loadedAt:Date.now(),ringtone:null};}
- return callRingtoneCache.ringtone;
+async function getCallRingtone(kind='voice',force=false){
+ const ringtoneKind=kind==='video'?'video':'voice';
+ if(!force&&Date.now()-callRingtoneCache.loadedAt<300000)return callRingtoneCache.ringtones?.[ringtoneKind]||null;
+ const defaults=window.MingloraCallRingtones?.defaults||{voice:'classic-phone',video:'glass-chime'};
+ try{
+  const result=await api('/calls/ringtone');
+  const fallbackVoice=result.ringtone?{selectedId:'custom',custom:result.ringtone}:{selectedId:defaults.voice,custom:null};
+  const ringtones=result.ringtones||{voice:fallbackVoice,video:{selectedId:defaults.video,custom:null}};
+  callRingtoneCache={loadedAt:Date.now(),ringtones:{voice:ringtones.voice||fallbackVoice,video:ringtones.video||{selectedId:defaults.video,custom:null}}};
+ }catch{
+  callRingtoneCache={loadedAt:Date.now(),ringtones:{voice:{selectedId:defaults.voice,custom:null},video:{selectedId:defaults.video,custom:null}}};
+ }
+ return callRingtoneCache.ringtones[ringtoneKind]||null;
 }
 async function startIncomingRingtone(call=null){
  const experience=window.MingloraExperience?.getSettings?.();
  const voiceCall=call?.kind==='audio';
+ const kind=voiceCall?'voice':'video';
  const soundEnabled=voiceCall?experience?.voiceCallSound!==false:experience?.videoCallSound!==false;
  if(state.settings?.preferences?.messengerIncomingCallSounds===false||window.MingloraExperience?.shouldSilenceNotifications?.('call')||experience?.soundMode==='mute'){stopCallTone();return false;}
  stopCallTone();
@@ -8545,8 +8555,17 @@ async function startIncomingRingtone(call=null){
  }
  if(soundEnabled===false)return false;
  if(experience?.vibrateOnRing&&typeof navigator.vibrate==='function')navigator.vibrate([100,70,100]);
- const ringtone=await getCallRingtone();
- if(ringtone?.url){try{const audio=new Audio(ringtone.url);audio.loop=true;audio.preload='auto';audio.volume=Math.max(0,Math.min(100,Number(experience?.ringtoneVolume??80)))/100;callRingtoneAudio=audio;await audio.play();return true;}catch{callRingtoneAudio=null;}}
+ const selection=await getCallRingtone(kind);
+ const defaults=window.MingloraCallRingtones?.defaults||{voice:'classic-phone',video:'glass-chime'};
+ const volume=Math.max(0,Math.min(100,Number(experience?.ringtoneVolume??80)))/100;
+ if(selection?.selectedId==='custom'&&selection.custom?.url){
+  try{
+   const audio=new Audio(selection.custom.url);audio.loop=true;audio.preload='auto';audio.volume=volume;
+   callRingtoneAudio=audio;await audio.play();return true;
+  }catch{callRingtoneAudio=null;}
+ }
+ const presetId=selection?.selectedId&&selection.selectedId!=='custom'?selection.selectedId:defaults[kind];
+ if(window.MingloraCallRingtones?.play?.(presetId,{loop:true,volume}))return true;
  const started=playCallTone([440,480,620],950);callToneTimer=setInterval(()=>playCallTone([440,480,620],950),3000);return started;
 }
 function mountMingloraCallOverlay(overlay){
