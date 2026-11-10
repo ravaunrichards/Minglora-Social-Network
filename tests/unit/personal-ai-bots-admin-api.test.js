@@ -797,6 +797,36 @@ test('AI profile PATCH persists demographic, career, location and preference fie
 });
 
 
+test('owner canonical AI identity list supports bounded page offsets',async()=>{
+  const identities=Array.from({length:50},(_,index)=>({id:'identity-'+(200+index),username:'ai_member_'+(200+index)}));
+  let options=null;
+  const context=makeContext({
+    method:'GET',
+    path:'/api/admin/personal-ai-bots/identities',
+    url:new URL('https://minglora.test/api/admin/personal-ai-bots/identities?limit=50&offset=200'),
+    listAiIdentities:async value=>{options=value;return identities;}
+  });
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,200);
+  assert.deepEqual(options,{limit:50,offset:200});
+  assert.deepEqual(context.res.payload.identities,identities);
+  assert.equal(context.res.payload.nextOffset,250);
+  assert.equal(context.res.payload.hasMore,true);
+});
+
+test('owner canonical AI identity list rejects invalid pagination before reading storage',async()=>{
+  let called=false;
+  const context=makeContext({
+    method:'GET',
+    path:'/api/admin/personal-ai-bots/identities',
+    url:new URL('https://minglora.test/api/admin/personal-ai-bots/identities?limit=1001&offset=0'),
+    listAiIdentities:async()=>{called=true;return [];}
+  });
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,400);
+  assert.equal(called,false);
+});
+
 test('owner safety report queue returns pending reports from canonical storage',async()=>{
   const reports=[{reportId:'report-1',identityId:'ai-1',reason:'spam',status:'pending'}];
   let options=null;
