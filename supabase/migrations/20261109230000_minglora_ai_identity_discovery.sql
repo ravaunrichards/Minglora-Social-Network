@@ -135,6 +135,11 @@ BEGIN
     WHERE identity.status = 'active'
       AND identity.public_profile_enabled = true
       AND profile.visibility = 'public'
+      AND NOT EXISTS (
+        SELECT 1 FROM public.ai_identity_blocks AS block
+        WHERE block.identity_id=identity.identity_id
+          AND block.user_id=p_viewer_user_id
+      )
       AND (
         v_search = '' OR
         names.display_name ILIKE '%' || v_search || '%' OR
