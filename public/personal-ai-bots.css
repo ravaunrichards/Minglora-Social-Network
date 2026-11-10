@@ -86,3 +86,14 @@
 .pab-report-card>small{display:block;color:var(--muted,#64748b);font-size:10px;margin:8px 0}
 .pab-report-resolution-label{display:grid;gap:6px;font-size:11px;font-weight:700;margin:10px 0}
 .pab-report-resolution{min-height:64px}
+
+/* Read-only corporate reporting tree built from approved appointment records. */
+.pab-org-tree{display:grid;gap:10px;min-width:0;overflow-wrap:anywhere}
+.pab-org-node{display:grid;gap:8px;min-width:0}
+.pab-org-card{display:grid;gap:5px;min-width:0;max-width:100%;padding:11px;border:1px solid var(--line,#dce4ef);border-radius:10px;background:var(--surface,#fff)}
+.pab-org-card strong{font-size:12px;overflow-wrap:anywhere}
+.pab-org-card small{font-size:10px;line-height:1.45;color:var(--muted,#64748b)}
+.pab-org-card .pab-tag{justify-self:start;white-space:normal}
+.pab-org-children{display:grid;gap:8px;margin-inline-start:clamp(12px,3vw,28px);padding-inline-start:clamp(8px,2vw,18px);border-inline-start:2px solid var(--line,#dce4ef);min-width:0}
+@media(max-width:700px){.pab-org-children{margin-inline-start:10px;padding-inline-start:9px}.pab-org-card{padding:9px}}
+
