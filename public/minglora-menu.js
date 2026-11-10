@@ -339,6 +339,7 @@
       }
     };
 
+    const signOutAction = { label: 'Log out', icon: 'logout' };
     const nav = document.createElement('nav');
     nav.className = 'account-switcher-actions';
     nav.setAttribute('aria-label', 'Account settings, help and sign out');
@@ -352,7 +353,7 @@
         sprite('activity', 'nav-3d-icon') + '<span>Give feedback</span>' +
       '</button>' +
       '<button type="button" class="account-switcher-action account-switcher-logout" data-account-logout>' +
-        sprite('logout', 'nav-3d-icon') + '<span>Log Out</span>' +
+        sprite(signOutAction.icon, 'nav-3d-icon') + '<span>' + signOutAction.label + '</span>' +
       '</button>' +
     '</div>';
     const submenuMarkup = Object.entries(menus).map(([key, item]) =>

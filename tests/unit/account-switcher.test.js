@@ -87,13 +87,14 @@ test('profile dropdown follows the Facebook account hierarchy without duplicate 
   assert.match(app,/data-account-logout-all/);
   assert.match(app,/account-switcher-see-all/);
   assert.doesNotMatch(html,/id="settings-btn"/,'do not add a duplicate Settings gear beside Personalise Minglora');
-  assert.equal((menu.match(/data-account-tool="settings"/g)||[]).length,1);
-  assert.equal((menu.match(/data-account-tool="support"/g)||[]).length,1);
-  assert.equal((menu.match(/data-account-tool="display"/g)||[]).length,1);
+  assert.match(menu, /settings:\s*\{\s*label: 'Settings & privacy',\s*icon: 'settings'/);
+  assert.match(menu, /support:\s*\{\s*label: 'Help & support',\s*icon: 'request'/);
+  assert.match(menu, /display:\s*\{\s*label: 'Display & accessibility',\s*icon: 'palette'/);
+  assert.match(menu, /const signOutAction = \{ label: 'Log out', icon: 'logout' \}/);
   for(const destination of ['settings','privacy-checkup','privacy-center','help-center','scam-protection','account-status','support-inbox','report-problem','display-accessibility','keyboard']) {
     assert.ok(menu.includes('data-account-destination="'+destination+'"'),'nested menu destination '+destination);
   }
-  for(const label of ['Settings & privacy','Help & support','Display & accessibility','Give feedback','Log Out']) assert.ok(menu.includes(label),'profile dropdown item '+label);
+  for(const label of ['Settings & privacy','Help & support','Display & accessibility','Give feedback','Log out']) assert.ok(menu.includes(label),'profile dropdown item '+label);
   assert.match(menu,/aria-controls="account-switcher-submenu-/);
   assert.match(menu,/data-account-menu-back/);
   assert.match(menu,/window\.MingloraSettings\?\.open/);
