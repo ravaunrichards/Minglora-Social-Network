@@ -312,6 +312,8 @@ test('owner-approved appointments require shortlisted candidates, valid reportin
     applicationId:ceoOpening.application.id,reportingManagerAppointmentId:chair.id
   },actor,stamp,uid);
   assert.equal(ceo.reportingManagerIdentityId,chairCandidate.id);
+  assert.equal(ceo.reportingManagerName,chairCandidate.displayName);
+  assert.equal(ceo.reportingManagerPositionTitle,chair.positionTitle);
   assert.equal(ceoCandidate.status,'disabled');
   assert.equal(ceoCandidate.enabled,false);
 
