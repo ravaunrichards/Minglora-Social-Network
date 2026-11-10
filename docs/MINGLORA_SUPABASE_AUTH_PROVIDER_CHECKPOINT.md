@@ -5,7 +5,7 @@
 - **Project:** Minglora Social Network — ravaunrichards/Minglora-Social-Network
 - **Branch:** `feat/minglora-admin-user-and-service-centre-20261109`
 - **Code commit with the tested implementation:** `ad8ea2c3e1600952238a94715e6d56c4786e7a8b`; subsequent commits on this branch only update this checkpoint.
-- **Current branch head:** `3d4df2f6498df9c44662ca9594568bf66fb0e10b`.
+- **Current branch head (checkpoint-only updates):** `6a0b50a111ecb08d9c5edb928a7c285e4c342470`.
 - **PR:** [#203](https://github.com/ravaunrichards/Minglora-Social-Network/pull/203) remains OPEN and DRAFT, not merged; reported mergeable=false.
 - **Latest completed CI run:** [42722256534](https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/42722256534).
   - **Supabase Auth provider controls:** PASS — job completed successfully; provider source syntax and focused acceptance tests passed (17 tests, per the CI result captured during the prior continuation).
@@ -15,9 +15,9 @@
 - **Verified completion:** 81%.
 - **Remaining:** 19%.
 - **Progress since prior checkpoint:** NO CHANGE. No new live acceptance criterion was verifiably completed in this recovery.
-- **Last successful verification:** CI for the tested implementation commit completed with the dedicated Auth Provider job and Admin Centre viewport job passing; later commits only updated this checkpoint.
-- **Production:** no merge, deployment, Supabase configuration write, provider credential write, or production route repair was performed in this continuation.
-- **External blockers still active:** designated MFA-verified owner session unavailable; the Render workspace has not been confirmed for further log inspection; existence/validity of `SUPABASE_ACCESS_TOKEN` is unknown; no real external OAuth Client ID/Secret pair has been supplied or registered; no real provider login has been completed.
+- **Last successful verification:** CI run `42722256534` on tested source commit `ad8ea2c3...`; dedicated Auth Provider and Admin Centre viewport jobs PASS. Checkpoint-only commits do not change implementation code.
+- **Production:** no merge, deployment, Supabase configuration write, provider credential write, or production route repair was performed in this continuation. Public HTTP checks were unavailable due DNS resolution failure in the execution environment.
+- **External blockers still active:** designated MFA-verified owner session unavailable; Render tool requires the user to explicitly choose a workspace before request-log inspection; existence/validity of `SUPABASE_ACCESS_TOKEN` is unknown; no real external OAuth Client ID/Secret pair has been supplied or registered; no real provider login has been completed.
 
 ## Exact next action
 
