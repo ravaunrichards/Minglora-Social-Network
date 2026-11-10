@@ -200,3 +200,12 @@
 .gp-level-card.is-admin-awarded .gp-level-state{color:#8c6718}
 .gp-current-badge-row .gp-admin-awarded-marker{margin-left:4px}
 @media(max-width:560px){.gp-admin-awarded-marker{font-size:7px;padding:2px 6px}}
+
+/* Prominent TikTok-style Gifter Level Up entry on the Gifts screen */
+.gift-level-up-banner{display:grid;grid-template-columns:minmax(180px,38%) minmax(0,1fr);align-items:center;gap:20px;overflow:hidden;padding:18px;border:1px solid rgba(116,92,220,.24);border-radius:22px;background:linear-gradient(120deg,rgba(34,25,75,.97),rgba(20,37,79,.96) 55%,rgba(86,37,111,.94));color:#fff;box-shadow:0 12px 34px rgba(25,20,60,.18)}
+.gift-level-up-banner>img{display:block;width:100%;max-height:250px;object-fit:contain;border-radius:14px}
+.gift-level-up-copy{min-width:0}
+.gift-level-up-copy .eyebrow{color:#d9caff}
+.gift-level-up-copy h2{margin:6px 0;font-size:clamp(1.35rem,3vw,2rem);font-weight:850}
+.gift-level-up-copy p{margin:0 0 14px;color:rgba(255,255,255,.82);line-height:1.5}
+@media(max-width:650px){.gift-level-up-banner{grid-template-columns:1fr;gap:10px;padding:13px}.gift-level-up-banner>img{max-height:190px}.gift-level-up-copy h2{font-size:1.35rem}}
