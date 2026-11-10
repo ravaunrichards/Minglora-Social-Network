@@ -9,9 +9,16 @@ test("defaults identify Minglora Signature and Vision and configure 22 categorie
 test("theme presets assign matching sounds across both call libraries and all notification groups",()=>{
  const r=buildSoundThemePreset("cinematic",defaultSoundStudioPreferences());assert.equal(r.valid,true);assert.equal(r.settings.voiceCall.soundId,"voice-26");assert.equal(r.settings.videoCall.soundId,"video-26");assert.equal(r.settings.notifications.private_messages.soundId,"notification-51");assert.equal(r.settings.notifications.system_notifications.soundId,"notification-52");assert.equal(buildSoundThemePreset("unknown").valid,false);
 });
-test("validation blocks wrong sound types, unknown categories and unowned uploads",()=>{
- const d=defaultSoundStudioPreferences(),ok=validateSoundStudioPatch(d,{voiceCall:{soundId:"voice-03"},videoCall:{enabled:false},notifications:{private_messages:{soundId:"notification-60",enabled:false}},favorites:["voice-03","notification-60"]});
- assert.equal(ok.valid,true);assert.equal(ok.settings.notifications.private_messages.enabled,false);assert.equal(validateSoundStudioPatch(d,{voiceCall:{soundId:"video-01"}}).valid,false);assert.equal(validateSoundStudioPatch(d,{notifications:{unknown:{soundId:"notification-01"}}}).valid,false);assert.equal(validateSoundStudioPatch(d,{voiceCall:{soundId:"custom:foreign"}}).valid,false);assert.equal(validateSoundStudioPatch(d,{voiceCall:{soundId:"custom:mine"}},["custom:mine"]).valid,true);
+test("validation enforces exact voice, video and notification library boundaries",()=>{
+ const d=defaultSoundStudioPreferences(),ok=validateSoundStudioPatch(d,{voiceCall:{soundId:"voice-30"},videoCall:{soundId:"video-30",enabled:false},notifications:{private_messages:{soundId:"notification-60",enabled:false}},favorites:["voice-30","notification-60"]});
+ assert.equal(ok.valid,true);assert.equal(ok.settings.notifications.private_messages.enabled,false);
+ assert.equal(validateSoundStudioPatch(d,{voiceCall:{soundId:"video-01"}}).valid,false);
+ assert.equal(validateSoundStudioPatch(d,{voiceCall:{soundId:"voice-31"}}).valid,false);
+ assert.equal(validateSoundStudioPatch(d,{videoCall:{soundId:"video-99"}}).valid,false);
+ assert.equal(validateSoundStudioPatch(d,{notifications:{private_messages:{soundId:"notification-99"}}}).valid,false);
+ assert.equal(validateSoundStudioPatch(d,{notifications:{unknown:{soundId:"notification-01"}}}).valid,false);
+ assert.equal(validateSoundStudioPatch(d,{voiceCall:{soundId:"custom:foreign"}}).valid,false);
+ assert.equal(validateSoundStudioPatch(d,{voiceCall:{soundId:"custom:mine"}},["custom:mine"]).valid,true);
 });
 test("the earlier custom ringtone migrates to the private selectable library without deleting audio",()=>{
  const user={id:"member-1",callRingtoneAssetId:"asset-1"},asset={id:"asset-1",ownerId:"member-1",slot:"ringtone",bucket:"minglora-ringtones",status:"attached",attachedTo:"account:call-ringtone",originalName:"My ringtone",mimeType:"audio/mpeg"};
