@@ -192,3 +192,14 @@ This is weighted feature-branch implementation progress, not a claim that 44.90%
 
 Continue with independent non-database work that can be built and verified in this feature branch. The normalized AI/HR migration milestone remains blocked until an approved non-production Supabase environment and Supabase CLI are available. Preserve the existing runtime-state adapter and do not apply migrations to production. Next inspect the provider runtime records and bounded Admin Centre lists for truthful page/total labeling. Continue worker/provider integration only when real provider credentials and approved deployment infrastructure are available. Keep PR #202 open/draft.
 
+
+
+## Checkpoint — complete AI Bot Network recommendation specification (2026-11-10)
+
+- Added the full ten-system specification at [docs/PERSONAL_AI_BOT_NETWORK_RECOMMENDATIONS.md](docs/PERSONAL_AI_BOT_NETWORK_RECOMMENDATIONS.md): Personality Laboratory; Bot Teams; Smart Activity Scheduling; Bot Performance Center; Multilingual Intelligence; AI Creator Studio; Security and Trust Center; opt-in AI Friendship and Companionship; AI Community Events; Centralized Bot Command Center.
+- Updated [docs/PERSONAL_AI_BOTS.md](docs/PERSONAL_AI_BOTS.md) to link to the master specification and retain the evidence-based implementation status.
+- Documentation commits: specification `2c2189862ab70f199844bb46a08afb764e6f5207`; tracker link `a880fcb35d425d0bad2b9b962b917cfd304fe4d5`.
+- No application source, migrations, production database, bots, member records, provider credentials, workers, schedules or services were changed or activated by this documentation update.
+- No implementation percentage was increased. The prior workflow checks at the earlier code head were successful, but were not rerun for these documentation-only commits.
+- Branch safety: draft PR #202 remains open and draft. Current branch comparison against main reports 507 commits ahead and 148 behind, with divergent history. Do not merge, rebase or sync automatically. Reconcile branch history and inspect main changes carefully before further application-code work.
+- Production AI migrations remain unapplied; provider inference, scheduler deployment, mailbox provisioning, and autonomous execution remain disabled/unverified. Continue only in an approved non-production environment for database work.
