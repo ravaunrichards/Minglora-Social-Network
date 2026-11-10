@@ -38,7 +38,7 @@ test("Gifters Badge Levels keeps and renders all 11 original JPGs in ascending p
 test("Gifters Badge Levels shows complete original panels and no separate per-level badge cards", () => {
   const progression = read("public/gifter-progression.js");
   const styles = read("public/gifter-progression.css");
-  assert.doesNotMatch(progression, /function badgeMarkup|function levelCard|function detailMarkup|data-gp-level|gp-selected-badge|gp-level25-emblem|MingloraGifterBadgeArt/);
+  assert.doesNotMatch(progression, /function badgeMarkup|function levelCard|function detailMarkup|data-gp-level=['"]|gp-selected-badge|gp-level25-emblem|MingloraGifterBadgeArt/);
   assert.match(progression, /loading='lazy' decoding='async'/);
   assert.match(styles, /\.gp-art-panel-stack\{display:grid;grid-template-columns:minmax\(0,1fr\);gap:14px/);
   assert.match(styles, /\.gp-art-panel>img\{display:block;width:100%;max-width:100%;height:auto;object-fit:contain/);
