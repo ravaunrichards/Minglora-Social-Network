@@ -20,8 +20,9 @@ test('Facebook-style Settings & Privacy navigation includes nested menu pages an
 test('All existing settings sections and key controls are retained',()=>{
  for(const id of ['settings-account','settings-data','settings-privacy','settings-interaction-preferences','settings-blocking','settings-notifications','settings-calls','settings-preferences','settings-cache','settings-device-access','settings-help','settings-security','settings-signout'])assert.equal((settings.match(new RegExp('id="'+id+'"','g'))||[]).length,1,'preserve '+id);
  assert.equal((settings.match(/data-settings-category-button=/g)||[]).length,9);
- for(const control of ['profileVisibility','messageAudience','notificationInApp','notificationFriendRequests','notificationMessages','theme','liveRoomTheme','liteMode','download-account-data','security-email-form','support-ticket-form','settings-logout-btn'])assert.ok(settings.includes('name="'+control+'"')||settings.includes('id="'+control+'"'),'preserve '+control);
+ for(const control of ['profileVisibility','messageAudience','notificationInApp','notificationFriendRequests','notificationMessages','theme','liteMode','download-account-data','security-email-form','support-ticket-form','settings-logout-btn'])assert.ok(settings.includes('name="'+control+'"')||settings.includes('id="'+control+'"'),'preserve '+control);
  assert.ok(settings.includes("renderThemeChoices('colorTheme', APP_THEMES"));
+ assert.ok(settings.includes("renderThemeChoices('liveRoomTheme', LIVE_THEMES"));
  assert.ok(settings.includes('new FormData(settingsForm)'));
  assert.ok(settings.includes("api('/security/mfa')"));
  assert.ok(settings.includes("api('/security/sessions')"));
