@@ -358,3 +358,53 @@
   .gp-art-panel>img,
   .gp-art-panel--final>img{border-radius:inherit}
 }
+
+
+/* Readable Gifter Level-Up chart across desktop, tablets, and touch screens. */
+.gp-hero-art{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:12px;
+  width:100%;
+  min-width:0;
+  box-sizing:border-box;
+  padding:clamp(10px,2vw,18px);
+}
+.gp-hero-art .gp-reference-art{
+  display:block;
+  width:100%;
+  max-width:1100px;
+  max-height:none;
+  height:auto;
+  margin:0 auto;
+  object-fit:contain;
+}
+.gp-chart-fullsize{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:auto;
+  max-width:100%;
+  min-height:46px;
+  box-sizing:border-box;
+  padding:10px 18px;
+  border:1px solid #9bb8ec;
+  border-radius:999px;
+  background:#fff;
+  color:#183f78;
+  font-size:1rem;
+  font-weight:800;
+  line-height:1.25;
+  text-align:center;
+  text-decoration:none;
+  touch-action:manipulation;
+}
+.gp-chart-fullsize:hover{background:#edf4ff;border-color:#527fc9}
+.gp-chart-fullsize:focus-visible{outline:3px solid #2563eb;outline-offset:3px}
+@media(max-width:650px){
+  .gp-hero-art{gap:10px;padding:10px 6px;border-radius:14px}
+  .gp-hero-art .gp-reference-art{width:100%;max-height:none}
+  .gp-chart-fullsize{width:min(100%,420px);min-height:48px;font-size:1rem;padding:11px 14px}
+}
