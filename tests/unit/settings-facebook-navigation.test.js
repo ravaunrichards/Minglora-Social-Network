@@ -9,6 +9,7 @@ const settings=read('public/settings.js');
 const server=read('src/server.js');
 const index=read('public/index.html');
 const css=read('public/settings-navigation.css');
+const oauthFlow=read('src/oauth-flow-state.js');
 test('Facebook-style Settings & Privacy navigation includes nested menu pages and back routes',()=>{
  for(const page of ['home','settings','help-support','report-support','display-accessibility','keyboard','language','privacy-checkup','privacy-center','ad-preferences','advertising','ad-choices','cookies','terms','help-center','scam-protection','account-status','about','career','developers','information'])assert.ok(settings.includes('data-settings-page="'+page+'"'),'missing page '+page);
  for(const item of ['Settings &amp; privacy','Help &amp; Support','Report &amp; Support','Display &amp; Accessibility','Privacy Checkup','Privacy Center','Your ad preferences','Scam Protection Center','Account Status','Support Inbox','Activity Center','Content Preferences','Accessibility Settings'])assert.ok(settings.includes(item),'missing menu item '+item);
@@ -34,7 +35,8 @@ test('All existing settings sections and key controls are retained',()=>{
  assert.ok(settings.includes('data-settings-target="#settings-activity-centre"'));
  assert.ok(settings.includes('data-settings-target="#active-sessions-list"'));
  assert.ok(settings.includes('data-settings-target="#support-tickets-list"'));
- assert.ok(settings.includes("COOKIE_NAME = 'minglora_oauth'"));
+ assert.ok(oauthFlow.includes("const COOKIE_NAME = 'minglora_oauth'"));
+ assert.ok(oauthFlow.includes('const COOKIE_MAX_AGE_SECONDS = 600'));
  assert.ok(settings.includes("api('/security/mfa')"));
  assert.ok(settings.includes("api('/security/sessions')"));
 });
