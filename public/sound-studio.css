@@ -1,0 +1,54 @@
+.sound-studio-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:18px}
+.sound-studio-heading h2{margin:4px 0 6px;font-size:clamp(1.25rem,2vw,1.7rem)}
+.sound-studio-heading p,.sound-studio-intro p,.sound-studio-row-copy small,.sound-studio-note{color:var(--muted,#667085);line-height:1.5}
+.sound-studio-kicker{display:inline-block;color:var(--primary,#1769e0);font-size:.72rem;font-weight:800;letter-spacing:.11em}
+.sound-studio-total{display:grid;min-width:98px;gap:2px;padding:12px 16px;border:1px solid var(--border,#d9e0ea);border-radius:14px;text-align:center}
+.sound-studio-total strong{font-size:1.65rem;line-height:1.1}
+.sound-studio-total span{font-size:.75rem;color:var(--muted,#667085)}
+.sound-studio-metrics{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 18px}
+.sound-studio-metrics span,.sound-studio-count{padding:6px 10px;border:1px solid var(--border,#d9e0ea);border-radius:999px;color:var(--muted,#667085);font-size:.78rem}
+.sound-studio-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-bottom:18px}
+.sound-studio-tab{display:grid;gap:4px;min-height:64px;padding:11px 13px;border:1px solid var(--border,#d9e0ea);border-radius:13px;background:var(--surface,#fff);color:inherit;text-align:left;cursor:pointer}
+.sound-studio-tab.active{border-color:var(--primary,#1769e0);box-shadow:inset 0 0 0 1px var(--primary,#1769e0)}
+.sound-studio-tab small{color:var(--muted,#667085)}
+.sound-studio-panel{min-width:0}
+.sound-studio-intro{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:10px 0 16px}
+.sound-studio-intro h3{margin:4px 0}
+.sound-studio-intro p{max-width:680px;margin:0}
+.sound-studio-field{display:grid;gap:6px;min-width:min(100%,280px);flex:1}
+.sound-studio-field>span{font-size:.82rem;font-weight:700}
+.sound-studio-field input,.sound-studio-field select,.sound-studio-toolbar input,.sound-studio-toolbar select{width:100%;min-width:0;min-height:42px;padding:9px 11px;border:1px solid var(--border,#d9e0ea);border-radius:10px;background:var(--surface,#fff);color:inherit}
+.sound-studio-toolbar{display:grid;grid-template-columns:minmax(0,1fr) minmax(160px,220px);gap:10px;margin:12px 0}
+.sound-studio-list,.sound-studio-event-list,.sound-studio-picker-list{display:grid;gap:8px;min-width:0}
+.sound-studio-row,.sound-studio-event-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:10px;min-width:0;padding:11px 12px;border:1px solid var(--border,#d9e0ea);border-radius:12px;background:var(--surface,#fff)}
+.sound-studio-row.is-selected{border-color:var(--primary,#1769e0);background:color-mix(in srgb,var(--primary,#1769e0) 5%,var(--surface,#fff))}
+.sound-studio-row-copy{display:grid;gap:4px;min-width:0}
+.sound-studio-row-copy strong{overflow-wrap:anywhere}
+.sound-studio-row-copy small{font-size:.78rem}
+.sound-studio-row button,.sound-studio-event-row button{white-space:nowrap}
+.sound-studio-picker,.sound-studio-upload{margin-top:18px;padding:15px;border:1px solid var(--border,#d9e0ea);border-radius:14px;background:var(--surface,#fff)}
+.sound-studio-inline-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.sound-studio-inline-heading h4,.sound-studio-inline-heading h3{margin:0 0 4px}
+.sound-studio-inline-heading p{margin:0;color:var(--muted,#667085);font-size:.85rem;line-height:1.5}
+.sound-studio-picker-list{max-height:540px;overflow:auto;padding-right:2px}
+.sound-studio-upload-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.sound-studio-check{display:flex;align-items:flex-start;gap:9px;min-width:0;color:var(--muted,#667085);font-size:.85rem;line-height:1.45}
+.sound-studio-check input{flex:0 0 auto;margin-top:3px}
+.sound-studio-upload-form button{justify-self:start}
+.sound-studio-upload-form .settings-form-status{grid-column:1/-1;margin:0}
+.sound-studio-count{display:inline-block;margin-top:12px}
+.sound-studio-total,.sound-studio-row,.sound-studio-event-row,.sound-studio-picker,.sound-studio-upload{color:var(--text,#172033)}
+@media(max-width:680px){
+ .sound-studio-tabs{grid-template-columns:1fr}
+ .sound-studio-tab{min-height:52px}
+ .sound-studio-toolbar{grid-template-columns:1fr}
+ .sound-studio-row,.sound-studio-event-row{grid-template-columns:minmax(0,1fr) auto}
+ .sound-studio-row-copy{grid-column:1/-1}
+ .sound-studio-upload-form{grid-template-columns:1fr}
+ .sound-studio-upload-form .settings-form-status{grid-column:auto}
+}
+@media(max-width:390px){
+ .sound-studio-row,.sound-studio-event-row{grid-template-columns:1fr}
+ .sound-studio-row-copy{grid-column:auto}
+ .sound-studio-row button,.sound-studio-event-row button{width:100%}
+}
