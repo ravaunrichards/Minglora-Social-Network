@@ -184,3 +184,25 @@ jobs:
             tests/unit/auth-redirect-routes.test.js \
             tests/unit/auth-provider-credentials.test.js \
             tests/unit/service-worker-update-before-auth.test.js
+
+  sound-studio:
+    name: Sound Studio catalogue and settings
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Check Sound Studio JavaScript syntax
+        run: |
+          node --check src/server.js
+          node --check backend/modules/sound-studio/service.js
+          node --check public/sound-studio.js
+          node --check tests/unit/sound-studio-catalogue.test.js
+      - name: Verify all 120 real audio entries and preference rules
+        run: node --test tests/unit/sound-studio-catalogue.test.js

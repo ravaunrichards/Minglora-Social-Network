@@ -26,7 +26,8 @@ test("preferences validate IDs, switches, independent volumes and custom ownersh
  const normalized=normalizeSoundStudioPreferences({ringtoneVolume:35,notificationVolume:55},{});
  assert.equal(normalized.ringtoneVolume,35);assert.equal(normalized.notificationVolume,55);
  assert.equal(normalized.voiceRingtoneId,"voice-01");assert.equal(normalized.notificationEnabled.new_followers,true);
- assert.equal(validateSoundStudioPreferences({voiceRingtoneId:"video-01"},{}).valid,true);
+ assert.equal(validateSoundStudioPreferences({voiceRingtoneId:"video-01"},{}).valid,false);
+ assert.equal(validateSoundStudioPreferences({videoRingtoneId:"voice-01"},{}).valid,false);
  assert.equal(validateSoundStudioPreferences({voiceRingtoneId:"not-real"},{}).valid,false);
  assert.equal(validateSoundStudioPreferences({notificationSounds:{private_messages:"voice-01"}},{}).valid,false);
  assert.equal(validateSoundStudioPreferences({notificationEnabled:{private_messages:"yes"}},{}).valid,false);

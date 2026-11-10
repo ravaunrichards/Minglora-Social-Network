@@ -31,6 +31,7 @@ export const SOUND_STUDIO_SOUND_IDS=Object.freeze(new Set([
 const DEFAULT_NOTIFICATION_SOUNDS=Object.freeze(Object.fromEntries(SOUND_NOTIFICATION_CATEGORIES.map((c,i)=>[c.id,"notification-"+String(i+1).padStart(2,"0")])));
 const DEFAULT_NOTIFICATION_ENABLED=Object.freeze(Object.fromEntries(SOUND_NOTIFICATION_CATEGORIES.map(c=>[c.id,true])));
 const validId=(id,custom=[])=>SOUND_STUDIO_SOUND_IDS.has(String(id||""))||custom.some(x=>x?.id===String(id||""));
+const validSoundType=(id,type,custom=[])=>custom.some(x=>x?.id===String(id||""))||(SOUND_STUDIO_SOUND_IDS.has(String(id||""))&&String(id).startsWith(type+"-"));
 const validTime=v=>typeof v==="string"&&/^([01]\d|2[0-3]):[0-5]\d$/.test(v);
 const days=new Set(["mon","tue","wed","thu","fri","sat","sun"]);
 const validVolume=v=>Number.isInteger(v)&&v>=0&&v<=100;
@@ -54,10 +55,10 @@ export function normalizeSoundStudioPreferences(input={},previous={}){
   notificationEnabled:{...base.notificationEnabled,...(raw.notificationEnabled||{})},
   doNotDisturb:{...base.doNotDisturb,...(raw.doNotDisturb||{})}};
  if(!SOUND_STUDIO_THEMES.includes(next.soundTheme))next.soundTheme="Classic";
- if(!validId(next.voiceRingtoneId,customSounds))next.voiceRingtoneId="voice-01";
- if(!validId(next.videoRingtoneId,customSounds))next.videoRingtoneId="video-01";
+ if(!validSoundType(next.voiceRingtoneId,"voice",customSounds))next.voiceRingtoneId="voice-01";
+ if(!validSoundType(next.videoRingtoneId,"video",customSounds))next.videoRingtoneId="video-01";
  for(const c of SOUND_NOTIFICATION_CATEGORIES){
-  if(!validId(next.notificationSounds[c.id],customSounds))next.notificationSounds[c.id]=DEFAULT_NOTIFICATION_SOUNDS[c.id];
+  if(!validSoundType(next.notificationSounds[c.id],"notification",customSounds))next.notificationSounds[c.id]=DEFAULT_NOTIFICATION_SOUNDS[c.id];
   if(typeof next.notificationEnabled[c.id]!=="boolean")next.notificationEnabled[c.id]=true;
  }
  next.favoriteIds=[...new Set(next.favoriteIds.filter(id=>validId(id,customSounds)))].slice(0,120);
@@ -80,13 +81,13 @@ export function validateSoundStudioPreferences(input,current={}){
  const custom=Array.isArray(current.customSounds)?current.customSounds:[];
  const next=normalizeSoundStudioPreferences(input,current);
  if(input.soundTheme!==undefined&&!SOUND_STUDIO_THEMES.includes(input.soundTheme))return {valid:false,error:"Choose a supported Sound Studio theme."};
- for(const key of ["voiceRingtoneId","videoRingtoneId"])if(input[key]!==undefined&&!validId(input[key],custom))return {valid:false,error:"Choose an available Minglora or custom sound."};
+ for(const [key,type] of [["voiceRingtoneId","voice"],["videoRingtoneId","video"]])if(input[key]!==undefined&&!validSoundType(input[key],type,custom))return {valid:false,error:"Choose a "+type+" call ringtone or one of your custom sounds."};
  for(const key of ["ringtoneVolume","notificationVolume"])if(input[key]!==undefined&&!validVolume(input[key]))return {valid:false,error:"Volume must be a whole number from 0 to 100."};
  for(const key of ["vibrationEnabled","silentMode"])if(input[key]!==undefined&&typeof input[key]!=="boolean")return {valid:false,error:key+" must be true or false."};
  if(input.vibrationPattern!==undefined&&!["short","standard","pulse","heartbeat"].includes(input.vibrationPattern))return {valid:false,error:"Choose a supported vibration pattern."};
  if(input.notificationSounds!==undefined){
   if(!input.notificationSounds||typeof input.notificationSounds!=="object"||Array.isArray(input.notificationSounds))return {valid:false,error:"Notification assignments must be an object."};
-  for(const [c,id] of Object.entries(input.notificationSounds))if(!SOUND_NOTIFICATION_CATEGORIES.some(x=>x.id===c)||!validId(id,custom))return {valid:false,error:"Choose a real sound for each notification category."};
+  for(const [c,id] of Object.entries(input.notificationSounds))if(!SOUND_NOTIFICATION_CATEGORIES.some(x=>x.id===c)||!validSoundType(id,"notification",custom))return {valid:false,error:"Choose a notification sound for each notification category."};
  }
  if(input.notificationEnabled!==undefined){
   if(!input.notificationEnabled||typeof input.notificationEnabled!=="object"||Array.isArray(input.notificationEnabled))return {valid:false,error:"Notification switches must be an object."};
