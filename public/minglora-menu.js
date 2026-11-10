@@ -122,6 +122,7 @@
       panel.hidden = true;
       panel.classList.remove('is-open');
       document.body.classList.remove('minglora-menu-open');
+      document.documentElement.classList.remove('minglora-menu-open');
       trigger.setAttribute('aria-expanded', 'false');
     }
 
@@ -134,6 +135,7 @@
       panel.hidden = false;
       panel.classList.add('is-open');
       document.body.classList.add('minglora-menu-open');
+      document.documentElement.classList.add('minglora-menu-open');
       trigger.setAttribute('aria-expanded', 'true');
     }
 
@@ -145,7 +147,7 @@
     });
     panel.querySelector('.minglora-menu-close').addEventListener('click', closeMenu);
 
-    document.addEventListener('pointerdown', event => {
+    document.addEventListener('click', event => {
       if (!panel.hidden && !panel.contains(event.target) && !trigger.contains(event.target)) closeMenu();
     });
     document.addEventListener('keydown', event => {

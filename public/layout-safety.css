@@ -53,7 +53,7 @@ body:has(#settings-form) #message-window-dock{
   right:max(12px,env(safe-area-inset-right))!important;
   left:auto!important;
   z-index:2300!important;
-  width:min(390px,calc(100vw - 24px))!important;
+  width:min(378px,calc(100vw - 24px))!important;
   height:min(690px,calc(100dvh - var(--minglora-header-height,66px) - 24px))!important;
   max-height:calc(100dvh - var(--minglora-header-height,66px) - 24px)!important;
   min-height:0!important;
@@ -77,6 +77,7 @@ body:has(#settings-form) #message-window-dock{
   right:max(12px,env(safe-area-inset-right))!important;
   z-index:2500!important;
   width:min(356px,calc(100vw - 24px))!important;
+  max-width:356px!important;
   max-height:calc(100dvh - var(--minglora-header-height,66px) - 24px)!important;
   overflow-x:hidden!important;
   overflow-y:auto!important;
@@ -87,10 +88,15 @@ body:has(#settings-form) #message-window-dock{
 .minglora-menu-panel{
   position:fixed!important;
   z-index:3200!important;
-  max-height:calc(100dvh - 16px)!important;
+  width:min(680px,calc(100vw - 32px))!important;
+  max-width:680px!important;
+  height:min(720px,calc(100dvh - var(--minglora-header-height,66px) - 24px))!important;
+  max-height:min(720px,calc(100dvh - var(--minglora-header-height,66px) - 24px))!important;
   overflow:hidden!important;
 }
 .profile-account-menu{
+  width:min(360px,calc(100vw - 24px))!important;
+  max-width:360px!important;
   max-height:min(76dvh,650px)!important;
   overflow-x:hidden!important;
   overflow-y:auto!important;
@@ -103,10 +109,25 @@ body:has(#settings-form) #message-window-dock{
 }
 .messenger-options-menu,.message-bubble-actions-menu,.profile-overflow-menu,
 .mobile-more-menu,.live-chat-emoji-picker{
-  max-height:min(72dvh,620px);
-  overflow-x:hidden;
-  overflow-y:auto;
-  overscroll-behavior:contain;
+  max-width:min(360px,calc(100vw - 24px))!important;
+  max-height:min(72dvh,620px)!important;
+  box-sizing:border-box!important;
+  overflow-x:hidden!important;
+  overflow-y:auto!important;
+  overscroll-behavior:contain!important;
+}
+html.minglora-menu-open,
+body.minglora-menu-open{
+  overflow:hidden!important;
+  overscroll-behavior:none!important;
+}
+@media(min-width:761px) and (max-width:1024px){
+  .minglora-menu-panel{
+    width:min(640px,calc(100vw - 24px))!important;
+    max-width:640px!important;
+    height:min(680px,calc(100dvh - var(--minglora-header-height,66px) - 24px))!important;
+    max-height:min(680px,calc(100dvh - var(--minglora-header-height,66px) - 24px))!important;
+  }
 }
 
 /* Dialogs and media editors: fixed dimmed layer, centered and viewport-bounded. */
@@ -266,8 +287,20 @@ body:has(#settings-form) #message-window-dock{
   .messenger-panel,.palette-switcher-panel{
     top:calc(56px + env(safe-area-inset-top) + 8px)!important;
     right:max(8px,env(safe-area-inset-right))!important;
-    width:min(390px,calc(100vw - 16px))!important;
+    width:min(378px,calc(100vw - 16px))!important;
     max-height:calc(100dvh - 76px - env(safe-area-inset-top) - env(safe-area-inset-bottom))!important;
+  }
+  .profile-account-menu{
+    width:min(360px,calc(100vw - 16px))!important;
+    max-width:calc(100vw - 16px)!important;
+    max-height:calc(100dvh - 82px - env(safe-area-inset-bottom))!important;
+  }
+  .minglora-menu-panel{
+    inset:0!important;
+    width:100vw!important;
+    max-width:100vw!important;
+    height:100dvh!important;
+    max-height:100dvh!important;
   }
   .modal-backdrop,.about-section-editor-backdrop,.story-viewer-backdrop,
   .image-viewer-backdrop,.device-camera-backdrop,.mw-modal-backdrop{

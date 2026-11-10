@@ -14,8 +14,8 @@ test('Minglora Menu beside Messenger has a clean single-row header', () => {
   assert.ok(html.includes('id="messenger-btn"'));
   assert.ok(html.includes('id="minglora-menu-toggle"'));
   assert.ok(html.includes('id="minglora-menu-panel"'));
-  assert.ok(html.includes('minglora-menu.css?v=20261108-menu-search-removed-1'));
-  assert.ok(html.includes('minglora-menu.js?v=20261108-menu-search-removed-1'));
+  assert.ok(html.includes('minglora-menu.css?v=20261110-facebook-menu-size-scroll-2'));
+  assert.ok(html.includes('minglora-menu.js?v=20261110-facebook-menu-size-scroll-2'));
   for (const label of ['Social','Entertainment','Shopping','Personal','Professional','More from Meta','Create']) {
     assert.ok(script.includes(label), 'Menu contains ' + label);
   }
@@ -59,4 +59,26 @@ test('Create options have their own scroll area on desktop and remain in normal 
   assert.match(css, /\.minglora-menu-create-list\s*\{[^}]*max-height:min\(520px,calc\(100dvh - 290px\)\)[^}]*overflow-y:auto[^}]*overscroll-behavior:contain/s);
   assert.match(css, /\.minglora-menu-create-card\s*\{[^}]*position:sticky/s);
   assert.match(css, /@media\(max-width:760px\)[\s\S]*\.minglora-menu-create-list\s*\{[^}]*max-height:none[^}]*overflow:visible/s);
+});
+
+
+test('Main Menu uses Facebook-sized viewport bounds on desktop, tablet and phones', () => {
+  const css = read('public/minglora-menu.css');
+  const safety = read('public/layout-safety.css');
+  assert.match(css, /width:min\\(680px,calc\\(100vw - 32px\\)\\)/);
+  assert.match(css, /height:min\\(720px,calc\\(100dvh - 84px\\)\\)/);
+  assert.match(css, /@media\\(min-width:761px\\) and \\(max-width:1024px\\)/);
+  assert.match(css, /width:min\\(640px,calc\\(100vw - 24px\\)\\)/);
+  assert.match(css, /@media\\(max-width:760px\\)[\\s\\S]*width:100vw[\\s\\S]*height:100dvh/);
+  assert.match(safety, /max-width:min\\(360px,calc\\(100vw - 24px\\)\\)!important/);
+});
+
+test('Scrolling does not dismiss the Menu; outside clicks and Escape still close it', () => {
+  const script = read('public/minglora-menu.js');
+  const safety = read('public/layout-safety.css');
+  assert.match(script, /document\\.addEventListener\\('click'/);
+  assert.doesNotMatch(script, /document\\.addEventListener\\('pointerdown'/);
+  assert.match(script, /event\\.key === 'Escape'/);
+  assert.match(script, /document\\.documentElement\\.classList\\.add\\('minglora-menu-open'\\)/);
+  assert.match(safety, /html\\.minglora-menu-open,[\\s\\S]*body\\.minglora-menu-open/);
 });
