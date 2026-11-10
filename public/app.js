@@ -7927,7 +7927,7 @@ async function refreshMessageConversations(){
       if(fresh.length){
         const restricted=new Set(state.settings?.preferences?.messengerRestrictedUserIds||[]);
         const eligibleFresh=fresh.filter(item=>!item.conversation.isRequest&&!restricted.has(item.conversation.user.id));
-        if(eligibleFresh.length&&state.settings?.preferences?.messengerMessageSounds!==false)playMessengerMessageSound();
+        if(eligibleFresh.length&&state.settings?.preferences?.messengerMessageSounds!==false){const category=eligibleFresh.some(item=>item.message.groupId)?'group_message':eligibleFresh.some(item=>(item.message.attachments||[]).some(file=>file.mediaType==='audio'))?'voice_message':'message';playMessengerMessageSound(category);}
         if(eligibleFresh.length&&state.settings?.preferences?.messengerAutoOpenNewMessages===true){
           const peers=[...new Map(eligibleFresh.map(item=>[item.conversation.user.id,item.conversation.user])).values()];
           peers.forEach(member=>{if(!state.messageWindows.some(win=>win.user.id===member.id))openMessageWindow(member);});
@@ -8253,8 +8253,9 @@ async function updateMessengerBadge(){
 
 function messengerPreferences(){return state.settings?.preferences||{};}
 function messengerPreference(key,fallback){const value=messengerPreferences()[key];return value===undefined?fallback:value;}
-function playMessengerMessageSound(){
+function playMessengerMessageSound(category='message'){
   try{
+    if(window.MingloraSoundStudio?.playNotification){void window.MingloraSoundStudio.playNotification(category);return;}
     const experience=window.MingloraExperience?.getSettings?.();
     if((window.MingloraExperience?.shouldSilenceNotifications?.('message')||experience?.soundMode==='mute')||experience?.messageSound===false)return;
     if(state.settings?.preferences?.messengerMessageSounds===false)return;
@@ -9198,7 +9199,11 @@ async function pollBrowserNotifications(){
     }else{
       fresh=items.filter(item=>!browserNotificationSeen.has(item.id));
       if(!webPushSubscriptionActive){
-        for(const item of fresh)void window.MingloraSoundStudio?.playNotification?.(item.type,item.id);
+        const alreadyHandledByMessengerOrCall=new Set(['message','group_message','voice_message','call']);
+        for(const item of fresh){
+          if(alreadyHandledByMessengerOrCall.has(item.type))continue;
+          void window.MingloraSoundStudio?.playNotification?.(item.type,item.id);
+        }
       }
       for(const item of fresh){
         browserNotificationSeen.add(item.id);

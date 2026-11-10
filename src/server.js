@@ -6507,6 +6507,7 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
         return json(res,200,{settings:{...user.soundStudio,customSounds},customSounds});
       }
       if(method==='POST'&&p==='/api/sounds/custom'){
+        if(input.rightsConfirmed!==true)return json(res,400,{error:'Confirm that you own this audio or have permission to use it.'});
         const asset=(db.mediaAssets||[]).find(item=>item.id===String(input.assetId||'')&&item.ownerId===user.id&&item.slot==='ringtone'&&item.bucket==='minglora-ringtones'&&item.status==='uploaded');
         if(!asset)return json(res,404,{error:'The uploaded sound could not be found in your private media uploads.'});
         const validation=validateCallRingtoneUpload({mimeType:asset.mimeType,byteSize:asset.byteSize});
