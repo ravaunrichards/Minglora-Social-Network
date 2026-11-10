@@ -202,7 +202,10 @@ test('owner Admin Centre exposes vacancy creation and safe lifecycle management'
   assert.match(ui,/vacancy\.filledSlots/);
   assert.match(ui,/vacancy\.remainingSlots/);
   assert.match(ui,/No AI identity or appointment was created/);
-  assert.match(ui,/No employee appointed/);
+  assert.match(ui,/Filled slots:/);
+  assert.match(ui,/Remaining:/);
+  assert.match(ui,/vacancy\.filledSlots/);
+  assert.match(ui,/vacancy\.remainingSlots/);
   assert.match(api,/path===root\+'\/vacancies'/);
   assert.match(api,/vacancyMatch&&method==='PATCH'/);
   assert.match(api,/vacancyMatch&&method==='DELETE'/);
