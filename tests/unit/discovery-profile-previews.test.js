@@ -174,6 +174,8 @@ test('public AI profile routes preserve disclosure, member privacy and owner-ID 
   const api=server.slice(apiStart,apiEnd);
   assert.match(api,/isSupabasePersistence\(\)/,'profile reads fail closed without canonical PostgreSQL');
   assert.match(api,/ai_identity_public_profile_get/,'profile data comes from the canonical privacy-filtered lookup');
+  assert.match(api,/ai_identity_block_list/,'direct profile links check the member-to-AI block list');
+  assert.match(api,/blockedByMember/,'blocked AI identities are hidden even when opened by slug');
   assert.match(api,/blockedBetween\(user\.id,ownerId\)/,'blocked owners cannot expose AI profiles');
   assert.match(api,/const \{ownerAdminId,\.\.\.publicProfile\}=profile/,'internal owner identifier is removed from member response');
   assert.match(server,/const publicAiPageMatch=p\.match\(\/\^\\\/ai\\\//,'dedicated AI profile page route exists');
