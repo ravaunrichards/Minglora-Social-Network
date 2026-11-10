@@ -8257,6 +8257,10 @@ function playMessengerMessageSound(){
     const experience=window.MingloraExperience?.getSettings?.();
     if((window.MingloraExperience?.shouldSilenceNotifications?.('message')||experience?.soundMode==='mute')||experience?.messageSound===false)return;
     if(state.settings?.preferences?.messengerMessageSounds===false)return;
+    if(window.MingloraSoundStudio?.playNotification){
+      void window.MingloraSoundStudio.playNotification('message');
+      return;
+    }
     const AudioContextClass=window.AudioContext||window.webkitAudioContext;
     if(!AudioContextClass)return;
     const context=callToneContext||messengerMessageSoundContext||new AudioContextClass();
@@ -8510,6 +8514,7 @@ async function renderMessages(){
 function stopCallTone(){
  if(callToneTimer){clearInterval(callToneTimer);callToneTimer=null;}
  if(callRingtoneAudio){callRingtoneAudio.pause();callRingtoneAudio.currentTime=0;callRingtoneAudio=null;}
+ window.MingloraSoundStudio?.stopPlayback?.();
  try{navigator.vibrate?.(0);}catch{}
  for(const node of callToneNodes){try{node.stop?.();node.disconnect?.();}catch{}}
  callToneNodes=[];
@@ -8553,8 +8558,19 @@ async function startIncomingRingtone(call=null){
  if(soundEnabled===false)return false;
  if(experience?.vibrateOnRing&&typeof navigator.vibrate==='function')navigator.vibrate([100,70,100]);
  const ringtone=await getCallRingtone();
- if(ringtone?.url){try{const audio=new Audio(ringtone.url);audio.loop=true;audio.preload='auto';audio.volume=Math.max(0,Math.min(100,Number(experience?.ringtoneVolume??80)))/100;callRingtoneAudio=audio;await audio.play();return true;}catch{callRingtoneAudio=null;}}
- const started=playCallTone([440,480,620],950);callToneTimer=setInterval(()=>playCallTone([440,480,620],950),3000);return started;
+ const selectedRingtoneId=String(experience?.[voiceCall?'voiceCallRingtoneId':'videoCallRingtoneId']||'');
+ const useUploadedRingtone=selectedRingtoneId==='legacy-custom'||(!selectedRingtoneId&&Boolean(ringtone?.url));
+ if(useUploadedRingtone&&ringtone?.url){
+   try{const audio=new Audio(ringtone.url);audio.loop=true;audio.preload='auto';audio.volume=Math.max(0,Math.min(100,Number(experience?.ringtoneVolume??80)))/100;callRingtoneAudio=audio;await audio.play();return true;}
+   catch{callRingtoneAudio=null;}
+ }
+ if(window.MingloraSoundStudio?.playCall){
+   const started=await window.MingloraSoundStudio.playCall(voiceCall?'voice':'video');
+   if(started)return true;
+ }
+ const started=playCallTone(voiceCall?[440,480,620]:[523,659,784],950);
+ callToneTimer=setInterval(()=>playCallTone(voiceCall?[440,480,620]:[523,659,784],950),3000);
+ return started;
 }
 function mountMingloraCallOverlay(overlay){
  document.body.append(overlay);
@@ -9179,6 +9195,7 @@ async function pollBrowserNotifications(){
       fresh=items.filter(item=>!browserNotificationSeen.has(item.id));
       for(const item of fresh){
         browserNotificationSeen.add(item.id);
+        if(item.type!=='message'&&item.type!=='call')void window.MingloraSoundStudio?.playNotification?.(item.type);
         if(webPushSubscriptionActive||state.settings?.notifications?.push===false||!('Notification' in window)||Notification.permission!=='granted')continue;
         const title=item.type==='live'?'Minglora LIVE':item.type==='live_moderator'?'LIVE moderator update':item.type==='call'?'Incoming Minglora call':item.type==='profile_view'?'Profile view':item.type==='gift'?'New gift':item.type==='fan_club'?'Fan Club update':item.type==='meetwave_invite'?'MeetWave invitation':item.type==='league_match'?'League match update':item.type==='friend'?'Friend update':item.type==='reaction'?'Post reaction':item.type==='comment'?'New comment':item.type==='follow'?'New follower':item.type==='message'?'New Minglora message':'Minglora account update';
         try{
