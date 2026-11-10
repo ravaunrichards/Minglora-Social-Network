@@ -14,7 +14,7 @@ const [html, css, sprite, serviceWorker, menuScript, appScript] = await Promise.
   read('public/app.js')
 ]);
 
-const useIcon = id => `<use href="/assets/icons/navigation-3d.svg?v=${id==='recharge'?'20261104-recharge-wallet-3d-3':id==='video'?'20261108-mobile-navigation-icons-1':'20261102-navigation-3d-2'}#${id}"></use>`;
+const useIcon = id => `<use href="/assets/icons/navigation-3d.svg?v=${["clock","gift","trophy","gamepad","game-video","reels","megaphone","ai","admin","logout"].includes(id)?'20261110-semantic-icons-3d-1':id==='recharge'?'20261104-recharge-wallet-3d-3':id==='video'?'20261108-mobile-navigation-icons-1':'20261102-navigation-3d-2'}#${id}"></use>`;
 
 test('desktop navigation keeps its existing destinations and uses 3D icons', () => {
   const nav = html.match(/<nav class="top-nav"[\s\S]*?<\/nav>/)?.[0] || '';
@@ -31,7 +31,7 @@ test('desktop navigation keeps its existing destinations and uses 3D icons', () 
     assert.ok(nav.includes(`<small>${label}</small>`), `${label} label remains visible`);
   }
   assert.match(nav,/data-view="leagues"/);
-  assert.ok(nav.includes('<span class="league-nav-icon" aria-hidden="true">🏆</span><small>Leagues</small>'));
+  assert.ok(nav.includes(useIcon('trophy')), 'Leagues uses a matching 3D trophy');
 });
 
 test('mobile header keeps the requested five primary tabs visible below logo and Search', () => {
@@ -72,7 +72,7 @@ test('utility rail and header actions use the matching rendered icon assets', ()
 });
 
 test('the SVG sprite contains finished dimensional artwork for primary and supporting actions', () => {
-  for (const id of ['home', 'explore', 'create', 'video', 'live', 'friends', 'messages', 'coins', 'creator', 'groups', 'pages', 'saved', 'activity', 'settings', 'search', 'profile', 'microphone', 'palette', 'share', 'photo', 'feeling', 'call', 'sound', 'privacy', 'request', 'archive', 'delivery', 'lock', 'block', 'external-link', 'more', 'close', 'restore', 'unlock', 'arrow-left', 'arrow-right', 'menstrual-health']) {
+  for (const id of ['home', 'explore', 'create', 'video', 'live', 'friends', 'messages', 'coins', 'creator', 'groups', 'pages', 'saved', 'activity', 'settings', 'search', 'profile', 'microphone', 'palette', 'share', 'photo', 'feeling', 'call', 'sound', 'privacy', 'request', 'archive', 'delivery', 'lock', 'block', 'external-link', 'more', 'close', 'restore', 'unlock', 'arrow-left', 'arrow-right', 'menstrual-health', 'clock', 'gift', 'trophy', 'gamepad', 'game-video', 'reels', 'megaphone', 'ai', 'admin', 'logout']) {
     assert.match(sprite, new RegExp(`<symbol id="${id}" viewBox="0 0 64 64">`), `sprite contains ${id}`);
   }
   assert.match(sprite, /<linearGradient id="blue-front"/);
@@ -82,6 +82,26 @@ test('the SVG sprite contains finished dimensional artwork for primary and suppo
   assert.ok(html.includes('/assets/icons/navigation-3d.svg?v=20261110-menstrual-health-3d-1#menstrual-health'));
   assert.ok(serviceWorker.includes("/assets/icons/navigation-3d.svg?v=20261110-menstrual-health-3d-1#menstrual-health"));
   assert.doesNotMatch(sprite, /<text\b|<image\b/i, 'icon artwork is vector-rendered, not text glyphs or bitmap placeholders');
+});
+
+
+test('feature navigation uses distinct, semantically correct 3D icons', () => {
+  assert.match(html, /data-view="calendar" aria-label="Events"[^\n]+#calendar/);
+  assert.match(html, /data-view="clock-centre" aria-label="Clock Centre"[^\n]+#clock/);
+  assert.match(html, /data-view="gifts" aria-label="Gifts"[^\n]+#gift/);
+  assert.match(html, /title="Gaming is coming soon"[^\n]+#gamepad/);
+  assert.match(html, /title="Play Games is coming soon"[^\n]+#gamepad/);
+  assert.match(html, /data-left-action="reels"[^\n]+#reels/);
+  assert.match(html, /data-view="leagues"[^\n]+#trophy/);
+  assert.match(menuScript, /Clock Centre[^\n]*icon: 'clock'/);
+  assert.match(menuScript, /Gaming Video[^\n]*icon: 'game-video'/);
+  assert.match(menuScript, /Play Games[^\n]*icon: 'gamepad'/);
+  assert.match(menuScript, /Meta AI[^\n]*icon: 'ai'/);
+  assert.match(menuScript, /Ads Manager[^\n]*icon: 'megaphone'/);
+  assert.match(menuScript, /Log Out[^\n]*icon: 'logout'/);
+  for (const id of ['clock','gift','trophy','gamepad','game-video','reels','megaphone','ai','admin','logout']) {
+    assert.ok(serviceWorker.includes('/assets/icons/navigation-3d.svg?v=20261110-semantic-icons-3d-1#' + id), id + ' is included in offline shell precache');
+  }
 });
 
 test('3D icon presentation uses depth, lighting and reduced-motion-safe transitions', () => {
