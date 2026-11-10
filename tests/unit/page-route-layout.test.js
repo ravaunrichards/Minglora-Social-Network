@@ -62,3 +62,56 @@ test('Admin Centre initializes dedicated page routing after building its feature
   assert.ok(!admin.includes('return payload;\\n    initializeAdminPageNavigation(panel, unlocked);'),
     'The page router must never be placed after an unconditional return');
 });
+
+
+test('Admin Centre has exactly seven persistent department buttons and no tool submenu in the sidebar',()=>{
+  const admin=fs.readFileSync(path.join(root,'public/admin-centre.js'),'utf8');
+  const start=admin.indexOf('function initializeAdminPageNavigation(panel, unlocked) {');
+  const end=admin.indexOf('\n  function addControlCentrePanel(',start);
+  assert.ok(start>=0&&end>start,'Department page navigation function exists');
+  const nav=admin.slice(start,end);
+  const keys=['dashboard','profile-community','user-management','creator-finance','live-pro-access','trust-support','administration'];
+  for(const key of keys){
+    assert.match(nav,new RegExp("key:'"+key+"'"),'Department '+key+' is defined');
+  }
+  assert.equal((nav.match(/\\{key:'(?:dashboard|profile-community|user-management|creator-finance|live-pro-access|trust-support|administration)'/g)||[]).length,7,
+    'Exactly seven top-level department workspaces are defined');
+  assert.match(nav,/departments\\.forEach\\(\\(department,index\\)=>\\s*\\{\\s*const link = document\\.createElement\\('a'\\)/,
+    'The persistent sidebar is populated from the seven departments');
+  assert.match(nav,/link\\.className = 'admin-centre-sidebar-link'/,
+    'Each department is a single sidebar navigation control');
+  assert.doesNotMatch(nav,/Recently visited|Find a page|admin-centre-nav-group|admin-centre-nav-heading/,
+    'The sidebar has no expandable tool groups, recent-page list or tool search');
+});
+
+test('Admin Centre groups existing tools into complete department pages and keeps direct legacy links compatible',()=>{
+  const admin=fs.readFileSync(path.join(root,'public/admin-centre.js'),'utf8');
+  const start=admin.indexOf('function initializeAdminPageNavigation(panel, unlocked) {');
+  const end=admin.indexOf('\n  function addControlCentrePanel(',start);
+  const nav=admin.slice(start,end);
+  assert.match(nav,/departments\\.forEach\\(department=>\\s*\\{\\s*const view = document\\.createElement\\('section'\\)/,
+    'Each department receives its own separate page view');
+  assert.match(nav,/view\\.hidden = pageKey !== key/,
+    'Only the selected department page is visible');
+  assert.match(nav,/view\\.append\\(target\\)/,
+    'Existing live tool containers are moved into their owning department instead of duplicated');
+  assert.match(nav,/data-admin-department-tool/,
+    'Each moved tool is retained as a department-specific workspace section');
+  for(const alias of ['users','audit-log','gift-earnings','campaign-wallet','member-promotions','marketing-budget','platform-payouts','creator-withdrawals','promotional-tracking','live-pro','moderation','support','security']){
+    assert.match(nav,new RegExp(alias+":"),'Legacy route '+alias+' still resolves to its department');
+  }
+  assert.match(nav,/window\\.history\\.pushState/,'Department navigation updates browser history');
+  assert.match(nav,/window\\.addEventListener\\('popstate'/,'Browser Back and Forward restore the selected department');
+});
+
+test('Admin Centre department workspaces remain responsive with a mobile department picker',()=>{
+  const admin=fs.readFileSync(path.join(root,'public/admin-centre.js'),'utf8');
+  const css=fs.readFileSync(path.join(root,'public/admin-centre.css'),'utf8');
+  assert.match(admin,/admin-centre-mobile-page-picker/,'A mobile department selector is included');
+  assert.match(css,/\\.admin-centre-workspace\\{[\\s\\S]*?grid-template-columns:minmax\\(230px,270px\\) minmax\\(0,1fr\\)/,
+    'Desktop uses a persistent sidebar and a separate full-width workspace');
+  assert.match(css,/@media\\(max-width:760px\\)[\\s\\S]*?\\.admin-centre-workspace\\{grid-template-columns:minmax\\(0,1fr\\)\\}/,
+    'Mobile stacks navigation above the selected full-page workspace');
+  assert.match(css,/\\.admin-centre-page-view\\[hidden\\]\\{display:none!important\\}/,
+    'Inactive departments are hidden rather than stacked below the active page');
+});
