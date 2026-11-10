@@ -1,36 +1,39 @@
-# Social-network feature catalog
+# Minglora social-network feature catalog
 
-This is a scope checklist, not a claim of Facebook parity.
+**Audit date:** 2026-11-10  
+This is a concise status index, not a claim of Facebook parity. The detailed comparison, verified evidence, gaps and prioritized completion order are in [FACEBOOK_PARITY_AUDIT.md](FACEBOOK_PARITY_AUDIT.md). The implementation-specific status is maintained in [FEATURES.md](FEATURES.md).
 
-| Domain | Current state |
-|---|---|
-| MeetWave meetings | Minglora-authenticated instant, scheduled and reusable personal rooms; private/friends/public access, invitations, LiveKit audio/video, screen sharing, meeting chat and host-only room ending | Breakout rooms, recording, captions/transcription, waiting room, co-hosts and AI meeting notes |
-| Accounts | Supabase Auth sign-up/sign-in; login rate limiting, password reset/change, email-change verification, server-sealed auth tokens, session revoke and TOTP MFA when provider configured | Passkeys, push login alerts and account deletion |
-| Profiles | Edit display name, unique username, bio and location; avatar/cover from gallery, folders or camera with image zoom/crop/rotation and Supabase Storage upload | Verified profiles, themes, albums and tagging |
-| Feed/posts | Posts accept device-uploaded photos, videos, audio and GLB 3D attachments; zoom/crop/rotation tools for images; edit and delete own posts | Automated video transcoding, chunked large uploads, personalized ranking and per-post audiences |
-| Reactions/comments | Basic reaction and comment APIs; threaded replies and lifecycle controls incomplete |
-| Relationships | Follow/unfollow, clickable follower/following lists, automatic friendship on reciprocal follow, friend requests/acceptance and block/unblock | Mute/restrict and other advanced relationship controls |
-| Groups | Public groups with join/leave, details and member posts supporting uploaded images, video, audio and 3D media; report posts and author/owner deletion | Roles, private groups, invitations, transcoding and automated moderation incomplete |
-| Pages | Create, follow, detail and owner publishing workflows; role management and insights incomplete |
-| Stories | Text, uploaded photo/video, audience rules, 24-hour expiry and view tracking | Story scheduling, transcoding and advanced moderation |
-| Profile image upload | Device gallery/file-picker uploads for avatar and cover, saved to the existing Minglora avatar/cover Storage buckets | Crop editor, old-media cleanup and gallery/albums are incomplete |
-| Photos and albums | Not implemented |
-| Reels/short-form video | Not implemented |
-| Watch/long-form video | Not implemented |
-| Voice/video calls | Not implemented |
-| Check-ins/places | Not implemented |
-| Memories/fundraisers | Not implemented |
-| Messaging | Basic direct text messaging; realtime, attachments and read receipts incomplete |
-| Notifications | Basic in-app notifications; preference and external delivery incomplete |
-| Search | Basic substring search across people, posts, groups and Pages; indexing and advanced privacy-aware discovery incomplete |
-| Events | Not implemented |
-| Marketplace | Not implemented |
-| Live video | Not implemented |
-| Account recovery/verification | Supabase password recovery link flow and email-change verification request; recovery password update; TOTP login challenge | Email verification onboarding, identity recovery support and passkeys |
-| Notification preferences | Persisted in-app, friend-request, message and interaction controls; push/email/device delivery not implemented |
-| Account settings | Dedicated Settings & Privacy with saved privacy/notification/appearance preferences, blocked-member management, account export, password/email, MFA and session management, support tickets and member reports | Account deletion and advanced recovery options |
-| Data export/deletion | Authenticated JSON download of the member's profile, content, relationships and account activity; secrets and sessions excluded | Verified deletion requests and coordinated erasure/retention workflows are not implemented |
-| Safety/privacy | Reports for members, posts, comments, stories, groups, Pages and messages; moderator queue and supported actions; audit records; support ticket/reply workflow | Human moderator allow-list configuration, appeals automation, automated media scanning and comprehensive safety policies |
-| Operations | Node, JSON store, basic tests, Docker and CI exist; durable database and production operations incomplete |
+## Current runtime status
 
-A feature is complete only after end-to-end integration and tests. A document, SQL table, or empty UI does not count.
+| Domain | Status | Summary |
+|---|---|---|
+| Accounts and security | Present / Partial | Supabase Auth, registration/sign-in, OAuth, session lifecycle, password recovery, MFA and account switching; passkeys, login alerts and complete deletion/erasure remain gaps. |
+| Profiles | Present / Partial | Profile details, About sections, avatar/cover uploads and crop, profile status, activity, archive and Highlights; photo tagging and stronger identity verification remain gaps. |
+| Feed and posts | Present / Partial | All/Following/Friends/For You scopes, post creation/edit/delete, uploaded media, saved posts and reactions; post audience controls, advanced ranking and full comment lifecycle remain incomplete. |
+| Friends and follows | Present / Partial | Friend requests/lists, custom lists, follows, reciprocal-follow friendship and block/unblock; mute/restrict and advanced relationship controls remain incomplete. |
+| Stories | Present / Partial | Stories with audience enforcement, expiry and view tracking; Highlights and archive exist; scheduling, interactive tools and advanced moderation remain incomplete. |
+| Photos and albums | Partial | Avatar/cover media and profile album API/editor are present; full Photos destination, tagging and shared albums remain incomplete. |
+| Reels and video | Present / Partial | Reels-format posts, For You video feed, Video Centre, sound tools and Watch Later; full Watch channels, automated transcoding and advanced creator analytics remain incomplete. |
+| Messenger | Present / Partial | Direct/group chats, attachments, voice notes, GIFs/stickers, reactions, read state, WebSocket updates and call entry points; end-to-end encryption and robust multi-instance delivery remain incomplete. |
+| Voice/video calls and LIVE | Blocked / Partial | Substantial LiveKit calling and LIVE code exists, but the inspected Render runtime reports LiveKit credentials are not configured. |
+| Groups | Partial | Public groups and member discussions exist; private groups, role hierarchy, invitations, events and advanced moderation remain incomplete. |
+| Pages | Partial | Page discovery, follows, publishing, team roles and basic insights exist; Page inbox, complete engagement tools and advanced analytics remain incomplete. |
+| Events and check-ins | Partial | Calendar/events, RSVP and profile check-ins exist; Local discovery, ticketing and advanced event management remain incomplete. |
+| Notifications | Present / Partial | In-app notification centre and preferences exist; Web Push is supported but provider/device delivery needs configuration verification. |
+| Creator Studio and monetization | Present / Partial | Creator workspace, subscriptions, gifts, coins, earnings and PayPal payout paths exist; analytics, drafts and some payout operations remain incomplete/configuration-dependent. |
+| Search and recommendations | Partial | Basic search, people discovery and video recommendations exist; indexed relevance search, advanced filters and full interest controls are missing. |
+| Marketplace | Retired | Migrations 072 and 073 remove Marketplace schema and runtime-state records; current menu marks it coming soon. |
+| Jobs | Retired | Migrations 072 and 073 remove job-related records and runtime-state collections. |
+| Dating, Memories, Fundraisers | Missing | No end-to-end implementations were found in the current runtime. |
+| Ads Manager and ad preferences | Missing | Existing menu items are placeholders; no active end-to-end advertiser or ad-preference product was verified. |
+| Games / Instant Games | Missing / Partial | Creator Leagues and LIVE mobile-gaming mode exist; no game catalogue or playable instant-games product was verified. |
+| AI assistant and AI creation | Missing | No integrated AI Mode, Creator Assistant, AI comment summaries, Group Ask or AI listing/creation tool was verified. |
+| Native platform clients | Partial / Missing | Browser UI is implemented; Android is a WebView shell/update workflow; iOS, desktop and TV clients remain planned. |
+| Data, privacy and operations | Partial | Supabase-backed durable state, reports, moderation, export and privacy controls exist; route-wide privacy review, normalized transactional repositories, backup/restore and multi-instance readiness remain incomplete. |
+
+## Empty-state and completion rules
+
+- A new account must have honest empty states. Never invent users, posts, reactions, messages, products, ratings, sales, views or engagement counts.
+- A README, placeholder screen, historical migration or SQL table is not proof of a working feature.
+- A capability becomes Present only after its responsive UI, server authorization, privacy enforcement, durable persistence, tests and deployed configuration are verified.
+- Do not reapply retired Marketplace/Jobs migrations or run destructive data changes as part of a feature-parity review.
