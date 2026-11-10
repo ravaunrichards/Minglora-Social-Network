@@ -110,7 +110,7 @@ Deno.serve(async (req: Request) => {
       actor_id: actorUserId,
       action: actionName,
       target_type: "user",
-      target_id: targetUserId,
+      target_id: targetUserId || null,
       request_id: crypto.randomUUID(),
       metadata
     });
@@ -272,7 +272,18 @@ Deno.serve(async (req: Request) => {
         ...(contactPhone ? { contact_phone: contactPhone, phone_number: contactPhone } : {})
       }
     });
-    if (createError || !created?.user) return json(409, { error: String(createError?.message || "Minglora could not create this account.").slice(0, 220) });
+    if (createError || !created?.user) {
+      const auditRecorded = await recordAdminUserAction(actorUserId, "", "account.create_failed", {
+        outcome: "rejected",
+        reason: "auth_create_rejected",
+        emailProvided: Boolean(email),
+        phoneProvided: Boolean(phone)
+      });
+      return json(409, {
+        error: String(createError?.message || "Minglora could not create this account.").slice(0, 220),
+        auditRecorded
+      });
+    }
     const userId = String(created.user.id);
     const profile: Record<string, unknown> = { id: userId };
     if (displayName) profile.display_name = displayName;
@@ -416,7 +427,22 @@ Deno.serve(async (req: Request) => {
     }
     if (Object.keys(authAttributes).length) {
       const { error: updateError } = await admin.auth.admin.updateUserById(userId, authAttributes as any);
-      if (updateError) return json(409, { error: String(updateError.message || "The Supabase Auth account could not be updated.").slice(0, 220), partial: Object.keys(profilePatch).length > 0 });
+      if (updateError) {
+        const profileApplied = Object.keys(profilePatch).length > 0;
+        const auditAction = profileApplied ? "account.update_partial" : "account.update_failed";
+        const auditRecorded = await recordAdminUserAction(actorUserId, userId, auditAction, {
+          outcome: profileApplied ? "partial" : "rejected",
+          changedFields,
+          profileFields: Object.keys(profilePatch),
+          profileApplied,
+          authUpdateFailed: true
+        });
+        return json(409, {
+          error: String(updateError.message || "The Supabase Auth account could not be updated.").slice(0, 220),
+          partial: profileApplied,
+          auditRecorded
+        });
+      }
     }
     const auditRecorded = await recordAdminUserAction(actorUserId, userId, "account.update", { changedFields });
     const { data: refreshed, error: refreshError } = await admin.auth.admin.getUserById(userId);
@@ -581,7 +607,16 @@ Deno.serve(async (req: Request) => {
     }
     const { data: updated, error: updateError } = await admin.auth.admin.updateUserById(userId, attributes as any);
     if (updateError || !updated?.user) {
-      return json(503, { error: String(updateError?.message || "Minglora could not update this account's ban status.").slice(0, 240) });
+      const failedAction = operation === "ban" ? "account.ban_failed" : "account.unban_failed";
+      const auditRecorded = await recordAdminUserAction(actorUserId, userId, failedAction, {
+        outcome: "rejected",
+        reason: reason || null,
+        reasonCode: "supabase_auth_update_rejected"
+      });
+      return json(503, {
+        error: String(updateError?.message || "Minglora could not update this account's ban status.").slice(0, 240),
+        auditRecorded
+      });
     }
     let sessionRevoked = false;
     if (operation === "ban") {
@@ -627,7 +662,7 @@ Deno.serve(async (req: Request) => {
     const limit = Number.isFinite(requestedLimit) ? Math.max(1, Math.min(100, requestedLimit)) : 50;
     const search = String(input.search || "").trim().toLowerCase().slice(0, 100);
     const actionFilter = String(input.actionFilter || "all").trim().toLowerCase();
-    const allowedAuditActions = new Set(["all","account.create","account.create_failed","account.update","account.delete","account.delete_failed","account.sessions_revoke","account.sessions_revoke_failed","account.ban","account.unban"]);
+    const allowedAuditActions = new Set(["all","account.create","account.create_failed","account.update","account.update_failed","account.update_partial","account.delete","account.delete_failed","account.sessions_revoke","account.sessions_revoke_failed","account.ban","account.ban_failed","account.unban","account.unban_failed"]);
     if (!allowedAuditActions.has(actionFilter)) return json(400, { error: "Choose a supported audit action filter." });
     let query = admin.from("audit_log").select("id,actor_id,action,target_type,target_id,metadata,created_at")
       .order("created_at", { ascending:false }).limit(search ? 500 : limit);
@@ -661,7 +696,7 @@ Deno.serve(async (req: Request) => {
       const metadata = row.metadata && typeof row.metadata === "object" ? row.metadata : {};
       const actorId=String(row.actor_id || ""),targetId=String(row.target_id || "");
       const actor=byId.get(actorId),target=byId.get(targetId);
-      const outcome = ["deleted","rejected"].includes(String(metadata.outcome || "")) ? String(metadata.outcome) : "";
+      const outcome = ["deleted","rejected","partial"].includes(String(metadata.outcome || "")) ? String(metadata.outcome) : "";
       const deletionMode = metadata.deletionMode === "hard" ? "hard" : "";
       const scope = ["global","application_only"].includes(String(metadata.scope || "")) ? String(metadata.scope) : "";
       return {
@@ -681,7 +716,9 @@ Deno.serve(async (req: Request) => {
           outcome,deletionMode,scope,
           providerRefreshTokensRevoked:metadata.providerRefreshTokensRevoked === true,
           profileLinkFailed:metadata.profileLinkFailed === true,
-          rollbackSucceeded:metadata.rollbackSucceeded === true
+          rollbackSucceeded:metadata.rollbackSucceeded === true,
+          profileApplied:metadata.profileApplied === true,
+          authUpdateFailed:metadata.authUpdateFailed === true
         }
       };
     });
