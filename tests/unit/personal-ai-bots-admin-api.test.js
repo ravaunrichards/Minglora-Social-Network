@@ -827,6 +827,22 @@ test('owner AI report review queue supports bounded page offsets and next-page m
   assert.equal(context.res.payload.hasMore,true);
 });
 
+test('owner AI report review queue supports every documented status filter',async()=>{
+  for(const status of ['all','open','pending','in_review','actioned','dismissed']){
+    let options=null;
+    const context=makeContext({
+      method:'GET',
+      path:'/api/admin/personal-ai-bots/safety/reports',
+      url:new URL('https://minglora.test/api/admin/personal-ai-bots/safety/reports?status='+status+'&limit=25&offset=0'),
+      listAiIdentityReports:async value=>{options=value;return [];}
+    });
+    await handlePersonalAiBotsAdminApi(context);
+    assert.equal(context.res.statusCode,200,status);
+    assert.deepEqual(options,{status,limit:25,offset:0},status);
+    assert.deepEqual(context.res.payload.reports,[],status);
+  }
+});
+
 test('owner AI report review queue rejects invalid pagination before querying storage',async()=>{
   let called=false;
   const context=makeContext({
