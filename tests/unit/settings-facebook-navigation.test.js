@@ -22,7 +22,7 @@ test('Facebook-style Settings & Privacy navigation includes nested menu pages an
  assert.ok(settings.includes('data-settings-page="ad-choices"'));
  assert.ok(settings.includes('data-settings-page="ad-preferences"'));
  assert.ok(settings.includes('data-settings-page="information-use"'));
- assert.ok(settings.includes('Watch, comment, search, advertising, mention and content-reuse histories are not currently tracked'));
+ assert.ok(settings.includes('Watch, comment, search, advertising, mention and content-reuse histories are not yet tracked'));
  assert.ok(settings.includes('not a complete published Privacy Policy'));
  assert.ok(settings.includes('data-settings-back-page="home"'));
  assert.ok(index.includes('settings-navigation.css?v=20261110-facebook-settings-privacy-1'));
