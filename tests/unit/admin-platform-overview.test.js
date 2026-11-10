@@ -44,7 +44,7 @@ test("Admin Centre preserves the existing full platform workspace", () => {
   assert.match(css, /admin-platform-module-grid/);
   assert.match(css, /admin-platform-collection-row/);
   assert.match(html, /Minglora — Admin Centre/);
-  assert.match(html, /20261110-admin-centre-seven-pages-1/);
+  assert.match(html, /20261110-admin-centre-seven-department-workspaces-2/);
 });
 
 test("Admin Centre is a standalone left-rail feature immediately below Profile", () => {
@@ -80,7 +80,7 @@ test("Only the designated Creator Hub admin identity can receive the Admin Centr
 });
 
 test("App shell and service worker load the restored Admin Centre navigation assets", () => {
-  const version = "20261110-admin-centre-seven-pages-1";
+  const version = "20261110-admin-centre-seven-department-workspaces-2";
   assert.ok(index.includes("/admin-centre.css?v=" + version));
   assert.ok(index.includes("/admin-centre.js?v=" + version));
   const appScript = index.match(/<script\b[^>]*src="(\/app\.js\?v=[^"]+)"/)?.[1] || '';
