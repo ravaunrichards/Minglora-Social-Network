@@ -1719,3 +1719,23 @@
   .admin-centre-sidebar-link-copy small{display:block}
   .admin-centre-history-controls button{padding:6px 8px;font-size:10px}
 }
+
+
+/* Optional compact mode keeps the persistent seven-button department rail available. */
+.admin-centre-workspace-sidebar-collapsed{grid-template-columns:minmax(68px,78px) minmax(0,1fr)}
+.admin-centre-workspace-sidebar-collapsed .admin-centre-sidebar{padding:10px 7px}
+.admin-centre-workspace-sidebar-collapsed .admin-centre-sidebar-heading{justify-items:center}
+.admin-centre-workspace-sidebar-collapsed .admin-centre-sidebar-heading strong{font-size:10px}
+.admin-centre-workspace-sidebar-collapsed .admin-centre-sidebar-heading small,
+.admin-centre-workspace-sidebar-collapsed .admin-centre-sidebar-link-copy,
+.admin-centre-workspace-sidebar-collapsed .admin-centre-sidebar-chevron,
+.admin-centre-workspace-sidebar-collapsed .admin-centre-sidebar-footer span:last-child,
+.admin-centre-workspace-sidebar-collapsed .admin-centre-page-search{display:none}
+.admin-centre-workspace-sidebar-collapsed .admin-centre-sidebar-nav{gap:7px}
+.admin-centre-workspace-sidebar-collapsed .admin-centre-sidebar-link{grid-template-columns:1fr;justify-items:center;padding:8px 4px}
+.admin-centre-workspace-sidebar-collapsed .admin-centre-sidebar-index{width:34px;height:34px;font-size:11px}
+.admin-centre-workspace-sidebar-collapsed .admin-centre-sidebar-link[title]{cursor:pointer}
+@media(max-width:760px){
+  .admin-centre-workspace-sidebar-collapsed{grid-template-columns:minmax(0,1fr)}
+  .admin-centre-workspace-sidebar-collapsed .admin-centre-sidebar-nav{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
