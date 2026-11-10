@@ -75,6 +75,15 @@ test('Notifications opens and restores as its own standalone destination',()=>{
     'Every direct notification entry synchronizes the active route and hides Home rails');
   assert.ok(app.includes("else if(state.view==='notifications')await renderNotifications();"),
     'Notifications is still supported by shared route restoration');
+  assert.ok(!app.includes("state.view='notifications';syncNavigationActive();persistCurrentView();recordBrowserNavigation();"),
+    'Notifications must not duplicate the history entry created by its route transition');
+});
+
+test('Messenger opens as a dedicated page instead of a floating Home-side panel',()=>{
+  assert.ok(app.includes("if(messengerButton)messengerButton.onclick=()=>activateNav('messages');"),
+    'The global Messenger action opens the full Messenger destination');
+  assert.match(app,/async function renderMessages\(\)\{\s*if\(state\.view!=='messages'\)activateSilent\('messages'\);/,
+    'Messenger keeps page state synchronized without duplicating navigation history');
 });
 
 test('Admin Centre initializes dedicated page routing after building its feature sections',()=>{
