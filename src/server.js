@@ -12,7 +12,7 @@ import { db, saveStore, uid, now, persistenceHealth, requestSupabaseState, isSup
 import { broadcastLiveKitData, createLiveKitToken, deleteLiveKitRoom, ensureLiveKitRoom, isLiveKitConfigured, listLiveKitParticipants, removeLiveKitParticipant, verifyLiveKitConnection, LIVEKIT_TRACK_SOURCE } from '../backend/modules/live/livekit.js';
 import { LIVE_MODES, broadcastTypeForLiveMode, getLivePublishSourceNames, normalizeLiveSettings } from '../backend/modules/live/settings.js';
 import { canAccessMeetWaveRoom, canManageMeetWaveParticipants, canReceiveMeetWaveInvitation, meetWaveRoomJoinAvailability, normalizeMeetWaveMessage, validateMeetWaveRoomInput, MEETWAVE_PARTICIPANT_LIMIT } from '../backend/modules/meetwave/service.js';
-import { CALL_RING_TIMEOUT_MS, CALL_MAX_PARTICIPANTS, CALL_RINGTONE_MIME_TYPES, CALL_RINGTONE_MAX_BYTES, countCallParticipants, expireRingingCall, isCallParticipantBusy, reconcileCallPresence, validateCallRingtoneUpload } from '../backend/modules/calls/service.js';
+import { CALL_RING_TIMEOUT_MS, CALL_MAX_PARTICIPANTS, CALL_RINGTONE_MIME_TYPES, CALL_RINGTONE_MAX_BYTES, CALL_RINGTONE_DEFAULTS, isCallRingtonePresetId, normalizeCallRingtoneKind, countCallParticipants, expireRingingCall, isCallParticipantBusy, reconcileCallPresence, validateCallRingtoneUpload } from '../backend/modules/calls/service.js';
 import { createMessengerRealtimeHub } from '../backend/modules/messaging/realtime.js';
 import { createCurrencyConverterService, normalizeCurrencyCode } from '../backend/modules/currency-converter/service.js';
 import { normalizeCalendarEntry } from '../backend/modules/calendar/service.js';
@@ -6453,32 +6453,66 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
         }
       }
       if(method==='GET'&&p==='/api/calls/ringtone'){
-        const asset=(db.mediaAssets||[]).find(item=>item.id===user.callRingtoneAssetId&&item.ownerId===user.id&&item.slot==='ringtone'&&item.status==='attached');
-        if(!asset)return json(res,200,{ringtone:null});
-        const url=await resolveAssetUrl(asset);
-        return json(res,200,{ringtone:{assetId:asset.id,name:asset.originalName||'Custom ringtone',mimeType:asset.mimeType,url}});
+        const getSelection=async kind=>{
+          const saved=user.callRingtones?.[kind]||{};
+          const legacyAssetId=kind==='voice'?user.callRingtoneAssetId:null;
+          const assetId=saved.assetId||legacyAssetId||null;
+          const asset=(db.mediaAssets||[]).find(item=>item.id===assetId&&item.ownerId===user.id&&item.slot==='ringtone'&&item.bucket==='minglora-ringtones'&&item.status==='attached');
+          const selectedId=asset&&saved.selectedId==='custom'?'custom'
+            :isCallRingtonePresetId(saved.selectedId)?saved.selectedId
+            :asset?'custom':CALL_RINGTONE_DEFAULTS[kind];
+          const custom=asset?{assetId:asset.id,name:asset.originalName||'Custom ringtone',mimeType:asset.mimeType,url:await resolveAssetUrl(asset)}:null;
+          return {selectedId,custom};
+        };
+        const [voice,video]=await Promise.all([getSelection('voice'),getSelection('video')]);
+        return json(res,200,{ringtones:{voice,video},ringtone:voice.selectedId==='custom'?voice.custom:null});
+      }
+      if(method==='PATCH'&&p==='/api/calls/ringtone'){
+        const kind=normalizeCallRingtoneKind(input.kind);
+        const selectedId=String(input.ringtoneId||'').trim();
+        if(!kind)return json(res,400,{error:'Choose voice or video calls.'});
+        if(!isCallRingtonePresetId(selectedId)&&selectedId!=='custom')return json(res,400,{error:'Choose an available Minglora ringtone.'});
+        const saved=user.callRingtones?.[kind]||{};
+        const legacyAssetId=kind==='voice'?user.callRingtoneAssetId:null;
+        const assetId=saved.assetId||legacyAssetId||null;
+        const customAsset=assetId?(db.mediaAssets||[]).find(item=>item.id===assetId&&item.ownerId===user.id&&item.slot==='ringtone'&&item.bucket==='minglora-ringtones'&&item.status==='attached'):null;
+        if(selectedId==='custom'&&!customAsset)return json(res,400,{error:'Upload a ringtone for this call type before selecting it.'});
+        user.callRingtones={...(user.callRingtones||{}),[kind]:{selectedId,assetId:customAsset?.id||null}};
+        await saveStore();
+        return json(res,200,{ok:true,kind,selectedId});
       }
       if(method==='POST'&&p==='/api/calls/ringtone'){
+        const kind=input.kind==null?'voice':normalizeCallRingtoneKind(input.kind);
+        if(!kind)return json(res,400,{error:'Choose voice or video calls.'});
         const asset=(db.mediaAssets||[]).find(item=>item.id===String(input.assetId||'')&&item.ownerId===user.id&&item.slot==='ringtone'&&item.bucket==='minglora-ringtones'&&item.status==='uploaded');
         if(!asset)return json(res,404,{error:'The uploaded ringtone could not be found.'});
         const validation=validateCallRingtoneUpload({mimeType:asset.mimeType,byteSize:asset.byteSize});
         if(!validation.valid)return json(res,400,{error:validation.error});
-        const previous=(db.mediaAssets||[]).find(item=>item.id===user.callRingtoneAssetId&&item.ownerId===user.id&&item.slot==='ringtone'&&item.status==='attached');
-        if(previous){previous.status='deleted';previous.deletedAt=now();}
-        asset.status='attached';asset.attachedTo='account:call-ringtone';asset.completedAt=asset.completedAt||now();
-        user.callRingtoneAssetId=asset.id;
+        const saved=user.callRingtones?.[kind]||{};
+        const previousId=saved.assetId||(kind==='voice'?user.callRingtoneAssetId:null);
+        const previous=(db.mediaAssets||[]).find(item=>item.id===previousId&&item.ownerId===user.id&&item.slot==='ringtone'&&item.status==='attached');
+        if(previous&&previous.id!==asset.id){previous.status='deleted';previous.deletedAt=now();}
+        asset.status='attached';asset.attachedTo='account:call-ringtone:'+kind;asset.completedAt=asset.completedAt||now();
+        user.callRingtones={...(user.callRingtones||{}),[kind]:{selectedId:'custom',assetId:asset.id}};
+        if(kind==='voice')user.callRingtoneAssetId=asset.id;
         await saveStore();
-        if(previous)void mediaGateway('media_delete',{ownerId:user.id,bucket:previous.bucket,path:previous.path}).catch(error=>console.warn('[Minglora ringtone] Previous ringtone cleanup failed.',{message:error.message}));
+        if(previous&&previous.id!==asset.id)void mediaGateway('media_delete',{ownerId:user.id,bucket:previous.bucket,path:previous.path}).catch(error=>console.warn('[Minglora ringtone] Previous '+kind+' ringtone cleanup failed.',{message:error.message}));
         const url=await resolveAssetUrl(asset);
-        return json(res,200,{ringtone:{assetId:asset.id,name:asset.originalName||'Custom ringtone',mimeType:asset.mimeType,url}});
+        return json(res,200,{ok:true,kind,selectedId:'custom',ringtone:{assetId:asset.id,name:asset.originalName||'Custom ringtone',mimeType:asset.mimeType,url}});
       }
       if(method==='DELETE'&&p==='/api/calls/ringtone'){
-        const previous=(db.mediaAssets||[]).find(item=>item.id===user.callRingtoneAssetId&&item.ownerId===user.id&&item.slot==='ringtone'&&item.status==='attached');
-        user.callRingtoneAssetId=null;
+        const rawKind=new URL(req.url,'http://localhost').searchParams.get('kind');
+        const kind=rawKind==null?'voice':normalizeCallRingtoneKind(rawKind);
+        if(!kind)return json(res,400,{error:'Choose voice or video calls.'});
+        const saved=user.callRingtones?.[kind]||{};
+        const assetId=saved.assetId||(kind==='voice'?user.callRingtoneAssetId:null);
+        const previous=(db.mediaAssets||[]).find(item=>item.id===assetId&&item.ownerId===user.id&&item.slot==='ringtone'&&item.status==='attached');
         if(previous){previous.status='deleted';previous.deletedAt=now();}
+        user.callRingtones={...(user.callRingtones||{}),[kind]:{selectedId:CALL_RINGTONE_DEFAULTS[kind],assetId:null}};
+        if(kind==='voice')user.callRingtoneAssetId=null;
         await saveStore();
-        if(previous)await mediaGateway('media_delete',{ownerId:user.id,bucket:previous.bucket,path:previous.path}).catch(error=>console.warn('[Minglora ringtone] Ringtone cleanup failed.',{message:error.message}));
-        return json(res,200,{ok:true,ringtone:null});
+        if(previous)await mediaGateway('media_delete',{ownerId:user.id,bucket:previous.bucket,path:previous.path}).catch(error=>console.warn('[Minglora ringtone] '+kind+' ringtone cleanup failed.',{message:error.message}));
+        return json(res,200,{ok:true,kind,selectedId:CALL_RINGTONE_DEFAULTS[kind],ringtone:null});
       }
       if(method==='GET'&&p==='/api/calls/incoming'){
         // A ringing invitation is already persisted in Minglora's call ledger.
