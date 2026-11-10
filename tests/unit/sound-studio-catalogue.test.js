@@ -46,7 +46,7 @@ test("Do Not Disturb handles same-day and overnight schedules",()=>{
  const day={enabled:true,startTime:"09:00",endTime:"17:00",days:["tue"]};
  assert.equal(isWithinDoNotDisturb(day,new Date("2026-11-10T10:00:00")),true);
  assert.equal(isWithinDoNotDisturb(day,new Date("2026-11-10T18:00:00")),false);
- const night={enabled:true,startTime:"22:00",endTime:"07:00",days:["mon"]};
+ const night={enabled:true,startTime:"22:00",endTime:"07:00",days:["mon","tue"]};
  assert.equal(isWithinDoNotDisturb(night,new Date("2026-11-10T23:00:00")),true);
  assert.equal(isWithinDoNotDisturb(night,new Date("2026-11-10T06:30:00")),true);
  assert.equal(isWithinDoNotDisturb({...night,days:["wed"]},new Date("2026-11-10T23:00:00")),false);
