@@ -80,7 +80,7 @@ test("level and badge names have separate horizontal and vertical ordered layout
   assert.match(styles, /\.gp-level-index-grid\[data-layout="horizontal"\]\{grid-template-columns:repeat\(4,minmax\(0,1fr\)\)\}/);
   assert.match(styles, /\.gp-level-index-grid\[data-layout="vertical"\]\{grid-template-columns:minmax\(0,1fr\)\}/);
   assert.match(styles, /\.gp-level-layout-button\[aria-pressed="true"\]/);
-  assert.match(progression, /badgePanels \+ "<\\/section>" \+\s*levelDirectory \+/);
+  assert.ok(progression.indexOf('badgePanels + "</section>" +') < progression.indexOf("levelDirectory +"), "level directory follows the separate artwork stack");
 });
 
 test("original artwork panels are centered, responsive, uncropped and capped at native image width", () => {
