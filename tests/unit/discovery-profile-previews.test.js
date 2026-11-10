@@ -162,11 +162,12 @@ test('People You May Know puts the name above the username and shows only the ve
 });
 
 test('public AI profile routes preserve disclosure, member privacy and owner-ID isolation',async()=>{
-  const [server,profilePage,profileScript,discovery]=await Promise.all([
+  const [server,profilePage,profileScript,discovery,safetySql]=await Promise.all([
     read('src/server.js'),
     read('public/ai-profile.html'),
     read('public/ai-profile.js'),
-    read('public/ai-discover.js')
+    read('public/ai-discover.js'),
+    read('supabase/migrations/20261109250000_minglora_ai_public_profile_safety.sql')
   ]);
   const apiStart=server.indexOf("const publicAiProfileMatch=p.match(");
   const apiEnd=server.indexOf("if(method==='GET'&&p==='/api/ai/blocks')",apiStart);
@@ -174,8 +175,8 @@ test('public AI profile routes preserve disclosure, member privacy and owner-ID 
   const api=server.slice(apiStart,apiEnd);
   assert.match(api,/isSupabasePersistence\(\)/,'profile reads fail closed without canonical PostgreSQL');
   assert.match(api,/ai_identity_public_profile_get/,'profile data comes from the canonical privacy-filtered lookup');
-  assert.match(api,/ai_identity_block_list/,'direct profile links check the member-to-AI block list');
-  assert.match(api,/blockedByMember/,'blocked AI identities are hidden even when opened by slug');
+  assert.doesNotMatch(api,/ai_identity_block_list|limit:500/,'profile reads do not load a capped block list');
+  assert.match(safetySql,/AND NOT EXISTS \([\s\S]*?FROM public\.ai_identity_blocks AS block[\s\S]*?block\.identity_id=identity\.identity_id AND block\.user_id=p_viewer_user_id[\s\S]*?\)/,'the indexed canonical profile RPC excludes profiles blocked by the viewer');
   assert.match(api,/blockedBetween\(user\.id,ownerId\)/,'blocked owners cannot expose AI profiles');
   assert.match(api,/const \{ownerAdminId,\.\.\.publicProfile\}=profile/,'internal owner identifier is removed from member response');
   assert.match(server,/const publicAiPageMatch=p\.match\(\/\^\\\/ai\\\//,'dedicated AI profile page route exists');
