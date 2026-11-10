@@ -82,7 +82,7 @@ test('Home Stories use a Facebook-style create card, scrollable story rail and n
   assert.match(html,/\/app\.js\?v=[^"']+/);
   assert.ok(sw.includes('/styles.css?v=20261110-theme-token-inheritance-1'));
   assert.ok(sw.includes('/app.js?v=20261109-facebook-edit-profile-admin-cross-layout-3'));
-  assert.match(sw, /^const CACHE_NAME='minglora-shell-v[0-9]+-theme-token-refresh-1';$/m);
+  assert.match(sw, /^const CACHE_NAME='minglora-shell-v[0-9]+-self-updating-1';$/m);
 });
 
 test('Stories create button stays above its label and uses consistent Facebook-style card sizing', async () => {
