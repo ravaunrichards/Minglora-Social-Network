@@ -810,6 +810,36 @@ test('owner safety report queue returns pending reports from canonical storage',
   assert.equal(context.res.payload.safetyReportsSource,'minglora_supabase_postgresql');
 });
 
+test('owner AI report review queue supports bounded page offsets and next-page metadata',async()=>{
+  const reports=Array.from({length:50},(_,index)=>({reportId:'report-'+(100+index),status:'pending'}));
+  let options=null;
+  const context=makeContext({
+    method:'GET',
+    path:'/api/admin/personal-ai-bots/safety/reports',
+    url:new URL('https://minglora.test/api/admin/personal-ai-bots/safety/reports?status=open&limit=50&offset=100'),
+    listAiIdentityReports:async value=>{options=value;return reports;}
+  });
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,200);
+  assert.deepEqual(options,{status:'open',limit:50,offset:100});
+  assert.deepEqual(context.res.payload.reports,reports);
+  assert.equal(context.res.payload.nextOffset,150);
+  assert.equal(context.res.payload.hasMore,true);
+});
+
+test('owner AI report review queue rejects invalid pagination before querying storage',async()=>{
+  let called=false;
+  const context=makeContext({
+    method:'GET',
+    path:'/api/admin/personal-ai-bots/safety/reports',
+    url:new URL('https://minglora.test/api/admin/personal-ai-bots/safety/reports?status=open&limit=201&offset=0'),
+    listAiIdentityReports:async()=>{called=true;return [];}
+  });
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,400);
+  assert.equal(called,false);
+});
+
 test('owner can move an AI safety report into review or close it with an audit note',async()=>{
   let received=null,saves=0;
   const context=makeContext({
