@@ -78,7 +78,7 @@ test('owner creation persists a normalized identity record with separate name fi
 test('owner overview reads canonical identity rows from the persistence callback',async()=>{
   const row={id:'ai-1',firstName:'Minglora',middleName:'AI',lastName:'Companion',username:'ai_minglora_companion',population:'independent',status:'created'};
   const context=makeContext({listAiIdentities:async options=>{
-    assert.deepEqual(options,{limit:1000,offset:0});
+    assert.deepEqual(options,{limit:100,offset:0});
     return [row];
   }});
   await handlePersonalAiBotsAdminApi(context);
