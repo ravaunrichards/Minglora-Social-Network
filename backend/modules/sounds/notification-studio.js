@@ -40,13 +40,13 @@ export function normalizeSoundStudioPreferences(user,mediaAssets=[]){
     customs.push({id:"custom:"+legacy.id,assetId:legacy.id,title:String(legacy.originalName||"Previous custom ringtone").slice(0,100),mimeType:legacy.mimeType,durationMs:Number(legacy.durationMs||0)});
     if(!source)base.voiceCall.soundId="custom:"+legacy.id;changed=true;
   }
-  base.customSounds=customs;const customIds=new Set(customs.map(item=>item.id)),valid=id=>builtinIds.has(id)||customIds.has(id);
-  if(!valid(base.voiceCall.soundId)){base.voiceCall.soundId="voice-01";changed=true;}
-  if(!valid(base.videoCall.soundId)){base.videoCall.soundId="video-01";changed=true;}
+  base.customSounds=customs;const customIds=new Set(customs.map(item=>item.id)),validCall=(id,group)=>customIds.has(id)||(group==="voice"?/^voice-(0[1-9]|[12][0-9]|30)$/:/^video-(0[1-9]|[12][0-9]|30)$/).test(id),validNotification=id=>customIds.has(id)||/^notification-(0[1-9]|[1-5][0-9]|60)$/.test(id),valid=id=>builtinIds.has(id)||customIds.has(id);
+  if(!validCall(base.voiceCall.soundId,"voice")){base.voiceCall.soundId="voice-01";changed=true;}
+  if(!validCall(base.videoCall.soundId,"video")){base.videoCall.soundId="video-01";changed=true;}
   for(const call of ["voiceCall","videoCall"])if(typeof base[call].enabled!=="boolean"){base[call].enabled=true;changed=true;}
   for(const category of SOUND_STUDIO_CATEGORIES){
     const item=base.notifications[category.key];
-    if(!valid(item.soundId)){item.soundId=category.defaultSoundId;changed=true;}
+    if(!validNotification(item.soundId)){item.soundId=category.defaultSoundId;changed=true;}
     if(typeof item.enabled!=="boolean"){item.enabled=true;changed=true;}
   }
   const favorites=base.favorites.filter(valid).slice(0,150);if(favorites.length!==base.favorites.length)changed=true;base.favorites=favorites;
