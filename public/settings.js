@@ -370,15 +370,15 @@
               </div>
             </section>
             <section class="settings-card" id="settings-keyboard" data-settings-category="content-display">
-              \${sectionHeading('Keyboard')}
-              <label class="settings-toggle"><span><strong>Use single-character keyboard shortcuts</strong><small>Use 1–5 to navigate Minglora. Shortcuts are ignored while you type in an editable field.</small></span><input type="checkbox" name="keyboardShortcuts" \${settings.preferences.keyboardShortcuts ? 'checked' : ''}></label>
+              ${sectionHeading('Keyboard')}
+              <label class="settings-toggle"><span><strong>Use single-character keyboard shortcuts</strong><small>Use 1–5 to navigate Minglora. Shortcuts are ignored while you type in an editable field.</small></span><input type="checkbox" name="keyboardShortcuts" ${settings.preferences.keyboardShortcuts ? 'checked' : ''}></label>
               <p class="settings-note">Available shortcuts: 1 Home, 2 Friends, 3 LIVE, 4 Messages, 5 More.</p>
             </section>
             <section class="settings-card" id="settings-accessibility" data-settings-category="content-display">
-              \${sectionHeading('Accessibility Settings')}
-              <label class="settings-field"><span><strong>Compact Mode</strong><small>Use a denser layout with less space between interface elements.</small></span><select name="experienceDensity"><option value="comfortable" \${(settings.experience.density || 'comfortable') === 'comfortable' ? 'selected' : ''}>Off</option><option value="compact" \${settings.experience.density === 'compact' ? 'selected' : ''}>On</option></select></label>
-              <label class="settings-field"><span><strong>Contrast</strong><small>Increase contrast between interface text, borders and backgrounds.</small></span><select name="experienceContrast"><option value="standard" \${(settings.experience.contrast || 'standard') === 'standard' ? 'selected' : ''}>Standard</option><option value="high" \${settings.experience.contrast === 'high' ? 'selected' : ''}>High contrast</option></select></label>
-              <label class="settings-field"><span><strong>Text size</strong><small>Adjust the interface text scale.</small></span><select name="experienceFontScale">\${[85,90,95,100,105,110,115,120,125,130,135,140,145,150].map(value => \`<option value="\${value}" \${Number(settings.experience.fontScale || 100) === value ? 'selected' : ''}>\${value}%</option>\`).join('')}</select></label>
+              ${sectionHeading('Accessibility Settings')}
+              <label class="settings-field"><span><strong>Compact Mode</strong><small>Use a denser layout with less space between interface elements.</small></span><select name="experienceDensity"><option value="comfortable" ${(settings.experience.density || 'comfortable') === 'comfortable' ? 'selected' : ''}>Off</option><option value="compact" ${settings.experience.density === 'compact' ? 'selected' : ''}>On</option></select></label>
+              <label class="settings-field"><span><strong>Contrast</strong><small>Increase contrast between interface text, borders and backgrounds.</small></span><select name="experienceContrast"><option value="standard" ${(settings.experience.contrast || 'standard') === 'standard' ? 'selected' : ''}>Standard</option><option value="high" ${settings.experience.contrast === 'high' ? 'selected' : ''}>High contrast</option></select></label>
+              <label class="settings-field"><span><strong>Text size</strong><small>Adjust the interface text scale.</small></span><select name="experienceFontScale">${[85,90,95,100,105,110,115,120,125,130,135,140,145,150].map(value => `<option value="${value}" ${Number(settings.experience.fontScale || 100) === value ? 'selected' : ''}>${value}%</option>`).join('')}</select></label>
             </section>
             <section class="settings-card" id="settings-cache" data-settings-category="cache-cellular">
               ${sectionHeading('Cache &amp; Cellular')}
