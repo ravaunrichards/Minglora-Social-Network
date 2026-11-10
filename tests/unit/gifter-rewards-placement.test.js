@@ -48,5 +48,5 @@ test('updated Gift entry script and Rewards image are refreshed through the serv
   assert.ok(html.includes(script), 'HTML shell references the new Gift entry script version');
   assert.ok(serviceWorker.includes(script), 'service worker precaches the new Gift entry script version');
   assert.ok(serviceWorker.includes("'/assets/gifters-rewards.png'"), 'service worker precaches the Rewards artwork');
-  assert.match(serviceWorker, /minglora-shell-v272-gifters-rewards-1/);
+  assert.match(serviceWorker, /minglora-shell-v272-self-updating-1/);
 });
