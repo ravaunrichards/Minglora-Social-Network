@@ -1,11 +1,11 @@
-Updated: 2026-11-09 19:14 UTC (Personal AI Bots workflow #569: 177/177; full Minglora CI #8419: 911/911)
+Updated: 2026-11-10 05:18 UTC (Personal AI Bots workflow #581: 177/177; full Minglora CI #8541: 911/911)
 Scope: **Minglora Social Network only**
 Repository: https://github.com/ravaunrichards/Minglora-Social-Network
 Branch: `feat/personal-ai-bots-network-control-center`
 Draft PR: https://github.com/ravaunrichards/Minglora-Social-Network/pull/202
 Supabase project: `gzycobgbasnqqhnympkr` (existing Minglora project only)
-Latest verified implementation source commit: `b6bb2f536e5781848ed471ba4d72cbf63d112da9` (the subsequent checkpoint-only commit is recorded in the branch history).
-Latest verified appointment workflow and regression-test commit: `b6bb2f536e5781848ed471ba4d72cbf63d112da9` (`test(ai): assert persisted appointment application status`).
+Latest verified implementation commit: `7a36133288d5abd773ea2d0f1f76ae5333bc89a6`.
+Corporate HR chart implementation commits: UI `cfabd8237c9aced10708befd8abfd3cf1068a7dc`, responsive styling `3f2bb75516ad61b41a2d23e9f549a065a5eaf697`, regression tests `7a36133288d5abd773ea2d0f1f76ae5333bc89a6`.
 PR must remain **OPEN + DRAFT**. Do not merge, deploy, or apply production migrations without the required review/authorization.
 
 
@@ -23,17 +23,17 @@ The previous checkpoint did not contain a weighted percentage. The earlier conve
 |---|---:|---:|---:|
 | 1. Relational foundation and backend persistence integration | 25% | 35% | 8.75% |
 | 2. AI identities, profiles, worldwide discovery and member follow graph | 20% | 75% | 15.00% |
-| 3. Corporate governance, organizational charts and HR lifecycle | 15% | 55% | 8.25% |
+| 3. Corporate governance, organizational charts and HR lifecycle | 15% | 57% | 8.55% |
 | 4. Supervision, bounded autonomy, queues, teams and collaboration | 10% | 65% | 6.50% |
 | 5. AI social participation and creator ecosystem | 10% | 25% | 2.50% |
 | 6. Security, governance, finance and resource controls | 8% | 25% | 2.00% |
 | 7. Model intelligence, memory, provider operations and analytics | 7% | 20% | 1.40% |
 | 8. Distributed scaling, load tests, device tests and production acceptance | 5% | 0% | 0.00% |
-| **TOTAL** | **100%** |  | **44.40% → 44%** |
+| **TOTAL** | **100%** |  | **44.70% → 45%** |
 
-**COMPLETION: 44.40% → 44% | REMAINING: 55.60% → 56%**
+**COMPLETION: 44.70% → 45% | REMAINING: 55.30% → 55%**
 
-This is weighted feature-branch implementation progress, not a claim that 44.40% of the production system is deployed. Milestones 1 and 2 remain partial because normalized AI tables/RPCs are staged but absent from the live Supabase migration ledger and public schema. Milestone 3 now includes the tested owner-approved appointment and employment-history workflow in addition to department, position, vacancy and candidate review foundations; it remains partial because canonical relational HR persistence, broader employment lifecycle, governance execution and organizational reporting are unfinished.
+This is weighted feature-branch implementation progress, not a claim that 44.70% of the production system is deployed. Milestones 1 and 2 remain partial because normalized AI tables/RPCs are staged but absent from the live Supabase migration ledger and public schema. Milestone 3 includes the tested owner-approved appointment and employment-history workflow plus a read-only organization chart built from recorded reporting-manager appointments; it remains partial because canonical relational HR persistence, broader employment lifecycle, governance execution, real browser acceptance and operational reporting remain unfinished.
 
 ## Recovered and project-verified implementation
 
@@ -58,6 +58,7 @@ This is weighted feature-branch implementation progress, not a claim that 44.40%
 - Added owner-approved corporate appointments for shortlisted, pre-existing organizational AI identities. The service validates owner/application status, open vacancy and remaining slots, position/department compatibility, candidate disabled state, uniqueness of active appointments and reporting-manager hierarchy. Appointment and employment-history records are created with owner attribution and audit/status history. Appointed identities remain disabled, receive an empty permission set (`not_granted`) and are not activated.
 - Added owner-only `GET /appointments`, `GET /employment-history` and `POST /appointments` API routes plus an Admin Centre appointment form, reporting-manager selector and employment-history display. Dedicated service, Admin API and UI tests cover the workflow.
 - **Persistence limitation:** appointment and employment-history collections currently use the existing runtime-state save adapter. Normalized relational HR tables/RPCs and live PostgreSQL readback are not implemented or verified; an appointment record does not grant position permissions or operational authority.
+- Added a read-only Corporate Organization Chart using approved appointment IDs and reporting-manager links. It renders manager/employee nesting, displays unavailable-manager warnings, detects circular/unlinked records without recursing indefinitely, and clearly states that chart positions grant no authority or permissions. UI regression assertions cover the component and safeguards; no live browser/device acceptance has been performed.
 
 - Existing owner-only Personal AI Bots Admin Centre and API; designated MFA-verified Minglora owner gate and same-origin write checks.
 - Original 15 AI categories, custom category management, disabled-by-default identities, unique `ai_` usernames and separate first/middle/last-name fields.
@@ -119,8 +120,8 @@ This is weighted feature-branch implementation progress, not a claim that 44.40%
 
 ## Verification and current status
 
-- Latest confirmed green Personal AI Bots workflow: run **#569**, implementation source commit **`b6bb2f536e5781848ed471ba4d72cbf63d112da9`**, **177 passed / 0 failed**, completed **2026-11-09 19:14:13 UTC**. Includes the owner-approved appointment service, API route, UI and HR workflow test coverage.
-- Latest confirmed green full Minglora CI workflow: run **#8419**, **911 passed / 0 failed**, completed **2026-11-09 19:14:22 UTC**. Both the main test job and For You functional-navigation job passed. The current dependency audit reported **0 vulnerable packages**.
+- Latest confirmed green Personal AI Bots workflow: run **#581**, commit **`7a36133288d5abd773ea2d0f1f76ae5333bc89a6`**, **177 passed / 0 failed**, completed **2026-11-10 05:18:25 UTC**. Covers appointment metadata, vacancy capacity display, organization chart UI and existing identity/worker guardrails.
+- Latest confirmed green full Minglora CI workflow: run **#8541**, **911 passed / 0 failed**, completed **2026-11-10 05:18:33 UTC**. Both the main test job and For You functional-navigation job passed. The dependency audit reported **0 vulnerable packages**.
 - Candidate applications are verified to require existing organizational AI identities and open vacancies, prevent duplicate applications, record status history/audit and enforce allowed review transitions.
 - Owner-approved appointment service/API/UI paths are covered by the 177-test focused workflow and 911-test full CI. Appointments require shortlisted applicants and valid manager hierarchy, prevent duplicate active appointments and overfilled vacancies, record employment history/audit, and leave AI identities disabled with no permissions.
 - Bulk identity import: 1–100 per batch, owner-scoped idempotency and payload hash, duplicate controls, per-record outcomes, safe retry after DB failure, rollback on initial runtime checkpoint-save failure, owner-only history; imported identities remain disabled/private.
@@ -130,13 +131,13 @@ This is weighted feature-branch implementation progress, not a claim that 44.40%
 ## Recovery and progress comparison
 
 - Previous verified weighted completion: **42.90% → 43%**.
-- Current verified weighted completion: **44.40% → 44%**.
-- Progress since previous checkpoint: **+1.50 percentage points** from the newly verified owner-approved appointment service/API/UI workflow and its employment-history/audit records; milestone 3 is now 55% verified. No credit is awarded for normalized HR persistence, employee lifecycle, position permissions, payroll, management execution or org charts.
-- Last verified milestone: **Phase 3 — department, role, vacancy, candidate review and owner-approved appointment foundations (partial)**.
-- Last confirmed action: commit `b6bb2f536e5781848ed471ba4d72cbf63d112da9` fixed the stale-copy assertion; checkpoint-only commit `0dcde6bc818490b85ffe1f0a4f2f200aefdd2667` was then verified by Personal AI Bots #569 (177/177) and full CI #8419 (911/911) at 2026-11-09 19:14 UTC.
+- Current verified weighted completion: **44.70% → 45%**.
+- Progress since previous checkpoint: **+0.30 percentage points** for the read-only organization chart and reporting-manager metadata UI, with code-level UI regression checks. Milestone 3 is now 57% verified. No credit is awarded for normalized HR persistence, employee lifecycle, role permissions, board governance execution, payroll, management execution or untested browser/device behavior.
+- Last verified milestone: **Phase 3 — department, role, vacancy, candidate review, owner-approved appointments and read-only organization chart (partial)**.
+- Last confirmed action: chart/UI commit `cfabd8237c9aced10708befd8abfd3cf1068a7dc`, styling commit `3f2bb75516ad61b41a2d23e9f549a065a5eaf697`, reporting-manager metadata commit `c814723246a5dd0752a55b405305d3776b5a2332`, and regression test commit `7a36133288d5abd773ea2d0f1f76ae5333bc89a6`; workflow #581 and full CI #8541 passed.
 - Recovered: repository, feature branch, PR #202 open/draft, checkpoint, source files, Supabase project status and CI logs independently checked.
 - Unverified: live normalized Postgres HR round-trip, provider/email provisioning, worker/scheduler, manager authorization/delegation and production capacity.
-- Changes since previous checkpoint: added the owner-approved appointment flow and employment-history UI/route/service support; repaired the stale copied-application assertion in the test, then confirmed both workflows green.
+- Changes since previous checkpoint: corrected contradictory HR status copy; added filled/remaining vacancy counts, recorded appointment counts by role, retained reporting-manager position labels and a responsive read-only organization chart with cycle/unlinked-record safeguards. Updated UI/service regression coverage; focused and full CI are green.
 - Recovery confidence: **CONFIRMED** for repository/branch/PR/source/checkpoint/CI; **PARTIALLY RECOVERED** for live DB/service state because AI SQL is unapplied and external runtime services are not released.
 
 ## Changes since the older checkpoint
@@ -160,7 +161,7 @@ This is weighted feature-branch implementation progress, not a claim that 44.40%
 
 ### Hard
 1. Complete HR lifecycle: recruitment, appointment, onboarding, training, availability, evaluation, promotion, transfer, discipline, suspension, succession and termination.
-2. Build interactive organization charts, actual reporting-manager links, board governance and scoped approval/delegation.
+2. Extend the read-only organization chart with normalized relational reporting links, browser interaction tests, board governance and scoped approval/delegation.
 3. Implement AI collaboration/team execution, budgets/resources, accounting, procurement, compliance, risk and security centres.
 4. Complete model routing/fallback, individual memory, multilingual/multimodal features and accurate operational analytics.
 5. Benchmark distributed identity storage, partitioning, indexing, job queues, regional placement, concurrency, failure recovery and ten-billion target design.
@@ -172,7 +173,7 @@ This is weighted feature-branch implementation progress, not a claim that 44.40%
 - **Department/position/vacancy/application data:** current staged service uses the existing runtime-state save adapter, not normalized relational tables.
 - **AI provider/email:** no connected, health-checked model provider or actual mailbox provisioning/sending service is verified.
 - **Workers:** remain disabled until provider, queue, permission, monitoring, deployment and human approval safeguards pass.
-- **HR execution:** candidate review is implemented; no employee has been appointed, no manager/authority delegated and no employment execution enabled.
+- **HR execution:** candidate review and an owner-approved appointment-record workflow are implemented, but no live production employee appointments are verified; no role permissions, authority delegation or employment execution are enabled.
 - **Branch:** PR #202 open/draft, now 412 commits ahead and 5 behind main. Avoid destructive merge/rebase.
 
 ## Exact next action
