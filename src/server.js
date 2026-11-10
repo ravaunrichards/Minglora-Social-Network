@@ -356,6 +356,7 @@ function validateSettingsPatch(input,user){
     }
     for(const [key,value] of Object.entries(values)){
       if(!allowed[section].includes(key))return {valid:false,error:'Unsupported setting: '+key};
+      if(section==='preferences'&&key==='soundStudio')continue;
       if(section==='privacy'&&key==='profileVisibility'&&!['public','friends','private'].includes(value))return {valid:false,error:'Profile visibility must be public, friends or private.'};
       if(section==='privacy'&&key==='messageAudience'&&!['everyone','friends','nobody'].includes(value))return {valid:false,error:'Message audience must be everyone, friends or nobody.'};
       if(section==='privacy'&&key==='meetWaveAudience'&&!['everyone','friends','nobody'].includes(value))return {valid:false,error:'MeetWave invitation audience must be everyone, friends or nobody.'};
