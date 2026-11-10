@@ -44,6 +44,12 @@ test('saved LIVE room style remains in Settings and is applied to newly created 
   assert.doesNotMatch(app, /liveTheme:values\.get\(["']liveTheme["']\)/);
 });
 
+test('selected app palettes re-resolve inherited surface and text tokens on the themed body', () => {
+  assert.ok(settings.includes('document.body.dataset.colorTheme = colorTheme'));
+  assert.ok(app.includes('document.body.dataset.colorTheme=value'));
+  assert.ok(css.includes('body[data-color-theme]{--surface:var(--card);--surface-soft:var(--bg);--text:var(--ink);background:var(--bg);color:var(--ink)}'), 'semantic surface and text tokens must resolve from the selected body palette');
+});
+
 test('all advertised themes have previews and responsive visual treatment', () => {
   for (const theme of ['minglora','ocean','tropical','royal','emerald','rose','golden','lavender','midnight','graphite']) {
     assert.ok(css.includes('data-color-theme="' + theme + '"'), 'missing app palette ' + theme);
@@ -53,11 +59,11 @@ test('all advertised themes have previews and responsive visual treatment', () =
     assert.ok(css.includes('live-theme-art-' + theme), 'missing LIVE preview ' + theme);
     if (theme !== 'studio') assert.ok(css.includes('live-theme-' + theme), 'missing LIVE room style ' + theme);
   }
-  assert.ok(html.includes('styles.css?v=20261108-facebook-profile-sidebar-1'));
+  assert.ok(html.includes('styles.css?v=20261110-theme-token-inheritance-1'));
   assert.match(html, /src="\/app\.js\?v=[^"]+"/);
-  assert.match(html, /auth-login\.js\?v=20261105-admin-mfa-enrollment-1/);
+  assert.match(html, /auth-login\.js\?v=20261109-oauth-pkce-buttons-1/);
   assert.match(html, /settings\.js\?v=20261106-refresh-controls-removed-1/);
-  assert.match(sw, /v\d+-self-updating-1/);
+  assert.match(sw, /minglora-shell-v\d+-theme-token-refresh-1/);
   assert.match(sw, /cacheCurrentShellAssets/);
   assert.match(sw, /auth-login\.js\?v=20261105-admin-mfa-enrollment-1/);
   assert.match(sw, /settings\.js\?v=20261106-refresh-controls-removed-1/);
