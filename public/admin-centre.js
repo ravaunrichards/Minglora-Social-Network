@@ -1602,6 +1602,8 @@
       loadAdminModerationQueue(panel);
       loadAdminSupportInbox(panel);
     }
+    // Build the dedicated page workspace only after all existing feature sections and controls exist.
+    initializeAdminPageNavigation(panel, unlocked);
   }
 
   async function adminCentreApi(path, options = {}) {
