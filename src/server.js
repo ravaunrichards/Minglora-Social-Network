@@ -2349,8 +2349,8 @@ if((method==='GET'||method==='PATCH')&&p==='/api/admin/auth-providers'){
               ?'Supabase rejected the Management token. Check that SUPABASE_ACCESS_TOKEN is current.'
               :status===403
                 ?(httpMethod==='GET'
-                  ?'The Supabase Management token needs Auth Read access to this project’s authentication configuration.'
-                  :'The Supabase Management token needs Auth Write access to this project’s authentication configuration.')
+                  ?'The Supabase Management token needs the Auth Config Read (auth_config_read) permission for this project’s authentication configuration.'
+                  :'The Supabase Management token needs the Auth Config Write (auth_config_write) and Project Admin Write (project_admin_write) permissions to change this project’s authentication configuration.')
                 :status===429
                   ?'Supabase is rate-limiting provider configuration requests. Try again shortly.'
                   :'Supabase could not process the provider configuration request. Existing settings were not intentionally replaced.';
