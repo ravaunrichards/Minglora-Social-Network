@@ -378,7 +378,7 @@ function bindPaletteSwitcher(){
     document.documentElement.dataset.paletteOutsideBound='true';
     window.MingloraMenuDismissal.bindOutsideDismissal({
       roots:()=>[$('.palette-menu-anchor')],
-      isOpen:()=>!$('#palette-switcher')?.classList.contains('hidden'),
+      isOpen:()=>Boolean($('#palette-switcher')&&!$('#palette-switcher').classList.contains('hidden')),
       onDismiss:closePaletteSwitcher
     });
     document.addEventListener('keydown',event=>{if(event.key==='Escape')closePaletteSwitcher();});
@@ -10120,7 +10120,7 @@ function bindAccountSwitcherMenu(){
     document.documentElement.dataset.accountSwitcherOutsideBound='true';
     window.MingloraMenuDismissal.bindOutsideDismissal({
       roots:()=>[anchor,$('#profile-account-menu')],
-      isOpen:()=>!$('#profile-account-menu')?.hidden,
+      isOpen:()=>Boolean($('#profile-account-menu')&&!$('#profile-account-menu').hidden),
       onDismiss:closeAccountSwitcherMenu
     });
     document.addEventListener('keydown',event=>{

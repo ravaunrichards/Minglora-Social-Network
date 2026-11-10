@@ -61,7 +61,9 @@ test('Creator account switcher escapes header stacking and stays above every app
   assert.match(app,/document\.body\.appendChild\(panel\)/);
   assert.match(app,/positionAccountSwitcherTopLayer\(\)/);
   assert.match(app,/zIndex='2147483647'/);
-  assert.match(app,/!panel\?\.contains\(event\.target\)/);
+  assert.ok(app.includes('window.MingloraMenuDismissal.bindOutsideDismissal'));
+  assert.ok(app.includes("roots:()=>[anchor,$('#profile-account-menu')]"));
+  assert.ok(app.includes("isOpen:()=>Boolean($('#profile-account-menu')&&!$('#profile-account-menu').hidden)"));
   assert.match(app,/anchor\.appendChild\(panel\)/);
   assert.match(css,/\.profile-account-menu\.is-top-layer\{[\s\S]*?z-index:2147483647!important/);
 });
