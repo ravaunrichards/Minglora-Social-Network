@@ -1,0 +1,30 @@
+/* Separate, responsive voice/video ringtone selectors. */
+.call-ringtone-settings-stack{display:grid;gap:18px;margin-top:12px}
+.call-ringtone-setting{min-width:0;padding:18px;border:1px solid var(--border-color,rgba(120,145,180,.28));border-radius:18px;background:var(--surface-card,rgba(120,145,180,.045))}
+.call-ringtone-setting h3{margin:0 0 5px}
+.call-ringtone-setting .call-ringtone-description{margin:0 0 14px;color:var(--text-secondary,#748096);font-size:13px;line-height:1.5}
+.call-ringtone-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.call-ringtone-preset{display:flex;align-items:center;gap:10px;min-width:0;padding:11px;border:1px solid var(--border-color,rgba(120,145,180,.28));border-radius:13px;background:var(--surface,rgba(120,145,180,.035));cursor:pointer;transition:border-color .16s ease,background .16s ease}
+.call-ringtone-preset:has(input:checked){border-color:var(--accent,#2876df);background:color-mix(in srgb,var(--accent,#2876df) 10%,transparent)}
+.call-ringtone-preset input{flex:0 0 auto;width:17px;height:17px;accent-color:var(--accent,#2876df)}
+.call-ringtone-preset-copy{display:flex;flex:1 1 auto;flex-direction:column;gap:3px;min-width:0}
+.call-ringtone-preset-copy strong{font-size:13px;line-height:1.25}
+.call-ringtone-preset-copy small{color:var(--text-secondary,#748096);font-size:11px;line-height:1.35}
+.call-ringtone-preview-button{flex:0 0 auto;min-height:34px;padding:6px 10px;border:1px solid var(--border-color,rgba(120,145,180,.35));border-radius:9px;background:transparent;color:inherit;font-size:12px;font-weight:700;cursor:pointer}
+.call-ringtone-custom-option{margin-top:10px}
+.call-ringtone-custom-option[hidden]{display:none!important}
+.call-ringtone-upload-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:15px;padding-top:14px;border-top:1px solid var(--border-color,rgba(120,145,180,.22))}
+.call-ringtone-upload-current{display:flex;flex-direction:column;gap:3px;min-width:0}
+.call-ringtone-upload-current strong{overflow-wrap:anywhere;font-size:13px}
+.call-ringtone-upload-current small,.call-ringtone-setting .settings-note{color:var(--text-secondary,#748096);font-size:12px}
+.call-ringtone-upload-actions{display:flex;gap:8px;flex-wrap:wrap}
+.call-ringtone-setting audio{display:block;width:100%;max-width:480px;margin-top:12px}
+.call-ringtone-setting .settings-form-status{min-height:18px;margin:8px 0 0}
+@media(max-width:620px){
+ .call-ringtone-setting{padding:14px}
+ .call-ringtone-options{grid-template-columns:minmax(0,1fr)}
+ .call-ringtone-upload-row{align-items:stretch}
+ .call-ringtone-upload-actions{width:100%}
+ .call-ringtone-upload-actions button{flex:1 1 140px}
+}
+@media(prefers-reduced-motion:reduce){.call-ringtone-preset{transition:none}}
