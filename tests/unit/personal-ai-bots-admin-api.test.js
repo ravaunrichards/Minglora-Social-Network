@@ -827,6 +827,54 @@ test('owner canonical AI identity list rejects invalid pagination before reading
   assert.equal(called,false);
 });
 
+test('owner provider assignment and email identity lists paginate with validated cursors',async()=>{
+  const providerRows=Array.from({length:25},(_,index)=>({assignmentId:'provider-'+(100+index)}));
+  const emailRows=Array.from({length:25},(_,index)=>({id:'email-'+(200+index)}));
+  let providerOptions=null,emailOptions=null;
+  const providerContext=makeContext({
+    method:'GET',
+    path:'/api/admin/personal-ai-bots/providers',
+    url:new URL('https://minglora.test/api/admin/personal-ai-bots/providers?limit=25&offset=100'),
+    listAiProviderAssignments:async value=>{providerOptions=value;return providerRows;}
+  });
+  await handlePersonalAiBotsAdminApi(providerContext);
+  assert.equal(providerContext.res.statusCode,200);
+  assert.deepEqual(providerOptions,{limit:25,offset:100});
+  assert.deepEqual(providerContext.res.payload.assignments,providerRows);
+  assert.equal(providerContext.res.payload.nextOffset,125);
+  assert.equal(providerContext.res.payload.hasMore,true);
+
+  const emailContext=makeContext({
+    method:'GET',
+    path:'/api/admin/personal-ai-bots/emails',
+    url:new URL('https://minglora.test/api/admin/personal-ai-bots/emails?limit=25&offset=200'),
+    listAiEmailIdentities:async value=>{emailOptions=value;return emailRows;}
+  });
+  await handlePersonalAiBotsAdminApi(emailContext);
+  assert.equal(emailContext.res.statusCode,200);
+  assert.deepEqual(emailOptions,{limit:25,offset:200});
+  assert.deepEqual(emailContext.res.payload.emails,emailRows);
+  assert.equal(emailContext.res.payload.nextOffset,225);
+  assert.equal(emailContext.res.payload.hasMore,true);
+});
+
+test('owner provider and email list APIs reject oversized pagination',async()=>{
+  for(const [path,property] of [
+    ['/api/admin/personal-ai-bots/providers','listAiProviderAssignments'],
+    ['/api/admin/personal-ai-bots/emails','listAiEmailIdentities']
+  ]){
+    let called=false;
+    const context=makeContext({
+      method:'GET',path,
+      url:new URL('https://minglora.test'+path+'?limit=501&offset=0'),
+      [property]:async()=>{called=true;return [];}
+    });
+    await handlePersonalAiBotsAdminApi(context);
+    assert.equal(context.res.statusCode,400,path);
+    assert.equal(called,false,path);
+  }
+});
+
 test('owner safety report queue returns pending reports from canonical storage',async()=>{
   const reports=[{reportId:'report-1',identityId:'ai-1',reason:'spam',status:'pending'}];
   let options=null;
