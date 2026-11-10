@@ -99,6 +99,10 @@ test('feature navigation uses distinct, semantically correct 3D icons', () => {
   assert.match(menuScript, /Meta AI[^\n]*icon: 'ai'/);
   assert.match(menuScript, /Ads Manager[^\n]*icon: 'megaphone'/);
   assert.match(menuScript, /Log Out[^\n]*icon: 'logout'/);
+  assert.match(appScript, /value:'mobile_gaming'[^\n]*icon:'gamepad'/);
+  assert.ok(appScript.includes("option.icon==='gamepad'?"), 'Mobile Gaming renders the dedicated gamepad artwork');
+  assert.ok(appScript.includes('20261110-semantic-icons-3d-1#gamepad'), 'Mobile Gaming loads the current 3D gamepad symbol');
+
   for (const id of ['clock','gift','trophy','gamepad','game-video','reels','megaphone','ai','admin','logout']) {
     assert.ok(serviceWorker.includes('/assets/icons/navigation-3d.svg?v=20261110-semantic-icons-3d-1#' + id), id + ' is included in offline shell precache');
   }
