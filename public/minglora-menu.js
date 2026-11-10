@@ -2,8 +2,10 @@
 (() => {
   'use strict';
 
-  const sprite = (name, extra = '') =>
-    '<svg class="minglora-menu-icon ' + extra + '" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><use href="/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#' + name + '"></use></svg>';
+  const sprite = (name, extra = '') => {
+    const version = ["clock","gift","trophy","gamepad","game-video","reels","megaphone","ai","admin","logout"].includes(name) ? '20261110-semantic-icons-3d-1' : '20261102-navigation-3d-2';
+    return '<svg class="minglora-menu-icon ' + extra + '" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><use href="/assets/icons/navigation-3d.svg?v=' + version + '#' + name + '"></use></svg>';
+  };
 
   const sections = [
     {
@@ -20,9 +22,9 @@
     {
       title: 'Entertainment',
       items: [
-        { label: 'Reels', detail: 'Watch and create short videos', icon: 'video', action: 'reels' },
-        { label: 'Gaming Video', detail: 'Gaming-focused video discovery', icon: 'video', action: 'coming-soon', pending: true },
-        { label: 'Play Games', detail: 'Games and interactive experiences', icon: 'explore', action: 'coming-soon', pending: true }
+        { label: 'Reels', detail: 'Watch and create short videos', icon: 'reels', action: 'reels' },
+        { label: 'Gaming Video', detail: 'Gaming-focused video discovery', icon: 'game-video', action: 'coming-soon', pending: true },
+        { label: 'Play Games', detail: 'Games and interactive experiences', icon: 'gamepad', action: 'coming-soon', pending: true }
       ]
     },
     {
@@ -38,20 +40,20 @@
         { label: 'Your Ad Activity', detail: 'Review ads associated with your account', icon: 'activity', action: 'coming-soon', pending: true },
         { label: 'Memories', detail: 'Revisit moments you have shared', icon: 'restore', action: 'coming-soon', pending: true },
         { label: 'Saved', detail: 'Find posts and videos you saved', icon: 'saved', action: 'saved' },
-        { label: 'Clock Centre', detail: 'Clocks, world time, alarms and timers', icon: 'calendar', action: 'clock-centre' }
+        { label: 'Clock Centre', detail: 'Clocks, world time, alarms and timers', icon: 'clock', action: 'clock-centre' }
       ]
     },
     {
       title: 'Professional',
       items: [
-        { label: 'Ads Manager', detail: 'Create and manage advertising campaigns', icon: 'creator', action: 'coming-soon', pending: true },
+        { label: 'Ads Manager', detail: 'Create and manage advertising campaigns', icon: 'megaphone', action: 'coming-soon', pending: true },
         { label: 'Creator Dashboard', detail: 'Manage creator tools and performance', icon: 'creator', action: 'creator' }
       ]
     }
   ];
 
   const metaItems = [
-    { label: 'Meta AI', detail: 'Open Meta AI', icon: 'explore', href: 'https://www.meta.ai/' },
+    { label: 'Meta AI', detail: 'Open Meta AI', icon: 'ai', href: 'https://www.meta.ai/' },
     { label: 'Messenger Kids', detail: 'Open Messenger Kids', icon: 'messages', href: 'https://www.messengerkids.com/' },
     { label: 'WhatsApp', detail: 'Open WhatsApp', icon: 'messages', href: 'https://www.whatsapp.com/' },
     { label: 'Instagram', detail: 'Open Instagram', icon: 'photo', href: 'https://www.instagram.com/' }
@@ -60,11 +62,11 @@
   const createItems = [
     { label: 'Post', detail: 'Share with your audience', icon: 'share', action: 'post' },
     { label: 'Story', detail: 'Share a moment for 24 hours', icon: 'photo', action: 'story' },
-    { label: 'Reel', detail: 'Create a short video', icon: 'video', action: 'reel' },
+    { label: 'Reel', detail: 'Create a short video', icon: 'reels', action: 'reel' },
     { label: 'Life Update', detail: 'Share what is happening in your life', icon: 'feeling', action: 'life-update' },
     { label: 'Note', detail: 'Write a text update', icon: 'create', action: 'note' },
     { label: 'Page', detail: 'Create a public Page', icon: 'pages', action: 'page' },
-    { label: 'Ad', detail: 'Create an advertisement', icon: 'creator', action: 'coming-soon', pending: true },
+    { label: 'Ad', detail: 'Create an advertisement', icon: 'megaphone', action: 'coming-soon', pending: true },
     { label: 'Group', detail: 'Start a community', icon: 'groups', action: 'group' },
     { label: 'Event', detail: 'Create an event', icon: 'calendar', action: 'event' }
   ];
@@ -311,7 +313,7 @@
       { label: 'Help & Support', key: 'support', icon: 'activity' },
       { label: 'Report a problem', key: 'report', icon: 'request' },
       { label: 'Display & Accessibility', key: 'display', icon: 'palette' },
-      { label: 'Log Out', key: 'logout', icon: 'lock' }
+      { label: 'Log Out', key: 'logout', icon: 'logout' }
     ];
     const nav = document.createElement('nav');
     nav.className = 'account-switcher-actions';
