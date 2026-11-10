@@ -8492,7 +8492,7 @@ async function openMessengerDestination(destination){
   }catch(error){toast(error.message||'Could not open Messenger settings.');}
 }
 async function renderMessages(){
-  activateSilent('messages');
+  if(state.view!=='messages')activateSilent('messages');
   const messageData=await api('/messages');
   state.conversations=messageData.conversations||[];
   paintMessengerBadge(state.conversations);
@@ -9034,7 +9034,6 @@ async function markNotificationInCenter(id){
   if(item){item.read=true;item.readAt=new Date().toISOString();}
 }
 async function renderNotifications(){if(state.view!=='notifications')activateSilent('notifications');
-  state.view='notifications';syncNavigationActive();persistCurrentView();recordBrowserNavigation();
   const response=await api('/notifications');
   state.notifications=Array.isArray(response.notifications)?response.notifications:[];
   const notificationSort=window.MingloraExperience?.getSettings?.()?.notificationSort||'newest';
@@ -10251,7 +10250,7 @@ function bindNavigation(){
   const notificationsButton=$('#notifications-btn');
   if(notificationsButton)notificationsButton.onclick=()=>{void renderNotifications().catch(error=>toast(error.message||'Notifications could not load.'));};
   const messengerButton=$('#messenger-btn');
-  if(messengerButton)messengerButton.onclick=()=>{void toggleMessengerPanel().catch(error=>toast(error.message||'Messenger could not open.'));};
+  if(messengerButton)messengerButton.onclick=()=>activateNav('messages');
   bindPaletteSwitcher();
   document.querySelectorAll('[data-view]').forEach(el=>el.addEventListener('click',()=>activateNav(el.dataset.view)));
   $('#home-brand').onclick=()=>activateNav('feed');
