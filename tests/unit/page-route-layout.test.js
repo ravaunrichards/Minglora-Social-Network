@@ -49,3 +49,16 @@ test('Home navigation and global navigation remain present',()=>{
   assert.ok(app.slice(navStart,navStart+100).includes('syncPageLayout();'),
     'Direct route navigation also synchronizes the standalone page shell');
 });
+
+
+test('Admin Centre initializes dedicated page routing after building its feature sections',()=>{
+  const admin=fs.readFileSync(path.join(root,'public/admin-centre.js'),'utf8');
+  const panelStart=admin.indexOf('function addControlCentrePanel(');
+  const apiStart=admin.indexOf('async function adminCentreApi(',panelStart);
+  assert.ok(panelStart>=0&&apiStart>panelStart,'Admin Centre panel builder and API helper exist');
+  const panelBuilder=admin.slice(panelStart,apiStart);
+  assert.match(panelBuilder,/initializeAdminPageNavigation\(panel,\s*unlocked\);/,
+    'The page router is initialized inside the panel builder after its feature sections are created');
+  assert.ok(!admin.includes('return payload;\\n    initializeAdminPageNavigation(panel, unlocked);'),
+    'The page router must never be placed after an unconditional return');
+});
