@@ -10250,7 +10250,7 @@ function bindNavigation(){
   const notificationsButton=$('#notifications-btn');
   if(notificationsButton)notificationsButton.onclick=()=>{void renderNotifications().catch(error=>toast(error.message||'Notifications could not load.'));};
   const messengerButton=$('#messenger-btn');
-  if(messengerButton)messengerButton.onclick=()=>activateNav('messages');
+  if(messengerButton)messengerButton.onclick=()=>{void toggleMessengerPanel().catch(error=>toast(error.message||'Messenger could not open.'));};
   bindPaletteSwitcher();
   document.querySelectorAll('[data-view]').forEach(el=>el.addEventListener('click',()=>activateNav(el.dataset.view)));
   $('#home-brand').onclick=()=>activateNav('feed');
