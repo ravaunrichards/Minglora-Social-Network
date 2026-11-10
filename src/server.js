@@ -2512,7 +2512,7 @@ if((method==='GET'||method==='PATCH')&&p==='/api/admin/auth-providers'){
         const limit=Number.isFinite(requestedLimit)?Math.max(1,Math.min(100,requestedLimit)):50;
         const search=String(params.get('search')||'').trim().slice(0,100);
         const actionFilter=String(params.get('action')||'all').trim().toLowerCase();
-        const auditActions=new Set(['all','account.create','account.create_failed','account.update','account.delete','account.delete_failed','account.sessions_revoke','account.sessions_revoke_failed','account.ban','account.unban']);
+        const auditActions=new Set(['all','account.create','account.create_failed','account.update','account.update_failed','account.update_partial','account.delete','account.delete_failed','account.sessions_revoke','account.sessions_revoke_failed','account.ban','account.ban_failed','account.unban','account.unban_failed']);
         if(!auditActions.has(actionFilter))return json(res,400,{error:'Choose a supported administrator audit action filter.'});
         const result=await requestSupabaseState('admin_audit_log',{actorUserId:user.id,limit,search,actionFilter});
         return json(res,200,result);
