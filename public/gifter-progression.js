@@ -100,6 +100,27 @@
       ).join("") + "</div>";
   }
 
+  function renderLevelDirectory(items) {
+    const ordered = [...items].sort((a, b) => Number(a.level) - Number(b.level));
+    return "<section class='gp-level-directory card' aria-labelledby='gp-level-directory-title'>" +
+      "<div class='gp-level-directory-heading'><div><span class='gp-eyebrow'>ORDERED REFERENCE</span>" +
+      "<h2 id='gp-level-directory-title'>Levels &amp; badge names</h2>" +
+      "<p>All 50 levels in sequence. This text directory is separate from the original artwork above.</p></div>" +
+      "<div class='gp-level-layout-controls' role='group' aria-label='Level directory orientation'>" +
+      "<button type='button' class='gp-level-layout-button is-active' data-gp-level-layout='horizontal' aria-pressed='true'>Horizontal</button>" +
+      "<button type='button' class='gp-level-layout-button' data-gp-level-layout='vertical' aria-pressed='false'>Vertical</button></div></div>" +
+      "<div class='gp-level-index-grid' id='gp-level-index-grid' data-layout='horizontal'>" +
+      ordered.map(item => {
+        const stateLabel = item.current ? "Current" : item.adminAwarded ? "Admin awarded" : item.unlocked ? "Unlocked" : "Locked";
+        const stateClass = item.current ? "is-current" : item.adminAwarded ? "is-admin-awarded" : item.unlocked ? "is-unlocked" : "is-locked";
+        return "<article class='gp-level-index-item " + stateClass + "'>" +
+          "<span class='gp-level-index-level'>LV " + number(item.level) + "</span>" +
+          "<strong class='gp-level-index-badge'>" + esc(item.tier || "Gifter") + " Gifter</strong>" +
+          "<small class='gp-level-index-coins'>" + number(item.coinsRequired ?? item.xpRequired) + " Coins required</small>" +
+          "<span class='gp-level-index-state'>" + stateLabel + "</span></article>";
+      }).join("") + "</div></section>";
+  }
+
   function renderHistory(items) {
     if (!items.length) {
       return "<div class='gp-empty'><span>🎁</span><strong>No confirmed gifts sent yet</strong><p>Your real gifting activity will appear here after a gift is successfully sent.</p></div>";
@@ -134,6 +155,7 @@
       : number(current.xpRemaining) + " Coins to LV " + current.nextLevel;
     const level25 = (data.levels || []).find(item => item.level === 25);
     const badgePanels = renderBadgePanels();
+    const levelDirectory = renderLevelDirectory(data.levels || []);
     const leaderboard = renderLeaderboard(data.leaderboard || [], { ...current, userId: data.viewerId });
     const newGifterNotice = data.newGifterIdentity?.active
       ? "<p class='gp-new-gifter-notice'><strong>✦ NEW GIFTER</strong> identity active until " + esc(date(data.newGifterIdentity.expiresAt)) + "</p>"
@@ -160,6 +182,7 @@
       "<section class='gp-section card'><div class='gp-section-heading'><div><span class='gp-eyebrow'>THE FULL PROGRESSION</span><h2>LV 1–50</h2>" +
       "<p>Earn levels with confirmed gifts, or receive an admin-awarded badge. Admin awards do not count as Coins spent.</p></div><span class='gp-level-count'>LV " + current.level + " / 50</span></div>" +
       badgePanels + "</section>" +
+      levelDirectory +
       "<section class='gp-level25 card'><div class='gp-level25-copy'><span class='gp-eyebrow'>SPECIAL MILESTONE</span><h2>LV 25 · LIVE Entrance Badge</h2><p>LV 25 unlocks special Minglora LIVE entrance recognition.</p><strong>" + (level25?.adminAwarded ? "✓ Unlocked by admin award" : level25?.unlocked ? "✓ Unlocked" : number(Math.max(0, (level25?.coinsRequired ?? level25?.xpRequired ?? 0) - current.xp)) + " Coins remaining") + "</strong></div></section>" +
       "<div class='gp-lower-grid'><section class='gp-section card'><div class='gp-section-heading'><div><span class='gp-eyebrow'>YOUR ACTIVITY</span><h2>Recent gifts</h2>" +
       "<p>Only successful, server-confirmed gifts are shown.</p></div></div>" + renderHistory(data.history || []) + "</section>" +
@@ -175,6 +198,18 @@
 
   function bindPage() {
     document.getElementById("gp-back-gifts")?.addEventListener("click", () => window.activateNav?.("gifts"));
+    const levelGrid = document.getElementById("gp-level-index-grid");
+    levelGrid?.parentElement?.querySelector(".gp-level-layout-controls")?.addEventListener("click", event => {
+      const button = event.target.closest("[data-gp-level-layout]");
+      if (!button || !levelGrid) return;
+      const layout = button.dataset.gpLevelLayout === "vertical" ? "vertical" : "horizontal";
+      levelGrid.dataset.layout = layout;
+      levelGrid.parentElement?.querySelectorAll("[data-gp-level-layout]").forEach(control => {
+        const active = control === button;
+        control.classList.toggle("is-active", active);
+        control.setAttribute("aria-pressed", active ? "true" : "false");
+      });
+    });
   }
 
   async function render() {
