@@ -1706,22 +1706,21 @@ async function route(req, res) {
           return json(res,400,{error:'AI discovery search, filters or pagination are invalid.'});
         }
         try{
-          const [result,blockResult]=await Promise.all([
-            requestSupabaseState('ai_identity_discover',{
-              actorUserId:user.id,search,filters,sort,limit,offset
-            }),
-            requestSupabaseState('ai_identity_block_list',{actorUserId:user.id,limit:500,offset:0})
-          ]);
-          const blockedIdentityIds=new Set((Array.isArray(blockResult.blockedIdentities)?blockResult.blockedIdentities:[]).map(item=>String(item.identityId)));
-          const visibleItems=(Array.isArray(result.items)?result.items:[])
+          const result=await requestSupabaseState('ai_identity_discover',{
+            actorUserId:user.id,search,filters,sort,limit,offset
+          });
+          const rawItems=Array.isArray(result.items)?result.items:[];
+          const visibleItems=rawItems
             .filter(item=>{
               const ownerId=String(item.ownerAdminId||'');
-              return !blockedIdentityIds.has(String(item.identityId||'')) &&
-                /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(ownerId)
+              return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(ownerId)
                 && !blockedBetween(user.id,ownerId);
             })
             .map(({ownerAdminId,...item})=>item);
-          return json(res,200,{ok:true,total:visibleItems.length,items:visibleItems});
+          const total=Math.max(0,Number(result.total)||0);
+          const nextOffset=offset+rawItems.length;
+          const hasMore=rawItems.length===limit&&nextOffset<total;
+          return json(res,200,{ok:true,total,items:visibleItems,nextOffset,hasMore});
         }catch(error){
           return json(res,Number(error?.status)||503,{error:String(error?.message||'AI discovery is unavailable.').slice(0,240)});
         }
