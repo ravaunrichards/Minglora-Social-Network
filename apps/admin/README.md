@@ -942,3 +942,45 @@ Workflow run [42763674914](https://github.com/ravaunrichards/Minglora-Social-Net
 - PR #203 still needs reviewed reconciliation with current `main`; shared files and branch history must not be force-merged or overwritten.
 
 **Next action:** after the user explicitly authorizes Render `My Workspace` read-only inspection, inspect only the Minglora service configuration state (never reveal secret values), then proceed to owner/MFA-hosted acceptance and reviewed deployment only after required credentials and deployment authorization are available.
+
+
+## Audit-integrity repair checkpoint — 2026-11-10 06:19 UTC
+
+- **Feature branch code head:** `87d36051dc8d067a2384686964dede5a7687ad7c`
+- **PR #203:** OPEN, DRAFT, unmerged; remains non-mergeable against its current base.
+- **Overall weighted Admin Centre progress:** unchanged at **81% verified / 19% remaining**. The new source-level fixes do not receive live-production credit.
+- **Latest CI run:** [42767452908](https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/42767452908).
+  - Admin Centre Chromium viewport regression: **PASS, 1/1**.
+  - Supabase Auth Provider controls: **PASS, 18/18**.
+  - General tests: **746/776 PASS, 30 FAIL**. The existing failures remain outside this Admin Centre workstream.
+  - For You functional navigation: **FAIL**. Two existing non-Admin navigation acceptance failures remain.
+
+### Audit integrity fixes delivered
+
+1. **Auth account creation rejection:** failures before an Auth user is created now record `account.create_failed` with a nullable target ID, outcome `rejected`, and non-secret email/phone-presence flags. No fake user ID is created.
+2. **Partial member edits:** when the Minglora profile write commits but Supabase Auth update fails, the Edge Function records `account.update_partial`, marks `profileApplied` and `authUpdateFailed`, returns `partial` and `auditRecorded`, and keeps the list of changed fields. A pure Auth update failure records `account.update_failed`.
+3. **Ban/restore failures:** failed Supabase Auth ban and unban mutations now create `account.ban_failed` / `account.unban_failed` audit rows with rejection outcome and an audit confirmation flag.
+4. **Safe audit projection:** the audit API now accepts and projects `partial` outcome plus explicit boolean flags only; it continues to use an allowlisted projection and never spreads raw metadata.
+5. **Admin UI visibility:** new audit filters and action labels show failed/partial updates and failed ban/restore operations. The edit dialog also tells the owner whether the partial/failure audit entry was confirmed.
+
+### Focused tests on the new head
+
+The general unit job explicitly passed:
+- `partial member updates are audited with safe fields and an explicit partial outcome`
+- `failed Supabase Auth ban and restore updates are recorded before returning`
+- `initial Supabase Auth account creation failures are audited without inventing a target account`
+- `administrator audit history filters and displays member CRUD and session operations safely`
+- member creation rollback, member CRUD/MFA/same-origin, ban/unban owner protection and Auth Provider route-security checks.
+
+No production Edge deployment, user/account operation, OAuth credential write, database mutation or service-configuration change was performed.
+
+### Remaining 19% — current exact blockers
+
+- **R002 (10 weighted points remaining):** live Supabase Auth CRUD, real account/session operations and rollback behavior still require a reviewed deployed Edge Function and designated owner/MFA-hosted acceptance. Production `minglora-runtime-state` remains active at **v112**, without the branch's new CRUD/session actions.
+- **R004 (2 points):** real Supabase Management API read/write and provider-issued OAuth/SMS credential setup remain unverified. The server-only `SUPABASE_ACCESS_TOKEN` status is unknown; the Render workspace/service has not been inspected because `My Workspace` was not explicitly selected for read-only inspection.
+- **R005 (1 point):** the full audit flows are now covered in source/unit tests, but live production audit inserts/read-back still need hosted acceptance after deployment.
+- **R007 (6 points):** full repository CI and safe PR integration remain incomplete. General tests still show 30 non-Admin failures and the independent For You job remains red. Main has advanced 98 commits beyond the common base, with 13 overlapping files; reconcile manually and review before updating/merging the existing draft PR.
+
+### Next safe action
+
+Inspect the Render Minglora service only after explicit selection of `My Workspace` for read-only access. Then establish whether the server-side Management API token is configured (never expose its value). Keep PR #203 draft and production unchanged until branch reconciliation, required access, MFA and deployment authorization are resolved.
