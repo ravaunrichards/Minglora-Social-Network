@@ -7,7 +7,7 @@
   let autoSyncTimer = null;
 
   function isGifterViewActive() {
-    return Boolean(document.querySelector("[data-view='gifter-progression'].active"));
+    return Boolean(document.querySelector("#main-content .gp-page"));
   }
 
   function onNavigateAway() {
@@ -174,7 +174,7 @@
       "<header class='gp-heading'><div><span class='gp-eyebrow'>MINGLORA GIFTER JOURNEY</span><h1>Gifter Level &amp; Badges</h1>" +
       "<p>Every confirmed gift you send moves your own Minglora gifter journey forward.</p></div>" +
       "<div class='gp-heading-actions'><button type='button' class='gp-back-link' id='gp-back-gifts'>← Back to Gifts</button></div></header>" +
-      "<section class='gp-hero card'><div class='gp-hero-art'><img class='gp-reference-art' src='/assets/gifters-level-up.png' alt='Gifters Level Up' loading='eager' decoding='async'></div><div class='gp-hero-summary'>" +
+      "<section class='gp-hero card'><div class='gp-hero-art'><img class='gp-reference-art' src='/assets/gifters-level-up.svg' alt='Gifters Level Up' loading='eager' decoding='async'></div><div class='gp-hero-summary'>" +
       "<span class='gp-eyebrow'>YOUR GIFTER STATUS</span><div class='gp-current-badge-row'>" +
       currentBadgeMarkup +
       "<div><h2>" + (current.hasUnlockedBadge ? "LV " + current.level + " · " + esc(current.tier) : "No badge earned yet") + "</h2><p>" + (current.hasUnlockedBadge ? esc(current.badgeName) : "Your gifter levels are locked until you send gifts.") + "</p>" +
@@ -228,15 +228,27 @@
     const generation = ++viewGeneration;
     const main = document.getElementById("main-content");
     if (!main) return;
-    main.innerHTML = "<section class='card gp-loading'><strong>Loading your gifter progression…</strong><p>Checking confirmed Minglora gifts.</p></section>";
-    const overview = await requestOverview();
-    if (generation !== viewGeneration || !isGifterViewActive()) return;
-    state.overview = overview;
-    state.selectedLevel = Math.max(1, Math.min(50, Number(overview.current.level) || 1));
-    main.innerHTML = renderMarkup(overview);
-    bindPage(overview);
-    publishBadge(overview);
-    autoSyncTimer = window.setInterval(() => void refreshOverview(), 30000);
+    main.innerHTML = "<section class='card gp-loading' role='status' aria-live='polite'><strong>Loading your gifter progression…</strong><p>Checking confirmed Minglora gifts.</p></section>";
+    try {
+      const overview = await requestOverview();
+      if (generation !== viewGeneration) return;
+      if (!overview || !overview.current || !Array.isArray(overview.levels) || overview.levels.length !== 50) {
+        throw new Error("Minglora returned incomplete gifter progression data. Please retry.");
+      }
+      state.overview = overview;
+      state.selectedLevel = Math.max(1, Math.min(50, Number(overview.current.level) || 1));
+      main.innerHTML = renderMarkup(overview);
+      bindPage(overview);
+      publishBadge(overview);
+      autoSyncTimer = window.setInterval(() => void refreshOverview(), 30000);
+    } catch (error) {
+      if (generation !== viewGeneration) return;
+      const message = error?.message || "Minglora could not load your confirmed gift progress.";
+      main.innerHTML = "<section class='card gp-loading gp-load-error' role='alert'><strong>Your 50 gifter levels could not load</strong><p>" +
+        esc(message) + "</p><div class='gp-load-actions'><button type='button' class='primary' id='gp-retry'>Try again</button><button type='button' class='gp-back-link' id='gp-error-back'>Back to Gifts</button></div></section>";
+      document.getElementById("gp-retry")?.addEventListener("click", () => void render());
+      document.getElementById("gp-error-back")?.addEventListener("click", () => window.activateNav?.("gifts"));
+    }
   }
 
   // Gifter progression syncs quietly without interrupting the member's page.
