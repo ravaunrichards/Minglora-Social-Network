@@ -78,7 +78,7 @@ test('Lite mode is stored as an account preference and applied to the interface'
   assert.match(settings,/classList\.toggle\('lite-mode', preferences\.liteMode === true\)/);
   assert.match(server,/liteMode:false/);
   assert.match(server,/\['theme','colorTheme','liveRoomTheme','feedSort','reducedMotion','liteMode'/);
-  assert.match(server,/\['reducedMotion','liteMode','messengerIncomingCallSounds'/);
+  assert.match(server,/\['reducedMotion','liteMode','keyboardShortcuts','messengerIncomingCallSounds'/);
   assert.match(styles,/body\.lite-mode/);
 });
 
