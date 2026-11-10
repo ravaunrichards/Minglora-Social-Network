@@ -374,11 +374,12 @@ function bindPaletteSwitcher(){
     toggle.dataset.bound='true';
     toggle.addEventListener('click',()=>$('#palette-switcher')?.classList.contains('hidden')?openPaletteSwitcher():closePaletteSwitcher());
   }
-  if(!document.documentElement.dataset.paletteOutsideBound){
+  if(!document.documentElement.dataset.paletteOutsideBound&&window.MingloraMenuDismissal?.bindOutsideDismissal){
     document.documentElement.dataset.paletteOutsideBound='true';
-    document.addEventListener('click',event=>{
-      const anchor=$('.palette-menu-anchor');
-      if(anchor&&!anchor.contains(event.target))closePaletteSwitcher();
+    window.MingloraMenuDismissal.bindOutsideDismissal({
+      roots:()=>[$('.palette-menu-anchor')],
+      isOpen:()=>!$('#palette-switcher')?.classList.contains('hidden'),
+      onDismiss:closePaletteSwitcher
     });
     document.addEventListener('keydown',event=>{if(event.key==='Escape')closePaletteSwitcher();});
   }
@@ -10115,11 +10116,12 @@ function bindAccountSwitcherMenu(){
     await renderAccountSwitcherMenu();
     positionAccountSwitcherTopLayer();
   });
-  if(!document.documentElement.dataset.accountSwitcherOutsideBound){
+  if(!document.documentElement.dataset.accountSwitcherOutsideBound&&window.MingloraMenuDismissal?.bindOutsideDismissal){
     document.documentElement.dataset.accountSwitcherOutsideBound='true';
-    document.addEventListener('pointerdown',event=>{
-      const panel=$('#profile-account-menu');
-      if(!anchor.contains(event.target)&&!panel?.contains(event.target))closeAccountSwitcherMenu();
+    window.MingloraMenuDismissal.bindOutsideDismissal({
+      roots:()=>[anchor,$('#profile-account-menu')],
+      isOpen:()=>!$('#profile-account-menu')?.hidden,
+      onDismiss:closeAccountSwitcherMenu
     });
     document.addEventListener('keydown',event=>{
       if(event.key==='Escape'){closeAccountSwitcherMenu();document.querySelector('.account-access-backdrop')?.remove();}

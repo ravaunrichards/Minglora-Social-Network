@@ -15,7 +15,7 @@ test('Minglora Menu beside Messenger has a clean single-row header', () => {
   assert.ok(html.includes('id="minglora-menu-toggle"'));
   assert.ok(html.includes('id="minglora-menu-panel"'));
   assert.ok(html.includes('minglora-menu.css?v=20261110-facebook-menu-search-left-column-1'));
-  assert.ok(html.includes('minglora-menu.js?v=20261110-menu-scroll-dismiss-guard-1'));
+  assert.ok(html.includes('minglora-menu.js?v=20261110-shared-menu-dismiss-guard-2'));
   for (const label of ['Social','Entertainment','Shopping','Personal','Professional','More from Meta','Create']) {
     assert.ok(script.includes(label), 'Menu contains ' + label);
   }
@@ -51,7 +51,7 @@ test('Search Menu is in the left Menu column above all shortcut sections', () =>
   assert.ok(script.includes('aria-controls="minglora-menu-results"'));
   assert.ok(css.includes('.minglora-menu-search-field'));
   assert.ok(css.includes('.minglora-menu-search input'));
-  assert.ok(html.includes('minglora-menu.js?v=20261110-menu-scroll-dismiss-guard-1'));
+  assert.ok(html.includes('minglora-menu.js?v=20261110-shared-menu-dismiss-guard-2'));
   assert.ok(html.includes('minglora-menu.css?v=20261110-facebook-menu-search-left-column-1'));
   assert.ok(!html.includes('id="search-form"'));
   assert.ok(!html.includes('id="search-input"'));
@@ -97,17 +97,32 @@ test('Main Menu uses Facebook-sized viewport bounds on desktop, tablet and phone
   assert.ok(safety.includes('max-width:min(360px,calc(100vw - 24px))!important'));
 });
 
-test('Scrolling does not dismiss the Menu; outside clicks and Escape still close it', () => {
+test('Main Menu delegates scroll-safe outside dismissal to the shared menu controller', () => {
   const script = read('public/minglora-menu.js');
   const safety = read('public/layout-safety.css');
-  assert.ok(script.includes("document.addEventListener('pointerdown'"));
-  assert.ok(script.includes("document.addEventListener('pointerup'"));
-  assert.ok(script.includes("document.addEventListener('pointercancel'"));
-  assert.ok(script.includes('const isTap = movedX < 10 && movedY < 10'));
-  assert.ok(script.includes('event.detail === 0'), 'keyboard outside activation still dismisses');
-  assert.ok(script.includes('trigger.contains(event.target)'), 'trigger taps do not count as outside taps');
+  assert.ok(script.includes('window.MingloraMenuDismissal.bindOutsideDismissal'));
+  assert.ok(script.includes('roots: () => [panel, trigger]'));
+  assert.ok(script.includes('isOpen: () => !panel.hidden'));
   assert.ok(script.includes("event.key === 'Escape'"));
   assert.ok(script.includes("document.documentElement.classList.add('minglora-menu-open')"));
   assert.ok(safety.includes('html.minglora-menu-open,'));
   assert.ok(safety.includes('body.minglora-menu-open'));
+});
+
+test('Palette and profile/account menus use the same scroll-safe outside dismissal controller', () => {
+  const app = read('public/app.js');
+  const helper = read('public/menu-dismissal.js');
+  const html = read('public/index.html');
+  const worker = read('public/sw.js');
+  assert.ok(app.includes('roots:()=>[$('.palette-menu-anchor')]'));
+  assert.ok(app.includes('roots:()=>[anchor,$('#profile-account-menu')]'));
+  assert.ok(app.includes('window.MingloraMenuDismissal.bindOutsideDismissal'));
+  assert.ok(helper.includes("event.type === 'pointerdown'") || helper.includes("function onPointerDown"));
+  assert.ok(helper.includes('event.detail === 0'));
+  assert.ok(html.indexOf('menu-dismissal.js') < html.indexOf('app.js'));
+  assert.ok(html.includes('menu-dismissal.js?v=20261110-menu-dismissal-1'));
+  assert.ok(html.includes('app.js?v=20261110-global-menu-scroll-guard-1'));
+  assert.ok(html.includes('minglora-menu.js?v=20261110-shared-menu-dismiss-guard-2'));
+  assert.ok(worker.includes('minglora-shell-v266-self-updating-1'));
+  assert.ok(worker.includes('/menu-dismissal.js?v=20261110-menu-dismissal-1'));
 });
