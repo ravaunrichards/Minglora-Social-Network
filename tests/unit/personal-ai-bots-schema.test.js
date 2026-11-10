@@ -458,7 +458,8 @@ test('AI discovery Edge gateway and server endpoint require a signed-in member',
   assert.match(handler,/validUuid\(actorUserId\)/);
   assert.match(handler,/Sign in to discover public Minglora AI identities/);
   assert.match(handler,/admin\.rpc\("minglora_ai_identity_discover"/);
-  const route=serverSource.slice(serverSource.indexOf("if(method==='GET'&&p==='/api/ai/discover')"),serverSource.indexOf('handlePersonalAiBotsAdminApi',serverSource.indexOf("if(method==='GET'&&p==='/api/ai/discover')")));
+  const discoveryStart=serverSource.indexOf("if(method==='GET'&&p==='/api/ai/discover')");
+  const route=serverSource.slice(discoveryStart,serverSource.indexOf("if(method==='POST'&&p==='/api/ai/follows')",discoveryStart));
   assert.ok(route.length>0);
   assert.match(serverSource,/requireAuth\(user\);\s*if\(method==='GET'&&p==='\/api\/ai\/discover'/);
   assert.match(route,/requestSupabaseState\('ai_identity_discover'/);
