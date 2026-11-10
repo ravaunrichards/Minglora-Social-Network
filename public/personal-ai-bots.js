@@ -28,7 +28,7 @@
         root.innerHTML='<section class="pab-access-denied"><h1>Private Personal AI Bots Network</h1><p>Sign in with the designated Minglora owner account and complete authenticator verification in Admin Centre.</p><a class="pab-btn secondary" href="/admin-centre.html">Return to Admin Centre</a></section>';
         return;
       }
-      state=await request(API);const batchResult=await request(API+'/batches?limit=50&offset=0');state.batchHistory=Array.isArray(batchResult.batches)?batchResult.batches:[];state.batchHistoryNextOffset=Number(batchResult.nextOffset)||state.batchHistory.length;state.batchHistoryHasMore=batchResult.hasMore===true;render();
+      state=await request(API);const batchResult=await request(API+'/batches?limit=50&offset=0');state.batchHistory=Array.isArray(batchResult.batches)?batchResult.batches:[];state.batchHistoryNextOffset=Number(batchResult.nextOffset)||state.batchHistory.length;state.batchHistoryHasMore=batchResult.hasMore===true;await loadProviderRuntimeOverview();render();
     }catch(error){
       root.innerHTML='<section class="pab-access-denied"><h1>Could not open Personal AI Bots Network</h1><p>'+esc(error.message)+'</p><a class="pab-btn secondary" href="/admin-centre.html">Return to Admin Centre</a></section>';
     }
@@ -185,6 +185,10 @@
     return '<article class="pab-task"><div><h4>'+esc(task.botName||'AI bot')+' · '+esc(String(task.taskType||'instruction').replaceAll('_',' '))+'</h4><p>'+esc(task.instruction||'No instruction text')+'</p><div class="pab-task-meta"><span>'+esc(status)+'</span><span>Submitted '+esc(date(task.createdAt))+'</span>'+(task.targetUserId?'<span>Target '+esc(task.targetUserId)+'</span>':'')+'</div></div><div class="pab-actions">'+(pending?'<button class="pab-btn secondary pab-approve-task" data-task="'+esc(task.id)+'">Approve</button>':'')+(!['completed','cancelled'].includes(task.status)?'<button class="pab-btn danger pab-cancel-task" data-task="'+esc(task.id)+'">Cancel</button>':'')+'</div></article>';
   }
 
+  function providerRuntimeRow(item){
+    return '<tr><td>'+esc(item.displayName||item.username||item.identityId)+'</td><td>'+esc(item.providerName||item.providerIdentifier)+'</td><td>'+esc(item.modelName||item.modelIdentifier)+'</td><td>'+(item.credentialConfigured===true?'Reference configured':'Reference missing')+'</td><td>'+esc(item.assignmentStatus||'configured')+'</td><td>'+esc(item.providerHealthStatus||'unknown')+'</td></tr>';
+  }
+
   function providerAssignmentRow(item){
     return '<tr><td>'+esc(item.displayName||item.username||item.identityId)+'</td><td>'+esc(item.providerName||item.providerIdentifier)+'</td><td>'+esc(item.modelName||item.modelIdentifier)+'</td><td>'+((item.credentialConfigured===true)?'Reference saved':'Missing reference')+'</td><td>'+esc(item.accountStatus||'configured')+'</td><td>'+esc(item.providerHealthStatus||'unknown')+'</td><td>'+esc(item.assignmentStatus||'configured')+'</td></tr>';
   }
@@ -230,6 +234,8 @@
     html+='</section>';
     const providerAssignments=Array.isArray(state.providerAssignments)?state.providerAssignments:[];
     const providerSource=state.providerAssignmentsSource==='minglora_supabase_postgresql';
+    const providerRuntimeAssignments=Array.isArray(state.providerRuntimeAssignments)?state.providerRuntimeAssignments:[];
+    const providerRuntimeSource=state.providerRuntimeSource===true;
     const emailIdentities=Array.isArray(state.emailIdentities)?state.emailIdentities:[];
     const emailSource=state.emailIdentitiesSource==='minglora_supabase_postgresql';
     const providerAssignmentsHasMore=state.providerAssignmentsHasMore===true;
@@ -245,6 +251,12 @@
     else html+='<div class="pab-identity-table-wrap"><table class="pab-identity-table"><thead><tr><th>AI identity</th><th>Provider</th><th>Model</th><th>Secret reference</th><th>Account</th><th>Health</th><th>Assignment</th></tr></thead><tbody id="pab-provider-assignment-rows">'+providerAssignments.map(providerAssignmentRow).join('')+'</tbody></table></div>';
     if(providerSource)html+='<div class="pab-pagination"><button type="button" class="pab-btn secondary" id="pab-load-more-providers" '+(providerAssignmentsHasMore?'':'hidden')+'>Load more provider assignments</button><span id="pab-provider-load-status" class="pab-notice" role="status" aria-live="polite"></span></div>';
     html+='<form id="pab-provider-form" class="pab-form-grid"><div class="pab-field"><label for="pab-provider-identity">AI identity</label><select class="pab-select" id="pab-provider-identity" required>'+bots.map(bot=>'<option value="'+esc(bot.id)+'">'+esc(bot.displayName)+' (@'+esc(bot.username||'AI')+')</option>').join('')+'</select></div><div class="pab-field"><label for="pab-provider-name">Provider name</label><input class="pab-input" id="pab-provider-name" maxlength="80" required placeholder="Provider display name"></div><div class="pab-field"><label for="pab-provider-id">Provider identifier</label><input class="pab-input" id="pab-provider-id" maxlength="80" required pattern="[a-z][a-z0-9._-]{1,79}" placeholder="provider_id"></div><div class="pab-field"><label for="pab-provider-account">Provider account reference</label><input class="pab-input" id="pab-provider-account" maxlength="120" value="default" required></div><div class="pab-field full"><label for="pab-provider-secret-ref">Server-side credential reference (not the credential)</label><input class="pab-input" id="pab-provider-secret-ref" maxlength="110" pattern="env:MINGLORA_AI_PROVIDER_[A-Z0-9_]{2,80}" placeholder="env:MINGLORA_AI_PROVIDER_..."><small class="pab-notice">The referenced environment variable must be provisioned securely on the Minglora server. Do not paste an API key here.</small></div><div class="pab-field"><label for="pab-model-name">Model name</label><input class="pab-input" id="pab-model-name" maxlength="160" required placeholder="Model display name"></div><div class="pab-field"><label for="pab-model-id">Model identifier</label><input class="pab-input" id="pab-model-id" maxlength="200" required placeholder="provider/model-id"></div><div class="pab-field"><label for="pab-model-version">Model version (optional)</label><input class="pab-input" id="pab-model-version" maxlength="80"></div><div class="pab-field"><label for="pab-provider-languages">Supported languages</label><input class="pab-input" id="pab-provider-languages" maxlength="500" placeholder="en, es, jam"></div><div class="pab-field"><label for="pab-provider-priority">Routing priority (1–1000)</label><input class="pab-input" id="pab-provider-priority" class="pab-input" type="number" min="1" max="1000" value="100"></div><div class="pab-field"><label class="pab-check"><span>Primary model assignment</span><input type="checkbox" id="pab-provider-primary"></label></div><div class="pab-field full"><button class="pab-btn" type="submit" '+(providerSource&&bots.length?'':'disabled')+'>Save provider/model assignment</button><span id="pab-provider-status" class="pab-notice">A saved assignment is not a verified provider connection.</span></div></form></section>';
+    html+='<section class="pab-panel"><div class="pab-heading"><div><h2>Worker-visible provider runtime configuration</h2><p>Read-only view of assignments eligible for worker routing. A configured credential reference or stored health label does not prove live connectivity or successful model inference.</p></div><span class="pab-status '+(providerRuntimeSource?'':'off')+'">'+(providerRuntimeSource?'RUNTIME LIST':'NOT AVAILABLE')+'</span></div>';
+    if(!providerRuntimeSource)html+='<div class="pab-empty">Provider runtime configuration could not be read from the current runtime gateway. No provider is claimed as connected.</div>';
+    else if(!providerRuntimeAssignments.length)html+='<div class="pab-empty">No enabled provider assignments are currently eligible for runtime routing.</div>';
+    else html+='<div class="pab-identity-table-wrap"><table class="pab-identity-table"><thead><tr><th>AI identity</th><th>Provider</th><th>Model</th><th>Credential reference</th><th>Assignment</th><th>Stored health</th></tr></thead><tbody id="pab-provider-runtime-rows">'+providerRuntimeAssignments.map(providerRuntimeRow).join('')+'</tbody></table></div>';
+    if(providerRuntimeSource)html+='<div class="pab-pagination"><button type="button" class="pab-btn secondary" id="pab-load-more-provider-runtime" '+(state.providerRuntimeHasMore?'':'hidden')+'>Load more runtime assignments</button><span id="pab-provider-runtime-status" class="pab-notice" role="status" aria-live="polite"></span></div>';
+    html+='</section>';
     html+='<section class="pab-panel"><div class="pab-heading"><div><h2>AI email identity records</h2><p>Record a unique address against an AI identity. An address record is not an inbox: verification and provisioning only change after an actual email provider confirms them.</p></div><span class="pab-status '+(emailSource?'':'off')+'">'+(emailSource?'POSTGRESQL':'STORAGE UNAVAILABLE')+'</span></div>';
     html+='<div class="pab-warning">Addresses saved here start as NOT VERIFIED and NOT PROVISIONED. This does not create a mailbox, enable sending, receive mail, or create a human Minglora login account.</div>';
     if(!emailSource)html+='<div class="pab-empty">AI email identity storage requires the staged Minglora Supabase migration and Edge Function release. No mailbox is claimed.</div>';
@@ -317,6 +329,7 @@
     document.querySelector('#pab-load-more-tasks')?.addEventListener('click',loadMoreTaskRecords);
     document.querySelector('#pab-load-more-batches')?.addEventListener('click',loadMoreBatchHistory);
     document.querySelector('#pab-load-more-providers')?.addEventListener('click',loadMoreProviderAssignments);
+    document.querySelector('#pab-load-more-provider-runtime')?.addEventListener('click',loadMoreProviderRuntime);
     document.querySelector('#pab-load-more-emails')?.addEventListener('click',loadMoreEmailIdentities);
     document.querySelector('#pab-safety-report-filter')?.addEventListener('change',()=>void loadMoreSafetyReports());
 
@@ -468,7 +481,7 @@
     catch(error){notice('pab-category-status',error.message,'error');}
   }
   function filterBots(){const value=String(document.querySelector('#pab-bot-filter')?.value||'').trim().toLowerCase();const population=String(document.querySelector('#pab-population-filter')?.value||'all');document.querySelectorAll('[data-bot-card]').forEach(card=>{const searchMatches=String(card.dataset.search||'').includes(value);const populationMatches=population==='all'||card.dataset.population===population;card.hidden=!(searchMatches&&populationMatches);});}
-  async function refresh(){try{state=await request(API);const batchResult=await request(API+'/batches?limit=50&offset=0');state.batchHistory=Array.isArray(batchResult.batches)?batchResult.batches:[];state.batchHistoryNextOffset=Number(batchResult.nextOffset)||state.batchHistory.length;state.batchHistoryHasMore=batchResult.hasMore===true;render();}catch(error){notice('pab-network-status',error.message,'error');}}
+  async function refresh(){try{state=await request(API);const batchResult=await request(API+'/batches?limit=50&offset=0');state.batchHistory=Array.isArray(batchResult.batches)?batchResult.batches:[];state.batchHistoryNextOffset=Number(batchResult.nextOffset)||state.batchHistory.length;state.batchHistoryHasMore=batchResult.hasMore===true;await loadProviderRuntimeOverview();render();}catch(error){notice('pab-network-status',error.message,'error');}}
   async function saveNetwork(){
     const enabled=!!document.querySelector('#pab-master-switch')?.checked,hybridEnabled=!!document.querySelector('#pab-hybrid-switch')?.checked;
     try{await request(API+'/network',{method:'PUT',body:JSON.stringify({enabled,hybridEnabled})});notice('pab-network-status','Network controls saved. Bots still require explicit instructions and approval.','success');await refresh();}
@@ -615,6 +628,49 @@
       if(status)status.textContent=added.length?('Loaded '+added.length+' more task records.'):'No additional task records were returned.';
     }catch(error){if(status)status.textContent=error.message;}
     finally{state.tasksLoading=false;button.disabled=false;}
+  }
+
+  async function loadProviderRuntimeOverview(){
+    state.providerRuntimeAssignments=[];
+    state.providerRuntimeNextOffset=0;
+    state.providerRuntimeHasMore=false;
+    state.providerRuntimeSource=false;
+    state.providerRuntimeError='';
+    try{
+      const result=await request(API+'/provider-runtime?limit=100&offset=0');
+      state.providerRuntimeAssignments=Array.isArray(result.assignments)?result.assignments:[];
+      state.providerRuntimeNextOffset=Number(result.nextOffset)||state.providerRuntimeAssignments.length;
+      state.providerRuntimeHasMore=result.hasMore===true;
+      state.providerRuntimeSource=true;
+    }catch(error){
+      state.providerRuntimeError=error.message;
+    }
+  }
+
+  async function loadMoreProviderRuntime(){
+    const button=document.querySelector('#pab-load-more-provider-runtime');
+    const rows=document.querySelector('#pab-provider-runtime-rows');
+    const status=document.querySelector('#pab-provider-runtime-status');
+    if(!button||!rows||button.disabled||state.providerRuntimeLoading)return;
+    state.providerRuntimeLoading=true;
+    button.disabled=true;
+    if(status)status.textContent='Loading runtime assignments…';
+    try{
+      const offset=Math.max(0,Number(state.providerRuntimeNextOffset)||0);
+      const params=new URLSearchParams({limit:'100',offset:String(offset)});
+      const result=await request(API+'/provider-runtime?'+params.toString());
+      const incoming=Array.isArray(result.assignments)?result.assignments:[];
+      const existing=new Set((state.providerRuntimeAssignments||[]).map(item=>String(item.assignmentId||'')));
+      const added=incoming.filter(item=>!existing.has(String(item.assignmentId||'')));
+      if(added.length)rows.insertAdjacentHTML('beforeend',added.map(providerRuntimeRow).join(''));
+      state.providerRuntimeAssignments=[...(state.providerRuntimeAssignments||[]),...added];
+      const nextOffset=Number(result.nextOffset);
+      state.providerRuntimeNextOffset=Number.isInteger(nextOffset)&&nextOffset>=0?nextOffset:offset+incoming.length;
+      state.providerRuntimeHasMore=result.hasMore===true;
+      button.hidden=!state.providerRuntimeHasMore;
+      if(status)status.textContent=added.length?('Loaded '+added.length+' more runtime assignments.'):'No additional runtime assignments were returned.';
+    }catch(error){if(status)status.textContent=error.message;}
+    finally{state.providerRuntimeLoading=false;button.disabled=false;}
   }
 
   async function loadMoreProviderAssignments(){
