@@ -51,6 +51,8 @@ test('navigation provides search, recent pages, breadcrumbs, history and mobile 
 test('navigation can be collapsed and the page layout adapts to narrow screens', () => {
   assert.match(js, /admin-centre-sidebar-toggle/);
   assert.match(js, /admin-centre-workspace-sidebar-collapsed/);
+  assert.match(js, /aria-controls/);
+  assert.match(js, /is-collapsed/);
   assert.match(css, /@media\(max-width:980px\)/);
   assert.match(css, /@media\(max-width:600px\)/);
 });
