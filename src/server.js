@@ -7305,6 +7305,28 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
     fs.readFile(assetFile,(error,data)=>{if(error)return json(res,404,{error:'Gifters rewards artwork not found.'});res.writeHead(200,{'Content-Type':'image/png','Cache-Control':'public, max-age=3600',...SECURITY_HEADERS});res.end(data);});
     return;
   }
+  const gifterBadgePanelFile = ({
+    '/assets/gifter-badge-level-panels/levels-1-4.jpg': 'Levels 1-4.jpg',
+    '/assets/gifter-badge-level-panels/levels-5-9.jpg': 'Levels 5-9.jpg',
+    '/assets/gifter-badge-level-panels/levels-10-14.jpg': 'Levels 10-14.jpg',
+    '/assets/gifter-badge-level-panels/levels-15-19.jpg': 'Levels 15-19.jpg',
+    '/assets/gifter-badge-level-panels/levels-20-24.jpg': 'Levels 20-24.jpg',
+    '/assets/gifter-badge-level-panels/levels-25-29.jpg': 'Levels 25-29.jpg',
+    '/assets/gifter-badge-level-panels/levels-30-34.jpg': 'Levels 30-34.jpg',
+    '/assets/gifter-badge-level-panels/levels-35-39.jpg': 'Levels 35-39.jpg',
+    '/assets/gifter-badge-level-panels/levels-40-44.jpg': 'Levels 40-44.jpg',
+    '/assets/gifter-badge-level-panels/levels-45-49.jpg': 'Levels 45-49.jpg',
+    '/assets/gifter-badge-level-panels/levels-50.jpg': 'Levels 50.jpg'
+  })[p];
+  if(gifterBadgePanelFile){
+    const assetFile=path.join(__dirname,'..','assets','Gifters Badge Levels',gifterBadgePanelFile);
+    fs.readFile(assetFile,(error,data)=>{
+      if(error)return json(res,404,{error:'Gifter badge level artwork not found.'});
+      res.writeHead(200,{'Content-Type':'image/jpeg','Cache-Control':'public, max-age=86400',...SECURITY_HEADERS});
+      res.end(data);
+    });
+    return;
+  }
   if(p==='/assets/gifters-level-up.png'){
     const assetFile=path.join(__dirname,'..','assets','Gifters Level Up.png');
     fs.readFile(assetFile,(error,data)=>{if(error)return json(res,404,{error:'Gifter progression artwork not found.'});res.writeHead(200,{'Content-Type':'image/png','Cache-Control':'public, max-age=3600',...SECURITY_HEADERS});res.end(data);});
