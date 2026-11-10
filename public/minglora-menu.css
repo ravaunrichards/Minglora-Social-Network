@@ -340,17 +340,20 @@
 .account-switcher-actions{
   display:grid;
   gap:2px;
-  padding:10px 0;
+  padding:9px 0 0;
   border-top:1px solid var(--line);
-  border-bottom:1px solid var(--line);
 }
+.account-switcher-actions [hidden],
+.account-switcher-menu-home[hidden],
+.account-switcher-submenu[hidden],
+.account-switcher-profiles[hidden]{display:none!important}
 .account-switcher-action{
   display:flex;
   align-items:center;
   gap:11px;
   width:100%;
   min-width:0;
-  min-height:43px;
+  min-height:44px;
   padding:6px 8px;
   border:0;
   border-radius:9px;
@@ -358,18 +361,91 @@
   color:var(--ink);
   text-align:left;
   font-size:13px;
+  font-weight:700;
+  cursor:pointer;
+}
+.account-switcher-action:hover,
+.account-switcher-submenu-item:hover,
+.account-switcher-back:hover{background:var(--bg)}
+.account-switcher-action .nav-3d-icon{
+  display:block;
+  width:29px;
+  height:29px;
+  flex:0 0 29px;
+}
+.account-switcher-action>span:nth-of-type(1){flex:1;min-width:0}
+.account-switcher-menu-chevron{
+  flex:0 0 auto;
+  margin-left:auto;
+  color:var(--muted);
+  font-size:22px;
+  line-height:1;
+}
+.account-switcher-action[aria-expanded="true"]{
+  background:color-mix(in srgb,var(--blue) 8%,var(--card));
+  color:var(--blue);
+}
+.account-switcher-logout{margin-top:3px;border-top:1px solid var(--line);border-radius:0;padding-top:10px}
+.account-switcher-submenu{display:grid;gap:2px}
+.account-switcher-back{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  min-height:42px;
+  margin-bottom:5px;
+  padding:6px 8px;
+  border:0;
+  border-radius:9px;
+  background:transparent;
+  color:var(--ink);
+  text-align:left;
+  font-size:13px;
+  font-weight:800;
+  cursor:pointer;
+}
+.account-switcher-back>span:first-child{font-size:24px;line-height:1}
+.account-switcher-submenu-item{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  width:100%;
+  min-width:0;
+  min-height:42px;
+  padding:7px 10px;
+  border:0;
+  border-radius:9px;
+  background:transparent;
+  color:var(--ink);
+  text-align:left;
+  font-size:12px;
   font-weight:650;
   cursor:pointer;
 }
-.account-switcher-action:hover{background:var(--bg)}
-.account-switcher-action .nav-3d-icon{
-  width:27px;height:27px;
-  flex:0 0 27px;
+.account-switcher-see-all{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  width:100%;
+  min-height:38px;
+  padding:6px 8px;
+  border:0;
+  border-radius:9px;
+  background:transparent;
+  color:var(--blue);
+  text-align:center;
+  font-size:12px;
+  font-weight:800;
+  cursor:pointer;
 }
-.account-switcher-action span{
-  min-width:0;
-  overflow-wrap:anywhere;
-}
+.account-switcher-see-all:hover{background:color-mix(in srgb,var(--blue) 7%,var(--card))}
+.account-switcher-see-all .account-switcher-arrow{font-size:19px;color:inherit}
+.account-switcher-profiles{display:grid;gap:10px;padding-top:9px;border-top:1px solid var(--line)}
+.account-switcher-profiles .account-switcher-head{padding-bottom:8px}
+.account-switcher-actions button:focus-visible,
+.account-switcher-see-all:focus-visible{outline:3px solid #82b4ff;outline-offset:2px}
+
 @media(min-width:761px) and (max-width:1024px){
   .minglora-menu-panel{
     width:min(640px,calc(100vw - 24px));

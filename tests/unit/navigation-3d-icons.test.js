@@ -63,7 +63,7 @@ test('utility rail and header actions use the matching rendered icon assets', ()
   }
   assert.ok(html.includes('id="notifications-btn"') && html.includes(useIcon('activity')));
   assert.doesNotMatch(html, /id="settings-btn"/, 'Settings is not a separate header control beside Personalise Minglora');
-  assert.match(menuScript, /label: 'Settings & Privacy',[^\n]+icon: 'settings'/, 'the profile dropdown reuses the existing 3D Settings icon');
+  assert.match(menuScript, /settings:\s*\{\s*label: 'Settings & privacy',\s*icon: 'settings'/, 'the profile dropdown reuses the existing 3D Settings icon');
   assert.match(menuScript, /sprite\(item\.icon, 'nav-3d-icon'\)/, 'account menu rows use the existing 3D icon treatment');
   assert.ok(html.includes('id="top-search-form"') && html.includes('id="top-search-input"'), 'the top bar has a real Search Minglora field');
   assert.ok(html.includes('class="top-search-submit"') && html.includes('class="nav-search-icon"'), 'the top bar search action has a visible icon');
@@ -100,7 +100,7 @@ test('feature navigation uses distinct, semantically correct 3D icons', () => {
   assert.match(menuScript, /Play Games[^\n]*icon: 'gamepad'/);
   assert.match(menuScript, /Meta AI[^\n]*icon: 'ai'/);
   assert.match(menuScript, /Ads Manager[^\n]*icon: 'megaphone'/);
-  assert.match(menuScript, /Log Out[^\n]*icon: 'logout'/);
+  assert.match(menuScript, /label: 'Log out', icon: 'logout'/);
   assert.match(appScript, /value:'mobile_gaming'[^\n]*icon:'gamepad'/);
   assert.ok(appScript.includes("option.icon==='gamepad'?"), 'Mobile Gaming renders the dedicated gamepad artwork');
   assert.ok(appScript.includes('20261110-semantic-icons-3d-1#gamepad'), 'Mobile Gaming loads the current 3D gamepad symbol');
@@ -127,8 +127,8 @@ test('service-worker shell pre-caches the latest icon sprite, stylesheet and app
   assert.ok(activeScript&&serviceWorker.includes("'"+activeScript+"'"),'active app script is cached');
   assert.match(serviceWorker,/mobile-profile-navigation\.css\?v=20261108-five-profile-metrics-1/);
   assert.match(serviceWorker,/\/assets\/icons\/navigation-3d\.svg/);
-  assert.ok(html.includes('/minglora-menu.js?v=20261110-semantic-icons-3d-1'), 'the corrected Menu script is cache-busted');
-  assert.ok(serviceWorker.includes("'/minglora-menu.js?v=20261110-semantic-icons-3d-1'"), 'the corrected Menu script is in the offline shell cache');
+  assert.ok(html.includes('/minglora-menu.js?v=20261110-facebook-profile-dropdown-1'), 'the corrected Menu script is cache-busted');
+  assert.ok(serviceWorker.includes("'/minglora-menu.js?v=20261110-facebook-profile-dropdown-1'"), 'the corrected Menu script is in the offline shell cache');
 });
 
 test('Facebook-style top bar keeps logo, Search, five navigation tabs and account controls in left-to-right order', () => {
@@ -159,7 +159,7 @@ test('Facebook-style top bar keeps logo, Search, five navigation tabs and accoun
   }
   assert.ok(header.includes('id="palette-toggle"') && header.includes('id="profile-menu"'), 'palette and profile dropdown controls remain available');
   assert.doesNotMatch(header, /id="settings-btn"/, 'Settings & Privacy is reached through the profile dropdown');
-  assert.equal((menuScript.match(/label: 'Settings & Privacy'/g) || []).length, 1, 'one Settings & Privacy dropdown action exists');
+  assert.equal((menuScript.match(/label: 'Settings & privacy'/g) || []).length, 1, 'one Settings & Privacy dropdown action exists');
 });
 
 test('top bar gives navigation and action icons consistent dimensions at desktop, tablet and mobile widths', () => {

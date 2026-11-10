@@ -14,8 +14,8 @@ test('Minglora Menu beside Messenger has a clean single-row header', () => {
   assert.ok(html.includes('id="messenger-btn"'));
   assert.ok(html.includes('id="minglora-menu-toggle"'));
   assert.ok(html.includes('id="minglora-menu-panel"'));
-  assert.ok(html.includes('minglora-menu.css?v=20261110-facebook-menu-search-left-column-1'));
-  assert.ok(html.includes('minglora-menu.js?v=20261110-semantic-icons-3d-1'));
+  assert.ok(html.includes('minglora-menu.css?v=20261110-facebook-profile-dropdown-1'));
+  assert.ok(html.includes('minglora-menu.js?v=20261110-facebook-profile-dropdown-1'));
   for (const label of ['Social','Entertainment','Shopping','Personal','Professional','More from Meta','Create']) {
     assert.ok(script.includes(label), 'Menu contains ' + label);
   }
@@ -51,8 +51,8 @@ test('Search Menu is in the left Menu column above all shortcut sections', () =>
   assert.ok(script.includes('aria-controls="minglora-menu-results"'));
   assert.ok(css.includes('.minglora-menu-search-field'));
   assert.ok(css.includes('.minglora-menu-search input'));
-  assert.ok(html.includes('minglora-menu.js?v=20261110-semantic-icons-3d-1'));
-  assert.ok(html.includes('minglora-menu.css?v=20261110-facebook-menu-search-left-column-1'));
+  assert.ok(html.includes('minglora-menu.js?v=20261110-facebook-profile-dropdown-1'));
+  assert.ok(html.includes('minglora-menu.css?v=20261110-facebook-profile-dropdown-1'));
   assert.ok(!html.includes('id="search-form"'));
   assert.ok(!html.includes('id="search-input"'));
 });
@@ -121,8 +121,8 @@ test('Palette and profile/account menus use the same scroll-safe outside dismiss
   assert.ok(helper.includes('event.detail === 0'));
   assert.ok(html.indexOf('menu-dismissal.js') < html.indexOf('app.js'));
   assert.ok(html.includes('menu-dismissal.js?v=20261110-menu-dismissal-1'));
-  assert.ok(html.includes('app.js?v=20261110-global-menu-scroll-guard-1'));
-  assert.ok(html.includes('minglora-menu.js?v=20261110-semantic-icons-3d-1'));
-  assert.ok(worker.includes('minglora-shell-v266-self-updating-1'));
+  assert.ok(html.includes('app.js?v=20261110-facebook-profile-dropdown-1'));
+  assert.ok(html.includes('minglora-menu.js?v=20261110-facebook-profile-dropdown-1'));
+  assert.ok(worker.includes('minglora-shell-v270-self-updating-1'));
   assert.ok(worker.includes('/menu-dismissal.js?v=20261110-menu-dismissal-1'));
 });

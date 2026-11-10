@@ -33,7 +33,7 @@ test('logout is kept out of mobile and tablet primary navigation and placed in S
   assert.doesNotMatch(sideRail, /data-logout|logout-rail-link|Log out/);
 
   assert.doesNotMatch(html, /id="settings-btn"/, 'the separate top-bar Settings gear is removed');
-  assert.equal((menu.match(/label: 'Settings & Privacy'/g) || []).length, 1, 'Settings & Privacy is available once in the profile dropdown');
+  assert.equal((menu.match(/label: 'Settings & privacy'/g) || []).length, 1, 'Settings & privacy is available once in the profile dropdown');
   assert.match(settings, /id="settings-signout"/);
   assert.match(settings, /id="settings-logout-btn"/);
   assert.match(settings, /sectionHeading\('Log out'\)/);

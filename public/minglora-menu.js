@@ -302,77 +302,202 @@
     window.MingloraMenu = { open: openMenu, close: closeMenu };
   }
 
+
   function installAccountActions() {
     const panel = document.getElementById('profile-account-menu');
     if (!panel || panel.hidden || panel.querySelector('.account-switcher-actions')) return;
-    if (!panel.querySelector('.account-switcher-head')) return;
+    if (!panel.querySelector('.account-switcher-current-card') && !panel.querySelector('.account-switcher-head')) return;
 
-    const actions = [
-      { label: 'Settings & Privacy', key: 'settings', icon: 'settings' },
-      { label: 'Help & Support', key: 'support', icon: 'request' },
-      { label: 'Display & Accessibility', key: 'display', icon: 'palette' },
-      { label: 'Log Out', key: 'logout', icon: 'logout' }
-    ];
+    const menus = {
+      settings: {
+        label: 'Settings & privacy',
+        icon: 'settings',
+        items: [
+          ['Settings', 'settings'],
+          ['Privacy Checkup', 'privacy-checkup'],
+          ['Privacy Center', 'privacy-center']
+        ]
+      },
+      support: {
+        label: 'Help & support',
+        icon: 'request',
+        items: [
+          ['Help Center', 'help-center'],
+          ['Scam Protection Center', 'scam-protection'],
+          ['Account Status', 'account-status'],
+          ['Support Inbox', 'support-inbox'],
+          ['Report a problem', 'report-problem']
+        ]
+      },
+      display: {
+        label: 'Display & accessibility',
+        icon: 'palette',
+        items: [
+          ['Display & Accessibility', 'display-accessibility'],
+          ['Keyboard', 'keyboard']
+        ]
+      }
+    };
+
+    const signOutAction = { label: 'Log out', icon: 'logout' };
     const nav = document.createElement('nav');
     nav.className = 'account-switcher-actions';
-    nav.setAttribute('aria-label', 'Account settings and help');
-    nav.innerHTML = actions.map(item =>
-      '<button type="button" class="account-switcher-action" data-account-tool="' + item.key + '">' +
-        sprite(item.icon, 'nav-3d-icon') + '<span>' + item.label + '</span>' +
-      '</button>'
+    nav.setAttribute('aria-label', 'Account settings, help and sign out');
+    const menuHome = '<div class="account-switcher-menu-home" data-account-menu-home>' +
+      Object.entries(menus).map(([key, item]) =>
+        '<button type="button" class="account-switcher-action" data-account-tool="' + key + '" aria-expanded="false" aria-controls="account-switcher-submenu-' + key + '">' +
+          sprite(item.icon, 'nav-3d-icon') + '<span>' + item.label + '</span><span class="account-switcher-menu-chevron" aria-hidden="true">›</span>' +
+        '</button>'
+      ).join('') +
+      '<button type="button" class="account-switcher-action" data-account-feedback>' +
+        sprite('activity', 'nav-3d-icon') + '<span>Give feedback</span>' +
+      '</button>' +
+      '<button type="button" class="account-switcher-action account-switcher-logout" data-account-logout>' +
+        sprite(signOutAction.icon, 'nav-3d-icon') + '<span>' + signOutAction.label + '</span>' +
+      '</button>' +
+    '</div>';
+    const submenuMarkup = Object.entries(menus).map(([key, item]) =>
+      '<section class="account-switcher-submenu" id="account-switcher-submenu-' + key + '" data-account-menu-page="' + key + '" aria-label="' + item.label + '" hidden>' +
+        '<button type="button" class="account-switcher-back" data-account-menu-back="' + key + '">' +
+          '<span aria-hidden="true">‹</span><span>' + item.label + '</span>' +
+        '</button>' +
+        item.items.map(([label, destination]) =>
+          '<button type="button" class="account-switcher-submenu-item" data-account-destination="' + destination + '">' +
+            '<span>' + label + '</span><span class="account-switcher-menu-chevron" aria-hidden="true">›</span>' +
+          '</button>'
+        ).join('') +
+      '</section>'
     ).join('');
-
-    const foot = panel.querySelector('.account-switcher-foot');
-    if (foot) panel.insertBefore(nav, foot);
-    else panel.append(nav);
+    nav.innerHTML = menuHome + submenuMarkup;
 
     nav.addEventListener('click', async event => {
-      const button = event.target instanceof Element ? event.target.closest('[data-account-tool]') : null;
-      if (!button) return;
-      const action = button.dataset.accountTool;
-      if (typeof window.closeAccountSwitcherMenu === 'function') window.closeAccountSwitcherMenu();
-      else panel.hidden = true;
-
-      if (action === 'logout') {
-        document.getElementById('logout-btn')?.click();
+      const target = event.target instanceof Element ? event.target : null;
+      const sectionButton = target?.closest('[data-account-tool]');
+      if (sectionButton) {
+        const key = sectionButton.dataset.accountTool;
+        const submenu = nav.querySelector('[data-account-menu-page="' + key + '"]');
+        if (!submenu) return;
+        nav.querySelector('[data-account-menu-home]').hidden = true;
+        submenu.hidden = false;
+        sectionButton.setAttribute('aria-expanded', 'true');
+        submenu.querySelector('[data-account-menu-back]')?.focus({ preventScroll: true });
         return;
       }
 
-      const openSettings = window.MingloraSettings?.open;
-      if (typeof openSettings !== 'function') {
-        notifyMenuError('Minglora Settings could not be opened. Please try again.');
+      const backButton = target?.closest('[data-account-menu-back]');
+      if (backButton) {
+        const key = backButton.dataset.accountMenuBack;
+        const rootButton = nav.querySelector('[data-account-tool="' + key + '"]');
+        const submenu = nav.querySelector('[data-account-menu-page="' + key + '"]');
+        if (submenu) submenu.hidden = true;
+        nav.querySelector('[data-account-menu-home]').hidden = false;
+        rootButton?.setAttribute('aria-expanded', 'false');
+        rootButton?.focus({ preventScroll: true });
         return;
       }
-      try {
-        await openSettings();
-        await new Promise(resolve => window.requestAnimationFrame(resolve));
-        if (action === 'support' || action === 'report') {
-          document.querySelector('[data-settings-category-button="support-about"]')?.click();
-          await new Promise(resolve => window.requestAnimationFrame(resolve));
-          const form = document.getElementById('support-ticket-form');
-          if (action === 'report') {
-            const category = form?.querySelector('select[name="category"]');
-            if (category) category.value = 'bug';
-            const subject = form?.querySelector('input[name="subject"]');
-            if (subject) subject.placeholder = 'Briefly describe the problem';
-          }
-          form?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          form?.querySelector('input[name="subject"]')?.focus({ preventScroll: true });
-        } else if (action === 'display') {
-          document.querySelector('[data-settings-category-button="content-display"]')?.click();
+
+      const destinationButton = target?.closest('[data-account-destination]');
+      if (destinationButton) {
+        const destination = destinationButton.dataset.accountDestination;
+        try {
+          await openSettingsDestination(destination);
+        } catch (error) {
+          notifyMenuError(error?.message || 'Minglora Settings could not be opened.');
         }
-      } catch (error) {
-        notifyMenuError(error?.message || 'Minglora Settings could not be opened.');
+        return;
+      }
+
+      if (target?.closest('[data-account-feedback]')) {
+        try {
+          await openSettingsDestination('feedback');
+        } catch (error) {
+          notifyMenuError(error?.message || 'Feedback could not be opened.');
+        }
+        return;
+      }
+
+      if (target?.closest('[data-account-logout]')) {
+        if (typeof window.closeAccountSwitcherMenu === 'function') window.closeAccountSwitcherMenu();
+        document.getElementById('logout-btn')?.click();
       }
     });
 
-    function notifyMenuError(message) {
-      const toast = document.getElementById('toast');
-      if (!toast) return;
-      toast.textContent = message;
-      toast.classList.add('show');
-      window.setTimeout(() => toast.classList.remove('show'), 2800);
+    const profiles = panel.querySelector('.account-switcher-profiles');
+    if (profiles?.nextSibling) panel.insertBefore(nav, profiles.nextSibling);
+    else panel.append(nav);
+  }
+
+  async function openSettingsDestination(destination) {
+    const openSettings = window.MingloraSettings?.open;
+    if (typeof openSettings !== 'function') {
+      throw new Error('Minglora Settings could not be opened. Please try again.');
     }
+    if (typeof window.closeAccountSwitcherMenu === 'function') window.closeAccountSwitcherMenu();
+    else {
+      const panel = document.getElementById('profile-account-menu');
+      if (panel) panel.hidden = true;
+    }
+
+    await openSettings();
+    await new Promise(resolve => window.requestAnimationFrame(() => window.requestAnimationFrame(resolve)));
+
+    const click = selector => {
+      const button = document.querySelector(selector);
+      if (!button) throw new Error('This option is not available yet.');
+      button.click();
+    };
+    const openPage = page => click('#settings-navigation [data-settings-open-page="' + page + '"]');
+
+    if (destination === 'settings') {
+      openPage('settings');
+      return;
+    }
+    if (destination === 'privacy-checkup' || destination === 'privacy-center') {
+      openPage('settings');
+      await new Promise(resolve => window.requestAnimationFrame(resolve));
+      openPage(destination);
+      return;
+    }
+    if (destination === 'display-accessibility') {
+      openPage('display-accessibility');
+      return;
+    }
+    if (destination === 'keyboard') {
+      openPage('display-accessibility');
+      await new Promise(resolve => window.requestAnimationFrame(resolve));
+      openPage('keyboard');
+      return;
+    }
+    if (destination === 'feedback') {
+      openPage('report-support');
+      await new Promise(resolve => window.requestAnimationFrame(resolve));
+      click('#settings-navigation [data-settings-title="Contact Support"]');
+      return;
+    }
+
+    openPage('help-support');
+    await new Promise(resolve => window.requestAnimationFrame(resolve));
+    if (destination === 'help-center' || destination === 'scam-protection' || destination === 'account-status') {
+      openPage(destination);
+      return;
+    }
+    if (destination === 'support-inbox') {
+      click('#settings-navigation [data-settings-page="help-support"] [data-settings-title="Support Inbox"]');
+      return;
+    }
+    if (destination === 'report-problem') {
+      click('#settings-navigation [data-settings-page="help-support"] [data-settings-report-problem]');
+      return;
+    }
+    throw new Error('This Settings destination is not available.');
+  }
+
+  function notifyMenuError(message) {
+    const toast = document.getElementById('toast');
+    if (!toast) return;
+    toast.textContent = message;
+    toast.classList.add('show');
+    window.setTimeout(() => toast.classList.remove('show'), 2800);
   }
 
   function initializeAccountActions() {

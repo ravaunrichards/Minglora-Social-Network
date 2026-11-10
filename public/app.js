@@ -10045,10 +10045,22 @@ async function renderAccountSwitcherMenu(){
         "<span class='account-switcher-current-copy'><strong>"+esc(currentName)+"</strong><small>"+esc(currentUsername)+" · View your profile</small></span>"+
         "<span class='account-switcher-arrow' aria-hidden='true'>›</span>"+
       "</button></div>"+
-      "<div class='account-switcher-head'><div><strong>Switch profiles</strong><small>Choose another profile saved on this device</small></div><button type='button' class='account-switcher-close' data-account-menu-close aria-label='Close account menu'>×</button></div>"+
-      "<div class='account-switcher-list'>"+(rows||"<p class='account-switcher-empty'>No other profiles are saved on this device yet.</p>")+"</div>"+
-      "<button type='button' class='account-switcher-add' data-account-add><span aria-hidden='true'>＋</span><span><strong>Add another profile</strong><small>Log in or create another Minglora account</small></span></button>"+
-      "<div class='account-switcher-foot'><button type='button' class='account-switcher-logout-all' data-account-logout-all>Log out of all accounts on this device</button><small>Each account keeps its own profile, messages and privacy settings.</small></div>";
+      "<button type='button' class='account-switcher-see-all' data-account-see-all aria-expanded='false' aria-controls='account-switcher-profiles'>See all profiles <span class='account-switcher-arrow' aria-hidden='true'>›</span></button>"+
+      "<div class='account-switcher-profiles' id='account-switcher-profiles' hidden>"+
+        "<div class='account-switcher-head'><div><strong>Switch profiles</strong><small>Choose another profile saved on this device</small></div><button type='button' class='account-switcher-close' data-account-menu-close aria-label='Close account menu'>×</button></div>"+
+        "<div class='account-switcher-list'>"+(rows||"<p class='account-switcher-empty'>No other profiles are saved on this device yet.</p>")+"</div>"+
+        "<button type='button' class='account-switcher-add' data-account-add><span aria-hidden='true'>＋</span><span><strong>Add another profile</strong><small>Log in or create another Minglora account</small></span></button>"+
+        "<div class='account-switcher-foot'><button type='button' class='account-switcher-logout-all' data-account-logout-all>Sign out all accounts on this device</button><small>Each account keeps its own profile, messages and privacy settings.</small></div>"+
+      "</div>";
+    const seeAllButton=panel.querySelector('[data-account-see-all]');
+    const savedProfiles=panel.querySelector('#account-switcher-profiles');
+    seeAllButton?.addEventListener('click',()=>{
+      const expanded=savedProfiles?.hidden===true;
+      if(savedProfiles)savedProfiles.hidden=!expanded;
+      seeAllButton.setAttribute('aria-expanded',String(expanded));
+      const arrow=seeAllButton.querySelector('.account-switcher-arrow');
+      if(arrow)arrow.textContent=expanded?'⌃':'›';
+    });
     panel.querySelector('[data-account-menu-close]')?.addEventListener('click',closeAccountSwitcherMenu);
     panel.querySelector('[data-account-view-profile]')?.addEventListener('click',()=>{
       closeAccountSwitcherMenu();
