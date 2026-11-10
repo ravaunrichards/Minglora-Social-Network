@@ -63,7 +63,7 @@ test('all advertised themes have previews and responsive visual treatment', () =
   assert.match(html, /src="\/app\.js\?v=[^"]+"/);
   assert.match(html, /auth-login\.js\?v=20261109-oauth-pkce-buttons-1/);
   assert.match(html, /settings\.js\?v=20261106-refresh-controls-removed-1/);
-  assert.match(sw, /minglora-shell-v\d+-theme-token-refresh-1/);
+  assert.match(sw, /minglora-shell-v\d+-self-updating-1/);
   assert.match(sw, /cacheCurrentShellAssets/);
   assert.match(sw, /auth-login\.js\?v=20261109-oauth-pkce-buttons-1/);
   assert.match(sw, /settings\.js\?v=20261106-refresh-controls-removed-1/);
