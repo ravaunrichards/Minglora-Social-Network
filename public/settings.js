@@ -105,6 +105,9 @@
   }
 
   async function openSettings() {
+    // Settings is a destination, not a Home overlay. Record it as a real page
+    // so the shared page shell removes both Home-only rails and browser Back works.
+    if(window.MingloraGetCurrentView?.()!=='settings')window.MingloraActivateSilentView?.('settings');
     const main = document.querySelector('#main-content');
     if (!main) return;
     main.innerHTML = '<section class="card empty-state"><h3>Loading Settings &amp; privacy…</h3></section>';
@@ -1026,7 +1029,7 @@
     }
   }
 
-  window.MingloraSettings = { open: openSettings };
+  window.MingloraSettings = { open: openSettings, render: openSettings };
   document.addEventListener('DOMContentLoaded', () => {
     document.querySelector('#rail-settings')?.addEventListener('click', openSettings);
     window.addEventListener('minglora:session-ready', async () => { try { const result = await api('/settings'); applyPreferences(result.settings); window.dispatchEvent(new CustomEvent('minglora:settings-loaded', { detail: result.settings })); } catch {} });
