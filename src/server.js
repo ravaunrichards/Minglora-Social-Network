@@ -1791,8 +1791,16 @@ async function route(req, res) {
       }
       if(method==='GET'&&p==='/api/ai/blocks'){
         if(!isSupabasePersistence())return json(res,503,{error:'AI profile blocks require Minglora Supabase PostgreSQL persistence.'});
-        try{const result=await requestSupabaseState('ai_identity_block_list',{actorUserId:user.id,limit:500,offset:0});return json(res,200,{ok:true,blockedIdentities:Array.isArray(result.blockedIdentities)?result.blockedIdentities:[]});}
-        catch(error){return json(res,503,{error:String(error?.message||'AI profile block list is unavailable.').slice(0,240)});}
+        const limit=Number(url.searchParams.get('limit')||100);
+        const offset=Number(url.searchParams.get('offset')||0);
+        if(!Number.isInteger(limit)||limit<1||limit>500||!Number.isInteger(offset)||offset<0||offset>1000000000){
+          return json(res,400,{error:'AI profile block-list pagination is invalid.'});
+        }
+        try{
+          const result=await requestSupabaseState('ai_identity_block_list',{actorUserId:user.id,limit,offset});
+          const blockedIdentities=Array.isArray(result.blockedIdentities)?result.blockedIdentities:[];
+          return json(res,200,{ok:true,blockedIdentities,nextOffset:offset+blockedIdentities.length,hasMore:blockedIdentities.length===limit});
+        }catch(error){return json(res,503,{error:String(error?.message||'AI profile block list is unavailable.').slice(0,240)});}
       }
       const aiProfileSafetyMatch=p.match(/^\/api\/ai\/profiles\/([0-9a-f-]{36})\/(block|report)$/i);
       if(aiProfileSafetyMatch&&aiProfileSafetyMatch[2]==='block'&&(method==='POST'||method==='DELETE')){
