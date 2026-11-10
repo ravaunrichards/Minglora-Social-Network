@@ -79,6 +79,7 @@
     ['friendRequest','Friend request','Social','Someone requests friendship'],
     ['friendAccepted','Friend request accepted','Social','A friendship is accepted'],
     ['newFollower','New follower','Social','Someone follows your profile'],
+    ['profileViewed','Profile view','Social','Someone views your profile'],
     ['like','New like','Social','Someone likes your post'],
     ['loveReaction','Love reaction','Social','Someone loves your post'],
     ['hahaReaction','Haha reaction','Social','Someone reacts with Haha'],
@@ -152,7 +153,7 @@
   const ALL_SOUNDS = [...VOICE,...VIDEO,...NOTIFICATIONS];
   const SOUND_BY_ID = new Map(ALL_SOUNDS.map(sound => [sound.id,sound]));
   const EVENT_BY_KEY = new Map(EVENTS.map(event => [event.key,event]));
-  const PACKS = ['All collections','Classic Mobile','Premium','Digital','Cinematic','Caribbean','Nature','Gaming','Powerful','Minimal','Messenger','Social','Minglora LIVE','MeetWave','Marketplace & Money','Account & Security','Platform & Activity'];
+  const PACKS = ['All collections','Classic Mobile','Premium','Digital','Cinematic','Caribbean','Nature','Gaming','Powerful','Minimal'];
 
   let root = null;
   let experience = {};
@@ -297,7 +298,7 @@
     return mySounds.find(sound => 'user:'+sound.id === id) || null;
   }
   async function refreshMySounds(force=false) {
-    if(!force && Date.now()-refreshMySoundsAt<45*60*1000) return mySounds;
+    if(!force && Date.now()-refreshMySoundsAt<30*60*1000) return mySounds;
     try {
       const result=await api('/sounds?sort=mine');
       mySounds=Array.isArray(result.sounds)?result.sounds:[];
@@ -359,7 +360,7 @@
   function normalizeEventKey(type) {
     const value=String(type||'').toLowerCase();
     const aliases={
-      friend:'friendRequest',reaction:'like',follow:'newFollower',profile_view:'eventReminder',
+      friend:'friendRequest',reaction:'like',follow:'newFollower',profile_view:'profileViewed',
       live:'creatorLive',live_moderator:'liveAchievement',gift:'giftReceived',fan_club:'giftReceived',
       meetwave_invite:'meetingInvitation',league_match:'eventReminder',call:'missedVoiceCall',
       message:'message'
@@ -513,8 +514,8 @@
         assetId:asset.id,title,attribution,rightsConfirmed,allowReuse,durationMs
       })});
       await refreshMySounds(true);
-      showStatus('Your original recording is now available in My Sounds.');
       render();
+      showStatus('Your original recording is now available in My Sounds.');
     } catch(error) {
       if(status) status.textContent='The recording was not added. '+error.message;
     } finally {
@@ -526,7 +527,7 @@
     const key=kind==='voice'?'voiceCallRingtoneId':'videoCallRingtoneId';
     try {
       await savePatch({[key]:id});
-      render();
+      render();showStatus('Your call ringtone has been saved.');
     } catch(error) { showStatus('The ringtone could not be saved. '+error.message,true); }
   }
   async function assignEvent(key,id) {
@@ -534,7 +535,7 @@
     try {
       await savePatch({notificationSoundAssignments:assignments});
       activeEvent=key;
-      render();
+      render();showStatus('Your notification sound has been saved.');
     } catch(error) { showStatus('The notification sound could not be saved. '+error.message,true); }
   }
   async function previewCustomRingtone() {
