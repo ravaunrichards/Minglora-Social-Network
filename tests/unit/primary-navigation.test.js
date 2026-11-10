@@ -97,14 +97,14 @@ test('desktop left sidebar contains secondary features while primary destination
   assert.ok(!sidebar.includes('>Feeds</span>'),'The duplicate For You/Feeds sidebar shortcut is removed');
   const expected=[
     ['friends','Friends'],['creator','Creator Studio'],['messages','Messenger'],
-    ['gifts','Gifts'],['coins','Coins &amp; Payments'],['groups','Groups'],
+    ['gifts','Gifts'],['coins','Recharge'],['groups','Groups'],
     ['pages','Pages'],['saved','Saved'],['calendar','Events'],['videos','Video']
   ];
   for(const [view,label] of expected){
     assert.ok(sidebar.includes('data-view="'+view+'"'),view+' remains directly available from the desktop sidebar');
     assert.ok(sidebar.includes('>'+label+'</span>'),label+' has a visible sidebar label');
   }
-  for(const symbol of ['friends','saved','groups','creator','feeling','calendar','video','messages','coins','pages']){
+  for(const symbol of ['friends','saved','groups','creator','feeling','calendar','video','messages','recharge','pages']){
     assert.ok(sidebar.includes('#'+symbol+'\"'),symbol+' uses the shared 3D navigation icon set');
   }
 });
