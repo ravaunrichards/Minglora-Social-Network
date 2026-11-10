@@ -30,7 +30,7 @@ test('existing administrative workspaces receive independent page routes', () =>
   ]) {
     assert.match(js, new RegExp("key:'" + key + "'"));
   }
-  assert.match(js, /data\.adminPageView = definition\.key/);
+  assert.match(js, /dataset\.adminPageView = definition\.key/);
   assert.match(js, /url\.searchParams\.set\('page',key\)/);
 });
 
