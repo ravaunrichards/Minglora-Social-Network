@@ -169,15 +169,15 @@ test('owner Admin Centre exposes a real paginated AI profile report review queue
   assert.match(source,/pab-load-more-reports/);
   assert.match(source,/safetyReportsHasMore/);
   assert.match(source,/safetyReportsNextOffset/);
-  assert.match(source,/URLSearchParams\\(\\{status:'open',limit:'100',offset:/);
-  assert.match(source,/state\\.safetyReportsLoading/);
+  assert.match(source,/URLSearchParams\(\{status:'open',limit:'100',offset:/);
+  assert.match(source,/state\.safetyReportsLoading/);
   assert.match(api,/safetyReportsNextOffset/);
   assert.match(api,/safetyReportsHasMore/);
-  assert.match(api,/nextOffset:offset\\+reports\\.length/);
-  assert.match(api,/hasMore:reports\\.length===limit/);
+  assert.match(api,/nextOffset:offset\+reports\.length/);
+  assert.match(api,/hasMore:reports\.length===limit/);
   assert.ok(html.includes('/personal-ai-bots.js?v=20261109-personal-ai-bots-9'));
-  assert.match(css,/\\.pab-report-card/);
-  assert.match(css,/\\.pab-report-resolution/);
+  assert.match(css,/\.pab-report-card/);
+  assert.match(css,/\.pab-report-resolution/);
 });
 
 test('owner Admin Centre exposes bounded JSON identity batch import with retry history',async()=>{
