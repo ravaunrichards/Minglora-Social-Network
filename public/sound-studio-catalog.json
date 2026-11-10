@@ -1,0 +1,1328 @@
+{
+  "version": 1,
+  "format": "Original synthesized PCM 16-bit WAV",
+  "sampleRate": 12000,
+  "channels": 1,
+  "themes": [
+    "Classic",
+    "Modern",
+    "Premium",
+    "Minimal",
+    "Digital",
+    "Cinematic"
+  ],
+  "categories": [
+    {
+      "id": "private_messages",
+      "label": "Private messages",
+      "defaultSoundId": "notification-01"
+    },
+    {
+      "id": "group_messages",
+      "label": "Group messages",
+      "defaultSoundId": "notification-02"
+    },
+    {
+      "id": "new_followers",
+      "label": "New followers",
+      "defaultSoundId": "notification-03"
+    },
+    {
+      "id": "new_friends",
+      "label": "New friends",
+      "defaultSoundId": "notification-04"
+    },
+    {
+      "id": "voice_messages",
+      "label": "Voice messages",
+      "defaultSoundId": "notification-05"
+    },
+    {
+      "id": "replies",
+      "label": "Replies",
+      "defaultSoundId": "notification-06"
+    },
+    {
+      "id": "reactions",
+      "label": "Reactions",
+      "defaultSoundId": "notification-07"
+    },
+    {
+      "id": "comments",
+      "label": "Comments",
+      "defaultSoundId": "notification-08"
+    },
+    {
+      "id": "mentions",
+      "label": "Mentions and tags",
+      "defaultSoundId": "notification-09"
+    },
+    {
+      "id": "missed_voice_calls",
+      "label": "Missed voice calls",
+      "defaultSoundId": "notification-10"
+    },
+    {
+      "id": "missed_video_calls",
+      "label": "Missed video calls",
+      "defaultSoundId": "notification-11"
+    },
+    {
+      "id": "incoming_calls",
+      "label": "Incoming calls",
+      "defaultSoundId": "notification-12"
+    },
+    {
+      "id": "live_notifications",
+      "label": "LIVE notifications",
+      "defaultSoundId": "notification-13"
+    },
+    {
+      "id": "meeting_invitations",
+      "label": "Meeting invitations",
+      "defaultSoundId": "notification-14"
+    },
+    {
+      "id": "meeting_reminders",
+      "label": "Meeting reminders",
+      "defaultSoundId": "notification-15"
+    },
+    {
+      "id": "gifts_received",
+      "label": "Gifts received",
+      "defaultSoundId": "notification-16"
+    },
+    {
+      "id": "coins_received",
+      "label": "Coins received",
+      "defaultSoundId": "notification-17"
+    },
+    {
+      "id": "payments_transactions",
+      "label": "Payments and transactions",
+      "defaultSoundId": "notification-18"
+    },
+    {
+      "id": "marketplace_orders",
+      "label": "Marketplace orders",
+      "defaultSoundId": "notification-19"
+    },
+    {
+      "id": "security_alerts",
+      "label": "Security alerts",
+      "defaultSoundId": "notification-20"
+    },
+    {
+      "id": "login_alerts",
+      "label": "Login alerts",
+      "defaultSoundId": "notification-21"
+    },
+    {
+      "id": "system_notifications",
+      "label": "System notifications",
+      "defaultSoundId": "notification-22"
+    }
+  ],
+  "sounds": [
+    {
+      "id": "voice-01",
+      "title": "Minglora Signature",
+      "type": "voice",
+      "theme": "Classic",
+      "style": "Classic",
+      "audioBank": "/sound-bank-voice-classic.wav",
+      "startMs": 40,
+      "durationMs": 4200
+    },
+    {
+      "id": "voice-02",
+      "title": "Classic Bell Cascade",
+      "type": "voice",
+      "theme": "Classic",
+      "style": "Classic",
+      "audioBank": "/sound-bank-voice-classic.wav",
+      "startMs": 4280,
+      "durationMs": 4200
+    },
+    {
+      "id": "voice-03",
+      "title": "Grand Telephone",
+      "type": "voice",
+      "theme": "Classic",
+      "style": "Classic",
+      "audioBank": "/sound-bank-voice-classic.wav",
+      "startMs": 8520,
+      "durationMs": 4200
+    },
+    {
+      "id": "voice-04",
+      "title": "Heritage Double Ring",
+      "type": "voice",
+      "theme": "Classic",
+      "style": "Classic",
+      "audioBank": "/sound-bank-voice-classic.wav",
+      "startMs": 12760,
+      "durationMs": 4200
+    },
+    {
+      "id": "voice-05",
+      "title": "Copper Chime",
+      "type": "voice",
+      "theme": "Classic",
+      "style": "Classic",
+      "audioBank": "/sound-bank-voice-classic.wav",
+      "startMs": 17000,
+      "durationMs": 4200
+    },
+    {
+      "id": "voice-06",
+      "title": "Metro Pulse",
+      "type": "voice",
+      "theme": "Modern",
+      "style": "Modern",
+      "audioBank": "/sound-bank-voice-modern.wav",
+      "startMs": 40,
+      "durationMs": 4200
+    },
+    {
+      "id": "voice-07",
+      "title": "Neon Horizon",
+      "type": "voice",
+      "theme": "Modern",
+      "style": "Modern",
+      "audioBank": "/sound-bank-voice-modern.wav",
+      "startMs": 4280,
+      "durationMs": 4200
+    },
+    {
+      "id": "voice-08",
+      "title": "Glasswave",
+      "type": "voice",
+      "theme": "Modern",
+      "style": "Modern",
+      "audioBank": "/sound-bank-voice-modern.wav",
+      "startMs": 8520,
+      "durationMs": 4200
+    },
+    {
+      "id": "voice-09",
+      "title": "City Spark",
+      "type": "voice",
+      "theme": "Modern",
+      "style": "Modern",
+      "audioBank": "/sound-bank-voice-modern.wav",
+      "startMs": 12760,
+      "durationMs": 4200
+    },
+    {
+      "id": "voice-10",
+      "title": "Future Current",
+      "type": "voice",
+      "theme": "Modern",
+      "style": "Modern",
+      "audioBank": "/sound-bank-voice-modern.wav",
+      "startMs": 17000,
+      "durationMs": 4200
+    },
+    {
+      "id": "voice-11",
+      "title": "Velvet Gold",
+      "type": "voice",
+      "theme": "Premium",
+      "style": "Premium",
+      "audioBank": "/sound-bank-voice-premium.wav",
+      "startMs": 40,
+      "durationMs": 4200
+    },
+    {
+      "id": "voice-12",
+      "title": "Crystal Suite",
+      "type": "voice",
+      "theme": "Premium",
+      "style": "Premium",
+      "audioBank": "/sound-bank-voice-premium.wav",
+      "startMs": 4280,
+      "durationMs": 4200
+    },
+    {
+      "id": "voice-13",
+      "title": "Royal Resonance",
+      "type": "voice",
+      "theme": "Premium",
+      "style": "Premium",
+      "audioBank": "/sound-bank-voice-premium.wav",
+      "startMs": 8520,
+      "durationMs": 4200
+    },
+    {
+      "id": "voice-14",
+      "title": "Golden Hour",
+      "type": "voice",
+      "theme": "Premium",
+      "style": "Premium",
+      "audioBank": "/sound-bank-voice-premium.wav",
+      "startMs": 12760,
+      "durationMs": 4200
+    },
+    {
+      "id": "voice-15",
+      "title": "Pearl Aria",
+      "type": "voice",
+      "theme": "Premium",
+      "style": "Premium",
+      "audioBank": "/sound-bank-voice-premium.wav",
+      "startMs": 17000,
+      "durationMs": 4200
+    },
+    {
+      "id": "voice-16",
+      "title": "Quiet Signal",
+      "type": "voice",
+      "theme": "Minimal",
+      "style": "Minimal",
+      "audioBank": "/sound-bank-voice-minimal.wav",
+      "startMs": 40,
+      "durationMs": 4200
+    },
+    {
+      "id": "voice-17",
+      "title": "Soft Arrival",
+      "type": "voice",
+      "theme": "Minimal",
+      "style": "Minimal",
+      "audioBank": "/sound-bank-voice-minimal.wav",
+      "startMs": 4280,
+      "durationMs": 4200
+    },
+    {
+      "id": "voice-18",
+      "title": "Clear Note",
+      "type": "voice",
+      "theme": "Minimal",
+      "style": "Minimal",
+      "audioBank": "/sound-bank-voice-minimal.wav",
+      "startMs": 8520,
+      "durationMs": 4200
+    },
+    {
+      "id": "voice-19",
+      "title": "Gentle Tap",
+      "type": "voice",
+      "theme": "Minimal",
+      "style": "Minimal",
+      "audioBank": "/sound-bank-voice-minimal.wav",
+      "startMs": 12760,
+      "durationMs": 4200
+    },
+    {
+      "id": "voice-20",
+      "title": "Pure Tone",
+      "type": "voice",
+      "theme": "Minimal",
+      "style": "Minimal",
+      "audioBank": "/sound-bank-voice-minimal.wav",
+      "startMs": 17000,
+      "durationMs": 4200
+    },
+    {
+      "id": "voice-21",
+      "title": "Silver Screen",
+      "type": "voice",
+      "theme": "Digital",
+      "style": "Digital",
+      "audioBank": "/sound-bank-voice-digital.wav",
+      "startMs": 40,
+      "durationMs": 4200
+    },
+    {
+      "id": "voice-22",
+      "title": "Aurora Rise",
+      "type": "voice",
+      "theme": "Digital",
+      "style": "Digital",
+      "audioBank": "/sound-bank-voice-digital.wav",
+      "startMs": 4280,
+      "durationMs": 4200
+    },
+    {
+      "id": "voice-23",
+      "title": "Cinematic Bloom",
+      "type": "voice",
+      "theme": "Digital",
+      "style": "Digital",
+      "audioBank": "/sound-bank-voice-digital.wav",
+      "startMs": 8520,
+      "durationMs": 4200
+    },
+    {
+      "id": "voice-24",
+      "title": "Starlight Call",
+      "type": "voice",
+      "theme": "Digital",
+      "style": "Digital",
+      "audioBank": "/sound-bank-voice-digital.wav",
+      "startMs": 12760,
+      "durationMs": 4200
+    },
+    {
+      "id": "voice-25",
+      "title": "Orchestral Dawn",
+      "type": "voice",
+      "theme": "Digital",
+      "style": "Digital",
+      "audioBank": "/sound-bank-voice-digital.wav",
+      "startMs": 17000,
+      "durationMs": 4200
+    },
+    {
+      "id": "voice-26",
+      "title": "Pixel Ring",
+      "type": "voice",
+      "theme": "Cinematic",
+      "style": "Cinematic",
+      "audioBank": "/sound-bank-voice-cinematic.wav",
+      "startMs": 40,
+      "durationMs": 4200
+    },
+    {
+      "id": "voice-27",
+      "title": "Binary Bloom",
+      "type": "voice",
+      "theme": "Cinematic",
+      "style": "Cinematic",
+      "audioBank": "/sound-bank-voice-cinematic.wav",
+      "startMs": 4280,
+      "durationMs": 4200
+    },
+    {
+      "id": "voice-28",
+      "title": "Digital Echo",
+      "type": "voice",
+      "theme": "Cinematic",
+      "style": "Cinematic",
+      "audioBank": "/sound-bank-voice-cinematic.wav",
+      "startMs": 8520,
+      "durationMs": 4200
+    },
+    {
+      "id": "voice-29",
+      "title": "Synthwave Arrival",
+      "type": "voice",
+      "theme": "Cinematic",
+      "style": "Cinematic",
+      "audioBank": "/sound-bank-voice-cinematic.wav",
+      "startMs": 12760,
+      "durationMs": 4200
+    },
+    {
+      "id": "voice-30",
+      "title": "Quantum Chime",
+      "type": "voice",
+      "theme": "Cinematic",
+      "style": "Cinematic",
+      "audioBank": "/sound-bank-voice-cinematic.wav",
+      "startMs": 17000,
+      "durationMs": 4200
+    },
+    {
+      "id": "video-01",
+      "title": "Minglora Vision",
+      "type": "video",
+      "theme": "Classic",
+      "style": "Classic",
+      "audioBank": "/sound-bank-video-classic.wav",
+      "startMs": 40,
+      "durationMs": 4200
+    },
+    {
+      "id": "video-02",
+      "title": "Classic Picture Bell",
+      "type": "video",
+      "theme": "Classic",
+      "style": "Classic",
+      "audioBank": "/sound-bank-video-classic.wav",
+      "startMs": 4280,
+      "durationMs": 4200
+    },
+    {
+      "id": "video-03",
+      "title": "Silver Frame",
+      "type": "video",
+      "theme": "Classic",
+      "style": "Classic",
+      "audioBank": "/sound-bank-video-classic.wav",
+      "startMs": 8520,
+      "durationMs": 4200
+    },
+    {
+      "id": "video-04",
+      "title": "Cinema Double",
+      "type": "video",
+      "theme": "Classic",
+      "style": "Classic",
+      "audioBank": "/sound-bank-video-classic.wav",
+      "startMs": 12760,
+      "durationMs": 4200
+    },
+    {
+      "id": "video-05",
+      "title": "Studio Premiere",
+      "type": "video",
+      "theme": "Classic",
+      "style": "Classic",
+      "audioBank": "/sound-bank-video-classic.wav",
+      "startMs": 17000,
+      "durationMs": 4200
+    },
+    {
+      "id": "video-06",
+      "title": "Motion Pulse",
+      "type": "video",
+      "theme": "Modern",
+      "style": "Modern",
+      "audioBank": "/sound-bank-video-modern.wav",
+      "startMs": 40,
+      "durationMs": 4200
+    },
+    {
+      "id": "video-07",
+      "title": "Visual Current",
+      "type": "video",
+      "theme": "Modern",
+      "style": "Modern",
+      "audioBank": "/sound-bank-video-modern.wav",
+      "startMs": 4280,
+      "durationMs": 4200
+    },
+    {
+      "id": "video-08",
+      "title": "Neon Focus",
+      "type": "video",
+      "theme": "Modern",
+      "style": "Modern",
+      "audioBank": "/sound-bank-video-modern.wav",
+      "startMs": 8520,
+      "durationMs": 4200
+    },
+    {
+      "id": "video-09",
+      "title": "Prism Connect",
+      "type": "video",
+      "theme": "Modern",
+      "style": "Modern",
+      "audioBank": "/sound-bank-video-modern.wav",
+      "startMs": 12760,
+      "durationMs": 4200
+    },
+    {
+      "id": "video-10",
+      "title": "Horizon Beam",
+      "type": "video",
+      "theme": "Modern",
+      "style": "Modern",
+      "audioBank": "/sound-bank-video-modern.wav",
+      "startMs": 17000,
+      "durationMs": 4200
+    },
+    {
+      "id": "video-11",
+      "title": "Velvet Spotlight",
+      "type": "video",
+      "theme": "Premium",
+      "style": "Premium",
+      "audioBank": "/sound-bank-video-premium.wav",
+      "startMs": 40,
+      "durationMs": 4200
+    },
+    {
+      "id": "video-12",
+      "title": "Crystal Motion",
+      "type": "video",
+      "theme": "Premium",
+      "style": "Premium",
+      "audioBank": "/sound-bank-video-premium.wav",
+      "startMs": 4280,
+      "durationMs": 4200
+    },
+    {
+      "id": "video-13",
+      "title": "Golden Premiere",
+      "type": "video",
+      "theme": "Premium",
+      "style": "Premium",
+      "audioBank": "/sound-bank-video-premium.wav",
+      "startMs": 8520,
+      "durationMs": 4200
+    },
+    {
+      "id": "video-14",
+      "title": "Royal Screen",
+      "type": "video",
+      "theme": "Premium",
+      "style": "Premium",
+      "audioBank": "/sound-bank-video-premium.wav",
+      "startMs": 12760,
+      "durationMs": 4200
+    },
+    {
+      "id": "video-15",
+      "title": "Pearl Projection",
+      "type": "video",
+      "theme": "Premium",
+      "style": "Premium",
+      "audioBank": "/sound-bank-video-premium.wav",
+      "startMs": 17000,
+      "durationMs": 4200
+    },
+    {
+      "id": "video-16",
+      "title": "Soft Focus",
+      "type": "video",
+      "theme": "Minimal",
+      "style": "Minimal",
+      "audioBank": "/sound-bank-video-minimal.wav",
+      "startMs": 40,
+      "durationMs": 4200
+    },
+    {
+      "id": "video-17",
+      "title": "Quiet Frame",
+      "type": "video",
+      "theme": "Minimal",
+      "style": "Minimal",
+      "audioBank": "/sound-bank-video-minimal.wav",
+      "startMs": 4280,
+      "durationMs": 4200
+    },
+    {
+      "id": "video-18",
+      "title": "Gentle Vision",
+      "type": "video",
+      "theme": "Minimal",
+      "style": "Minimal",
+      "audioBank": "/sound-bank-video-minimal.wav",
+      "startMs": 8520,
+      "durationMs": 4200
+    },
+    {
+      "id": "video-19",
+      "title": "Clear Picture",
+      "type": "video",
+      "theme": "Minimal",
+      "style": "Minimal",
+      "audioBank": "/sound-bank-video-minimal.wav",
+      "startMs": 12760,
+      "durationMs": 4200
+    },
+    {
+      "id": "video-20",
+      "title": "Still Moment",
+      "type": "video",
+      "theme": "Minimal",
+      "style": "Minimal",
+      "audioBank": "/sound-bank-video-minimal.wav",
+      "startMs": 17000,
+      "durationMs": 4200
+    },
+    {
+      "id": "video-21",
+      "title": "Cinematic Arrival",
+      "type": "video",
+      "theme": "Digital",
+      "style": "Digital",
+      "audioBank": "/sound-bank-video-digital.wav",
+      "startMs": 40,
+      "durationMs": 4200
+    },
+    {
+      "id": "video-22",
+      "title": "Aurora Screen",
+      "type": "video",
+      "theme": "Digital",
+      "style": "Digital",
+      "audioBank": "/sound-bank-video-digital.wav",
+      "startMs": 4280,
+      "durationMs": 4200
+    },
+    {
+      "id": "video-23",
+      "title": "Starlight Vision",
+      "type": "video",
+      "theme": "Digital",
+      "style": "Digital",
+      "audioBank": "/sound-bank-video-digital.wav",
+      "startMs": 8520,
+      "durationMs": 4200
+    },
+    {
+      "id": "video-24",
+      "title": "Grand Reveal",
+      "type": "video",
+      "theme": "Digital",
+      "style": "Digital",
+      "audioBank": "/sound-bank-video-digital.wav",
+      "startMs": 12760,
+      "durationMs": 4200
+    },
+    {
+      "id": "video-25",
+      "title": "Orchestral View",
+      "type": "video",
+      "theme": "Digital",
+      "style": "Digital",
+      "audioBank": "/sound-bank-video-digital.wav",
+      "startMs": 17000,
+      "durationMs": 4200
+    },
+    {
+      "id": "video-26",
+      "title": "Pixel Vision",
+      "type": "video",
+      "theme": "Cinematic",
+      "style": "Cinematic",
+      "audioBank": "/sound-bank-video-cinematic.wav",
+      "startMs": 40,
+      "durationMs": 4200
+    },
+    {
+      "id": "video-27",
+      "title": "Digital Lens",
+      "type": "video",
+      "theme": "Cinematic",
+      "style": "Cinematic",
+      "audioBank": "/sound-bank-video-cinematic.wav",
+      "startMs": 4280,
+      "durationMs": 4200
+    },
+    {
+      "id": "video-28",
+      "title": "Future Frame",
+      "type": "video",
+      "theme": "Cinematic",
+      "style": "Cinematic",
+      "audioBank": "/sound-bank-video-cinematic.wav",
+      "startMs": 8520,
+      "durationMs": 4200
+    },
+    {
+      "id": "video-29",
+      "title": "Signal Spectrum",
+      "type": "video",
+      "theme": "Cinematic",
+      "style": "Cinematic",
+      "audioBank": "/sound-bank-video-cinematic.wav",
+      "startMs": 12760,
+      "durationMs": 4200
+    },
+    {
+      "id": "video-30",
+      "title": "Quantum View",
+      "type": "video",
+      "theme": "Cinematic",
+      "style": "Cinematic",
+      "audioBank": "/sound-bank-video-cinematic.wav",
+      "startMs": 17000,
+      "durationMs": 4200
+    },
+    {
+      "id": "notification-01",
+      "title": "Message Spark",
+      "type": "notification",
+      "theme": "Classic",
+      "style": "Classic",
+      "audioBank": "/sound-bank-notification-classic.wav",
+      "startMs": 40,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-02",
+      "title": "Group Chime",
+      "type": "notification",
+      "theme": "Classic",
+      "style": "Classic",
+      "audioBank": "/sound-bank-notification-classic.wav",
+      "startMs": 1180,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-03",
+      "title": "Follower Note",
+      "type": "notification",
+      "theme": "Classic",
+      "style": "Classic",
+      "audioBank": "/sound-bank-notification-classic.wav",
+      "startMs": 2320,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-04",
+      "title": "Friend Welcome",
+      "type": "notification",
+      "theme": "Classic",
+      "style": "Classic",
+      "audioBank": "/sound-bank-notification-classic.wav",
+      "startMs": 3460,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-05",
+      "title": "Voice Note Arrival",
+      "type": "notification",
+      "theme": "Classic",
+      "style": "Classic",
+      "audioBank": "/sound-bank-notification-classic.wav",
+      "startMs": 4600,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-06",
+      "title": "Reply Ripple",
+      "type": "notification",
+      "theme": "Classic",
+      "style": "Classic",
+      "audioBank": "/sound-bank-notification-classic.wav",
+      "startMs": 5740,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-07",
+      "title": "Reaction Pop",
+      "type": "notification",
+      "theme": "Classic",
+      "style": "Classic",
+      "audioBank": "/sound-bank-notification-classic.wav",
+      "startMs": 6880,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-08",
+      "title": "Comment Bell",
+      "type": "notification",
+      "theme": "Classic",
+      "style": "Classic",
+      "audioBank": "/sound-bank-notification-classic.wav",
+      "startMs": 8020,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-09",
+      "title": "Mention Flash",
+      "type": "notification",
+      "theme": "Classic",
+      "style": "Classic",
+      "audioBank": "/sound-bank-notification-classic.wav",
+      "startMs": 9160,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-10",
+      "title": "Missed Voice",
+      "type": "notification",
+      "theme": "Classic",
+      "style": "Classic",
+      "audioBank": "/sound-bank-notification-classic.wav",
+      "startMs": 10300,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-11",
+      "title": "Missed Vision",
+      "type": "notification",
+      "theme": "Modern",
+      "style": "Modern",
+      "audioBank": "/sound-bank-notification-modern.wav",
+      "startMs": 40,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-12",
+      "title": "Incoming Call",
+      "type": "notification",
+      "theme": "Modern",
+      "style": "Modern",
+      "audioBank": "/sound-bank-notification-modern.wav",
+      "startMs": 1180,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-13",
+      "title": "LIVE Beacon",
+      "type": "notification",
+      "theme": "Modern",
+      "style": "Modern",
+      "audioBank": "/sound-bank-notification-modern.wav",
+      "startMs": 2320,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-14",
+      "title": "Meeting Invite",
+      "type": "notification",
+      "theme": "Modern",
+      "style": "Modern",
+      "audioBank": "/sound-bank-notification-modern.wav",
+      "startMs": 3460,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-15",
+      "title": "Meeting Reminder",
+      "type": "notification",
+      "theme": "Modern",
+      "style": "Modern",
+      "audioBank": "/sound-bank-notification-modern.wav",
+      "startMs": 4600,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-16",
+      "title": "Gift Unwrap",
+      "type": "notification",
+      "theme": "Modern",
+      "style": "Modern",
+      "audioBank": "/sound-bank-notification-modern.wav",
+      "startMs": 5740,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-17",
+      "title": "Coin Drop",
+      "type": "notification",
+      "theme": "Modern",
+      "style": "Modern",
+      "audioBank": "/sound-bank-notification-modern.wav",
+      "startMs": 6880,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-18",
+      "title": "Payment Confirmed",
+      "type": "notification",
+      "theme": "Modern",
+      "style": "Modern",
+      "audioBank": "/sound-bank-notification-modern.wav",
+      "startMs": 8020,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-19",
+      "title": "Order Ready",
+      "type": "notification",
+      "theme": "Modern",
+      "style": "Modern",
+      "audioBank": "/sound-bank-notification-modern.wav",
+      "startMs": 9160,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-20",
+      "title": "Security Shield",
+      "type": "notification",
+      "theme": "Modern",
+      "style": "Modern",
+      "audioBank": "/sound-bank-notification-modern.wav",
+      "startMs": 10300,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-21",
+      "title": "New Login",
+      "type": "notification",
+      "theme": "Premium",
+      "style": "Premium",
+      "audioBank": "/sound-bank-notification-premium.wav",
+      "startMs": 40,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-22",
+      "title": "System Signal",
+      "type": "notification",
+      "theme": "Premium",
+      "style": "Premium",
+      "audioBank": "/sound-bank-notification-premium.wav",
+      "startMs": 1180,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-23",
+      "title": "Morning Chime",
+      "type": "notification",
+      "theme": "Premium",
+      "style": "Premium",
+      "audioBank": "/sound-bank-notification-premium.wav",
+      "startMs": 2320,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-24",
+      "title": "Bluebird Ping",
+      "type": "notification",
+      "theme": "Premium",
+      "style": "Premium",
+      "audioBank": "/sound-bank-notification-premium.wav",
+      "startMs": 3460,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-25",
+      "title": "Bright Pebble",
+      "type": "notification",
+      "theme": "Premium",
+      "style": "Premium",
+      "audioBank": "/sound-bank-notification-premium.wav",
+      "startMs": 4600,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-26",
+      "title": "Soft Whisper",
+      "type": "notification",
+      "theme": "Premium",
+      "style": "Premium",
+      "audioBank": "/sound-bank-notification-premium.wav",
+      "startMs": 5740,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-27",
+      "title": "Crystal Tick",
+      "type": "notification",
+      "theme": "Premium",
+      "style": "Premium",
+      "audioBank": "/sound-bank-notification-premium.wav",
+      "startMs": 6880,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-28",
+      "title": "Warm Welcome",
+      "type": "notification",
+      "theme": "Premium",
+      "style": "Premium",
+      "audioBank": "/sound-bank-notification-premium.wav",
+      "startMs": 8020,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-29",
+      "title": "Ripple Note",
+      "type": "notification",
+      "theme": "Premium",
+      "style": "Premium",
+      "audioBank": "/sound-bank-notification-premium.wav",
+      "startMs": 9160,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-30",
+      "title": "Lively Tap",
+      "type": "notification",
+      "theme": "Premium",
+      "style": "Premium",
+      "audioBank": "/sound-bank-notification-premium.wav",
+      "startMs": 10300,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-31",
+      "title": "Gentle Glow",
+      "type": "notification",
+      "theme": "Minimal",
+      "style": "Minimal",
+      "audioBank": "/sound-bank-notification-minimal.wav",
+      "startMs": 40,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-32",
+      "title": "Star Accent",
+      "type": "notification",
+      "theme": "Minimal",
+      "style": "Minimal",
+      "audioBank": "/sound-bank-notification-minimal.wav",
+      "startMs": 1180,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-33",
+      "title": "Premium Dot",
+      "type": "notification",
+      "theme": "Minimal",
+      "style": "Minimal",
+      "audioBank": "/sound-bank-notification-minimal.wav",
+      "startMs": 2320,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-34",
+      "title": "Velvet Ping",
+      "type": "notification",
+      "theme": "Minimal",
+      "style": "Minimal",
+      "audioBank": "/sound-bank-notification-minimal.wav",
+      "startMs": 3460,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-35",
+      "title": "Golden Drop",
+      "type": "notification",
+      "theme": "Minimal",
+      "style": "Minimal",
+      "audioBank": "/sound-bank-notification-minimal.wav",
+      "startMs": 4600,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-36",
+      "title": "Pearl Tap",
+      "type": "notification",
+      "theme": "Minimal",
+      "style": "Minimal",
+      "audioBank": "/sound-bank-notification-minimal.wav",
+      "startMs": 5740,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-37",
+      "title": "Quiet Pebble",
+      "type": "notification",
+      "theme": "Minimal",
+      "style": "Minimal",
+      "audioBank": "/sound-bank-notification-minimal.wav",
+      "startMs": 6880,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-38",
+      "title": "Minimal Mark",
+      "type": "notification",
+      "theme": "Minimal",
+      "style": "Minimal",
+      "audioBank": "/sound-bank-notification-minimal.wav",
+      "startMs": 8020,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-39",
+      "title": "Airy Note",
+      "type": "notification",
+      "theme": "Minimal",
+      "style": "Minimal",
+      "audioBank": "/sound-bank-notification-minimal.wav",
+      "startMs": 9160,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-40",
+      "title": "Pure Click",
+      "type": "notification",
+      "theme": "Minimal",
+      "style": "Minimal",
+      "audioBank": "/sound-bank-notification-minimal.wav",
+      "startMs": 10300,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-41",
+      "title": "Soft Pulse",
+      "type": "notification",
+      "theme": "Digital",
+      "style": "Digital",
+      "audioBank": "/sound-bank-notification-digital.wav",
+      "startMs": 40,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-42",
+      "title": "Digital Dot",
+      "type": "notification",
+      "theme": "Digital",
+      "style": "Digital",
+      "audioBank": "/sound-bank-notification-digital.wav",
+      "startMs": 1180,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-43",
+      "title": "Pixel Pop",
+      "type": "notification",
+      "theme": "Digital",
+      "style": "Digital",
+      "audioBank": "/sound-bank-notification-digital.wav",
+      "startMs": 2320,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-44",
+      "title": "Binary Tick",
+      "type": "notification",
+      "theme": "Digital",
+      "style": "Digital",
+      "audioBank": "/sound-bank-notification-digital.wav",
+      "startMs": 3460,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-45",
+      "title": "Neon Bit",
+      "type": "notification",
+      "theme": "Digital",
+      "style": "Digital",
+      "audioBank": "/sound-bank-notification-digital.wav",
+      "startMs": 4600,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-46",
+      "title": "Signal Burst",
+      "type": "notification",
+      "theme": "Digital",
+      "style": "Digital",
+      "audioBank": "/sound-bank-notification-digital.wav",
+      "startMs": 5740,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-47",
+      "title": "Data Spark",
+      "type": "notification",
+      "theme": "Digital",
+      "style": "Digital",
+      "audioBank": "/sound-bank-notification-digital.wav",
+      "startMs": 6880,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-48",
+      "title": "Cyber Bell",
+      "type": "notification",
+      "theme": "Digital",
+      "style": "Digital",
+      "audioBank": "/sound-bank-notification-digital.wav",
+      "startMs": 8020,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-49",
+      "title": "Future Ping",
+      "type": "notification",
+      "theme": "Digital",
+      "style": "Digital",
+      "audioBank": "/sound-bank-notification-digital.wav",
+      "startMs": 9160,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-50",
+      "title": "Quantum Tick",
+      "type": "notification",
+      "theme": "Digital",
+      "style": "Digital",
+      "audioBank": "/sound-bank-notification-digital.wav",
+      "startMs": 10300,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-51",
+      "title": "Aurora Tap",
+      "type": "notification",
+      "theme": "Cinematic",
+      "style": "Cinematic",
+      "audioBank": "/sound-bank-notification-cinematic.wav",
+      "startMs": 40,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-52",
+      "title": "Silver Note",
+      "type": "notification",
+      "theme": "Cinematic",
+      "style": "Cinematic",
+      "audioBank": "/sound-bank-notification-cinematic.wav",
+      "startMs": 1180,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-53",
+      "title": "Cinematic Cue",
+      "type": "notification",
+      "theme": "Cinematic",
+      "style": "Cinematic",
+      "audioBank": "/sound-bank-notification-cinematic.wav",
+      "startMs": 2320,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-54",
+      "title": "Sunrise Accent",
+      "type": "notification",
+      "theme": "Cinematic",
+      "style": "Cinematic",
+      "audioBank": "/sound-bank-notification-cinematic.wav",
+      "startMs": 3460,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-55",
+      "title": "Evening Glow",
+      "type": "notification",
+      "theme": "Cinematic",
+      "style": "Cinematic",
+      "audioBank": "/sound-bank-notification-cinematic.wav",
+      "startMs": 4600,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-56",
+      "title": "Ocean Bell",
+      "type": "notification",
+      "theme": "Cinematic",
+      "style": "Cinematic",
+      "audioBank": "/sound-bank-notification-cinematic.wav",
+      "startMs": 5740,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-57",
+      "title": "Starlight Tap",
+      "type": "notification",
+      "theme": "Cinematic",
+      "style": "Cinematic",
+      "audioBank": "/sound-bank-notification-cinematic.wav",
+      "startMs": 6880,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-58",
+      "title": "Ambient Mark",
+      "type": "notification",
+      "theme": "Cinematic",
+      "style": "Cinematic",
+      "audioBank": "/sound-bank-notification-cinematic.wav",
+      "startMs": 8020,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-59",
+      "title": "Echo Spark",
+      "type": "notification",
+      "theme": "Cinematic",
+      "style": "Cinematic",
+      "audioBank": "/sound-bank-notification-cinematic.wav",
+      "startMs": 9160,
+      "durationMs": 1100
+    },
+    {
+      "id": "notification-60",
+      "title": "Horizon Note",
+      "type": "notification",
+      "theme": "Cinematic",
+      "style": "Cinematic",
+      "audioBank": "/sound-bank-notification-cinematic.wav",
+      "startMs": 10300,
+      "durationMs": 1100
+    }
+  ]
+}
