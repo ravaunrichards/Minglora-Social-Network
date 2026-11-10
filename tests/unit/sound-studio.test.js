@@ -55,7 +55,7 @@ test('Minglora Sound Studio is mounted in account settings and connected to acti
   assert.match(app,/videoCallRingtoneId/);
   assert.match(html,/sound-studio\.js\?v=20261110-sound-studio-1/);
   assert.match(html,/sound-studio\.css\?v=20261110-sound-studio-1/);
-  assert.match(worker,/minglora-shell-v261-sound-studio-1/);
+  assert.match(worker,/minglora-shell-v261-self-updating-1/);
   assert.match(worker,/sound-studio\.js\?v=20261110-sound-studio-1/);
   assert.match(worker,/sound-studio\.css\?v=20261110-sound-studio-1/);
 });
