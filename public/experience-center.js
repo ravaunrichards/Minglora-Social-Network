@@ -9,6 +9,7 @@
     screenSaverWaitValue:60, screenSaverWaitUnit:'minutes', screenSaverText:'Welcome to Minglora',
     osdClock:true, osdDate:true, osdNotifications:false, osdBattery:true, osdPosition:'top-right', osdOpacity:85,
     soundMode:'sound', vibrateOnRing:true, voiceCallSound:true, videoCallSound:true, messageSound:true, notificationSound:true,
+    voiceCallRingtoneId:'', videoCallRingtoneId:'', notificationSoundAssignments:{},
     ringtoneVolume:80, mediaVolume:80, notificationVolume:80, systemVolume:80,
     dndEnabled:false, dndStart:'22:00', dndEnd:'07:00', dndAllowedCalls:'none',
     notificationSort:'newest', lockScreenNotifications:'content',
