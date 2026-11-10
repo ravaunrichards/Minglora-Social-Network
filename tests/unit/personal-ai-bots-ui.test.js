@@ -7,7 +7,7 @@ const read=path=>readFile(new URL(path,root),'utf8');
 
 test('Personal AI Bots page loads the dedicated responsive controller and styles',async()=>{
   const html=await read('public/personal-ai-bots.html');
-  assert.match(html,/personal-ai-bots\.js\?v=20261109-personal-ai-bots-12/);
+  assert.match(html,/personal-ai-bots\.js\?v=20261109-personal-ai-bots-13/);
   assert.match(html,/personal-ai-bots\.js/);
   assert.match(html,/id="pab-root"/);
   assert.match(html,/noindex,nofollow/);
@@ -170,7 +170,7 @@ test('owner Admin Centre pages canonical AI identity records with a verified cur
   assert.match(api,/path===root\+'\/identities'/);
   assert.match(api,/nextOffset:offset\+result\.length/);
   assert.match(api,/hasMore:result\.length===limit/);
-  assert.ok(html.includes('/personal-ai-bots.js?v=20261109-personal-ai-bots-12'));
+  assert.ok(html.includes('/personal-ai-bots.js?v=20261109-personal-ai-bots-13'));
 });
 
 test('owner Admin Centre paginates provider assignments and AI email identity records',async()=>{
@@ -193,7 +193,28 @@ test('owner Admin Centre paginates provider assignments and AI email identity re
   assert.match(api,/listAiEmailIdentities\(\{limit:100,offset:0\}\)/);
   assert.match(api,/path===root\+'\/providers'/);
   assert.match(api,/path===root\+'\/emails'/);
-  assert.ok(html.includes('/personal-ai-bots.js?v=20261109-personal-ai-bots-12'));
+  assert.ok(html.includes('/personal-ai-bots.js?v=20261109-personal-ai-bots-13'));
+});
+
+test('owner Admin Centre paginates task queue and follow/unfollow history together',async()=>{
+  const [source,api,html]=await Promise.all([
+    read('public/personal-ai-bots.js'),
+    read('backend/modules/personal-ai-bots/admin-api.js'),
+    read('public/personal-ai-bots.html')
+  ]);
+  assert.match(source,/id="pab-task-queue-list"/);
+  assert.match(source,/id="pab-follow-task-history-list"/);
+  assert.match(source,/id="pab-load-more-tasks"/);
+  assert.match(source,/loadMoreTaskRecords/);
+  assert.match(source,/API\+'\/tasks\?'/);
+  assert.match(source,/state\.tasksNextOffset/);
+  assert.match(source,/followTasks=added\.filter\(task=>\['follow','unfollow'\]/);
+  assert.match(api,/listAiBotTasks\(\{limit:100,offset:0\}\)/);
+  assert.match(api,/path===root\+'\/tasks'/);
+  assert.match(api,/tasksNextOffset/);
+  assert.match(api,/tasksHasMore/);
+  assert.match(api,/hasMore:result\.length===limit/);
+  assert.ok(html.includes('/personal-ai-bots.js?v=20261109-personal-ai-bots-13'));
 });
 
 test('owner Admin Centre exposes a real paginated AI profile report review queue',async()=>{
@@ -221,7 +242,7 @@ test('owner Admin Centre exposes a real paginated AI profile report review queue
   assert.match(api,/safetyReportsHasMore/);
   assert.match(api,/nextOffset:offset\+reports\.length/);
   assert.match(api,/hasMore:reports\.length===limit/);
-  assert.ok(html.includes('/personal-ai-bots.js?v=20261109-personal-ai-bots-12'));
+  assert.ok(html.includes('/personal-ai-bots.js?v=20261109-personal-ai-bots-13'));
   assert.match(css,/\.pab-report-card/);
   assert.match(css,/\.pab-report-resolution/);
 });
@@ -286,7 +307,7 @@ test('owner Admin Centre exposes the 20-department catalogue and safe hierarchy 
   assert.match(ui,/Recorded appointments:/);
   assert.match(ui,/position\.code&&\['appointed','suspended'\]\.includes\(item\.status\)/);
   assert.doesNotMatch(ui,/No AI has been appointed/,'position catalogue must not contradict the existing appointment workflow');
-  assert.ok(html.includes('/personal-ai-bots.js?v=20261109-personal-ai-bots-12'),'Admin Centre script cache version is current');
+  assert.ok(html.includes('/personal-ai-bots.js?v=20261109-personal-ai-bots-13'),'Admin Centre script cache version is current');
   assert.match(service,/PERSONAL_AI_BOT_DEPARTMENTS = Object\.freeze/);
   assert.equal((service.match(/\{code:'[a-z_]+',name:'[^']+'/g)||[]).length>=20,true);
 });
@@ -307,7 +328,7 @@ test('owner Admin Centre exposes corporate vacancy creation and safe status cont
   assert.ok(service.includes("status:'open'"));
   assert.ok(service.includes('statusHistory'));
   assert.ok(api.includes("root+'/vacancies'"));
-  assert.ok(html.includes('/personal-ai-bots.js?v=20261109-personal-ai-bots-12'));
+  assert.ok(html.includes('/personal-ai-bots.js?v=20261109-personal-ai-bots-13'));
 });
 
 test('owner Admin Centre exposes approval-gated appointments and employment history without activating AI identities',async()=>{
@@ -328,7 +349,7 @@ test('owner Admin Centre exposes approval-gated appointments and employment hist
   assert.ok(service.includes("position.reportsTo.length"));
   assert.match(ui,/The AI identity stays disabled, no permissions are granted/);
   assert.match(ui,/reportingManagerPositionTitle\|\|'Position unavailable'/);
-  assert.ok(html.includes('/personal-ai-bots.js?v=20261109-personal-ai-bots-12'));
+  assert.ok(html.includes('/personal-ai-bots.js?v=20261109-personal-ai-bots-13'));
 });
 
 
@@ -344,6 +365,6 @@ test('owner Admin Centre exposes organizational candidate submission and review 
   assert.match(ui,/Only existing AI identities with population "organizational" can be submitted/);
   assert.ok(service.includes("candidate.population!=='organizational'"));
   assert.ok(api.includes("root+'/applications'"));
-  assert.ok(html.includes('/personal-ai-bots.js?v=20261109-personal-ai-bots-12'));
+  assert.ok(html.includes('/personal-ai-bots.js?v=20261109-personal-ai-bots-13'));
 });
 
