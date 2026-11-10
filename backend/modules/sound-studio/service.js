@@ -105,11 +105,12 @@ export function validateSoundStudioPreferences(input,current={}){
 }
 export function isWithinDoNotDisturb(schedule,date=new Date()){
  if(!schedule?.enabled)return false;
- const day=["sun","mon","tue","wed","thu","fri","sat"][date.getDay()];
- if(Array.isArray(schedule.days)&&!schedule.days.includes(day))return false;
+ const dayIndex=date.getDay(),day=["sun","mon","tue","wed","thu","fri","sat"][dayIndex],previousDay=["sun","mon","tue","wed","thu","fri","sat"][(dayIndex+6)%7];
  const mins=v=>{const [h,m]=String(v||"").split(":").map(Number);return h*60+m;};
  const now=date.getHours()*60+date.getMinutes(),start=mins(schedule.startTime),end=mins(schedule.endTime);
- if(start===end)return true;
- return start<end?now>=start&&now<end:now>=start||now<end;
+ if(start===end)return !Array.isArray(schedule.days)||schedule.days.includes(day);
+ if(start<end)return (!Array.isArray(schedule.days)||schedule.days.includes(day))&&now>=start&&now<end;
+ if(now>=start)return !Array.isArray(schedule.days)||schedule.days.includes(day);
+ return now<end&&(!Array.isArray(schedule.days)||schedule.days.includes(previousDay));
 }
 export function countSoundCatalogue(items=[]){return {voice:items.filter(x=>x.type==="voice").length,video:items.filter(x=>x.type==="video").length,notification:items.filter(x=>x.type==="notification").length,total:items.length};}

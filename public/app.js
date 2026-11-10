@@ -8548,7 +8548,6 @@ async function startIncomingRingtone(call=null){
  const voiceCall=call?.kind==='audio';
  const soundEnabled=voiceCall?experience?.voiceCallSound!==false:experience?.videoCallSound!==false;
  if(state.settings?.preferences?.messengerIncomingCallSounds===false||window.MingloraExperience?.shouldSilenceNotifications?.('call')||experience?.soundMode==='mute'){stopCallTone();return false;}
- if(window.MingloraSoundStudio?.shouldSilence?.()){stopCallTone();return false;}
  stopCallTone();
  if(experience?.soundMode==='vibrate'){
    if(experience.vibrateOnRing&&typeof navigator.vibrate==='function')navigator.vibrate([260,130,260]);

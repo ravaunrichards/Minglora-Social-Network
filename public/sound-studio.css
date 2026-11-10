@@ -20,3 +20,5 @@
 .sound-studio-legacy{margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}.sound-studio-legacy summary{font-size:11px;font-weight:700;color:var(--muted);cursor:pointer}
 @media(max-width:720px){.mss-call-grid,.mss-controls-grid,.mss-sound-grid{grid-template-columns:1fr}.mss-category-row{grid-template-columns:minmax(0,1fr) auto;gap:7px}.mss-category-row select{grid-column:1}.mss-category-row>button{grid-column:2;grid-row:2}.mss-switch{grid-column:2;grid-row:1}.mss-upload-row{grid-template-columns:1fr}.mss-panel{padding:13px}}
 @media(max-width:420px){.mss-header h2{font-size:19px}.mss-dnd-grid,.mss-library-tools{grid-template-columns:1fr}.mss-days{gap:8px}.mss-custom-row{align-items:flex-start;flex-direction:column}.mss-footer-actions>*{flex:1}}
+
+.mss-rights-check{display:flex;gap:8px;align-items:center;font-size:10px;color:var(--muted)}.mss-rights-check input{accent-color:var(--blue)}

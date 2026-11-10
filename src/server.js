@@ -6493,7 +6493,7 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
           notificationSounds:{...(current.notificationSounds||{})}};
         if(next.voiceRingtoneId===customId)next.voiceRingtoneId='voice-01';
         if(next.videoRingtoneId===customId)next.videoRingtoneId='video-01';
-        for(const category of SOUND_NOTIFICATION_CATEGORIES)if(next.notificationSounds[category.id]===customId)next.notificationSounds[category.id]=category.defaultSoundId||'notification-01';
+        for(const [index,category] of SOUND_NOTIFICATION_CATEGORIES.entries())if(next.notificationSounds[category.id]===customId)next.notificationSounds[category.id]='notification-'+String(index+1).padStart(2,'0');
         const asset=(db.mediaAssets||[]).find(item=>item.id===target.assetId&&item.ownerId===user.id&&item.slot==='sound'&&item.status==='attached');
         if(asset){asset.status='deleted';asset.deletedAt=now();}
         user.settings={...(user.settings||{}),preferences:{...(user.settings?.preferences||{}),soundStudio:next}};
