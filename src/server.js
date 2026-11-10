@@ -6508,11 +6508,12 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
         const assetId=saved.assetId||(kind==='voice'?user.callRingtoneAssetId:null);
         const previous=(db.mediaAssets||[]).find(item=>item.id===assetId&&item.ownerId===user.id&&item.slot==='ringtone'&&item.status==='attached');
         if(previous){previous.status='deleted';previous.deletedAt=now();}
-        user.callRingtones={...(user.callRingtones||{}),[kind]:{selectedId:CALL_RINGTONE_DEFAULTS[kind],assetId:null}};
+        const selectedId=isCallRingtonePresetId(saved.selectedId)?saved.selectedId:CALL_RINGTONE_DEFAULTS[kind];
+        user.callRingtones={...(user.callRingtones||{}),[kind]:{selectedId,assetId:null}};
         if(kind==='voice')user.callRingtoneAssetId=null;
         await saveStore();
         if(previous)await mediaGateway('media_delete',{ownerId:user.id,bucket:previous.bucket,path:previous.path}).catch(error=>console.warn('[Minglora ringtone] '+kind+' ringtone cleanup failed.',{message:error.message}));
-        return json(res,200,{ok:true,kind,selectedId:CALL_RINGTONE_DEFAULTS[kind],ringtone:null});
+        return json(res,200,{ok:true,kind,selectedId,ringtone:null});
       }
       if(method==='GET'&&p==='/api/calls/incoming'){
         // A ringing invitation is already persisted in Minglora's call ledger.
