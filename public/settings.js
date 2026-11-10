@@ -112,11 +112,13 @@
     const radioName = 'callRingtone-' + kind;
     const options = tones.map(tone => {
       const checked = selectedId === tone.id ? ' checked' : '';
-      return '<label class="call-ringtone-preset">' +
-        '<input type="radio" name="' + radioName + '" value="' + escapeHtml(tone.id) + '"' + checked + '>' +
-        '<span class="call-ringtone-preset-copy"><strong>' + escapeHtml(tone.name) + '</strong><small>' + escapeHtml(tone.description) + '</small></span>' +
+      return '<div class="call-ringtone-preset">' +
+        '<label class="call-ringtone-preset-select">' +
+          '<input type="radio" name="' + radioName + '" value="' + escapeHtml(tone.id) + '"' + checked + '>' +
+          '<span class="call-ringtone-preset-copy"><strong>' + escapeHtml(tone.name) + '</strong><small>' + escapeHtml(tone.description) + '</small></span>' +
+        '</label>' +
         '<button type="button" class="call-ringtone-preview-button" data-call-ringtone-preview="' + escapeHtml(tone.id) + '" aria-label="Preview ' + escapeHtml(tone.name) + '">Preview</button>' +
-      '</label>';
+      '</div>';
     }).join('');
     const customOption = custom
       ? '<label class="call-ringtone-preset call-ringtone-custom-option" data-call-ringtone-custom-option>' +
