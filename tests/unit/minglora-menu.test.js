@@ -65,20 +65,25 @@ test('Create options have their own scroll area on desktop and remain in normal 
 test('Main Menu uses Facebook-sized viewport bounds on desktop, tablet and phones', () => {
   const css = read('public/minglora-menu.css');
   const safety = read('public/layout-safety.css');
-  assert.match(css, /width:min\\(680px,calc\\(100vw - 32px\\)\\)/);
-  assert.match(css, /height:min\\(720px,calc\\(100dvh - 84px\\)\\)/);
-  assert.match(css, /@media\\(min-width:761px\\) and \\(max-width:1024px\\)/);
-  assert.match(css, /width:min\\(640px,calc\\(100vw - 24px\\)\\)/);
-  assert.match(css, /@media\\(max-width:760px\\)[\\s\\S]*width:100vw[\\s\\S]*height:100dvh/);
-  assert.match(safety, /max-width:min\\(360px,calc\\(100vw - 24px\\)\\)!important/);
+  assert.ok(css.includes('width:min(680px,calc(100vw - 32px))'));
+  assert.ok(css.includes('height:min(720px,calc(100dvh - 84px))'));
+  assert.ok(css.includes('@media(min-width:761px) and (max-width:1024px)'));
+  assert.ok(css.includes('width:min(640px,calc(100vw - 24px))'));
+  const mobileCss = css.slice(css.indexOf('@media(max-width:760px)'));
+  assert.ok(mobileCss.includes('width:100vw;'));
+  assert.ok(mobileCss.includes('height:100dvh;'));
+  assert.ok(safety.includes('width:min(360px,calc(100vw - 24px))!important'));
+  assert.ok(safety.includes('width:min(378px,calc(100vw - 24px))!important'));
+  assert.ok(safety.includes('max-width:min(360px,calc(100vw - 24px))!important'));
 });
 
 test('Scrolling does not dismiss the Menu; outside clicks and Escape still close it', () => {
   const script = read('public/minglora-menu.js');
   const safety = read('public/layout-safety.css');
-  assert.match(script, /document\\.addEventListener\\('click'/);
-  assert.doesNotMatch(script, /document\\.addEventListener\\('pointerdown'/);
-  assert.match(script, /event\\.key === 'Escape'/);
-  assert.match(script, /document\\.documentElement\\.classList\\.add\\('minglora-menu-open'\\)/);
-  assert.match(safety, /html\\.minglora-menu-open,[\\s\\S]*body\\.minglora-menu-open/);
+  assert.ok(script.includes("document.addEventListener('click'"));
+  assert.ok(!script.includes("document.addEventListener('pointerdown'"));
+  assert.ok(script.includes("event.key === 'Escape'"));
+  assert.ok(script.includes("document.documentElement.classList.add('minglora-menu-open')"));
+  assert.ok(safety.includes('html.minglora-menu-open,'));
+  assert.ok(safety.includes('body.minglora-menu-open'));
 });
