@@ -501,7 +501,7 @@ body.theme-dark[data-color-theme="graphite"]{--bg:#171d25;--card:#242d38;--ink:#
  body.theme-system[data-color-theme="midnight"]{--bg:#0b1424;--card:#14233a;--ink:#eff8ff;--muted:#a9c5db;--line:#28415f}
  body.theme-system[data-color-theme="graphite"]{--bg:#171d25;--card:#242d38;--ink:#edf1f5;--muted:#b0bac5;--line:#3a4653}
 }
-body[data-color-theme]{background:var(--bg);color:var(--ink)}
+body[data-color-theme]{--surface:var(--card);--surface-soft:var(--bg);--text:var(--ink);background:var(--bg);color:var(--ink)}
 body[data-color-theme] .brand,body[data-color-theme] .nav-item.active,body[data-color-theme] .text-button,body[data-color-theme] .profile-tabs button.active{color:var(--blue)}
 body[data-color-theme] .brand-mark{background:linear-gradient(145deg,var(--blue),var(--blue-dark))}
 body[data-color-theme] .nav-item.active:after{background:var(--blue)}
