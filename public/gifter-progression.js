@@ -174,7 +174,7 @@
       "<header class='gp-heading'><div><span class='gp-eyebrow'>MINGLORA GIFTER JOURNEY</span><h1>Gifter Level &amp; Badges</h1>" +
       "<p>Every confirmed gift you send moves your own Minglora gifter journey forward.</p></div>" +
       "<div class='gp-heading-actions'><button type='button' class='gp-back-link' id='gp-back-gifts'>← Back to Gifts</button></div></header>" +
-      "<section class='gp-hero card'><div class='gp-hero-summary'>" +
+      "<section class='gp-hero card'><div class='gp-hero-art'><img class='gp-reference-art' src='/assets/Gifters%20Level%20Up.png' alt='Gifters Level Up' loading='eager' decoding='async'></div><div class='gp-hero-summary'>" +
       "<span class='gp-eyebrow'>YOUR GIFTER STATUS</span><div class='gp-current-badge-row'>" +
       currentBadgeMarkup +
       "<div><h2>" + (current.hasUnlockedBadge ? "LV " + current.level + " · " + esc(current.tier) : "No badge earned yet") + "</h2><p>" + (current.hasUnlockedBadge ? esc(current.badgeName) : "Your gifter levels are locked until you send gifts.") + "</p>" +
