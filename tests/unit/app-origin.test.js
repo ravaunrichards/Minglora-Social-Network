@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { appOrigin, isAllowedAppOrigin } from '../../src/app-origin.js';
+import { appOrigin, isAllowedAppOrigin, isSameOriginAdminWrite } from '../../src/app-origin.js';
 
 const request = {
   headers: {
@@ -60,4 +60,15 @@ test('same-origin writes reject unconfigured domains and lookalike hosts', () =>
 test('development same-origin writes continue to match the forwarded local origin', () => {
   assert.equal(isAllowedAppOrigin('http://localhost:3000', request, { NODE_ENV: 'development' }), true);
   assert.equal(isAllowedAppOrigin('http://attacker.example', request, { NODE_ENV: 'development' }), false);
+});
+
+
+test('privileged Admin Centre writes require an explicit allowed Origin header', () => {
+  const env = { NODE_ENV: 'production', APP_ORIGIN: 'https://social.example.com' };
+  assert.equal(isSameOriginAdminWrite({ headers: {} }, env), false);
+  assert.equal(isSameOriginAdminWrite({ headers: { origin: '' } }, env), false);
+  assert.equal(isSameOriginAdminWrite({ headers: { origin: 'https://attacker.example' } }, env), false);
+  assert.equal(isSameOriginAdminWrite({ headers: { origin: 'https://social.example.com', 'sec-fetch-site': 'same-origin' } }, env), true);
+  assert.equal(isSameOriginAdminWrite({ headers: { origin: 'https://minglora-social-network.onrender.com' } }, env), true);
+  assert.equal(isSameOriginAdminWrite({ headers: { origin: 'https://social.example.com', 'sec-fetch-site': 'cross-site' } }, env), false);
 });
