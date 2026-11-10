@@ -884,7 +884,7 @@ test('owner durable AI task queue supports bounded offset pagination',async()=>{
     url:new URL('https://minglora.test/api/admin/personal-ai-bots/tasks?limit=25&offset=300'),
     listAiBotTasks:async value=>{options=value;return tasks;}
   });
-  await handlePersonalAiBotAdminApi(context).catch(()=>{});
+  await handlePersonalAiBotsAdminApi(context);
   assert.equal(context.res.statusCode,200);
   assert.deepEqual(options,{limit:25,offset:300});
   assert.deepEqual(context.res.payload.tasks,tasks);
