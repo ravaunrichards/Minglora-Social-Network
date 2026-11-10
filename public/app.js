@@ -393,7 +393,7 @@ let incomingCallPollingTimer=null,incomingCallPollBusy=false,incomingCallOverlay
 let incomingCallLastErrorAt=0;
 let outgoingCallOverlay=null,outgoingCallPending=null,callRingtoneCache={loadedAt:0,ringtones:{voice:null,video:null}};
 let callRingtoneAudio=null,callToneContext=null,callToneNodes=[],callToneTimer=null;
-window.addEventListener('minglora:call-ringtone-updated',()=>{callRingtoneCache={loadedAt:0,ringtone:null};});
+window.addEventListener('minglora:call-ringtone-updated',()=>{callRingtoneCache={loadedAt:0,ringtones:{voice:null,video:null}};});
 function toast(message){const el=$('#toast');el.textContent=message;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2800)}
 function showSubscriptionReturnNotice(){
   const params=new URLSearchParams(window.location.search),status=params.get('subscription');
