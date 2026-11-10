@@ -67,6 +67,10 @@ const discoveryUi = await readFile(
   new URL('../../public/ai-discover.js', import.meta.url),
   'utf8'
 );
+const discoveryHtml = await readFile(
+  new URL('../../public/ai-discover.html', import.meta.url),
+  'utf8'
+);
 
 test('normalized AI bot migration contains all 15 master categories',()=>{
   for(const id of [
@@ -762,4 +766,22 @@ test('AI report review gateway and owner API only permit the designated owner',(
   assert.match(serverSource,/reviewAiIdentityReport/);
   assert.match(adminApiSource,/method==='GET'&&path===root\+'\/safety\/reports'/);
   assert.match(adminApiSource,/safetyReportMatch&&method==='PATCH'/);
+});
+
+test('member AI block management paginates beyond the first database page',()=>{
+  const start=serverSource.indexOf("if(method==='GET'&&p==='/api/ai/blocks')");
+  const end=serverSource.indexOf("const aiProfileSafetyMatch",start);
+  const route=serverSource.slice(start,end);
+  assert.match(route,/url\.searchParams\.get\('limit'\)/);
+  assert.match(route,/url\.searchParams\.get\('offset'\)/);
+  assert.match(route,/limit>500/);
+  assert.match(route,/nextOffset:offset\+blockedIdentities\.length/);
+  assert.match(route,/hasMore:blockedIdentities\.length===limit/);
+  const gatewayHandler=gateway.slice(gateway.indexOf('if (action === "ai_identity_block_list")'),gateway.indexOf('if (action === "ai_identity_report_create")'));
+  assert.match(gatewayHandler,/p_limit: limit,p_offset: offset/);
+  assert.ok(discoveryHtml.includes('id="aid-blocked-load-more"'));
+  assert.match(discoveryUi,/let blockedOffset=0,blockedLoading=false/);
+  assert.match(discoveryUi,/limit:'100',offset:String\(blockedOffset\)/);
+  assert.match(discoveryUi,/blockedOffset=Number\.isInteger\(nextOffset\)/);
+  assert.match(discoveryUi,/loadBlockedIdentities\(\{append:true\}\)/);
 });
