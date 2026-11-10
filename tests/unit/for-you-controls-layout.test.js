@@ -59,7 +59,7 @@ test('For You header and search reserve their own space above the scrolling feed
   assert.ok(sw.includes('/for-you-controls.css?v=20261108-home-live-mixed-feed-2'));
   assert.match(html,/\/app\.js\?v=[^"']+/);
   assert.ok(sw.includes('/app.js?v=20261110-separated-call-ringtones-1'));
-  assert.match(sw, /^const CACHE_NAME='minglora-shell-v[0-9]+-[^']+';$/m);
+  assert.equal(sw.match(/^const CACHE_NAME='([^']+)';$/m)?.[1], 'minglora-shell-v260-separated-call-ringtones-1');
 });
 
 test('Home Stories use a Facebook-style create card, scrollable story rail and navigable fullscreen viewer', async () => {
