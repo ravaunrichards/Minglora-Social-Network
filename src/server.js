@@ -1779,11 +1779,19 @@ async function route(req, res) {
       if(method==='GET'&&publicAiProfileMatch){
         if(!isSupabasePersistence())return json(res,503,{error:'Public AI profiles require Minglora Supabase PostgreSQL persistence.'});
         try{
-          const result=await requestSupabaseState('ai_identity_public_profile_get',{actorUserId:user.id,slug:publicAiProfileMatch[1]});
+          const [result,blockResult]=await Promise.all([
+            requestSupabaseState('ai_identity_public_profile_get',{actorUserId:user.id,slug:publicAiProfileMatch[1]}),
+            requestSupabaseState('ai_identity_block_list',{actorUserId:user.id,limit:500,offset:0})
+          ]);
           const profile=result.profile;
           if(!profile)return json(res,404,{error:'AI profile not found.'});
+          if(!Array.isArray(blockResult.blockedIdentities))throw new Error('AI profile block lookup is unavailable.');
+          const identityId=String(profile.identityId||'');
+          const blockedByMember=blockResult.blockedIdentities.some(item=>String(item.identityId||'')===identityId);
           const ownerId=String(profile.ownerAdminId||'');
-          if(!/^[0-9a-f-]{36}$/i.test(ownerId)||blockedBetween(user.id,ownerId))return json(res,404,{error:'AI profile not found.'});
+          if(blockedByMember||!identityId||!(/^[0-9a-f-]{36}$/i.test(ownerId))||blockedBetween(user.id,ownerId)){
+            return json(res,404,{error:'AI profile not found.'});
+          }
           const {ownerAdminId,...publicProfile}=profile;
           return json(res,200,{ok:true,profile:publicProfile});
         }catch(error){return json(res,503,{error:String(error?.message||'Public AI profile is unavailable.').slice(0,240)});}
