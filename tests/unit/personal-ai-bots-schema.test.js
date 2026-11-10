@@ -657,7 +657,7 @@ test('public AI profile and safety endpoints enforce signed-in sessions and serv
   assert.match(routes,/ai_identity_public_profile_get/);
   assert.match(routes,/blockedBetween\(user\.id,ownerId\)/);
   assert.match(routes,/ai_identity_block_set/);
-  assert.match(routes,/ai_identity_block_list/);
+  assert.doesNotMatch(routes,/ai_identity_block_list/,'public profile access uses the indexed canonical block predicate instead of fetching a capped list');
   assert.match(routes,/ai_identity_report_create/);
   assert.match(serverSource,/const publicAiPageMatch=p\.match/);
   assert.match(serverSource,/path\.join\(publicDir,'ai-profile\.html'\)/);
