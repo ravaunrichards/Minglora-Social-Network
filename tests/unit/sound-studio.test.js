@@ -46,7 +46,7 @@ test('Minglora Sound Studio is mounted in account settings and connected to acti
   const app=fs.readFileSync(path.join(root,'public/app.js'),'utf8');
   const html=fs.readFileSync(path.join(root,'public/index.html'),'utf8');
   const worker=fs.readFileSync(path.join(root,'public/sw.js'),'utf8');
-  assert.match(settings,/data-settings-category-button="sound-studio"/);
+  assert.match(settings,/id="settings-calls" data-settings-category="interactions"[\s\S]*minglora-sound-studio-root/);
   assert.match(settings,/minglora-sound-studio-root/);
   assert.match(settings,/MingloraSoundStudio\?\.mount/);
   assert.match(app,/MingloraSoundStudio\?\.playCall/);
