@@ -292,7 +292,6 @@
     for(const node of activeNodes) { try{node.stop?.();node.disconnect?.();}catch{} }
     activeNodes=[];
     playingCall=false;
-    try{context?.suspend?.();}catch{}
   }
   function getCustomSound(id) {
     return mySounds.find(sound => 'user:'+sound.id === id) || null;
@@ -452,13 +451,13 @@
   }
   function renderUploadSection() {
     return '<section class="sound-studio-upload"><div class="sound-studio-inline-heading"><div><h3>My Sounds</h3><p>Upload your own recording and use it for calls or any notification. Only publish audio you own or are licensed to use.</p></div></div>'+
-      '<form id="sound-studio-upload-form" class="sound-studio-upload-form">'+
+      '<div id="sound-studio-upload-form" class="sound-studio-upload-form">'+
       '<label class="sound-studio-field"><span>Sound title</span><input name="title" minlength="2" maxlength="100" required placeholder="Name your sound"></label>'+
       '<label class="sound-studio-field"><span>Attribution (optional)</span><input name="attribution" maxlength="100" placeholder="Creator or source"></label>'+
       '<label class="sound-studio-field"><span>Audio file</span><input name="file" type="file" accept="audio/mpeg,audio/mp4,audio/ogg,audio/webm,audio/wav,audio/x-wav,audio/flac,audio/aac,.mp3,.m4a,.ogg,.opus,.webm,.wav,.flac,.aac" required></label>'+
       '<label class="sound-studio-check"><input type="checkbox" name="allowReuse"><span>Allow other Minglora members to reuse this original recording.</span></label>'+
       '<label class="sound-studio-check"><input type="checkbox" name="rightsConfirmed" required><span>I own this recording or have permission to publish and use it.</span></label>'+
-      '<button type="submit" class="primary">Upload to My Sounds</button><p class="settings-form-status" id="sound-studio-upload-status" role="status" aria-live="polite"></p></form>'+
+      '<button type="button" class="primary" data-upload-sound>Upload to My Sounds</button><p class="settings-form-status" id="sound-studio-upload-status" role="status" aria-live="polite"></p></div>'+
       '<div class="sound-studio-count">'+mySounds.length+' personal recordings available</div></section>';
   }
   function render() {
@@ -492,11 +491,17 @@
     });
   }
   async function handleUpload(form) {
-    const file=form.elements.file?.files?.[0];
+    const file=form.querySelector('[name="file"]')?.files?.[0];
     const status=$('#sound-studio-upload-status',root);
-    if(!file) return;
-    const submit=form.querySelector('button[type="submit"]');
-    submit.disabled=true;
+    const submit=form.querySelector('[data-upload-sound]');
+    const title=String(form.querySelector('[name="title"]')?.value||'').trim();
+    const attribution=String(form.querySelector('[name="attribution"]')?.value||'').trim();
+    const rightsConfirmed=form.querySelector('[name="rightsConfirmed"]')?.checked===true;
+    const allowReuse=form.querySelector('[name="allowReuse"]')?.checked===true;
+    if(!file) {if(status)status.textContent='Choose an audio recording first.';return;}
+    if(title.length<2) {if(status)status.textContent='Give your sound a title of at least two characters.';return;}
+    if(!rightsConfirmed) {if(status)status.textContent='Confirm that you own this recording or have permission to publish it.';return;}
+    if(submit)submit.disabled=true;
     if(status) status.textContent='Preparing your recording…';
     try {
       if(typeof window.uploadMediaFile!=='function') throw new Error('The Minglora audio upload service is unavailable.');
@@ -504,10 +509,8 @@
       const asset=await window.uploadMediaFile('sound',file,1,0,progress=>{
         if(status) status.textContent=progress.finalizing?'Upload complete. Publishing your sound…':'Uploading '+progress.percentage+'%';
       });
-      const values=new FormData(form);
       await api('/sounds',{method:'POST',body:JSON.stringify({
-        assetId:asset.id,title:values.get('title'),attribution:values.get('attribution')||'',
-        rightsConfirmed:values.has('rightsConfirmed'),allowReuse:values.has('allowReuse'),durationMs
+        assetId:asset.id,title,attribution,rightsConfirmed,allowReuse,durationMs
       })});
       await refreshMySounds(true);
       showStatus('Your original recording is now available in My Sounds.');
@@ -516,7 +519,7 @@
       if(status) status.textContent='The recording was not added. '+error.message;
     } finally {
       const activeForm=$('#sound-studio-upload-form',root);
-      if(activeForm?.querySelector('button[type="submit"]')) activeForm.querySelector('button[type="submit"]').disabled=false;
+      if(activeForm?.querySelector('[data-upload-sound]')) activeForm.querySelector('[data-upload-sound]').disabled=false;
     }
   }
   async function assignCall(kind,id) {
@@ -556,6 +559,7 @@
     if(button.dataset.previewSound) { void previewSound(button.dataset.previewSound);return; }
     if(button.dataset.previewUserSound) { void previewUserSound(button.dataset.previewUserSound);return; }
     if(button.hasAttribute('data-preview-custom-call')) { void previewCustomRingtone();return; }
+    if(button.hasAttribute('data-upload-sound')) { void handleUpload($('#sound-studio-upload-form',root));return; }
     if(button.dataset.useCall) { void assignCall(button.dataset.callKind,button.dataset.useCall);return; }
     if(button.dataset.editEvent) { activeEvent=button.dataset.editEvent;librarySearch='';render();return; }
     if(button.dataset.closePicker!==undefined) { activeEvent='';render();return; }
@@ -577,10 +581,6 @@
     if(target.matches('[data-event-search]')) { eventSearch=target.value;const pos=target.selectionStart;render();const next=$('[data-event-search]',root);next?.focus();next?.setSelectionRange(pos,pos); }
     if(target.matches('[data-picker-search]')) { librarySearch=target.value;const pos=target.selectionStart;render();const next=$('[data-picker-search]',root);next?.focus();next?.setSelectionRange(pos,pos); }
   }
-  function handleSubmit(event) {
-    if(event.target?.id!=='sound-studio-upload-form') return;
-    event.preventDefault();void handleUpload(event.target);
-  }
   function mount(container,options={}) {
     root=container||$('#minglora-sound-studio-root');
     if(!root) return false;
@@ -590,11 +590,9 @@
     root.removeEventListener('click',handleClick);
     root.removeEventListener('change',handleChange);
     root.removeEventListener('input',handleInput);
-    root.removeEventListener('submit',handleSubmit);
     root.addEventListener('click',handleClick);
     root.addEventListener('change',handleChange);
     root.addEventListener('input',handleInput);
-    root.addEventListener('submit',handleSubmit);
     render();
     void refreshMySounds(true).then(render);
     return true;
