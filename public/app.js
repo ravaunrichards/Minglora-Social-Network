@@ -10048,16 +10048,11 @@ async function renderAccountSwitcherMenu(){
       "<div class='account-switcher-head'><div><strong>Switch profiles</strong><small>Choose another profile saved on this device</small></div><button type='button' class='account-switcher-close' data-account-menu-close aria-label='Close account menu'>×</button></div>"+
       "<div class='account-switcher-list'>"+(rows||"<p class='account-switcher-empty'>No other profiles are saved on this device yet.</p>")+"</div>"+
       "<button type='button' class='account-switcher-add' data-account-add><span aria-hidden='true'>＋</span><span><strong>Add another profile</strong><small>Log in or create another Minglora account</small></span></button>"+
-      "<div class='account-switcher-foot'><button type='button' class='account-switcher-settings' data-account-open-settings><svg viewBox='0 0 64 64' aria-hidden='true'><use href='/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#settings'></use></svg><span>Settings &amp; privacy</span><span aria-hidden='true'>›</span></button><button type='button' class='account-switcher-logout-all' data-account-logout-all>Log out of all accounts on this device</button><small>Each account keeps its own profile, messages and privacy settings.</small></div>";
+      "<div class='account-switcher-foot'><button type='button' class='account-switcher-logout-all' data-account-logout-all>Log out of all accounts on this device</button><small>Each account keeps its own profile, messages and privacy settings.</small></div>";
     panel.querySelector('[data-account-menu-close]')?.addEventListener('click',closeAccountSwitcherMenu);
     panel.querySelector('[data-account-view-profile]')?.addEventListener('click',()=>{
       closeAccountSwitcherMenu();
       void window.MingloraActivateView?.('profile');
-    });
-    panel.querySelector('[data-account-open-settings]')?.addEventListener('click',()=>{
-      closeAccountSwitcherMenu();
-      if(window.MingloraSettings?.open)window.MingloraSettings.open();
-      else toast('Settings & privacy is not available right now.');
     });
     panel.querySelector('[data-account-add]')?.addEventListener('click',()=>{closeAccountSwitcherMenu();openAccountAccessDialog('login');});
     panel.querySelectorAll('[data-account-switch]').forEach(button=>button.addEventListener('click',async()=>{

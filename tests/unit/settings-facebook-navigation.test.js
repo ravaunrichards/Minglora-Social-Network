@@ -15,7 +15,14 @@ test('Facebook-style Settings & Privacy navigation includes nested menu pages an
  assert.ok(settings.includes('data-settings-back-page="home"'));
  assert.ok(settings.includes('settings-detail-back'));
  assert.ok(settings.includes('settings-more-menu'));
- assert.ok(index.includes('settings-navigation.css?v=20261110-facebook-settings-privacy-1'));
+ assert.ok(index.includes('settings-navigation.css?v=20261110-settings-privacy-menu-icons-1'));
+ assert.ok(settings.includes('#settings'));
+ assert.ok(settings.includes('#request'));
+ assert.ok(settings.includes('#activity'));
+ assert.ok(settings.includes('#block'));
+ assert.ok(settings.includes('#palette'));
+ assert.ok(settings.includes('#logout'));
+ assert.doesNotMatch(settings, /settings-facebook-row-icon\">[⚙️❔🛟⚠️🌗↪]/);
 });
 test('All existing settings sections and key controls are retained',()=>{
  for(const id of ['settings-account','settings-data','settings-privacy','settings-interaction-preferences','settings-blocking','settings-notifications','settings-calls','settings-preferences','settings-cache','settings-device-access','settings-help','settings-security','settings-signout'])assert.equal((settings.match(new RegExp('id="'+id+'"','g'))||[]).length,1,'preserve '+id);

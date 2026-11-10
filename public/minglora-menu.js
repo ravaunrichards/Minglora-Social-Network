@@ -308,10 +308,8 @@
     if (!panel.querySelector('.account-switcher-head')) return;
 
     const actions = [
-      { label: 'See all Profiles', key: 'profiles', icon: 'profile' },
       { label: 'Settings & Privacy', key: 'settings', icon: 'settings' },
-      { label: 'Help & Support', key: 'support', icon: 'activity' },
-      { label: 'Report a problem', key: 'report', icon: 'request' },
+      { label: 'Help & Support', key: 'support', icon: 'request' },
       { label: 'Display & Accessibility', key: 'display', icon: 'palette' },
       { label: 'Log Out', key: 'logout', icon: 'logout' }
     ];
@@ -320,7 +318,7 @@
     nav.setAttribute('aria-label', 'Account settings and help');
     nav.innerHTML = actions.map(item =>
       '<button type="button" class="account-switcher-action" data-account-tool="' + item.key + '">' +
-        sprite(item.icon) + '<span>' + item.label + '</span>' +
+        sprite(item.icon, 'nav-3d-icon') + '<span>' + item.label + '</span>' +
       '</button>'
     ).join('');
 
@@ -334,12 +332,6 @@
       const action = button.dataset.accountTool;
       if (typeof window.closeAccountSwitcherMenu === 'function') window.closeAccountSwitcherMenu();
       else panel.hidden = true;
-
-      if (action === 'profiles') {
-        // The account switcher itself lists every profile saved on this device.
-        document.getElementById('profile-menu')?.click();
-        return;
-      }
 
       if (action === 'logout') {
         document.getElementById('logout-btn')?.click();

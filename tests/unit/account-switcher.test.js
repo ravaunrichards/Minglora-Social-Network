@@ -4,6 +4,7 @@ import fs from 'node:fs';
 
 const html=fs.readFileSync(new URL('../../public/index.html',import.meta.url),'utf8');
 const app=fs.readFileSync(new URL('../../public/app.js',import.meta.url),'utf8');
+const menu=fs.readFileSync(new URL('../../public/minglora-menu.js',import.meta.url),'utf8');
 const server=fs.readFileSync(new URL('../../src/server.js',import.meta.url),'utf8');
 const css=fs.readFileSync(new URL('../../public/styles.css',import.meta.url),'utf8');
 const topbarCss=fs.readFileSync(new URL('../../public/profile-facebook-account-menu.css',import.meta.url),'utf8');
@@ -76,12 +77,19 @@ test('top-right profile trigger is avatar-only with the Facebook-style lower-rig
   assert.match(topbarCss,/profile-menu img#top-avatar[\s\S]*?width:40px!important/);
   assert.match(topbarCss,/profile-menu-chevron[\s\S]*?position:absolute!important;right:-2px!important;bottom:-1px!important/);
 });
-test('profile dropdown opens the current profile, saved profiles, add-profile and settings actions',()=>{
+test('profile dropdown opens the current profile, saved profiles, add-profile and one Settings & Privacy menu',()=>{
   assert.match(app,/data-account-view-profile/);
   assert.match(app,/data-account-switch=/);
   assert.match(app,/Switch profiles/);
   assert.match(app,/data-account-add/);
-  assert.match(app,/data-account-open-settings/);
-  assert.match(app,/window\.MingloraSettings\?\.open/);
   assert.match(app,/data-account-logout-all/);
+  assert.doesNotMatch(app,/data-account-open-settings/,'the app must not render a duplicate Settings & privacy row');
+  assert.doesNotMatch(html,/id=\"settings-btn\"/,'remove the duplicate top-bar Settings icon beside Personalise Minglora');
+  assert.equal((menu.match(/label: 'Settings & Privacy'/g)||[]).length,1);
+  assert.equal((menu.match(/label: 'Help & Support'/g)||[]).length,1);
+  assert.equal((menu.match(/label: 'Display & Accessibility'/g)||[]).length,1);
+  assert.equal((menu.match(/label: 'Log Out'/g)||[]).length,1);
+  assert.doesNotMatch(menu,/label: 'See all Profiles'/,'profile switching is already shown above Add another profile');
+  assert.match(menu,/window\.MingloraSettings\?\.open/);
+  assert.match(menu,/sprite\(item\.icon, 'nav-3d-icon'\)/);
 });

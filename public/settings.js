@@ -149,12 +149,12 @@
 <section class="settings-facebook-page" data-settings-page="home">
 <div class="settings-heading"><h1>Settings &amp; privacy</h1></div>
 <div class="settings-facebook-menu-list" aria-label="Settings and privacy menu">
-<button type="button" class="settings-facebook-row" data-settings-open-page="settings"><span class="settings-facebook-row-icon">⚙️</span><span>Settings</span><span class="settings-facebook-chevron">›</span></button>
-<button type="button" class="settings-facebook-row" data-settings-open-page="help-support"><span class="settings-facebook-row-icon">❔</span><span>Help &amp; Support</span><span class="settings-facebook-chevron">›</span></button>
-<button type="button" class="settings-facebook-row" data-settings-open-page="report-support"><span class="settings-facebook-row-icon">🛟</span><span>Report &amp; Support</span><span class="settings-facebook-chevron">›</span></button>
-<button type="button" class="settings-facebook-row" data-settings-report-problem><span class="settings-facebook-row-icon">⚠️</span><span>Report a problem</span><span class="settings-facebook-chevron">›</span></button>
-<button type="button" class="settings-facebook-row" data-settings-open-page="display-accessibility"><span class="settings-facebook-row-icon">🌗</span><span>Display &amp; Accessibility</span><span class="settings-facebook-chevron">›</span></button>
-<button type="button" class="settings-facebook-row settings-facebook-logout" data-settings-logout><span class="settings-facebook-row-icon">↪</span><span>Log out</span></button>
+<button type="button" class="settings-facebook-row" data-settings-open-page="settings"><span class="settings-facebook-row-icon"><svg class="nav-3d-icon" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><use href="/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#settings"></use></svg></span><span>Settings</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row" data-settings-open-page="help-support"><span class="settings-facebook-row-icon"><svg class="nav-3d-icon" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><use href="/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#request"></use></svg></span><span>Help &amp; Support</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row" data-settings-open-page="report-support"><span class="settings-facebook-row-icon"><svg class="nav-3d-icon" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><use href="/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#activity"></use></svg></span><span>Report &amp; Support</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row" data-settings-report-problem><span class="settings-facebook-row-icon"><svg class="nav-3d-icon" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><use href="/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#block"></use></svg></span><span>Report a problem</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row" data-settings-open-page="display-accessibility"><span class="settings-facebook-row-icon"><svg class="nav-3d-icon" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><use href="/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#palette"></use></svg></span><span>Display &amp; Accessibility</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row settings-facebook-logout" data-settings-logout><span class="settings-facebook-row-icon"><svg class="nav-3d-icon" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><use href="/assets/icons/navigation-3d.svg?v=20261110-semantic-icons-3d-1#logout"></use></svg></span><span>Log out</span></button>
 </div>
 <footer class="settings-facebook-footer" aria-label="Legal and information links">
 <div class="settings-facebook-footer-links">
@@ -1075,7 +1075,6 @@
 
   window.MingloraSettings = { open: openSettings };
   document.addEventListener('DOMContentLoaded', () => {
-    document.querySelector('#settings-btn')?.addEventListener('click', openSettings);
     document.querySelector('#rail-settings')?.addEventListener('click', openSettings);
     window.addEventListener('minglora:session-ready', async () => { try { const result = await api('/settings'); applyPreferences(result.settings); window.dispatchEvent(new CustomEvent('minglora:settings-loaded', { detail: result.settings })); } catch {} });
   });
