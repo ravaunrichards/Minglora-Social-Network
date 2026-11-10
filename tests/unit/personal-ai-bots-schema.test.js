@@ -661,10 +661,12 @@ test('public AI profile getter and report RPC only expose active public opted-in
 
 test('public AI profile and safety endpoints enforce signed-in sessions and server block policy',()=>{
   const routes=serverSource.slice(serverSource.indexOf("const publicAiProfileMatch"),serverSource.indexOf("if (await handlePersonalAiBotsAdminApi",serverSource.indexOf("const publicAiProfileMatch")));
-  assert.match(routes,/ai_identity_public_profile_get/);
-  assert.match(routes,/blockedBetween\(user\.id,ownerId\)/);
+  const publicProfileRoutes=routes.slice(0,routes.indexOf("if(method==='GET'&&p==='/api/ai/blocks')"));
+  assert.match(publicProfileRoutes,/ai_identity_public_profile_get/);
+  assert.match(publicProfileRoutes,/blockedBetween\(user\.id,ownerId\)/);
+  assert.doesNotMatch(publicProfileRoutes,/ai_identity_block_list|limit:500/,'public profile access uses the indexed canonical block predicate instead of fetching a capped list');
   assert.match(routes,/ai_identity_block_set/);
-  assert.doesNotMatch(routes,/ai_identity_block_list/,'public profile access uses the indexed canonical block predicate instead of fetching a capped list');
+  assert.match(routes,/ai_identity_block_list/);
   assert.match(routes,/ai_identity_report_create/);
   assert.match(serverSource,/const publicAiPageMatch=p\.match/);
   assert.match(serverSource,/path\.join\(publicDir,'ai-profile\.html'\)/);
