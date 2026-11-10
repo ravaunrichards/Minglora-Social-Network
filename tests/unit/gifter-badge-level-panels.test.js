@@ -64,3 +64,29 @@ test("updated progression assets and all original JPG panels are included in the
     assert.ok(sw.includes("/assets/gifter-badge-level-panels/" + routeName));
   });
 });
+
+
+test("level and badge names have separate horizontal and vertical ordered layouts", () => {
+  const progression = read("public/gifter-progression.js");
+  const styles = read("public/gifter-progression.css");
+  assert.match(progression, /function renderLevelDirectory\(items\)/);
+  assert.match(progression, /\.sort\(\(a, b\) => Number\(a\.level\) - Number\(b\.level\)\)/);
+  assert.match(progression, /data-gp-level-layout='horizontal'/);
+  assert.match(progression, /data-gp-level-layout='vertical'/);
+  assert.match(progression, /data-layout='horizontal'/);
+  assert.match(progression, /levelGrid\.dataset\.layout = layout/);
+  assert.match(progression, /esc\(item\.tier \|\| "Gifter"\)/);
+  assert.match(progression, /item\.coinsRequired \?\? item\.xpRequired/);
+  assert.match(styles, /\.gp-level-index-grid\[data-layout="horizontal"\]\{grid-template-columns:repeat\(4,minmax\(0,1fr\)\)\}/);
+  assert.match(styles, /\.gp-level-index-grid\[data-layout="vertical"\]\{grid-template-columns:minmax\(0,1fr\)\}/);
+  assert.match(styles, /\.gp-level-layout-button\[aria-pressed="true"\]/);
+  assert.match(progression, /badgePanels \+ "<\\/section>" \+\s*levelDirectory \+/);
+});
+
+test("original artwork panels are centered, responsive, uncropped and capped at native image width", () => {
+  const styles = read("public/gifter-progression.css");
+  assert.match(styles, /\.gp-art-panel-stack\{[\s\S]*?max-width:820px[\s\S]*?margin:0 auto/);
+  assert.match(styles, /\.gp-art-panel>img\{[\s\S]*?max-width:720px[\s\S]*?height:auto[\s\S]*?object-fit:contain/);
+  assert.match(styles, /\.gp-art-panel\{[\s\S]*?border-radius:16px[\s\S]*?background:linear-gradient/);
+  assert.match(styles, /@media\(max-width:760px\)[\s\S]*?\.gp-art-panel\{padding:5px;border-radius:12px\}/);
+});
