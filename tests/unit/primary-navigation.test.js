@@ -98,7 +98,7 @@ test('desktop left sidebar contains secondary features while primary destination
   const expected=[
     ['friends','Friends'],['creator','Creator Studio'],['messages','Messenger'],
     ['gifts','Gifts'],['coins','Recharge'],['groups','Groups'],
-    ['pages','Pages'],['saved','Saved'],['calendar','Events'],['clock-centre','Clock Centre'],['gifts','Gifts'],['videos','Video']
+    ['pages','Pages'],['saved','Saved'],['calendar','Events'],['clock-centre','Clock Centre'],['videos','Video']
   ];
   for(const [view,label] of expected){
     assert.ok(sidebar.includes('data-view="'+view+'"'),view+' remains directly available from the desktop sidebar');
