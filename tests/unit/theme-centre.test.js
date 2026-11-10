@@ -56,10 +56,11 @@ test('all advertised themes have previews and responsive visual treatment', () =
   const activeStyles = html.match(/href="(\/styles\.css\?v=[^"]+)"/)?.[1] || '';
   assert.ok(activeStyles && sw.includes("'" + activeStyles + "'"));
   assert.match(html, /src="\/app\.js\?v=[^"]+"/);
-  assert.match(html, /auth-login\.js\?v=20261105-admin-mfa-enrollment-1/);
+  const loginAsset = html.match(/src="(\/auth-login\.js\?v=[^"]+)"/)?.[1] || '';
+  assert.ok(loginAsset && sw.includes(loginAsset));
   assert.match(html, /settings\.js\?v=20261106-refresh-controls-removed-1/);
   assert.match(sw, /v\d+-self-updating-1/);
   assert.match(sw, /cacheCurrentShellAssets/);
-  assert.match(sw, /auth-login\.js\?v=20261105-admin-mfa-enrollment-1/);
+  assert.ok(loginAsset && sw.includes(loginAsset));
   assert.match(sw, /settings\.js\?v=20261106-refresh-controls-removed-1/);
 });
