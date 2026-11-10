@@ -77,19 +77,25 @@ test('top-right profile trigger is avatar-only with the Facebook-style lower-rig
   assert.match(topbarCss,/profile-menu img#top-avatar[\s\S]*?width:40px!important/);
   assert.match(topbarCss,/profile-menu-chevron[\s\S]*?position:absolute!important;right:-2px!important;bottom:-1px!important/);
 });
-test('profile dropdown opens the current profile, saved profiles, add-profile and one Settings & Privacy menu',()=>{
+test('profile dropdown follows the Facebook account hierarchy without duplicate controls',()=>{
   assert.match(app,/data-account-view-profile/);
+  assert.match(app,/data-account-see-all/);
+  assert.match(app,/id='account-switcher-profiles' hidden/);
   assert.match(app,/data-account-switch=/);
   assert.match(app,/Switch profiles/);
   assert.match(app,/data-account-add/);
   assert.match(app,/data-account-logout-all/);
-  assert.doesNotMatch(app,/data-account-open-settings/,'the app must not render a duplicate Settings & privacy row');
-  assert.doesNotMatch(html,/id=\"settings-btn\"/,'remove the duplicate top-bar Settings icon beside Personalise Minglora');
-  assert.equal((menu.match(/label: 'Settings & Privacy'/g)||[]).length,1);
-  assert.equal((menu.match(/label: 'Help & Support'/g)||[]).length,1);
-  assert.equal((menu.match(/label: 'Display & Accessibility'/g)||[]).length,1);
-  assert.equal((menu.match(/label: 'Log Out'/g)||[]).length,1);
-  assert.doesNotMatch(menu,/label: 'See all Profiles'/,'profile switching is already shown above Add another profile');
+  assert.match(app,/account-switcher-see-all/);
+  assert.doesNotMatch(html,/id="settings-btn"/,'do not add a duplicate Settings gear beside Personalise Minglora');
+  assert.equal((menu.match(/data-account-tool="settings"/g)||[]).length,1);
+  assert.equal((menu.match(/data-account-tool="support"/g)||[]).length,1);
+  assert.equal((menu.match(/data-account-tool="display"/g)||[]).length,1);
+  for(const destination of ['settings','privacy-checkup','privacy-center','help-center','scam-protection','account-status','support-inbox','report-problem','display-accessibility','keyboard']) {
+    assert.ok(menu.includes('data-account-destination="'+destination+'"'),'nested menu destination '+destination);
+  }
+  for(const label of ['Settings & privacy','Help & support','Display & accessibility','Give feedback','Log Out']) assert.ok(menu.includes(label),'profile dropdown item '+label);
+  assert.match(menu,/aria-controls="account-switcher-submenu-/);
+  assert.match(menu,/data-account-menu-back/);
   assert.match(menu,/window\.MingloraSettings\?\.open/);
   assert.match(menu,/sprite\(item\.icon, 'nav-3d-icon'\)/);
 });
