@@ -240,7 +240,7 @@
                 <button type="button" class="settings-category-tab active" aria-pressed="true" data-settings-category-button="activity" data-category-description="Notifications and profile-view activity."><svg viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#activity"></use></svg><span>Activity</span></button>
                 <button type="button" class="settings-category-tab" aria-pressed="false" data-settings-category-button="account" data-category-description="Your account information, personal data and account actions."><svg viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#profile"></use></svg><span>Account</span></button>
                 <button type="button" class="settings-category-tab" aria-pressed="false" data-settings-category-button="visibility" data-category-description="Profile privacy and audience choices."><svg viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#privacy"></use></svg><span>Visibility</span></button>
-                <button type="button" class="settings-category-tab" aria-pressed="false" data-settings-category-button="interactions" data-category-description="Blocking and voice/video call preferences."><svg viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#friends"></use></svg><span>Interactions</span></button>
+                <button type="button" class="settings-category-tab" aria-pressed="false" data-settings-category-button="interactions" data-category-description="Blocking, ringtones, vibration and notification sound preferences."><svg viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#friends"></use></svg><span>Interactions</span></button>
                 <button type="button" class="settings-category-tab" aria-pressed="false" data-settings-category-button="content-display" data-category-description="Appearance, themes, feed order and display preferences."><svg viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#palette"></use></svg><span>Content &amp; Display</span></button>
                 <button type="button" class="settings-category-tab" aria-pressed="false" data-settings-category-button="cache-cellular" data-category-description="Lite mode, browser storage and temporary cached images."><svg viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#restore"></use></svg><span>Cache &amp; Cellular</span></button>
                 <button type="button" class="settings-category-tab" aria-pressed="false" data-settings-category-button="device-access" data-category-description="Camera, microphone, location, screen sharing, notifications and device time zone."><svg viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261102-navigation-3d-2#settings"></use></svg><span>Device Access</span></button>
@@ -327,9 +327,10 @@
               </div>
             </section>
             <section class="settings-card" id="settings-calls" data-settings-category="interactions">
-              ${sectionHeading('Voice &amp; video calls')}
-              <div class="settings-security-form">
-                <h3>Your incoming-call ringtone</h3>
+              ${sectionHeading('Sound &amp; Notifications')}
+              <div id="minglora-sound-studio" class="minglora-sound-studio-mount"></div>
+              <details class="sound-studio-legacy"><summary>Previously saved custom ringtone (compatibility)</summary><div class="settings-security-form">
+                <h3>Your previously saved incoming-call ringtone</h3>
                 <p class="muted">Choose a ringtone or a song from your device. It plays when Minglora rings while the app is open. Your ringtone is private to your account.</p>
                 <p class="settings-note">Supported: MP3, M4A, OGG, WebM, WAV, FLAC and AAC · Maximum 20 MB.</p>
                 <div class="call-ringtone-picker-row">
@@ -346,6 +347,7 @@
                 <audio id="call-ringtone-preview" class="call-ringtone-preview" controls preload="none" ${ringtoneResult.ringtone?.url ? 'src="'+escapeHtml(ringtoneResult.ringtone.url)+'"' : 'hidden'}></audio>
                 <p class="settings-form-status" id="call-ringtone-status" role="status" aria-live="polite">${escapeHtml(ringtoneResult.error||'')}</p>
               </div>
+              </details>
             </section>
             <section class="settings-card theme-centre-card" id="settings-preferences" data-settings-category="content-display">
               ${sectionHeading('Theme Centre')}
@@ -706,6 +708,7 @@
         }
       }
       const settingsForm = document.querySelector('#settings-form');
+      window.MingloraSoundStudio?.mount('#minglora-sound-studio');
       document.querySelector('#settings-display-currency')?.addEventListener('change',event=>{
         displayCurrency=event.currentTarget.value||'USD';
         void refreshSettingsCurrency();
