@@ -39,3 +39,9 @@ test('provider writes remain owner/MFA gated, same-origin, allow-listed and read
   assert.ok(route.includes('enabledCount<=1'));
   assert.ok(route.includes('buildMingloraAuthRoutePatch('));
 });
+
+test('Management API permission errors name the exact fine-grained read and write permissions', () => {
+  assert.ok(server.includes('Auth Config Read (auth_config_read)'));
+  assert.ok(server.includes('Auth Config Write (auth_config_write)'));
+  assert.ok(server.includes('Project Admin Write (project_admin_write)'));
+});
