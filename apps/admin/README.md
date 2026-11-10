@@ -905,3 +905,40 @@ The next external step that unlocks live provider verification is Render workspa
 ### Exact next action
 
 Obtain explicit permission to inspect Render's `My Workspace` read-only, then verify only whether the server-side Management API token is configured (never reveal its value). Continue with owner/MFA-hosted acceptance and reviewed deployment only after the required access and authorization are available. Keep PR #203 draft and production unchanged until then.
+
+
+## Security-hardening checkpoint — 2026-11-10 05:43 UTC
+
+- **Latest branch head:** `1981d10bfbe26b487a0a3a86eaf75f4a45fe70b4`
+- **PR #203:** remains OPEN, DRAFT and unmerged; GitHub reports `mergeable=false`.
+- **Weighted Admin Centre completion:** remains **81% verified / 19% remaining**. This hardening reinforces the existing R003 same-origin criterion; it is not counted as a second milestone or additional percentage.
+
+### Change applied
+
+Privileged Admin Centre write routes now require an explicit allowed `Origin` header and reject `Sec-Fetch-Site: cross-site`. This stricter guard is used by the five member-management mutation routes (create, update, delete, session revocation and ban/unban) plus the Auth Provider PATCH route. The general application API origin helper and non-admin API behavior are unchanged.
+
+Files updated:
+- `src/app-origin.js` — added `isSameOriginAdminWrite`.
+- `src/server.js` — applied the strict helper to all Admin Centre mutation endpoints.
+- `tests/unit/app-origin.test.js` — covers missing/empty Origin, unapproved host, canonical Render host, allowed custom host and cross-site fetch metadata.
+- `tests/unit/admin-user-and-service-centre.test.js` — checks member and ban mutation routes call the strict helper.
+- `tests/unit/auth-providers-admin-ui.test.js` — checks provider PATCH uses the same strict helper.
+
+### Verification on latest branch head
+
+Workflow run [42763674914](https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/42763674914):
+- Supabase Auth provider controls: **PASS, 18/18**.
+- Admin Centre real-browser viewport regression: **PASS, 1/1**.
+- Focused Admin Centre route checks in general suite: member CRUD/MFA/same-origin, ban/unban owner protection and Auth Provider owner/MFA/same-origin assertions **PASS**.
+- General suite: **773 tests, 743 passed, 30 failed**. Existing failing groups include application shell/profile/For You/LIVE/theme/persistence areas outside this Admin Centre change; they remain failures, not passes.
+- For You functional navigation: **FAIL**; its two known tests remain separate from this Admin Centre acceptance.
+- No production settings, database records, users, provider credentials, service configuration or deployment were changed.
+
+### Remaining blockers unchanged
+
+- Production `minglora-runtime-state` remains active at version 112 and lacks branch CRUD/session actions.
+- Live Management API read/write, provider credential acceptance, real OAuth callback/login, hosted CRUD/session/delete/audit behavior remain unverified.
+- Render workspace selection is still outstanding. `My Workspace` (`tea-db2o44nlk1mc738421q0`) has not been explicitly selected for read-only service inspection; `SUPABASE_ACCESS_TOKEN` presence/validity remains unknown.
+- PR #203 still needs reviewed reconciliation with current `main`; shared files and branch history must not be force-merged or overwritten.
+
+**Next action:** after the user explicitly authorizes Render `My Workspace` read-only inspection, inspect only the Minglora service configuration state (never reveal secret values), then proceed to owner/MFA-hosted acceptance and reviewed deployment only after required credentials and deployment authorization are available.
