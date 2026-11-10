@@ -23,19 +23,19 @@ test('Minglora Sound Studio ships separate voice, video and event-specific notif
   const catalog=studio.getCatalog();
   assert.equal(catalog.voice.length,30);
   assert.equal(catalog.video.length,30);
-  assert.equal(catalog.notifications.length,69);
-  assert.equal(catalog.events.length,69);
+  assert.equal(catalog.notifications.length,70);
+  assert.equal(catalog.events.length,70);
   assert.equal(new Set(catalog.voice.map(item=>item.id)).size,30);
   assert.equal(new Set(catalog.video.map(item=>item.id)).size,30);
-  assert.equal(new Set(catalog.notifications.map(item=>item.id)).size,69);
-  assert.equal(new Set(catalog.events.map(item=>item.defaultSoundId)).size,69);
-  assert.equal(new Set([...catalog.voice,...catalog.video,...catalog.notifications].map(item=>item.id)).size,129);
+  assert.equal(new Set(catalog.notifications.map(item=>item.id)).size,70);
+  assert.equal(new Set(catalog.events.map(item=>item.defaultSoundId)).size,70);
+  assert.equal(new Set([...catalog.voice,...catalog.video,...catalog.notifications].map(item=>item.id)).size,130);
 });
 
 test('Minglora notification event catalog covers the existing live message and social event types',()=>{
   const catalog=loadStudio().getCatalog();
   const keys=new Set(catalog.events.map(item=>item.key));
-  for(const key of ['message','friendRequest','newFollower','like','comment','creatorLive','giftReceived','meetingInvitation','paymentConfirmed','newDeviceLogin','securityWarning','uploadCompleted']){
+  for(const key of ['message','friendRequest','newFollower','like','comment','creatorLive','giftReceived','meetingInvitation','paymentConfirmed','newDeviceLogin','securityWarning','profileViewed','uploadCompleted']){
     assert.ok(keys.has(key),'missing event-specific sound: '+key);
   }
   assert.ok(catalog.events.every(item=>item.defaultSoundId==='notice-'+item.key));
