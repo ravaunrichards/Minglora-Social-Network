@@ -1206,6 +1206,38 @@ test('AI identity batch history is limited to the authenticated owner',async()=>
   assert.deepEqual(context.res.payload.batches,[ownerBatch]);
 });
 
+test('AI identity batch history paginates after owner filtering and returns a stable cursor',async()=>{
+  const db={personalAiBotBatches:[
+    {id:'batch-foreign',ownerId:'owner-2',createdAt:'2026-11-10T05:00:00.000Z'},
+    {id:'batch-c',ownerId:'owner-1',createdAt:'2026-11-10T03:00:00.000Z'},
+    {id:'batch-b',ownerId:'owner-1',createdAt:'2026-11-10T02:00:00.000Z'},
+    {id:'batch-a',ownerId:'owner-1',createdAt:'2026-11-10T01:00:00.000Z'}
+  ]};
+  const context=makeContext({
+    method:'GET',
+    path:'/api/admin/personal-ai-bots/batches',
+    url:new URL('https://minglora.test/api/admin/personal-ai-bots/batches?limit=1&offset=1'),
+    db
+  });
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,200);
+  assert.deepEqual(context.res.payload.batches,[db.personalAiBotBatches[2]]);
+  assert.equal(context.res.payload.nextOffset,2);
+  assert.equal(context.res.payload.hasMore,true);
+});
+
+test('AI identity batch history rejects invalid pagination before returning owner records',async()=>{
+  const context=makeContext({
+    method:'GET',
+    path:'/api/admin/personal-ai-bots/batches',
+    url:new URL('https://minglora.test/api/admin/personal-ai-bots/batches?limit=101&offset=0'),
+    db:{personalAiBotBatches:[{id:'batch-owner',ownerId:'owner-1'}]}
+  });
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,400);
+  assert.deepEqual(context.res.payload,{error:'AI identity batch history pagination is invalid.'});
+});
+
 test('explicitly skipped PostgreSQL identity writes are never reported as completed',async()=>{
   let saves=0;
   const context=makeContext({
