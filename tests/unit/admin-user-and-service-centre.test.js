@@ -286,20 +286,64 @@ test("service connections show Minglora providers without returning secrets", ()
   assert.match(css, /admin-service-connections-grid/);
 });
 
+test("partial member updates are audited with safe fields and an explicit partial outcome", () => {
+  const start = runtime.indexOf('if (action === "admin_user_update")');
+  const end = runtime.indexOf('if (action === "admin_user_delete")', start);
+  assert.ok(start >= 0 && end > start);
+  const update = runtime.slice(start, end);
+  const failureStart = update.indexOf('if (updateError) {');
+  const failureEnd = update.indexOf('    }\n    const auditRecorded = await recordAdminUserAction', failureStart);
+  assert.ok(failureStart >= 0 && failureEnd > failureStart);
+  const failure = update.slice(failureStart, failureEnd);
+  assert.match(failure, /const profileApplied = Object\.keys\(profilePatch\)\.length > 0/);
+  assert.match(failure, /profileApplied \? "account\.update_partial" : "account\.update_failed"/);
+  assert.match(failure, /outcome: profileApplied \? "partial" : "rejected"/);
+  assert.match(failure, /profileFields: Object\.keys\(profilePatch\)/);
+  assert.match(failure, /authUpdateFailed: true/);
+  assert.match(failure, /auditRecorded/);
+  assert.match(failure, /partial: profileApplied/);
+  assert.ok(admin.includes('This failed or partial update was recorded in the administrator audit log.'));
+  assert.ok(admin.includes('the failed or partial update audit entry could not be confirmed'));
+});
+
+test("failed Supabase Auth ban and restore updates are recorded before returning", () => {
+  const start = runtime.indexOf('if (action === "admin_user_set_ban")');
+  const end = runtime.indexOf('if (action === "admin_audit_log")', start);
+  assert.ok(start >= 0 && end > start);
+  const ban = runtime.slice(start, end);
+  const failureStart = ban.indexOf('if (updateError || !updated?.user) {');
+  const failureEnd = ban.indexOf('    let sessionRevoked = false;', failureStart);
+  assert.ok(failureStart >= 0 && failureEnd > failureStart);
+  const failure = ban.slice(failureStart, failureEnd);
+  assert.match(failure, /operation === "ban" \? "account\.ban_failed" : "account\.unban_failed"/);
+  assert.match(failure, /recordAdminUserAction\(actorUserId, userId, failedAction/);
+  assert.match(failure, /outcome: "rejected"/);
+  assert.match(failure, /auditRecorded/);
+  assert.match(ban, /"account\.ban_failed"/);
+  assert.match(ban, /"account\.unban_failed"/);
+});
+
+test("initial Supabase Auth account creation failures are audited without inventing a target account", () => {
+  assert.match(runtime, /target_id: targetUserId \|\| null/);
+  assert.match(runtime, /recordAdminUserAction\(actorUserId, "", "account\.create_failed"/);
+  assert.match(runtime, /reason: "auth_create_rejected"/);
+});
+
 test("administrator audit history filters and displays member CRUD and session operations safely", () => {
   const actions = [
-    "account.create", "account.create_failed", "account.update", "account.delete", "account.delete_failed",
-    "account.sessions_revoke", "account.sessions_revoke_failed", "account.ban", "account.unban"
+    "account.create", "account.create_failed", "account.update", "account.update_failed", "account.update_partial",
+    "account.delete", "account.delete_failed", "account.sessions_revoke", "account.sessions_revoke_failed",
+    "account.ban", "account.ban_failed", "account.unban", "account.unban_failed"
   ];
   for (const action of actions) {
     assert.ok(server.includes("'" + action + "'"), "server allows audit filter " + action);
     assert.ok(runtime.includes('"' + action + '"'), "runtime allows audit filter " + action);
     assert.ok(admin.includes("'" + action + "'") || admin.includes('"' + action + '"'), "Admin Centre exposes audit filter " + action);
   }
-  for (const field of ["changedFields", "profileFields", "emailProvided", "phoneProvided", "deletionMode", "outcome", "scope", "providerRefreshTokensRevoked", "profileLinkFailed", "rollbackSucceeded"]) {
+  for (const field of ["changedFields", "profileFields", "emailProvided", "phoneProvided", "deletionMode", "outcome", "scope", "providerRefreshTokensRevoked", "profileLinkFailed", "rollbackSucceeded", "profileApplied", "authUpdateFailed"]) {
     assert.ok(runtime.includes(field + ":"), "runtime returns allowlisted audit metadata " + field);
   }
-  for (const label of ["Member account created", "Member account updated", "Member account deleted", "Member sessions revoked", "Member session revocation failed"]) {
+  for (const label of ["Member account created", "Member account updated", "Member account update failed", "Member account update partially applied", "Member account deleted", "Member sessions revoked", "Member session revocation failed", "Account ban failed", "Account restore failed"]) {
     assert.ok(admin.includes(label), "Admin Centre labels audit event " + label);
   }
   assert.ok(admin.includes("Profile fields: "));
