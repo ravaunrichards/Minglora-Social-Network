@@ -117,7 +117,7 @@ test('Palette and profile/account menus use the same scroll-safe outside dismiss
   assert.ok(app.includes("roots:()=>[$('.palette-menu-anchor')]"));
   assert.ok(app.includes("roots:()=>[anchor,$('#profile-account-menu')]"));
   assert.ok(app.includes('window.MingloraMenuDismissal.bindOutsideDismissal'));
-  assert.ok(helper.includes("event.type === 'pointerdown'") || helper.includes("function onPointerDown"));
+  assert.ok(helper.includes('const onPointerDown = event =>'));
   assert.ok(helper.includes('event.detail === 0'));
   assert.ok(html.indexOf('menu-dismissal.js') < html.indexOf('app.js'));
   assert.ok(html.includes('menu-dismissal.js?v=20261110-menu-dismissal-1'));
