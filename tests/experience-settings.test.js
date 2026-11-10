@@ -52,3 +52,43 @@ test('experience settings patch preserves unrelated saved values', () => {
   assert.equal(second.settings.dndEnabled, true);
   assert.equal(second.settings.soundMode, 'mute');
 });
+
+test('experience settings validate separate call ringtones and per-event notification sounds', () => {
+  const result = validateExperienceSettingsPatch(DEFAULT_EXPERIENCE_SETTINGS, {
+    voiceCallRingtoneId: 'voice-minglora-signature',
+    videoCallRingtoneId: 'video-minglora-vision',
+    notificationSoundAssignments: {
+      message: 'notice-message',
+      newFollower: 'notice-newFollower',
+      giftReceived: 'user:original-sound-123'
+    }
+  });
+  assert.equal(result.valid, true);
+  assert.equal(result.settings.voiceCallRingtoneId, 'voice-minglora-signature');
+  assert.equal(result.settings.videoCallRingtoneId, 'video-minglora-vision');
+  assert.equal(result.settings.notificationSoundAssignments.message, 'notice-message');
+  assert.equal(result.settings.notificationSoundAssignments.newFollower, 'notice-newFollower');
+  assert.equal(result.settings.notificationSoundAssignments.giftReceived, 'user:original-sound-123');
+});
+
+test('notification sound assignment patches preserve existing unrelated assignments', () => {
+  const first = validateExperienceSettingsPatch(DEFAULT_EXPERIENCE_SETTINGS, {
+    notificationSoundAssignments: { message: 'notice-message', like: 'notice-like' }
+  });
+  const second = validateExperienceSettingsPatch(first.settings, {
+    notificationSoundAssignments: { newFollower: 'notice-newFollower' }
+  });
+  assert.equal(second.valid, true);
+  assert.deepEqual(
+    { ...second.settings.notificationSoundAssignments },
+    { message: 'notice-message', like: 'notice-like', newFollower: 'notice-newFollower' }
+  );
+});
+
+test('experience settings reject invalid ringtone IDs and notification assignment maps', () => {
+  assert.equal(validateExperienceSettingsPatch({}, { voiceCallRingtoneId: '../bad/path' }).valid, false);
+  assert.equal(validateExperienceSettingsPatch({}, { videoCallRingtoneId: 42 }).valid, false);
+  assert.equal(validateExperienceSettingsPatch({}, { notificationSoundAssignments: [] }).valid, false);
+  assert.equal(validateExperienceSettingsPatch({}, { notificationSoundAssignments: { 'bad key': 'notice-message' } }).valid, false);
+  assert.equal(validateExperienceSettingsPatch({}, { notificationSoundAssignments: { message: '../external' } }).valid, false);
+});
