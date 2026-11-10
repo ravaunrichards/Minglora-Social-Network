@@ -1800,7 +1800,7 @@ async function route(req, res) {
         if(account.status==='deactivated'){account.status='active';await supabaseUpdateUserMetadata(verified.access_token,{account_status:'active'});}
         const sessionCookie=await createAppSession(account,verified,req);
         await saveStore();
-        return json(res,200,{user:safeUser(account)},{'Set-Cookie':sessionCookie});
+        return json(res,200,{user:safeUser(account,account.id)},{'Set-Cookie':sessionCookie});
       }
       if (method==='POST' && p==='/api/auth/logout') { const sid=cookie(req,'sid'); if(sid){const id=decodeURIComponent(sid).split('.')[0]; db.sessions=db.sessions.filter(s=>s.id!==id); await saveStore();} return json(res,200,{ok:true},{'Set-Cookie':clearAppSessionCookie()}); }
       if (method==='GET' && p==='/api/auth/me') return json(res,200,{user:user?safeUser(user,user.id):null});

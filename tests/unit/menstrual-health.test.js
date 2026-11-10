@@ -65,6 +65,7 @@ test('frontend and API both block menstrual-health access for non-female account
  assert.match(menstrualApp,/requestedView==='menstrual-health'&&!isFemaleAccountForMenstrualHealth\(\)/);
  assert.match(menstrualApp,/state\.view==='menstrual-health'&&!isFemaleAccountForMenstrualHealth\(\)/);
  assert.match(menstrualServer,/if\(!isFemaleMenstrualHealthAccount\(user\)\)return json\(res,403/);
+ assert.match(menstrualServer,/return json\(res,200,\{user:safeUser\(account,account\.id\)\}/,'the completed sign-in response exposes the signed-in account gender to its owner');
 });
 
 test('server blocks new health records when the private tracker is disabled',()=>{
