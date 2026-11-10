@@ -253,6 +253,7 @@
     sidebar.setAttribute('aria-label','Admin Centre departments');
     sidebar.innerHTML =
       '<div class="admin-centre-sidebar-heading"><strong>Admin Centre</strong><small>Seven department workspaces</small></div>' +
+      '<label class="admin-centre-page-search"><span>Search departments</span><input id="admin-centre-page-search" type="search" autocomplete="off" placeholder="Search departments" aria-label="Search Admin Centre departments"></label>' +
       '<nav id="admin-centre-sidebar-nav" class="admin-centre-sidebar-nav" aria-label="Administration departments"></nav>' +
       '<div class="admin-centre-sidebar-footer"><span class="admin-centre-sidebar-status-dot" aria-hidden="true"></span><span>' +
       (unlocked ? 'Secure administrator session' : 'Authenticator verification required') + '</span></div>';
@@ -267,6 +268,7 @@
         '<a href="?page=dashboard" data-admin-route="dashboard">Admin Centre</a><span aria-hidden="true">/</span><strong id="admin-centre-current-page-title">Dashboard</strong>' +
       '</div>' +
       '<div class="admin-centre-route-toolbar-actions">' +
+        '<button type="button" class="secondary admin-centre-sidebar-toggle" id="admin-centre-sidebar-toggle" aria-expanded="true" aria-controls="admin-centre-sidebar">Compact navigation</button>' +
         '<div class="admin-centre-history-controls">' +
           '<button type="button" class="secondary" data-admin-history="back" disabled><span aria-hidden="true">←</span> Back</button>' +
           '<button type="button" class="secondary" data-admin-history="forward" disabled>Forward <span aria-hidden="true">→</span></button>' +
@@ -332,6 +334,8 @@
 
     const sidebarNav = sidebar.querySelector('#admin-centre-sidebar-nav');
     const mobilePicker = toolbar.querySelector('#admin-centre-mobile-page-select');
+    const departmentSearch = sidebar.querySelector('#admin-centre-page-search');
+    const sidebarToggle = toolbar.querySelector('#admin-centre-sidebar-toggle');
     departments.forEach((department,index) => {
       const link = document.createElement('a');
       link.href = '?page=' + encodeURIComponent(department.key);
@@ -495,6 +499,22 @@
     });
 
     mobilePicker.addEventListener('change',() => navigate(mobilePicker.value));
+
+    departmentSearch?.addEventListener('input',() => {
+      const query = String(departmentSearch.value || '').trim().toLowerCase();
+      sidebarNav.querySelectorAll('[data-admin-route]').forEach(link => {
+        const department = departmentByKey.get(link.dataset.adminRoute);
+        const searchable = department.title + ' ' + department.description;
+        link.hidden = Boolean(query) && !searchable.toLowerCase().includes(query);
+      });
+    });
+
+    sidebarToggle?.addEventListener('click',() => {
+      const compact = workspace.classList.toggle('admin-centre-workspace-sidebar-collapsed');
+      sidebar.classList.toggle('is-collapsed',compact);
+      sidebarToggle.setAttribute('aria-expanded',String(!compact));
+      sidebarToggle.textContent = compact ? 'Expand navigation' : 'Compact navigation';
+    });
 
     window.addEventListener('popstate',event => {
       const requested = routeFromUrl();
