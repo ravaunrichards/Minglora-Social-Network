@@ -54,7 +54,7 @@ test("Admin Centre is a standalone left-rail feature immediately below Profile",
   assert.ok(profileIndex >= 0 && adminIndex > profileIndex && metaAiIndex > adminIndex);
   assert.match(index, /id="admin-centre-sidebar-link"[^>]*href="\/admin-centre\.html"/);
   assert.match(index, /rail-link-admin-centre hidden/);
-  assert.match(index, /#privacy/);
+  assert.match(index, /#admin/);
   assert.match(sidebar, /fetch\('\/api\/admin\/access'/);
   assert.match(sidebar, /access\.canAccess === true \|\| access\.setupRequired === true/);
   assert.match(sidebar, /minglora:session-ready/);
