@@ -264,6 +264,11 @@
     osc.start(start); partial.start(start);
     const stopAt = start+duration+profile.release+.025;
     osc.stop(stopAt); partial.stop(stopAt);
+    const cleanup=()=>{
+      try{osc.disconnect();partial.disconnect();filter.disconnect();gain.disconnect();partialGain.disconnect();}catch{}
+      activeNodes=activeNodes.filter(node=>node!==osc&&node!==partial&&node!==filter&&node!==gain&&node!==partialGain);
+    };
+    osc.onended=cleanup;partial.onended=cleanup;
     activeNodes.push(osc,partial,filter,gain,partialGain);
   }
   async function playSynthOnce(id,kind,volume=0.8) {
@@ -314,7 +319,11 @@
     const settings=getExperience();
     const key=kind==='voice'?'voiceCallRingtoneId':'videoCallRingtoneId';
     let id=String(settings[key]||'');
+    if(!id && customRingtone?.url) id='legacy-custom';
     const volume=Math.max(0,Math.min(100,Number(settings.ringtoneVolume??80)))/100;
+    if(id==='legacy-custom' && customRingtone?.url) {
+      if(await playCustomSound({url:customRingtone.url},volume,true)) { playingCall=true; return true; }
+    }
     if(id.startsWith('user:')) {
       await refreshMySounds();
       const userSound=getCustomSound(id);
@@ -568,6 +577,10 @@
     if(target.matches('[data-event-search]')) { eventSearch=target.value;const pos=target.selectionStart;render();const next=$('[data-event-search]',root);next?.focus();next?.setSelectionRange(pos,pos); }
     if(target.matches('[data-picker-search]')) { librarySearch=target.value;const pos=target.selectionStart;render();const next=$('[data-picker-search]',root);next?.focus();next?.setSelectionRange(pos,pos); }
   }
+  function handleSubmit(event) {
+    if(event.target?.id!=='sound-studio-upload-form') return;
+    event.preventDefault();void handleUpload(event.target);
+  }
   function mount(container,options={}) {
     root=container||$('#minglora-sound-studio-root');
     if(!root) return false;
@@ -577,13 +590,11 @@
     root.removeEventListener('click',handleClick);
     root.removeEventListener('change',handleChange);
     root.removeEventListener('input',handleInput);
+    root.removeEventListener('submit',handleSubmit);
     root.addEventListener('click',handleClick);
     root.addEventListener('change',handleChange);
     root.addEventListener('input',handleInput);
-    root.addEventListener('submit',event=>{
-      if(event.target?.id!=='sound-studio-upload-form') return;
-      event.preventDefault();void handleUpload(event.target);
-    });
+    root.addEventListener('submit',handleSubmit);
     render();
     void refreshMySounds(true).then(render);
     return true;
