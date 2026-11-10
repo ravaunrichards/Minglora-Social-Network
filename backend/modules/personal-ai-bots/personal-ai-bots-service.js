@@ -837,6 +837,7 @@ export function createPersonalAiBotAppointment(db,input,actorId,timestamp,uid) {
     reportingManagerAppointmentId:reportingManager?.id||null,
     reportingManagerIdentityId:reportingManager?.identityId||null,
     reportingManagerName:reportingManager?.candidateDisplayName||null,
+    reportingManagerPositionTitle:reportingManager?.positionTitle||null,
     status:'appointed',
     ownerId:actorId,
     approvedBy:actorId,
