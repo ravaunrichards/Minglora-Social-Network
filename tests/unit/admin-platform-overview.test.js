@@ -44,7 +44,7 @@ test("Admin Centre preserves the existing full platform workspace", () => {
   assert.match(css, /admin-platform-module-grid/);
   assert.match(css, /admin-platform-collection-row/);
   assert.match(html, /Minglora — Admin Centre/);
-  assert.match(html, /20261109-admin-centre-left-sidebar-1/);
+  assert.match(html, /20261110-admin-centre-seven-pages-1/);
 });
 
 test("Admin Centre is a standalone left-rail feature immediately below Profile", () => {
