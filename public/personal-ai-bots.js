@@ -185,6 +185,14 @@
     return '<article class="pab-task"><div><h4>'+esc(task.botName||'AI bot')+' · '+esc(String(task.taskType||'instruction').replaceAll('_',' '))+'</h4><p>'+esc(task.instruction||'No instruction text')+'</p><div class="pab-task-meta"><span>'+esc(status)+'</span><span>Submitted '+esc(date(task.createdAt))+'</span>'+(task.targetUserId?'<span>Target '+esc(task.targetUserId)+'</span>':'')+'</div></div><div class="pab-actions">'+(pending?'<button class="pab-btn secondary pab-approve-task" data-task="'+esc(task.id)+'">Approve</button>':'')+(!['completed','cancelled'].includes(task.status)?'<button class="pab-btn danger pab-cancel-task" data-task="'+esc(task.id)+'">Cancel</button>':'')+'</div></article>';
   }
 
+  function providerAssignmentRow(item){
+    return '<tr><td>'+esc(item.displayName||item.username||item.identityId)+'</td><td>'+esc(item.providerName||item.providerIdentifier)+'</td><td>'+esc(item.modelName||item.modelIdentifier)+'</td><td>'+((item.credentialConfigured===true)?'Reference saved':'Missing reference')+'</td><td>'+esc(item.accountStatus||'configured')+'</td><td>'+esc(item.providerHealthStatus||'unknown')+'</td><td>'+esc(item.assignmentStatus||'configured')+'</td></tr>';
+  }
+
+  function emailIdentityRow(item){
+    return '<tr><td>'+esc(item.displayName||item.username||item.identityId)+'</td><td>'+esc(item.emailAddress)+'</td><td>'+esc(item.emailType)+'</td><td>'+(item.isPrimary?'Yes':'No')+'</td><td>'+esc(item.verificationStatus||'not_verified')+'</td><td>'+esc(item.provisioningStatus||'not_provisioned')+'</td><td>'+esc(item.emailProvider||'Not assigned')+'</td></tr>';
+  }
+
   function canonicalIdentityRow(identity){
     return '<tr><td>'+esc(identity.firstName||'—')+'</td><td>'+esc(identity.middleName||'—')+'</td><td>'+esc(identity.lastName||'—')+'</td><td>@'+esc(identity.username||'—')+'</td><td>'+esc(identity.population||'—')+'</td><td>'+esc(identity.status||'—')+'</td><td>'+esc(identity.categoryName||identity.categoryId||'—')+'</td></tr>';
   }
@@ -218,6 +226,8 @@
     const providerSource=state.providerAssignmentsSource==='minglora_supabase_postgresql';
     const emailIdentities=Array.isArray(state.emailIdentities)?state.emailIdentities:[];
     const emailSource=state.emailIdentitiesSource==='minglora_supabase_postgresql';
+    const providerAssignmentsHasMore=state.providerAssignmentsHasMore===true;
+    const emailIdentitiesHasMore=state.emailIdentitiesHasMore===true;
     const safetyReports=Array.isArray(state.safetyReports)?state.safetyReports:[];
     const safetyReportsSource=state.safetyReportsSource==='minglora_supabase_postgresql';
     const safetyReportsNextOffset=Math.max(0,Number(state.safetyReportsNextOffset??safetyReports.length)||0);
@@ -226,13 +236,15 @@
     html+='<div class="pab-warning">New assignments are saved as configured and unverified. A provider is not considered connected until a real secret exists in the server environment and a server-side health check succeeds. Provider health does not by itself enable task execution.</div>';
     if(!providerSource)html+='<div class="pab-empty">Provider assignment storage requires the staged Minglora Supabase migration and Edge Function release. No provider connection is claimed.</div>';
     else if(!providerAssignments.length)html+='<div class="pab-empty">No provider/model assignments have been configured for these AI identities.</div>';
-    else html+='<div class="pab-identity-table-wrap"><table class="pab-identity-table"><thead><tr><th>AI identity</th><th>Provider</th><th>Model</th><th>Secret reference</th><th>Account</th><th>Health</th><th>Assignment</th></tr></thead><tbody>'+providerAssignments.map(item=>'<tr><td>'+esc(item.displayName||item.username||item.identityId)+'</td><td>'+esc(item.providerName||item.providerIdentifier)+'</td><td>'+esc(item.modelName||item.modelIdentifier)+'</td><td>'+((item.credentialConfigured===true)?'Reference saved':'Missing reference')+'</td><td>'+esc(item.accountStatus||'configured')+'</td><td>'+esc(item.providerHealthStatus||'unknown')+'</td><td>'+esc(item.assignmentStatus||'configured')+'</td></tr>').join('')+'</tbody></table></div>';
+    else html+='<div class="pab-identity-table-wrap"><table class="pab-identity-table"><thead><tr><th>AI identity</th><th>Provider</th><th>Model</th><th>Secret reference</th><th>Account</th><th>Health</th><th>Assignment</th></tr></thead><tbody id="pab-provider-assignment-rows">'+providerAssignments.map(providerAssignmentRow).join('')+'</tbody></table></div>';
+    if(providerSource)html+='<div class="pab-pagination"><button type="button" class="pab-btn secondary" id="pab-load-more-providers" '+(providerAssignmentsHasMore?'':'hidden')+'>Load more provider assignments</button><span id="pab-provider-load-status" class="pab-notice" role="status" aria-live="polite"></span></div>';
     html+='<form id="pab-provider-form" class="pab-form-grid"><div class="pab-field"><label for="pab-provider-identity">AI identity</label><select class="pab-select" id="pab-provider-identity" required>'+bots.map(bot=>'<option value="'+esc(bot.id)+'">'+esc(bot.displayName)+' (@'+esc(bot.username||'AI')+')</option>').join('')+'</select></div><div class="pab-field"><label for="pab-provider-name">Provider name</label><input class="pab-input" id="pab-provider-name" maxlength="80" required placeholder="Provider display name"></div><div class="pab-field"><label for="pab-provider-id">Provider identifier</label><input class="pab-input" id="pab-provider-id" maxlength="80" required pattern="[a-z][a-z0-9._-]{1,79}" placeholder="provider_id"></div><div class="pab-field"><label for="pab-provider-account">Provider account reference</label><input class="pab-input" id="pab-provider-account" maxlength="120" value="default" required></div><div class="pab-field full"><label for="pab-provider-secret-ref">Server-side credential reference (not the credential)</label><input class="pab-input" id="pab-provider-secret-ref" maxlength="110" pattern="env:MINGLORA_AI_PROVIDER_[A-Z0-9_]{2,80}" placeholder="env:MINGLORA_AI_PROVIDER_..."><small class="pab-notice">The referenced environment variable must be provisioned securely on the Minglora server. Do not paste an API key here.</small></div><div class="pab-field"><label for="pab-model-name">Model name</label><input class="pab-input" id="pab-model-name" maxlength="160" required placeholder="Model display name"></div><div class="pab-field"><label for="pab-model-id">Model identifier</label><input class="pab-input" id="pab-model-id" maxlength="200" required placeholder="provider/model-id"></div><div class="pab-field"><label for="pab-model-version">Model version (optional)</label><input class="pab-input" id="pab-model-version" maxlength="80"></div><div class="pab-field"><label for="pab-provider-languages">Supported languages</label><input class="pab-input" id="pab-provider-languages" maxlength="500" placeholder="en, es, jam"></div><div class="pab-field"><label for="pab-provider-priority">Routing priority (1–1000)</label><input class="pab-input" id="pab-provider-priority" class="pab-input" type="number" min="1" max="1000" value="100"></div><div class="pab-field"><label class="pab-check"><span>Primary model assignment</span><input type="checkbox" id="pab-provider-primary"></label></div><div class="pab-field full"><button class="pab-btn" type="submit" '+(providerSource&&bots.length?'':'disabled')+'>Save provider/model assignment</button><span id="pab-provider-status" class="pab-notice">A saved assignment is not a verified provider connection.</span></div></form></section>';
     html+='<section class="pab-panel"><div class="pab-heading"><div><h2>AI email identity records</h2><p>Record a unique address against an AI identity. An address record is not an inbox: verification and provisioning only change after an actual email provider confirms them.</p></div><span class="pab-status '+(emailSource?'':'off')+'">'+(emailSource?'POSTGRESQL':'STORAGE UNAVAILABLE')+'</span></div>';
     html+='<div class="pab-warning">Addresses saved here start as NOT VERIFIED and NOT PROVISIONED. This does not create a mailbox, enable sending, receive mail, or create a human Minglora login account.</div>';
     if(!emailSource)html+='<div class="pab-empty">AI email identity storage requires the staged Minglora Supabase migration and Edge Function release. No mailbox is claimed.</div>';
     else if(!emailIdentities.length)html+='<div class="pab-empty">No AI email identity records have been added.</div>';
-    else html+='<div class="pab-identity-table-wrap"><table class="pab-identity-table"><thead><tr><th>AI identity</th><th>Email address</th><th>Type</th><th>Primary</th><th>Verification</th><th>Provisioning</th><th>Provider label</th></tr></thead><tbody>'+emailIdentities.map(item=>'<tr><td>'+esc(item.displayName||item.username||item.identityId)+'</td><td>'+esc(item.emailAddress)+'</td><td>'+esc(item.emailType)+'</td><td>'+(item.isPrimary?'Yes':'No')+'</td><td>'+esc(item.verificationStatus||'not_verified')+'</td><td>'+esc(item.provisioningStatus||'not_provisioned')+'</td><td>'+esc(item.emailProvider||'Not assigned')+'</td></tr>').join('')+'</tbody></table></div>';
+    else html+='<div class="pab-identity-table-wrap"><table class="pab-identity-table"><thead><tr><th>AI identity</th><th>Email address</th><th>Type</th><th>Primary</th><th>Verification</th><th>Provisioning</th><th>Provider label</th></tr></thead><tbody id="pab-email-identity-rows">'+emailIdentities.map(emailIdentityRow).join('')+'</tbody></table></div>';
+    if(emailSource)html+='<div class="pab-pagination"><button type="button" class="pab-btn secondary" id="pab-load-more-emails" '+(emailIdentitiesHasMore?'':'hidden')+'>Load more email identities</button><span id="pab-email-load-status" class="pab-notice" role="status" aria-live="polite"></span></div>';
     html+='<form id="pab-email-form" class="pab-form-grid"><div class="pab-field"><label for="pab-email-identity">AI identity</label><select class="pab-select" id="pab-email-identity" required>'+bots.map(bot=>'<option value="'+esc(bot.id)+'">'+esc(bot.displayName)+' (@'+esc(bot.username||'AI')+')</option>').join('')+'</select></div><div class="pab-field"><label for="pab-email-address">Email address</label><input class="pab-input" id="pab-email-address" type="email" maxlength="320" required placeholder="ai.name@example.com"></div><div class="pab-field"><label for="pab-email-type">Email type</label><select class="pab-select" id="pab-email-type"><option value="primary">Primary</option><option value="recovery">Recovery</option><option value="notification">Notification</option><option value="other">Other</option></select></div><div class="pab-field"><label for="pab-email-provider">Email provider label (optional)</label><input class="pab-input" id="pab-email-provider" maxlength="80" placeholder="Provider name, if selected"></div><div class="pab-field"><label class="pab-check"><span>Set as primary address</span><input type="checkbox" id="pab-email-primary" checked></label></div><div class="pab-field full"><button class="pab-btn" type="submit" '+(emailSource&&bots.length?'':'disabled')+'>Save AI email identity record</button><span id="pab-email-status" class="pab-notice">This records an address only; it does not provision a mailbox.</span></div></form></section>';
     html+='<section class="pab-panel"><div class="pab-heading"><div><h2>AI profile safety reports</h2><p>Review member-submitted reports about public AI identities. Review decisions are audited and never automatically delete an identity.</p></div><span class="pab-status '+(safetyReportsSource?'':'off')+'">'+(safetyReportsSource?'POSTGRESQL':'STORAGE UNAVAILABLE')+'</span></div>';
     if(!safetyReportsSource)html+='<div class="pab-empty">AI report review requires the staged safety/report migration and runtime gateway release.</div>';
@@ -293,6 +305,8 @@
     document.querySelectorAll('.pab-review-report').forEach(node=>node.addEventListener('click',()=>reviewAiProfileReport(node.dataset.report,node.dataset.status)));
     document.querySelector('#pab-load-more-reports')?.addEventListener('click',loadMoreSafetyReports);
     document.querySelector('#pab-load-more-identities')?.addEventListener('click',loadMoreCanonicalIdentities);
+    document.querySelector('#pab-load-more-providers')?.addEventListener('click',loadMoreProviderAssignments);
+    document.querySelector('#pab-load-more-emails')?.addEventListener('click',loadMoreEmailIdentities);
     document.querySelector('#pab-safety-report-filter')?.addEventListener('change',()=>void loadMoreSafetyReports());
 
     document.querySelector('#pab-master-switch')?.addEventListener('change',saveNetwork);
@@ -526,6 +540,58 @@
       await refresh();
       notice('pab-email-status',result.message||'Email identity record saved. Mailbox not provisioned.','success');
     }catch(error){notice('pab-email-status',error.message,'error');}
+  }
+
+  async function loadMoreProviderAssignments(){
+    const button=document.querySelector('#pab-load-more-providers');
+    const rows=document.querySelector('#pab-provider-assignment-rows');
+    const status=document.querySelector('#pab-provider-load-status');
+    if(!button||!rows||button.disabled||state.providerAssignmentsLoading)return;
+    state.providerAssignmentsLoading=true;
+    button.disabled=true;
+    if(status)status.textContent='Loading provider assignments…';
+    try{
+      const offset=Math.max(0,Number(state.providerAssignmentsNextOffset)||0);
+      const params=new URLSearchParams({limit:'100',offset:String(offset)});
+      const result=await request(API+'/providers?'+params.toString());
+      const incoming=Array.isArray(result.assignments)?result.assignments:[];
+      const existing=new Set((state.providerAssignments||[]).map(item=>String(item.assignmentId||'')));
+      const added=incoming.filter(item=>!existing.has(String(item.assignmentId||'')));
+      if(added.length)rows.insertAdjacentHTML('beforeend',added.map(providerAssignmentRow).join(''));
+      state.providerAssignments=[...(state.providerAssignments||[]),...added];
+      const nextOffset=Number(result.nextOffset);
+      state.providerAssignmentsNextOffset=Number.isInteger(nextOffset)&&nextOffset>=0?nextOffset:offset+incoming.length;
+      state.providerAssignmentsHasMore=result.hasMore===true;
+      button.hidden=!state.providerAssignmentsHasMore;
+      if(status)status.textContent=added.length?('Loaded '+added.length+' more provider assignments.'):'No additional provider assignments were returned.';
+    }catch(error){if(status)status.textContent=error.message;}
+    finally{state.providerAssignmentsLoading=false;button.disabled=false;}
+  }
+
+  async function loadMoreEmailIdentities(){
+    const button=document.querySelector('#pab-load-more-emails');
+    const rows=document.querySelector('#pab-email-identity-rows');
+    const status=document.querySelector('#pab-email-load-status');
+    if(!button||!rows||button.disabled||state.emailIdentitiesLoading)return;
+    state.emailIdentitiesLoading=true;
+    button.disabled=true;
+    if(status)status.textContent='Loading AI email identities…';
+    try{
+      const offset=Math.max(0,Number(state.emailIdentitiesNextOffset)||0);
+      const params=new URLSearchParams({limit:'100',offset:String(offset)});
+      const result=await request(API+'/emails?'+params.toString());
+      const incoming=Array.isArray(result.emails)?result.emails:[];
+      const existing=new Set((state.emailIdentities||[]).map(item=>String(item.id||'')));
+      const added=incoming.filter(item=>!existing.has(String(item.id||'')));
+      if(added.length)rows.insertAdjacentHTML('beforeend',added.map(emailIdentityRow).join(''));
+      state.emailIdentities=[...(state.emailIdentities||[]),...added];
+      const nextOffset=Number(result.nextOffset);
+      state.emailIdentitiesNextOffset=Number.isInteger(nextOffset)&&nextOffset>=0?nextOffset:offset+incoming.length;
+      state.emailIdentitiesHasMore=result.hasMore===true;
+      button.hidden=!state.emailIdentitiesHasMore;
+      if(status)status.textContent=added.length?('Loaded '+added.length+' more AI email identities.'):'No additional AI email identities were returned.';
+    }catch(error){if(status)status.textContent=error.message;}
+    finally{state.emailIdentitiesLoading=false;button.disabled=false;}
   }
 
   async function loadMoreCanonicalIdentities(){
