@@ -1862,6 +1862,11 @@ async function route(req, res) {
           const result=await requestSupabaseState('ai_provider_assignment_list',{actorUserId:user.id,identityId,limit,offset});
           return Array.isArray(result.assignments)?result.assignments:[];
         },
+        listAiProviderRuntime:async ({limit=100,offset=0}={})=>{
+          if(!isSupabasePersistence())return null;
+          const result=await requestSupabaseState('ai_provider_runtime_list',{actorUserId:user.id,limit,offset});
+          return Array.isArray(result.assignments)?result.assignments:[];
+        },
         persistAiEmailIdentity:async email=>{
           if(!isSupabasePersistence())throw Object.assign(new Error('AI email identity records require Minglora Supabase PostgreSQL persistence.'),{status:503});
           const result=await requestSupabaseState('ai_email_identity_upsert',{actorUserId:user.id,email});
