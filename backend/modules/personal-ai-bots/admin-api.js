@@ -189,7 +189,7 @@ export async function handlePersonalAiBotsAdminApi(context) {
   try{
     if(method==='GET'&&path===root){
       const overview=getPersonalAiBotOverview(db);
-      const identityRecords=typeof listAiIdentities==='function'?await listAiIdentities({limit:1000,offset:0}):null;
+      const identityRecords=typeof listAiIdentities==='function'?await listAiIdentities({limit:100,offset:0}):null;
       const durableTasks=typeof listAiBotTasks==='function'?await listAiBotTasks({limit:100,offset:0}):null;
       const durableTaskStats=typeof getAiBotTaskStats==='function'?await getAiBotTaskStats():null;
       const providerAssignments=typeof listAiProviderAssignments==='function'?await listAiProviderAssignments({limit:200,offset:0}):null;
@@ -199,6 +199,8 @@ export async function handlePersonalAiBotsAdminApi(context) {
         ...overview,
         identityRecords:Array.isArray(identityRecords)?identityRecords:[],
         identityRecordsSource:Array.isArray(identityRecords)?'minglora_supabase_postgresql':'legacy_runtime_state',
+        identityRecordsNextOffset:Array.isArray(identityRecords)?identityRecords.length:0,
+        identityRecordsHasMore:Array.isArray(identityRecords)&&identityRecords.length===100,
         taskRecordsSource:Array.isArray(durableTasks)?'minglora_supabase_postgresql':'legacy_runtime_state',
         taskQueueStats:durableTaskStats&&typeof durableTaskStats==='object'?durableTaskStats:null,
         providerAssignments:Array.isArray(providerAssignments)?providerAssignments:[],
@@ -530,6 +532,17 @@ export async function handlePersonalAiBotsAdminApi(context) {
       const category=createPersonalAiBotCategory(db,input||{},user.id,stamp,uid);
       await saveStore();
       return (json(res,201,{ok:true,category}),true);
+    }
+    if(method==='GET'&&path===root+'/identities'){
+      if(typeof listAiIdentities!=='function')return (json(res,503,{error:'Canonical AI identity storage is unavailable.'}),true);
+      const limit=Number(url.searchParams.get('limit')||100);
+      const offset=Number(url.searchParams.get('offset')||0);
+      if(!Number.isInteger(limit)||limit<1||limit>1000||!Number.isInteger(offset)||offset<0||offset>1000000000){
+        return (json(res,400,{error:'Canonical AI identity pagination is invalid.'}),true);
+      }
+      const result=await listAiIdentities({limit,offset});
+      if(!Array.isArray(result))return (json(res,503,{error:'Canonical AI identity storage is unavailable.'}),true);
+      return (json(res,200,{ok:true,identities:result,nextOffset:offset+result.length,hasMore:result.length===limit}),true);
     }
     if(method==='GET'&&path===root+'/safety/reports'){
       if(typeof listAiIdentityReports!=='function')return (json(res,503,{error:'AI report review storage is unavailable.'}),true);
