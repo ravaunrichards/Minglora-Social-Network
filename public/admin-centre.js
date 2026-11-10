@@ -365,6 +365,7 @@
 
       if (!target.id) target.id = 'admin-centre-tool-' + tool.key;
       target.dataset.adminDepartmentTool = tool.key;
+      target.setAttribute('data-admin-department-tool',tool.key);
       target.setAttribute('tabindex','-1');
       view.append(target);
       toolTargets.set(tool.key,target);
