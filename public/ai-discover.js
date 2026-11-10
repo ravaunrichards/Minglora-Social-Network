@@ -9,6 +9,7 @@
   const loadMore=document.querySelector('#aid-load-more');
   const countrySelect=document.querySelector('#aid-country');
   let offset=0,total=0,loading=false;
+  let blockedOffset=0,blockedLoading=false;
   let lastQuery={};
 
   const esc=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
@@ -98,18 +99,38 @@
     }catch(error){target.innerHTML='<div class="aid-empty">'+esc(error.message)+'</div>';}
   }
 
-  async function loadBlockedIdentities(){
+  async function loadBlockedIdentities({append=false}={}){
     const target=document.querySelector('#aid-blocked-list');
-    if(!target)return;
+    const loadMoreButton=document.querySelector('#aid-blocked-load-more');
+    if(!target||blockedLoading)return;
+    blockedLoading=true;
+    if(!append){blockedOffset=0;target.innerHTML='<div class="aid-empty">Loading blocked AI profiles…</div>';}
+    if(loadMoreButton)loadMoreButton.disabled=true;
     try{
-      const response=await fetch('/api/ai/blocks',{credentials:'same-origin',cache:'no-store',headers:{Accept:'application/json'}});
+      const params=new URLSearchParams({limit:'100',offset:String(blockedOffset)});
+      const response=await fetch('/api/ai/blocks?'+params.toString(),{credentials:'same-origin',cache:'no-store',headers:{Accept:'application/json'}});
       const payload=await response.json().catch(()=>({}));
       if(!response.ok)throw new Error(payload.error||'Blocked AI profiles are unavailable.');
       const items=Array.isArray(payload.blockedIdentities)?payload.blockedIdentities:[];
-      target.innerHTML=items.length?items.map(item=>
-        '<article class="aid-follow-item"><div><strong>'+esc(item.displayName||item.username||'AI member')+'</strong><small>@'+esc(item.username||'ai_member')+'</small></div><button type="button" class="aid-secondary aid-unblock-item" data-identity="'+esc(item.identityId)+'">Unblock</button></article>'
-      ).join(''):'<div class="aid-empty">You have not blocked any AI identities.</div>';
-    }catch(error){target.innerHTML='<div class="aid-empty">'+esc(error.message)+'</div>';}
+      if(!append)target.innerHTML='';
+      if(items.length){
+        target.querySelector('.aid-empty')?.remove();
+        target.insertAdjacentHTML('beforeend',items.map(item=>
+          '<article class="aid-follow-item"><div><strong>'+esc(item.displayName||item.username||'AI member')+'</strong><small>@'+esc(item.username||'ai_member')+'</small></div><button type="button" class="aid-secondary aid-unblock-item" data-identity="'+esc(item.identityId)+'">Unblock</button></article>'
+        ).join(''));
+      }
+      const nextOffset=Number(payload.nextOffset);
+      blockedOffset=Number.isInteger(nextOffset)&&nextOffset>=0?nextOffset:blockedOffset+items.length;
+      if(loadMoreButton)loadMoreButton.hidden=payload.hasMore!==true;
+      if(!target.children.length)target.innerHTML='<div class="aid-empty">You have not blocked any AI identities.</div>';
+    }catch(error){
+      if(append)target.insertAdjacentHTML('beforeend','<div class="aid-empty aid-error">'+esc(error.message)+'</div>');
+      else target.innerHTML='<div class="aid-empty aid-error">'+esc(error.message)+'</div>';
+      if(loadMoreButton)loadMoreButton.hidden=true;
+    }finally{
+      blockedLoading=false;
+      if(loadMoreButton)loadMoreButton.disabled=false;
+    }
   }
 
   async function unblockIdentity(identityId){
@@ -284,6 +305,7 @@
     const button=event.target.closest('.aid-unfollow-item');
     if(button)setFollowing(button.dataset.identity,false,button);
   });
+  document.querySelector('#aid-blocked-load-more')?.addEventListener('click',()=>void loadBlockedIdentities({append:true}));
   document.querySelector('#aid-blocked-list')?.addEventListener('click',event=>{
     const button=event.target.closest('.aid-unblock-item');
     if(button)unblockIdentity(button.dataset.identity);
