@@ -93,6 +93,8 @@ jobs:
           node --check public/sw.js
           node --check public/settings.js
           node --check public/experience-center.js
+          node --check public/sound-studio.js
+          node --check tests/unit/sound-studio.test.js
           node --check src/domain/experience-settings.js
           node --check public/admin-centre.js
           node --check public/auth-providers-admin.js
