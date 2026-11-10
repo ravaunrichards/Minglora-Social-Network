@@ -62,3 +62,51 @@ test('Admin Centre initializes dedicated page routing after building its feature
   assert.ok(!admin.includes('return payload;\\n    initializeAdminPageNavigation(panel, unlocked);'),
     'The page router must never be placed after an unconditional return');
 });
+
+
+
+test('Admin Centre has exactly seven persistent department buttons and no tool submenu in the sidebar',()=>{
+  const admin=fs.readFileSync(path.join(root,'public/admin-centre.js'),'utf8');
+  const start=admin.indexOf('function initializeAdminPageNavigation(panel, unlocked) {');
+  const end=admin.indexOf('\n  function addControlCentrePanel(',start);
+  assert.ok(start>=0&&end>start,'Department page navigation function exists');
+  const nav=admin.slice(start,end);
+  const keys=['dashboard','profile-community','user-management','creator-finance','live-pro-access','trust-support','administration'];
+  assert.equal(keys.filter(key=>nav.includes("{key:'"+key+"'")).length,7,
+    'Exactly seven top-level department workspaces are defined');
+  assert.ok(nav.includes('departments.forEach((department,index) =>'),
+    'The persistent sidebar is populated from the seven departments');
+  assert.ok(nav.includes("link.className = 'admin-centre-sidebar-link'"),
+    'Each department is a single sidebar navigation control');
+  for(const forbidden of ['Recently visited','Find a page','admin-centre-nav-group','admin-centre-nav-heading']){
+    assert.equal(nav.includes(forbidden),false,'Sidebar must not contain '+forbidden);
+  }
+});
+
+test('Admin Centre groups existing tools into complete department pages and keeps direct legacy links compatible',()=>{
+  const admin=fs.readFileSync(path.join(root,'public/admin-centre.js'),'utf8');
+  const start=admin.indexOf('function initializeAdminPageNavigation(panel, unlocked) {');
+  const end=admin.indexOf('\n  function addControlCentrePanel(',start);
+  const nav=admin.slice(start,end);
+  assert.ok(nav.includes('departments.forEach(department =>'),'Each department receives its own separate page view');
+  assert.ok(nav.includes('view.hidden = pageKey !== key'),'Only the selected department page is visible');
+  assert.ok(nav.includes('view.append(target)'),'Existing feature containers are moved into their owning department');
+  assert.ok(nav.includes('data-admin-department-tool'),'Each moved tool is retained as a department-specific workspace section');
+  for(const alias of ['users','audit-log','gift-earnings','campaign-wallet','member-promotions','marketing-budget','platform-payouts','creator-withdrawals','promotional-tracking','live-pro','moderation','support','security']){
+    assert.ok(nav.includes(alias+":") || nav.includes("'"+alias+"':"),'Legacy route '+alias+' still resolves to its department');
+  }
+  assert.ok(nav.includes('window.history.pushState'),'Department navigation updates browser history');
+  assert.ok(nav.includes("window.addEventListener('popstate'"),'Browser Back and Forward restore the selected department');
+});
+
+test('Admin Centre department workspaces remain responsive with a mobile department picker',()=>{
+  const admin=fs.readFileSync(path.join(root,'public/admin-centre.js'),'utf8');
+  const css=fs.readFileSync(path.join(root,'public/admin-centre.css'),'utf8');
+  assert.ok(admin.includes('admin-centre-mobile-page-picker'),'A mobile department selector is included');
+  assert.ok(css.includes('grid-template-columns:minmax(230px,270px) minmax(0,1fr);'),
+    'Desktop uses a persistent sidebar and a separate full-width workspace');
+  assert.ok(css.includes('@media(max-width:760px){\n  .admin-centre-workspace{grid-template-columns:minmax(0,1fr)}'),
+    'Mobile stacks navigation above the selected full-page workspace');
+  assert.ok(css.includes('.admin-centre-page-view[hidden]{display:none!important}'),
+    'Inactive departments are hidden rather than stacked below the active page');
+});

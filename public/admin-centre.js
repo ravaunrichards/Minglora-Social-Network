@@ -186,39 +186,62 @@
     const legacyNavigation = panel.querySelector('.admin-centre-navigation');
     if (!legacyNavigation) return;
 
-    const pageDefinitions = [
-      {key:'overview',title:'Overview',group:'Dashboard',description:'A clear starting point with shortcuts to every available administration workspace.'},
-      {key:'internal-operations',title:'Platform operations',group:'Dashboard',description:'Review metadata-only activity across accounts, social features, calls, meetings, LIVE and finance.',selector:'#admin-internal-operations'},
-      {key:'platform-overview',title:'Platform inventory',group:'Dashboard',description:'Review live inventory counts for active Minglora runtime collections.',selector:'#admin-platform-overview'},
-      {key:'profile-verification',title:'Profile verification & gifter badges',group:'Profile & Community',description:'Review member profile verification and manage the established gifter badge progression.',selector:'#admin-badge-controls'},
-      {key:'users',title:'Member accounts',group:'User Management',description:'Find member accounts, inspect their status and use the existing audited account controls.',selector:'#admin-user-management'},
-      {key:'audit-log',title:'Administrator audit log',group:'User Management',description:'Review recorded administrator actions, affected accounts, reasons, timestamps and outcomes.',selector:'#admin-audit-log'},
-      {key:'gift-earnings',title:'Gift revenue & creator earnings',group:'Creator Finance',description:'Review recorded LIVE gift revenue and creator/platform earnings breakdowns.',selector:'#admin-gift-earnings'},
-      {key:'campaign-wallet',title:'Campaign gift wallet',group:'Creator Finance',description:'Review the separate administrator campaign wallet, protected main wallet notice and verified reserve.',selector:'#admin-campaign-coins-wallet',additionalSelectors:['#admin-main-wallet-protection']},
-      {key:'member-promotions',title:'Member promotional Coins',group:'Creator Finance',description:'Allocate promotional Coins to a selected member from the separate promotional wallet.',selector:'#admin-member-promotions-title',closest:'section.admin-member-promotions'},
-      {key:'marketing-budget',title:'Creator marketing budget',group:'Creator Finance',description:'Review verified campaign funding and cash-backed creator marketing allocations.',selector:'#admin-marketing-budget-title',closest:'section.admin-marketing-budget'},
-      {key:'platform-payouts',title:'Platform share payouts',group:'Creator Finance',description:'Review and manage manually confirmed payouts of Minglora’s platform revenue share.',selector:'.admin-platform-payout-controls'},
-      {key:'creator-withdrawals',title:'Creator & member withdrawals',group:'Creator Finance',description:'Search payout requests and review their latest recorded payment statuses.',selector:'#admin-withdrawal-tracker'},
-      {key:'promotional-tracking',title:'Promotional wallet tracking',group:'Creator Finance',description:'Review member promotional wallets, ledgers, cash reserves and cash-backed gift activity.',selector:'#admin-promotional-tracker'},
-      {key:'live-pro',title:'LIVE Pro access',group:'Live Pro Access',description:'Review and manage eligible members’ LIVE Pro access using the existing access controls.',selector:'#admin-live-pro-access'},
-      {key:'moderation',title:'Moderation reports',group:'Trust & Support',description:'Review member reports and take action through the existing moderation workflow.',selector:'#moderation-workspace'},
-      {key:'support',title:'Member support inbox',group:'Trust & Support',description:'Review support requests and respond through the existing support workflow.',selector:'#moderator-support-workspace'},
-      {key:'security',title:'Administrator security & devices',group:'Administration',description:'Manage authenticator protection, administrator sessions and connected authentication settings.',selector:'#admin-centre-settings'}
+    const departments = [
+      {key:'dashboard',title:'Dashboard',description:'Platform health, live operations, inventory and administrator alerts.'},
+      {key:'profile-community',title:'Profile & Community',description:'Member profile verification and community badge administration.'},
+      {key:'user-management',title:'User Management',description:'Member accounts, account access decisions and administrator audit history.'},
+      {key:'creator-finance',title:'Creator Finance',description:'Gift earnings, creator withdrawals, wallets, promotions and platform revenue.'},
+      {key:'live-pro-access',title:'Live Pro Access',description:'Creator eligibility, LIVE Pro access and access controls.'},
+      {key:'trust-support',title:'Trust & Support',description:'Member reports, moderation workflows, appeals and support requests.'},
+      {key:'administration',title:'Administration',description:'Administrator authentication, sessions, devices and system security.'}
     ];
+
+    const tools = [
+      {key:'internal-operations',title:'Platform operations',department:'dashboard',description:'Review metadata-only activity across accounts, social features, calls, meetings, LIVE and finance.',selector:'#admin-internal-operations'},
+      {key:'platform-overview',title:'Platform inventory',department:'dashboard',description:'Review live inventory counts for active Minglora runtime collections.',selector:'#admin-platform-overview'},
+      {key:'profile-verification',title:'Profile verification & gifter badges',department:'profile-community',description:'Review member profile verification and manage the established gifter badge progression.',selector:'#admin-badge-controls'},
+      {key:'users',title:'Member accounts',department:'user-management',description:'Find member accounts, inspect their status and use the existing audited account controls.',selector:'#admin-user-management'},
+      {key:'audit-log',title:'Administrator audit log',department:'user-management',description:'Review recorded administrator actions, affected accounts, reasons, timestamps and outcomes.',selector:'#admin-audit-log'},
+      {key:'gift-earnings',title:'Gift revenue & creator earnings',department:'creator-finance',description:'Review recorded LIVE gift revenue and creator/platform earnings breakdowns.',selector:'#admin-gift-earnings'},
+      {key:'campaign-wallet',title:'Campaign gift wallet',department:'creator-finance',description:'Review the separate administrator campaign wallet, protected main wallet notice and verified reserve.',selector:'#admin-campaign-coins-wallet',additionalSelectors:['#admin-main-wallet-protection']},
+      {key:'member-promotions',title:'Member promotional Coins',department:'creator-finance',description:'Allocate promotional Coins to a selected member from the separate promotional wallet.',selector:'#admin-member-promotions-title',closest:'section.admin-member-promotions'},
+      {key:'marketing-budget',title:'Creator marketing budget',department:'creator-finance',description:'Review verified campaign funding and cash-backed creator marketing allocations.',selector:'#admin-marketing-budget-title',closest:'section.admin-marketing-budget'},
+      {key:'platform-payouts',title:'Platform share payouts',department:'creator-finance',description:'Review and manage manually confirmed payouts of Minglora’s platform revenue share.',selector:'.admin-platform-payout-controls'},
+      {key:'creator-withdrawals',title:'Creator & member withdrawals',department:'creator-finance',description:'Search payout requests and review their latest recorded payment statuses.',selector:'#admin-withdrawal-tracker'},
+      {key:'promotional-tracking',title:'Promotional wallet tracking',department:'creator-finance',description:'Review member promotional wallets, ledgers, cash reserves and cash-backed gift activity.',selector:'#admin-promotional-tracker'},
+      {key:'live-pro',title:'LIVE Pro access',department:'live-pro-access',description:'Review and manage eligible members’ LIVE Pro access using the existing access controls.',selector:'#admin-live-pro-access'},
+      {key:'moderation',title:'Moderation reports',department:'trust-support',description:'Review member reports and take action through the existing moderation workflow.',selector:'#moderation-workspace'},
+      {key:'support',title:'Member support inbox',department:'trust-support',description:'Review support requests and respond through the existing support workflow.',selector:'#moderator-support-workspace'},
+      {key:'security',title:'Administrator security & devices',department:'administration',description:'Manage authenticator protection, administrator sessions and connected authentication settings.',selector:'#admin-centre-settings'}
+    ];
+
+    const departmentByKey = new Map(departments.map(item => [item.key,item]));
+    const toolByKey = new Map(tools.map(item => [item.key,item]));
+    const aliases = {
+      overview:'dashboard',
+      'internal-operations':'dashboard',
+      'platform-overview':'dashboard',
+      'profile-verification':'profile-community',
+      users:'user-management',
+      'audit-log':'user-management',
+      'gift-earnings':'creator-finance',
+      'campaign-wallet':'creator-finance',
+      'member-promotions':'creator-finance',
+      'marketing-budget':'creator-finance',
+      'platform-payouts':'creator-finance',
+      'creator-withdrawals':'creator-finance',
+      'promotional-tracking':'creator-finance',
+      'live-pro':'live-pro-access',
+      moderation:'trust-support',
+      support:'trust-support',
+      security:'administration'
+    };
 
     const resolveTarget = definition => {
       if (!definition.selector) return null;
       const target = panel.querySelector(definition.selector);
       return definition.closest ? target?.closest(definition.closest) || null : target;
     };
-
-    const availablePages = pageDefinitions.filter(definition => {
-      if (definition.key === 'overview') return true;
-      if (!unlocked && definition.key !== 'security') return false;
-      return Boolean(resolveTarget(definition));
-    });
-    const pageByKey = new Map(availablePages.map(definition => [definition.key, definition]));
-    const groupOrder = ['Dashboard','Profile & Community','User Management','Creator Finance','Live Pro Access','Trust & Support','Administration'];
 
     const workspace = document.createElement('div');
     workspace.className = 'admin-centre-workspace';
@@ -227,29 +250,31 @@
     const sidebar = document.createElement('aside');
     sidebar.className = 'admin-centre-sidebar';
     sidebar.id = 'admin-centre-sidebar';
-    sidebar.setAttribute('aria-label','Admin Centre page navigation');
+    sidebar.setAttribute('aria-label','Admin Centre departments');
     sidebar.innerHTML =
-      '<div class="admin-centre-sidebar-heading"><strong>Workspace navigation</strong><small>Choose a dedicated administration page.</small></div>' +
-      '<label class="admin-centre-page-search"><span>Find a page</span><input id="admin-centre-page-search" type="search" autocomplete="off" placeholder="Search admin pages" aria-label="Search administration pages"></label>' +
-      '<nav id="admin-centre-sidebar-nav" class="admin-centre-sidebar-nav" aria-label="Administration pages"></nav>' +
-      '<div class="admin-centre-recent-wrap"><div class="admin-centre-recent-heading">Recently visited</div><nav id="admin-centre-recent-pages" aria-label="Recently visited pages"><span class="admin-centre-recent-empty">Pages you visit will appear here.</span></nav></div>';
+      '<div class="admin-centre-sidebar-heading"><strong>Admin Centre</strong><small>Seven department workspaces</small></div>' +
+      '<label class="admin-centre-page-search"><span>Search departments</span><input id="admin-centre-page-search" type="search" autocomplete="off" placeholder="Search departments" aria-label="Search Admin Centre departments"></label>' +
+      '<nav id="admin-centre-sidebar-nav" class="admin-centre-sidebar-nav" aria-label="Administration departments"></nav>' +
+      '<div class="admin-centre-sidebar-footer"><span class="admin-centre-sidebar-status-dot" aria-hidden="true"></span><span>' +
+      (unlocked ? 'Secure administrator session' : 'Authenticator verification required') + '</span></div>';
 
     const column = document.createElement('div');
     column.className = 'admin-centre-page-column';
+
     const toolbar = document.createElement('div');
     toolbar.className = 'admin-centre-route-toolbar';
     toolbar.innerHTML =
       '<div class="admin-centre-breadcrumbs" aria-label="Breadcrumb">' +
-        '<a href="?page=overview" data-admin-route="overview">Admin Centre</a><span aria-hidden="true">/</span><strong id="admin-centre-current-page-title">Overview</strong>' +
+        '<a href="?page=dashboard" data-admin-route="dashboard">Admin Centre</a><span aria-hidden="true">/</span><strong id="admin-centre-current-page-title">Dashboard</strong>' +
       '</div>' +
       '<div class="admin-centre-route-toolbar-actions">' +
-        '<button type="button" class="secondary admin-centre-sidebar-toggle" id="admin-centre-sidebar-toggle" aria-expanded="true" aria-controls="admin-centre-sidebar">Hide navigation</button>' +
+        '<button type="button" class="secondary admin-centre-sidebar-toggle" id="admin-centre-sidebar-toggle" aria-expanded="true" aria-controls="admin-centre-sidebar">Compact navigation</button>' +
         '<div class="admin-centre-history-controls">' +
           '<button type="button" class="secondary" data-admin-history="back" disabled><span aria-hidden="true">←</span> Back</button>' +
           '<button type="button" class="secondary" data-admin-history="forward" disabled>Forward <span aria-hidden="true">→</span></button>' +
         '</div>' +
       '</div>' +
-      '<label class="admin-centre-mobile-page-picker"><span>Go to page</span><select id="admin-centre-mobile-page-select" aria-label="Choose an Admin Centre page"></select></label>';
+      '<label class="admin-centre-mobile-page-picker"><span>Go to department</span><select id="admin-centre-mobile-page-select" aria-label="Choose an Admin Centre department"></select></label>';
 
     const pageCount = document.createElement('div');
     pageCount.className = 'admin-centre-page-count';
@@ -259,175 +284,189 @@
     const stage = document.createElement('main');
     stage.className = 'admin-centre-page-stage';
     stage.id = 'admin-centre-page-stage';
-    stage.setAttribute('aria-label','Selected administration page');
+    stage.setAttribute('aria-label','Selected department workspace');
 
     column.append(toolbar,pageCount,stage);
     workspace.append(sidebar,column);
     legacyNavigation.replaceWith(workspace);
 
     const pageViews = new Map();
-    availablePages.forEach(definition => {
+    departments.forEach(department => {
       const view = document.createElement('section');
       view.className = 'admin-centre-page-view';
-      view.id = 'admin-centre-page-' + definition.key;
-      view.dataset.adminPageView = definition.key;
-      view.setAttribute('aria-label',definition.title);
+      view.id = 'admin-centre-page-' + department.key;
+      view.dataset.adminPageView = department.key;
+      view.setAttribute('aria-label',department.title);
       view.hidden = true;
-      if (definition.key === 'overview') {
-        const dashboard = document.createElement('div');
-        dashboard.className = 'admin-centre-dashboard';
-        dashboard.innerHTML =
-          '<div class="admin-centre-dashboard-intro"><span class="admin-centre-dashboard-eyebrow">MINGLORA ADMINISTRATION</span>' +
-          '<h2>Administration overview</h2><p>Choose a workspace below or use the page navigation to move directly between dedicated management screens.</p></div>' +
-          (unlocked ? '<div class="admin-centre-dashboard-status"><strong>Secure administrator workspace</strong><span>Protected pages are available for this authenticated administrator session.</span></div>' :
-            '<div class="admin-centre-dashboard-status admin-centre-dashboard-status-warning"><strong>Additional security setup required</strong><span>Open Admin security & devices to configure or verify the authenticator before accessing protected tools.</span><a href="?page=security" data-admin-route="security">Open security settings</a></div>') +
-          '<div class="admin-centre-dashboard-links-heading"><h3>Quick access</h3><p>Each item opens its own page and keeps its own address in your browser history.</p></div>' +
-          '<div class="admin-centre-dashboard-links" id="admin-centre-dashboard-links"></div>';
-        view.append(dashboard);
+
+      const header = document.createElement('header');
+      header.className = 'admin-centre-department-header';
+      header.innerHTML =
+        '<div><span class="admin-centre-department-eyebrow">MINGLORA ADMINISTRATION</span>' +
+        '<h2>' + escapeText(department.title) + '</h2><p>' + escapeText(department.description) + '</p></div>' +
+        '<span class="admin-centre-department-access">' + (unlocked ? 'Protected workspace' : 'Restricted workspace') + '</span>';
+      view.append(header);
+
+      const nav = document.createElement('nav');
+      nav.className = 'admin-centre-department-tools';
+      nav.setAttribute('aria-label',department.title + ' tools');
+      nav.dataset.departmentTools = department.key;
+      view.append(nav);
+
+      if (!unlocked && department.key !== 'dashboard' && department.key !== 'administration') {
+        const locked = document.createElement('section');
+        locked.className = 'admin-centre-department-locked';
+        locked.innerHTML =
+          '<h3>Authenticator verification required</h3>' +
+          '<p>This department is protected. Complete the administrator authenticator check before its member, financial or moderation data can be opened.</p>' +
+          '<a href="?page=administration" data-admin-route="administration">Open Administration security</a>';
+        view.append(locked);
+      } else if (!unlocked && department.key === 'administration') {
+        const notice = document.createElement('div');
+        notice.className = 'admin-centre-department-security-notice';
+        notice.textContent = 'Complete authenticator verification below to unlock the protected Admin Centre departments.';
+        view.append(notice);
       }
+
       stage.append(view);
-      pageViews.set(definition.key,view);
+      pageViews.set(department.key,view);
     });
 
-    const nav = sidebar.querySelector('#admin-centre-sidebar-nav');
-    groupOrder.forEach(groupName => {
-      const members = availablePages.filter(definition => definition.group === groupName);
-      if (!members.length) return;
-      const group = document.createElement('div');
-      group.className = 'admin-centre-nav-group';
-      const heading = document.createElement('button');
-      heading.type = 'button';
-      heading.className = 'admin-centre-nav-heading';
-      heading.textContent = groupName;
-      heading.setAttribute('aria-expanded','true');
-      heading.setAttribute('aria-controls','admin-centre-nav-links-' + groupOrder.indexOf(groupName));
-      const links = document.createElement('div');
-      links.className = 'admin-centre-nav-links';
-      links.id = 'admin-centre-nav-links-' + groupOrder.indexOf(groupName);
-      heading.addEventListener('click',() => {
-        const collapsed = group.classList.toggle('is-collapsed');
-        heading.setAttribute('aria-expanded',String(!collapsed));
-      });
-      members.forEach(definition => {
-        const link = document.createElement('a');
-        link.href = '?page=' + encodeURIComponent(definition.key);
-        link.dataset.adminRoute = definition.key;
-        link.textContent = definition.title;
-        link.title = definition.description;
-        links.append(link);
-      });
-      group.append(heading,links);
-      nav.append(group);
-    });
-
+    const sidebarNav = sidebar.querySelector('#admin-centre-sidebar-nav');
     const mobilePicker = toolbar.querySelector('#admin-centre-mobile-page-select');
-    groupOrder.forEach(groupName => {
-      const members = availablePages.filter(definition => definition.group === groupName);
-      if (!members.length) return;
-      const optgroup = document.createElement('optgroup');
-      optgroup.label = groupName;
-      members.forEach(definition => {
-        const option = document.createElement('option');
-        option.value = definition.key;
-        option.textContent = definition.title;
-        optgroup.append(option);
-      });
-      mobilePicker.append(optgroup);
+    const departmentSearch = sidebar.querySelector('#admin-centre-page-search');
+    const sidebarToggle = toolbar.querySelector('#admin-centre-sidebar-toggle');
+    departments.forEach((department,index) => {
+      const link = document.createElement('a');
+      link.href = '?page=' + encodeURIComponent(department.key);
+      link.dataset.adminRoute = department.key;
+      link.className = 'admin-centre-sidebar-link';
+      link.innerHTML =
+        '<span class="admin-centre-sidebar-index">' + String(index + 1).padStart(2,'0') + '</span>' +
+        '<span class="admin-centre-sidebar-link-copy"><strong>' + escapeText(department.title) + '</strong>' +
+        '<small>' + escapeText(department.description) + '</small></span><span class="admin-centre-sidebar-chevron" aria-hidden="true">›</span>';
+      sidebarNav.append(link);
+
+      const option = document.createElement('option');
+      option.value = department.key;
+      option.textContent = department.title;
+      mobilePicker.append(option);
     });
 
-    const dashboardLinks = pageViews.get('overview')?.querySelector('#admin-centre-dashboard-links');
-    if (dashboardLinks) {
-      availablePages.filter(definition => definition.key !== 'overview').forEach(definition => {
-        const link = document.createElement('a');
-        link.href = '?page=' + encodeURIComponent(definition.key);
-        link.dataset.adminRoute = definition.key;
-        link.className = 'admin-centre-dashboard-link';
-        link.innerHTML = '<span class="admin-centre-dashboard-link-group">' + escapeText(definition.group) + '</span>' +
-          '<strong>' + escapeText(definition.title) + '</strong><span>' + escapeText(definition.description) + '</span><span class="admin-centre-dashboard-link-arrow" aria-hidden="true">→</span>';
-        dashboardLinks.append(link);
-      });
-    }
+    // Keep the existing feature containers and their listeners intact, but group them
+    // inside the one complete department page they belong to.
+    const toolTargets = new Map();
+    tools.forEach(tool => {
+      const view = pageViews.get(tool.department);
+      if (!view) return;
+      if (!unlocked && tool.key !== 'security') return;
+      const target = resolveTarget(tool);
+      if (!target) return;
 
-    // Move each existing feature container into its own route view.
-    // Original element IDs and event handlers are preserved; no duplicate controls are created.
-    availablePages.forEach(definition => {
-      const view = pageViews.get(definition.key);
-      const target = resolveTarget(definition);
-      if (view && target) view.append(target);
-      (definition.additionalSelectors || []).forEach(selector => {
+      if (!target.id) target.id = 'admin-centre-tool-' + tool.key;
+      target.dataset.adminDepartmentTool = tool.key;
+      target.setAttribute('data-admin-department-tool',tool.key);
+      target.setAttribute('tabindex','-1');
+      view.append(target);
+      toolTargets.set(tool.key,target);
+
+      (tool.additionalSelectors || []).forEach(selector => {
         const additionalTarget = panel.querySelector(selector);
-        if (view && additionalTarget) view.append(additionalTarget);
+        if (additionalTarget && additionalTarget !== target && !target.contains(additionalTarget)) {
+          view.append(additionalTarget);
+        }
       });
+
+      const sectionNav = view.querySelector('[data-department-tools="' + tool.department + '"]');
+      const sectionLink = document.createElement('a');
+      sectionLink.href = '#' + target.id;
+      sectionLink.dataset.adminSection = target.id;
+      sectionLink.textContent = tool.title;
+      sectionNav.append(sectionLink);
     });
 
-    // Replace the former one-page jump tiles with real, directly addressable pages.
+    // Dashboard overview content remains on the Dashboard page; the former jump-tile
+    // grid is removed so it cannot duplicate or stack department navigation.
+    const dashboardView = pageViews.get('dashboard');
+    const dashboardIntro = document.createElement('div');
+    dashboardIntro.className = 'admin-centre-dashboard-intro';
+    dashboardIntro.innerHTML =
+      '<span class="admin-centre-dashboard-eyebrow">MINGLORA ADMINISTRATION</span>' +
+      '<h3>Platform overview</h3><p>Choose one of the seven departments to open its complete workspace. Only the selected department is displayed.</p>' +
+      (unlocked
+        ? '<div class="admin-centre-dashboard-status"><strong>Secure administrator workspace</strong><span>Protected pages are available for this authenticated administrator session.</span></div>'
+        : '<div class="admin-centre-dashboard-status admin-centre-dashboard-status-warning"><strong>Additional security setup required</strong><span>Complete the authenticator check in Administration before opening protected departments.</span><a href="?page=administration" data-admin-route="administration">Open Administration security</a></div>');
+    dashboardView.insertBefore(dashboardIntro,dashboardView.querySelector('[data-department-tools="dashboard"]'));
+    const departmentCards = document.createElement('div');
+    departmentCards.className = 'admin-centre-dashboard-links';
+    departmentCards.setAttribute('aria-label','Admin Centre departments');
+    departments.filter(item => item.key !== 'dashboard').forEach(department => {
+      const link = document.createElement('a');
+      link.href = '?page=' + encodeURIComponent(department.key);
+      link.dataset.adminRoute = department.key;
+      link.className = 'admin-centre-dashboard-link';
+      link.innerHTML = '<strong>' + escapeText(department.title) + '</strong><span>' +
+        escapeText(department.description) + '</span><span class="admin-centre-dashboard-link-arrow" aria-hidden="true">→</span>';
+      departmentCards.append(link);
+    });
+    dashboardView.insertBefore(departmentCards,dashboardView.querySelector('[data-department-tools="dashboard"]'));
+
+    // Remove the old page-jump grid after its real workspaces have been assembled.
     panel.querySelector('.admin-control-centre-grid')?.remove();
 
-    const search = sidebar.querySelector('#admin-centre-page-search');
-    const sidebarToggle = toolbar.querySelector('#admin-centre-sidebar-toggle');
-    const recentContainer = sidebar.querySelector('#admin-centre-recent-pages');
     const backButton = toolbar.querySelector('[data-admin-history="back"]');
     const forwardButton = toolbar.querySelector('[data-admin-history="forward"]');
     const titleNode = toolbar.querySelector('#admin-centre-current-page-title');
-    const countNode = pageCount;
-    let recentPages = [];
     let historyPages = [];
     let historyIndex = 0;
 
-    const routeFromUrl = () => new URLSearchParams(window.location.search).get('page') || 'overview';
+    const routeFromUrl = () => new URLSearchParams(window.location.search).get('page') || 'dashboard';
+    const canonicalPage = key => departmentByKey.has(key) ? key : (aliases[key] || 'dashboard');
     const pageUrl = key => {
       const url = new URL(window.location.href);
       url.searchParams.set('page',key);
       return url.pathname + url.search + url.hash;
     };
-    const validPage = key => pageByKey.has(key) ? key : 'overview';
+    const legacySectionFor = key => toolTargets.get(key) || null;
     const syncHistoryButtons = () => {
       backButton.disabled = historyIndex <= 0;
       forwardButton.disabled = historyIndex >= historyPages.length - 1;
     };
-    const renderRecentPages = () => {
-      if (!recentContainer) return;
-      const items = recentPages.filter(key => pageByKey.has(key)).slice(0,5);
-      recentContainer.innerHTML = items.length ? items.map(key => {
-        const definition = pageByKey.get(key);
-        return '<a href="' + escapeText(pageUrl(key)) + '" data-admin-route="' + escapeText(key) + '">' +
-          escapeText(definition.title) + '</a>';
-      }).join('') : '<span class="admin-centre-recent-empty">Pages you visit will appear here.</span>';
-    };
-    const renderPage = (requestedKey, options = {}) => {
-      const key = validPage(requestedKey);
-      const definition = pageByKey.get(key);
+    const renderPage = (requestedKey,options = {}) => {
+      const key = canonicalPage(requestedKey);
+      const department = departmentByKey.get(key);
       pageViews.forEach((view,pageKey) => {
         view.hidden = pageKey !== key;
         view.setAttribute('aria-hidden',pageKey === key ? 'false' : 'true');
       });
-      nav.querySelectorAll('[data-admin-route]').forEach(link => {
-        if (link.dataset.adminRoute === key) link.setAttribute('aria-current','page');
-        else link.removeAttribute('aria-current');
+      sidebarNav.querySelectorAll('[data-admin-route]').forEach(link => {
+        if (link.dataset.adminRoute === key) {
+          link.setAttribute('aria-current','page');
+          link.classList.add('is-active');
+        } else {
+          link.removeAttribute('aria-current');
+          link.classList.remove('is-active');
+        }
       });
-      const activeLink = Array.from(nav.querySelectorAll('[data-admin-route]')).find(link => link.dataset.adminRoute === key);
-      const activeGroup = activeLink?.closest('.admin-centre-nav-group');
-      activeGroup?.classList.remove('is-collapsed');
-      activeGroup?.querySelector('.admin-centre-nav-heading')?.setAttribute('aria-expanded','true');
-      if (titleNode) titleNode.textContent = definition.title;
-      if (mobilePicker) mobilePicker.value = key;
-      if (countNode) countNode.textContent = 'Page ' + (availablePages.findIndex(item => item.key === key) + 1) + ' of ' + availablePages.length;
-      document.title = 'Minglora — Admin Centre — ' + definition.title;
-      if (options.remember !== false) {
-        recentPages = [key,...recentPages.filter(item => item !== key)].slice(0,5);
-        renderRecentPages();
-      }
+      if (titleNode) titleNode.textContent = department.title;
+      mobilePicker.value = key;
+      pageCount.textContent = 'Department ' + (departments.findIndex(item => item.key === key) + 1) + ' of ' + departments.length;
+      document.title = 'Minglora — Admin Centre — ' + department.title;
       syncHistoryButtons();
+      if (options.section) {
+        window.requestAnimationFrame(() => options.section.scrollIntoView({behavior:'auto',block:'start'}));
+      }
     };
 
-    const initialKey = validPage(routeFromUrl());
+    const requestedInitial = routeFromUrl();
+    const initialKey = canonicalPage(requestedInitial);
     historyPages = [initialKey];
     historyIndex = 0;
     window.history.replaceState({...window.history.state,mingloraAdminCentrePage:initialKey},'',pageUrl(initialKey));
-    if (initialKey !== routeFromUrl()) window.history.replaceState({...window.history.state,mingloraAdminCentrePage:initialKey},'',pageUrl(initialKey));
+    renderPage(initialKey,{section:legacySectionFor(requestedInitial)});
 
-    const navigate = (requestedKey, push = true) => {
-      const key = validPage(requestedKey);
+    const navigate = (requestedKey,push = true) => {
+      const key = canonicalPage(requestedKey);
       if (push && key !== historyPages[historyIndex]) {
         historyPages = historyPages.slice(0,historyIndex + 1);
         historyPages.push(key);
@@ -447,35 +486,40 @@
         navigate(routeLink.dataset.adminRoute);
         return;
       }
+      const sectionLink = event.target.closest('a[data-admin-section]');
+      if (sectionLink && panel.contains(sectionLink)) {
+        event.preventDefault();
+        const target = document.getElementById(sectionLink.dataset.adminSection);
+        target?.scrollIntoView({behavior:'smooth',block:'start'});
+        return;
+      }
       const historyButton = event.target.closest('[data-admin-history]');
       if (!historyButton) return;
       if (historyButton.dataset.adminHistory === 'back' && historyIndex > 0) window.history.back();
       if (historyButton.dataset.adminHistory === 'forward' && historyIndex < historyPages.length - 1) window.history.forward();
     });
 
-    sidebarToggle?.addEventListener('click',() => {
-      const collapsed = workspace.classList.toggle('admin-centre-workspace-sidebar-collapsed');
-      sidebarToggle.setAttribute('aria-expanded',String(!collapsed));
-      sidebarToggle.textContent = collapsed ? 'Show navigation' : 'Hide navigation';
-    });
+    mobilePicker.addEventListener('change',() => navigate(mobilePicker.value));
 
-    mobilePicker?.addEventListener('change',() => navigate(mobilePicker.value));
-    search?.addEventListener('input',() => {
-      const query = String(search.value || '').trim().toLowerCase();
-      sidebar.querySelectorAll('.admin-centre-nav-group').forEach(group => {
-        let visible = false;
-        group.querySelectorAll('a[data-admin-route]').forEach(link => {
-          const definition = pageByKey.get(link.dataset.adminRoute);
-          const matches = !query || (definition.title + ' ' + definition.group + ' ' + definition.description).toLowerCase().includes(query);
-          link.hidden = !matches;
-          if (matches) visible = true;
-        });
-        group.hidden = !visible;
+    departmentSearch?.addEventListener('input',() => {
+      const query = String(departmentSearch.value || '').trim().toLowerCase();
+      sidebarNav.querySelectorAll('[data-admin-route]').forEach(link => {
+        const department = departmentByKey.get(link.dataset.adminRoute);
+        const searchable = department.title + ' ' + department.description;
+        link.hidden = Boolean(query) && !searchable.toLowerCase().includes(query);
       });
     });
 
+    sidebarToggle?.addEventListener('click',() => {
+      const compact = workspace.classList.toggle('admin-centre-workspace-sidebar-collapsed');
+      sidebar.classList.toggle('is-collapsed',compact);
+      sidebarToggle.setAttribute('aria-expanded',String(!compact));
+      sidebarToggle.textContent = compact ? 'Expand navigation' : 'Compact navigation';
+    });
+
     window.addEventListener('popstate',event => {
-      const key = validPage(routeFromUrl());
+      const requested = routeFromUrl();
+      const key = canonicalPage(requested);
       const knownIndex = historyPages.lastIndexOf(key);
       if (knownIndex >= 0) historyIndex = knownIndex;
       else {
@@ -485,12 +529,10 @@
       if (event.state?.mingloraAdminCentrePage !== key) {
         window.history.replaceState({...window.history.state,mingloraAdminCentrePage:key},'',pageUrl(key));
       }
-      renderPage(key);
-      window.scrollTo({top:0,behavior:'auto'});
+      renderPage(key,{section:legacySectionFor(requested)});
     });
 
     panel.dataset.adminNavigationInitialized = 'true';
-    renderPage(initialKey,{remember:true});
   }
 
   function addControlCentrePanel(rootOverride = null) {
