@@ -203,3 +203,17 @@ Continue with independent non-database work that can be built and verified in th
 - No implementation percentage was increased. The prior workflow checks at the earlier code head were successful, but were not rerun for these documentation-only commits.
 - Branch safety: draft PR #202 remains open and draft. Current branch comparison against main reports 507 commits ahead and 148 behind, with divergent history. Do not merge, rebase or sync automatically. Reconcile branch history and inspect main changes carefully before further application-code work.
 - Production AI migrations remain unapplied; provider inference, scheduler deployment, mailbox provisioning, and autonomous execution remain disabled/unverified. Continue only in an approved non-production environment for database work.
+
+
+## Checkpoint — provider and email list-count accuracy (2026-11-10)
+
+- Continued the exact next action from the previous checkpoint: inspect provider runtime records and bounded Admin Centre lists for truthful page/total labeling.
+- Updated the provider/model assignment, worker-visible provider runtime, and AI email identity panel descriptions to state explicitly that rows load 100 at a time and the loaded row count is not a total count.
+- Added a focused UI regression test asserting all three truthful labels and the existing pagination controls.
+- Bumped the Personal AI Bots Admin Centre script asset version to `20261110-personal-ai-bots-15` so clients do not retain stale cached UI.
+- Commits, in order: UI `8af7627ad512bdad94f405ea0b5671361775c6d0`; regression test `6312e53ebcc9b2143ff1a38c3adab441da4e6521`; asset version `9a052463010624ac66113aeda462a81f89963f6a`.
+- Source-level verification confirmed the three labels, regression test and cache version are present on the feature branch. **The new tests have not yet been executed**: the commit workflow lookup returned no workflow runs and the combined commit status returned no status checks. Do not mark this test green until CI runs.
+- No production database, migration, worker, provider credential, email provider, user record, or deployment was changed. The live Supabase AI table check remains empty; staged AI migrations remain unapplied.
+- Current branch comparison after these commits: feature branch is divergent from `main`, 511 commits ahead and 148 behind (merge base `0f22dabec48315fc6d306296aed2315cdb7d26c2`). Do not merge, rebase, or sync automatically. Preserve PR #202 as draft/open per the existing release constraint.
+- Weighted implementation percentage is unchanged at 45.52% (rounded 46%); this is a UI wording/testability improvement, not an operational system milestone.
+- **Next action:** continue the remaining independent non-database work and inspect the AI provider runtime gateway/list contract for truthful status, while keeping provider execution, scheduling and production release disabled until real provider credentials and approved deployment infrastructure exist.
