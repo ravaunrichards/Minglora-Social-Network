@@ -14,8 +14,8 @@ test('Minglora Menu beside Messenger has a clean single-row header', () => {
   assert.ok(html.includes('id="messenger-btn"'));
   assert.ok(html.includes('id="minglora-menu-toggle"'));
   assert.ok(html.includes('id="minglora-menu-panel"'));
-  assert.ok(html.includes('minglora-menu.css?v=20261110-facebook-menu-size-scroll-2'));
-  assert.ok(html.includes('minglora-menu.js?v=20261110-facebook-menu-size-scroll-2'));
+  assert.ok(html.includes('minglora-menu.css?v=20261110-facebook-menu-search-left-column-1'));
+  assert.ok(html.includes('minglora-menu.js?v=20261110-facebook-menu-search-left-column-1'));
   for (const label of ['Social','Entertainment','Shopping','Personal','Professional','More from Meta','Create']) {
     assert.ok(script.includes(label), 'Menu contains ' + label);
   }
@@ -36,21 +36,41 @@ test('Menu uses an independent scroll column, a stationary Create panel and resp
   assert.match(css, /\.account-switcher-actions/);
 });
 
-test('Menu permanently omits the Search Menu field, icon and filtering', () => {
-  const html = read('public/index.html');
+test('Search Menu is in the left Menu column above all shortcut sections', () => {
   const script = read('public/minglora-menu.js');
   const css = read('public/minglora-menu.css');
-  const app = read('public/app.js');
-  assert.ok(!html.includes('id="search-form"'), 'external top-bar Search stays removed');
-  assert.ok(!html.includes('id="search-input"'), 'external top-bar Search input stays removed');
-  assert.ok(script.includes('<h2>Menu</h2>'));
-  assert.ok(!script.includes('minglora-menu-search'));
-  assert.ok(!script.includes('Search menu'));
-  assert.ok(!script.includes("sprite('search')"));
-  assert.ok(!script.includes('filterMenu'));
-  assert.ok(!css.includes('minglora-menu-search'));
-  assert.ok(app.includes("$('#search-form')?.addEventListener"), 'Removed external form must not break app startup');
-  assert.match(css, /\.minglora-menu-header\s*\{[^}]*grid-template-columns:minmax\(0,1fr\) 40px/s);
+  const html = read('public/index.html');
+  const searchAt = script.indexOf('class="minglora-menu-search"');
+  const resultsAt = script.indexOf('id="minglora-menu-results"');
+  const socialAt = script.indexOf("sections.map(sectionMarkup).join('')");
+  const createAt = script.indexOf('minglora-menu-create-column');
+  assert.ok(searchAt >= 0 && resultsAt > searchAt && socialAt > resultsAt);
+  assert.ok(createAt > socialAt, 'Search Menu is in the left column, not Create column');
+  assert.ok(script.includes('placeholder="Search menu"'));
+  assert.ok(script.includes('aria-label="Search menu"'));
+  assert.ok(script.includes('aria-controls="minglora-menu-results"'));
+  assert.ok(css.includes('.minglora-menu-search-field'));
+  assert.ok(css.includes('.minglora-menu-search input'));
+  assert.ok(html.includes('minglora-menu.js?v=20261110-facebook-menu-search-left-column-1'));
+  assert.ok(html.includes('minglora-menu.css?v=20261110-facebook-menu-search-left-column-1'));
+  assert.ok(!html.includes('id="search-form"'));
+  assert.ok(!html.includes('id="search-input"'));
+});
+
+test('Search Menu filters shortcuts and headings, reports no matches, and resets on Escape or close', () => {
+  const script = read('public/minglora-menu.js');
+  assert.ok(script.includes("searchInput.addEventListener('input'"));
+  assert.ok(script.includes('function filterMenuItems(value)'));
+  assert.ok(script.includes('normalizeMenuSearch(item.textContent).includes(term)'));
+  assert.ok(script.includes('heading.includes(term)'));
+  assert.ok(script.includes('item.hidden = !matches'));
+  assert.ok(script.includes('section.hidden = visibleInSection === 0'));
+  assert.ok(script.includes('No menu results for'));
+  assert.ok(script.includes('role="status" aria-live="polite" hidden'));
+  assert.ok(script.includes("event.key === 'Escape' && searchInput.value"));
+  assert.ok(script.includes("event.key === 'ArrowDown'"));
+  assert.ok(script.includes("searchInput.value = '';"));
+  assert.ok(script.includes("filterMenuItems('')"));
 });
 
 

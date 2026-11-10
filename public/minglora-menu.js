@@ -107,8 +107,17 @@
       '</header>' +
       '<div class="minglora-menu-body">' +
         '<div class="minglora-menu-main-scroll">' +
-          sections.map(sectionMarkup).join('') +
-          sectionMarkup({ title: 'More from Meta', items: metaItems }) +
+          '<div class="minglora-menu-search" role="search">' +
+            '<label class="minglora-menu-search-field" for="minglora-menu-search-input">' +
+              sprite('search') +
+              '<input id="minglora-menu-search-input" type="search" placeholder="Search menu" aria-label="Search menu" aria-controls="minglora-menu-results" autocomplete="off" spellcheck="false">' +
+            '</label>' +
+          '</div>' +
+          '<div class="minglora-menu-results" id="minglora-menu-results">' +
+            sections.map(sectionMarkup).join('') +
+            sectionMarkup({ title: 'More from Meta', items: metaItems }) +
+          '</div>' +
+          '<p class="minglora-menu-no-results" id="minglora-menu-no-results" role="status" aria-live="polite" hidden></p>' +
         '</div>' +
         '<aside class="minglora-menu-create-column" aria-label="Create">' +
           '<section class="minglora-menu-create-card" data-menu-section>' +
@@ -118,7 +127,46 @@
         '</aside>' +
       '</div>';
 
+    const searchInput = panel.querySelector('#minglora-menu-search-input');
+    const menuResults = panel.querySelector('#minglora-menu-results');
+    const noResults = panel.querySelector('#minglora-menu-no-results');
+    const normalizeMenuSearch = value => String(value || '').toLocaleLowerCase().trim();
+
+    function filterMenuItems(value) {
+      const term = normalizeMenuSearch(value);
+      const rawTerm = String(value || '').trim();
+      let visibleItems = 0;
+      menuResults.querySelectorAll('[data-menu-section]').forEach(section => {
+        const heading = normalizeMenuSearch(section.querySelector('h3')?.textContent);
+        const headingMatches = Boolean(term && heading.includes(term));
+        let visibleInSection = 0;
+        section.querySelectorAll('[data-menu-item]').forEach(item => {
+          const matches = !term || headingMatches || normalizeMenuSearch(item.textContent).includes(term);
+          item.hidden = !matches;
+          if (matches) { visibleInSection += 1; visibleItems += 1; }
+        });
+        section.hidden = visibleInSection === 0;
+      });
+      noResults.hidden = !term || visibleItems > 0;
+      noResults.textContent = noResults.hidden ? '' : 'No menu results for "' + rawTerm + '".';
+    }
+
+    searchInput.addEventListener('input', () => filterMenuItems(searchInput.value));
+    searchInput.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && searchInput.value) {
+        event.preventDefault();
+        event.stopPropagation();
+        searchInput.value = '';
+        filterMenuItems('');
+      } else if (event.key === 'ArrowDown') {
+        const firstResult = menuResults.querySelector('[data-menu-item]:not([hidden]):not(:disabled)');
+        if (firstResult) { event.preventDefault(); firstResult.focus(); }
+      }
+    });
+
     function closeMenu() {
+      searchInput.value = '';
+      filterMenuItems('');
       panel.hidden = true;
       panel.classList.remove('is-open');
       document.body.classList.remove('minglora-menu-open');
