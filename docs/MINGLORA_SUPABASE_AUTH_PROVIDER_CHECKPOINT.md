@@ -5,8 +5,9 @@
 - **Project:** Minglora Social Network — ravaunrichards/Minglora-Social-Network
 - **Branch:** `feat/minglora-admin-user-and-service-centre-20261109`
 - **Code commit with the tested implementation:** `ad8ea2c3e1600952238a94715e6d56c4786e7a8b`; subsequent commits on this branch only update this checkpoint.
+- **Current branch head:** `3d4df2f6498df9c44662ca9594568bf66fb0e10b`.
 - **PR:** [#203](https://github.com/ravaunrichards/Minglora-Social-Network/pull/203) remains OPEN and DRAFT, not merged; reported mergeable=false.
-- **Latest completed CI run before this checkpoint-only update:** [42714965643](https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/42714965643).
+- **Latest completed CI run:** [42722256534](https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/42722256534).
   - **Supabase Auth provider controls:** PASS — job completed successfully; provider source syntax and focused acceptance tests passed (17 tests, per the CI result captured during the prior continuation).
   - **Admin Centre real-browser viewport regression:** PASS.
   - **Repository-wide test job:** FAIL — failures are outside the Auth Provider control scope.
@@ -20,7 +21,7 @@
 
 ## Exact next action
 
-Obtain confirmation to use the Render **My Workspace** connection for read-only production request-log inspection. Then, with the designated owner using an active MFA-verified Admin Centre session and a valid server-side Supabase Management API token, verify provider status, repair the production Site URL/redirect allow-list, configure one real OAuth provider, and complete a live enable/disable round trip. Finally complete a real external OAuth sign-in and verify session/MFA continuation. Do not paste secrets into chat or commit them. Keep the 81% completion credit unchanged until those live acceptance checks pass.
+Ask the user to explicitly choose the Render **My Workspace** workspace before read-only production request-log inspection. Separately obtain a designated owner MFA-verified Admin Centre session and a valid server-side Supabase Management API token. Then verify provider status, repair the production Site URL/redirect allow-list, configure one real OAuth provider, and complete a live enable/disable round trip. Finally complete a real external OAuth sign-in and verify session/MFA continuation. Do not paste secrets into chat or commit them. Keep the 81% completion credit unchanged until those live acceptance checks pass.
 
 ---
 
