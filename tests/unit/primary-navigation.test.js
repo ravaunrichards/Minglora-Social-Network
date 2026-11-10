@@ -98,13 +98,14 @@ test('desktop left sidebar contains secondary features while primary destination
   const expected=[
     ['friends','Friends'],['creator','Creator Studio'],['messages','Messenger'],
     ['gifts','Gifts'],['coins','Recharge'],['groups','Groups'],
-    ['pages','Pages'],['saved','Saved'],['calendar','Events'],['videos','Video']
+    ['pages','Pages'],['saved','Saved'],['calendar','Events'],['clock-centre','Clock Centre'],['gifts','Gifts'],['videos','Video']
   ];
   for(const [view,label] of expected){
     assert.ok(sidebar.includes('data-view="'+view+'"'),view+' remains directly available from the desktop sidebar');
     assert.ok(sidebar.includes('>'+label+'</span>'),label+' has a visible sidebar label');
   }
-  for(const symbol of ['friends','saved','groups','creator','feeling','calendar','video','messages','recharge','pages']){
+  assert.ok(sidebar.includes('data-left-action="reels"') && sidebar.includes('#reels'), 'Reels has its own video-format icon');
+  for(const symbol of ['friends','saved','groups','creator','gift','calendar','clock','gamepad','reels','megaphone','admin','video','messages','recharge','pages']){
     assert.ok(sidebar.includes('#'+symbol+'\"'),symbol+' uses the shared 3D navigation icon set');
   }
 });
