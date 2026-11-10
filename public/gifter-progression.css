@@ -315,3 +315,46 @@
   .gp-art-panel>img{border-radius:7px}
 }
 @media(max-width:380px){.gp-level-index-grid[data-layout="horizontal"]{grid-template-columns:minmax(0,1fr)}.gp-level-layout-button{padding-inline:10px}}
+
+
+/* Clean edge treatment for the supplied JPG panels: trim black canvas, not artwork. */
+.gp-art-panel-stack{
+  max-width:760px;
+  gap:clamp(8px,1.2vw,12px);
+}
+.gp-art-panel{
+  width:100%;
+  max-width:720px;
+  padding:0;
+  overflow:hidden;
+  border:1.5px solid rgba(196,216,255,.88);
+  border-radius:15px;
+  background:#0b1020;
+  box-shadow:
+    0 0 0 1px rgba(129,164,255,.28),
+    0 5px 15px rgba(5,10,24,.16),
+    inset 0 0 0 1px rgba(245,249,255,.42);
+}
+.gp-art-panel>img,
+.gp-art-panel--final>img{
+  display:block;
+  width:100%;
+  max-width:none;
+  height:auto;
+  margin:0;
+  border-radius:inherit;
+  object-fit:contain;
+  object-position:center;
+  transform:scale(1.08,1.05) translateY(-.55%);
+  transform-origin:center;
+}
+/* The first and final source JPGs have a deeper empty top edge than the middle panels. */
+.gp-art-panel:first-child>img,
+.gp-art-panel--final>img{
+  transform:scale(1.08,1.10) translateY(-2.5%);
+}
+@media(max-width:760px){
+  .gp-art-panel{padding:0;border-width:1.25px;border-radius:12px}
+  .gp-art-panel>img,
+  .gp-art-panel--final>img{border-radius:inherit}
+}
