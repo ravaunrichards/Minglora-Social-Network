@@ -15,7 +15,7 @@ const mobileCss = fs.readFileSync(path.join(root, 'public/mobile-layout.css'), '
 test('logout is kept out of mobile and tablet primary navigation and placed in Settings', () => {
   assert.match(html,/href="\/styles\.css\?v=[^"]+"/);
   assert.match(html,/src="\/app\.js\?v=[^"]+"/);
-  assert.ok(html.includes('src="/settings.js?v=20261106-refresh-controls-removed-1"'));
+  assert.ok(html.includes('src="/settings.js?v=20261106-refresh-controls-removed-1-call-ringtones-1"'));
   assert.match(html, /id="logout-btn"[^>]*data-logout/);
   assert.match(html, /<div id="minglora-session-actions" class="hidden" hidden aria-hidden="true">[\s\S]*id="logout-btn"[^>]*data-logout/);
   const header = html.match(/<header class="topbar">[\s\S]*?<\/header>/)?.[0] || '';
