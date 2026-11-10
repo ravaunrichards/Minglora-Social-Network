@@ -58,9 +58,9 @@ test('all advertised themes have previews and responsive visual treatment', () =
   assert.match(html, /src="\/app\.js\?v=[^"]+"/);
   const loginAsset = html.match(/src="(\/auth-login\.js\?v=[^"]+)"/)?.[1] || '';
   assert.ok(loginAsset && sw.includes(loginAsset));
-  assert.match(html, /settings\.js\?v=20261110-facebook-settings-privacy-1/);
+  assert.match(html, /settings\.js\?v=20261110-facebook-settings-privacy-3/);
   assert.match(sw, /v\d+-self-updating-1/);
   assert.match(sw, /cacheCurrentShellAssets/);
   assert.ok(loginAsset && sw.includes(loginAsset));
-  assert.match(sw, /settings\.js\?v=20261110-facebook-settings-privacy-1/);
+  assert.match(sw, /settings\.js\?v=20261110-facebook-settings-privacy-3/);
 });
