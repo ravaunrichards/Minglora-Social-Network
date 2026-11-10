@@ -28,6 +28,8 @@ export const DEFAULT_EXPERIENCE_SETTINGS = Object.freeze({
   osdOpacity: 85,
   soundMode: 'sound',
   vibrateOnRing: true,
+  vibrateOnNotification: true,
+  vibrationPattern: 'classic',
   voiceCallSound: true,
   videoCallSound: true,
   messageSound: true,
@@ -67,6 +69,7 @@ const ENUMS = {
   screenSaverWaitUnit: ['seconds', 'minutes', 'hours'],
   osdPosition: ['top-left', 'top-right', 'bottom-left', 'bottom-right', 'center'],
   soundMode: ['sound', 'vibrate', 'mute'],
+  vibrationPattern: ['none', 'short', 'double', 'classic', 'heartbeat', 'pulse', 'long'],
   dndAllowedCalls: ['everyone', 'none'],
   notificationSort: ['newest', 'oldest', 'unread', 'priority', 'people', 'category'],
   lockScreenNotifications: ['content', 'hide-content', 'icon-only', 'hidden'],
@@ -74,7 +77,7 @@ const ENUMS = {
 };
 const BOOLEAN_KEYS = [
   'screenSaverEnabled', 'osdClock', 'osdDate', 'osdNotifications', 'osdBattery',
-  'vibrateOnRing', 'voiceCallSound', 'videoCallSound', 'messageSound',
+  'vibrateOnRing', 'vibrateOnNotification', 'voiceCallSound', 'videoCallSound', 'messageSound',
   'notificationSound', 'dndEnabled', 'showBatteryPercentage', 'dataSaverEnabled',
   'parentalControlsEnabled'
 ];
