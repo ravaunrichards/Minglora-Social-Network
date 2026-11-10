@@ -1,8 +1,10 @@
 (() => {
+  const SOUND_STUDIO_CATEGORIES = [{"id":"privateMessages","label":"Private messages"},{"id":"groupMessages","label":"Group messages"},{"id":"newFollowers","label":"New followers"},{"id":"newFriends","label":"New friends"},{"id":"voiceMessages","label":"Voice messages"},{"id":"replies","label":"Replies"},{"id":"reactions","label":"Reactions"},{"id":"comments","label":"Comments"},{"id":"mentionsTags","label":"Mentions and tags"},{"id":"missedVoiceCalls","label":"Missed voice calls"},{"id":"missedVideoCalls","label":"Missed video calls"},{"id":"incomingCalls","label":"Incoming calls"},{"id":"live","label":"LIVE notifications"},{"id":"meetingInvitations","label":"Meeting invitations"},{"id":"meetingReminders","label":"Meeting reminders"},{"id":"giftReceived","label":"Gift received"},{"id":"coinsReceived","label":"Coins received"},{"id":"paymentsTransactions","label":"Payments and transactions"},{"id":"marketplaceOrders","label":"Marketplace orders"},{"id":"securityAlerts","label":"Security alerts"},{"id":"loginAlerts","label":"Login alerts"},{"id":"systemNotifications","label":"System notifications"}];
+  const SOUND_STUDIO_DEFAULTS = {theme:'Classic',voiceRingtoneId:'voice-01',videoRingtoneId:'video-01',notifications:Object.fromEntries(SOUND_STUDIO_CATEGORIES.map((item,index)=>[item.id,'notification-'+String(index+1).padStart(2,'0')])),favorites:[],ringtoneVolume:80,notificationVolume:75,vibrationEnabled:true,vibrationPattern:'standard',silentMode:false,enabled:{voiceCall:true,videoCall:true,notifications:Object.fromEntries(SOUND_STUDIO_CATEGORIES.map(item=>[item.id,true]))},doNotDisturb:{enabled:false,start:'22:00',end:'07:00',days:[0,1,2,3,4,5,6]}};
   const defaults = {
     privacy: { profileVisibility: 'public', allowFriendRequests: true, messageAudience: 'everyone', meetWaveAudience: 'everyone' },
     notifications: { inApp: true, friendRequests: true, messages: true, interactions: true, push: true, profileViews: false, calls: true, live: true, gifts: true, meetWave: true, leagues: true, account: true },
-    preferences: { theme: 'system', colorTheme: 'minglora', liveRoomTheme: 'studio', feedSort: 'recent', reducedMotion: false, liteMode: false, keyboardShortcuts: false, displayCurrency: 'USD', messengerIncomingCallSounds: true, messengerMessageSounds: true, messengerAutoOpenNewMessages: false, messengerActiveStatus: true, profileLayout: 'advanced', messengerArchivedConversationIds: [], messengerRestrictedUserIds: [] }
+    preferences: { theme: 'system', colorTheme: 'minglora', liveRoomTheme: 'studio', feedSort: 'recent', reducedMotion: false, liteMode: false, keyboardShortcuts: false, displayCurrency: 'USD', messengerIncomingCallSounds: true, messengerMessageSounds: true, messengerAutoOpenNewMessages: false, messengerActiveStatus: true, profileLayout: 'advanced', messengerArchivedConversationIds: [], messengerRestrictedUserIds: [], soundStudio: SOUND_STUDIO_DEFAULTS }
   };
 
   const APP_THEMES = [
@@ -79,6 +81,72 @@
     if (meta) meta.setAttribute('content', ({ minglora:'#1769e0', ocean:'#0f766e', tropical:'#e45b4d', royal:'#7146c7', emerald:'#16834f', rose:'#be315f', golden:'#a16207', lavender:'#7864c8', midnight:'#172033', graphite:'#475569' })[colorTheme]);
   }
 
+
+  function renderSoundOptions(items,selected,custom){
+    return (items||[]).map(item=>'<option value="'+escapeHtml(item.id)+'" '+(item.id===selected?'selected':'')+'>'+escapeHtml(item.name)+'</option>').join('')+
+      (custom||[]).map(item=>'<option value="'+escapeHtml(item.id)+'" '+(item.id===selected?'selected':'')+'>Custom · '+escapeHtml(item.title)+'</option>').join('');
+  }
+  function renderSoundStudioLibraryItem(item,favorites){
+    const favorite=(favorites||[]).includes(item.id);
+    const kind=item.type==='voice'?'Voice call':item.type==='video'?'Video call':item.type==='notification'?'Notification':'Custom sound';
+    return '<article class="sound-studio-library-item" data-sound-library-item data-sound-type="'+escapeHtml(item.type)+'" data-sound-theme="'+escapeHtml(item.style||'Personal')+'" data-sound-search="'+escapeHtml((item.name+' '+(item.style||'')+' '+item.type).toLowerCase())+'"><div class="sound-studio-sound-copy"><strong>'+escapeHtml(item.name)+'</strong><small>'+kind+' · '+escapeHtml(item.style||'Personal')+'</small></div><div class="sound-studio-sound-actions"><button type="button" class="secondary" data-sound-preview="'+escapeHtml(item.id)+'">Preview</button><button type="button" class="secondary sound-studio-favorite '+(favorite?'is-favorite':'')+'" data-sound-favorite="'+escapeHtml(item.id)+'" aria-pressed="'+(favorite?'true':'false')+'">'+(favorite?'★ Saved':'☆ Save')+'</button></div></article>';
+  }
+  function renderSoundStudioMarkup(studio,catalog,customSounds){
+    const current=studio||SOUND_STUDIO_DEFAULTS,items=Array.isArray(catalog?.sounds)?catalog.sounds:[],custom=Array.isArray(customSounds)?customSounds:[];
+    if(items.length!==120)return '<section class="settings-card sound-studio-card" id="settings-sound-studio" data-settings-category="interactions"><h2>Sound &amp; Notifications</h2><p class="settings-form-status" role="status">The original sound catalogue could not be loaded. Existing settings are still available.</p></section>';
+    const voiceItems=items.filter(item=>item.type==='voice'),videoItems=items.filter(item=>item.type==='video'),notificationItems=items.filter(item=>item.type==='notification');
+    const categoryRows=SOUND_STUDIO_CATEGORIES.map(category=>{
+      const selected=current.notifications?.[category.id]||'notification-01';
+      const enabled=current.enabled?.notifications?.[category.id]!==false;
+      return '<label class="sound-studio-category-row"><span class="sound-studio-category-copy"><strong>'+escapeHtml(category.label)+'</strong><small>Choose a separate notification cue</small></span><span class="sound-studio-assignment"><select name="notificationSound_'+category.id+'" aria-label="'+escapeHtml(category.label)+' sound">'+renderSoundOptions(notificationItems,selected,custom)+'</select><button type="button" class="secondary sound-studio-preview-selection" data-sound-preview-selection="'+category.id+'">Preview</button></span><label class="sound-studio-enabled"><input type="checkbox" name="soundCategoryEnabled_'+category.id+'" '+(enabled?'checked':'')+'><span>Sound on</span></label></label>';
+    }).join('');
+    const dayNames=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const selectedDays=current.doNotDisturb?.days||[0,1,2,3,4,5,6];
+    const days=dayNames.map((day,index)=>'<label class="sound-studio-day"><input type="checkbox" name="soundDndDay" value="'+index+'" '+(selectedDays.includes(index)?'checked':'')+'><span>'+day+'</span></label>').join('');
+    const library=[...items,...custom.map(item=>({id:item.id,name:item.title,type:'custom',style:'Personal'}))];
+    const themeOptions=['Classic','Modern','Premium','Minimal','Digital','Cinematic'].map(theme=>'<option value="'+theme+'" '+(current.theme===theme?'selected':'')+'>'+theme+'</option>').join('');
+    return '<section class="settings-card sound-studio-card" id="settings-sound-studio" data-settings-category="interactions">'+
+      '<div class="sound-studio-heading"><div><span class="eyebrow">MINGLORA AUDIO</span><h2>Sound &amp; Notifications Studio</h2><p>120 original sounds. Choose separate voice and video ringtones, assign every notification category, and preview before saving.</p></div><button type="button" class="secondary" data-sound-reset>Restore defaults</button></div>'+
+      '<label class="settings-field"><span><strong>Sound theme</strong><small>Classic, Modern, Premium, Minimal, Digital or Cinematic.</small></span><select name="soundTheme">'+themeOptions+'</select></label>'+
+      '<div class="sound-studio-call-grid">'+
+        '<div class="sound-studio-call-panel"><div><h3>Voice call ringtone</h3><p>30 separate voice-call sounds</p></div><div class="sound-studio-assignment"><select name="voiceRingtoneId" aria-label="Voice call ringtone">'+renderSoundOptions(voiceItems,current.voiceRingtoneId||'voice-01',custom)+'</select><button type="button" class="secondary sound-studio-preview-selection" data-sound-preview-selection="voice">Preview</button></div><label class="settings-toggle"><span><strong>Enable voice call ringtone</strong></span><input type="checkbox" name="soundEnabledVoiceCall" '+(current.enabled?.voiceCall!==false?'checked':'')+'></label></div>'+
+        '<div class="sound-studio-call-panel"><div><h3>Video call ringtone</h3><p>30 distinct video-call sounds</p></div><div class="sound-studio-assignment"><select name="videoRingtoneId" aria-label="Video call ringtone">'+renderSoundOptions(videoItems,current.videoRingtoneId||'video-01',custom)+'</select><button type="button" class="secondary sound-studio-preview-selection" data-sound-preview-selection="video">Preview</button></div><label class="settings-toggle"><span><strong>Enable video call ringtone</strong></span><input type="checkbox" name="soundEnabledVideoCall" '+(current.enabled?.videoCall!==false?'checked':'')+'></label></div>'+
+      '</div>'+
+      '<div class="sound-studio-notifications"><div class="settings-inline-heading"><div><h3>Individual notification sounds</h3><p>Assign a sound and toggle playback for each category independently.</p></div></div><div class="sound-studio-category-list">'+categoryRows+'</div></div>'+
+      '<div class="sound-studio-controls-grid">'+
+        '<label class="settings-field"><span><strong>Ringtone volume</strong><small><output id="sound-ringtone-volume-value">'+Number(current.ringtoneVolume??80)+'</output>%</small></span><input type="range" min="0" max="100" step="1" name="soundRingtoneVolume" value="'+Number(current.ringtoneVolume??80)+'"></label>'+
+        '<label class="settings-field"><span><strong>Notification volume</strong><small><output id="sound-notification-volume-value">'+Number(current.notificationVolume??75)+'</output>%</small></span><input type="range" min="0" max="100" step="1" name="soundNotificationVolume" value="'+Number(current.notificationVolume??75)+'"></label>'+
+      '</div>'+
+      '<div class="sound-studio-controls-grid">'+
+        '<label class="settings-toggle"><span><strong>Vibration</strong><small>Use device vibration where the platform allows it.</small></span><input type="checkbox" name="soundVibrationEnabled" '+(current.vibrationEnabled!==false?'checked':'')+'></label>'+
+        '<label class="settings-field"><span><strong>Vibration pattern</strong><small>Device support varies by platform.</small></span><select name="soundVibrationPattern">'+['standard','pulse','double','heartbeat','long'].map(value=>'<option value="'+value+'" '+((current.vibrationPattern||'standard')===value?'selected':'')+'>'+value.charAt(0).toUpperCase()+value.slice(1)+'</option>').join('')+'</select></label>'+
+      '</div>'+
+      '<div class="sound-studio-silence-grid"><label class="settings-toggle"><span><strong>Silent mode</strong><small>Mute Minglora app sound playback.</small></span><input type="checkbox" name="soundSilentMode" '+(current.silentMode?'checked':'')+'></label>'+
+        '<div class="sound-studio-dnd"><label class="settings-toggle"><span><strong>Do Not Disturb schedule</strong><small>Silence sounds during the selected local hours and days.</small></span><input type="checkbox" name="soundDndEnabled" '+(current.doNotDisturb?.enabled?'checked':'')+'></label>'+
+        '<div class="sound-studio-time-row"><label>From <input type="time" name="soundDndStart" value="'+escapeHtml(current.doNotDisturb?.start||'22:00')+'"></label><label>Until <input type="time" name="soundDndEnd" value="'+escapeHtml(current.doNotDisturb?.end||'07:00')+'"></label></div><div class="sound-studio-days">'+days+'</div></div></div>'+
+      '<div class="sound-studio-custom"><div><h3>Custom sounds</h3><p>Upload audio you own or are licensed to use. Files remain private to your Minglora account.</p></div><div class="sound-studio-custom-upload"><input type="text" id="sound-studio-custom-title" maxlength="100" placeholder="Custom sound name" aria-label="Custom sound name"><input type="file" id="sound-studio-custom-file" accept="audio/mpeg,audio/mp4,audio/ogg,audio/webm,audio/wav,audio/x-wav,audio/flac,audio/aac,.mp3,.m4a,.ogg,.opus,.webm,.wav,.flac,.aac"><label class="sound-studio-rights"><input type="checkbox" id="sound-studio-rights"> I own this audio or have permission to use it.</label><button type="button" class="primary" id="sound-studio-upload-button">Upload custom sound</button><p class="settings-form-status" id="sound-studio-upload-status" role="status" aria-live="polite"></p></div></div>'+
+      '<div class="sound-studio-library"><div class="settings-inline-heading"><div><h3>Sound library</h3><p>Preview every original sound and save favourites.</p></div><span class="sound-studio-count">120 sounds</span></div>'+
+      '<div class="sound-studio-library-filters"><input type="search" id="sound-studio-search" placeholder="Search sounds" aria-label="Search sounds"><select id="sound-studio-type-filter" aria-label="Filter sound type"><option value="all">All sounds</option><option value="voice">Voice call</option><option value="video">Video call</option><option value="notification">Notification</option><option value="custom">Custom</option></select><select id="sound-studio-theme-filter" aria-label="Filter sound theme"><option value="all">All themes</option>'+['Classic','Modern','Premium','Minimal','Digital','Cinematic'].map(theme=>'<option value="'+theme+'">'+theme+'</option>').join('')+'</select><label><input type="checkbox" id="sound-studio-favorites-only"> Favourites only</label></div>'+
+      '<div class="sound-studio-library-list" id="sound-studio-library-list">'+library.map(item=>renderSoundStudioLibraryItem(item,current.favorites||[])).join('')+'</div></div>'+
+      '<p class="settings-note">Downloaded sounds are cached for offline playback. Browser and operating-system push notifications may use the device’s own notification sound; Minglora controls in-app playback and vibration where supported.</p></section>';
+  }
+  function createSoundStudioPreview(catalog,customSounds){
+    let audio=null,endAt=0;
+    const stop=()=>{if(audio){audio.pause();audio.removeAttribute('src');audio.load();audio=null;}};
+    const play=async id=>{
+      const custom=(customSounds||[]).find(item=>item.id===id);
+      const sound=(catalog?.sounds||[]).find(item=>item.id===id);
+      if(!custom&&!sound)throw new Error('The selected sound is not in your library.');
+      stop();
+      audio=new Audio(custom?custom.url:catalog.audioPack);audio.preload='auto';audio.volume=1;audio.loop=false;
+      if(custom){await audio.play();return;}
+      await new Promise((resolve,reject)=>{if(audio.readyState>=1){resolve();return;}audio.addEventListener('loadedmetadata',resolve,{once:true});audio.addEventListener('error',()=>reject(new Error('The sound file could not be loaded.')),{once:true});});
+      audio.currentTime=sound.start;endAt=sound.end;
+      audio.ontimeupdate=()=>{if(audio&&audio.currentTime>=endAt-.025)stop();};
+      await audio.play();
+    };
+    return {play,stop};
+  }
   function sectionHeading(title) {
     return `<h2 class="settings-section-title">${title}</h2>`;
   }
@@ -136,12 +204,15 @@
         ?await api('/users/'+encodeURIComponent(result.account.id)+'/activity').catch(error=>({error:error.message,activity:[]}))
         :{activity:[]};
       const activityItems=Array.isArray(activityResult.activity)?activityResult.activity:[];
+      const soundStudioCatalog = await fetch('/sounds/catalog.json').then(response=>{if(!response.ok)throw new Error('Sound catalogue unavailable.');return response.json();}).catch(error=>{console.warn('[Minglora Sound Studio] Catalogue unavailable:',error.message);return null;});
+      const soundStudioCustomResult = await api('/sound-studio/custom').catch(error=>({error:error.message,sounds:[]}));
       const settings = {
         privacy: { ...defaults.privacy, ...(result.settings?.privacy || {}) },
         notifications: { ...defaults.notifications, ...(result.settings?.notifications || {}) },
         preferences: { ...defaults.preferences, ...(result.settings?.preferences || {}) },
         experience: { ...(result.settings?.experience || {}) }
       };
+      settings.preferences.soundStudio = { ...SOUND_STUDIO_DEFAULTS, ...(result.settings?.preferences?.soundStudio || {}) };
       applyPreferences(settings);
       window.dispatchEvent(new CustomEvent('minglora:settings-loaded', { detail: settings }));
       main.innerHTML = `
@@ -347,6 +418,7 @@
                 <p class="settings-form-status" id="call-ringtone-status" role="status" aria-live="polite">${escapeHtml(ringtoneResult.error||'')}</p>
               </div>
             </section>
+            ${renderSoundStudioMarkup(settings.preferences.soundStudio,soundStudioCatalog,soundStudioCustomResult.sounds||[])}
             <section class="settings-card theme-centre-card" id="settings-preferences" data-settings-category="content-display">
               ${sectionHeading('Theme Centre')}
               <div class="theme-centre-section">
@@ -706,6 +778,80 @@
         }
       }
       const settingsForm = document.querySelector('#settings-form');
+      const studioLibrary=document.querySelector('#sound-studio-library-list');
+      function applyStudioLibraryFilters(){
+        const search=(document.querySelector('#sound-studio-search')?.value||'').trim().toLowerCase();
+        const type=document.querySelector('#sound-studio-type-filter')?.value||'all';
+        const theme=document.querySelector('#sound-studio-theme-filter')?.value||'all';
+        const favoritesOnly=document.querySelector('#sound-studio-favorites-only')?.checked===true;
+        studioLibrary?.querySelectorAll('[data-sound-library-item]').forEach(item=>{
+          const favorite=item.querySelector('[data-sound-favorite]')?.classList.contains('is-favorite');
+          item.hidden=Boolean((search&&!item.dataset.soundSearch.includes(search))||(type!=='all'&&item.dataset.soundType!==type)||(theme!=='all'&&item.dataset.soundTheme!==theme)||(favoritesOnly&&!favorite));
+        });
+      }
+      settingsForm?.addEventListener('click',async event=>{
+        const preview=event.target.closest('[data-sound-preview]');
+        const selectedPreview=event.target.closest('[data-sound-preview-selection]');
+        const favorite=event.target.closest('[data-sound-favorite]');
+        const reset=event.target.closest('[data-sound-reset]');
+        if(preview||selectedPreview){
+          const id=preview?.dataset.soundPreview||(()=>{
+            const target=selectedPreview.dataset.soundPreviewSelection;
+            const name=target==='voice'?'voiceRingtoneId':target==='video'?'videoRingtoneId':'notificationSound_'+target;
+            return settingsForm.querySelector('[name="'+name+'"]')?.value;
+          })();
+          if(id)try{await soundStudioPreview.play(id);}catch(error){const status=document.querySelector('#sound-studio-upload-status');if(status)status.textContent=error.message;}
+          return;
+        }
+        if(favorite){
+          const active=!favorite.classList.contains('is-favorite');
+          favorite.classList.toggle('is-favorite',active);favorite.setAttribute('aria-pressed',active?'true':'false');favorite.textContent=active?'★ Saved':'☆ Save';
+          applyStudioLibraryFilters();queueSettingsSave();return;
+        }
+        if(reset){
+          const base=SOUND_STUDIO_DEFAULTS;
+          const setValue=(name,value)=>{const field=settingsForm.querySelector('[name="'+name+'"]');if(field)field.value=value;};
+          setValue('soundTheme',base.theme);setValue('voiceRingtoneId',base.voiceRingtoneId);setValue('videoRingtoneId',base.videoRingtoneId);
+          setValue('soundRingtoneVolume',base.ringtoneVolume);setValue('soundNotificationVolume',base.notificationVolume);setValue('soundVibrationPattern',base.vibrationPattern);
+          for(const category of SOUND_STUDIO_CATEGORIES){setValue('notificationSound_'+category.id,base.notifications[category.id]);const checkbox=settingsForm.querySelector('[name="soundCategoryEnabled_'+category.id+'"]');if(checkbox)checkbox.checked=true;}
+          [['soundEnabledVoiceCall',true],['soundEnabledVideoCall',true],['soundVibrationEnabled',true],['soundSilentMode',false],['soundDndEnabled',false]].forEach(([name,value])=>{const field=settingsForm.querySelector('[name="'+name+'"]');if(field)field.checked=value;});
+          setValue('soundDndStart',base.doNotDisturb.start);setValue('soundDndEnd',base.doNotDisturb.end);
+          settingsForm.querySelectorAll('[name="soundDndDay"]').forEach(field=>field.checked=true);
+          studioLibrary?.querySelectorAll('[data-sound-favorite]').forEach(button=>{button.classList.remove('is-favorite');button.setAttribute('aria-pressed','false');button.textContent='☆ Save';});
+          settingsForm.dispatchEvent(new Event('change',{bubbles:true}));applyStudioLibraryFilters();return;
+        }
+      });
+      ['#sound-studio-search','#sound-studio-type-filter','#sound-studio-theme-filter','#sound-studio-favorites-only'].forEach(selector=>document.querySelector(selector)?.addEventListener('input',applyStudioLibraryFilters));
+      document.querySelector('#sound-studio-type-filter')?.addEventListener('change',applyStudioLibraryFilters);
+      document.querySelector('#sound-studio-theme-filter')?.addEventListener('change',applyStudioLibraryFilters);
+      document.querySelector('#sound-studio-favorites-only')?.addEventListener('change',applyStudioLibraryFilters);
+      ['soundRingtoneVolume','soundNotificationVolume'].forEach(name=>settingsForm.querySelector('[name="'+name+'"]')?.addEventListener('input',event=>{
+        const output=document.querySelector(name==='soundRingtoneVolume'?'#sound-ringtone-volume-value':'#sound-notification-volume-value');
+        if(output)output.textContent=event.currentTarget.value;
+      }));
+      document.querySelector('#sound-studio-upload-button')?.addEventListener('click',()=>document.querySelector('#sound-studio-custom-file')?.click());
+      document.querySelector('#sound-studio-custom-file')?.addEventListener('change',async event=>{
+        const file=event.currentTarget.files?.[0];if(!file)return;
+        const status=document.querySelector('#sound-studio-upload-status');
+        const title=document.querySelector('#sound-studio-custom-title')?.value.trim()||file.name.replace(/\.[^.]+$/,'');
+        if(!document.querySelector('#sound-studio-rights')?.checked){if(status)status.textContent='Confirm that you own this audio or have permission to use it.';event.currentTarget.value='';return;}
+        try{
+          if(status)status.textContent='Preparing secure upload…';
+          const audio=new Audio(),url=URL.createObjectURL(file);
+          const durationMs=await new Promise(resolve=>{let done=false;const finish=value=>{if(done)return;done=true;audio.removeAttribute('src');URL.revokeObjectURL(url);resolve(value);};audio.onloadedmetadata=()=>finish(Number.isFinite(audio.duration)?Math.round(audio.duration*1000):0);audio.onerror=()=>finish(0);audio.src=url;});
+          const asset=await window.uploadMediaFile('sound',file,1,0,progress=>{if(status)status.textContent=progress.finalizing?'Upload complete…':'Uploading · '+progress.percentage+'%';});
+          const saved=await api('/sound-studio/custom',{method:'POST',body:JSON.stringify({assetId:asset.id,title,rightsConfirmed:true,durationMs})});
+          soundStudioCustomResult.sounds ||= [];soundStudioCustomResult.sounds.push(saved.sound);
+          settingsForm.querySelectorAll('select[name="voiceRingtoneId"],select[name="videoRingtoneId"],select[name^="notificationSound_"]').forEach(select=>{
+            const option=document.createElement('option');option.value=saved.sound.id;option.textContent='Custom · '+saved.sound.title;select.append(option);
+          });
+          if(studioLibrary)studioLibrary.insertAdjacentHTML('beforeend',renderSoundStudioLibraryItem({id:saved.sound.id,name:saved.sound.title,type:'custom',style:'Personal'},settings.preferences.soundStudio.favorites||[]));
+          if(status)status.textContent='Custom sound uploaded and ready to preview or assign.';
+          event.currentTarget.value='';applyStudioLibraryFilters();
+        }catch(error){if(status)status.textContent='Custom sound upload failed. '+error.message;}
+      });
+      applyStudioLibraryFilters();
+
       document.querySelector('#settings-display-currency')?.addEventListener('change',event=>{
         displayCurrency=event.currentTarget.value||'USD';
         void refreshSettingsCurrency();
@@ -961,6 +1107,28 @@
       let settingsSaveTimer = null;
       let settingsSaveQueue = Promise.resolve();
 
+      const soundStudioPreview = createSoundStudioPreview(soundStudioCatalog,soundStudioCustomResult.sounds||[]);
+      function collectSoundStudioPayload(formData){
+        const current=settings.preferences.soundStudio||SOUND_STUDIO_DEFAULTS;
+        return {
+          theme:formData.get('soundTheme')||current.theme,
+          voiceRingtoneId:formData.get('voiceRingtoneId')||current.voiceRingtoneId,
+          videoRingtoneId:formData.get('videoRingtoneId')||current.videoRingtoneId,
+          notifications:Object.fromEntries(SOUND_STUDIO_CATEGORIES.map(category=>[category.id,formData.get('notificationSound_'+category.id)||current.notifications[category.id]])),
+          favorites:[...document.querySelectorAll('[data-sound-favorite].is-favorite')].map(button=>button.dataset.soundFavorite).slice(0,200),
+          ringtoneVolume:Number(formData.get('soundRingtoneVolume')??current.ringtoneVolume),
+          notificationVolume:Number(formData.get('soundNotificationVolume')??current.notificationVolume),
+          vibrationEnabled:formData.has('soundVibrationEnabled'),
+          vibrationPattern:formData.get('soundVibrationPattern')||current.vibrationPattern,
+          silentMode:formData.has('soundSilentMode'),
+          enabled:{
+            voiceCall:formData.has('soundEnabledVoiceCall'),
+            videoCall:formData.has('soundEnabledVideoCall'),
+            notifications:Object.fromEntries(SOUND_STUDIO_CATEGORIES.map(category=>[category.id,formData.has('soundCategoryEnabled_'+category.id)]))
+          },
+          doNotDisturb:{enabled:formData.has('soundDndEnabled'),start:formData.get('soundDndStart')||'22:00',end:formData.get('soundDndEnd')||'07:00',days:formData.getAll('soundDndDay').map(Number)}
+        };
+      }
       function collectSettingsPayload() {
         const formData = new FormData(settingsForm);
         return {
@@ -997,7 +1165,8 @@
             reducedMotion: formData.has('reducedMotion'),
             liteMode: formData.has('liteMode'),
             displayCurrency: formData.get('displayCurrency') || 'USD',
-            keyboardShortcuts: formData.has('keyboardShortcuts')
+            keyboardShortcuts: formData.has('keyboardShortcuts'),
+            soundStudio: collectSoundStudioPayload(formData)
           },
           experience: {
             density: formData.get('experienceDensity') || settings.experience.density || 'comfortable',
