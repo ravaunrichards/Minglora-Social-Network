@@ -53,7 +53,7 @@ test('Messenger controls connect to conversation, user, settings and read-receip
   ]);
 
   assert.ok(app.includes("const messengerButton=$('#messenger-btn')"));
-  assert.ok(app.includes('messengerButton.onclick=()=>{void toggleMessengerPanel()'));
+  assert.ok(app.includes('messengerButton.onclick=()=>{void toggleMessengerPanel()'), 'the global Messenger quick-access panel remains available');
   assert.ok(app.includes("const notificationsButton=$('#notifications-btn')"));
   assert.ok(app.includes("panel.querySelector('[data-messenger-close]')?.addEventListener('click',closeMessengerPanel)"));
   const activateNavStart=app.indexOf('function activateNav(view){');
