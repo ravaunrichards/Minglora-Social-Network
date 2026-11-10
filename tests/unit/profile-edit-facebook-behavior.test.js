@@ -59,6 +59,6 @@ test('the updated profile editor JavaScript bypasses stale service-worker assets
   const cacheName=worker.match(/CACHE_NAME='([^']+)'/)?.[1]||'';
   assert.ok(appAsset.length>0);
   assert.ok(worker.includes('/'+appAsset));
-  assert.match(appAsset,/facebook-edit-profile/);
+  assert.match(appAsset,/^app\.js\?v=[a-z0-9-]+$/);
   assert.match(cacheName,/^minglora-shell-v\d+-/);
 });
