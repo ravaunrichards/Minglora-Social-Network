@@ -207,6 +207,8 @@ export async function handlePersonalAiBotsAdminApi(context) {
         emailIdentitiesSource:Array.isArray(emailIdentities)?'minglora_supabase_postgresql':'unavailable',
         safetyReports:Array.isArray(safetyReports)?safetyReports:[],
         safetyReportsSource:Array.isArray(safetyReports)?'minglora_supabase_postgresql':'unavailable',
+        safetyReportsNextOffset:Array.isArray(safetyReports)?safetyReports.length:0,
+        safetyReportsHasMore:Array.isArray(safetyReports)&&safetyReports.length===100,
         categories:getPersonalAiBotCategories(db),
         departments:getPersonalAiBotDepartments(db),
         jobPositions:PERSONAL_AI_BOT_JOB_POSITIONS,
@@ -532,9 +534,16 @@ export async function handlePersonalAiBotsAdminApi(context) {
     if(method==='GET'&&path===root+'/safety/reports'){
       if(typeof listAiIdentityReports!=='function')return (json(res,503,{error:'AI report review storage is unavailable.'}),true);
       const status=String(url.searchParams.get('status')||'pending');
-      if(!['all','open','pending','in_review','actioned','dismissed'].includes(status))return (json(res,400,{error:'AI report status filter is invalid.'}),true);
-      const reports=await listAiIdentityReports({status,limit:200,offset:0});
-      return (json(res,200,{ok:true,reports:Array.isArray(reports)?reports:[]}),true);
+      const limit=Number(url.searchParams.get('limit')||100);
+      const offset=Number(url.searchParams.get('offset')||0);
+      if(!['all','open','pending','in_review','actioned','dismissed'].includes(status)||
+         !Number.isInteger(limit)||limit<1||limit>200||
+         !Number.isInteger(offset)||offset<0||offset>1000000000){
+        return (json(res,400,{error:'AI report status filter or pagination is invalid.'}),true);
+      }
+      const result=await listAiIdentityReports({status,limit,offset});
+      const reports=Array.isArray(result)?result:[];
+      return (json(res,200,{ok:true,reports,nextOffset:offset+reports.length,hasMore:reports.length===limit}),true);
     }
     const safetyReportMatch=path.match(/^\/api\/admin\/personal-ai-bots\/safety\/reports\/([0-9a-f-]{36})$/i);
     if(safetyReportMatch&&method==='PATCH'){
