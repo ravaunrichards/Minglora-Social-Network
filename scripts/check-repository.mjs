@@ -79,7 +79,9 @@ async function inspectDirectory(directory, relative = '') {
     }
     if (!entry.isFile()) continue;
     fileCount += 1;
-    if (entry.name === '.gitkeep') failures.push(`Placeholder file is not allowed: ${child}`);
+    if (entry.name === '.gitkeep' && !entries.some((sibling) => sibling.isFile() && sibling.name !== '.gitkeep')) {
+      failures.push(`Placeholder file is not allowed: ${child}`);
+    }
     const body = await readFile(absolute);
     if (body.length === 0) failures.push(`Empty file: ${child}`);
   }

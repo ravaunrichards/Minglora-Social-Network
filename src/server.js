@@ -13,6 +13,7 @@ import { broadcastLiveKitData, createLiveKitToken, deleteLiveKitRoom, ensureLive
 import { LIVE_MODES, broadcastTypeForLiveMode, getLivePublishSourceNames, normalizeLiveSettings } from '../backend/modules/live/settings.js';
 import { canAccessMeetWaveRoom, canManageMeetWaveParticipants, canReceiveMeetWaveInvitation, meetWaveRoomJoinAvailability, normalizeMeetWaveMessage, validateMeetWaveRoomInput, MEETWAVE_PARTICIPANT_LIMIT } from '../backend/modules/meetwave/service.js';
 import { CALL_RING_TIMEOUT_MS, CALL_MAX_PARTICIPANTS, CALL_RINGTONE_MIME_TYPES, CALL_RINGTONE_MAX_BYTES, countCallParticipants, expireRingingCall, isCallParticipantBusy, reconcileCallPresence, validateCallRingtoneUpload } from '../backend/modules/calls/service.js';
+import { SOUND_STUDIO_THEMES, SOUND_STUDIO_CATEGORIES, normalizeSoundStudioPreferences, validateSoundStudioPatch } from '../backend/modules/sounds/notification-studio.js';
 import { createMessengerRealtimeHub } from '../backend/modules/messaging/realtime.js';
 import { createCurrencyConverterService, normalizeCurrencyCode } from '../backend/modules/currency-converter/service.js';
 import { normalizeCalendarEntry } from '../backend/modules/calendar/service.js';
@@ -6482,6 +6483,65 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
         if(previous)await mediaGateway('media_delete',{ownerId:user.id,bucket:previous.bucket,path:previous.path}).catch(error=>console.warn('[Minglora ringtone] Ringtone cleanup failed.',{message:error.message}));
         return json(res,200,{ok:true,ringtone:null});
       }
+      if(method==='GET'&&p==='/api/sounds/preferences'){
+        const normalized=normalizeSoundStudioPreferences(user,db.mediaAssets||[]);
+        if(normalized.changed)await saveStore();
+        const customSounds=[];
+        for(const item of normalized.settings.customSounds||[]){
+          const asset=(db.mediaAssets||[]).find(candidate=>candidate.id===item.assetId&&candidate.ownerId===user.id&&candidate.slot==='ringtone'&&candidate.status==='attached');
+          if(asset)customSounds.push({...item,url:await resolveAssetUrl(asset),mimeType:asset.mimeType});
+        }
+        return json(res,200,{settings:{...normalized.settings,customSounds},customSounds,themes:SOUND_STUDIO_THEMES,categories:SOUND_STUDIO_CATEGORIES});
+      }
+      if(method==='PATCH'&&p==='/api/sounds/preferences'){
+        const normalized=normalizeSoundStudioPreferences(user,db.mediaAssets||[]);
+        const validation=validateSoundStudioPatch(normalized.settings,input,normalized.settings.customSounds.map(item=>item.id));
+        if(!validation.valid)return json(res,400,{error:validation.error});
+        user.soundStudio={...validation.settings,customSounds:normalized.settings.customSounds};
+        await saveStore();
+        const customSounds=[];
+        for(const item of user.soundStudio.customSounds){
+          const asset=(db.mediaAssets||[]).find(candidate=>candidate.id===item.assetId&&candidate.ownerId===user.id&&candidate.status==='attached');
+          if(asset)customSounds.push({...item,url:await resolveAssetUrl(asset),mimeType:asset.mimeType});
+        }
+        return json(res,200,{settings:{...user.soundStudio,customSounds},customSounds});
+      }
+      if(method==='POST'&&p==='/api/sounds/custom'){
+        if(input.rightsConfirmed!==true)return json(res,400,{error:'Confirm that you own this audio or have permission to use it.'});
+        const asset=(db.mediaAssets||[]).find(item=>item.id===String(input.assetId||'')&&item.ownerId===user.id&&item.slot==='ringtone'&&item.bucket==='minglora-ringtones'&&item.status==='uploaded');
+        if(!asset)return json(res,404,{error:'The uploaded sound could not be found in your private media uploads.'});
+        const validation=validateCallRingtoneUpload({mimeType:asset.mimeType,byteSize:asset.byteSize});
+        if(!validation.valid)return json(res,400,{error:validation.error});
+        const normalized=normalizeSoundStudioPreferences(user,db.mediaAssets||[]);
+        if(normalized.settings.customSounds.length>=30)return json(res,409,{error:'Your private Sound Studio library is full. Remove a custom sound before uploading another.'});
+        const title=String(input.title||asset.originalName||'Custom sound').trim().slice(0,100)||'Custom sound';
+        asset.status='attached';asset.attachedTo='account:sound-studio';asset.completedAt=asset.completedAt||now();
+        const custom={id:'custom:'+asset.id,assetId:asset.id,title,mimeType:asset.mimeType,durationMs:Number.isSafeInteger(Number(input.durationMs))?Math.max(0,Math.min(Number(input.durationMs),3600000)):Number(asset.durationMs||0)};
+        user.soundStudio={...normalized.settings,customSounds:[...normalized.settings.customSounds.filter(item=>item.assetId!==asset.id),custom]};
+        await saveStore();
+        const url=await resolveAssetUrl(asset);
+        const customSounds=user.soundStudio.customSounds.map(item=>item.assetId===asset.id?{...item,url}:item);
+        return json(res,201,{ok:true,sound:customSounds.find(item=>item.assetId===asset.id),settings:{...user.soundStudio,customSounds},customSounds});
+      }
+      const soundStudioCustomMatch=p.match(/^\/api\/sounds\/custom\/([^/]+)$/);
+      if(method==='DELETE'&&soundStudioCustomMatch){
+        let soundId='';
+        try{soundId=decodeURIComponent(soundStudioCustomMatch[1]);}catch{return json(res,400,{error:'Invalid custom sound identifier.'});}
+        const normalized=normalizeSoundStudioPreferences(user,db.mediaAssets||[]);
+        const custom=normalized.settings.customSounds.find(item=>item.id===soundId);
+        if(!custom)return json(res,404,{error:'That private custom sound was not found.'});
+        const asset=(db.mediaAssets||[]).find(item=>item.id===custom.assetId&&item.ownerId===user.id&&item.slot==='ringtone');
+        const next={...normalized.settings,customSounds:normalized.settings.customSounds.filter(item=>item.id!==soundId),favorites:normalized.settings.favorites.filter(id=>id!==soundId)};
+        if(next.voiceCall.soundId===soundId)next.voiceCall={...next.voiceCall,soundId:'voice-01'};
+        if(next.videoCall.soundId===soundId)next.videoCall={...next.videoCall,soundId:'video-01'};
+        for(const category of SOUND_STUDIO_CATEGORIES)if(next.notifications[category.key]?.soundId===soundId)next.notifications[category.key]={...next.notifications[category.key],soundId:category.defaultSoundId};
+        if(asset){asset.status='deleted';asset.deletedAt=now();}
+        if(user.callRingtoneAssetId===custom.assetId)user.callRingtoneAssetId=null;
+        user.soundStudio=next;await saveStore();
+        if(asset)void mediaGateway('media_delete',{ownerId:user.id,bucket:asset.bucket,path:asset.path}).catch(error=>console.warn('[Minglora Sound Studio] Custom audio cleanup failed.',{message:error.message}));
+        return json(res,200,{ok:true});
+      }
+
       if(method==='GET'&&p==='/api/calls/incoming'){
         // A ringing invitation is already persisted in Minglora's call ledger.
         // Do not make its display depend on a LiveKit presence reconciliation:

@@ -7927,7 +7927,7 @@ async function refreshMessageConversations(){
       if(fresh.length){
         const restricted=new Set(state.settings?.preferences?.messengerRestrictedUserIds||[]);
         const eligibleFresh=fresh.filter(item=>!item.conversation.isRequest&&!restricted.has(item.conversation.user.id));
-        if(eligibleFresh.length&&state.settings?.preferences?.messengerMessageSounds!==false)playMessengerMessageSound();
+        if(eligibleFresh.length&&state.settings?.preferences?.messengerMessageSounds!==false){const category=eligibleFresh.some(item=>item.message.groupId)?'group_message':eligibleFresh.some(item=>(item.message.attachments||[]).some(file=>file.mediaType==='audio'))?'voice_message':'message';playMessengerMessageSound(category);}
         if(eligibleFresh.length&&state.settings?.preferences?.messengerAutoOpenNewMessages===true){
           const peers=[...new Map(eligibleFresh.map(item=>[item.conversation.user.id,item.conversation.user])).values()];
           peers.forEach(member=>{if(!state.messageWindows.some(win=>win.user.id===member.id))openMessageWindow(member);});
@@ -8253,8 +8253,9 @@ async function updateMessengerBadge(){
 
 function messengerPreferences(){return state.settings?.preferences||{};}
 function messengerPreference(key,fallback){const value=messengerPreferences()[key];return value===undefined?fallback:value;}
-function playMessengerMessageSound(){
+function playMessengerMessageSound(category='message'){
   try{
+    if(window.MingloraSoundStudio?.playNotification){void window.MingloraSoundStudio.playNotification(category);return;}
     const experience=window.MingloraExperience?.getSettings?.();
     if((window.MingloraExperience?.shouldSilenceNotifications?.('message')||experience?.soundMode==='mute')||experience?.messageSound===false)return;
     if(state.settings?.preferences?.messengerMessageSounds===false)return;
@@ -8548,14 +8549,33 @@ async function startIncomingRingtone(call=null){
  if(state.settings?.preferences?.messengerIncomingCallSounds===false||window.MingloraExperience?.shouldSilenceNotifications?.('call')||experience?.soundMode==='mute'){stopCallTone();return false;}
  stopCallTone();
  if(experience?.soundMode==='vibrate'){
-   if(experience.vibrateOnRing&&typeof navigator.vibrate==='function')navigator.vibrate([260,130,260]);
+   if(experience.vibrateOnRing!==false){
+     if(window.MingloraSoundStudio?.vibrate)window.MingloraSoundStudio.vibrate();
+     else if(typeof navigator.vibrate==='function')navigator.vibrate([260,130,260]);
+   }
    return true;
  }
  if(soundEnabled===false)return false;
- if(experience?.vibrateOnRing&&typeof navigator.vibrate==='function')navigator.vibrate([100,70,100]);
+ if(experience?.vibrateOnRing!==false){
+   if(window.MingloraSoundStudio?.vibrate)window.MingloraSoundStudio.vibrate();
+   else if(typeof navigator.vibrate==='function')navigator.vibrate([100,70,100]);
+ }
+ if(window.MingloraSoundStudio?.getCallSound){
+   try{
+     const selected=await window.MingloraSoundStudio.getCallSound(voiceCall?'voice':'video');
+     if(!selected?.enabled||!selected.url)return false;
+     const audio=new Audio(selected.url);audio.loop=true;audio.preload='auto';
+     audio.volume=Math.max(0,Math.min(100,Number(experience?.ringtoneVolume??80)))/100;
+     callRingtoneAudio=audio;await audio.play();return true;
+   }catch(error){
+     callRingtoneAudio=null;
+     console.warn('[Minglora] Selected call ringtone could not play:',error?.message||error);
+     return false;
+   }
+ }
  const ringtone=await getCallRingtone();
  if(ringtone?.url){try{const audio=new Audio(ringtone.url);audio.loop=true;audio.preload='auto';audio.volume=Math.max(0,Math.min(100,Number(experience?.ringtoneVolume??80)))/100;callRingtoneAudio=audio;await audio.play();return true;}catch{callRingtoneAudio=null;}}
- const started=playCallTone([440,480,620],950);callToneTimer=setInterval(()=>playCallTone([440,480,620],950),3000);return started;
+ return false;
 }
 function mountMingloraCallOverlay(overlay){
  document.body.append(overlay);
@@ -9178,12 +9198,19 @@ async function pollBrowserNotifications(){
       browserNotificationPrimed=true;
     }else{
       fresh=items.filter(item=>!browserNotificationSeen.has(item.id));
+      if(!webPushSubscriptionActive){
+        const alreadyHandledByMessengerOrCall=new Set(['message','group_message','voice_message','call']);
+        for(const item of fresh){
+          if(alreadyHandledByMessengerOrCall.has(item.type))continue;
+          void window.MingloraSoundStudio?.playNotification?.(item.type,item.id);
+        }
+      }
       for(const item of fresh){
         browserNotificationSeen.add(item.id);
         if(webPushSubscriptionActive||state.settings?.notifications?.push===false||!('Notification' in window)||Notification.permission!=='granted')continue;
         const title=item.type==='live'?'Minglora LIVE':item.type==='live_moderator'?'LIVE moderator update':item.type==='call'?'Incoming Minglora call':item.type==='profile_view'?'Profile view':item.type==='gift'?'New gift':item.type==='fan_club'?'Fan Club update':item.type==='meetwave_invite'?'MeetWave invitation':item.type==='league_match'?'League match update':item.type==='friend'?'Friend update':item.type==='reaction'?'Post reaction':item.type==='comment'?'New comment':item.type==='follow'?'New follower':item.type==='message'?'New Minglora message':'Minglora account update';
         try{
-          const notice=new Notification(title,{body:item.text||'You have a new Minglora notification.',tag:'minglora-'+item.id,icon:'/assets/icons/minglora-push.svg'});
+          const notice=new Notification(title,{body:item.text||'You have a new Minglora notification.',tag:'minglora-'+item.id,icon:'/assets/icons/minglora-push.svg',silent:true});
           notice.onclick=()=>{window.focus();renderNotifications();notice.close();};
         }catch(error){
           console.warn('Minglora could not display a browser notification:',error?.message||error);

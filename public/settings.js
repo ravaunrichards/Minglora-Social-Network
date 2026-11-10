@@ -109,14 +109,13 @@
     if (!main) return;
     main.innerHTML = '<section class="card empty-state"><h3>Loading Settings &amp; privacy…</h3></section>';
     try {
-      const [result, blockedResult, sessionResult, mfaResult, supportResult, reportResult, moderationAccess, adminWorkspaceAccess, ringtoneResult, profileViewsResult, walletResult, creatorEarningsResult] = await Promise.all([
+      const [result, blockedResult, sessionResult, mfaResult, supportResult, reportResult, moderationAccess, adminWorkspaceAccess, profileViewsResult, walletResult, creatorEarningsResult] = await Promise.all([
         api('/settings'),api('/blocks'),api('/security/sessions').catch(error=>({error:error.message,sessions:[]})),
         api('/security/mfa').catch(error=>({error:error.message,available:false,factors:[]})),
         api('/support/tickets').catch(error=>({error:error.message,tickets:[]})),
         api('/reports/mine').catch(error=>({error:error.message,reports:[]})),
         api('/moderation/access').catch(()=>({canModerate:false})),
         api('/admin/access').catch(()=>({canAccess:false,setupRequired:false})),
-        api('/calls/ringtone').catch(error=>({error:error.message,ringtone:null})),
         api('/profile-views').catch(error=>({enabled:false,viewers:[],error:error.message})),
         api('/coins/wallet').catch(error=>({error:error.message,wallet:null})),
         api('/creator/earnings').catch(error=>({error:error.message,availableMinor:null,earnedMinor:null}))
@@ -328,24 +327,11 @@
             </section>
             <section class="settings-card" id="settings-calls" data-settings-category="interactions">
               ${sectionHeading('Voice &amp; video calls')}
-              <div class="settings-security-form">
-                <h3>Your incoming-call ringtone</h3>
-                <p class="muted">Choose a ringtone or a song from your device. It plays when Minglora rings while the app is open. Your ringtone is private to your account.</p>
-                <p class="settings-note">Supported: MP3, M4A, OGG, WebM, WAV, FLAC and AAC · Maximum 20 MB.</p>
-                <div class="call-ringtone-picker-row">
-                  <div class="call-ringtone-current" id="call-ringtone-current">
-                    <strong>${ringtoneResult.ringtone ? escapeHtml(ringtoneResult.ringtone.name) : 'Minglora default ringtone'}</strong>
-                    <small>${ringtoneResult.ringtone ? 'Your custom ringtone is selected.' : 'No custom ringtone selected.'}</small>
-                  </div>
-                  <div class="call-ringtone-actions">
-                    <input id="call-ringtone-file" type="file" accept="audio/mpeg,audio/mp4,audio/ogg,audio/webm,audio/wav,audio/x-wav,audio/flac,audio/aac,.mp3,.m4a,.ogg,.opus,.webm,.wav,.flac,.aac" hidden>
-                    <button type="button" class="primary" id="choose-call-ringtone">Choose ringtone or song</button>
-                    <button type="button" class="secondary" id="remove-call-ringtone" ${ringtoneResult.ringtone ? '' : 'hidden'}>Use default ringtone</button>
-                  </div>
-                </div>
-                <audio id="call-ringtone-preview" class="call-ringtone-preview" controls preload="none" ${ringtoneResult.ringtone?.url ? 'src="'+escapeHtml(ringtoneResult.ringtone.url)+'"' : 'hidden'}></audio>
-                <p class="settings-form-status" id="call-ringtone-status" role="status" aria-live="polite">${escapeHtml(ringtoneResult.error||'')}</p>
-              </div>
+              <p class="muted">Voice-call and video-call ringtones are configured independently in Sound &amp; Notifications below. Your previous custom ringtone is retained in your private sound library.</p>
+            </section>
+            <section class="settings-card" id="settings-sound-studio" data-settings-category="interactions">
+              ${sectionHeading('Sound &amp; Notifications')}
+              <div id="minglora-sound-studio-root"></div>
             </section>
             <section class="settings-card theme-centre-card" id="settings-preferences" data-settings-category="content-display">
               ${sectionHeading('Theme Centre')}
@@ -635,39 +621,6 @@
       }
       if(canModerate){loadModerationQueue();loadModeratorSupportInbox();}
       
-      const ringtoneInput=document.querySelector('#call-ringtone-file');
-      const ringtoneStatus=document.querySelector('#call-ringtone-status');
-      const ringtoneCurrent=document.querySelector('#call-ringtone-current');
-      const ringtonePreview=document.querySelector('#call-ringtone-preview');
-      const ringtoneRemove=document.querySelector('#remove-call-ringtone');
-      document.querySelector('#choose-call-ringtone')?.addEventListener('click',()=>ringtoneInput?.click());
-      ringtoneInput?.addEventListener('change',async()=>{
-        const file=ringtoneInput.files?.[0];if(!file)return;
-        ringtoneStatus.textContent='Uploading '+file.name+'…';
-        try{
-          const asset=await window.uploadMediaFile('ringtone',file,1,0,progress=>{
-            ringtoneStatus.textContent=progress.finalizing?'Upload complete. Saving ringtone…':'Uploading ringtone · '+progress.percentage+'%';
-          });
-          const saved=await api('/calls/ringtone',{method:'POST',body:JSON.stringify({assetId:asset.id})});
-          ringtonePreview.src=saved.ringtone.url;ringtonePreview.hidden=false;ringtonePreview.load();
-          ringtoneCurrent.innerHTML='<strong>'+escapeHtml(saved.ringtone.name)+'</strong><small>Your custom ringtone is selected.</small>';
-          ringtoneRemove.hidden=false;ringtoneStatus.textContent='Your incoming-call ringtone has been saved.';
-          window.dispatchEvent(new CustomEvent('minglora:call-ringtone-updated'));
-        }catch(error){ringtoneStatus.textContent='Could not save ringtone. '+error.message;}
-        finally{ringtoneInput.value='';}
-      });
-      ringtoneRemove?.addEventListener('click',async()=>{
-        ringtoneRemove.disabled=true;ringtoneStatus.textContent='Removing custom ringtone…';
-        try{
-          await api('/calls/ringtone',{method:'DELETE'});
-          ringtonePreview.pause();ringtonePreview.removeAttribute('src');ringtonePreview.hidden=true;ringtonePreview.load();
-          ringtoneCurrent.innerHTML='<strong>Minglora default ringtone</strong><small>No custom ringtone selected.</small>';
-          ringtoneRemove.hidden=true;ringtoneStatus.textContent='Minglora default ringtone restored.';
-          window.dispatchEvent(new CustomEvent('minglora:call-ringtone-updated'));
-        }catch(error){ringtoneStatus.textContent='Could not remove ringtone. '+error.message;}
-        finally{ringtoneRemove.disabled=false;}
-      });
-
       let displayCurrency=settings.preferences.displayCurrency||'USD';
       let displayRate=displayCurrency==='USD'?1:null;
       let displayRateDate=null;
