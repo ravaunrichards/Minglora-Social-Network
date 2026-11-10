@@ -4,6 +4,20 @@ export const CALL_MAX_PARTICIPANTS=8;
 export const CALL_ACTIVE_PARTICIPANT_STATUSES=Object.freeze(["calling","invited","joined"]);
 export const CALL_TERMINAL_STATUSES=Object.freeze(["ended","cancelled","declined","missed"]);
 export const CALL_RINGTONE_MAX_BYTES=20*1024*1024;
+export const CALL_RINGTONE_DEFAULTS=Object.freeze({voice:"classic-phone",video:"glass-chime"});
+export const CALL_RINGTONE_PRESET_IDS=Object.freeze([
+ "classic-phone","retro-polyphonic","warm-marimba","digital-pulse",
+ "soft-piano","double-bell","glass-chime","radar-ping"
+]);
+export function normalizeCallRingtoneKind(value){
+ const kind=String(value??"").trim().toLowerCase();
+ if(kind==="voice"||kind==="audio")return "voice";
+ if(kind==="video")return "video";
+ return null;
+}
+export function isCallRingtonePresetId(value){
+ return CALL_RINGTONE_PRESET_IDS.includes(String(value??""));
+}
 export const CALL_RINGTONE_MIME_TYPES=Object.freeze({
  "audio/mpeg":"mp3","audio/mp4":"m4a","audio/ogg":"ogg","audio/webm":"webm",
  "audio/wav":"wav","audio/x-wav":"wav","audio/flac":"flac","audio/aac":"aac"
