@@ -571,7 +571,7 @@ test('owner provider overview reads canonical assignments without exposing crede
     credentialConfigured:true,providerHealthStatus:'unknown',assignmentStatus:'configured'
   };
   const context=makeContext({listAiProviderAssignments:async options=>{
-    assert.deepEqual(options,{limit:200,offset:0});
+    assert.deepEqual(options,{limit:100,offset:0});
     return [row];
   }});
   await handlePersonalAiBotsAdminApi(context);
@@ -653,7 +653,7 @@ test('AI email overview reads PostgreSQL records and preserves provisioning trut
   };
   const context=makeContext({
     listAiEmailIdentities:async options=>{
-      assert.deepEqual(options,{limit:200,offset:0});
+      assert.deepEqual(options,{limit:100,offset:0});
       return [row];
     }
   });
