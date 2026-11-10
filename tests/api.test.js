@@ -237,6 +237,31 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   const defaultCallRingtone = await request('/api/calls/ringtone');
   assert.equal(defaultCallRingtone.status, 200);
   assert.equal(defaultCallRingtone.body.ringtone, null);
+  assert.deepEqual(defaultCallRingtone.body.ringtones, {
+    voice: { selectedId: 'classic-phone', custom: null },
+    video: { selectedId: 'glass-chime', custom: null }
+  });
+  const savedVoiceRingtone = await request('/api/calls/ringtone', {
+    method: 'PATCH', body: JSON.stringify({ kind: 'voice', ringtoneId: 'soft-piano' })
+  });
+  assert.equal(savedVoiceRingtone.status, 200);
+  const savedVideoRingtone = await request('/api/calls/ringtone', {
+    method: 'PATCH', body: JSON.stringify({ kind: 'video', ringtoneId: 'radar-ping' })
+  });
+  assert.equal(savedVideoRingtone.status, 200);
+  const rejectedRingtone = await request('/api/calls/ringtone', {
+    method: 'PATCH', body: JSON.stringify({ kind: 'video', ringtoneId: 'unapproved-audio-url' })
+  });
+  assert.equal(rejectedRingtone.status, 400);
+  const independentRingtones = await request('/api/calls/ringtone');
+  assert.equal(independentRingtones.body.ringtones.voice.selectedId, 'soft-piano');
+  assert.equal(independentRingtones.body.ringtones.video.selectedId, 'radar-ping');
+  const removedVoiceUpload = await request('/api/calls/ringtone?kind=voice', { method: 'DELETE' });
+  assert.equal(removedVoiceUpload.status, 200);
+  assert.equal(removedVoiceUpload.body.selectedId, 'soft-piano');
+  const videoRingtoneAfterVoiceRemoval = await request('/api/calls/ringtone');
+  assert.equal(videoRingtoneAfterVoiceRemoval.body.ringtones.voice.selectedId, 'soft-piano');
+  assert.equal(videoRingtoneAfterVoiceRemoval.body.ringtones.video.selectedId, 'radar-ping');
   const unconfiguredCallStart = await request('/api/calls', {
     method: 'POST', body: JSON.stringify({ to: 'unavailable-recipient', kind: 'audio' })
   });
