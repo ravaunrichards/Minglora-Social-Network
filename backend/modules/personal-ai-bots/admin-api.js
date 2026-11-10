@@ -192,8 +192,8 @@ export async function handlePersonalAiBotsAdminApi(context) {
       const identityRecords=typeof listAiIdentities==='function'?await listAiIdentities({limit:100,offset:0}):null;
       const durableTasks=typeof listAiBotTasks==='function'?await listAiBotTasks({limit:100,offset:0}):null;
       const durableTaskStats=typeof getAiBotTaskStats==='function'?await getAiBotTaskStats():null;
-      const providerAssignments=typeof listAiProviderAssignments==='function'?await listAiProviderAssignments({limit:200,offset:0}):null;
-      const emailIdentities=typeof listAiEmailIdentities==='function'?await listAiEmailIdentities({limit:200,offset:0}):null;
+      const providerAssignments=typeof listAiProviderAssignments==='function'?await listAiProviderAssignments({limit:100,offset:0}):null;
+      const emailIdentities=typeof listAiEmailIdentities==='function'?await listAiEmailIdentities({limit:100,offset:0}):null;
       const safetyReports=typeof listAiIdentityReports==='function'?await listAiIdentityReports({status:'open',limit:100,offset:0}):null;
       return (json(res,200,{
         ...overview,
@@ -207,6 +207,10 @@ export async function handlePersonalAiBotsAdminApi(context) {
         providerAssignmentsSource:Array.isArray(providerAssignments)?'minglora_supabase_postgresql':'unavailable',
         emailIdentities:Array.isArray(emailIdentities)?emailIdentities:[],
         emailIdentitiesSource:Array.isArray(emailIdentities)?'minglora_supabase_postgresql':'unavailable',
+        providerAssignmentsNextOffset:Array.isArray(providerAssignments)?providerAssignments.length:0,
+        providerAssignmentsHasMore:Array.isArray(providerAssignments)&&providerAssignments.length===100,
+        emailIdentitiesNextOffset:Array.isArray(emailIdentities)?emailIdentities.length:0,
+        emailIdentitiesHasMore:Array.isArray(emailIdentities)&&emailIdentities.length===100,
         safetyReports:Array.isArray(safetyReports)?safetyReports:[],
         safetyReportsSource:Array.isArray(safetyReports)?'minglora_supabase_postgresql':'unavailable',
         safetyReportsNextOffset:Array.isArray(safetyReports)?safetyReports.length:0,
@@ -600,6 +604,28 @@ export async function handlePersonalAiBotsAdminApi(context) {
         ok:true,email:saved,
         message:'Email identity record saved. The address is not a verified mailbox and no email provider has provisioned an inbox.'
       }),true);
+    }
+    if(method==='GET'&&path===root+'/providers'){
+      if(typeof listAiProviderAssignments!=='function')return (json(res,503,{error:'AI provider assignment storage is unavailable.'}),true);
+      const limit=Number(url.searchParams.get('limit')||100);
+      const offset=Number(url.searchParams.get('offset')||0);
+      if(!Number.isInteger(limit)||limit<1||limit>500||!Number.isInteger(offset)||offset<0||offset>1000000000){
+        return (json(res,400,{error:'AI provider assignment pagination is invalid.'}),true);
+      }
+      const result=await listAiProviderAssignments({limit,offset});
+      if(!Array.isArray(result))return (json(res,503,{error:'AI provider assignment storage is unavailable.'}),true);
+      return (json(res,200,{ok:true,assignments:result,nextOffset:offset+result.length,hasMore:result.length===limit}),true);
+    }
+    if(method==='GET'&&path===root+'/emails'){
+      if(typeof listAiEmailIdentities!=='function')return (json(res,503,{error:'AI email identity storage is unavailable.'}),true);
+      const limit=Number(url.searchParams.get('limit')||100);
+      const offset=Number(url.searchParams.get('offset')||0);
+      if(!Number.isInteger(limit)||limit<1||limit>500||!Number.isInteger(offset)||offset<0||offset>1000000000){
+        return (json(res,400,{error:'AI email identity pagination is invalid.'}),true);
+      }
+      const result=await listAiEmailIdentities({limit,offset});
+      if(!Array.isArray(result))return (json(res,503,{error:'AI email identity storage is unavailable.'}),true);
+      return (json(res,200,{ok:true,emails:result,nextOffset:offset+result.length,hasMore:result.length===limit}),true);
     }
     if(method==='POST'&&path===root+'/providers'){
       const allowedProviderFields=new Set([
