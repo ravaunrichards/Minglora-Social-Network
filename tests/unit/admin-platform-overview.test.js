@@ -36,7 +36,7 @@ test("owner platform overview inventories every active runtime collection exactl
 
 test("Admin Centre preserves the existing full platform workspace", () => {
   assert.match(admin, /id="admin-platform-overview"/);
-  assert.match(admin, /data-admin-route="platform-overview"/);
+  assert.match(admin, /selector:'#admin-platform-overview'/);
   assert.match(admin, /id="admin-platform-module-grid"/);
   assert.match(admin, /module\.collections/);
   assert.match(admin, /Active sessions/);
