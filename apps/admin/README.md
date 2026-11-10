@@ -865,3 +865,43 @@ Latest workflow run `42731143080`: Auth Provider 18/18 PASS, Admin Centre Chromi
 ### Exact next action
 
 The next external step that unlocks live provider verification is Render workspace selection. Ask the user to confirm **My Workspace** for read-only inspection. Continue all branch-only work without touching production while that external dependency is pending.
+
+
+## Execution checkpoint — 2026-11-10 05:10 UTC
+
+- **Project / task:** Minglora Social Network — Admin Centre member management, service connections, Auth Provider settings and acceptance.
+- **Repository:** `ravaunrichards/Minglora-Social-Network`
+- **Working branch:** `feat/minglora-admin-user-and-service-centre-20261109`
+- **Checkpoint starting head:** `d24922ea98c8e6999d25f21e67bd9b18f5eb68d4`
+- **PR #203:** OPEN, DRAFT, unmerged; current metadata still reports `mergeable=false`.
+- **Verified Admin Centre completion:** **81%**; **19% remaining**. Weighted R001–R007 credits above are unchanged. No new credit is claimed from this inspection.
+
+### Latest verification
+
+- Workflow run [42759667111](https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/42759667111) ran on the checkpoint head.
+- Admin Centre Chromium viewport job: **PASS**. The six configured viewport sizes and disclosure/no-write checks passed.
+- Supabase Auth provider controls: **PASS, 18/18 tests**.
+- General repository test job: **FAIL, 30 failing tests**. The Admin Centre-focused member CRUD, rollback, ban/unban, audit and service-secret-safety assertions pass; remaining failures are outside this Admin Centre acceptance scope.
+- For You functional navigation: **FAIL, 2 tests**. These are separate application regressions, not Admin Centre feature acceptance.
+- The Admin Centre-focused UI and Auth Provider jobs remain the latest relevant passing checks; do not count unrelated failing feature tests as completed.
+
+### Live production comparison (read-only)
+
+- Supabase project `gzycobgbasnqqhnympkr` remains `ACTIVE_HEALTHY`, PostgreSQL 17.11.0.003.
+- Production Edge Function `minglora-runtime-state` is **ACTIVE version 112**. Its deployed source supports the prior member list/ban/audit actions but does **not** contain the feature-branch actions `admin_user_get`, `admin_user_create`, `admin_user_update`, `admin_user_delete` or `admin_user_revoke_sessions`. Production CRUD/session/audit acceptance is therefore not possible until the reviewed function version is authorized and deployed.
+- No production deploy, provider configuration change, database mutation, account mutation or permission change was performed.
+- Current main comparison: main commit `c10f0354416598b7b4be44febfaeaf0c488b2dd5`; common base `b4a624f72cf961d0dfa9a1b6233dd2b1787c869e`. Main has 98 commits since that base and the feature branch has 150; the histories diverge across **13 shared/overlapping files**. Do not force-push, rebase, merge or overwrite shared files without reviewed reconciliation.
+- Available Render workspace is `My Workspace` (`tea-db2o44nlk1mc738421q0`), but the user has not explicitly selected it for inspection. The Minglora Render service environment was not inspected; presence/validity of `SUPABASE_ACCESS_TOKEN` remains **UNKNOWN**. No secret values were requested or exposed.
+- Live Management API provider read/write, OAuth callback/login, hosted member CRUD, global session revocation, deletion constraint behavior and production audit persistence remain **NOT TESTED / BLOCKED** pending the required service access, designated owner MFA session, provider-issued credentials and reviewed deployment authorization.
+
+### Current task state
+
+- **VERIFIED:** Admin Centre user-management UI and browser layout; guarded server routes and Edge source contracts; account audit projection and failure/rollback disclosures; Auth Provider controls source and 18-test acceptance; existing documentation/tracker.
+- **PARTIAL:** Supabase Auth operations and audit persistence; service-connection provider status; Admin Centre overall CI acceptance.
+- **FAILED:** Broad repository suite (30 failures) and separate For You suite (2 failures) as above.
+- **BLOCKED:** Production Edge deployment and hosted member operations pending review/deployment authorization; Render read-only inspection pending explicit `My Workspace` selection; Management API and real OAuth testing pending scoped server token, MFA owner session and provider-issued credentials.
+- **Current weighted progress remains:** R001 20/20; R002 15/25; R003 15/15; R004 13/15; R005 9/10; R006 5/5; R007 4/10 = **81/100**.
+
+### Exact next action
+
+Obtain explicit permission to inspect Render's `My Workspace` read-only, then verify only whether the server-side Management API token is configured (never reveal its value). Continue with owner/MFA-hosted acceptance and reviewed deployment only after the required access and authorization are available. Keep PR #203 draft and production unchanged until then.
