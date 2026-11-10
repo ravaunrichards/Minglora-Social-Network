@@ -72,12 +72,16 @@ test('Cache & Cellular safely clears temporary image cache and preserves device 
 });
 
 test('Lite mode is stored as an account preference and applied to the interface',()=>{
+  assert.match(server,/validateSoundStudioPreferences/);
+  assert.match(server,/soundStudio:DEFAULT_SOUND_STUDIO_PREFERENCES/);
+  assert.match(settings,/Sound &amp; Notifications/);
+  assert.match(settings,/minglora-sound-studio/);
   assert.match(settings,/liteMode: false/);
   assert.match(settings,/name="liteMode"/);
   assert.match(settings,/liteMode: formData\.has\('liteMode'\)/);
   assert.match(settings,/classList\.toggle\('lite-mode', preferences\.liteMode === true\)/);
   assert.match(server,/liteMode:false/);
-  assert.match(server,/\['theme','colorTheme','liveRoomTheme','feedSort','reducedMotion','liteMode'/);
+  assert.match(server,/\['soundStudio','theme','colorTheme','liveRoomTheme','feedSort','reducedMotion','liteMode'/);
   assert.match(server,/\['reducedMotion','liteMode','keyboardShortcuts','messengerIncomingCallSounds'/);
   assert.match(styles,/body\.lite-mode/);
 });
