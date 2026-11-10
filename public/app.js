@@ -8550,11 +8550,11 @@ async function startIncomingRingtone(call=null){
  if(state.settings?.preferences?.messengerIncomingCallSounds===false||window.MingloraExperience?.shouldSilenceNotifications?.('call')||experience?.soundMode==='mute'){stopCallTone();return false;}
  stopCallTone();
  if(experience?.soundMode==='vibrate'){
-   if(experience.vibrateOnRing&&typeof navigator.vibrate==='function')navigator.vibrate([260,130,260]);
+   if(window.MingloraSoundStudio?.vibrateForCall)window.MingloraSoundStudio.vibrateForCall();
+   else if(experience.vibrateOnRing&&typeof navigator.vibrate==='function')navigator.vibrate([260,130,260]);
    return true;
  }
  if(soundEnabled===false)return false;
- if(experience?.vibrateOnRing&&typeof navigator.vibrate==='function')navigator.vibrate([100,70,100]);
  if(window.MingloraSoundStudio?.playCallRingtone)return await window.MingloraSoundStudio.playCallRingtone(voiceCall?'voice':'video');
  const ringtone=await getCallRingtone();
  if(ringtone?.url){try{const audio=new Audio(ringtone.url);audio.loop=true;audio.preload='auto';audio.volume=Math.max(0,Math.min(100,Number(experience?.ringtoneVolume??80)))/100;callRingtoneAudio=audio;await audio.play();return true;}catch{callRingtoneAudio=null;}}
