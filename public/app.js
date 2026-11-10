@@ -8555,7 +8555,7 @@ async function startIncomingRingtone(call=null){
    return true;
  }
  if(soundEnabled===false)return false;
- if(window.MingloraSoundStudio?.playCallRingtone)return await window.MingloraSoundStudio.playCallRingtone(voiceCall?'voice':'video');
+ if(window.MingloraSoundStudio?.playCallRingtone){const handled=await window.MingloraSoundStudio.playCallRingtone(voiceCall?'voice':'video');if(handled)return true;}
  const ringtone=await getCallRingtone();
  if(ringtone?.url){try{const audio=new Audio(ringtone.url);audio.loop=true;audio.preload='auto';audio.volume=Math.max(0,Math.min(100,Number(experience?.ringtoneVolume??80)))/100;callRingtoneAudio=audio;await audio.play();return true;}catch{callRingtoneAudio=null;}}
  const started=playCallTone([440,480,620],950);callToneTimer=setInterval(()=>playCallTone([440,480,620],950),3000);return started;
