@@ -15,8 +15,8 @@ test('Home alone keeps the Facebook-style feature rail',()=>{
   assert.notEqual(start,-1,'Shared page-layout synchronizer exists');
   assert.ok(end>start,'Page-layout synchronizer is complete');
   const sync=app.slice(start,end);
-  assert.ok(sync.includes("const standalone=state.view!=='feed'&&!forYou;"),
-    'Every route other than Home and immersive For You becomes a standalone page');
+  assert.ok(sync.includes("const standalone=state.view!=='feed';"),
+    'Every route other than Home becomes a standalone page, including For You');
   assert.ok(sync.includes("classList.toggle('minglora-standalone-page',standalone)"),
     'Standalone route state is applied to the document');
   assert.ok(sync.includes("classList.toggle('standalone-page-view',standalone)"),
@@ -43,13 +43,39 @@ test('Home navigation and global navigation remain present',()=>{
     'The mobile primary navigation remains available');
   assert.ok(html.includes('class="left-rail-features"'),
     'Home retains its feature rail markup');
-  assert.match(app,/const standalone=state\.view!=='feed'&&!forYou;/,
+  assert.match(app,/const standalone=state\.view!=='feed';/,
     'Only the Home feed keeps the feature rail');
   const navStart=app.indexOf('function syncNavigationActive(){');
   assert.ok(app.slice(navStart,navStart+100).includes('syncPageLayout();'),
     'Direct route navigation also synchronizes the standalone page shell');
 });
 
+
+
+test('Settings is a real restorable page and uses the shared standalone layout',()=>{
+  const settings=fs.readFileSync(path.join(root,'public/settings.js'),'utf8');
+  assert.match(app,/const RESTORABLE_VIEWS=new Set\([^\n]*'settings'\)/,
+    'Settings can be restored after a page reload');
+  assert.ok(app.includes("window.MingloraActivateSilentView=view=>activateSilent(view);"),
+    'Dedicated pages can update shared navigation state without rendering twice');
+  assert.ok(app.includes("else if(state.view==='settings')await window.MingloraSettings?.render?.();"),
+    'The shared route renderer can restore Settings');
+  assert.ok(settings.includes("window.MingloraActivateSilentView?.('settings')"),
+    'Opening Settings changes the active route before displaying its content');
+  assert.ok(settings.includes('window.MingloraSettings = { open: openSettings, render: openSettings };'),
+    'Settings exposes the same page renderer for direct entry and route restoration');
+  assert.ok(html.includes('/app.js?v=20261110-home-only-page-routing-1'),
+    'The browser receives the updated page-routing bundle');
+  assert.ok(html.includes('/settings.js?v=20261110-standalone-settings-page-1'),
+    'The browser receives the updated Settings page bundle');
+});
+
+test('Notifications opens and restores as its own standalone destination',()=>{
+  assert.match(app,/async function renderNotifications\(\)\{if\(state\.view!=='notifications'\)activateSilent\('notifications'\);/,
+    'Every direct notification entry synchronizes the active route and hides Home rails');
+  assert.ok(app.includes("else if(state.view==='notifications')await renderNotifications();"),
+    'Notifications is still supported by shared route restoration');
+});
 
 test('Admin Centre initializes dedicated page routing after building its feature sections',()=>{
   const admin=fs.readFileSync(path.join(root,'public/admin-centre.js'),'utf8');
