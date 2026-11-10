@@ -32,6 +32,9 @@ export const DEFAULT_EXPERIENCE_SETTINGS = Object.freeze({
   videoCallSound: true,
   messageSound: true,
   notificationSound: true,
+  voiceCallRingtoneId: '',
+  videoCallRingtoneId: '',
+  notificationSoundAssignments: {},
   ringtoneVolume: 80,
   mediaVolume: 80,
   notificationVolume: 80,
@@ -92,6 +95,7 @@ const RANGE_KEYS = {
   screenSaverWaitValue: [5, 7200]
 };
 const COLOR_KEYS = ['customAccentColor', 'customBackgroundColor', 'wallpaperColor'];
+const SOUND_ID_KEYS = ['voiceCallRingtoneId', 'videoCallRingtoneId'];
 const TIME_KEYS = ['dndStart', 'dndEnd'];
 const TEXT_LIMITS = { screenSaverText: 120 };
 
@@ -115,6 +119,23 @@ export function validateExperienceSettingsPatch(current, patch) {
       if (!Number.isInteger(value) || value < min || value > max) return { valid: false, error: key + ' is outside its supported range.' };
     } else if (COLOR_KEYS.includes(key)) {
       if (!isColor(value)) return { valid: false, error: key + ' must be a six-digit HEX color.' };
+    } else if (SOUND_ID_KEYS.includes(key)) {
+      if (typeof value !== 'string' || (value !== '' && !/^[a-zA-Z0-9:_-]{1,100}$/.test(value))) {
+        return { valid: false, error: key + ' must identify a supported sound.' };
+      }
+    } else if (key === 'notificationSoundAssignments') {
+      if (!isRecord(value) || Object.keys(value).length > 100) {
+        return { valid: false, error: 'Notification sound assignments must be a valid event-to-sound map.' };
+      }
+      const assignments = {};
+      for (const [eventKey, soundId] of Object.entries(value)) {
+        if (!/^[a-zA-Z0-9_-]{1,80}$/.test(eventKey) || typeof soundId !== 'string' || !/^[a-zA-Z0-9:_-]{1,100}$/.test(soundId)) {
+          return { valid: false, error: 'A notification sound assignment is invalid.' };
+        }
+        assignments[eventKey] = soundId;
+      }
+      next[key] = { ...(isRecord(next[key]) ? next[key] : {}), ...assignments };
+      continue;
     } else if (TIME_KEYS.includes(key)) {
       if (!isClock(value)) return { valid: false, error: key + ' must use 24-hour HH:MM format.' };
     } else if (Object.hasOwn(TEXT_LIMITS, key)) {
