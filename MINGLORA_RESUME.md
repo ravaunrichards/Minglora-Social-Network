@@ -1,10 +1,11 @@
-Updated: 2026-11-10 06:53 UTC (Personal AI Bots workflow #614: 184/184; full Minglora CI #8640: 919/919)
+Updated: 2026-11-10 06:58 UTC (Personal AI Bots workflow #621: 187/187; full Minglora CI #8648: 922/922)
 Scope: **Minglora Social Network only**
 Repository: https://github.com/ravaunrichards/Minglora-Social-Network
 Branch: `feat/personal-ai-bots-network-control-center`
 Draft PR: https://github.com/ravaunrichards/Minglora-Social-Network/pull/202
 Supabase project: `gzycobgbasnqqhnympkr` (existing Minglora project only)
-Latest verified implementation commit: `2579f6a16bfbac8e74b7838abda107b3d8fa56fa`.
+Latest verified implementation commit: `0bd7a31b8feafbd0a50238f2b72358c69b70aec0`.
+Recent admin list pagination commits: canonical identity API/UI/tests `49fa272c4716361e76059037320b42dbfd41c45a`, `d42fdd27fcbe15f6c472576fc2bbca1ba28e8f33`, `60d6e926f3495106455046e460ecbde067653ed4`, `1df4af0747fa02ab3192af277f217c5d0614b3e5`, `2579f6a16bfbac8e74b7838abda107b3d8fa56fa`; provider/email pagination API/UI/tests `2ddc159cfb50dc9efce8f92aa794c0002d5b3a0a`, `430156e0d92facee34a41a9f813b0c532dc534a9`, `d1fd4ab1be4158b794904fb4d8ce1a75249c6044`, `e20e2197174cd0657e2825c24f2e3df52b3cf157`, `c98e75f8e93be47a70f926cb2cb98f4158a7c42a`, verified by `0bd7a31b8feafbd0a50238f2b72358c69b70aec0`.
 Recent AI Admin Centre work: report review pagination/status filtering commits `14d24f50ba27931ade717dee6fe4eeca178b8a8f`, `8d14b93c9e76f55de147b4eab3795fd8be07fdea`, `5631c88dcef3ba6f44a98914059b60824aa4e7f8`, test coverage `02094edbb03e78cf552c0bf1e47345cbafd094bf`, `7132292fbea2fdb9f2207049d7f0d61fb8cb9b28`; canonical identity page endpoint/UI/tests `49fa272c4716361e76059037320b42dbfd41c45a`, `d42fdd27fcbe15f6c472576fc2bbca1ba28e8f33`, `60d6e926f3495106455046e460ecbde067653ed4`, `1df4af0747fa02ab3192af277f217c5d0614b3e5`, `2579f6a16bfbac8e74b7838abda107b3d8fa56fa`.
 Recent verified privacy/discovery fixes: public profile blocked-member privacy `b6cc24cb679c480ea352ec777d7e0922a8fd6257`; indexed SQL discovery block filtering and stable pagination cursor `9d4db3d0180250f553c93d1b87ecce85f8cbdb05`, `a810344b3424f473ff51e74b569658762f7b5ea8`, `5614fd5aaf40a840ec6af9354f3f0e2e34bde4d6`; blocked-profile pagination API/UI `5b62dbc089499636f279a935fb24d801a85b9b1e`, `35890552603e492194c1d35aebe9872979b1d8f6`, `bab44fc987a0cfca478714f5dacefbb87d2a5ab7`, verified by `0e731e850608893bb05a43b2c9b99ed8aead5769`.
 PR must remain **OPEN + DRAFT**. Do not merge, deploy, or apply production migrations without the required review/authorization.
@@ -28,11 +29,11 @@ The previous checkpoint did not contain a weighted percentage. The earlier conve
 | 4. Supervision, bounded autonomy, queues, teams and collaboration | 10% | 65% | 6.50% |
 | 5. AI social participation and creator ecosystem | 10% | 25% | 2.50% |
 | 6. Security, governance, finance and resource controls | 8% | 27.5% | 2.20% |
-| 7. Model intelligence, memory, provider operations and analytics | 7% | 20% | 1.40% |
+| 7. Model intelligence, memory, provider operations and analytics | 7% | 21% | 1.47% |
 | 8. Distributed scaling, load tests, device tests and production acceptance | 5% | 0% | 0.00% |
-| **TOTAL** | **100%** |  | **45.30% → 45%** |
+| **TOTAL** | **100%** |  | **45.37% → 45%** |
 
-**COMPLETION: 45.30% → 45% | REMAINING: 54.70% → 55%**
+**COMPLETION: 45.37% → 45% | REMAINING: 54.63% → 55%**
 
 This is weighted feature-branch implementation progress, not a claim that 44.90% of the production system is deployed. Milestones 1 and 2 remain partial because normalized AI tables/RPCs are staged but absent from the live Supabase migration ledger and public schema. Milestone 2 now includes tested SQL-level member-block exclusion, stable raw-page pagination cursors, and paginated blocked-profile management in addition to identities, profiles, public discovery, follows and saved searches. Milestone 3 includes tested owner-approved appointment/employment-history records and a read-only organization chart; it remains partial because canonical relational HR persistence, broader employment lifecycle, governance execution, real browser acceptance and operational reporting are unfinished.
 
@@ -93,6 +94,7 @@ This is weighted feature-branch implementation progress, not a claim that 44.90%
 - Member blocked-AI management now supports page sizes of 100 and a Load More control; the API validates `limit`/`offset` and the gateway supports up to 500 rows per request rather than silently limiting the UI to the first 500.
 - The owner Admin Centre AI safety-report queue now supports all six SQL/API status views (`open`, `pending`, `in_review`, `all`, `actioned`, `dismissed`) and page-offset loading at 100 reports per UI page, with API pagination bounds and regression tests.
 - Canonical PostgreSQL AI identity records now load 100 at a time in the Admin Centre. The owner-only `/identities` API validates `limit`/`offset`, returns `nextOffset`/`hasMore`, and the UI appends deduplicated records with an accessible live status. This remains feature-branch code pending release of the staged SQL/Edge Function migrations.
+- Provider assignment and AI email identity tables now load 100 records at a time, with owner-only `/providers` and `/emails` list APIs validating offsets and returning `nextOffset`/`hasMore`. Admin Centre buttons append further pages and deduplicate by canonical assignment/email IDs. The UI still reveals only whether a server-side credential reference exists; it never exposes credential contents. Verification/provisioning states remain truthful.
 - Only active, public, explicitly opted-in AI profiles are returned by the staged public profile/discovery RPCs.
 - Signed-in members follow/unfollow AI identities through a separate AI-only relationship graph. AI follower counts are not written to human `user_follows` and do not affect human popularity counts.
 - Saved discovery searches are member-scoped and have bounded validated filters.
@@ -126,8 +128,8 @@ This is weighted feature-branch implementation progress, not a claim that 44.90%
 
 ## Verification and current status
 
-- Latest confirmed green Personal AI Bots workflow: run **#614**, commit **`2579f6a16bfbac8e74b7838abda107b3d8fa56fa`**, **184 passed / 0 failed**, completed **2026-11-10 06:52:46 UTC**. Covers owner canonical identity list pagination, report-review filters/pagination, discovery privacy/pagination, blocked-list pagination, HR/chart UI and worker guardrails.
-- Latest confirmed green full Minglora CI workflow: run **#8640**, **919 passed / 0 failed**, completed **2026-11-10 06:53:01 UTC**. Both the main test job and For You functional-navigation job passed. The dependency audit reported **0 vulnerable packages**.
+- Latest confirmed green Personal AI Bots workflow: run **#621**, commit **`0bd7a31b8feafbd0a50238f2b72358c69b70aec0`**, **187 passed / 0 failed**, completed **2026-11-10 06:58:09 UTC**. Covers provider/email pagination API/UI, canonical identity pagination, report-review filters/pagination, discovery privacy/pagination, blocked-list pagination, HR/chart UI and worker guardrails.
+- Latest confirmed green full Minglora CI workflow: run **#8648**, **922 passed / 0 failed**, completed **2026-11-10 06:58:20 UTC**. Both the main test job and For You functional-navigation job passed. The dependency audit reported **0 vulnerable packages**.
 - Candidate applications are verified to require existing organizational AI identities and open vacancies, prevent duplicate applications, record status history/audit and enforce allowed review transitions.
 - Owner-approved appointment service/API/UI paths are covered by the 177-test focused workflow and 911-test full CI. Appointments require shortlisted applicants and valid manager hierarchy, prevent duplicate active appointments and overfilled vacancies, record employment history/audit, and leave AI identities disabled with no permissions.
 - Bulk identity import: 1–100 per batch, owner-scoped idempotency and payload hash, duplicate controls, per-record outcomes, safe retry after DB failure, rollback on initial runtime checkpoint-save failure, owner-only history; imported identities remain disabled/private.
@@ -136,14 +138,14 @@ This is weighted feature-branch implementation progress, not a claim that 44.90%
 
 ## Recovery and progress comparison
 
-- Previous verified weighted completion: **45.10% → 45%**.
-- Current verified weighted completion: **45.30% → 45%**.
-- Progress since previous checkpoint: **+0.20 percentage points** for canonical identity listing with validated cursor pagination and deduplicated UI load-more, with focused API/UI regression checks. Milestone 2 is now 77% verified. No credit is awarded for live database deployment, provider/email operations, worker execution, browser/device acceptance or production capacity.
-- Last verified milestone: **AI identity administration — canonical identity list pagination through owner API and Admin Centre UI (partial)**.
-- Last confirmed action: commit `2579f6a16bfbac8e74b7838abda107b3d8fa56fa` corrected canonical identity overview pagination expectation; Personal AI Bots #614 passed 184/184 and full CI #8640 passed 919/919. Admin Centre loads canonical AI identity rows 100 at a time and appends subsequent validated pages.
+- Previous verified weighted completion: **45.30% → 45%**.
+- Current verified weighted completion: **45.37% → 45%**.
+- Progress since previous checkpoint: **+0.07 percentage points** for provider assignment and AI email identity list pagination via the existing owner-scoped RPCs, with focused API/UI tests. Milestone 7 is now 21% verified. No credit is awarded for connected model providers, successful inference/health checks, mailbox provisioning, worker execution, browser/device acceptance or production capacity.
+- Last verified milestone: **Provider/email administration — owner-scoped provider assignment and AI email identity list pagination (partial)**.
+- Last confirmed action: commit `0bd7a31b8feafbd0a50238f2b72358c69b70aec0` corrected provider/email initial-page test expectations; Personal AI Bots #621 passed 187/187 and full CI #8648 passed 922/922. Provider and email lists use 100-row cursor pagination and append deduplicated rows in the Admin Centre.
 - Recovered: repository, feature branch, PR #202 open/draft, checkpoint, source files, Supabase project status and CI logs independently checked.
 - Unverified: live normalized Postgres HR round-trip, provider/email provisioning, worker/scheduler, manager authorization/delegation and production capacity.
-- Changes since previous checkpoint: added owner-selectable AI safety report status filters and paginated review queue; added 100-row canonical AI identity listing pages and a validated cursor API/Load More UI. Added cross-layer API/UI tests and refreshed the Admin Centre asset cache. Focused and full CI are green.
+- Changes since previous checkpoint: added 100-row provider-assignment and email-identity list paging, validated owner APIs with cursors, deduplicated Admin Centre append controls and cross-layer tests. Focused and full CI are green.
 - Recovery confidence: **CONFIRMED** for repository/branch/PR/source/checkpoint/CI; **PARTIALLY RECOVERED** for live DB/service state because AI SQL is unapplied and external runtime services are not released.
 
 ## Changes since the older checkpoint
@@ -184,5 +186,5 @@ This is weighted feature-branch implementation progress, not a claim that 44.90%
 
 ## Exact next action
 
-Continue with independent non-database work that can be built and verified in this feature branch. The normalized AI/HR migration milestone remains blocked until an approved non-production Supabase environment and Supabase CLI are available. Preserve the existing runtime-state adapter and do not apply migrations to production. Next evaluate provider-assignment and email-identity list limits (currently first-page reads) for safe pagination and ensure empty/error states distinguish unavailable storage from a truly empty result. Continue worker/provider integration only when real provider credentials and approved deployment infrastructure are available. Keep PR #202 open/draft.
+Continue with independent non-database work that can be built and verified in this feature branch. The normalized AI/HR migration milestone remains blocked until an approved non-production Supabase environment and Supabase CLI are available. Preserve the existing runtime-state adapter and do not apply migrations to production. Next examine the remaining Admin Centre collections with bounded reads (for example task queue, provider runtime records and batch history) and ensure each view communicates the exact loaded-page count rather than implying a total count. Continue worker/provider integration only when real provider credentials and approved deployment infrastructure are available. Keep PR #202 open/draft.
 
