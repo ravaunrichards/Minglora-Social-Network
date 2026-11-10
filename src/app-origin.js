@@ -59,3 +59,12 @@ export function isAllowedAppOrigin(suppliedOrigin, req, env = process.env) {
 
   return origin === appOrigin(req, env);
 }
+
+
+export function isSameOriginAdminWrite(req, env = process.env) {
+  const headers = req?.headers || {};
+  if (String(headers['sec-fetch-site'] || '').toLowerCase() === 'cross-site') return false;
+  const suppliedOrigin = headers.origin;
+  if (typeof suppliedOrigin !== 'string' || !suppliedOrigin.trim()) return false;
+  return isAllowedAppOrigin(suppliedOrigin, req, env);
+}
