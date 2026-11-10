@@ -3,6 +3,9 @@ const state = { user:null, view:'feed', feed:[], feedScope:'all', videoFeed:[], 
 const LAST_VIEW_SESSION_PREFIX='minglora:last-view:v1:';
 const RESTORABLE_VIEWS=new Set(['feed','for-you','more','videos','gifts','gifter-progression','live','live-pro','leagues','coins','creator','friends','groups','messages','saved','pages','meetwave','connections','page','group','profile','search','notifications','calendar','clock-centre','menstrual-health']);
 const MINGLORA_HISTORY_KEY='mingloraNavigation';
+function isFemaleAccountForMenstrualHealth(user=state.user){return /(^|[^a-z])(female|woman|women)([^a-z]|$)/i.test(String(user?.gender||''));}
+function syncMenstrualHealthNavigation(){const link=document.querySelector('[data-menstrual-health-nav]');if(!link)return;const visible=isFemaleAccountForMenstrualHealth();link.classList.toggle('hidden',!visible);link.hidden=!visible;link.setAttribute('aria-hidden',String(!visible));}
+function menstrualHealth3dIcon(){return '<svg class="nav-3d-icon mobile-hub-icon" viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg?v=20261110-menstrual-health-3d-1#menstrual-health"></use></svg>';}
 const FOR_YOU_SCOPE_VALUES=new Set(['for-you','friends','subscribers','following']);
 function normalizeForYouScope(value){return FOR_YOU_SCOPE_VALUES.has(value)?value:'for-you';}
 function forYouRoutePath(scope=state.forYouScope){
@@ -490,7 +493,7 @@ function syncNavigationActive(){
   const moreButton=document.querySelector('#mobile-more-nav');
   moreButton?.classList.toggle('active',activeView==='more'||!['feed','for-you','profile','friends','live','messages'].includes(activeView));
 }
-function activateNav(view){const requestedView=view;if(state.view==='for-you'&&requestedView!=='for-you'){stopForYouAutoRefresh();teardownForYouPlayback();}if(requestedView==='profile'&&state.user){state.profileTargetId=String(state.user.id);state.profileTab='posts';}if(state.view==='meetwave'&&requestedView!=='meetwave')window.MingloraMeetWave?.onNavigateAway?.();if(state.view==='leagues'&&requestedView!=='leagues')window.MingloraLeagues?.onNavigateAway?.();if(state.view==='gifter-progression'&&requestedView!=='gifter-progression')window.MingloraGifterProgression?.onNavigateAway?.();if(state.view==='feed'&&requestedView!=='feed'&&requestedView!=='for-you')stopFeedAutoSync();if(requestedView==='for-you'){state.forYouScope=normalizeForYouScope(state.forYouScope);view='for-you';}else if(requestedView==='feed'&&!restoringSavedView){state.feedScope='all';}if(view!=='profile')stopProfilePresence();if(view!=='friends')stopPeopleDiscoveryRefresh();if(view!=='profile')state.profileTargetId='';state.view=view;syncPageLayout();syncMessageRefreshPolling();syncNavigationActive();persistCurrentView();recordBrowserNavigation();return renderView();}
+function activateNav(view){const requestedView=view;if(requestedView==='menstrual-health'&&!isFemaleAccountForMenstrualHealth()){syncMenstrualHealthNavigation();toast('Menstrual Health is available only to female accounts.');return;}if(state.view==='for-you'&&requestedView!=='for-you'){stopForYouAutoRefresh();teardownForYouPlayback();}if(requestedView==='profile'&&state.user){state.profileTargetId=String(state.user.id);state.profileTab='posts';}if(state.view==='meetwave'&&requestedView!=='meetwave')window.MingloraMeetWave?.onNavigateAway?.();if(state.view==='leagues'&&requestedView!=='leagues')window.MingloraLeagues?.onNavigateAway?.();if(state.view==='gifter-progression'&&requestedView!=='gifter-progression')window.MingloraGifterProgression?.onNavigateAway?.();if(state.view==='feed'&&requestedView!=='feed'&&requestedView!=='for-you')stopFeedAutoSync();if(requestedView==='for-you'){state.forYouScope=normalizeForYouScope(state.forYouScope);view='for-you';}else if(requestedView==='feed'&&!restoringSavedView){state.feedScope='all';}if(view!=='profile')stopProfilePresence();if(view!=='friends')stopPeopleDiscoveryRefresh();if(view!=='profile')state.profileTargetId='';state.view=view;syncPageLayout();syncMessageRefreshPolling();syncNavigationActive();persistCurrentView();recordBrowserNavigation();return renderView();}
 window.MingloraActivateView=view=>activateNav(view);
 window.addEventListener('minglora:open-wallet',event=>{
   const tab=['recharge','earnings','exchange','currency','calculator'].includes(event.detail?.tab)?event.detail.tab:'recharge';
@@ -5323,7 +5326,7 @@ function openAboutSectionEditor(sectionKey,u){
       }
       if(sectionKey==='contactInfo')patch.contactPhone=section.phone||'';
       const result=await api('/users/me',{method:'PATCH',body:JSON.stringify(patch)});
-      state.user={...state.user,...result.user};
+      state.user={...state.user,...result.user};syncMenstrualHealthNavigation();
       close();state.profileTab='about';await openProfile(state.user.id);
       state.profileTab='about';toast(label+' saved.');
     }catch(error){
@@ -6843,7 +6846,7 @@ function openEditProfile(u,mediaOnly=null){
         status.textContent='Saving profile details…';
         try{
           const result=await api('/users/me',{method:'PATCH',body:JSON.stringify(collectProfilePayload())});
-          state.user=result.user;
+          state.user=result.user;syncMenstrualHealthNavigation();
           status.textContent='Profile details saved to your account.';
         }catch(error){
           status.textContent='Profile changes were not saved. '+error.message;
@@ -6886,7 +6889,7 @@ function openEditProfile(u,mediaOnly=null){
       if(!mediaOnly){
         status.textContent='Saving profile details…';
         const result=await api('/users/me',{method:'PATCH',body:JSON.stringify(collectProfilePayload())});
-        state.user=result.user;
+        state.user=result.user;syncMenstrualHealthNavigation();
       }
       const nextGender=String(state.user?.gender||'').trim();
       const wasFemale=/(^|[^a-z])(female|woman|women)([^a-z]|$)/i.test(priorGender);
@@ -9928,7 +9931,7 @@ function renderMoreHub(){
       {label:'Gifters Level',detail:'Track your LV, Coins and badge collection',view:'gifter-progression',icon:'<span class="mobile-hub-emoji" aria-hidden="true">🏅</span>'},
       {label:'Recharge',detail:'Buy Coins or exchange available money balance for Minglora Coins',view:'coins',icon:messenger3dIcon('recharge','mobile-hub-icon')}
     ]},
-    {title:'Tools & productivity',items:[{label:'Calendar',detail:'Your schedule, events, tasks and reminders',view:'calendar',icon:messenger3dIcon('calendar','mobile-hub-icon')},{label:'Clock Centre',detail:'Live 3D clocks, alarms, timers and sleep schedules',view:'clock-centre',icon:'<span class="mobile-hub-emoji" aria-hidden="true">◷</span>'},{label:'Menstrual Health',detail:'Private period, cycle and symptom tracking',view:'menstrual-health',icon:'<span class="mobile-hub-emoji" aria-hidden="true">♡</span>'}]},
+    {title:'Tools & productivity',items:[{label:'Calendar',detail:'Your schedule, events, tasks and reminders',view:'calendar',icon:messenger3dIcon('calendar','mobile-hub-icon')},{label:'Clock Centre',detail:'Live 3D clocks, alarms, timers and sleep schedules',view:'clock-centre',icon:'<span class="mobile-hub-emoji" aria-hidden="true">◷</span>'},...(isFemaleAccountForMenstrualHealth()?[{label:'Menstrual Health',detail:'Private period, cycle and symptom tracking',view:'menstrual-health',icon:menstrualHealth3dIcon()}]:[])]},
     {title:'Your account',items:[
       {label:'My profile',detail:'View and update your profile',action:'profile',icon:'<span class="mobile-hub-emoji" aria-hidden="true">👤</span>'},
       {label:'Notifications',detail:'See your recent activity',action:'notifications',icon:messenger3dIcon('activity','mobile-hub-icon')},
@@ -9955,7 +9958,7 @@ function renderMoreHub(){
     else if(action==='app-metrics')window.dispatchEvent(new CustomEvent('minglora:open-creator-section',{detail:{section:'analytics'}}));
   }));
 }
-async function renderView(){try{if(state.view==='more')renderMoreHub();else if(state.view==='for-you')await renderForYouFeed();else if(state.view==='feed'){await loadPeople();await loadFeed();await loadStories();await renderFeed()}else if(state.view==='videos')await renderVideoCentre();else if(state.view==='gifts')await window.MingloraGifts?.render();else if(state.view==='gifter-progression')await window.MingloraGifterProgression?.render();else if(state.view==='live')await renderLive();else if(state.view==='live-pro')await renderLiveProStudio();else if(state.view==='leagues')await window.MingloraLeagues?.render();else if(state.view==='coins')await renderCoins();else if(state.view==='calendar')await window.MingloraCalendar?.render();else if(state.view==='clock-centre')await window.MingloraClockCentre?.render({user:state.user});else if(state.view==='menstrual-health')await window.MingloraMenstrualHealth?.render();else if(state.view==='creator'){await renderCreator();if(state.restoreCreatorSection&&state.restoreCreatorSection!=='overview')await renderCreatorSection(state.restoreCreatorSection)}else if(state.view==='friends')await renderFriends();else if(state.view==='groups')await renderGroups();else if(state.view==='messages')await renderMessages();else if(state.view==='saved')await renderSavedPosts();else if(state.view==='pages')await renderPages();else if(state.view==='meetwave')await window.MingloraMeetWave?.render();else if(state.view==='connections'&&state.activeConnections)await renderConnections(state.activeConnections.profileId,state.activeConnections.kind);else if(state.view==='page'&&state.activePage)await renderPage(state.activePage,state.pageTab||'posts',state.pageDays||30);else if(state.view==='group'&&state.activeGroup)await renderGroup(state.activeGroup);else if(state.view==='profile'&&state.profileTargetId)await openProfile(state.profileTargetId);else if(state.view==='search'&&state.searchQuery)await renderSearch(state.searchQuery);else if(state.view==='notifications')await renderNotifications();}catch(e){setContent(`<section class="card empty-state"><h3>Could not load this page</h3><p>${esc(e.message)}</p><button class="primary" id="retry-view">Try again</button></section>`);$('#retry-view').onclick=renderView;}}
+async function renderView(){try{if(state.view==='menstrual-health'&&!isFemaleAccountForMenstrualHealth()){state.view='feed';syncMenstrualHealthNavigation();syncNavigationActive();toast('Menstrual Health is available only to female accounts.');await renderFeed();return;}if(state.view==='more')renderMoreHub();else if(state.view==='for-you')await renderForYouFeed();else if(state.view==='feed'){await loadPeople();await loadFeed();await loadStories();await renderFeed()}else if(state.view==='videos')await renderVideoCentre();else if(state.view==='gifts')await window.MingloraGifts?.render();else if(state.view==='gifter-progression')await window.MingloraGifterProgression?.render();else if(state.view==='live')await renderLive();else if(state.view==='live-pro')await renderLiveProStudio();else if(state.view==='leagues')await window.MingloraLeagues?.render();else if(state.view==='coins')await renderCoins();else if(state.view==='calendar')await window.MingloraCalendar?.render();else if(state.view==='clock-centre')await window.MingloraClockCentre?.render({user:state.user});else if(state.view==='menstrual-health')await window.MingloraMenstrualHealth?.render();else if(state.view==='creator'){await renderCreator();if(state.restoreCreatorSection&&state.restoreCreatorSection!=='overview')await renderCreatorSection(state.restoreCreatorSection)}else if(state.view==='friends')await renderFriends();else if(state.view==='groups')await renderGroups();else if(state.view==='messages')await renderMessages();else if(state.view==='saved')await renderSavedPosts();else if(state.view==='pages')await renderPages();else if(state.view==='meetwave')await window.MingloraMeetWave?.render();else if(state.view==='connections'&&state.activeConnections)await renderConnections(state.activeConnections.profileId,state.activeConnections.kind);else if(state.view==='page'&&state.activePage)await renderPage(state.activePage,state.pageTab||'posts',state.pageDays||30);else if(state.view==='group'&&state.activeGroup)await renderGroup(state.activeGroup);else if(state.view==='profile'&&state.profileTargetId)await openProfile(state.profileTargetId);else if(state.view==='search'&&state.searchQuery)await renderSearch(state.searchQuery);else if(state.view==='notifications')await renderNotifications();}catch(e){setContent(`<section class="card empty-state"><h3>Could not load this page</h3><p>${esc(e.message)}</p><button class="primary" id="retry-view">Try again</button></section>`);$('#retry-view').onclick=renderView;}}
 let accountSwitcherTopLayerCleanup=null;
 function positionAccountSwitcherTopLayer(){
   const panel=$('#profile-account-menu'),anchor=$('.profile-menu-anchor');
@@ -10329,7 +10332,7 @@ function bindProfileLinks(root=document){
   });
 }
 async function enterMingloraApp(user,showWelcome=false){
-  state.user=user;showApp();bindNavigation();initializeBrowserNavigation();
+  state.user=user;syncMenstrualHealthNavigation();showApp();bindNavigation();initializeBrowserNavigation();
   const params=new URLSearchParams(window.location.search);
   const isCreatorHubAdmin=String(user?.id||'')==='5b998c21-86b5-4621-ab37-e0808a2657b1'&&String(user?.email||'').trim().toLowerCase()==='creatorhubcreatornetwork@gmail.com'&&user?.platformRole==='platform_owner';
   if(isCreatorHubAdmin&&params.get('mfa-setup')==='required'){

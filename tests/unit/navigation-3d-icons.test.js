@@ -71,13 +71,15 @@ test('utility rail and header actions use the matching rendered icon assets', ()
 });
 
 test('the SVG sprite contains finished dimensional artwork for primary and supporting actions', () => {
-  for (const id of ['home', 'explore', 'create', 'video', 'live', 'friends', 'messages', 'coins', 'creator', 'groups', 'pages', 'saved', 'activity', 'settings', 'search', 'profile', 'microphone', 'palette', 'share', 'photo', 'feeling', 'call', 'sound', 'privacy', 'request', 'archive', 'delivery', 'lock', 'block', 'external-link', 'more', 'close', 'restore', 'unlock', 'arrow-left', 'arrow-right']) {
+  for (const id of ['home', 'explore', 'create', 'video', 'live', 'friends', 'messages', 'coins', 'creator', 'groups', 'pages', 'saved', 'activity', 'settings', 'search', 'profile', 'microphone', 'palette', 'share', 'photo', 'feeling', 'call', 'sound', 'privacy', 'request', 'archive', 'delivery', 'lock', 'block', 'external-link', 'more', 'close', 'restore', 'unlock', 'arrow-left', 'arrow-right', 'menstrual-health']) {
     assert.match(sprite, new RegExp(`<symbol id="${id}" viewBox="0 0 64 64">`), `sprite contains ${id}`);
   }
   assert.match(sprite, /<linearGradient id="blue-front"/);
   assert.match(sprite, /<linearGradient id="silver-front"/);
   assert.match(sprite, /<linearGradient id="gold-front"/);
   assert.match(sprite, /<radialGradient id="lens"/);
+  assert.ok(html.includes('/assets/icons/navigation-3d.svg?v=20261110-menstrual-health-3d-1#menstrual-health'));
+  assert.ok(serviceWorker.includes("/assets/icons/navigation-3d.svg?v=20261110-menstrual-health-3d-1#menstrual-health"));
   assert.doesNotMatch(sprite, /<text\b|<image\b/i, 'icon artwork is vector-rendered, not text glyphs or bitmap placeholders');
 });
 

@@ -3,8 +3,16 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
  calculateMenstrualInsights, normalizeCycleInput, normalizeDailyLogInput,
- normalizeReminderInput, normalizeTrackerPreferences
+ normalizeReminderInput, normalizeTrackerPreferences, isFemaleMenstrualHealthAccount
 } from '../../backend/modules/menstrual-health/service.js';
+
+test('restricts menstrual-health access to accounts marked female',()=>{
+ assert.equal(isFemaleMenstrualHealthAccount({gender:'Female'}),true);
+ assert.equal(isFemaleMenstrualHealthAccount({gender:'Woman'}),true);
+ assert.equal(isFemaleMenstrualHealthAccount({gender:'women'}),true);
+ assert.equal(isFemaleMenstrualHealthAccount({gender:'Male'}),false);
+ assert.equal(isFemaleMenstrualHealthAccount({gender:''}),false);
+});
 
 test('does not invent a standard cycle or next-period date',()=>{
  const result=calculateMenstrualInsights([],{fertility_estimates_enabled:true},new Date('2026-11-07T12:00:00Z'));
@@ -43,6 +51,7 @@ test('validates daily symptoms, pain, reminders and preferences',()=>{
 
 const menstrualUi=fs.readFileSync(new URL('../../public/menstrual-health.js',import.meta.url),'utf8');
 const menstrualServer=fs.readFileSync(new URL('../../src/server.js',import.meta.url),'utf8');
+const menstrualApp=fs.readFileSync(new URL('../../public/app.js',import.meta.url),'utf8');
 test('private tracker UI edits periods, switches reminders and exports journal data',()=>{
  assert.match(menstrualUi,/data-edit-cycle/);
  assert.match(menstrualUi,/period_enabled/);
@@ -51,6 +60,13 @@ test('private tracker UI edits periods, switches reminders and exports journal d
  assert.match(menstrualUi,/s\.data\.journal/);
  assert.match(menstrualUi,/s\.data\.reminders/);
 });
+test('frontend and API both block menstrual-health access for non-female accounts',()=>{
+ assert.match(menstrualApp,/function isFemaleAccountForMenstrualHealth\(user=state\.user\)/);
+ assert.match(menstrualApp,/requestedView==='menstrual-health'&&!isFemaleAccountForMenstrualHealth\(\)/);
+ assert.match(menstrualApp,/state\.view==='menstrual-health'&&!isFemaleAccountForMenstrualHealth\(\)/);
+ assert.match(menstrualServer,/if\(!isFemaleMenstrualHealthAccount\(user\)\)return json\(res,403/);
+});
+
 test('server blocks new health records when the private tracker is disabled',()=>{
  assert.match(menstrualServer,/const requireTrackerEnabled=async\(\)=>/);
  for(const resource of ['cycles','daily-logs','journal','reminders']) {

@@ -1,3 +1,7 @@
+export function isFemaleMenstrualHealthAccount(user) {
+  return /(^|[^a-z])(female|woman|women)([^a-z]|$)/i.test(String(user?.gender||''));
+}
+
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const FLOWS = new Set(['spotting','light','medium','heavy','unspecified']);
 const DAILY_FLOWS = new Set(['none','spotting','light','medium','heavy']);

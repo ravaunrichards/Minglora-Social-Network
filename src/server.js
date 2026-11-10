@@ -32,6 +32,7 @@ import { canPublishGroupPost, canDeleteGroupPost, canLeaveGroup } from '../backe
 import { getMutualFollowIds, normalizeFriendPreferences, validateFriendPreferencePatch } from '../backend/modules/relationships/friends.js';
 import { validatePageInput, validatePageUpdate, canManagePage as canManagePagePolicy, canManagePageTeam as canManagePageTeamPolicy, canViewPageInsights as canViewPageInsightsPolicy, canAssignPageRole as canAssignPageRolePolicy, canChangePageRole as canChangePageRolePolicy, canRemovePageRole as canRemovePageRolePolicy, canDeletePagePost, canDeletePage } from '../backend/modules/pages/service.js';
 import { recordProfileView, touchProfilePresence, getProfileViewStats } from '../backend/modules/profiles/service.js';
+import { isFemaleMenstrualHealthAccount } from '../backend/modules/menstrual-health/service.js';
 import { getPlatformAdminBadge, getProfileVerificationBadge } from './platform-badges.js';
 import { listActiveCreatorSubscriptions } from '../backend/modules/subscriptions/service.js';
 import { SOUND_AUDIO_MIME_TYPES, validateSoundInput, normalizeSoundtrackInput, canUseSound, soundUsageCounts } from '../backend/modules/sounds/service.js';
@@ -1805,6 +1806,7 @@ async function route(req, res) {
       if (method==='GET' && p==='/api/auth/me') return json(res,200,{user:user?safeUser(user,user.id):null});
       requireAuth(user);
       if(p==='/api/menstrual-health'||p.startsWith('/api/menstrual-health/')){
+        if(!isFemaleMenstrualHealthAccount(user))return json(res,403,{error:'Menstrual Health is available only to female accounts.'});
         if(AUTH_PROVIDER!=='supabase')return json(res,503,{error:'Menstrual Health requires Minglora Supabase Auth and private database storage.'});
         const healthSession=sessionFromRequest(req),healthAuth=await sessionAuth(healthSession);
         if(!healthAuth?.access_token)return json(res,401,{error:'Your secure session has expired. Sign in again.'});

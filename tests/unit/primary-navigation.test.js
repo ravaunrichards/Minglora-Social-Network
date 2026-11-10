@@ -44,6 +44,22 @@ test('the More page provides direct access to secondary features and account too
   assert.ok(app.includes("else if(action==='themes')openPaletteSwitcher()"),'Theme controls open from More');
 });
 
+test('Menstrual Health is restored with a 3D icon and shown only to female accounts',()=>{
+  const start=html.indexOf('data-menstrual-health-nav="true"');
+  assert.notEqual(start,-1,'female-only Menstrual Health sidebar shortcut exists');
+  const end=html.indexOf('</button>',start);
+  const entry=html.slice(start-90,end+9);
+  assert.ok(entry.includes('class="rail-link hidden"'),'the entry starts hidden until account gender is checked');
+  assert.ok(entry.includes('data-view="menstrual-health"'),'the entry opens the existing tracker route');
+  assert.ok(entry.includes('/assets/icons/navigation-3d.svg?v=20261110-menstrual-health-3d-1#menstrual-health'),'the entry uses the new 3D menstrual-health icon');
+  assert.ok(app.includes('function isFemaleAccountForMenstrualHealth(user=state.user)'),'the signed-in account gender controls visibility');
+  assert.ok(app.includes("requestedView==='menstrual-health'&&!isFemaleAccountForMenstrualHealth()"),'direct navigation is also gated');
+  const moreStart=app.indexOf('function renderMoreHub(){');
+  const moreEnd=app.indexOf('async function renderView(){',moreStart);
+  const hub=app.slice(moreStart,moreEnd);
+  assert.ok(hub.includes("...(isFemaleAccountForMenstrualHealth()?[{label:'Menstrual Health'"),'More only lists the tracker for female accounts');
+});
+
 test('profile navigation keeps creator tabs and the More menu available',()=>{
   assert.ok(app.includes("[['posts','Posts'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Reels'],['more','More']].map(([key,label])=>"));
   assert.ok(app.includes('profile-more-menu'),'profile More menu markup is present');

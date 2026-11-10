@@ -440,4 +440,16 @@
     <path d="m39 41 2.2 2.2 4.5-5" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
     <path d="M13 20h37" stroke="#fff" stroke-opacity=".75" stroke-width="1.2"/>
   </symbol>
+  <symbol id="menstrual-health" viewBox="0 0 64 64">
+    <ellipse cx="32" cy="58" rx="20" ry="3.5" fill="#421329" opacity=".22"/>
+    <path d="M16 12h32q6 0 6 6v33q0 6-6 6H16q-6 0-6-6V18q0-6 6-6" fill="url(#red-side)" transform="translate(1 2)"/>
+    <rect x="9" y="9" width="46" height="48" rx="9" fill="url(#silver-front)" stroke="#fff0f4" stroke-width="1.3"/>
+    <path d="M9 18q0-9 9-9h28q9 0 9 9v8H9z" fill="url(#red-front)"/>
+    <path d="M17 6v12M47 6v12" stroke="url(#gold-side)" stroke-width="6" stroke-linecap="round"/>
+    <path d="M17 5v12M47 5v12" stroke="url(#gold-front)" stroke-width="3.7" stroke-linecap="round"/>
+    <path d="M32 27c-5 8-10 13-10 19a10 10 0 0 0 20 0c0-6-5-11-10-19z" fill="url(#red-side)" transform="translate(1 2)"/>
+    <path d="M32 25c-5 8-10 13-10 19a10 10 0 0 0 20 0c0-6-5-11-10-19z" fill="url(#red-front)" stroke="#fff0f4" stroke-width="1.2"/>
+    <path d="M26 43q0-5 5-11" fill="none" stroke="#fff" stroke-opacity=".8" stroke-width="2" stroke-linecap="round"/>
+    <path d="M14 19h36" stroke="#fff" stroke-opacity=".65" stroke-width="1.2"/>
+  </symbol>
 </svg>
