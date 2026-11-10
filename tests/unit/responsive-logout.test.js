@@ -15,7 +15,7 @@ const mobileCss = fs.readFileSync(path.join(root, 'public/mobile-layout.css'), '
 test('logout is kept out of mobile and tablet primary navigation and placed in Settings', () => {
   assert.match(html,/href="\/styles\.css\?v=[^"]+"/);
   assert.match(html,/src="\/app\.js\?v=[^"]+"/);
-  assert.ok(html.includes('src="/settings.js?v=20261106-refresh-controls-removed-1"'));
+  assert.ok(html.includes('src="/settings.js?v=20261110-facebook-settings-privacy-1"'));
   assert.match(html, /id="logout-btn"[^>]*data-logout/);
   assert.match(html, /<div id="minglora-session-actions" class="hidden" hidden aria-hidden="true">[\s\S]*id="logout-btn"[^>]*data-logout/);
   const header = html.match(/<header class="topbar">[\s\S]*?<\/header>/)?.[0] || '';
@@ -62,7 +62,7 @@ test('responsive Settings entry remains available after removing navigation logo
   const currentAppScript = html.match(/src="(\/app\.js\?v=[^"]+)"/)?.[1];
   assert.ok(currentStylesheet && serviceWorker.includes(currentStylesheet), 'the active stylesheet must be cached using the current HTML version');
   assert.ok(currentAppScript && serviceWorker.includes(currentAppScript), 'the active app bundle must be cached using the current HTML version');
-  assert.ok(serviceWorker.includes('settings.js?v=20261106-refresh-controls-removed-1'));
+  assert.ok(serviceWorker.includes('settings.js?v=20261110-facebook-settings-privacy-1'));
   assert.ok(serviceWorker.includes('mobile-layout.css?v=20261108-mobile-overlay-panels-1'));
   assert.ok(mobileCss.includes('.top-actions #settings-btn{display:none!important}'));
 });
