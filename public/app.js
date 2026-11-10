@@ -9195,7 +9195,8 @@ async function pollBrowserNotifications(){
       fresh=items.filter(item=>!browserNotificationSeen.has(item.id));
       for(const item of fresh){
         browserNotificationSeen.add(item.id);
-        if(item.type!=='message'&&item.type!=='call')void window.MingloraSoundStudio?.playNotification?.(item.type);
+        if(item.type==='call'&&/missed/i.test(String(item.text||'')))void window.MingloraSoundStudio?.playNotification?.(/video/i.test(String(item.text||''))?'missedVideoCall':'missedVoiceCall');
+        else if(item.type!=='message'&&item.type!=='call')void window.MingloraSoundStudio?.playNotification?.(item.type);
         if(webPushSubscriptionActive||state.settings?.notifications?.push===false||!('Notification' in window)||Notification.permission!=='granted')continue;
         const title=item.type==='live'?'Minglora LIVE':item.type==='live_moderator'?'LIVE moderator update':item.type==='call'?'Incoming Minglora call':item.type==='profile_view'?'Profile view':item.type==='gift'?'New gift':item.type==='fan_club'?'Fan Club update':item.type==='meetwave_invite'?'MeetWave invitation':item.type==='league_match'?'League match update':item.type==='friend'?'Friend update':item.type==='reaction'?'Post reaction':item.type==='comment'?'New comment':item.type==='follow'?'New follower':item.type==='message'?'New Minglora message':'Minglora account update';
         try{
