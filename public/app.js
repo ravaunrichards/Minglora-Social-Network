@@ -815,8 +815,9 @@ function stopFeedAutoSync(){
   feedAutoSyncTimer=null;
 }
 function startFeedAutoSync(){
-  // Do not replace the user's feed while they are reading; refresh on navigation or action.
   stopFeedAutoSync();
+  if(state.view!=='feed')return;
+  feedAutoSyncTimer=window.setInterval(()=>void syncFeedAutomatically(),30000);
 }
 async function syncFeedAutomatically(){
   if(feedAutoSyncBusy||state.view!=='feed'||document.visibilityState!=='visible')return;
@@ -861,7 +862,8 @@ function renderStoriesPanel(){
   });
   const createCard='<button type="button" id="create-story" class="story-create-card" aria-label="Create a story"><span class="story-create-photo"><img src="'+avatar(state.user)+'" alt=""></span><span class="story-create-plus" aria-hidden="true">+</span><span class="story-create-label">Create story</span></button>';
   const cards=visible.map(story=>{
-    const media=story.media?renderStoryPreview(story.media):story.soundtrack?'<span class="story-text-background story-sound-preview">♫<small>'+esc(story.soundtrack.sound?.title||'Original sound')+'</small></span>':'<span class="story-text-background">'+esc((story.text||'').slice(0,80))+'</span>';
+    const storyMedia=Array.isArray(story.mediaItems)&&story.mediaItems.length?story.mediaItems:(story.media?[story.media]:[]);
+    const media=storyMedia.length?renderStoryPreview(storyMedia[0]):story.soundtrack?'<span class="story-text-background story-sound-preview">♫<small>'+esc(story.soundtrack.sound?.title||'Original sound')+'</small></span>':'<span class="story-text-background">'+esc((story.text||'').slice(0,80))+'</span>';
     const ringClass=story.viewedByMe?'is-viewed':'is-unviewed';
     return '<button type="button" class="story-card '+ringClass+'" data-open-story="'+esc(story.id)+'" aria-label="View story by '+esc(story.author?.name||'Minglora member')+'"><span class="story-card-media">'+media+'</span><span class="story-shade"></span><span class="story-avatar-ring"><img class="story-avatar" src="'+avatar(story.author)+'" alt=""></span><span class="story-author">'+esc(story.author?.name||'Unknown account')+'</span>'+(Array.isArray(story.mediaItems)&&story.mediaItems.length>1?'<span class="story-media-count">'+story.mediaItems.length+'</span>':'')+'</button>';
   }).join('');
