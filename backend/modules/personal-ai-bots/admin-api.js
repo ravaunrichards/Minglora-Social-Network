@@ -178,7 +178,7 @@ import {
 } from './personal-ai-bots-service.js';
 
 export async function handlePersonalAiBotsAdminApi(context) {
-  const {req,res,url,method,path,user,input,db,saveStore,uid,now,json,isOwnerAdmin,isSameOriginWrite,lookupAdminMember,persistAiIdentities,listAiIdentities,persistAiBotTasks,listAiBotTasks,getAiBotTaskStats,persistAiBotSettings,persistAiProviderAssignment,listAiProviderAssignments,persistAiEmailIdentity,listAiEmailIdentities,listAiIdentityReports,reviewAiIdentityReport}=context;
+  const {req,res,url,method,path,user,input,db,saveStore,uid,now,json,isOwnerAdmin,isSameOriginWrite,lookupAdminMember,persistAiIdentities,listAiIdentities,persistAiBotTasks,listAiBotTasks,getAiBotTaskStats,persistAiBotSettings,persistAiProviderAssignment,listAiProviderAssignments,listAiProviderRuntime,persistAiEmailIdentity,listAiEmailIdentities,listAiIdentityReports,reviewAiIdentityReport}=context;
   const root='/api/admin/personal-ai-bots';
   if(path!==root&&!path.startsWith(root+'/'))return false;
   if(!isOwnerAdmin)return (json(res,403,{error:'Only the designated MFA-verified Minglora owner can manage the Personal AI Bots Network.'}),true);
@@ -638,6 +638,21 @@ export async function handlePersonalAiBotsAdminApi(context) {
         ok:true,email:saved,
         message:'Email identity record saved. The address is not a verified mailbox and no email provider has provisioned an inbox.'
       }),true);
+    }
+    if(method==='GET'&&path===root+'/provider-runtime'){
+      if(typeof listAiProviderRuntime!=='function')return (json(res,503,{error:'Provider runtime configuration is unavailable.'}),true);
+      const limit=Number(url.searchParams.get('limit')||100);
+      const offset=Number(url.searchParams.get('offset')||0);
+      if(!Number.isInteger(limit)||limit<1||limit>500||!Number.isInteger(offset)||offset<0||offset>1000000000){
+        return (json(res,400,{error:'Provider runtime pagination is invalid.'}),true);
+      }
+      const result=await listAiProviderRuntime({limit,offset});
+      if(!Array.isArray(result))return (json(res,503,{error:'Provider runtime configuration is unavailable.'}),true);
+      const assignments=result.map(item=>{
+        const {credentialSecretReference,...safeItem}=item||{};
+        return {...safeItem,credentialConfigured:typeof credentialSecretReference==='string'&&credentialSecretReference.trim().length>0};
+      });
+      return (json(res,200,{ok:true,assignments,nextOffset:offset+assignments.length,hasMore:assignments.length===limit}),true);
     }
     if(method==='GET'&&path===root+'/providers'){
       if(typeof listAiProviderAssignments!=='function')return (json(res,503,{error:'AI provider assignment storage is unavailable.'}),true);
