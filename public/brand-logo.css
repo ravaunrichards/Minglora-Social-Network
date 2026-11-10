@@ -1,0 +1,51 @@
+/* Minglora top-left brand logo: clear, consistently sized and responsive. */
+.topbar .top-left > #home-brand.brand{
+  display:grid;
+  place-items:center;
+  width:48px;
+  min-width:48px;
+  height:48px;
+  min-height:48px;
+  flex:0 0 48px;
+  padding:0;
+  margin:0;
+  overflow:visible;
+}
+.topbar .top-left > #home-brand .brand-logo{
+  display:block;
+  width:48px;
+  height:48px;
+  max-width:none;
+  max-height:none;
+  object-fit:contain;
+  object-position:center;
+  flex:0 0 48px;
+}
+@media (min-width:761px) and (max-width:980px){
+  .topbar .top-left > #home-brand.brand{
+    width:44px;
+    min-width:44px;
+    height:44px;
+    min-height:44px;
+    flex-basis:44px;
+  }
+  .topbar .top-left > #home-brand .brand-logo{
+    width:44px;
+    height:44px;
+    flex-basis:44px;
+  }
+}
+@media (max-width:760px){
+  .topbar .top-left > #home-brand.brand{
+    width:42px;
+    min-width:42px;
+    height:42px;
+    min-height:42px;
+    flex-basis:42px;
+  }
+  .topbar .top-left > #home-brand .brand-logo{
+    width:42px;
+    height:42px;
+    flex-basis:42px;
+  }
+}
