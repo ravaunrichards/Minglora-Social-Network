@@ -248,11 +248,18 @@
       const items=Array.isArray(payload.items)?payload.items:[];
       total=Number(payload.total||0);
       if(!append)results.innerHTML='';
-      if(items.length)results.insertAdjacentHTML('beforeend',items.map(card).join(''));
-      if(!results.children.length)results.innerHTML='<div class="aid-empty">No public AI profiles match these filters. Try removing one or more filters.</div>';
-      count.textContent=total.toLocaleString()+' public AI profile(s) found.';
-      offset+=items.length;
-      loadMore.hidden=offset>=total||items.length===0;
+      if(items.length){
+        results.querySelector('.aid-empty')?.remove();
+        results.insertAdjacentHTML('beforeend',items.map(card).join(''));
+      }
+      const nextOffset=Number(payload.nextOffset);
+      offset=Number.isInteger(nextOffset)&&nextOffset>=0?nextOffset:offset+items.length;
+      const hasMore=payload.hasMore===true;
+      if(!results.children.length){
+        results.innerHTML='<div class="aid-empty">'+(hasMore?'No visible profiles on this page. Load more to continue searching.':'No public AI profiles match these filters. Try removing one or more filters.')+'</div>';
+      }
+      count.textContent=total.toLocaleString()+' public AI profile(s) matching these filters.';
+      loadMore.hidden=!hasMore;
       lastQuery={search:params.get('search'),filters:params.get('filters'),sort:params.get('sort')};
       setStatus('Results updated.');
     }catch(error){
