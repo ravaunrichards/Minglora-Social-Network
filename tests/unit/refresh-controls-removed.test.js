@@ -33,7 +33,7 @@ test('Recharge currency tools do not expose manual refresh buttons', () => {
 
 test('Feed, Friends and LIVE quietly sync in the background without replacing active interactions', () => {
   assert.match(app, /feedAutoSyncTimer=window\.setInterval\(\(\)=>void syncFeedAutomatically\(\),30000\)/);
-  assert.match(app, /peopleDiscoveryRefreshTimer=window\.setInterval\(\(\)=>void refreshPeopleDiscovery\(\{quiet:true\}\),30000\)/);
+  assert.match(app, /peopleDiscoveryRefreshTimer=window\.setInterval\(\(\)=>void refreshPeopleDiscovery\(\{quiet:true\}\),15000\)/);
   assert.match(app, /liveDirectoryRefreshTimer=window\.setInterval\(\(\)=>void refreshLiveDirectorySessions\(\{quiet:true\}\),15000\)/);
   assert.match(app, /focused&&list\.contains\(focused\)/);
   assert.match(app, /focused&&grid\.contains\(focused\)/);
