@@ -30,7 +30,7 @@ test('provider writes remain owner/MFA gated, same-origin, allow-listed and read
   const routeStart = server.indexOf("if((method==='GET'||method==='PATCH')&&p==='/api/admin/auth-providers'){");
   const routeEnd = server.indexOf("if(method==='GET'&&p==='/api/admin/users')", routeStart);
   const route = server.slice(routeStart, routeEnd);
-  assert.ok(route.includes("if(method==='PATCH'&&!isSameOriginApiWrite(req))"));
+  assert.ok(route.includes("if(method==='PATCH'&&!isSameOriginAdminWrite(req))"));
   assert.ok(route.includes('isDesignatedCreatorHubAdmin(user)'));
   assert.ok(route.includes('hasActiveReviewerSession(user)'));
   assert.ok(route.includes('buildSupabaseProviderCredentialPatch('));
