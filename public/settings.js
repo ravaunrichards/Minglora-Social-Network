@@ -104,6 +104,47 @@
     }).join('')+'</div>';
   }
 
+  function renderCallRingtoneSection(kind, label, selection) {
+    const tones = window.MingloraCallRingtones?.catalog || [];
+    const defaults = window.MingloraCallRingtones?.defaults || { voice: 'classic-phone', video: 'glass-chime' };
+    const custom = selection?.custom || null;
+    const selectedId = selection?.selectedId || (custom ? 'custom' : defaults[kind]);
+    const radioName = 'callRingtone-' + kind;
+    const options = tones.map(tone => {
+      const checked = selectedId === tone.id ? ' checked' : '';
+      return '<label class="call-ringtone-preset">' +
+        '<input type="radio" name="' + radioName + '" value="' + escapeHtml(tone.id) + '"' + checked + '>' +
+        '<span class="call-ringtone-preset-copy"><strong>' + escapeHtml(tone.name) + '</strong><small>' + escapeHtml(tone.description) + '</small></span>' +
+        '<button type="button" class="call-ringtone-preview-button" data-call-ringtone-preview="' + escapeHtml(tone.id) + '" aria-label="Preview ' + escapeHtml(tone.name) + '">Preview</button>' +
+      '</label>';
+    }).join('');
+    const customOption = custom
+      ? '<label class="call-ringtone-preset call-ringtone-custom-option" data-call-ringtone-custom-option>' +
+          '<input type="radio" name="' + radioName + '" value="custom"' + (selectedId === 'custom' ? ' checked' : '') + '>' +
+          '<span class="call-ringtone-preset-copy"><strong>My uploaded ringtone</strong><small>' + escapeHtml(custom.name || 'Uploaded audio') + '</small></span>' +
+        '</label>'
+      : '';
+    const selectedTone = tones.find(tone => tone.id === selectedId);
+    const currentName = selectedId === 'custom' ? (custom?.name || 'Uploaded ringtone') : (selectedTone?.name || 'Minglora default');
+    const currentNote = selectedId === 'custom' ? 'Your private audio is selected.' : 'Selected for ' + (kind === 'voice' ? 'voice' : 'video') + ' calls.';
+    const accept = 'audio/mpeg,audio/mp4,audio/ogg,audio/webm,audio/wav,audio/x-wav,audio/flac,audio/aac,.mp3,.m4a,.ogg,.opus,.webm,.wav,.flac,.aac';
+    return '<div class="call-ringtone-setting" data-call-ringtone-setting="' + kind + '">' +
+      '<h3>' + label + '</h3>' +
+      '<p class="call-ringtone-description">Choose the sound Minglora plays for incoming ' + (kind === 'voice' ? 'voice' : 'video') + ' calls. This choice is separate from the other call type.</p>' +
+      '<div class="call-ringtone-options" role="radiogroup" aria-label="' + label + ' ringtone">' + options + customOption + '</div>' +
+      '<div class="call-ringtone-upload-row">' +
+        '<div class="call-ringtone-upload-current" id="call-ringtone-' + kind + '-current"><strong>' + escapeHtml(currentName) + '</strong><small>' + escapeHtml(currentNote) + '</small></div>' +
+        '<div class="call-ringtone-upload-actions">' +
+          '<input id="call-ringtone-' + kind + '-file" type="file" accept="' + accept + '" hidden>' +
+          '<button type="button" class="primary" id="choose-call-ringtone-' + kind + '">Upload from device</button>' +
+          '<button type="button" class="secondary" id="remove-call-ringtone-' + kind + '"' + (custom ? '' : ' hidden') + '>Remove upload</button>' +
+        '</div>' +
+      '</div>' +
+      '<audio id="call-ringtone-' + kind + '-preview" class="call-ringtone-preview" controls preload="none"' + (custom?.url ? ' src="' + escapeHtml(custom.url) + '"' : ' hidden') + '></audio>' +
+      '<p class="settings-form-status" id="call-ringtone-' + kind + '-status" role="status" aria-live="polite"></p>' +
+    '</div>';
+  }
+
   async function openSettings() {
     const main = document.querySelector('#main-content');
     if (!main) return;
@@ -241,22 +282,12 @@
             <section class="settings-card" id="settings-calls" data-settings-category="interactions">
               ${sectionHeading('Voice &amp; video calls')}
               <div class="settings-security-form">
-                <h3>Your incoming-call ringtone</h3>
-                <p class="muted">Choose a ringtone or a song from your device. It plays when Minglora rings while the app is open. Your ringtone is private to your account.</p>
-                <p class="settings-note">Supported: MP3, M4A, OGG, WebM, WAV, FLAC and AAC · Maximum 20 MB.</p>
-                <div class="call-ringtone-picker-row">
-                  <div class="call-ringtone-current" id="call-ringtone-current">
-                    <strong>${ringtoneResult.ringtone ? escapeHtml(ringtoneResult.ringtone.name) : 'Minglora default ringtone'}</strong>
-                    <small>${ringtoneResult.ringtone ? 'Your custom ringtone is selected.' : 'No custom ringtone selected.'}</small>
-                  </div>
-                  <div class="call-ringtone-actions">
-                    <input id="call-ringtone-file" type="file" accept="audio/mpeg,audio/mp4,audio/ogg,audio/webm,audio/wav,audio/x-wav,audio/flac,audio/aac,.mp3,.m4a,.ogg,.opus,.webm,.wav,.flac,.aac" hidden>
-                    <button type="button" class="primary" id="choose-call-ringtone">Choose ringtone or song</button>
-                    <button type="button" class="secondary" id="remove-call-ringtone" ${ringtoneResult.ringtone ? '' : 'hidden'}>Use default ringtone</button>
-                  </div>
+                <p class="muted">Personalize each incoming-call alert. Voice-call and video-call sounds are saved independently for your account and follow you when you sign in on another device.</p>
+                <p class="settings-note">Built-in tones are original Minglora sounds in familiar, popular ringtone styles. You can also upload your own audio. Supported: MP3, M4A, OGG, WebM, WAV, FLAC and AAC · Maximum 20 MB per ringtone.</p>
+                <div class="call-ringtone-settings-stack">
+                  ${renderCallRingtoneSection('voice', 'Voice call ringtone', ringtoneResult.ringtones?.voice || { selectedId: ringtoneResult.ringtone ? 'custom' : null, custom: ringtoneResult.ringtone || null })}
+                  ${renderCallRingtoneSection('video', 'Video call ringtone', ringtoneResult.ringtones?.video || null)}
                 </div>
-                <audio id="call-ringtone-preview" class="call-ringtone-preview" controls preload="none" ${ringtoneResult.ringtone?.url ? 'src="'+escapeHtml(ringtoneResult.ringtone.url)+'"' : 'hidden'}></audio>
-                <p class="settings-form-status" id="call-ringtone-status" role="status" aria-live="polite">${escapeHtml(ringtoneResult.error||'')}</p>
               </div>
             </section>
             <section class="settings-card theme-centre-card" id="settings-preferences" data-settings-category="content-display">
