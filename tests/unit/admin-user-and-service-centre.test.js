@@ -87,7 +87,7 @@ test("member contact and location fields respect live profile constraints", () =
 
 test("member CRUD and session routes require owner identity, MFA and same-origin writes", () => {
   for (const name of ["admin_user_get", "admin_user_create", "admin_user_update", "admin_user_delete", "admin_user_revoke_sessions"]) assert.ok(runtime.includes('"' + name + '"'));
-  assert.match(server, /isSameOriginApiWrite\(req\)/);
+  assert.match(server, /isSameOriginAdminWrite\(req\)/);
   assert.match(server, /hasActiveReviewerSession\(user\)/);
   assert.match(server, /isDesignatedCreatorHubAdmin\(user\)/);
   assert.match(runtime, /adminActorAllowed/);
@@ -100,7 +100,7 @@ test("ban and unban routes enforce owner MFA, same-origin writes and owner prote
   const routeEnd = server.indexOf("if(method==='GET'&&p==='/api/admin/audit-log')", routeStart);
   assert.ok(routeStart >= 0 && routeEnd > routeStart);
   const route = server.slice(routeStart, routeEnd);
-  assert.ok(route.includes("isSameOriginApiWrite(req)"));
+  assert.ok(route.includes("isSameOriginAdminWrite(req)"));
   assert.ok(route.includes("isDesignatedCreatorHubAdmin(user)"));
   assert.ok(route.includes("isModerator(user,req)"));
   assert.ok(route.includes("hasActiveReviewerSession(user)"));
@@ -209,7 +209,7 @@ test("Auth provider settings require owner MFA and same-origin provider writes",
   const end = server.indexOf("if(method==='GET'&&p==='/api/admin/users')", start);
   assert.ok(start >= 0 && end > start, "Auth provider route is present");
   const route = server.slice(start, end);
-  assert.match(route, /method==='PATCH'&&!isSameOriginApiWrite\(req\)/);
+  assert.match(route, /method==='PATCH'&&!isSameOriginAdminWrite\(req\)/);
   assert.match(route, /isDesignatedCreatorHubAdmin\(user\)/);
   assert.match(route, /isModerator\(user,req\)/);
   assert.match(route, /hasActiveReviewerSession\(user\)/);
