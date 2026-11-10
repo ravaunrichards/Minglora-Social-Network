@@ -36,6 +36,7 @@ import { isFemaleMenstrualHealthAccount } from '../backend/modules/menstrual-hea
 import { getPlatformAdminBadge, getProfileVerificationBadge } from './platform-badges.js';
 import { listActiveCreatorSubscriptions } from '../backend/modules/subscriptions/service.js';
 import { SOUND_AUDIO_MIME_TYPES, validateSoundInput, normalizeSoundtrackInput, canUseSound, soundUsageCounts } from '../backend/modules/sounds/service.js';
+import { DEFAULT_SOUND_STUDIO_SETTINGS, normalizeSoundStudioSettings, validateSoundStudioSettings } from '../backend/modules/sounds/studio.js';
 import { getGiftGallery, giftGalleryTimeZone, recordGiftGalleryEvent, updateGiftGallerySettings } from '../backend/modules/gift-gallery/service.js';
 import { CREATOR_LEAGUE_CLASSES, recordLiveGiftForLeagues, refundCreatorLeagueGift, getCreatorLeagueOverview, createCreatorLeagueMatch, acceptCreatorLeagueMatch, supportCreatorLeagueMatch, useCreatorLeaguePowerup, listCreatorLeagueMatches, settleExpiredLeagueMatches, settleScheduledCreatorLeagueDays } from '../backend/modules/leagues/service.js';
 import { recordGifterGift, refundGifterGift, getGifterProgressionOverview, getGifterBadgeSummary, getNewGifterIdentity, getLiveGifterLeaderboard } from '../backend/modules/gifter-progression/service.js';
@@ -267,8 +268,23 @@ function safeUser(u,viewerId=null){
 const APP_COLOR_THEMES=['minglora','ocean','tropical','royal','emerald','rose','golden','lavender','midnight','graphite'];
 const LIVE_ROOM_THEMES=['studio','ocean','tropical','royal','neon','sunset','garden','social'];
 const LIVE_SCREEN_LAYOUTS=['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight','roundtable-1','roundtable-2'];
-const DEFAULT_SETTINGS={privacy:{profileVisibility:'public',allowFriendRequests:true,messageAudience:'everyone',meetWaveAudience:'everyone',friendsListAudience:'public',followersListAudience:'public',followingListAudience:'public',subscribersListAudience:'public',commentAudience:'everyone'},notifications:{inApp:true,friendRequests:true,messages:true,interactions:true,push:true,profileViews:false,calls:true,live:true,gifts:true,meetWave:true,leagues:true,account:true},preferences:{theme:'system',colorTheme:'minglora',liveRoomTheme:'studio',feedSort:'recent',reducedMotion:false,liteMode:false,keyboardShortcuts:false,displayCurrency:'USD',messengerIncomingCallSounds:true,messengerMessageSounds:true,messengerAutoOpenNewMessages:false,messengerActiveStatus:true,profileLayout:'advanced',messengerArchivedConversationIds:[],messengerRestrictedUserIds:[]},experience:DEFAULT_EXPERIENCE_SETTINGS};
-function getUserSettings(user){const saved=user?.settings||{};const preferences={...DEFAULT_SETTINGS.preferences,...(saved.preferences||{})};if(!APP_COLOR_THEMES.includes(preferences.colorTheme))preferences.colorTheme=DEFAULT_SETTINGS.preferences.colorTheme;if(!['standard','advanced','creator'].includes(preferences.profileLayout))preferences.profileLayout=DEFAULT_SETTINGS.preferences.profileLayout;if(!LIVE_ROOM_THEMES.includes(preferences.liveRoomTheme))preferences.liveRoomTheme=DEFAULT_SETTINGS.preferences.liveRoomTheme;for(const key of ['messengerArchivedConversationIds','messengerRestrictedUserIds'])if(!Array.isArray(preferences[key]))preferences[key]=[];const experience=validateExperienceSettingsPatch(DEFAULT_EXPERIENCE_SETTINGS,saved.experience||{}).settings;return {privacy:{...DEFAULT_SETTINGS.privacy,...(saved.privacy||{})},notifications:{...DEFAULT_SETTINGS.notifications,...(saved.notifications||{})},preferences,experience};}
+const DEFAULT_SETTINGS={privacy:{profileVisibility:'public',allowFriendRequests:true,messageAudience:'everyone',meetWaveAudience:'everyone',friendsListAudience:'public',followersListAudience:'public',followingListAudience:'public',subscribersListAudience:'public',commentAudience:'everyone'},notifications:{inApp:true,friendRequests:true,messages:true,interactions:true,push:true,profileViews:false,calls:true,live:true,gifts:true,meetWave:true,leagues:true,account:true},preferences:{theme:'system',colorTheme:'minglora',liveRoomTheme:'studio',feedSort:'recent',reducedMotion:false,liteMode:false,keyboardShortcuts:false,displayCurrency:'USD',messengerIncomingCallSounds:true,messengerMessageSounds:true,messengerAutoOpenNewMessages:false,messengerActiveStatus:true,profileLayout:'advanced',messengerArchivedConversationIds:[],messengerRestrictedUserIds:[],soundStudio:DEFAULT_SOUND_STUDIO_SETTINGS},experience:DEFAULT_EXPERIENCE_SETTINGS};
+function getUserSettings(user){
+  const saved=user?.settings||{};
+  const preferences={...DEFAULT_SETTINGS.preferences,...(saved.preferences||{})};
+  if(!APP_COLOR_THEMES.includes(preferences.colorTheme))preferences.colorTheme=DEFAULT_SETTINGS.preferences.colorTheme;
+  if(!['standard','advanced','creator'].includes(preferences.profileLayout))preferences.profileLayout=DEFAULT_SETTINGS.preferences.profileLayout;
+  if(!LIVE_ROOM_THEMES.includes(preferences.liveRoomTheme))preferences.liveRoomTheme=DEFAULT_SETTINGS.preferences.liveRoomTheme;
+  for(const key of ['messengerArchivedConversationIds','messengerRestrictedUserIds'])if(!Array.isArray(preferences[key]))preferences[key]=[];
+  const ownedCustomIds=new Set((db.mediaAssets||[])
+    .filter(item=>item.ownerId===user?.id&&item.status==='attached'&&['sound','ringtone'].includes(item.slot)&&String(item.attachedTo||'').startsWith('account:'))
+    .map(item=>'custom:'+item.id));
+  const soundStudio=normalizeSoundStudioSettings(preferences.soundStudio,ownedCustomIds);
+  if(!saved.preferences?.soundStudio?.voiceRingtoneId&&user?.callRingtoneAssetId&&ownedCustomIds.has('custom:'+user.callRingtoneAssetId))soundStudio.voiceRingtoneId='custom:'+user.callRingtoneAssetId;
+  preferences.soundStudio=soundStudio;
+  const experience=validateExperienceSettingsPatch(DEFAULT_EXPERIENCE_SETTINGS,saved.experience||{}).settings;
+  return {privacy:{...DEFAULT_SETTINGS.privacy,...(saved.privacy||{})},notifications:{...DEFAULT_SETTINGS.notifications,...(saved.notifications||{})},preferences,experience};
+}
 function isFriend(firstId,secondId){return (db.follows||[]).some(item=>item.followerId===firstId&&item.followedId===secondId)&&(db.follows||[]).some(item=>item.followerId===secondId&&item.followedId===firstId);}
 function friendPreferenceFor(viewerId,targetId){return (db.friendPreferences||[]).find(item=>item.ownerId===viewerId&&item.targetId===targetId)||null;}
 function isFriendRestricted(viewerId,ownerId){
@@ -326,10 +342,18 @@ function recordProfileActivity(userId,action,summary,targetType='profile',target
 
 function validateSettingsPatch(input,user){
   if(!input||typeof input!=='object'||Array.isArray(input))return {valid:false,error:'Settings must be an object.'};
-  const next=getUserSettings(user);const allowed={privacy:['profileVisibility','allowFriendRequests','messageAudience','meetWaveAudience','friendsListAudience','followersListAudience','followingListAudience','subscribersListAudience','commentAudience'],notifications:['inApp','friendRequests','messages','interactions','push','profileViews','calls','live','gifts','meetWave','leagues','account'],preferences:['theme','colorTheme','liveRoomTheme','feedSort','reducedMotion','liteMode','keyboardShortcuts','displayCurrency','messengerIncomingCallSounds','messengerMessageSounds','messengerAutoOpenNewMessages','messengerActiveStatus','profileLayout','messengerArchivedConversationIds','messengerRestrictedUserIds'],experience:Object.keys(DEFAULT_EXPERIENCE_SETTINGS)};
+  const next=getUserSettings(user);const allowed={privacy:['profileVisibility','allowFriendRequests','messageAudience','meetWaveAudience','friendsListAudience','followersListAudience','followingListAudience','subscribersListAudience','commentAudience'],notifications:['inApp','friendRequests','messages','interactions','push','profileViews','calls','live','gifts','meetWave','leagues','account'],preferences:['theme','colorTheme','liveRoomTheme','feedSort','reducedMotion','liteMode','keyboardShortcuts','displayCurrency','messengerIncomingCallSounds','messengerMessageSounds','messengerAutoOpenNewMessages','messengerActiveStatus','profileLayout','messengerArchivedConversationIds','messengerRestrictedUserIds','soundStudio'],experience:Object.keys(DEFAULT_EXPERIENCE_SETTINGS)};
   for(const [section,values] of Object.entries(input)){
     if(!allowed[section]||!values||typeof values!=='object'||Array.isArray(values))return {valid:false,error:'Unsupported settings section.'};
     if(section==='experience'){const result=validateExperienceSettingsPatch(next.experience,values);if(!result.valid)return result;next.experience=result.settings;continue;}
+    if(section==='preferences'&&Object.hasOwn(values,'soundStudio')){
+      const ownedCustomIds=new Set((db.mediaAssets||[])
+        .filter(item=>item.ownerId===user.id&&item.status==='attached'&&['sound','ringtone'].includes(item.slot)&&String(item.attachedTo||'').startsWith('account:'))
+        .map(item=>'custom:'+item.id));
+      const result=validateSoundStudioSettings(values.soundStudio,next.preferences.soundStudio,ownedCustomIds);
+      if(!result.valid)return {valid:false,error:result.error};
+      next.preferences.soundStudio=result.settings;
+    }
     for(const [key,value] of Object.entries(values)){
       if(!allowed[section].includes(key))return {valid:false,error:'Unsupported setting: '+key};
       if(section==='privacy'&&key==='profileVisibility'&&!['public','friends','private'].includes(value))return {valid:false,error:'Profile visibility must be public, friends or private.'};
@@ -6454,6 +6478,37 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
           return json(res,200,{...result});
         }
       }
+      if(method==='GET'&&p==='/api/sound-studio/custom'){
+        const assets=(db.mediaAssets||[]).filter(item=>item.ownerId===user.id&&item.status==='attached'&&['sound','ringtone'].includes(item.slot)&&String(item.attachedTo||'').startsWith('account:'));
+        const sounds=await Promise.all(assets.map(async asset=>({
+          id:'custom:'+asset.id,assetId:asset.id,title:asset.title||asset.originalName||'Custom sound',
+          mimeType:asset.mimeType,durationMs:Number(asset.durationMs||0),url:await resolveAssetUrl(asset)
+        })));
+        return json(res,200,{sounds});
+      }
+      if(method==='POST'&&p==='/api/sound-studio/custom'){
+        const asset=(db.mediaAssets||[]).find(item=>item.id===String(input.assetId||'')&&item.ownerId===user.id&&item.slot==='sound'&&item.bucket==='minglora-sounds'&&item.status==='uploaded');
+        if(!asset)return json(res,404,{error:'The uploaded custom sound could not be found.'});
+        const title=String(input.title||asset.originalName||'').trim().slice(0,100);
+        const validation=validateSoundInput({title,rightsConfirmed:input.rightsConfirmed===true,allowReuse:false,durationMs:Number(input.durationMs||0)});
+        if(!validation.valid)return json(res,400,{error:validation.errors.join(' ')});
+        asset.title=title;asset.durationMs=validation.value.durationMs;asset.status='attached';asset.attachedTo='account:sound-studio';asset.completedAt=asset.completedAt||now();
+        await saveStore();
+        return json(res,201,{sound:{id:'custom:'+asset.id,assetId:asset.id,title,mimeType:asset.mimeType,durationMs:asset.durationMs,url:await resolveAssetUrl(asset)}});
+      }
+      if(method==='DELETE'&&p.startsWith('/api/sound-studio/custom/')){
+        const assetId=decodeURIComponent(p.slice('/api/sound-studio/custom/'.length));
+        const asset=(db.mediaAssets||[]).find(item=>item.id===assetId&&item.ownerId===user.id&&item.status==='attached'&&['sound','ringtone'].includes(item.slot)&&String(item.attachedTo||'').startsWith('account:'));
+        if(!asset)return json(res,404,{error:'The custom sound could not be found.'});
+        const selectedId='custom:'+asset.id,studio=user.settings?.preferences?.soundStudio||{};
+        const used=studio.voiceRingtoneId===selectedId||studio.videoRingtoneId===selectedId||Object.values(studio.notifications||{}).includes(selectedId);
+        if(used)return json(res,409,{error:'Choose another sound for every assigned category before removing this custom sound.'});
+        asset.status='deleted';asset.deletedAt=now();
+        if(Array.isArray(studio.favorites))studio.favorites=studio.favorites.filter(id=>id!==selectedId);
+        await saveStore();
+        await mediaGateway('media_delete',{ownerId:user.id,bucket:asset.bucket,path:asset.path}).catch(error=>console.warn('[Minglora Sound Studio] Custom sound cleanup failed.',{message:error.message}));
+        return json(res,200,{ok:true});
+      }
       if(method==='GET'&&p==='/api/calls/ringtone'){
         const asset=(db.mediaAssets||[]).find(item=>item.id===user.callRingtoneAssetId&&item.ownerId===user.id&&item.slot==='ringtone'&&item.status==='attached');
         if(!asset)return json(res,200,{ringtone:null});
@@ -6469,6 +6524,8 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
         if(previous){previous.status='deleted';previous.deletedAt=now();}
         asset.status='attached';asset.attachedTo='account:call-ringtone';asset.completedAt=asset.completedAt||now();
         user.callRingtoneAssetId=asset.id;
+        user.settings=user.settings||{};user.settings.preferences=user.settings.preferences||{};
+        user.settings.preferences.soundStudio={...getUserSettings(user).preferences.soundStudio,voiceRingtoneId:'custom:'+asset.id};
         await saveStore();
         if(previous)void mediaGateway('media_delete',{ownerId:user.id,bucket:previous.bucket,path:previous.path}).catch(error=>console.warn('[Minglora ringtone] Previous ringtone cleanup failed.',{message:error.message}));
         const url=await resolveAssetUrl(asset);
@@ -6477,6 +6534,7 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
       if(method==='DELETE'&&p==='/api/calls/ringtone'){
         const previous=(db.mediaAssets||[]).find(item=>item.id===user.callRingtoneAssetId&&item.ownerId===user.id&&item.slot==='ringtone'&&item.status==='attached');
         user.callRingtoneAssetId=null;
+        if(user.settings?.preferences?.soundStudio?.voiceRingtoneId==='custom:'+String(previous?.id||''))user.settings.preferences.soundStudio.voiceRingtoneId='voice-01';
         if(previous){previous.status='deleted';previous.deletedAt=now();}
         await saveStore();
         if(previous)await mediaGateway('media_delete',{ownerId:user.id,bucket:previous.bucket,path:previous.path}).catch(error=>console.warn('[Minglora ringtone] Ringtone cleanup failed.',{message:error.message}));
