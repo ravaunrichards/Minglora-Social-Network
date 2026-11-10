@@ -10,11 +10,17 @@ const server=read('src/server.js');
 const index=read('public/index.html');
 const css=read('public/settings-navigation.css');
 test('Facebook-style Settings & Privacy navigation includes nested menu pages and back routes',()=>{
- for(const page of ['home','settings','help-support','report-support','display-accessibility','keyboard','language','privacy-checkup','privacy-center','help-center','scam-protection','account-status','about','career','developers','information'])assert.ok(settings.includes('data-settings-page="'+page+'"'),'missing page '+page);
- for(const item of ['Settings &amp; privacy','Help &amp; Support','Report &amp; Support','Display &amp; Accessibility','Privacy Checkup','Privacy Center','Scam Protection Center','Account Status','Support Inbox','Activity Center','Content Preferences','Accessibility Settings'])assert.ok(settings.includes(item),'missing menu item '+item);
+ for(const page of ['home','settings','help-support','report-support','display-accessibility','keyboard','language','privacy-checkup','privacy-center','ad-preferences','advertising','ad-choices','cookies','terms','help-center','scam-protection','account-status','about','career','developers','information'])assert.ok(settings.includes('data-settings-page="'+page+'"'),'missing page '+page);
+ for(const item of ['Settings &amp; privacy','Help &amp; Support','Report &amp; Support','Display &amp; Accessibility','Privacy Checkup','Privacy Center','Your ad preferences','Scam Protection Center','Account Status','Support Inbox','Activity Center','Content Preferences','Accessibility Settings'])assert.ok(settings.includes(item),'missing menu item '+item);
  assert.ok(settings.includes('data-settings-back-page="home"'));
  assert.ok(settings.includes('settings-detail-back'));
  assert.ok(settings.includes('settings-more-menu'));
+ assert.ok(settings.includes('data-settings-page="cookies"'));
+ assert.ok(settings.includes('data-settings-page="terms"'));
+ assert.ok(settings.includes('data-settings-page="advertising"'));
+ assert.ok(settings.includes('data-settings-page="ad-choices"'));
+ assert.ok(settings.includes('data-settings-page="ad-preferences"'));
+ assert.ok(settings.includes('data-settings-back-page="home"'));
  assert.ok(index.includes('settings-navigation.css?v=20261110-facebook-settings-privacy-1'));
 });
 test('All existing settings sections and key controls are retained',()=>{
@@ -24,12 +30,22 @@ test('All existing settings sections and key controls are retained',()=>{
  assert.ok(settings.includes("renderThemeChoices('colorTheme', APP_THEMES"));
  assert.ok(settings.includes("renderThemeChoices('liveRoomTheme', LIVE_THEMES"));
  assert.ok(settings.includes('new FormData(settingsForm)'));
+ assert.ok(settings.includes('id="settings-activity-centre"'));
+ assert.ok(settings.includes('data-settings-target="#settings-activity-centre"'));
+ assert.ok(settings.includes('data-settings-target="#active-sessions-list"'));
+ assert.ok(settings.includes('data-settings-target="#support-tickets-list"'));
+ assert.ok(settings.includes("COOKIE_NAME = 'minglora_oauth'"));
  assert.ok(settings.includes("api('/security/mfa')"));
  assert.ok(settings.includes("api('/security/sessions')"));
 });
 test('Dark mode, compact mode, keyboard and accessibility settings save through existing APIs',()=>{
  for(const field of ['keyboardShortcuts','experienceDensity','experienceContrast','experienceFontScale'])assert.ok(settings.includes('name="'+field+'"'),'missing persisted field '+field);
  assert.ok(settings.includes('data-settings-theme-value="system"'));
+ assert.ok(settings.includes('settings-language-current'));
+ assert.ok(settings.includes('navigator.languages'));
+ assert.ok(settings.includes('400-day maximum age'));
+ assert.ok(settings.includes('valid for 10 minutes'));
+ assert.ok(settings.includes('No separate optional-cookie consent or analytics-cookie preference service is connected'));
  assert.ok(settings.includes('MingloraExperience?.apply'));
  assert.ok(server.includes('keyboardShortcuts:false'));
  assert.ok(server.includes("'keyboardShortcuts'"));
