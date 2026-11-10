@@ -100,8 +100,12 @@ test('Main Menu uses Facebook-sized viewport bounds on desktop, tablet and phone
 test('Scrolling does not dismiss the Menu; outside clicks and Escape still close it', () => {
   const script = read('public/minglora-menu.js');
   const safety = read('public/layout-safety.css');
-  assert.ok(script.includes("document.addEventListener('click'"));
-  assert.ok(!script.includes("document.addEventListener('pointerdown'"));
+  assert.ok(script.includes("document.addEventListener('pointerdown'"));
+  assert.ok(script.includes("document.addEventListener('pointerup'"));
+  assert.ok(script.includes("document.addEventListener('pointercancel'"));
+  assert.ok(script.includes('const isTap = movedX < 10 && movedY < 10'));
+  assert.ok(script.includes('event.detail === 0'), 'keyboard outside activation still dismisses');
+  assert.ok(script.includes('trigger.contains(event.target)'), 'trigger taps do not count as outside taps');
   assert.ok(script.includes("event.key === 'Escape'"));
   assert.ok(script.includes("document.documentElement.classList.add('minglora-menu-open')"));
   assert.ok(safety.includes('html.minglora-menu-open,'));

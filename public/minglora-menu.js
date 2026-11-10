@@ -195,8 +195,33 @@
     });
     panel.querySelector('.minglora-menu-close').addEventListener('click', closeMenu);
 
+    let outsidePointerStart = null;
+    document.addEventListener('pointerdown', event => {
+      if (panel.hidden || panel.contains(event.target) || trigger.contains(event.target)) {
+        outsidePointerStart = null;
+        return;
+      }
+      outsidePointerStart = { id: event.pointerId, x: event.clientX, y: event.clientY };
+    }, true);
+
+    document.addEventListener('pointerup', event => {
+      const start = outsidePointerStart;
+      outsidePointerStart = null;
+      if (!start || start.id !== event.pointerId || panel.hidden) return;
+      const movedX = Math.abs(event.clientX - start.x);
+      const movedY = Math.abs(event.clientY - start.y);
+      const isTap = movedX < 10 && movedY < 10;
+      const endedOutside = !panel.contains(event.target) && !trigger.contains(event.target);
+      if (isTap && endedOutside) closeMenu();
+    }, true);
+
+    document.addEventListener('pointercancel', () => {
+      outsidePointerStart = null;
+    }, true);
+
     document.addEventListener('click', event => {
-      if (!panel.hidden && !panel.contains(event.target) && !trigger.contains(event.target)) closeMenu();
+      // Keyboard-generated clicks have detail 0; pointer gestures are handled above.
+      if (event.detail === 0 && !panel.hidden && !panel.contains(event.target) && !trigger.contains(event.target)) closeMenu();
     });
     document.addEventListener('keydown', event => {
       if (event.key === 'Escape' && !panel.hidden) {
