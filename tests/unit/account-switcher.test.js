@@ -91,9 +91,12 @@ test('profile dropdown follows the Facebook account hierarchy without duplicate 
   assert.match(menu, /support:\s*\{\s*label: 'Help & support',\s*icon: 'request'/);
   assert.match(menu, /display:\s*\{\s*label: 'Display & accessibility',\s*icon: 'palette'/);
   assert.match(menu, /const signOutAction = \{ label: 'Log out', icon: 'logout' \}/);
-  for(const destination of ['settings','privacy-checkup','privacy-center','help-center','scam-protection','account-status','support-inbox','report-problem','display-accessibility','keyboard']) {
-    assert.ok(menu.includes('data-account-destination="'+destination+'"'),'nested menu destination '+destination);
-  }
+  for(const destination of [
+    "['Settings', 'settings']","['Privacy Checkup', 'privacy-checkup']","['Privacy Center', 'privacy-center']",
+    "['Help Center', 'help-center']","['Scam Protection Center', 'scam-protection']","['Account Status', 'account-status']",
+    "['Support Inbox', 'support-inbox']","['Report a problem', 'report-problem']",
+    "['Display & Accessibility', 'display-accessibility']","['Keyboard', 'keyboard']"
+  ]) assert.ok(menu.includes(destination),'nested menu destination '+destination);
   for(const label of ['Settings & privacy','Help & support','Display & accessibility','Give feedback','Log out']) assert.ok(menu.includes(label),'profile dropdown item '+label);
   assert.match(menu,/aria-controls="account-switcher-submenu-/);
   assert.match(menu,/data-account-menu-back/);

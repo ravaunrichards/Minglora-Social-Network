@@ -123,6 +123,6 @@ test('Palette and profile/account menus use the same scroll-safe outside dismiss
   assert.ok(html.includes('menu-dismissal.js?v=20261110-menu-dismissal-1'));
   assert.ok(html.includes('app.js?v=20261110-facebook-profile-dropdown-1'));
   assert.ok(html.includes('minglora-menu.js?v=20261110-facebook-profile-dropdown-1'));
-  assert.ok(worker.includes('minglora-shell-v268-self-updating-1'));
+  assert.ok(worker.includes('minglora-shell-v269-self-updating-1'));
   assert.ok(worker.includes('/menu-dismissal.js?v=20261110-menu-dismissal-1'));
 });
