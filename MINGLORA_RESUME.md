@@ -1,10 +1,11 @@
-Updated: 2026-11-10 07:03 UTC (Personal AI Bots workflow #629: 190/190; full Minglora CI #8657: 925/925)
+Updated: 2026-11-10 07:10 UTC (Personal AI Bots workflow #635: 193/193; full Minglora CI #8664: 928/928)
 Scope: **Minglora Social Network only**
 Repository: https://github.com/ravaunrichards/Minglora-Social-Network
 Branch: `feat/personal-ai-bots-network-control-center`
 Draft PR: https://github.com/ravaunrichards/Minglora-Social-Network/pull/202
 Supabase project: `gzycobgbasnqqhnympkr` (existing Minglora project only)
-Latest verified implementation commit: `44e3e1c02cc5d51a490315c6468c83b75472cda0`.
+Latest verified implementation commit: `f464df671d3d30d4e21521462f4b7ab33aad0ef1`.
+Latest documentation/checkpoint commits: `aeb5429ad656ce8005ab732c1b363d18b7ee9e40` (AI scope note); `MINGLORA_RESUME.md` update follows. Owner batch-history paging API/UI/tests: API `ff2171f17cfd8cad79807521544e06c2512bac4a`, UI `29d19ed6884e5a59a84f66b9d8b5b50375f4ac9d`, API tests `c3bada696db68772405cf92ca4542e75d15d8705`, UI tests/cache `cef7b1385f362b56d8aa54bbcd94d8ea2bac359e`, `f464df671d3d30d4e21521462f4b7ab33aad0ef1`.
 Durable task queue pagination API/UI/test commits: API and cursor `4000e4fbf1e6c0c785bb131724e5e80ba4eea320`, queue/history UI `ad9faf6278f78770858b156ec6c2fcc48c81858c`, API tests `476704394f571c463b3b6a9586f779c7d43ed5a9`, `82afb0572f478549d2717257d076273dada5e288`, UI tests and cache refresh `3c68c30923f3a250cb15110ec0675ff693c9b21e`, `44e3e1c02cc5d51a490315c6468c83b75472cda0`.
 Recent admin list pagination commits: canonical identity API/UI/tests `49fa272c4716361e76059037320b42dbfd41c45a`, `d42fdd27fcbe15f6c472576fc2bbca1ba28e8f33`, `60d6e926f3495106455046e460ecbde067653ed4`, `1df4af0747fa02ab3192af277f217c5d0614b3e5`, `2579f6a16bfbac8e74b7838abda107b3d8fa56fa`; provider/email pagination API/UI/tests `2ddc159cfb50dc9efce8f92aa794c0002d5b3a0a`, `430156e0d92facee34a41a9f813b0c532dc534a9`, `d1fd4ab1be4158b794904fb4d8ce1a75249c6044`, `e20e2197174cd0657e2825c24f2e3df52b3cf157`, `c98e75f8e93be47a70f926cb2cb98f4158a7c42a`, verified by `0bd7a31b8feafbd0a50238f2b72358c69b70aec0`.
 Recent AI Admin Centre work: report review pagination/status filtering commits `14d24f50ba27931ade717dee6fe4eeca178b8a8f`, `8d14b93c9e76f55de147b4eab3795fd8be07fdea`, `5631c88dcef3ba6f44a98914059b60824aa4e7f8`, test coverage `02094edbb03e78cf552c0bf1e47345cbafd094bf`, `7132292fbea2fdb9f2207049d7f0d61fb8cb9b28`; canonical identity page endpoint/UI/tests `49fa272c4716361e76059037320b42dbfd41c45a`, `d42fdd27fcbe15f6c472576fc2bbca1ba28e8f33`, `60d6e926f3495106455046e460ecbde067653ed4`, `1df4af0747fa02ab3192af277f217c5d0614b3e5`, `2579f6a16bfbac8e74b7838abda107b3d8fa56fa`.
@@ -27,14 +28,14 @@ The previous checkpoint did not contain a weighted percentage. The earlier conve
 | 1. Relational foundation and backend persistence integration | 25% | 35% | 8.75% |
 | 2. AI identities, profiles, worldwide discovery and member follow graph | 20% | 77% | 15.40% |
 | 3. Corporate governance, organizational charts and HR lifecycle | 15% | 57% | 8.55% |
-| 4. Supervision, bounded autonomy, queues, teams and collaboration | 10% | 66% | 6.60% |
+| 4. Supervision, bounded autonomy, queues, teams and collaboration | 10% | 66.5% | 6.65% |
 | 5. AI social participation and creator ecosystem | 10% | 25% | 2.50% |
 | 6. Security, governance, finance and resource controls | 8% | 27.5% | 2.20% |
 | 7. Model intelligence, memory, provider operations and analytics | 7% | 21% | 1.47% |
 | 8. Distributed scaling, load tests, device tests and production acceptance | 5% | 0% | 0.00% |
-| **TOTAL** | **100%** |  | **45.47% → 45%** |
+| **TOTAL** | **100%** |  | **45.52% → 46%** |
 
-**COMPLETION: 45.47% → 45% | REMAINING: 54.53% → 55%**
+**COMPLETION: 45.52% → 46% | REMAINING: 54.48% → 54%**
 
 This is weighted feature-branch implementation progress, not a claim that 44.90% of the production system is deployed. Milestones 1 and 2 remain partial because normalized AI tables/RPCs are staged but absent from the live Supabase migration ledger and public schema. Milestone 2 now includes tested SQL-level member-block exclusion, stable raw-page pagination cursors, and paginated blocked-profile management in addition to identities, profiles, public discovery, follows and saved searches. Milestone 3 includes tested owner-approved appointment/employment-history records and a read-only organization chart; it remains partial because canonical relational HR persistence, broader employment lifecycle, governance execution, real browser acceptance and operational reporting are unfinished.
 
@@ -97,6 +98,7 @@ This is weighted feature-branch implementation progress, not a claim that 44.90%
 - Canonical PostgreSQL AI identity records now load 100 at a time in the Admin Centre. The owner-only `/identities` API validates `limit`/`offset`, returns `nextOffset`/`hasMore`, and the UI appends deduplicated records with an accessible live status. This remains feature-branch code pending release of the staged SQL/Edge Function migrations.
 - Provider assignment and AI email identity tables now load 100 records at a time, with owner-only `/providers` and `/emails` list APIs validating offsets and returning `nextOffset`/`hasMore`. Admin Centre buttons append further pages and deduplicate by canonical assignment/email IDs. The UI still reveals only whether a server-side credential reference exists; it never exposes credential contents. Verification/provisioning states remain truthful.
 - The durable task queue now has an owner-only `/tasks` list endpoint with validated `limit` (up to the existing RPC cap of 100), `offset`, `nextOffset` and `hasMore`. One Load More action appends each returned page to the main approval queue and adds follow/unfollow tasks from the same page to Follow Manager history. This is read-only; it does not change approval, lease, retry or execution state.
+- Identity batch history now supports validated owner-only pagination (default 50, maximum 100). Owner filtering occurs before stable created-at/ID ordering and offset/limit slicing. The Admin Centre loads the first 50 and appends later pages with duplicate protection; identity creation/retry/idempotency behavior is unchanged. This history remains in the runtime-state adapter, not normalized PostgreSQL.
 - Only active, public, explicitly opted-in AI profiles are returned by the staged public profile/discovery RPCs.
 - Signed-in members follow/unfollow AI identities through a separate AI-only relationship graph. AI follower counts are not written to human `user_follows` and do not affect human popularity counts.
 - Saved discovery searches are member-scoped and have bounded validated filters.
@@ -131,7 +133,7 @@ This is weighted feature-branch implementation progress, not a claim that 44.90%
 ## Verification and current status
 
 - Latest confirmed green Personal AI Bots workflow: run **#629**, commit **`44e3e1c02cc5d51a490315c6468c83b75472cda0`**, **190 passed / 0 failed**, completed **2026-11-10 07:03:05 UTC**. Covers durable task queue pagination and paired follow history, provider/email pagination, canonical identity pagination, report-review filters/pagination, discovery privacy/pagination, blocked-list pagination, HR/chart UI and worker guardrails.
-- Latest confirmed green full Minglora CI workflow: run **#8657**, **925 passed / 0 failed**, completed **2026-11-10 07:03:19 UTC**. Both the main test job and For You functional-navigation job passed. The dependency audit reported **0 vulnerable packages**.
+- Latest confirmed green full Minglora CI workflow: run **#8664**, **928 passed / 0 failed**, completed **2026-11-10 07:10:30 UTC**. Both the main test job and For You functional-navigation job passed. The dependency audit reported **0 vulnerable packages**.
 - Candidate applications are verified to require existing organizational AI identities and open vacancies, prevent duplicate applications, record status history/audit and enforce allowed review transitions.
 - Owner-approved appointment service/API/UI paths are covered by the 177-test focused workflow and 911-test full CI. Appointments require shortlisted applicants and valid manager hierarchy, prevent duplicate active appointments and overfilled vacancies, record employment history/audit, and leave AI identities disabled with no permissions.
 - Bulk identity import: 1–100 per batch, owner-scoped idempotency and payload hash, duplicate controls, per-record outcomes, safe retry after DB failure, rollback on initial runtime checkpoint-save failure, owner-only history; imported identities remain disabled/private.
@@ -140,14 +142,14 @@ This is weighted feature-branch implementation progress, not a claim that 44.90%
 
 ## Recovery and progress comparison
 
-- Previous verified weighted completion: **45.37% → 45%**.
-- Current verified weighted completion: **45.47% → 45%**.
-- Progress since previous checkpoint: **+0.10 percentage points** for paginated durable task queue access with coordinated follow/unfollow history and owner API/UI regression coverage. Milestone 4 is now 66% verified. No credit is awarded for task execution, worker deployment, provider integrations, relational HR persistence, browser/device acceptance or production capacity.
-- Last verified milestone: **Supervision and queues — paginated durable task queue with paired follow/unfollow history (partial)**.
-- Last confirmed action: commit `44e3e1c02cc5d51a490315c6468c83b75472cda0` added the task queue pagination UI and corrected the initial-page expectations; Personal AI Bots #629 passed 190/190 and full CI #8657 passed 925/925. The same returned task page is appended to the main queue and follow/unfollow history; no task state is altered.
+- Previous verified weighted completion: **45.47% → 45%**.
+- Current verified weighted completion: **45.52% → 46%**.
+- Progress since previous checkpoint: **+0.05 percentage points** for owner-filtered, offset-paginated identity batch history and Admin Centre append controls with API/UI verification. Milestone 4 is now 66.5% verified. No credit is awarded for durable PostgreSQL batch-history migration, production browser acceptance, task execution, worker deployment, provider integrations, relational HR persistence or production capacity.
+- Last verified milestone: **Identity batch administration — owner-filtered, paginated batch-history view in the Admin Centre (runtime-state-backed; partial)**.
+- Last confirmed action: commit `f464df671d3d30d4e21521462f4b7ab33aad0ef1` added owner-filtered batch-history pagination and the Admin Centre Load More control; Personal AI Bots #635 passed 193/193 and full CI #8664 passed 928/928. The default first page is 50, with page size capped at 100; batch records remain runtime-state-backed.
 - Recovered: repository, feature branch, PR #202 open/draft, checkpoint, source files, Supabase project status and CI logs independently checked.
 - Unverified: live normalized Postgres HR round-trip, provider/email provisioning, worker/scheduler, manager authorization/delegation and production capacity.
-- Changes since previous checkpoint: added durable task queue cursor API and append-only UI loading for main queue plus follow/unfollow history, with cross-layer tests. Focused and full CI are green.
+- Changes since previous checkpoint: added validated owner-filtered batch-history list pagination, stable ordering, cursor metadata, deduplicated append UI, and API/UI tests. Focused and full CI are green.
 - Recovery confidence: **CONFIRMED** for repository/branch/PR/source/checkpoint/CI; **PARTIALLY RECOVERED** for live DB/service state because AI SQL is unapplied and external runtime services are not released.
 
 ## Changes since the older checkpoint
@@ -188,5 +190,5 @@ This is weighted feature-branch implementation progress, not a claim that 44.90%
 
 ## Exact next action
 
-Continue with independent non-database work that can be built and verified in this feature branch. The normalized AI/HR migration milestone remains blocked until an approved non-production Supabase environment and Supabase CLI are available. Preserve the existing runtime-state adapter and do not apply migrations to production. Next examine provider-runtime records and identity batch-history limits for pagination and accurate loaded-page labels. Continue worker/provider integration only when real provider credentials and approved deployment infrastructure are available. Keep PR #202 open/draft.
+Continue with independent non-database work that can be built and verified in this feature branch. The normalized AI/HR migration milestone remains blocked until an approved non-production Supabase environment and Supabase CLI are available. Preserve the existing runtime-state adapter and do not apply migrations to production. Next inspect the provider runtime records and bounded Admin Centre lists for truthful page/total labeling. Continue worker/provider integration only when real provider credentials and approved deployment infrastructure are available. Keep PR #202 open/draft.
 
