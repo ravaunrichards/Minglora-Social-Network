@@ -2,7 +2,7 @@
   const defaults = {
     privacy: { profileVisibility: 'public', allowFriendRequests: true, messageAudience: 'everyone', meetWaveAudience: 'everyone' },
     notifications: { inApp: true, friendRequests: true, messages: true, interactions: true, push: true, profileViews: false, calls: true, live: true, gifts: true, meetWave: true, leagues: true, account: true },
-    preferences: { theme: 'system', colorTheme: 'minglora', liveRoomTheme: 'studio', feedSort: 'recent', reducedMotion: false, liteMode: false, displayCurrency: 'USD', messengerIncomingCallSounds: true, messengerMessageSounds: true, messengerAutoOpenNewMessages: false, messengerActiveStatus: true, profileLayout: 'advanced', messengerArchivedConversationIds: [], messengerRestrictedUserIds: [] }
+    preferences: { theme: 'system', colorTheme: 'minglora', liveRoomTheme: 'studio', feedSort: 'recent', reducedMotion: false, liteMode: false, keyboardShortcuts: false, displayCurrency: 'USD', messengerIncomingCallSounds: true, messengerMessageSounds: true, messengerAutoOpenNewMessages: false, messengerActiveStatus: true, profileLayout: 'advanced', messengerArchivedConversationIds: [], messengerRestrictedUserIds: [] }
   };
 
   const APP_THEMES = [
@@ -139,13 +139,101 @@
       const settings = {
         privacy: { ...defaults.privacy, ...(result.settings?.privacy || {}) },
         notifications: { ...defaults.notifications, ...(result.settings?.notifications || {}) },
-        preferences: { ...defaults.preferences, ...(result.settings?.preferences || {}) }
+        preferences: { ...defaults.preferences, ...(result.settings?.preferences || {}) },
+        experience: { ...(result.settings?.experience || {}) }
       };
       applyPreferences(settings);
       window.dispatchEvent(new CustomEvent('minglora:settings-loaded', { detail: settings }));
       main.innerHTML = `
-        <div class="settings-heading"><h1>Settings &amp; privacy</h1></div>
-        <form id="settings-form" class="settings-panels">
+        <div id="settings-navigation" class="settings-facebook-navigation">
+<section class="settings-facebook-page" data-settings-page="home">
+<div class="settings-heading"><h1>Settings &amp; privacy</h1></div>
+<div class="settings-facebook-menu-list" aria-label="Settings and privacy menu">
+<button type="button" class="settings-facebook-row" data-settings-open-page="settings"><span class="settings-facebook-row-icon">⚙️</span><span>Settings</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row" data-settings-open-page="help-support"><span class="settings-facebook-row-icon">❔</span><span>Help &amp; Support</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row" data-settings-open-page="report-support"><span class="settings-facebook-row-icon">🛟</span><span>Report &amp; Support</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row" data-settings-report-problem><span class="settings-facebook-row-icon">⚠️</span><span>Report a problem</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row" data-settings-open-page="display-accessibility"><span class="settings-facebook-row-icon">🌗</span><span>Display &amp; Accessibility</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row settings-facebook-logout" data-settings-logout><span class="settings-facebook-row-icon">↪</span><span>Log out</span></button>
+</div>
+<footer class="settings-facebook-footer" aria-label="Legal and information links">
+<div class="settings-facebook-footer-links">
+<button type="button" data-settings-footer="privacy">Privacy</button><span>·</span><button type="button" data-settings-footer="terms">Terms</button><span>·</span><button type="button" data-settings-footer="advertising">Advertising</button><span>·</span><button type="button" data-settings-footer="ad-choices">Ad Choices</button><span>·</span><button type="button" data-settings-footer="cookies">Cookies</button><span>·</span><button type="button" id="settings-more-menu-toggle" aria-expanded="false" aria-controls="settings-more-menu">More</button>
+</div>
+<div class="settings-facebook-more-menu" id="settings-more-menu" hidden><button type="button" data-settings-open-page="about">About</button><button type="button" data-settings-open-page="career">Career</button><button type="button" data-settings-open-page="developers">Developers</button><button type="button" data-settings-open-page="help-center">Help</button></div>
+</footer>
+</section>
+<section class="settings-facebook-page" data-settings-page="settings" hidden>
+<button type="button" class="settings-facebook-back" data-settings-back-page="home">⬅️ Settings &amp; Privacy</button><h2>Settings</h2>
+<div class="settings-facebook-shortcut-list">
+<button type="button" class="settings-facebook-row" data-settings-open-page="language"><span>Language</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row" data-settings-open-page="privacy-checkup"><span>Privacy Checkup</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row" data-settings-open-page="privacy-center"><span>Privacy Center</span><span class="settings-facebook-chevron">›</span></button>
+</div><div id="settings-category-links"></div>
+</section>
+<section class="settings-facebook-page" data-settings-page="help-support" hidden>
+<button type="button" class="settings-facebook-back" data-settings-back-page="home">⬅️ Help &amp; Support</button><h2>Help &amp; Support</h2>
+<div class="settings-facebook-shortcut-list">
+<button type="button" class="settings-facebook-row" data-settings-open-page="help-center"><span>Help Center</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row" data-settings-open-page="scam-protection"><span>Scam Protection Center</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row" data-settings-open-page="account-status"><span>Account Status</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row" data-settings-open-section="settings-help" data-settings-category="support-about" data-settings-title="Support Inbox" data-settings-target="#support-tickets-list"><span>Support Inbox</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row" data-settings-report-problem><span>Report a Problem</span><span class="settings-facebook-chevron">›</span></button>
+</div></section>
+<section class="settings-facebook-page" data-settings-page="report-support" hidden>
+<button type="button" class="settings-facebook-back" data-settings-back-page="home">⬅️ Report &amp; Support</button><h2>Report &amp; Support</h2><p class="settings-facebook-description">Contact Minglora Support, review your existing support conversations, or report a technical problem.</p>
+<div class="settings-facebook-shortcut-list">
+<button type="button" class="settings-facebook-row" data-settings-open-section="settings-help" data-settings-category="support-about" data-settings-title="Contact Support" data-settings-target="#support-ticket-form"><span>Contact Support</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row" data-settings-open-section="settings-help" data-settings-category="support-about" data-settings-title="Support Inbox" data-settings-target="#support-tickets-list"><span>Support Inbox</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row" data-settings-report-problem><span>Report a problem</span><span class="settings-facebook-chevron">›</span></button>
+</div></section>
+<section class="settings-facebook-page" data-settings-page="display-accessibility" hidden>
+<button type="button" class="settings-facebook-back" data-settings-back-page="home">⬅️ Display &amp; Accessibility</button><h2>Display &amp; Accessibility</h2>
+<div class="settings-facebook-control-block"><div><strong>Dark mode</strong><p>Adjust the appearance of Minglora to reduce glare and give your eyes a break.</p></div>
+<div class="settings-facebook-segmented" role="group" aria-label="Dark mode"><button type="button" data-settings-theme-value="light">Off</button><button type="button" data-settings-theme-value="dark">On</button><button type="button" data-settings-theme-value="system">Automatic</button></div></div>
+<label class="settings-facebook-toggle"><span><strong>Compact Mode</strong><small>Use a denser layout with less space between interface elements.</small></span><input type="checkbox" id="settings-compact-mode"></label>
+<div class="settings-facebook-shortcut-list">
+<button type="button" class="settings-facebook-row" data-settings-open-section="settings-notifications" data-settings-category="activity" data-settings-title="Activity Center" data-settings-target="#settings-activity-centre"><span>Activity Center · Activity Log</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row" data-settings-open-page="keyboard"><span>Keyboard</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row" data-settings-open-section="settings-preferences" data-settings-category="content-display" data-settings-title="Content Preferences"><span>Content Preferences</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row" data-settings-open-section="settings-accessibility" data-settings-category="content-display" data-settings-title="Accessibility Settings"><span>Accessibility Settings</span><span class="settings-facebook-chevron">›</span></button>
+</div></section>
+<section class="settings-facebook-page" data-settings-page="keyboard" hidden>
+<button type="button" class="settings-facebook-back" data-settings-back-page="display-accessibility">⬅️ Keyboard</button><h2>Keyboard</h2>
+<button type="button" class="settings-facebook-row" id="settings-see-all-shortcuts" aria-expanded="false" aria-controls="settings-shortcut-reference"><span>See all keyboard shortcuts</span><span class="settings-facebook-chevron">›</span></button>
+<div id="settings-shortcut-reference" class="settings-shortcut-reference" hidden><div><kbd>1</kbd><span>Open Home feed</span></div><div><kbd>2</kbd><span>Open Friends</span></div><div><kbd>3</kbd><span>Open LIVE</span></div><div><kbd>4</kbd><span>Open Messages</span></div><div><kbd>5</kbd><span>Open More</span></div></div>
+<label class="settings-facebook-toggle"><span><strong>Use single-character keyboard shortcuts</strong><small>Use single-character shortcuts for common actions. Shortcuts are ignored while typing in a text field.</small></span><input type="checkbox" id="settings-keyboard-shortcuts-quick"></label>
+</section>
+<section class="settings-facebook-page" data-settings-page="language" hidden><button type="button" class="settings-facebook-back" data-settings-back-page="settings">⬅️ Language</button><h2>Language</h2><div class="settings-facebook-info-card"><strong>App language</strong><p>English is the currently connected interface language. Other language packs are not yet available, so this page does not pretend to switch untranslated screens.</p><p class="muted">Your device language is detected automatically by your browser.</p></div></section>
+<section class="settings-facebook-page" data-settings-page="privacy-checkup" hidden><button type="button" class="settings-facebook-back" data-settings-back-page="settings">⬅️ Privacy Checkup</button><h2>Privacy Checkup</h2><p class="settings-facebook-description">Review the privacy and security choices that control who can see your information and how your account is protected.</p>
+<div class="settings-facebook-shortcut-list">
+<button type="button" class="settings-facebook-row" data-settings-open-section="settings-privacy" data-settings-category="visibility" data-settings-title="Who can see what you share?"><span>Who can see what you share?</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row" data-settings-open-section="settings-privacy" data-settings-category="visibility" data-settings-title="Who can contact you?"><span>Who can contact you?</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row" data-settings-open-section="settings-security" data-settings-category="logon" data-settings-title="How to keep your account secure"><span>How to keep your account secure</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row" data-settings-open-section="settings-data" data-settings-category="account" data-settings-title="Your information and account controls"><span>Your information and account controls</span><span class="settings-facebook-chevron">›</span></button>
+</div></section>
+<section class="settings-facebook-page" data-settings-page="privacy-center" hidden><button type="button" class="settings-facebook-back" data-settings-back-page="settings">⬅️ Privacy Center</button><h2>Privacy Center</h2><p class="settings-facebook-description">Learn about and manage Minglora privacy choices. These links open existing account controls rather than duplicate settings.</p>
+<div class="settings-facebook-shortcut-list">
+<button type="button" class="settings-facebook-row" data-settings-open-section="settings-privacy" data-settings-category="visibility" data-settings-title="Profile and audience controls"><span>Profile and audience controls</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row" data-settings-open-section="settings-blocking" data-settings-category="interactions" data-settings-title="Blocking and interactions"><span>Blocking and interactions</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row" data-settings-open-section="settings-security" data-settings-category="logon" data-settings-title="Password, two-factor authentication and sessions"><span>Password, two-factor authentication and sessions</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row" data-settings-open-section="settings-data" data-settings-category="account" data-settings-title="Download or manage your information"><span>Download or manage your information</span><span class="settings-facebook-chevron">›</span></button>
+</div></section>
+<section class="settings-facebook-page" data-settings-page="help-center" hidden><button type="button" class="settings-facebook-back" data-settings-back-page="help-support">⬅️ Help Center</button><h2>Help Center</h2><p class="settings-facebook-description">Find help with your Minglora account, privacy, sign-in, messages and creator features.</p>
+<div class="settings-facebook-shortcut-list">
+<button type="button" class="settings-facebook-row" data-settings-open-section="settings-security" data-settings-category="logon" data-settings-title="Sign-in and account security"><span>Sign-in and account security</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row" data-settings-open-section="settings-privacy" data-settings-category="visibility" data-settings-title="Privacy and audience"><span>Privacy and audience</span><span class="settings-facebook-chevron">›</span></button>
+<button type="button" class="settings-facebook-row" data-settings-open-section="settings-help" data-settings-category="support-about" data-settings-title="Contact Minglora Support" data-settings-target="#support-ticket-form"><span>Contact Minglora Support</span><span class="settings-facebook-chevron">›</span></button>
+</div></section>
+<section class="settings-facebook-page" data-settings-page="scam-protection" hidden><button type="button" class="settings-facebook-back" data-settings-back-page="help-support">⬅️ Scam Protection Center</button><h2>Scam Protection Center</h2><div class="settings-facebook-info-card"><strong>Protect your account</strong><ul><li>Never share your password, one-time sign-in codes or authenticator codes.</li><li>Be cautious of messages asking you to send money, coins or gifts to unlock an account or prize.</li><li>Check links and account identities before opening them or sending personal information.</li><li>Use a unique password and enable two-factor authentication where available.</li></ul><button type="button" class="settings-facebook-inline-link" data-settings-open-section="settings-security" data-settings-category="logon" data-settings-title="Security and login">Review security settings</button><button type="button" class="settings-facebook-inline-link" data-settings-report-problem>Report suspicious activity</button></div></section>
+<section class="settings-facebook-page" data-settings-page="account-status" hidden><button type="button" class="settings-facebook-back" data-settings-back-page="help-support">⬅️ Account Status</button><h2>Account Status</h2><div class="settings-facebook-info-card"><p>Your current Minglora account status</p><strong id="settings-account-status-value"></strong><p class="muted">This status is read from your signed-in account record. For a restriction or review that needs attention, contact Minglora Support.</p><button type="button" class="settings-facebook-inline-link" data-settings-open-section="settings-help" data-settings-category="support-about" data-settings-title="Contact Support" data-settings-target="#support-ticket-form">Contact Support</button></div></section>
+<section class="settings-facebook-page" data-settings-page="about" hidden><button type="button" class="settings-facebook-back" data-settings-back-page="home">⬅️ About</button><h2>About Minglora</h2><p class="settings-facebook-description">Minglora is a social network for connecting with people, sharing moments and participating in communities.</p></section>
+<section class="settings-facebook-page" data-settings-page="career" hidden><button type="button" class="settings-facebook-back" data-settings-back-page="home">⬅️ Career</button><h2>Career</h2><p class="settings-facebook-description">Career listings are not currently connected to this menu. No open roles are published here.</p></section>
+<section class="settings-facebook-page" data-settings-page="developers" hidden><button type="button" class="settings-facebook-back" data-settings-back-page="home">⬅️ Developers</button><h2>Developers</h2><p class="settings-facebook-description">Minglora's source repository and project history:</p><a class="settings-facebook-inline-link" href="https://github.com/ravaunrichards/Minglora-Social-Network" target="_blank" rel="noopener noreferrer">Minglora on GitHub</a></section>
+<section class="settings-facebook-page" data-settings-page="information" hidden><button type="button" class="settings-facebook-back" data-settings-back-page="home">⬅️ Settings &amp; Privacy</button><h2 id="settings-information-title">Information</h2><p class="settings-facebook-description" id="settings-information-copy"></p><p class="settings-facebook-description">For account questions, use Help &amp; Support to contact Minglora.</p><button type="button" class="settings-facebook-inline-link" data-settings-open-page="help-support">Open Help &amp; Support</button></section>
+</div>
+<div id="settings-detail-heading" class="settings-facebook-detail-heading" hidden><button type="button" id="settings-detail-back" class="settings-facebook-back">⬅️ Settings</button><h2 id="settings-detail-title">Settings</h2></div>
+        <form id="settings-form" class="settings-panels" hidden>
             <div class="settings-category-intro">
               <p>Choose a category to find its settings. Existing Minglora controls are kept in their original sections and saved together.</p>
               <div class="settings-category-grid" role="group" aria-label="Settings &amp; privacy categories">
@@ -280,6 +368,17 @@
                 </label>
                 <label class="settings-toggle"><span><strong>Reduce motion</strong><small>Reduce interface animations and transitions.</small></span><input type="checkbox" name="reducedMotion" ${settings.preferences.reducedMotion ? 'checked' : ''}></label>
               </div>
+            </section>
+            <section class="settings-card" id="settings-keyboard" data-settings-category="content-display">
+              ${sectionHeading('Keyboard')}
+              <label class="settings-toggle"><span><strong>Use single-character keyboard shortcuts</strong><small>Use 1–5 to navigate Minglora. Shortcuts are ignored while you type in an editable field.</small></span><input type="checkbox" name="keyboardShortcuts" ${settings.preferences.keyboardShortcuts ? 'checked' : ''}></label>
+              <p class="settings-note">Available shortcuts: 1 Home, 2 Friends, 3 LIVE, 4 Messages, 5 More.</p>
+            </section>
+            <section class="settings-card" id="settings-accessibility" data-settings-category="content-display">
+              ${sectionHeading('Accessibility Settings')}
+              <label class="settings-field"><span><strong>Compact Mode</strong><small>Use a denser layout with less space between interface elements.</small></span><select name="experienceDensity"><option value="comfortable" ${(settings.experience.density || 'comfortable') === 'comfortable' ? 'selected' : ''}>Off</option><option value="compact" ${settings.experience.density === 'compact' ? 'selected' : ''}>On</option></select></label>
+              <label class="settings-field"><span><strong>Contrast</strong><small>Increase contrast between interface text, borders and backgrounds.</small></span><select name="experienceContrast"><option value="standard" ${(settings.experience.contrast || 'standard') === 'standard' ? 'selected' : ''}>Standard</option><option value="high" ${settings.experience.contrast === 'high' ? 'selected' : ''}>High contrast</option></select></label>
+              <label class="settings-field"><span><strong>Text size</strong><small>Adjust the interface text scale.</small></span><select name="experienceFontScale">${[85,90,95,100,105,110,115,120,125,130,135,140,145,150].map(value => `<option value="${value}" ${Number(settings.experience.fontScale || 100) === value ? 'selected' : ''}>${value}%</option>`).join('')}</select></label>
             </section>
             <section class="settings-card" id="settings-cache" data-settings-category="cache-cellular">
               ${sectionHeading('Cache &amp; Cellular')}
@@ -633,8 +732,112 @@
         const description=document.querySelector('#settings-category-description');
         if(description)description.textContent=selected.dataset.categoryDescription||'';
       }
-      categoryTabs.forEach(tab=>tab.addEventListener('click',()=>activateSettingsCategory(tab.dataset.settingsCategoryButton)));
-      activateSettingsCategory('activity');
+      const settingsNavigation=document.querySelector('#settings-navigation');
+      const settingsMenuPages=[...settingsNavigation.querySelectorAll('[data-settings-page]')];
+      const settingsCategoryIntro=settingsForm.querySelector('.settings-category-intro');
+      const settingsCategoryLinks=document.querySelector('#settings-category-links');
+      if(settingsCategoryIntro&&settingsCategoryLinks)settingsCategoryLinks.append(settingsCategoryIntro);
+      let currentMenuPage='home';
+      let returnToMenuPage='settings';
+      function showSettingsMenuPage(page){
+        const target=settingsMenuPages.find(item=>item.dataset.settingsPage===page);
+        if(!target)return;
+        currentMenuPage=page;settingsNavigation.hidden=false;settingsForm.hidden=true;
+        const detailHeading=document.querySelector('#settings-detail-heading');
+        if(detailHeading)detailHeading.hidden=true;
+        for(const item of settingsMenuPages)item.hidden=item!==target;
+        window.scrollTo({top:0,behavior:settings.preferences.reducedMotion?'auto':'smooth'});
+      }
+      function parentPageLabel(page){
+        return ({home:'Settings & Privacy',settings:'Settings','help-support':'Help & Support','report-support':'Report & Support','display-accessibility':'Display & Accessibility',keyboard:'Keyboard',language:'Language','privacy-checkup':'Privacy Checkup','privacy-center':'Privacy Center','help-center':'Help Center','scam-protection':'Scam Protection Center','account-status':'Account Status',about:'About',career:'Career',developers:'Developers',information:'Settings & Privacy'})[page]||'Settings';
+      }
+      function openSettingsDetail(category,title,sectionId,targetSelector){
+        const selectedSection=sectionId?categorizedSections.find(section=>section.id===sectionId):null;
+        if(sectionId&&!selectedSection)return;
+        returnToMenuPage=currentMenuPage;settingsNavigation.hidden=true;settingsForm.hidden=false;
+        const heading=document.querySelector('#settings-detail-heading');
+        const back=document.querySelector('#settings-detail-back');
+        const titleNode=document.querySelector('#settings-detail-title');
+        if(heading)heading.hidden=false;
+        if(back)back.textContent='⬅️ '+parentPageLabel(returnToMenuPage);
+        if(titleNode)titleNode.textContent=title||'Settings';
+        activateSettingsCategory(category);
+        if(selectedSection)for(const section of categorizedSections)section.hidden=section!==selectedSection;
+        if(targetSelector){const target=document.querySelector(targetSelector);if(target)requestAnimationFrame(()=>target.scrollIntoView({behavior:settings.preferences.reducedMotion?'auto':'smooth',block:'start'}));}
+        else window.scrollTo({top:0,behavior:settings.preferences.reducedMotion?'auto':'smooth'});
+      }
+      categoryTabs.forEach(tab=>tab.addEventListener('click',()=>openSettingsDetail(tab.dataset.settingsCategoryButton,tab.querySelector('span')?.textContent?.trim()||tab.dataset.settingsCategoryButton)));
+      settingsNavigation.addEventListener('click',event=>{
+        const pageButton=event.target.closest('[data-settings-open-page]');
+        if(pageButton){showSettingsMenuPage(pageButton.dataset.settingsOpenPage);return;}
+        const sectionButton=event.target.closest('[data-settings-open-section]');
+        if(sectionButton){openSettingsDetail(sectionButton.dataset.settingsCategory||'support-about',sectionButton.dataset.settingsTitle||sectionButton.textContent.trim(),sectionButton.dataset.settingsOpenSection,sectionButton.dataset.settingsTarget||'');return;}
+        const footer=event.target.closest('[data-settings-footer]');
+        if(footer){
+          const topic=footer.dataset.settingsFooter;
+          if(topic==='privacy'){showSettingsMenuPage('privacy-center');return;}
+          const copy={terms:'A dedicated Minglora Terms page is not connected to this menu yet. This information page does not replace published legal terms.',advertising:'Advertising preference controls are not currently connected to this settings page. No inactive advertising switch is presented as working.','ad-choices':'Ad Choices controls are not currently connected to this settings page. This page will expose controls only when an enforceable preference is available.',cookies:'Cookie and browser-storage information is not yet published in a dedicated policy page. Temporary cached images can be cleared under Cache & Cellular without deleting your account or downloaded files.'};
+          document.querySelector('#settings-information-title').textContent=topic==='ad-choices'?'Ad Choices':topic.charAt(0).toUpperCase()+topic.slice(1);
+          document.querySelector('#settings-information-copy').textContent=copy[topic]||'Information is not available yet.';
+          showSettingsMenuPage('information');return;
+        }
+        if(event.target.closest('[data-settings-report-problem]')){
+          showSettingsMenuPage('help-support');openSettingsDetail('support-about','Report a Problem','settings-help','#support-ticket-form');
+          const reportCategory=document.querySelector('#support-ticket-form select[name="category"]');if(reportCategory)reportCategory.value='bug';
+          return;
+        }
+        if(event.target.closest('[data-settings-logout]'))document.querySelector('#logout-btn')?.click();
+      });
+      settingsNavigation.querySelectorAll('[data-settings-back-page]').forEach(button=>button.addEventListener('click',()=>showSettingsMenuPage(button.dataset.settingsBackPage)));
+      document.querySelector('#settings-detail-back')?.addEventListener('click',()=>showSettingsMenuPage(returnToMenuPage));
+      document.querySelector('#settings-more-menu-toggle')?.addEventListener('click',event=>{
+        const button=event.currentTarget,menu=document.querySelector('#settings-more-menu'),open=menu?.hidden===true;
+        if(menu)menu.hidden=!open;button.setAttribute('aria-expanded',open?'true':'false');
+      });
+      document.querySelector('#settings-see-all-shortcuts')?.addEventListener('click',event=>{
+        const button=event.currentTarget,list=document.querySelector('#settings-shortcut-reference'),open=list?.hidden===true;
+        if(list)list.hidden=!open;button.setAttribute('aria-expanded',open?'true':'false');
+      });
+      const quickThemeButtons=[...settingsNavigation.querySelectorAll('[data-settings-theme-value]')];
+      function syncQuickAppearance(){
+        const theme=settingsForm.querySelector('[name="theme"]')?.value||'system';
+        for(const button of quickThemeButtons){const active=button.dataset.settingsThemeValue===theme;button.classList.toggle('active',active);button.setAttribute('aria-pressed',active?'true':'false');}
+        const density=settingsForm.querySelector('[name="experienceDensity"]')?.value||settings.experience.density||'comfortable';
+        const compact=document.querySelector('#settings-compact-mode');if(compact)compact.checked=density==='compact';
+        const keyboard=settingsForm.querySelector('[name="keyboardShortcuts"]'),quickKeyboard=document.querySelector('#settings-keyboard-shortcuts-quick');
+        if(quickKeyboard&&keyboard)quickKeyboard.checked=keyboard.checked;
+      }
+      quickThemeButtons.forEach(button=>button.addEventListener('click',()=>{
+        const field=settingsForm.querySelector('[name="theme"]');if(!field)return;
+        field.value=button.dataset.settingsThemeValue;field.dispatchEvent(new Event('change',{bubbles:true}));syncQuickAppearance();
+      }));
+      document.querySelector('#settings-compact-mode')?.addEventListener('change',event=>{
+        const field=settingsForm.querySelector('[name="experienceDensity"]');if(!field)return;
+        field.value=event.currentTarget.checked?'compact':'comfortable';field.dispatchEvent(new Event('change',{bubbles:true}));syncQuickAppearance();
+      });
+      document.querySelector('#settings-keyboard-shortcuts-quick')?.addEventListener('change',event=>{
+        const field=settingsForm.querySelector('[name="keyboardShortcuts"]');if(!field)return;
+        field.checked=event.currentTarget.checked;field.dispatchEvent(new Event('change',{bubbles:true}));
+      });
+      settingsForm.querySelector('[name="keyboardShortcuts"]')?.addEventListener('change',event=>{
+        window.MingloraKeyboardShortcutsEnabled=event.currentTarget.checked;
+        const quick=document.querySelector('#settings-keyboard-shortcuts-quick');if(quick)quick.checked=event.currentTarget.checked;
+      });
+      settingsForm.querySelector('[name="theme"]')?.addEventListener('change',syncQuickAppearance);
+      settingsForm.querySelector('[name="experienceDensity"]')?.addEventListener('change',syncQuickAppearance);
+      window.MingloraKeyboardShortcutsEnabled=settings.preferences.keyboardShortcuts===true;
+      if(!window.__mingloraSettingsSingleKeyShortcutsBound){
+        document.addEventListener('keydown',event=>{
+          if(window.MingloraKeyboardShortcutsEnabled!==true||event.altKey||event.ctrlKey||event.metaKey||event.shiftKey)return;
+          if(event.target?.closest?.('input,textarea,select,[contenteditable="true"],[role="textbox"]'))return;
+          const route={'1':'feed','2':'friends','3':'live','4':'messages','5':'more'}[event.key];if(!route)return;
+          const control=document.querySelector('[data-view="'+route+'"]:not([hidden])');
+          if(control&&!control.disabled){event.preventDefault();control.click();}
+        });window.__mingloraSettingsSingleKeyShortcutsBound=true;
+      }
+      const statusNode=document.querySelector('#settings-account-status-value');
+      if(statusNode)statusNode.textContent=result.account?.status||'Not available';
+      syncQuickAppearance();showSettingsMenuPage('home');
 
       const setDeviceAccessStatus=(resource,message)=>{
         const label=document.querySelector('#device-access-'+resource+'-status');
@@ -793,7 +996,13 @@
             feedSort: formData.get('feedSort'),
             reducedMotion: formData.has('reducedMotion'),
             liteMode: formData.has('liteMode'),
-            displayCurrency: formData.get('displayCurrency') || 'USD'
+            displayCurrency: formData.get('displayCurrency') || 'USD',
+            keyboardShortcuts: formData.has('keyboardShortcuts')
+          },
+          experience: {
+            density: formData.get('experienceDensity') || settings.experience.density || 'comfortable',
+            contrast: formData.get('experienceContrast') || settings.experience.contrast || 'standard',
+            fontScale: Number(formData.get('experienceFontScale') || settings.experience.fontScale || 100)
           }
         };
       }
@@ -801,6 +1010,9 @@
       async function persistSettings() {
         const saved = await api('/settings', { method: 'PATCH', body: JSON.stringify(collectSettingsPayload()) });
         applyPreferences(saved.settings);
+        settings.experience = { ...settings.experience, ...(saved.settings?.experience || {}) };
+        if (window.MingloraExperience?.apply && saved.settings?.experience) window.MingloraExperience.apply(saved.settings.experience);
+        window.MingloraKeyboardShortcutsEnabled = saved.settings?.preferences?.keyboardShortcuts === true;
         window.dispatchEvent(new CustomEvent('minglora:settings-loaded', { detail: saved.settings }));
         if(settingsForm?.querySelector('[name="notificationProfileViews"]')){
           const profileViews=await api('/profile-views').catch(()=>({enabled:false,viewers:[]}));
