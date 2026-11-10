@@ -93,7 +93,7 @@ test('Admin Centre groups existing tools into complete department pages and keep
   assert.ok(nav.includes('view.append(target)'),'Existing feature containers are moved into their owning department');
   assert.ok(nav.includes('data-admin-department-tool'),'Each moved tool is retained as a department-specific workspace section');
   for(const alias of ['users','audit-log','gift-earnings','campaign-wallet','member-promotions','marketing-budget','platform-payouts','creator-withdrawals','promotional-tracking','live-pro','moderation','support','security']){
-    assert.ok(nav.includes(alias+":"),'Legacy route '+alias+' still resolves to its department');
+    assert.ok(nav.includes(alias+":") || nav.includes("'"+alias+"':"),'Legacy route '+alias+' still resolves to its department');
   }
   assert.ok(nav.includes('window.history.pushState'),'Department navigation updates browser history');
   assert.ok(nav.includes("window.addEventListener('popstate'"),'Browser Back and Forward restore the selected department');
