@@ -11,8 +11,23 @@ import {
   isCallRingExpired,
   isCallTerminalStatus,
   reconcileCallPresence,
-  validateCallRingtoneUpload
+  validateCallRingtoneUpload,
+  CALL_RINGTONE_DEFAULTS,
+  CALL_RINGTONE_PRESET_IDS,
+  isCallRingtonePresetId,
+  normalizeCallRingtoneKind
 } from '../backend/modules/calls/service.js';
+
+test('voice and video calls have separate validated ringtone presets',()=>{
+  assert.deepEqual(CALL_RINGTONE_DEFAULTS,{voice:'classic-phone',video:'glass-chime'});
+  assert.equal(CALL_RINGTONE_PRESET_IDS.length,8);
+  for(const id of CALL_RINGTONE_PRESET_IDS)assert.equal(isCallRingtonePresetId(id),true);
+  assert.equal(isCallRingtonePresetId('unapproved-audio-url'),false);
+  assert.equal(normalizeCallRingtoneKind('voice'),'voice');
+  assert.equal(normalizeCallRingtoneKind('audio'),'voice');
+  assert.equal(normalizeCallRingtoneKind('video'),'video');
+  assert.equal(normalizeCallRingtoneKind('unknown'),null);
+});
 
 test('calls enforce an eight-participant maximum',()=>{
   assert.equal(CALL_MAX_PARTICIPANTS,8);

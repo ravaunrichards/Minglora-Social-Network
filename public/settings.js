@@ -104,6 +104,49 @@
     }).join('')+'</div>';
   }
 
+  function renderCallRingtoneSection(kind, label, selection) {
+    const tones = window.MingloraCallRingtones?.catalog || [];
+    const defaults = window.MingloraCallRingtones?.defaults || { voice: 'classic-phone', video: 'glass-chime' };
+    const custom = selection?.custom || null;
+    const selectedId = selection?.selectedId || (custom ? 'custom' : defaults[kind]);
+    const radioName = 'callRingtone-' + kind;
+    const options = tones.map(tone => {
+      const checked = selectedId === tone.id ? ' checked' : '';
+      return '<div class="call-ringtone-preset">' +
+        '<label class="call-ringtone-preset-select">' +
+          '<input type="radio" name="' + radioName + '" value="' + escapeHtml(tone.id) + '"' + checked + '>' +
+          '<span class="call-ringtone-preset-copy"><strong>' + escapeHtml(tone.name) + '</strong><small>' + escapeHtml(tone.description) + '</small></span>' +
+        '</label>' +
+        '<button type="button" class="call-ringtone-preview-button" data-call-ringtone-preview="' + escapeHtml(tone.id) + '" aria-label="Preview ' + escapeHtml(tone.name) + '">Preview</button>' +
+      '</div>';
+    }).join('');
+    const customOption = custom
+      ? '<label class="call-ringtone-preset call-ringtone-custom-option" data-call-ringtone-custom-option>' +
+          '<input type="radio" name="' + radioName + '" value="custom"' + (selectedId === 'custom' ? ' checked' : '') + '>' +
+          '<span class="call-ringtone-preset-copy"><strong>My uploaded ringtone</strong><small>' + escapeHtml(custom.name || 'Uploaded audio') + '</small></span>' +
+        '</label>'
+      : '';
+    const selectedTone = tones.find(tone => tone.id === selectedId);
+    const currentName = selectedId === 'custom' ? (custom?.name || 'Uploaded ringtone') : (selectedTone?.name || 'Minglora default');
+    const currentNote = selectedId === 'custom' ? 'Your private audio is selected.' : 'Selected for ' + (kind === 'voice' ? 'voice' : 'video') + ' calls.';
+    const accept = 'audio/mpeg,audio/mp4,audio/ogg,audio/webm,audio/wav,audio/x-wav,audio/flac,audio/aac,.mp3,.m4a,.ogg,.opus,.webm,.wav,.flac,.aac';
+    return '<div class="call-ringtone-setting" data-call-ringtone-setting="' + kind + '">' +
+      '<h3>' + label + '</h3>' +
+      '<p class="call-ringtone-description">Choose the sound Minglora plays for incoming ' + (kind === 'voice' ? 'voice' : 'video') + ' calls. This choice is separate from the other call type.</p>' +
+      '<div class="call-ringtone-options" role="radiogroup" aria-label="' + label + ' ringtone">' + options + customOption + '</div>' +
+      '<div class="call-ringtone-upload-row">' +
+        '<div class="call-ringtone-upload-current" id="call-ringtone-' + kind + '-current"><strong>' + escapeHtml(currentName) + '</strong><small>' + escapeHtml(currentNote) + '</small></div>' +
+        '<div class="call-ringtone-upload-actions">' +
+          '<input id="call-ringtone-' + kind + '-file" type="file" accept="' + accept + '" hidden>' +
+          '<button type="button" class="primary" id="choose-call-ringtone-' + kind + '">Upload from device</button>' +
+          '<button type="button" class="secondary" id="remove-call-ringtone-' + kind + '"' + (custom ? '' : ' hidden') + '>Remove upload</button>' +
+        '</div>' +
+      '</div>' +
+      '<audio id="call-ringtone-' + kind + '-preview" class="call-ringtone-preview" controls preload="none"' + (custom?.url ? ' src="' + escapeHtml(custom.url) + '"' : ' hidden') + '></audio>' +
+      '<p class="settings-form-status" id="call-ringtone-' + kind + '-status" role="status" aria-live="polite"></p>' +
+    '</div>';
+  }
+
   async function openSettings() {
     const main = document.querySelector('#main-content');
     if (!main) return;
@@ -241,22 +284,12 @@
             <section class="settings-card" id="settings-calls" data-settings-category="interactions">
               ${sectionHeading('Voice &amp; video calls')}
               <div class="settings-security-form">
-                <h3>Your incoming-call ringtone</h3>
-                <p class="muted">Choose a ringtone or a song from your device. It plays when Minglora rings while the app is open. Your ringtone is private to your account.</p>
-                <p class="settings-note">Supported: MP3, M4A, OGG, WebM, WAV, FLAC and AAC · Maximum 20 MB.</p>
-                <div class="call-ringtone-picker-row">
-                  <div class="call-ringtone-current" id="call-ringtone-current">
-                    <strong>${ringtoneResult.ringtone ? escapeHtml(ringtoneResult.ringtone.name) : 'Minglora default ringtone'}</strong>
-                    <small>${ringtoneResult.ringtone ? 'Your custom ringtone is selected.' : 'No custom ringtone selected.'}</small>
-                  </div>
-                  <div class="call-ringtone-actions">
-                    <input id="call-ringtone-file" type="file" accept="audio/mpeg,audio/mp4,audio/ogg,audio/webm,audio/wav,audio/x-wav,audio/flac,audio/aac,.mp3,.m4a,.ogg,.opus,.webm,.wav,.flac,.aac" hidden>
-                    <button type="button" class="primary" id="choose-call-ringtone">Choose ringtone or song</button>
-                    <button type="button" class="secondary" id="remove-call-ringtone" ${ringtoneResult.ringtone ? '' : 'hidden'}>Use default ringtone</button>
-                  </div>
+                <p class="muted">Personalize each incoming-call alert. Voice-call and video-call sounds are saved independently for your account and follow you when you sign in on another device.</p>
+                <p class="settings-note">Built-in tones are original Minglora sounds in familiar, popular ringtone styles. You can also upload your own audio. Supported: MP3, M4A, OGG, WebM, WAV, FLAC and AAC · Maximum 20 MB per ringtone.</p>
+                <div class="call-ringtone-settings-stack">
+                  ${renderCallRingtoneSection('voice', 'Voice call ringtone', ringtoneResult.ringtones?.voice || { selectedId: ringtoneResult.ringtone ? 'custom' : null, custom: ringtoneResult.ringtone || null })}
+                  ${renderCallRingtoneSection('video', 'Video call ringtone', ringtoneResult.ringtones?.video || null)}
                 </div>
-                <audio id="call-ringtone-preview" class="call-ringtone-preview" controls preload="none" ${ringtoneResult.ringtone?.url ? 'src="'+escapeHtml(ringtoneResult.ringtone.url)+'"' : 'hidden'}></audio>
-                <p class="settings-form-status" id="call-ringtone-status" role="status" aria-live="polite">${escapeHtml(ringtoneResult.error||'')}</p>
               </div>
             </section>
             <section class="settings-card theme-centre-card" id="settings-preferences" data-settings-category="content-display">
@@ -536,37 +569,117 @@
       }
       if(canModerate){loadModerationQueue();loadModeratorSupportInbox();}
       
-      const ringtoneInput=document.querySelector('#call-ringtone-file');
-      const ringtoneStatus=document.querySelector('#call-ringtone-status');
-      const ringtoneCurrent=document.querySelector('#call-ringtone-current');
-      const ringtonePreview=document.querySelector('#call-ringtone-preview');
-      const ringtoneRemove=document.querySelector('#remove-call-ringtone');
-      document.querySelector('#choose-call-ringtone')?.addEventListener('click',()=>ringtoneInput?.click());
-      ringtoneInput?.addEventListener('change',async()=>{
-        const file=ringtoneInput.files?.[0];if(!file)return;
-        ringtoneStatus.textContent='Uploading '+file.name+'…';
-        try{
-          const asset=await window.uploadMediaFile('ringtone',file,1,0,progress=>{
-            ringtoneStatus.textContent=progress.finalizing?'Upload complete. Saving ringtone…':'Uploading ringtone · '+progress.percentage+'%';
-          });
-          const saved=await api('/calls/ringtone',{method:'POST',body:JSON.stringify({assetId:asset.id})});
-          ringtonePreview.src=saved.ringtone.url;ringtonePreview.hidden=false;ringtonePreview.load();
-          ringtoneCurrent.innerHTML='<strong>'+escapeHtml(saved.ringtone.name)+'</strong><small>Your custom ringtone is selected.</small>';
-          ringtoneRemove.hidden=false;ringtoneStatus.textContent='Your incoming-call ringtone has been saved.';
-          window.dispatchEvent(new CustomEvent('minglora:call-ringtone-updated'));
-        }catch(error){ringtoneStatus.textContent='Could not save ringtone. '+error.message;}
-        finally{ringtoneInput.value='';}
-      });
-      ringtoneRemove?.addEventListener('click',async()=>{
-        ringtoneRemove.disabled=true;ringtoneStatus.textContent='Removing custom ringtone…';
-        try{
-          await api('/calls/ringtone',{method:'DELETE'});
-          ringtonePreview.pause();ringtonePreview.removeAttribute('src');ringtonePreview.hidden=true;ringtonePreview.load();
-          ringtoneCurrent.innerHTML='<strong>Minglora default ringtone</strong><small>No custom ringtone selected.</small>';
-          ringtoneRemove.hidden=true;ringtoneStatus.textContent='Minglora default ringtone restored.';
-          window.dispatchEvent(new CustomEvent('minglora:call-ringtone-updated'));
-        }catch(error){ringtoneStatus.textContent='Could not remove ringtone. '+error.message;}
-        finally{ringtoneRemove.disabled=false;}
+      ['voice','video'].forEach(kind=>{
+        const section=document.querySelector('[data-call-ringtone-setting="'+kind+'"]');
+        if(!section)return;
+        const fileInput=section.querySelector('#call-ringtone-'+kind+'-file');
+        const status=section.querySelector('#call-ringtone-'+kind+'-status');
+        const current=section.querySelector('#call-ringtone-'+kind+'-current');
+        const preview=section.querySelector('#call-ringtone-'+kind+'-preview');
+        const removeButton=section.querySelector('#remove-call-ringtone-'+kind);
+        const options=section.querySelector('.call-ringtone-options');
+        const radioName='callRingtone-'+kind;
+        let savedChoice=section.querySelector('input[type="radio"][name="'+radioName+'"]:checked')?.value||'';
+        const defaultId=window.MingloraCallRingtones?.defaults?.[kind]||(kind==='voice'?'classic-phone':'glass-chime');
+        const setCurrent=(name,note)=>{
+          const title=current?.querySelector('strong'),detail=current?.querySelector('small');
+          if(title)title.textContent=name;
+          if(detail)detail.textContent=note;
+        };
+        const setStatus=message=>{if(status)status.textContent=message;};
+        const selectedLabel=choice=>{
+          if(choice==='custom')return {name:'My uploaded ringtone',note:'Your private audio is selected.'};
+          const tone=window.MingloraCallRingtones?.get?.(choice);
+          return {name:tone?.name||'Minglora default',note:'Selected for '+(kind==='voice'?'voice':'video')+' calls.'};
+        };
+        const updateCustomOption=custom=>{
+          let option=section.querySelector('[data-call-ringtone-custom-option]');
+          if(!custom){option?.remove();return;}
+          if(!option){
+            option=document.createElement('label');
+            option.className='call-ringtone-preset call-ringtone-custom-option';
+            option.setAttribute('data-call-ringtone-custom-option','');
+            const radio=document.createElement('input');
+            radio.type='radio';radio.name=radioName;radio.value='custom';
+            const copy=document.createElement('span');copy.className='call-ringtone-preset-copy';
+            const title=document.createElement('strong');title.textContent='My uploaded ringtone';
+            const detail=document.createElement('small');detail.textContent=custom.name||'Uploaded audio';
+            copy.append(title,detail);option.append(radio,copy);options.append(option);
+          }else{
+            const detail=option.querySelector('small');
+            if(detail)detail.textContent=custom.name||'Uploaded audio';
+          }
+        };
+        const setRadio=choice=>{
+          const radio=section.querySelector('input[type="radio"][name="'+radioName+'"][value="'+choice+'"]');
+          if(radio)radio.checked=true;
+        };
+
+        section.addEventListener('click',event=>{
+          const button=event.target.closest('[data-call-ringtone-preview]');
+          if(!button||!section.contains(button))return;
+          event.preventDefault();event.stopPropagation();
+          const tone=window.MingloraCallRingtones?.get?.(button.dataset.callRingtonePreview);
+          if(window.MingloraCallRingtones?.play?.(button.dataset.callRingtonePreview,{loop:false,volume:0.8})){
+            setStatus('Previewing '+(tone?.name||'ringtone')+'.');
+          }else setStatus('Audio preview is not available on this device.');
+        });
+
+        section.addEventListener('change',async event=>{
+          const radio=event.target;
+          if(!(radio instanceof HTMLInputElement)||radio.type!=='radio'||radio.name!==radioName)return;
+          const choice=radio.value;
+          if(choice==='custom'&&!section.querySelector('[data-call-ringtone-custom-option]'))return;
+          section.querySelectorAll('input[type="radio"][name="'+radioName+'"]').forEach(item=>item.disabled=true);
+          setStatus('Saving '+(kind==='voice'?'voice':'video')+' call ringtone…');
+          try{
+            await api('/calls/ringtone',{method:'PATCH',body:JSON.stringify({kind,ringtoneId:choice})});
+            savedChoice=choice;
+            const label=selectedLabel(choice);setCurrent(label.name,label.note);
+            setStatus((kind==='voice'?'Voice':'Video')+' call ringtone saved.');
+            window.dispatchEvent(new CustomEvent('minglora:call-ringtone-updated'));
+          }catch(error){
+            setRadio(savedChoice);
+            setStatus('Could not save ringtone. '+error.message);
+          }finally{
+            section.querySelectorAll('input[type="radio"][name="'+radioName+'"]').forEach(item=>item.disabled=false);
+          }
+        });
+
+        document.querySelector('#choose-call-ringtone-'+kind)?.addEventListener('click',()=>fileInput?.click());
+        fileInput?.addEventListener('change',async()=>{
+          const file=fileInput.files?.[0];if(!file)return;
+          setStatus('Uploading '+file.name+'…');
+          try{
+            const asset=await window.uploadMediaFile('ringtone',file,1,0,progress=>{
+              setStatus(progress.finalizing?'Upload complete. Saving your '+kind+' ringtone…':'Uploading ringtone · '+progress.percentage+'%');
+            });
+            const saved=await api('/calls/ringtone',{method:'POST',body:JSON.stringify({kind,assetId:asset.id})});
+            if(!saved.ringtone?.url)throw new Error('The uploaded ringtone was saved but its preview URL is unavailable.');
+            updateCustomOption(saved.ringtone);
+            setRadio('custom');savedChoice='custom';
+            preview.src=saved.ringtone.url;preview.hidden=false;preview.load();
+            setCurrent(saved.ringtone.name||'Uploaded ringtone','Your private audio is selected for '+(kind==='voice'?'voice':'video')+' calls.');
+            if(removeButton)removeButton.hidden=false;
+            setStatus((kind==='voice'?'Voice':'Video')+' call ringtone uploaded and saved.');
+            window.dispatchEvent(new CustomEvent('minglora:call-ringtone-updated'));
+          }catch(error){setStatus('Could not save ringtone. '+error.message);}
+          finally{fileInput.value='';}
+        });
+        removeButton?.addEventListener('click',async()=>{
+          removeButton.disabled=true;setStatus('Removing uploaded ringtone…');
+          try{
+            const result=await api('/calls/ringtone?kind='+encodeURIComponent(kind),{method:'DELETE'});
+            const nextChoice=result.selectedId||defaultId;
+            updateCustomOption(null);setRadio(nextChoice);savedChoice=nextChoice;
+            if(preview){preview.pause();preview.removeAttribute('src');preview.hidden=true;preview.load();}
+            const label=selectedLabel(nextChoice);setCurrent(label.name,label.note);
+            removeButton.hidden=true;
+            setStatus('Uploaded '+kind+' ringtone removed.');
+            window.dispatchEvent(new CustomEvent('minglora:call-ringtone-updated'));
+          }catch(error){setStatus('Could not remove ringtone. '+error.message);}
+          finally{removeButton.disabled=false;}
+        });
       });
 
       let displayCurrency=settings.preferences.displayCurrency||'USD';
