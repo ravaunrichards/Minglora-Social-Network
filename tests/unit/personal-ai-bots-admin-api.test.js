@@ -875,6 +875,36 @@ test('owner provider and email list APIs reject oversized pagination',async()=>{
   }
 });
 
+test('owner durable AI task queue supports bounded offset pagination',async()=>{
+  const tasks=Array.from({length:25},(_,index)=>({id:'task-'+(300+index),taskType:index%2?'follow':'assistant_request',status:'awaiting_administrator_approval'}));
+  let options=null;
+  const context=makeContext({
+    method:'GET',
+    path:'/api/admin/personal-ai-bots/tasks',
+    url:new URL('https://minglora.test/api/admin/personal-ai-bots/tasks?limit=25&offset=300'),
+    listAiBotTasks:async value=>{options=value;return tasks;}
+  });
+  await handlePersonalAiBotAdminApi(context).catch(()=>{});
+  assert.equal(context.res.statusCode,200);
+  assert.deepEqual(options,{limit:25,offset:300});
+  assert.deepEqual(context.res.payload.tasks,tasks);
+  assert.equal(context.res.payload.nextOffset,325);
+  assert.equal(context.res.payload.hasMore,true);
+});
+
+test('owner durable AI task queue rejects page sizes above the gateway cap',async()=>{
+  let called=false;
+  const context=makeContext({
+    method:'GET',
+    path:'/api/admin/personal-ai-bots/tasks',
+    url:new URL('https://minglora.test/api/admin/personal-ai-bots/tasks?limit=101&offset=0'),
+    listAiBotTasks:async()=>{called=true;return [];}
+  });
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,400);
+  assert.equal(called,false);
+});
+
 test('owner safety report queue returns pending reports from canonical storage',async()=>{
   const reports=[{reportId:'report-1',identityId:'ai-1',reason:'spam',status:'pending'}];
   let options=null;
