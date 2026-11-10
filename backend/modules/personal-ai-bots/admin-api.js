@@ -263,12 +263,20 @@ export async function handlePersonalAiBotsAdminApi(context) {
       return (json(res,200,{ok:true,tasks:result,nextOffset:offset+result.length,hasMore:result.length===limit}),true);
     }
     if(method==='GET'&&path===root+'/batches'){
-      const batches=db.personalAiBotBatches
+      const limit=Number(url.searchParams.get('limit')||50);
+      const offset=Number(url.searchParams.get('offset')||0);
+      if(!Number.isInteger(limit)||limit<1||limit>100||
+         !Number.isInteger(offset)||offset<0||offset>1000000000){
+        return (json(res,400,{error:'AI identity batch history pagination is invalid.'}),true);
+      }
+      const ownedBatches=db.personalAiBotBatches
         .filter(batch=>batch.ownerId===user.id)
         .slice()
-        .sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')))
-        .slice(0,50);
-      return (json(res,200,{ok:true,batches}),true);
+        .sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||''))||String(b.id||'').localeCompare(String(a.id||'')));
+      const batches=ownedBatches.slice(offset,offset+limit);
+      return (json(res,200,{
+        ok:true,batches,nextOffset:offset+batches.length,hasMore:offset+batches.length<ownedBatches.length
+      }),true);
     }
     if(method==='POST'&&path===root+'/batches'){
       if(typeof persistAiIdentities!=='function'){
