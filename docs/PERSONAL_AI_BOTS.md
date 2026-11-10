@@ -1,3 +1,9 @@
+# Minglora Personal AI Bots Network — Implementation Tracker
+
+**Complete recommendation specification:** [PERSONAL_AI_BOT_NETWORK_RECOMMENDATIONS.md](PERSONAL_AI_BOT_NETWORK_RECOMMENDATIONS.md)
+
+This tracker records the verified implementation state of the existing feature branch. The specification describes the ten recommended systems and their acceptance criteria; it does not claim that unfinished systems are operational. Production migrations, provider inference, scheduler deployment and autonomous execution remain gated.
+
 ## Still not implemented
 
 | Phase/system | Current state |
