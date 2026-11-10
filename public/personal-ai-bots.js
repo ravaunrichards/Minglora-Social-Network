@@ -28,7 +28,7 @@
         root.innerHTML='<section class="pab-access-denied"><h1>Private Personal AI Bots Network</h1><p>Sign in with the designated Minglora owner account and complete authenticator verification in Admin Centre.</p><a class="pab-btn secondary" href="/admin-centre.html">Return to Admin Centre</a></section>';
         return;
       }
-      state=await request(API);const batchResult=await request(API+'/batches');state.batchHistory=Array.isArray(batchResult.batches)?batchResult.batches:[];render();
+      state=await request(API);const batchResult=await request(API+'/batches?limit=50&offset=0');state.batchHistory=Array.isArray(batchResult.batches)?batchResult.batches:[];state.batchHistoryNextOffset=Number(batchResult.nextOffset)||state.batchHistory.length;state.batchHistoryHasMore=batchResult.hasMore===true;render();
     }catch(error){
       root.innerHTML='<section class="pab-access-denied"><h1>Could not open Personal AI Bots Network</h1><p>'+esc(error.message)+'</p><a class="pab-btn secondary" href="/admin-centre.html">Return to Admin Centre</a></section>';
     }
@@ -193,6 +193,10 @@
     return '<tr><td>'+esc(item.displayName||item.username||item.identityId)+'</td><td>'+esc(item.emailAddress)+'</td><td>'+esc(item.emailType)+'</td><td>'+(item.isPrimary?'Yes':'No')+'</td><td>'+esc(item.verificationStatus||'not_verified')+'</td><td>'+esc(item.provisioningStatus||'not_provisioned')+'</td><td>'+esc(item.emailProvider||'Not assigned')+'</td></tr>';
   }
 
+  function batchHistoryRow(batch){
+    return '<div class="pab-audit-row" data-batch="'+esc(batch.id)+'"><strong>'+esc(batch.status||'unknown')+' · '+esc(batch.completedRecords||0)+'/'+esc(batch.totalRecords||0)+' persisted · '+esc(batch.failedRecords||0)+' failed</strong><span>'+esc(date(batch.createdAt))+' · retries '+esc(batch.retryCount||0)+'</span></div>';
+  }
+
   function canonicalIdentityRow(identity){
     return '<tr><td>'+esc(identity.firstName||'—')+'</td><td>'+esc(identity.middleName||'—')+'</td><td>'+esc(identity.lastName||'—')+'</td><td>@'+esc(identity.username||'—')+'</td><td>'+esc(identity.population||'—')+'</td><td>'+esc(identity.status||'—')+'</td><td>'+esc(identity.categoryName||identity.categoryId||'—')+'</td></tr>';
   }
@@ -215,11 +219,13 @@
     html+='</section>';
 
     const batchHistory=Array.isArray(state.batchHistory)?state.batchHistory:[];
+    const batchHistoryHasMore=state.batchHistoryHasMore===true;
     html+='<section class="pab-panel"><div class="pab-heading"><div><h2>Bulk AI identity generation and import</h2><p>Import 1–100 individual AI identities per batch. Every row becomes a separate disabled identity, with its own first and last name, category and persistent record.</p></div><span class="pab-tag">Maximum 100 per batch</span></div>';
     html+='<div class="pab-warning">Use a JSON array of identity objects. Each item needs a displayName and categoryId (or firstName and lastName plus categoryId). Optional population values: independent, organizational or specialized_service. Duplicate names within a category are rejected. A failed database write can be retried with the same key and unchanged JSON.</div>';
     html+='<form id="pab-batch-form" class="pab-form-grid"><div class="pab-field full"><label for="pab-batch-items">AI identity records (JSON array)</label><textarea class="pab-textarea pab-batch-json" id="pab-batch-items" rows="8" required spellcheck="false" placeholder=\'[{"displayName":"AI Learning Guide","firstName":"AI","lastName":"Guide","categoryId":"ai-educators","population":"independent"},{"displayName":"AI Service Analyst","firstName":"AI","lastName":"Analyst","categoryId":"ai-support","population":"specialized_service"}]\'></textarea><small class="pab-notice">Supported fields include name fields, category, population, gender, nationality, country, languages, personality, interests, education, profession, skills and profile preferences.</small></div><div class="pab-field"><label for="pab-batch-key">Idempotency key (generated on first submit)</label><input class="pab-input" id="pab-batch-key" maxlength="120" autocomplete="off" placeholder="Generated automatically; keep it unchanged when retrying"></div><div class="pab-field full"><button class="pab-btn" type="submit">Create and persist AI identity batch</button><span id="pab-batch-status" class="pab-notice">Creation is not activation. New AI identities remain disabled and private.</span></div></form>';
-    html+='<div class="pab-divider"></div><div class="pab-heading"><div><h3>Recent identity batches</h3><p>Saved batches can be safely replayed using the same idempotency key and original records after a persistence interruption.</p></div></div>';
-    html+=batchHistory.length?'<div class="pab-audit">'+batchHistory.map(batch=>'<div class="pab-audit-row"><strong>'+esc(batch.status||'unknown')+' · '+esc(batch.completedRecords||0)+'/'+esc(batch.totalRecords||0)+' persisted · '+esc(batch.failedRecords||0)+' failed</strong><span>'+esc(date(batch.createdAt))+' · retries '+esc(batch.retryCount||0)+'</span></div>').join('')+'</div>':'<div class="pab-empty">No identity batches have been submitted.</div>';
+    html+='<div class="pab-divider"></div><div class="pab-heading"><div><h3>Recent identity batches</h3><p>Saved batches are shown 50 at a time from the current runtime-state history and can be safely replayed using the same idempotency key and original records after a persistence interruption.</p></div></div>';
+    html+=batchHistory.length?'<div id="pab-batch-history-list" class="pab-audit">'+batchHistory.map(batchHistoryRow).join('')+'</div>':'<div id="pab-batch-history-list" class="pab-audit"><div class="pab-empty">No identity batches have been submitted.</div></div>';
+    html+='<div class="pab-pagination"><button type="button" class="pab-btn secondary" id="pab-load-more-batches" '+(batchHistoryHasMore?'':'hidden')+'>Load more batch history</button><span id="pab-batch-history-status" class="pab-notice" role="status" aria-live="polite"></span></div>';
     html+='<div id="pab-batch-results" class="pab-audit" aria-live="polite"></div>';
     html+='</section>';
     const providerAssignments=Array.isArray(state.providerAssignments)?state.providerAssignments:[];
@@ -309,6 +315,7 @@
     document.querySelector('#pab-load-more-reports')?.addEventListener('click',loadMoreSafetyReports);
     document.querySelector('#pab-load-more-identities')?.addEventListener('click',loadMoreCanonicalIdentities);
     document.querySelector('#pab-load-more-tasks')?.addEventListener('click',loadMoreTaskRecords);
+    document.querySelector('#pab-load-more-batches')?.addEventListener('click',loadMoreBatchHistory);
     document.querySelector('#pab-load-more-providers')?.addEventListener('click',loadMoreProviderAssignments);
     document.querySelector('#pab-load-more-emails')?.addEventListener('click',loadMoreEmailIdentities);
     document.querySelector('#pab-safety-report-filter')?.addEventListener('change',()=>void loadMoreSafetyReports());
@@ -461,7 +468,7 @@
     catch(error){notice('pab-category-status',error.message,'error');}
   }
   function filterBots(){const value=String(document.querySelector('#pab-bot-filter')?.value||'').trim().toLowerCase();const population=String(document.querySelector('#pab-population-filter')?.value||'all');document.querySelectorAll('[data-bot-card]').forEach(card=>{const searchMatches=String(card.dataset.search||'').includes(value);const populationMatches=population==='all'||card.dataset.population===population;card.hidden=!(searchMatches&&populationMatches);});}
-  async function refresh(){try{state=await request(API);const batchResult=await request(API+'/batches');state.batchHistory=Array.isArray(batchResult.batches)?batchResult.batches:[];render();}catch(error){notice('pab-network-status',error.message,'error');}}
+  async function refresh(){try{state=await request(API);const batchResult=await request(API+'/batches?limit=50&offset=0');state.batchHistory=Array.isArray(batchResult.batches)?batchResult.batches:[];state.batchHistoryNextOffset=Number(batchResult.nextOffset)||state.batchHistory.length;state.batchHistoryHasMore=batchResult.hasMore===true;render();}catch(error){notice('pab-network-status',error.message,'error');}}
   async function saveNetwork(){
     const enabled=!!document.querySelector('#pab-master-switch')?.checked,hybridEnabled=!!document.querySelector('#pab-hybrid-switch')?.checked;
     try{await request(API+'/network',{method:'PUT',body:JSON.stringify({enabled,hybridEnabled})});notice('pab-network-status','Network controls saved. Bots still require explicit instructions and approval.','success');await refresh();}
@@ -544,6 +551,35 @@
       await refresh();
       notice('pab-email-status',result.message||'Email identity record saved. Mailbox not provisioned.','success');
     }catch(error){notice('pab-email-status',error.message,'error');}
+  }
+
+  async function loadMoreBatchHistory(){
+    const button=document.querySelector('#pab-load-more-batches');
+    const list=document.querySelector('#pab-batch-history-list');
+    const status=document.querySelector('#pab-batch-history-status');
+    if(!button||!list||button.disabled||state.batchHistoryLoading)return;
+    state.batchHistoryLoading=true;
+    button.disabled=true;
+    if(status)status.textContent='Loading additional batch history…';
+    try{
+      const offset=Math.max(0,Number(state.batchHistoryNextOffset)||0);
+      const params=new URLSearchParams({limit:'50',offset:String(offset)});
+      const result=await request(API+'/batches?'+params.toString());
+      const incoming=Array.isArray(result.batches)?result.batches:[];
+      const existing=new Set((state.batchHistory||[]).map(batch=>String(batch.id||'')));
+      const added=incoming.filter(batch=>!existing.has(String(batch.id||'')));
+      if(added.length){
+        list.querySelector('.pab-empty')?.remove();
+        list.insertAdjacentHTML('beforeend',added.map(batchHistoryRow).join(''));
+      }
+      state.batchHistory=[...(state.batchHistory||[]),...added];
+      const nextOffset=Number(result.nextOffset);
+      state.batchHistoryNextOffset=Number.isInteger(nextOffset)&&nextOffset>=0?nextOffset:offset+incoming.length;
+      state.batchHistoryHasMore=result.hasMore===true;
+      button.hidden=!state.batchHistoryHasMore;
+      if(status)status.textContent=added.length?('Loaded '+added.length+' more identity batch records from runtime history.'):'No additional identity batch records were returned.';
+    }catch(error){if(status)status.textContent=error.message;}
+    finally{state.batchHistoryLoading=false;button.disabled=false;}
   }
 
   async function loadMoreTaskRecords(){
