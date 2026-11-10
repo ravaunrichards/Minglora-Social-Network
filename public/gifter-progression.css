@@ -227,3 +227,16 @@
   .gift-level-up-copy h2{font-size:1.45rem}
   .gp-hero-art .gp-reference-art{max-height:230px}
 }
+
+
+/* Original Gifters Badge Levels artwork: one complete JPG per vertical panel. */
+.gp-current-badge-row{align-items:flex-start}
+.gp-current-status-copy{min-width:0;width:100%}
+.gp-art-panel-stack{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;width:100%;min-width:0}
+.gp-art-panel{display:flex;align-items:center;justify-content:center;width:100%;min-width:0;margin:0}
+.gp-art-panel>img{display:block;width:100%;max-width:100%;height:auto;object-fit:contain;object-position:center}
+.gp-art-panel--final{justify-self:center}
+.gp-art-panel--final>img{width:auto;max-width:100%;height:auto;margin-inline:auto}
+.gp-leader-level{display:inline-flex;align-items:center;flex:0 0 auto;margin-left:7px;color:var(--muted,#667085);font-size:.72rem;font-weight:800;white-space:nowrap}
+.gp-level25-copy{width:100%}
+@media(max-width:650px){.gp-art-panel-stack{gap:12px}.gp-art-panel>img{width:100%;height:auto}.gp-art-panel--final>img{width:auto;max-width:100%;height:auto}}
