@@ -185,6 +185,10 @@
     return '<article class="pab-task"><div><h4>'+esc(task.botName||'AI bot')+' · '+esc(String(task.taskType||'instruction').replaceAll('_',' '))+'</h4><p>'+esc(task.instruction||'No instruction text')+'</p><div class="pab-task-meta"><span>'+esc(status)+'</span><span>Submitted '+esc(date(task.createdAt))+'</span>'+(task.targetUserId?'<span>Target '+esc(task.targetUserId)+'</span>':'')+'</div></div><div class="pab-actions">'+(pending?'<button class="pab-btn secondary pab-approve-task" data-task="'+esc(task.id)+'">Approve</button>':'')+(!['completed','cancelled'].includes(task.status)?'<button class="pab-btn danger pab-cancel-task" data-task="'+esc(task.id)+'">Cancel</button>':'')+'</div></article>';
   }
 
+  function canonicalIdentityRow(identity){
+    return '<tr><td>'+esc(identity.firstName||'—')+'</td><td>'+esc(identity.middleName||'—')+'</td><td>'+esc(identity.lastName||'—')+'</td><td>@'+esc(identity.username||'—')+'</td><td>'+esc(identity.population||'—')+'</td><td>'+esc(identity.status||'—')+'</td><td>'+esc(identity.categoryName||identity.categoryId||'—')+'</td></tr>';
+  }
+
   function render(){
     const counts=state.counts||{},network=state.network||{},bots=Array.isArray(state.bots)?state.bots:[];
     const identityRecords=Array.isArray(state.identityRecords)?state.identityRecords:[];
@@ -193,11 +197,14 @@
     html+='<section class="pab-hero"><div><h1>Personal AI Bots Network</h1><p>Scalable, clearly disclosed AI identities within Minglora. Every identity, category, schedule, permission and task is managed here. AI activity remains separate from human engagement metrics.</p></div><span class="pab-status '+(network.enabled?'':'off')+'">'+(network.enabled?'Network enabled':'Network disabled')+'</span></section>';
     html+='<div class="pab-warning"><strong>Safe initial operating mode.</strong> New bots are disabled and administrator-controlled. This release has no model provider, scheduler or execution worker connected. Approved tasks remain queued; social actions are not performed. AI follows and activity must never be counted as human popularity or mixed into human follower, like, view or ranking totals.</div>';
     html+='<section class="pab-grid" aria-label="Bot network totals">'+metric(counts.totalBots,'Registered AI bots')+metric(counts.enabledBots,'Enabled')+metric(counts.activeBots,'Active in last 5 min')+metric(counts.executingBots,'Executing now')+metric(counts.pendingInstructions,'Awaiting approval')+'</section>';
-    html+='<section class="pab-panel"><div class="pab-heading"><div><h2>Canonical PostgreSQL AI identity records</h2><p>Read from Minglora Supabase through the owner-only runtime gateway. The count below is the number returned on this page (maximum 1,000), not total project capacity.</p></div><span class="pab-status '+(identitySource==='minglora_supabase_postgresql'?'':'off')+'">'+(identitySource==='minglora_supabase_postgresql'?'DATABASE READ':'LEGACY ONLY')+'</span></div>';
-    html+='<div class="pab-metric"><strong>'+esc(identityRecords.length.toLocaleString())+'</strong><span>Canonical identity rows loaded</span></div>';
+    const identityRecordsHasMore=state.identityRecordsHasMore===true;
+    const identityRecordsNextOffset=Math.max(0,Number(state.identityRecordsNextOffset??identityRecords.length)||0);
+    html+='<section class="pab-panel"><div class="pab-heading"><div><h2>Canonical PostgreSQL AI identity records</h2><p>Read from Minglora Supabase through the owner-only runtime gateway. This list loads 100 rows at a time; the displayed number is rows loaded, not total project capacity.</p></div><span class="pab-status '+(identitySource==='minglora_supabase_postgresql'?'':'off')+'">'+(identitySource==='minglora_supabase_postgresql'?'DATABASE READ':'LEGACY ONLY')+'</span></div>';
+    html+='<div class="pab-metric"><strong id="pab-identity-count">'+esc(identityRecords.length.toLocaleString())+'</strong><span>Canonical identity rows loaded</span></div>';
     if(identitySource!=='minglora_supabase_postgresql')html+='<p class="pab-notice">Normalized Supabase identity reads are not configured in this runtime session. No PostgreSQL identity count is being claimed.</p>';
     else if(!identityRecords.length)html+='<div class="pab-empty">No canonical AI identity rows have been returned yet. Create an AI identity to persist its individual database record.</div>';
-    else html+='<div class="pab-identity-table-wrap"><table class="pab-identity-table"><thead><tr><th>First name</th><th>Middle name</th><th>Last name</th><th>Username</th><th>Population</th><th>Lifecycle</th><th>Category</th></tr></thead><tbody>'+identityRecords.map(identity=>'<tr><td>'+esc(identity.firstName||'—')+'</td><td>'+esc(identity.middleName||'—')+'</td><td>'+esc(identity.lastName||'—')+'</td><td>@'+esc(identity.username||'—')+'</td><td>'+esc(identity.population||'—')+'</td><td>'+esc(identity.status||'—')+'</td><td>'+esc(identity.categoryName||identity.categoryId||'—')+'</td></tr>').join('')+'</tbody></table></div>';
+    else html+='<div class="pab-identity-table-wrap"><table class="pab-identity-table"><thead><tr><th>First name</th><th>Middle name</th><th>Last name</th><th>Username</th><th>Population</th><th>Lifecycle</th><th>Category</th></tr></thead><tbody id="pab-canonical-identity-rows">'+identityRecords.map(canonicalIdentityRow).join('')+'</tbody></table></div>';
+    if(identitySource==='minglora_supabase_postgresql')html+='<div class="pab-pagination"><button type="button" class="pab-btn secondary" id="pab-load-more-identities" '+(identityRecordsHasMore?'':'hidden')+'>Load more identities</button><span id="pab-identity-load-status" class="pab-notice" role="status" aria-live="polite"></span></div>';
     html+='</section>';
 
     const batchHistory=Array.isArray(state.batchHistory)?state.batchHistory:[];
@@ -286,6 +293,7 @@
     document.querySelector('#pab-refresh')?.addEventListener('click',refresh);
     document.querySelectorAll('.pab-review-report').forEach(node=>node.addEventListener('click',()=>reviewAiProfileReport(node.dataset.report,node.dataset.status)));
     document.querySelector('#pab-load-more-reports')?.addEventListener('click',loadMoreSafetyReports);
+    document.querySelector('#pab-load-more-identities')?.addEventListener('click',loadMoreCanonicalIdentities);
     document.querySelector('#pab-safety-report-filter')?.addEventListener('change',()=>void loadMoreSafetyReports());
 
     document.querySelector('#pab-master-switch')?.addEventListener('change',saveNetwork);
@@ -519,6 +527,38 @@
       await refresh();
       notice('pab-email-status',result.message||'Email identity record saved. Mailbox not provisioned.','success');
     }catch(error){notice('pab-email-status',error.message,'error');}
+  }
+
+  async function loadMoreCanonicalIdentities(){
+    const button=document.querySelector('#pab-load-more-identities');
+    const rows=document.querySelector('#pab-canonical-identity-rows');
+    const status=document.querySelector('#pab-identity-load-status');
+    if(!button||!rows||button.disabled||state.identityRecordsLoading)return;
+    state.identityRecordsLoading=true;
+    button.disabled=true;
+    if(status)status.textContent='Loading canonical AI identities…';
+    try{
+      const offset=Math.max(0,Number(state.identityRecordsNextOffset)||0);
+      const params=new URLSearchParams({limit:'100',offset:String(offset)});
+      const result=await request(API+'/identities?'+params.toString());
+      const incoming=Array.isArray(result.identities)?result.identities:[];
+      const existing=new Set((state.identityRecords||[]).map(item=>String(item.id||item.identityId||'')));
+      const added=incoming.filter(item=>!existing.has(String(item.id||item.identityId||'')));
+      if(added.length)rows.insertAdjacentHTML('beforeend',added.map(canonicalIdentityRow).join(''));
+      state.identityRecords=[...(state.identityRecords||[]),...added];
+      const nextOffset=Number(result.nextOffset);
+      state.identityRecordsNextOffset=Number.isInteger(nextOffset)&&nextOffset>=0?nextOffset:offset+incoming.length;
+      state.identityRecordsHasMore=result.hasMore===true;
+      const count=document.querySelector('#pab-identity-count');
+      if(count)count.textContent=state.identityRecords.length.toLocaleString();
+      button.hidden=!state.identityRecordsHasMore;
+      if(status)status.textContent=added.length?('Loaded '+added.length+' more canonical identity records.'):'No additional canonical identity records were returned.';
+    }catch(error){
+      if(status)status.textContent=error.message;
+    }finally{
+      state.identityRecordsLoading=false;
+      button.disabled=false;
+    }
   }
 
   async function loadMoreSafetyReports({append=false}={}){
