@@ -16,7 +16,7 @@ const builtinIds=new Set([...Array.from({length:30},(_,i)=>voiceId(i+1)),...Arra
 const record=value=>value&&typeof value==="object"&&!Array.isArray(value);
 export function defaultSoundStudioPreferences(){
   return {theme:"classic",voiceCall:{soundId:"voice-01",enabled:true},videoCall:{soundId:"video-01",enabled:true},
-    notifications:Object.fromEntries(SOUND_STUDIO_CATEGORIES.map(category=>[category.key,{soundId:category.defaultSoundId,enabled:true}])),
+    notifications:Object.fromEntries(SOUND_STUDIO_CATEGORIES.map((category,index)=>[category.key,{soundId:notificationId(index%10+1),enabled:true}])),
     favorites:[],customSounds:[]};
 }
 export function normalizeSoundStudioPreferences(user,mediaAssets=[]){
