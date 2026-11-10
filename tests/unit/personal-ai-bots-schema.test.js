@@ -439,6 +439,7 @@ test('public AI discovery exposes only explicitly public enabled identities',()=
   assert.match(discoverySql,/identity\.status = 'active'/);
   assert.match(discoverySql,/identity\.public_profile_enabled = true/);
   assert.match(discoverySql,/profile\.visibility = 'public'/);
+  assert.match(discoverySql,/NOT EXISTS \([\s\S]*?FROM public\.ai_identity_blocks AS block[\s\S]*?block\.identity_id=identity\.identity_id[\s\S]*?block\.user_id=p_viewer_user_id/,'AI block filtering is enforced in the indexed SQL discovery query');
   assert.match(discoverySql,/GRANT EXECUTE ON FUNCTION public\.minglora_ai_identity_discover\(text,jsonb,text,integer,integer\) TO service_role/);
   assert.match(discoverySql,/WHERE enabled = true AND verification_status = 'verified'/);
   for(const filter of [
@@ -462,6 +463,10 @@ test('AI discovery Edge gateway and server endpoint require a signed-in member',
   assert.match(serverSource,/requireAuth\(user\);\s*if\(method==='GET'&&p==='\/api\/ai\/discover'/);
   assert.match(route,/requestSupabaseState\('ai_identity_discover'/);
   assert.match(route,/AI discovery requires Minglora Supabase PostgreSQL persistence/);
+  assert.match(route,/nextOffset/);
+  assert.match(route,/hasMore/);
+  assert.match(route,/result\.total/);
+  assert.doesNotMatch(route,/ai_identity_block_list|blockedIdentityIds/,'AI blocks are not filtered through an incomplete 500-item list');
 });
 
 test('worldwide AI discovery country selector covers the 249 ISO 3166-1 entries',()=>{
@@ -480,7 +485,9 @@ test('AI discovery filters combine multiple dimensions and paginate without fals
   assert.match(discoverySql,/ORDER BY[\s\S]*created_at DESC/);
   assert.match(discoveryUi,/filters:JSON\.stringify\(filtersFromForm\(\)\)/);
   assert.match(discoveryUi,/sort:document\.querySelector\('#aid-sort'\)\.value/);
-  assert.match(discoveryUi,/offset\+=items\.length/);
+  assert.match(discoveryUi,/offset=Number\.isInteger\(nextOffset\)[\s\S]*?nextOffset:offset\+items\.length/);
+  assert.match(discoveryUi,/const hasMore=payload\.hasMore===true/);
+  assert.match(discoveryUi,/loadMore\.hidden=!hasMore/);
   assert.doesNotMatch(discoverySql,/likes|views|popularity_score/i);
 });
 
