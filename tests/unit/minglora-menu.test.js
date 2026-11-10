@@ -15,7 +15,7 @@ test('Minglora Menu beside Messenger has a clean single-row header', () => {
   assert.ok(html.includes('id="minglora-menu-toggle"'));
   assert.ok(html.includes('id="minglora-menu-panel"'));
   assert.ok(html.includes('minglora-menu.css?v=20261110-facebook-menu-search-left-column-1'));
-  assert.ok(html.includes('minglora-menu.js?v=20261110-facebook-menu-search-left-column-1'));
+  assert.ok(html.includes('minglora-menu.js?v=20261110-menu-scroll-dismiss-guard-1'));
   for (const label of ['Social','Entertainment','Shopping','Personal','Professional','More from Meta','Create']) {
     assert.ok(script.includes(label), 'Menu contains ' + label);
   }
@@ -51,7 +51,7 @@ test('Search Menu is in the left Menu column above all shortcut sections', () =>
   assert.ok(script.includes('aria-controls="minglora-menu-results"'));
   assert.ok(css.includes('.minglora-menu-search-field'));
   assert.ok(css.includes('.minglora-menu-search input'));
-  assert.ok(html.includes('minglora-menu.js?v=20261110-facebook-menu-search-left-column-1'));
+  assert.ok(html.includes('minglora-menu.js?v=20261110-menu-scroll-dismiss-guard-1'));
   assert.ok(html.includes('minglora-menu.css?v=20261110-facebook-menu-search-left-column-1'));
   assert.ok(!html.includes('id="search-form"'));
   assert.ok(!html.includes('id="search-input"'));
