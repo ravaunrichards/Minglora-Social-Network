@@ -207,6 +207,7 @@
     ];
 
     const resolveTarget = definition => {
+      if (!definition.selector) return null;
       const target = panel.querySelector(definition.selector);
       return definition.closest ? target?.closest(definition.closest) || null : target;
     };
@@ -294,11 +295,19 @@
       if (!members.length) return;
       const group = document.createElement('div');
       group.className = 'admin-centre-nav-group';
-      const heading = document.createElement('div');
+      const heading = document.createElement('button');
+      heading.type = 'button';
       heading.className = 'admin-centre-nav-heading';
       heading.textContent = groupName;
+      heading.setAttribute('aria-expanded','true');
+      heading.setAttribute('aria-controls','admin-centre-nav-links-' + groupOrder.indexOf(groupName));
       const links = document.createElement('div');
       links.className = 'admin-centre-nav-links';
+      links.id = 'admin-centre-nav-links-' + groupOrder.indexOf(groupName);
+      heading.addEventListener('click',() => {
+        const collapsed = group.classList.toggle('is-collapsed');
+        heading.setAttribute('aria-expanded',String(!collapsed));
+      });
       members.forEach(definition => {
         const link = document.createElement('a');
         link.href = '?page=' + encodeURIComponent(definition.key);
@@ -396,6 +405,10 @@
         if (link.dataset.adminRoute === key) link.setAttribute('aria-current','page');
         else link.removeAttribute('aria-current');
       });
+      const activeLink = Array.from(nav.querySelectorAll('[data-admin-route]')).find(link => link.dataset.adminRoute === key);
+      const activeGroup = activeLink?.closest('.admin-centre-nav-group');
+      activeGroup?.classList.remove('is-collapsed');
+      activeGroup?.querySelector('.admin-centre-nav-heading')?.setAttribute('aria-expanded','true');
       if (titleNode) titleNode.textContent = definition.title;
       if (mobilePicker) mobilePicker.value = key;
       if (countNode) countNode.textContent = 'Page ' + (availablePages.findIndex(item => item.key === key) + 1) + ' of ' + availablePages.length;
