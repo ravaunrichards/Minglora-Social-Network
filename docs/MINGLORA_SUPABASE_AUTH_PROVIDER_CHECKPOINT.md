@@ -5,7 +5,7 @@
 - Repository: `ravaunrichards/Minglora-Social-Network`
 - Branch: `feat/minglora-admin-user-and-service-centre-20261109`
 - Latest code commit: `80cae14069bf6b78036eb64451f9cd85b395a156` (exact Management API permissions diagnostic)
-- Latest focused-test commit: `cda004b4d6b557e677c5ad994e013b72f7925d16`; latest checkpoint-only branch head: `be6d52cb3493a74186077a8cb6ebad14c6883bbb`.
+- Latest implementation/test verification commit: `cda004b4d6b557e677c5ad994e013b72f7925d16`; all newer branch commits in this checkpoint sequence only update recovery evidence.
 - PR #203 remains OPEN and DRAFT; not merged or deployed.
 - Verified weighted completion remains **81%**; remaining **19%**; no live acceptance criterion has changed status in this pass.
 - New code change: HTTP 403 errors from the Supabase Management API now specify `auth_config_read` for reads and both `auth_config_write` and `project_admin_write` for writes. Added a source acceptance test for these exact diagnostics.
