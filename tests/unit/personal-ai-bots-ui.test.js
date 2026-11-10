@@ -259,6 +259,7 @@ test('owner Admin Centre exposes approval-gated appointments and employment hist
     read('public/personal-ai-bots.html')
   ]);
   for(const phrase of ['Owner-approved corporate appointments','pab-appointment-form','pab-appointment-application','pab-appointment-manager','createAppointment','syncAppointmentManagerRequirement','employmentHistory'])assert.ok(ui.includes(phrase),phrase);
+  for(const phrase of ['Corporate organization chart','organizationChart','pab-org-tree','reportingManagerAppointmentId','Circular reporting link detected','Appointment records'])assert.ok(ui.includes(phrase),phrase);
   assert.ok(api.includes("root+'/appointments'"));
   assert.ok(api.includes("root+'/employment-history'"));
   assert.ok(service.includes("application.status!=='shortlisted'"));
