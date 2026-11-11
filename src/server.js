@@ -30,6 +30,7 @@ import { rankForYouFeed } from './domain/feed-ranking.js';
 import { rankForYouVideos } from './domain/video-ranking.js';
 import { canViewStory as canViewStoryPolicy, removeExpiredStories } from '../backend/modules/stories/service.js';
 import { canPublishGroupPost, canDeleteGroupPost, canLeaveGroup } from '../backend/modules/groups/service.js';
+import { disconnectBlockedConnections } from '../backend/modules/relationships/blocks.js';
 import { getActiveFollowEdges, getMutualFollowIds, isSocialAccountEligible, normalizeFriendPreferences, validateFriendPreferencePatch } from '../backend/modules/relationships/friends.js';
 import { validatePageInput, validatePageUpdate, canManagePage as canManagePagePolicy, canManagePageTeam as canManagePageTeamPolicy, canViewPageInsights as canViewPageInsightsPolicy, canAssignPageRole as canAssignPageRolePolicy, canChangePageRole as canChangePageRolePolicy, canRemovePageRole as canRemovePageRolePolicy, canDeletePagePost, canDeletePage } from '../backend/modules/pages/service.js';
 import { recordProfileView, touchProfilePresence, getProfileViewStats } from '../backend/modules/profiles/service.js';
@@ -558,6 +559,7 @@ function activeProfilePresence(){
   return (db.profileViewPresence||[]).filter(entry=>
     isSocialAccountEligible((db.users||[]).find(member=>member.id===entry.viewerUserId))
       && isSocialAccountEligible((db.users||[]).find(member=>member.id===entry.targetUserId))
+      && !blockedBetween(entry.viewerUserId,entry.targetUserId)
   );
 }
 function activePageFollows(){
@@ -5302,18 +5304,42 @@ async function route(req, res) {
       if((method==='POST'||method==='DELETE')&&m){
         const target=db.users.find(u=>u.id===m[1]);
         if(!target||target.id===user.id)return json(res,400,{error:'Choose another valid account.'});
-        const exists=(db.blocks||[]).some(b=>b.blockerId===user.id&&b.blockedId===target.id);
-        if(method==='POST'&&!exists){
-          db.blocks.push({id:uid(),blockerId:user.id,blockedId:target.id,createdAt:now()});
-          const outgoingFollow=(db.follows||[]).some(f=>f.followerId===user.id&&f.followedId===target.id);
-          const incomingFollow=(db.follows||[]).some(f=>f.followerId===target.id&&f.followedId===user.id);
-          if(outgoingFollow)await requestSupabaseState('relationship_unfollow',{followerId:user.id,followedId:target.id});
-          if(incomingFollow)await requestSupabaseState('relationship_unfollow',{followerId:target.id,followedId:user.id});
-          db.follows=(db.follows||[]).filter(f=>!((f.followerId===user.id&&f.followedId===target.id)||(f.followerId===target.id&&f.followedId===user.id)));
-          db.friendships=db.friendships.filter(f=>!((f.from===user.id&&f.to===target.id)||(f.from===target.id&&f.to===user.id)));
+        db.blocks||=[];
+        const exists=db.blocks.some(b=>b.blockerId===user.id&&b.blockedId===target.id);
+        if(method==='POST'){
+          // Make Supabase relationship edges agree before committing local projections.
+          // Repeating Block is intentionally idempotent and repairs stale old edges.
+          const pairFollows=(db.follows||[]).filter(edge=>
+            (edge.followerId===user.id&&edge.followedId===target.id)
+              ||(edge.followerId===target.id&&edge.followedId===user.id)
+          );
+          const uniqueEdges=[...new Map(pairFollows.map(edge=>[
+            String(edge.followerId)+'::'+String(edge.followedId),edge
+          ])).values()];
+          for(const edge of uniqueEdges){
+            await requestSupabaseState('relationship_unfollow',{
+              followerId:edge.followerId,followedId:edge.followedId
+            });
+          }
+          if(!exists)db.blocks.push({id:uid(),blockerId:user.id,blockedId:target.id,createdAt:now()});
+          const disconnected=disconnectBlockedConnections(db,user.id,target.id,now());
+          await saveStore();
+          await Promise.all(disconnected.calls.map(call=>cleanupCallRoom(call,'blocked')));
+          messengerRealtime?.disconnectPair(user.id,target.id,'blocked');
+          return json(res,200,{
+            blocked:true,
+            disconnected:{
+              follows:disconnected.follows,
+              friendships:disconnected.friendships,
+              friendListMembers:disconnected.friendListMembers,
+              pageFollows:disconnected.pageFollows,
+              activeCalls:disconnected.calls.length
+            }
+          });
         }
         if(method==='DELETE'&&exists)db.blocks=db.blocks.filter(b=>!(b.blockerId===user.id&&b.blockedId===target.id));
-        await saveStore();return json(res,200,{blocked:method==='POST'});
+        await saveStore();
+        return json(res,200,{blocked:false});
       }
       if(method==='GET'&&p==='/api/blocks')return json(res,200,{users:(db.blocks||[]).filter(b=>b.blockerId===user.id).map(b=>safeUser(db.users.find(u=>u.id===b.blockedId))).filter(Boolean)});
       if(method==='GET'&&p==='/api/profile-views'){
@@ -6970,6 +6996,7 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
       }
       if(method==='GET'&&p==='/api/message-groups'){
         const groups=(db.messageGroups||[]).filter(group=>group.status==='active'&&canAccessMessageGroup(db,group.id,user.id))
+          .filter(group=>getActiveMessageGroupMembers(db,group.id).every(memberId=>!blockedBetween(user.id,memberId)))
           .map(group=>({...group,memberCount:getActiveMessageGroupMembers(db,group.id).length,role:(db.messageGroupMembers||[]).find(item=>item.groupId===group.id&&item.userId===user.id)?.role||'member'}));
         return json(res,200,{groups});
       }
