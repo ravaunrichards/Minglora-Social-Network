@@ -598,9 +598,25 @@ test('emergency shutdown disables the network, pauses enabled bots and cancels o
   updatePersonalAiBot(db,bot.id,{status:'enabled'},actor,stamp,uid);
   setPersonalAiBotNetworkSettings(db,{enabled:true,hybridEnabled:true},actor,stamp,uid);
   const task=queuePersonalAiBotInstruction(db,bot.id,{taskType:'assistant_request',instruction:'Prepare a response to this instruction.'},actor,stamp,uid);
+  const team=createPersonalAiBotTeam(db,{name:'Emergency Team'},actor,stamp,uid);
+  const sender=createPersonalAiBot(db,{displayName:'Emergency Sender',categoryId:'ai-friends'},actor,stamp,uid);
+  const receiver=createPersonalAiBot(db,{displayName:'Emergency Receiver',categoryId:'ai-friends'},actor,stamp,uid);
+  assignPersonalAiBotsToTeam(db,team.id,[sender.id,receiver.id],actor,stamp,uid);
+  const sourceTaskId=uid();
+  db.personalAiBotTasks.push({id:sourceTaskId,botId:sender.id,status:'awaiting_administrator_approval',createdAt:stamp});
+  const handoff=createPersonalAiBotTeamHandoff(db,team.id,{
+    sourceTaskId,senderBotId:sender.id,receivingBotId:receiver.id,
+    requiredInput:'Review approved team notes only.',
+    expectedOutput:'Return a concise report to the owner.',
+    contextScope:'team_internal',privacyAttested:true
+  },actor,stamp,uid);
   const result=emergencyShutdownPersonalAiBots(db,actor,stamp,uid);
   assert.equal(result.paused,1);
+  assert.equal(result.pausedTeams,1);
   assert.equal(result.cancelled,1);
+  assert.equal(result.cancelledHandoffs,1);
+  assert.equal(db.personalAiBotTeams.find(item=>item.id===team.id).status,'paused');
+  assert.equal(db.personalAiBotTeamHandoffs.find(item=>item.id===handoff.id).status,'cancelled');
   assert.equal(result.network.enabled,false);
   assert.equal(result.network.hybridEnabled,false);
   assert.equal(db.personalAiBots[0].status,'paused');
