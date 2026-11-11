@@ -1,0 +1,50 @@
+name: Extract individual gift artwork
+
+on:
+  push:
+    branches:
+      - artwork/gift-artwork-extraction
+    paths:
+      - "assets/Gifts/**"
+      - "scripts/extract_gift_artwork.py"
+      - ".github/workflows/extract-gift-artwork.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gift-artwork-extraction
+  cancel-in-progress: false
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out source captures
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Install OCR engine
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y tesseract-ocr
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install image dependencies
+        run: python -m pip install --upgrade pip Pillow pytesseract
+      - name: Extract individual gift artwork
+        run: python scripts/extract_gift_artwork.py
+      - name: Commit generated artwork only
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/Artwork
+          if git diff --cached --quiet; then
+            echo "No artwork changes to commit."
+          else
+            git commit -m "Extract individually titled gift artwork"
+            git push origin "HEAD:artwork/gift-artwork-extraction"
+          fi
