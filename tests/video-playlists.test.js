@@ -136,6 +136,66 @@ test('video playlists persist, enforce ownership and respect public/unlisted/pri
   });
   assert.equal(unavailableVideo.status, 404);
 
+  // Create one real video record in this isolated test store, then restart the
+  // server so the API exercises the same persisted-state load path as production.
+  await new Promise(resolve => {
+    server.once('exit', resolve);
+    server.kill('SIGTERM');
+  });
+  const statePath = path.join(testDataDir, 'db.json');
+  const state = JSON.parse(fs.readFileSync(statePath, 'utf8'));
+  state.mediaAssets.push({
+    id: 'test-video-asset-1', ownerId, slot: 'post', bucket: 'test', path: 'test/video.mp4',
+    mimeType: 'video/mp4', mediaType: 'video', byteSize: 4096, originalName: 'video.mp4',
+    status: 'attached', url: 'https://cdn.example.test/test/video.mp4', createdAt: new Date().toISOString()
+  });
+  state.posts.unshift({
+    id: 'test-video-post-1', userId: ownerId, text: 'Isolated video playlist integration fixture',
+    mediaIds: ['test-video-asset-1'], audience: 'public', createdAt: new Date().toISOString(),
+    reactions: {}, comments: []
+  });
+  fs.writeFileSync(statePath, JSON.stringify(state, null, 2), { mode: 0o600 });
+  server = spawn(process.execPath, ['src/server.js'], {
+    cwd: root,
+    env: {
+      ...process.env, PORT: String(port), NODE_ENV: 'test', AUTH_PROVIDER: 'legacy',
+      PERSISTENCE_DRIVER: 'json', DATA_DIR: testDataDir,
+      SESSION_SECRET: 'playlist-test-secret-with-sufficient-entropy-and-length',
+      APP_ORIGIN: `http://127.0.0.1:${port}`, TENOR_API_KEY: ''
+    },
+    stdio: 'ignore'
+  });
+  let restartedHealth;
+  for (let attempt = 0; attempt < 60; attempt++) {
+    try {
+      restartedHealth = await request(ownerCookieHeader, '/api/health');
+      if (restartedHealth.status === 200) break;
+    } catch {}
+    await delay(100);
+  }
+  assert.equal(restartedHealth?.status, 200);
+
+  const addedVideo = await request(ownerCookieHeader, `/api/video-playlists/${publicId}/items`, {
+    method: 'POST', body: JSON.stringify({ postId: 'test-video-post-1' })
+  });
+  assert.equal(addedVideo.status, 201, JSON.stringify(addedVideo.body));
+  const duplicateVideo = await request(ownerCookieHeader, `/api/video-playlists/${publicId}/items`, {
+    method: 'POST', body: JSON.stringify({ postId: 'test-video-post-1' })
+  });
+  assert.equal(duplicateVideo.status, 200);
+  const publicPlaylistWithVideo = await request(viewerCookie, `/api/video-playlists/${publicId}`);
+  assert.equal(publicPlaylistWithVideo.status, 200);
+  assert.equal(publicPlaylistWithVideo.body.playlist.videos.length, 1);
+  assert.equal(publicPlaylistWithVideo.body.playlist.videos[0].id, 'test-video-post-1');
+  const forbiddenItemRemoval = await request(viewerCookie, `/api/video-playlists/${publicId}/items/test-video-post-1`, { method: 'DELETE' });
+  assert.equal(forbiddenItemRemoval.status, 403);
+  const ordered = await request(ownerCookieHeader, `/api/video-playlists/${publicId}/order`, {
+    method: 'PUT', body: JSON.stringify({ orderedPostIds: ['test-video-post-1'] })
+  });
+  assert.equal(ordered.status, 200);
+  const removedVideo = await request(ownerCookieHeader, `/api/video-playlists/${publicId}/items/test-video-post-1`, { method: 'DELETE' });
+  assert.equal(removedVideo.status, 200);
+
   const invalidOrder = await request(ownerCookieHeader, `/api/video-playlists/${publicId}/order`, {
     method: 'PUT', body: JSON.stringify({ orderedPostIds: ['not-a-real-video'] })
   });
