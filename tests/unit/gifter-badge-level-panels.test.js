@@ -142,7 +142,7 @@ test("Gifters Level-Up chart is readable in normal page view without requiring z
   const html = read("public/index.html");
   const sw = read("public/sw.js");
   assert.match(progression, /gp-chart-fullsize[\s\S]*?View full-size chart to zoom/);
-  assert.match(progression, /href='\/assets\/gifters-level-up\.png' target='_blank' rel='noopener noreferrer'/);
+  assert.match(progression, /href='\/assets\/gifters-level-up\.svg' target='_blank' rel='noopener noreferrer'/);
   assert.match(styles, /\.gp-hero-art \.gp-reference-art\{[\s\S]*?width:min\(100%,900px\)[\s\S]*?height:auto[\s\S]*?max-height:none/);
   assert.match(styles, /@media\(max-width:650px\)[\s\S]*?\.gp-hero-art \.gp-reference-art\{width:100%;height:auto;max-height:none;object-fit:contain\}/);
   assert.match(styles, /\.gp-chart-fullsize\{[\s\S]*?min-height:46px[\s\S]*?font-size:1rem/);
