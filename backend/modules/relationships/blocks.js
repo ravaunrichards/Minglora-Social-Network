@@ -38,16 +38,13 @@ export function disconnectBlockedConnections(state, firstId, secondId, at = new 
     return updated;
   });
 
-  const ownedPageIds = new Set(
+  const pageOwnerById = new Map(
     (Array.isArray(state.pages) ? state.pages : [])
-      .filter(page => pair.has(String(page?.createdBy || '')))
-      .map(page => String(page.id || ''))
-      .filter(Boolean)
+      .filter(page => page?.id && page?.createdBy)
+      .map(page => [String(page.id), String(page.createdBy)])
   );
   const pageFollows = removeMatching('pageFollows', edge =>
-    ownedPageIds.has(String(edge?.pageId || '')) && pair.has(String(edge?.userId || ''))
-      && !pair.has(String((Array.isArray(state.pages) ? state.pages : []).find(page => String(page.id) === String(edge.pageId))?.createdBy || '')) === false
-      && String((Array.isArray(state.pages) ? state.pages : []).find(page => String(page.id) === String(edge.pageId))?.createdBy || '') !== String(edge?.userId || '')
+    isPair(pageOwnerById.get(String(edge?.pageId || '')), edge?.userId)
   );
 
   const presence = removeMatching('profileViewPresence', entry =>
