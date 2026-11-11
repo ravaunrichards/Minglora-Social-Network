@@ -1796,7 +1796,7 @@ test('team handoff API is owner-controlled, one-receiver and permanently non-dis
       saveStore:async()=>{saves++;}
     });
     await handlePersonalAiBotsAdminApi(context);
-    return {...context.res,payload:structuredClone(context.res.payload)};
+    return {...context.res,payload:context.res.payload?JSON.parse(JSON.stringify(context.res.payload)):null};
   };
   const base='/api/admin/personal-ai-bots/teams/'+teamId+'/handoffs';
   const created=await invoke('POST',base,{
