@@ -61,5 +61,6 @@ test("the LIVE identity assets are versioned together and refreshed in the servi
   assert.ok(badgeAsset);
   assert.ok(serviceWorker.includes(appAsset));
   assert.ok(serviceWorker.includes(badgeAsset));
+  assert.ok(serviceWorker.includes("'/assets/animations/gifts/catalog-motion-index.json'"), 'the service worker precaches the canonical gift motion index');
   assert.match(serviceWorker, /const CACHE_NAME='minglora-shell-v\d+-self-updating-1';/);
 });
