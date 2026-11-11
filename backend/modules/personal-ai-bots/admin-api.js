@@ -190,6 +190,9 @@ import {
   updatePersonalAiBotTeam,
   assignPersonalAiBotsToTeam,
   removePersonalAiBotFromTeam,
+  getPersonalAiBotTeamHandoffs,
+  createPersonalAiBotTeamHandoff,
+  reviewPersonalAiBotTeamHandoff,
   PERSONAL_AI_BOT_CATEGORIES
 } from './personal-ai-bots-service.js';
 
@@ -484,6 +487,35 @@ export async function handlePersonalAiBotsAdminApi(context) {
       await saveStore();
       return (json(res,200,result),true);
     }
+    const teamHandoffsMatch=path.match(/^\/api\/admin\/personal-ai-bots\/teams\/([0-9a-f-]{36})\/handoffs$/i);
+    if(teamHandoffsMatch&&method==='GET'){
+      const handoffs=getPersonalAiBotTeamHandoffs(db,teamHandoffsMatch[1],user.id);
+      return (json(res,200,{ok:true,handoffs}),true);
+    }
+    if(teamHandoffsMatch&&method==='POST'){
+      const allowed=new Set(['sourceTaskId','senderBotId','receivingBotId','summary','requiredInput','expectedOutput','contextScope','deadlineAt']);
+      if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).some(key=>!allowed.has(key))){
+        return (json(res,400,{error:'Team handoff payload contains unsupported fields.'}),true);
+      }
+      const handoff=createPersonalAiBotTeamHandoff(db,teamHandoffsMatch[1],input,user.id,stamp,uid);
+      await saveStore();
+      return (json(res,201,{ok:true,handoff}),true);
+    }
+    const teamHandoffActionMatch=path.match(/^\/api\/admin\/personal-ai-bots\/teams\/([0-9a-f-]{36})\/handoffs\/([0-9a-f-]{36})\/(accept|reject|cancel|complete)$/i);
+    if(teamHandoffActionMatch&&method==='POST'){
+      const action=teamHandoffActionMatch[3];
+      const allowed=action==='complete'?new Set(['resultSummary']):new Set();
+      if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).some(key=>!allowed.has(key))){
+        return (json(res,400,{error:'Team handoff action contains unsupported fields.'}),true);
+      }
+      const handoff=reviewPersonalAiBotTeamHandoff(
+        db,teamHandoffActionMatch[1],teamHandoffActionMatch[2],
+        {action,...input},user.id,stamp,uid
+      );
+      await saveStore();
+      return (json(res,200,{ok:true,handoff}),true);
+    }
+
     if(method==='GET'&&path===root+'/applications'){
       return (json(res,200,{ok:true,applications:getPersonalAiBotApplications(db)}),true);
     }
