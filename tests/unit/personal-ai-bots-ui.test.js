@@ -499,7 +499,7 @@ test('Multilingual Intelligence exposes private configuration while keeping tran
   ]) assert.ok(ui.includes(phrase),phrase);
   assert.match(ui,/async function loadLanguageSettings/);
   assert.match(ui,/async function saveLanguageSettings/);
-  assert.match(ui,/\\/languages/);
-  assert.match(ui,/panel\\.dataset\\.languageLoaded!=='true'/);
+  assert.ok(ui.includes("/languages"));
+  assert.ok(ui.includes("panel.dataset.languageLoaded!=='true'"));
   assert.match(ui,/privacy|public profile Languages field/i);
 });
