@@ -176,6 +176,21 @@ Moderator access is restricted to MODERATOR_USER_IDS or a trusted account with a
 
 Creator analytics aggregate real playback records into distinct viewers, viewer-video pairs, recorded watch time, average watch duration and completion rate. They do not expose viewer IDs, count impressions, or estimate reach. Hidden and archived posts, owner self-views, future events and records outside the selected reporting period are excluded. The endpoint defaults to 30 days and accepts only 7, 30 or 90 days.
 
+## Video playlists
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/api/video-playlists` | List the signed-in member's playlists; optional `ownerId` lists playlists visible on another member's profile |
+| POST | `/api/video-playlists` | Create a playlist with a title, optional description and visibility (`private`, `unlisted`, `friends` or `public`) |
+| GET | `/api/video-playlists/:id` | Read a playlist and its currently accessible video posts |
+| PATCH | `/api/video-playlists/:id` | Update playlist metadata and visibility (owner only) |
+| DELETE | `/api/video-playlists/:id` | Delete the playlist and its item references without deleting video posts (owner only) |
+| POST | `/api/video-playlists/:id/items` | Add an existing accessible video post (owner only; duplicate additions are idempotent) |
+| DELETE | `/api/video-playlists/:id/items/:postId` | Remove a video from a playlist without deleting the post (owner only) |
+| PUT | `/api/video-playlists/:id/order` | Reorder the complete visible playlist item set (owner only) |
+
+Playlist APIs require authentication. Each video is rechecked against the current post, profile, relationship and block visibility before it is returned. Private playlists are owner-only; unlisted playlists require the direct link; friends playlists require an accepted friendship; public playlists are discoverable. Playlist metadata and item references are persisted in Minglora's account state for use across signed-in devices. Each playlist accepts up to 500 videos, and each account may create up to 100 playlists.
+
 ## Voice and video calls
 
 | Method | Endpoint | Purpose |

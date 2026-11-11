@@ -447,6 +447,14 @@ Deno.serve(async (req: Request) => {
             "key": "videoFeedback"
           },
           {
+            "label": "Video playlists",
+            "key": "videoPlaylists"
+          },
+          {
+            "label": "Video playlist items",
+            "key": "videoPlaylistItems"
+          },
+          {
             "label": "Media assets",
             "key": "mediaAssets"
           },
