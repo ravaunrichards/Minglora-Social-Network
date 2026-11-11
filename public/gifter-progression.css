@@ -422,34 +422,3 @@
 @media(max-width:760px){.gp-level-directory-heading{align-items:flex-start;flex-direction:column}.gp-level-index-grid[data-layout="horizontal"]{grid-template-columns:repeat(2,minmax(0,1fr))}.gp-level-index-item{grid-template-columns:64px minmax(0,1fr);gap:10px;padding:10px}.gp-level-index-art{width:64px;height:64px}}
 @media(max-width:480px){.gp-level-index-grid[data-layout="horizontal"]{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:360px){.gp-level-index-item{grid-template-columns:58px minmax(0,1fr);gap:9px;padding:9px}.gp-level-index-art{width:58px;height:58px}}
-
-/* Readable ordered gifter badge references: make the original artwork easy to recognize at a glance. */
-.gp-level-index-item{grid-template-columns:92px minmax(0,1fr);align-items:center;gap:14px;min-height:116px;padding:12px 14px}
-.gp-level-index-art{width:92px;height:92px;max-width:100%;aspect-ratio:1/1;object-fit:contain;object-position:center}
-.gp-level-index-level{font-size:.82rem;line-height:1.3}
-.gp-level-index-badge{font-size:1rem;line-height:1.35;font-weight:800}
-.gp-level-index-coins{font-size:.84rem;line-height:1.4}
-.gp-level-index-state{font-size:.76rem;line-height:1.3;padding:5px 9px}
-.gp-level-index-grid[data-layout="vertical"] .gp-level-index-item{grid-template-columns:92px minmax(0,1fr) minmax(140px,auto) auto;gap:14px}
-@media(max-width:760px){
-  .gp-level-index-item{grid-template-columns:88px minmax(0,1fr);gap:12px;min-height:112px;padding:12px}
-  .gp-level-index-art{width:88px;height:88px}
-  .gp-level-index-grid[data-layout="vertical"] .gp-level-index-item{grid-template-columns:88px minmax(0,1fr);align-items:center;gap:10px 12px}
-  .gp-level-index-grid[data-layout="vertical"] .gp-level-index-coins,
-  .gp-level-index-grid[data-layout="vertical"] .gp-level-index-state{grid-column:2}
-  .gp-level-index-grid[data-layout="vertical"] .gp-level-index-state{justify-self:start}
-}
-@media(max-width:480px){
-  .gp-level-index-grid[data-layout="horizontal"]{grid-template-columns:minmax(0,1fr)}
-  .gp-level-index-item{grid-template-columns:96px minmax(0,1fr);gap:14px;min-height:124px;padding:14px}
-  .gp-level-index-art{width:96px;height:96px}
-  .gp-level-index-badge{font-size:1rem}
-  .gp-level-index-coins{font-size:.86rem}
-  .gp-level-index-grid[data-layout="vertical"] .gp-level-index-item{grid-template-columns:96px minmax(0,1fr);gap:10px 14px}
-}
-@media(max-width:360px){
-  .gp-level-index-item{grid-template-columns:88px minmax(0,1fr);gap:10px;min-height:108px;padding:11px}
-  .gp-level-index-art{width:88px;height:88px}
-  .gp-level-index-badge{font-size:.96rem}
-  .gp-level-index-grid[data-layout="vertical"] .gp-level-index-item{grid-template-columns:88px minmax(0,1fr);gap:9px 10px}
-}
