@@ -9656,6 +9656,21 @@ async function renderVideoChannelLibrary(feed){
       try{await setVideoChannelSubscription(channel,button.dataset.subscribed!=='true');await renderVideoChannelLibrary(feed);}
       catch(error){button.disabled=false;toast(error.message);}
     }));
+    if(activeVideoChannelScope==='subscriptions'){
+      const uploads=Array.isArray(subscriptions.videos)?subscriptions.videos:[];
+      if(uploads.length){
+        const section=document.createElement('section');
+        section.className='video-channel-latest-uploads';
+        section.innerHTML='<div class="video-channel-latest-heading"><span class="eyebrow">YOUR CHANNEL FEED</span><h3>Latest uploads from your subscriptions</h3><p>Recent videos from channels you chose to follow.</p></div>';
+        const list=document.createElement('div');
+        list.className='video-channel-latest-list';
+        list.innerHTML=uploads.map(video=>'<div class="video-channel-latest-item"><small>From '+esc(video.channel?.title||video.author?.name||'Subscribed channel')+'</small>'+postCard(video,{videoWatchLater:true})+videoPlaylistActionMarkup(video)+'</div>').join('');
+        section.append(list);
+        feed.append(section);
+        bindFeed(section);
+        bindVideoPlaylistActions(section);
+      }
+    }
   }catch(error){
     feed.innerHTML='<section class="card empty-state"><h3>Channels could not be loaded</h3><p>'+esc(error.message)+'</p><button type="button" class="secondary" data-channel-retry>Try again</button></section>';
     feed.querySelector('[data-channel-retry]')?.addEventListener('click',()=>void renderVideoChannelLibrary(feed));
