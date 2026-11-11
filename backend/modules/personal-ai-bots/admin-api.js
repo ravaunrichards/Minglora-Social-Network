@@ -663,7 +663,13 @@ export async function handlePersonalAiBotsAdminApi(context) {
       }
       const result=await listAiProviderAssignments({limit,offset});
       if(!Array.isArray(result))return (json(res,503,{error:'AI provider assignment storage is unavailable.'}),true);
-      return (json(res,200,{ok:true,assignments:result,nextOffset:offset+result.length,hasMore:result.length===limit}),true);
+      // Never return a server-side secret reference to the browser. Expose only
+      // whether a reference exists; the worker resolves it inside trusted runtime.
+      const assignments=result.map(item=>{
+        const {credentialSecretReference,...safeItem}=item||{};
+        return {...safeItem,credentialConfigured:typeof credentialSecretReference==='string'&&credentialSecretReference.trim().length>0};
+      });
+      return (json(res,200,{ok:true,assignments,nextOffset:offset+assignments.length,hasMore:assignments.length===limit}),true);
     }
     if(method==='GET'&&path===root+'/emails'){
       if(typeof listAiEmailIdentities!=='function')return (json(res,503,{error:'AI email identity storage is unavailable.'}),true);
