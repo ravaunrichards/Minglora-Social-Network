@@ -46,8 +46,8 @@ test('feed, comments and LIVE gifter surfaces retain their existing badge behavi
   assert.ok(app.includes('gifterProfileBadge(author)'));
   assert.ok(app.includes('gifterProfileBadge(c.author)'));
   assert.ok(app.includes('live-viewer-gifter-badge'));
-  assert.ok(app.includes('gifterProfileBadge({ ...member, gifterBadge: badge },"compact")'));
-  assert.ok(app.includes('gifterProfileBadge({ ...member, gifterBadge: item.gifterBadge },"compact")'));
+  assert.ok(app.includes('liveGifterBadgeMarkup({ ...member, gifterBadge: badge },"compact")'));
+  assert.ok(app.includes('liveGifterBadgeMarkup({ ...member, gifterBadge: item.gifterBadge },"compact")'));
 });
 
 test('profile badge artwork keeps responsive sizing and original proportions', () => {
