@@ -170,6 +170,13 @@ import {
   createPersonalAiBotStarterSet,
   updatePersonalAiBot,
   previewPersonalAiBotSchedule,
+  listPersonalAiBotPersonaVersions,
+  createPersonalAiBotPersonaDraft,
+  updatePersonalAiBotPersonaDraft,
+  evaluatePersonalAiBotPersonaDraft,
+  approvePersonalAiBotPersonaVersion,
+  activatePersonalAiBotPersonaVersion,
+  rollbackPersonalAiBotPersonaVersion,
   createPersonalAiBotCategory,
   queuePersonalAiBotInstruction,
   queuePersonalAiBotFollowBatch,
@@ -780,6 +787,52 @@ export async function handlePersonalAiBotsAdminApi(context) {
           dispatchEnabled:false
         }
       }),true);
+    }
+    if(method==='GET'&&path===root+'/personas'){
+      const botId=String(url.searchParams.get('botId')||'').trim();
+      if(!botId)return (json(res,400,{error:'A bot ID is required to list persona versions.'}),true);
+      const versions=listPersonalAiBotPersonaVersions(db,botId);
+      const bot=db.personalAiBots.find(item=>item.id===botId);
+      return (json(res,200,{
+        ok:true,botId,activePersonaVersionId:bot.activePersonaVersionId||null,
+        versions
+      }),true);
+    }
+    if(method==='POST'&&path===root+'/personas'){
+      const allowed=new Set(['botId','baseVersionId','configuration']);
+      if(!input||typeof input!=='object'||Array.isArray(input)||
+         Object.keys(input).some(key=>!allowed.has(key))||
+         !String(input.botId||'').trim()){
+        return (json(res,400,{error:'Persona draft payload contains unsupported or missing fields.'}),true);
+      }
+      const version=createPersonalAiBotPersonaDraft(db,input,user.id,stamp,uid);
+      await saveStore();
+      return (json(res,201,{ok:true,version}),true);
+    }
+    const personaVersionMatch=path.match(/^\/api\/admin\/personal-ai-bots\/personas\/([0-9a-f-]{36})$/i);
+    if(personaVersionMatch&&method==='PATCH'){
+      const allowed=new Set(['configuration']);
+      if(!input||typeof input!=='object'||Array.isArray(input)||
+         Object.keys(input).some(key=>!allowed.has(key))||!input.configuration){
+        return (json(res,400,{error:'Persona draft update must contain only a configuration object.'}),true);
+      }
+      const version=updatePersonalAiBotPersonaDraft(db,personaVersionMatch[1],input.configuration,user.id,stamp,uid);
+      await saveStore();
+      return (json(res,200,{ok:true,version}),true);
+    }
+    const personaActionMatch=path.match(/^\/api\/admin\/personal-ai-bots\/personas\/([0-9a-f-]{36})\/(evaluate|approve|activate|rollback)$/i);
+    if(personaActionMatch&&method==='POST'){
+      if(input&&typeof input==='object'&&Object.keys(input).length){
+        return (json(res,400,{error:'Persona lifecycle actions do not accept additional fields.'}),true);
+      }
+      const versionId=personaActionMatch[1],action=personaActionMatch[2];
+      let result;
+      if(action==='evaluate')result=evaluatePersonalAiBotPersonaDraft(db,versionId,user.id,stamp,uid);
+      else if(action==='approve')result={version:approvePersonalAiBotPersonaVersion(db,versionId,user.id,stamp,uid)};
+      else if(action==='activate')result=activatePersonalAiBotPersonaVersion(db,versionId,user.id,stamp,uid);
+      else result=rollbackPersonalAiBotPersonaVersion(db,versionId,user.id,stamp,uid);
+      await saveStore();
+      return (json(res,200,{ok:true,action,...result}),true);
     }
     const botMatch=path.match(/^\/api\/admin\/personal-ai-bots\/bots\/([0-9a-f-]{36})$/i);
     if(botMatch&&method==='PATCH'){
