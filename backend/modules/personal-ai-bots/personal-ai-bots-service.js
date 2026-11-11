@@ -1055,6 +1055,9 @@ export function createPersonalAiBotTeamHandoff(db, teamId, input, actorId, times
   if(!['public','team_internal'].includes(contextScope)){
     throw Object.assign(new Error('Handoffs may use only public or team-internal context; private member conversations and bot memory are not shared.'),{status:400});
   }
+  if(input.privacyAttested!==true){
+    throw Object.assign(new Error('The owner must confirm that no private member conversation, private message or private bot memory is included in the handoff.'),{status:400});
+  }
   let deadlineAt=null;
   if(input.deadlineAt){
     const deadline=Date.parse(input.deadlineAt),now=Date.parse(timestamp);
@@ -1071,7 +1074,8 @@ export function createPersonalAiBotTeamHandoff(db, teamId, input, actorId, times
   const handoff={
     id:uid(),ownerId:actorId,teamId,teamName:team.name,
     sourceTaskId,senderBotId,receivingBotId,
-    summary,requiredInput,expectedOutput,contextScope,deadlineAt,
+    summary,requiredInput,expectedOutput,contextScope,privacyAttested:true,
+    privacyAttestedBy:actorId,privacyAttestedAt:timestamp,deadlineAt,
     idempotencyKey,status:'pending_owner_review',dispatchStatus:'not_dispatched',
     acceptedBy:null,acceptedAt:null,rejectedBy:null,rejectedAt:null,
     cancelledBy:null,cancelledAt:null,completedBy:null,completedAt:null,
