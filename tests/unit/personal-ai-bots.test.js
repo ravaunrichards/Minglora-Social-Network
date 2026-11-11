@@ -613,7 +613,7 @@ test('emergency shutdown disables the network, pauses enabled bots and cancels o
   const result=emergencyShutdownPersonalAiBots(db,actor,stamp,uid);
   assert.equal(result.paused,1);
   assert.equal(result.pausedTeams,1);
-  assert.equal(result.cancelled,1);
+  assert.equal(result.cancelled,2);
   assert.equal(result.cancelledHandoffs,1);
   assert.equal(db.personalAiBotTeams.find(item=>item.id===team.id).status,'paused');
   assert.equal(db.personalAiBotTeamHandoffs.find(item=>item.id===handoff.id).status,'cancelled');
