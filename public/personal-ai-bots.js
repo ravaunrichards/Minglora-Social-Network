@@ -167,6 +167,7 @@
     html+='<div><strong style="font-size:11px">Allowed low-risk autonomous actions</strong><div class="pab-actions-checks">'+HYBRID_ACTIONS.map(item=>'<label class="pab-check"><input type="checkbox" class="pab-hybrid-action" data-bot="'+esc(bot.id)+'" value="'+esc(item[0])+'" '+(actions.includes(item[0])?'checked':'')+' '+(!['hybrid','autonomous_within_limits'].includes(bot.autonomyMode)?'disabled':'')+'> '+esc(item[1])+'</label>').join('')+'</div><small style="display:block;margin-top:5px;color:var(--muted,#64748b);font-size:10px">High-impact actions always require a separate instruction and approval. Low-risk permissions never enable publishing, follows, messages or broadcasting by themselves.</small></div>';
     html+='<details class="pab-schedule"><summary>Activity schedule and daily limits</summary><div class="pab-bot-fields"><div class="pab-field"><label>Timezone</label><input class="pab-input pab-schedule-timezone" data-bot="'+esc(bot.id)+'" value="'+esc(schedule.timezone||'America/Jamaica')+'"></div><div class="pab-field"><label>Days (1=Mon … 7=Sun, comma-separated)</label><input class="pab-input pab-schedule-days" data-bot="'+esc(bot.id)+'" value="'+esc(list(schedule.daysOfWeek||[1,2,3,4,5,6,7]))+'"></div><div class="pab-field"><label>Start time</label><input class="pab-input pab-schedule-start" type="time" data-bot="'+esc(bot.id)+'" value="'+esc(schedule.startTime||'00:00')+'"></div><div class="pab-field"><label>End time</label><input class="pab-input pab-schedule-end" type="time" data-bot="'+esc(bot.id)+'" value="'+esc(schedule.endTime||'23:59')+'"></div><div class="pab-field"><label>Maximum tasks per day (0 = no worker dispatch)</label><input class="pab-input pab-schedule-limit" type="number" min="0" max="500" data-bot="'+esc(bot.id)+'" value="'+esc(schedule.maxTasksPerDay||0)+'"></div></div><p class="pab-notice">Saved schedules are configuration only. Preview the next 14 local calendar days below; this never dispatches work.</p><div class="pab-actions"><button type="button" class="pab-btn secondary pab-preview-schedule" data-bot="'+esc(bot.id)+'">Preview next 14 days</button></div><div class="pab-schedule-preview" data-schedule-preview="'+esc(bot.id)+'" aria-live="polite"></div></details>';
     html+='<details class="pab-persona-lab"><summary>Personality Laboratory · versioned persona</summary><p class="pab-notice">Personas are private instruction configuration, separate from the public profile biography. Structural checks are not model tests; no provider sandbox is connected, and this panel never grants permissions or enables the bot.</p><div class="pab-bot-fields"><div class="pab-field"><label>Purpose</label><textarea class="pab-textarea pab-persona-purpose" maxlength="600" placeholder="What is this AI identity for?"></textarea></div><div class="pab-field"><label>Role</label><input class="pab-input pab-persona-role" maxlength="160" placeholder="For example, member support assistant"></div><div class="pab-field"><label>Communication style</label><textarea class="pab-textarea pab-persona-communication" maxlength="1200" placeholder="Describe the intended communication style."></textarea></div><div class="pab-field"><label>Tone</label><input class="pab-input pab-persona-tone" maxlength="600" placeholder="Friendly and professional"></div><div class="pab-field"><label>Response length</label><select class="pab-select pab-persona-length"><option value="brief">Brief</option><option value="balanced" selected>Balanced</option><option value="detailed">Detailed</option></select></div><div class="pab-field"><label>Expertise (comma-separated)</label><input class="pab-input pab-persona-expertise" maxlength="1500" placeholder="Add expertise areas"></div><div class="pab-field"><label>Language preferences (comma-separated)</label><input class="pab-input pab-persona-languages" maxlength="500" value="English"></div><div class="pab-field"><label>Intended audience</label><input class="pab-input pab-persona-audience" maxlength="400" placeholder="Who is this AI for?"></div><div class="pab-field"><label>Behavior boundaries</label><textarea class="pab-textarea pab-persona-boundaries" maxlength="1600" placeholder="Define what this AI must never cross."></textarea></div><div class="pab-field"><label>Prohibited behaviors</label><textarea class="pab-textarea pab-persona-prohibited" maxlength="1600" placeholder="List prohibited actions and behavior."></textarea></div><div class="pab-field"><label>Escalation instructions</label><textarea class="pab-textarea pab-persona-escalation" maxlength="1200" placeholder="When and how must the AI escalate to a human?"></textarea></div><div class="pab-field"><label>Structured traits (JSON; each value 0–100)</label><textarea class="pab-textarea pab-persona-traits" maxlength="1000">{"formality":50,"warmth":50,"humor":50,"assertiveness":50,"detail":50,"creativity":50,"initiative":50,"caution":50}</textarea></div></div><div class="pab-actions"><button type="button" class="pab-btn secondary pab-persona-create" data-bot="'+esc(bot.id)+'">Create persona draft</button><button type="button" class="pab-btn secondary pab-persona-load" data-bot="'+esc(bot.id)+'">Load version history</button></div><div class="pab-persona-versions" data-persona-versions="'+esc(bot.id)+'" aria-live="polite"></div></details>';
+    html+='<details class="pab-language-settings"><summary>Multilingual Intelligence · language behavior</summary><p class="pab-notice">Private language configuration is separate from the public profile Languages field. These are saved preferences only: language detection, translation and provider compatibility are not connected. Quality stays unverified until competent-speaker evaluation; human review remains required.</p><div class="pab-bot-fields"><div class="pab-field"><label>Supported language codes (comma-separated)</label><input class="pab-input pab-language-supported" data-bot="'+esc(bot.id)+'" value="en" placeholder="en, jam, es"></div><div class="pab-field"><label>Primary language code</label><input class="pab-input pab-language-primary" data-bot="'+esc(bot.id)+'" value="en" maxlength="35"></div><div class="pab-field"><label>Fallback language code</label><input class="pab-input pab-language-fallback" data-bot="'+esc(bot.id)+'" value="en" maxlength="35"></div><div class="pab-field"><label>Regional locale</label><input class="pab-input pab-language-locale" data-bot="'+esc(bot.id)+'" value="en-JM" maxlength="35"></div><div class="pab-field"><label>Language detection</label><select class="pab-select pab-language-detection" data-bot="'+esc(bot.id)+'"><option value="manual">Manual selection (default)</option><option value="confidence_guarded">Confidence guarded (not connected)</option></select></div><div class="pab-field"><label>Detection confidence threshold</label><input class="pab-input pab-language-confidence" data-bot="'+esc(bot.id)+'" type="number" min="0.5" max="0.99" step="0.01" value="0.8"></div><div class="pab-field"><label>Response language policy</label><select class="pab-select pab-language-response" data-bot="'+esc(bot.id)+'"><option value="match_member_preference">Member language preference</option><option value="match_input_language">Match each input</option><option value="primary_language">Always use primary language</option></select></div><div class="pab-field"><label>Mixed-language / code-switching</label><select class="pab-select pab-language-codeswitch" data-bot="'+esc(bot.id)+'"><option value="preserve">Preserve code-switching</option><option value="ask_before_normalizing">Ask before normalizing</option><option value="single_language_response">Respond in one language</option></select></div><div class="pab-field"><label>Translation display</label><select class="pab-select pab-language-display" data-bot="'+esc(bot.id)+'"><option value="show_original_and_translation">Show original and translation</option><option value="original_only">Original only</option></select></div></div><div class="pab-actions"><button type="button" class="pab-btn secondary pab-language-load" data-bot="'+esc(bot.id)+'">Load saved language settings</button><button type="button" class="pab-btn secondary pab-language-save" data-bot="'+esc(bot.id)+'">Save multilingual settings</button></div><div class="pab-language-status" data-language-status="'+esc(bot.id)+'" aria-live="polite"><p class="pab-notice">Default settings are shown. Load saved configuration before editing an existing multilingual profile.</p></div><div class="pab-language-quality" data-language-quality="'+esc(bot.id)+'"></div></details>';
     html+='<div class="pab-actions"><button type="button" class="pab-btn secondary pab-save-bot" data-bot="'+esc(bot.id)+'">Save bot profile and controls</button><button type="button" class="pab-btn secondary pab-instruct" data-bot="'+esc(bot.id)+'">Give instruction</button></div><div class="pab-divider"></div>';
     html+='<form class="pab-instruction-form" data-bot-form="'+esc(bot.id)+'" hidden><div class="pab-field"><label>Instruction type</label><select class="pab-select pab-task-type">'+selectOptions(TASK_TYPES,'assistant_request')+'</select></div><div class="pab-field"><label>Administrator instruction</label><textarea class="pab-textarea pab-task-text" minlength="5" maxlength="4000" required placeholder="Describe exactly what you want this bot to do."></textarea></div><div class="pab-field"><label>Target member ID (required for follow/unfollow)</label><input class="pab-input pab-target-user" placeholder="Select a member below"></div><div class="pab-field"><label>Find a Minglora member</label><div class="pab-search-row"><input class="pab-input pab-member-search" placeholder="Search username or display name"><button type="button" class="pab-btn secondary pab-search-members" data-bot="'+esc(bot.id)+'">Search</button></div><div class="pab-member-results" id="pab-members-'+esc(bot.id)+'"></div></div><div class="pab-actions"><button class="pab-btn" type="submit">Submit instruction for approval</button><button class="pab-btn secondary pab-cancel-instruct" type="button">Close</button></div><small style="color:var(--muted,#64748b);font-size:10px">This records an instruction only. No post, follow, message, reaction or broadcast is executed by this release.</small></form>';
     html+='</article>';return html;
@@ -389,6 +390,9 @@
     document.querySelectorAll('.pab-save-bot').forEach(node=>node.addEventListener('click',()=>saveBot(node.dataset.bot)));
     document.querySelectorAll('.pab-preview-schedule').forEach(node=>node.addEventListener('click',()=>previewBotSchedule(node.dataset.bot)));
     document.querySelectorAll('.pab-persona-create').forEach(node=>node.addEventListener('click',()=>createPersonaDraft(node.dataset.bot)));
+    document.querySelectorAll('.pab-language-load').forEach(node=>node.addEventListener('click',()=>loadLanguageSettings(node.dataset.bot)));
+    document.querySelectorAll('.pab-language-save').forEach(node=>node.addEventListener('click',()=>saveLanguageSettings(node.dataset.bot)));
+
     document.querySelectorAll('.pab-persona-load').forEach(node=>node.addEventListener('click',()=>loadPersonaVersions(node.dataset.bot)));
     document.querySelectorAll('.pab-bot-mode').forEach(node=>node.addEventListener('change',()=>{
       const card=node.closest('[data-bot-card]');if(!card)return;
@@ -1190,6 +1194,65 @@
       await loadPersonaVersions(botId);
     }catch(error){
       notice('pab-task-status',error.message||'Persona version action failed.','error');
+    }
+  }
+
+  function renderLanguageSettings(botId,result){
+    const config=result.configuration||{};
+    const set=(selector,value)=>{const input=document.querySelector(selector+'[data-bot="'+CSS.escape(botId)+'"]');if(input)input.value=value??'';};
+    set('.pab-language-supported',(config.supportedLanguages||[]).join(', '));
+    set('.pab-language-primary',config.primaryLanguage||'en');
+    set('.pab-language-fallback',config.fallbackLanguage||'en');
+    set('.pab-language-locale',config.locale||'en-JM');
+    set('.pab-language-detection',config.detectionMode||'manual');
+    set('.pab-language-confidence',config.confidenceThreshold??0.8);
+    set('.pab-language-response',config.responsePolicy||'match_member_preference');
+    set('.pab-language-codeswitch',config.codeSwitchingPolicy||'preserve');
+    set('.pab-language-display',config.translationDisplay||'show_original_and_translation');
+    const quality=document.querySelector('.pab-language-quality[data-language-quality="'+CSS.escape(botId)+'"]');
+    if(quality){
+      const rows=Array.isArray(config.languageQuality)?config.languageQuality:[];
+      quality.innerHTML='<p><strong>Provider compatibility:</strong> '+esc(config.providerCompatibility||'not_checked')+' · <strong>Adapter:</strong> '+(config.providerAdapterConnected?'connected':'not connected')+'</p><p><strong>Runtime:</strong> '+esc(config.runtimeStatus||'configuration_only')+' · <strong>Human review:</strong> '+(config.humanReviewRequired?'required':'not configured')+'</p><div class="pab-team-members">'+(rows.map(item=>'<div class="pab-team-member"><span>'+esc(item.code)+' <small>language quality</small></span><span class="pab-status off">'+esc(item.status||'unverified')+'</span></div>').join('')||'<div class="pab-empty">No language quality records.</div>')+'</div><p class="pab-notice">Names, URLs, hashtags, emojis, numbers, quoted text and original source text are configured for preservation. No translation or detection was executed.</p>';
+    }
+    const status=document.querySelector('.pab-language-status[data-language-status="'+CSS.escape(botId)+'"]');
+    if(status)status.innerHTML='<p class="pab-notice">'+(result.saved?'Saved configuration loaded.':'Default configuration loaded; not saved yet.')+'</p>';
+  }
+
+  async function loadLanguageSettings(botId){
+    const target=document.querySelector('.pab-language-status[data-language-status="'+CSS.escape(botId)+'"]');
+    if(target)target.innerHTML='<p class="pab-notice">Loading multilingual settings…</p>';
+    try{
+      const result=await request(API+'/bots/'+encodeURIComponent(botId)+'/languages');
+      renderLanguageSettings(botId,result);
+    }catch(error){
+      if(target)target.innerHTML='<p class="pab-notice error">'+esc(error.message||'Could not load multilingual settings.')+'</p>';
+    }
+  }
+
+  async function saveLanguageSettings(botId){
+    const value=selector=>document.querySelector(selector+'[data-bot="'+CSS.escape(botId)+'"]')?.value||'';
+    const supportedLanguages=String(value('.pab-language-supported')).split(',').map(item=>item.trim()).filter(Boolean);
+    const payload={
+      supportedLanguages,
+      primaryLanguage:value('.pab-language-primary').trim(),
+      fallbackLanguage:value('.pab-language-fallback').trim(),
+      locale:value('.pab-language-locale').trim(),
+      detectionMode:value('.pab-language-detection'),
+      confidenceThreshold:Number(value('.pab-language-confidence')),
+      responsePolicy:value('.pab-language-response'),
+      codeSwitchingPolicy:value('.pab-language-codeswitch'),
+      translationDisplay:value('.pab-language-display'),
+      humanReviewRequired:true
+    };
+    const status=document.querySelector('.pab-language-status[data-language-status="'+CSS.escape(botId)+'"]');
+    if(status)status.innerHTML='<p class="pab-notice">Saving language settings…</p>';
+    try{
+      const result=await request(API+'/bots/'+encodeURIComponent(botId)+'/languages',{method:'PUT',body:JSON.stringify(payload)});
+      renderLanguageSettings(botId,result);
+      notice('pab-task-status','Multilingual preferences saved. Public profile languages remain separate; translation and model compatibility remain unverified.','success');
+    }catch(error){
+      if(status)status.innerHTML='<p class="pab-notice error">'+esc(error.message||'Could not save multilingual settings.')+'</p>';
+      notice('pab-task-status',error.message||'Multilingual settings could not be saved.','error');
     }
   }
 
