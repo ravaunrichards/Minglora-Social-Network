@@ -847,5 +847,5 @@ test('multilingual settings are isolated in the existing owner runtime-state col
   assert.match(serviceSource,/providerCompatibility:'not_checked'/);
   assert.match(serviceSource,/providerAdapterConnected:false/);
   assert.match(serviceSource,/humanReviewRequired:true/);
-  assert.match(serviceSource,/input\\.humanReviewRequired!==true/);
+  assert.match(serviceSource,/merged\.humanReviewRequired!==true/);
 });
