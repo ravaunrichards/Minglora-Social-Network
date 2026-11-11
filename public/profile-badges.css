@@ -75,3 +75,24 @@
 /* High-quality resampling for the original individual Gifter PNGs.
    Existing dimensions, layout, visibility, opacity and effects remain unchanged. */
 .gp-profile-level-badge{image-rendering:auto;image-rendering:smooth}
+
+
+/* TikTok-scale display for Minglora's original 170×76 horizontal Gifter badges.
+   Preserve the complete image, native aspect ratio, and existing visibility. */
+.gp-profile-level-badge{height:auto;max-width:100%;aspect-ratio:170 / 76;object-fit:contain;object-position:center;image-rendering:auto}
+.gp-profile-level-badge--profile{width:48px;height:auto}
+.gp-profile-level-badge--inline{width:44px;height:auto}
+.gp-profile-level-badge--compact{width:40px;height:auto}
+.gp-profile-level-badge--gallery{width:170px;height:auto;max-width:100%}
+.profile-award-art--gifter .gp-profile-level-badge--gallery{width:170px;height:auto;max-width:100%}
+@media(max-width:650px){
+  .gp-profile-level-badge--profile{width:44px;height:auto}
+  .gp-profile-level-badge--inline{width:40px;height:auto}
+  .gp-profile-level-badge--compact{width:36px;height:auto}
+}
+@media(max-width:360px){
+  .gp-profile-level-badge--profile{width:40px;height:auto}
+  .gp-profile-level-badge--inline{width:36px;height:auto}
+  .gp-profile-level-badge--compact{width:34px;height:auto}
+}
+@media(max-width:560px){.profile-award-art--gifter .gp-profile-level-badge--gallery{width:150px;height:auto}}
