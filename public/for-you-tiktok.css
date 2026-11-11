@@ -1,0 +1,514 @@
+/* TikTok-inspired full-screen video presentation for Minglora For You.
+   Keeps existing post, LIVE, search, reaction and playback behavior intact. */
+html.minglora-for-you-active,
+body.minglora-for-you-active {
+  width:100vw!important;
+  height:100dvh!important;
+  min-height:100dvh!important;
+  overflow:hidden!important;
+  background:#050505!important;
+}
+body.minglora-for-you-active .minglora-for-you {
+  position:fixed!important;
+  inset:0!important;
+  display:block!important;
+  width:100vw!important;
+  height:100dvh!important;
+  min-height:100dvh!important;
+  margin:0!important;
+  padding:0!important;
+  overflow:hidden!important;
+  background:#050505!important;
+}
+body.minglora-for-you-active .fyp-header {
+  position:absolute!important;
+  inset:0 0 auto 0!important;
+  z-index:30!important;
+  display:grid!important;
+  grid-template-columns:38px minmax(0,1fr) 38px!important;
+  align-items:center!important;
+  gap:8px!important;
+  width:100%!important;
+  height:66px!important;
+  min-height:66px!important;
+  box-sizing:border-box!important;
+  padding:max(7px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) 5px max(12px,env(safe-area-inset-left))!important;
+  border:0!important;
+  background:linear-gradient(180deg,rgba(0,0,0,.62),rgba(0,0,0,.22) 72%,transparent)!important;
+  box-shadow:none!important;
+  pointer-events:none!important;
+}
+body.minglora-for-you-active .fyp-exit,
+body.minglora-for-you-active .fyp-feed-switch,
+body.minglora-for-you-active .fyp-top-search {
+  pointer-events:auto!important;
+}
+body.minglora-for-you-active .fyp-exit {
+  position:relative!important;
+  inset:auto!important;
+  display:grid!important;
+  place-items:center!important;
+  width:36px!important;
+  min-width:36px!important;
+  height:36px!important;
+  min-height:36px!important;
+  padding:0!important;
+  border:1px solid rgba(255,255,255,.32)!important;
+  border-radius:50%!important;
+  background:rgba(0,0,0,.28)!important;
+  color:#fff!important;
+  font-size:27px!important;
+  line-height:1!important;
+  box-shadow:0 2px 12px rgba(0,0,0,.22)!important;
+  backdrop-filter:blur(9px)!important;
+}
+body.minglora-for-you-active .fyp-feed-switch {
+  position:relative!important;
+  inset:auto!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  justify-self:center!important;
+  gap:clamp(2px,.7vw,9px)!important;
+  width:100%!important;
+  max-width:520px!important;
+  min-width:0!important;
+  min-height:42px!important;
+  height:42px!important;
+  margin:0!important;
+  padding:0 2px!important;
+  overflow-x:auto!important;
+  overflow-y:hidden!important;
+  scrollbar-width:none!important;
+  white-space:nowrap!important;
+  transform:none!important;
+}
+body.minglora-for-you-active .fyp-feed-switch::-webkit-scrollbar {display:none!important}
+body.minglora-for-you-active .fyp-feed-switch button {
+  position:relative!important;
+  flex:0 1 auto!important;
+  min-width:0!important;
+  min-height:40px!important;
+  height:40px!important;
+  padding:7px clamp(3px,.8vw,10px)!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  color:rgba(255,255,255,.74)!important;
+  font-size:clamp(10px,1.2vw,14px)!important;
+  font-weight:800!important;
+  letter-spacing:-.015em!important;
+  text-shadow:0 1px 5px rgba(0,0,0,.65)!important;
+  white-space:nowrap!important;
+}
+body.minglora-for-you-active .fyp-feed-switch button[data-fyp-scope="for-you"] {
+  font-size:0!important;
+}
+body.minglora-for-you-active .fyp-feed-switch button[data-fyp-scope="for-you"]::before {
+  content:"For You";
+  font-size:clamp(10px,1.2vw,14px)!important;
+}
+body.minglora-for-you-active .fyp-feed-switch button.active {
+  background:transparent!important;
+  color:#fff!important;
+}
+body.minglora-for-you-active .fyp-feed-switch button.active::after {
+  position:absolute!important;
+  right:18%!important;
+  bottom:1px!important;
+  left:18%!important;
+  height:3px!important;
+  border-radius:4px!important;
+  background:#fff!important;
+  content:""!important;
+}
+body.minglora-for-you-active .fyp-top-search {
+  position:relative!important;
+  inset:auto!important;
+  justify-self:end!important;
+  display:flex!important;
+  align-items:center!important;
+  width:38px!important;
+  max-width:38px!important;
+  min-width:38px!important;
+  height:38px!important;
+  margin:0!important;
+  padding:0!important;
+}
+body.minglora-for-you-active .fyp-top-search input {
+  display:none!important;
+}
+body.minglora-for-you-active .fyp-top-search button[data-fyp-search] {
+  display:grid!important;
+  place-items:center!important;
+  width:38px!important;
+  min-width:38px!important;
+  height:38px!important;
+  padding:0!important;
+  border:1px solid rgba(255,255,255,.32)!important;
+  border-radius:50%!important;
+  background:rgba(0,0,0,.28)!important;
+  color:#fff!important;
+  font-size:0!important;
+  box-shadow:0 2px 12px rgba(0,0,0,.22)!important;
+  backdrop-filter:blur(9px)!important;
+}
+body.minglora-for-you-active .fyp-top-search button[data-fyp-search]::before {
+  content:"⌕";
+  font-size:27px!important;
+  line-height:1!important;
+}
+body.minglora-for-you-active .fyp-top-search:focus-within,
+body.minglora-for-you-active .fyp-top-search:has(input:not(:placeholder-shown)) {
+  position:absolute!important;
+  top:calc(max(58px,env(safe-area-inset-top) + 50px))!important;
+  right:max(12px,env(safe-area-inset-right))!important;
+  z-index:45!important;
+  display:flex!important;
+  align-items:center!important;
+  gap:6px!important;
+  width:min(340px,calc(100vw - 24px))!important;
+  max-width:none!important;
+  min-width:0!important;
+  height:auto!important;
+  padding:7px!important;
+  border:1px solid rgba(255,255,255,.2)!important;
+  border-radius:14px!important;
+  background:rgba(10,13,20,.96)!important;
+  box-shadow:0 12px 36px rgba(0,0,0,.42)!important;
+  backdrop-filter:blur(18px)!important;
+}
+body.minglora-for-you-active .fyp-top-search:focus-within input,
+body.minglora-for-you-active .fyp-top-search:has(input:not(:placeholder-shown)) input {
+  display:block!important;
+  flex:1 1 0!important;
+  width:100%!important;
+  min-width:0!important;
+  height:38px!important;
+  margin:0!important;
+  padding:0 10px!important;
+  border:1px solid rgba(255,255,255,.2)!important;
+  border-radius:9px!important;
+  background:rgba(255,255,255,.09)!important;
+  color:#fff!important;
+  font-size:14px!important;
+}
+body.minglora-for-you-active .fyp-top-search:focus-within button[data-fyp-search],
+body.minglora-for-you-active .fyp-top-search:has(input:not(:placeholder-shown)) button[data-fyp-search] {
+  width:auto!important;
+  min-width:52px!important;
+  height:38px!important;
+  padding:0 10px!important;
+  border:1px solid #347fe0!important;
+  border-radius:9px!important;
+  background:#226bd0!important;
+  color:#fff!important;
+  font-size:12px!important;
+}
+body.minglora-for-you-active .fyp-top-search:focus-within button[data-fyp-search]::before,
+body.minglora-for-you-active .fyp-top-search:has(input:not(:placeholder-shown)) button[data-fyp-search]::before {content:none!important}
+body.minglora-for-you-active .fyp-top-search button[data-fyp-search-clear][hidden] {display:none!important}
+body.minglora-for-you-active .fyp-top-search button[data-fyp-search-clear]:not([hidden]) {
+  display:grid!important;
+  place-items:center!important;
+  flex:0 0 34px!important;
+  width:34px!important;
+  min-width:34px!important;
+  height:36px!important;
+  padding:0!important;
+  border:1px solid rgba(255,255,255,.2)!important;
+  border-radius:9px!important;
+  background:rgba(255,255,255,.08)!important;
+  color:#fff!important;
+  font-size:20px!important;
+}
+body.minglora-for-you-active .fyp-stream {
+  position:absolute!important;
+  inset:0!important;
+  z-index:1!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  grid-row:auto!important;
+  width:100vw!important;
+  max-width:none!important;
+  height:100dvh!important;
+  min-height:100dvh!important;
+  max-height:100dvh!important;
+  margin:0!important;
+  padding:0!important;
+  box-sizing:border-box!important;
+  overflow-x:hidden!important;
+  overflow-y:auto!important;
+  overscroll-behavior-y:contain!important;
+  scroll-snap-type:y mandatory!important;
+  scrollbar-width:none!important;
+  background:#050505!important;
+}
+body.minglora-for-you-active .fyp-stream::-webkit-scrollbar {display:none!important}
+body.minglora-for-you-active .fyp-video-card {
+  position:relative!important;
+  display:block!important;
+  flex:0 0 100dvh!important;
+  width:100vw!important;
+  max-width:none!important;
+  height:100dvh!important;
+  min-height:100dvh!important;
+  margin:0 auto!important;
+  overflow:hidden!important;
+  scroll-snap-align:start!important;
+  scroll-snap-stop:always!important;
+  background:#050505!important;
+}
+body.minglora-for-you-active .fyp-video-card.has-video {
+  width:min(100vw,56.25dvh)!important;
+  max-width:min(100vw,56.25dvh)!important;
+}
+body.minglora-for-you-active .fyp-video-card.has-video .fyp-video {
+  position:absolute!important;
+  inset:0!important;
+  display:block!important;
+  width:100%!important;
+  height:100%!important;
+  min-width:0!important;
+  min-height:0!important;
+  max-width:none!important;
+  max-height:none!important;
+  object-fit:cover!important;
+  object-position:center!important;
+  background:#000!important;
+}
+body.minglora-for-you-active .fyp-video-shade {
+  position:absolute!important;
+  inset:0!important;
+  z-index:2!important;
+  pointer-events:none!important;
+  background:linear-gradient(180deg,rgba(0,0,0,.28) 0%,transparent 19%,transparent 56%,rgba(0,0,0,.64) 100%)!important;
+}
+body.minglora-for-you-active .fyp-overlay-bottom {
+  position:absolute!important;
+  z-index:6!important;
+  right:78px!important;
+  bottom:max(20px,calc(env(safe-area-inset-bottom) + 14px))!important;
+  left:16px!important;
+  display:flex!important;
+  flex-direction:column!important;
+  gap:9px!important;
+  max-height:40%!important;
+  overflow:hidden!important;
+  color:#fff!important;
+  text-shadow:0 1px 5px rgba(0,0,0,.85)!important;
+}
+body.minglora-for-you-active .fyp-creator-line {
+  display:flex!important;
+  align-items:center!important;
+  flex-wrap:wrap!important;
+  gap:8px!important;
+  min-width:0!important;
+}
+body.minglora-for-you-active .fyp-avatar-button {
+  width:38px!important;
+  height:38px!important;
+  padding:2px!important;
+  border:2px solid #fff!important;
+  border-radius:50%!important;
+}
+body.minglora-for-you-active .fyp-creator-name {
+  max-width:58%!important;
+  color:#fff!important;
+  font-size:14px!important;
+  font-weight:850!important;
+  text-shadow:0 1px 5px rgba(0,0,0,.85)!important;
+}
+body.minglora-for-you-active .fyp-caption {
+  display:-webkit-box!important;
+  max-height:4.2em!important;
+  overflow:hidden!important;
+  -webkit-box-orient:vertical!important;
+  -webkit-line-clamp:3!important;
+  font-size:14px!important;
+  line-height:1.4!important;
+  overflow-wrap:anywhere!important;
+  color:#fff!important;
+}
+body.minglora-for-you-active .fyp-post-meta {
+  color:rgba(255,255,255,.78)!important;
+  font-size:11px!important;
+}
+body.minglora-for-you-active .fyp-sound-line {
+  max-width:100%!important;
+  color:#fff!important;
+  font-size:12px!important;
+}
+body.minglora-for-you-active .fyp-action-rail {
+  position:absolute!important;
+  top:50%!important;
+  right:8px!important;
+  bottom:auto!important;
+  z-index:7!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  gap:clamp(7px,1.25vh,12px)!important;
+  width:54px!important;
+  max-height:calc(100% - 150px)!important;
+  overflow:visible!important;
+  transform:translateY(-35%)!important;
+  color:#fff!important;
+}
+body.minglora-for-you-active .fyp-action {
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:2px!important;
+  width:48px!important;
+  min-height:44px!important;
+  padding:0!important;
+  border:0!important;
+  background:transparent!important;
+  color:#fff!important;
+  text-shadow:0 1px 5px rgba(0,0,0,.9)!important;
+  touch-action:manipulation!important;
+  -webkit-tap-highlight-color:transparent!important;
+}
+body.minglora-for-you-active .fyp-action>span {
+  display:grid!important;
+  place-items:center!important;
+  width:40px!important;
+  height:40px!important;
+  border-radius:50%!important;
+  background:rgba(0,0,0,.28)!important;
+  box-shadow:0 2px 10px rgba(0,0,0,.22)!important;
+  font-size:24px!important;
+  line-height:1!important;
+}
+body.minglora-for-you-active .fyp-action small {
+  color:#fff!important;
+  font-size:10px!important;
+  font-weight:800!important;
+  text-shadow:0 1px 5px rgba(0,0,0,.9)!important;
+}
+body.minglora-for-you-active .fyp-action.liked>span {
+  color:#ff2d55!important;
+  background:rgba(255,45,85,.2)!important;
+}
+body.minglora-for-you-active .fyp-disc {
+  display:grid!important;
+  place-items:center!important;
+  flex:0 0 44px!important;
+  width:44px!important;
+  height:44px!important;
+  border:7px solid #252525!important;
+  border-radius:50%!important;
+  background:radial-gradient(circle,#545454 0 18%,#151515 20% 100%)!important;
+  color:#fff!important;
+  font-size:18px!important;
+  box-shadow:0 3px 12px rgba(0,0,0,.38)!important;
+  animation:fyp-disc-spin 8s linear infinite!important;
+}
+@keyframes fyp-disc-spin {to{transform:rotate(360deg)}}
+body.minglora-for-you-active .fyp-play-toggle {
+  z-index:8!important;
+  display:none!important;
+}
+body.minglora-for-you-active .fyp-video-card.is-paused .fyp-play-toggle {
+  display:grid!important;
+}
+body.minglora-for-you-active .fyp-empty,
+body.minglora-for-you-active .fyp-loading,
+body.minglora-for-you-active .fyp-search-loading {
+  width:100%!important;
+  min-height:100dvh!important;
+  padding:90px 24px 40px!important;
+  box-sizing:border-box!important;
+  background:#080808!important;
+  color:#fff!important;
+}
+@media(max-width:760px) {
+  body.minglora-for-you-active .fyp-header {
+    grid-template-columns:34px minmax(0,1fr) 34px!important;
+    gap:5px!important;
+    height:58px!important;
+    min-height:58px!important;
+    padding: max(6px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) 4px max(8px,env(safe-area-inset-left))!important;
+  }
+  body.minglora-for-you-active .fyp-exit,
+  body.minglora-for-you-active .fyp-top-search,
+  body.minglora-for-you-active .fyp-top-search button[data-fyp-search] {
+    width:32px!important;
+    min-width:32px!important;
+    height:32px!important;
+    min-height:32px!important;
+  }
+  body.minglora-for-you-active .fyp-feed-switch {
+    justify-content:space-between!important;
+    gap:1px!important;
+    min-height:38px!important;
+    height:38px!important;
+  }
+  body.minglora-for-you-active .fyp-feed-switch button {
+    min-height:36px!important;
+    height:36px!important;
+    padding:6px 2px!important;
+    font-size:clamp(9px,2.8vw,12px)!important;
+  }
+  body.minglora-for-you-active .fyp-feed-switch button[data-fyp-scope="for-you"]::before {
+    font-size:clamp(9px,2.8vw,12px)!important;
+  }
+  body.minglora-for-you-active .fyp-video-card.has-video {
+    width:100vw!important;
+    max-width:100vw!important;
+  }
+  body.minglora-for-you-active .fyp-overlay-bottom {
+    right:70px!important;
+    bottom:max(14px,calc(env(safe-area-inset-bottom) + 10px))!important;
+    left:12px!important;
+    gap:7px!important;
+    max-height:38%!important;
+  }
+  body.minglora-for-you-active .fyp-action-rail {
+    right:5px!important;
+    width:50px!important;
+    gap:clamp(5px,1vh,9px)!important;
+    transform:translateY(-30%)!important;
+  }
+  body.minglora-for-you-active .fyp-action {
+    width:46px!important;
+    min-height:40px!important;
+  }
+  body.minglora-for-you-active .fyp-action>span {
+    width:36px!important;
+    height:36px!important;
+    font-size:22px!important;
+  }
+  body.minglora-for-you-active .fyp-action small {font-size:9px!important}
+  body.minglora-for-you-active .fyp-disc {
+    width:40px!important;
+    height:40px!important;
+    flex-basis:40px!important;
+    border-width:6px!important;
+  }
+  body.minglora-for-you-active .fyp-top-search:focus-within,
+  body.minglora-for-you-active .fyp-top-search:has(input:not(:placeholder-shown)) {
+    top:calc(max(52px,env(safe-area-inset-top) + 46px))!important;
+    right:8px!important;
+    width:min(320px,calc(100vw - 16px))!important;
+  }
+}
+@media(max-height:640px) {
+  body.minglora-for-you-active .fyp-action-rail {
+    gap:4px!important;
+    transform:translateY(-46%)!important;
+  }
+  body.minglora-for-you-active .fyp-action {min-height:34px!important}
+  body.minglora-for-you-active .fyp-action>span {width:30px!important;height:30px!important;font-size:19px!important}
+  body.minglora-for-you-active .fyp-action small {font-size:8px!important}
+  body.minglora-for-you-active .fyp-disc {width:34px!important;height:34px!important;flex-basis:34px!important}
+  body.minglora-for-you-active .fyp-overlay-bottom {max-height:34%!important;gap:5px!important}
+  body.minglora-for-you-active .fyp-header {height:50px!important;min-height:50px!important}
+}
+@media(prefers-reduced-motion:reduce) {
+  body.minglora-for-you-active .fyp-disc {animation:none!important}
+  body.minglora-for-you-active .fyp-stream {scroll-behavior:auto!important}
+}
