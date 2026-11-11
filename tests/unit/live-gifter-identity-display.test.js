@@ -19,7 +19,7 @@ test("LIVE uses the original level-specific badge artwork and visibly prints its
   assert.match(renderer, /badge\.badgeName/);
   assert.match(renderer, /gifterBadgeImageMarkup/);
   assert.match(renderer, /live-gifter-badge-name/);
-  assert.match(renderer, /level, placement/);
+  assert.match(renderer, /level }, placement/);
 });
 
 test("LIVE comments show username, then display name, then the individual gifter badge and name", () => {
