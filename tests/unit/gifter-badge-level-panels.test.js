@@ -43,7 +43,7 @@ test("ordered Level references each display their matching individual original b
   assert.match(progression, /gp-level-index-art/);
   assert.match(progression, /src='\/assets\/gifter-badges\/level_"/);
   assert.match(progression, /String\(levelNumber\)\.padStart\(2, "0"\)/);
-  assert.match(progression, /alt='Level " \+ number\(levelNumber\) \+ " gifter badge'/);
+  assert.match(progression, /alt='" \+ esc\(badgeName\) \+ "'/);
   assert.match(progression, /loading='lazy' decoding='async' width='80' height='80'/);
   assert.doesNotMatch(progression, /MingloraGifterBadgeArt/);
   assert.match(styles, /\.gp-level-index-art\{[^}]*width:76px;height:76px[^}]*aspect-ratio:1\/1[^}]*object-fit:contain/);
@@ -100,7 +100,7 @@ test("level and badge names have separate horizontal and vertical ordered layout
   assert.match(progression, /data-gp-level-layout='vertical'/);
   assert.match(progression, /data-layout='horizontal'/);
   assert.match(progression, /levelGrid\.dataset\.layout = layout/);
-  assert.match(progression, /esc\(item\.tier \|\| "Gifter"\)/);
+  assert.match(progression, /esc\(badgeName\)/);
   assert.match(progression, /item\.coinsRequired \?\? item\.xpRequired/);
   assert.match(styles, /\.gp-level-index-grid\[data-layout="horizontal"\]\{grid-template-columns:repeat\(4,minmax\(0,1fr\)\)\}/);
   assert.match(styles, /\.gp-level-index-grid\[data-layout="vertical"\]\{grid-template-columns:minmax\(0,1fr\)\}/);
@@ -142,7 +142,7 @@ test("Gifters Level-Up chart is readable in normal page view without requiring z
   const html = read("public/index.html");
   const sw = read("public/sw.js");
   assert.match(progression, /gp-chart-fullsize[\s\S]*?View full-size chart to zoom/);
-  assert.match(progression, /href='\/assets\/Gifters%20Level%20Up\.png' target='_blank' rel='noopener noreferrer'/);
+  assert.match(progression, /href='\/assets\/gifters-level-up\.png' target='_blank' rel='noopener noreferrer'/);
   assert.match(styles, /\.gp-hero-art \.gp-reference-art\{[\s\S]*?width:min\(100%,900px\)[\s\S]*?height:auto[\s\S]*?max-height:none/);
   assert.match(styles, /@media\(max-width:650px\)[\s\S]*?\.gp-hero-art \.gp-reference-art\{width:100%;height:auto;max-height:none;object-fit:contain\}/);
   assert.match(styles, /\.gp-chart-fullsize\{[\s\S]*?min-height:46px[\s\S]*?font-size:1rem/);
