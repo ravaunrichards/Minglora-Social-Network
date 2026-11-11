@@ -24,6 +24,9 @@ import {
   updatePersonalAiBotTeam,
   assignPersonalAiBotsToTeam,
   removePersonalAiBotFromTeam,
+  getPersonalAiBotTeamHandoffs,
+  createPersonalAiBotTeamHandoff,
+  reviewPersonalAiBotTeamHandoff,
   PERSONAL_AI_BOT_DEPARTMENTS,
   PERSONAL_AI_BOT_JOB_POSITIONS,
   getPersonalAiBotDepartments,
@@ -1024,4 +1027,98 @@ test('Persona Laboratory rollback rejects approved versions that were never prev
   approvePersonalAiBotPersonaVersion(db,approvedOnly.id,actor,stamp,uid);
   assert.throws(()=>rollbackPersonalAiBotPersonaVersion(db,approvedOnly.id,actor,stamp,uid),/previously active/);
   assert.equal(bot.activePersonaVersionId,active.id);
+});
+
+
+function createTeamHandoffFixture(){
+  const db=makeDb();
+  const sender=createPersonalAiBot(db,{displayName:'Handoff Sender Bot',categoryId:'ai-friends'},actor,stamp,uid);
+  const receiver=createPersonalAiBot(db,{displayName:'Handoff Receiver Bot',categoryId:'ai-friends'},actor,stamp,uid);
+  const team=createPersonalAiBotTeam(db,{name:'Handoff Review Team',description:'Owner-reviewed specialist handoffs.'},actor,stamp,uid);
+  assignPersonalAiBotsToTeam(db,team.id,[sender.id,receiver.id],actor,stamp,uid);
+  const taskId=uid();
+  db.personalAiBotTasks.push({
+    id:taskId,botId:sender.id,status:'awaiting_administrator_approval',createdAt:stamp,
+    taskType:'assistant_request',instruction:'Prepare a safe draft for owner review.'
+  });
+  return {db,sender,receiver,team,taskId};
+}
+
+test('team handoffs are one-receiver, owner-reviewed, idempotent and never dispatched',()=>{
+  const fixture=createTeamHandoffFixture();
+  const {db,sender,receiver,team,taskId}=fixture;
+  const handoff=createPersonalAiBotTeamHandoff(db,team.id,{
+    sourceTaskId:taskId,senderBotId:sender.id,receivingBotId:receiver.id,
+    summary:'Independent review request',
+    requiredInput:'Review the prepared draft for completeness and consistency.',
+    expectedOutput:'Return a structured review with findings and recommendations.',
+    contextScope:'team_internal'
+  },actor,stamp,uid);
+  assert.equal(handoff.status,'pending_owner_review');
+  assert.equal(handoff.dispatchStatus,'not_dispatched');
+  assert.equal(handoff.receivingBotId,receiver.id);
+  assert.equal(getPersonalAiBotTeamHandoffs(db,team.id,actor).length,1);
+  assert.throws(()=>createPersonalAiBotTeamHandoff(db,team.id,{
+    sourceTaskId:taskId,senderBotId:sender.id,receivingBotId:receiver.id,
+    requiredInput:'Review the same work again.',expectedOutput:'Provide another review.'
+  },actor,stamp,uid),/already exists/);
+  assert.throws(()=>createPersonalAiBotTeamHandoff(db,team.id,{
+    sourceTaskId:taskId,senderBotId:sender.id,receivingBotId:sender.id,
+    requiredInput:'Review this task.',expectedOutput:'Return the review.'
+  },actor,stamp,uid),/cannot hand work to itself/);
+});
+
+test('team handoff lifecycle requires owner acceptance and human-reviewed completion',()=>{
+  const fixture=createTeamHandoffFixture();
+  const {db,sender,receiver,team,taskId}=fixture;
+  const handoff=createPersonalAiBotTeamHandoff(db,team.id,{
+    sourceTaskId:taskId,senderBotId:sender.id,receivingBotId:receiver.id,
+    requiredInput:'Review this source task for completeness.',
+    expectedOutput:'Return findings and recommendations.'
+  },actor,stamp,uid);
+  assert.throws(()=>reviewPersonalAiBotTeamHandoff(db,team.id,handoff.id,{action:'complete',resultSummary:'Complete'},actor,stamp,uid),/Only an accepted handoff/);
+  const accepted=reviewPersonalAiBotTeamHandoff(db,team.id,handoff.id,{action:'accept'},actor,stamp,uid);
+  assert.equal(accepted.status,'accepted');
+  assert.equal(accepted.dispatchStatus,'not_dispatched');
+  assert.throws(()=>reviewPersonalAiBotTeamHandoff(db,team.id,handoff.id,{action:'complete',resultSummary:'Done'},actor,stamp,uid),/at least 5 characters/);
+  const completed=reviewPersonalAiBotTeamHandoff(db,team.id,handoff.id,{
+    action:'complete',resultSummary:'Human reviewed the result and recorded the handoff outcome.'
+  },actor,stamp,uid);
+  assert.equal(completed.status,'completed');
+  assert.equal(completed.completedBy,actor);
+  assert.equal(completed.dispatchStatus,'not_dispatched');
+});
+
+test('team handoff rejects private context and revalidates membership, source task, team state and deadline',()=>{
+  const fixture=createTeamHandoffFixture();
+  const {db,sender,receiver,team,taskId}=fixture;
+  const payload={
+    sourceTaskId:taskId,senderBotId:sender.id,receivingBotId:receiver.id,
+    requiredInput:'Use only approved team information for this review.',
+    expectedOutput:'Return a concise review with any concerns.'
+  };
+  assert.throws(()=>createPersonalAiBotTeamHandoff(db,team.id,{...payload,contextScope:'private'},actor,stamp,uid),/private member conversations/);
+
+  const due=createPersonalAiBotTeamHandoff(db,team.id,{...payload,deadlineAt:'2026-11-12T10:00:00.000Z'},actor,stamp,uid);
+  assert.throws(()=>reviewPersonalAiBotTeamHandoff(db,team.id,due.id,{action:'accept'},actor,'2026-11-13T10:00:00.000Z',uid),/deadline has expired/);
+
+  const stale=createPersonalAiBotTeamHandoff(db,team.id,{...payload,deadlineAt:null,summary:'Second handoff'},actor,stamp,uid);
+  const source=db.personalAiBotTasks.find(item=>item.id===taskId);
+  source.status='cancelled';
+  assert.throws(()=>reviewPersonalAiBotTeamHandoff(db,team.id,stale.id,{action:'accept'},actor,stamp,uid),/source task was cancelled/);
+});
+
+test('removing a team member cancels and preserves the member’s open handoffs',()=>{
+  const fixture=createTeamHandoffFixture();
+  const {db,sender,receiver,team,taskId}=fixture;
+  const handoff=createPersonalAiBotTeamHandoff(db,team.id,{
+    sourceTaskId:taskId,senderBotId:sender.id,receivingBotId:receiver.id,
+    requiredInput:'Review the prepared task safely.',
+    expectedOutput:'Provide findings for a human owner.'
+  },actor,stamp,uid);
+  removePersonalAiBotFromTeam(db,team.id,receiver.id,actor,stamp,uid);
+  const retained=db.personalAiBotTeamHandoffs.find(item=>item.id===handoff.id);
+  assert.equal(retained.status,'cancelled');
+  assert.equal(retained.cancellationReason,'team_membership_removed');
+  assert.equal(getPersonalAiBotTeamHandoffs(db,team.id,actor).length,1);
 });
