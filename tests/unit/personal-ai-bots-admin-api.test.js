@@ -2070,3 +2070,19 @@ test('multilingual evaluation set API requires owner privacy attestation and blo
   assert.equal(denied.res.statusCode,403);
   assert.equal(db.personalAiBotLanguageEvaluationSets.length,0);
 });
+
+test('owner overview exposes a bounded performance snapshot without claiming provider telemetry',async()=>{
+  const context=makeContext({
+    now:()=> '2026-11-11T10:00:00.000Z',
+    db:{personalAiBotTasks:[
+      {id:'queued-metric',status:'awaiting_administrator_approval',taskType:'assistant_request',createdAt:'2026-11-11T09:55:00.000Z'}
+    ]}
+  });
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,200);
+  assert.equal(context.res.payload.performance.source,'legacy_runtime_state_snapshot');
+  assert.equal(context.res.payload.performance.observedAt,'2026-11-11T10:00:00.000Z');
+  assert.equal(context.res.payload.performance.queue.awaitingApproval,1);
+  assert.equal(context.res.payload.performance.integrations.providerInference.available,false);
+  assert.equal(context.res.payload.performance.integrations.usageTelemetry.status,'unavailable');
+});
