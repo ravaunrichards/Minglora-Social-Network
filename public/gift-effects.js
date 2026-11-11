@@ -9,45 +9,140 @@
   }
   function prime(){try{const c=audio();if(c?.state==="suspended")void c.resume();return Boolean(c);}catch{return false;}}
   function hash(value){let h=2166136261;for(const ch of String(value||"")){h^=ch.charCodeAt(0);h=Math.imul(h,16777619);}return h>>>0;}
-  const profiles={
-    flowers:{wave:"sine",notes:[0,7,12,19],base:610,length:.18,pan:.15},
-    hearts:{wave:"sine",notes:[0,4,7,12],base:520,length:.2,pan:0},
-    animals:{wave:"triangle",notes:[0,3,7,10],base:370,length:.14,pan:-.1},
-    vehicles:{wave:"sawtooth",notes:[0,7,12,19],base:260,length:.12,pan:0},
-    music:{wave:"triangle",notes:[0,5,7,12,16],base:480,length:.17,pan:.1},
-    sports:{wave:"square",notes:[0,7,12],base:310,length:.1,pan:0},
-    food_drink:{wave:"sine",notes:[0,3,7,10],base:570,length:.15,pan:-.05},
-    fashion_beauty:{wave:"sine",notes:[0,7,12,16],base:690,length:.19,pan:.15},
-    luxury:{wave:"sine",notes:[0,4,7,11,16],base:760,length:.22,pan:0},
-    celebrations:{wave:"triangle",notes:[0,4,7,12,16],base:540,length:.13,pan:0},
-    fantasy:{wave:"sine",notes:[0,7,12,19,24],base:450,length:.24,pan:0},
-    nature:{wave:"sine",notes:[0,5,9,12],base:430,length:.22,pan:-.15},
-    travel:{wave:"triangle",notes:[0,5,7,12],base:420,length:.16,pan:.1},
-    games:{wave:"square",notes:[0,12,19,24],base:340,length:.08,pan:0},
-    community:{wave:"triangle",notes:[0,4,7,12],base:490,length:.17,pan:0},
-    symbols:{wave:"sine",notes:[0,7,12],base:580,length:.16,pan:0},
-    everyday:{wave:"sine",notes:[0,3,7],base:530,length:.21,pan:-.08},
-    reactions:{wave:"square",notes:[0,12,19],base:680,length:.07,pan:.04},
-    seasonal:{wave:"sine",notes:[0,7,12,16],base:720,length:.2,pan:.12},
-    jamaican_culture:{wave:"triangle",notes:[0,3,7,10,12],base:390,length:.13,pan:0},
-    other:{wave:"triangle",notes:[0,5,12],base:460,length:.15,pan:0}
-  };
-  function play(gift){
-    if(!gift)return false;
-    const c=audio();if(!c)return false;
+  let soundMapPromise=null;
+  const soundBuffers=new Map();
+  const activeSources=new Set();
+  const activeElements=new Set();
+  const SOUND_MAP_URL="/assets/Gift%20Sounds/gift-code-map.json";
+  const SOUND_BASE_PATH="/assets/Gift Sounds/";
+  const MAX_ACTIVE_GIFT_SOUNDS=4;
+  function slugify(value){
+    return String(value||"").toLowerCase().normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g,"").replace(/&/g," and ")
+      .replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
+  }
+  function safeSoundUrl(value){
     try{
-      if(c.state==="suspended")void c.resume();
-      const p=profiles[gift.category]||profiles.other,seed=hash([gift.sound_preset,gift.code,gift.name].join("|")),variation=(seed%9)-4,now=c.currentTime;
-      const base=p.base*(.92+(seed%17)/100);
-      p.notes.forEach((step,i)=>{
-        const osc=c.createOscillator(),gain=c.createGain(),pan=c.createStereoPanner?.();
-        const start=now+i*p.length*.78,duration=p.length*(i===p.notes.length-1?1.35:1);
-        osc.type=p.wave;osc.frequency.setValueAtTime(base*Math.pow(2,(step+variation*.12)/12),start);
-        gain.gain.setValueAtTime(.0001,start);gain.gain.exponentialRampToValueAtTime(.12/(1+i*.12),start+.018);gain.gain.exponentialRampToValueAtTime(.0001,start+duration);
-        if(pan){pan.pan.setValueAtTime(Math.max(-.8,Math.min(.8,p.pan+(i%2?.12:-.12))),start);osc.connect(gain);gain.connect(pan);pan.connect(c.destination);}
-        else{osc.connect(gain);gain.connect(c.destination);}
-        osc.start(start);osc.stop(start+duration+.03);
-      });
+      const url=new URL(String(value||""),window.location.href);
+      const path=decodeURIComponent(url.pathname);
+      if(url.origin!==window.location.origin||!path.startsWith(SOUND_BASE_PATH)||!path.endsWith("/sound.mp3"))return "";
+      return url.href;
+    }catch{return "";}
+  }
+  async function soundMap(){
+    if(!soundMapPromise){
+      soundMapPromise=fetch(SOUND_MAP_URL,{credentials:"same-origin",cache:"force-cache"})
+        .then(response=>{
+          if(!response.ok)throw new Error("Gift sound map unavailable.");
+          return response.json();
+        })
+        .then(value=>{
+          const byCode=value&&value.gifts_by_code&&typeof value.gifts_by_code==="object"?value.gifts_by_code:{};
+          const bySlug=new Map();
+          for(const entry of Object.values(byCode)){
+            if(entry&&entry.slug)bySlug.set(String(entry.slug),entry);
+          }
+          return {byCode,bySlug};
+        })
+        .catch(error=>{soundMapPromise=null;throw error;});
+    }
+    return soundMapPromise;
+  }
+  function prime(){
+    try{
+      const c=audio();
+      if(c?.state==="suspended")void c.resume();
+      void soundMap().catch(()=>null);
+      return Boolean(c);
+    }catch{return false;}
+  }
+  async function resolveGiftSound(gift){
+    if(!gift||typeof gift!=="object")return null;
+    const direct=safeSoundUrl(gift.sound_url||gift.soundUrl||gift.audioUrl||"");
+    if(direct)return {url:direct,volume:Number(gift.sound_volume)||.68,slug:slugify(gift.name||gift.giftName)};
+    try{
+      const map=await soundMap();
+      const code=String(gift.code||gift.giftCode||gift.gift_code||"").trim();
+      let entry=code?map.byCode[code]:null;
+      const nameSlug=slugify(gift.name||gift.giftName||gift.gift_name||"");
+      if(!entry&&nameSlug)entry=map.bySlug.get(nameSlug)||null;
+      if(!entry)return null;
+      const url=safeSoundUrl(entry.audioUrl);
+      return url?{url,volume:Number(entry.volume)||.68,slug:entry.slug,sourceId:entry.sourceId}:null;
+    }catch{return null;}
+  }
+  async function loadSoundBuffer(url,c){
+    if(soundBuffers.has(url))return soundBuffers.get(url);
+    const pending=fetch(url,{credentials:"same-origin",cache:"force-cache"})
+      .then(response=>{
+        if(!response.ok)throw new Error("Gift sound file unavailable.");
+        return response.arrayBuffer();
+      })
+      .then(bytes=>c.decodeAudioData(bytes.slice(0)));
+    soundBuffers.set(url,pending);
+    try{return await pending;}
+    catch(error){soundBuffers.delete(url);throw error;}
+  }
+  function rememberSource(source){
+    activeSources.add(source);
+    while(activeSources.size>MAX_ACTIVE_GIFT_SOUNDS){
+      const oldest=activeSources.values().next().value;
+      try{oldest.stop();}catch{}
+      activeSources.delete(oldest);
+    }
+    source.addEventListener?.("ended",()=>activeSources.delete(source),{once:true});
+  }
+  function rememberElement(element){
+    activeElements.add(element);
+    while(activeElements.size>MAX_ACTIVE_GIFT_SOUNDS){
+      const oldest=activeElements.values().next().value;
+      oldest.pause();
+      oldest.currentTime=0;
+      activeElements.delete(oldest);
+    }
+    element.addEventListener("ended",()=>activeElements.delete(element),{once:true});
+  }
+  async function play(gift,options={}){
+    const entry=await resolveGiftSound(gift);
+    if(!entry)return false;
+    const volume=Math.max(0,Math.min(1,Number(options.volume??entry.volume)||.68));
+    const durationLimit=Math.max(.35,Math.min(6,Number(options.durationSeconds)||4.5));
+    const identity=String(gift.code||gift.giftCode||gift.name||entry.slug||"gift");
+    const panValue=Number.isFinite(Number(options.pan))?Math.max(-1,Math.min(1,Number(options.pan))):((hash(identity)%31)-15)/100;
+    const c=audio();
+    if(!c){
+      try{
+        const element=new Audio(entry.url);
+        element.preload="auto";
+        element.volume=volume;
+        element.currentTime=0;
+        rememberElement(element);
+        await element.play();
+        return true;
+      }catch{return false;}
+    }
+    try{
+      if(c.state==="suspended")await c.resume();
+      const buffer=await loadSoundBuffer(entry.url,c);
+      const source=c.createBufferSource();
+      const gain=c.createGain();
+      const panner=c.createStereoPanner?.();
+      const now=c.currentTime;
+      const duration=Math.min(buffer.duration,durationLimit);
+      if(!Number.isFinite(duration)||duration<=.05)return false;
+      source.buffer=buffer;
+      gain.gain.setValueAtTime(.0001,now);
+      gain.gain.linearRampToValueAtTime(volume,now+.035);
+      gain.gain.setValueAtTime(volume,Math.max(now+.04,now+duration-.16));
+      gain.gain.linearRampToValueAtTime(.0001,now+duration);
+      source.connect(gain);
+      if(panner){
+        panner.pan.setValueAtTime(panValue,now);
+        gain.connect(panner);
+        panner.connect(c.destination);
+      }else gain.connect(c.destination);
+      rememberSource(source);
+      source.start(now,0,duration);
       return true;
     }catch{return false;}
   }
@@ -103,14 +198,14 @@
       particles.append(particle);
     }
     outer.append(card,rays,particles);parent.append(outer);
-    if(options.sound!==false)play(gift);
+    if(options.sound!==false)void play(gift,options.soundOptions||{});
     setTimeout(()=>outer.remove(),duration+250);
     return outer;
   }
   function show(gift,options={}){return mount(document.body,gift,options);}
   function preview(gift){
     if(!gift)return false;
-    play(gift);
+    void play(gift);
     const target=document.getElementById("minglora-gift-selected-model")||document.getElementById("minglora-gift-selected-image")||document.getElementById("live-gift-preview-model")||document.getElementById("live-gift-preview-image");
     if(target){
       const identity=String(gift.animation_key||gift.code||gift.name||"minglora-gift");
