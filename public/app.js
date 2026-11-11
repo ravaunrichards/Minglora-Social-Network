@@ -9587,13 +9587,87 @@ async function renderVideoPlaylistLibrary(feed){
 }
 
 
+
+let activeVideoChannelId=null;
+let activeVideoChannelScope='discover';
+function openVideoChannelEditor(channel,onSaved=null){
+  const overlay=document.createElement('div');
+  overlay.className='modal-backdrop';
+  overlay.innerHTML='<section class="modal video-channel-editor" role="dialog" aria-modal="true" aria-labelledby="video-channel-editor-title"><div class="modal-head"><h2 id="video-channel-editor-title">Customize your channel</h2><button type="button" class="modal-close" aria-label="Close">×</button></div><form class="modal-body"><label class="field"><span>Channel name</span><input name="title" required maxlength="80" value="'+esc(channel?.title||state.user?.name||'')+'" placeholder="Name your video channel"></label><label class="field"><span>Description</span><textarea name="description" rows="4" maxlength="1000" placeholder="Tell people what your channel is about">'+esc(channel?.description||'')+'</textarea></label><label class="field"><span>Channel visibility</span><select name="visibility"><option value="public" '+((channel?.visibility||'public')==='public'?'selected':'')+'>Public · discoverable</option><option value="unlisted" '+(channel?.visibility==='unlisted'?'selected':'')+'>Unlisted · link only</option><option value="private" '+(channel?.visibility==='private'?'selected':'')+'>Private · only you</option></select></label><p class="auth-error" data-video-channel-error role="status"></p><button type="submit" class="primary full">Save channel</button></form></section>';
+  document.body.append(overlay);
+  overlay.querySelector('.modal-close')?.addEventListener('click',()=>overlay.remove());
+  overlay.addEventListener('click',event=>{if(event.target===overlay)overlay.remove();});
+  overlay.querySelector('form')?.addEventListener('submit',async event=>{
+    event.preventDefault();
+    const form=event.currentTarget,button=form.querySelector('button[type="submit"]'),error=form.querySelector('[data-video-channel-error]');
+    button.disabled=true;error.textContent='';
+    try{
+      const values=Object.fromEntries(new FormData(form));
+      const result=await api('/video-channels/me',{method:'PATCH',body:JSON.stringify(values)});
+      overlay.remove();
+      if(typeof onSaved==='function')await onSaved(result.channel);
+    }catch(err){error.textContent=err.message;button.disabled=false;}
+  });
+}
+async function setVideoChannelSubscription(channel,subscribe){
+  const result=await api('/video-channels/'+encodeURIComponent(channel.ownerId)+'/subscribe',{method:subscribe?'POST':'DELETE'});
+  toast(subscribe?(result.alreadySubscribed?'Already subscribed.':'Subscribed to channel.'):'Channel subscription removed.');
+}
+async function renderVideoChannelLibrary(feed){
+  feed.innerHTML='<section class="card empty-state"><h3>Loading Minglora channels…</h3></section>';
+  try{
+    if(activeVideoChannelId){
+      const result=await api('/video-channels/'+encodeURIComponent(activeVideoChannelId));
+      const channel=result.channel;
+      const videos=Array.isArray(channel.videos)?channel.videos:[];
+      feed.innerHTML='<section class="card video-channel-detail-head"><button type="button" class="secondary" data-video-channel-back>‹ Channels</button><div class="video-channel-detail-copy"><span class="eyebrow">MINGLORA WATCH · CHANNEL</span><h2>'+esc(channel.title)+'</h2><p>'+esc(channel.description||'')+'</p><small>'+Number(channel.subscriberCount||0)+' subscribers · '+Number(channel.videoCount||0)+' videos'+(channel.visibility==='unlisted'?' · Unlisted':'')+'</small><div class="video-channel-owner-line"><span>'+esc(channel.owner?.name||channel.owner?.username||'Minglora member')+'</span></div></div>'+(channel.isOwner?'<button type="button" class="secondary" data-video-channel-edit>Edit channel</button>':'<button type="button" class="'+(channel.isSubscribed?'secondary':'primary')+'" data-video-channel-subscribe="'+(channel.isSubscribed?'off':'on')+'">'+(channel.isSubscribed?'Subscribed · Unsubscribe':'＋ Subscribe')+'</button>')+'</section>'+(videos.length?videos.map(post=>postCard(post,{videoWatchLater:true})+videoPlaylistActionMarkup(post)).join(''):'<section class="card empty-state"><div class="empty-icon">▶</div><h3>No accessible videos yet</h3><p>Videos appear here when this creator publishes posts that you are allowed to view.</p>'+(channel.isOwner?'<button type="button" class="primary" data-video-channel-publish>＋ Publish a video</button>':'')+'</section>');
+      feed.querySelector('[data-video-channel-back]')?.addEventListener('click',()=>{activeVideoChannelId=null;void renderVideoChannelLibrary(feed);});
+      feed.querySelector('[data-video-channel-edit]')?.addEventListener('click',()=>openVideoChannelEditor(channel,()=>void renderVideoChannelLibrary(feed)));
+      feed.querySelector('[data-video-channel-subscribe]')?.addEventListener('click',async event=>{
+        const button=event.currentTarget;button.disabled=true;
+        try{await setVideoChannelSubscription(channel,button.dataset.videoChannelSubscribe==='on');await renderVideoChannelLibrary(feed);}
+        catch(error){button.disabled=false;toast(error.message);}
+      });
+      feed.querySelector('[data-video-channel-publish]')?.addEventListener('click',()=>openVideoComposer({videoFormat:'video'}));
+      bindFeed(feed);
+      bindVideoPlaylistActions(feed);
+      return;
+    }
+    const query=String(feed.dataset.channelQuery||'').trim().slice(0,100);
+    const [discovery,subscriptions]=await Promise.all([
+      api('/video-channels'+(query?'?q='+encodeURIComponent(query):'')),
+      api('/video-channels/subscriptions')
+    ]);
+    const channels=activeVideoChannelScope==='subscriptions'?(subscriptions.channels||[]):(discovery.channels||[]);
+    feed.innerHTML='<section class="card video-channel-library-head"><div><span class="eyebrow">MINGLORA WATCH</span><h2>Creator channels</h2><p>Discover creators, subscribe for free and find their latest public videos.</p></div><button type="button" class="secondary" data-video-channel-own>Manage my channel</button></section><nav class="video-channel-scope" aria-label="Channel directory"><button type="button" data-channel-scope="discover" class="'+(activeVideoChannelScope==='discover'?'active':'')+'">Discover</button><button type="button" data-channel-scope="subscriptions" class="'+(activeVideoChannelScope==='subscriptions'?'active':'')+'">My subscriptions ('+Number((subscriptions.channels||[]).length)+')</button></nav><form class="card video-channel-search"><label for="video-channel-search-input">Find a channel</label><input id="video-channel-search-input" name="q" type="search" maxlength="100" value="'+esc(query)+'" placeholder="Search channel name or creator"><button type="submit" class="primary">Search</button></form>'+(channels.length?'<div class="video-channel-grid">'+channels.map(channel=>'<article class="card video-channel-card" data-video-channel-card="'+esc(channel.ownerId)+'"><div class="video-channel-avatar" aria-hidden="true">'+esc(String(channel.owner?.name||channel.owner?.username||'M').trim().slice(0,1).toUpperCase())+'</div><div class="video-channel-card-copy"><h3>'+esc(channel.title)+'</h3><p>'+esc(channel.description||'Minglora creator channel')+'</p><small>'+esc(channel.owner?.name||channel.owner?.username||'Creator')+' · '+Number(channel.subscriberCount||0)+' subscribers · '+Number(channel.videoCount||0)+' videos</small></div><div class="video-channel-card-actions"><button type="button" class="primary" data-channel-open="'+esc(channel.ownerId)+'">View channel</button>'+(channel.isOwner?'':'<button type="button" class="secondary" data-channel-subscribe="'+esc(channel.ownerId)+'" data-subscribed="'+(channel.isSubscribed?'true':'false')+'">'+(channel.isSubscribed?'Unsubscribe':'＋ Subscribe')+'</button>')+'</div></article>').join('')+'</div>':'<section class="card empty-state"><div class="empty-icon">◎</div><h3>'+(activeVideoChannelScope==='subscriptions'?'You have no channel subscriptions yet':'No channels found')+'</h3><p>'+(activeVideoChannelScope==='subscriptions'?'Subscribe to a creator to keep their channel in your list.':'Channels appear when members publish real videos. Try another search.')+'</p></section>');
+    feed.querySelector('[data-video-channel-own]')?.addEventListener('click',()=>{activeVideoChannelId=state.user?.id||null;if(activeVideoChannelId)void renderVideoChannelLibrary(feed);});
+    feed.querySelectorAll('[data-channel-scope]').forEach(button=>button.addEventListener('click',()=>{activeVideoChannelScope=button.dataset.channelScope;void renderVideoChannelLibrary(feed);}));
+    feed.querySelector('.video-channel-search')?.addEventListener('submit',event=>{
+      event.preventDefault();feed.dataset.channelQuery=String(new FormData(event.currentTarget).get('q')||'');
+      const input=event.currentTarget.querySelector('input');
+      feed.dataset.channelQuery=input?.value||'';
+      void renderVideoChannelLibrary(feed);
+    });
+    feed.querySelectorAll('[data-channel-open]').forEach(button=>button.addEventListener('click',()=>{activeVideoChannelId=button.dataset.channelOpen;void renderVideoChannelLibrary(feed);}));
+    feed.querySelectorAll('[data-channel-subscribe]').forEach(button=>button.addEventListener('click',async()=>{
+      const channel=channels.find(item=>item.ownerId===button.dataset.channelSubscribe);if(!channel)return;
+      button.disabled=true;
+      try{await setVideoChannelSubscription(channel,button.dataset.subscribed!=='true');await renderVideoChannelLibrary(feed);}
+      catch(error){button.disabled=false;toast(error.message);}
+    }));
+  }catch(error){
+    feed.innerHTML='<section class="card empty-state"><h3>Channels could not be loaded</h3><p>'+esc(error.message)+'</p><button type="button" class="secondary" data-channel-retry>Try again</button></section>';
+    feed.querySelector('[data-channel-retry]')?.addEventListener('click',()=>void renderVideoChannelLibrary(feed));
+  }
+}
+
 async function renderVideoCentre(){
   const scope=['for-you','all','following','friends'].includes(state.videoScope)?state.videoScope:'for-you';
-  const mode=['videos','reels','watch-later','playlists'].includes(state.videoMode)?state.videoMode:'videos';
+  const mode=['videos','reels','watch-later','playlists','channels'].includes(state.videoMode)?state.videoMode:'videos';
   state.videoScope=scope;
   state.videoMode=mode;
-  if(mode!=='playlists')await fetchVideoCentrePage({reset:true,watchLater:mode==='watch-later'});
-  setContent('<div class="video-centre"><header class="card video-centre-heading"><div><span class="eyebrow">MINGLORA WATCH</span><h1>Minglora Video</h1><p>Discover videos shared by real Minglora members. Switch to Reels for a vertical swipe-through player.</p></div><button type="button" class="primary" id="video-create-button">＋ Create video post</button></header><nav class="video-centre-mode-switch" role="group" aria-label="Video experience"><button type="button" data-video-mode="videos" class="'+(mode==='videos'?'active':'')+'" aria-pressed="'+(mode==='videos'?'true':'false')+'">Videos</button><button type="button" data-video-mode="reels" class="'+(mode==='reels'?'active':'')+'" aria-pressed="'+(mode==='reels'?'true':'false')+'">Reels</button><button type="button" data-video-mode="watch-later" class="'+(mode==='watch-later'?'active':'')+'" aria-pressed="'+(mode==='watch-later'?'true':'false')+'">Watch Later</button><button type="button" data-video-mode="playlists" class="'+(mode==='playlists'?'active':'')+'" aria-pressed="'+(mode==='playlists'?'true':'false')+'">Playlists</button></nav><section class="card video-centre-toolbar" style="'+(mode==='playlists'?'display:none':'')+'"><label for="video-scope">Discover videos<select id="video-scope"><option value="for-you" '+(scope==='for-you'?'selected':'')+'>For You</option><option value="all" '+(scope==='all'?'selected':'')+'>All videos</option><option value="following" '+(scope==='following'?'selected':'')+'>Following</option><option value="friends" '+(scope==='friends'?'selected':'')+'>Friends</option></select></label><label for="video-search">Search videos<input id="video-search" type="search" maxlength="100" value="'+esc(state.videoSearch||'')+'" placeholder="Search captions or creators"></label></section><section id="video-centre-feed" class="video-centre-feed" aria-live="polite"></section><p class="video-centre-note">Playback, reactions and comments come from existing Minglora member posts. This centre does not invent views or engagement.</p></div>');
+  if(!['playlists','channels'].includes(mode))await fetchVideoCentrePage({reset:true,watchLater:mode==='watch-later'});
+  setContent('<div class="video-centre"><header class="card video-centre-heading"><div><span class="eyebrow">MINGLORA WATCH</span><h1>Minglora Video</h1><p>Discover videos shared by real Minglora members. Switch to Reels for a vertical swipe-through player.</p></div><button type="button" class="primary" id="video-create-button">＋ Create video post</button></header><nav class="video-centre-mode-switch" role="group" aria-label="Video experience"><button type="button" data-video-mode="videos" class="'+(mode==='videos'?'active':'')+'" aria-pressed="'+(mode==='videos'?'true':'false')+'">Videos</button><button type="button" data-video-mode="reels" class="'+(mode==='reels'?'active':'')+'" aria-pressed="'+(mode==='reels'?'true':'false')+'">Reels</button><button type="button" data-video-mode="watch-later" class="'+(mode==='watch-later'?'active':'')+'" aria-pressed="'+(mode==='watch-later'?'true':'false')+'">Watch Later</button><button type="button" data-video-mode="playlists" class="'+(mode==='playlists'?'active':'')+'" aria-pressed="'+(mode==='playlists'?'true':'false')+'">Playlists</button><button type="button" data-video-mode="channels" class="'+(mode==='channels'?'active':'')+'" aria-pressed="'+(mode==='channels'?'true':'false')+'">Channels</button></nav><section class="card video-centre-toolbar" style="'+(['playlists','channels'].includes(mode)?'display:none':'')+'"><label for="video-scope">Discover videos<select id="video-scope"><option value="for-you" '+(scope==='for-you'?'selected':'')+'>For You</option><option value="all" '+(scope==='all'?'selected':'')+'>All videos</option><option value="following" '+(scope==='following'?'selected':'')+'>Following</option><option value="friends" '+(scope==='friends'?'selected':'')+'>Friends</option></select></label><label for="video-search">Search videos<input id="video-search" type="search" maxlength="100" value="'+esc(state.videoSearch||'')+'" placeholder="Search captions or creators"></label></section><section id="video-centre-feed" class="video-centre-feed" aria-live="polite"></section><p class="video-centre-note">Playback, reactions and comments come from existing Minglora member posts. This centre does not invent views or engagement.</p></div>');
   const root=$('#main-content');
   const feed=root.querySelector('#video-centre-feed');
   const loadMoreVideoPage=async button=>{
@@ -9651,6 +9725,7 @@ async function renderVideoCentre(){
   };
   const drawVideoPosts=()=>{
     if(mode==='playlists'){void renderVideoPlaylistLibrary(feed);return;}
+    if(mode==='channels'){void renderVideoChannelLibrary(feed);return;}
     const query=String(state.videoSearch||'').trim().toLowerCase();
     const modePosts=mode==='watch-later'?state.videoFeed:state.videoFeed.filter(post=>mode==='reels'?post.videoFormat==='reel':post.videoFormat!=='reel');
     const visible=modePosts.filter(post=>!query||[post.text,post.author?.name,post.author?.username].some(value=>String(value||'').toLowerCase().includes(query)));
@@ -9685,6 +9760,7 @@ async function renderVideoCentre(){
     if(state.videoMode===button.dataset.videoMode)return;
     state.videoMode=button.dataset.videoMode;
     if(state.videoMode!=='playlists')activeVideoPlaylistId=null;
+    if(state.videoMode!=='channels')activeVideoChannelId=null;
     await renderVideoCentre();
   }));
   root.querySelector('#video-create-button')?.addEventListener('click',()=>openVideoComposer({videoFormat:mode==='reels'?'reel':'video'}));
