@@ -759,7 +759,7 @@ export async function handlePersonalAiBotsAdminApi(context) {
       await saveStore();
       return (json(res,200,{ok:true,...result}),true);
     }
-    const schedulePreviewMatch=path.match(/^\\/api\\/admin\\/personal-ai-bots\\/bots\\/([0-9a-f-]{36})\\/schedule-preview$/i);
+    const schedulePreviewMatch=path.match(/^\/api\/admin\/personal-ai-bots\/bots\/([0-9a-f-]{36})\/schedule-preview$/i);
     if(schedulePreviewMatch&&method==='GET'){
       const bot=db.personalAiBots.find(item=>item.id===schedulePreviewMatch[1]);
       if(!bot)return (json(res,404,{error:'Bot not found.'}),true);
