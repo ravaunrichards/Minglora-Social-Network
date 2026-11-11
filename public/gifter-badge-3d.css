@@ -61,7 +61,11 @@
   max-width:100%;min-width:0;margin-inline-start:5px;vertical-align:middle;
   white-space:normal;overflow-wrap:anywhere;
 }
-.live-gifter-badge-label .gp-badge{display:inline-flex;flex:0 0 24px;width:24px;height:25px;min-width:24px;vertical-align:middle}
+.live-gifter-badge-label .gp-profile-level-badge{
+  display:block;flex:0 0 22px;width:22px;height:22px;max-width:22px;
+  object-fit:contain;filter:drop-shadow(0 1px 2px rgba(10,18,32,.32));
+  animation:live-gifter-badge-glow 7s ease-in-out infinite;
+}
 .live-gifter-badge-name{
   display:inline-block;min-width:0;max-width:100%;color:#f2d58e;
   font-size:9px;font-weight:850;line-height:1.25;white-space:normal;
@@ -82,15 +86,15 @@
 }
 @media(max-width:520px){
   .live-gifter-badge-label{gap:3px;margin-inline-start:3px}
-  .live-gifter-badge-label .gp-badge{flex-basis:22px;width:22px;height:23px;min-width:22px}
+  .live-gifter-badge-label .gp-profile-level-badge{flex-basis:20px;width:20px;height:20px;max-width:20px}
   .live-gifter-badge-name{font-size:8px}
 }
-@media(prefers-reduced-motion:reduce){.live-gifter-badge-label .gp-badge .gp-crest-svg{animation:none}}
+@media(prefers-reduced-motion:reduce){.live-gifter-badge-label .gp-profile-level-badge{animation:none}}
 
 
 /* Non-LIVE individual gifter identity: username first, display name next, original badge art and exact level name. */
 .minglora-gifter-identity{display:inline-flex;align-items:center;justify-content:flex-start;gap:4px;min-width:0;max-width:100%;margin-inline-start:5px;vertical-align:middle;flex-wrap:wrap;white-space:normal;overflow-wrap:anywhere}
-.minglora-gifter-identity .gp-badge{display:inline-flex;flex:0 0 24px;width:24px;height:25px;min-width:24px;vertical-align:middle}
+.minglora-gifter-identity .gp-profile-level-badge{display:block;flex:0 0 23px;width:23px;height:23px;max-width:23px;object-fit:contain;filter:drop-shadow(0 2px 3px rgba(12,24,48,.22));animation:minglora-gifter-badge-glow 7s ease-in-out infinite}
 .minglora-gifter-badge-name{display:inline-block;min-width:0;max-width:100%;color:#805817;font-size:9px;font-weight:850;line-height:1.25;white-space:normal;overflow-wrap:anywhere}
 .post-author{display:grid;gap:2px;min-width:0}
 .post-author-username,.post-author-meta{display:block;color:var(--muted);font-size:10px;line-height:1.35}
@@ -104,16 +108,6 @@
 .minglora-gifter-person>small{display:block;min-width:0;overflow-wrap:anywhere}
 .minglora-gifter-person>strong{display:flex;align-items:center;flex-wrap:wrap;gap:3px;min-width:0;white-space:normal;overflow:visible;overflow-wrap:anywhere}
 @keyframes minglora-gifter-badge-glow{0%,100%{filter:drop-shadow(0 1px 2px rgba(12,24,48,.18))}50%{filter:drop-shadow(0 2px 5px rgba(201,153,59,.5))}}
-@media(max-width:560px){.minglora-gifter-identity{gap:3px;margin-inline-start:3px}.minglora-gifter-identity .gp-badge{flex-basis:22px;width:22px;height:23px;min-width:22px}.minglora-gifter-badge-name{font-size:8px}.post-author strong,.comment-bubble>strong{gap:2px}}
-@media(prefers-reduced-motion:reduce){.minglora-gifter-identity .gp-badge .gp-crest-svg{animation:none}}
+@media(max-width:560px){.minglora-gifter-identity{gap:3px;margin-inline-start:3px}.minglora-gifter-identity .gp-profile-level-badge{flex-basis:21px;width:21px;height:21px;max-width:21px}.minglora-gifter-badge-name{font-size:8px}.post-author strong,.comment-bubble>strong{gap:2px}}
+@media(prefers-reduced-motion:reduce){.minglora-gifter-identity .gp-profile-level-badge{animation:none}}
 
-
-/* Compact 3D crest sizes used wherever legacy numbered PNG badges appeared. */
-.gp-badge--profile{flex:0 0 40px;width:40px;height:42px;min-width:40px}
-.gp-badge--inline{flex:0 0 28px;width:28px;height:30px;min-width:28px}
-.gp-badge--compact{flex:0 0 24px;width:24px;height:25px;min-width:24px}
-.gp-badge--gallery{flex:0 0 120px;width:120px;height:130px;min-width:120px}
-.gp-badge--directory{flex:0 0 76px;width:76px;height:80px;min-width:76px}
-.gp-badge--profile .gp-crest-stage,.gp-badge--inline .gp-crest-stage,.gp-badge--compact .gp-crest-stage,.gp-badge--gallery .gp-crest-stage,.gp-badge--directory .gp-crest-stage{inset:0}
-.gp-badge--profile .gp-crest-svg,.gp-badge--inline .gp-crest-svg,.gp-badge--compact .gp-crest-svg,.gp-badge--gallery .gp-crest-svg,.gp-badge--directory .gp-crest-svg{width:100%;height:100%;animation-duration:7.5s}
-.gp-badge--compact .gp-crest-spark,.gp-badge--profile .gp-crest-spark,.gp-badge--inline .gp-crest-spark{display:none}
