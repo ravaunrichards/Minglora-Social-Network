@@ -1,7 +1,7 @@
 {
   "title": "Minglora Gift Sound Candidate Mappings",
   "status": "review_required_not_production_approved",
-  "mappedGiftCount": 96,
+  "mappedGiftCount": 101,
   "mappings": [
     {
       "giftSlug": "cute-cat-variant-2",
@@ -337,6 +337,46 @@
       "sourceId": "animal-blue-whale",
       "sha256": "bd3bc77fa4c1e545400e7504296dd6024ef15cc6fa734f767d9e029eb38065ce",
       "bytes": 5326514,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "dubai-i999-fireworks",
+      "file": "assets/Gift Sounds/dubai-i999-fireworks/sound.mp3",
+      "sourceId": "celebration-fireworks",
+      "sha256": "a373d0e2779dc8cfa4e89fdc2d8e38a9eb4df315d7f14abef5a3fdd4ba991b0e",
+      "bytes": 2470181,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "fireworks",
+      "file": "assets/Gift Sounds/fireworks/sound.mp3",
+      "sourceId": "celebration-fireworks",
+      "sha256": "a373d0e2779dc8cfa4e89fdc2d8e38a9eb4df315d7f14abef5a3fdd4ba991b0e",
+      "bytes": 2470181,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "maple-fireworks",
+      "file": "assets/Gift Sounds/maple-fireworks/sound.mp3",
+      "sourceId": "celebration-fireworks",
+      "sha256": "a373d0e2779dc8cfa4e89fdc2d8e38a9eb4df315d7f14abef5a3fdd4ba991b0e",
+      "bytes": 2470181,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "mystery-firework",
+      "file": "assets/Gift Sounds/mystery-firework/sound.mp3",
+      "sourceId": "celebration-fireworks",
+      "sha256": "a373d0e2779dc8cfa4e89fdc2d8e38a9eb4df315d7f14abef5a3fdd4ba991b0e",
+      "bytes": 2470181,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "wave-firework",
+      "file": "assets/Gift Sounds/wave-firework/sound.mp3",
+      "sourceId": "celebration-fireworks",
+      "sha256": "a373d0e2779dc8cfa4e89fdc2d8e38a9eb4df315d7f14abef5a3fdd4ba991b0e",
+      "bytes": 2470181,
       "status": "candidate_real_recording_needs_listening_review"
     },
     {

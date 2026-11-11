@@ -3218,9 +3218,12 @@
       "title": "Dubai I999 Fireworks",
       "artwork": "assets/Artwork/dubai-i999-fireworks/artwork.png",
       "expectedSound": "assets/Gift Sounds/dubai-i999-fireworks/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "celebration-fireworks",
+      "candidateSoundFile": "assets/Gift Sounds/dubai-i999-fireworks/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "dune-car",
@@ -3881,9 +3884,12 @@
       "title": "Fireworks",
       "artwork": "assets/Artwork/fireworks/artwork.png",
       "expectedSound": "assets/Gift Sounds/fireworks/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "celebration-fireworks",
+      "candidateSoundFile": "assets/Gift Sounds/fireworks/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "first-rose",
@@ -7730,9 +7736,12 @@
       "title": "Maple Fireworks",
       "artwork": "assets/Artwork/maple-fireworks/artwork.png",
       "expectedSound": "assets/Gift Sounds/maple-fireworks/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "celebration-fireworks",
+      "candidateSoundFile": "assets/Gift Sounds/maple-fireworks/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "maple-world",
@@ -8408,9 +8417,12 @@
       "title": "Mystery Firework",
       "artwork": "assets/Artwork/mystery-firework/artwork.png",
       "expectedSound": "assets/Gift Sounds/mystery-firework/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "celebration-fireworks",
+      "candidateSoundFile": "assets/Gift Sounds/mystery-firework/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "mystic-drink",
@@ -13472,9 +13484,12 @@
       "title": "Wave Firework",
       "artwork": "assets/Artwork/wave-firework/artwork.png",
       "expectedSound": "assets/Gift Sounds/wave-firework/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "celebration-fireworks",
+      "candidateSoundFile": "assets/Gift Sounds/wave-firework/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "wave-lights",
@@ -13890,8 +13905,8 @@
   ],
   "lastIngestion": {
     "status": "candidate_recordings_downloaded_review_only",
-    "downloadedSourceCount": 32,
-    "mappedGiftFileCount": 96,
+    "downloadedSourceCount": 1,
+    "mappedGiftFileCount": 101,
     "productionReadyGiftCount": 0
   }
 }
