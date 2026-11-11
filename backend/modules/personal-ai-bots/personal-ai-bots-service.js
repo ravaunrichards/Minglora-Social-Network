@@ -1234,7 +1234,7 @@ export function previewPersonalAiBotSchedule(schedule, options = {}) {
     throw Object.assign(new Error('A valid bot activity schedule is required.'), {status:400});
   }
   const selectedDays = Array.isArray(schedule.daysOfWeek) ? [...new Set(schedule.daysOfWeek)] : [];
-  const validTime = value => typeof value === 'string' && /^([01]\\d|2[0-3]):[0-5]\\d$/.test(value);
+  const validTime = value => typeof value === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
   if (selectedDays.length < 1 || selectedDays.length > 7 ||
       selectedDays.some(day => !Number.isInteger(day) || day < 1 || day > 7) ||
       !validTime(schedule.startTime) || !validTime(schedule.endTime)) {
