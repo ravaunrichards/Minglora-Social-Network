@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createPersonalAiBotWorker } from '../../backend/modules/personal-ai-bots/worker.js';
+import { createPersonalAiBotWorker, PERSONAL_AI_BOT_WORKER_TASK_TYPES } from '../../backend/modules/personal-ai-bots/worker.js';
 
 const workerId='minglora-worker-test:1';
 const leasedTask={
@@ -59,6 +59,28 @@ test('worker claims only approved low-impact text tasks and stores a human-revie
   assert.equal(calls.completions[0].result.content,'Reviewed draft output.');
   assert.equal(calls.completions[0].result.outputType,'human_review_draft');
   assert.equal(calls.failures.length,0);
+});
+
+test('worker allowlist contains only four non-side-effecting text task types',()=>{
+  assert.deepEqual(PERSONAL_AI_BOT_WORKER_TASK_TYPES.sort(),[
+    'analytics_report','assistant_request','moderation_review','translation'
+  ]);
+});
+
+test('worker rejects social-action task types even when marked low-impact and approved',async()=>{
+  for(const taskType of ['follow','unfollow','send_message','react','draft_post','share_media','join_group','event_participation']){
+    const {options,calls}=dependencies({
+      claimTasks:async()=>[{...leasedTask,taskType,highImpact:false}]
+    });
+    const worker=createPersonalAiBotWorker(options);
+    const result=await worker.runOnce();
+    assert.equal(result.status,'policy_blocked',taskType);
+    assert.equal(calls.provider.length,0,taskType+' must never reach a provider');
+    assert.equal(calls.completions.length,0,taskType+' must never be completed');
+    assert.equal(calls.failures.length,1,taskType+' must be recorded as blocked');
+    assert.equal(calls.failures[0].retryable,false,taskType+' must not be retried');
+    assert.equal(calls.failures[0].errorCode,'TASK_POLICY_BLOCKED');
+  }
 });
 
 test('worker permanently rejects high-impact or unapproved task payloads',async()=>{
