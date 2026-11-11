@@ -34,6 +34,8 @@ One chicken-clucking imitation was explicitly excluded because its uploader desc
 - 1 imitation excluded from natural-recording consideration.
 - **33 source MP3 files are now downloaded and verified** in `assets/Gift Sounds/_sources/mp3/`; all decode as stereo 44.1 kHz, 192 kbps MP3.
 - **101 per-gift `sound.mp3` candidate files** have been created in folders matching `assets/Artwork/<gift-slug>/`.
+- **71 active catalogue gift codes** are mapped by exact gift code to their matching candidate recordings in `gift-code-map.json`.
+- Gifts Studio preview can audition mapped candidates. Sent gifts and LIVE rooms remain silent for candidates until the individual mapping is human-approved.
 - 0 clips have human listening approval and 0 gift sounds are marked production-ready. Natural recordings can still be a poor semantic match or have unwanted background noise, so each candidate requires listening review.
 
 The actual files still need to be downloaded from their sources and auditioned before being copied into per-gift folders.
