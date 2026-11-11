@@ -58,16 +58,48 @@
 | 43 | Embroidered | `capture-20261111-044144.png` r2c1 vs r1c2 | Same embroidered medallion artwork | Repeated-artwork candidate |
 
 
+## Additional full-size comparisons (#44–#69)
+
+| # | Same-title candidate pair | Source cells | Finding | Decision |
+|---:|---|---|---|---|
+| 44 | Fairy Wings (original vs variant 2) | `capture-20261111-053527.png` r2c4 vs `capture-20261111-043153.png` r3c6 | Purple wings versus blue pair | Keep distinct variants |
+| 45 | Fairy Wings (original vs variant 3) | `capture-20261111-053527.png` r2c4 vs `capture-20261111-043729.png` r1c3 | Purple wings versus blue pair | Keep distinct variants |
+| 46 | Fairy Wings (variant 2 vs variant 3) | `capture-20261111-043153.png` r3c6 vs `capture-20261111-043729.png` r1c3 | Same blue wing artwork | Repeated-artwork candidate |
+| 47 | Fire | `capture-20261111-052003.png` r3c2 vs `capture-20261111-043658.png` r3c4 | Flame-haired character versus flame icon | Keep distinct variants |
+| 48 | Flowers (original vs variant 2) | `capture-20261111-052817.png` r2c3 vs `capture-20261111-052720.png` r2c2 | Same bouquet artwork | Repeated-artwork candidate |
+| 49 | Flowers (original vs variant 3) | `capture-20261111-052817.png` r2c3 vs `capture-20261111-053158.png` r1c1 | Same bouquet artwork | Repeated-artwork candidate |
+| 50 | Gingerbread | `capture-20261111-053858.png` r3c6 vs `capture-20261111-043332.png` r3c6 | Gingerbread figure versus decorated heart/cookie | Keep distinct variants |
+| 51 | GOAT | `capture-20261111-050753.png` r2c5 vs `capture-20261111-043837.png` r3c3 | Goat character versus GOAT wordmark | Keep distinct variants |
+| 52 | Hand Heart | `capture-20261111-045530.png` r1c1 vs r1c2 | Floating heart in hands versus hands forming a heart | Keep distinct variants |
+| 53 | Haunted House | `capture-20261111-054528.png` r2c6 vs `capture-20261111-045631.png` r1c4 | Haunted mansion scene versus dark ghost house | Keep distinct variants |
+| 54 | Heart (original vs variant 2) | `capture-20261111-044426.png` r1c3 vs `capture-20261111-050753.png` r2c2 | Plain red heart versus text-heart graphic | Keep distinct variants |
+| 55 | Heart (original vs variant 3) | `capture-20261111-044426.png` r1c3 vs `capture-20261111-042918.png` r3c5 | Plain red heart versus crowned heart character | Keep distinct variants |
+| 56 | Hove You | `capture-20261111-044334.png` r3c5 vs `capture-20261111-044426.png` r3c1 | Same “I Love You” letter/heart artwork; OCR title is unreliable | Repeated-artwork candidate; correct label against source |
+| 57 | Invincible Hammer | `capture-20261111-055610.png` r1c6 vs `capture-20261111-055543.png` r3c5 | Red mechanical hammer versus fiery hammer | Keep distinct variants |
+| 58 | Judy Pose | `capture-20261111-051147.png` r1c5 vs `capture-20261111-051522.png` r2c4 | Same rabbit character/pose | Repeated-artwork candidate |
+| 59 | Julius the Champ | `capture-20261111-060148.png` r2c6 vs r3c2 | Different champion character compositions | Keep distinct variants |
+| 60 | King Leonardo | `capture-20261111-060148.png` r2c1 vs r1c6 | Seated royal lion scene versus close-up lion/rose design | Keep distinct variants |
+| 61 | Koala Love | `capture-20261111-051219.png` r3c5 vs `capture-20261111-051646.png` r2c3 | Same koala holding the same “I love you” sign | Repeated-artwork candidate |
+| 62 | Love (original vs variant 2) | `capture-20261111-043959.png` r3c6 vs `capture-20261111-055038.png` r1c5 | 2025 heart versus romantic couple scene | Keep distinct variants |
+| 63 | Love (original vs variant 3) | `capture-20261111-043959.png` r3c6 vs `capture-20261111-053527.png` r1c5 | 2025 heart versus watermelon couple scene | Keep distinct variants |
+| 64 | Love Letter | `capture-20261111-045019.png` r2c3 vs `capture-20261111-043729.png` r3c3 | Open letter with “Love” versus sealed heart envelope | Keep distinct variants |
+| 65 | Love Sunset | `capture-20261111-054840.png` r1c1 vs `capture-20261111-054810.png` r2c1 | Same cat/couple sunset artwork | Repeated-artwork candidate |
+| 66 | Love You | `capture-20261111-043101.png` r2c1 vs `capture-20261111-045919.png` r3c1 | Heart-with-arrow versus paired-heart message design | Keep distinct variants |
+| 67 | Meerkat | `capture-20261111-050221.png` r4c1 vs `capture-20261111-045919.png` r3c5 | Same standing meerkat artwork | Repeated-artwork candidate |
+| 68 | Music Bubbles | `capture-20261111-050916.png` r3c6 vs `capture-20261111-045604.png` r3c6 | Headphones versus glowing orb/music symbol | Keep distinct variants |
+| 69 | Music Stage | `capture-20261111-043911.png` r2c4 vs `capture-20261111-043101.png` r1c1 | Neon star-stage icon versus purple music-card icon | Keep distinct variants |
+
+
 ## Result
 
-- Full-size candidate pair comparisons: **43**.
-- Pair review: **26 distinct-variant pairs** and **17 repeated-artwork candidates**.
+- Full-size candidate pair comparisons: **69**.
+- Pair review: **44 distinct-variant pairs** and **25 repeated-artwork candidates**.
 - Contact-sheet thumbnail screening: **24/24 pages**, covering **1,509/1,509** candidate thumbnails.
-- Source-screenshot cell comparisons: **31/43 pair comparisons** directly checked against original screenshot cells. The twelve middle comparisons (#7–#18) still need direct source-cell confirmation.
-- Pair-comparison image slots: **86**; the Compact original was used in two pair comparisons.
+- Source-screenshot cell comparisons: **57/69 pair comparisons** were directly checked against original screenshot cells. The twelve middle comparisons (#7–#18) still need direct source-cell confirmation.
+- Pair-comparison image slots: **138**. Some base images are reused across comparisons for multi-variant groups (Compact, Fairy Wings, Flowers, Heart, and Love).
 - Files deleted, overwritten or merged during review: **0**.
-- Catalog identity reconciliation: **NOT COMPLETED**. Source occurrences and catalog rows still need to be reconciled before a canonical file is chosen.
-- Individual full-resolution review: **NOT COMPLETED**. The other **1,424** manifest records have not been individually compared at full size; contact-sheet thumbnails were screened separately.
+- Catalogue identity reconciliation: **NOT COMPLETED**. Source occurrences and catalogue rows still need reconciliation before selecting any canonical file.
+- Individual full-resolution review: **NOT COMPLETED**. The other **1,378** manifest records have not been individually compared at full size; contact-sheet thumbnails were screened separately.
 - Rights/licence provenance: **NOT REVIEWED / NOT CLEARED**.
 
 Repeated-artwork decisions are candidates, not deletion instructions. Keep every file and source reference. Distinct scene, pose, colour, object or composition variants remain separate. Do not merge or remove anything until exact source appearances, catalogue identity, and rights/provenance are reconciled. This report is not approval for production use.
