@@ -49,6 +49,8 @@ import {
   approvePersonalAiBotPersonaVersion,
   activatePersonalAiBotPersonaVersion,
   rollbackPersonalAiBotPersonaVersion,
+  getPersonalAiBotLanguageSettings,
+  updatePersonalAiBotLanguageSettings,
 } from '../../backend/modules/personal-ai-bots/personal-ai-bots-service.js';
 
 const makeDb=()=>({});
@@ -1206,4 +1208,69 @@ test('emergency shutdown cancels open handoffs and preserves their audit history
   assert.equal(retained.cancellationReason,'network_emergency_shutdown');
   assert.equal(retained.dispatchStatus,'not_dispatched');
   assert.ok(db.personalAiBotAudit.some(item=>item.action==='team.handoff_cancelled'&&item.entityId===handoff.id));
+});
+
+
+test('multilingual settings are private per-bot preferences separate from public profile languages',()=>{
+  const db=makeDb();
+  const bot=createPersonalAiBot(db,{
+    displayName:'Jamaican Language Bot',categoryId:'ai-friends',
+    languages:['English','Jamaican Patois']
+  },actor,stamp,uid);
+  const defaults=getPersonalAiBotLanguageSettings(db,bot.id,actor);
+  assert.equal(defaults.saved,false);
+  assert.deepEqual(defaults.configuration.supportedLanguages,['en']);
+  assert.equal(defaults.configuration.providerCompatibility,'not_checked');
+  assert.equal(defaults.configuration.providerAdapterConnected,false);
+  assert.equal(defaults.configuration.humanReviewRequired,true);
+  assert.deepEqual(bot.languages,['English','Jamaican Patois']);
+
+  const saved=updatePersonalAiBotLanguageSettings(db,bot.id,{
+    supportedLanguages:['en','jam','es'],
+    primaryLanguage:'en',
+    fallbackLanguage:'jam',
+    locale:'en-JM',
+    detectionMode:'confidence_guarded',
+    confidenceThreshold:0.82,
+    responsePolicy:'match_input_language',
+    codeSwitchingPolicy:'preserve',
+    translationDisplay:'show_original_and_translation',
+    humanReviewRequired:true
+  },actor,stamp,uid);
+  assert.equal(saved.configuration.primaryLanguage,'en');
+  assert.deepEqual(saved.configuration.supportedLanguages,['en','jam','es']);
+  assert.equal(saved.configuration.fallbackLanguage,'jam');
+  assert.equal(saved.configuration.locale,'en-JM');
+  assert.equal(saved.configuration.detectionMode,'confidence_guarded');
+  assert.equal(saved.configuration.confidenceThreshold,0.82);
+  assert.equal(saved.configuration.responsePolicy,'match_input_language');
+  assert.equal(saved.configuration.languageQuality.every(item=>item.status==='unverified'),true);
+  assert.equal(saved.configuration.providerCompatibility,'not_checked');
+  assert.equal(saved.configuration.providerAdapterConnected,false);
+  assert.equal(saved.configuration.humanReviewRequired,true);
+  assert.equal(saved.configuration.preservationRules.originalSourceText,true);
+  assert.deepEqual(bot.languages,['English','Jamaican Patois']);
+  assert.equal(db.personalAiBotTasks.length,0);
+});
+
+test('multilingual settings reject invalid language sets, unsupported modes and disabling human review',()=>{
+  const db=makeDb();
+  const bot=createPersonalAiBot(db,{displayName:'Language Guard Bot',categoryId:'ai-friends'},actor,stamp,uid);
+  const base={supportedLanguages:['en','jam'],primaryLanguage:'en',fallbackLanguage:'jam',locale:'en-JM'};
+  assert.throws(()=>updatePersonalAiBotLanguageSettings(db,bot.id,{...base,primaryLanguage:'fr'},actor,stamp,uid),/must both be in the supported language list/);
+  assert.throws(()=>updatePersonalAiBotLanguageSettings(db,bot.id,{...base,supportedLanguages:['en','en']},actor,stamp,uid),/duplicate supported language/);
+  assert.throws(()=>updatePersonalAiBotLanguageSettings(db,bot.id,{...base,supportedLanguages:['not a language']},actor,stamp,uid),/valid BCP 47 language tag/);
+  assert.throws(()=>updatePersonalAiBotLanguageSettings(db,bot.id,{...base,confidenceThreshold:0.2},actor,stamp,uid),/between 0.50 and 0.99/);
+  assert.throws(()=>updatePersonalAiBotLanguageSettings(db,bot.id,{...base,humanReviewRequired:false},actor,stamp,uid),/Human review remains required/);
+  assert.throws(()=>updatePersonalAiBotLanguageSettings(db,bot.id,{...base,providerCompatibility:'verified'},actor,stamp,uid),/unsupported fields/);
+});
+
+test('multilingual settings cannot be read or changed across bot owner boundaries',()=>{
+  const db=makeDb();
+  const bot=createPersonalAiBot(db,{displayName:'Private Language Bot',categoryId:'ai-friends'},actor,stamp,uid);
+  assert.throws(()=>getPersonalAiBotLanguageSettings(db,bot.id,'other-owner'),/not found under your owner account/);
+  assert.throws(()=>updatePersonalAiBotLanguageSettings(db,bot.id,{
+    supportedLanguages:['en'],primaryLanguage:'en',fallbackLanguage:'en',locale:'en-JM'
+  },'other-owner',stamp,uid),/not found under your owner account/);
+  assert.equal(db.personalAiBotLanguageSettings.length,0);
 });
