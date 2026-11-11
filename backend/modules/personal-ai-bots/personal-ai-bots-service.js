@@ -105,7 +105,7 @@ export const PERSONAL_AI_BOT_HIGH_IMPACT_TASKS = Object.freeze([
 const COLLECTIONS = [
   'personalAiBotCategories','personalAiBots','personalAiBotTasks',
   'personalAiBotAudit','personalAiBotSettings','personalAiBotFollows',
-  'personalAiBotTeams','personalAiBotTeamMembers','personalAiBotSchedules','personalAiBotBatches','personalAiBotDepartments','personalAiBotVacancies','personalAiBotApplications','personalAiBotAppointments','personalAiBotEmploymentHistory'
+  'personalAiBotTeams','personalAiBotTeamMembers','personalAiBotSchedules','personalAiBotPersonaVersions','personalAiBotBatches','personalAiBotDepartments','personalAiBotVacancies','personalAiBotApplications','personalAiBotAppointments','personalAiBotEmploymentHistory'
 ];
 
 export function ensurePersonalAiBotCollections(db) {
@@ -1328,6 +1328,230 @@ export function previewPersonalAiBotSchedule(schedule, options = {}) {
     skippedWindows,
     message:'Dry-run schedule preview only. No scheduler is connected and no tasks were dispatched.'
   };
+}
+
+
+const PERSONAL_AI_BOT_PERSONA_TRAITS = Object.freeze([
+  'formality','warmth','humor','assertiveness','detail','creativity','initiative','caution'
+]);
+
+function normalizePersonalAiBotPersonaConfiguration(input) {
+  if(!input||typeof input!=='object'||Array.isArray(input)){
+    throw Object.assign(new Error('Persona configuration must be a JSON object.'),{status:400});
+  }
+  const allowed=new Set([
+    'purpose','role','communicationStyle','tone','responseLength','expertise',
+    'languagePreferences','audience','boundaries','prohibitedBehaviors','escalationInstructions','traits'
+  ]);
+  if(Object.keys(input).some(key=>!allowed.has(key))){
+    throw Object.assign(new Error('Persona configuration contains unsupported fields.'),{status:400});
+  }
+  const text=(key,max)=>String(input[key]||'').trim().slice(0,max);
+  const list=(value,label,maxItems,maxLength)=>{
+    if(!Array.isArray(value))throw Object.assign(new Error(label+' must be a list.'),{status:400});
+    if(value.length>maxItems)throw Object.assign(new Error(label+' has too many entries.'),{status:400});
+    const values=value.map(item=>{
+      if(typeof item!=='string')throw Object.assign(new Error(label+' entries must be text.'),{status:400});
+      return item.trim().slice(0,maxLength);
+    }).filter(Boolean);
+    return [...new Set(values)];
+  };
+  const rawTraits=input.traits===undefined?{}:input.traits;
+  if(!rawTraits||typeof rawTraits!=='object'||Array.isArray(rawTraits)||
+     Object.keys(rawTraits).some(key=>!PERSONAL_AI_BOT_PERSONA_TRAITS.includes(key))){
+    throw Object.assign(new Error('Persona traits contain unsupported fields.'),{status:400});
+  }
+  const traits={};
+  for(const key of PERSONAL_AI_BOT_PERSONA_TRAITS){
+    const value=rawTraits[key]===undefined?50:Number(rawTraits[key]);
+    if(!Number.isInteger(value)||value<0||value>100){
+      throw Object.assign(new Error('Persona trait values must be whole numbers from 0 to 100.'),{status:400});
+    }
+    traits[key]=value;
+  }
+  const responseLength=String(input.responseLength||'balanced');
+  if(!['brief','balanced','detailed'].includes(responseLength)){
+    throw Object.assign(new Error('Choose brief, balanced or detailed persona responses.'),{status:400});
+  }
+  return {
+    purpose:text('purpose',600),
+    role:text('role',160),
+    communicationStyle:text('communicationStyle',1200),
+    tone:text('tone',600),
+    responseLength,
+    expertise:list(input.expertise||[],'Expertise',20,100),
+    languagePreferences:list(input.languagePreferences||[],'Language preferences',12,40),
+    audience:text('audience',400),
+    boundaries:text('boundaries',1600),
+    prohibitedBehaviors:text('prohibitedBehaviors',1600),
+    escalationInstructions:text('escalationInstructions',1200),
+    traits
+  };
+}
+
+function evaluatePersonalAiBotPersonaStructure(configuration) {
+  const checks=[
+    {id:'purpose',label:'Purpose is defined',passed:configuration.purpose.length>=12},
+    {id:'role',label:'Role is defined',passed:configuration.role.length>=2},
+    {id:'communication',label:'Communication style and tone are defined',passed:configuration.communicationStyle.length>=8&&configuration.tone.length>=3},
+    {id:'expertise',label:'At least one expertise area is listed',passed:configuration.expertise.length>0},
+    {id:'languages',label:'At least one language preference is listed',passed:configuration.languagePreferences.length>0},
+    {id:'audience',label:'Intended audience is defined',passed:configuration.audience.length>=4},
+    {id:'boundaries',label:'Behavior boundaries are defined',passed:configuration.boundaries.length>=20},
+    {id:'prohibited',label:'Prohibited behaviors are defined',passed:configuration.prohibitedBehaviors.length>=20},
+    {id:'escalation',label:'Escalation instructions are defined',passed:configuration.escalationInstructions.length>=10},
+    {id:'traits',label:'All eight structured traits are bounded',passed:PERSONAL_AI_BOT_PERSONA_TRAITS.every(key=>Number.isInteger(configuration.traits[key])&&configuration.traits[key]>=0&&configuration.traits[key]<=100)}
+  ];
+  return {
+    evaluator:'static_persona_completeness_v1',
+    status:checks.every(item=>item.passed)?'pass':'fail',
+    checks,
+    evaluatedAt:null,
+    limitations:'Structural completeness only. No model inference, safety benchmark, factuality test, language-quality test or behavioural evaluation was run.'
+  };
+}
+
+export function listPersonalAiBotPersonaVersions(db, botId) {
+  ensurePersonalAiBotCollections(db);
+  if(!db.personalAiBots.some(bot=>bot.id===botId)){
+    throw Object.assign(new Error('Bot not found.'),{status:404});
+  }
+  return db.personalAiBotPersonaVersions
+    .filter(item=>item.botId===botId)
+    .slice()
+    .sort((a,b)=>b.version-a.version);
+}
+
+export function createPersonalAiBotPersonaDraft(db, input, actorId, timestamp, uid) {
+  ensurePersonalAiBotCollections(db);
+  const botId=String(input?.botId||'').trim();
+  const bot=db.personalAiBots.find(item=>item.id===botId);
+  if(!bot)throw Object.assign(new Error('Choose an existing AI bot identity.'),{status:404});
+  if(['suspended','archived','retired'].includes(String(bot.status||''))){
+    throw Object.assign(new Error('A suspended, archived or retired AI identity cannot receive a new persona version.'),{status:409});
+  }
+  let base=null;
+  if(input.baseVersionId){
+    base=db.personalAiBotPersonaVersions.find(item=>item.id===String(input.baseVersionId)&&item.botId===botId);
+    if(!base)throw Object.assign(new Error('The selected base persona version was not found for this bot.'),{status:404});
+  }
+  const configuration=normalizePersonalAiBotPersonaConfiguration(input.configuration??base?.configuration??{});
+  const version=db.personalAiBotPersonaVersions
+    .filter(item=>item.botId===botId)
+    .reduce((max,item)=>Math.max(max,Number(item.version)||0),0)+1;
+  const record={
+    id:uid(),botId,version,status:'draft',configuration,
+    baseVersionId:base?.id||null,
+    structuralEvaluation:null,approvedBy:null,approvedAt:null,
+    activatedBy:null,activatedAt:null,createdBy:actorId,updatedBy:actorId,
+    createdAt:timestamp,updatedAt:timestamp
+  };
+  db.personalAiBotPersonaVersions.push(record);
+  audit(db,actorId,'persona.version_draft_created','persona_version',record.id,
+    'Created persona version '+version+' for '+bot.displayName+'. Public profile biography and permissions remain separate.',
+    timestamp,uid);
+  return record;
+}
+
+export function updatePersonalAiBotPersonaDraft(db, versionId, configuration, actorId, timestamp, uid) {
+  ensurePersonalAiBotCollections(db);
+  const record=db.personalAiBotPersonaVersions.find(item=>item.id===versionId);
+  if(!record)throw Object.assign(new Error('Persona version not found.'),{status:404});
+  if(record.status!=='draft')throw Object.assign(new Error('Only draft persona versions can be edited; create a new version instead.'),{status:409});
+  record.configuration=normalizePersonalAiBotPersonaConfiguration(configuration);
+  record.structuralEvaluation=null;
+  record.updatedBy=actorId;
+  record.updatedAt=timestamp;
+  audit(db,actorId,'persona.version_draft_updated','persona_version',record.id,
+    'Updated draft persona version '+record.version+'. The previous structural evaluation was cleared.',
+    timestamp,uid);
+  return record;
+}
+
+export function evaluatePersonalAiBotPersonaDraft(db, versionId, actorId, timestamp, uid) {
+  ensurePersonalAiBotCollections(db);
+  const record=db.personalAiBotPersonaVersions.find(item=>item.id===versionId);
+  if(!record)throw Object.assign(new Error('Persona version not found.'),{status:404});
+  if(record.status!=='draft')throw Object.assign(new Error('Only draft persona versions can be evaluated.'),{status:409});
+  const result=evaluatePersonalAiBotPersonaStructure(record.configuration);
+  result.evaluatedAt=timestamp;
+  record.structuralEvaluation=result;
+  record.updatedBy=actorId;
+  record.updatedAt=timestamp;
+  audit(db,actorId,'persona.version_structural_evaluation','persona_version',record.id,
+    'Recorded structural completeness result '+result.status+' for persona version '+record.version+'.',
+    timestamp,uid);
+  return {version:record,evaluation:result};
+}
+
+export function approvePersonalAiBotPersonaVersion(db, versionId, actorId, timestamp, uid) {
+  ensurePersonalAiBotCollections(db);
+  const record=db.personalAiBotPersonaVersions.find(item=>item.id===versionId);
+  if(!record)throw Object.assign(new Error('Persona version not found.'),{status:404});
+  if(record.status!=='draft')throw Object.assign(new Error('Only a draft persona version can be approved.'),{status:409});
+  if(record.structuralEvaluation?.status!=='pass'){
+    throw Object.assign(new Error('A passing structural completeness evaluation is required before approval.'),{status:409});
+  }
+  record.status='approved';
+  record.approvedBy=actorId;
+  record.approvedAt=timestamp;
+  record.updatedBy=actorId;
+  record.updatedAt=timestamp;
+  audit(db,actorId,'persona.version_approved','persona_version',record.id,
+    'Human owner approved persona version '+record.version+' after static structural checks.',
+    timestamp,uid);
+  return record;
+}
+
+function activateApprovedPersonaVersion(db, record, actorId, timestamp, uid, action) {
+  const bot=db.personalAiBots.find(item=>item.id===record.botId);
+  if(!bot)throw Object.assign(new Error('Persona bot identity not found.'),{status:404});
+  if(['suspended','archived','retired'].includes(String(bot.status||''))){
+    throw Object.assign(new Error('Persona versions cannot be activated for a suspended, archived or retired AI identity.'),{status:409});
+  }
+  if(record.status!=='approved'||record.structuralEvaluation?.status!=='pass'||!record.approvedBy||!record.approvedAt){
+    throw Object.assign(new Error('Only an owner-approved persona version with passing structural checks can become active.'),{status:409});
+  }
+  const previousId=bot.activePersonaVersionId||null;
+  if(previousId){
+    const previous=db.personalAiBotPersonaVersions.find(item=>item.id===previousId&&item.botId===bot.id);
+    if(previous&&previous.status==='active'){
+      previous.status='approved';
+      previous.updatedBy=actorId;
+      previous.updatedAt=timestamp;
+    }
+  }
+  record.status='active';
+  record.activatedBy=actorId;
+  record.activatedAt=timestamp;
+  record.updatedBy=actorId;
+  record.updatedAt=timestamp;
+  bot.activePersonaVersionId=record.id;
+  bot.personaActivatedAt=timestamp;
+  bot.updatedBy=actorId;
+  bot.updatedAt=timestamp;
+  audit(db,actorId,action,'persona_version',record.id,
+    (action==='persona.version_rolled_back'?'Rolled back to':'Activated')+' persona version '+record.version+'. Bot enabled status and execution permissions were not changed.',
+    timestamp,uid);
+  return {version:record,bot,previousVersionId:previousId};
+}
+
+export function activatePersonalAiBotPersonaVersion(db, versionId, actorId, timestamp, uid) {
+  ensurePersonalAiBotCollections(db);
+  const record=db.personalAiBotPersonaVersions.find(item=>item.id===versionId);
+  if(!record)throw Object.assign(new Error('Persona version not found.'),{status:404});
+  return activateApprovedPersonaVersion(db,record,actorId,timestamp,uid,'persona.version_activated');
+}
+
+export function rollbackPersonalAiBotPersonaVersion(db, versionId, actorId, timestamp, uid) {
+  ensurePersonalAiBotCollections(db);
+  const record=db.personalAiBotPersonaVersions.find(item=>item.id===versionId);
+  if(!record)throw Object.assign(new Error('Persona version not found.'),{status:404});
+  const bot=db.personalAiBots.find(item=>item.id===record.botId);
+  if(!bot||!bot.activePersonaVersionId||bot.activePersonaVersionId===record.id){
+    throw Object.assign(new Error('Choose a previously approved persona version to roll back to.'),{status:409});
+  }
+  return activateApprovedPersonaVersion(db,record,actorId,timestamp,uid,'persona.version_rolled_back');
 }
 
 export function getPersonalAiBotOverview(db) {
