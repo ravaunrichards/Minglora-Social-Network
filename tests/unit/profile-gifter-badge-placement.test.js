@@ -19,29 +19,38 @@ test('each earned Gifter Level maps to its original numbered PNG', () => {
   const renderer = app.slice(start, end);
   assert.ok(renderer.includes('String(level).padStart(2, "0")'));
   assert.ok(renderer.includes('/assets/gifter-badges/level_'));
-  assert.ok(renderer.includes('alt="\' + label + \'"'));
-  assert.ok(renderer.includes('width="\' + size + \'" height="\' + size'));
+  assert.ok(renderer.includes('alt="' + label + '"'));
+  assert.ok(renderer.includes('width="' + size + '" height="' + size));
   assert.ok(server.includes('Level_Badges_01-50_Individual'));
   assert.ok(server.includes("'Content-Type':'image/png'"));
 });
 
-test('main profile, public preview and LIVE profile preview show badges beside usernames', () => {
-  assert.ok(app.includes("profile-username-line\">@'+esc(u.username)+' '+verifiedProfileBadge(u)+gifterProfileBadge(u,\"profile\")+liveProProfileBadge(u)+'</p>"));
-  assert.ok(app.includes("verifiedProfileBadge(u)+gifterProfileBadge(u,\"profile\")+liveProProfileBadge(u)+'</small>"));
-  assert.ok(app.includes("verifiedProfileBadge(member)+gifterProfileBadge(member,\"profile\")+liveProProfileBadge(member)+\"</small></div>\""));
-  assert.ok(app.includes("verifiedProfileBadge(member)+gifterProfileBadge(member,\"compact\")"));
+test('profile headers and previews show verification only', () => {
+  assert.ok(app.includes("profile-username-line\">@'+esc(u.username)+' '+verifiedProfileBadge(u)+'</p>"));
+  assert.ok(app.includes('verifiedProfileBadge(u)+\\'</small>\\''));
+  assert.ok(app.includes('verifiedProfileBadge(member)+"</small></div>"'));
+  assert.ok(app.includes("verifiedProfileBadge(member)+'</small></button>'"));
+  assert.ok(!app.includes('verifiedProfileBadge(u)+gifterProfileBadge(u,"profile")+liveProProfileBadge(u)'));
+  assert.ok(!app.includes('verifiedProfileBadge(member)+gifterProfileBadge(member,"profile")+liveProProfileBadge(member)'));
+  assert.ok(!app.includes('verifiedProfileBadge(member)+gifterProfileBadge(member,"compact")'));
+  assert.ok(!app.includes('profile-admin-identity'));
 });
 
-test('feed, comments and LIVE gifter surfaces use the same original Level badge renderer', () => {
+test('the badge gallery still displays earned Gifter artwork separately', () => {
+  assert.ok(app.includes('gifterBadgeImageMarkup({ ...badge, level }, "gallery")'));
+  assert.ok(app.includes('profile-badges-panel'));
+  assert.ok(app.includes('Badges &amp; achievements'));
+});
+
+test('feed, comments and LIVE gifter surfaces retain their existing badge behavior', () => {
   assert.ok(app.includes('gifterProfileBadge(author)'));
   assert.ok(app.includes('gifterProfileBadge(c.author)'));
   assert.ok(app.includes('live-viewer-gifter-badge'));
   assert.ok(app.includes('gifterProfileBadge({ ...member, gifterBadge: badge },"compact")'));
   assert.ok(app.includes('gifterProfileBadge({ ...member, gifterBadge: item.gifterBadge },"compact")'));
-  assert.ok(app.includes('gifterBadgeImageMarkup({ ...badge, level }, "gallery")'));
 });
 
-test('profile badge images have consistent responsive sizing and preserve artwork proportions', () => {
+test('profile badge artwork keeps responsive sizing and original proportions', () => {
   assert.ok(css.includes('object-fit:contain;object-position:center'));
   assert.ok(css.includes('.gp-profile-level-badge--profile{width:40px;height:40px}'));
   assert.ok(css.includes('.gp-profile-level-badge--compact{width:24px;height:24px}'));
@@ -50,12 +59,9 @@ test('profile badge images have consistent responsive sizing and preserve artwor
   assert.ok(css.includes('.profile-award-art--gifter .gp-profile-level-badge--gallery{width:96px;height:112px}'));
 });
 
-test('app bundle, profile badge stylesheet and service-worker cache are versioned together', () => {
-  const appAsset = '/app.js?v=20261111-profile-gifter-level-badges-1';
-  const badgeStylesheet = '/profile-badges.css?v=20261111-profile-gifter-level-badges-1';
+test('app asset and service-worker cache are versioned together', () => {
+  const appAsset = '/app.js?v=20261111-profile-verification-only-1';
   assert.ok(html.includes(appAsset));
-  assert.ok(html.includes(badgeStylesheet));
   assert.ok(worker.includes(appAsset));
-  assert.ok(worker.includes(badgeStylesheet));
-  assert.ok(worker.includes('minglora-shell-v274-self-updating-1'));
+  assert.ok(worker.includes('minglora-shell-v275-profile-verification-only-1'));
 });
