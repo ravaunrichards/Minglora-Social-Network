@@ -1735,3 +1735,41 @@ test('Persona Laboratory API rejects unsupported permission fields and non-owner
   assert.equal(denied.res.statusCode,403);
   assert.equal(db.personalAiBotPersonaVersions,undefined);
 });
+
+
+test('Persona Laboratory API lists history and draft edits invalidate stale structural checks',async()=>{
+  const botId='00000000-0000-4000-8000-000000000004';
+  const db={personalAiBots:[{id:botId,displayName:'Editable Persona Bot',status:'disabled'}]};
+  const post=async(path,input)=>{
+    const context=makeContext({method:'POST',path,url:new URL('https://minglora.test'+path),input:input||{},db});
+    await handlePersonalAiBotsAdminApi(context);
+    return context.res;
+  };
+  const created=await post('/api/admin/personal-ai-bots/personas',{botId,configuration:validPersonaApiConfiguration});
+  assert.equal(created.statusCode,201);
+  const id=created.payload.version.id;
+  const evaluated=await post('/api/admin/personal-ai-bots/personas/'+id+'/evaluate');
+  assert.equal(evaluated.payload.evaluation.status,'pass');
+
+  const listedContext=makeContext({
+    method:'GET',path:'/api/admin/personal-ai-bots/personas',
+    url:new URL('https://minglora.test/api/admin/personal-ai-bots/personas?botId='+botId),db
+  });
+  await handlePersonalAiBotsAdminApi(listedContext);
+  assert.equal(listedContext.res.statusCode,200);
+  assert.equal(listedContext.res.payload.versions.length,1);
+  assert.equal(listedContext.res.payload.activePersonaVersionId,null);
+
+  const edited=await (async()=>{
+    const context=makeContext({
+      method:'PATCH',path:'/api/admin/personal-ai-bots/personas/'+id,
+      url:new URL('https://minglora.test/api/admin/personal-ai-bots/personas/'+id),
+      input:{configuration:{...validPersonaApiConfiguration,tone:'Calm and reassuring'}},db
+    });
+    await handlePersonalAiBotsAdminApi(context);
+    return context.res;
+  })();
+  assert.equal(edited.statusCode,200);
+  assert.equal(edited.payload.version.configuration.tone,'Calm and reassuring');
+  assert.equal(edited.payload.version.structuralEvaluation,null);
+});
