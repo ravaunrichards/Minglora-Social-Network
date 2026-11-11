@@ -1339,7 +1339,19 @@ export function emergencyShutdownPersonalAiBots(db, actorId, timestamp, uid) {
   settings.hybridEnabled=false;
   settings.emergencyShutdownAt=timestamp;
   settings.emergencyShutdownBy=actorId;
-  let paused=0,cancelled=0;
+  let paused=0,cancelled=0,pausedTeams=0;
+  for(const team of db.personalAiBotTeams){
+    if(team.status==='enabled'||team.enabled===true){
+      team.status='paused';
+      team.enabled=false;
+      team.pausedAt=timestamp;
+      team.updatedAt=timestamp;
+      team.updatedBy=actorId;
+      pausedTeams++;
+      audit(db,actorId,'team.paused_by_emergency_shutdown','team',team.id,
+        'Paused team '+team.name+' during network emergency shutdown.',timestamp,uid);
+    }
+  }
   for(const bot of db.personalAiBots){
     if(bot.status==='enabled'||bot.enabled){
       bot.status='paused';bot.enabled=false;bot.pausedAt=timestamp;bot.updatedAt=timestamp;bot.updatedBy=actorId;paused++;
@@ -1353,7 +1365,7 @@ export function emergencyShutdownPersonalAiBots(db, actorId, timestamp, uid) {
   }
   const cancelledHandoffs=cancelOpenPersonalAiBotTeamHandoffs(db,null,actorId,timestamp,uid,'network_emergency_shutdown');
   audit(db,actorId,'network.emergency_shutdown','network','global','Emergency shutdown paused '+paused+' bots, cancelled '+cancelled+' pending or running task records and cancelled '+cancelledHandoffs+' open team handoffs.',timestamp,uid);
-  return {ok:true,paused,cancelled,cancelledHandoffs,network:settings};
+  return {ok:true,paused,pausedTeams,cancelled,cancelledHandoffs,network:settings};
 }
 
 const AI_SCHEDULE_WEEKDAYS = Object.freeze({Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6,Sun:7});
