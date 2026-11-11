@@ -1603,3 +1603,51 @@ test('provider assignment creation never returns the server-side credential refe
   assert.doesNotMatch(JSON.stringify(context.res.payload),'env:MINGLORA_AI_PROVIDER_PRIVATE');
 });
 
+
+
+test('owner schedule preview is read-only and never dispatches work',async()=>{
+  let saves=0;
+  const context=makeContext({
+    path:'/api/admin/personal-ai-bots/bots/00000000-0000-4000-8000-000000000001/schedule-preview',
+    url:new URL('https://minglora.test/api/admin/personal-ai-bots/bots/00000000-0000-4000-8000-000000000001/schedule-preview?days=1'),
+    now:()=> '2026-11-11T10:00:00.000Z',
+    db:{
+      personalAiBots:[{
+        id:'00000000-0000-4000-8000-000000000001',status:'enabled',enabled:true,
+        activitySchedule:{
+          timezone:'America/Jamaica',daysOfWeek:[3],startTime:'09:00',endTime:'17:00',
+          maxTasksPerDay:4
+        }
+      }],
+      personalAiBotSettings:[{id:'global',enabled:true}]
+    },
+    saveStore:async()=>{saves++;}
+  });
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,200);
+  assert.equal(context.res.payload.preview.slots.length,1);
+  assert.equal(context.res.payload.preview.slots[0].startsAtUtc,'2026-11-11T14:00:00.000Z');
+  assert.equal(context.res.payload.preview.previewOnly,true);
+  assert.equal(context.res.payload.preview.dispatchEnabled,false);
+  assert.equal(context.res.payload.configurationGates.schedulerConnected,false);
+  assert.equal(context.res.payload.configurationGates.dispatchEnabled,false);
+  assert.equal(saves,0);
+});
+
+test('owner schedule preview rejects out-of-range preview horizons',async()=>{
+  const context=makeContext({
+    path:'/api/admin/personal-ai-bots/bots/00000000-0000-4000-8000-000000000001/schedule-preview',
+    url:new URL('https://minglora.test/api/admin/personal-ai-bots/bots/00000000-0000-4000-8000-000000000001/schedule-preview?days=61'),
+    now:()=> '2026-11-11T10:00:00.000Z',
+    db:{personalAiBots:[{
+      id:'00000000-0000-4000-8000-000000000001',status:'disabled',
+      activitySchedule:{
+        timezone:'America/Jamaica',daysOfWeek:[3],startTime:'09:00',endTime:'17:00',
+        maxTasksPerDay:0
+      }
+    }]}
+  });
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,400);
+  assert.match(context.res.payload.error,/between 1 and 60/);
+});
