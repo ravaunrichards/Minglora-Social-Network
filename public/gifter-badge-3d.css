@@ -111,3 +111,15 @@
 @media(max-width:560px){.minglora-gifter-identity{gap:3px;margin-inline-start:3px}.minglora-gifter-identity .gp-profile-level-badge{flex-basis:21px;width:21px;height:21px;max-width:21px}.minglora-gifter-badge-name{font-size:8px}.post-author strong,.comment-bubble>strong{gap:2px}}
 @media(prefers-reduced-motion:reduce){.minglora-gifter-identity .gp-profile-level-badge{animation:none}}
 
+
+
+/* Keep Gifter identity badges legible and proportional beside usernames in LIVE and chat. */
+.live-gifter-badge-label .gp-profile-level-badge{flex:0 0 40px;width:40px;height:auto;max-width:40px;aspect-ratio:170 / 76;object-fit:contain}
+.minglora-gifter-identity .gp-profile-level-badge{flex:0 0 40px;width:40px;height:auto;max-width:40px;aspect-ratio:170 / 76;object-fit:contain}
+@media(max-width:650px){
+  .live-gifter-badge-label .gp-profile-level-badge{flex-basis:36px;width:36px;height:auto;max-width:36px}
+  .minglora-gifter-identity .gp-profile-level-badge{flex-basis:36px;width:36px;height:auto;max-width:36px}
+}
+@media(max-width:360px){
+  .live-gifter-badge-label .gp-profile-level-badge,.minglora-gifter-identity .gp-profile-level-badge{flex-basis:34px;width:34px;max-width:34px}
+}
