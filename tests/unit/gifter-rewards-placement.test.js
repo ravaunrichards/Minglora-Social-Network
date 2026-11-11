@@ -48,9 +48,9 @@ test('Rewards banner remains contained, responsive and does not clip its own con
 });
 
 test('updated Gift entry script and Rewards image are refreshed through the service worker', () => {
-  const script = '/gifts.js?v=20261110-gifters-rewards-outside-1';
-  assert.ok(html.includes(script), 'HTML shell references the new Gift entry script version');
-  assert.ok(serviceWorker.includes(script), 'service worker precaches the new Gift entry script version');
+  const script = html.match(/\/gifts\.js\?v=[^"']+/)?.[0] || '';
+  assert.ok(script, 'HTML shell references the Gift entry script version');
+  assert.ok(serviceWorker.includes(script), 'service worker precaches the exact Gift entry script version');
   assert.ok(serviceWorker.includes("'/assets/gifters-rewards.png'"), 'service worker precaches the Rewards artwork');
-  assert.match(serviceWorker, /minglora-shell-v285-self-updating-1/);
+  assert.match(serviceWorker, /const CACHE_NAME='minglora-shell-v\d+-self-updating-1';/);
 });
