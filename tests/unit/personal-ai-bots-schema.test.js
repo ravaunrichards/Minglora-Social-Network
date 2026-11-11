@@ -849,3 +849,15 @@ test('multilingual settings are isolated in the existing owner runtime-state col
   assert.match(serviceSource,/humanReviewRequired:true/);
   assert.match(serviceSource,/merged\.humanReviewRequired!==true/);
 });
+
+
+test('multilingual evaluation sets persist in owner runtime state and never auto-verify provider quality',()=>{
+  assert.match(storeSource,/'personalAiBotLanguageEvaluationSets'/);
+  assert.match(serviceSource,/createPersonalAiBotLanguageEvaluationSet/);
+  assert.match(serviceSource,/submitPersonalAiBotLanguageEvaluationSet/);
+  assert.match(serviceSource,/reviewPersonalAiBotLanguageEvaluationSet/);
+  assert.match(adminApiSource,/languageEvaluationListMatch&&method==='GET'/);
+  assert.match(adminApiSource,/languageEvaluationListMatch&&method==='POST'/);
+  assert.match(serviceSource,/providerExecutionStatus:'not_run',languageQualityStatus:'unverified'/);
+  assert.match(serviceSource,/reviewEvidenceReference/);
+});
