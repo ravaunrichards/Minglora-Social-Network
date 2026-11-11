@@ -129,8 +129,8 @@ test("Gifter artwork removes unused outer padding and uses a brighter clean edge
 test("clean-edge stylesheet cache key is current in HTML and service-worker shell", () => {
   const html = read("public/index.html");
   const sw = read("public/sw.js");
-  assert.ok(html.includes("/gifter-progression.css?v=20261111-gifter-chart-original-size-1"));
-  assert.ok(sw.includes("/gifter-progression.css?v=20261111-gifter-chart-original-size-1"));
+  assert.ok(html.includes("/gifter-progression.css?v=20261111-gifter-chart-comfortable-size-1"));
+  assert.ok(sw.includes("/gifter-progression.css?v=20261111-gifter-chart-comfortable-size-1"));
   assert.ok(!sw.includes("/gifter-progression.css?v=20261110-gifter-level-polish-1"));
 });
 
@@ -146,7 +146,7 @@ test("Gifters Level-Up chart is readable and offers a full-size zoom view on eve
   assert.match(styles, /\.gp-hero-art \.gp-reference-art\{[\s\S]*?width:min\(100%,720px\)[\s\S]*?max-height:350px[\s\S]*?height:auto/);
   assert.match(styles, /@media\(max-width:650px\)[\s\S]*?\.gp-hero-art \.gp-reference-art\{width:100%;max-height:270px\}/);
   assert.match(styles, /\.gp-chart-fullsize\{[\s\S]*?min-height:46px[\s\S]*?font-size:1rem/);
-  assert.ok(html.includes("/gifter-progression.css?v=20261111-gifter-chart-original-size-1"));
-  assert.ok(sw.includes("/gifter-progression.css?v=20261111-gifter-chart-original-size-1"));
+  assert.ok(html.includes("/gifter-progression.css?v=20261111-gifter-chart-comfortable-size-1"));
+  assert.ok(sw.includes("/gifter-progression.css?v=20261111-gifter-chart-comfortable-size-1"));
   assert.ok(sw.includes("minglora-shell-v277-self-updating-1"));
 });
