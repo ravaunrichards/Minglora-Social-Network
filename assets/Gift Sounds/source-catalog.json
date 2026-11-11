@@ -529,8 +529,8 @@
     "downloadedAudioFiles": 0,
     "auditionedAudioFiles": 0,
     "productionReadyAudioFiles": 0,
-    "candidateGiftMappings": 14,
-    "candidateGiftFolderCount": 47
+    "candidateGiftMappings": 20,
+    "candidateGiftFolderCount": 101
   },
   "additionalCC0Recordings": [
     {
@@ -920,6 +920,96 @@
         "wave-firework"
       ],
       "reason": "The artwork names directly identify fireworks; the source is a real neighborhood fireworks recording. Trim and audition a short event before production."
+    },
+    {
+      "sourceId": "rain-soft",
+      "giftSlugs": [
+        "heart-rain",
+        "love-rain",
+        "make-rain",
+        "rain-doll",
+        "umbrella",
+        "umbrella-love",
+        "umbrella-variant-2"
+      ],
+      "reason": "Real rain ambience for gifts whose artwork names depict rain or umbrellas."
+    },
+    {
+      "sourceId": "wind-breeze",
+      "giftSlugs": [
+        "whitewind-beast",
+        "whitewind-king",
+        "wind-kemen",
+        "air-dancer",
+        "air-dancer-variant-2",
+        "hot-air-balloon",
+        "shiny-air-balloon"
+      ],
+      "reason": "Real outdoor wind recording for gifts whose artwork explicitly depicts wind or air movement."
+    },
+    {
+      "sourceId": "nature-forest-day",
+      "giftSlugs": [
+        "forest-eif",
+        "agarden-yonder",
+        "coconut-tree",
+        "diamond-tree"
+      ],
+      "reason": "Real forest field ambience for nature, garden and tree artwork."
+    },
+    {
+      "sourceId": "water-stream",
+      "giftSlugs": [
+        "water-lantern",
+        "hydrangea-sea",
+        "jacaranda-sea",
+        "sea-biitzy",
+        "sea-cooper",
+        "sea-nyota",
+        "sea-tom",
+        "undersea-kingd",
+        "undersea-kingd-variant-2"
+      ],
+      "reason": "Real flowing-water ambience for aquatic and water-themed artwork; keep as a review candidate because it is a river/stream, not ocean surf."
+    },
+    {
+      "sourceId": "bell1",
+      "giftSlugs": [
+        "diamond-ring",
+        "diamond-ring-variant-2",
+        "ring-honor",
+        "stage-ring",
+        "birthday-crown",
+        "crown",
+        "little-crown",
+        "legend-crown"
+      ],
+      "reason": "Recorded bell strike for ring and crown presentation animations; audition/trim before activation."
+    },
+    {
+      "sourceId": "steel1",
+      "giftSlugs": [
+        "club-music",
+        "dynamic-music",
+        "enjoy-music",
+        "music-album",
+        "music-bubbles",
+        "music-bubbles-variant-2",
+        "music-conductor",
+        "music-mate",
+        "music-mic",
+        "music-play",
+        "music-player",
+        "music-stage",
+        "music-stage-variant-2",
+        "music",
+        "rosie-s-concert",
+        "your-concert",
+        "sing-together",
+        "singing-mic",
+        "singing-sax"
+      ],
+      "reason": "Real steel-pan performance tone for music-themed gift artwork; do not imply this is a complete song."
     }
   ]
 }
