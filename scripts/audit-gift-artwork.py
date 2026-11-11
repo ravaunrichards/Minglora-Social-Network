@@ -47,6 +47,7 @@ def inspect_image(path: Path) -> dict:
     with Image.open(path) as source:
         source.verify()
     with Image.open(path) as source:
+        original_has_alpha = "A" in source.getbands() or "transparency" in source.info
         image = ImageOps.exif_transpose(source).convert("RGBA")
     width, height = image.size
     alpha = image.getchannel("A")
@@ -71,7 +72,7 @@ def inspect_image(path: Path) -> dict:
     alpha_ratio = alpha_pixels / max(1, width * height)
     return {
         "dimensions": [width, height],
-        "has_alpha": "A" in image.getbands(),
+        "has_alpha": original_has_alpha,
         "visible_pixels": visible_pixels,
         "visible_ratio": round(visible_ratio, 5),
         "alpha_ratio": round(alpha_ratio, 5),
@@ -142,7 +143,7 @@ def main() -> int:
                 "expected": expected_hash,
                 "actual": actual_hash,
             })
-        if details["dimensions"] != EXPECTED_SIZE:
+        if tuple(details["dimensions"]) != EXPECTED_SIZE:
             quality_flags["wrong-dimensions"] += 1
         if not details["has_alpha"] or details["alpha_ratio"] >= 0.999:
             quality_flags["transparency-missing-or-ineffective"] += 1
