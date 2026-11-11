@@ -63,7 +63,6 @@ test('video playlists persist, enforce ownership and respect public/unlisted/pri
     body: JSON.stringify({ name: 'Playlist Owner', username: 'playlistowner', email: 'playlist-owner@example.test', password: 'PlaylistPassword123!' })
   });
   assert.equal(ownerRegistration.status, 201, JSON.stringify(ownerRegistration.body));
-  const ownerCookie = ownerRegistration.body ? '' : '';
   const ownerSetCookie = await fetch(`http://127.0.0.1:${port}/api/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
