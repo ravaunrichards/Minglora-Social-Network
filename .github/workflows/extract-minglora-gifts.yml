@@ -1,9 +1,9 @@
 name: Extract individual Minglora gift animations
 
 on:
-  push:
+  pull_request:
     branches:
-      - automation/minglora-gift-assets-extraction
+      - main
     paths:
       - "assets/Gifts/**"
       - "scripts/extract-minglora-gift-captures.mjs"
@@ -20,6 +20,7 @@ concurrency:
 
 jobs:
   extract:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.ref == 'automation/minglora-gift-assets-extraction'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -49,6 +50,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No generated gift-asset changes to commit."
           else
-            git commit -m "Extract individual Minglora gift animation assets"
+            git commit -m "Refresh individual Minglora gift animations"
             git push origin automation/minglora-gift-assets-extraction
           fi
