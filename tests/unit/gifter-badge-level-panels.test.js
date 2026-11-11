@@ -148,5 +148,5 @@ test("Gifters Level-Up chart is readable and offers a full-size zoom view on eve
   assert.match(styles, /\.gp-chart-fullsize\{[\s\S]*?min-height:46px[\s\S]*?font-size:1rem/);
   assert.ok(html.includes("/gifter-progression.css?v=20261110-gifter-individual-badges-1"));
   assert.ok(sw.includes("/gifter-progression.css?v=20261110-gifter-individual-badges-1"));
-  assert.ok(sw.includes("minglora-shell-v273-gifter-individual-badges-1"));
+  assert.ok(sw.includes("minglora-shell-v273-self-updating-1"));
 });
