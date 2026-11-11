@@ -1,0 +1,1236 @@
+{
+  "title": "Minglora Gift Sound Ingestion",
+  "status": "download_attempted",
+  "downloaded": [
+    {
+      "id": "rain-soft",
+      "mp3": "assets/Gift Sounds/_sources/mp3/rain-soft.mp3",
+      "sourcePage": "https://freesound.org/people/barkenov/sounds/640655/",
+      "sourceUrl": "https://github.com/Leminno-org/ambient-sounds-library/releases/download/v0.1.0-preview/rain-soft.wav",
+      "creator": "barkenov",
+      "license": "CC0-1.0",
+      "originalBytes": 7488044,
+      "originalSha256": "bfd2eceddd04eeac960c5cdbada2da3b2c880d0382d2165f4fa35796bc173f7d",
+      "mp3Bytes": 937316,
+      "mp3Sha256": "fbef36f5b5550bebcd9276755ad4425de3b1a4b74c806e225fc1582dc2ad3bc4",
+      "originalFormat": ".wav",
+      "status": "downloaded_verified_transcoded_review_only"
+    },
+    {
+      "id": "water-stream",
+      "mp3": "assets/Gift Sounds/_sources/mp3/water-stream.mp3",
+      "sourcePage": "https://freesound.org/people/SamsterBirdies/sounds/584269/",
+      "sourceUrl": "https://github.com/Leminno-org/ambient-sounds-library/releases/download/v0.3.0-preview/water-stream.wav",
+      "creator": "SamsterBirdies",
+      "license": "CC0-1.0",
+      "originalBytes": 13785212,
+      "originalSha256": "63b81431fd0758c2d008a42a14b143a9953c3c0b1e3a7f42d6773fb657419c2d",
+      "mp3Bytes": 1724751,
+      "mp3Sha256": "91bc6c8092788c3c32ce3429b1b077772b7c536432edbb888a160b2530f0d78a",
+      "originalFormat": ".wav",
+      "status": "downloaded_verified_transcoded_review_only"
+    },
+    {
+      "id": "water-river",
+      "mp3": "assets/Gift Sounds/_sources/mp3/water-river.mp3",
+      "sourcePage": "https://freesound.org/people/JW_Audio/sounds/810231/",
+      "sourceUrl": "https://github.com/Leminno-org/ambient-sounds-library/releases/download/v0.2.0-preview/water-river.wav",
+      "creator": "JW_Audio",
+      "license": "CC0-1.0",
+      "originalBytes": 17088044,
+      "originalSha256": "9810878a22c3e50c42e79cc3ef331e8cc65f835582e607695e0f3985a6cdc310",
+      "mp3Bytes": 2137904,
+      "mp3Sha256": "63a62206bec57a378a2dbb70aec0c6a5746454ae478d73687739d0dc4167ed77",
+      "originalFormat": ".wav",
+      "status": "downloaded_verified_transcoded_review_only"
+    },
+    {
+      "id": "wind-breeze",
+      "mp3": "assets/Gift Sounds/_sources/mp3/wind-breeze.mp3",
+      "sourcePage": "https://freesound.org/people/keweldog/sounds/181801/",
+      "sourceUrl": "https://github.com/Leminno-org/ambient-sounds-library/releases/download/v0.3.0-preview/wind-breeze.wav",
+      "creator": "keweldog",
+      "license": "CC0-1.0",
+      "originalBytes": 12256128,
+      "originalSha256": "9b6db638e3be9930d2425e7598d8f5d1e4031e3f91a467fe1a6feb9e0492ac53",
+      "mp3Bytes": 1533535,
+      "mp3Sha256": "042eb1ce23f3388069cf9855f61ccf8c7605040387cf540bf4c5d3a95a328682",
+      "originalFormat": ".wav",
+      "status": "downloaded_verified_transcoded_review_only"
+    },
+    {
+      "id": "nature-forest-day",
+      "mp3": "assets/Gift Sounds/_sources/mp3/nature-forest-day.mp3",
+      "sourcePage": "https://freesound.org/people/Sadiquecat/sounds/799439/",
+      "sourceUrl": "https://github.com/Leminno-org/ambient-sounds-library/releases/download/v0.3.0-preview/nature-forest-day.wav",
+      "creator": "Sadiquecat",
+      "license": "CC0-1.0",
+      "originalBytes": 22848044,
+      "originalSha256": "919d755e9a8665c49ea5d2aac479513e49b9562dff35a7c8eb69a4d6d389166f",
+      "mp3Bytes": 2857630,
+      "mp3Sha256": "2a43932ac2b0ffa46b9bb4bfa58284f585baad0ba93278e261b8bcdd61386f6b",
+      "originalFormat": ".wav",
+      "status": "downloaded_verified_transcoded_review_only"
+    },
+    {
+      "id": "animals-cat",
+      "mp3": "assets/Gift Sounds/_sources/mp3/animals-cat.mp3",
+      "sourcePage": "https://freesound.org/people/Trautwein/sounds/260881/",
+      "sourceUrl": "https://github.com/Leminno-org/ambient-sounds-library/releases/download/v0.3.0-preview/animals-cat.wav",
+      "creator": "Trautwein",
+      "license": "CC0-1.0",
+      "originalBytes": 11347896,
+      "originalSha256": "f617ac9faf3411a07b442acabf81301cfaef8502987ce4bbac727c347931391a",
+      "mp3Bytes": 1420059,
+      "mp3Sha256": "02f7d71fc5d20a0d9bd57a4041849f5863bcac008c999faa8c493de6b0ed0c08",
+      "originalFormat": ".wav",
+      "status": "downloaded_verified_transcoded_review_only"
+    },
+    {
+      "id": "home-air-conditioner",
+      "mp3": "assets/Gift Sounds/_sources/mp3/home-air-conditioner.mp3",
+      "sourcePage": "https://freesound.org/people/TimBahrij/sounds/234918/",
+      "sourceUrl": "https://github.com/Leminno-org/ambient-sounds-library/releases/download/v0.3.0-preview/home-air-conditioner.wav",
+      "creator": "TimBahrij",
+      "license": "CC0-1.0",
+      "originalBytes": 11014700,
+      "originalSha256": "dbdf5a668ae6fff670af45f0e0eda20f55c2b98c95fba5e894fc74743a5f3f2d",
+      "mp3Bytes": 1378681,
+      "mp3Sha256": "080f7e3b3569bf935993ff213aeca86fa247609180df6273ab660d6355c20dde",
+      "originalFormat": ".wav",
+      "status": "downloaded_verified_transcoded_review_only"
+    },
+    {
+      "id": "bell1",
+      "mp3": "assets/Gift Sounds/_sources/mp3/bell1.mp3",
+      "sourcePage": "https://github.com/code4fukui/sound-cc0/blob/main/bell1.wav",
+      "sourceUrl": "https://raw.githubusercontent.com/code4fukui/sound-cc0/main/bell1.wav",
+      "creator": "code4fukui/sound-cc0 contributors",
+      "license": "CC0-1.0 as declared by source README",
+      "originalBytes": 1800108,
+      "originalSha256": "4af46c2751611d024a38855a8215f5d8d42962fcc5ec5c93ba1dba10b41fa7f7",
+      "mp3Bytes": 491563,
+      "mp3Sha256": "184193975d89a826d77f8f281c37891fe3571521d6f1a41089fcfb7a3c46f7e9",
+      "originalFormat": ".wav",
+      "status": "downloaded_verified_transcoded_review_only"
+    },
+    {
+      "id": "cracker1",
+      "mp3": "assets/Gift Sounds/_sources/mp3/cracker1.mp3",
+      "sourcePage": "https://github.com/code4fukui/sound-cc0/blob/main/cracker1.wav",
+      "sourceUrl": "https://raw.githubusercontent.com/code4fukui/sound-cc0/main/cracker1.wav",
+      "creator": "code4fukui/sound-cc0 contributors",
+      "license": "CC0-1.0 as declared by source README",
+      "originalBytes": 58370,
+      "originalSha256": "479b722134a1ba43e7e7d0ffd473bbebc273013fbd2c892d8559a6ef7eb45e6e",
+      "mp3Bytes": 16343,
+      "mp3Sha256": "3173206b305c147883c1a6710a63beb3c62c0c7cec07b71a963e192fcb6ac44f",
+      "originalFormat": ".wav",
+      "status": "downloaded_verified_transcoded_review_only"
+    },
+    {
+      "id": "cracker1v-stereo",
+      "mp3": "assets/Gift Sounds/_sources/mp3/cracker1v-stereo.mp3",
+      "sourcePage": "https://github.com/code4fukui/sound-cc0/blob/main/cracker1v-stereo.wav",
+      "sourceUrl": "https://raw.githubusercontent.com/code4fukui/sound-cc0/main/cracker1v-stereo.wav",
+      "creator": "code4fukui/sound-cc0 contributors",
+      "license": "CC0-1.0 as declared by source README",
+      "originalBytes": 89560,
+      "originalSha256": "1a509516953cfb0f63654a3e597ddf8884a203bc661bc5bf47b32019483d6446",
+      "mp3Bytes": 13835,
+      "mp3Sha256": "a70dbd9a036573937a254529a737c4f590d7c61f2c7e62d051bd6e07c674c3d9",
+      "originalFormat": ".wav",
+      "status": "downloaded_verified_transcoded_review_only"
+    },
+    {
+      "id": "cracker1v",
+      "mp3": "assets/Gift Sounds/_sources/mp3/cracker1v.mp3",
+      "sourcePage": "https://github.com/code4fukui/sound-cc0/blob/main/cracker1v.wav",
+      "sourceUrl": "https://raw.githubusercontent.com/code4fukui/sound-cc0/main/cracker1v.wav",
+      "creator": "code4fukui/sound-cc0 contributors",
+      "license": "CC0-1.0 as declared by source README",
+      "originalBytes": 44802,
+      "originalSha256": "2d320bb50fbad536fbc84e5f5281ab30d24e7baeebaa4fa00f35d8202f318fd3",
+      "mp3Bytes": 13835,
+      "mp3Sha256": "d11718f7d5d44a25c17684cae6177ab838ad112bc7bdda104b4e41384614a59a",
+      "originalFormat": ".wav",
+      "status": "downloaded_verified_transcoded_review_only"
+    },
+    {
+      "id": "cracker2",
+      "mp3": "assets/Gift Sounds/_sources/mp3/cracker2.mp3",
+      "sourcePage": "https://github.com/code4fukui/sound-cc0/blob/main/cracker2.wav",
+      "sourceUrl": "https://raw.githubusercontent.com/code4fukui/sound-cc0/main/cracker2.wav",
+      "creator": "code4fukui/sound-cc0 contributors",
+      "license": "CC0-1.0 as declared by source README",
+      "originalBytes": 53448,
+      "originalSha256": "300fd1d03591d6b06efcf5fad4461bde2295cd269346f83cc4e0b0973afc5ef9",
+      "mp3Bytes": 16343,
+      "mp3Sha256": "cf1eeb1b76d04a056993d169061bc1e47148bceb0397feba3309a694f3ed6b6e",
+      "originalFormat": ".wav",
+      "status": "downloaded_verified_transcoded_review_only"
+    },
+    {
+      "id": "metal1",
+      "mp3": "assets/Gift Sounds/_sources/mp3/metal1.mp3",
+      "sourcePage": "https://github.com/code4fukui/sound-cc0/blob/main/metal1.wav",
+      "sourceUrl": "https://raw.githubusercontent.com/code4fukui/sound-cc0/main/metal1.wav",
+      "creator": "code4fukui/sound-cc0 contributors",
+      "license": "CC0-1.0 as declared by source README",
+      "originalBytes": 46180,
+      "originalSha256": "3d1f75a723cb43f34906f9d88cbe804e0ac1f9e02ac4c79a08efa080f6fcda0c",
+      "mp3Bytes": 13208,
+      "mp3Sha256": "28ebf238b0c9e4d71365b2836a94d9a58b1b76c2e9c792c92cea4363e8acac58",
+      "originalFormat": ".wav",
+      "status": "downloaded_verified_transcoded_review_only"
+    },
+    {
+      "id": "steel1",
+      "mp3": "assets/Gift Sounds/_sources/mp3/steel1.mp3",
+      "sourcePage": "https://github.com/code4fukui/sound-cc0/blob/main/steel1.wav",
+      "sourceUrl": "https://raw.githubusercontent.com/code4fukui/sound-cc0/main/steel1.wav",
+      "creator": "code4fukui/sound-cc0 contributors",
+      "license": "CC0-1.0 as declared by source README",
+      "originalBytes": 105638,
+      "originalSha256": "98fb5887400b1405176f171d9c8f796f5425c1c0e7979c13ac3b947bca61aa5b",
+      "mp3Bytes": 28255,
+      "mp3Sha256": "c9eba4d36afd286b2d8bf92fd99d5ca92f09911aaf21b01808e67e6cffe03b8c",
+      "originalFormat": ".wav",
+      "status": "downloaded_verified_transcoded_review_only"
+    },
+    {
+      "id": "switch1",
+      "mp3": "assets/Gift Sounds/_sources/mp3/switch1.mp3",
+      "sourcePage": "https://github.com/code4fukui/sound-cc0/blob/main/switch1.wav",
+      "sourceUrl": "https://raw.githubusercontent.com/code4fukui/sound-cc0/main/switch1.wav",
+      "creator": "code4fukui/sound-cc0 contributors",
+      "license": "CC0-1.0 as declared by source README",
+      "originalBytes": 33964,
+      "originalSha256": "43bfa8dde4a8553802b826518aff7246f510037e563009166b93584be626dba2",
+      "mp3Bytes": 10701,
+      "mp3Sha256": "3be4fa8f930ce50cf18f4dffec8067410789b2d398a000e9d981ad520c2e12f3",
+      "originalFormat": ".wav",
+      "status": "downloaded_verified_transcoded_review_only"
+    },
+    {
+      "id": "wahaha",
+      "mp3": "assets/Gift Sounds/_sources/mp3/wahaha.mp3",
+      "sourcePage": "https://github.com/code4fukui/sound-cc0/blob/main/wahaha.wav",
+      "sourceUrl": "https://raw.githubusercontent.com/code4fukui/sound-cc0/main/wahaha.wav",
+      "creator": "code4fukui/sound-cc0 contributors",
+      "license": "CC0-1.0 as declared by source README",
+      "originalBytes": 82566,
+      "originalSha256": "8e85fb1e61a380fed6b120557ad4f91454f5c9faf6351706274df21db7adcc15",
+      "mp3Bytes": 21985,
+      "mp3Sha256": "e290309933d9425aac92ffbd44dcf821f72b09e1f2fb4496802e1c521ee735f3",
+      "originalFormat": ".wav",
+      "status": "downloaded_verified_transcoded_review_only"
+    },
+    {
+      "id": "animal-bee",
+      "mp3": "assets/Gift Sounds/_sources/mp3/animal-bee.mp3",
+      "sourcePage": "https://freesound.org/people/TheKingOfGeeks360/sounds/846433/",
+      "sourceUrl": "https://raw.githubusercontent.com/ashkansirous/ReadTheStupidText/main/src/DinoReader.App/Resources/Raw/animal-sounds/bee.m4a",
+      "creator": "TheKingOfGeeks360",
+      "license": "CC0-1.0",
+      "originalBytes": 13453,
+      "originalSha256": "f8d0c855e3f304d42eb65a2c594e2039da57d16036a19ccb539a815eabe6d6c5",
+      "mp3Bytes": 37758,
+      "mp3Sha256": "1dc714ae5d10fef2ac0f5c771496220b5af01418d8d7df26c014fa0f4ae9e91e",
+      "originalFormat": ".m4a",
+      "status": "downloaded_verified_transcoded_review_only"
+    },
+    {
+      "id": "animal-bird",
+      "mp3": "assets/Gift Sounds/_sources/mp3/animal-bird.mp3",
+      "sourcePage": "https://freesound.org/people/JW_Audio/sounds/827197/",
+      "sourceUrl": "https://raw.githubusercontent.com/ashkansirous/ReadTheStupidText/main/src/DinoReader.App/Resources/Raw/animal-sounds/bird.m4a",
+      "creator": "JW_Audio",
+      "license": "CC0-1.0",
+      "originalBytes": 13444,
+      "originalSha256": "ee2a86dea23d03cd39515f8bfcaaa856e18814bf8b7dfd74ed005294ff571cc7",
+      "mp3Bytes": 37758,
+      "mp3Sha256": "4b66ab0bd90d9d829c4a903bfa419f056d9aec29829e3f17789a688a98638e0d",
+      "originalFormat": ".m4a",
+      "status": "downloaded_verified_transcoded_review_only"
+    },
+    {
+      "id": "animal-cat",
+      "mp3": "assets/Gift Sounds/_sources/mp3/animal-cat.mp3",
+      "sourcePage": "https://freesound.org/people/tuberatanka/sounds/110011/",
+      "sourceUrl": "https://raw.githubusercontent.com/ashkansirous/ReadTheStupidText/main/src/DinoReader.App/Resources/Raw/animal-sounds/cat.m4a",
+      "creator": "tuberatanka",
+      "license": "CC0-1.0",
+      "originalBytes": 13902,
+      "originalSha256": "b480d0475d51eb99bb05a4b8ae7b3603cd51654f0586575fab5d19d4aba5fcf6",
+      "mp3Bytes": 39012,
+      "mp3Sha256": "8ccc6f35e9504f18ab85b3da3f40430d47c7e17fde53c7002188d31de8d1afc2",
+      "originalFormat": ".m4a",
+      "status": "downloaded_verified_transcoded_review_only"
+    },
+    {
+      "id": "animal-cow",
+      "mp3": "assets/Gift Sounds/_sources/mp3/animal-cow.mp3",
+      "sourcePage": "https://freesound.org/people/manofham/sounds/700380/",
+      "sourceUrl": "https://raw.githubusercontent.com/ashkansirous/ReadTheStupidText/main/src/DinoReader.App/Resources/Raw/animal-sounds/cow.m4a",
+      "creator": "manofham",
+      "license": "CC0-1.0",
+      "originalBytes": 12334,
+      "originalSha256": "55ca4082ad443bc77ff4a8650209c121ed01c5e80a15f619af800b9857f5fa17",
+      "mp3Bytes": 31489,
+      "mp3Sha256": "4c119fcc0e339e3491328a096fed5506759a9b8111e0b1b17f25b4cdeef797d6",
+      "originalFormat": ".m4a",
+      "status": "downloaded_verified_transcoded_review_only"
+    },
+    {
+      "id": "animal-dog",
+      "mp3": "assets/Gift Sounds/_sources/mp3/animal-dog.mp3",
+      "sourcePage": "https://freesound.org/people/SmirnoffLulo/sounds/585873/",
+      "sourceUrl": "https://raw.githubusercontent.com/ashkansirous/ReadTheStupidText/main/src/DinoReader.App/Resources/Raw/animal-sounds/dog.m4a",
+      "creator": "SmirnoffLulo",
+      "license": "CC0-1.0",
+      "originalBytes": 8533,
+      "originalSha256": "f9002b67ecf3409b60d771b2fb187806b9ec359ac31802f7dbada2edc2b8f143",
+      "mp3Bytes": 23338,
+      "mp3Sha256": "06f6e451a97be087fcef06140be812ddc8c1e20b85724c5cc8fb8ecaea97aac5",
+      "originalFormat": ".m4a",
+      "status": "downloaded_verified_transcoded_review_only"
+    },
+    {
+      "id": "animal-duck",
+      "mp3": "assets/Gift Sounds/_sources/mp3/animal-duck.mp3",
+      "sourcePage": "https://freesound.org/people/Mikes-MultiMedia/sounds/418509/",
+      "sourceUrl": "https://raw.githubusercontent.com/ashkansirous/ReadTheStupidText/main/src/DinoReader.App/Resources/Raw/animal-sounds/duck.m4a",
+      "creator": "Mikes-MultiMedia",
+      "license": "CC0-1.0",
+      "originalBytes": 8006,
+      "originalSha256": "a692931a5ce70d177a8cd8807befe621a6dfc0173e9fe5338ed441346340253a",
+      "mp3Bytes": 21458,
+      "mp3Sha256": "54491fd080a970129a2738566c0126d03c048ce46a042928e3b05f0234d36884",
+      "originalFormat": ".m4a",
+      "status": "downloaded_verified_transcoded_review_only"
+    },
+    {
+      "id": "animal-frog",
+      "mp3": "assets/Gift Sounds/_sources/mp3/animal-frog.mp3",
+      "sourcePage": "https://freesound.org/people/egomassive/sounds/536759/",
+      "sourceUrl": "https://raw.githubusercontent.com/ashkansirous/ReadTheStupidText/main/src/DinoReader.App/Resources/Raw/animal-sounds/frog.m4a",
+      "creator": "egomassive",
+      "license": "CC0-1.0",
+      "originalBytes": 7716,
+      "originalSha256": "a2f6a613b2d862cd069d52852b87441515c5bccdfd402a105a146c4114180815",
+      "mp3Bytes": 15815,
+      "mp3Sha256": "f44fd1c33e7d0526d89fe2af92fc6bb17150f8db4dd9fb02a75d7aa266000cfd",
+      "originalFormat": ".m4a",
+      "status": "downloaded_verified_transcoded_review_only"
+    },
+    {
+      "id": "animal-goat",
+      "mp3": "assets/Gift Sounds/_sources/mp3/animal-goat.mp3",
+      "sourcePage": "https://freesound.org/people/saha213131/sounds/683259/",
+      "sourceUrl": "https://raw.githubusercontent.com/ashkansirous/ReadTheStupidText/main/src/DinoReader.App/Resources/Raw/animal-sounds/goat.m4a",
+      "creator": "saha213131",
+      "license": "CC0-1.0",
+      "originalBytes": 13517,
+      "originalSha256": "01f37e29b8a1e8e0474f4d59f754526588742416f3ca9b6f70d1bac1f5d2e4a3",
+      "mp3Bytes": 37758,
+      "mp3Sha256": "c8058589cc729f1c267b973b33f5f7517778ce1d58fd10d213ebb2a58a4c57aa",
+      "originalFormat": ".m4a",
+      "status": "downloaded_verified_transcoded_review_only"
+    },
+    {
+      "id": "animal-horse",
+      "mp3": "assets/Gift Sounds/_sources/mp3/animal-horse.mp3",
+      "sourcePage": "https://freesound.org/people/shadoWisp/sounds/269571/",
+      "sourceUrl": "https://raw.githubusercontent.com/ashkansirous/ReadTheStupidText/main/src/DinoReader.App/Resources/Raw/animal-sounds/horse.m4a",
+      "creator": "shadoWisp",
+      "license": "CC0-1.0",
+      "originalBytes": 13179,
+      "originalSha256": "68146bec98a10f1c60641865345fd6f4bfcb6b0c517fc6c62a02711ed0cc270c",
+      "mp3Bytes": 37131,
+      "mp3Sha256": "9a725b9d257946c9a2a6987d34b95b430875bb92c904d6f6eff510e17ff20cfa",
+      "originalFormat": ".m4a",
+      "status": "downloaded_verified_transcoded_review_only"
+    },
+    {
+      "id": "animal-mouse",
+      "mp3": "assets/Gift Sounds/_sources/mp3/animal-mouse.mp3",
+      "sourcePage": "https://freesound.org/people/shyguy014/sounds/463789/",
+      "sourceUrl": "https://raw.githubusercontent.com/ashkansirous/ReadTheStupidText/main/src/DinoReader.App/Resources/Raw/animal-sounds/mouse.m4a",
+      "creator": "shyguy014",
+      "license": "CC0-1.0",
+      "originalBytes": 12891,
+      "originalSha256": "b5df864717423a0177c0e044e48a47626aeb110c8caafa6e2091b3cacd7c2089",
+      "mp3Bytes": 31489,
+      "mp3Sha256": "96a92a29c45a271588fd1f4d7ca4eb27d463cae31426b73a3be6ce8f70d3434e",
+      "originalFormat": ".m4a",
+      "status": "downloaded_verified_transcoded_review_only"
+    },
+    {
+      "id": "animal-owl",
+      "mp3": "assets/Gift Sounds/_sources/mp3/animal-owl.mp3",
+      "sourcePage": "https://freesound.org/people/Gerent/sounds/558396/",
+      "sourceUrl": "https://raw.githubusercontent.com/ashkansirous/ReadTheStupidText/main/src/DinoReader.App/Resources/Raw/animal-sounds/owl.m4a",
+      "creator": "Gerent",
+      "license": "CC0-1.0",
+      "originalBytes": 11095,
+      "originalSha256": "c30aa0662acda423cb126585b74777dfbc486ffb5d05666964439ba2094dc95f",
+      "mp3Bytes": 30862,
+      "mp3Sha256": "fb6cb8a5c8149b8186b7fcf629b32495656c0ef2ede2b4c6acc140432ac534ca",
+      "originalFormat": ".m4a",
+      "status": "downloaded_verified_transcoded_review_only"
+    },
+    {
+      "id": "animal-pig",
+      "mp3": "assets/Gift Sounds/_sources/mp3/animal-pig.mp3",
+      "sourcePage": "https://freesound.org/people/krzpia/sounds/510974/",
+      "sourceUrl": "https://raw.githubusercontent.com/ashkansirous/ReadTheStupidText/main/src/DinoReader.App/Resources/Raw/animal-sounds/pig.m4a",
+      "creator": "krzpia",
+      "license": "CC0-1.0",
+      "originalBytes": 6118,
+      "originalSha256": "2f7cb5e6a39038d8508002878b00d0fab6a2da3688d28def11bef443cb091ee0",
+      "mp3Bytes": 16442,
+      "mp3Sha256": "ec8539fa994c083847939ca1a228a6995f0a85f23bb7359822b1923d8b835f3f",
+      "originalFormat": ".m4a",
+      "status": "downloaded_verified_transcoded_review_only"
+    },
+    {
+      "id": "animal-rooster",
+      "mp3": "assets/Gift Sounds/_sources/mp3/animal-rooster.mp3",
+      "sourcePage": "https://freesound.org/people/BenjaminNelan/sounds/435508/",
+      "sourceUrl": "https://raw.githubusercontent.com/ashkansirous/ReadTheStupidText/main/src/DinoReader.App/Resources/Raw/animal-sounds/rooster.m4a",
+      "creator": "BenjaminNelan",
+      "license": "CC0-1.0",
+      "originalBytes": 13509,
+      "originalSha256": "bbb9c4e1a4d1b969e05ce81bd009b7d87308dc055ce39edba429771e46502cf0",
+      "mp3Bytes": 37758,
+      "mp3Sha256": "fca38db851afe3db45c5b62a051b49756d501670eb00d5b158b57dbcc55c9e62",
+      "originalFormat": ".m4a",
+      "status": "downloaded_verified_transcoded_review_only"
+    },
+    {
+      "id": "animal-sheep",
+      "mp3": "assets/Gift Sounds/_sources/mp3/animal-sheep.mp3",
+      "sourcePage": "https://freesound.org/people/SergioJbs/sounds/669872/",
+      "sourceUrl": "https://raw.githubusercontent.com/ashkansirous/ReadTheStupidText/main/src/DinoReader.App/Resources/Raw/animal-sounds/sheep.m4a",
+      "creator": "SergioJbs",
+      "license": "CC0-1.0",
+      "originalBytes": 8079,
+      "originalSha256": "3d83bf509a9f4580727137379b18e6812d8450e001d91eb5c745c4f2eb1e7f3b",
+      "mp3Bytes": 22084,
+      "mp3Sha256": "ebc151a2943fae3898bb85a9e639f621707d834e92101aedfb467dd904cd3757",
+      "originalFormat": ".m4a",
+      "status": "downloaded_verified_transcoded_review_only"
+    },
+    {
+      "id": "animal-lion",
+      "mp3": "assets/Gift Sounds/_sources/mp3/animal-lion.mp3",
+      "sourcePage": "https://commons.wikimedia.org/wiki/File:Lion_raring-sound1TamilNadu178.ogg",
+      "sourceUrl": "https://upload.wikimedia.org/wikipedia/commons/7/7d/Lion_raring-sound1TamilNadu178.ogg",
+      "creator": "த*உழவன்",
+      "license": "Public Domain dedication",
+      "originalBytes": 77611,
+      "originalSha256": "ab237d0f960e83412251d0c11f69959f3c2e8d3b14595f7181c3056f7fa18bf7",
+      "mp3Bytes": 218217,
+      "mp3Sha256": "14048020f3d1b535309848e3c91e0a2acef6d50fb5ad45781ac5f68b9b3a3e5a",
+      "originalFormat": ".ogg",
+      "status": "downloaded_verified_transcoded_review_only"
+    },
+    {
+      "id": "animal-blue-whale",
+      "mp3": "assets/Gift Sounds/_sources/mp3/animal-blue-whale.mp3",
+      "sourcePage": "https://commons.wikimedia.org/wiki/File:Blue_whale_atlantic3_1x.oga",
+      "sourceUrl": "https://upload.wikimedia.org/wikipedia/commons/4/4f/Blue_whale_atlantic3_1x.oga",
+      "creator": "NOAA",
+      "license": "CC0-1.0",
+      "originalBytes": 932265,
+      "originalSha256": "3c467734e4d3485a43c6cf2a6e1e1e8aaa2aa9aa8dc2e58fac9e2e559da6545f",
+      "mp3Bytes": 5326514,
+      "mp3Sha256": "bd3bc77fa4c1e545400e7504296dd6024ef15cc6fa734f767d9e029eb38065ce",
+      "originalFormat": ".oga",
+      "status": "downloaded_verified_transcoded_review_only"
+    }
+  ],
+  "mappedGiftFiles": [
+    {
+      "giftSlug": "cute-cat-variant-2",
+      "file": "assets/Gift Sounds/cute-cat-variant-2/sound.mp3",
+      "sourceId": "animal-cat",
+      "sha256": "8ccc6f35e9504f18ab85b3da3f40430d47c7e17fde53c7002188d31de8d1afc2",
+      "bytes": 39012,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "cute-cat",
+      "file": "assets/Gift Sounds/cute-cat/sound.mp3",
+      "sourceId": "animal-cat",
+      "sha256": "8ccc6f35e9504f18ab85b3da3f40430d47c7e17fde53c7002188d31de8d1afc2",
+      "bytes": 39012,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "fortune-cat",
+      "file": "assets/Gift Sounds/fortune-cat/sound.mp3",
+      "sourceId": "animal-cat",
+      "sha256": "8ccc6f35e9504f18ab85b3da3f40430d47c7e17fde53c7002188d31de8d1afc2",
+      "bytes": 39012,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "gamer-cat",
+      "file": "assets/Gift Sounds/gamer-cat/sound.mp3",
+      "sourceId": "animal-cat",
+      "sha256": "8ccc6f35e9504f18ab85b3da3f40430d47c7e17fde53c7002188d31de8d1afc2",
+      "bytes": 39012,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "lucky-cat",
+      "file": "assets/Gift Sounds/lucky-cat/sound.mp3",
+      "sourceId": "animal-cat",
+      "sha256": "8ccc6f35e9504f18ab85b3da3f40430d47c7e17fde53c7002188d31de8d1afc2",
+      "bytes": 39012,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "rock-cats",
+      "file": "assets/Gift Sounds/rock-cats/sound.mp3",
+      "sourceId": "animal-cat",
+      "sha256": "8ccc6f35e9504f18ab85b3da3f40430d47c7e17fde53c7002188d31de8d1afc2",
+      "bytes": 39012,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "space-cat",
+      "file": "assets/Gift Sounds/space-cat/sound.mp3",
+      "sourceId": "animal-cat",
+      "sha256": "8ccc6f35e9504f18ab85b3da3f40430d47c7e17fde53c7002188d31de8d1afc2",
+      "bytes": 39012,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "spooky-cat",
+      "file": "assets/Gift Sounds/spooky-cat/sound.mp3",
+      "sourceId": "animal-cat",
+      "sha256": "8ccc6f35e9504f18ab85b3da3f40430d47c7e17fde53c7002188d31de8d1afc2",
+      "bytes": 39012,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "sumo-cat",
+      "file": "assets/Gift Sounds/sumo-cat/sound.mp3",
+      "sourceId": "animal-cat",
+      "sha256": "8ccc6f35e9504f18ab85b3da3f40430d47c7e17fde53c7002188d31de8d1afc2",
+      "bytes": 39012,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "the-van-cat",
+      "file": "assets/Gift Sounds/the-van-cat/sound.mp3",
+      "sourceId": "animal-cat",
+      "sha256": "8ccc6f35e9504f18ab85b3da3f40430d47c7e17fde53c7002188d31de8d1afc2",
+      "bytes": 39012,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "minecraft-bee",
+      "file": "assets/Gift Sounds/minecraft-bee/sound.mp3",
+      "sourceId": "animal-bee",
+      "sha256": "1dc714ae5d10fef2ac0f5c771496220b5af01418d8d7df26c014fa0f4ae9e91e",
+      "bytes": 37758,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "stinging-bee",
+      "file": "assets/Gift Sounds/stinging-bee/sound.mp3",
+      "sourceId": "animal-bee",
+      "sha256": "1dc714ae5d10fef2ac0f5c771496220b5af01418d8d7df26c014fa0f4ae9e91e",
+      "bytes": 37758,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "bird-paradise",
+      "file": "assets/Gift Sounds/bird-paradise/sound.mp3",
+      "sourceId": "animal-bird",
+      "sha256": "4b66ab0bd90d9d829c4a903bfa419f056d9aec29829e3f17789a688a98638e0d",
+      "bytes": 37758,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "dizzy-bird",
+      "file": "assets/Gift Sounds/dizzy-bird/sound.mp3",
+      "sourceId": "animal-bird",
+      "sha256": "4b66ab0bd90d9d829c4a903bfa419f056d9aec29829e3f17789a688a98638e0d",
+      "bytes": 37758,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "melodic-birds",
+      "file": "assets/Gift Sounds/melodic-birds/sound.mp3",
+      "sourceId": "animal-bird",
+      "sha256": "4b66ab0bd90d9d829c4a903bfa419f056d9aec29829e3f17789a688a98638e0d",
+      "bytes": 37758,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "cow-napping",
+      "file": "assets/Gift Sounds/cow-napping/sound.mp3",
+      "sourceId": "animal-cow",
+      "sha256": "4c119fcc0e339e3491328a096fed5506759a9b8111e0b1b17f25b4cdeef797d6",
+      "bytes": 31489,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "autumn-dog",
+      "file": "assets/Gift Sounds/autumn-dog/sound.mp3",
+      "sourceId": "animal-dog",
+      "sha256": "06f6e451a97be087fcef06140be812ddc8c1e20b85724c5cc8fb8ecaea97aac5",
+      "bytes": 23338,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "hunting-dog",
+      "file": "assets/Gift Sounds/hunting-dog/sound.mp3",
+      "sourceId": "animal-dog",
+      "sha256": "06f6e451a97be087fcef06140be812ddc8c1e20b85724c5cc8fb8ecaea97aac5",
+      "bytes": 23338,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "space-dog",
+      "file": "assets/Gift Sounds/space-dog/sound.mp3",
+      "sourceId": "animal-dog",
+      "sha256": "06f6e451a97be087fcef06140be812ddc8c1e20b85724c5cc8fb8ecaea97aac5",
+      "bytes": 23338,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "super-dog",
+      "file": "assets/Gift Sounds/super-dog/sound.mp3",
+      "sourceId": "animal-dog",
+      "sha256": "06f6e451a97be087fcef06140be812ddc8c1e20b85724c5cc8fb8ecaea97aac5",
+      "bytes": 23338,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "frog-conductor",
+      "file": "assets/Gift Sounds/frog-conductor/sound.mp3",
+      "sourceId": "animal-frog",
+      "sha256": "f44fd1c33e7d0526d89fe2af92fc6bb17150f8db4dd9fb02a75d7aa266000cfd",
+      "bytes": 15815,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "frog",
+      "file": "assets/Gift Sounds/frog/sound.mp3",
+      "sourceId": "animal-frog",
+      "sha256": "f44fd1c33e7d0526d89fe2af92fc6bb17150f8db4dd9fb02a75d7aa266000cfd",
+      "bytes": 15815,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "singing-frog",
+      "file": "assets/Gift Sounds/singing-frog/sound.mp3",
+      "sourceId": "animal-frog",
+      "sha256": "f44fd1c33e7d0526d89fe2af92fc6bb17150f8db4dd9fb02a75d7aa266000cfd",
+      "bytes": 15815,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "singing-frogs",
+      "file": "assets/Gift Sounds/singing-frogs/sound.mp3",
+      "sourceId": "animal-frog",
+      "sha256": "f44fd1c33e7d0526d89fe2af92fc6bb17150f8db4dd9fb02a75d7aa266000cfd",
+      "bytes": 15815,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "goat-busker",
+      "file": "assets/Gift Sounds/goat-busker/sound.mp3",
+      "sourceId": "animal-goat",
+      "sha256": "c8058589cc729f1c267b973b33f5f7517778ce1d58fd10d213ebb2a58a4c57aa",
+      "bytes": 37758,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "goat-variant-2",
+      "file": "assets/Gift Sounds/goat-variant-2/sound.mp3",
+      "sourceId": "animal-goat",
+      "sha256": "c8058589cc729f1c267b973b33f5f7517778ce1d58fd10d213ebb2a58a4c57aa",
+      "bytes": 37758,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "goat",
+      "file": "assets/Gift Sounds/goat/sound.mp3",
+      "sourceId": "animal-goat",
+      "sha256": "c8058589cc729f1c267b973b33f5f7517778ce1d58fd10d213ebb2a58a4c57aa",
+      "bytes": 37758,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "arabian-stallion",
+      "file": "assets/Gift Sounds/arabian-stallion/sound.mp3",
+      "sourceId": "animal-horse",
+      "sha256": "9a725b9d257946c9a2a6987d34b95b430875bb92c904d6f6eff510e17ff20cfa",
+      "bytes": 37131,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "stallion",
+      "file": "assets/Gift Sounds/stallion/sound.mp3",
+      "sourceId": "animal-horse",
+      "sha256": "9a725b9d257946c9a2a6987d34b95b430875bb92c904d6f6eff510e17ff20cfa",
+      "bytes": 37131,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "stallions",
+      "file": "assets/Gift Sounds/stallions/sound.mp3",
+      "sourceId": "animal-horse",
+      "sha256": "9a725b9d257946c9a2a6987d34b95b430875bb92c904d6f6eff510e17ff20cfa",
+      "bytes": 37131,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "santa-owl-surp",
+      "file": "assets/Gift Sounds/santa-owl-surp/sound.mp3",
+      "sourceId": "animal-owl",
+      "sha256": "fb6cb8a5c8149b8186b7fcf629b32495656c0ef2ede2b4c6acc140432ac534ca",
+      "bytes": 30862,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "love-piggy",
+      "file": "assets/Gift Sounds/love-piggy/sound.mp3",
+      "sourceId": "animal-pig",
+      "sha256": "ec8539fa994c083847939ca1a228a6995f0a85f23bb7359822b1923d8b835f3f",
+      "bytes": 16442,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "lucky-pig",
+      "file": "assets/Gift Sounds/lucky-pig/sound.mp3",
+      "sourceId": "animal-pig",
+      "sha256": "ec8539fa994c083847939ca1a228a6995f0a85f23bb7359822b1923d8b835f3f",
+      "bytes": 16442,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "sheep-joy",
+      "file": "assets/Gift Sounds/sheep-joy/sound.mp3",
+      "sourceId": "animal-sheep",
+      "sha256": "ebc151a2943fae3898bb85a9e639f621707d834e92101aedfb467dd904cd3757",
+      "bytes": 22084,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "crescent-lion",
+      "file": "assets/Gift Sounds/crescent-lion/sound.mp3",
+      "sourceId": "animal-lion",
+      "sha256": "14048020f3d1b535309848e3c91e0a2acef6d50fb5ad45781ac5f68b9b3a3e5a",
+      "bytes": 218217,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "holiday-lion",
+      "file": "assets/Gift Sounds/holiday-lion/sound.mp3",
+      "sourceId": "animal-lion",
+      "sha256": "14048020f3d1b535309848e3c91e0a2acef6d50fb5ad45781ac5f68b9b3a3e5a",
+      "bytes": 218217,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "leon-and-lion",
+      "file": "assets/Gift Sounds/leon-and-lion/sound.mp3",
+      "sourceId": "animal-lion",
+      "sha256": "14048020f3d1b535309848e3c91e0a2acef6d50fb5ad45781ac5f68b9b3a3e5a",
+      "bytes": 218217,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "lion-s-mane",
+      "file": "assets/Gift Sounds/lion-s-mane/sound.mp3",
+      "sourceId": "animal-lion",
+      "sha256": "14048020f3d1b535309848e3c91e0a2acef6d50fb5ad45781ac5f68b9b3a3e5a",
+      "bytes": 218217,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "royal-lions-sce",
+      "file": "assets/Gift Sounds/royal-lions-sce/sound.mp3",
+      "sourceId": "animal-lion",
+      "sha256": "14048020f3d1b535309848e3c91e0a2acef6d50fb5ad45781ac5f68b9b3a3e5a",
+      "bytes": 218217,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "sam-the-whale",
+      "file": "assets/Gift Sounds/sam-the-whale/sound.mp3",
+      "sourceId": "animal-blue-whale",
+      "sha256": "bd3bc77fa4c1e545400e7504296dd6024ef15cc6fa734f767d9e029eb38065ce",
+      "bytes": 5326514,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "seal-and-whale",
+      "file": "assets/Gift Sounds/seal-and-whale/sound.mp3",
+      "sourceId": "animal-blue-whale",
+      "sha256": "bd3bc77fa4c1e545400e7504296dd6024ef15cc6fa734f767d9e029eb38065ce",
+      "bytes": 5326514,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "whale-diving",
+      "file": "assets/Gift Sounds/whale-diving/sound.mp3",
+      "sourceId": "animal-blue-whale",
+      "sha256": "bd3bc77fa4c1e545400e7504296dd6024ef15cc6fa734f767d9e029eb38065ce",
+      "bytes": 5326514,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "heart-rain",
+      "file": "assets/Gift Sounds/heart-rain/sound.mp3",
+      "sourceId": "rain-soft",
+      "sha256": "fbef36f5b5550bebcd9276755ad4425de3b1a4b74c806e225fc1582dc2ad3bc4",
+      "bytes": 937316,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "love-rain",
+      "file": "assets/Gift Sounds/love-rain/sound.mp3",
+      "sourceId": "rain-soft",
+      "sha256": "fbef36f5b5550bebcd9276755ad4425de3b1a4b74c806e225fc1582dc2ad3bc4",
+      "bytes": 937316,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "make-rain",
+      "file": "assets/Gift Sounds/make-rain/sound.mp3",
+      "sourceId": "rain-soft",
+      "sha256": "fbef36f5b5550bebcd9276755ad4425de3b1a4b74c806e225fc1582dc2ad3bc4",
+      "bytes": 937316,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "rain-doll",
+      "file": "assets/Gift Sounds/rain-doll/sound.mp3",
+      "sourceId": "rain-soft",
+      "sha256": "fbef36f5b5550bebcd9276755ad4425de3b1a4b74c806e225fc1582dc2ad3bc4",
+      "bytes": 937316,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "umbrella",
+      "file": "assets/Gift Sounds/umbrella/sound.mp3",
+      "sourceId": "rain-soft",
+      "sha256": "fbef36f5b5550bebcd9276755ad4425de3b1a4b74c806e225fc1582dc2ad3bc4",
+      "bytes": 937316,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "umbrella-love",
+      "file": "assets/Gift Sounds/umbrella-love/sound.mp3",
+      "sourceId": "rain-soft",
+      "sha256": "fbef36f5b5550bebcd9276755ad4425de3b1a4b74c806e225fc1582dc2ad3bc4",
+      "bytes": 937316,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "umbrella-variant-2",
+      "file": "assets/Gift Sounds/umbrella-variant-2/sound.mp3",
+      "sourceId": "rain-soft",
+      "sha256": "fbef36f5b5550bebcd9276755ad4425de3b1a4b74c806e225fc1582dc2ad3bc4",
+      "bytes": 937316,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "whitewind-beast",
+      "file": "assets/Gift Sounds/whitewind-beast/sound.mp3",
+      "sourceId": "wind-breeze",
+      "sha256": "042eb1ce23f3388069cf9855f61ccf8c7605040387cf540bf4c5d3a95a328682",
+      "bytes": 1533535,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "whitewind-king",
+      "file": "assets/Gift Sounds/whitewind-king/sound.mp3",
+      "sourceId": "wind-breeze",
+      "sha256": "042eb1ce23f3388069cf9855f61ccf8c7605040387cf540bf4c5d3a95a328682",
+      "bytes": 1533535,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "wind-kemen",
+      "file": "assets/Gift Sounds/wind-kemen/sound.mp3",
+      "sourceId": "wind-breeze",
+      "sha256": "042eb1ce23f3388069cf9855f61ccf8c7605040387cf540bf4c5d3a95a328682",
+      "bytes": 1533535,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "air-dancer",
+      "file": "assets/Gift Sounds/air-dancer/sound.mp3",
+      "sourceId": "wind-breeze",
+      "sha256": "042eb1ce23f3388069cf9855f61ccf8c7605040387cf540bf4c5d3a95a328682",
+      "bytes": 1533535,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "air-dancer-variant-2",
+      "file": "assets/Gift Sounds/air-dancer-variant-2/sound.mp3",
+      "sourceId": "wind-breeze",
+      "sha256": "042eb1ce23f3388069cf9855f61ccf8c7605040387cf540bf4c5d3a95a328682",
+      "bytes": 1533535,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "hot-air-balloon",
+      "file": "assets/Gift Sounds/hot-air-balloon/sound.mp3",
+      "sourceId": "wind-breeze",
+      "sha256": "042eb1ce23f3388069cf9855f61ccf8c7605040387cf540bf4c5d3a95a328682",
+      "bytes": 1533535,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "shiny-air-balloon",
+      "file": "assets/Gift Sounds/shiny-air-balloon/sound.mp3",
+      "sourceId": "wind-breeze",
+      "sha256": "042eb1ce23f3388069cf9855f61ccf8c7605040387cf540bf4c5d3a95a328682",
+      "bytes": 1533535,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "forest-eif",
+      "file": "assets/Gift Sounds/forest-eif/sound.mp3",
+      "sourceId": "nature-forest-day",
+      "sha256": "2a43932ac2b0ffa46b9bb4bfa58284f585baad0ba93278e261b8bcdd61386f6b",
+      "bytes": 2857630,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "agarden-yonder",
+      "file": "assets/Gift Sounds/agarden-yonder/sound.mp3",
+      "sourceId": "nature-forest-day",
+      "sha256": "2a43932ac2b0ffa46b9bb4bfa58284f585baad0ba93278e261b8bcdd61386f6b",
+      "bytes": 2857630,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "coconut-tree",
+      "file": "assets/Gift Sounds/coconut-tree/sound.mp3",
+      "sourceId": "nature-forest-day",
+      "sha256": "2a43932ac2b0ffa46b9bb4bfa58284f585baad0ba93278e261b8bcdd61386f6b",
+      "bytes": 2857630,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "diamond-tree",
+      "file": "assets/Gift Sounds/diamond-tree/sound.mp3",
+      "sourceId": "nature-forest-day",
+      "sha256": "2a43932ac2b0ffa46b9bb4bfa58284f585baad0ba93278e261b8bcdd61386f6b",
+      "bytes": 2857630,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "water-lantern",
+      "file": "assets/Gift Sounds/water-lantern/sound.mp3",
+      "sourceId": "water-stream",
+      "sha256": "91bc6c8092788c3c32ce3429b1b077772b7c536432edbb888a160b2530f0d78a",
+      "bytes": 1724751,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "hydrangea-sea",
+      "file": "assets/Gift Sounds/hydrangea-sea/sound.mp3",
+      "sourceId": "water-stream",
+      "sha256": "91bc6c8092788c3c32ce3429b1b077772b7c536432edbb888a160b2530f0d78a",
+      "bytes": 1724751,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "jacaranda-sea",
+      "file": "assets/Gift Sounds/jacaranda-sea/sound.mp3",
+      "sourceId": "water-stream",
+      "sha256": "91bc6c8092788c3c32ce3429b1b077772b7c536432edbb888a160b2530f0d78a",
+      "bytes": 1724751,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "sea-biitzy",
+      "file": "assets/Gift Sounds/sea-biitzy/sound.mp3",
+      "sourceId": "water-stream",
+      "sha256": "91bc6c8092788c3c32ce3429b1b077772b7c536432edbb888a160b2530f0d78a",
+      "bytes": 1724751,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "sea-cooper",
+      "file": "assets/Gift Sounds/sea-cooper/sound.mp3",
+      "sourceId": "water-stream",
+      "sha256": "91bc6c8092788c3c32ce3429b1b077772b7c536432edbb888a160b2530f0d78a",
+      "bytes": 1724751,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "sea-nyota",
+      "file": "assets/Gift Sounds/sea-nyota/sound.mp3",
+      "sourceId": "water-stream",
+      "sha256": "91bc6c8092788c3c32ce3429b1b077772b7c536432edbb888a160b2530f0d78a",
+      "bytes": 1724751,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "sea-tom",
+      "file": "assets/Gift Sounds/sea-tom/sound.mp3",
+      "sourceId": "water-stream",
+      "sha256": "91bc6c8092788c3c32ce3429b1b077772b7c536432edbb888a160b2530f0d78a",
+      "bytes": 1724751,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "undersea-kingd",
+      "file": "assets/Gift Sounds/undersea-kingd/sound.mp3",
+      "sourceId": "water-stream",
+      "sha256": "91bc6c8092788c3c32ce3429b1b077772b7c536432edbb888a160b2530f0d78a",
+      "bytes": 1724751,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "undersea-kingd-variant-2",
+      "file": "assets/Gift Sounds/undersea-kingd-variant-2/sound.mp3",
+      "sourceId": "water-stream",
+      "sha256": "91bc6c8092788c3c32ce3429b1b077772b7c536432edbb888a160b2530f0d78a",
+      "bytes": 1724751,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "diamond-ring",
+      "file": "assets/Gift Sounds/diamond-ring/sound.mp3",
+      "sourceId": "bell1",
+      "sha256": "184193975d89a826d77f8f281c37891fe3571521d6f1a41089fcfb7a3c46f7e9",
+      "bytes": 491563,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "diamond-ring-variant-2",
+      "file": "assets/Gift Sounds/diamond-ring-variant-2/sound.mp3",
+      "sourceId": "bell1",
+      "sha256": "184193975d89a826d77f8f281c37891fe3571521d6f1a41089fcfb7a3c46f7e9",
+      "bytes": 491563,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "ring-honor",
+      "file": "assets/Gift Sounds/ring-honor/sound.mp3",
+      "sourceId": "bell1",
+      "sha256": "184193975d89a826d77f8f281c37891fe3571521d6f1a41089fcfb7a3c46f7e9",
+      "bytes": 491563,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "stage-ring",
+      "file": "assets/Gift Sounds/stage-ring/sound.mp3",
+      "sourceId": "bell1",
+      "sha256": "184193975d89a826d77f8f281c37891fe3571521d6f1a41089fcfb7a3c46f7e9",
+      "bytes": 491563,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "birthday-crown",
+      "file": "assets/Gift Sounds/birthday-crown/sound.mp3",
+      "sourceId": "bell1",
+      "sha256": "184193975d89a826d77f8f281c37891fe3571521d6f1a41089fcfb7a3c46f7e9",
+      "bytes": 491563,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "crown",
+      "file": "assets/Gift Sounds/crown/sound.mp3",
+      "sourceId": "bell1",
+      "sha256": "184193975d89a826d77f8f281c37891fe3571521d6f1a41089fcfb7a3c46f7e9",
+      "bytes": 491563,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "little-crown",
+      "file": "assets/Gift Sounds/little-crown/sound.mp3",
+      "sourceId": "bell1",
+      "sha256": "184193975d89a826d77f8f281c37891fe3571521d6f1a41089fcfb7a3c46f7e9",
+      "bytes": 491563,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "legend-crown",
+      "file": "assets/Gift Sounds/legend-crown/sound.mp3",
+      "sourceId": "bell1",
+      "sha256": "184193975d89a826d77f8f281c37891fe3571521d6f1a41089fcfb7a3c46f7e9",
+      "bytes": 491563,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "club-music",
+      "file": "assets/Gift Sounds/club-music/sound.mp3",
+      "sourceId": "steel1",
+      "sha256": "c9eba4d36afd286b2d8bf92fd99d5ca92f09911aaf21b01808e67e6cffe03b8c",
+      "bytes": 28255,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "dynamic-music",
+      "file": "assets/Gift Sounds/dynamic-music/sound.mp3",
+      "sourceId": "steel1",
+      "sha256": "c9eba4d36afd286b2d8bf92fd99d5ca92f09911aaf21b01808e67e6cffe03b8c",
+      "bytes": 28255,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "enjoy-music",
+      "file": "assets/Gift Sounds/enjoy-music/sound.mp3",
+      "sourceId": "steel1",
+      "sha256": "c9eba4d36afd286b2d8bf92fd99d5ca92f09911aaf21b01808e67e6cffe03b8c",
+      "bytes": 28255,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "music-album",
+      "file": "assets/Gift Sounds/music-album/sound.mp3",
+      "sourceId": "steel1",
+      "sha256": "c9eba4d36afd286b2d8bf92fd99d5ca92f09911aaf21b01808e67e6cffe03b8c",
+      "bytes": 28255,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "music-bubbles",
+      "file": "assets/Gift Sounds/music-bubbles/sound.mp3",
+      "sourceId": "steel1",
+      "sha256": "c9eba4d36afd286b2d8bf92fd99d5ca92f09911aaf21b01808e67e6cffe03b8c",
+      "bytes": 28255,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "music-bubbles-variant-2",
+      "file": "assets/Gift Sounds/music-bubbles-variant-2/sound.mp3",
+      "sourceId": "steel1",
+      "sha256": "c9eba4d36afd286b2d8bf92fd99d5ca92f09911aaf21b01808e67e6cffe03b8c",
+      "bytes": 28255,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "music-conductor",
+      "file": "assets/Gift Sounds/music-conductor/sound.mp3",
+      "sourceId": "steel1",
+      "sha256": "c9eba4d36afd286b2d8bf92fd99d5ca92f09911aaf21b01808e67e6cffe03b8c",
+      "bytes": 28255,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "music-mate",
+      "file": "assets/Gift Sounds/music-mate/sound.mp3",
+      "sourceId": "steel1",
+      "sha256": "c9eba4d36afd286b2d8bf92fd99d5ca92f09911aaf21b01808e67e6cffe03b8c",
+      "bytes": 28255,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "music-mic",
+      "file": "assets/Gift Sounds/music-mic/sound.mp3",
+      "sourceId": "steel1",
+      "sha256": "c9eba4d36afd286b2d8bf92fd99d5ca92f09911aaf21b01808e67e6cffe03b8c",
+      "bytes": 28255,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "music-play",
+      "file": "assets/Gift Sounds/music-play/sound.mp3",
+      "sourceId": "steel1",
+      "sha256": "c9eba4d36afd286b2d8bf92fd99d5ca92f09911aaf21b01808e67e6cffe03b8c",
+      "bytes": 28255,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "music-player",
+      "file": "assets/Gift Sounds/music-player/sound.mp3",
+      "sourceId": "steel1",
+      "sha256": "c9eba4d36afd286b2d8bf92fd99d5ca92f09911aaf21b01808e67e6cffe03b8c",
+      "bytes": 28255,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "music-stage",
+      "file": "assets/Gift Sounds/music-stage/sound.mp3",
+      "sourceId": "steel1",
+      "sha256": "c9eba4d36afd286b2d8bf92fd99d5ca92f09911aaf21b01808e67e6cffe03b8c",
+      "bytes": 28255,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "music-stage-variant-2",
+      "file": "assets/Gift Sounds/music-stage-variant-2/sound.mp3",
+      "sourceId": "steel1",
+      "sha256": "c9eba4d36afd286b2d8bf92fd99d5ca92f09911aaf21b01808e67e6cffe03b8c",
+      "bytes": 28255,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "music",
+      "file": "assets/Gift Sounds/music/sound.mp3",
+      "sourceId": "steel1",
+      "sha256": "c9eba4d36afd286b2d8bf92fd99d5ca92f09911aaf21b01808e67e6cffe03b8c",
+      "bytes": 28255,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "rosie-s-concert",
+      "file": "assets/Gift Sounds/rosie-s-concert/sound.mp3",
+      "sourceId": "steel1",
+      "sha256": "c9eba4d36afd286b2d8bf92fd99d5ca92f09911aaf21b01808e67e6cffe03b8c",
+      "bytes": 28255,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "your-concert",
+      "file": "assets/Gift Sounds/your-concert/sound.mp3",
+      "sourceId": "steel1",
+      "sha256": "c9eba4d36afd286b2d8bf92fd99d5ca92f09911aaf21b01808e67e6cffe03b8c",
+      "bytes": 28255,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "sing-together",
+      "file": "assets/Gift Sounds/sing-together/sound.mp3",
+      "sourceId": "steel1",
+      "sha256": "c9eba4d36afd286b2d8bf92fd99d5ca92f09911aaf21b01808e67e6cffe03b8c",
+      "bytes": 28255,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "singing-mic",
+      "file": "assets/Gift Sounds/singing-mic/sound.mp3",
+      "sourceId": "steel1",
+      "sha256": "c9eba4d36afd286b2d8bf92fd99d5ca92f09911aaf21b01808e67e6cffe03b8c",
+      "bytes": 28255,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "singing-sax",
+      "file": "assets/Gift Sounds/singing-sax/sound.mp3",
+      "sourceId": "steel1",
+      "sha256": "c9eba4d36afd286b2d8bf92fd99d5ca92f09911aaf21b01808e67e6cffe03b8c",
+      "bytes": 28255,
+      "status": "candidate_real_recording_needs_listening_review"
+    }
+  ],
+  "skipped": [
+    {
+      "sourceId": "celebration-fireworks",
+      "reason": "source MP3 was not downloaded"
+    }
+  ],
+  "errors": [
+    {
+      "id": "celebration-fireworks",
+      "message": "HTTP 429 for https://upload.wikimedia.org/wikipedia/commons/7/71/Fireworks.ogg"
+    }
+  ]
+}
