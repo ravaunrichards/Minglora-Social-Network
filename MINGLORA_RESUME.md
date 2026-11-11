@@ -399,3 +399,11 @@ Continue with independent non-database work that can be built and verified in th
 - PR #202 remains OPEN + DRAFT, and branch ref matches PR head 9c28029053d02a5e5ff946b15b7897bd9fa6a23f. Branch remains diverged from main (652 ahead, 249 behind; merge base 0f22dabec48315fc6d306296aed2315cdb7d26c2). Do not merge/rebase/retarget automatically. No PR workflow runs or commit statuses were returned.
 - No workers, translation/model providers, migrations, deployments or production data updates were used. Weighted project progress remains at the previously reported 45.52%.
 - Next safe action: inspect Minglora’s existing authenticated administrator/reviewer identity model before implementing independent evaluation reviews. If no verifiable reviewer identity/role source exists, preserve the current owner-attested-only boundary rather than inventing credentials or treating owner input as independent evidence.
+
+## Authorization audit — independent language reviewer access is not available (2026-11-11)
+
+- Inspected handlePersonalAiBotsAdminApi: the entire /api/admin/personal-ai-bots route is gated by isOwnerAdmin, with a 403 for anyone except the designated MFA-verified Minglora owner.
+- Inspected src/server.js: some unrelated platform features use moderator roles and active reviewer sessions, but that authorization is not passed as Personal AI Bot review authority.
+- Inspected supabase/functions/minglora-runtime-state/index.ts: AI network, AI identity, provider and task operations enforce the fixed designated AI network owner ID. There is no separate independent language-reviewer grant/role or trusted reviewer claim to reuse.
+- Therefore independent language-reviewer verification cannot safely be enabled by simply accepting a reviewerRole string or evidence URL. Keep status owner_review_recorded, preserve owner attestation, and leave languageQualityStatus unverified until a separate authenticated reviewer identity/authorization capability is designed and authorized.
+- Updated docs/PERSONAL_AI_BOT_NETWORK_RECOMMENDATIONS.md to make this current authorization boundary explicit. No permissions were widened and no platform role, owner identity, RLS policy or gateway authorization was modified.
