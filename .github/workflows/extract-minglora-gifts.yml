@@ -1,0 +1,51 @@
+name: Extract individual Minglora gift animations
+
+on:
+  push:
+    branches:
+      - automation/minglora-gift-assets-extraction
+    paths:
+      - "assets/Gifts/**"
+      - "scripts/extract-minglora-gift-captures.mjs"
+      - ".github/workflows/extract-minglora-gifts.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: minglora-gift-extraction
+  cancel-in-progress: false
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out Minglora
+        uses: actions/checkout@v4
+        with:
+          ref: automation/minglora-gift-assets-extraction
+          fetch-depth: 0
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install OCR and image processing
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y tesseract-ocr
+          npm install --no-save --no-package-lock sharp
+      - name: Extract each gift into an individual animation asset
+        run: node scripts/extract-minglora-gift-captures.mjs
+      - name: Commit generated assets to the extraction branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/animations/gifts
+          if git diff --cached --quiet; then
+            echo "No generated gift-asset changes to commit."
+          else
+            git commit -m "Extract individual Minglora gift animation assets"
+            git push origin automation/minglora-gift-assets-extraction
+          fi
