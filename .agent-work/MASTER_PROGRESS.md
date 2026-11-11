@@ -8,7 +8,7 @@
 - **Current repository:** `ravaunrichards/Minglora-Social-Network`
 - **Working branch:** `work/gifts-artwork-extraction-v3-20261111`
 - **Pull request:** #236 (DRAFT; not merged) — https://github.com/ravaunrichards/Minglora-Social-Network/pull/236
-- **Last verified branch commit:** `85fbb4a07d5d4c31fe23ec8f4f332f09a457398d`
+- **Last verified extraction/audit commit:** `d15ef3494d4727bf08ae5fc3ee69ae36c24c28cc` (later commits update review and progress records).`
 - **Latest successful artwork extraction and audit:** https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/43088609831
 
 ## Completed and verified at this checkpoint
@@ -76,6 +76,19 @@ Continue PR #236 from the verified extraction checkpoint. The 131 source capture
 
 No files were intentionally deleted. No badge source image was edited or replaced.
 
+## Files changed in the gift artwork stage
+
+- `assets/Gifts/capture-*.png` — 131 original read-only references; preserved.
+- `assets/Artwork/` — 1,509 extracted transparent PNG candidates, manifest, README and review queue.
+- `scripts/extract-gift-artwork.py` — reproducible screenshot extraction and deduplication.
+- `scripts/audit-gift-artwork.py` — read-only integrity, dimensions, transparency, hash and review audit.
+- `.github/workflows/gift-artwork-extraction.yml` — extraction and audit automation.
+- `reports/gift-artwork-audit.md` and `.json` — automated QA output.
+- `reports/gift-artwork-visual-review-notes.md` — six-pair partial human visual review.
+- `.agent-work/MASTER_PROGRESS.md`, `STAGE_QUEUE.md`, `DECISIONS.md`, and `BLOCKERS.md` — recovery and stage tracking.
+
+No original screenshot was edited. No extracted PNG was deleted or merged during the six-pair visual review. No live catalogue, Coin, wallet, transaction, promotional reserve or creator-earning record was changed.
+
 ## Test results
 
 | Check | Result |
@@ -100,17 +113,12 @@ See `STAGE_QUEUE.md`. Repository-wide work is not complete; future stages remain
 
 ## Dependencies and blockers
 
-- Full human visual review of all 1,509 extracted PNG candidates remains incomplete; only six near-duplicate pairs (12 files) have been directly compared.
-- Rights/licence provenance for screenshot-derived artwork is not established. Do not publish or activate any extracted crop as original Minglora artwork until documented permission is present or a new Minglora-original replacement is created.
-- Three same-title pairs are distinct artwork variants and must remain distinct; three appear to be repeated artwork candidates. All files remain preserved pending canonical record/source-occurrence reconciliation.
-- Repository CI's main test job currently fails at `npm run check:repo` because the base repository contains two unrelated pre-existing placeholders: `assets/Multi-Guest/.gitkeep` and `assets/Sounds/.gitkeep`. They were left untouched. The For You and Supabase Auth acceptance jobs passed; the artwork-specific extraction/audit workflow passed.
-- PR #236 remains Draft and unmerged; no extracted assets have been integrated into the production gift catalog.
-- Overall product completion remains unquantified until the backlog is fully decomposed and weighted.
-
-- Production browser/Render visual verification has not been performed by this GitHub-only workflow.
-- Absolute local filesystem checkout path is unavailable from repository metadata; only repository root `.` is verified.
-- Hosted LiveKit provider configuration is documented as not configured in the current runtime audit; unrelated to this profile-badge change.
-- Whole-repository completion percentage is intentionally unquantified until the feature backlog is fully decomposed and weighted.
+- The complete human visual review remains incomplete: six near-duplicate candidate pairs (12 files) were checked; the other 1,497 records still require individual review.
+- Rights/licence provenance for screenshot-derived artwork is not established. No PNG is approved for production use; use newly authored Minglora replacements when rights cannot be proven.
+- Three same-title pairs were confirmed as distinct variants; three appear to be repeated artwork candidates. Every source and extracted file is preserved pending canonical-record reconciliation.
+- PR #236 remains Draft and unmerged; no extracted asset has been integrated into the production gift catalogue.
+- The general CI test job fails at `npm run check:repo` because two pre-existing unrelated placeholders remain in the base repository: `assets/Multi-Guest/.gitkeep` and `assets/Sounds/.gitkeep`. They were left untouched. The For You and Supabase Auth jobs passed; the gift-specific workflow passed.
+- Overall product completion remains unquantified until the documented backlog is fully decomposed and weighted.
 
 ## Error history
 
