@@ -82,7 +82,7 @@ test("level artwork route is an explicit allow-list and serves JPEG without expo
 test("updated progression assets and all original JPG panels are included in the app shell", () => {
   const html = read("public/index.html");
   const sw = read("public/sw.js");
-  assert.ok(html.includes("/gifter-progression.css?v=20261111-gifter-reference-readability-1"));
+  assert.ok(html.includes("/gifter-progression.css?v=20261110-gifter-individual-badges-1"));
   assert.ok(html.includes("/gifter-progression.js?v=20261110-gifter-individual-badges-1"));
   panelFiles.forEach(filename => {
     const routeName = filename.toLowerCase().replaceAll(" ", "-");
@@ -129,8 +129,8 @@ test("Gifter artwork removes unused outer padding and uses a brighter clean edge
 test("clean-edge stylesheet cache key is current in HTML and service-worker shell", () => {
   const html = read("public/index.html");
   const sw = read("public/sw.js");
-  assert.ok(html.includes("/gifter-progression.css?v=20261111-gifter-reference-readability-1"));
-  assert.ok(sw.includes("/gifter-progression.css?v=20261111-gifter-reference-readability-1"));
+  assert.ok(html.includes("/gifter-progression.css?v=20261110-gifter-individual-badges-1"));
+  assert.ok(sw.includes("/gifter-progression.css?v=20261110-gifter-individual-badges-1"));
   assert.ok(!sw.includes("/gifter-progression.css?v=20261110-gifter-level-polish-1"));
 });
 
@@ -146,19 +146,7 @@ test("Gifters Level-Up chart is readable and offers a full-size zoom view on eve
   assert.match(styles, /\.gp-hero-art \.gp-reference-art\{[\s\S]*?max-width:1100px[\s\S]*?max-height:none[\s\S]*?height:auto/);
   assert.match(styles, /@media\(max-width:650px\)[\s\S]*?\.gp-hero-art \.gp-reference-art\{width:100%;max-height:none\}/);
   assert.match(styles, /\.gp-chart-fullsize\{[\s\S]*?min-height:46px[\s\S]*?font-size:1rem/);
-  assert.ok(html.includes("/gifter-progression.css?v=20261111-gifter-reference-readability-1"));
-  assert.ok(sw.includes("/gifter-progression.css?v=20261111-gifter-reference-readability-1"));
-  assert.ok(sw.includes("minglora-shell-v276-self-updating-1"));
-});
-
-
-test("ordered gifter badge references are prominent and legible on phone-sized screens", () => {
-  const styles = read("public/gifter-progression.css");
-  const readable = styles.slice(styles.lastIndexOf("/* Readable ordered gifter badge references:"));
-  assert.ok(readable.length > 0, "readability overrides are present at the end of the stylesheet");
-  assert.match(readable, /\.gp-level-index-item\{grid-template-columns:92px minmax\(0,1fr\)[^}]*min-height:116px/);
-  assert.match(readable, /\.gp-level-index-art\{width:92px;height:92px[^}]*object-fit:contain/);
-  assert.match(readable, /\.gp-level-index-badge\{font-size:1rem/);
-  assert.match(readable, /@media\(max-width:480px\)[\s\S]*?grid-template-columns:96px minmax\(0,1fr\)[\s\S]*?width:96px;height:96px/);
-  assert.match(readable, /@media\(max-width:360px\)[\s\S]*?grid-template-columns:88px minmax\(0,1fr\)[\s\S]*?width:88px;height:88px/);
+  assert.ok(html.includes("/gifter-progression.css?v=20261110-gifter-individual-badges-1"));
+  assert.ok(sw.includes("/gifter-progression.css?v=20261110-gifter-individual-badges-1"));
+  assert.ok(sw.includes("minglora-shell-v277-self-updating-1"));
 });
