@@ -181,7 +181,7 @@ Creator analytics aggregate real playback records into distinct viewers, viewer-
 | Method | Endpoint | Purpose |
 |---|---|---|
 | GET | `/api/video-channels` | Discover public creator channels that have real videos visible to the signed-in member; optional `q` searches channel name, description or creator |
-| GET | `/api/video-channels/subscriptions` | List the signed-in member's free video-channel subscriptions |
+| GET | `/api/video-channels/subscriptions` | List the signed-in member's free video-channel subscriptions and up to 60 newest video posts from those channels, rechecked against current post/profile/block permissions |
 | GET | `/api/video-channels/:ownerId` | Read an accessible creator channel and its latest video posts |
 | PATCH | `/api/video-channels/me` | Create or update the signed-in member's channel name, description and visibility |
 | POST | `/api/video-channels/:ownerId/subscribe` | Subscribe to a public or unlisted video channel |
