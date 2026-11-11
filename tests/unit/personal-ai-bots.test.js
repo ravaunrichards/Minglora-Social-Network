@@ -941,7 +941,7 @@ test('Persona Laboratory requires complete static checks and an explicit human a
   const db=makeDb();
   const bot=createPersonaTestBot(db);
   const draft=createPersonalAiBotPersonaDraft(db,{
-    botId:bot.id,configuration:{purpose:'',role:'',traits:{warmth:101}}
+    botId:bot.id,configuration:{purpose:'',role:'',expertise:[],languagePreferences:[],audience:'',boundaries:'',prohibitedBehaviors:'',escalationInstructions:''}
   },actor,stamp,uid);
   const evaluation=evaluatePersonalAiBotPersonaDraft(db,draft.id,actor,stamp,uid);
   assert.equal(evaluation.evaluation.status,'fail');
