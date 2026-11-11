@@ -26,10 +26,10 @@
 
 - **Extraction:** 131/131 screenshots processed; 2,065 labelled cells; 1,509 individual PNG candidates; 556 repeated appearances merged by the extraction pipeline.
 - **Automated quality:** Latest read-only audit passed after correcting its dimension-type comparison. All 1,509 manifest assets were inspected; 0 missing/invalid/hash errors; 0 exact duplicate file-hash groups; 0 automated image-quality flags.
-- **Manual review:** 1,114 entries remain in the OCR/crop/variant review queue. Only six near-duplicate pairs (12 files) have been visually checked; three pairs are distinct variants and three pairs appear to be repeated artwork. The remaining 1,497 records have not received individual visual review.
+- **Manual review:** 24/24 contact sheets and 1,509/1,509 thumbnails have been screened. Eighteen same-title pairs (36 PNGs) have been compared at full size: seven are distinct artwork variants and eleven appear to repeat artwork. The first six pairs were also compared to their source screenshots; the later twelve still need direct source-cell confirmation. The other 1,473 manifest records still require individual full-size review. The OCR/crop/variant review queue remains 1,114 entries (overlapping warnings).
 - **Name mapping:** 997 exact gift-name matches, 74 fuzzy suggestions, 432 unmatched exact names, and 6 low-confidence/truncated names without a suggestion.
 - **Rights/provenance:** NOT CLEARED. The PNGs are crops from screenshot references; their extraction does not establish ownership or commercial-use permission. All files remain review-only and must not be activated as Minglora-original art.
 - **Integration:** No extracted file has been added to the live gift catalogue; no gift pricing, Coin balances, wallets, transactions, reserves or creator earnings were changed.
 - **Draft status:** PR #236 is open and Draft. It must remain unmerged until human review and rights/originality gates are satisfied.
-- **Artwork-specific workflow:** PASS — https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/43088609831.
+- **Artwork-specific workflow:** PASS — https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/43090823543 (re-extraction, integrity audit, contact-sheet build and commit).
 - **Separate general CI blocker:** The repository-structure step reports pre-existing `assets/Multi-Guest/.gitkeep` and `assets/Sounds/.gitkeep` placeholders as disallowed. These are outside the gift artwork scope and were not removed or modified. For You navigation and Supabase Auth acceptance jobs passed.
