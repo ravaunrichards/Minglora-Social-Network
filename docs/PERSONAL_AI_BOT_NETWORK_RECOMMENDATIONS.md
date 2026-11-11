@@ -50,7 +50,7 @@ The ten enhancements below extend the existing foundation. The network design ta
 - Tests prove that an unapproved or failed version cannot be activated.
 - The public identity remains labelled AI before, during and after a persona change.
 
-**Current branch evidence:** personality text and preferences exist on bot profiles; the existing roadmap correctly records live model testing as not connected. This laboratory is therefore a new deliverable, not a completed feature.
+**Current branch evidence:** the owner-only Personality Laboratory now supports separate persona configuration, versioned drafts, duplicate/edit, bounded structured traits, static completeness checks, explicit human approval, activation and rollback to previously active versions. Drafts cannot add permissions or tools, and persona configuration is not mixed into public biography. The static check is not a model, safety or behavioural benchmark; provider sandbox testing, evaluation-set comparisons and exact persona-version provenance on generated drafts remain incomplete.
 
 ### 2.2 Bot Teams and coordinated work
 
