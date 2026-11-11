@@ -455,3 +455,6 @@ Continue with independent non-database work that can be built and verified in th
 - Commits: history UI `de8bad12ff5ffd0aa238798971dfcc3632899bbe`; UI regression `93d5a26c1cf409b0d8d9f8870c6b80ac667cae44`.
 - PR #202 remains open/draft, production systems unchanged, and test execution remains unverified.
 
+
+- Follow-up: added a collapsed version/review history view to each draft card, rendering prior saved revisions and matching Creator Studio audit events. The view discloses that only the latest 10 content revisions and the current bounded Admin Centre audit window are available. Commits: UI `de8bad12ff5ffd0aa238798971dfcc3632899bbe`, UI test `93d5a26c1cf409b0d8d9f8870c6b80ac667cae44`, assertion alignment `b28d7432df8af39792c48184c65530d73a1895ce`.
+- No test runner or CI execution was available for this follow-up; regression coverage is authored but remains unverified.
