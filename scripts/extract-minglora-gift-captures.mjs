@@ -62,35 +62,114 @@ function categoryFor(name, matchedCategory) {
   for (const [category, pattern] of rules) if (pattern.test(n)) return category;
   return "other";
 }
-function animationProfile(category, seed) {
-  const profiles = {
-    flowers: ["petal-bloom","2.1s","sway"],
-    hearts: ["heart-pulse","1.25s","pulse"],
-    animals: ["creature-entrance","1.55s","bounce"],
-    vehicles: ["horizon-sweep","1.8s","glide"],
-    music: ["soundwave-ripple","1.35s","rhythm"],
-    sports: ["power-impact","1.35s","impact"],
-    food_drink: ["delight-pop","1.5s","pop"],
-    fashion_beauty: ["glam-spin","1.9s","shimmer"],
-    luxury: ["royal-shimmer","2.3s","shimmer"],
-    celebrations: ["celebration-burst","1.45s","burst"],
-    fantasy: ["cosmic-orbit","2.2s","orbit"],
-    nature: ["nature-rise","2.4s","float"],
-    travel: ["horizon-sweep","2.0s","glide"],
-    games: ["pixel-burst","1.2s","impact"],
-    community: ["warm-wave","1.8s","wave"],
-    symbols: ["spark-float","1.75s","float"],
-    seasonal: ["royal-shimmer","2.2s","shimmer"],
-    jamaican_culture: ["warm-wave","1.8s","wave"],
-    reactions: ["delight-pop","1.15s","pop"],
-    everyday: ["gift-reveal","1.7s","float"],
-    other: ["gift-reveal","1.7s","float"]
+function animationProfile(category, seed, name = "") {
+  const normalizedName = normalizeName(name);
+  // Prefer an object-specific motion when the recognized name clearly identifies
+  // the subject. Category profiles remain the safe fallback for ambiguous labels.
+  const namedProfiles = [
+    { pattern: /\b(?:firework|fireworks|sparkler|confetti|celebration|burst)\b/, profile: ["firework-burst", "2.3s", "burst", "sparkles"] },
+    { pattern: /\b(?:rocket|spaceship|space shuttle|launch|starship)\b/, profile: ["rocket-launch", "2.2s", "launch", "trail"] },
+    { pattern: /\b(?:airplane|plane|jet|helicopter|aircraft|hot air balloon)\b/, profile: ["sky-flight", "2.0s", "glide", "orbits"] },
+    { pattern: /\b(?:car|truck|bus|motorcycle|motorbike|bicycle|bike|race|racing|sports car)\b/, profile: ["speed-drift", "1.85s", "glide", "trail"] },
+    { pattern: /\b(?:butterfly|moth|dragonfly)\b/, profile: ["butterfly-flutter", "1.8s", "flutter", "petals"] },
+    { pattern: /\b(?:bird|falcon|eagle|owl|parrot|chicken|duck|goose|phoenix)\b/, profile: ["winged-flight", "1.65s", "flutter", "trail"] },
+    { pattern: /\b(?:cat|kitten|dog|puppy|lion|tiger|bear|panda|rabbit|bunny|fox|wolf|horse|frog|turtle|koala)\b/, profile: ["playful-creature", "1.55s", "bounce", "sparkles"] },
+    { pattern: /\b(?:rose|flower|bouquet|hibiscus|tulip|lily|orchid|petal|blossom|sunflower)\b/, profile: ["blossom-bloom", "2.1s", "bloom", "petals"] },
+    { pattern: /\b(?:heart|love|kiss|romance|cupid|valentine|hug)\b/, profile: ["heart-pulse", "1.25s", "pulse", "sparkles"] },
+    { pattern: /\b(?:crown|diamond|crystal|gem|gold|treasure|royal|palace|jewel)\b/, profile: ["royal-shimmer", "2.35s", "shimmer", "sparkles"] },
+    { pattern: /\b(?:balloon|cloud|moon|sun|star|rainbow|comet)\b/, profile: ["gentle-float", "2.3s", "float", "bubbles"] },
+    { pattern: /\b(?:guitar|drum|piano|keyboard|microphone|headphone|speaker|music|melody|concert|dj)\b/, profile: ["music-rhythm", "1.35s", "rhythm", "waves"] },
+    { pattern: /\b(?:ocean|sea|wave|fish|dolphin|whale|shark|boat|ship|yacht|sail)\b/, profile: ["ocean-drift", "2.2s", "wave", "waves"] },
+    { pattern: /\b(?:cake|cupcake|ice cream|coffee|tea|juice|pizza|burger|cherry|mango|watermelon|candy|food|drink)\b/, profile: ["sweet-pop", "1.5s", "pop", "bubbles"] },
+    { pattern: /\b(?:trophy|medal|champion|goal|victory|winner|award)\b/, profile: ["victory-impact", "1.45s", "impact", "rings"] },
+    { pattern: /\b(?:dragon|unicorn|wizard|magic|fairy|spell|galaxy|nebula|cosmic)\b/, profile: ["magic-orbit", "2.2s", "orbit", "sparkles"] }
+  ];
+  const named = namedProfiles.find(entry => entry.pattern.test(normalizedName));
+  const categoryProfiles = {
+    flowers: ["petal-bloom", "2.1s", "bloom", "petals"],
+    hearts: ["heart-pulse", "1.25s", "pulse", "sparkles"],
+    animals: ["creature-entrance", "1.55s", "bounce", "sparkles"],
+    vehicles: ["horizon-sweep", "1.8s", "glide", "trail"],
+    music: ["soundwave-ripple", "1.35s", "rhythm", "waves"],
+    sports: ["power-impact", "1.35s", "impact", "rings"],
+    food_drink: ["delight-pop", "1.5s", "pop", "bubbles"],
+    fashion_beauty: ["glam-spin", "1.9s", "spin", "sparkles"],
+    luxury: ["royal-shimmer", "2.3s", "shimmer", "sparkles"],
+    celebrations: ["celebration-burst", "1.45s", "burst", "sparkles"],
+    fantasy: ["cosmic-orbit", "2.2s", "orbit", "orbits"],
+    nature: ["nature-rise", "2.4s", "float", "petals"],
+    travel: ["horizon-sweep", "2.0s", "glide", "trail"],
+    games: ["pixel-burst", "1.2s", "impact", "rings"],
+    community: ["warm-wave", "1.8s", "wave", "waves"],
+    symbols: ["spark-float", "1.75s", "float", "sparkles"],
+    seasonal: ["seasonal-shimmer", "2.2s", "shimmer", "sparkles"],
+    jamaican_culture: ["island-wave", "1.8s", "wave", "waves"],
+    reactions: ["delight-pop", "1.15s", "pop", "sparkles"],
+    everyday: ["gift-reveal", "1.7s", "float", "bubbles"],
+    other: ["gift-reveal", "1.7s", "float", "sparkles"]
   };
-  const [preset, duration, motion] = profiles[category] || profiles.other;
-  return { preset, duration, motion, phase: -((seed % 1600) / 1000).toFixed(3) + "s" };
+  const [preset, duration, motion, effect] = named?.profile || categoryProfiles[category] || categoryProfiles.other;
+  return {
+    preset,
+    duration,
+    motion,
+    effect,
+    phase: -((seed % 1600) / 1000).toFixed(3) + "s",
+    phaseIndex: seed % 7
+  };
 }
+
+function makeEffectMarkup(effect, seed) {
+  const points = [[38,64],[218,60],[24,137],[232,148],[72,220],[184,218],[128,27]];
+  const delayFor = index => -(((seed + index * 317) % 1800) / 1000).toFixed(2) + "s";
+  if (effect === "petals") {
+    return points.slice(0,6).map((point,index) =>
+      '<ellipse class="gift-effect gift-effect-petal" cx="' + point[0] + '" cy="' + point[1] +
+      '" rx="3.8" ry="8" transform="rotate(' + (index * 53 + seed % 30) + ' ' + point[0] + ' ' + point[1] +
+      ')" style="animation-delay:' + delayFor(index) + '"/>'
+    ).join("");
+  }
+  if (effect === "waves") {
+    return [
+      '<path class="gift-effect gift-effect-wave" d="M12 94 Q24 82 36 94 T60 94" style="animation-delay:' + delayFor(0) + '"/>',
+      '<path class="gift-effect gift-effect-wave" d="M196 164 Q208 152 220 164 T244 164" style="animation-delay:' + delayFor(1) + '"/>',
+      '<path class="gift-effect gift-effect-wave" d="M82 238 Q94 226 106 238 T130 238" style="animation-delay:' + delayFor(2) + '"/>'
+    ].join("");
+  }
+  if (effect === "rings") {
+    return [0,1,2].map(index =>
+      '<circle class="gift-effect gift-effect-ring" cx="128" cy="128" r="' + (84 + index * 12) +
+      '" style="animation-delay:' + delayFor(index) + '"/>'
+    ).join("");
+  }
+  if (effect === "trail") {
+    return points.slice(0,6).map((point,index) =>
+      '<circle class="gift-effect gift-effect-dot" cx="' + point[0] + '" cy="' + point[1] +
+      '" r="' + (2.2 + ((seed + index) % 3)) + '" style="animation-delay:' + delayFor(index) + '"/>'
+    ).join("");
+  }
+  if (effect === "orbits") {
+    return [0,1,2].map(index =>
+      '<circle class="gift-effect gift-effect-orbit" cx="' + (128 + Math.cos(index * 2.1) * 96) +
+      '" cy="' + (128 + Math.sin(index * 2.1) * 96) + '" r="' + (3 + index) +
+      '" style="animation-delay:' + delayFor(index) + '"/>'
+    ).join("");
+  }
+  if (effect === "bubbles") {
+    return points.slice(0,6).map((point,index) =>
+      '<circle class="gift-effect gift-effect-bubble" cx="' + point[0] + '" cy="' + point[1] +
+      '" r="' + (3 + ((seed + index) % 4)) + '" style="animation-delay:' + delayFor(index) + '"/>'
+    ).join("");
+  }
+  return points.map((point,index) =>
+    '<path class="gift-effect gift-effect-spark" d="M0 -7 L2 -2 L7 0 L2 2 L0 7 L-2 2 L-7 0 L-2 -2 Z" transform="translate(' +
+    point[0] + ' ' + point[1] + ') scale(' + (0.72 + ((seed + index) % 5) * 0.08) +
+    ')" style="animation-delay:' + delayFor(index) + '"/>'
+  ).join("");
+}
+
 function makeAnimationSvg(name, posterDataUri, category, seed) {
-  const p = animationProfile(category, seed);
+  const p = animationProfile(category, seed, name);
   const escapedName = String(name).replace(/[&<>"]/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[ch]));
   const motion = {
     sway: "giftSway",
@@ -104,31 +183,58 @@ function makeAnimationSvg(name, posterDataUri, category, seed) {
     burst: "giftBurst",
     orbit: "giftOrbit",
     float: "giftFloat",
-    wave: "giftWave"
+    wave: "giftWave",
+    bloom: "giftBloom",
+    flutter: "giftFlutter",
+    launch: "giftLaunch",
+    spin: "giftSpin"
   }[p.motion] || "giftFloat";
-  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
-<title id="title">${escapedName} animated gift</title>
-<desc id="desc">Individual Minglora gift presentation animation. Original captured artwork is retained as the source.</desc>
-<defs><filter id="glow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="7" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
-<ellipse cx="128" cy="224" rx="56" ry="10" fill="#7c8db7" opacity=".22"/>
-<g class="gift-motion" style="transform-origin:128px 128px;animation:${motion} ${p.duration} ease-in-out infinite;animation-delay:${p.phase}">
-<image href="${posterDataUri}" xlink:href="${posterDataUri}" x="8" y="8" width="240" height="240" preserveAspectRatio="xMidYMid meet" filter="url(#glow)"/>
-</g>
-<style>
-@keyframes giftSway{0%,100%{transform:rotate(-5deg) translateY(2px) scale(.96)}50%{transform:rotate(5deg) translateY(-8px) scale(1.04)}}
-@keyframes giftPulse{0%,100%{transform:scale(.88)}45%{transform:scale(1.1)}70%{transform:scale(.97)}}
-@keyframes giftBounce{0%,100%{transform:translateY(4px) scale(.98)}38%{transform:translateY(-22px) scale(1.04)}55%{transform:translateY(1px) scale(.94)}}
-@keyframes giftGlide{0%,100%{transform:translateX(-8px) rotate(-2deg)}50%{transform:translateX(8px) rotate(2deg)}}
-@keyframes giftRhythm{0%,100%{transform:translateY(2px) rotate(-3deg) scale(.96)}25%{transform:translateY(-7px) rotate(3deg) scale(1.04)}50%{transform:translateY(0) rotate(-2deg) scale(.98)}75%{transform:translateY(-5px) rotate(2deg) scale(1.02)}}
-@keyframes giftImpact{0%,100%{transform:scale(.9) rotate(-4deg)}35%{transform:scale(1.12) rotate(4deg)}55%{transform:scale(.97) rotate(-2deg)}}
-@keyframes giftPop{0%,100%{transform:scale(.9) translateY(5px)}35%{transform:scale(1.12) translateY(-10px)}65%{transform:scale(.98) translateY(0)}}
-@keyframes giftShimmer{0%,100%{transform:rotate(-2deg) scale(.97);filter:brightness(1)}50%{transform:rotate(2deg) scale(1.06);filter:brightness(1.35)}}
-@keyframes giftBurst{0%,100%{transform:scale(.88) rotate(-4deg)}30%{transform:scale(1.12) rotate(5deg)}65%{transform:scale(1) rotate(-2deg)}}
-@keyframes giftOrbit{0%,100%{transform:rotate(-7deg) translateY(2px)}50%{transform:rotate(7deg) translateY(-9px)}}
-@keyframes giftFloat{0%,100%{transform:translateY(5px) scale(.97)}50%{transform:translateY(-10px) scale(1.04)}}
-@keyframes giftWave{0%,100%{transform:translateX(-4px) rotate(-3deg)}50%{transform:translateX(5px) rotate(3deg)}}
-@media(prefers-reduced-motion:reduce){.gift-motion{animation:none!important}}
-</style></svg>`;
+  const effects = makeEffectMarkup(p.effect, seed);
+  return [
+    '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">',
+    '<title id="title">' + escapedName + ' animated gift</title>',
+    '<desc id="desc">Individual Minglora gift presentation animation. Original captured artwork is retained as the source.</desc>',
+    '<defs><filter id="glow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="7" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>',
+    '<ellipse cx="128" cy="224" rx="56" ry="10" fill="#7c8db7" opacity=".22"/>',
+    '<g class="gift-effects" aria-hidden="true">' + effects + '</g>',
+    '<g class="gift-motion" data-preset="' + p.preset + '" style="transform-origin:128px 128px;animation:' + motion + ' ' + p.duration + ' ease-in-out infinite;animation-delay:' + p.phase + '">',
+    '<image href="' + posterDataUri + '" xlink:href="' + posterDataUri + '" x="8" y="8" width="240" height="240" preserveAspectRatio="xMidYMid meet" filter="url(#glow)"/>',
+    '</g>',
+    '<style>',
+    '@keyframes giftSway{0%,100%{transform:rotate(-5deg) translateY(2px) scale(.96)}50%{transform:rotate(5deg) translateY(-8px) scale(1.04)}}',
+    '@keyframes giftPulse{0%,100%{transform:scale(.88)}45%{transform:scale(1.1)}70%{transform:scale(.97)}}',
+    '@keyframes giftBounce{0%,100%{transform:translateY(4px) scale(.98)}38%{transform:translateY(-22px) scale(1.04)}55%{transform:translateY(1px) scale(.94)}}',
+    '@keyframes giftGlide{0%,100%{transform:translateX(-8px) rotate(-2deg)}50%{transform:translateX(8px) rotate(2deg)}}',
+    '@keyframes giftRhythm{0%,100%{transform:translateY(2px) rotate(-3deg) scale(.96)}25%{transform:translateY(-7px) rotate(3deg) scale(1.04)}50%{transform:translateY(0) rotate(-2deg) scale(.98)}75%{transform:translateY(-5px) rotate(2deg) scale(1.02)}}',
+    '@keyframes giftImpact{0%,100%{transform:scale(.9) rotate(-4deg)}35%{transform:scale(1.12) rotate(4deg)}55%{transform:scale(.97) rotate(-2deg)}}',
+    '@keyframes giftPop{0%,100%{transform:scale(.9) translateY(5px)}35%{transform:scale(1.12) translateY(-10px)}65%{transform:scale(.98) translateY(0)}}',
+    '@keyframes giftShimmer{0%,100%{transform:rotate(-2deg) scale(.97);filter:brightness(1)}50%{transform:rotate(2deg) scale(1.06);filter:brightness(1.35)}}',
+    '@keyframes giftBurst{0%,100%{transform:scale(.88) rotate(-4deg)}30%{transform:scale(1.12) rotate(5deg)}65%{transform:scale(1) rotate(-2deg)}}',
+    '@keyframes giftOrbit{0%,100%{transform:rotate(-7deg) translateY(2px)}50%{transform:rotate(7deg) translateY(-9px)}}',
+    '@keyframes giftFloat{0%,100%{transform:translateY(5px) scale(.97)}50%{transform:translateY(-10px) scale(1.04)}}',
+    '@keyframes giftWave{0%,100%{transform:translateX(-4px) rotate(-3deg)}50%{transform:translateX(5px) rotate(3deg)}}',
+    '@keyframes giftBloom{0%,100%{transform:scale(.84) rotate(-6deg)}48%{transform:scale(1.08) rotate(4deg)}72%{transform:scale(.98) rotate(-1deg)}}',
+    '@keyframes giftFlutter{0%,100%{transform:rotate(-8deg) scale(.96)}25%{transform:rotate(8deg) scale(1.02)}50%{transform:rotate(-6deg) scale(1.04)}75%{transform:rotate(7deg) scale(.98)}}',
+    '@keyframes giftLaunch{0%{transform:translateY(12px) scale(.88) rotate(-3deg)}55%{transform:translateY(-19px) scale(1.05) rotate(3deg)}100%{transform:translateY(0) scale(.98) rotate(0)}}',
+    '@keyframes giftSpin{0%,100%{transform:rotate(-8deg) scale(.96)}50%{transform:rotate(8deg) scale(1.06)}}',
+    '.gift-effect{opacity:.7;transform-box:fill-box;transform-origin:center}',
+    '.gift-effect-spark{fill:#f9df91;animation:giftEffectSpark 1.8s ease-in-out infinite}',
+    '.gift-effect-petal{fill:#f4a5c4;animation:giftEffectPetal 2.2s ease-in-out infinite}',
+    '.gift-effect-dot{fill:#9edcff;animation:giftEffectBubble 1.9s ease-in-out infinite}',
+    '.gift-effect-orbit{fill:#e8d2ff;animation:giftEffectOrbit 2.4s ease-in-out infinite}',
+    '.gift-effect-bubble{fill:#aee8e1;animation:giftEffectBubble 2s ease-in-out infinite}',
+    '.gift-effect-ring{fill:none;stroke:#f7d98b;stroke-width:2;opacity:.42;animation:giftEffectRing 2s ease-out infinite}',
+    '.gift-effect-wave{fill:none;stroke:#a7d9f4;stroke-width:3;stroke-linecap:round;stroke-dasharray:7 6;animation:giftEffectWave 2s linear infinite}',
+    '@keyframes giftEffectSpark{0%,100%{opacity:.16;transform:scale(.45) rotate(0)}50%{opacity:.9;transform:scale(1.05) rotate(45deg)}}',
+    '@keyframes giftEffectPetal{0%,100%{opacity:.22;transform:translateY(3px) rotate(-8deg)}50%{opacity:.8;transform:translateY(-5px) rotate(8deg)}}',
+    '@keyframes giftEffectBubble{0%,100%{opacity:.25;transform:translateY(5px) scale(.85)}50%{opacity:.85;transform:translateY(-7px) scale(1.08)}}',
+    '@keyframes giftEffectOrbit{0%{opacity:.2;transform:scale(.7)}50%{opacity:.9;transform:scale(1.2)}100%{opacity:.2;transform:scale(.7)}}',
+    '@keyframes giftEffectRing{0%{opacity:.5;transform:scale(.82)}100%{opacity:0;transform:scale(1.15)}}',
+    '@keyframes giftEffectWave{0%,100%{opacity:.25;stroke-dashoffset:0}50%{opacity:.85;stroke-dashoffset:26}}',
+    '@media(prefers-reduced-motion:reduce){.gift-motion{animation:none!important}.gift-effects>*{animation:none!important}}',
+    '</style>',
+    '</svg>'
+  ].join('\n');
 }
 function edgeBackground(raw, width, height, channels) {
   const counts = new Map();
@@ -258,7 +364,7 @@ async function processScreenshot(file, catalogByName) {
       const code=match?.code||slugify(originalName)+"-"+hash(normalizeName(originalName));
       const posterName="poster.webp";
       const seed=parseInt(hash(code),16)>>>0;
-      const profile=animationProfile(category,seed);
+      const profile=animationProfile(category,seed,originalName);
       // Hold each crop until duplicate names are resolved; the best OCR source wins.
       const posterBuffer=await sharp(rgba,{raw:{width:cropWidth,height:cropHeight,channels:4}})
         .resize(256,256,{fit:"contain",background:{r:0,g:0,b:0,alpha:0}})
