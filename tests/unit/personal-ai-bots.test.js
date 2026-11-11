@@ -1324,8 +1324,9 @@ test('multilingual evaluation sets store synthetic cases and owner-attested revi
     decision:'approve',
     reviewerRole:'native_speaker',
     evidenceReference:'review-record-jam-2026-01',
-    reviewNotes:'Human reviewer recorded sample-level comments.',
-    reviewerAttestation:true
+    reviewNotes:'Owner recorded sample-level comments.',
+    reviewerAttestation:true,
+    reviewRubric:{semanticAccuracy:4,dialectFidelity:3,contextPreservation:4,codeSwitching:3,safetyMeaning:4}
   },actor,stamp,uid);
   assert.equal(reviewed.status,'owner_review_recorded');
   assert.equal(reviewed.reviewStatus,'approve');
@@ -1333,6 +1334,7 @@ test('multilingual evaluation sets store synthetic cases and owner-attested revi
   assert.equal(reviewed.providerExecutionStatus,'not_run');
   assert.equal(reviewed.languageQualityStatus,'unverified');
   assert.equal(reviewed.reviewEvidenceReference,'review-record-jam-2026-01');
+  assert.deepEqual(reviewed.reviewRubric,{semanticAccuracy:4,dialectFidelity:3,contextPreservation:4,codeSwitching:3,safetyMeaning:4});
   assert.equal(db.personalAiBotTasks.length,0);
   assert.equal(bot.languages[0],'English');
 });
@@ -1365,7 +1367,8 @@ test('editing evaluation cases requires renewed privacy attestation and clears e
   submitPersonalAiBotLanguageEvaluationSet(db,bot.id,set.id,actor,stamp,uid);
   reviewPersonalAiBotLanguageEvaluationSet(db,bot.id,set.id,{
     decision:'changes_requested',reviewerRole:'qualified_language_reviewer',
-    evidenceReference:'review-comments-record-01',reviewerAttestation:true
+    evidenceReference:'review-comments-record-01',reviewerAttestation:true,
+    reviewRubric:{semanticAccuracy:2,dialectFidelity:2,contextPreservation:3,codeSwitching:2,safetyMeaning:4}
   },actor,stamp,uid);
   assert.throws(()=>updatePersonalAiBotLanguageEvaluationSet(db,bot.id,set.id,{
     cases:makeSyntheticLanguageCases('Changed case')
