@@ -579,13 +579,16 @@ test('Creator Studio exposes read-only previous-version and review audit history
   assert.match(ui,/<details class="pab-creator-history"/);
 });
 
-test('approved Creator Studio feed drafts transfer to the existing composer with disclosure and a human publish gate',async()=>{
+test('approved Creator Studio Feed and Story drafts transfer to existing composers with disclosure and human publish gates',async()=>{
   const [admin,app,index,worker,styles]=await Promise.all([
     read('public/personal-ai-bots.js'),read('public/app.js'),read('public/index.html'),
     read('public/sw.js'),read('public/styles.css')
   ]);
   assert.match(admin,/draft\.status==='approved_for_human_handoff'/);
   assert.match(admin,/draft\.contentFormat==='feed_post'&&draft\.destination==='feed'/);
+  assert.match(admin,/draft\.contentFormat==='story'&&draft\.destination==='story'/);
+  assert.match(admin,/const characterLimit=isStoryDraft\?1000:5000/);
+  assert.match(admin,/press '\+publishAction/);
   assert.match(admin,/window\.open\('\/','_blank'\)/);
   assert.match(admin,/MINGLORA_CREATOR_DRAFT_HANDOFF/);
   assert.match(admin,/press Share post/);
@@ -595,6 +598,14 @@ test('approved Creator Studio feed drafts transfer to the existing composer with
   assert.match(app,/AI-assisted content draft from /);
   assert.match(app,/Nothing is shared until you press Share post/);
   assert.match(app,/asset reference\(s\) were not attached/);
+  assert.match(app,/payload\.contentFormat==='story'&&payload\.destination==='story'/);
+  assert.match(app,/1,000-character limit of the existing Minglora Story composer/);
+  const storyComposer=app.slice(app.indexOf('function openStoryComposer(options={})'),app.indexOf('async function openStory('));
+  assert.match(storyComposer,/creator-ai-handoff-notice/);
+  assert.match(storyComposer,/Publish story/);
+  assert.match(storyComposer,/api\('\/stories'/);
+  assert.match(storyComposer,/storyText\.value=initialText/);
+  assert.doesNotMatch(receiver,/api\(['"]\/stories/);
   assert.match(admin,/assetReferenceCount:Array\.isArray\(draft\.assetReferences\)/);
   const receiver=app.slice(app.indexOf('function applyPendingCreatorDraftHandoff'),app.indexOf('function openVideoComposer'));
   assert.doesNotMatch(receiver,/api\(['"]\/posts/);
