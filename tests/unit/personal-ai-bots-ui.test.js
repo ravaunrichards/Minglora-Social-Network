@@ -400,3 +400,18 @@ test('provider and email pagination labels never imply a total record count',asy
   assert.match(source,/id="pab-load-more-provider-runtime"/);
   assert.match(source,/id="pab-load-more-emails"/);
 });
+
+
+test('activity schedule UI offers a read-only timezone-aware dry-run preview',async()=>{
+  const ui=await read('public/personal-ai-bots.js');
+  for(const phrase of [
+    'Preview next 14 days',
+    'pab-preview-schedule',
+    'previewBotSchedule',
+    'schedule-preview?days=14',
+    'Upcoming local activity windows',
+    'Dry-run schedule preview only. No tasks were dispatched.',
+    'Scheduler:</strong> not connected.',
+    'Dispatch:</strong> disabled.'
+  ]) assert.ok(ui.includes(phrase),phrase);
+});
