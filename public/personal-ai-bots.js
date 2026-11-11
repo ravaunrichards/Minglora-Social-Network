@@ -175,9 +175,16 @@
 
   function teamCard(team){
     const members=Array.isArray(team.members)?team.members:[];
+    const memberIds=new Set(members.map(member=>String(member.botId)));
+    const memberOptions=members.map(member=>'<option value="'+esc(member.botId)+'">'+esc(member.botName||'AI bot')+'</option>').join('');
     const memberRows=members.map(member=>'<div class="pab-team-member"><span>'+esc(member.botName)+' <small>AI identity</small></span><button type="button" class="pab-btn secondary pab-team-remove" data-team="'+esc(team.id)+'" data-bot="'+esc(member.botId)+'">Remove</button></div>').join('');
-    const options=(state.bots||[]).map(bot=>'<option value="'+esc(bot.id)+'">'+esc(bot.displayName)+' (@'+esc(bot.username||'AI')+')</option>').join('');
-    return '<article class="pab-team-card" data-team-card="'+esc(team.id)+'"><div class="pab-team-top"><div><span class="pab-tag">BOT TEAM</span><span class="pab-status '+(team.status==='enabled'?'':'off')+'">'+esc(team.status||'disabled')+'</span></div><select class="pab-select pab-team-status" data-team="'+esc(team.id)+'"><option value="enabled" '+(team.status==='enabled'?'selected':'')+'>Enabled</option><option value="paused" '+(team.status==='paused'?'selected':'')+'>Paused</option><option value="disabled" '+(team.status==='disabled'?'selected':'')+'>Disabled</option></select></div><div class="pab-field"><label>Team name</label><input class="pab-input pab-team-name" data-team="'+esc(team.id)+'" maxlength="64" value="'+esc(team.name)+'"></div><div class="pab-field"><label>Description</label><textarea class="pab-textarea pab-team-description" data-team="'+esc(team.id)+'" maxlength="600">'+esc(team.description||'')+'</textarea></div><div class="pab-actions"><button type="button" class="pab-btn secondary pab-team-save" data-team="'+esc(team.id)+'">Save team</button><strong>'+members.length+' AI bot(s)</strong></div><div class="pab-team-members">'+(memberRows||'<div class="pab-empty">No bots assigned to this team.</div>')+'</div><div class="pab-field"><label>Add bots to this team</label><select multiple size="4" class="pab-select pab-team-candidates" data-team="'+esc(team.id)+'">'+options+'</select><small class="pab-notice">Only bots you manage can be assigned. A bot may belong to multiple teams. Team membership does not activate the bot.</small></div><button type="button" class="pab-btn pab-team-assign" data-team="'+esc(team.id)+'">Assign selected bots</button></article>';
+    const candidateOptions=(state.bots||[]).map(bot=>'<option value="'+esc(bot.id)+'">'+esc(bot.displayName)+' (@'+esc(bot.username||'AI')+')</option>').join('');
+    const sourceTasks=(state.tasks||[]).filter(task=>memberIds.has(String(task.botId))&&!['cancelled','rejected'].includes(task.status));
+    const sourceOptions=sourceTasks.map(task=>'<option value="'+esc(task.id)+'" data-sender="'+esc(task.botId)+'">'+esc(task.botName||'AI bot')+' · '+esc(task.taskType||'task')+' · '+esc(String(task.instruction||'').slice(0,90))+'</option>').join('');
+    const handoffForm=members.length>1
+      ?'<details class="pab-team-handoff-create-panel"><summary>Create a task handoff</summary><p class="pab-notice">One receiving bot only. Handoffs are reviewed by the owner, remain inside the team context and are never automatically dispatched.</p><div class="pab-field"><label>Existing source task</label><select class="pab-select pab-handoff-source" data-team="'+esc(team.id)+'"><option value="">Select source task</option>'+sourceOptions+'</select></div><div class="pab-field"><label>Receiving bot</label><select class="pab-select pab-handoff-receiver" data-team="'+esc(team.id)+'"><option value="">Select one receiver</option>'+memberOptions+'</select></div><div class="pab-field"><label>Handoff summary</label><input class="pab-input pab-handoff-summary" data-team="'+esc(team.id)+'" maxlength="1200" placeholder="Brief purpose of the handoff"></div><div class="pab-field"><label>Required input</label><textarea class="pab-textarea pab-handoff-input" data-team="'+esc(team.id)+'" maxlength="2500" placeholder="What approved information should the receiver review?"></textarea></div><div class="pab-field"><label>Expected output</label><textarea class="pab-textarea pab-handoff-output" data-team="'+esc(team.id)+'" maxlength="800" placeholder="What should the reviewer return?"></textarea></div><div class="pab-field"><label>Context scope</label><select class="pab-select pab-handoff-context" data-team="'+esc(team.id)+'"><option value="team_internal">Team-internal approved context</option><option value="public">Public context only</option></select></div><div class="pab-field"><label>Optional deadline (local time)</label><input class="pab-input pab-handoff-deadline" data-team="'+esc(team.id)+'" type="datetime-local"></div><button type="button" class="pab-btn pab-team-handoff-create" data-team="'+esc(team.id)+'">Create handoff for owner review</button></details>'
+      :'<p class="pab-notice">Assign at least two bots before creating team handoffs.</p>';
+    return '<article class="pab-team-card" data-team-card="'+esc(team.id)+'"><div class="pab-team-top"><div><span class="pab-tag">BOT TEAM</span><span class="pab-status '+(team.status==='enabled'?'':'off')+'">'+esc(team.status||'disabled')+'</span></div><select class="pab-select pab-team-status" data-team="'+esc(team.id)+'"><option value="enabled" '+(team.status==='enabled'?'selected':'')+'>Enabled</option><option value="paused" '+(team.status==='paused'?'selected':'')+'>Paused</option><option value="disabled" '+(team.status==='disabled'?'selected':'')+'>Disabled</option></select></div><div class="pab-field"><label>Team name</label><input class="pab-input pab-team-name" data-team="'+esc(team.id)+'" maxlength="64" value="'+esc(team.name)+'"></div><div class="pab-field"><label>Description</label><textarea class="pab-textarea pab-team-description" data-team="'+esc(team.id)+'" maxlength="600">'+esc(team.description||'')+'</textarea></div><div class="pab-actions"><button type="button" class="pab-btn secondary pab-team-save" data-team="'+esc(team.id)+'">Save team</button><strong>'+members.length+' AI bot(s)</strong></div><div class="pab-team-members">'+(memberRows||'<div class="pab-empty">No bots assigned to this team.</div>')+'</div><div class="pab-field"><label>Add bots to this team</label><select multiple size="4" class="pab-select pab-team-candidates" data-team="'+esc(team.id)+'">'+candidateOptions+'</select><small class="pab-notice">Only bots you manage can be assigned. A bot may belong to multiple teams. Team membership does not activate the bot.</small></div><button type="button" class="pab-btn pab-team-assign" data-team="'+esc(team.id)+'">Assign selected bots</button>'+handoffForm+'<div class="pab-divider"></div><div class="pab-heading"><div><h4>Team handoffs</h4><p>Owner-reviewed handoffs only. No bot execution or external actions occur.</p></div><button type="button" class="pab-btn secondary pab-team-handoff-load" data-team="'+esc(team.id)+'">Load handoff history</button></div><div class="pab-team-handoff-list" data-handoffs="'+esc(team.id)+'" aria-live="polite"><div class="pab-empty">Load handoff history to view owner-reviewed records.</div></div></article>';
   }
 
   function taskCard(task){
@@ -361,6 +368,9 @@
     document.querySelectorAll('.pab-team-save').forEach(node=>node.addEventListener('click',()=>saveTeam(node.dataset.team)));
     document.querySelectorAll('.pab-team-assign').forEach(node=>node.addEventListener('click',()=>assignTeamMembers(node.dataset.team)));
     document.querySelectorAll('.pab-team-remove').forEach(node=>node.addEventListener('click',()=>removeTeamMember(node.dataset.team,node.dataset.bot)));
+    document.querySelectorAll('.pab-team-handoff-create').forEach(node=>node.addEventListener('click',()=>createTeamHandoff(node.dataset.team)));
+    document.querySelectorAll('.pab-team-handoff-load').forEach(node=>node.addEventListener('click',()=>loadTeamHandoffs(node.dataset.team)));
+
 
     document.querySelector('#pab-category-form')?.addEventListener('submit',createCategory);
     document.querySelector('#pab-bot-filter')?.addEventListener('input',filterBots);
@@ -455,6 +465,69 @@
     try{await request(API+'/teams/'+encodeURIComponent(teamId)+'/members/'+encodeURIComponent(botId),{method:'DELETE'});notice('pab-team-status','Bot removed from team.','success');await refresh();}
     catch(error){notice('pab-team-status',error.message,'error');}
   }
+  function teamHandoffRow(teamId,handoff){
+    const pending=handoff.status==='pending_owner_review';
+    const accepted=handoff.status==='accepted';
+    const open=pending||accepted;
+    const actions=(pending?'<button type="button" class="pab-btn secondary pab-handoff-action" data-team="'+esc(teamId)+'" data-handoff="'+esc(handoff.id)+'" data-action="accept">Accept</button><button type="button" class="pab-btn secondary pab-handoff-action" data-team="'+esc(teamId)+'" data-handoff="'+esc(handoff.id)+'" data-action="reject">Reject</button>':'')+
+      (open?'<button type="button" class="pab-btn danger pab-handoff-action" data-team="'+esc(teamId)+'" data-handoff="'+esc(handoff.id)+'" data-action="cancel">Cancel</button>':'')+
+      (accepted?'<button type="button" class="pab-btn secondary pab-handoff-action" data-team="'+esc(teamId)+'" data-handoff="'+esc(handoff.id)+'" data-action="complete">Record human-reviewed completion</button>':'');
+    return '<article class="pab-task"><div><h4>'+esc(handoff.summary||'Team handoff')+'</h4><p>'+esc(handoff.requiredInput||'')+'</p><div class="pab-task-meta"><span>'+esc(String(handoff.status||'unknown').replaceAll('_',' '))+'</span><span>Receiver: '+esc((state.bots||[]).find(bot=>bot.id===handoff.receivingBotId)?.displayName||handoff.receivingBotId)+'</span><span>Scope: '+esc(handoff.contextScope||'team_internal')+'</span><span>Dispatch: not dispatched</span></div>'+(accepted?'<div class="pab-field"><label>Human-reviewed result summary</label><textarea class="pab-textarea pab-handoff-result" data-handoff="'+esc(handoff.id)+'" maxlength="1200" placeholder="Record the result reviewed by the owner"></textarea></div>':'')+(handoff.resultSummary?'<p><strong>Recorded outcome:</strong> '+esc(handoff.resultSummary)+'</p>':'')+'</div><div class="pab-actions">'+actions+'</div></article>';
+  }
+
+  async function loadTeamHandoffs(teamId){
+    const target=document.querySelector('.pab-team-handoff-list[data-handoffs="'+CSS.escape(teamId)+'"]');
+    if(!target)return;
+    target.innerHTML='<p class="pab-notice">Loading team handoffs…</p>';
+    try{
+      const result=await request(API+'/teams/'+encodeURIComponent(teamId)+'/handoffs');
+      const handoffs=Array.isArray(result.handoffs)?result.handoffs:[];
+      target.innerHTML=handoffs.length?handoffs.map(item=>teamHandoffRow(teamId,item)).join():'<div class="pab-empty">No handoffs have been created for this team.</div>';
+      target.querySelectorAll('.pab-handoff-action').forEach(node=>node.addEventListener('click',()=>reviewTeamHandoff(teamId,node.dataset.handoff,node.dataset.action)));
+    }catch(error){target.innerHTML='<p class="pab-notice error">'+esc(error.message||'Could not load team handoff history.')+'</p>';}
+  }
+
+  async function createTeamHandoff(teamId){
+    const card=document.querySelector('[data-team-card="'+CSS.escape(teamId)+'"]');
+    if(!card)return;
+    const source=card.querySelector('.pab-handoff-source');
+    const selected=source?.selectedOptions?.[0];
+    const sourceTaskId=source?.value||'';
+    const senderBotId=selected?.dataset.sender||'';
+    const payload={
+      sourceTaskId,senderBotId,
+      receivingBotId:card.querySelector('.pab-handoff-receiver')?.value||'',
+      summary:card.querySelector('.pab-handoff-summary')?.value||'',
+      requiredInput:card.querySelector('.pab-handoff-input')?.value||'',
+      expectedOutput:card.querySelector('.pab-handoff-output')?.value||'',
+      contextScope:card.querySelector('.pab-handoff-context')?.value||'team_internal'
+    };
+    const deadline=card.querySelector('.pab-handoff-deadline')?.value||'';
+    if(deadline){
+      const instant=new Date(deadline);
+      if(!Number.isFinite(instant.getTime())){notice('pab-team-status','Enter a valid handoff deadline.','error');return;}
+      payload.deadlineAt=instant.toISOString();
+    }
+    try{
+      await request(API+'/teams/'+encodeURIComponent(teamId)+'/handoffs',{method:'POST',body:JSON.stringify(payload)});
+      notice('pab-team-status','Handoff created for owner review. No bot was dispatched.','success');
+      await loadTeamHandoffs(teamId);
+    }catch(error){notice('pab-team-status',error.message||'Could not create handoff.','error');}
+  }
+
+  async function reviewTeamHandoff(teamId,handoffId,action){
+    const card=document.querySelector('[data-team-card="'+CSS.escape(teamId)+'"]');
+    const payload={};
+    if(action==='complete'){
+      payload.resultSummary=card?.querySelector('.pab-handoff-result[data-handoff="'+CSS.escape(handoffId)+'"]')?.value||'';
+    }
+    try{
+      await request(API+'/teams/'+encodeURIComponent(teamId)+'/handoffs/'+encodeURIComponent(handoffId)+'/'+action,{method:'POST',body:JSON.stringify(payload)});
+      notice('pab-team-status','Handoff '+action+' recorded by the owner. No bot execution occurred.','success');
+      await loadTeamHandoffs(teamId);
+    }catch(error){notice('pab-team-status',error.message||'Could not update handoff.','error');}
+  }
+
   async function saveCapacity(){
     const enabled=!!document.querySelector('#pab-master-switch')?.checked;
     const hybridEnabled=!!document.querySelector('#pab-hybrid-switch')?.checked;
