@@ -1176,6 +1176,160 @@ export function emergencyShutdownPersonalAiBots(db, actorId, timestamp, uid) {
   return {ok:true,paused,cancelled,network:settings};
 }
 
+const AI_SCHEDULE_WEEKDAYS = Object.freeze({Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6,Sun:7});
+
+function aiScheduleZonedParts(date, formatter) {
+  const raw = Object.fromEntries(formatter.formatToParts(date).map(part => [part.type, part.value]));
+  return {
+    year:Number(raw.year), month:Number(raw.month), day:Number(raw.day),
+    hour:Number(raw.hour), minute:Number(raw.minute),
+    weekday:AI_SCHEDULE_WEEKDAYS[raw.weekday]
+  };
+}
+
+function aiScheduleLocalTimeToUtc(dateParts, localTime, formatter) {
+  const [hour, minute] = localTime.split(':').map(Number);
+  const targetWallTime = Date.UTC(dateParts.year, dateParts.month - 1, dateParts.day, hour, minute);
+  const possibleOffsets = new Set();
+
+  // Sample both sides of nearby timezone transitions. This detects normal,
+  // half-hour and one-hour DST offsets without assuming a fixed UTC offset.
+  for (const offsetHours of [-36,-24,-12,0,12,24,36]) {
+    const sampleInstant = targetWallTime + offsetHours * 60 * 60 * 1000;
+    const sampleParts = aiScheduleZonedParts(new Date(sampleInstant), formatter);
+    const representedWallTime = Date.UTC(
+      sampleParts.year, sampleParts.month - 1, sampleParts.day,
+      sampleParts.hour, sampleParts.minute
+    );
+    possibleOffsets.add(representedWallTime - sampleInstant);
+  }
+
+  const candidates = [...possibleOffsets]
+    .map(offset => targetWallTime - offset)
+    .filter(instant => {
+      const actual = aiScheduleZonedParts(new Date(instant), formatter);
+      return actual.year === dateParts.year &&
+        actual.month === dateParts.month &&
+        actual.day === dateParts.day &&
+        actual.hour === hour &&
+        actual.minute === minute;
+    })
+    .sort((a,b) => a-b);
+
+  // A missing wall time during a spring-forward transition has no candidate.
+  // A repeated wall time during a fall-back transition selects the earlier instant.
+  return candidates.length ? new Date(candidates[0]) : null;
+}
+
+export function previewPersonalAiBotSchedule(schedule, options = {}) {
+  const from = options.from === undefined ? new Date() : new Date(options.from);
+  const days = Number(options.days === undefined ? 14 : options.days);
+  if (!Number.isFinite(from.getTime())) {
+    throw Object.assign(new Error('Schedule preview start time is invalid.'), {status:400});
+  }
+  if (!Number.isInteger(days) || days < 1 || days > 60) {
+    throw Object.assign(new Error('Schedule preview must cover between 1 and 60 local calendar days.'), {status:400});
+  }
+  if (!schedule || typeof schedule !== 'object' || Array.isArray(schedule)) {
+    throw Object.assign(new Error('A valid bot activity schedule is required.'), {status:400});
+  }
+  const selectedDays = Array.isArray(schedule.daysOfWeek) ? [...new Set(schedule.daysOfWeek)] : [];
+  const validTime = value => typeof value === 'string' && /^([01]\\d|2[0-3]):[0-5]\\d$/.test(value);
+  if (selectedDays.length < 1 || selectedDays.length > 7 ||
+      selectedDays.some(day => !Number.isInteger(day) || day < 1 || day > 7) ||
+      !validTime(schedule.startTime) || !validTime(schedule.endTime)) {
+    throw Object.assign(new Error('The activity schedule days or local time window is invalid.'), {status:400});
+  }
+  const timezone = String(schedule.timezone || '').trim();
+  if (!timezone || timezone.length > 80) {
+    throw Object.assign(new Error('Choose a valid IANA schedule timezone.'), {status:400});
+  }
+
+  let formatter;
+  try {
+    formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone:timezone, calendar:'iso8601', numberingSystem:'latn',
+      weekday:'short', year:'numeric', month:'2-digit', day:'2-digit',
+      hour:'2-digit', minute:'2-digit', hourCycle:'h23'
+    });
+    formatter.format(from);
+  } catch {
+    throw Object.assign(new Error('Choose a valid IANA schedule timezone.'), {status:400});
+  }
+
+  const dailyTaskLimit = Number(schedule.maxTasksPerDay || 0);
+  if (!Number.isInteger(dailyTaskLimit) || dailyTaskLimit < 0 || dailyTaskLimit > 500) {
+    throw Object.assign(new Error('Daily task cap must be between 0 and 500.'), {status:400});
+  }
+
+  const firstLocalDay = aiScheduleZonedParts(from, formatter);
+  const firstCivilDate = Date.UTC(firstLocalDay.year, firstLocalDay.month - 1, firstLocalDay.day);
+  const slots = [];
+  const skippedWindows = [];
+  const pad = value => String(value).padStart(2,'0');
+  const toDateParts = civil => ({
+    year:civil.getUTCFullYear(), month:civil.getUTCMonth()+1, day:civil.getUTCDate()
+  });
+  const toDateString = parts => parts.year+'-'+pad(parts.month)+'-'+pad(parts.day);
+  const startFrom = from.getTime();
+  const overnight = schedule.endTime < schedule.startTime;
+
+  for (let offset = 0; offset < days; offset += 1) {
+    const civil = new Date(firstCivilDate + offset * 86400000);
+    const weekday = ((civil.getUTCDay() + 6) % 7) + 1;
+    if (!selectedDays.includes(weekday)) continue;
+
+    const dateParts = toDateParts(civil);
+    const localDate = toDateString(dateParts);
+    const startUtc = aiScheduleLocalTimeToUtc(dateParts, schedule.startTime, formatter);
+    if (!startUtc) {
+      skippedWindows.push({date:localDate, localStart:localDate+'T'+schedule.startTime, reason:'nonexistent_local_time'});
+      continue;
+    }
+    if (startUtc.getTime() < startFrom) {
+      skippedWindows.push({date:localDate, localStart:localDate+'T'+schedule.startTime, reason:'window_already_started'});
+      continue;
+    }
+
+    const endCivil = new Date(firstCivilDate + (offset + (overnight ? 1 : 0)) * 86400000);
+    const endDateParts = toDateParts(endCivil);
+    const endUtc = aiScheduleLocalTimeToUtc(endDateParts, schedule.endTime, formatter);
+    if (!endUtc) {
+      skippedWindows.push({date:localDate, localStart:localDate+'T'+schedule.startTime, reason:'nonexistent_local_end_time'});
+      continue;
+    }
+    if (endUtc.getTime() <= startUtc.getTime()) {
+      skippedWindows.push({date:localDate, localStart:localDate+'T'+schedule.startTime, reason:'zero_length_or_invalid_window'});
+      continue;
+    }
+
+    slots.push({
+      localDate,
+      weekday,
+      timezone,
+      startLocal:localDate+'T'+schedule.startTime,
+      endLocal:toDateString(endDateParts)+'T'+schedule.endTime,
+      startsAtUtc:startUtc.toISOString(),
+      endsAtUtc:endUtc.toISOString()
+    });
+  }
+
+  return {
+    previewOnly:true,
+    dispatchEnabled:false,
+    dispatchStatus:'not_connected',
+    timezone,
+    from:from.toISOString(),
+    rangeDays:days,
+    daysOfWeek:selectedDays.sort((a,b)=>a-b),
+    dailyTaskLimit,
+    slots,
+    nextRun:slots[0]||null,
+    skippedWindows,
+    message:'Dry-run schedule preview only. No scheduler is connected and no tasks were dispatched.'
+  };
+}
+
 export function getPersonalAiBotOverview(db) {
   const settings=ensurePersonalAiBotCollections(db);
   const bots=db.personalAiBots;
