@@ -1285,15 +1285,30 @@ let refreshLiveGiftGrid=null;
 let liveDirectoryFilter='all';
 const MINGLORA_FAN_CLUB_GIFT_CODES=Object.freeze(['heart-me-2mk7ob','community-heart-mg6zzi','blue-heart-19gp9xp','flame-heart-yv4ovw','fan-1avs41e']);
 const LIVE_SCREEN_LAYOUT_OPTIONS=Object.freeze([
-  {value:'full-screen',label:'Full Screen',icon:'fullscreen'},
-  {value:'fluid-panel',label:'Fluid Panel',icon:'featured'},
-  {value:'fluid-grid',label:'Fluid Grid',icon:'grid'},
-  {value:'fixed-grid',label:'Fixed Grid',icon:'grid'},
-  {value:'fixed-panel',label:'Fixed Panel',icon:'columns'},
-  {value:'side-by-side',label:'Side by Side',icon:'columns'},
+  {value:'solo-host',label:'Solo Host',icon:'host'},
+  {value:'side-by-side',label:'Side-by-Side',icon:'columns'},
+  {value:'grid-2x2',label:'2x2 Grid',icon:'grid'},
+  {value:'grid-3x2',label:'3x2 Grid',icon:'grid'},
+  {value:'grid-3x3',label:'3x3 Grid',icon:'grid'},
   {value:'spotlight',label:'Spotlight',icon:'host'},
-  {value:'roundtable-1',label:'Roundtable 1',icon:'stack'},
-  {value:'roundtable-2',label:'Roundtable 2',icon:'match'}
+  {value:'picture-in-picture',label:'Picture-in-Picture',icon:'featured'},
+  {value:'vertical-panels',label:'Vertical Panels',icon:'columns'},
+  {value:'pk-battle',label:'PK Battle',icon:'match'},
+  {value:'audio-guest-panel',label:'Audio Guest Panel',icon:'stack'},
+  {value:'full-screen',label:'Full-Screen Host',icon:'fullscreen'},
+  {value:'fixed-grid',label:'Equal-Sized Guest Grid',icon:'grid'},
+  {value:'fluid-panel',label:'Host-Focused Grid',icon:'featured'},
+  {value:'fixed-panel',label:'Speaker-Focused Layout',icon:'host'},
+  {value:'floating-guest-window',label:'Floating Guest Window',icon:'featured'},
+  {value:'horizontal-guest-strip',label:'Horizontal Guest Strip',icon:'stack'},
+  {value:'vertical-guest-strip',label:'Vertical Guest Strip',icon:'columns'},
+  {value:'stage-layout',label:'Stage Layout',icon:'host'},
+  {value:'roundtable-1',label:'Roundtable Layout',icon:'stack'},
+  {value:'fluid-grid',label:'Audience Gallery',icon:'grid'},
+  {value:'screen-sharing-layout',label:'Screen-Sharing Layout',icon:'featured'},
+  {value:'host-chat-split',label:'Host-and-Chat Split Layout',icon:'columns'},
+  {value:'dual-host',label:'Dual-Host Layout',icon:'match'},
+  {value:'roundtable-2',label:'Multi-Host Layout',icon:'match'}
 ]);
 let activeLiveScreenLayout='full-screen';
 function normalizeLiveScreenLayout(value){const candidate=String(value||'full-screen');return LIVE_SCREEN_LAYOUT_OPTIONS.some(option=>option.value===candidate)?candidate:'full-screen';}

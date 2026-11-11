@@ -11,7 +11,7 @@ const styles = fs.readFileSync(path.join(root, 'public/styles.css'), 'utf8');
 const compact = fs.readFileSync(path.join(root, 'public/live-room-compact.css'), 'utf8');
 const liveSettings = fs.readFileSync(path.join(root, 'backend/modules/live/settings.js'), 'utf8');
 
-test('LIVE has nine host-selectable screen layouts with a safe default', () => {
+test('LIVE has 24 host-selectable screen layouts with a safe default', () => {
   assert.ok(app.includes('const LIVE_SCREEN_LAYOUT_OPTIONS=Object.freeze'), 'missing layout preset registry');
   for (const layout of ['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight','roundtable-1','roundtable-2']) {
     assert.ok(app.includes("value:'" + layout + "'"), 'missing ' + layout + ' layout');
@@ -150,8 +150,8 @@ test('Every Full Screen LIVE control icon has its expected working event handler
 });;
 
 test('Full Screen has its own expand icon with no guest panels; Fluid Panel keeps its panel icon', () => {
-  assert.ok(app.includes("value:'full-screen',label:'Full Screen',icon:'fullscreen'"));
-  assert.ok(app.includes("value:'fluid-panel',label:'Fluid Panel',icon:'featured'"));
+  assert.ok(app.includes("value:'full-screen',label:'Full-Screen Host',icon:'fullscreen'"));
+  assert.ok(app.includes("value:'fluid-panel',label:'Host-Focused Grid',icon:'featured'"));
   const iconMap=app.slice(app.indexOf('function liveLayoutIcon'),app.indexOf('function applyLiveScreenLayout'));
   const fullScreenIcon=iconMap.split('fullscreen:')[1].split(',match:')[0];
   assert.ok(fullScreenIcon.includes("M8 3H3v5 M16 3h5v5 M21 16v5h-5 M8 21H3v-5"));
@@ -159,7 +159,7 @@ test('Full Screen has its own expand icon with no guest panels; Fluid Panel keep
 });
 
 test('Full Screen keeps the compact centered host stage and visible guest seats', () => {
-  assert.match(app, /value:'full-screen',label:'Full Screen',icon:'fullscreen'/);
+  assert.match(app, /value:'full-screen',label:'Full-Screen Host',icon:'fullscreen'/);
   assert.match(app, /classList\.toggle\('live-full-screen-layout',activeLiveScreenLayout==='full-screen'\)/);
   assert.doesNotMatch(app, /classList\.toggle\('live-full-screen-active',hostOnly\)/);
   assert.match(styles, /\.live-video-stage\.live-full-screen-layout:not\(\.live-audio-stage\)\{/);

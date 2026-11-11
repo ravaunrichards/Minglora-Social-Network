@@ -119,3 +119,12 @@ Only the host can change assignments. The host and assigned room moderators may 
 ### Features intentionally not exposed as working switches yet
 
 Guardian/family controls, stream recording/egress, advanced visual effects, LIVE Services and Fan Club require their own provider, storage, safety and creator workflows. They are not shown as active controls until those workflows are implemented and verified. Full Android mobile-game capture also requires native Android integration; browser screen sharing alone cannot provide that capability.
+
+
+## 24 responsive host-selectable LIVE layouts
+
+The host layout picker provides 24 arrangements on the existing LiveKit stage. The choice is validated by the authenticated LIVE API, stored on the active session, and synchronized to viewers and approved guests over the host-authenticated `minglora-live-layout` room data topic.
+
+The 24 choices are: Solo Host, Side-by-Side, 2x2 Grid, 3x2 Grid, 3x3 Grid, Spotlight, Picture-in-Picture, Vertical Panels, PK Battle, Audio Guest Panel, Full-Screen Host, Equal-Sized Guest Grid, Host-Focused Grid, Speaker-Focused Layout, Floating Guest Window, Horizontal Guest Strip, Vertical Guest Strip, Stage Layout, Roundtable Layout, Audience Gallery, Screen-Sharing Layout, Host-and-Chat Split Layout, Dual-Host Layout and Multi-Host Layout.
+
+The existing nine layout IDs remain stable for already-saved LIVE sessions. Each layout adapts seat counts, portrait/landscape space and narrow-screen dimensions; the established chat pane, guest permissions, host tools, audio-only restrictions and LiveKit media tracks remain independent of the visual arrangement. Video and audio-only rooms use the same saved layout preference, with compact seat styling for audio-only broadcasts.
