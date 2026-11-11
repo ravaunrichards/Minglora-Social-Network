@@ -1,5 +1,7 @@
+import { randomUUID } from 'node:crypto';
+
 const nowIso = (now = new Date()) => new Date(now).toISOString();
-const makeId = () => globalThis.crypto?.randomUUID?.() || 'ai_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+const makeId = () => randomUUID();
 const fail = (status, message) => Object.assign(new Error(message), { status });
 const text = (value, max) => String(value ?? '').trim().slice(0, max);
 const ownerRows = (rows, ownerId) => (Array.isArray(rows) ? rows : []).filter(row => row?.ownerId === ownerId);
@@ -335,8 +337,9 @@ export function decideAIApproval(db, ownerId, approvalId, decision, { now = new 
     approval.status = 'expired';
     approval.decidedAt = nowIso(now);
     approval.decidedBy = ownerId;
+    approval.executionStatus = 'not_executed';
     audit(db, ownerId, ownerId, 'approval_expired', 'approval', approval.id, now);
-    throw fail(409, 'This approval request has expired. Create a new request if it is still needed.');
+    return approval;
   }
   approval.status = decision === 'approve' ? 'approved_not_executed' : 'rejected';
   approval.decidedAt = nowIso(now);
