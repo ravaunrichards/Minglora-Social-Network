@@ -20,20 +20,20 @@
   <path d="M-84 -26l42 -48 42 34 43 -56 43 70-15 68h-140z" fill="url(#gold)" stroke="#fff0b2" stroke-width="8" stroke-linejoin="round"/>
   <circle cx="-42" cy="-75" r="13" fill="#fff5c7"/><circle cx="0" cy="-40" r="13" fill="#fff5c7"/><circle cx="43" cy="-96" r="13" fill="#fff5c7"/>
   <path d="M-70 58h140l-16 32h-108z" fill="url(#gold)"/>
-  <text x="0" y="28" fill="#fff" font-family="Arial,sans-serif" font-size="66" font-weight="900" text-anchor="middle">LV 50</text>
+  <text x="0" y="28" fill="#fff" font-family="Arial,sans-serif" font-size="49" font-weight="900" text-anchor="middle">Level 50</text>
   <text x="0" y="70" fill="#f8e6ad" font-family="Arial,sans-serif" font-size="19" font-weight="800" letter-spacing="5" text-anchor="middle">GIFTER ELITE</text>
 </g>
 <g transform="translate(170 420) rotate(-12)">
   <rect width="145" height="145" rx="34" fill="url(#gold)" stroke="#fff1bd" stroke-width="5"/>
   <rect x="14" y="14" width="117" height="117" rx="26" fill="url(#purple)"/>
   <path d="M72 38c-24-25-52 8-30 30l30 30 30-30c22-22-6-55-30-30z" fill="#fff1b7"/>
-  <text x="72" y="119" fill="#fff" font-family="Arial,sans-serif" font-size="20" font-weight="900" text-anchor="middle">LV 10</text>
+  <text x="72" y="119" fill="#fff" font-family="Arial,sans-serif" font-size="15" font-weight="900" text-anchor="middle">Level 10</text>
 </g>
 <g transform="translate(880 415) rotate(12)">
   <rect width="145" height="145" rx="34" fill="url(#gold)" stroke="#fff1bd" stroke-width="5"/>
   <rect x="14" y="14" width="117" height="117" rx="26" fill="url(#purple)"/>
   <path d="M72 35l12 25 28 4-20 20 5 28-25-13-25 13 5-28-20-20 28-4z" fill="#fff1b7"/>
-  <text x="72" y="126" fill="#fff" font-family="Arial,sans-serif" font-size="20" font-weight="900" text-anchor="middle">LV 25</text>
+  <text x="72" y="126" fill="#fff" font-family="Arial,sans-serif" font-size="15" font-weight="900" text-anchor="middle">Level 25</text>
 </g>
 <text x="600" y="64" fill="#e7dbff" font-family="Arial,sans-serif" font-size="22" font-weight="800" letter-spacing="8" text-anchor="middle">MINGLORA REWARDS</text>
 <text x="600" y="535" fill="#fff" font-family="Arial,sans-serif" font-size="61" font-weight="900" letter-spacing="2" text-anchor="middle">GIFTERS LEVEL UP</text>
