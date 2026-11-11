@@ -233,3 +233,17 @@ Continue with independent non-database work that can be built and verified in th
 - No production database, migration, provider secret, bot identity, worker, scheduler or deployment was changed. Live AI migrations remain unapplied; production provider inference remains disabled/unverified.
 - Weighted implementation progress remains **45.52%**; this security hardening and duplicate response-field cleanup do not justify a milestone percentage increase.
 - **Next action:** continue safe, independent API/security review of the AI Admin Centre response surfaces and add focused regression tests. Keep production AI execution, migrations and rollout gated.
+
+
+## Follow-up checkpoint — unified provider secret boundary (2026-11-11)
+
+- Extended the provider credential redaction fix to the `/provider-runtime` endpoint using the same shared serializer, removing duplicated secret-handling logic.
+- Preserved an existing trusted `credentialConfigured: true` status returned by the persistence adapter when the raw secret reference is intentionally absent. The serializer now removes the raw `credentialSecretReference` and exposes a boolean only.
+- Added a focused provider-runtime regression test. Current Admin API test file contains 69 test cases; source inspection confirms regression cases exist for the overview, provider list, provider runtime list and provider creation responses.
+- Latest commits: shared serializer and response hardening `8ce6dc730c1e6eb6582fe0c89fe31631d4a9a570`; provider-runtime regression test `dea97401d74a7d58b59edf0df461824d416f1b00`.
+- Verified from current branch source: overview, GET `/providers`, GET `/provider-runtime`, and POST `/providers` all use the shared redaction helper; no raw `assignment:saved` or `assignments:result` response patterns remain. The existing adapter-provided configured boolean remains preserved.
+- CI remains **unverified for this head**: GitHub reports zero PR-triggered workflow runs and zero commit status checks for `dea97401d74a7d58b59edf0df461824d416f1b00`. The 69 API test cases are present but have not been executed in this session.
+- PR #202 remains open/draft. Latest comparison against `main`: divergent, 520 commits ahead and 246 behind. Do not merge, rebase or retarget.
+- No database, migrations, provider credentials, bot records, worker, scheduler or deployment changed. Production provider inference remains disabled/unverified.
+- Weighted implementation progress remains **45.52%**; security hardening is important but does not complete a weighted product milestone.
+- **Next action:** continue security review of AI task and worker boundaries; verify that only the four explicitly safe, tool-free task types can ever be claimed, and that no social-action task can execute through any worker/API path.
