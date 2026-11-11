@@ -834,4 +834,5 @@ test('team handoff records use existing runtime-state persistence and owner-only
   assert.match(serviceSource,/cancelOpenPersonalAiBotTeamHandoffs/);
   assert.match(serviceSource,/team_paused/);
   assert.match(serviceSource,/network_emergency_shutdown/);
+  assert.match(serviceSource,/pausedTeams,cancelled,cancelledHandoffs,network:settings/);
 });
