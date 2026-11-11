@@ -24,11 +24,14 @@ test('the designated Minglora admin has permanent LIVE Pro feature access while 
   assert.ok(server.includes("canManageAccess: adminAccess,"));
 });
 
-test('LIVE Pro appears beside the username in the profile header and previews', () => {
-  assert.ok(app.includes("<p class=\"profile-username-line\">@'+esc(u.username)+' '+verifiedProfileBadge(u)+gifterProfileBadge(u,\"profile\")+liveProProfileBadge(u)+'</p>"));
+test('LIVE Pro remains a feature entitlement and Badges-gallery item, not a profile identity badge', () => {
+  assert.ok(app.includes("<p class=\"profile-username-line\">@'+esc(u.username)+' '+verifiedProfileBadge(u)+'</p>"));
   assert.ok(app.includes("live-profile-preview-heading"));
-  assert.ok(app.includes("verifiedProfileBadge(member)+gifterProfileBadge(member,\"profile\")+liveProProfileBadge(member)"));
-  assert.ok(app.includes("verifiedProfileBadge(u)+gifterProfileBadge(u,\"profile\")+liveProProfileBadge(u)"));
+  assert.ok(app.includes('verifiedProfileBadge(member)+"</small></div>"'));
+  assert.ok(!app.includes("verifiedProfileBadge(member)+gifterProfileBadge(member,\"profile\")+liveProProfileBadge(member)"));
+  assert.ok(!app.includes("verifiedProfileBadge(u)+gifterProfileBadge(u,\"profile\")+liveProProfileBadge(u)"));
+  assert.ok(app.includes('if(u.liveProBadge===true){'));
+  assert.ok(app.includes('kind:"live-pro"'));
 });
 
 test('active LIVE Pro is included in Creator recognition on the Badges tab', () => {
