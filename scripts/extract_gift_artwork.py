@@ -23,14 +23,14 @@ def safe_name(value):
     value = unicodedata.normalize("NFKD", value)
     value = "".join(c for c in value if not unicodedata.combining(c))
     value = re.sub(r"[^A-Za-z0-9 .&'()+,-]", "", value)
-    return re.sub(r"\\s+", " ", value).strip(" .-_")[:64] or "Unidentified Gift"
+    return re.sub(r"\s+", " ", value).strip(" .-_")[:64] or "Unidentified Gift"
 
 def clean_title(value):
     value = unicodedata.normalize("NFKC", value or "")
-    value = re.sub(r"\\s+", " ", value.replace("\\n", " ").replace("\\r", " ")).strip()
-    value = re.sub(r"(?i)\\s*(?:[0-9]+\\s*)?(?:coin|coins)\\s*$", "", value)
-    value = re.sub(r"^[\\W_]+|[\\W_]+$", "", value)
-    value = re.sub(r"\\s+[0-9]+$", "", value).strip()
+    value = re.sub(r"\s+", " ", value.replace("\n", " ").replace("\r", " ")).strip()
+    value = re.sub(r"(?i)\s*(?:[0-9]+\s*)?(?:coin|coins)\s*$", "", value)
+    value = re.sub(r"^[\W_]+|[\W_]+$", "", value)
+    value = re.sub(r"\s+[0-9]+$", "", value).strip()
     if not re.search(r"[A-Za-z]", value) or re.fullmatch(r"(?i)(coin|coins|send|gift|popular|new|hot)", value):
         return ""
     return value[:64]
@@ -116,7 +116,7 @@ def main():
                     empty+=1
                     continue
                 if not title:
-                    match=re.search(r"(\\d{6})\\.png$",source.name)
+                    match=re.search(r"(\d{6})\.png$",source.name)
                     stamp=match.group(1) if match else source.stem[-6:]
                     title=f"Unidentified Gift {stamp} R{row+1} C{col+1}"
                     unknown+=1
@@ -156,7 +156,7 @@ def main():
         "duplicate_slots_removed":duplicates,"empty_slots_skipped":empty,
         "unidentified_titles":unknown,"artworks":manifest
     }
-    (DEST/"manifest.json").write_text(json.dumps(summary,indent=2,ensure_ascii=False)+"\\n",encoding="utf-8")
+    (DEST/"manifest.json").write_text(json.dumps(summary,indent=2,ensure_ascii=False)+"\n",encoding="utf-8")
     report=[
         "# Gift artwork extraction report","",
         f"- Source screenshots: **{len(sources)}**",
@@ -170,8 +170,8 @@ def main():
         "These are isolated raster previews extracted from the supplied screenshots, not recovered original TikTok vector or 3D source files.",
         "The manifest records title, source capture, grid position, OCR confidence, output path, and SHA-256 checksum.",""
     ]
-    (DEST/"EXTRACTION_REPORT.md").write_text("\\n".join(report),encoding="utf-8")
-    print("\\n".join(report))
+    (DEST/"EXTRACTION_REPORT.md").write_text("\n".join(report),encoding="utf-8")
+    print("\n".join(report))
 
 if __name__=="__main__":
     main()
