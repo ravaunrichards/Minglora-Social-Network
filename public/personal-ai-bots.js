@@ -1049,7 +1049,6 @@
       fillPersonaForm(card,version.configuration);
       card.dataset.personaEditVersionId=versionId;
       button.textContent='Save draft changes';
-      card.querySelector('.pab-persona-lab')?.scrollIntoView({block:'nearest'});
       notice('pab-task-status','Draft loaded for editing. Saving will clear the previous structural evaluation.','success');
     }catch(error){notice('pab-task-status',error.message||'Could not load the persona draft.','error');}
   }
