@@ -8,6 +8,11 @@ import {
   ensurePersonalAiBotCollections,
   getPersonalAiBotCategories,
   getPersonalAiBotOverview,
+  listPersonalAiCreatorDrafts,
+  createPersonalAiCreatorDraft,
+  updatePersonalAiCreatorDraft,
+  submitPersonalAiCreatorDraft,
+  reviewPersonalAiCreatorDraft,
   getPersonalAiBotPerformanceSnapshot,
   createPersonalAiBot,
   createPersonalAiBotStarterSet,
@@ -1427,4 +1432,42 @@ test('performance snapshot discloses the runtime task history cap',()=>{
   assert.equal(snapshot.coverage.taskRecordsObserved,2000);
   assert.equal(snapshot.coverage.taskRecordsMayBeTruncated,true);
   assert.equal(snapshot.coverage.taskRecordCap,2000);
+});
+
+test('Creator Studio drafts retain versions and require an owner rights attestation before review',()=>{
+  const db=makeDb();
+  const bot=createPersonalAiBot(db,{displayName:'Creator Draft Bot',categoryId:'ai-creators'},actor,stamp,uid);
+  const base={botId:bot.id,title:'Launch post',contentFormat:'feed_post',destination:'feed',caption:'A concise caption',body:'A manually supplied draft for an upcoming creator announcement.',sourceType:'owner_authored',assetReferences:['asset:approved-image-01'],rightsAttested:false};
+  const draft=createPersonalAiCreatorDraft(db,base,actor,stamp,uid);
+  assert.equal(draft.status,'draft');
+  assert.equal(draft.generationStatus,'not_connected');
+  assert.equal(draft.aiIdentityDisclosureRequired,true);
+  assert.equal(draft.publishingStatus,'not_published');
+  assert.equal(db.personalAiBotTasks.length,0);
+  assert.throws(()=>submitPersonalAiCreatorDraft(db,draft.id,actor,stamp,uid),/rights/);
+  const edited=updatePersonalAiCreatorDraft(db,draft.id,{caption:'Updated caption',rightsAttested:true},actor,stamp,uid);
+  assert.equal(edited.version,2);
+  assert.equal(edited.versionHistory.length,1);
+  assert.equal(edited.versionHistory[0].caption,'A concise caption');
+  assert.equal(edited.status,'draft');
+  const submitted=submitPersonalAiCreatorDraft(db,draft.id,actor,stamp,uid);
+  assert.equal(submitted.status,'pending_review');
+  const approved=reviewPersonalAiCreatorDraft(db,draft.id,{decision:'approve',reviewNotes:'Reviewed for future human handoff.'},actor,stamp,uid);
+  assert.equal(approved.status,'approved_for_human_handoff');
+  assert.equal(approved.publishingStatus,'not_published');
+  assert.equal(approved.handoffStatus,'not_handed_off');
+  assert.equal(db.personalAiBotTasks.length,0);
+  assert.equal(listPersonalAiCreatorDrafts(db,{limit:10,offset:0}).length,1);
+});
+
+test('Creator Studio rejects unsupported formats, excessive assets, data URIs and cross-owner edits',()=>{
+  const db=makeDb();
+  const bot=createPersonalAiBot(db,{displayName:'Rights Bot',categoryId:'ai-creators'},actor,stamp,uid);
+  const base={botId:bot.id,title:'Rights review',contentFormat:'feed_post',destination:'feed',body:'Draft content for review.',sourceType:'owner_authored',assetReferences:[],rightsAttested:true};
+  assert.throws(()=>createPersonalAiCreatorDraft(db,{...base,contentFormat:'publish_now'},actor,stamp,uid),/format/);
+  assert.throws(()=>createPersonalAiCreatorDraft(db,{...base,assetReferences:['data:image/png;base64,abc']},actor,stamp,uid),/asset reference/);
+  assert.throws(()=>createPersonalAiCreatorDraft(db,{...base,assetReferences:Array.from({length:11},(_,i)=>'asset:'+i)},actor,stamp,uid),/10 asset/);
+  const draft=createPersonalAiCreatorDraft(db,base,actor,stamp,uid);
+  assert.throws(()=>updatePersonalAiCreatorDraft(db,draft.id,{title:'Changed'},'other-owner',stamp,uid),/another owner/);
+  assert.throws(()=>reviewPersonalAiCreatorDraft(db,draft.id,{decision:'approve'},actor,stamp,uid),/awaiting owner review/);
 });
