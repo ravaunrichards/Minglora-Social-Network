@@ -7531,7 +7531,7 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
     return json(res, 400, { error: 'Invalid gift sound asset path.' });
   }
   if (giftSoundRelativePath === 'gift-code-map.json' ||
-      /^[a-z0-9-]+\\/sound\\.mp3$/.test(giftSoundRelativePath)) {
+      /^[a-z0-9-]+\/sound\.mp3$/.test(giftSoundRelativePath)) {
     const giftSoundRoot = path.resolve(__dirname, '..', 'assets', 'Gift Sounds');
     const giftSoundFile = path.resolve(giftSoundRoot, giftSoundRelativePath);
     if (!giftSoundFile.startsWith(giftSoundRoot + path.sep)) {
