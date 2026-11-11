@@ -63,5 +63,5 @@ test('app asset and service-worker cache are versioned together', () => {
   const appAsset = '/app.js?v=20261111-profile-verification-only-1';
   assert.ok(html.includes(appAsset));
   assert.ok(worker.includes(appAsset));
-  assert.ok(worker.includes('minglora-shell-v275-self-updating-1'));
+  assert.ok(worker.includes('minglora-shell-v276-self-updating-1'));
 });
