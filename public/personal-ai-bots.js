@@ -1443,6 +1443,7 @@
   function resetCreatorDraftForm(){
     const form=document.querySelector('#pab-creator-draft-form');if(!form)return;
     form.reset();form.dataset.editId='';
+    const botSelect=document.querySelector('#pab-creator-bot');if(botSelect)botSelect.disabled=false;
     const button=document.querySelector('#pab-creator-save');if(button)button.textContent='Save draft';
     notice('pab-creator-status','New private draft. No content is published.','');
   }
@@ -1455,6 +1456,7 @@
     set('#pab-creator-bot',draft.botId);set('#pab-creator-format',draft.contentFormat);set('#pab-creator-destination',draft.destination);
     set('#pab-creator-title',draft.title);set('#pab-creator-caption',draft.caption);set('#pab-creator-body',draft.body);
     set('#pab-creator-source',draft.sourceType);set('#pab-creator-assets',(draft.assetReferences||[]).join('\n'));
+    const botSelect=document.querySelector('#pab-creator-bot');if(botSelect)botSelect.disabled=true;
     const rights=document.querySelector('#pab-creator-rights');if(rights)rights.checked=draft.rightsAttested===true;
     const button=document.querySelector('#pab-creator-save');if(button)button.textContent='Save version '+(Number(draft.version||1)+1);
     notice('pab-creator-status','Editing '+draft.title+'. Saving creates a new version and resets the review state.','');
@@ -1463,13 +1465,14 @@
   async function saveCreatorDraft(event){
     event.preventDefault();
     const read=selector=>document.querySelector(selector)?.value||'';
+    const form=document.querySelector('#pab-creator-draft-form'),id=form?.dataset.editId||'';
     const payload={
-      botId:read('#pab-creator-bot'),contentFormat:read('#pab-creator-format'),destination:read('#pab-creator-destination'),
+      ...(!id?{botId:read('#pab-creator-bot')}:{}),
+      contentFormat:read('#pab-creator-format'),destination:read('#pab-creator-destination'),
       title:read('#pab-creator-title'),caption:read('#pab-creator-caption'),body:read('#pab-creator-body'),
       sourceType:read('#pab-creator-source'),assetReferences:read('#pab-creator-assets').split('\n').map(value=>value.trim()).filter(Boolean),
       rightsAttested:document.querySelector('#pab-creator-rights')?.checked===true
     };
-    const form=document.querySelector('#pab-creator-draft-form'),id=form?.dataset.editId||'';
     try{
       const result=await request(API+'/creator-studio/drafts'+(id?'/'+encodeURIComponent(id):''),{
         method:id?'PATCH':'POST',body:JSON.stringify(payload)
