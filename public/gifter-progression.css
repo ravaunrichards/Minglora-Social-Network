@@ -453,3 +453,8 @@
   .gp-current-badge-art{flex-basis:82px;width:82px;height:92px}
   .gp-current-badge-art .gp-badge{width:80px;height:90px;min-width:80px}
 }
+
+
+/* Smooth high-quality resampling for original Gifter PNGs in the level directory and status row.
+   The existing badge size, placement, visibility and effects are intentionally unchanged. */
+.gp-level-index-art,.gp-current-badge-image{image-rendering:auto;image-rendering:smooth}
