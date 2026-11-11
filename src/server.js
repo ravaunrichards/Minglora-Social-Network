@@ -4955,14 +4955,28 @@ async function route(req, res) {
           .filter(item=>item.subscriberId===user.id)
           .sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));
         const channels=[];
+        const visibleOwnerIds=new Set();
         for(const subscription of subscriptions){
           const owner=(db.users||[]).find(member=>member.id===subscription.ownerId);
           const channel=getVideoChannel(subscription.ownerId);
           if(!owner||!channel||blockedBetween(user.id,owner.id)||!canViewProfile(user.id,owner)||
              !canViewVideoChannel(channel,user.id,{isBlocked:blockedBetween(user.id,owner.id),allowUnlisted:true}))continue;
+          visibleOwnerIds.add(owner.id);
           channels.push(await publicVideoChannel(channel,user.id));
         }
-        return json(res,200,{channels});
+        const uploadPosts=(db.posts||[])
+          .filter(post=>visibleOwnerIds.has(post.userId)&&isVisibleVideoPost(user.id,post))
+          .sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0))
+          .slice(0,60);
+        const videos=[];
+        for(const post of uploadPosts){
+          const channel=getVideoChannel(post.userId);
+          const published=await publicPost(post,user.id);
+          if((published.media||[]).some(media=>media.mediaType==='video'&&media.url)){
+            videos.push({...published,channel:{ownerId:post.userId,title:channel.title,owner:safeUser(db.users.find(member=>member.id===post.userId),user.id)}});
+          }
+        }
+        return json(res,200,{channels,videos});
       }
       if(method==='GET'&&p==='/api/video-channels'){
         const query=String(url.searchParams.get('q')||'').trim().toLowerCase().slice(0,100);
