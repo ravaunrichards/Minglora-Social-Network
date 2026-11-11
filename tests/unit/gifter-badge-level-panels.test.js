@@ -148,5 +148,5 @@ test("Gifters Level-Up chart is readable in normal page view without requiring z
   assert.match(styles, /\.gp-chart-fullsize\{[\s\S]*?min-height:46px[\s\S]*?font-size:1rem/);
   assert.ok(html.includes("/gifter-progression.css?v=20261111-gifter-chart-fit-without-zoom-2"));
   assert.ok(sw.includes("/gifter-progression.css?v=20261111-gifter-chart-fit-without-zoom-2"));
-  assert.ok(sw.includes("minglora-shell-v277-self-updating-1"));
+  assert.ok(sw.includes("minglora-shell-v278-self-updating-1"));
 });

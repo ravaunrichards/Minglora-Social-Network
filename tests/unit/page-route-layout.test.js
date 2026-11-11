@@ -64,7 +64,7 @@ test('Settings is a real restorable page and uses the shared standalone layout',
     'Opening Settings changes the active route before displaying its content');
   assert.ok(settings.includes('window.MingloraSettings = { open: openSettings, render: openSettings };'),
     'Settings exposes the same page renderer for direct entry and route restoration');
-  assert.ok(html.includes('/app.js?v=20261111-block-relationships-1'),
+  assert.ok(html.includes('/app.js?v=20261111-live-gifter-name-badge-1'),
     'The browser receives the updated page-routing bundle');
   assert.ok(html.includes('/settings.js?v=20261110-standalone-settings-page-1'),
     'The browser receives the updated Settings page bundle');

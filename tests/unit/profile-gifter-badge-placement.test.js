@@ -46,8 +46,8 @@ test('feed, comments and LIVE gifter surfaces retain their existing badge behavi
   assert.ok(app.includes('gifterProfileBadge(author)'));
   assert.ok(app.includes('gifterProfileBadge(c.author)'));
   assert.ok(app.includes('live-viewer-gifter-badge'));
-  assert.ok(app.includes('gifterProfileBadge({ ...member, gifterBadge: badge },"compact")'));
-  assert.ok(app.includes('gifterProfileBadge({ ...member, gifterBadge: item.gifterBadge },"compact")'));
+  assert.ok(app.includes('liveGifterBadgeMarkup({ ...member, gifterBadge: badge },"compact")'));
+  assert.ok(app.includes('liveGifterBadgeMarkup({ ...member, gifterBadge: item.gifterBadge },"compact")'));
 });
 
 test('profile badge artwork keeps responsive sizing and original proportions', () => {
@@ -60,8 +60,8 @@ test('profile badge artwork keeps responsive sizing and original proportions', (
 });
 
 test('app asset and service-worker cache are versioned together', () => {
-  const appAsset = '/app.js?v=20261111-block-relationships-1';
+  const appAsset = '/app.js?v=20261111-live-gifter-name-badge-1';
   assert.ok(html.includes(appAsset));
   assert.ok(worker.includes(appAsset));
-  assert.ok(worker.includes('minglora-shell-v277-self-updating-1'));
+  assert.ok(worker.includes('minglora-shell-v278-self-updating-1'));
 });
