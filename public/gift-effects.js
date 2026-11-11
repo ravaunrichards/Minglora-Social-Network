@@ -252,7 +252,31 @@
       particle.style.setProperty("--minglora-particle-x",Math.round(Math.cos(angle)*distance)+"px");
       particle.style.setProperty("--minglora-particle-y",Math.round(Math.sin(angle)*distance)+"px");
       particle.style.setProperty("--minglora-particle-size",(4+(ps%9))+"px");
+      const particleColor="hsl("+((particleHue+i*19)%360)+" 96% 70%)";
+      const motionEffect=String(gift.motion_effect||"sparkles");
       particle.style.setProperty("--minglora-particle-hue",String((particleHue+i*19)%360));
+      if(motionEffect==="petals"){
+        particle.style.borderRadius="62% 0 62% 62%";
+        particle.style.width="calc(var(--minglora-particle-size,6px) * .72)";
+        particle.style.height="calc(var(--minglora-particle-size,6px) * 1.5)";
+      }else if(motionEffect==="waves"){
+        particle.style.width="calc(var(--minglora-particle-size,6px) * 2.4)";
+        particle.style.height="3px";
+        particle.style.borderRadius="999px";
+        particle.style.filter="drop-shadow(0 0 4px "+particleColor+")";
+      }else if(motionEffect==="rings"||motionEffect==="orbits"){
+        particle.style.background="transparent";
+        particle.style.border="1.5px solid "+particleColor;
+        particle.style.borderRadius="50%";
+        particle.style.boxShadow="inset 0 0 7px "+particleColor;
+      }else if(motionEffect==="bubbles"){
+        particle.style.border="1px solid rgba(255,255,255,.72)";
+        particle.style.background="radial-gradient(circle at 30% 25%,rgba(255,255,255,.95),"+particleColor+" 42%,transparent 78%)";
+        particle.style.boxShadow="0 0 12px "+particleColor;
+      }else if(motionEffect==="sparkles"){
+        particle.style.borderRadius="0";
+        particle.style.clipPath="polygon(50% 0,62% 36%,100% 50%,62% 64%,50% 100%,38% 64%,0 50%,38% 36%)";
+      }
       particle.style.setProperty("--minglora-particle-duration",(720+(ps%1200))+"ms");
       particle.style.setProperty("--minglora-particle-delay",(i*65)+"ms");
       particle.style.setProperty("--minglora-particle-spin",((ps%2?1:-1)*(90+(ps%540)))+"deg");
