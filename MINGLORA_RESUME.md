@@ -217,3 +217,19 @@ Continue with independent non-database work that can be built and verified in th
 - Current branch comparison after these commits: feature branch is divergent from `main`, 511 commits ahead and 148 behind (merge base `0f22dabec48315fc6d306296aed2315cdb7d26c2`). Do not merge, rebase, or sync automatically. Preserve PR #202 as draft/open per the existing release constraint.
 - Weighted implementation percentage is unchanged at 45.52% (rounded 46%); this is a UI wording/testability improvement, not an operational system milestone.
 - **Next action:** continue the remaining independent non-database work and inspect the AI provider runtime gateway/list contract for truthful status, while keeping provider execution, scheduling and production release disabled until real provider credentials and approved deployment infrastructure exist.
+
+
+## Checkpoint — provider credential response redaction (2026-11-11)
+
+- Continued the exact Minglora AI Bot Network task on `feat/personal-ai-bots-network-control-center`.
+- Security issue found during API review: provider credential secret references were explicitly removed from the provider-runtime response, but the initial Admin Centre overview, provider assignment list, and provider assignment creation response did not all apply the same redaction boundary.
+- Added one shared `safeProviderAssignmentRecords` serializer and applied it to all three response paths. Browser responses now expose only `credentialConfigured` (boolean), never `credentialSecretReference`. Secret references remain server-side for trusted runtime resolution.
+- Added API regression coverage for initial overview, paginated provider assignment listing, and provider assignment creation. Tests assert the private reference string is absent from serialized responses.
+- Removed duplicate `tasksNextOffset` and `tasksHasMore` keys from the initial Admin API overview response.
+- Commits: initial list-route fix `9b4f1a76362daa7547da179e368ea87189d050b2`; test `c8f0a1c6f0039fbad6f7a80d9a9acdc4ad2f4a76`; shared all-response redaction `f1754f9bfc039a757c87e6df6b35c2e09075dab9`; expanded tests `ad7fd9ad4cafda0912809b611fe552a5651ba8ef`; duplicate response field cleanup `62426a0c32b33edcef2d2ad830ed3cf6e646c6aa`.
+- Source verification after the changes confirmed that the root overview, GET `/providers`, and POST `/providers` all use the redaction helper; no raw `assignment:saved` or `assignments:result` return pattern remains. Regression tests for all three paths are present exactly once.
+- **Tests are not yet executed.** The GitHub connector returned no PR-triggered workflow runs and no combined commit statuses for the latest head. Do not claim CI pass until a workflow run provides evidence.
+- Draft PR #202 remains open and draft. Latest comparison against `main` reports a divergent branch (516 commits ahead, 246 behind). Do not merge, rebase or retarget automatically.
+- No production database, migration, provider secret, bot identity, worker, scheduler or deployment was changed. Live AI migrations remain unapplied; production provider inference remains disabled/unverified.
+- Weighted implementation progress remains **45.52%**; this security hardening and duplicate response-field cleanup do not justify a milestone percentage increase.
+- **Next action:** continue safe, independent API/security review of the AI Admin Centre response surfaces and add focused regression tests. Keep production AI execution, migrations and rollout gated.
