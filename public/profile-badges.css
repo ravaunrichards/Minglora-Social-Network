@@ -49,3 +49,24 @@
 .profile-award-art--live-pro .profile-live-pro-badge{gap:9px;min-height:54px;padding:12px 18px;border-radius:16px;font-size:15px;letter-spacing:.1em;box-shadow:0 8px 18px rgba(169,32,77,.22),inset 0 1px 1px rgba(255,255,255,.48)}
 .profile-award-art--live-pro .profile-live-pro-badge svg{flex-basis:27px;width:27px;height:27px}
 @media(max-width:560px){.profile-live-pro-badge{min-height:20px;padding:4px 6px;font-size:8px}.profile-live-pro-badge svg{flex-basis:12px;width:12px;height:12px}.profile-award-art--live-pro .profile-live-pro-badge{gap:6px;min-height:44px;padding:9px 12px;font-size:12px}.profile-award-art--live-pro .profile-live-pro-badge svg{flex-basis:22px;width:22px;height:22px}}
+
+
+/* Original Level-specific Gifter artwork across member identity surfaces. */
+.gp-profile-level-badge{display:inline-block;flex:0 0 auto;max-width:100%;height:auto;object-fit:contain;object-position:center;vertical-align:middle;filter:drop-shadow(0 2px 3px rgba(12,24,48,.2))}
+.gp-profile-level-badge--profile{width:40px;height:40px}
+.gp-profile-level-badge--inline{width:28px;height:28px}
+.gp-profile-level-badge--compact{width:24px;height:24px}
+.gp-profile-level-badge--gallery{display:block;width:120px;height:132px;margin:0 auto}
+.profile-award-art--gifter .gp-profile-level-badge--gallery{width:118px;height:132px}
+.profile-username-line .gp-profile-level-badge--profile{margin-inline:2px}
+.live-profile-preview-heading small{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.live-speaker-username{display:inline-flex;align-items:center;gap:5px;flex-wrap:wrap}
+.live-chat-handle{display:inline-flex;align-items:center;gap:4px;vertical-align:middle}
+@media(max-width:650px){
+  .gp-profile-level-badge--profile{width:34px;height:34px}
+  .gp-profile-level-badge--inline{width:26px;height:26px}
+  .gp-profile-level-badge--compact{width:22px;height:22px}
+}
+@media(max-width:560px){
+  .profile-award-art--gifter .gp-profile-level-badge--gallery{width:96px;height:112px}
+}
