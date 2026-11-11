@@ -1,0 +1,28 @@
+{
+  "screenshot_count": 131,
+  "detected_occurrences": 2531,
+  "unique_gifts": 1718,
+  "category_counts": {
+    "animals": 155,
+    "celebrations": 46,
+    "community": 43,
+    "everyday": 5,
+    "fantasy": 88,
+    "fashion_beauty": 44,
+    "flowers": 42,
+    "food_drink": 88,
+    "games": 16,
+    "hearts": 106,
+    "luxury": 56,
+    "music": 104,
+    "nature": 53,
+    "other": 724,
+    "reactions": 4,
+    "sports": 46,
+    "symbols": 14,
+    "travel": 30,
+    "vehicles": 54
+  },
+  "screenshots_with_errors": [],
+  "zero_detection_screenshots": []
+}
