@@ -25,6 +25,10 @@
   },
   "matched_catalog_gifts": 1133,
   "unmatched_catalog_gifts": 585,
+  "catalog_motion_profiles": 1129,
+  "catalog_motion_inactive_matches": 4,
+  "catalog_motion_duplicate_codes": [],
+  "artwork_reference_matches": 0,
   "confidence_counts": {
     "high": 1419,
     "medium": 118,
