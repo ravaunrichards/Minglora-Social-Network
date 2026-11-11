@@ -121,8 +121,10 @@ test('Palette and profile/account menus use the same scroll-safe outside dismiss
   assert.ok(helper.includes('event.detail === 0'));
   assert.ok(html.indexOf('menu-dismissal.js') < html.indexOf('app.js'));
   assert.ok(html.includes('menu-dismissal.js?v=20261110-menu-dismissal-1'));
-  assert.ok(html.includes('app.js?v=20261111-live-gifter-name-badge-1'));
+  const appAsset = html.split('\"').find(value => value.startsWith('/app.js?v='));
+  assert.ok(appAsset, 'HTML references a versioned core application bundle');
+  assert.ok(worker.includes(appAsset), 'the service worker precaches the same core application bundle');
   assert.ok(html.includes('minglora-menu.js?v=20261110-facebook-profile-dropdown-1'));
-  assert.ok(worker.includes('minglora-shell-v278-self-updating-1'));
+  assert.ok(worker.includes("const CACHE_NAME='minglora-shell-v"), 'service worker cache is versioned');
   assert.ok(worker.includes('/menu-dismissal.js?v=20261110-menu-dismissal-1'));
 });

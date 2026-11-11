@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 const html=fs.readFileSync(path.join(root,'public/index.html'),'utf8');
 const app=fs.readFileSync(path.join(root,'public/app.js'),'utf8');
+const worker=fs.readFileSync(path.join(root,'public/sw.js'),'utf8');
 const layoutCss=fs.readFileSync(path.join(root,'public/page-route-layout.css'),'utf8');
 
 test('Home alone keeps the Facebook-style feature rail',()=>{
@@ -64,8 +65,9 @@ test('Settings is a real restorable page and uses the shared standalone layout',
     'Opening Settings changes the active route before displaying its content');
   assert.ok(settings.includes('window.MingloraSettings = { open: openSettings, render: openSettings };'),
     'Settings exposes the same page renderer for direct entry and route restoration');
-  assert.ok(html.includes('/app.js?v=20261111-live-gifter-name-badge-1'),
-    'The browser receives the updated page-routing bundle');
+  const appAsset = html.split('\"').find(value => value.startsWith('/app.js?v='));
+  assert.ok(appAsset && worker.includes(appAsset),
+    'The browser and service worker use the same current page-routing bundle');
   assert.ok(html.includes('/settings.js?v=20261110-standalone-settings-page-1'),
     'The browser receives the updated Settings page bundle');
 });

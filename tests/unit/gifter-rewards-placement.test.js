@@ -23,10 +23,14 @@ test('Gift entry shows the repository Gifters Rewards artwork outside the level 
 });
 
 test('Gifters Level Up remains inside the separate Gifter Progression page', () => {
-  assert.match(progression, /src='\/assets\/gifters-level-up\.svg' alt='Gifters Level Up'/);
-  assert.match(progression, /<h1>Gifter Level &amp; Badges<\/h1>/);
-  assert.doesNotMatch(progression, /Gifters Rewards/);
-  assert.match(server, /if\(p==='\/assets\/gifters-level-up\.png'\)/, 'existing Level Up asset route is retained');
+  assert.ok(progression.includes("src='/assets/Gifters%20Level%20Up.png' alt='Original Minglora Gifters Level Up chart artwork'"));
+  assert.ok(progression.includes("href='/assets/Gifters%20Level%20Up.png' target='_blank' rel='noopener noreferrer'"));
+  assert.ok(progression.includes("<h1>Gifter Level &amp; Badges</h1>"));
+  assert.ok(progression.includes("const badgePanels = renderBadgePanels();"));
+  assert.ok(!progression.includes("Gifters Rewards"));
+  assert.ok(fs.existsSync(path.join(root, 'assets', 'Gifters Badge Levels', 'Gifters Level Up.png')), 'the original Level-Up artwork remains in its canonical folder');
+  assert.ok(server.includes("if(p==='/assets/gifters-level-up.png')"));
+  assert.ok(server.includes("path.join(__dirname,'..','assets','Gifters Badge Levels','Gifters Level Up.png')"));
 });
 
 test('Gifters Rewards image route serves the exact repository artwork', () => {

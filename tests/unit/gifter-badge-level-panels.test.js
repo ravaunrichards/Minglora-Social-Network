@@ -136,16 +136,18 @@ test("clean-edge stylesheet cache key is current in HTML and service-worker shel
 
 
 
-test("Gifters Level-Up chart is readable in normal page view without requiring zoom", () => {
+test("Gifter progression uses the original ordered Level panels as its primary artwork", () => {
   const progression = read("public/gifter-progression.js");
   const styles = read("public/gifter-progression.css");
   const html = read("public/index.html");
   const sw = read("public/sw.js");
-  assert.match(progression, /gp-chart-fullsize[\s\S]*?View full-size chart to zoom/);
-  assert.match(progression, /href='\/assets\/gifters-level-up\.svg' target='_blank' rel='noopener noreferrer'/);
-  assert.match(styles, /\.gp-hero-art \.gp-reference-art\{[\s\S]*?width:min\(100%,900px\)[\s\S]*?height:auto[\s\S]*?max-height:none/);
-  assert.match(styles, /@media\(max-width:650px\)[\s\S]*?\.gp-hero-art \.gp-reference-art\{width:100%;height:auto;max-height:none;object-fit:contain\}/);
-  assert.match(styles, /\.gp-chart-fullsize\{[\s\S]*?min-height:46px[\s\S]*?font-size:1rem/);
+  assert.ok(progression.includes("const BADGE_LEVEL_PANELS = Object.freeze(["));
+  assert.ok(progression.includes("BADGE_LEVEL_PANELS.map(panel"));
+  assert.ok(progression.includes("aria-label='Original Gifter Badge Levels artwork'"));
+  assert.ok(progression.includes("const badgePanels = renderBadgePanels();"));
+  assert.ok(progression.includes('badgePanels + "</section>" +'));
+  assert.ok(styles.includes(".gp-page .gp-hero-art{display:none!important}"));
+  assert.ok(styles.includes(".gp-art-panel-stack{display:grid;grid-template-columns:minmax(0,1fr);gap:14px"));
   assert.ok(html.includes("/gifter-progression.css?v=20261111-tiktok-readable-badge-size-2"));
   assert.ok(sw.includes("/gifter-progression.css?v=20261111-tiktok-readable-badge-size-2"));
   assert.ok(sw.includes("minglora-shell-v285-self-updating-1"));
