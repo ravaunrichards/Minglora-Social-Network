@@ -1074,7 +1074,8 @@ test('team handoff lifecycle requires owner acceptance and human-reviewed comple
   const handoff=createPersonalAiBotTeamHandoff(db,team.id,{
     sourceTaskId:taskId,senderBotId:sender.id,receivingBotId:receiver.id,
     requiredInput:'Review this source task for completeness.',
-    expectedOutput:'Return findings and recommendations.'
+    expectedOutput:'Return findings and recommendations.',
+    privacyAttested:true
   },actor,stamp,uid);
   assert.throws(()=>reviewPersonalAiBotTeamHandoff(db,team.id,handoff.id,{action:'complete',resultSummary:'Complete'},actor,stamp,uid),/Only an accepted handoff/);
   const accepted=reviewPersonalAiBotTeamHandoff(db,team.id,handoff.id,{action:'accept'},actor,stamp,uid);
@@ -1117,7 +1118,8 @@ test('removing a team member cancels and preserves the member’s open handoffs'
   const handoff=createPersonalAiBotTeamHandoff(db,team.id,{
     sourceTaskId:taskId,senderBotId:sender.id,receivingBotId:receiver.id,
     requiredInput:'Review the prepared task safely.',
-    expectedOutput:'Provide findings for a human owner.'
+    expectedOutput:'Provide findings for a human owner.',
+    privacyAttested:true
   },actor,stamp,uid);
   removePersonalAiBotFromTeam(db,team.id,receiver.id,actor,stamp,uid);
   const retained=db.personalAiBotTeamHandoffs.find(item=>item.id===handoff.id);
