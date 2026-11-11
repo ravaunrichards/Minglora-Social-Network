@@ -16,7 +16,7 @@ const watch = (postId, userId, watchedMs, completed, ageMs = 60_000) => ({
 });
 
 test('creator analytics aggregate real watch time and unique viewer-video pairs', () => {
-  const posts = [video('one', 'creator'), video('two', 'creator')];
+  const posts = [video('one', 'creator'), video('two', 'creator', { createdAt: new Date(now - 30_000).toISOString() })];
   const events = [
     watch('one', 'viewer-a', 4_000, false),
     watch('one', 'viewer-a', 5_000, true),
