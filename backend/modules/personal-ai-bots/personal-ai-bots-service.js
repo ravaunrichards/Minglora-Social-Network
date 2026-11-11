@@ -105,7 +105,7 @@ export const PERSONAL_AI_BOT_HIGH_IMPACT_TASKS = Object.freeze([
 const COLLECTIONS = [
   'personalAiBotCategories','personalAiBots','personalAiBotTasks',
   'personalAiBotAudit','personalAiBotSettings','personalAiBotFollows',
-  'personalAiBotTeams','personalAiBotTeamMembers','personalAiBotTeamHandoffs','personalAiBotSchedules','personalAiBotPersonaVersions','personalAiBotBatches','personalAiBotDepartments','personalAiBotVacancies','personalAiBotApplications','personalAiBotAppointments','personalAiBotEmploymentHistory'
+  'personalAiBotTeams','personalAiBotTeamMembers','personalAiBotTeamHandoffs','personalAiBotSchedules','personalAiBotPersonaVersions','personalAiBotLanguageSettings','personalAiBotBatches','personalAiBotDepartments','personalAiBotVacancies','personalAiBotApplications','personalAiBotAppointments','personalAiBotEmploymentHistory'
 ];
 
 export function ensurePersonalAiBotCollections(db) {
@@ -1744,6 +1744,159 @@ export function rollbackPersonalAiBotPersonaVersion(db, versionId, actorId, time
     throw Object.assign(new Error('Rollback requires a persona version that was previously active.'),{status:409});
   }
   return activateApprovedPersonaVersion(db,record,actorId,timestamp,uid,'persona.version_rolled_back');
+}
+
+
+const PERSONAL_AI_BOT_LANGUAGE_MODES = Object.freeze({
+  detection:['manual','confidence_guarded'],
+  response:['match_member_preference','match_input_language','primary_language'],
+  codeSwitching:['preserve','ask_before_normalizing','single_language_response'],
+  translationDisplay:['show_original_and_translation','original_only']
+});
+
+function defaultPersonalAiBotLanguageConfiguration() {
+  return {
+    primaryLanguage:'en',
+    supportedLanguages:['en'],
+    fallbackLanguage:'en',
+    locale:'en-JM',
+    detectionMode:'manual',
+    confidenceThreshold:0.8,
+    responsePolicy:'match_member_preference',
+    codeSwitchingPolicy:'preserve',
+    translationDisplay:'show_original_and_translation',
+    humanReviewRequired:true,
+    languageQuality:[{code:'en',status:'unverified',evidenceReference:null}],
+    providerCompatibility:'not_checked',
+    providerAdapterConnected:false,
+    preservationRules:{
+      names:true,urls:true,hashtags:true,emojis:true,numbers:true,
+      quotedText:true,originalSourceText:true
+    },
+    runtimeStatus:'configuration_only'
+  };
+}
+
+function normalizePersonalAiBotLanguageCode(value, label='Language code') {
+  const raw=String(value||'').trim().replaceAll('_','-');
+  if(!raw||raw.length>35||!/^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/i.test(raw)){
+    throw Object.assign(new Error(label+' must be a valid BCP 47 language tag or ISO 639-3 code.'),{status:400});
+  }
+  try {
+    const canonical=Intl.getCanonicalLocales(raw)[0];
+    if(!canonical)throw new Error('invalid');
+    return canonical;
+  } catch {
+    throw Object.assign(new Error(label+' must be a valid BCP 47 language tag or ISO 639-3 code.'),{status:400});
+  }
+}
+
+function normalizePersonalAiBotLanguageConfiguration(input, current) {
+  if(!input||typeof input!=='object'||Array.isArray(input)){
+    throw Object.assign(new Error('Multilingual settings must be a JSON object.'),{status:400});
+  }
+  const allowed=new Set([
+    'primaryLanguage','supportedLanguages','fallbackLanguage','locale',
+    'detectionMode','confidenceThreshold','responsePolicy',
+    'codeSwitchingPolicy','translationDisplay','humanReviewRequired'
+  ]);
+  if(Object.keys(input).some(key=>!allowed.has(key))){
+    throw Object.assign(new Error('Multilingual settings contain unsupported fields; quality evidence and provider compatibility are managed separately.'),{status:400});
+  }
+  const merged={...current,...input};
+  const supportedRaw=merged.supportedLanguages;
+  if(!Array.isArray(supportedRaw)||supportedRaw.length<1||supportedRaw.length>20){
+    throw Object.assign(new Error('Select between 1 and 20 supported languages.'),{status:400});
+  }
+  const supportedLanguages=supportedRaw.map((code,index)=>
+    normalizePersonalAiBotLanguageCode(code,'Supported language '+(index+1))
+  );
+  if(new Set(supportedLanguages.map(code=>code.toLowerCase())).size!==supportedLanguages.length){
+    throw Object.assign(new Error('Remove duplicate supported language codes.'),{status:400});
+  }
+  const primaryLanguage=normalizePersonalAiBotLanguageCode(merged.primaryLanguage,'Primary language');
+  const fallbackLanguage=normalizePersonalAiBotLanguageCode(merged.fallbackLanguage,'Fallback language');
+  if(!supportedLanguages.includes(primaryLanguage)||!supportedLanguages.includes(fallbackLanguage)){
+    throw Object.assign(new Error('Primary and fallback languages must both be in the supported language list.'),{status:400});
+  }
+  const locale=normalizePersonalAiBotLanguageCode(merged.locale,'Regional locale');
+  if(!['manual','confidence_guarded'].includes(merged.detectionMode)){
+    throw Object.assign(new Error('Choose manual detection or confidence-guarded detection.'),{status:400});
+  }
+  if(!PERSONAL_AI_BOT_LANGUAGE_MODES.response.includes(merged.responsePolicy)){
+    throw Object.assign(new Error('Choose a supported language response policy.'),{status:400});
+  }
+  if(!PERSONAL_AI_BOT_LANGUAGE_MODES.codeSwitching.includes(merged.codeSwitchingPolicy)){
+    throw Object.assign(new Error('Choose a supported code-switching policy.'),{status:400});
+  }
+  if(!PERSONAL_AI_BOT_LANGUAGE_MODES.translationDisplay.includes(merged.translationDisplay)){
+    throw Object.assign(new Error('Choose a supported original/translation display policy.'),{status:400});
+  }
+  const confidenceThreshold=Number(merged.confidenceThreshold);
+  if(!Number.isFinite(confidenceThreshold)||confidenceThreshold<0.5||confidenceThreshold>0.99){
+    throw Object.assign(new Error('Language detection confidence threshold must be between 0.50 and 0.99.'),{status:400});
+  }
+  if(merged.humanReviewRequired!==true){
+    throw Object.assign(new Error('Human review remains required until a provider and language quality evaluations are approved.'),{status:409});
+  }
+  const priorQuality=new Map((current.languageQuality||[]).map(item=>[item.code,item]));
+  return {
+    primaryLanguage,supportedLanguages,fallbackLanguage,locale,
+    detectionMode:merged.detectionMode,confidenceThreshold,
+    responsePolicy:merged.responsePolicy,
+    codeSwitchingPolicy:merged.codeSwitchingPolicy,
+    translationDisplay:merged.translationDisplay,
+    humanReviewRequired:true,
+    languageQuality:supportedLanguages.map(code=>{
+      const prior=priorQuality.get(code);
+      return {code,status:prior?.status||'unverified',evidenceReference:prior?.evidenceReference||null};
+    }),
+    providerCompatibility:'not_checked',
+    providerAdapterConnected:false,
+    preservationRules:{
+      names:true,urls:true,hashtags:true,emojis:true,numbers:true,
+      quotedText:true,originalSourceText:true
+    },
+    runtimeStatus:'configuration_only'
+  };
+}
+
+function getOwnedPersonalAiBotForLanguageSettings(db, botId, actorId) {
+  ensurePersonalAiBotCollections(db);
+  const bot=db.personalAiBots.find(item=>item.id===botId&&item.createdBy===actorId);
+  if(!bot)throw Object.assign(new Error('AI identity not found under your owner account.'),{status:404});
+  return bot;
+}
+
+export function getPersonalAiBotLanguageSettings(db, botId, actorId) {
+  getOwnedPersonalAiBotForLanguageSettings(db,botId,actorId);
+  const stored=db.personalAiBotLanguageSettings.find(item=>item.botId===botId&&item.ownerId===actorId);
+  return {
+    botId,
+    configuration:stored?.configuration||defaultPersonalAiBotLanguageConfiguration(),
+    saved:!!stored,
+    updatedAt:stored?.updatedAt||null
+  };
+}
+
+export function updatePersonalAiBotLanguageSettings(db, botId, input, actorId, timestamp, uid) {
+  getOwnedPersonalAiBotForLanguageSettings(db,botId,actorId);
+  const index=db.personalAiBotLanguageSettings.findIndex(item=>item.botId===botId&&item.ownerId===actorId);
+  const existing=index>=0?db.personalAiBotLanguageSettings[index]:null;
+  const current=existing?.configuration||defaultPersonalAiBotLanguageConfiguration();
+  const configuration=normalizePersonalAiBotLanguageConfiguration(input,current);
+  const record=existing||{
+    id:uid(),botId,ownerId:actorId,createdBy:actorId,createdAt:timestamp
+  };
+  record.configuration=configuration;
+  record.updatedBy=actorId;
+  record.updatedAt=timestamp;
+  if(index>=0)db.personalAiBotLanguageSettings[index]=record;
+  else db.personalAiBotLanguageSettings.push(record);
+  audit(db,actorId,'language.settings_updated','bot_language_settings',record.id,
+    'Saved multilingual configuration for one AI identity. Provider compatibility remains unverified and runtime translation remains disconnected.',
+    timestamp,uid);
+  return {botId,configuration,saved:true,updatedAt:timestamp};
 }
 
 export function getPersonalAiBotOverview(db) {
