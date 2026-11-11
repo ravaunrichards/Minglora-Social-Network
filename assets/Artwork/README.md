@@ -8,11 +8,11 @@
 - Automated integrity audit: **PASS_WITH_REVIEW_REQUIRED**
 - All 1,509 referenced files inspected; **0** missing/invalid/hash errors.
 - Exact duplicate file hashes: **0**.
-- Initial same-title near-duplicate candidates: **6**; see `reports/gift-artwork-visual-review-notes.md`.
-- Additional same-title candidates needing full-size confirmation: see `reports/gift-artwork-contact-sheet-screening.md`.
+- Full-size same-title candidate review: **18 pairs / 36 PNGs**; **7** distinct variant pairs and **11** repeated-artwork candidates. Details and source cells: `reports/gift-artwork-visual-review-notes.md`.
+- For the first 6 pairs, source screenshot cells were also visually checked. For the later 12 pairs, source-cell confirmation remains pending.
 - Contact-sheet gallery: `reports/gift-artwork-contact-sheets/` (24 pages, 64 per full page).
 - Contact-sheet visual screening: **24/24 pages; 1,509/1,509 thumbnails inspected**.
-- Individual full-resolution visual review of the complete collection: **NOT COMPLETED**.
+- Individual full-resolution visual review of the complete collection: **NOT COMPLETED**; the other 1,473 manifest records still need individual full-size review.
 - Rights/licence clearance: **NOT COMPLETED**.
 
 ## Source preservation and publication gate
@@ -21,4 +21,4 @@ Original screenshots in `assets/Gifts/` are read-only inputs. Each PNG in this f
 
 Keep this collection in the review-only workspace. Do not publish, activate, monetize, or represent these crops as Minglora-original gifts until the rights/provenance for each item is documented or a new original Minglora replacement is created. All OCR names, crops, variants, and unmatched catalogue labels require full-resolution/source-cell review before production use.
 
-The 1,509 extracted files are preserved. Near-duplicate candidates and variants are documented; no near-duplicate file was deleted or silently merged during this review.
+The 1,509 extracted files are preserved. Eighteen same-title pairs have been compared full-size; all 36 files remain unchanged. No near-duplicate file was deleted or silently merged. Eleven pairs appear to repeat artwork and require source-occurrence/catalog reconciliation; seven pairs are distinct and must remain variants.
