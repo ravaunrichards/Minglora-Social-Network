@@ -61,7 +61,7 @@ These are the capabilities in the **current runtime**, not a claim of Facebook f
 - `tests/`: current API integration tests plus unit tests and test plans for security, accessibility, performance and browser flows.
 - `docs/`: architecture map, feature catalog, roadmap, API, security and deployment guides.
 
-See [the repository map](docs/REPOSITORY_MAP.md), [platform coverage](docs/PLATFORM_COVERAGE.md), [feature implementation status](docs/FEATURES.md), [feature catalog](docs/FEATURE_CATALOG.md), [Facebook feature-parity audit](docs/FACEBOOK_PARITY_AUDIT.md), and [roadmap](docs/ROADMAP.md) for the distinction between live functionality, gaps and planned work.
+See [the repository map](docs/REPOSITORY_MAP.md), [platform coverage](docs/PLATFORM_COVERAGE.md), [global platform capability matrix](docs/GLOBAL-PLATFORM-CAPABILITY-MATRIX.md), [feature implementation status](docs/FEATURES.md), [feature catalog](docs/FEATURE_CATALOG.md), [Facebook feature-parity audit](docs/FACEBOOK_PARITY_AUDIT.md), and [roadmap](docs/ROADMAP.md) for the distinction between live functionality, gaps and planned work.
 
 ## Requirements
 
