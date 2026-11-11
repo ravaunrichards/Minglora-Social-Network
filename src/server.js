@@ -20,6 +20,7 @@ import { normalizeCalendarEntry } from '../backend/modules/calendar/service.js';
 import { canAccessMessageGroup, canManageMessageGroup, getActiveMessageGroupMembers, normalizeMessageGroupMemberIds, normalizeMessageGroupName, summarizeGroupReadState, validateMessageGroupReaction, MESSAGE_GROUP_MAX_MEMBERS, MESSAGE_GROUP_MESSAGE_MAX_LENGTH, normalizeMessageDisappearingSeconds, messageConversationKey, getMessageDisappearingSeconds, isMessageExpired, getMessageConversationPeerId } from '../backend/modules/messaging/service.js';
 import { normalizeEmail, normalizeUsername, normalizeContactPhone, validateContactPhone, validateEmail, validateUsername, validatePostInput, validateProfilePatch } from './domain/validation.js';
 import { createSessionAuthManager, getAuthTokenExpiresAt } from './session-auth.js';
+import { VIDEO_PLAYLIST_MAX_ITEMS, addVideoPlaylistItem, canViewVideoPlaylist, removeVideoPlaylistItem, reorderVideoPlaylistItems, validateVideoPlaylistInput } from '../backend/modules/video/playlists.js';
 import { createOrResumeSupabaseAccount } from './domain/auth-registration.js';
 import { createOAuthFlowCookie, readOAuthFlowCookie as parseOAuthFlowCookie, clearOAuthFlowCookie as buildClearOAuthFlowCookie } from './oauth-flow-state.js';
 import { createSupabaseOAuthAuthorization } from './oauth-authorization.js';
@@ -1042,6 +1043,49 @@ async function publicPost(p,viewerId) {
     isWatchLater:(db.savedPosts||[]).some(saved=>saved.userId===viewerId&&saved.postId===p.id&&saved.readLater===true),
     comments:(p.comments||[]).map(c=>({...c,author:safeUser(db.users.find(u=>u.id===c.userId))}))};
 }
+
+function isVisibleVideoPost(viewerId, post) {
+  if (!post || post.status === 'hidden' || post.archivedAt || !post.userId || blockedBetween(viewerId, post.userId)) return false;
+  const author = (db.users || []).find(profile => profile.id === post.userId);
+  if (!author || !canViewProfile(viewerId, author) || !canViewProfileAudience(viewerId, post.userId, post.audience || 'public')) return false;
+  return (post.mediaIds || []).some(assetId => {
+    const asset = (db.mediaAssets || []).find(item => item.id === assetId && item.ownerId === post.userId && item.slot === 'post');
+    return asset && asset.status === 'attached' && asset.mediaType === 'video';
+  });
+}
+async function publicVideoPlaylist(playlist, viewerId, { includeVideos = false } = {}) {
+  const owner = (db.users || []).find(member => member.id === playlist.ownerId);
+  const orderedItems = (db.videoPlaylistItems || [])
+    .filter(item => item.playlistId === playlist.id)
+    .sort((a, b) => Number(a.position) - Number(b.position));
+  const visibleItems = orderedItems.filter(item => {
+    const post = (db.posts || []).find(candidate => candidate.id === item.postId);
+    return isVisibleVideoPost(viewerId, post);
+  });
+  const videos = [];
+  if (includeVideos) {
+    for (const item of visibleItems) {
+      const post = (db.posts || []).find(candidate => candidate.id === item.postId);
+      const published = await publicPost(post, viewerId);
+      if ((published.media || []).some(media => media.mediaType === 'video' && media.url)) {
+        videos.push({ ...published, playlistItemId: item.id, playlistPosition: item.position, addedAt: item.createdAt });
+      }
+    }
+  }
+  return {
+    id: playlist.id,
+    title: playlist.title,
+    description: playlist.description || '',
+    visibility: playlist.visibility,
+    createdAt: playlist.createdAt,
+    updatedAt: playlist.updatedAt || playlist.createdAt,
+    owner: safeUser(owner, viewerId),
+    isOwner: playlist.ownerId === viewerId,
+    videoCount: visibleItems.length,
+    ...(includeVideos ? { videos } : {})
+  };
+}
+
 async function publicDiscoveryPost(post) {
   const media = await Promise.all((post.mediaIds || []).slice(0, 3).map(async id => {
     const asset = (db.mediaAssets || []).find(item => item.id === id && item.ownerId === post.userId && item.slot === 'post');
@@ -4846,6 +4890,111 @@ async function route(req, res) {
           return json(res,200,{posts:page.items,nextCursor:page.nextCursor,hasMore:page.hasMore,scope});
         } catch (e) { return json(res,400,{error:e.message}); }
       }
+
+      if(method==='GET'&&p==='/api/video-playlists'){
+        const requestedOwnerId=String(url.searchParams.get('ownerId')||user.id).trim();
+        const owner=(db.users||[]).find(member=>member.id===requestedOwnerId);
+        if(!owner||blockedBetween(user.id,requestedOwnerId))return json(res,200,{playlists:[]});
+        const own=requestedOwnerId===user.id;
+        const playlists=(db.videoPlaylists||[])
+          .filter(playlist=>playlist.ownerId===requestedOwnerId&&!playlist.deletedAt)
+          .filter(playlist=>canViewVideoPlaylist(playlist,user.id,{
+            isFriend:(viewerId,ownerId)=>isFriend(viewerId,ownerId),
+            isBlocked:blockedBetween(user.id,requestedOwnerId),
+            allowUnlisted:own
+          }))
+          .sort((a,b)=>new Date(b.updatedAt||b.createdAt)-new Date(a.updatedAt||a.createdAt));
+        const cards=await Promise.all(playlists.map(playlist=>publicVideoPlaylist(playlist,user.id)));
+        return json(res,200,{playlists:cards});
+      }
+      if(method==='POST'&&p==='/api/video-playlists'){
+        const validation=validateVideoPlaylistInput(input);
+        if(!validation.valid)return json(res,400,{error:validation.errors.join(' ')});
+        const owned=(db.videoPlaylists||[]).filter(playlist=>playlist.ownerId===user.id&&!playlist.deletedAt);
+        if(owned.length>=100)return json(res,429,{error:'You have reached the limit of 100 video playlists.'});
+        const timestamp=now();
+        const playlist={
+          id:uid(),ownerId:user.id,...validation.value,createdAt:timestamp,updatedAt:timestamp
+        };
+        db.videoPlaylists.push(playlist);
+        await saveStore();
+        return json(res,201,{playlist:await publicVideoPlaylist(playlist,user.id)});
+      }
+      const playlistItemsRoute=p.match(/^\/api\/video-playlists\/([^/]+)\/items(?:\/([^/]+))?$/);
+      if(playlistItemsRoute&&method==='POST'&&playlistItemsRoute[2]===undefined){
+        const playlist=(db.videoPlaylists||[]).find(item=>item.id===playlistItemsRoute[1]&&!item.deletedAt);
+        if(!playlist)return json(res,404,{error:'Video playlist not found.'});
+        if(playlist.ownerId!==user.id)return json(res,403,{error:'Only the playlist owner can add videos.'});
+        const post=(db.posts||[]).find(item=>item.id===String(input.postId||''));
+        if(!isVisibleVideoPost(user.id,post))return json(res,404,{error:'The selected video is not available to this account.'});
+        const result=addVideoPlaylistItem(db.videoPlaylistItems,{
+          playlistId:playlist.id,postId:post.id,actorId:user.id,ownerId:playlist.ownerId,id:uid(),createdAt:now()
+        });
+        if(result.status==='exists')return json(res,200,{ok:true,alreadyAdded:true,item:result.item});
+        if(result.status==='limit')return json(res,400,{error:'A playlist can contain up to '+VIDEO_PLAYLIST_MAX_ITEMS+' videos.'});
+        if(result.status!=='created')return json(res,400,{error:'The video could not be added to this playlist.'});
+        playlist.updatedAt=now();
+        await saveStore();
+        return json(res,201,{ok:true,item:result.item});
+      }
+      if(playlistItemsRoute&&method==='DELETE'&&playlistItemsRoute[2]!==undefined){
+        const playlist=(db.videoPlaylists||[]).find(item=>item.id===playlistItemsRoute[1]&&!item.deletedAt);
+        if(!playlist)return json(res,404,{error:'Video playlist not found.'});
+        if(playlist.ownerId!==user.id)return json(res,403,{error:'Only the playlist owner can remove videos.'});
+        const result=removeVideoPlaylistItem(db.videoPlaylistItems,{
+          playlistId:playlist.id,postId:decodeURIComponent(playlistItemsRoute[2]),actorId:user.id,ownerId:playlist.ownerId
+        });
+        if(result.status==='not_found')return json(res,404,{error:'The video is not in this playlist.'});
+        if(result.status!=='removed')return json(res,400,{error:'The playlist item could not be removed.'});
+        playlist.updatedAt=now();
+        await saveStore();
+        return json(res,200,{ok:true,removedPostId:result.item.postId});
+      }
+      const playlistOrderRoute=p.match(/^\/api\/video-playlists\/([^/]+)\/order$/);
+      if(method==='PUT'&&playlistOrderRoute){
+        const playlist=(db.videoPlaylists||[]).find(item=>item.id===playlistOrderRoute[1]&&!item.deletedAt);
+        if(!playlist)return json(res,404,{error:'Video playlist not found.'});
+        if(playlist.ownerId!==user.id)return json(res,403,{error:'Only the playlist owner can reorder videos.'});
+        if(!Array.isArray(input.orderedPostIds)||input.orderedPostIds.length>VIDEO_PLAYLIST_MAX_ITEMS)return json(res,400,{error:'Provide the complete ordered list of playlist video IDs.'});
+        const result=reorderVideoPlaylistItems(db.videoPlaylistItems,{
+          playlistId:playlist.id,orderedPostIds:input.orderedPostIds,actorId:user.id,ownerId:playlist.ownerId
+        });
+        if(result.status==='invalid_order')return json(res,400,{error:'Reorder must contain every playlist video exactly once.'});
+        if(result.status!=='reordered')return json(res,400,{error:'The playlist could not be reordered.'});
+        playlist.updatedAt=now();
+        await saveStore();
+        return json(res,200,{ok:true,orderedPostIds:result.items.map(item=>item.postId)});
+      }
+      const playlistRoute=p.match(/^\/api\/video-playlists\/([^/]+)$/);
+      if(playlistRoute&&method==='GET'){
+        const playlist=(db.videoPlaylists||[]).find(item=>item.id===playlistRoute[1]&&!item.deletedAt);
+        if(!playlist||!canViewVideoPlaylist(playlist,user.id,{
+          isFriend:(viewerId,ownerId)=>isFriend(viewerId,ownerId),
+          isBlocked:blockedBetween(user.id,playlist?.ownerId),
+          allowUnlisted:true
+        }))return json(res,404,{error:'Video playlist not found.'});
+        return json(res,200,{playlist:await publicVideoPlaylist(playlist,user.id,{includeVideos:true})});
+      }
+      if(playlistRoute&&method==='PATCH'){
+        const playlist=(db.videoPlaylists||[]).find(item=>item.id===playlistRoute[1]&&!item.deletedAt);
+        if(!playlist)return json(res,404,{error:'Video playlist not found.'});
+        if(playlist.ownerId!==user.id)return json(res,403,{error:'Only the playlist owner can update it.'});
+        const validation=validateVideoPlaylistInput(input,{partial:true});
+        if(!validation.valid)return json(res,400,{error:validation.errors.join(' ')});
+        Object.assign(playlist,validation.value,{updatedAt:now()});
+        await saveStore();
+        return json(res,200,{playlist:await publicVideoPlaylist(playlist,user.id)});
+      }
+      if(playlistRoute&&method==='DELETE'){
+        const playlist=(db.videoPlaylists||[]).find(item=>item.id===playlistRoute[1]&&!item.deletedAt);
+        if(!playlist)return json(res,404,{error:'Video playlist not found.'});
+        if(playlist.ownerId!==user.id)return json(res,403,{error:'Only the playlist owner can delete it.'});
+        db.videoPlaylists=db.videoPlaylists.filter(item=>item.id!==playlist.id);
+        db.videoPlaylistItems=db.videoPlaylistItems.filter(item=>item.playlistId!==playlist.id);
+        await saveStore();
+        return json(res,200,{ok:true,deleted:true});
+      }
+
       if(method==='GET'&&p==='/api/for-you/videos'){
         const scope=String(url.searchParams.get('scope')||'for-you');
         if(!['for-you','following'].includes(scope))return json(res,400,{error:'Video feed scope must be for-you or following.'});
