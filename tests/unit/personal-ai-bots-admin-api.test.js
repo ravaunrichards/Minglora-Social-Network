@@ -1927,3 +1927,59 @@ test('emergency shutdown API reports paused teams and cancelled handoffs',async(
   assert.equal(db.personalAiBotTeamHandoffs[0].status,'cancelled');
   assert.equal(saves,1);
 });
+
+
+test('multilingual settings API loads defaults and saves private per-bot language preferences',async()=>{
+  const botId='00000000-0000-4000-8000-000000000701';
+  const db={personalAiBots:[{id:botId,createdBy:'owner-1',languages:['English','Jamaican Patois']}]};
+  let saves=0;
+  const base='/api/admin/personal-ai-bots/bots/'+botId+'/languages';
+  const read=makeContext({
+    method:'GET',path:base,url:new URL('https://minglora.test'+base),db
+  });
+  await handlePersonalAiBotsAdminApi(read);
+  assert.equal(read.res.statusCode,200);
+  assert.equal(read.res.payload.saved,false);
+  assert.equal(read.res.payload.configuration.providerCompatibility,'not_checked');
+  assert.equal(read.res.payload.configuration.humanReviewRequired,true);
+
+  const write=makeContext({
+    method:'PUT',path:base,url:new URL('https://minglora.test'+base),
+    input:{
+      supportedLanguages:['en','jam','es'],primaryLanguage:'en',
+      fallbackLanguage:'jam',locale:'en-JM',
+      detectionMode:'confidence_guarded',confidenceThreshold:0.82,
+      responsePolicy:'match_input_language',codeSwitchingPolicy:'preserve',
+      translationDisplay:'show_original_and_translation',humanReviewRequired:true
+    },db,saveStore:async()=>{saves++;}
+  });
+  await handlePersonalAiBotsAdminApi(write);
+  assert.equal(write.res.statusCode,200);
+  assert.equal(write.res.payload.configuration.fallbackLanguage,'jam');
+  assert.equal(write.res.payload.configuration.providerAdapterConnected,false);
+  assert.equal(write.res.payload.configuration.languageQuality.every(item=>item.status==='unverified'),true);
+  assert.deepEqual(db.personalAiBots[0].languages,['English','Jamaican Patois']);
+  assert.equal(saves,1);
+});
+
+test('multilingual settings API rejects provider assertions and non-owner reads',async()=>{
+  const botId='00000000-0000-4000-8000-000000000702';
+  const base='/api/admin/personal-ai-bots/bots/'+botId+'/languages';
+  const db={personalAiBots:[{id:botId,createdBy:'owner-1'}]};
+  const invalid=makeContext({
+    method:'PUT',path:base,url:new URL('https://minglora.test'+base),
+    input:{supportedLanguages:['en'],primaryLanguage:'en',fallbackLanguage:'en',locale:'en-JM',providerCompatibility:'verified'},
+    db
+  });
+  await handlePersonalAiBotsAdminApi(invalid);
+  assert.equal(invalid.res.statusCode,400);
+  assert.equal(db.personalAiBotLanguageSettings.length,undefined);
+
+  const denied=makeContext({
+    method:'GET',path:base,url:new URL('https://minglora.test'+base),
+    db,isOwnerAdmin:false
+  });
+  await handlePersonalAiBotsAdminApi(denied);
+  assert.equal(denied.res.statusCode,403);
+  assert.equal(db.personalAiBotLanguageSettings,undefined);
+});
