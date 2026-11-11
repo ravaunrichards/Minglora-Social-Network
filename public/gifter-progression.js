@@ -113,13 +113,14 @@
       ordered.map(item => {
         const levelNumber = Number(item.level);
         const badgeNumber = String(levelNumber).padStart(2, "0");
+        const badgeName = String(item.badgeName || ((item.tier || "Gifter") + " Gifter · LV " + number(levelNumber)));
         const stateLabel = item.current ? "Current" : item.adminAwarded ? "Admin awarded" : item.unlocked ? "Unlocked" : "Locked";
         const stateClass = item.current ? "is-current" : item.adminAwarded ? "is-admin-awarded" : item.unlocked ? "is-unlocked" : "is-locked";
         return "<article class='gp-level-index-item " + stateClass + "'>" +
-          "<img class='gp-level-index-art' src='/assets/gifter-badges/level_" + badgeNumber + ".png' alt='Level " + number(levelNumber) + " gifter badge' loading='lazy' decoding='async' width='80' height='80'>" +
+          "<img class='gp-level-index-art' src='/assets/gifter-badges/level_" + badgeNumber + ".png' alt='" + esc(badgeName) + "' loading='lazy' decoding='async' width='80' height='80'>" +
           "<div class='gp-level-index-copy'>" +
           "<span class='gp-level-index-level'>Level " + number(levelNumber) + "</span>" +
-          "<strong class='gp-level-index-badge'>" + esc(item.tier || "Gifter") + " Gifter</strong>" +
+          "<strong class='gp-level-index-badge'>" + esc(badgeName) + "</strong>" +
           "<small class='gp-level-index-coins'>" + number(item.coinsRequired ?? item.xpRequired) + " Coins required</small>" +
           "<span class='gp-level-index-state'>" + stateLabel + "</span></div></article>";
       }).join("") + "</div></section>";
@@ -141,15 +142,21 @@
     if (!items.length) {
       return "<div class='gp-empty'><span>🏅</span><strong>The leaderboard is waiting for its first gifter</strong><p>Only members with confirmed gifts appear here.</p></div>";
     }
-    return "<div class='gp-leaderboard-list'>" + items.map(item =>
-      "<article class='gp-leader-row " + (item.userId === current.userId ? "is-you" : "") + "'>" +
-      "<span class='gp-rank-number'>" + item.rank + "</span>" +
-      "<span class='gp-leader-avatar'>" + esc((item.name || item.username || "M").slice(0, 1).toUpperCase()) + "</span>" +
-      "<span class='gp-leader-copy'><span class='gp-leader-name'><strong>" + esc(item.name) + "</strong>" +
-      "<span class='gp-leader-level'>LV " + number(item.level) + "</span>" +
-      "</span><small>@" + esc(item.username) + "</small></span><strong class='gp-leader-xp'>" +
-      number(item.xp) + " Coins sent</strong></article>"
-    ).join("") + "</div>";
+    return "<div class='gp-leaderboard-list'>" + items.map(item => {
+      const level = Math.max(0, Math.min(50, Math.floor(Number(item.level) || 0)));
+      const badgeName = String(item.badgeName || (level ? "Level " + level + " Gifter" : ""));
+      const badgeMarkup = level
+        ? "<span class='gp-leader-badge'><img src='/assets/gifter-badges/level_" + String(level).padStart(2, "0") +
+          ".png' alt='Level " + level + " gifter badge' loading='lazy' decoding='async' width='24' height='24'><span>" +
+          esc(badgeName) + "</span></span>"
+        : "";
+      return "<article class='gp-leader-row " + (item.userId === current.userId ? "is-you" : "") + "'>" +
+        "<span class='gp-rank-number'>" + item.rank + "</span>" +
+        "<span class='gp-leader-avatar'>" + esc((item.name || item.username || "M").slice(0, 1).toUpperCase()) + "</span>" +
+        "<span class='gp-leader-copy'><small class='gp-leader-username'>@" + esc(item.username) + "</small>" +
+        "<strong class='gp-leader-display-name'>" + esc(item.name) + badgeMarkup + "</strong></span><strong class='gp-leader-xp'>" +
+        number(item.xp) + " Coins sent</strong></article>";
+    }).join("") + "</div>";
   }
 
   function renderMarkup(data) {
