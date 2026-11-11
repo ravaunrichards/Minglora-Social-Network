@@ -1133,8 +1133,9 @@ export function reviewPersonalAiBotTeamHandoff(db, teamId, handoffId, input, act
   handoff.updatedBy=actorId;
   handoff.updatedAt=timestamp;
   handoff.dispatchStatus='not_dispatched';
+  const actionLabel={accept:'accepted',reject:'rejected',cancel:'cancelled',complete:'completed'}[action];
   audit(db,actorId,'team.handoff_'+action,'team_handoff',handoff.id,
-    'Owner '+action+'d handoff '+handoff.id+'. No bot execution or external action was performed.',
+    'Owner '+actionLabel+' handoff '+handoff.id+'. No bot execution or external action was performed.',
     timestamp,uid);
   return handoff;
 }
