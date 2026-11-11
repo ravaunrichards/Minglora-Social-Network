@@ -136,7 +136,14 @@ body.minglora-for-you-active .fyp-top-search {
   padding:0!important;
 }
 body.minglora-for-you-active .fyp-top-search input {
-  display:none!important;
+  position:absolute!important;
+  left:0!important;
+  width:1px!important;
+  height:1px!important;
+  padding:0!important;
+  border:0!important;
+  opacity:0!important;
+  pointer-events:none!important;
 }
 body.minglora-for-you-active .fyp-top-search button[data-fyp-search] {
   display:grid!important;
@@ -180,11 +187,14 @@ body.minglora-for-you-active .fyp-top-search:has(input:not(:placeholder-shown)) 
 }
 body.minglora-for-you-active .fyp-top-search:focus-within input,
 body.minglora-for-you-active .fyp-top-search:has(input:not(:placeholder-shown)) input {
+  position:static!important;
   display:block!important;
   flex:1 1 0!important;
   width:100%!important;
   min-width:0!important;
   height:38px!important;
+  opacity:1!important;
+  pointer-events:auto!important;
   margin:0!important;
   padding:0 10px!important;
   border:1px solid rgba(255,255,255,.2)!important;
