@@ -408,3 +408,17 @@
   .gp-hero-art .gp-reference-art{width:100%;max-height:none}
   .gp-chart-fullsize{width:min(100%,420px);min-height:48px;font-size:1rem;padding:11px 14px}
 }
+
+
+/* Individual original badge artwork: equal display boxes, no cropping or distortion. */
+.gp-level-index-item{grid-template-columns:76px minmax(0,1fr);align-items:center;gap:12px;min-height:100px}
+.gp-level-index-art{display:block;width:76px;height:76px;max-width:100%;aspect-ratio:1/1;object-fit:contain;object-position:center;justify-self:center;align-self:center;filter:drop-shadow(0 3px 5px rgba(15,23,42,.18))}
+.gp-level-index-copy{display:grid;gap:5px;min-width:0;align-content:center}
+.gp-level-index-level{font-size:.74rem;line-height:1.2}
+.gp-level-index-badge{font-size:.82rem;line-height:1.25}
+.gp-level-index-coins{line-height:1.3;white-space:normal;overflow-wrap:anywhere}
+.gp-level-index-state{margin-top:1px}
+@media(max-width:980px){.gp-level-index-grid[data-layout="horizontal"]{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:760px){.gp-level-directory-heading{align-items:flex-start;flex-direction:column}.gp-level-index-grid[data-layout="horizontal"]{grid-template-columns:repeat(2,minmax(0,1fr))}.gp-level-index-item{grid-template-columns:64px minmax(0,1fr);gap:10px;padding:10px}.gp-level-index-art{width:64px;height:64px}}
+@media(max-width:480px){.gp-level-index-grid[data-layout="horizontal"]{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:360px){.gp-level-index-item{grid-template-columns:58px minmax(0,1fr);gap:9px;padding:9px}.gp-level-index-art{width:58px;height:58px}}
