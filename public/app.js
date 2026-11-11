@@ -3969,6 +3969,7 @@ async function renderCreator(){
       settings:null,
       videoAnalytics:null,
       videoAnalyticsError:null,
+      analyticsPeriodDays:30,
       contentTab:"posts",
       section:"overview",
       pagePickers:[]
@@ -4190,7 +4191,6 @@ function creatorAudienceMarkup(){
 }
 function creatorAnalyticsMarkup(){
   const s=state.creatorStudio,p=s.profile||{},analytics=s.videoAnalytics;
-  const posts=Array.isArray(p.posts)?p.posts:[];
   const formatDuration=seconds=>{
     const value=Math.max(0,Number(seconds)||0);
     if(value>=3600)return Math.floor(value/3600)+'h '+Math.floor(value%3600/60)+'m';
@@ -4199,28 +4199,30 @@ function creatorAnalyticsMarkup(){
   };
   const percentage=value=>Math.round(Math.max(0,Math.min(1,Number(value)||0))*100)+'%';
   const summary=analytics?.summary||{};
+  const periodDays=[7,30,90].includes(Number(analytics?.periodDays))?Number(analytics.periodDays):([7,30,90].includes(Number(s.analyticsPeriodDays))?Number(s.analyticsPeriodDays):30);
   const videoRows=Array.isArray(analytics?.videos)?analytics.videos:[];
   const rows=videoRows.length?videoRows.map(video=>{
     const date=video.createdAt?new Date(video.createdAt):null;
     const dateLabel=date&&!Number.isNaN(date.getTime())?date.toLocaleDateString():'Date unavailable';
-    return "<article class='creator-video-analytics-row'><div class='creator-video-analytics-title'><strong>"+esc(video.caption||'Untitled video')+"</strong><small>"+esc(dateLabel)+"</small></div><div class='creator-video-analytics-value'><strong>"+creatorNumber(video.uniqueViewers)+"</strong><small>Unique viewers</small></div><div class='creator-video-analytics-value'><strong>"+formatDuration(video.totalWatchSeconds)+"</strong><small>Watch time</small></div><div class='creator-video-analytics-value'><strong>"+percentage(video.completionRate)+"</strong><small>Completion</small></div></article>";
-  }).join(''):"<div class='creator-empty-state'><span>"+creatorIcon('video')+"</span><h3>No video watch data yet</h3><p>"+(s.videoAnalyticsError?'Minglora could not load your video analytics: '+esc(s.videoAnalyticsError):(videoRows.length===0?'Publish a video and let members watch it. Real viewer activity will appear here.':'No watch events were recorded during this period.'))+"</p></div>";
-  const analyticsError=s.videoAnalyticsError?"<p class='creator-analytics-footnote' role='status'>Video analytics unavailable: "+esc(s.videoAnalyticsError)+"</p>":"";
-  return "<div class='creator-subpage-heading'><div><span class='creator-eyebrow'>MEASURE WHAT MATTERS</span><h2>Creator analytics</h2><p>Account-backed profile insights and real video watch activity from the last "+Number(analytics?.periodDays||30)+" days.</p></div></div>"+
-    "<div class='creator-analytics-source'><span>✓</span><div><strong>Verified Minglora activity</strong><small>Viewer totals and watch time are aggregated from real video playback events. No estimated impressions, invented views or individual viewer identities are shown.</small></div></div>"+
-    "<div class='creator-analytics-grid'>"+
-      creatorMetric("Followers",creatorNumber(p.followersCount),"Current follower relationship count","friends")+
-      creatorMetric("Following",creatorNumber(p.followingCount),"Current following relationship count","profile")+
-      creatorMetric("Published videos",creatorNumber(summary.publishedVideos),"Your published videos with attached video media","video")+
+    return "<article class='creator-video-analytics-row'><div class='creator-video-analytics-title'><strong>"+esc(video.caption||'Untitled video')+"</strong><small>"+esc(dateLabel)+"</small></div><div class='creator-video-analytics-value'><strong>"+creatorNumber(video.uniqueViewers)+"</strong><small>Unique viewers</small></div><div class='creator-video-analytics-value'><strong>"+formatDuration(video.totalWatchSeconds)+"</strong><small>Watch time</small></div><div class='creator-video-analytics-value'><strong>"+formatDuration(video.averageWatchSecondsPerViewer)+"</strong><small>Avg / viewer</small></div><div class='creator-video-analytics-value'><strong>"+percentage(video.completionRate)+"</strong><small>Completion</small></div></article>";
+  }).join(''):"<div class='creator-empty-state'><span>"+creatorIcon('video')+"</span><h3>No video watch data yet</h3><p>"+(videoRows.length===0?'Publish a video and let members watch it. Real viewer activity will appear here.':'No watch events were recorded during this period.')+"</p></div>";
+  const profileMetrics=s.profile
+    ?creatorMetric("Followers",creatorNumber(p.followersCount),"Current follower relationship count","friends")+creatorMetric("Following",creatorNumber(p.followingCount),"Current following relationship count","profile")
+    :"<p class='creator-analytics-footnote' role='status'>Profile metrics are unavailable.</p>";
+  const videoMetrics=analytics
+    ?creatorMetric("Published videos",creatorNumber(summary.publishedVideos),"Published videos with attached video media","video")+
       creatorMetric("Unique viewers",creatorNumber(summary.uniqueViewers),"Distinct member accounts across your videos","friends")+
       creatorMetric("Video watch time",formatDuration(summary.totalWatchSeconds),"Recorded watch time in the reporting period","clock")+
-      creatorMetric("Completion rate",percentage(summary.completionRate),"Viewer-video pairs reaching at least 85%","analytics")+
-    "</div>"+
-    "<section class='creator-studio-panel creator-video-analytics'><div class='creator-video-analytics-heading'><h3>Video performance</h3><small>Last "+Number(analytics?.periodDays||30)+" days · up to 30 recent videos</small></div>"+
+      creatorMetric("Average watch",formatDuration(summary.averageWatchSecondsPerViewer),"Per unique viewer-video pair","clock")+
+      creatorMetric("Completion rate",percentage(summary.completionRate),"Viewer-video pairs reaching at least 85%","analytics")
+    :"<p class='creator-analytics-footnote' role='status'>Video analytics unavailable: "+esc(s.videoAnalyticsError||'Minglora could not load video watch analytics.')+"</p>";
+  return "<div class='creator-subpage-heading'><div><span class='creator-eyebrow'>MEASURE WHAT MATTERS</span><h2>Creator analytics</h2><p>Account-backed profile insights and real video watch activity.</p></div><label class='creator-video-analytics-period-label'>Reporting period<select id='creator-video-analytics-period' aria-label='Video analytics reporting period'><option value='7' "+(periodDays===7?'selected':'')+">Last 7 days</option><option value='30' "+(periodDays===30?'selected':'')+">Last 30 days</option><option value='90' "+(periodDays===90?'selected':'')+">Last 90 days</option></select></label></div>"+
+    "<div class='creator-analytics-source'><span>✓</span><div><strong>Verified Minglora activity</strong><small>Viewer totals and watch time are aggregated from real video playback events. No estimated impressions, invented views or individual viewer identities are shown.</small></div></div>"+
+    "<div class='creator-analytics-grid'>"+profileMetrics+videoMetrics+"</div>"+
+    "<section class='creator-studio-panel creator-video-analytics'><div class='creator-video-analytics-heading'><h3>Video performance</h3><small>Last "+periodDays+" days · up to 30 recent videos</small></div>"+
       (analytics?rows:"<div class='creator-empty-state'><span>"+creatorIcon('analytics')+"</span><h3>Video analytics unavailable</h3><p>"+esc(s.videoAnalyticsError||'Minglora could not load video watch analytics.')+"</p></div>")+
       "<p class='creator-video-analytics-footnote'>Unique viewers are distinct signed-in accounts with recorded playback. Completion is based on the viewer reaching at least 85% of the video. These are not ad impressions or reach estimates.</p></section>"+
-    "<section class='creator-studio-panel creator-analytics-limits'><span class='creator-eyebrow'>METRIC COVERAGE</span><h3>What Minglora can measure today</h3><div class='creator-coverage-list'><p><b>Available</b><span>Followers, following, published posts, unique video viewers, recorded watch time, average watch time per viewer-video pair and completion rate.</span></p><p><b>Still being built</b><span>Impressions/reach, audience demographics, traffic sources, retention curves, follower conversion and time-series comparisons.</span></p></div></section>"+
-    analyticsError;
+    "<section class='creator-studio-panel creator-analytics-limits'><span class='creator-eyebrow'>METRIC COVERAGE</span><h3>What Minglora can measure today</h3><div class='creator-coverage-list'><p><b>Available</b><span>Followers, following, published videos, unique video viewers, recorded watch time, average watch time per viewer-video pair and completion rate.</span></p><p><b>Still being built</b><span>Impressions/reach, audience demographics, traffic sources, retention curves, follower conversion and time-series comparisons.</span></p></div></section>";
 }
 function creatorPageCard(page,details){
   const posts=details?.posts||[],canDelete=page.myRole==="owner";
@@ -4364,7 +4366,7 @@ async function renderCreatorSection(section){
   }else if(section==="analytics"){
     const [profileResult,videoResult]=await Promise.allSettled([
       api("/users/"+encodeURIComponent(state.user.id)),
-      api("/creator/video-analytics?days=30")
+      api("/creator/video-analytics?days="+( [7,30,90].includes(Number(s.analyticsPeriodDays))?Number(s.analyticsPeriodDays):30))
     ]);
     if(profileResult.status==="fulfilled"){s.profile=profileResult.value;s.analyticsError=null;}
     else s.analyticsError=profileResult.reason?.message||"Profile insights are unavailable.";
@@ -4389,6 +4391,14 @@ async function renderCreatorSection(section){
   setContent(creatorStudioChrome(section,content));
   syncCreatorStudioNavigationLayout();
   window.scrollTo({top:0,behavior:"auto"});
+  if(section==="analytics"){
+    const periodSelect=document.getElementById("creator-video-analytics-period");
+    periodSelect?.addEventListener("change",()=>{
+      const value=Number(periodSelect.value);
+      s.analyticsPeriodDays=[7,30,90].includes(value)?value:30;
+      renderCreatorSection("analytics").catch(error=>toast(error.message||"Video analytics could not be refreshed."));
+    });
+  }
   document.querySelectorAll("[data-creator-section]").forEach(button=>button.addEventListener("click",()=>renderCreatorSection(button.dataset.creatorSection).catch(error=>toast(error.message))));
   document.querySelectorAll("[data-creator-open-live]").forEach(button=>button.addEventListener("click",()=>activateNav("live")));
   document.querySelectorAll('[data-creator-start-live]').forEach(button=>button.addEventListener('click',()=>{state.liveStartFormat=button.dataset.creatorStartLive==='audio_only'?'audio_only':'video_audio';activateNav('live');}));
