@@ -166,6 +166,7 @@
     html+='<div class="pab-field"><label>Standing administrator instructions</label><textarea class="pab-textarea pab-bot-instructions" data-bot="'+esc(bot.id)+'" maxlength="4000">'+esc(bot.administratorInstructions||'')+'</textarea></div>';
     html+='<div><strong style="font-size:11px">Allowed low-risk autonomous actions</strong><div class="pab-actions-checks">'+HYBRID_ACTIONS.map(item=>'<label class="pab-check"><input type="checkbox" class="pab-hybrid-action" data-bot="'+esc(bot.id)+'" value="'+esc(item[0])+'" '+(actions.includes(item[0])?'checked':'')+' '+(!['hybrid','autonomous_within_limits'].includes(bot.autonomyMode)?'disabled':'')+'> '+esc(item[1])+'</label>').join('')+'</div><small style="display:block;margin-top:5px;color:var(--muted,#64748b);font-size:10px">High-impact actions always require a separate instruction and approval. Low-risk permissions never enable publishing, follows, messages or broadcasting by themselves.</small></div>';
     html+='<details class="pab-schedule"><summary>Activity schedule and daily limits</summary><div class="pab-bot-fields"><div class="pab-field"><label>Timezone</label><input class="pab-input pab-schedule-timezone" data-bot="'+esc(bot.id)+'" value="'+esc(schedule.timezone||'America/Jamaica')+'"></div><div class="pab-field"><label>Days (1=Mon … 7=Sun, comma-separated)</label><input class="pab-input pab-schedule-days" data-bot="'+esc(bot.id)+'" value="'+esc(list(schedule.daysOfWeek||[1,2,3,4,5,6,7]))+'"></div><div class="pab-field"><label>Start time</label><input class="pab-input pab-schedule-start" type="time" data-bot="'+esc(bot.id)+'" value="'+esc(schedule.startTime||'00:00')+'"></div><div class="pab-field"><label>End time</label><input class="pab-input pab-schedule-end" type="time" data-bot="'+esc(bot.id)+'" value="'+esc(schedule.endTime||'23:59')+'"></div><div class="pab-field"><label>Maximum tasks per day (0 = no worker dispatch)</label><input class="pab-input pab-schedule-limit" type="number" min="0" max="500" data-bot="'+esc(bot.id)+'" value="'+esc(schedule.maxTasksPerDay||0)+'"></div></div><p class="pab-notice">Saved schedules are configuration only. Preview the next 14 local calendar days below; this never dispatches work.</p><div class="pab-actions"><button type="button" class="pab-btn secondary pab-preview-schedule" data-bot="'+esc(bot.id)+'">Preview next 14 days</button></div><div class="pab-schedule-preview" data-schedule-preview="'+esc(bot.id)+'" aria-live="polite"></div></details>';
+    html+='<details class="pab-persona-lab"><summary>Personality Laboratory · versioned persona</summary><p class="pab-notice">Personas are private instruction configuration, separate from the public profile biography. Structural checks are not model tests; no provider sandbox is connected, and this panel never grants permissions or enables the bot.</p><div class="pab-bot-fields"><div class="pab-field"><label>Purpose</label><textarea class="pab-textarea pab-persona-purpose" maxlength="600" placeholder="What is this AI identity for?"></textarea></div><div class="pab-field"><label>Role</label><input class="pab-input pab-persona-role" maxlength="160" placeholder="For example, member support assistant"></div><div class="pab-field"><label>Communication style</label><textarea class="pab-textarea pab-persona-communication" maxlength="1200" placeholder="Describe the intended communication style."></textarea></div><div class="pab-field"><label>Tone</label><input class="pab-input pab-persona-tone" maxlength="600" placeholder="Friendly and professional"></div><div class="pab-field"><label>Response length</label><select class="pab-select pab-persona-length"><option value="brief">Brief</option><option value="balanced" selected>Balanced</option><option value="detailed">Detailed</option></select></div><div class="pab-field"><label>Expertise (comma-separated)</label><input class="pab-input pab-persona-expertise" maxlength="1500" placeholder="Add expertise areas"></div><div class="pab-field"><label>Language preferences (comma-separated)</label><input class="pab-input pab-persona-languages" maxlength="500" value="English"></div><div class="pab-field"><label>Intended audience</label><input class="pab-input pab-persona-audience" maxlength="400" placeholder="Who is this AI for?"></div><div class="pab-field"><label>Behavior boundaries</label><textarea class="pab-textarea pab-persona-boundaries" maxlength="1600" placeholder="Define what this AI must never cross."></textarea></div><div class="pab-field"><label>Prohibited behaviors</label><textarea class="pab-textarea pab-persona-prohibited" maxlength="1600" placeholder="List prohibited actions and behavior."></textarea></div><div class="pab-field"><label>Escalation instructions</label><textarea class="pab-textarea pab-persona-escalation" maxlength="1200" placeholder="When and how must the AI escalate to a human?"></textarea></div><div class="pab-field"><label>Structured traits (JSON; each value 0–100)</label><textarea class="pab-textarea pab-persona-traits" maxlength="1000">{"formality":50,"warmth":50,"humor":50,"assertiveness":50,"detail":50,"creativity":50,"initiative":50,"caution":50}</textarea></div></div><div class="pab-actions"><button type="button" class="pab-btn secondary pab-persona-create" data-bot="'+esc(bot.id)+'">Create persona draft</button><button type="button" class="pab-btn secondary pab-persona-load" data-bot="'+esc(bot.id)+'">Load version history</button></div><div class="pab-persona-versions" data-persona-versions="'+esc(bot.id)+'" aria-live="polite"></div></details>';
     html+='<div class="pab-actions"><button type="button" class="pab-btn secondary pab-save-bot" data-bot="'+esc(bot.id)+'">Save bot profile and controls</button><button type="button" class="pab-btn secondary pab-instruct" data-bot="'+esc(bot.id)+'">Give instruction</button></div><div class="pab-divider"></div>';
     html+='<form class="pab-instruction-form" data-bot-form="'+esc(bot.id)+'" hidden><div class="pab-field"><label>Instruction type</label><select class="pab-select pab-task-type">'+selectOptions(TASK_TYPES,'assistant_request')+'</select></div><div class="pab-field"><label>Administrator instruction</label><textarea class="pab-textarea pab-task-text" minlength="5" maxlength="4000" required placeholder="Describe exactly what you want this bot to do."></textarea></div><div class="pab-field"><label>Target member ID (required for follow/unfollow)</label><input class="pab-input pab-target-user" placeholder="Select a member below"></div><div class="pab-field"><label>Find a Minglora member</label><div class="pab-search-row"><input class="pab-input pab-member-search" placeholder="Search username or display name"><button type="button" class="pab-btn secondary pab-search-members" data-bot="'+esc(bot.id)+'">Search</button></div><div class="pab-member-results" id="pab-members-'+esc(bot.id)+'"></div></div><div class="pab-actions"><button class="pab-btn" type="submit">Submit instruction for approval</button><button class="pab-btn secondary pab-cancel-instruct" type="button">Close</button></div><small style="color:var(--muted,#64748b);font-size:10px">This records an instruction only. No post, follow, message, reaction or broadcast is executed by this release.</small></form>';
     html+='</article>';return html;
@@ -377,6 +378,8 @@
     }));
     document.querySelectorAll('.pab-save-bot').forEach(node=>node.addEventListener('click',()=>saveBot(node.dataset.bot)));
     document.querySelectorAll('.pab-preview-schedule').forEach(node=>node.addEventListener('click',()=>previewBotSchedule(node.dataset.bot)));
+    document.querySelectorAll('.pab-persona-create').forEach(node=>node.addEventListener('click',()=>createPersonaDraft(node.dataset.bot)));
+    document.querySelectorAll('.pab-persona-load').forEach(node=>node.addEventListener('click',()=>loadPersonaVersions(node.dataset.bot)));
     document.querySelectorAll('.pab-bot-mode').forEach(node=>node.addEventListener('change',()=>{
       const card=node.closest('[data-bot-card]');if(!card)return;
       const allow=['hybrid','autonomous_within_limits'].includes(node.value);
@@ -976,6 +979,82 @@
       target.innerHTML='<div class="pab-schedule-result"><p class="pab-notice">Dry-run schedule preview only. No tasks were dispatched.</p><p><strong>Timezone:</strong> '+esc(preview.timezone||'Unavailable')+' · <strong>Days:</strong> '+esc(preview.rangeDays||0)+'</p><p><strong>Configuration:</strong> bot '+(gates.botEnabled?'enabled':'not enabled')+', network '+(gates.globalNetworkEnabled?'enabled':'not enabled')+', daily cap '+(gates.dailyTaskLimitConfigured?'configured':'not configured')+'. <strong>Scheduler:</strong> not connected. <strong>Dispatch:</strong> disabled.</p><h4>Upcoming local activity windows</h4>'+(rows?'<ol>'+rows+'</ol>':'<p class="pab-empty">No upcoming activity windows in this preview range.</p>')+(skippedRows?'<h4>Skipped windows</h4><ul>'+skippedRows+'</ul>':'')+'</div>';
     }catch(error){
       target.innerHTML='<p class="pab-notice error">'+esc(error.message||'Schedule preview unavailable.')+'</p>';
+    }
+  }
+
+  function renderPersonaVersions(botId,result){
+    const target=document.querySelector('.pab-persona-versions[data-persona-versions="'+CSS.escape(botId)+'"]');
+    if(!target)return;
+    const versions=Array.isArray(result.versions)?result.versions:[];
+    if(!versions.length){target.innerHTML='<p class="pab-empty">No persona versions have been created for this AI identity.</p>';return;}
+    const rows=versions.map(version=>{
+      const evaluation=version.structuralEvaluation||null;
+      const active=version.id===result.activePersonaVersionId||version.status==='active';
+      let actions='';
+      if(version.status==='draft'){
+        actions+='<button type="button" class="pab-btn secondary pab-persona-action" data-version="'+esc(version.id)+'" data-action="evaluate">Run structural checks</button>';
+        if(evaluation?.status==='pass')actions+='<button type="button" class="pab-btn secondary pab-persona-action" data-version="'+esc(version.id)+'" data-action="approve">Approve version</button>';
+      }else if(version.status==='approved'&&!active){
+        actions+='<button type="button" class="pab-btn secondary pab-persona-action" data-version="'+esc(version.id)+'" data-action="'+(result.activePersonaVersionId?'rollback':'activate')+'">'+(result.activePersonaVersionId?'Rollback to this version':'Activate approved version')+'</button>';
+      }
+      return '<article class="pab-team-card"><div class="pab-team-top"><strong>Persona v'+esc(version.version)+'</strong><span class="pab-status '+(active?'':'off')+'">'+esc(active?'active':version.status)+'</span></div><p>Structural readiness: '+esc(evaluation?.status||'not evaluated')+'</p><p><small>Created '+esc(date(version.createdAt))+' · Owner approval '+(version.approvedAt?'recorded':'not recorded')+'</small></p><p><small>Provider/model behavioural test: not connected</small></p><div class="pab-actions">'+actions+'</div></article>';
+    }).join('');
+    target.innerHTML=rows;
+    target.querySelectorAll('.pab-persona-action').forEach(node=>node.addEventListener('click',()=>runPersonaAction(botId,node.dataset.version,node.dataset.action)));
+  }
+
+  async function loadPersonaVersions(botId){
+    const target=document.querySelector('.pab-persona-versions[data-persona-versions="'+CSS.escape(botId)+'"]');
+    if(!target)return;
+    target.innerHTML='<p class="pab-notice">Loading persona version history…</p>';
+    try{
+      const result=await request(API+'/personas?botId='+encodeURIComponent(botId));
+      renderPersonaVersions(botId,result);
+    }catch(error){
+      target.innerHTML='<p class="pab-notice error">'+esc(error.message||'Persona version history is unavailable.')+'</p>';
+    }
+  }
+
+  async function createPersonaDraft(botId){
+    const button=document.querySelector('.pab-persona-create[data-bot="'+CSS.escape(botId)+'"]');
+    const card=button?.closest('[data-bot-card]');
+    if(!card)return;
+    const csv=value=>String(value||'').split(',').map(item=>item.trim()).filter(Boolean);
+    let traits;
+    try{traits=JSON.parse(card.querySelector('.pab-persona-traits').value||'{}');}
+    catch{notice('pab-task-status','Persona traits must be valid JSON.','error');return;}
+    const configuration={
+      purpose:card.querySelector('.pab-persona-purpose').value,
+      role:card.querySelector('.pab-persona-role').value,
+      communicationStyle:card.querySelector('.pab-persona-communication').value,
+      tone:card.querySelector('.pab-persona-tone').value,
+      responseLength:card.querySelector('.pab-persona-length').value,
+      expertise:csv(card.querySelector('.pab-persona-expertise').value),
+      languagePreferences:csv(card.querySelector('.pab-persona-languages').value),
+      audience:card.querySelector('.pab-persona-audience').value,
+      boundaries:card.querySelector('.pab-persona-boundaries').value,
+      prohibitedBehaviors:card.querySelector('.pab-persona-prohibited').value,
+      escalationInstructions:card.querySelector('.pab-persona-escalation').value,
+      traits
+    };
+    try{
+      await request(API+'/personas',{method:'POST',body:JSON.stringify({botId,configuration})});
+      notice('pab-task-status','Private persona draft created. Run structural checks before owner approval.','success');
+      await loadPersonaVersions(botId);
+    }catch(error){notice('pab-task-status',error.message||'Could not create the persona draft.','error');}
+  }
+
+  async function runPersonaAction(botId,versionId,action){
+    try{
+      const result=await request(API+'/personas/'+versionId+'/'+action,{method:'POST',body:JSON.stringify({})});
+      const message=action==='evaluate'
+        ?'Structural checks '+(result.evaluation?.status||'completed')+'. This is not a model or safety benchmark.'
+        :action==='approve'?'Persona version approved by the owner.':'Persona version updated. The bot remains in its existing activation state.';
+      notice('pab-task-status',message,'success');
+      await loadPersonaVersions(botId);
+      await refresh();
+    }catch(error){
+      notice('pab-task-status',error.message||'Persona version action failed.','error');
     }
   }
 
