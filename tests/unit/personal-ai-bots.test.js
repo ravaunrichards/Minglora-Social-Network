@@ -1317,6 +1317,9 @@ test('multilingual evaluation sets store synthetic cases and human-reviewed evid
 
   const submitted=submitPersonalAiBotLanguageEvaluationSet(db,bot.id,created.id,actor,stamp,uid);
   assert.equal(submitted.status,'pending_human_review');
+  assert.throws(()=>reviewPersonalAiBotLanguageEvaluationSet(db,bot.id,created.id,{
+    decision:'approve',reviewerRole:'native_speaker',evidenceReference:'',reviewerAttestation:false
+  },actor,stamp,uid),/Reviewer attestation and a non-empty evidence reference are required/);
   const reviewed=reviewPersonalAiBotLanguageEvaluationSet(db,bot.id,created.id,{
     decision:'approve',
     reviewerRole:'native_speaker',
@@ -1348,6 +1351,10 @@ test('multilingual evaluation sets require synthetic-data privacy attestation an
   },actor,stamp,uid),/unsupported fields/);
   assert.throws(()=>submitPersonalAiBotLanguageEvaluationSet(db,bot.id,uid(),actor,stamp,uid),/not found/);
   assert.equal(db.personalAiBotLanguageEvaluationSets.length,0);
+  const shortSet=createPersonalAiBotLanguageEvaluationSet(db,bot.id,{
+    languageCode:'jam',name:'Too Few Cases',cases:cases.slice(0,4),syntheticDataAttested:true
+  },actor,stamp,uid);
+  assert.throws(()=>submitPersonalAiBotLanguageEvaluationSet(db,bot.id,shortSet.id,actor,stamp,uid),/at least 5 synthetic cases/);
 });
 
 test('editing evaluation cases requires renewed privacy attestation and clears earlier human review',()=>{
