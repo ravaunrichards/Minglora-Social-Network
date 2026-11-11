@@ -7,7 +7,7 @@
     if(!ctx)ctx=new C();
     return ctx;
   }
-  function prime(){try{const c=audio();if(c?.state==="suspended")void c.resume();return Boolean(c);}catch{return false;}}
+  function prime(){void loadCatalogMotionIndex();try{const c=audio();if(c?.state==="suspended")void c.resume();return Boolean(c);}catch{return false;}}
   function hash(value){let h=2166136261;for(const ch of String(value||"")){h^=ch.charCodeAt(0);h=Math.imul(h,16777619);}return h>>>0;}
   let catalogMotionIndex=null;
   let catalogMotionLoadPromise=null;
