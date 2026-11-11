@@ -165,6 +165,17 @@ Stories expire after 24 hours; expired records and their view records are remove
 
 Moderator access is restricted to MODERATOR_USER_IDS or a trusted account with an explicit admin/moderator role. Do not add arbitrary member IDs to this list.
 
+## Short-form video and creator analytics
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/api/for-you/videos?scope=for-you` | Read the authenticated member's privacy-filtered, ranked video feed with cursor pagination |
+| POST | `/api/videos/:id/watch` | Record playback duration and watched time for a video the member is authorized to view |
+| POST | `/api/videos/:id/feedback` | Save `interested` or `not_interested` recommendation feedback |
+| GET | `/api/creator/video-analytics?days=7|30|90` | Read authenticated creator-only aggregated video analytics for their own attached video posts |
+
+Creator analytics aggregate real playback records into distinct viewers, viewer-video pairs, recorded watch time, average watch duration and completion rate. They do not expose viewer IDs, count impressions, or estimate reach. Hidden and archived posts, owner self-views, future events and records outside the selected reporting period are excluded. The endpoint defaults to 30 days and accepts only 7, 30 or 90 days.
+
 ## Voice and video calls
 
 | Method | Endpoint | Purpose |
