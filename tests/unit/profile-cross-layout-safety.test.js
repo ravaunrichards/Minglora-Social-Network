@@ -20,8 +20,10 @@ test('owner and visitor profiles retain their separate real action sets',()=>{
   const profile=app.slice(start,end);
   for(const marker of ['id="profile-add-story"','id="edit-profile"','id="profile-people-toggle"'])assert.ok(profile.includes(marker));
   for(const marker of ['id="profile-follow"','id="profile-subscribe"','id="profile-message"','data-profile-call="audio"','data-profile-call="video"','id="profile-more-actions"','id="profile-report"','id="profile-block"'])assert.ok(profile.includes(marker));
-  assert.ok(profile.includes('verifiedProfileBadge(u)+gifterProfileBadge(u,"profile")+liveProProfileBadge(u)'));
-  assert.ok(profile.includes('profile-admin-identity'));
+  assert.ok(profile.includes('verifiedProfileBadge(u)'));
+  assert.ok(!profile.includes('gifterProfileBadge(u,"profile")'));
+  assert.ok(!profile.includes('liveProProfileBadge(u)'));
+  assert.ok(!profile.includes('profile-admin-identity'));
 });
 
 test('admin uses the same owner layout without an admin-specific grid modifier',()=>{
@@ -29,7 +31,7 @@ test('admin uses the same owner layout without an admin-specific grid modifier',
   const end=app.indexOf('async function loadProfileGiftGallery',start);
   const profile=app.slice(start,end);
   assert.ok(profile.includes("const isAdminProfile=Boolean(isMe&&"));
-  assert.ok(profile.includes('profile-admin-identity'));
+  assert.ok(!profile.includes('profile-admin-identity'));
   assert.ok(!profile.includes("profile-header-card--admin"));
   assert.ok(!profile.includes("profile-info--admin"));
   assert.ok(profile.includes('const profileActionMarkup=relationshipActions'));
