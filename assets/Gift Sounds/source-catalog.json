@@ -528,7 +528,9 @@
     "excludedImitations": 2,
     "downloadedAudioFiles": 0,
     "auditionedAudioFiles": 0,
-    "productionReadyAudioFiles": 0
+    "productionReadyAudioFiles": 0,
+    "candidateGiftMappings": 14,
+    "candidateGiftFolderCount": 47
   },
   "additionalCC0Recordings": [
     {
@@ -785,6 +787,139 @@
       "durationSeconds": 103,
       "sourceStatus": "public_domain_source_page_verified; binary_download_pending",
       "productionEligible": false
+    }
+  ],
+  "candidateGiftMappings": [
+    {
+      "sourceId": "animal-cat",
+      "giftSlugs": [
+        "cute-cat-variant-2",
+        "cute-cat",
+        "fortune-cat",
+        "gamer-cat",
+        "lucky-cat",
+        "rock-cats",
+        "space-cat",
+        "spooky-cat",
+        "sumo-cat",
+        "the-van-cat"
+      ],
+      "reason": "The artwork names directly identify cats; the source is a genuine cat meow recording."
+    },
+    {
+      "sourceId": "animal-bee",
+      "giftSlugs": [
+        "minecraft-bee",
+        "stinging-bee"
+      ],
+      "reason": "The artwork names directly identify bees; the source is a genuine honeybee buzz recording."
+    },
+    {
+      "sourceId": "animal-bird",
+      "giftSlugs": [
+        "bird-paradise",
+        "dizzy-bird",
+        "melodic-birds"
+      ],
+      "reason": "The artwork names directly identify birds; the source is a blackcap bird song field recording."
+    },
+    {
+      "sourceId": "animal-cow",
+      "giftSlugs": [
+        "cow-napping"
+      ],
+      "reason": "The artwork directly identifies a cow; the source is a genuine moo recording."
+    },
+    {
+      "sourceId": "animal-dog",
+      "giftSlugs": [
+        "autumn-dog",
+        "hunting-dog",
+        "space-dog",
+        "super-dog"
+      ],
+      "reason": "The artwork names directly identify dogs; the source is a genuine dog bark recording."
+    },
+    {
+      "sourceId": "animal-frog",
+      "giftSlugs": [
+        "frog-conductor",
+        "frog",
+        "singing-frog",
+        "singing-frogs"
+      ],
+      "reason": "The artwork names directly identify frogs; the source is a genuine frog call recording."
+    },
+    {
+      "sourceId": "animal-goat",
+      "giftSlugs": [
+        "goat-busker",
+        "goat-variant-2",
+        "goat"
+      ],
+      "reason": "The artwork names directly identify goats; the source is a genuine goat call recording."
+    },
+    {
+      "sourceId": "animal-horse",
+      "giftSlugs": [
+        "arabian-stallion",
+        "stallion",
+        "stallions"
+      ],
+      "reason": "The artwork names directly identify horses/stallions; the source is a genuine horse neigh recording."
+    },
+    {
+      "sourceId": "animal-owl",
+      "giftSlugs": [
+        "santa-owl-surp"
+      ],
+      "reason": "The artwork directly identifies an owl; the source is a genuine owl hoot recording."
+    },
+    {
+      "sourceId": "animal-pig",
+      "giftSlugs": [
+        "love-piggy",
+        "lucky-pig"
+      ],
+      "reason": "The artwork names directly identify pigs; the source is a genuine pig oink recording."
+    },
+    {
+      "sourceId": "animal-sheep",
+      "giftSlugs": [
+        "sheep-joy"
+      ],
+      "reason": "The artwork directly identifies a sheep; the source is a genuine sheep bleat recording."
+    },
+    {
+      "sourceId": "animal-lion",
+      "giftSlugs": [
+        "crescent-lion",
+        "holiday-lion",
+        "leon-and-lion",
+        "lion-s-mane",
+        "royal-lions-sce"
+      ],
+      "reason": "The artwork names directly identify lions; the source is a recorded male lion roar. The clip is marked for human listening review due to its edited zoo recording description and low original bitrate."
+    },
+    {
+      "sourceId": "animal-blue-whale",
+      "giftSlugs": [
+        "sam-the-whale",
+        "seal-and-whale",
+        "whale-diving"
+      ],
+      "reason": "The artwork names directly identify whales; the source is a genuine NOAA blue-whale vocalization recording. Verify audibility and crop before production."
+    },
+    {
+      "sourceId": "celebration-fireworks",
+      "giftSlugs": [
+        "dubai-i999-fireworks",
+        "fireworks",
+        "maple-fireworks",
+        "mystery-firework",
+        "wave-firework"
+      ],
+      "reason": "The artwork names directly identify fireworks; the source is a real neighborhood fireworks recording. Trim and audition a short event before production."
     }
   ]
 }
