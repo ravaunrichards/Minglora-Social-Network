@@ -458,3 +458,31 @@
 /* Smooth high-quality resampling for original Gifter PNGs in the level directory and status row.
    The existing badge size, placement, visibility and effects are intentionally unchanged. */
 .gp-level-index-art,.gp-current-badge-image{image-rendering:auto;image-rendering:smooth}
+
+
+/* Display each original Gifter badge at a readable, undistorted horizontal size. */
+.gp-level-index-item{grid-template-columns:minmax(0,1fr);align-items:start;gap:8px}
+.gp-level-index-art{display:block;width:min(100%,170px);height:auto;aspect-ratio:170 / 76;object-fit:contain;object-position:left center;justify-self:start;align-self:center;filter:drop-shadow(0 3px 5px rgba(15,23,42,.18));image-rendering:auto}
+.gp-level-index-grid[data-layout="vertical"] .gp-level-index-item{grid-template-columns:minmax(0,170px) minmax(0,1fr) minmax(120px,auto) auto;align-items:center;gap:12px}
+.gp-level-index-grid[data-layout="vertical"] .gp-level-index-art{width:170px}
+.gp-leader-badge img{display:block;flex:0 0 40px;width:40px;height:auto;aspect-ratio:170 / 76;object-fit:contain;filter:drop-shadow(0 2px 3px rgba(12,24,48,.22));animation:gp-leader-badge-glow 7s ease-in-out infinite}
+.gp-current-badge-art{display:grid;place-items:center;flex:0 0 170px;width:170px;height:76px;min-width:0;overflow:visible}
+.gp-current-badge-art .gp-current-badge-image{display:block;width:170px;height:auto;max-width:100%;aspect-ratio:170 / 76;object-fit:contain;filter:drop-shadow(0 4px 9px rgba(15,23,42,.2));image-rendering:auto}
+@media(max-width:760px){
+  .gp-level-index-grid[data-layout="vertical"] .gp-level-index-item{grid-template-columns:minmax(0,130px) minmax(0,1fr);gap:7px 12px}
+  .gp-level-index-grid[data-layout="vertical"] .gp-level-index-art{width:130px}
+  .gp-level-index-grid[data-layout="vertical"] .gp-level-index-coins,.gp-level-index-grid[data-layout="vertical"] .gp-level-index-state{grid-column:2}
+  .gp-level-index-grid[data-layout="vertical"] .gp-level-index-state{justify-self:start}
+  .gp-current-badge-art{flex-basis:150px;width:150px;height:auto;min-height:67px}
+  .gp-current-badge-art .gp-current-badge-image{width:150px;height:auto}
+  .gp-leader-badge img{flex-basis:36px;width:36px}
+}
+@media(max-width:480px){
+  .gp-level-index-art{width:min(100%,160px)}
+  .gp-current-badge-row{align-items:flex-start}
+  .gp-current-badge-art{flex-basis:136px;width:136px;min-height:61px}
+  .gp-current-badge-art .gp-current-badge-image{width:136px}
+  .gp-level-index-grid[data-layout="vertical"] .gp-level-index-item{grid-template-columns:minmax(0,120px) minmax(0,1fr)}
+  .gp-level-index-grid[data-layout="vertical"] .gp-level-index-art{width:120px}
+}
+@media(prefers-reduced-motion:reduce){.gp-leader-badge img{animation:none}}
