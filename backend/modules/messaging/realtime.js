@@ -116,6 +116,31 @@ export function createMessengerRealtimeHub({
     return current.length;
   }
 
+  function disconnectPair(firstUserId, secondUserId, reason = 'blocked') {
+    const first = String(firstUserId || '');
+    const second = String(secondUserId || '');
+    if (!first || !second || first === second) return 0;
+
+    for (const [senderId, peerId] of [[first, second], [second, first]]) {
+      const key = senderId + ':' + peerId;
+      const timer = typingTimers.get(key);
+      if (timer) clearTimeout(timer);
+      typingTimers.delete(key);
+      typingLastSent.delete(key);
+      for (const socket of socketsByUser.get(senderId) || []) {
+        socket.typingConversations?.delete(peerId);
+      }
+      sendUser(peerId, { type: 'typing', userId: senderId, conversationId: peerId, active: false });
+    }
+
+    let delivered = 0;
+    delivered += sendUser(first, { type: 'presence', userId: second, online: false });
+    delivered += sendUser(second, { type: 'presence', userId: first, online: false });
+    delivered += sendUser(first, { type: 'relationship:blocked', userId: second, reason: String(reason || 'blocked') });
+    delivered += sendUser(second, { type: 'relationship:blocked', userId: first, reason: String(reason || 'blocked') });
+    return delivered;
+  }
+
   function publish(userIds, payload) {
     const ids = [...new Set((Array.isArray(userIds) ? userIds : [userIds])
       .map(value => String(value || '')).filter(Boolean))];
@@ -288,6 +313,7 @@ export function createMessengerRealtimeHub({
     publish,
     refreshPresence,
     disconnectUser,
+    disconnectPair,
     isConnected: userId => Boolean(socketsByUser.get(String(userId || ''))?.size),
     close
   };
