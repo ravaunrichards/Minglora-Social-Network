@@ -15,6 +15,7 @@ const giftsUi = read("public/gifts.js");
 const app = read("public/app.js");
 const html = read("public/index.html");
 const sw = read("public/sw.js");
+const server = read("src/server.js");
 
 function slugify(value) {
   return String(value || "").toLowerCase().normalize("NFKD")
@@ -64,8 +65,17 @@ test("gift sound map is versioned, precached and included in the current applica
   const effectsVersion = html.match(/src="(\/gift-effects\.js\?v=[^"]+)"/)?.[1] || "";
   assert.match(effectsVersion, /20261111-real-gift-recordings-1/);
   assert.ok(sw.includes("'" + effectsVersion + "'"), "current gift FX script is precached");
-  assert.ok(sw.includes("const CACHE_NAME='minglora-shell-v286-real-gift-audio-1'"));
+  assert.ok(sw.includes("const CACHE_NAME='minglora-shell-v286-self-updating-1'"));
   assert.ok(sw.includes("SHELL.push('/assets/Gift%20Sounds/gift-code-map.json')"));
+});
+
+test("restricted server route exposes only gift map and slug-specific MP3 files", () => {
+  assert.ok(server.includes("const giftSoundPrefix = '/assets/Gift Sounds/'"));
+  assert.ok(server.includes("gift-code-map.json"));
+  assert.ok(server.includes(String.raw\`^[a-z0-9-]+\/sound\.mp3$\`));
+  assert.ok(server.includes("audio/mpeg"));
+  assert.ok(server.includes("path.resolve(giftSoundRoot, giftSoundRelativePath)"));
+  assert.ok(server.includes("giftSoundFile.startsWith(giftSoundRoot + path.sep)"));
 });
 
 test("review candidate count remains aligned with the delivered per-gift MP3 files", () => {
