@@ -179,6 +179,11 @@ import {
   rollbackPersonalAiBotPersonaVersion,
   getPersonalAiBotLanguageSettings,
   updatePersonalAiBotLanguageSettings,
+  listPersonalAiBotLanguageEvaluationSets,
+  createPersonalAiBotLanguageEvaluationSet,
+  updatePersonalAiBotLanguageEvaluationSet,
+  submitPersonalAiBotLanguageEvaluationSet,
+  reviewPersonalAiBotLanguageEvaluationSet,
   createPersonalAiBotCategory,
   queuePersonalAiBotInstruction,
   queuePersonalAiBotFollowBatch,
@@ -886,6 +891,49 @@ export async function handlePersonalAiBotsAdminApi(context) {
       const result=updatePersonalAiBotLanguageSettings(db,botLanguageMatch[1],input,user.id,stamp,uid);
       await saveStore();
       return (json(res,200,{ok:true,...result}),true);
+    }
+    const languageEvaluationListMatch=path.match(/^\/api\/admin\/personal-ai-bots\/bots\/([0-9a-f-]{36})\/languages\/evaluation-sets$/i);
+    if(languageEvaluationListMatch&&method==='GET'){
+      const evaluationSets=listPersonalAiBotLanguageEvaluationSets(db,languageEvaluationListMatch[1],user.id);
+      return (json(res,200,{ok:true,evaluationSets}),true);
+    }
+    if(languageEvaluationListMatch&&method==='POST'){
+      const allowed=new Set(['languageCode','name','description','cases','syntheticDataAttested']);
+      if(!input||typeof input!=='object'||Array.isArray(input)||
+         Object.keys(input).some(key=>!allowed.has(key))){
+        return (json(res,400,{error:'Language evaluation set contains unsupported fields.'}),true);
+      }
+      const evaluationSet=createPersonalAiBotLanguageEvaluationSet(db,languageEvaluationListMatch[1],input,user.id,stamp,uid);
+      await saveStore();
+      return (json(res,201,{ok:true,evaluationSet}),true);
+    }
+    const languageEvaluationSetMatch=path.match(/^\/api\/admin\/personal-ai-bots\/bots\/([0-9a-f-]{36})\/languages\/evaluation-sets\/([0-9a-f-]{36})$/i);
+    if(languageEvaluationSetMatch&&method==='PATCH'){
+      const allowed=new Set(['name','description','cases','syntheticDataAttested']);
+      if(!input||typeof input!=='object'||Array.isArray(input)||
+         Object.keys(input).some(key=>!allowed.has(key))||!Object.keys(input).length){
+        return (json(res,400,{error:'Language evaluation set update contains unsupported or missing fields.'}),true);
+      }
+      const evaluationSet=updatePersonalAiBotLanguageEvaluationSet(
+        db,languageEvaluationSetMatch[1],languageEvaluationSetMatch[2],input,user.id,stamp,uid
+      );
+      await saveStore();
+      return (json(res,200,{ok:true,evaluationSet}),true);
+    }
+    const languageEvaluationActionMatch=path.match(/^\/api\/admin\/personal-ai-bots\/bots\/([0-9a-f-]{36})\/languages\/evaluation-sets\/([0-9a-f-]{36})\/(submit|review)$/i);
+    if(languageEvaluationActionMatch&&method==='POST'){
+      const action=languageEvaluationActionMatch[3];
+      const allowed=action==='review'
+        ?new Set(['decision','reviewerRole','evidenceReference','reviewNotes','reviewerAttestation'])
+        :new Set();
+      if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).some(key=>!allowed.has(key))){
+        return (json(res,400,{error:'Language evaluation action contains unsupported fields.'}),true);
+      }
+      const evaluationSet=action==='submit'
+        ?submitPersonalAiBotLanguageEvaluationSet(db,languageEvaluationActionMatch[1],languageEvaluationActionMatch[2],user.id,stamp,uid)
+        :reviewPersonalAiBotLanguageEvaluationSet(db,languageEvaluationActionMatch[1],languageEvaluationActionMatch[2],input,user.id,stamp,uid);
+      await saveStore();
+      return (json(res,200,{ok:true,action,evaluationSet}),true);
     }
     const botMatch=path.match(/^\/api\/admin\/personal-ai-bots\/bots\/([0-9a-f-]{36})$/i);
     if(botMatch&&method==='PATCH'){
