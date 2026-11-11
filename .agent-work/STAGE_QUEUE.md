@@ -40,6 +40,41 @@ Statuses: NOT STARTED · READY · IN PROGRESS · VERIFYING · COMPLETED · BLOCK
 - **Acceptance:** All edge-case tests pass and the browser renders expected output at desktop/tablet/mobile sizes.
 - **Status:** NOT STARTED.
 
+## Gifts artwork workstream
+
+### MS-GIFTS-ART-01 — Extract and automatically validate reference artwork
+- **Objective:** Preserve the 131 captured gift-gallery screenshots and extract one traceable transparent PNG candidate per deduplicated gift appearance.
+- **Requirements:** Read-only source captures; unique stable filenames; source screenshot/row/column; OCR confidence; SHA-256; dimensions; transparent crop; duplicate appearance traceability; reproducible extraction.
+- **Dependencies:** The 131 original `assets/Gifts/capture-*.png` reference captures.
+- **Implementation:** `scripts/extract-gift-artwork.py`, `.github/workflows/gift-artwork-extraction.yml`, `assets/Artwork/`.
+- **Acceptance:** All 131 screenshots processed; every manifest file exists; image dimensions and hashes pass; no exact duplicate image hashes; report generated; source files remain unchanged.
+- **Status:** COMPLETED for extraction and automated integrity checks only. This does not mean the complete collection has passed human review or rights clearance.
+- **Verified result:** 131/131 captures, 2,065 labelled cells, 1,509 extracted PNG records, 556 repeated appearances merged; 1,509/1,509 assets inspected; 0 integrity errors, 0 exact duplicate file-hash groups, 0 automated image-quality flags.
+- **Latest successful artwork workflow:** https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/43088609831
+
+### MS-GIFTS-ART-02 — Human visual review, OCR correction and variant reconciliation
+- **Objective:** Review every extracted artwork and label before any gift catalog integration.
+- **Requirements:** Inspect crop boundaries, transparent edges, subject scale, OCR names, truncation, low-confidence labels, category accuracy, same-name variants, repeated appearances and near-duplicate candidates.
+- **Dependencies:** MS-GIFTS-ART-01.
+- **Tasks:** Create review contact sheets; review flagged groups first; reconcile all 100 same-title/different-artwork variants; correct truncated/low-confidence labels against the source captures; document each approved, rejected, duplicate or unresolved asset.
+- **Acceptance:** Every record has a human review state and reason; no unresolved crop/name/duplicate issue is silently accepted; approved artwork maps to one deliberate catalog identity; all variants and repeated screenshot appearances remain traceable.
+- **Status:** IN PROGRESS. Six near-duplicate candidate pairs were visually compared (12 files). Three pairs are distinct artwork variants; three pairs appear to be repeated artwork and are retained pending canonical-record reconciliation. The other 1,497 records have not received individual human review.
+- **Review notes:** `reports/gift-artwork-visual-review-notes.md`; machine audit: `reports/gift-artwork-audit.md`.
+
+### MS-GIFTS-ART-03 — Rights, provenance and originality clearance
+- **Objective:** Confirm lawful rights for each image before publication or commercial use.
+- **Requirements:** Identify the source and rights holder; retain permission/licence evidence and allowed uses; replace any unlicensed or unclear third-party crop with newly authored Minglora artwork; keep provenance linked to each asset.
+- **Dependencies:** MS-GIFTS-ART-02.
+- **Acceptance:** Every production-bound image has documented rights/provenance or is an original Minglora replacement with recorded authorship; no unknown-rights screenshot crop is activated.
+- **Status:** BLOCKED / NOT STARTED. Screenshot extraction does not establish ownership or reuse rights. The entire extracted collection remains review-only.
+
+### MS-GIFTS-ART-04 — Integrate approved assets into the gift catalogue and clients
+- **Objective:** Publish only reviewed, rights-cleared, distinct gift artwork to the existing Minglora gift surfaces.
+- **Requirements:** Stable catalog identity and file references; correct thumbnail/model association; no price, balance, wallet, transaction or creator-earnings changes; responsive previews; web/mobile parity; cache/version correctness; fallback and load-error handling.
+- **Dependencies:** MS-GIFTS-ART-02 and MS-GIFTS-ART-03.
+- **Acceptance:** Each activated record points to a verified approved asset; all relevant gift-picker and preview tests pass; no unreviewed or unlicensed asset is displayed as production-ready.
+- **Status:** NOT STARTED. No extracted PNG was added to the live gift catalog by this artwork-extraction PR.
+
 ## Core product roadmap stages
 
 ### MS-CORE-01 — Reliable core, auth and persistence
