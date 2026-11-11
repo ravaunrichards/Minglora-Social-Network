@@ -154,7 +154,7 @@ test("Gifters Level-Up chart is readable and offers a full-size zoom view on eve
 
 test("ordered gifter badge references are prominent and legible on phone-sized screens", () => {
   const styles = read("public/gifter-progression.css");
-  const readable = styles.slice(styles.lastIndexOf("/* Readable ordered gifter badge references */"));
+  const readable = styles.slice(styles.lastIndexOf("/* Readable ordered gifter badge references:"));
   assert.ok(readable.length > 0, "readability overrides are present at the end of the stylesheet");
   assert.match(readable, /\.gp-level-index-item\{grid-template-columns:92px minmax\(0,1fr\)[^}]*min-height:116px/);
   assert.match(readable, /\.gp-level-index-art\{width:92px;height:92px[^}]*object-fit:contain/);
