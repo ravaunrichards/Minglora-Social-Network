@@ -2069,7 +2069,7 @@ export function reviewPersonalAiBotLanguageEvaluationSet(db, botId, setId, input
   if(input.reviewerAttestation!==true||evidenceReference.length<5){
     throw Object.assign(new Error('Reviewer attestation and a non-empty evidence reference are required.'),{status:400});
   }
-  record.status=decision==='approve'?'human_reviewed':decision;
+  record.status=decision==='approve'?'owner_review_recorded':decision;
   record.reviewStatus=decision;
   record.reviewerRole=reviewerRole;
   record.reviewEvidenceReference=evidenceReference;
