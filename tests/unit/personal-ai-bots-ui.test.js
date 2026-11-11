@@ -452,6 +452,7 @@ test('Bot Teams exposes owner-reviewed single-receiver handoffs without automati
     'Expected output',
     'Team-internal approved context',
     'Public context only',
+    'I confirm this handoff contains no private member conversations, private messages or private bot memory.',
     'Create handoff for owner review',
     'Load handoff history',
     'Accept',
@@ -467,4 +468,6 @@ test('Bot Teams exposes owner-reviewed single-receiver handoffs without automati
   assert.match(ui,/async function reviewTeamHandoff/);
   assert.match(ui,/pab-team-handoff-create/);
   assert.match(ui,/pab-team-handoff-load/);
+  assert.match(ui,/pab-handoff-privacy-attestation/);
+  assert.match(ui,/if\(!payload\.privacyAttested\)/);
 });
