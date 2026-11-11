@@ -1,4 +1,5 @@
 const $ = s => document.querySelector(s);
+let pendingCreatorDraftHandoff=null;
 const state = { user:null, view:'feed', feed:[], feedScope:'all', videoFeed:[], videoScope:'for-you', videoSearch:'', videoMode:'videos', videoNextCursor:null, videoHasMore:false, videoLoading:false, videoRequestSequence:0, forYouScope:'for-you', forYouNextCursor:null, forYouHasMore:false, forYouLoading:false, forYouSearch:'', savedPosts:[], savedPostCollections:[], savedFilter:'all', savedCollection:'all', savedType:'all', savedSort:'saved-newest', savedSearch:'', stories:[], people:[], discoveryLiveSessions:[], groups:[], notifications:[], conversations:[], activeConversation:null, messageWindows:[], activeGroup:null, pages:[], activePage:null, profile:null, searchResults:null, settings:null, activeConnections:null, liveStartFormat:'video_audio', messengerFilter:'all', messengerSearch:'', messengerPanelOpen:false, messengerOptionsOpen:false, messengerPanelSection:'chats', messengerComposeMode:false, messengerComposeUsers:null, messengerComposeLoading:false, messengerPresence:{}, messengerTyping:{}, messengerRealtimeConnected:false, rechargeTab:'recharge', rechargeCurrencyMode:'two-way' };
 const LAST_VIEW_SESSION_PREFIX='minglora:last-view:v1:';
 const RESTORABLE_VIEWS=new Set(['feed','for-you','more','videos','gifts','gifter-progression','live','live-pro','leagues','coins','creator','friends','groups','messages','saved','pages','meetwave','connections','page','group','profile','search','notifications','calendar','clock-centre','menstrual-health']);
@@ -1063,10 +1064,17 @@ function createSoundtrackEditor(root,initialTrack=null){
 }
 function openComposer(options={}){
   const returnToVideoCentre=state.view==='videos';
+  const initialText=String(options?.initialText||'').slice(0,5000);
+  const creatorDisclosure=options?.creatorDisclosure&&typeof options.creatorDisclosure==='object'?options.creatorDisclosure:null;
+  const creatorDisclosureMarkup=creatorDisclosure
+    ?'<div class="creator-ai-handoff-notice"><strong>AI-assisted draft · '+esc(creatorDisclosure.identityName||'Minglora AI identity')+'</strong><p>You are publishing as '+esc(state.user?.name||'your signed-in Minglora account')+'. Review the AI attribution in the text and keep required disclosure. '+(Number(creatorDisclosure.assetReferenceCount)>0?String(Number(creatorDisclosure.assetReferenceCount))+' asset reference(s) were not attached; select approved media manually. ':'')+'Nothing is shared until you press Share post.</p></div>'
+    :'';
+
   const returnToProfileId=options&&typeof options==='object'?String(options.returnToProfile||'').trim():'';
   const modal=document.createElement('div');modal.className='modal-backdrop';
-  modal.innerHTML='<section class="modal composer-modal" role="dialog" aria-modal="true" aria-labelledby="create-post-title"><div class="modal-head"><h2 id="create-post-title">Create post</h2><button class="modal-close" type="button" aria-label="Close">'+messenger3dIcon('close','modal-close-icon')+'</button></div><form class="modal-body" id="create-post-form"><div class="post-head"><img class="avatar" src="'+avatar(state.user)+'" alt=""><div class="post-author"><strong>'+esc(state.user.name)+'</strong><small>Choose the audience for this post</small></div></div><div class="field"><label for="post-audience">Who can see this post?</label><select id="post-audience" name="audience"><option value="public">Public</option><option value="friends">Friends</option><option value="close_friends">Close Friends</option><option value="followers">Followers</option><option value="private">Only me</option></select></div><div class="field"><textarea name="text" maxlength="5000" placeholder="What’s on your mind?" aria-label="Write a post"></textarea></div><div class="field"><label>Photos, videos and audio attachments</label><div id="create-post-media-picker"></div></div><div class="field"><label>Soundtrack</label><div id="create-post-soundtrack"></div></div><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button type="submit" class="primary">Share post</button></div></form></section>';
+  modal.innerHTML='<section class="modal composer-modal" role="dialog" aria-modal="true" aria-labelledby="create-post-title"><div class="modal-head"><h2 id="create-post-title">Create post</h2><button class="modal-close" type="button" aria-label="Close">'+messenger3dIcon('close','modal-close-icon')+'</button></div>'+creatorDisclosureMarkup+'<form class="modal-body" id="create-post-form"><div class="post-head"><img class="avatar" src="'+avatar(state.user)+'" alt=""><div class="post-author"><strong>'+esc(state.user.name)+'</strong><small>Choose the audience for this post</small></div></div><div class="field"><label for="post-audience">Who can see this post?</label><select id="post-audience" name="audience"><option value="public">Public</option><option value="friends">Friends</option><option value="close_friends">Close Friends</option><option value="followers">Followers</option><option value="private">Only me</option></select></div><div class="field"><textarea name="text" maxlength="5000" placeholder="What’s on your mind?" aria-label="Write a post"></textarea></div><div class="field"><label>Photos, videos and audio attachments</label><div id="create-post-media-picker"></div></div><div class="field"><label>Soundtrack</label><div id="create-post-soundtrack"></div></div><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button type="submit" class="primary">Share post</button></div></form></section>';
   document.body.append(modal);
+  const postText=modal.querySelector('textarea[name="text"]');if(postText)postText.value=initialText;
   const picker=createMediaPicker(modal.querySelector('#create-post-media-picker'),{slot:'post',maxFiles:10});
   const soundtrack=createSoundtrackEditor(modal.querySelector('#create-post-soundtrack'));
   const close=()=>{picker.destroy();soundtrack.destroy();modal.remove();};
@@ -1080,6 +1088,54 @@ function openComposer(options={}){
       close();if(returnToProfileId)await openProfile(returnToProfileId);else if(returnToVideoCentre)await renderVideoCentre();else{await loadFeed();await renderFeed();}toast(returnToProfileId?'Your post is published on your profile.':'Your post is published.');
     }catch(error){toast(error.message);button.disabled=false;}
   });
+}
+
+function applyPendingCreatorDraftHandoff(){
+  if(!pendingCreatorDraftHandoff||!state.user)return false;
+  const payload=pendingCreatorDraftHandoff;
+  pendingCreatorDraftHandoff=null;
+  const identityName=String(payload.identityName||'Minglora AI identity').trim().slice(0,80);
+  const identityUsername=String(payload.identityUsername||'ai_identity').trim().replace(/^@/,'').slice(0,40);
+  const disclosureLine='AI-assisted content draft from '+identityName+' (@'+identityUsername+').';
+  const initialText=[disclosureLine,String(payload.caption||'').trim(),String(payload.body||'').trim()].filter(Boolean).join('\n\n');
+  if(initialText.length>5000){
+    try{window.opener?.postMessage({type:'MINGLORA_CREATOR_DRAFT_REJECTED',reason:'This draft exceeds the 5,000-character limit of the existing Minglora post composer. Shorten it in Creator Studio first.'},window.location.origin);}catch{}
+    return false;
+  }
+  openComposer({initialText,creatorDisclosure:{identityName,assetReferenceCount:Number(payload.assetReferenceCount)||0}});
+  try{window.opener?.postMessage({type:'MINGLORA_CREATOR_DRAFT_APPLIED',draftTitle:String(payload.draftTitle||'').slice(0,120)},window.location.origin);}catch{}
+  return true;
+}
+
+window.addEventListener('message',event=>{
+  if(event.origin!==window.location.origin||!window.opener||event.source!==window.opener)return;
+  if(event.data?.type!=='MINGLORA_CREATOR_DRAFT_HANDOFF')return;
+  const payload=event.data.payload;
+  if(!payload||typeof payload!=='object'||Array.isArray(payload))return;
+  if(payload.contentFormat!=='feed_post'||payload.destination!=='feed'){
+    window.opener.postMessage({type:'MINGLORA_CREATOR_DRAFT_REJECTED',reason:'This handoff supports Feed post drafts only.'},window.location.origin);
+    return;
+  }
+  const fields=['draftTitle','identityName','identityUsername','caption','body'];
+  if(fields.some(key=>typeof payload[key]!=='string')||payload.draftTitle.length>120||payload.identityName.length>80||payload.identityUsername.length>40||payload.caption.length>5000||payload.body.length>20000){
+    window.opener.postMessage({type:'MINGLORA_CREATOR_DRAFT_REJECTED',reason:'The draft payload is invalid or exceeds the supported limits.'},window.location.origin);
+    return;
+  }
+  const assetReferenceCount=Number(payload.assetReferenceCount)||0;
+  if(!Number.isInteger(assetReferenceCount)||assetReferenceCount<0||assetReferenceCount>10){
+    window.opener.postMessage({type:'MINGLORA_CREATOR_DRAFT_REJECTED',reason:'The asset reference count is invalid.'},window.location.origin);
+    return;
+  }
+  if(pendingCreatorDraftHandoff){
+    window.opener.postMessage({type:'MINGLORA_CREATOR_DRAFT_REJECTED',reason:'A Creator Studio draft handoff is already waiting in this tab.'},window.location.origin);
+    return;
+  }
+  pendingCreatorDraftHandoff={...payload,assetReferenceCount};
+  window.opener.postMessage({type:'MINGLORA_CREATOR_DRAFT_RECEIVED'},window.location.origin);
+  applyPendingCreatorDraftHandoff();
+});
+if(window.opener){
+  try{window.opener.postMessage({type:'MINGLORA_CREATOR_DRAFT_READY'},window.location.origin);}catch{}
 }
 
 function openVideoComposer(options={}){
@@ -10425,6 +10481,7 @@ async function enterMingloraApp(user,showWelcome=false){
   if(params.get('paypal')==='coins'||params.get('paypal')==='cancel'){await finishPaypalCoinReturn();if(state.view!=='coins')activateNav('feed');}
   else await restoreLastView();
   if(showWelcome)toast('Welcome to Minglora!');
+  applyPendingCreatorDraftHandoff();
 }
 function openMfaLogin(challengeId,reloadAfterVerification=false){
   const modal=document.createElement('div');modal.className='modal-backdrop';
