@@ -3,13 +3,13 @@
 ## Overall status
 
 - **Repository-wide completion percentage:** Not yet measurable. The documented backlog spans many partially implemented feature areas; a complete task-level inventory and weighting has not yet been established. No percentage is invented.
-- **Current stage:** `MS-PROFILE-01 — Original unique Gifter badges on member identity surfaces`
-- **Current stage status:** VERIFYING — implementation and CI passed; final merge and post-merge verification are the remaining acceptance steps at this checkpoint.
+- **Current stage:** `MS-GIFTS-ART-02 — Human visual review, OCR correction and variant reconciliation`
+- **Current stage status:** IN PROGRESS — screenshot extraction and automated integrity validation are complete; full human review and rights clearance remain open.
 - **Current repository:** `ravaunrichards/Minglora-Social-Network`
-- **Working branch:** `fix/profile-unique-gifter-badge-display`
-- **Pull request:** #224 — https://github.com/ravaunrichards/Minglora-Social-Network/pull/224
-- **Last verified branch commit:** `b9c1bc6bae92f0a239ecae1b9693e09e5e7a4365`
-- **Latest full CI run:** https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/42943613615
+- **Working branch:** `work/gifts-artwork-extraction-v3-20261111`
+- **Pull request:** #236 (DRAFT; not merged) — https://github.com/ravaunrichards/Minglora-Social-Network/pull/236
+- **Last verified extraction/audit commit:** `d15ef3494d4727bf08ae5fc3ee69ae36c24c28cc` (later commits update review and progress records).`
+- **Latest successful artwork extraction and audit:** https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/43088609831
 
 ## Completed and verified at this checkpoint
 
@@ -28,8 +28,31 @@
 
 ## Current task
 
-Complete PR #224 by verifying the latest head, mergeability and green CI; merge; then verify the merged `main` tree contains the profile renderer, styles, original per-Level source mapping and progress records.
+Continue PR #236 from the verified extraction checkpoint. The 131 source captures have been processed and all 1,509 extracted PNG files pass automated integrity checks. Complete the remaining human review and label/variant reconciliation without activating any unreviewed asset. Resolve rights/provenance or create original Minglora replacement art before any production integration. Keep PR #236 in Draft until its review and release gates are met.
 
+## Gift artwork results
+
+- Processed **131/131** original screenshot captures.
+- Detected **2,065** labelled gift cells.
+- Extracted **1,509** individual transparent 256×256 PNG artwork candidates under `assets/Artwork/`.
+- Merged **556** repeated appearances through the extraction pipeline.
+- Read-only audit inspected **1,509/1,509** referenced PNGs.
+- Audit result: **PASS_WITH_REVIEW_REQUIRED**; 0 missing/invalid/hash errors, 0 exact duplicate file-hash groups, 0 automated image-quality flags.
+- OCR/crop queue: **1,114** flagged records (1,058 foreground-near-boundary, 77 truncated-title, 100 same-title/different-artwork-variant, 7 low OCR confidence; warnings overlap).
+- Catalog name comparison: 997 exact matches, 74 fuzzy suggestions, 432 with no exact match, and 6 low-confidence/truncated entries with no suggestion.
+- Six same-title near-duplicate candidate pairs (12 images) were visually inspected with their source screenshots: three pairs are distinct variants; three appear to be repeated artwork. No files were deleted or merged during that partial review.
+- Full visual review: **NOT COMPLETED**. The other 1,497 artwork records still require individual review.
+- Rights/licence clearance: **NOT COMPLETED**. These are screenshot-derived reference crops, not verified Minglora-original artwork; all remain review-only.
+- No production gift catalog, gift prices, balances, transactions, wallets, promotional reserves or creator earnings were changed.
+
+## Current stage reports
+
+- `assets/Artwork/README.md` — extraction scope and review/rights gate.
+- `assets/Artwork/manifest.json` — item/source/crop/hash records.
+- `assets/Artwork/review-needed.json` — machine-flagged records.
+- `reports/gift-artwork-audit.md` and `.json` — automated quality/integrity results.
+- `reports/gift-artwork-visual-review-notes.md` — six-pair partial visual review.
+- `scripts/audit-gift-artwork.py` — read-only integrity and review audit.
 ## Files changed in the profile-badge stage
 
 - `public/app.js`
@@ -53,6 +76,19 @@ Complete PR #224 by verifying the latest head, mergeability and green CI; merge;
 
 No files were intentionally deleted. No badge source image was edited or replaced.
 
+## Files changed in the gift artwork stage
+
+- `assets/Gifts/capture-*.png` — 131 original read-only references; preserved.
+- `assets/Artwork/` — 1,509 extracted transparent PNG candidates, manifest, README and review queue.
+- `scripts/extract-gift-artwork.py` — reproducible screenshot extraction and deduplication.
+- `scripts/audit-gift-artwork.py` — read-only integrity, dimensions, transparency, hash and review audit.
+- `.github/workflows/gift-artwork-extraction.yml` — extraction and audit automation.
+- `reports/gift-artwork-audit.md` and `.json` — automated QA output.
+- `reports/gift-artwork-visual-review-notes.md` — six-pair partial human visual review.
+- `.agent-work/MASTER_PROGRESS.md`, `STAGE_QUEUE.md`, `DECISIONS.md`, and `BLOCKERS.md` — recovery and stage tracking.
+
+No original screenshot was edited. No extracted PNG was deleted or merged during the six-pair visual review. No live catalogue, Coin, wallet, transaction, promotional reserve or creator-earning record was changed.
+
 ## Test results
 
 | Check | Result |
@@ -67,20 +103,22 @@ Earlier failures were resolved: test-string quoting, stale `app.js` version asse
 
 ## Completed stages
 
-- `MS-IDENTITY-00` — repository identity and working-branch verification.
-- `MS-QUEUE-00` — initial roadmap-derived stage queue established.
-- `MS-PROFILE-01` — implementation and automated verification complete; awaiting final merge/post-merge check.
-
+- `MS-IDENTITY-00` — Minglora repository identity verified.
+- `MS-QUEUE-00` — recovery and master backlog records established.
+- `MS-PROFILE-01` — unique original Gifter badge implementation merged via PR #224; merge recorded as `8a496d54df8daca5f543e9571c494e9d4354a158`. Post-merge deployed visual verification remains separate.
+- `MS-GIFTS-ART-01` — 131-capture extraction and automated integrity audit completed (does not imply full human review or rights clearance).
 ## Remaining stages
 
 See `STAGE_QUEUE.md`. Repository-wide work is not complete; future stages remain NOT STARTED or BLOCKED as listed there.
 
 ## Dependencies and blockers
 
-- Production browser/Render visual verification has not been performed by this GitHub-only workflow.
-- Absolute local filesystem checkout path is unavailable from repository metadata; only repository root `.` is verified.
-- Hosted LiveKit provider configuration is documented as not configured in the current runtime audit; unrelated to this profile-badge change.
-- Whole-repository completion percentage is intentionally unquantified until the feature backlog is fully decomposed and weighted.
+- The complete human visual review remains incomplete: six near-duplicate candidate pairs (12 files) were checked; the other 1,497 records still require individual review.
+- Rights/licence provenance for screenshot-derived artwork is not established. No PNG is approved for production use; use newly authored Minglora replacements when rights cannot be proven.
+- Three same-title pairs were confirmed as distinct variants; three appear to be repeated artwork candidates. Every source and extracted file is preserved pending canonical-record reconciliation.
+- PR #236 remains Draft and unmerged; no extracted asset has been integrated into the production gift catalogue.
+- The general CI test job fails at `npm run check:repo` because two pre-existing unrelated placeholders remain in the base repository: `assets/Multi-Guest/.gitkeep` and `assets/Sounds/.gitkeep`. They were left untouched. The For You and Supabase Auth jobs passed; the gift-specific workflow passed.
+- Overall product completion remains unquantified until the documented backlog is fully decomposed and weighted.
 
 ## Error history
 
@@ -91,4 +129,4 @@ See `STAGE_QUEUE.md`. Repository-wide work is not complete; future stages remain
 
 ## Exact next action
 
-Verify PR #224 is still mergeable at the recorded head SHA, merge it using the expected-head guard, then inspect `main` and run/check post-merge CI before marking `MS-PROFILE-01` COMPLETED.
+Continue MS-GIFTS-ART-02: make review contact sheets for all remaining candidates, reconcile every flagged OCR title and variant against source screenshots, document item-level visual decisions, and preserve all original captures. Keep PR #236 Draft. Do not start production integration until MS-GIFTS-ART-02 and MS-GIFTS-ART-03 pass their acceptance criteria.

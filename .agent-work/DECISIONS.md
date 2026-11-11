@@ -25,3 +25,14 @@
 15. Serve existing artwork from its actual repository path; do not duplicate the image just to match an incorrect route.
 16. Keep automated tests aligned with the new asset URL/cache version; change only assertions that encode the previous behavior.
 17. Never reactivate Marketplace or other explicitly retired product surfaces without a separate approved scope; repository docs classify Marketplace as RETIRED.
+
+
+## Minglora gift artwork extraction and review
+
+18. Keep all 131 original files in `assets/Gifts/` read-only. Extracted PNGs in `assets/Artwork/` are reference crops, not automatically original Minglora artwork.
+19. Treat extraction, integrity validation, human visual review, rights/provenance clearance and production integration as separate acceptance stages. Passing OCR or checksum tests does not approve publication.
+20. Do not publish, activate, monetize or describe screenshot-derived crops as Minglora-original art until item-level rights/licence evidence is recorded or a newly authored Minglora replacement is created.
+21. Preserve every extracted file and every source-cell reference until manual review confirms the canonical asset and all repeated appearances. Near-duplicate hashes are review leads only; no automatic deletion or merge.
+22. Current six-pair visual spot-check decisions: keep Club Power, Grand show and Love Balloon pairs as distinct variants; mark LIVE Pro Badge, Side by Side and Star Glasses pairs as repeated-artwork candidates. All 12 files remain preserved pending complete source-occurrence reconciliation.
+23. Do not alter gift Coin prices, catalogue active states, wallets, balances, gift transactions, promotional reserves, creator earnings, payouts or production UI as part of artwork extraction/review.
+24. Keep PR #236 Draft and do not integrate extracted assets into the production gift catalog while human review or rights clearance is incomplete.

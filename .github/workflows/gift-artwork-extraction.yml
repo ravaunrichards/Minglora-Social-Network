@@ -1,0 +1,87 @@
+name: Extract Minglora gift artwork
+
+on:
+  push:
+    branches:
+      - work/gifts-artwork-extraction-v3-20261111
+    paths:
+      - "scripts/extract-gift-artwork.py"
+      - "scripts/audit-gift-artwork.py"
+      - "scripts/build-gift-artwork-contact-sheets.py"
+      - ".github/workflows/gift-artwork-extraction.yml"
+      - "assets/Gifts/*.png"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: minglora-gift-artwork-extraction
+  cancel-in-progress: false
+
+jobs:
+  extract:
+    name: Extract, deduplicate, and validate artwork
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout source captures
+        uses: actions/checkout@v4
+        with:
+          ref: work/gifts-artwork-extraction-v3-20261111
+          fetch-depth: 1
+
+      - name: Install OCR engine
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends tesseract-ocr
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install extraction dependencies
+        run: python -m pip install --disable-pip-version-check pillow numpy pytesseract ImageHash
+
+      - name: Run safe extraction self-test
+        run: python scripts/extract-gift-artwork.py --self-test
+
+      - name: Extract all 131 source captures
+        run: python scripts/extract-gift-artwork.py --expected-captures 131
+
+      - name: Verify output integrity
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          root = Path("assets/Artwork")
+          data = json.loads((root / "manifest.json").read_text())
+          records = data["gifts"]
+          assert data["source_capture_count"] == 131, data["source_capture_count"]
+          assert data["unique_artwork_count"] == len(records), (data["unique_artwork_count"], len(records))
+          assert records, "No individual gift artwork was created"
+          for item in records:
+              path = root / item["artwork"]
+              assert path.is_file() and path.stat().st_size > 100, str(path)
+          assert (root / "review-needed.json").is_file()
+          print(f"OUTPUT CHECK PASS: {len(records)} artwork PNGs; {len(data.get('source_warnings', {}))} source warnings.")
+          PY
+
+      - name: Run read-only image integrity and review audit
+        run: python scripts/audit-gift-artwork.py
+
+      - name: Build read-only review contact sheets
+        run: python scripts/build-gift-artwork-contact-sheets.py
+
+      - name: Commit extracted artwork, audit, and contact sheets without touching originals
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/Artwork reports/gift-artwork-audit.json reports/gift-artwork-audit.md reports/gift-artwork-contact-sheets
+          if git diff --cached --quiet; then
+            echo "No new artwork changes to commit."
+          else
+            git commit -m "Extract individual gift artwork from catalogue captures"
+            git push origin HEAD:work/gifts-artwork-extraction-v3-20261111
+          fi
