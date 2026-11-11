@@ -100,7 +100,7 @@ test('For You API enforces viewer visibility and persists validated watch and fe
     read('../../src/store.js')
   ]);
   assert.match(server, /p==='\/api\/for-you\/videos'/);
-  assert.match(server, /rankForYouVideos\(visiblePosts,user\.id,db\.follows\|\|\[\],db\.savedPosts\|\|\[\],db\.videoWatchEvents\|\|\[\],excludedFeedback\)/);
+  assert.match(server, /rankForYouVideos\(visiblePosts,user\.id,activeFollows\(\),db\.savedPosts\|\|\[\],db\.videoWatchEvents\|\|\[\],excludedFeedback\)/);
   assert.match(server, /canViewProfileAudience\(user\.id,post\.userId,post\.audience\|\|'public'\)/);
   assert.match(server, /new RegExp\('\^\/api\/videos\/\(\[\^\/\]\+\)\/watch\$'\)/);
   assert.match(server, /new RegExp\('\^\/api\/videos\/\(\[\^\/\]\+\)\/feedback\$'\)/);

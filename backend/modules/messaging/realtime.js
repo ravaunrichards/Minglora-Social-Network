@@ -99,6 +99,23 @@ export function createMessengerRealtimeHub({
     announcePresence(id, Boolean(socketsByUser.get(id)?.size));
   }
 
+  function disconnectUser(userId, reason = 'Account access revoked') {
+    const id = String(userId || '');
+    const sockets = socketsByUser.get(id);
+    if (!id || !sockets?.size) return 0;
+    const current = [...sockets];
+    // Clear the visible online state before the close handshake completes.
+    announcePresence(id, false);
+    for (const socket of current) {
+      try {
+        socket.close(1008, String(reason || 'Account access revoked').slice(0, 120));
+      } catch {
+        try { socket.terminate(); } catch {}
+      }
+    }
+    return current.length;
+  }
+
   function publish(userIds, payload) {
     const ids = [...new Set((Array.isArray(userIds) ? userIds : [userIds])
       .map(value => String(value || '')).filter(Boolean))];
@@ -270,6 +287,7 @@ export function createMessengerRealtimeHub({
     handleUpgrade,
     publish,
     refreshPresence,
+    disconnectUser,
     isConnected: userId => Boolean(socketsByUser.get(String(userId || ''))?.size),
     close
   };

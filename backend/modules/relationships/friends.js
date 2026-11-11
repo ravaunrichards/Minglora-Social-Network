@@ -1,3 +1,33 @@
+/**
+ * Whether an account is eligible to appear in social relationship and presence data.
+ * Expired bans are treated as eligible; missing/invalid ban expiry remains restricted.
+ */
+export function isSocialAccountEligible(account, nowMs = Date.now()) {
+  if (!account || typeof account !== 'object' || !account.id) return false;
+  const status = String(account.status || 'active').trim().toLowerCase();
+  if (status === 'banned') {
+    const expiresAt = Date.parse(String(account.bannedUntil || ''));
+    return Number.isFinite(expiresAt) && expiresAt <= nowMs;
+  }
+  return !['suspended', 'deactivated', 'deleted'].includes(status);
+}
+
+/**
+ * Keep stored follow records intact, but exclude edges involving restricted
+ * accounts from every user-facing social count and relationship calculation.
+ */
+export function getActiveFollowEdges(follows = [], accounts = [], nowMs = Date.now()) {
+  const activeIds = new Set(
+    (Array.isArray(accounts) ? accounts : [])
+      .filter(account => isSocialAccountEligible(account, nowMs))
+      .map(account => String(account.id))
+  );
+  return (Array.isArray(follows) ? follows : []).filter(edge =>
+    edge && activeIds.has(String(edge.followerId || ''))
+      && activeIds.has(String(edge.followedId || ''))
+  );
+}
+
 export const FRIEND_PREFERENCE_DEFAULTS = Object.freeze({
   isFavorite: false,
   isCloseFriend: false,
