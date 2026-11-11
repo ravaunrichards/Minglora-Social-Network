@@ -942,6 +942,26 @@ export function createPersonalAiBotTeam(db, input, actorId, timestamp, uid) {
   return team;
 }
 
+function cancelOpenPersonalAiBotTeamHandoffs(db, teamId, actorId, timestamp, uid, reason) {
+  const open=db.personalAiBotTeamHandoffs.filter(item=>
+    (!teamId||item.teamId===teamId)&&
+    ['pending_owner_review','accepted'].includes(item.status)
+  );
+  for(const handoff of open){
+    handoff.status='cancelled';
+    handoff.cancelledBy=actorId;
+    handoff.cancelledAt=timestamp;
+    handoff.updatedBy=actorId;
+    handoff.updatedAt=timestamp;
+    handoff.cancellationReason=reason;
+    handoff.dispatchStatus='not_dispatched';
+    audit(db,actorId,'team.handoff_cancelled','team_handoff',handoff.id,
+      'Cancelled open team handoff because '+reason+'. No downstream bot task was created.',
+      timestamp,uid);
+  }
+  return open.length;
+}
+
 export function updatePersonalAiBotTeam(db, teamId, input, actorId, timestamp, uid) {
   ensurePersonalAiBotCollections(db);
   const team=db.personalAiBotTeams.find(item=>item.id===teamId&&item.ownerId===actorId);
@@ -957,7 +977,15 @@ export function updatePersonalAiBotTeam(db, teamId, input, actorId, timestamp, u
   if(Object.hasOwn(input,'status')){
     const status=String(input.status);
     if(!['enabled','disabled','paused'].includes(status))throw Object.assign(new Error('Choose enabled, disabled or paused.'),{status:400});
+    const wasEnabled=team.status==='enabled';
     team.status=status;team.enabled=status==='enabled';changes.push('status');
+    if(wasEnabled&&status!=='enabled'){
+      const cancelledHandoffs=cancelOpenPersonalAiBotTeamHandoffs(
+        db,teamId,actorId,timestamp,uid,status==='paused'?'team_paused':'team_disabled'
+      );
+      team.lastHandoffShutdownAt=timestamp;
+      team.lastHandoffsCancelled=cancelledHandoffs;
+    }
   }
   team.updatedAt=timestamp;team.updatedBy=actorId;
   if(changes.length)audit(db,actorId,'team.updated','team',team.id,'Updated '+team.name+': '+changes.join(', '),timestamp,uid);
@@ -1323,8 +1351,9 @@ export function emergencyShutdownPersonalAiBots(db, actorId, timestamp, uid) {
       task.cancelledAt=timestamp;task.cancelledBy=actorId;cancelled++;
     }
   }
-  audit(db,actorId,'network.emergency_shutdown','network','global','Emergency shutdown paused '+paused+' bots and cancelled '+cancelled+' pending or running task records.',timestamp,uid);
-  return {ok:true,paused,cancelled,network:settings};
+  const cancelledHandoffs=cancelOpenPersonalAiBotTeamHandoffs(db,null,actorId,timestamp,uid,'network_emergency_shutdown');
+  audit(db,actorId,'network.emergency_shutdown','network','global','Emergency shutdown paused '+paused+' bots, cancelled '+cancelled+' pending or running task records and cancelled '+cancelledHandoffs+' open team handoffs.',timestamp,uid);
+  return {ok:true,paused,cancelled,cancelledHandoffs,network:settings};
 }
 
 const AI_SCHEDULE_WEEKDAYS = Object.freeze({Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6,Sun:7});
