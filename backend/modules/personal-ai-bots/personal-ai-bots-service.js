@@ -989,6 +989,19 @@ export function removePersonalAiBotFromTeam(db, teamId, botId, actorId, timestam
   const index=db.personalAiBotTeamMembers.findIndex(member=>member.teamId===teamId&&member.botId===botId&&member.ownerId===actorId);
   if(index<0)throw Object.assign(new Error('That bot is not a member of this team.'),{status:404});
   db.personalAiBotTeamMembers.splice(index,1);
+  for(const handoff of db.personalAiBotTeamHandoffs.filter(item=>
+    item.teamId===teamId&&[item.senderBotId,item.receivingBotId].includes(botId)&&
+    ['pending_owner_review','accepted'].includes(item.status)
+  )){
+    handoff.status='cancelled';
+    handoff.cancelledBy=actorId;
+    handoff.cancelledAt=timestamp;
+    handoff.updatedBy=actorId;
+    handoff.updatedAt=timestamp;
+    handoff.cancellationReason='team_membership_removed';
+    audit(db,actorId,'team.handoff_cancelled','team_handoff',handoff.id,
+      'Cancelled open handoff after a team member was removed.',timestamp,uid);
+  }
   audit(db,actorId,'team.member_removed','team',team.id,'Removed a bot from '+team.name+'.',timestamp,uid);
   return {ok:true,teamId,botId,memberCount:db.personalAiBotTeamMembers.filter(member=>member.teamId===teamId).length};
 }
