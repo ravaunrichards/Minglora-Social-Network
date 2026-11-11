@@ -117,7 +117,7 @@
         const stateLabel = item.current ? "Current" : item.adminAwarded ? "Admin awarded" : item.unlocked ? "Unlocked" : "Locked";
         const stateClass = item.current ? "is-current" : item.adminAwarded ? "is-admin-awarded" : item.unlocked ? "is-unlocked" : "is-locked";
         return "<article class='gp-level-index-item " + stateClass + "'>" +
-          "<span class='gp-level-index-art'>" + (window.MingloraGifterBadgeArt?.render ? window.MingloraGifterBadgeArt.render({ level: levelNumber, badgeName, compact: true, placement: "directory" }) : "") + "</span>"" +
+          "<span class='gp-level-index-art'>" + (window.MingloraGifterBadgeArt?.render ? window.MingloraGifterBadgeArt.render({ level: levelNumber, badgeName, compact: true, placement: "directory" }) : "") + "</span>" +
           "<div class='gp-level-index-copy'>" +
           "<span class='gp-level-index-level'>Level " + number(levelNumber) + "</span>" +
           "<strong class='gp-level-index-badge'>" + esc(badgeName) + "</strong>" +
