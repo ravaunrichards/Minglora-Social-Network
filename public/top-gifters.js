@@ -40,7 +40,14 @@
   function gifterRow(item, index) {
     const position = Number(item.position || index + 1);
     const user = item.user || {};
-    const earned = item.gifterBadge?.badgeName || item.badgeName || "";
+    const badge = item.gifterBadge || user.gifterBadge || null;
+    const badgeLevel = Math.max(0, Math.min(50, Math.floor(Number(badge?.level || item.level) || 0)));
+    const earned = String(badge?.badgeName || item.badgeName || (badgeLevel ? "Level " + badgeLevel + " Gifter" : ""));
+    const badgeMarkup = badgeLevel
+      ? "<span class='minglora-gifter-identity' aria-label='" + escapeHtml(earned) + "'><img class='gp-profile-level-badge gp-profile-level-badge--compact' src='/assets/gifter-badges/level_" +
+        String(badgeLevel).padStart(2, "0") + ".png' alt='Level " + badgeLevel + " gifter badge' loading='lazy' decoding='async' width='24' height='24'><span class='minglora-gifter-badge-name'>" +
+        escapeHtml(earned) + "</span></span>"
+      : "";
     const avatar = user.avatarUrl || user.avatar_url || user.avatar || user.profilePicture || "";
     const image = avatar
       ? "<img src='" + escapeHtml(avatar) + "' alt='' loading='lazy' referrerpolicy='no-referrer'>"
@@ -48,10 +55,9 @@
         escapeHtml((user.name || item.name || user.username || item.username || "M").slice(0, 1).toUpperCase()) + "</span>";
     return "<article class='minglora-gifter-row'>" +
       "<span class='minglora-gifter-rank'>#" + position + "</span>" + image +
-      "<span class='minglora-gifter-person'><strong>" +
-      escapeHtml(user.name || item.name || user.username || item.username || "Minglora member") +
-      "</strong><small>@" + escapeHtml(user.username || item.username || "member") + "</small>" +
-      (earned ? "<small class='minglora-gifter-earned'>" + escapeHtml(earned) + "</small>" : "") +
+      "<span class='minglora-gifter-person'><small>@" + escapeHtml(user.username || item.username || "member") + "</small><strong>" +
+      escapeHtml(user.name || item.name || user.username || item.username || "Minglora member") + badgeMarkup +
+      "</strong>" +
       "</span><span class='minglora-gifter-title'>" + titleFor(position) +
       "</span><strong class='minglora-gifter-coins'>" + count(item.points ?? item.coinsSent) +
       "<small>Coins sent</small></strong><button type='button' class='minglora-gifter-profile' data-top-gifter-profile='" +

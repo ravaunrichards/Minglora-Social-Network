@@ -90,3 +90,23 @@
   .live-gifter-badge-name{font-size:8px}
 }
 @media(prefers-reduced-motion:reduce){.live-gifter-badge-label .gp-profile-level-badge{animation:none}}
+
+
+/* Non-LIVE individual gifter identity: username first, display name next, original badge art and exact level name. */
+.minglora-gifter-identity{display:inline-flex;align-items:center;justify-content:flex-start;gap:4px;min-width:0;max-width:100%;margin-inline-start:5px;vertical-align:middle;flex-wrap:wrap;white-space:normal;overflow-wrap:anywhere}
+.minglora-gifter-identity .gp-profile-level-badge{display:block;flex:0 0 23px;width:23px;height:23px;max-width:23px;object-fit:contain;filter:drop-shadow(0 2px 3px rgba(12,24,48,.22));animation:minglora-gifter-badge-glow 7s ease-in-out infinite}
+.minglora-gifter-badge-name{display:inline-block;min-width:0;max-width:100%;color:#805817;font-size:9px;font-weight:850;line-height:1.25;white-space:normal;overflow-wrap:anywhere}
+.post-author{display:grid;gap:2px;min-width:0}
+.post-author-username,.post-author-meta{display:block;color:var(--muted);font-size:10px;line-height:1.35}
+.post-author strong{display:flex;align-items:center;flex-wrap:wrap;gap:3px;min-width:0;overflow-wrap:anywhere}
+.comment-author-username{display:block;margin:0 0 3px;color:var(--muted);font-size:10px;line-height:1.35}
+.comment-bubble>strong{display:flex;align-items:center;flex-wrap:wrap;gap:3px;margin:0 0 3px;min-width:0;overflow-wrap:anywhere}
+.comment-bubble .comment-text{display:block;white-space:pre-wrap;overflow-wrap:anywhere}
+.gift-gallery-gifter-username{display:block;color:var(--muted);font-size:10px;line-height:1.3}
+.gift-gallery-leader>span,.gift-gallery-ranked-row>span:not(.gift-gallery-ranked-position){display:grid;gap:3px;min-width:0;flex:1}
+.gift-gallery-leader>span>strong,.gift-gallery-ranked-row>span>strong{display:flex;align-items:center;flex-wrap:wrap;gap:3px;min-width:0;overflow-wrap:anywhere}
+.minglora-gifter-person>small{display:block;min-width:0;overflow-wrap:anywhere}
+.minglora-gifter-person>strong{display:flex;align-items:center;flex-wrap:wrap;gap:3px;min-width:0;white-space:normal;overflow:visible;overflow-wrap:anywhere}
+@keyframes minglora-gifter-badge-glow{0%,100%{filter:drop-shadow(0 1px 2px rgba(12,24,48,.18))}50%{filter:drop-shadow(0 2px 5px rgba(201,153,59,.5))}}
+@media(max-width:560px){.minglora-gifter-identity{gap:3px;margin-inline-start:3px}.minglora-gifter-identity .gp-profile-level-badge{flex-basis:21px;width:21px;height:21px;max-width:21px}.minglora-gifter-badge-name{font-size:8px}.post-author strong,.comment-bubble>strong{gap:2px}}
+@media(prefers-reduced-motion:reduce){.minglora-gifter-identity .gp-profile-level-badge{animation:none}}
