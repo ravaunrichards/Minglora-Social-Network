@@ -269,6 +269,15 @@ const liveGifterBadgeMarkup = (member, placement = "compact") => {
     gifterBadgeImageMarkup({ ...badge, level }, placement) +
     '<span class="live-gifter-badge-name">' + esc(badgeName) + '</span></span>';
 };
+const memberGifterBadgeMarkup = (member, placement = "compact") => {
+  const badge = member?.gifterBadge;
+  if (!badge?.level) return "";
+  const level = Math.max(1, Math.min(50, Math.floor(Number(badge.level) || 1)));
+  const badgeName = String(badge.badgeName || ("Level " + level + " Gifter"));
+  return '<span class="minglora-gifter-identity" aria-label="' + esc(badgeName) + '">' +
+    gifterBadgeImageMarkup({ ...badge, level }, placement) +
+    '<span class="minglora-gifter-badge-name">' + esc(badgeName) + '</span></span>';
+};
 window.addEventListener('minglora:gifter-badge-updated',event=>{
   if(state.user){
     state.user.gifterBadge=event.detail?.badge||null;
@@ -637,7 +646,7 @@ function postCard(post,options={}){
   const watchLaterControl=options.videoWatchLater?`<button type="button" data-watch-later="${esc(post.id)}" data-watch-later-saved="${post.isWatchLater?'true':'false'}">${post.isWatchLater?'✓ Watch Later':'＋ Watch Later'}</button>`:'';
   return `<article class="card post" data-post="${esc(post.id)}">
     <div class="post-head">${thoughtAvatarMarkup(author,'avatar',true)}
-      <div class="post-author"><strong data-profile="${esc(author.id||'')}">${esc(author.name||'Unknown account')}</strong><small>@${esc(author.username||'')} ${verifiedProfileBadge(author)}${gifterProfileBadge(author)} · ${timeAgo(post.createdAt)} · ◉</small></div>
+      <div class="post-author"><small class="post-author-username">@${esc(author.username||'')}</small><strong data-profile="${esc(author.id||'')}">${esc(author.name||'Unknown account')}${memberGifterBadgeMarkup(author)}</strong><small class="post-author-meta">${timeAgo(post.createdAt)} · ◉</small></div>
       <button class="post-menu" aria-label="Post options" data-post-menu="${esc(post.id)}">···</button>
     </div>
     ${post.text?`<div class="post-text">${esc(post.text)}</div>`:''}
@@ -665,7 +674,7 @@ function postCard(post,options={}){
       <button type="button" data-gift-content="post" data-gift-id="${esc(post.id)}" data-gift-username="${esc(author.username||'')}">🎁 Gift</button>
     </div>
     ${savedControls}
-    ${comments.length?`<div class="comments">${comments.slice(-3).map(c=>`<div class="comment">${thoughtAvatarMarkup(c.author,'avatar',true)}<div class="comment-bubble"><strong data-profile="${esc(c.author?.id||'')}" role="link" tabindex="0">${esc(c.author?.name||'Member')}</strong><small class="comment-author-username" data-profile="${esc(c.author?.id||'')}" role="link" tabindex="0">@${esc(c.author?.username||'')} ${verifiedProfileBadge(c.author)}${gifterProfileBadge(c.author)}</small>${esc(c.text)}${c.userId===state.user.id||post.userId===state.user.id?`<button class="comment-delete" data-delete-comment-post="${esc(post.id)}" data-delete-comment-id="${esc(c.id)}">Delete</button>`:''}</div>${c.userId!==state.user.id?`<button class="comment-delete" data-report-comment="${esc(c.id)}">Report</button>`:''}</div>`).join('')}</div>`:''}
+    ${comments.length?`<div class="comments">${comments.slice(-3).map(c=>`<div class="comment">${thoughtAvatarMarkup(c.author,'avatar',true)}<div class="comment-bubble"><small class="comment-author-username" data-profile="${esc(c.author?.id||'')}" role="link" tabindex="0">@${esc(c.author?.username||'')}</small><strong data-profile="${esc(c.author?.id||'')}" role="link" tabindex="0">${esc(c.author?.name||'Member')}${memberGifterBadgeMarkup(c.author)}</strong><span class="comment-text">${esc(c.text)}</span>${c.userId===state.user.id||post.userId===state.user.id?`<button class="comment-delete" data-delete-comment-post="${esc(post.id)}" data-delete-comment-id="${esc(c.id)}">Delete</button>`:''}</div>${c.userId!==state.user.id?`<button class="comment-delete" data-report-comment="${esc(c.id)}">Report</button>`:''}</div>`).join('')}</div>`:''}
     <form class="comment-form" data-comment-form="${esc(post.id)}">${thoughtAvatarMarkup(state.user)}<input name="text" maxlength="2000" placeholder="Write a comment…" aria-label="Write a comment" required><button type="submit">Send</button></form>
   </article>`;
 }
@@ -6098,7 +6107,7 @@ async function loadProfileGiftGallery(panel,profileData){
         const person=gifter.user||gifter;
         const rank=Math.max(2,Number(gifter.rank)||2);
         const place=rank===2?'RUNNER-UP':rank===3?'3RD PLACE':'';
-        return '<div class="gift-gallery-ranked-row'+(rank<=3?' is-podium is-podium-'+rank:'')+'"><span class="gift-gallery-ranked-position" aria-label="Rank '+rank+'">#'+rank+'</span><img src="'+avatar(person)+'" alt="" loading="lazy"><span><strong>'+esc(person.name||person.username||'Minglora member')+'</strong>'+gifterProfileBadge({ ...person, gifterBadge: gifter.gifterBadge },"compact")+'<small>'+Number(gifter.giftCount||0).toLocaleString()+' sent · '+Number(gifter.totalCoins||0).toLocaleString()+' Coins</small></span>'+(place?'<small class="gift-gallery-ranked-place">'+place+'</small>':'')+'<button type="button" data-gift-gallery-gifter-profile="'+esc(person.id||gifter.userId||'')+'" aria-label="View '+esc(person.name||person.username||'gifter')+' profile">Profile</button></div>';
+        return '<div class="gift-gallery-ranked-row'+(rank<=3?' is-podium is-podium-'+rank:'')+'"><span class="gift-gallery-ranked-position" aria-label="Rank '+rank+'">#'+rank+'</span><img src="'+avatar(person)+'" alt="" loading="lazy"><span><small class="gift-gallery-gifter-username">@'+esc(person.username||'member')+'</small><strong>'+esc(person.name||person.username||'Minglora member')+memberGifterBadgeMarkup({ ...person, gifterBadge: gifter.gifterBadge })+'</strong><small>'+Number(gifter.giftCount||0).toLocaleString()+' sent · '+Number(gifter.totalCoins||0).toLocaleString()+' Coins</small></span>'+(place?'<small class="gift-gallery-ranked-place">'+place+'</small>':'')+'<button type="button" data-gift-gallery-gifter-profile="'+esc(person.id||gifter.userId||'')+'" aria-label="View '+esc(person.name||person.username||'gifter')+' profile">Profile</button></div>';
       }).join('')+'</div>':'';
       return '<article class="gift-gallery-tile '+(entry.lit?'is-lit':'')+'">'+
         '<div class="gift-gallery-tile-top">'+(image?'<img class="gift-gallery-art" src="'+esc(image)+'" alt="'+esc(entry.giftName)+'" loading="lazy">':'<span class="gift-gallery-emoji" aria-hidden="true">'+esc(entry.emoji||'🎁')+'</span>')+
@@ -6106,7 +6115,7 @@ async function loadProfileGiftGallery(panel,profileData){
         '<div class="gift-gallery-tile-copy"><strong>'+esc(entry.giftName)+'</strong><small>'+Number(entry.giftCount||0).toLocaleString()+' received · '+Number(entry.totalCoins||0).toLocaleString()+' Coins</small>'+
         '<div class="gift-gallery-progress-label"><span>Leading gifter progress</span><strong>'+progress.toLocaleString()+' / '+target.toLocaleString()+'</strong></div>'+
         '<div class="gift-gallery-progress"><span style="width:'+percent+'%"></span></div>'+
-        (leader?'<div class="gift-gallery-leader"><span class="gift-gallery-leader-position" aria-label="Rank 1">#1</span><img src="'+avatar(leader)+'" alt=""><span><strong>'+esc(leader.name||leader.username||'Minglora member')+'</strong><small>Weekly Title Gifter for this gift · '+Number(entry.titleGifterGiftCount||progress).toLocaleString()+' sent</small>'+(leader.gifterBadge?'<small class="gift-gallery-earned-title">'+esc(leader.gifterBadge.badgeName||leader.gifterBadge.tier+' Gifter')+'</small>':'')+'</span><b>TOP GIFTER</b><button type="button" data-gift-gallery-gifter-profile="'+esc(leader.id||'')+'" aria-label="View '+esc(leader.name||leader.username||'Title Gifter')+' profile">Profile</button></div>':'<p class="muted gift-gallery-no-leader">No visible Title Gifter yet</p>')+
+        (leader?'<div class="gift-gallery-leader"><span class="gift-gallery-leader-position" aria-label="Rank 1">#1</span><img src="'+avatar(leader)+'" alt=""><span><small class="gift-gallery-gifter-username">@'+esc(leader.username||'member')+'</small><strong>'+esc(leader.name||leader.username||'Minglora member')+memberGifterBadgeMarkup(leader)+'</strong><small>Weekly Title Gifter for this gift · '+Number(entry.titleGifterGiftCount||progress).toLocaleString()+' sent</small></span><b>TOP GIFTER</b><button type="button" data-gift-gallery-gifter-profile="'+esc(leader.id||'')+'" aria-label="View '+esc(leader.name||leader.username||'Title Gifter')+' profile">Profile</button></div>':'<p class="muted gift-gallery-no-leader">No visible Title Gifter yet</p>')+
         rankedMarkup+
         (isOwner?'<form class="gift-gallery-goal-form" data-gift-gallery-goal="'+esc(entry.giftCode)+'"><label>Gift target<input name="targetCount" type="number" min="1" max="10000" step="1" value="'+target+'"></label><button type="submit" class="secondary">Save goal</button></form>':'')+
         '</div></article>';
