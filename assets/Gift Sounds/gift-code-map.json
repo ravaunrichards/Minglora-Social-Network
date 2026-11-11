@@ -23,7 +23,8 @@
       "audioUrl": "/assets/Gift%20Sounds/enjoy-music/sound.mp3",
       "volume": 0.58,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "goat-406qji": {
       "name": "GOAT",
@@ -33,7 +34,8 @@
       "audioUrl": "/assets/Gift%20Sounds/goat/sound.mp3",
       "volume": 0.68,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "music-album-d5lbk3": {
       "name": "Music  Album",
@@ -43,7 +45,8 @@
       "audioUrl": "/assets/Gift%20Sounds/music-album/sound.mp3",
       "volume": 0.58,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "music-mic-1oevalj": {
       "name": "Music Mic",
@@ -53,7 +56,8 @@
       "audioUrl": "/assets/Gift%20Sounds/music-mic/sound.mp3",
       "volume": 0.58,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "music-play-1770tl2": {
       "name": "Music Play",
@@ -63,7 +67,8 @@
       "audioUrl": "/assets/Gift%20Sounds/music-play/sound.mp3",
       "volume": 0.58,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "umbrella-1w4w15x": {
       "name": "umbrella",
@@ -73,7 +78,8 @@
       "audioUrl": "/assets/Gift%20Sounds/umbrella/sound.mp3",
       "volume": 0.46,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "cute-cat-elpqt6": {
       "name": "Cute Cat",
@@ -83,7 +89,8 @@
       "audioUrl": "/assets/Gift%20Sounds/cute-cat/sound.mp3",
       "volume": 0.68,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "wave-firework-1z31rx": {
       "name": "Wave Firework",
@@ -93,7 +100,8 @@
       "audioUrl": "/assets/Gift%20Sounds/wave-firework/sound.mp3",
       "volume": 0.72,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "love-piggy-1sd0rt9": {
       "name": "Love Piggy",
@@ -103,7 +111,8 @@
       "audioUrl": "/assets/Gift%20Sounds/love-piggy/sound.mp3",
       "volume": 0.68,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "lucky-pig-dt659n": {
       "name": "Lucky Pig",
@@ -113,7 +122,8 @@
       "audioUrl": "/assets/Gift%20Sounds/lucky-pig/sound.mp3",
       "volume": 0.68,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "sing-together-1rvoylc": {
       "name": "Sing Together",
@@ -123,7 +133,8 @@
       "audioUrl": "/assets/Gift%20Sounds/sing-together/sound.mp3",
       "volume": 0.58,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "birthday-crown-11s9xov": {
       "name": "Birthday Crown",
@@ -133,7 +144,8 @@
       "audioUrl": "/assets/Gift%20Sounds/birthday-crown/sound.mp3",
       "volume": 0.58,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "cow-napping-dyv3c2": {
       "name": "Cow-napping",
@@ -143,7 +155,8 @@
       "audioUrl": "/assets/Gift%20Sounds/cow-napping/sound.mp3",
       "volume": 0.68,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "little-crown-1160xla": {
       "name": "Little Crown",
@@ -153,7 +166,8 @@
       "audioUrl": "/assets/Gift%20Sounds/little-crown/sound.mp3",
       "volume": 0.58,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "minecraft-bee-1qyv8ng": {
       "name": "Minecraft Bee",
@@ -163,7 +177,8 @@
       "audioUrl": "/assets/Gift%20Sounds/minecraft-bee/sound.mp3",
       "volume": 0.68,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "dizzy-bird-19o6c1c": {
       "name": "Dizzy Bird",
@@ -173,7 +188,8 @@
       "audioUrl": "/assets/Gift%20Sounds/dizzy-bird/sound.mp3",
       "volume": 0.68,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "frog-conductor-1usmbx2": {
       "name": "Frog Conductor",
@@ -183,7 +199,8 @@
       "audioUrl": "/assets/Gift%20Sounds/frog-conductor/sound.mp3",
       "volume": 0.68,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "heart-rain-1vaqozz": {
       "name": "Heart Rain",
@@ -193,7 +210,8 @@
       "audioUrl": "/assets/Gift%20Sounds/heart-rain/sound.mp3",
       "volume": 0.46,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "coconut-tree-1bhsxd0": {
       "name": "Coconut Tree",
@@ -203,7 +221,8 @@
       "audioUrl": "/assets/Gift%20Sounds/coconut-tree/sound.mp3",
       "volume": 0.46,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "crown-eokfps": {
       "name": "Crown",
@@ -213,7 +232,8 @@
       "audioUrl": "/assets/Gift%20Sounds/crown/sound.mp3",
       "volume": 0.58,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "gamer-cat-uhu32n": {
       "name": "Gamer Cat",
@@ -223,7 +243,8 @@
       "audioUrl": "/assets/Gift%20Sounds/gamer-cat/sound.mp3",
       "volume": 0.68,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "love-rain-1xpcgmh": {
       "name": "Love Rain",
@@ -233,7 +254,8 @@
       "audioUrl": "/assets/Gift%20Sounds/love-rain/sound.mp3",
       "volume": 0.46,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "music-player-9la6sx": {
       "name": "Music Player",
@@ -243,7 +265,8 @@
       "audioUrl": "/assets/Gift%20Sounds/music-player/sound.mp3",
       "volume": 0.58,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "stinging-bee-mam8vu": {
       "name": "Stinging Bee",
@@ -253,7 +276,8 @@
       "audioUrl": "/assets/Gift%20Sounds/stinging-bee/sound.mp3",
       "volume": 0.68,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "melodic-birds-m3cape": {
       "name": "Melodic birds",
@@ -263,7 +287,8 @@
       "audioUrl": "/assets/Gift%20Sounds/melodic-birds/sound.mp3",
       "volume": 0.68,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "singing-frog-jyg9qc": {
       "name": "Singing Frog",
@@ -273,7 +298,8 @@
       "audioUrl": "/assets/Gift%20Sounds/singing-frog/sound.mp3",
       "volume": 0.68,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "legend-crown-1sssvt3": {
       "name": "Legend Crown",
@@ -283,7 +309,8 @@
       "audioUrl": "/assets/Gift%20Sounds/legend-crown/sound.mp3",
       "volume": 0.58,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "music-mate-yprngp": {
       "name": "Music Mate",
@@ -293,7 +320,8 @@
       "audioUrl": "/assets/Gift%20Sounds/music-mate/sound.mp3",
       "volume": 0.58,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "rain-doll-10qmk0w": {
       "name": "Rain Doll",
@@ -303,7 +331,8 @@
       "audioUrl": "/assets/Gift%20Sounds/rain-doll/sound.mp3",
       "volume": 0.46,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "super-dog-16dui86": {
       "name": "Super Dog",
@@ -313,7 +342,8 @@
       "audioUrl": "/assets/Gift%20Sounds/super-dog/sound.mp3",
       "volume": 0.68,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "air-dancer-1ai1nh6": {
       "name": "Air Dancer",
@@ -323,7 +353,8 @@
       "audioUrl": "/assets/Gift%20Sounds/air-dancer/sound.mp3",
       "volume": 0.46,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "singing-frogs-vfsal1": {
       "name": "Singing frogs",
@@ -333,7 +364,8 @@
       "audioUrl": "/assets/Gift%20Sounds/singing-frogs/sound.mp3",
       "volume": 0.68,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "fortune-cat-kfcnwu": {
       "name": "Fortune Cat",
@@ -343,7 +375,8 @@
       "audioUrl": "/assets/Gift%20Sounds/fortune-cat/sound.mp3",
       "volume": 0.68,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "lucky-cat-ubi74j": {
       "name": "Lucky Cat",
@@ -353,7 +386,8 @@
       "audioUrl": "/assets/Gift%20Sounds/lucky-cat/sound.mp3",
       "volume": 0.68,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "rosie-s-concert-r72phd": {
       "name": "Rosie's Concert",
@@ -363,7 +397,8 @@
       "audioUrl": "/assets/Gift%20Sounds/rosie-s-concert/sound.mp3",
       "volume": 0.58,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "singing-mic-1u2hgwx": {
       "name": "Singing Mic",
@@ -373,7 +408,8 @@
       "audioUrl": "/assets/Gift%20Sounds/singing-mic/sound.mp3",
       "volume": 0.58,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "singing-sax-xudpeu": {
       "name": "Singing Sax",
@@ -383,7 +419,8 @@
       "audioUrl": "/assets/Gift%20Sounds/singing-sax/sound.mp3",
       "volume": 0.58,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "rock-cats-4zxzyx": {
       "name": "Rock Cats",
@@ -393,7 +430,8 @@
       "audioUrl": "/assets/Gift%20Sounds/rock-cats/sound.mp3",
       "volume": 0.68,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "music-conductor-foohxt": {
       "name": "Music Conductor",
@@ -403,7 +441,8 @@
       "audioUrl": "/assets/Gift%20Sounds/music-conductor/sound.mp3",
       "volume": 0.58,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "music-18ab07o": {
       "name": "Music",
@@ -413,7 +452,8 @@
       "audioUrl": "/assets/Gift%20Sounds/music/sound.mp3",
       "volume": 0.58,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "lion-s-mane-hfjdru": {
       "name": "Lion’s Mane",
@@ -423,7 +463,8 @@
       "audioUrl": "/assets/Gift%20Sounds/lion-s-mane/sound.mp3",
       "volume": 0.72,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "the-van-cat-19qqq79": {
       "name": "The Van Cat",
@@ -433,7 +474,8 @@
       "audioUrl": "/assets/Gift%20Sounds/the-van-cat/sound.mp3",
       "volume": 0.68,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "sheep-joy-1pkkzuy": {
       "name": "Sheep Joy",
@@ -443,7 +485,8 @@
       "audioUrl": "/assets/Gift%20Sounds/sheep-joy/sound.mp3",
       "volume": 0.68,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "hot-air-balloon-duavn3": {
       "name": "Hot Air Balloon",
@@ -453,7 +496,8 @@
       "audioUrl": "/assets/Gift%20Sounds/hot-air-balloon/sound.mp3",
       "volume": 0.46,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "hunting-dog-105zvae": {
       "name": "Hunting Dog",
@@ -463,7 +507,8 @@
       "audioUrl": "/assets/Gift%20Sounds/hunting-dog/sound.mp3",
       "volume": 0.68,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "shiny-air-balloon-sh3naj": {
       "name": "Shiny Air Balloon",
@@ -473,7 +518,8 @@
       "audioUrl": "/assets/Gift%20Sounds/shiny-air-balloon/sound.mp3",
       "volume": 0.46,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "diamond-tree-1t4qpp1": {
       "name": "Diamond Tree",
@@ -483,7 +529,8 @@
       "audioUrl": "/assets/Gift%20Sounds/diamond-tree/sound.mp3",
       "volume": 0.46,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "fireworks-acz98l": {
       "name": "Fireworks",
@@ -493,7 +540,8 @@
       "audioUrl": "/assets/Gift%20Sounds/fireworks/sound.mp3",
       "volume": 0.72,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "spooky-cat-12a4740": {
       "name": "Spooky Cat",
@@ -503,7 +551,8 @@
       "audioUrl": "/assets/Gift%20Sounds/spooky-cat/sound.mp3",
       "volume": 0.68,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "hydrangea-sea-f427al": {
       "name": "Hydrangea Sea",
@@ -513,7 +562,8 @@
       "audioUrl": "/assets/Gift%20Sounds/hydrangea-sea/sound.mp3",
       "volume": 0.46,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "diamond-ring-wc6vxn": {
       "name": "Diamond Ring",
@@ -523,7 +573,8 @@
       "audioUrl": "/assets/Gift%20Sounds/diamond-ring/sound.mp3",
       "volume": 0.58,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "space-cat-1rosc5d": {
       "name": "Space Cat",
@@ -533,7 +584,8 @@
       "audioUrl": "/assets/Gift%20Sounds/space-cat/sound.mp3",
       "volume": 0.68,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "mystery-firework-te1x8b": {
       "name": "Mystery Firework",
@@ -543,7 +595,8 @@
       "audioUrl": "/assets/Gift%20Sounds/mystery-firework/sound.mp3",
       "volume": 0.72,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "club-music-1j75f0q": {
       "name": "Club Music",
@@ -553,7 +606,8 @@
       "audioUrl": "/assets/Gift%20Sounds/club-music/sound.mp3",
       "volume": 0.58,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "whale-diving-uig90r": {
       "name": "Whale Diving",
@@ -563,7 +617,8 @@
       "audioUrl": "/assets/Gift%20Sounds/whale-diving/sound.mp3",
       "volume": 0.68,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "space-dog-s8djhz": {
       "name": "Space Dog",
@@ -573,7 +628,8 @@
       "audioUrl": "/assets/Gift%20Sounds/space-dog/sound.mp3",
       "volume": 0.68,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "sea-cooper-1w41q2q": {
       "name": "Sea Cooper",
@@ -583,7 +639,8 @@
       "audioUrl": "/assets/Gift%20Sounds/sea-cooper/sound.mp3",
       "volume": 0.46,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "sea-nyota-gx4oel": {
       "name": "Sea Nyota",
@@ -593,7 +650,8 @@
       "audioUrl": "/assets/Gift%20Sounds/sea-nyota/sound.mp3",
       "volume": 0.46,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "sea-tom-y3sc5c": {
       "name": "Sea Tom",
@@ -603,7 +661,8 @@
       "audioUrl": "/assets/Gift%20Sounds/sea-tom/sound.mp3",
       "volume": 0.46,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "sumo-cat-l2rbnl": {
       "name": "Sumo Cat",
@@ -613,7 +672,8 @@
       "audioUrl": "/assets/Gift%20Sounds/sumo-cat/sound.mp3",
       "volume": 0.68,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "whitewind-beast-5l78e3": {
       "name": "Whitewind Beast",
@@ -623,7 +683,8 @@
       "audioUrl": "/assets/Gift%20Sounds/whitewind-beast/sound.mp3",
       "volume": 0.46,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "your-concert-1pibhzg": {
       "name": "Your Concert",
@@ -633,7 +694,8 @@
       "audioUrl": "/assets/Gift%20Sounds/your-concert/sound.mp3",
       "volume": 0.58,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "dynamic-music-tb6cp": {
       "name": "Dynamic Music",
@@ -643,7 +705,8 @@
       "audioUrl": "/assets/Gift%20Sounds/dynamic-music/sound.mp3",
       "volume": 0.58,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "arabian-stallion-17yhax5": {
       "name": "Arabian Stallion",
@@ -653,7 +716,8 @@
       "audioUrl": "/assets/Gift%20Sounds/arabian-stallion/sound.mp3",
       "volume": 0.68,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "stallion-wz6iqh": {
       "name": "Stallion",
@@ -663,7 +727,8 @@
       "audioUrl": "/assets/Gift%20Sounds/stallion/sound.mp3",
       "volume": 0.68,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "sam-the-whale-1cm4l6e": {
       "name": "Sam the Whale",
@@ -673,7 +738,8 @@
       "audioUrl": "/assets/Gift%20Sounds/sam-the-whale/sound.mp3",
       "volume": 0.68,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "crescent-lion-1b2ilhk": {
       "name": "Crescent Lion",
@@ -683,7 +749,8 @@
       "audioUrl": "/assets/Gift%20Sounds/crescent-lion/sound.mp3",
       "volume": 0.72,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "leon-and-lion-878h40": {
       "name": "Leon and Lion",
@@ -693,7 +760,8 @@
       "audioUrl": "/assets/Gift%20Sounds/leon-and-lion/sound.mp3",
       "volume": 0.72,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "seal-and-whale-w243ac": {
       "name": "Seal and Whale",
@@ -703,7 +771,8 @@
       "audioUrl": "/assets/Gift%20Sounds/seal-and-whale/sound.mp3",
       "volume": 0.68,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "holiday-lion-1xxat4j": {
       "name": "Holiday Lion",
@@ -713,7 +782,8 @@
       "audioUrl": "/assets/Gift%20Sounds/holiday-lion/sound.mp3",
       "volume": 0.72,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     },
     "music-bubbles-100-mgl": {
       "name": "Music Bubbles",
@@ -723,7 +793,15 @@
       "audioUrl": "/assets/Gift%20Sounds/music-bubbles/sound.mp3",
       "volume": 0.58,
       "reviewStatus": "candidate_real_recording_needs_listening_review",
-      "spatialProfile": "stereo_listener_relative"
+      "spatialProfile": "stereo_listener_relative",
+      "playbackApproved": false
     }
+  },
+  "review_gate": {
+    "required": true,
+    "defaultPlaybackApproved": false,
+    "previewControl": "Gifts Studio > Preview sound",
+    "productionEnablement": "Set playbackApproved=true only after human listening, artwork/animation match and source licence review.",
+    "unapprovedGiftEventBehavior": "silent_no_candidate_playback"
   }
 }
