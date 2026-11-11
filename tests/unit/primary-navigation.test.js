@@ -105,6 +105,8 @@ test('desktop left sidebar contains secondary features while primary destination
     assert.ok(sidebar.includes('>'+label+'</span>'),label+' has a visible sidebar label');
   }
   assert.ok(sidebar.includes('data-left-action="reels"') && sidebar.includes('#reels'), 'Reels has its own video-format icon');
+  assert.ok(!sidebar.includes('title="Gaming is coming soon"'), 'the duplicate standalone Gaming feature is removed');
+  assert.ok(sidebar.includes('title="Play Games is coming soon"') && sidebar.includes('>Play Games</span>'), 'Play Games remains as the single games destination');
   for(const symbol of ['friends','saved','groups','creator','gift','calendar','clock','gamepad','reels','megaphone','admin','video','messages','recharge','pages']){
     assert.ok(sidebar.includes('#'+symbol+'\"'),symbol+' uses the shared 3D navigation icon set');
   }
