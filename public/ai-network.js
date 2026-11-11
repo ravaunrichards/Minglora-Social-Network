@@ -164,7 +164,7 @@
       '<div class="ai-network-form-grid"><label>Daily token budget<input name="dailyTokenBudget" type="number" min="500" max="500000" step="100" value="' + esc(settings.dailyTokenBudget) + '" required></label>' +
       '<label>Monthly spend limit (USD)<input name="monthlySpendLimitUsd" type="number" min="0.5" max="500" step="0.5" value="' + esc(settings.monthlySpendLimitUsd) + '" required></label></div>' +
       '<label class="ai-network-switch"><input type="checkbox" name="companionOptIn" ' + (settings.companionOptIn ? 'checked' : '') + '><span>Opt in to an AI companion (off by default)</span></label>' +
-      '<label class="ai-network-switch"><input type="checkbox" name="companionAcknowledgedAIIdentity"><span>I understand this companion is AI, not a human</span></label>' +
+      '<label class="ai-network-switch"><input type="checkbox" name="companionAcknowledgedAIIdentity"' + (settings.companionOptIn ? ' checked' : '') + '><span>I understand this companion is AI, not a human</span></label>' +
       '<button class="primary" type="submit">Save safety settings</button></form>' +
       '<div class="ai-network-provider"><div><strong>Provider readiness</strong><p>' + esc(provider.note) + '</p></div>' +
       pill(provider.configured ? 'Configured · execution disabled' : 'Not configured', provider.configured ? 'warning' : 'neutral') + '</div>' +
