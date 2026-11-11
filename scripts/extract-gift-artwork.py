@@ -183,7 +183,10 @@ def run(source, output, expected):
       f"- Individual artwork files: **{written}**\n- Repeat appearances merged: **{len(candidates)-written}**\n"
       f"- Items flagged for review: **{len(review)}**\n- Human visual review: **NOT COMPLETED**\n\n"
       "Original captures are read-only. OCR names and transparent crops require visual review before production use.\n")
-    write_new(output/"README.md", readme.encode())
+    # Preserve a manually maintained review/provenance README on repeat runs.
+    # The extractor owns the manifest and review-needed data, not the human review gate.
+    if not (output / "README.md").exists():
+        write_new(output/"README.md", readme.encode())
     print(f"EXTRACTION COMPLETE: {len(files)} captures; {len(candidates)} labels; {written} artwork files; {len(review)} flagged.")
     return written
 
