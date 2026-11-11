@@ -587,6 +587,8 @@ test('approved Creator Studio Feed and Story drafts transfer to existing compose
   assert.match(admin,/draft\.status==='approved_for_human_handoff'/);
   assert.match(admin,/draft\.contentFormat==='feed_post'&&draft\.destination==='feed'/);
   assert.match(admin,/draft\.contentFormat==='story'&&draft\.destination==='story'/);
+  assert.match(admin,/const composerHandoffAction=draft\.status==='approved_for_human_handoff'/);
+  assert.match(admin,/text-only Stories; other formats remain in Creator Studio/);
   assert.match(admin,/const characterLimit=isStoryDraft\?1000:5000/);
   assert.match(admin,/press '\+publishAction/);
   assert.match(admin,/window\.open\('\/','_blank'\)/);
