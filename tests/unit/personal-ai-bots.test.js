@@ -1148,3 +1148,46 @@ test('team handoff creation requires a recorded owner privacy attestation',()=>{
   assert.equal(attested.privacyAttestedBy,actor);
   assert.equal(attested.privacyAttestedAt,stamp);
 });
+
+
+test('pausing or disabling a bot team cancels pending and accepted handoffs without deleting records',()=>{
+  const fixture=createTeamHandoffFixture();
+  const {db,sender,receiver,team,taskId}=fixture;
+  const base={
+    senderBotId:sender.id,receivingBotId:receiver.id,
+    requiredInput:'Review only the approved team task content.',
+    expectedOutput:'Return a short owner-reviewed report.',
+    contextScope:'team_internal',privacyAttested:true
+  };
+  const pending=createPersonalAiBotTeamHandoff(db,team.id,{...base,sourceTaskId:taskId},actor,stamp,uid);
+  const secondTaskId=uid();
+  db.personalAiBotTasks.push({id:secondTaskId,botId:sender.id,status:'awaiting_administrator_approval',createdAt:stamp});
+  const accepted=createPersonalAiBotTeamHandoff(db,team.id,{...base,sourceTaskId:secondTaskId},actor,stamp,uid);
+  reviewPersonalAiBotTeamHandoff(db,team.id,accepted.id,{action:'accept'},actor,stamp,uid);
+  const result=updatePersonalAiBotTeam(db,team.id,{status:'paused'},actor,stamp,uid);
+  assert.equal(result.status,'paused');
+  assert.equal(db.personalAiBotTeamHandoffs.length,2);
+  assert.equal(db.personalAiBotTeamHandoffs.find(item=>item.id===pending.id).status,'cancelled');
+  assert.equal(db.personalAiBotTeamHandoffs.find(item=>item.id===accepted.id).status,'cancelled');
+  assert.equal(db.personalAiBotTeamHandoffs.every(item=>item.cancellationReason==='team_paused'),true);
+  assert.equal(db.personalAiBotTeamHandoffs.every(item=>item.dispatchStatus==='not_dispatched'),true);
+  assert.throws(()=>createPersonalAiBotTeamHandoff(db,team.id,{...base,sourceTaskId:taskId+'-other'},actor,stamp,uid),/enabled team/);
+});
+
+test('emergency shutdown cancels open handoffs and preserves their audit history',()=>{
+  const fixture=createTeamHandoffFixture();
+  const {db,sender,receiver,team,taskId}=fixture;
+  const handoff=createPersonalAiBotTeamHandoff(db,team.id,{
+    sourceTaskId:taskId,senderBotId:sender.id,receivingBotId:receiver.id,
+    requiredInput:'Review the approved team notes only.',
+    expectedOutput:'Return a concise human-reviewed report.',
+    contextScope:'team_internal',privacyAttested:true
+  },actor,stamp,uid);
+  const result=emergencyShutdownPersonalAiBots(db,actor,stamp,uid);
+  const retained=db.personalAiBotTeamHandoffs.find(item=>item.id===handoff.id);
+  assert.equal(result.cancelledHandoffs,1);
+  assert.equal(retained.status,'cancelled');
+  assert.equal(retained.cancellationReason,'network_emergency_shutdown');
+  assert.equal(retained.dispatchStatus,'not_dispatched');
+  assert.ok(db.personalAiBotAudit.some(item=>item.action==='team.handoff_cancelled'&&item.entityId===handoff.id));
+});
