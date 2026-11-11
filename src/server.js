@@ -553,7 +553,8 @@ function isAccountBlocked(account){
   return isAccountBanned(account)||['suspended','deactivated','deleted'].includes(String(account.status||'').toLowerCase());
 }
 function activeFollows(){
-  return getActiveFollowEdges(db.follows||[],db.users||[]);
+  return getActiveFollowEdges(db.follows||[],db.users||[])
+    .filter(edge=>!blockedBetween(edge.followerId,edge.followedId));
 }
 function activeProfilePresence(){
   return (db.profileViewPresence||[]).filter(entry=>
@@ -563,7 +564,12 @@ function activeProfilePresence(){
   );
 }
 function activePageFollows(){
-  return (db.pageFollows||[]).filter(edge=>isSocialAccountEligible((db.users||[]).find(member=>member.id===edge.userId)));
+  const pagesById=new Map((db.pages||[]).map(page=>[String(page.id),page]));
+  return (db.pageFollows||[]).filter(edge=>{
+    const page=pagesById.get(String(edge.pageId));
+    return isSocialAccountEligible((db.users||[]).find(member=>member.id===edge.userId))
+      && page && !blockedBetween(page.createdBy,edge.userId);
+  });
 }
 function sessionUser(req){
   const session=sessionFromRequest(req);
@@ -5307,8 +5313,8 @@ async function route(req, res) {
         db.blocks||=[];
         const exists=db.blocks.some(b=>b.blockerId===user.id&&b.blockedId===target.id);
         if(method==='POST'){
-          // Make Supabase relationship edges agree before committing local projections.
-          // Repeating Block is intentionally idempotent and repairs stale old edges.
+          // Commit the block before any network waits so the pair cannot
+          // create a new relationship while old connection records are cleaned.
           const pairFollows=(db.follows||[]).filter(edge=>
             (edge.followerId===user.id&&edge.followedId===target.id)
               ||(edge.followerId===target.id&&edge.followedId===user.id)
@@ -5316,18 +5322,24 @@ async function route(req, res) {
           const uniqueEdges=[...new Map(pairFollows.map(edge=>[
             String(edge.followerId)+'::'+String(edge.followedId),edge
           ])).values()];
-          for(const edge of uniqueEdges){
-            await requestSupabaseState('relationship_unfollow',{
-              followerId:edge.followerId,followedId:edge.followedId
-            });
-          }
           if(!exists)db.blocks.push({id:uid(),blockerId:user.id,blockedId:target.id,createdAt:now()});
           const disconnected=disconnectBlockedConnections(db,user.id,target.id,now());
+          messengerRealtime?.disconnectPair(user.id,target.id,'blocked');
           await saveStore();
           await Promise.all(disconnected.calls.map(call=>cleanupCallRoom(call,'blocked')));
-          messengerRealtime?.disconnectPair(user.id,target.id,'blocked');
+          let followProjectionSynced=true;
+          try{
+            await Promise.all(uniqueEdges.map(edge=>requestSupabaseState('relationship_unfollow',{
+              followerId:edge.followerId,followedId:edge.followedId
+            })));
+          }catch(error){
+            followProjectionSynced=false;
+            console.warn('[Minglora block] Blocked relationship was saved, but a Supabase follow projection needs retry.',{
+              blockerId:user.id,blockedId:target.id,message:String(error?.message||error).slice(0,160)
+            });
+          }
           return json(res,200,{
-            blocked:true,
+            blocked:true,followProjectionSynced,
             disconnected:{
               follows:disconnected.follows,
               friendships:disconnected.friendships,
