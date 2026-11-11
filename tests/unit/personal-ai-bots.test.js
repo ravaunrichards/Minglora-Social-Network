@@ -38,6 +38,7 @@ import {
   getPersonalAiBotAppointments,
   getPersonalAiBotEmploymentHistory,
   createPersonalAiBotAppointment,
+  previewPersonalAiBotSchedule,
 } from '../../backend/modules/personal-ai-bots/personal-ai-bots-service.js';
 
 const makeDb=()=>({});
@@ -822,4 +823,65 @@ test('AI profile updates reject unsupported gender, invalid time zones and dupli
     {locationType:'current',countryCode:'CA',timeZone:'America/Toronto'}
   ]},actor,stamp,uid),/unique supported location types/);
   assert.throws(()=>createPersonalAiBot(db,{displayName:'Invalid Timezone AI',categoryId:'ai-support',timeZone:'Bad/Timezone'},actor,stamp,uid),/valid profile time zone/);
+});
+
+
+test('schedule dry-run preview returns local and UTC windows without dispatching',()=>{
+  const schedule={
+    timezone:'America/Jamaica',daysOfWeek:[3],startTime:'09:00',endTime:'17:00',
+    maxTasksPerDay:4
+  };
+  const original=structuredClone(schedule);
+  const preview=previewPersonalAiBotSchedule(schedule,{from:'2026-11-11T10:00:00.000Z',days:1});
+  assert.equal(preview.previewOnly,true);
+  assert.equal(preview.dispatchEnabled,false);
+  assert.equal(preview.dispatchStatus,'not_connected');
+  assert.equal(preview.timezone,'America/Jamaica');
+  assert.equal(preview.slots.length,1);
+  assert.equal(preview.slots[0].startLocal,'2026-11-11T09:00');
+  assert.equal(preview.slots[0].endLocal,'2026-11-11T17:00');
+  assert.equal(preview.slots[0].startsAtUtc,'2026-11-11T14:00:00.000Z');
+  assert.equal(preview.slots[0].endsAtUtc,'2026-11-11T22:00:00.000Z');
+  assert.deepEqual(schedule,original);
+});
+
+test('schedule preview skips nonexistent local times during spring-forward transitions',()=>{
+  const preview=previewPersonalAiBotSchedule({
+    timezone:'Europe/Berlin',daysOfWeek:[7],startTime:'02:30',endTime:'03:30',
+    maxTasksPerDay:2
+  },{from:'2026-03-28T12:00:00.000Z',days:2});
+  assert.equal(preview.slots.length,0);
+  assert.equal(preview.skippedWindows.length,1);
+  assert.equal(preview.skippedWindows[0].localStart,'2026-03-29T02:30');
+  assert.equal(preview.skippedWindows[0].reason,'nonexistent_local_time');
+});
+
+test('schedule preview selects the earlier instant for repeated fall-back local times',()=>{
+  const preview=previewPersonalAiBotSchedule({
+    timezone:'Europe/Berlin',daysOfWeek:[7],startTime:'02:30',endTime:'03:30',
+    maxTasksPerDay:2
+  },{from:'2026-10-24T00:00:00.000Z',days:2});
+  assert.equal(preview.slots.length,1);
+  assert.equal(preview.slots[0].startsAtUtc,'2026-10-25T00:30:00.000Z');
+  assert.equal(preview.slots[0].endsAtUtc,'2026-10-25T02:30:00.000Z');
+});
+
+test('schedule preview supports windows that cross local midnight',()=>{
+  const preview=previewPersonalAiBotSchedule({
+    timezone:'America/Jamaica',daysOfWeek:[5],startTime:'22:00',endTime:'02:00',
+    maxTasksPerDay:3
+  },{from:'2026-11-13T12:00:00.000Z',days:1});
+  assert.equal(preview.slots.length,1);
+  assert.equal(preview.slots[0].startLocal,'2026-11-13T22:00');
+  assert.equal(preview.slots[0].endLocal,'2026-11-14T02:00');
+  assert.equal(preview.slots[0].startsAtUtc,'2026-11-14T03:00:00.000Z');
+  assert.equal(preview.slots[0].endsAtUtc,'2026-11-14T07:00:00.000Z');
+});
+
+test('schedule preview rejects invalid ranges, timezones and daily caps',()=>{
+  const base={timezone:'America/Jamaica',daysOfWeek:[1],startTime:'09:00',endTime:'17:00',maxTasksPerDay:0};
+  assert.throws(()=>previewPersonalAiBotSchedule(base,{from:'not-a-date',days:7}),/start time is invalid/);
+  assert.throws(()=>previewPersonalAiBotSchedule(base,{from:'2026-11-11T00:00:00Z',days:61}),/between 1 and 60/);
+  assert.throws(()=>previewPersonalAiBotSchedule({...base,timezone:'Not/A_Timezone'},{from:'2026-11-11T00:00:00Z'}),/valid IANA schedule timezone/);
+  assert.throws(()=>previewPersonalAiBotSchedule({...base,maxTasksPerDay:501},{from:'2026-11-11T00:00:00Z'}),/Daily task cap/);
 });
