@@ -159,7 +159,13 @@ async function ocrLabels(inputPath, scale) {
   const tempPath=path.join(os.tmpdir(), "minglora-gift-ocr-"+crypto.randomBytes(6).toString("hex")+".png");
   try{
     const meta=await sharp(inputPath).metadata();
-    await sharp(inputPath).resize({width:Math.min(2400,Math.round(meta.width*scale))}).png().toFile(tempPath);
+    if(!meta.width||!meta.height)throw new Error("Image dimensions unavailable");
+    const targetWidth=Math.max(1,Math.min(2400,Math.round(meta.width*scale)));
+    // The OCR resize is capped at 2400px. Convert OCR coordinates using the
+    // actual resize ratio, not the requested scale, or wide screenshots crop
+    // the wrong region and create mismatched gift artwork.
+    const actualScale=targetWidth/meta.width;
+    await sharp(inputPath).resize({width:targetWidth}).png().toFile(tempPath);
     const {stdout}=await execFileAsync("tesseract",[tempPath,"stdout","-l","eng","--psm","11","tsv"],{maxBuffer:32*1024*1024});
     const lines=new Map();
     const rows=stdout.split(/\r?\n/);
@@ -169,7 +175,7 @@ async function ocrLabels(inputPath, scale) {
       const conf=Number(cols[10]), word=String(cols[11]||"").trim();
       if(!word||!Number.isFinite(conf)||conf<18)continue;
       const key=cols[2]+"."+cols[3]+"."+cols[4];
-      const left=Number(cols[6])/scale,top=Number(cols[7])/scale,w=Number(cols[8])/scale,h=Number(cols[9])/scale;
+      const left=Number(cols[6])/actualScale,top=Number(cols[7])/actualScale,w=Number(cols[8])/actualScale,h=Number(cols[9])/actualScale;
       if(!lines.has(key))lines.set(key,[]);
       lines.get(key).push({word,left,top,w,h,conf});
     }
