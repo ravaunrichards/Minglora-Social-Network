@@ -91,7 +91,8 @@ test('feature navigation uses distinct, semantically correct 3D icons', () => {
   assert.match(html, /data-view="calendar" aria-label="Events"[^\n]+#calendar/);
   assert.match(html, /data-view="clock-centre" aria-label="Clock Centre"[^\n]+#clock/);
   assert.match(html, /data-view="gifts" aria-label="Gifts"[^\n]+#gift/);
-  assert.match(html, /title="Gaming is coming soon"[^\n]+#gamepad/);
+  assert.doesNotMatch(html, /title="Gaming is coming soon"[^\n]+#gamepad/, 'the duplicate Gaming feature is absent from the sidebar');
+  assert.match(html, /title="Play Games is coming soon"[^\n]+#gamepad/, 'Play Games keeps the gamepad icon and remains available');
   assert.match(html, /title="Play Games is coming soon"[^\n]+#gamepad/);
   assert.match(html, /data-left-action="reels"[^\n]+#reels/);
   assert.match(html, /data-view="leagues"[^\n]+#trophy/);
