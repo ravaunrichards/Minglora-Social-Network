@@ -578,3 +578,28 @@ test('Creator Studio exposes read-only previous-version and review audit history
   assert.match(ui,/previousVersions\.map/);
   assert.match(ui,/<details class="pab-creator-history"/);
 });
+
+test('approved Creator Studio feed drafts transfer to the existing composer with disclosure and a human publish gate',async()=>{
+  const [admin,app,index,worker,styles]=await Promise.all([
+    read('public/personal-ai-bots.js'),read('public/app.js'),read('public/index.html'),
+    read('public/sw.js'),read('public/styles.css')
+  ]);
+  assert.match(admin,/draft\.status==='approved_for_human_handoff'/);
+  assert.match(admin,/draft\.contentFormat==='feed_post'&&draft\.destination==='feed'/);
+  assert.match(admin,/window\.open\('\/','_blank'\)/);
+  assert.match(admin,/MINGLORA_CREATOR_DRAFT_HANDOFF/);
+  assert.match(admin,/press Share post/);
+  assert.match(app,/event\.origin!==window\.location\.origin/);
+  assert.match(app,/event\.source!==window\.opener/);
+  assert.match(app,/MINGLORA_CREATOR_DRAFT_READY/);
+  assert.match(app,/AI-assisted content draft from /);
+  assert.match(app,/Nothing is shared until you press Share post/);
+  const receiver=app.slice(app.indexOf('function applyPendingCreatorDraftHandoff'),app.indexOf('function openVideoComposer'));
+  assert.doesNotMatch(receiver,/api\(['"]\/posts/);
+  const composer=app.slice(app.indexOf('function openComposer(options={})'),app.indexOf('function applyPendingCreatorDraftHandoff'));
+  assert.match(composer,/api\('\/posts'/);
+  assert.match(index,/app\.js\?v=20261111-creator-studio-composer-handoff-1/);
+  assert.match(index,/styles\.css\?v=20261111-creator-studio-composer-handoff-1/);
+  assert.match(worker,/minglora-shell-v256-creator-studio-composer-handoff-1/);
+  assert.match(styles,/creator-ai-handoff-notice/);
+});
