@@ -1081,6 +1081,7 @@ async function publicVideoPlaylist(playlist, viewerId, { includeVideos = false }
     updatedAt: playlist.updatedAt || playlist.createdAt,
     owner: safeUser(owner, viewerId),
     isOwner: playlist.ownerId === viewerId,
+    canReorder: playlist.ownerId === viewerId && visibleItems.length === orderedItems.length,
     videoCount: visibleItems.length,
     ...(includeVideos ? { videos } : {})
   };
