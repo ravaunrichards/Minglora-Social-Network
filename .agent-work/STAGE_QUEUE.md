@@ -56,10 +56,10 @@ Statuses: NOT STARTED · READY · IN PROGRESS · VERIFYING · COMPLETED · BLOCK
 - **Objective:** Review every extracted artwork and label before any gift catalog integration.
 - **Requirements:** Inspect crop boundaries, transparent edges, subject scale, OCR names, truncation, low-confidence labels, category accuracy, same-name variants, repeated appearances and near-duplicate candidates.
 - **Dependencies:** MS-GIFTS-ART-01.
-- **Tasks:** Create review contact sheets; review flagged groups first; reconcile all 100 same-title/different-artwork variants; correct truncated/low-confidence labels against the source captures; document each approved, rejected, duplicate or unresolved asset.
+- **Tasks:** Build 24 review contact sheets; screen all thumbnails; review flagged groups at full size; reconcile same-title/different-artwork candidates; correct truncated/low-confidence labels against the source captures; document every approved, rejected, duplicate or unresolved asset.
 - **Acceptance:** Every record has a human review state and reason; no unresolved crop/name/duplicate issue is silently accepted; approved artwork maps to one deliberate catalog identity; all variants and repeated screenshot appearances remain traceable.
-- **Status:** IN PROGRESS. Six near-duplicate candidate pairs were visually compared (12 files). Three pairs are distinct artwork variants; three pairs appear to be repeated artwork and are retained pending canonical-record reconciliation. The other 1,497 records have not received individual human review.
-- **Review notes:** `reports/gift-artwork-visual-review-notes.md`; machine audit: `reports/gift-artwork-audit.md`.
+- **Status:** IN PROGRESS. Contact-sheet screening covers 24/24 pages and 1,509/1,509 thumbnails. Eighteen same-title pairs (36 PNGs) were compared at full size: seven pairs are distinct artwork variants and eleven pairs appear to be repeated artwork. All files remain preserved. The first six pairs also had their source screenshots checked; direct source-cell confirmation is still pending for the other twelve pairs. The remaining 1,473 manifest records have not yet received individual full-size comparison.
+- **Review notes:** `reports/gift-artwork-visual-review-notes.md`; contact-sheet screening: `reports/gift-artwork-contact-sheet-screening.md`; machine audit: `reports/gift-artwork-audit.md`.
 
 ### MS-GIFTS-ART-03 — Rights, provenance and originality clearance
 - **Objective:** Confirm lawful rights for each image before publication or commercial use.
