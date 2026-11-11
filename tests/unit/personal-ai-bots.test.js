@@ -1052,7 +1052,7 @@ test('team handoffs are one-receiver, owner-reviewed, idempotent and never dispa
     summary:'Independent review request',
     requiredInput:'Review the prepared draft for completeness and consistency.',
     expectedOutput:'Return a structured review with findings and recommendations.',
-    contextScope:'team_internal'
+    contextScope:'team_internal',privacyAttested:true
   },actor,stamp,uid);
   assert.equal(handoff.status,'pending_owner_review');
   assert.equal(handoff.dispatchStatus,'not_dispatched');
@@ -1060,11 +1060,11 @@ test('team handoffs are one-receiver, owner-reviewed, idempotent and never dispa
   assert.equal(getPersonalAiBotTeamHandoffs(db,team.id,actor).length,1);
   assert.throws(()=>createPersonalAiBotTeamHandoff(db,team.id,{
     sourceTaskId:taskId,senderBotId:sender.id,receivingBotId:receiver.id,
-    requiredInput:'Review the same work again.',expectedOutput:'Provide another review.'
+    requiredInput:'Review the same work again.',expectedOutput:'Provide another review.',privacyAttested:true
   },actor,stamp,uid),/already exists/);
   assert.throws(()=>createPersonalAiBotTeamHandoff(db,team.id,{
     sourceTaskId:taskId,senderBotId:sender.id,receivingBotId:sender.id,
-    requiredInput:'Review this task.',expectedOutput:'Return the review.'
+    requiredInput:'Review this task.',expectedOutput:'Return the review.',privacyAttested:true
   },actor,stamp,uid),/cannot hand work to itself/);
 });
 
@@ -1095,7 +1095,8 @@ test('team handoff rejects private context and revalidates membership, source ta
   const payload={
     sourceTaskId:taskId,senderBotId:sender.id,receivingBotId:receiver.id,
     requiredInput:'Use only approved team information for this review.',
-    expectedOutput:'Return a concise review with any concerns.'
+    expectedOutput:'Return a concise review with any concerns.',
+    privacyAttested:true
   };
   assert.throws(()=>createPersonalAiBotTeamHandoff(db,team.id,{...payload,contextScope:'private'},actor,stamp,uid),/private member conversations/);
 
@@ -1123,4 +1124,25 @@ test('removing a team member cancels and preserves the member’s open handoffs'
   assert.equal(retained.status,'cancelled');
   assert.equal(retained.cancellationReason,'team_membership_removed');
   assert.equal(getPersonalAiBotTeamHandoffs(db,team.id,actor).length,1);
+});
+
+
+test('team handoff creation requires a recorded owner privacy attestation',()=>{
+  const fixture=createTeamHandoffFixture();
+  const {db,sender,receiver,team,taskId}=fixture;
+  assert.throws(()=>createPersonalAiBotTeamHandoff(db,team.id,{
+    sourceTaskId:taskId,senderBotId:sender.id,receivingBotId:receiver.id,
+    requiredInput:'Review only the approved task summary and public details.',
+    expectedOutput:'Return a concise review for the human owner.',
+    contextScope:'team_internal'
+  },actor,stamp,uid),/owner must confirm that no private member conversation/);
+  const attested=createPersonalAiBotTeamHandoff(db,team.id,{
+    sourceTaskId:taskId,senderBotId:sender.id,receivingBotId:receiver.id,
+    requiredInput:'Review only the approved task summary and public details.',
+    expectedOutput:'Return a concise review for the human owner.',
+    contextScope:'team_internal',privacyAttested:true
+  },actor,stamp,uid);
+  assert.equal(attested.privacyAttested,true);
+  assert.equal(attested.privacyAttestedBy,actor);
+  assert.equal(attested.privacyAttestedAt,stamp);
 });
