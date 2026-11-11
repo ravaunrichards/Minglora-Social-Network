@@ -474,3 +474,32 @@ test('Bot Teams exposes owner-reviewed single-receiver handoffs without automati
   assert.match(ui,/pab-handoff-privacy-attestation/);
   assert.match(ui,/if\(!payload\.privacyAttested\)/);
 });
+
+
+test('Multilingual Intelligence exposes private configuration while keeping translation disabled and human-reviewed',async()=>{
+  const ui=await read('public/personal-ai-bots.js');
+  for(const phrase of [
+    'Multilingual Intelligence · language behavior',
+    'Supported language codes (comma-separated)',
+    'Primary language code',
+    'Fallback language code',
+    'Regional locale',
+    'Confidence guarded (not connected)',
+    'Member language preference',
+    'Preserve code-switching',
+    'Show original and translation',
+    'jam is Jamaican Patois',
+    'language quality remains unverified',
+    'Provider compatibility:',
+    'not connected',
+    'Human review:',
+    'No translation or detection was executed.',
+    'Load saved language settings',
+    'Save multilingual settings'
+  ]) assert.ok(ui.includes(phrase),phrase);
+  assert.match(ui,/async function loadLanguageSettings/);
+  assert.match(ui,/async function saveLanguageSettings/);
+  assert.match(ui,/\\/languages/);
+  assert.match(ui,/panel\\.dataset\\.languageLoaded!=='true'/);
+  assert.match(ui,/privacy|public profile Languages field/i);
+});
