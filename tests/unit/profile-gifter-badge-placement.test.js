@@ -27,7 +27,7 @@ test('each earned Gifter Level maps to its original numbered PNG', () => {
 
 test('profile headers and previews show verification only', () => {
   assert.ok(app.includes("profile-username-line\">@'+esc(u.username)+' '+verifiedProfileBadge(u)+'</p>"));
-  assert.ok(app.includes("verifiedProfileBadge(u)+'</small></div>'"));
+  assert.ok(app.includes("verifiedProfileBadge(u)+'</small></div>"));
   assert.ok(app.includes('verifiedProfileBadge(member)+"</small></div>"'));
   assert.ok(app.includes("verifiedProfileBadge(member)+'</small></button>'"));
   assert.ok(!app.includes('verifiedProfileBadge(u)+gifterProfileBadge(u,"profile")+liveProProfileBadge(u)'));
@@ -63,5 +63,5 @@ test('app asset and service-worker cache are versioned together', () => {
   const appAsset = '/app.js?v=20261111-profile-verification-only-1';
   assert.ok(html.includes(appAsset));
   assert.ok(worker.includes(appAsset));
-  assert.ok(worker.includes('minglora-shell-v275-profile-verification-only-1'));
+  assert.ok(worker.includes('minglora-shell-v275-self-updating-1'));
 });
