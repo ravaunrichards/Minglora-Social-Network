@@ -992,15 +992,21 @@
       const active=version.id===result.activePersonaVersionId||version.status==='active';
       let actions='';
       if(version.status==='draft'){
+        actions+='<button type="button" class="pab-btn secondary pab-persona-edit" data-version="'+esc(version.id)+'">Edit draft</button>';
         actions+='<button type="button" class="pab-btn secondary pab-persona-action" data-version="'+esc(version.id)+'" data-action="evaluate">Run structural checks</button>';
         if(evaluation?.status==='pass')actions+='<button type="button" class="pab-btn secondary pab-persona-action" data-version="'+esc(version.id)+'" data-action="approve">Approve version</button>';
       }else if(version.status==='approved'&&!active){
-        actions+='<button type="button" class="pab-btn secondary pab-persona-action" data-version="'+esc(version.id)+'" data-action="'+(result.activePersonaVersionId?'rollback':'activate')+'">'+(result.activePersonaVersionId?'Rollback to this version':'Activate approved version')+'</button>';
+        const canRollback=Boolean(result.activePersonaVersionId&&version.activatedAt);
+        const action=canRollback?'rollback':'activate';
+        actions+='<button type="button" class="pab-btn secondary pab-persona-action" data-version="'+esc(version.id)+'" data-action="'+action+'">'+(canRollback?'Rollback to this version':'Activate approved version')+'</button>';
       }
+      actions+='<button type="button" class="pab-btn secondary pab-persona-duplicate" data-version="'+esc(version.id)+'">Duplicate as new draft</button>';
       return '<article class="pab-team-card"><div class="pab-team-top"><strong>Persona v'+esc(version.version)+'</strong><span class="pab-status '+(active?'':'off')+'">'+esc(active?'active':version.status)+'</span></div><p>Structural readiness: '+esc(evaluation?.status||'not evaluated')+'</p><p><small>Created '+esc(date(version.createdAt))+' · Owner approval '+(version.approvedAt?'recorded':'not recorded')+'</small></p><p><small>Provider/model behavioural test: not connected</small></p><div class="pab-actions">'+actions+'</div></article>';
     }).join('');
     target.innerHTML=rows;
     target.querySelectorAll('.pab-persona-action').forEach(node=>node.addEventListener('click',()=>runPersonaAction(botId,node.dataset.version,node.dataset.action)));
+    target.querySelectorAll('.pab-persona-edit').forEach(node=>node.addEventListener('click',()=>editPersonaDraft(botId,node.dataset.version)));
+    target.querySelectorAll('.pab-persona-duplicate').forEach(node=>node.addEventListener('click',()=>duplicatePersonaDraft(botId,node.dataset.version)));
   }
 
   async function loadPersonaVersions(botId){
@@ -1013,6 +1019,50 @@
     }catch(error){
       target.innerHTML='<p class="pab-notice error">'+esc(error.message||'Persona version history is unavailable.')+'</p>';
     }
+  }
+
+  function fillPersonaForm(card,configuration){
+    const config=configuration||{};
+    const set=(selector,value)=>{const input=card.querySelector(selector);if(input)input.value=value??'';};
+    set('.pab-persona-purpose',config.purpose);
+    set('.pab-persona-role',config.role);
+    set('.pab-persona-communication',config.communicationStyle);
+    set('.pab-persona-tone',config.tone);
+    set('.pab-persona-length',config.responseLength||'balanced');
+    set('.pab-persona-expertise',(config.expertise||[]).join(', '));
+    set('.pab-persona-languages',(config.languagePreferences||[]).join(', '));
+    set('.pab-persona-audience',config.audience);
+    set('.pab-persona-boundaries',config.boundaries);
+    set('.pab-persona-prohibited',config.prohibitedBehaviors);
+    set('.pab-persona-escalation',config.escalationInstructions);
+    set('.pab-persona-traits',JSON.stringify(config.traits||{},null,2));
+  }
+
+  async function editPersonaDraft(botId,versionId){
+    const button=document.querySelector('.pab-persona-create[data-bot="'+CSS.escape(botId)+'"]');
+    const card=button?.closest('[data-bot-card]');
+    if(!card)return;
+    try{
+      const result=await request(API+'/personas?botId='+encodeURIComponent(botId));
+      const version=(result.versions||[]).find(item=>item.id===versionId);
+      if(!version||version.status!=='draft')throw new Error('Only an existing draft can be edited.');
+      fillPersonaForm(card,version.configuration);
+      card.dataset.personaEditVersionId=versionId;
+      button.textContent='Save draft changes';
+      card.querySelector('.pab-persona-lab')?.scrollIntoView({block:'nearest'});
+      notice('pab-task-status','Draft loaded for editing. Saving will clear the previous structural evaluation.','success');
+    }catch(error){notice('pab-task-status',error.message||'Could not load the persona draft.','error');}
+  }
+
+  async function duplicatePersonaDraft(botId,versionId){
+    try{
+      const result=await request(API+'/personas?botId='+encodeURIComponent(botId));
+      const version=(result.versions||[]).find(item=>item.id===versionId);
+      if(!version)throw new Error('Persona version not found.');
+      await request(API+'/personas',{method:'POST',body:JSON.stringify({botId,baseVersionId:versionId})});
+      notice('pab-task-status','A separate draft was created from persona v'+version.version+'.','success');
+      await loadPersonaVersions(botId);
+    }catch(error){notice('pab-task-status',error.message||'Could not duplicate the persona version.','error');}
   }
 
   async function createPersonaDraft(botId){
@@ -1038,10 +1088,18 @@
       traits
     };
     try{
-      await request(API+'/personas',{method:'POST',body:JSON.stringify({botId,configuration})});
-      notice('pab-task-status','Private persona draft created. Run structural checks before owner approval.','success');
+      const editVersionId=card.dataset.personaEditVersionId;
+      if(editVersionId){
+        await request(API+'/personas/'+editVersionId,{method:'PATCH',body:JSON.stringify({configuration})});
+        delete card.dataset.personaEditVersionId;
+        button.textContent='Create persona draft';
+        notice('pab-task-status','Draft updated. Its previous structural evaluation was cleared.','success');
+      }else{
+        await request(API+'/personas',{method:'POST',body:JSON.stringify({botId,configuration})});
+        notice('pab-task-status','Private persona draft created. Run structural checks before owner approval.','success');
+      }
       await loadPersonaVersions(botId);
-    }catch(error){notice('pab-task-status',error.message||'Could not create the persona draft.','error');}
+    }catch(error){notice('pab-task-status',error.message||'Could not save the persona draft.','error');}
   }
 
   async function runPersonaAction(botId,versionId,action){
