@@ -25,7 +25,7 @@ jobs:
       - name: Check out the isolated gift-sound branch
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref_name }}
+          ref: feature/gift-sounds-artwork-aligned
           persist-credentials: true
 
       - name: Set up Node.js
@@ -46,7 +46,7 @@ jobs:
 
       - name: Commit the verified MP3 review library to this branch only
         env:
-          BRANCH_NAME: ${{ github.ref_name }}
+          BRANCH_NAME: feature/gift-sounds-artwork-aligned
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -55,5 +55,5 @@ jobs:
             echo "No new or changed gift audio assets to commit."
           else
             git commit -m "Add verified natural gift sound review MP3s"
-            git push origin "HEAD:\${BRANCH_NAME}"
+            git push origin HEAD:feature/gift-sounds-artwork-aligned
           fi
