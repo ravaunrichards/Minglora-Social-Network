@@ -467,6 +467,46 @@ async function main(){
   const duplicatePosterGroups=[...posterGroups.entries()].filter(([,items])=>items.length>1).map(([sha256,items])=>({
     sha256,gifts:items.map(item=>({id:item.id,name:item.name,source_image:item.source_image}))
   }));
+  // Exact joins preserve production gift names, Coin prices, original artwork,
+  // original 3D models and sounds. Only the motion profile is layered on.
+  const catalogMotionProfiles=[];
+  const catalogMotionCodes=new Set();
+  const duplicateCatalogMotionCodes=[];
+  let artworkReferenceMatches=0;
+  let inactiveCatalogMatches=0;
+  for(const extracted of gifts){
+    const code=String(extracted.matched_catalog_code||"");
+    if(!code)continue;
+    const sourceCatalog=catalogByCode.get(code);
+    if(!sourceCatalog||normalizeName(sourceCatalog.name)!==extracted.normalized_name)continue;
+    if(sourceCatalog.active===false){inactiveCatalogMatches++;continue;}
+    if(catalogMotionCodes.has(code)){duplicateCatalogMotionCodes.push(code);continue;}
+    if(!Number.isFinite(Number(sourceCatalog.coin_price))||Number(sourceCatalog.coin_price)<0)continue;
+    if(typeof sourceCatalog.image_url!=="string"||!sourceCatalog.image_url.startsWith("/assets/"))continue;
+    if(typeof sourceCatalog.model_url!=="string"||!sourceCatalog.model_url.startsWith("/assets/"))continue;
+    const artwork=artworkByName.get(normalizeName(sourceCatalog.name));
+    if(artwork)artworkReferenceMatches++;
+    catalogMotionCodes.add(code);
+    catalogMotionProfiles.push({
+      code:sourceCatalog.code,name:sourceCatalog.name,category:sourceCatalog.category,emoji:sourceCatalog.emoji,
+      coin_price:Number(sourceCatalog.coin_price),active:true,
+      image_url:sourceCatalog.image_url,model_url:sourceCatalog.model_url,
+      animation_key:sourceCatalog.animation_key,original_animation_preset:sourceCatalog.animation_preset,
+      sound_preset:sourceCatalog.sound_preset,original_animation_duration_ms:sourceCatalog.animation_duration_ms,
+      motion_preset:extracted.animation_preset,motion_effect:extracted.animation_effect,
+      motion_duration_ms:extracted.animation_duration_ms,
+      source_kind:extracted.source_kind,source_image:extracted.source_image,
+      source_region:extracted.source_region,source_capture_references:extracted.sources,
+      ocr_confidence:extracted.ocr_confidence,
+      artwork_reference:artwork?{
+        path:"assets/Artwork/"+artwork.artwork,sha256:artwork.sha256,
+        source_primary:artwork.source_primary,warnings:artwork.warnings||[],
+        review_status:artwork.review_status
+      }:null,
+      visual_review_status:"needs_visual_review"
+    });
+  }
+  catalogMotionProfiles.sort((a,b)=>a.name.localeCompare(b.name)||a.code.localeCompare(b.code));
   // Write only one canonical pair of assets for each deduplicated gift.
   for(const gift of gifts){
     const folderName=slugify(gift.name)+"-"+hash(gift.id);
