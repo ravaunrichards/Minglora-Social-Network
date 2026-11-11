@@ -273,3 +273,16 @@ Continue with independent non-database work that can be built and verified in th
 - Tests are authored but not executed in this session; no green CI evidence exists for the latest commits. Keep all verification labels honest.
 - No implementation percentage increase; weighted progress remains **45.52%**.
 - **Next action:** continue auditing gateway action authorization and payload allowlists, especially the provider runtime/health and task queue operations, while preserving disabled execution defaults and production database safety.
+
+
+## Gateway review checkpoint — durable AI worker operations (2026-11-11)
+
+- Reviewed the existing `minglora-runtime-state` gateway provider and task actions after the worker/RPC checks.
+- Confirmed the provider runtime list and provider health update actions require the designated owner identity and validate pagination/assignment/status inputs.
+- Confirmed the durable task action group is owner-gated before routing; batch upsert accepts an explicit field allowlist and rejects arbitrary fields/provider secrets; claim, heartbeat, complete and fail validate worker/lease identifiers before invoking the corresponding database RPCs.
+- The gateway returns the provider credential reference only through the server-to-server worker runtime list; the browser-facing Admin API now redacts that field on all provider response paths.
+- The database claim/lease RPCs independently enforce owner identity and active lease ownership. No production deployment or live RPC execution was performed.
+- No additional gateway source change was necessary from this review. Existing schema tests cover the owner gate, action allowlist, provider-secret rejection, claim/complete RPC wiring, and the newly added heartbeat/complete/fail lease invariants.
+- Current test execution status remains **not run / no current CI evidence** for the latest branch head. Keep PR #202 open/draft and do not claim the tests pass.
+- No weighted progress change; **45.52%** remains the last evidence-based estimate.
+- **Next action:** resume remaining non-database implementation only after CI execution becomes available; continue with the next unimplemented advanced system rather than enabling production workers or applying staged migrations.
