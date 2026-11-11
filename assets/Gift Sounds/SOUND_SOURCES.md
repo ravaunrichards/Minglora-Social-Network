@@ -32,7 +32,9 @@ One chicken-clucking imitation was explicitly excluded because its uploader desc
 - 9 public-domain recorded-effect files with verified repository metadata and Git blob hashes.
 - 20 CC0 source-page candidates for animal and gift-event recordings.
 - 1 imitation excluded from natural-recording consideration.
-- **0 audio binaries downloaded, 0 clips auditioned and 0 gift sounds production-ready in this repository branch.**
+- **33 source MP3 files are now downloaded and verified** in `assets/Gift Sounds/_sources/mp3/`; all decode as stereo 44.1 kHz, 192 kbps MP3.
+- **101 per-gift `sound.mp3` candidate files** have been created in folders matching `assets/Artwork/<gift-slug>/`.
+- 0 clips have human listening approval and 0 gift sounds are marked production-ready. Natural recordings can still be a poor semantic match or have unwanted background noise, so each candidate requires listening review.
 
 The actual files still need to be downloaded from their sources and auditioned before being copied into per-gift folders.
 
