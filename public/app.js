@@ -7681,6 +7681,28 @@ function startMessengerRealtime(){
       if(state.messengerPanelOpen)renderMessengerPanelList();
       return;
     }
+    if(message.type==='relationship:blocked'){
+      const peerId=String(message.userId||'');
+      if(!peerId)return;
+      state.messengerPresence[peerId]=false;
+      Object.keys(state.messengerTyping||{}).forEach(key=>{
+        if(key.endsWith(':'+peerId)||key.startsWith(peerId+':'))delete state.messengerTyping[key];
+      });
+      state.messageWindows=state.messageWindows.filter(win=>{
+        if(win.user.id!==peerId)return true;
+        cancelMessageVoiceRecording(peerId);
+        return false;
+      });
+      state.conversations=(state.conversations||[]).filter(conversation=>
+        !(conversation.kind==='direct'&&conversation.user?.id===peerId)
+      );
+      renderMessageWindows();
+      paintMessengerBadge(state.conversations);
+      if(state.messengerPanelOpen)renderMessengerPanelList();
+      if(state.view==='messages')updateMessageInboxRows();
+      toast('This conversation is no longer available.');
+      return;
+    }
     if(message.type==='typing'){
       const key=String(message.conversationId||'')+':'+String(message.userId||'');
       if(message.active)state.messengerTyping[key]=Date.now();
