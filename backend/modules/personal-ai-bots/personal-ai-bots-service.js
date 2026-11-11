@@ -1101,6 +1101,13 @@ export function reviewPersonalAiBotTeamHandoff(db, teamId, handoffId, input, act
     const senderExists=db.personalAiBotTeamMembers.some(item=>item.teamId===teamId&&item.botId===handoff.senderBotId&&item.ownerId===actorId);
     const receiverExists=db.personalAiBotTeamMembers.some(item=>item.teamId===teamId&&item.botId===handoff.receivingBotId&&item.ownerId===actorId);
     if(!senderExists||!receiverExists)throw Object.assign(new Error('The sending or receiving bot is no longer a team member.'),{status:409});
+    const sourceTask=db.personalAiBotTasks.find(item=>item.id===handoff.sourceTaskId&&item.botId===handoff.senderBotId);
+    if(!sourceTask||['cancelled','rejected'].includes(sourceTask.status)){
+      throw Object.assign(new Error('The source task was cancelled or rejected before handoff acceptance.'),{status:409});
+    }
+    if(handoff.deadlineAt&&Date.parse(handoff.deadlineAt)<=Date.parse(timestamp)){
+      throw Object.assign(new Error('This handoff deadline has expired.'),{status:409});
+    }
     handoff.status='accepted';
     handoff.acceptedBy=actorId;
     handoff.acceptedAt=timestamp;
