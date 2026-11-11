@@ -235,8 +235,15 @@ const creatorLeagueProfileBadge = member => {
   if(!/^(D[1-5]|C[1-5]|B[1-5]|A[1-3])$/.test(league))return '';
   return '<span class="creator-league-profile-badge" role="img" aria-label="Creator League '+league+'" title="Creator League · '+league+'"><span aria-hidden="true">🏆</span> '+league+'</span>';
 };
+const normalizeGifterBadgeLevel = value => {
+  let numeric;
+  try { numeric = Number(value); } catch { return null; }
+  if (!Number.isFinite(numeric) || numeric <= 0) return null;
+  return Math.max(1, Math.min(50, Math.floor(numeric)));
+};
 const gifterBadgeImageMarkup = (badge, placement = "compact") => {
-  const level = Math.max(1, Math.min(50, Math.floor(Number(badge?.level) || 1)));
+  const level = normalizeGifterBadgeLevel(badge?.level);
+  if (level === null) return "";
   const sizes = { profile: [48, 21], inline: [44, 20], compact: [40, 18], gallery: [170, 76] };
   const size = sizes[placement] || sizes.compact;
   const label = "Level " + level + " Gifter badge";
@@ -252,8 +259,8 @@ const gifterProfileBadge = (member, placement = "compact") => {
     : '';
   const leagueBadge = creatorLeagueProfileBadge(member);
   const badge = member?.gifterBadge;
-  if (!badge?.level) return identity + leagueBadge;
-  const level = Math.max(1, Math.min(50, Math.floor(Number(badge.level) || 1)));
+  const level = normalizeGifterBadgeLevel(badge?.level);
+  if (level === null) return identity + leagueBadge;
   const artwork = gifterBadgeImageMarkup({ ...badge, level }, placement);
   return identity + artwork +
     (badge.adminAwarded ? '<span class="gp-admin-awarded-marker" title="Admin-awarded gifter badge; no Coin spending was added">ADMIN AWARDED</span>' : '') +
@@ -262,8 +269,8 @@ const gifterProfileBadge = (member, placement = "compact") => {
 };
 const liveGifterBadgeMarkup = (member, placement = "compact") => {
   const badge = member?.gifterBadge;
-  if (!badge?.level) return "";
-  const level = Math.max(1, Math.min(50, Math.floor(Number(badge.level) || 1)));
+  const level = normalizeGifterBadgeLevel(badge?.level);
+  if (level === null) return "";
   const badgeName = String(badge.badgeName || ("Level " + level + " Gifter"));
   return '<span class="live-gifter-badge-label" aria-label="' + esc(badgeName) + '">' +
     gifterBadgeImageMarkup({ ...badge, level }, placement) +
@@ -271,8 +278,8 @@ const liveGifterBadgeMarkup = (member, placement = "compact") => {
 };
 const memberGifterBadgeMarkup = (member, placement = "compact") => {
   const badge = member?.gifterBadge;
-  if (!badge?.level) return "";
-  const level = Math.max(1, Math.min(50, Math.floor(Number(badge.level) || 1)));
+  const level = normalizeGifterBadgeLevel(badge?.level);
+  if (level === null) return "";
   const badgeName = String(badge.badgeName || ("Level " + level + " Gifter"));
   return '<span class="minglora-gifter-identity" aria-label="' + esc(badgeName) + '">' +
     gifterBadgeImageMarkup({ ...badge, level }, placement) +
