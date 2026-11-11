@@ -2027,8 +2027,9 @@ test('multilingual evaluation set API creates, submits and records human review 
   const reviewed=await invoke('POST',base+'/'+id+'/review',{
     decision:'approve',reviewerRole:'native_speaker',
     evidenceReference:'owner-entered-language-review-001',
-    reviewNotes:'Human reviewer recorded the evaluation notes.',
-    reviewerAttestation:true
+    reviewNotes:'Owner recorded the evaluation notes.',
+    reviewerAttestation:true,
+    reviewRubric:{semanticAccuracy:4,dialectFidelity:3,contextPreservation:4,codeSwitching:3,safetyMeaning:4}
   });
   assert.equal(reviewed.statusCode,200);
   assert.equal(reviewed.payload.evaluationSet.status,'owner_review_recorded');
