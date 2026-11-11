@@ -41,9 +41,9 @@ Continue PR #236 from the verified extraction checkpoint. The 131 source capture
 - OCR/crop queue: **1,114** flagged records (1,058 foreground-near-boundary, 77 truncated-title, 100 same-title/different-artwork-variant, 7 low OCR confidence; warnings overlap).
 - Catalog name comparison: 997 exact matches, 74 fuzzy suggestions, 432 with no exact match, and 6 low-confidence/truncated entries with no suggestion.
 - Contact-sheet screening: **24/24 pages**, covering **1,509/1,509 thumbnails**.
-- Full-size variant checks: **43 same-title pair comparisons**. **26 pairs** are distinct artwork variants and **17 pairs** appear to repeat artwork. The Compact base asset was compared with two variants. No files were deleted or merged.
-- Direct source-screenshot-cell confirmation is complete for the first six and latest twenty-five comparisons (31/43); it remains pending for the twelve middle comparisons (#7–#18).
-- Full individual visual review: **NOT COMPLETED**. The other 1,424 manifest records still require individual full-size comparison, and the 1,114 warning queue needs item-level resolution.
+- Full-size variant checks: **69 same-title pair comparisons**. **44 pairs** are distinct artwork variants and **25 pairs** appear to repeat artwork. Base assets were reused for multi-variant comparisons. No files were deleted or merged.
+- Direct source-screenshot-cell confirmation is complete for the first six and latest fifty-one comparisons (57/69); it remains pending for the twelve middle comparisons (#7–#18).
+- Full individual visual review: **NOT COMPLETED**. The other 1,378 manifest records still require individual full-size comparison, and the 1,114 warning queue needs item-level resolution.
 - Rights/licence clearance: **NOT COMPLETED**. These are screenshot-derived reference crops, not verified Minglora-original artwork; all remain review-only.
 - No production gift catalog, gift prices, balances, transactions, wallets, promotional reserves or creator earnings were changed.
 
@@ -53,7 +53,7 @@ Continue PR #236 from the verified extraction checkpoint. The 131 source capture
 - `assets/Artwork/manifest.json` — item/source/crop/hash records.
 - `assets/Artwork/review-needed.json` — machine-flagged records.
 - `reports/gift-artwork-audit.md` and `.json` — automated quality/integrity results.
-- `reports/gift-artwork-visual-review-notes.md` — 43-pair full-size comparison log, including source-cell traceability.
+- `reports/gift-artwork-visual-review-notes.md` — 69-pair full-size comparison log, including source-cell traceability.
 - `reports/gift-artwork-contact-sheet-screening.md` — 24-page thumbnail screening record.
 - `reports/gift-artwork-contact-sheets/` — 24 indexed review sheets for all 1,509 records.
 - `scripts/audit-gift-artwork.py` — read-only integrity and review audit.
@@ -94,7 +94,7 @@ No files were intentionally deleted. No badge source image was edited or replace
 - `scripts/build-gift-artwork-contact-sheets.py` — contact-sheet builder.
 - `.agent-work/MASTER_PROGRESS.md`, `STAGE_QUEUE.md`, `DECISIONS.md`, and `BLOCKERS.md` — recovery and stage tracking.
 
-No original screenshot was edited. No extracted PNG was deleted or merged during the 43-pair full-size review. No live catalogue, Coin, wallet, transaction, promotional reserve or creator-earning record was changed.
+No original screenshot was edited. No extracted PNG was deleted or merged during the 69-pair full-size review. No live catalogue, Coin, wallet, transaction, promotional reserve or creator-earning record was changed.
 
 ## Test results
 
