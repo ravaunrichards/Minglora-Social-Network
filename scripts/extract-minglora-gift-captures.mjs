@@ -540,10 +540,18 @@ async function main(){
   };
   await fs.mkdir(OUTPUT_DIR,{recursive:true});
   await fs.writeFile(path.join(OUTPUT_DIR,"manifest.json"),JSON.stringify(manifest,null,2)+"\n","utf8");
+  const motionIndex={
+    schema_version:1,generated_at:manifest.generated_at,project:"Minglora Social Network",
+    source_directory:"assets/Gifts",artwork_reference_manifest:"assets/Artwork/manifest.json",
+    authoritative_catalog:"data/minglora-gift-catalog.json",gifts:catalogMotionProfiles
+  };
+  await fs.writeFile(path.join(OUTPUT_DIR,"catalog-motion-index.json"),JSON.stringify(motionIndex,null,2)+"\n","utf8");
   const report={
     screenshot_count:files.length,detected_occurrences:manifest.detected_occurrences,
     unique_gifts:gifts.length,category_counts:categoryCounts,
     matched_catalog_gifts:matchedCatalogCount,unmatched_catalog_gifts:gifts.length-matchedCatalogCount,
+    catalog_motion_profiles:catalogMotionProfiles.length,catalog_motion_inactive_matches:inactiveCatalogMatches,
+    catalog_motion_duplicate_codes:duplicateCatalogMotionCodes,artwork_reference_matches:artworkReferenceMatches,
     confidence_counts:confidenceCounts,quality_flag_counts:qualityFlagCounts,
     duplicate_poster_groups:duplicatePosterGroups,
     screenshots_with_errors:processed.filter(x=>x.error).map(x=>({file:x.file,error:x.error})),
