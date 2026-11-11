@@ -503,3 +503,27 @@ test('Multilingual Intelligence exposes private configuration while keeping tran
   assert.ok(ui.includes("panel.dataset.languageLoaded!=='true'"));
   assert.match(ui,/privacy|public profile Languages field/i);
 });
+
+
+test('Multilingual evaluation registry exposes synthetic data privacy and owner-attested human review',async()=>{
+  const ui=await read('public/personal-ai-bots.js');
+  for(const phrase of [
+    'Manual language evaluation sets',
+    'Use synthetic examples only.',
+    'Synthetic test cases (JSON array)',
+    'I confirm every evaluation case is synthetic and contains no private member data.',
+    'Create evaluation set',
+    'Load evaluation sets',
+    'Submit for human review',
+    'Approve human review',
+    'Request changes',
+    'Reject set',
+    'Provider run: not run',
+    'Language quality: unverified',
+    'owner-attested and not independently credential-verified',
+    'Provider compatibility and language quality remain unverified.'
+  ]) assert.ok(ui.includes(phrase),phrase);
+  assert.match(ui,/async function createOrUpdateLanguageEvaluationSet/);
+  assert.match(ui,/async function submitLanguageEvaluationSet/);
+  assert.match(ui,/async function reviewLanguageEvaluationSet/);
+});
