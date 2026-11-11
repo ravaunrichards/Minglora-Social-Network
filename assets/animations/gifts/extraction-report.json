@@ -23,6 +23,52 @@
     "travel": 30,
     "vehicles": 54
   },
+  "matched_catalog_gifts": 1133,
+  "unmatched_catalog_gifts": 585,
+  "confidence_counts": {
+    "high": 1419,
+    "medium": 118,
+    "low": 181
+  },
+  "quality_flag_counts": {
+    "medium_ocr_confidence": 100,
+    "unmatched_catalog_name": 585,
+    "short_or_uncertain_name": 152,
+    "low_ocr_confidence": 139,
+    "generic_other_category": 724
+  },
+  "duplicate_poster_groups": [
+    {
+      "sha256": "01d1b663191225b887d7aedb81800db6cec54d372d2def0cc35e6471b801b320",
+      "gifts": [
+        {
+          "id": "diamond-stage-1ikyg31",
+          "name": "Diamond Stage",
+          "source_image": "assets/Gifts/capture-20261111-055638.png"
+        },
+        {
+          "id": "ei-ceb03c09",
+          "name": "Ei",
+          "source_image": "assets/Gifts/capture-20261111-055638.png"
+        }
+      ]
+    },
+    {
+      "sha256": "c478d2ecd891a21114601d9fd160a7c90c25ab942c23a3aea338531f085c8183",
+      "gifts": [
+        {
+          "id": "ay-f9407667",
+          "name": "Ay",
+          "source_image": "assets/Gifts/capture-20261111-055954.png"
+        },
+        {
+          "id": "cyber-roar-1simjfi",
+          "name": "Cyber Roar",
+          "source_image": "assets/Gifts/capture-20261111-055954.png"
+        }
+      ]
+    }
+  ],
   "screenshots_with_errors": [],
   "zero_detection_screenshots": []
 }

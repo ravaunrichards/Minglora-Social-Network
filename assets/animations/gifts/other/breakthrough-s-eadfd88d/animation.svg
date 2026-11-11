@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
-<title id="title">Breakthrough S.. animated gift</title>
+<title id="title">Breakthrough S. animated gift</title>
 <desc id="desc">Individual Minglora gift presentation animation. Original captured artwork is retained as the source.</desc>
 <defs><filter id="glow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="7" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
 <ellipse cx="128" cy="224" rx="56" ry="10" fill="#7c8db7" opacity=".22"/>
