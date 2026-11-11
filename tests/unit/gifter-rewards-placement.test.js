@@ -19,7 +19,7 @@ test('Gift entry shows the repository Gifters Rewards artwork outside the level 
   assert.match(giftEntry, /<h2 id='minglora-gifter-rewards-title'>Gifters Rewards<\/h2>/);
   assert.match(giftEntry, /id='minglora-gifter-level-up-open'>View all 50 levels/);
   assert.doesNotMatch(giftEntry, /gifters-level-up\.svg/);
-  assert.ok(fs.existsSync(path.join(root, 'assets', 'Gifters Rewards.png')), 'the original artwork remains in assets');
+  assert.ok(fs.existsSync(path.join(root, 'assets', 'Gifters Badge Levels', 'Gifters Rewards.png')), 'the original artwork remains in assets');
 });
 
 test('Gifters Level Up remains inside the separate Gifter Progression page', () => {
@@ -30,7 +30,7 @@ test('Gifters Level Up remains inside the separate Gifter Progression page', () 
 });
 
 test('Gifters Rewards image route serves the exact repository artwork', () => {
-  assert.match(server, /if\(p==='\/assets\/gifters-rewards\.png'\)[\s\S]*?path\.join\(__dirname,'\.\.','assets','Gifters Rewards\.png'\)/);
+  assert.match(server, /if\(p==='\/assets\/gifters-rewards\.png'\)[\s\S]*?path\.join\(__dirname,'\.\.','assets','Gifters Badge Levels','Gifters Rewards\.png'\)/);
   assert.match(server, /Content-Type':'image\/png'/);
   assert.match(server, /Gifters rewards artwork not found/);
 });
