@@ -19,7 +19,7 @@ const COLLECTIONS = [
     'liveFanClubMemberships', 'liveFanClubEvents',
   'creatorSubscriptions', 'giftGalleryEvents', 'giftGallerySettings', 'giftGalleryPreferences', 'sounds', 'soundFavorites', 'profileSections', 'profileStatuses', 'profileHighlights', 'storyArchives', 'profileActivity', 'checkIns', 'events', 'eventRsvps',
   'personalAiBotCategories', 'personalAiBots', 'personalAiBotTasks', 'personalAiBotAudit',
-  'personalAiBotSettings', 'personalAiBotFollows', 'personalAiBotTeams', 'personalAiBotTeamMembers', 'personalAiBotTeamHandoffs', 'personalAiBotSchedules', 'personalAiBotPersonaVersions', 'personalAiBotLanguageSettings', 'personalAiBotLanguageEvaluationSets'
+  'personalAiBotSettings', 'personalAiBotFollows', 'personalAiBotTeams', 'personalAiBotTeamMembers', 'personalAiBotTeamHandoffs', 'personalAiBotSchedules', 'personalAiBotPersonaVersions', 'personalAiBotLanguageSettings', 'personalAiBotLanguageEvaluationSets', 'personalAiCreatorDrafts'
 ];
 
 const requestedDriver = String(process.env.PERSISTENCE_DRIVER || '').trim().toLowerCase();
