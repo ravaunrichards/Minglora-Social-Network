@@ -365,7 +365,16 @@
       ?'<button type="button" class="pab-btn secondary pab-creator-edit" data-draft="'+esc(draft.id)+'">Edit draft</button><button type="button" class="pab-btn secondary pab-creator-submit" data-draft="'+esc(draft.id)+'">Submit for review</button>'
       :'';
     const archiveAction=draft.status==='archived'?'':'<button type="button" class="pab-btn secondary pab-creator-review" data-draft="'+esc(draft.id)+'" data-decision="archive">Archive</button>';
-    return '<div class="pab-audit-row"><strong>'+esc(draft.title)+' · '+esc(draft.status)+'</strong><span>'+esc(bot?.displayName||'AI identity unavailable')+' · '+esc(draft.contentFormat)+' → '+esc(draft.destination)+' · v'+esc(draft.version)+' · '+esc(date(draft.updatedAt))+'</span><div class="pab-actions">'+editAction+reviewActions+archiveAction+'</div><small>'+esc(draft.reviewNotes||'No review notes')+' · AI disclosure required · '+(draft.rightsAttested?'rights owner-attested':'rights not attested')+'</small></div>';
+    const previousVersions=Array.isArray(draft.versionHistory)?draft.versionHistory:[];
+    const reviewEvents=(state?.audit||[]).filter(event=>event.targetType==='creator_draft'&&event.targetId===draft.id&&String(event.action||'').startsWith('creator_draft.'));
+    const versionRows=previousVersions.length?previousVersions.map(version=>
+      '<div class="pab-audit-row"><strong>Version '+esc(version.version)+' · '+esc(version.title)+'</strong><span>'+esc(date(version.savedAt))+' · '+esc(version.contentFormat)+' → '+esc(version.destination)+' · '+esc(version.sourceType)+' · '+(version.rightsAttested?'rights owner-attested':'rights not attested')+'</span><p>'+esc(version.caption||'No caption')+'</p><p>'+esc(version.body||'No draft text')+'</p></div>'
+    ).join(''):'<div class="pab-empty">No earlier content versions have been retained.</div>';
+    const reviewRows=reviewEvents.length?reviewEvents.map(event=>
+      '<div class="pab-audit-row"><strong>'+esc(event.action||'Review event')+'</strong><span>'+esc(date(event.createdAt))+'</span><p>'+esc(event.summary||'No audit summary available')+'</p></div>'
+    ).join(''):'<div class="pab-empty">No Creator Studio review event is present in the current audit window.</div>';
+    const history='<details class="pab-creator-history"><summary>Version and review history · '+previousVersions.length+' prior version(s), '+reviewEvents.length+' audit event(s)</summary><div class="pab-audit"><h4>Previous content versions</h4>'+versionRows+'<h4>Review and audit events</h4>'+reviewRows+'</div><small class="pab-notice">Content history retains the latest 10 edits. Audit events shown are limited to the Admin Centre audit window.</small></details>';
+    return '<div class="pab-audit-row"><strong>'+esc(draft.title)+' · '+esc(draft.status)+'</strong><span>'+esc(bot?.displayName||'AI identity unavailable')+' · '+esc(draft.contentFormat)+' → '+esc(draft.destination)+' · v'+esc(draft.version)+' · '+esc(date(draft.updatedAt))+'</span><div class="pab-actions">'+editAction+reviewActions+archiveAction+'</div><small>'+esc(draft.reviewNotes||'No review notes')+' · AI disclosure required · '+(draft.rightsAttested?'rights owner-attested':'rights not attested')+'</small>'+history+'</div>';
   }
   function roadmapCard(title,description,status){return '<article class="pab-roadmap-card"><strong>'+esc(title)+'</strong><p>'+esc(description)+'</p><span class="pab-tag">'+esc(status)+'</span></article>';}
 
