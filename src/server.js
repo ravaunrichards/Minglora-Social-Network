@@ -29,6 +29,7 @@ import { paginateDescending } from './domain/pagination.js';
 import { rankForYouFeed } from './domain/feed-ranking.js';
 import { rankForYouVideos } from './domain/video-ranking.js';
 import { VIDEO_PLAYLIST_MAX_ITEMS, addVideoPlaylistItem, canViewVideoPlaylist, removeVideoPlaylistItem, reorderVideoPlaylistItems, validateVideoPlaylistInput } from '../backend/modules/video/playlists.js';
+import { VIDEO_CHANNEL_MAX_SUBSCRIPTIONS, canViewVideoChannel, subscribeToVideoChannel, unsubscribeFromVideoChannel, validateVideoChannelInput } from '../backend/modules/video/channels.js';
 import { summarizeCreatorVideoAnalytics } from './domain/video-analytics.js';
 import { canViewStory as canViewStoryPolicy, removeExpiredStories } from '../backend/modules/stories/service.js';
 import { canPublishGroupPost, canDeleteGroupPost, canLeaveGroup } from '../backend/modules/groups/service.js';
@@ -1085,6 +1086,49 @@ async function publicVideoPlaylist(playlist, viewerId, { includeVideos = false }
     videoCount: visibleItems.length,
     ...(includeVideos ? { videos } : {})
   };
+}
+
+
+function getVideoChannel(ownerId) {
+  const owner=(db.users||[]).find(member=>member.id===ownerId);
+  if(!owner)return null;
+  const stored=(db.videoChannels||[]).find(channel=>channel.ownerId===ownerId&&!channel.deletedAt);
+  return stored||{
+    id:'channel:'+ownerId,
+    ownerId,
+    title:String(owner.name||owner.username||'Minglora Channel').trim(),
+    description:'',
+    visibility:'public',
+    createdAt:owner.createdAt||null,
+    updatedAt:null
+  };
+}
+async function publicVideoChannel(channel, viewerId, { includeVideos = false } = {}) {
+  const owner=(db.users||[]).find(member=>member.id===channel?.ownerId);
+  if(!owner)return null;
+  const videos=(db.posts||[])
+    .filter(post=>post.userId===owner.id&&isVisibleVideoPost(viewerId,post))
+    .sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));
+  const subscription=(db.videoChannelSubscriptions||[]).find(item=>item.ownerId===owner.id&&item.subscriberId===viewerId);
+  const card={
+    id:channel.id,
+    ownerId:owner.id,
+    title:channel.title,
+    description:channel.description||'',
+    visibility:channel.visibility||'public',
+    createdAt:channel.createdAt||owner.createdAt||null,
+    updatedAt:channel.updatedAt||null,
+    owner:safeUser(owner,viewerId),
+    isOwner:owner.id===viewerId,
+    isSubscribed:Boolean(subscription),
+    subscriberCount:(db.videoChannelSubscriptions||[]).filter(item=>item.ownerId===owner.id).length,
+    videoCount:videos.length
+  };
+  if(includeVideos){
+    const items=await Promise.all(videos.slice(0,40).map(post=>publicPost(post,viewerId)));
+    card.videos=items.filter(post=>(post.media||[]).some(media=>media.mediaType==='video'&&media.url));
+  }
+  return card;
 }
 
 
@@ -4905,6 +4949,99 @@ async function route(req, res) {
         const analytics=summarizeCreatorVideoAnalytics(creatorVideos,db.videoWatchEvents||[],user.id,Date.now(),rawDays);
         return json(res,200,analytics);
       }
+
+      if(method==='GET'&&p==='/api/video-channels/subscriptions'){
+        const subscriptions=(db.videoChannelSubscriptions||[])
+          .filter(item=>item.subscriberId===user.id)
+          .sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));
+        const channels=[];
+        const visibleOwnerIds=new Set();
+        for(const subscription of subscriptions){
+          const owner=(db.users||[]).find(member=>member.id===subscription.ownerId);
+          const channel=getVideoChannel(subscription.ownerId);
+          if(!owner||!channel||blockedBetween(user.id,owner.id)||!canViewProfile(user.id,owner)||
+             !canViewVideoChannel(channel,user.id,{isBlocked:blockedBetween(user.id,owner.id),allowUnlisted:true}))continue;
+          visibleOwnerIds.add(owner.id);
+          channels.push(await publicVideoChannel(channel,user.id));
+        }
+        const uploadPosts=(db.posts||[])
+          .filter(post=>visibleOwnerIds.has(post.userId)&&isVisibleVideoPost(user.id,post))
+          .sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0))
+          .slice(0,60);
+        const videos=[];
+        for(const post of uploadPosts){
+          const channel=getVideoChannel(post.userId);
+          const published=await publicPost(post,user.id);
+          if((published.media||[]).some(media=>media.mediaType==='video'&&media.url)){
+            videos.push({...published,channel:{ownerId:post.userId,title:channel.title,owner:safeUser(db.users.find(member=>member.id===post.userId),user.id)}});
+          }
+        }
+        return json(res,200,{channels,videos});
+      }
+      if(method==='GET'&&p==='/api/video-channels'){
+        const query=String(url.searchParams.get('q')||'').trim().toLowerCase().slice(0,100);
+        const owners=(db.users||[]).filter(owner=>{
+          if(blockedBetween(user.id,owner.id)||!canViewProfile(user.id,owner))return false;
+          const channel=getVideoChannel(owner.id);
+          if(!channel||channel.visibility!=='public')return false;
+          if(query&&![
+            channel.title,channel.description,owner.name,owner.username
+          ].some(value=>String(value||'').toLowerCase().includes(query)))return false;
+          return (db.posts||[]).some(post=>post.userId===owner.id&&isVisibleVideoPost(user.id,post));
+        });
+        const channels=await Promise.all(owners.slice(0,60).map(owner=>publicVideoChannel(getVideoChannel(owner.id),user.id)));
+        channels.sort((a,b)=>b.subscriberCount-a.subscriberCount||b.videoCount-a.videoCount||String(b.updatedAt||b.createdAt||'').localeCompare(String(a.updatedAt||a.createdAt||'')));
+        return json(res,200,{channels});
+      }
+      if(method==='PATCH'&&p==='/api/video-channels/me'){
+        const validation=validateVideoChannelInput(input,{partial:true});
+        if(!validation.valid)return json(res,400,{error:validation.errors.join(' ')});
+        let channel=(db.videoChannels||[]).find(item=>item.ownerId===user.id&&!item.deletedAt);
+        if(!channel){
+          channel={id:uid(),ownerId:user.id,title:String(user.name||user.username||'Minglora Channel').trim(),description:'',visibility:'public',createdAt:now(),updatedAt:now()};
+          db.videoChannels.push(channel);
+        }
+        Object.assign(channel,validation.value,{updatedAt:now()});
+        await saveStore();
+        return json(res,200,{channel:await publicVideoChannel(channel,user.id)});
+      }
+      const videoChannelSubscribeRoute=p.match(/^\/api\/video-channels\/([^/]+)\/subscribe$/);
+      if(videoChannelSubscribeRoute&&method==='POST'){
+        const ownerId=decodeURIComponent(videoChannelSubscribeRoute[1]);
+        const owner=(db.users||[]).find(member=>member.id===ownerId);
+        const channel=getVideoChannel(ownerId);
+        if(!owner||!channel||blockedBetween(user.id,ownerId)||!canViewProfile(user.id,owner)||
+           !canViewVideoChannel(channel,user.id,{isBlocked:blockedBetween(user.id,ownerId),allowUnlisted:true})) {
+          return json(res,404,{error:'Video channel not found.'});
+        }
+        const result=subscribeToVideoChannel(db.videoChannelSubscriptions,{
+          ownerId,subscriberId:user.id,id:uid(),createdAt:now()
+        });
+        if(result.status==='exists')return json(res,200,{ok:true,alreadySubscribed:true});
+        if(result.status==='invalid')return json(res,400,{error:'You cannot subscribe to your own channel.'});
+        if(result.status==='limit')return json(res,429,{error:'You have reached the '+VIDEO_CHANNEL_MAX_SUBSCRIPTIONS+' channel subscription limit.'});
+        if(result.status!=='created')return json(res,400,{error:'The channel subscription could not be saved.'});
+        await saveStore();
+        return json(res,201,{ok:true,subscribed:true,channel:await publicVideoChannel(channel,user.id)});
+      }
+      if(videoChannelSubscribeRoute&&method==='DELETE'){
+        const ownerId=decodeURIComponent(videoChannelSubscribeRoute[1]);
+        const result=unsubscribeFromVideoChannel(db.videoChannelSubscriptions,{ownerId,subscriberId:user.id});
+        if(result.status==='removed')await saveStore();
+        return json(res,200,{ok:true,subscribed:false});
+      }
+      const videoChannelRoute=p.match(/^\/api\/video-channels\/([^/]+)$/);
+      if(videoChannelRoute&&method==='GET'){
+        const ownerId=decodeURIComponent(videoChannelRoute[1]);
+        const owner=(db.users||[]).find(member=>member.id===ownerId);
+        const channel=getVideoChannel(ownerId);
+        if(!owner||!channel||blockedBetween(user.id,ownerId)||!canViewProfile(user.id,owner)||
+           !canViewVideoChannel(channel,user.id,{isBlocked:blockedBetween(user.id,ownerId),allowUnlisted:true})) {
+          return json(res,404,{error:'Video channel not found.'});
+        }
+        return json(res,200,{channel:await publicVideoChannel(channel,user.id,{includeVideos:true})});
+      }
+
       if(method==='GET'&&p==='/api/video-playlists'){
         const requestedOwnerId=String(url.searchParams.get('ownerId')||user.id).trim();
         const owner=(db.users||[]).find(member=>member.id===requestedOwnerId);
