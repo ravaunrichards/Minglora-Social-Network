@@ -5,30 +5,46 @@ import { readFile } from 'node:fs/promises';
 const root = new URL('../../', import.meta.url);
 const read = path => readFile(new URL(path, root), 'utf8');
 
-const [app, html, serviceWorker, adminCentre] = await Promise.all([
+const [app, html, serviceWorker, adminCentre, badgeScript] = await Promise.all([
   read('public/app.js'),
   read('public/index.html'),
   read('public/sw.js'),
-  read('public/admin-centre.js')
+  read('public/admin-centre.js'),
+  read('public/profile-badges.js')
 ]);
 
-test('every verified profile shows one blue check beside the username only', () => {
-  assert.doesNotMatch(app, /PROFILE_NAME_VERIFICATION_BADGE_HIDDEN_USER_ID|profileNameVerificationBadge/);
-  assert.match(app, /profile-name-with-badges"><span>'\+esc\(u\.name\)\+'<\/span><\/h1><p class="profile-username-line">@'\+esc\(u\.username\)\+' '\+verifiedProfileBadge\(u\)/);
-  assert.match(app, /profile-username-line">@'\+esc\(u\.username\)\+' '\+verifiedProfileBadge\(u\)/);
-  assert.ok(app.includes(`profile-preview-name">'+esc(u.name)+platformAdminProfileBadge(u)+'</strong><small>@'+esc(u.username)+' '+verifiedProfileBadge(u)+gifterProfileBadge(u,"profile")+liveProProfileBadge(u)+'</small>`));
+test('verified profiles show only the blue check beside the username', () => {
+  assert.ok(app.includes("profile-username-line\">@'+esc(u.username)+' '+verifiedProfileBadge(u)+'</p>"));
+  assert.ok(!app.includes('verifiedProfileBadge(u)+gifterProfileBadge(u,"profile")+liveProProfileBadge(u)'));
+  assert.doesNotMatch(app, /profile-admin-identity/);
 });
 
-test('the admin verification control explicitly describes one username check', () => {
+test('profile previews and friend cards omit all non-verification badges', () => {
+  assert.ok(app.includes("<strong class=\"profile-preview-name\">'+esc(u.name)+'</strong><small>@'+esc(u.username)+' '+verifiedProfileBadge(u)+'</small>"));
+  assert.ok(app.includes('verifiedProfileBadge(member)+"</small></div>"'));
+  assert.ok(app.includes("verifiedProfileBadge(member)+'</small></button>'"));
+  assert.ok(!app.includes('verifiedProfileBadge(member)+gifterProfileBadge(member,"profile")+liveProProfileBadge(member)'));
+  assert.ok(!app.includes('verifiedProfileBadge(member)+gifterProfileBadge(member,"compact")'));
+  assert.ok(badgeScript.includes("'.profile-live-pro-badge'"));
+  assert.ok(badgeScript.includes("'.profile-admin-identity'"));
+});
+
+test('the complete badge gallery remains available separately', () => {
+  assert.ok(app.includes("if(tab==='badges')return profileBadgesMarkup(data,isMe);"));
+  assert.ok(app.includes('gifterBadgeImageMarkup({ ...badge, level }, "gallery")'));
+  assert.ok(app.includes('PROFILE RECOGNITION'));
+});
+
+test('the admin verification control still grants or removes only the blue username check', () => {
   assert.ok(adminCentre.includes('Grant or remove one blue verification sticker.'));
   assert.ok(adminCentre.includes('exactly one check beside the @username.'));
   assert.ok(adminCentre.includes('Verified — one blue check beside username'));
 });
 
-test('the app keeps its current asset URL and refreshes the service-worker cache',()=>{
-  const appAsset=html.match(/app\.js\?v=[^"']+/)?.[0]||'';
+test('the updated app asset and service-worker cache are versioned together', () => {
+  const appAsset=html.match(/app\\.js\\?v=[^\"']+/)?.[0]||'';
   const cacheName=serviceWorker.match(/CACHE_NAME='([^']+)'/)?.[1]||'';
-  assert.ok(appAsset&&serviceWorker.includes('/'+appAsset));
-  assert.ok(serviceWorker.includes("cache:'no-cache'"));
-  assert.match(cacheName,/^minglora-shell-v\d+-/);
+  assert.equal(appAsset,'app.js?v=20261111-profile-verification-only-1');
+  assert.ok(serviceWorker.includes('/'+appAsset));
+  assert.equal(cacheName,'minglora-shell-v275-profile-verification-only-1');
 });
