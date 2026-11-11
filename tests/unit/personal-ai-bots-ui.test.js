@@ -515,12 +515,12 @@ test('Multilingual evaluation registry exposes synthetic data privacy and owner-
     'Create evaluation set',
     'Load evaluation sets',
     'Submit for human review',
-    'Approve human review',
+    'Record owner-attested review',
     'Request changes',
     'Reject set',
     'Provider run: not run',
     'Language quality: unverified',
-    'owner-attested and not independently credential-verified',
+    'owner-entered and self-attested by the bot owner, not independently verified',
     'Provider compatibility and language quality remain unverified.'
   ]) assert.ok(ui.includes(phrase),phrase);
   assert.match(ui,/async function createOrUpdateLanguageEvaluationSet/);
