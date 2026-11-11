@@ -555,7 +555,13 @@ function activeFollows(){
   return getActiveFollowEdges(db.follows||[],db.users||[]);
 }
 function activeProfilePresence(){
-  return (db.profileViewPresence||[]).filter(entry=>isSocialAccountEligible((db.users||[]).find(member=>member.id===entry.viewerUserId)));
+  return (db.profileViewPresence||[]).filter(entry=>
+    isSocialAccountEligible((db.users||[]).find(member=>member.id===entry.viewerUserId))
+      && isSocialAccountEligible((db.users||[]).find(member=>member.id===entry.targetUserId))
+  );
+}
+function activePageFollows(){
+  return (db.pageFollows||[]).filter(edge=>isSocialAccountEligible((db.users||[]).find(member=>member.id===edge.userId)));
 }
 function sessionUser(req){
   const session=sessionFromRequest(req);
@@ -2062,7 +2068,7 @@ async function route(req, res) {
           storyViews:(db.storyViews||[]).filter(item=>item.viewerId===user.id||ownedStoryIds.has(item.storyId)),
           pages:ownedPages,
           pageRoles:(db.pageRoles||[]).filter(item=>item.userId===user.id||ownedPageIds.has(item.pageId)),
-          pageFollows:(db.pageFollows||[]).filter(item=>item.userId===user.id||ownedPageIds.has(item.pageId)),
+          pageFollows:activePageFollows().filter(item=>item.userId===user.id||ownedPageIds.has(item.pageId)),
           pagePosts:(db.pagePosts||[]).filter(item=>item.publishedBy===user.id||ownedPageIds.has(item.pageId)),
           pageViews:(db.pageViews||[]).filter(item=>item.viewerId===user.id||ownedPageIds.has(item.pageId)),
           messages:(db.messages||[]).filter(item=>item.from===user.id||item.to===user.id),
@@ -2359,7 +2365,8 @@ async function route(req, res) {
           db.sessions=(db.sessions||[]).filter(item=>item.userId!==targetId);
           db.pendingAuth=(db.pendingAuth||[]).filter(item=>item.userId!==targetId);
         }
-        messengerRealtime?.refreshPresence(targetId);
+        if(operation==='ban')messengerRealtime?.disconnectUser(targetId,'Account banned');
+        else messengerRealtime?.refreshPresence(targetId);
         await saveStore();
         return json(res,200,{
           ok:true,operation,status:result.status||operation,
@@ -2792,7 +2799,7 @@ async function route(req, res) {
             }
           }
           if(action==='remove_story'&&report.targetType==='story'){const story=(db.stories||[]).find(item=>item.id===report.targetId);if(story){db.stories=db.stories.filter(item=>item.id!==story.id);db.storyViews=(db.storyViews||[]).filter(item=>item.storyId!==story.id);if(story.mediaId){const asset=(db.mediaAssets||[]).find(item=>item.id===story.mediaId);if(asset){asset.status='deleted';asset.deletedAt=now();}}}}
-          if(action==='suspend_account'&&report.targetType==='user'){const target=db.users.find(item=>item.id===report.targetId);if(target){target.status='suspended';target.suspendedAt=now();target.suspendedBy=user.id;db.sessions=db.sessions.filter(session=>session.userId!==target.id);messengerRealtime?.refreshPresence(target.id);}}
+          if(action==='suspend_account'&&report.targetType==='user'){const target=db.users.find(item=>item.id===report.targetId);if(target){target.status='suspended';target.suspendedAt=now();target.suspendedBy=user.id;db.sessions=db.sessions.filter(session=>session.userId!==target.id);messengerRealtime?.disconnectUser(target.id,'Account suspended');}}
           (db.moderationActions||[]).unshift({id:uid(),moderatorId:user.id,reportId:report.id,action,targetType:report.targetType,targetId:report.targetId,createdAt:now()});
           (db.auditLog||[]).unshift({id:uid(),actorId:user.id,event:'moderation.action',targetType:report.targetType,targetId:report.targetId,createdAt:now()});
         }
@@ -4812,7 +4819,7 @@ async function route(req, res) {
           });
         }
         const orderedPosts=scope==='for-you'
-          ?rankForYouFeed(visiblePosts,user.id,db.follows||[],db.savedPosts||[])
+          ?rankForYouFeed(visiblePosts,user.id,activeFollows(),db.savedPosts||[])
           :visiblePosts.slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
         const posts=(await Promise.all(orderedPosts.map(x=>publicPost(x,user.id)))).map(post=>({...post,following:followedIds.has(post.userId)}));
         if(!url.searchParams.has('limit')&&!url.searchParams.has('cursor'))return json(res,200,{posts,scope});
@@ -4853,7 +4860,7 @@ async function route(req, res) {
         );
         const excludedFeedback=(db.videoFeedback||[]).filter(item=>item.userId===user.id&&item.action==='not_interested');
         const orderedPosts=scope==='for-you'
-          ?rankForYouVideos(visiblePosts,user.id,db.follows||[],db.savedPosts||[],db.videoWatchEvents||[],excludedFeedback)
+          ?rankForYouVideos(visiblePosts,user.id,activeFollows(),db.savedPosts||[],db.videoWatchEvents||[],excludedFeedback)
           :visiblePosts.slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
         const page=orderedPosts.slice(offset,offset+rawLimit+1);
         const hasMore=page.length>rawLimit;
@@ -5694,7 +5701,7 @@ async function route(req, res) {
           await saveStore();
         }
         const profileInsights=target.id===user.id
-          ?getProfileViewStats({views:db.profileViews.filter(view=>view.historyEligible===true),presence:db.profileViewPresence,targetUserId:target.id})
+          ?getProfileViewStats({views:db.profileViews.filter(view=>view.historyEligible===true),presence:activeProfilePresence(),targetUserId:target.id})
           :undefined;
         const profilePosts=await Promise.all(db.posts.filter(post=>post.status!=='hidden'&&!post.archivedAt&&post.userId===target.id&&!blockedBetween(user.id,post.userId)&&canViewProfileAudience(user.id,post.userId,post.audience||'public')&&!friendPostsMuted(user.id,post.userId)).map(post=>publicPost(post,user.id)));
         const viewerIsFriend=isFriend(user.id,target.id);
@@ -6030,7 +6037,7 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
         await saveStore();return json(res,200,{ok:true,id:story.id});
       }
       if(method==='GET'&&p==='/api/pages'){
-        const pages=(db.pages||[]).filter(page=>page.status==='active'&&!blockedBetween(user.id,page.createdBy)).map(page=>({...page,owner:safeUser(db.users.find(u=>u.id===page.createdBy)),followerCount:(db.pageFollows||[]).filter(f=>f.pageId===page.id).length,isFollowing:(db.pageFollows||[]).some(f=>f.pageId===page.id&&f.userId===user.id),myRole:pageRole(page.id,user.id)}));
+        const pages=(db.pages||[]).filter(page=>page.status==='active'&&!blockedBetween(user.id,page.createdBy)).map(page=>({...page,owner:safeUser(db.users.find(u=>u.id===page.createdBy)),followerCount:activePageFollows().filter(f=>f.pageId===page.id).length,isFollowing:(db.pageFollows||[]).some(f=>f.pageId===page.id&&f.userId===user.id),myRole:pageRole(page.id,user.id)}));
         return json(res,200,{pages});
       }
       if(method==='POST'&&p==='/api/pages'){
@@ -6136,7 +6143,7 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
           if(daily.has(date)&&view.viewerId)daily.get(date).add(view.viewerId);
         });
         const publishedPosts=(db.pagePosts||[]).filter(item=>item.pageId===page.id&&item.status==='published');
-        const followers=(db.pageFollows||[]).filter(item=>item.pageId===page.id);
+        const followers=activePageFollows().filter(item=>item.pageId===page.id);
         const series=[...daily.entries()].map(([date,visitors])=>({date,visitors:visitors.size}));
         return json(res,200,{days,metrics:{visitorDays:views.length,uniqueVisitors:new Set(views.map(item=>item.viewerId).filter(Boolean)).size,followers:followers.length,publishedPosts:publishedPosts.length},series,generatedAt:now()});
       }
@@ -6156,7 +6163,7 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
         if(!validation.valid)return json(res,validation.errors.some(error=>error.includes('already taken'))?409:400,{error:validation.errors.join(' ')});
         Object.assign(page,validation.value,{updatedAt:now()});
         await saveStore();
-        return json(res,200,{page:{...page,owner:safeUser(db.users.find(member=>member.id===page.createdBy)),followerCount:(db.pageFollows||[]).filter(item=>item.pageId===page.id).length,isFollowing:(db.pageFollows||[]).some(item=>item.pageId===page.id&&item.userId===user.id),myRole:pageRole(page.id,user.id)}});
+        return json(res,200,{page:{...page,owner:safeUser(db.users.find(member=>member.id===page.createdBy)),followerCount:activePageFollows().filter(item=>item.pageId===page.id).length,isFollowing:(db.pageFollows||[]).some(item=>item.pageId===page.id&&item.userId===user.id),myRole:pageRole(page.id,user.id)}});
       }
       m=p.match(/^\/api\/pages\/([^/]+)$/);
       if(method==='GET'&&m){
@@ -6169,7 +6176,7 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
           if(!alreadyCounted){db.pageViews.push({id:uid(),pageId:page.id,viewerId:user.id,dateKey,createdAt:now()});await saveStore();}
         }
         const posts=await Promise.all((db.pagePosts||[]).filter(post=>post.pageId===page.id&&post.status==='published').sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(async post=>({...await publicPagePost(post),page:{id:page.id,title:page.title,handle:page.handle}})));
-        return json(res,200,{page:{...page,owner:safeUser(db.users.find(u=>u.id===page.createdBy)),followerCount:(db.pageFollows||[]).filter(f=>f.pageId===page.id).length,isFollowing:(db.pageFollows||[]).some(f=>f.pageId===page.id&&f.userId===user.id),myRole:pageRole(page.id,user.id)},posts});
+        return json(res,200,{page:{...page,owner:safeUser(db.users.find(u=>u.id===page.createdBy)),followerCount:activePageFollows().filter(f=>f.pageId===page.id).length,isFollowing:(db.pageFollows||[]).some(f=>f.pageId===page.id&&f.userId===user.id),myRole:pageRole(page.id,user.id)},posts});
       }
       m=p.match(/^\/api\/pages\/([^/]+)$/);
       if(method==='DELETE'&&m){
@@ -7287,7 +7294,7 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
           .map(member=>safeUser(member,user.id));
         const posts=await Promise.all(db.posts.filter(post=>post.status!=='hidden'&&!post.archivedAt&&!blockedBetween(user.id,post.userId)&&String(post.text||'').toLowerCase().includes(q)).slice(0,20).map(post=>publicPost(post,user.id)));
         const groups=(db.groups||[]).filter(group=>!['private','hidden'].includes(String(group.visibility||group.privacy||'').toLowerCase())||group.members?.includes(user.id)).filter(group=>(String(group.name||'')+' '+String(group.description||'')).toLowerCase().includes(q)).slice(0,12).map(group=>({...group,memberCount:(group.members||[]).length,owner:safeUser(db.users.find(member=>member.id===group.ownerId),user.id)}));
-        const pages=(db.pages||[]).filter(page=>page.status==='active'&&!blockedBetween(user.id,page.createdBy)&&(page.title+' '+page.handle+' '+page.description+' '+page.category).toLowerCase().includes(q)).slice(0,12).map(page=>({...page,owner:safeUser(db.users.find(member=>member.id===page.createdBy),user.id),followerCount:(db.pageFollows||[]).filter(follow=>follow.pageId===page.id).length,isFollowing:(db.pageFollows||[]).some(follow=>follow.pageId===page.id&&follow.userId===user.id)}));
+        const pages=(db.pages||[]).filter(page=>page.status==='active'&&!blockedBetween(user.id,page.createdBy)&&(page.title+' '+page.handle+' '+page.description+' '+page.category).toLowerCase().includes(q)).slice(0,12).map(page=>({...page,owner:safeUser(db.users.find(member=>member.id===page.createdBy),user.id),followerCount:activePageFollows().filter(follow=>follow.pageId===page.id).length,isFollowing:(db.pageFollows||[]).some(follow=>follow.pageId===page.id&&follow.userId===user.id)}));
         return json(res,200,{users,posts,groups,pages});
       }
       return json(res,404,{error:'API route not found.'});
