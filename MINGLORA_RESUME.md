@@ -477,3 +477,12 @@ Continue with independent non-database work that can be built and verified in th
 
 
 - Final syntax-only verification: fetched the current branch copies of `public/app.js` (930,479 characters), `public/personal-ai-bots.js` (205,380 characters) and `public/sw.js` (11,363 characters) and parsed each as browser JavaScript with no syntax error. This is a parser check only; it does not replace runtime/browser testing or the Node test suite.
+
+
+## Creator Studio → Story composer handoff checkpoint (2026-11-11)
+
+- Extended the existing owner-approved handoff to drafts whose format and destination are both `story`, in addition to the existing Feed post path. The handoff remains explicitly confirmed by the owner in Creator Studio and opens the existing Minglora Story composer in a same-origin tab.
+- The receiving app continues to verify exact origin and `window.opener`, validate the payload, and wait for an authenticated member session. Story drafts include a fixed AI identity attribution line and are limited to the existing Story composer’s 1,000-character text limit; Feed remains limited to 5,000 characters.
+- The existing Story composer pre-fills only text, displays an AI disclosure stating that the signed-in member is publishing, warns that referenced assets were not transferred, and requires the member to review and press **Publish story**. The receiver does not call `/api/stories`; only the existing Story composer submit handler does so after the member submits.
+- No asset references or files are transferred/attached, no media upload is triggered by the handoff, and all other content formats/destinations remain unsupported. No autonomous publishing, provider, worker, scheduler, database, migration, deployment or production data changes were made.
+- Added regression assertions for Feed + Story gating, Story length limit, disclosure, prefill, existing `/stories` submit path and absence of Story API calls in the receiver. Tests are authored but not executed; syntax-only and CI checks are pending.
