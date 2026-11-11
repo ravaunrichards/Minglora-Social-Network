@@ -2052,7 +2052,7 @@ export function reviewPersonalAiBotLanguageEvaluationSet(db, botId, setId, input
   if(record.status!=='pending_human_review'){
     throw Object.assign(new Error('Only an evaluation set pending human review can be reviewed.'),{status:409});
   }
-  const allowed=new Set(['decision','reviewerRole','evidenceReference','reviewNotes','reviewerAttestation']);
+  const allowed=new Set(['decision','reviewerRole','evidenceReference','reviewNotes','reviewerAttestation','reviewRubric']);
   if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).some(key=>!allowed.has(key))){
     throw Object.assign(new Error('Language evaluation review contains unsupported fields.'),{status:400});
   }
@@ -2069,6 +2069,14 @@ export function reviewPersonalAiBotLanguageEvaluationSet(db, botId, setId, input
   if(input.reviewerAttestation!==true||evidenceReference.length<5){
     throw Object.assign(new Error('Reviewer attestation and a non-empty evidence reference are required.'),{status:400});
   }
+  const rubricKeys=['semanticAccuracy','dialectFidelity','contextPreservation','codeSwitching','safetyMeaning'];
+  const rubric=input.reviewRubric;
+  if(!rubric||typeof rubric!=='object'||Array.isArray(rubric)||
+     Object.keys(rubric).length!==rubricKeys.length||
+     rubricKeys.some(key=>!Object.hasOwn(rubric,key)||!Number.isInteger(rubric[key])||rubric[key]<0||rubric[key]>4)){
+    throw Object.assign(new Error('Provide all five owner-attested rubric scores as whole numbers from 0 to 4.'),{status:400});
+  }
+  record.reviewRubric=Object.fromEntries(rubricKeys.map(key=>[key,rubric[key]]));
   record.status=decision==='approve'?'owner_review_recorded':decision;
   record.reviewStatus=decision;
   record.reviewerRole=reviewerRole;
@@ -2081,7 +2089,7 @@ export function reviewPersonalAiBotLanguageEvaluationSet(db, botId, setId, input
   record.updatedBy=actorId;
   record.updatedAt=timestamp;
   audit(db,actorId,'language.evaluation_set_reviewed','language_evaluation_set',record.id,
-    'Recorded '+decision+' human review for '+record.languageCode+'. This does not certify provider or translation-model compatibility.',
+    'Recorded '+decision+' owner-attested language review and manual rubric for '+record.languageCode+'. This does not certify reviewer credentials, provider compatibility or translation-model quality.',
     timestamp,uid);
   return record;
 }
