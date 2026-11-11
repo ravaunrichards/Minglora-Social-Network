@@ -247,3 +247,16 @@ Continue with independent non-database work that can be built and verified in th
 - No database, migrations, provider credentials, bot records, worker, scheduler or deployment changed. Production provider inference remains disabled/unverified.
 - Weighted implementation progress remains **45.52%**; security hardening is important but does not complete a weighted product milestone.
 - **Next action:** continue security review of AI task and worker boundaries; verify that only the four explicitly safe, tool-free task types can ever be claimed, and that no social-action task can execute through any worker/API path.
+
+
+## Follow-up checkpoint — AI worker social-action isolation (2026-11-11)
+
+- Inspected the existing worker implementation and durable queue claim SQL. Both currently restrict execution to the four non-side-effecting task types: `assistant_request`, `moderation_review`, `analytics_report`, and `translation`; the provider receives an empty tools array, tool access disabled, external actions disabled, and draft-only output instructions.
+- Added worker regression coverage that asserts the exported allowlist contains exactly those four task types and rejects eight social-action types (`follow`, `unfollow`, `send_message`, `react`, `draft_post`, `share_media`, `join_group`, `event_participation`) even when a claimed task is marked low-impact and has approval metadata.
+- Test explicitly checks no provider call, no completion, and a permanent `TASK_POLICY_BLOCKED` failure for each social-action type.
+- Worker test commits: initial allowlist/social-action tests `d48709fb2619d7c9b4ff9daec315864fe3fb3017`; immutable frozen-allowlist test correction `564f15629918bbc2b570719d9fe8562a0caa6fde`.
+- Existing worker remains disabled unless `MINGLORA_AI_BOT_WORKER_ENABLED=true`, requires `PERSISTENCE_DRIVER=supabase`, and the database claim function independently checks the global execution/provider readiness gates, owner approval, safe task type, low-impact status, and no-tools provider assignment. No worker was started.
+- **Tests are not yet executed.** No workflow run or commit status was returned for the latest head. Source and test assertions are present, but CI is not green until the GitHub workflow runs.
+- No production database, provider secret, bot record, worker process, scheduler, or deployment changed.
+- Implementation progress remains **45.52%**; this is worker safety hardening, not completion of the remaining team, model, HR, creator, finance, multilingual, analytics, or scale milestones.
+- **Next action:** continue reviewing task claim/heartbeat/complete/fail RPC authorization and lease recovery invariants. Keep execution disabled and preserve PR #202 as open/draft.
