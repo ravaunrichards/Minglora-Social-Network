@@ -88,6 +88,22 @@ test('owner overview redacts provider credential references from initial dashboa
   assert.doesNotMatch(JSON.stringify(context.res.payload),'env:MINGLORA_AI_PROVIDER_PRIVATE');
 });
 
+test('provider runtime listing redacts server-side credential references',async()=>{
+  const context=makeContext({
+    path:'/api/admin/personal-ai-bots/provider-runtime',
+    url:new URL('https://minglora.test/api/admin/personal-ai-bots/provider-runtime?limit=5&offset=0'),
+    listAiProviderRuntime:async options=>{
+      assert.deepEqual(options,{limit:5,offset:0});
+      return [{id:'runtime-1',providerName:'Example Provider',credentialSecretReference:'env:MINGLORA_AI_PROVIDER_RUNTIME_PRIVATE'}];
+    }
+  });
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,200);
+  assert.equal(context.res.payload.assignments[0].credentialConfigured,true);
+  assert.ok(!Object.hasOwn(context.res.payload.assignments[0],'credentialSecretReference'));
+  assert.doesNotMatch(JSON.stringify(context.res.payload),'env:MINGLORA_AI_PROVIDER_RUNTIME_PRIVATE');
+});
+
 test('provider assignment listing redacts server-side credential references',async()=>{
   const context=makeContext({
     path:'/api/admin/personal-ai-bots/providers',
