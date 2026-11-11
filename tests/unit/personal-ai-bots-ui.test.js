@@ -524,6 +524,6 @@ test('Multilingual evaluation registry exposes synthetic data privacy and owner-
     'Provider compatibility and language quality remain unverified.'
   ]) assert.ok(ui.includes(phrase),phrase);
   assert.match(ui,/async function createOrUpdateLanguageEvaluationSet/);
-  assert.match(ui,/async function submitLanguageEvaluationSet/);
+  assert.match(ui,/async function actOnLanguageEvaluationSet/);
   assert.match(ui,/async function reviewLanguageEvaluationSet/);
 });
