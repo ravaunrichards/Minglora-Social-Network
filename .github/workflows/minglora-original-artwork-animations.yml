@@ -1,0 +1,56 @@
+name: Build individual Minglora artwork animations
+
+on:
+  push:
+    branches:
+      - automation/minglora-original-artwork-animations-20261111
+    paths:
+      - "assets/Artwork/manifest.json"
+      - "assets/Gifts/**"
+      - "data/minglora-gift-catalog.json"
+      - "reports/gift-artwork-audit.json"
+      - "scripts/generate-minglora-artwork-animations.mjs"
+      - ".github/workflows/minglora-original-artwork-animations.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: minglora-original-artwork-animations
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out Minglora
+        uses: actions/checkout@v4
+        with:
+          ref: automation/minglora-original-artwork-animations-20261111
+          fetch-depth: 0
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install OCR and image processing
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y tesseract-ocr
+          npm install --no-save --no-package-lock sharp
+      - name: Generate one animation inside each original Artwork folder
+        run: node scripts/generate-minglora-artwork-animations.mjs
+      - name: Verify original PNGs, all animations, catalogue matches and Coin prices
+        run: node scripts/generate-minglora-artwork-animations.mjs --check
+      - name: Commit only generated animations and mapping manifests
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/Artwork
+          if git diff --cached --quiet; then
+            echo "All generated artwork animations are already current."
+          else
+            git commit -m "Build individual animations from original Minglora artwork"
+            git push origin automation/minglora-original-artwork-animations-20261111
+          fi
