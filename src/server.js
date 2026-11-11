@@ -46,6 +46,19 @@ import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseExchang
 const scrypt = promisify(crypto.scrypt);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, '..', 'public');
+let giftAnimationManifestCache = null;
+function getGiftAnimationMap() {
+  if (giftAnimationManifestCache) return giftAnimationManifestCache;
+  const manifestPath = path.join(publicDir, 'assets', 'gifts', 'animations', 'manifest.json');
+  try {
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    giftAnimationManifestCache = manifest && manifest.gifts_by_code && typeof manifest.gifts_by_code === 'object'
+      ? manifest.gifts_by_code : {};
+  } catch {
+    return {};
+  }
+  return giftAnimationManifestCache;
+}
 const PORT = Number(process.env.PORT || 3000);
 const liveLikeRateLimits = new Map();
 const liveFanClubJoinInProgress = new Set();
@@ -3408,7 +3421,21 @@ async function route(req, res) {
         return json(res, 200, { ok: true, session });
       }
       if(method==='GET'&&p==='/api/coins/catalog'){
-        return json(res,200,await requestSupabaseState('economy_catalog'));
+        const catalog = await requestSupabaseState('economy_catalog');
+        if (!catalog || !Array.isArray(catalog.gifts)) return json(res,200,catalog);
+        const artworkMap = getGiftAnimationMap();
+        const gifts = catalog.gifts.map(gift => {
+          const artwork = artworkMap[String(gift?.code || '')];
+          if (!artwork) return gift;
+          return {
+            ...gift,
+            artwork_url: artwork.artwork_url,
+            animation_url: artwork.animation_url,
+            animation_variant_urls: artwork.animation_variant_urls || [],
+            animation_match_method: artwork.match_method || 'exact-title'
+          };
+        });
+        return json(res,200,{...catalog,gifts});
       }
       if(method==='GET'&&p==='/api/coins/promotional-gift-wallet'){
         return json(res,200,await requestSupabaseState('economy_promotional_gift_wallet',{userId:user.id}));
@@ -7396,6 +7423,19 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
   if(p==='/assets/gifters-level-up.png'){
     const assetFile=path.join(__dirname,'..','assets','Gifters Badge Levels','Gifters Level Up.png');
     fs.readFile(assetFile,(error,data)=>{if(error)return json(res,404,{error:'Gifter progression artwork not found.'});res.writeHead(200,{'Content-Type':'image/png','Cache-Control':'public, max-age=3600',...SECURITY_HEADERS});res.end(data);});
+    return;
+  }
+  const originalGiftArtworkMatch = /^\/assets\/Artwork\/([a-z0-9]+(?:-[a-z0-9]+)*)\/artwork\.png$/.exec(p);
+  if (method === 'GET' && originalGiftArtworkMatch) {
+    const slug = originalGiftArtworkMatch[1];
+    const artworkRoot = path.resolve(__dirname, '..', 'assets', 'Artwork');
+    const assetFile = path.resolve(artworkRoot, slug, 'artwork.png');
+    if (!assetFile.startsWith(artworkRoot + path.sep)) return json(res,403,{error:'Forbidden'});
+    fs.readFile(assetFile,(error,data)=>{
+      if(error)return json(res,404,{error:'Original gift artwork not found.'});
+      res.writeHead(200,{'Content-Type':'image/png','Cache-Control':'public, max-age=31536000, immutable',...SECURITY_HEADERS});
+      res.end(data);
+    });
     return;
   }
   const rel=p==='/'?'index.html':decodeURIComponent(p.slice(1)); const file=path.resolve(publicDir,rel);
