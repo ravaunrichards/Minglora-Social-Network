@@ -416,8 +416,16 @@ async function main(){
   if(!files.length)throw new Error("No PNG, JPEG or WebP gift captures found in assets/Gifts.");
   let catalog={gifts:[]};
   try{catalog=JSON.parse(await fs.readFile(CATALOG_FILE,"utf8"));}catch(error){console.warn("Catalog matching unavailable:",error.message);}
+  let artworkManifest={gifts:[]};
+  try{artworkManifest=JSON.parse(await fs.readFile(ARTWORK_MANIFEST_FILE,"utf8"));}catch(error){console.warn("Artwork reference manifest unavailable:",error.message);}
   const catalogByName=new Map();
-  for(const gift of catalog.gifts||[])if(gift.name)catalogByName.set(normalizeName(gift.name),gift);
+  const catalogByCode=new Map();
+  const artworkByName=new Map();
+  for(const gift of catalog.gifts||[]){
+    if(gift.name)catalogByName.set(normalizeName(gift.name),gift);
+    if(gift.code)catalogByCode.set(String(gift.code),gift);
+  }
+  for(const artwork of artworkManifest.gifts||[])if(artwork.name)artworkByName.set(normalizeName(artwork.name),artwork);
   const processed=await mapLimit(files,2,async file=>{
     try{return await processScreenshot(file,catalogByName);}
     catch(error){return {file,detected:0,error:String(error?.message||error),results:[]};}
