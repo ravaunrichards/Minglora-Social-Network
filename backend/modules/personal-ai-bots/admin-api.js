@@ -4,7 +4,8 @@ import { isRelationshipBlocked } from '../relationships/friends.js';
 function safeProviderAssignmentRecords(records){
   return records.map(item=>{
     const {credentialSecretReference,...safeItem}=item||{};
-    return {...safeItem,credentialConfigured:typeof credentialSecretReference==='string'&&credentialSecretReference.trim().length>0};
+    const configured=typeof credentialSecretReference==='string'&&credentialSecretReference.trim().length>0;
+    return {...safeItem,credentialConfigured:configured||safeItem.credentialConfigured===true};
   });
 }
 
@@ -653,10 +654,7 @@ export async function handlePersonalAiBotsAdminApi(context) {
       }
       const result=await listAiProviderRuntime({limit,offset});
       if(!Array.isArray(result))return (json(res,503,{error:'Provider runtime configuration is unavailable.'}),true);
-      const assignments=result.map(item=>{
-        const {credentialSecretReference,...safeItem}=item||{};
-        return {...safeItem,credentialConfigured:typeof credentialSecretReference==='string'&&credentialSecretReference.trim().length>0};
-      });
+      const assignments=safeProviderAssignmentRecords(result);
       return (json(res,200,{ok:true,assignments,nextOffset:offset+assignments.length,hasMore:assignments.length===limit}),true);
     }
     if(method==='GET'&&path===root+'/providers'){
