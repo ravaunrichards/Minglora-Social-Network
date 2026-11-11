@@ -2094,12 +2094,75 @@ export function reviewPersonalAiBotLanguageEvaluationSet(db, botId, setId, input
   return record;
 }
 
-export function getPersonalAiBotOverview(db) {
+export function getPersonalAiBotPerformanceSnapshot(db, observedAt = new Date().toISOString()) {
+  ensurePersonalAiBotCollections(db);
+  const observedMs=Date.parse(observedAt);
+  if(!Number.isFinite(observedMs))throw Object.assign(new Error('Performance snapshot time must be a valid timestamp.'),{status:400});
+  const dayMs=24*60*60*1000;
+  const sinceMs=observedMs-dayMs;
+  const tasks=db.personalAiBotTasks;
+  const recentTasks=tasks.filter(task=>{
+    const createdMs=Date.parse(task.createdAt);
+    return Number.isFinite(createdMs)&&createdMs>=sinceMs&&createdMs<=observedMs;
+  });
+  const completed=tasks.filter(task=>{
+    const completedMs=Date.parse(task.completedAt);
+    return task.status==='completed'&&Number.isFinite(completedMs)&&completedMs>=sinceMs&&completedMs<=observedMs;
+  });
+  const durations=completed.map(task=>{
+    const createdMs=Date.parse(task.createdAt),completedMs=Date.parse(task.completedAt);
+    return Number.isFinite(createdMs)&&completedMs>=createdMs?(completedMs-createdMs)/60000:null;
+  }).filter(value=>value!==null);
+  const taskTypes={};
+  for(const task of recentTasks){
+    const type=String(task.taskType||'unknown');
+    if(PERSONAL_AI_BOT_TASK_TYPES.includes(type))taskTypes[type]=(taskTypes[type]||0)+1;
+  }
+  const countByTimestamp=(status,timestampFields)=>{
+    return tasks.filter(task=>{
+      if(task.status!==status)return false;
+      const eventMs=timestampFields.map(field=>Date.parse(task[field])).find(Number.isFinite);
+      return Number.isFinite(eventMs)&&eventMs>=sinceMs&&eventMs<=observedMs;
+    }).length;
+  };
+  return {
+    observedAt:new Date(observedMs).toISOString(),
+    windowHours:24,
+    source:'legacy_runtime_state_snapshot',
+    coverage:{
+      taskRecordsObserved:tasks.length,
+      taskRecordCap:2000,
+      taskRecordsMayBeTruncated:tasks.length>=2000
+    },
+    queue:{
+      awaitingApproval:tasks.filter(task=>task.status==='awaiting_administrator_approval').length,
+      approvedWaitingForWorker:tasks.filter(task=>task.status==='approved_waiting_for_worker').length,
+      running:tasks.filter(task=>task.status==='running').length
+    },
+    activity:{
+      tasksCreated24h:recentTasks.length,
+      tasksCompleted24h:completed.length,
+      tasksFailed24h:countByTimestamp('failed',['failedAt','updatedAt']),
+      tasksCancelled24h:countByTimestamp('cancelled',['cancelledAt','updatedAt']),
+      averageCompletionMinutes24h:durations.length?Math.round((durations.reduce((sum,value)=>sum+value,0)/durations.length)*100)/100:null,
+      taskTypes24h:taskTypes
+    },
+    integrations:{
+      providerInference:{available:false,status:'not_connected'},
+      usageTelemetry:{available:false,status:'unavailable',reason:'No verified provider usage ledger is connected.'}
+    }
+  };
+}
+
+export function getPersonalAiBotOverview(db, observedAt = new Date().toISOString()) {
   const settings=ensurePersonalAiBotCollections(db);
+  const observedMs=Date.parse(observedAt);
+  const performance=getPersonalAiBotPerformanceSnapshot(db,observedAt);
   const bots=db.personalAiBots;
   const tasks=db.personalAiBotTasks;
   return {
     network:settings,
+    performance,
     counts:{
       totalBots:bots.length,
       enabledBots:bots.filter(bot=>bot.status==='enabled').length,
@@ -2108,7 +2171,7 @@ export function getPersonalAiBotOverview(db) {
       pendingInstructions:tasks.filter(task=>task.status==='awaiting_administrator_approval').length,
       approvedWaitingForWorker:tasks.filter(task=>task.status==='approved_waiting_for_worker').length,
       categories:getPersonalAiBotCategories(db).length,
-      activeBots:bots.filter(bot=>bot.status==='enabled'&&bot.lastActiveAt&&Date.parse(bot.lastActiveAt)>Date.now()-5*60*1000).length,
+      activeBots:bots.filter(bot=>{const activeMs=Date.parse(bot.lastActiveAt);return bot.status==='enabled'&&Number.isFinite(activeMs)&&activeMs<=observedMs&&observedMs-activeMs<5*60*1000;}).length,
       executingBots:new Set(tasks.filter(task=>task.status==='running').map(task=>task.botId)).size,
       identityDesignTarget:settings.identityDesignTarget||10000000000,
       concurrentExecutionLimit:settings.concurrentExecutionLimit||0,
