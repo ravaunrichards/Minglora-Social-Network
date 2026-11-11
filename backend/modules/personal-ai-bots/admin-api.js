@@ -184,6 +184,11 @@ import {
   updatePersonalAiBotLanguageEvaluationSet,
   submitPersonalAiBotLanguageEvaluationSet,
   reviewPersonalAiBotLanguageEvaluationSet,
+  listPersonalAiCreatorDrafts,
+  createPersonalAiCreatorDraft,
+  updatePersonalAiCreatorDraft,
+  submitPersonalAiCreatorDraft,
+  reviewPersonalAiCreatorDraft,
   createPersonalAiBotCategory,
   queuePersonalAiBotInstruction,
   queuePersonalAiBotFollowBatch,
@@ -213,6 +218,46 @@ export async function handlePersonalAiBotsAdminApi(context) {
   ensurePersonalAiBotCollections(db);
   const stamp=now();
   try{
+
+    const creatorDraftPath=root+'/creator-studio/drafts';
+    if(path===creatorDraftPath&&method==='GET'){
+      const limit=Number(url.searchParams.get('limit')||50),offset=Number(url.searchParams.get('offset')||0);
+      const drafts=listPersonalAiCreatorDrafts(db,{limit,offset});
+      return (json(res,200,{ok:true,drafts,nextOffset:offset+drafts.length,hasMore:drafts.length===limit}),true);
+    }
+    if(path===creatorDraftPath&&method==='POST'){
+      const allowed=new Set(['botId','title','contentFormat','destination','caption','body','sourceType','assetReferences','rightsAttested']);
+      if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).some(key=>!allowed.has(key))){
+        return (json(res,400,{error:'Creator Studio draft contains unsupported fields.'}),true);
+      }
+      const draft=createPersonalAiCreatorDraft(db,input,user.id,stamp,uid);
+      await saveStore();
+      return (json(res,201,{ok:true,draft}),true);
+    }
+    const creatorSuffix=path.startsWith(creatorDraftPath+'/')?path.slice(creatorDraftPath.length+1).split('/'):[];
+    if(creatorSuffix.length===1&&/^[0-9a-f-]{36}$/i.test(creatorSuffix[0])&&method==='PATCH'){
+      const allowed=new Set(['title','contentFormat','destination','caption','body','sourceType','assetReferences','rightsAttested']);
+      if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).some(key=>!allowed.has(key))||!Object.keys(input).length){
+        return (json(res,400,{error:'Creator Studio draft update contains unsupported or missing fields.'}),true);
+      }
+      const draft=updatePersonalAiCreatorDraft(db,creatorSuffix[0],input,user.id,stamp,uid);
+      await saveStore();
+      return (json(res,200,{ok:true,draft}),true);
+    }
+    if(creatorSuffix.length===2&&/^[0-9a-f-]{36}$/i.test(creatorSuffix[0])&&['submit','review'].includes(creatorSuffix[1])&&method==='POST'){
+      const action=creatorSuffix[1];
+      const allowed=action==='review'?new Set(['decision','reviewNotes']):new Set();
+      if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).some(key=>!allowed.has(key))){
+        return (json(res,400,{error:'Creator Studio draft action contains unsupported fields.'}),true);
+      }
+      const draft=action==='submit'
+        ?submitPersonalAiCreatorDraft(db,creatorSuffix[0],user.id,stamp,uid)
+        :reviewPersonalAiCreatorDraft(db,creatorSuffix[0],input,user.id,stamp,uid);
+      await saveStore();
+      return (json(res,200,{ok:true,draft,message:action==='submit'
+        ?'Draft submitted for owner review. It has not been published.'
+        :'Review decision saved. No publishing or external handoff occurred.'}),true);
+    }
     if(method==='GET'&&path===root){
       const overview=getPersonalAiBotOverview(db,stamp);
       const identityRecords=typeof listAiIdentities==='function'?await listAiIdentities({limit:100,offset:0}):null;
