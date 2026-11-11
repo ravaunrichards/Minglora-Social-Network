@@ -370,6 +370,16 @@ function main() {
   const expectedMappings = groups.reduce((total, group) => total + group.gifts.length, 0);
   if (mappedGiftCodes.size !== expectedMappings) fail("Some catalogue gift-code mappings were lost.");
   if (artworkRows.length !== 1509) fail("Not every original Artwork folder received an animation mapping.");
+  const catalogueRows = catalogRecords.map(gift => {
+    const artwork = giftsByCode[gift.code];
+    return {
+      ...gift,
+      artwork_url: artwork?.artwork_url || null,
+      animation_url: artwork?.animation_url || null,
+      animation_variant_urls: artwork?.animation_variant_urls || [],
+      artwork_match_status: artwork?.match_method || "no-original-artwork-title-match"
+    };
+  });
   const manifest = {
     schema_version: 1,
     generated_at: String(catalogManifest.generated_at || "source-catalogue"),
@@ -392,6 +402,7 @@ function main() {
       note: "Animations preserve the exact original Artwork PNG bytes. They are generated for review and are not automatically approved for production or monetization."
     },
     gifts_by_code: giftsByCode,
+    catalogue_records: catalogueRows,
     artworks: artworkRows
   };
   writeGenerated(OUTPUT_MANIFEST, JSON.stringify(manifest, null, 2) + "\n");
