@@ -1,0 +1,370 @@
+(() => {
+  'use strict';
+
+  const API = '/api/ai-network';
+  const root = () => document.getElementById('main-content');
+  const state = { snapshot: null, busy: false, error: '', notice: '' };
+  const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[character]));
+  const number = value => Number(value || 0).toLocaleString();
+  const date = value => {
+    if (!value) return 'Not recorded';
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? 'Not recorded' : parsed.toLocaleString();
+  };
+  const options = (values, current) => values.map(value =>
+    '<option value="' + esc(value.value) + '"' + (current === value.value ? ' selected' : '') + '>' + esc(value.label) + '</option>'
+  ).join('');
+  const card = (title, eyebrow, body, extra = '') =>
+    '<section class="ai-network-card ' + extra + '"><div class="ai-network-card-heading"><div><span class="ai-network-eyebrow">' +
+    esc(eyebrow) + '</span><h2>' + esc(title) + '</h2></div></div>' + body + '</section>';
+  const empty = message => '<p class="ai-network-empty">' + esc(message) + '</p>';
+  const pill = (label, kind = 'neutral') => '<span class="ai-network-pill ai-network-pill--' + kind + '">' + esc(label) + '</span>';
+  const list = values => Array.isArray(values) ? values : [];
+
+  async function request(path = '', options = {}) {
+    const response = await fetch(API + path, {
+      method: options.method || 'GET',
+      credentials: 'same-origin',
+      cache: 'no-store',
+      headers: options.body ? { 'Content-Type': 'application/json', 'Accept': 'application/json' } : { 'Accept': 'application/json' },
+      body: options.body ? JSON.stringify(options.body) : undefined
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || 'The AI Network request could not be completed.');
+    return result;
+  }
+
+  function setNotice(message, type = 'success') {
+    state.notice = message;
+    state.noticeType = type;
+    state.error = '';
+  }
+
+  function selectedValues(form, name) {
+    return [...form.querySelectorAll('input[name="' + name + '"]:checked')].map(input => input.value);
+  }
+
+  function renderBotRows(bots) {
+    if (!bots.length) return empty('No AI bots created yet. Create your first clearly labelled AI assistant below.');
+    return '<div class="ai-network-list">' + bots.map(bot =>
+      '<article class="ai-network-list-row"><div class="ai-network-list-main"><div class="ai-network-avatar" aria-hidden="true">AI</div><div><strong>' +
+      esc(bot.name) + '</strong><div class="ai-network-meta">' + pill('AI BOT', 'ai') + ' ' + pill(bot.status, bot.status === 'active' ? 'success' : 'neutral') +
+      '</div><p>' + esc(bot.purpose) + '</p><small>' + esc(bot.tone) + ' · ' + esc(list(bot.languages).join(', ')) + ' · ' + esc(list(bot.traits).join(', ')) + '</small></div></div>' +
+      '<div class="ai-network-row-actions">' +
+      (bot.status === 'active'
+        ? '<button type="button" class="secondary" data-ai-action="bot-status" data-id="' + esc(bot.id) + '" data-status="paused">Pause</button>'
+        : bot.status !== 'archived'
+          ? '<button type="button" class="secondary" data-ai-action="bot-status" data-id="' + esc(bot.id) + '" data-status="active" disabled title="Provider execution is not enabled">Activate</button>'
+          : '') +
+      (bot.status !== 'archived' ? '<button type="button" class="secondary" data-ai-action="bot-status" data-id="' + esc(bot.id) + '" data-status="archived">Archive</button>' : '') +
+      '</div></article>'
+    ).join('') + '</div>';
+  }
+
+  function renderTeams(teams, bots) {
+    const rows = teams.length
+      ? '<div class="ai-network-list">' + teams.map(team => {
+          const names = list(team.botIds).map(id => bots.find(bot => bot.id === id)?.name || 'Unavailable bot');
+          return '<article class="ai-network-list-row"><div class="ai-network-list-main"><div class="ai-network-avatar ai-network-avatar--team" aria-hidden="true">TEAM</div><div><strong>' +
+            esc(team.name) + '</strong><p>' + esc(team.description || 'No team description.') + '</p><small>' + esc(names.join(' · ')) + '</small></div></div>' +
+            pill(team.coordinationMode || 'human_reviewed') + '</article>';
+        }).join('') + '</div>'
+      : empty('No bot teams yet. Teams use your own bots and keep coordination human-reviewed.');
+    const choices = bots.filter(bot => bot.status !== 'archived').map(bot =>
+      '<label class="ai-network-check"><input type="checkbox" name="teamBotIds" value="' + esc(bot.id) + '"><span><strong>' + esc(bot.name) + '</strong><small>' + esc(bot.identityLabel || 'AI BOT') + '</small></span></label>'
+    ).join('') || empty('Create a bot before forming a team.');
+    return rows + '<form class="ai-network-form" data-ai-form="team"><div class="ai-network-form-title">Create a bot team</div>' +
+      '<label>Team name<input name="name" required minlength="2" maxlength="60" placeholder="Community Support Team"></label>' +
+      '<label>Description<textarea name="description" maxlength="240" rows="2" placeholder="What should this team coordinate?"></textarea></label>' +
+      '<fieldset><legend>Select team members</legend><div class="ai-network-check-grid">' + choices + '</div></fieldset>' +
+      '<button class="primary" type="submit"' + (!bots.some(bot => bot.status !== 'archived') ? ' disabled' : '') + '>Create team</button></form>';
+  }
+
+  function renderSchedules(schedules, bots) {
+    const rows = schedules.length
+      ? '<div class="ai-network-list">' + schedules.map(schedule => {
+          const bot = bots.find(item => item.id === schedule.botId);
+          return '<article class="ai-network-list-row"><div><strong>' + esc(schedule.taskType.replaceAll('_', ' ')) + '</strong><p>' +
+            esc(bot?.name || 'Assigned bot') + ' · ' + esc(schedule.cadence) + ' · ' + esc(schedule.timezone) + '</p><small>Next planned time: ' + esc(date(schedule.runAt)) + '</small></div>' +
+            pill(schedule.status, schedule.status === 'active' ? 'success' : 'neutral') + '</article>';
+        }).join('') + '</div>'
+      : empty('No schedules yet. New schedules start paused and require provider verification before activation.');
+    const botOptions = bots.filter(bot => bot.status !== 'archived').map(bot => ({ value: bot.id, label: bot.name }));
+    return rows + '<form class="ai-network-form" data-ai-form="schedule"><div class="ai-network-form-title">Schedule a safe task</div>' +
+      '<label>AI bot<select name="botId" required>' + options(botOptions, '') + '</select></label>' +
+      '<label>Task<select name="taskType" required>' + options([
+        {value:'content_outline',label:'Content outline'},
+        {value:'caption_draft',label:'Caption draft'},
+        {value:'title_ideas',label:'Title ideas'},
+        {value:'translation_draft',label:'Translation draft'},
+        {value:'creator_calendar',label:'Creator calendar'},
+        {value:'public_event_support',label:'Public event support'}
+      ], 'content_outline') + '</select></label>' +
+      '<div class="ai-network-form-grid"><label>Cadence<select name="cadence">' + options([{value:'once',label:'Once'},{value:'daily',label:'Daily'},{value:'weekly',label:'Weekly'}],'once') + '</select></label>' +
+      '<label>Time zone<input name="timezone" required value="' + esc(Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC') + '"></label></div>' +
+      '<label>Start date and time<input name="runAt" type="datetime-local" required></label>' +
+      '<button class="primary" type="submit"' + (!bots.some(bot => bot.status !== 'archived') ? ' disabled' : '') + '>Save paused schedule</button></form>';
+  }
+
+  function renderApprovals(approvals) {
+    if (!approvals.length) return empty('No high-impact actions are awaiting your approval.');
+    return '<div class="ai-network-list">' + approvals.map(item =>
+      '<article class="ai-network-list-row"><div><strong>' + esc(item.actionType.replaceAll('_', ' ')) + '</strong><p>' + esc(item.summary) +
+      '</p><small>Requested ' + esc(date(item.requestedAt)) + ' · Expires ' + esc(date(item.expiresAt)) + '</small></div>' +
+      '<div class="ai-network-row-actions"><button type="button" class="primary" data-ai-action="approval" data-id="' + esc(item.id) + '" data-decision="approve">Approve record</button>' +
+      '<button type="button" class="secondary" data-ai-action="approval" data-id="' + esc(item.id) + '" data-decision="reject">Reject</button></div></article>'
+    ).join('') + '</div><p class="ai-network-note">Approval records do not publish, send or execute actions. They record your decision; any future action must go through a separate verified human-controlled workflow.</p>';
+  }
+
+  function renderCreatorJobs(jobs) {
+    if (!jobs.length) return empty('No Creator Studio drafts yet.');
+    return '<div class="ai-network-list">' + jobs.map(job =>
+      '<article class="ai-network-list-row"><div><strong>' + esc(job.taskType.replaceAll('_', ' ')) + '</strong><p>' + esc(job.brief) +
+      '</p><small>Created ' + esc(date(job.createdAt)) + ' · ' + esc(job.providerExecution || 'not started') + '</small></div>' +
+      pill(job.status) + '</article>'
+    ).join('') + '</div>';
+  }
+
+  function renderEvents(events) {
+    if (!events.length) return empty('No AI-hosted community event drafts yet.');
+    return '<div class="ai-network-list">' + events.map(event =>
+      '<article class="ai-network-list-row"><div><strong>' + esc(event.title) + '</strong><p>' + esc(event.description) +
+      '</p><small>' + esc(date(event.startsAt)) + ' · ' + esc(event.visibility) + ' · AI host, opt-in invitations only</small></div>' +
+      pill(event.status) + '</article>'
+    ).join('') + '</div>';
+  }
+
+  function renderPerformance(performance) {
+    const metrics = [
+      ['Bots', number(performance.botCount)], ['Active bots', number(performance.activeBots)],
+      ['Teams', number(performance.teamCount)], ['Schedules', number(performance.scheduleCount)],
+      ['Pending approvals', number(performance.pendingApprovals)], ['Creator drafts', number(performance.creatorDrafts)],
+      ['Completed runs', number(performance.completedRuns)], ['Failed runs', number(performance.failedRuns)],
+      ['Tokens recorded', number(performance.totalTokensUsed)]
+    ];
+    return '<div class="ai-network-metric-grid">' + metrics.map(([label, value]) =>
+      '<div class="ai-network-metric"><span>' + esc(label) + '</span><strong>' + esc(value) + '</strong></div>'
+    ).join('') + '</div><p class="ai-network-note">Based on ' + number(performance.measuredRunCount) +
+      ' recorded runs only. Drafts and unexecuted requests are not counted as activity.</p>';
+  }
+
+  function renderLanguages(settings) {
+    return '<form class="ai-network-form" data-ai-form="languages"><div class="ai-network-form-title">Language preferences</div>' +
+      '<label>Enabled languages (comma-separated BCP 47 tags)<input name="enabledLanguages" value="' + esc(list(settings.enabledLanguages).join(', ')) + '" placeholder="en, es, fr, ht" required></label>' +
+      '<label>Primary language<input name="primaryLanguage" value="' + esc(settings.primaryLanguage || 'en') + '" maxlength="35" required></label>' +
+      '<label class="ai-network-switch"><input type="checkbox" name="autoTranslate" ' + (settings.autoTranslate ? 'checked' : '') + '><span>Allow opt-in translation drafts</span></label>' +
+      '<button class="primary" type="submit">Save language settings</button></form>' +
+      '<p class="ai-network-note">Original content is preserved. Translation remains a draft and must be labelled and reviewed. Automatic translation is off unless you enable it.</p>';
+  }
+
+  function renderSettings(settings, provider) {
+    return '<form class="ai-network-form" data-ai-form="settings"><div class="ai-network-form-title">Usage and safety limits</div>' +
+      '<div class="ai-network-form-grid"><label>Daily token budget<input name="dailyTokenBudget" type="number" min="500" max="500000" step="100" value="' + esc(settings.dailyTokenBudget) + '" required></label>' +
+      '<label>Monthly spend limit (USD)<input name="monthlySpendLimitUsd" type="number" min="0.5" max="500" step="0.5" value="' + esc(settings.monthlySpendLimitUsd) + '" required></label></div>' +
+      '<label class="ai-network-switch"><input type="checkbox" name="companionOptIn" ' + (settings.companionOptIn ? 'checked' : '') + '><span>Opt in to an AI companion (off by default)</span></label>' +
+      '<label class="ai-network-switch"><input type="checkbox" name="companionAcknowledgedAIIdentity"><span>I understand this companion is AI, not a human</span></label>' +
+      '<button class="primary" type="submit">Save safety settings</button></form>' +
+      '<div class="ai-network-provider"><div><strong>Provider readiness</strong><p>' + esc(provider.note) + '</p></div>' +
+      pill(provider.configured ? 'Configured · execution disabled' : 'Not configured', provider.configured ? 'warning' : 'neutral') + '</div>' +
+      '<div class="ai-network-safety-actions"><button type="button" class="danger" data-ai-action="emergency-pause">Emergency pause all AI work</button>' +
+      '<button type="button" class="secondary" data-ai-action="emergency-resume" disabled title="Provider execution is not verified">Resume network</button></div>' +
+      '<p class="ai-network-note">Human approval and AI identity disclosure are mandatory and cannot be disabled. Emergency pause preserves history.</p>';
+  }
+
+  function renderSnapshot(snapshot) {
+    const settings = snapshot.settings, performance = snapshot.performance, provider = snapshot.providerStatus;
+    const bots = list(snapshot.bots), teams = list(snapshot.teams), schedules = list(snapshot.schedules);
+    const approvals = list(snapshot.approvals), creatorJobs = list(snapshot.creatorJobs);
+    const events = list(snapshot.communityEvents);
+    const safeguards = snapshot.safeguards || {};
+    return '<section class="ai-network-page">' +
+      '<header class="ai-network-hero"><div><span class="ai-network-eyebrow">MINGLORA INTELLIGENCE</span><h1>AI Bot Network</h1>' +
+      '<p>Build distinct AI assistants, coordinate approved work and manage every bot from one secure workspace.</p></div>' +
+      '<div class="ai-network-hero-status">' + pill('AI identity required', 'ai') + pill(safeguards.globalPaused ? 'Network paused' : 'Network enabled', safeguards.globalPaused ? 'warning' : 'success') + '</div></header>' +
+      (state.notice ? '<div class="ai-network-alert ai-network-alert--' + esc(state.noticeType || 'success') + '" role="status">' + esc(state.notice) + '</div>' : '') +
+      (state.error ? '<div class="ai-network-alert ai-network-alert--error" role="alert">' + esc(state.error) + '</div>' : '') +
+      '<div class="ai-network-quick-stats"><div><span>My bots</span><strong>' + number(performance.botCount) + '</strong></div><div><span>Teams</span><strong>' + number(performance.teamCount) + '</strong></div><div><span>Pending reviews</span><strong>' + number(performance.pendingApprovals) + '</strong></div><div><span>Recorded runs</span><strong>' + number(performance.measuredRunCount) + '</strong></div></div>' +
+      '<div class="ai-network-grid">' +
+      card('Bot Personality Laboratory', '01 · PERSONALITY', '<p>Build unique AI helpers with a clear purpose, tone, traits, expertise and permitted tasks.</p>' +
+        renderBotRows(bots) + '<form class="ai-network-form" data-ai-form="bot"><div class="ai-network-form-title">Create a new AI bot</div>' +
+        '<label>Bot name<input name="name" required minlength="2" maxlength="40" placeholder="Community Guide"></label>' +
+        '<label>Purpose<textarea name="purpose" required minlength="20" maxlength="280" rows="3" placeholder="Describe the exact kind of help this AI bot should provide."></textarea></label>' +
+        '<div class="ai-network-form-grid"><label>Personality tone<select name="tone">' + options([
+          {value:'friendly',label:'Friendly'},{value:'professional',label:'Professional'},{value:'educational',label:'Educational'},
+          {value:'creative',label:'Creative'},{value:'calm',label:'Calm'},{value:'energetic',label:'Energetic'},
+          {value:'concise',label:'Concise'},{value:'supportive',label:'Supportive'}
+        ], 'friendly') + '</select></label><label>Expertise<input name="expertise" maxlength="180" placeholder="Creator education"></label></div>' +
+        '<fieldset><legend>Choose two to five personality traits</legend><div class="ai-network-check-grid">' +
+        ['helpful','curious','calm','energetic','analytical','empathetic','creative','precise','playful','patient','direct'].map((trait,index) =>
+          '<label class="ai-network-check"><input type="checkbox" name="traits" value="' + trait + '"' + (index < 2 ? ' checked' : '') + '><span>' + trait + '</span></label>'
+        ).join('') + '</div></fieldset>' +
+        '<label>Languages<input name="languages" value="en, ht" placeholder="en, es, fr, ht"></label>' +
+        '<label>Primary language<input name="primaryLanguage" value="en" maxlength="35"></label>' +
+        '<fieldset><legend>Allowed capabilities</legend><div class="ai-network-check-grid">' +
+        [{id:'draft_content',label:'Draft content'},{id:'summarize_public_content',label:'Summarize public content'},
+          {id:'translate_user_provided_content',label:'Translate my content'},{id:'suggest_replies',label:'Suggest replies'},
+          {id:'organize_creator_tasks',label:'Organize creator tasks'},{id:'prepare_event_material',label:'Prepare event material'}].map((item,index) =>
+          '<label class="ai-network-check"><input type="checkbox" name="capabilities" value="' + item.id + '"' + (index === 0 ? ' checked' : '') + '><span>' + item.label + '</span></label>'
+        ).join('') + '</div></fieldset><button class="primary" type="submit">Create AI bot draft</button></form>', 'ai-network-span-2') +
+      card('Bot Teams', '02 · TEAM WORK', '<p>Coordinate your own specialist bots with human-reviewed plans and separate identities.</p>' + renderTeams(teams,bots)) +
+      card('Smart Activity Scheduling', '03 · SCHEDULING', '<p>Plan content support by time zone and cadence. Every new schedule is paused until execution is verified.</p>' + renderSchedules(schedules,bots)) +
+      card('Bot Performance Center', '04 · PERFORMANCE', renderPerformance(performance)) +
+      card('Multilingual Intelligence', '05 · LANGUAGES', '<p>Set preferred languages and opt-in translation. Original text stays available.</p>' + renderLanguages(settings)) +
+      card('AI Creator Studio', '06 · CREATOR', '<p>Create structured draft requests. No content is generated or published while the provider is disabled.</p>' +
+        renderCreatorJobs(creatorJobs) + '<form class="ai-network-form" data-ai-form="creator"><div class="ai-network-form-title">Start a Creator Studio draft</div>' +
+        '<label>Draft type<select name="taskType">' + options([{value:'content_outline',label:'Content outline'},{value:'caption_draft',label:'Caption options'},
+          {value:'title_ideas',label:'Title ideas'},{value:'translation_draft',label:'Translation draft'},{value:'creator_calendar',label:'Creator calendar'}],'content_outline') + '</select></label>' +
+        '<label>Instructions<textarea name="brief" required minlength="10" maxlength="8000" rows="4" placeholder="Describe the content, audience and result you need."></textarea></label>' +
+        '<label>Assign bot (optional)<select name="botId"><option value="">No bot assigned</option>' + options(bots.filter(bot=>bot.status!=='archived').map(bot=>({value:bot.id,label:bot.name})), '') + '</select></label>' +
+        '<button class="primary" type="submit">Save draft request</button></form>') +
+      card('Security & Trust Center', '07 · SAFETY', '<div class="ai-network-safety-grid">' +
+        '<div>' + pill('Mandatory', 'success') + '<strong>Human approval</strong><p>High-impact requests need a human decision. Approval never executes the action.</p></div>' +
+        '<div>' + pill('Mandatory', 'success') + '<strong>AI identity labels</strong><p>Bots are always identified as AI, never as human accounts.</p></div>' +
+        '<div>' + pill('Blocked', 'warning') + '<strong>Restricted actions</strong><p>Coins, payments, payouts, refunds, admin rights, suspensions, security changes and destructive moderation are not delegated.</p></div>' +
+        '<div>' + pill('Recorded only', 'neutral') + '<strong>Usage and audit</strong><p>Budgets, activity and performance use recorded events only.</p></div></div>' +
+        '<p class="ai-network-note">Security controls are enforced on the server; they cannot be switched off from this screen.</p>') +
+      card('AI Friendship & Companionship', '08 · OPTIONAL COMPANION', '<p>Companionship is off by default. A companion must be clearly identified as AI and can be withdrawn at any time.</p>' +
+        '<div class="ai-network-consent-state">' + pill(settings.companionOptIn ? 'Opted in' : 'Opted out', settings.companionOptIn ? 'success' : 'neutral') +
+        '<span>Retention preference: 30 days. Conversation runtime is not enabled yet.</span></div>' +
+        '<p class="ai-network-note">Use the safety settings below to change consent. No companion will start contacting you automatically.</p>') +
+      card('AI Community Events', '09 · COMMUNITY', '<p>Prepare transparent AI-hosted sessions. Event drafts do not send invitations; participation remains opt-in.</p>' +
+        renderEvents(events) + '<form class="ai-network-form" data-ai-form="event"><div class="ai-network-form-title">Draft an AI community event</div>' +
+        '<label>Event title<input name="title" required minlength="3" maxlength="100" placeholder="Creator Learning Circle"></label>' +
+        '<label>Description<textarea name="description" required minlength="20" maxlength="1200" rows="3" placeholder="What will people learn or discuss?"></textarea></label>' +
+        '<div class="ai-network-form-grid"><label>AI host<select name="botId" required>' + options(bots.filter(bot=>bot.status!=='archived').map(bot=>({value:bot.id,label:bot.name})), '') + '</select></label>' +
+        '<label>Audience<select name="visibility">' + options([{value:'public',label:'Public'},{value:'followers',label:'Followers'},{value:'friends',label:'Friends'},{value:'private',label:'Private'}],'public') + '</select></label></div>' +
+        '<label>Starts at<input name="startsAt" type="datetime-local" required></label><button class="primary" type="submit"' +
+        (!bots.some(bot=>bot.status!=='archived')?' disabled':'') + '>Save event draft</button></form>') +
+      card('Central Bot Command Center', '10 · COMMAND CENTER', '<p>All of your AI tools, approval decisions, provider status and global safety controls.</p>' +
+        '<div class="ai-network-command-grid"><div><span>Provider</span><strong>' + esc(provider.provider || 'Not configured') + '</strong></div><div><span>Model</span><strong>' + esc(provider.model || '—') + '</strong></div>' +
+        '<div><span>Global state</span><strong>' + esc(settings.globalPaused ? 'Paused' : 'Enabled') + '</strong></div><div><span>Execution</span><strong>Disabled until provider adapter is verified</strong></div></div>' +
+        renderApprovals(approvals) + renderSettings(settings,provider), 'ai-network-span-2') +
+      '</div><footer class="ai-network-footer">Minglora AI Network · Owner-controlled · AI identities disclosed · Human approval required</footer></section>';
+  }
+
+  async function load() {
+    state.error = '';
+    const host = root();
+    if (!host) return;
+    host.innerHTML = '<section class="ai-network-loading" role="status"><span class="ai-network-spinner" aria-hidden="true"></span><strong>Opening your AI Network workspace…</strong></section>';
+    try {
+      state.snapshot = await request();
+      renderSnapshot(state.snapshot);
+    } catch (error) {
+      state.error = error.message;
+      host.innerHTML = '<section class="ai-network-page"><div class="ai-network-alert ai-network-alert--error" role="alert">' + esc(error.message) + '</div>' +
+        '<button type="button" class="primary" data-ai-action="reload">Try again</button></section>';
+    }
+  }
+
+  async function refresh(message) {
+    if (message) setNotice(message);
+    state.snapshot = await request();
+    renderSnapshot(state.snapshot);
+  }
+
+  async function submit(form) {
+    const kind = form.dataset.aiForm;
+    const data = new FormData(form);
+    const value = key => String(data.get(key) ?? '').trim();
+    const payload = {};
+    let path = '';
+    if (kind === 'bot') {
+      path = '/bots';
+      payload.name = value('name');
+      payload.purpose = value('purpose');
+      payload.tone = value('tone');
+      payload.expertise = value('expertise');
+      payload.traits = selectedValues(form, 'traits');
+      payload.languages = value('languages').split(',').map(item => item.trim()).filter(Boolean);
+      payload.primaryLanguage = value('primaryLanguage');
+      payload.capabilities = selectedValues(form, 'capabilities');
+    } else if (kind === 'team') {
+      path = '/teams';
+      payload.name = value('name');
+      payload.description = value('description');
+      payload.botIds = selectedValues(form, 'teamBotIds');
+    } else if (kind === 'schedule') {
+      path = '/schedules';
+      payload.botId = value('botId');
+      payload.taskType = value('taskType');
+      payload.cadence = value('cadence');
+      payload.timezone = value('timezone');
+      const runAt = value('runAt');
+      payload.runAt = runAt ? new Date(runAt).toISOString() : '';
+      if (payload.cadence === 'weekly') payload.weekdays = [1,2,3,4,5];
+    } else if (kind === 'creator') {
+      path = '/creator-jobs';
+      payload.taskType = value('taskType');
+      payload.brief = value('brief');
+      payload.botId = value('botId') || null;
+    } else if (kind === 'event') {
+      path = '/community-events';
+      payload.title = value('title');
+      payload.description = value('description');
+      payload.botId = value('botId');
+      payload.visibility = value('visibility');
+      const startsAt = value('startsAt');
+      payload.startsAt = startsAt ? new Date(startsAt).toISOString() : '';
+    } else if (kind === 'languages') {
+      path = '/settings';
+      payload.enabledLanguages = value('enabledLanguages').split(',').map(item => item.trim()).filter(Boolean);
+      payload.primaryLanguage = value('primaryLanguage');
+      payload.autoTranslate = form.querySelector('[name="autoTranslate"]').checked;
+    } else if (kind === 'settings') {
+      path = '/settings';
+      payload.dailyTokenBudget = Number(value('dailyTokenBudget'));
+      payload.monthlySpendLimitUsd = Number(value('monthlySpendLimitUsd'));
+      payload.companionOptIn = form.querySelector('[name="companionOptIn"]').checked;
+      payload.companionAcknowledged = form.querySelector('[name="companionAcknowledgedAIIdentity"]').checked;
+    } else return;
+    await request(path, { method: kind === 'settings' || kind === 'languages' ? 'PATCH' : 'POST', body: payload });
+    form.reset();
+    await refresh('Saved successfully.');
+  }
+
+  const onSubmit = async event => {
+    const form = event.target instanceof Element ? event.target.closest('form[data-ai-form]') : null;
+    if (!form) return;
+    event.preventDefault();
+    if (state.busy) return;
+    state.busy = true;
+    try {
+      await submit(form);
+    } catch (error) {
+      state.error = error.message;
+      renderSnapshot(state.snapshot);
+    } finally {
+      state.busy = false;
+    }
+  };
+
+  const onClick = async event => {
+    const button = event.target instanceof Element ? event.target.closest('[data-ai-action]') : null;
+    if (!button || button.disabled || state.busy) return;
+    const action = button.dataset.aiAction, id = button.dataset.id;
+    state.busy = true;
+    try {
+      if (action === 'reload') return await load();
+      if (action === 'bot-status') await request('/bots/' + encodeURIComponent(id) + '/status', { method:'PATCH', body:{ status:button.dataset.status } });
+      else if (action === 'approval') await request('/approvals/' + encodeURIComponent(id), { method:'PATCH', body:{ decision:button.dataset.decision } });
+      else if (action === 'emergency-pause') await request('/emergency-pause', { method:'POST', body:{ reason:'Owner initiated emergency pause from the AI Network command center.' } });
+      else if (action === 'emergency-resume') await request('/emergency-resume', { method:'POST', body:{} });
+      await refresh(action === 'emergency-pause' ? 'Emergency pause confirmed. AI work remains stopped.' : 'AI Network updated.');
+    } catch (error) {
+      state.error = error.message;
+      renderSnapshot(state.snapshot);
+    } finally {
+      state.busy = false;
+    }
+  };
+
+  if (!window.__mingloraAINetworkBound) {
+    window.__mingloraAINetworkBound = true;
+    document.addEventListener('submit', onSubmit);
+    document.addEventListener('click', onClick);
+  }
+  window.MingloraAINetwork = { render: load, refresh: () => refresh(), request };
+})();
