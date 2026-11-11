@@ -1982,9 +1982,17 @@ export function updatePersonalAiBotLanguageEvaluationSet(db, botId, setId, input
   if(!['draft','changes_requested'].includes(record.status)){
     throw Object.assign(new Error('Only draft or changes-requested evaluation sets can be edited.'),{status:409});
   }
-  const allowed=new Set(['name','description','cases']);
+  const allowed=new Set(['name','description','cases','syntheticDataAttested']);
   if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).some(key=>!allowed.has(key))||!Object.keys(input).length){
     throw Object.assign(new Error('Evaluation set updates contain unsupported or missing fields.'),{status:400});
+  }
+  if(Object.hasOwn(input,'cases')||Object.hasOwn(input,'syntheticDataAttested')){
+    if(input.syntheticDataAttested!==true){
+      throw Object.assign(new Error('Confirm that all edited evaluation examples remain synthetic and contain no private member data.'),{status:400});
+    }
+    record.syntheticDataAttested=true;
+    record.syntheticDataAttestedBy=actorId;
+    record.syntheticDataAttestedAt=timestamp;
   }
   if(Object.hasOwn(input,'name')){
     const name=String(input.name||'').trim().slice(0,100);
