@@ -40,7 +40,7 @@ test('admin profile keeps the regular owner layout and administrator recognition
   assert.match(ownerActions,/id="edit-profile"/);
   assert.match(ownerActions,/id="profile-add-story"/);
   assert.match(ownerActions,/id="profile-people-toggle"/);
-  assert.ok(app.includes('profile-admin-identity'),'administrator recognition remains in the identity column');
+  assert.ok(!app.includes('profile-admin-identity'),'administrator recognition decoration is not shown on profile headers');
   assert.ok(app.includes('data-profile-overflow-action="verification-review"'),'administrator-only tools remain reachable through the regular profile menu');
   assert.doesNotMatch(ownerActions,/profile-edit-admin-cover|Edit Cover/);
   assert.doesNotMatch(app,/profile-header-card--admin|profile-info--admin/);
