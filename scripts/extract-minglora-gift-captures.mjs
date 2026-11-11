@@ -245,7 +245,8 @@ async function processScreenshot(file, catalogByName) {
       const displayName=titleCase(label.text);
       if(!displayName||displayName.length>48)continue;
       const left=clamp(Math.round(label.cx-cropSize/2),0,Math.max(0,meta.width-cropSize));
-      const top=clamp(Math.round(label.bottom-cropSize-9),0,Math.max(0,meta.height-cropSize));
+      // Stop above the label so recognized text is not baked into the gift image.
+      const top=clamp(Math.round(label.top-cropSize-9),0,Math.max(0,meta.height-cropSize));
       const cropWidth=Math.min(cropSize,meta.width-left),cropHeight=Math.min(cropSize,meta.height-top);
       if(cropWidth<32||cropHeight<32)continue;
       const crop=await sharp(rawInfo.data,{raw:{width:meta.width,height:meta.height,channels}})
@@ -255,19 +256,25 @@ async function processScreenshot(file, catalogByName) {
       const match=catalogByName.get(normalizeName(originalName));
       const category=categoryFor(originalName,match?.category);
       const code=match?.code||slugify(originalName)+"-"+hash(normalizeName(originalName));
-      const assetFolder=path.join(OUTPUT_DIR,category,slugify(originalName)+"-"+hash(code));
-      await fs.mkdir(assetFolder,{recursive:true});
       const posterName="poster.webp";
-      const posterPath=path.join(assetFolder,posterName);
-      await sharp(rgba,{raw:{width:cropWidth,height:cropHeight,channels:4}})
-        .resize(256,256,{fit:"contain",background:{r:0,g:0,b:0,alpha:0}})
-        .webp({quality:91,alphaQuality:100,effort:5}).toFile(posterPath);
-      const animationPath=path.join(assetFolder,"animation.svg");
       const seed=parseInt(hash(code),16)>>>0;
       const profile=animationProfile(category,seed);
-      await fs.writeFile(animationPath,makeAnimationSvg(originalName,posterName,category,seed),"utf8");
+      // Hold each crop until duplicate names are resolved; the best OCR source wins.
+      const posterBuffer=await sharp(rgba,{raw:{width:cropWidth,height:cropHeight,channels:4}})
+        .resize(256,256,{fit:"contain",background:{r:0,g:0,b:0,alpha:0}})
+        .webp({quality:91,alphaQuality:100,effort:5}).toBuffer();
+      const animationSource=makeAnimationSvg(originalName,posterName,category,seed);
+      const posterSha256=crypto.createHash("sha256").update(posterBuffer).digest("hex");
+      const animationSha256=crypto.createHash("sha256").update(animationSource).digest("hex");
+      const normalizedName=normalizeName(originalName);
+      const qualityFlags=[];
+      if(label.confidence<55)qualityFlags.push("low_ocr_confidence");
+      else if(label.confidence<75)qualityFlags.push("medium_ocr_confidence");
+      if(!match)qualityFlags.push("unmatched_catalog_name");
+      if(category==="other")qualityFlags.push("generic_other_category");
+      if(normalizedName.length<4)qualityFlags.push("short_or_uncertain_name");
       results.push({
-        id:code,name:originalName,normalized_name:normalizeName(originalName),category,
+        id:code,name:originalName,normalized_name:normalizedName,category,
         animation_key:"minglora-"+slugify(code),animation_preset:profile.preset,
         animation_kind:"individual-svg-css-motion",animation_duration_ms:Math.round(Number.parseFloat(profile.duration)*1000),
         source_kind:"captured-gallery-still",source_image:"assets/Gifts/"+file,
@@ -275,8 +282,12 @@ async function processScreenshot(file, catalogByName) {
         ocr_confidence:Number(label.confidence.toFixed(1)),
         matched_catalog_code:match?.code||null,
         matched_catalog_name:match?.name||null,
-        poster:"assets/animations/gifts/"+category+"/"+path.basename(assetFolder)+"/poster.webp",
-        animation:"assets/animations/gifts/"+category+"/"+path.basename(assetFolder)+"/animation.svg",
+        poster:null,animation:null,
+        poster_sha256:posterSha256,animation_sha256:animationSha256,
+        ocr_confidence_band:label.confidence>=85?"high":label.confidence>=65?"medium":"low",
+        quality_review_flags:qualityFlags,
+        review_priority:qualityFlags.includes("low_ocr_confidence")||qualityFlags.includes("short_or_uncertain_name")?"high":qualityFlags.length?"normal":"routine",
+        _poster_buffer:posterBuffer,_animation_source:animationSource,
         visual_review_status:"needs_visual_review",
         original_3d_motion_available:false
       });
@@ -313,12 +324,45 @@ async function main(){
       if(gift.ocr_confidence>existing.ocr_confidence){
         existing.source_image=gift.source_image;existing.source_region=gift.source_region;
         existing.ocr_confidence=gift.ocr_confidence;
+        existing.ocr_confidence_band=gift.ocr_confidence_band;
+        existing.quality_review_flags=gift.quality_review_flags;
+        existing.review_priority=gift.review_priority;
+        existing._poster_buffer=gift._poster_buffer;
+        existing._animation_source=gift._animation_source;
+        existing.poster_sha256=gift.poster_sha256;
+        existing.animation_sha256=gift.animation_sha256;
       }
     }
   }
   const gifts=[...unique.values()].sort((a,b)=>a.category.localeCompare(b.category)||a.name.localeCompare(b.name));
   const categoryCounts={};
-  for(const gift of gifts)categoryCounts[gift.category]=(categoryCounts[gift.category]||0)+1;
+  const confidenceCounts={high:0,medium:0,low:0};
+  const qualityFlagCounts={};
+  const posterGroups=new Map();
+  let matchedCatalogCount=0;
+  for(const gift of gifts){
+    categoryCounts[gift.category]=(categoryCounts[gift.category]||0)+1;
+    confidenceCounts[gift.ocr_confidence_band]=(confidenceCounts[gift.ocr_confidence_band]||0)+1;
+    if(gift.matched_catalog_code)matchedCatalogCount++;
+    for(const flag of gift.quality_review_flags||[])qualityFlagCounts[flag]=(qualityFlagCounts[flag]||0)+1;
+    if(!posterGroups.has(gift.poster_sha256))posterGroups.set(gift.poster_sha256,[]);
+    posterGroups.get(gift.poster_sha256).push(gift);
+  }
+  const duplicatePosterGroups=[...posterGroups.entries()].filter(([,items])=>items.length>1).map(([sha256,items])=>({
+    sha256,gifts:items.map(item=>({id:item.id,name:item.name,source_image:item.source_image}))
+  }));
+  // Write only one canonical pair of assets for each deduplicated gift.
+  for(const gift of gifts){
+    const folderName=slugify(gift.name)+"-"+hash(gift.id);
+    const assetFolder=path.join(OUTPUT_DIR,gift.category,folderName);
+    await fs.mkdir(assetFolder,{recursive:true});
+    await fs.writeFile(path.join(assetFolder,"poster.webp"),gift._poster_buffer);
+    await fs.writeFile(path.join(assetFolder,"animation.svg"),gift._animation_source,"utf8");
+    gift.poster="assets/animations/gifts/"+gift.category+"/"+folderName+"/poster.webp";
+    gift.animation="assets/animations/gifts/"+gift.category+"/"+folderName+"/animation.svg";
+    delete gift._poster_buffer;
+    delete gift._animation_source;
+  }
   const manifest={
     schema_version:1,generated_at:new Date().toISOString(),project:"Minglora Social Network",
     source_directory:"assets/Gifts",output_directory:"assets/animations/gifts",
@@ -328,7 +372,9 @@ async function main(){
     processing_notes:[
       "Each recognized gift is extracted into its own category folder with an optimized transparent WebP poster and an individual animated SVG.",
       "Matching is by normalized gift name against the existing Minglora gift catalog; unmatched captures receive a stable slug ID.",
-      "Repeated names are deduplicated into one asset record with all capture source references retained.",
+      "Repeated names are deduplicated into one asset record with all capture source references retained; the highest-confidence crop is selected.",
+      "Artwork crops end above detected label text. Poster and animation files receive SHA-256 digests for duplicate auditing.",
+      "OCR confidence, unmatched names, generic categories and short uncertain labels are surfaced as quality-review flags.",
       "Source captures are screenshots, not original animation frame sequences. SVG motion is an original presentation animation and is not a reconstruction of TikTok's proprietary animation or 3D model.",
       "Generated assets require visual review before activating them in the live gift catalog."
     ],
@@ -339,6 +385,9 @@ async function main(){
   const report={
     screenshot_count:files.length,detected_occurrences:manifest.detected_occurrences,
     unique_gifts:gifts.length,category_counts:categoryCounts,
+    matched_catalog_gifts:matchedCatalogCount,unmatched_catalog_gifts:gifts.length-matchedCatalogCount,
+    confidence_counts:confidenceCounts,quality_flag_counts:qualityFlagCounts,
+    duplicate_poster_groups:duplicatePosterGroups,
     screenshots_with_errors:processed.filter(x=>x.error).map(x=>({file:x.file,error:x.error})),
     zero_detection_screenshots:processed.filter(x=>!x.error&&!x.detected).map(x=>x.file)
   };
