@@ -542,8 +542,8 @@
     catch(error){notice('pab-network-status',error.message,'error');}
   }
   async function emergencyShutdown(){
-    if(!window.confirm('Emergency shutdown will disable the network, pause enabled bots and cancel open tasks. Continue?'))return;
-    try{const result=await request(API+'/emergency-shutdown',{method:'POST',body:'{}'});await refresh();notice('pab-network-status','Emergency shutdown complete. '+result.paused+' bot(s) paused; '+result.cancelled+' task(s) cancelled.','success');}
+    if(!window.confirm('Emergency shutdown will disable the network, pause enabled bots, cancel open tasks and cancel open team handoffs. Continue?'))return;
+    try{const result=await request(API+'/emergency-shutdown',{method:'POST',body:'{}'});await refresh();notice('pab-network-status','Emergency shutdown complete. '+result.paused+' bot(s) paused; '+result.cancelled+' task(s) cancelled; '+Number(result.cancelledHandoffs||0)+' team handoff(s) cancelled.','success');}
     catch(error){notice('pab-network-status',error.message,'error');}
   }
   async function bulkUpdate(){
