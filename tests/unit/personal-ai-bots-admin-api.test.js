@@ -1733,5 +1733,5 @@ test('Persona Laboratory API rejects unsupported permission fields and non-owner
   });
   await handlePersonalAiBotsAdminApi(denied);
   assert.equal(denied.res.statusCode,403);
-  assert.deepEqual(db.personalAiBotPersonaVersions,[]);
+  assert.equal(db.personalAiBotPersonaVersions,undefined);
 });
