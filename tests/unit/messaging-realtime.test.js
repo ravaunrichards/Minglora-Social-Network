@@ -192,3 +192,19 @@ test('Messenger realtime closes sockets after the authenticated application sess
   assert.equal(hub.isConnected('alice'), false);
   hub.close();
 });
+
+test('Messenger can immediately disconnect a restricted account and broadcast offline presence', () => {
+  const { hub, connect } = createHub();
+  const alice = connect('alice');
+  const bob = connect('bob');
+  assert.equal(bob.socket.readyState, 1);
+  assert.equal(hub.isConnected('bob'), true);
+
+  assert.equal(hub.disconnectUser('bob', 'Account banned'), 1);
+  assert.equal(bob.socket.readyState, 3);
+  assert.equal(hub.isConnected('bob'), false);
+  assert.equal(alice.socket.sent.some(item =>
+    item.type === 'presence' && item.userId === 'bob' && item.online === false
+  ), true);
+  hub.close();
+});
