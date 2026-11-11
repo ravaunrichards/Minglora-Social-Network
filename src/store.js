@@ -10,7 +10,7 @@ const dbPath = path.join(dataDir, 'db.json');
 const uid = () => crypto.randomUUID();
 const now = () => new Date().toISOString();
 const COLLECTIONS = [
-  'users', 'posts', 'friendships', 'follows', 'blocks', 'friendLists', 'friendPreferences', 'savedPosts', 'savedPostCollections', 'videoWatchEvents', 'videoFeedback', 'videoPlaylists', 'videoPlaylistItems', 'mediaAssets', 'dismissedPeopleSuggestions',
+  'users', 'posts', 'friendships', 'follows', 'blocks', 'friendLists', 'friendPreferences', 'savedPosts', 'savedPostCollections', 'videoWatchEvents', 'videoFeedback', 'videoPlaylists', 'videoPlaylistItems', 'videoChannelSubscriptions', 'mediaAssets', 'dismissedPeopleSuggestions',
   'messageGroups', 'messageGroupMembers', 'messageGroupMessages', 'messageConversationSettings',
   'groups', 'groupPosts', 'stories', 'storyViews', 'pages', 'pageRoles',
   'pageFollows', 'pagePosts', 'pageViews', 'messages', 'messageConversationHides', 'notifications', 'sessions', 'liveSessions', 'liveParticipants', 'liveSpeakerRequests',
@@ -135,6 +135,7 @@ function stripLegacyDemoData(state) {
   const removedVideoPlaylistIds = new Set((state.videoPlaylists || []).filter(playlist => demoUsers.has(playlist.ownerId)).map(playlist => playlist.id));
   state.videoPlaylists = (state.videoPlaylists || []).filter(playlist => !demoUsers.has(playlist.ownerId));
   state.videoPlaylistItems = (state.videoPlaylistItems || []).filter(item => !removedVideoPlaylistIds.has(item.playlistId) && !demoPostIds.has(item.postId));
+  state.videoChannelSubscriptions = (state.videoChannelSubscriptions || []).filter(item => !demoUsers.has(item.subscriberId) && !demoUsers.has(item.channelOwnerId));
   state.videoWatchEvents = (state.videoWatchEvents || []).filter(event => !demoUsers.has(event.userId) && !demoUsers.has(event.authorId));
   state.videoFeedback = (state.videoFeedback || []).filter(item => !demoUsers.has(item.userId));
   const removedGroupIds = new Set((state.groups || []).filter(g => g.id === 'group-creators').map(g => g.id));
