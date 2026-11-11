@@ -248,3 +248,40 @@ body:has(#live-player-shell) #live-video-stage #live-guest-layout:is(
     width:36%!important;height:34%!important;right:7px!important;bottom:7px!important;
   }
 }
+
+
+/* Keep all generated participant seats inside the selected stage layout. */
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="stage-layout"]{
+  grid-template-rows:22px minmax(0,1fr) repeat(2,minmax(48px,.28fr))!important;
+}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="stage-layout"]>.live-guest-seat.is-guest{
+  grid-row:auto!important;min-height:0!important;
+}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="screen-sharing-layout"]{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  grid-template-rows:22px repeat(3,minmax(0,1fr))!important;
+}
+body:has(#live-player-shell) #live-video-stage.has-live-screen-share #live-guest-layout[data-live-layout="screen-sharing-layout"]{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  grid-template-rows:20px repeat(3,minmax(0,1fr))!important;
+}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="host-chat-split"]{
+  grid-template-rows:22px minmax(0,1fr) repeat(3,minmax(48px,.24fr))!important;
+}
+@media(max-width:760px){
+  body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="stage-layout"]{
+    grid-template-columns:repeat(4,minmax(0,1fr))!important;
+    grid-template-rows:20px minmax(0,1fr) repeat(2,minmax(42px,.24fr))!important;
+  }
+  body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="screen-sharing-layout"]{
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    grid-template-rows:20px repeat(3,minmax(0,1fr))!important;
+  }
+  body:has(#live-player-shell) #live-video-stage.has-live-screen-share #live-guest-layout[data-live-layout="screen-sharing-layout"]{
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    grid-template-rows:20px repeat(3,minmax(0,1fr))!important;
+  }
+  body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="host-chat-split"]{
+    grid-template-rows:20px minmax(0,1fr) repeat(3,minmax(38px,.2fr))!important;
+  }
+}
