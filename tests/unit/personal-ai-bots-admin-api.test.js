@@ -1896,3 +1896,34 @@ test('team handoff API rejects private context, unsupported fields and non-owner
   assert.equal(denied.res.statusCode,403);
   assert.equal(db.personalAiBotTeamHandoffs,undefined);
 });
+
+
+test('emergency shutdown API reports paused teams and cancelled handoffs',async()=>{
+  const teamId='00000000-0000-4000-8000-000000000601';
+  const handoffId='00000000-0000-4000-8000-000000000602';
+  const db={
+    personalAiBotSettings:[{id:'global',enabled:true,hybridEnabled:true}],
+    personalAiBots:[{id:'bot-active',status:'enabled',enabled:true}],
+    personalAiBotTasks:[{id:'task-open',status:'approved_waiting_for_worker'}],
+    personalAiBotTeams:[{id:teamId,ownerId:'owner-1',name:'Shutdown Team',status:'enabled',enabled:true}],
+    personalAiBotTeamHandoffs:[{
+      id:handoffId,ownerId:'owner-1',teamId,senderBotId:'bot-a',receivingBotId:'bot-b',
+      status:'accepted',dispatchStatus:'not_dispatched',createdAt:'2026-11-11T11:00:00.000Z'
+    }]
+  };
+  let saves=0;
+  const context=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/emergency-shutdown',
+    input:{},db,saveStore:async()=>{saves++;}
+  });
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,200);
+  assert.equal(context.res.payload.paused,1);
+  assert.equal(context.res.payload.pausedTeams,1);
+  assert.equal(context.res.payload.cancelled,1);
+  assert.equal(context.res.payload.cancelledHandoffs,1);
+  assert.equal(context.res.payload.message.includes('team handoffs were cancelled'),true);
+  assert.equal(db.personalAiBotTeams[0].status,'paused');
+  assert.equal(db.personalAiBotTeamHandoffs[0].status,'cancelled');
+  assert.equal(saves,1);
+});
