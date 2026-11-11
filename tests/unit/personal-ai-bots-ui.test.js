@@ -545,3 +545,8 @@ test('Performance Center shows a timestamped queue snapshot and does not imply p
   assert.match(ui,/Provider inference is not connected/);
   assert.match(ui,/unavailable, not zero/);
 });
+
+test('top-line running-state metric describes bots, not live task execution',async()=>{
+  const ui=await read('public/personal-ai-bots.js');
+  assert.ok(ui.includes("metric(counts.executingBots,'Bots with running-state tasks')"));
+});
