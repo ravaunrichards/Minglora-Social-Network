@@ -20,51 +20,58 @@ def slug(text):
     return re.sub(r"[^a-z0-9]+", "-", text).strip("-")[:58] or "unlabelled-gift"
 
 def labels_for(img):
+    """Read gift titles only from the expected label band of each six-column row."""
     d = pytesseract.image_to_data(img, output_type=Output.DICT, config="--oem 3 --psm 11")
-    w, h = img.size
-    tokens = []
+    width, height = img.size
+    tile_width = width / COLS
+    row_count = max(1, min(6, round(height / (tile_width * 1.15))))
+    pitch = height / row_count
+    groups = defaultdict(list)
+
     for i, raw in enumerate(d["text"]):
         word = re.sub(r"\s+", " ", raw).strip(" -_|")
-        try: conf = float(d["conf"][i])
-        except Exception: continue
-        if conf < 50 or not re.search(r"[A-Za-z]", word) or re.fullmatch(r"[\W\d_]+", word):
+        try:
+            confidence = float(d["conf"][i])
+        except Exception:
+            continue
+        if confidence < 50 or not re.search(r"[A-Za-z]", word) or re.fullmatch(r"[\W\d_]+", word):
+            continue
+        compact = re.sub(r"[^A-Za-z0-9]", "", word)
+        if len(compact) < 3 and word.lower() not in {"gg", "dj", "vs", "ok"}:
+            continue
+        if re.match(r"^\d", word) and not re.match(r"^\d+(st|nd|rd|th)$", word.lower()):
             continue
         left, top = int(d["left"][i]), int(d["top"][i])
-        bw, bh = int(d["width"][i]), int(d["height"][i])
-        if bw < 2 or bh < 2: continue
-        cy = top + bh / 2
-        if cy < h * .07 or cy > h * .92: continue
-        col = min(COLS - 1, max(0, int((left + bw / 2) / (w / COLS))))
-        letters = re.sub(r"[^A-Za-z0-9]", "", word)
-        if len(letters) < 3 and word.lower() not in {"gg", "dj", "vs", "ok"}:
+        box_w, box_h = int(d["width"][i]), int(d["height"][i])
+        if box_w < 2 or box_h < 2:
             continue
-        tokens.append((cy, top, left, col, word, conf))
-    tokens.sort(key=lambda x: x[0])
-    groups = []
-    for t in tokens:
-        if not groups or t[0] - statistics.mean(v[0] for v in groups[-1]) > TOL:
-            groups.append([t])
-        else:
-            groups[-1].append(t)
-    result = []
-    for group in groups:
-        by_col = defaultdict(list)
-        for t in group: by_col[t[3]].append(t)
-        for col, words in by_col.items():
-            words.sort(key=lambda x: x[2])
-            name = re.sub(r"\s+", " ", " ".join(x[4] for x in words)).strip(" -_|")
-            if len(re.sub(r"[^A-Za-z0-9]", "", name)) >= 3 or name.lower() in {"gg", "dj", "vs", "ok"}:
-                result.append({"y": statistics.mean(x[0] for x in words),
-                               "top": min(x[1] for x in words), "col": col,
-                               "name": name[:70], "confidence": statistics.mean(x[5] for x in words)})
-    # Resolve any OCR fragments competing for the same row/column.
-    fixed = {}
-    for item in result:
-        key = (round(item["y"] / TOL), item["col"])
-        if key not in fixed or item["confidence"] > fixed[key]["confidence"]:
-            fixed[key] = item
-    return sorted(fixed.values(), key=lambda x: (x["y"], x["col"]))
+        center_x = left + box_w / 2
+        center_y = top + box_h / 2
+        row = int(round((center_y - pitch * 0.68) / pitch))
+        if row < 0 or row >= row_count:
+            continue
+        expected_y = row * pitch + pitch * 0.68
+        if abs(center_y - expected_y) > max(10, pitch * 0.15):
+            continue
+        column = min(COLS - 1, max(0, int(center_x / tile_width)))
+        groups[(row, column)].append((left, top, word, confidence))
 
+    result = []
+    for (row, column), words in sorted(groups.items()):
+        words.sort(key=lambda item: item[0])
+        name = re.sub(r"\s+", " ", " ".join(item[2] for item in words)).strip(" -_|")
+        compact = re.sub(r"[^A-Za-z0-9]", "", name)
+        if len(compact) < 3 and name.lower() not in {"gg", "dj", "vs", "ok"}:
+            continue
+        digits = sum(ch.isdigit() for ch in name)
+        if digits and digits / max(1, len(compact)) > 0.25:
+            continue
+        result.append({
+            "row": row, "row_top": round(row * pitch), "pitch": pitch,
+            "top": min(item[1] for item in words), "col": column,
+            "name": name[:70], "confidence": statistics.mean(item[3] for item in words),
+        })
+    return result
 def transparent_icon(crop):
     rgb = np.asarray(crop.convert("RGB"), dtype=np.int16)
     h, w, _ = rgb.shape
@@ -112,25 +119,26 @@ def run(source, output, expected):
     for ix, file in enumerate(files, 1):
         with Image.open(file) as im: img = ImageOps.exif_transpose(im).convert("RGB")
         labels = labels_for(img)
-        if not labels: source_warnings[file.name] = ["no-gift-labels-detected"]
-        ys = sorted(x["y"] for x in labels)
-        centers = []
-        for y in ys:
-            if not centers or y-centers[-1] > TOL: centers.append(y)
-            else: centers[-1] = (centers[-1]+y)/2
-        pitch = statistics.median([b-a for a,b in zip(centers,centers[1:])]) if len(centers)>1 else img.height/3
+        if not labels:
+            source_warnings[file.name] = ["no-gift-labels-detected"]
         tile = img.width / COLS
         for item in labels:
-            row = min(range(len(centers)), key=lambda i: abs(centers[i]-item["y"]))
-            x0 = round(item["col"]*tile + tile*.10)
-            x1 = round((item["col"]+1)*tile - tile*.10)
-            y0 = max(0, round(item["top"] - pitch*.56))
-            y1 = min(img.height, item["top"]-3)
-            if y1 <= y0+8: continue
-            art, area, warnings = transparent_icon(img.crop((x0,y0,x1,y1)))
+            x0 = round(item["col"] * tile + tile * .10)
+            x1 = round((item["col"] + 1) * tile - tile * .10)
+            # Keep the current row's icon only: start below the preceding row's
+            # price line and stop immediately above this gift's own name.
+            y0 = max(0, round(item["row_top"] + item["pitch"] * .06))
+            y1 = min(img.height, item["top"] - 4)
+            if y1 <= y0 + 8:
+                source_warnings.setdefault(file.name, []).append("invalid-cell-crop:" + item["name"])
+                continue
+            art, area, warnings = transparent_icon(img.crop((x0, y0, x1, y1)))
+            if "..." in item["name"] or "…" in item["name"]:
+                warnings.append("truncated-title")
             candidates.append({"name":item["name"], "slug":slug(item["name"]),
                 "confidence":round(item["confidence"],1), "source":file.name,
-                "row":row+1, "column":item["col"]+1, "art":art, "area":area, "warnings":warnings})
+                "row":item["row"]+1, "column":item["col"]+1, "art":art,
+                "area":area, "warnings":warnings})
         print(f"[{ix}/{len(files)}] {file.name}: {len(labels)} label cells")
     if not candidates: raise RuntimeError("No artwork candidates extracted.")
     grouped = defaultdict(list)
