@@ -35,3 +35,27 @@ One chicken-clucking imitation was explicitly excluded because its uploader desc
 - **0 audio binaries downloaded, 0 clips auditioned and 0 gift sounds production-ready in this repository branch.**
 
 The actual files still need to be downloaded from their sources and auditioned before being copied into per-gift folders.
+
+## Source ingestion helper
+
+The repository includes `tools/ingest-sources.mjs` for a repeatable, licence-aware source-ingestion step. It verifies fixed-release WAV assets by byte count/SHA-256, verifies public-domain repository files by Git blob hash, and checks the Freesound API licence before downloading an MP3 preview.
+
+Dry-run the public source list:
+
+```bash
+node "assets/Gift Sounds/tools/ingest-sources.mjs" --dry-run --download-public
+```
+
+Download public GitHub-hosted sources and transcode them to 192 kbps MP3 (requires Node 20+ and FFmpeg):
+
+```bash
+node "assets/Gift Sounds/tools/ingest-sources.mjs" --download-public
+```
+
+Freesound previews require a developer API key in `FREESOUND_API_KEY`:
+
+```bash
+FREESOUND_API_KEY=... node "assets/Gift Sounds/tools/ingest-sources.mjs" --download-all
+```
+
+The script stores originals and MP3 review copies under `assets/Gift Sounds/_sources/`. It deliberately does **not** activate or copy sounds into gift folders; a human must audition each recording and approve the corresponding gift mapping first.
