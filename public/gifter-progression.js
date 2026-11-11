@@ -171,13 +171,18 @@
     const newGifterNotice = data.newGifterIdentity?.active
       ? "<p class='gp-new-gifter-notice'><strong>✦ NEW GIFTER</strong> identity active until " + esc(date(data.newGifterIdentity.expiresAt)) + "</p>"
       : "";
+    const currentBadgeMarkup = current.hasUnlockedBadge && window.MingloraGifterBadgeArt?.render
+      ? window.MingloraGifterBadgeArt.render({ level: current.level, badgeName: current.badgeName })
+      : "";
 
     return "<div class='gp-page'>" +
       "<header class='gp-heading'><div><span class='gp-eyebrow'>MINGLORA GIFTER JOURNEY</span><h1>Gifter Level &amp; Badges</h1>" +
       "<p>Every confirmed gift you send moves your own Minglora gifter journey forward.</p></div>" +
       "<div class='gp-heading-actions'><button type='button' class='gp-back-link' id='gp-back-gifts'>← Back to Gifts</button></div></header>" +
       "<section class='gp-hero card'><div class='gp-hero-art'><img class='gp-reference-art' src='/assets/Gifters%20Level%20Up.png' alt='Original Minglora Gifters Level Up chart artwork' loading='eager' decoding='async'><a class='gp-chart-fullsize' href='/assets/Gifters%20Level%20Up.png' target='_blank' rel='noopener noreferrer' aria-label='Open the original full-size Minglora Gifters Level Up chart in a new tab to zoom'>View original full-size chart to zoom ↗</a></div><div class='gp-hero-summary'>" +
-      "<span class='gp-eyebrow'>YOUR GIFTER STATUS</span><div class='gp-current-badge-row'><div class='gp-current-status-copy'>" +
+      "<span class='gp-eyebrow'>YOUR GIFTER STATUS</span><div class='gp-current-badge-row'>" +
+      (currentBadgeMarkup ? "<div class='gp-current-badge-art' aria-label='Your current Gifter badge'>" + currentBadgeMarkup + "</div>" : "") +
+      "<div class='gp-current-status-copy'>" +
       "<h2>" + (current.hasUnlockedBadge ? "LV " + current.level + " · " + esc(current.tier) : "No badge earned yet") + "</h2><p>" + (current.hasUnlockedBadge ? esc(current.badgeName) : "Your gifter levels are locked until you send gifts.") + "</p>" +
       "<span class='gp-rank-chip'>" + (current.rankPosition ? "Community rank #" + current.rankPosition : "Not ranked yet") + "</span></div></div>" +
       newGifterNotice +
