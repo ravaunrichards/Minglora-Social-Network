@@ -23,7 +23,7 @@ test('Gift entry shows the repository Gifters Rewards artwork outside the level 
 });
 
 test('Gifters Level Up remains inside the separate Gifter Progression page', () => {
-  assert.match(progression, /src='\/assets\/Gifters%20Level%20Up\.png' alt='Gifters Level Up'/);
+  assert.match(progression, /src='\/assets\/gifters-level-up\.png' alt='Gifters Level Up'/);
   assert.match(progression, /<h1>Gifter Level &amp; Badges<\/h1>/);
   assert.doesNotMatch(progression, /Gifters Rewards/);
   assert.match(server, /if\(p==='\/assets\/gifters-level-up\.png'\)/, 'existing Level Up asset route is retained');
