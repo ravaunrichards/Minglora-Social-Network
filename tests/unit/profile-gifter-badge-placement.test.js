@@ -61,8 +61,8 @@ test('profile badge artwork keeps responsive sizing and original proportions', (
 });
 
 test('app asset and service-worker cache are versioned together', () => {
-  const appAsset = '/app.js?v=20261111-tiktok-readable-badge-size-2';
+  const appAsset = '/app.js?v=20261111-ai-network-command-center-1';
   assert.ok(html.includes(appAsset));
   assert.ok(worker.includes(appAsset));
-  assert.ok(worker.includes('minglora-shell-v285-self-updating-1'));
+  assert.ok(worker.includes('minglora-shell-v286-self-updating-1'));
 });
