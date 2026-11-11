@@ -29,7 +29,8 @@
   }
   function selected(){return state.gifts.find(g=>g.code===state.selectedCode)||null;}
   function card(g){
-    const image=g.image_url?"<img class='gift-card-image' loading='lazy' decoding='async' src='"+esc(g.image_url)+"' alt='Original Minglora artwork: "+esc(g.name)+"'>":"<span class='gift-emoji-preview' aria-label='"+esc(g.name)+"'>"+esc(g.emoji||"🎁")+"</span>";
+    const previewUrl=g.animation_url||g.artwork_url||g.image_url||"";
+    const image=previewUrl?"<img class='gift-card-image' loading='lazy' decoding='async' src='"+esc(previewUrl)+"' alt='Gift artwork: "+esc(g.name)+"'>":"<span class='gift-emoji-preview' aria-label='"+esc(g.name)+"'>"+esc(g.emoji||"🎁")+"</span>";
     return "<button type='button' class='gift-catalog-card "+(state.selectedCode===g.code?"selected":"")+"' data-gift-select='"+esc(g.code)+"' aria-pressed='"+(state.selectedCode===g.code)+"'><span class='gift-catalog-art'>"+image+"</span><strong>"+esc(g.name)+"</strong><small>◈ "+Number(g.coin_price).toLocaleString()+" Coins</small></button>";
   }
   function updateSelected(){
@@ -40,15 +41,16 @@
     const sound=document.getElementById("minglora-gift-sound"),send=document.getElementById("minglora-gift-send");
     if(title)title.textContent=g?g.name:"Choose a gift above";
     if(price)price.textContent=g?Number(g.coin_price).toLocaleString()+" Minglora Coins · "+(labels[g.category]||"Gift"):"Select a gift to preview it";
+    const artworkPreviewUrl=g?.animation_url||g?.artwork_url||g?.image_url||"";
     if(image){
       image.dataset.previewCode=g?.code||"";
-      image.src=g?.image_url||"";
-      image.alt=g?g.name+" original Minglora artwork":"";
-      image.hidden=!g?.image_url;
+      image.src=artworkPreviewUrl;
+      image.alt=g?g.name+" gift artwork":"";
+      image.hidden=!artworkPreviewUrl;
     }
     if(fallback){
       fallback.textContent=g?.emoji||"🎁";
-      fallback.hidden=Boolean(g?.image_url);
+      fallback.hidden=Boolean(artworkPreviewUrl);
       fallback.setAttribute("aria-label",g?g.name+" gift artwork fallback":"Gift preview unavailable");
     }
     if(model){
@@ -58,7 +60,7 @@
       model.alt=g?g.name+" original Minglora 3D gift":"";
       if(nextModel){
         model.hidden=false;
-        model.setAttribute("poster",g?.image_url||"");
+        model.setAttribute("poster",g?.artwork_url||g?.image_url||"");
         if(model.getAttribute("src")!==nextModel||model.dataset.loadedCode!==nextCode){
           if(model.getAttribute("src")!==nextModel){
             model.dataset.loadedCode="";
@@ -75,7 +77,7 @@
         model.removeAttribute("src");
         model.removeAttribute("poster");
         model.dataset.loadedCode="";
-        if(previewStatus)previewStatus.textContent=g?"Showing the original gift artwork.":"Choose a gift to preview it.";
+        if(previewStatus)previewStatus.textContent=g?"Showing the selected gift animation.":"Choose a gift to preview it.";
       }
     }
     if(sound)sound.disabled=!g;
