@@ -69,6 +69,20 @@ test('profile status, check-ins, events, Highlights, archives, activity and sect
   assert.equal(checkIn.status,201,JSON.stringify(checkIn.body));assert.equal((await request(bob.cookie,'/api/users/'+alice.id+'/check-ins')).body.checkIns.length,0);
   assert.equal((await request(bob.cookie,'/api/users/'+alice.id+'/follow',{method:'POST',body:'{}'})).status,200);
   assert.equal((await request(alice.cookie,'/api/users/'+bob.id+'/follow',{method:'POST',body:'{}'})).status,200,'mutual follows should create the reciprocal connection');
+
+  const bobFriendList=await request(bob.cookie,'/api/friends/lists',{method:'POST',body:JSON.stringify({name:'Block cleanup list'})});
+  const aliceFriendList=await request(alice.cookie,'/api/friends/lists',{method:'POST',body:JSON.stringify({name:'Block cleanup list'})});
+  assert.equal(bobFriendList.status,201);assert.equal(aliceFriendList.status,201);
+  assert.equal((await request(bob.cookie,'/api/friends/lists/'+bobFriendList.body.list.id+'/members/'+alice.id,{method:'PUT',body:'{}'})).status,200);
+  assert.equal((await request(alice.cookie,'/api/friends/lists/'+aliceFriendList.body.list.id+'/members/'+bob.id,{method:'PUT',body:'{}'})).status,200);
+  assert.equal((await request(bob.cookie,'/api/friends/'+alice.id+'/preferences',{method:'PATCH',body:JSON.stringify({isFavorite:true})})).status,200);
+  assert.equal((await request(alice.cookie,'/api/friends/'+bob.id+'/preferences',{method:'PATCH',body:JSON.stringify({isCloseFriend:true})})).status,200);
+
+  const alicePage=await request(alice.cookie,'/api/pages',{method:'POST',body:JSON.stringify({handle:'aliceblocktest',title:'Alice Block Test Page',category:'Community'})});
+  const bobPage=await request(bob.cookie,'/api/pages',{method:'POST',body:JSON.stringify({handle:'bobblocktest',title:'Bob Block Test Page',category:'Community'})});
+  assert.equal(alicePage.status,201,JSON.stringify(alicePage.body));assert.equal(bobPage.status,201,JSON.stringify(bobPage.body));
+  assert.equal((await request(bob.cookie,'/api/pages/'+alicePage.body.page.id+'/follow',{method:'POST',body:'{}'})).status,200);
+  assert.equal((await request(alice.cookie,'/api/pages/'+bobPage.body.page.id+'/follow',{method:'POST',body:'{}'})).status,200);
   assert.equal((await request(bob.cookie,'/api/users/'+alice.id+'/profile-status')).body.status.text,'Building on Minglora');
   assert.equal((await request(bob.cookie,'/api/users/'+alice.id)).body.user.profileThought.text,'Building on Minglora');
   assert.equal((await request(bob.cookie,'/api/users/'+alice.id+'/check-ins')).body.checkIns.length,1);
@@ -117,9 +131,24 @@ test('profile status, check-ins, events, Highlights, archives, activity and sect
   const blockedOwnerFollowing=await request(bob.cookie,'/api/users/'+bob.id+'/following');
   assert.equal(blockedOwnerFollowing.status,200);
   assert.equal(blockedOwnerFollowing.body.users.some(member=>member.id===alice.id),false,'blocking removes the follow edge from the owner’s Following list');
+  const blockedTargetFollowing=await request(alice.cookie,'/api/users/'+alice.id+'/following');
+  assert.equal(blockedTargetFollowing.status,200);
+  assert.equal(blockedTargetFollowing.body.users.some(member=>member.id===bob.id),false,'blocking also removes the reverse Following edge');
+  assert.equal((await request(alice.cookie,'/api/users/'+alice.id+'/followers')).body.users.some(member=>member.id===bob.id),false,'blocking removes the reverse Followers edge');
+  assert.equal((await request(bob.cookie,'/api/friends/manage')).body.count,0,'the blocker no longer has the blocked member in Friends');
+  assert.equal((await request(alice.cookie,'/api/friends/manage')).body.count,0,'the blocked member no longer has the blocker in Friends');
+  assert.equal((await request(bob.cookie,'/api/friends/lists')).body.lists.find(list=>list.id===bobFriendList.body.list.id).memberIds.includes(alice.id),false);
+  assert.equal((await request(alice.cookie,'/api/friends/lists')).body.lists.find(list=>list.id===aliceFriendList.body.list.id).memberIds.includes(bob.id),false);
+  assert.equal((await request(alice.cookie,'/api/pages/'+alicePage.body.page.id+'/followers')).body.followers.some(item=>item.userId===bob.id),false,'Page follow in the reverse direction is removed');
+  assert.equal((await request(bob.cookie,'/api/pages/'+bobPage.body.page.id+'/followers')).body.followers.some(item=>item.userId===alice.id),false,'Page follow in the blocker direction is removed');
   const blockedRsvp=await request(bob.cookie,'/api/events/'+event.body.event.id+'/rsvp',{method:'POST',body:JSON.stringify({status:'going'})});
   assert.equal(blockedRsvp.status,404,'Blocked members cannot view or RSVP to a public event.');
   assert.equal((await request(bob.cookie,'/api/users/'+alice.id+'/profile-status')).status,404);
+  const unblock=await request(bob.cookie,'/api/users/'+alice.id+'/block',{method:'DELETE',body:'{}'});
+  assert.equal(unblock.status,200);assert.equal(unblock.body.blocked,false);
+  assert.equal((await request(alice.cookie,'/api/users/'+alice.id+'/following')).body.users.some(member=>member.id===bob.id),false,'unblocking must not silently restore old follows');
+  assert.equal((await request(bob.cookie,'/api/friends/manage')).body.count,0,'unblocking must not silently restore friendship');
+  assert.equal((await request(alice.cookie,'/api/pages/'+alicePage.body.page.id+'/followers')).body.followers.some(item=>item.userId===bob.id),false,'unblocking must not restore page follows');
 
   await stopServer();
   const dbPath=path.join(dataDir,'db.json'),persisted=JSON.parse(fs.readFileSync(dbPath,'utf8'));
