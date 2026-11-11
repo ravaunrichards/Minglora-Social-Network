@@ -56,11 +56,11 @@ async function main() {
         !svg.includes(".gift-motion{animation:none!important}")) {
       fail(id + " does not disable motion for reduced-motion users.");
     }
-    if (/<script\\b/i.test(svg) || /\\bon[a-z]+\\s*=/i.test(svg)) {
+    if (/<script\b/i.test(svg) || /\bon[a-z]+\s*=/i.test(svg)) {
       fail(id + " contains script or inline event handlers.");
     }
 
-    const imageMatch = svg.match(/<image\\b[^>]*\\bhref="data:image\\/webp;base64,([A-Za-z0-9+/=]+)"/);
+    const imageMatch = svg.match(/<image\b[^>]*\bhref="data:image\/webp;base64,([A-Za-z0-9+/=]+)"/);
     if (!imageMatch) fail(id + " does not embed its poster as a WebP data URI.");
     const embedded = Buffer.from(imageMatch[1], "base64");
     if (!embedded.equals(poster)) fail(id + " embedded poster does not match poster.webp.");
