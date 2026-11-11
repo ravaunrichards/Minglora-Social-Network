@@ -2086,3 +2086,54 @@ test('owner overview exposes a bounded performance snapshot without claiming pro
   assert.equal(context.res.payload.performance.integrations.providerInference.available,false);
   assert.equal(context.res.payload.performance.integrations.usageTelemetry.status,'unavailable');
 });
+
+test('Creator Studio API provides owner-only draft create, edit, submit and review workflow',async()=>{
+  const botId='00000000-0000-4000-8000-000000000901';
+  const db={personalAiBots:[{id:botId,displayName:'Creator API Bot',createdBy:'owner-1'}]};
+  let saves=0;
+  const base='/api/admin/personal-ai-bots/creator-studio/drafts';
+  const invoke=async(method,path,input={},overrides={})=>{
+    const context=makeContext({
+      method,path,url:new URL('https://minglora.test'+path),input,db,
+      saveStore:async()=>{saves++;},...overrides
+    });
+    await handlePersonalAiBotsAdminApi(context);
+    return context;
+  };
+  const denied=await invoke('POST',base,{botId,title:'Private draft',contentFormat:'feed_post',destination:'feed',body:'Some draft content.',sourceType:'owner_authored',assetReferences:[],rightsAttested:true},{isOwnerAdmin:false});
+  assert.equal(denied.res.statusCode,403);
+  const created=await invoke('POST',base,{botId,title:'Private draft',contentFormat:'feed_post',destination:'feed',body:'Some draft content.',sourceType:'owner_authored',assetReferences:[],rightsAttested:true});
+  assert.equal(created.res.statusCode,201);
+  const id=created.res.payload.draft.id;
+  const edited=await invoke('PATCH',base+'/'+id,{caption:'Edited caption'});
+  assert.equal(edited.res.statusCode,200);
+  assert.equal(edited.res.payload.draft.version,2);
+  const submitted=await invoke('POST',base+'/'+id+'/submit');
+  assert.equal(submitted.res.statusCode,200);
+  assert.equal(submitted.res.payload.draft.status,'pending_review');
+  const reviewed=await invoke('POST',base+'/'+id+'/review',{decision:'approve',reviewNotes:'Owner approved for later human handoff.'});
+  assert.equal(reviewed.res.statusCode,200);
+  assert.equal(reviewed.res.payload.draft.status,'approved_for_human_handoff');
+  assert.equal(reviewed.res.payload.draft.publishingStatus,'not_published');
+  const listed=await invoke('GET',base+'?limit=20&offset=0');
+  assert.equal(listed.res.statusCode,200);
+  assert.equal(listed.res.payload.drafts.length,1);
+  assert.equal(saves,4);
+});
+
+test('Creator Studio API rejects unsupported request fields and cross-origin writes',async()=>{
+  const botId='00000000-0000-4000-8000-000000000902';
+  const base='/api/admin/personal-ai-bots/creator-studio/drafts';
+  const db={personalAiBots:[{id:botId,displayName:'Creator API Bot',createdBy:'owner-1'}]};
+  const unsupported=makeContext({
+    method:'POST',path:base,url:new URL('https://minglora.test'+base),
+    input:{botId,title:'Bad draft',contentFormat:'feed_post',destination:'feed',body:'Draft content',sourceType:'owner_authored',assetReferences:[],rightsAttested:true,publishNow:true},db
+  });
+  await handlePersonalAiBotsAdminApi(unsupported);
+  assert.equal(unsupported.res.statusCode,400);
+  assert.equal(db.personalAiCreatorDrafts.length,0);
+  const crossOrigin=makeContext({method:'POST',path:base,url:new URL('https://minglora.test'+base),input:{},db,isSameOriginWrite:false});
+  await handlePersonalAiBotsAdminApi(crossOrigin);
+  assert.equal(crossOrigin.res.statusCode,403);
+  assert.equal(db.personalAiCreatorDrafts.length,0);
+});
