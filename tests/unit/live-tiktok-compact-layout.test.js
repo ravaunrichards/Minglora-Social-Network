@@ -64,3 +64,7 @@ test('Audio-only LIVE keeps its original speaker grid instead of becoming a flat
   assert.match(compact, /grid-template-rows:minmax\(36px,auto\) minmax\(0,1fr\) minmax\(32px,auto\)/);
   assert.match(compact, /#live-video-stage\.live-audio-stage #live-speaker-list/);
 });
+
+test('Mobile audio-only LIVE reserves space above the bottom control dock', () => {
+  assert.match(compact, /\.live-video-column #live-video-stage\.live-audio-stage\{[\s\S]*?inset:0 0 60px/);
+});

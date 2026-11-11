@@ -466,7 +466,7 @@ body:has(#live-player-shell) #live-video-stage.live-audio-stage{
   padding:6px!important;gap:5px!important;
 }
 @media(max-width:900px){
-  body:has(#live-player-shell) #live-video-column #live-video-stage.live-audio-stage{
+  body:has(#live-player-shell) .live-video-column #live-video-stage.live-audio-stage{
     position:absolute!important;inset:0 0 60px!important;
     width:100%!important;height:auto!important;min-height:0!important;
     grid-template-rows:38px minmax(0,1fr) 36px!important;
