@@ -202,10 +202,13 @@
     if(!parent||!gift)return null;
     const originalGift=gift;
     gift=withCatalogMotion(gift);
-    const duration=Math.max(900,Math.min(8000,Number(options.duration)||Number(gift.motion_duration_ms)||Number(gift.animation_duration_ms)||2600));
+    // Keep the catalogue's original choreography as the outer gift entrance.
+    // The new subject-aware motion runs on the original artwork/model inside it.
+    const duration=Math.max(900,Math.min(8000,Number(options.duration)||Number(gift.animation_duration_ms)||Number(gift.motion_duration_ms)||2600));
     const requestedPreset=gift.motion_preset||gift.animation_preset||"gift-reveal";
-    const choreographyPreset=semanticChoreography[requestedPreset]||requestedPreset;
-    const preset=presets.has(choreographyPreset)?choreographyPreset:"gift-reveal";
+    const originalPreset=gift.animation_preset||"gift-reveal";
+    const fallbackPreset=semanticChoreography[requestedPreset]||requestedPreset;
+    const preset=presets.has(originalPreset)?originalPreset:presets.has(fallbackPreset)?fallbackPreset:"gift-reveal";
     const animationIdentity=String(gift.animation_key||gift.code||gift.name||"minglora-gift");
     const motionSeed=hash([animationIdentity,gift.code,gift.name].join("|"));
     const particleHue=effectHue(String(gift.motion_effect||"sparkles"),motionSeed);
@@ -256,6 +259,16 @@
       particles.append(particle);
     }
     outer.append(card,rays,particles);parent.append(outer);
+    const motionElement=card.querySelector(".minglora-gift-fx-model");
+    if(motionElement&&gift.motion_preset&&typeof motionElement.animate==="function"){
+      const reduced=Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);
+      const semanticFrames=buildPreviewFrames(gift.motion_preset,{dx,dy,tilt,spin,peak,rebound});
+      motionElement.animate(semanticFrames,{
+        duration:reduced?320:Math.max(950,Math.min(4200,Number(gift.motion_duration_ms)||duration)),
+        easing:"cubic-bezier(.17,.85,.3,1)",
+        fill:"none"
+      });
+    }
     if(options.sound!==false)play(gift);
     setTimeout(()=>outer.remove(),duration+250);
     return outer;
