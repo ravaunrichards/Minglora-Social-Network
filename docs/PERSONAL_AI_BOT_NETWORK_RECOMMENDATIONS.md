@@ -169,7 +169,7 @@ The ten enhancements below extend the existing foundation. The network design ta
 - Test datasets cover supported languages, code-switching, Patois, right-to-left text and formatting.
 - Provider assignment is rejected or marked unsupported when the assigned model has no verified support for the requested language.
 
-**Current branch evidence:** language preferences/profile metadata and a translation task type exist. A production translation adapter, quality evaluation and multilingual interaction layer are not connected.
+**Current branch evidence:** an owner-only, per-bot multilingual configuration now stores supported/primary/fallback language codes, regional locale, confidence-guarded detection preference, response language policy, code-switching policy and original/translation display preference. It is separate from public profile Languages metadata and reuses the existing runtime-state collection. Quality remains unverified, provider compatibility remains not_checked, runtime translation/detection remains disconnected and human review cannot be disabled. A production translation adapter, language-quality evaluation datasets, member/conversation language overrides, UI language selection, RTL accessibility and original/translated content viewing are still incomplete.
 
 ### 2.6 AI Creator Studio
 
