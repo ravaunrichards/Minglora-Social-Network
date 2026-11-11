@@ -6,6 +6,7 @@ const ROOT = process.cwd();
 const OUTPUT_DIR = path.join(ROOT, "assets", "animations", "gifts");
 const MANIFEST_PATH = path.join(OUTPUT_DIR, "manifest.json");
 const REPORT_PATH = path.join(OUTPUT_DIR, "extraction-report.json");
+const MOTION_INDEX_PATH = path.join(OUTPUT_DIR, "catalog-motion-index.json");
 const fail = message => { throw new Error("[gift-animation-validation] " + message); };
 const sha256 = value => crypto.createHash("sha256").update(value).digest("hex");
 
@@ -81,6 +82,29 @@ async function main() {
   if (report.unique_gifts !== manifest.gifts.length) fail("Extraction report and manifest totals differ.");
   if (report.screenshots_with_errors?.length) fail("Extraction report contains screenshot-processing errors.");
   if (report.zero_detection_screenshots?.length) fail("Extraction report contains screenshots with zero detections.");
+
+  // The runtime index is a strict join to the original active catalogue.
+  // It must never substitute extracted screenshot crops for production artwork.
+  const motionIndex = JSON.parse(await fs.readFile(MOTION_INDEX_PATH, "utf8"));
+  if (!Array.isArray(motionIndex.gifts)) fail("Canonical catalogue motion index has no gifts array.");
+  if (report.catalog_motion_profiles !== motionIndex.gifts.length) fail("Motion index and extraction report totals differ.");
+  const catalogCodes = new Set();
+  for (const gift of motionIndex.gifts) {
+    const code = String(gift?.code || "");
+    if (!code || catalogCodes.has(code)) fail("Missing or duplicate canonical catalogue code in motion index: " + code);
+    catalogCodes.add(code);
+    if (gift.active !== true) fail(code + " is not an active canonical gift.");
+    if (!String(gift.name || "").trim()) fail(code + " has no canonical gift name.");
+    if (!Number.isFinite(Number(gift.coin_price)) || Number(gift.coin_price) < 0) fail(code + " has an invalid canonical Coin price.");
+    if (typeof gift.image_url !== "string" || !gift.image_url.startsWith("/assets/")) fail(code + " lost its original catalogue image URL.");
+    if (typeof gift.model_url !== "string" || !gift.model_url.startsWith("/assets/")) fail(code + " lost its original 3D model URL.");
+    if (typeof gift.original_animation_preset !== "string" || !gift.original_animation_preset) fail(code + " lost its original animation preset.");
+    if (typeof gift.sound_preset !== "string" || !gift.sound_preset) fail(code + " lost its original sound preset.");
+    if (typeof gift.motion_preset !== "string" || !gift.motion_preset) fail(code + " has no generated per-gift motion profile.");
+    if (!String(gift.source_image || "").startsWith("assets/Gifts/")) fail(code + " has no source Gifts capture reference.");
+    if (!Array.isArray(gift.source_capture_references) || !gift.source_capture_references.length) fail(code + " lost repeated source capture references.");
+    if (gift.artwork_reference && !String(gift.artwork_reference.path || "").startsWith("assets/Artwork/")) fail(code + " has an unsafe Artwork manifest reference.");
+  }
 
   process.stdout.write(
     "[gift-animation-validation] Verified " + manifest.gifts.length +
