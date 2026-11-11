@@ -1,53 +1,42 @@
 # Minglora Gift Artwork — Contact-Sheet Visual Screening
 
-**Screening status:** COMPLETE at contact-sheet thumbnail level; NOT COMPLETE at full-resolution/source-cell review level.
+**Screening status:** COMPLETE at thumbnail level; full-resolution item review is still IN PROGRESS.
 
 ## Coverage
 
-- Contact sheets generated: **24/24**
-- Manifest records displayed: **1,509/1,509**
-- Grid: 8 columns × 8 rows, 64 candidates per full page; the final page contains the remaining 37 records.
-- Every page was opened and visually scanned for grossly empty/missing artwork, incorrect image placement, obvious crop problems, and same-name variants.
-- This was a contact-sheet screening pass. It is not individual full-resolution acceptance and does not clear any licence or reuse right.
+- Contact sheets generated and opened: **24/24**.
+- Candidate thumbnails displayed and screened: **1,509/1,509**.
+- Layout: 8 × 8 candidates per full page; 24 pages total, final page contains 37 records.
+- Every sheet was checked visually for grossly empty/missing artwork, obvious clipping, image/label mismatch, repeated-looking variants and layout errors.
+- The page index maps every card to its stable slug and source screenshot file/row/column.
+- A contact-sheet pass is only a triage screen; it does not replace full-resolution/source-cell review or rights clearance.
 
-## Findings
+## Full-size follow-up completed
 
-- The gallery is complete and the page index maps every visible candidate to its stable slug and original screenshot cell.
-- No missing page was found. The final page has unused cells because only 37 candidates remain.
-- Some artwork appears very small within its transparent canvas; crop-boundary warnings and low-occupancy items still require full-resolution comparison with their source cells.
-- Several OCR labels are truncated or appear unreliable. The existing machine review queue remains authoritative for the list of records needing name/source correction.
-- More near-identical same-title pairs were visible than the initial six hash-based candidates alone. These are review leads, not confirmed duplicates.
+Eighteen same-title candidate pairs (36 extracted PNG files) have since been compared at full size. Results are recorded in `gift-artwork-visual-review-notes.md`.
 
-## Additional possible repeated-artwork leads
+- Distinct variant pairs: **7**.
+- Repeated-artwork candidate pairs: **11**.
+- All 36 files remain preserved. No file has been deleted, overwritten or merged.
+- First six pairs also had their source screenshots visually checked.
+- For the other twelve pairs, full-size PNGs were compared and source coordinates documented; direct screenshot-cell confirmation remains pending.
+- Contact-sheet leads for additional candidates still require full-size review and are not confirmed duplicates.
 
-The following same-title variants looked very similar at contact-sheet scale and should receive full-size/source-cell comparison:
+## Remaining issues
 
-- Air Dancer
-- Crescent Lantern
-- DJ Peak
-- Dancing Hands
-- Dream Team
-- Drums
-- Flame Heart
-- Night Star
-- Orange Juice
-- Otter Kiss
-- Ready
-- Sour Buddy
-- Thumbs
+- The automated review queue still contains **1,114** flagged records (warnings overlap): 1,058 foreground-near-crop-boundary, 77 truncated-title, 100 same-title/different-artwork-variant, 7 low OCR confidence.
+- Catalog name comparison recorded 997 exact matches, 74 fuzzy suggestions, 432 without an exact name match, and 6 low-confidence/truncated records without a suggestion.
+- Some transparent crops show small subjects or edge proximity at thumbnail scale; each flagged record still requires full-size comparison with its source cell.
+- OCR truncation and naming errors must be corrected against source screenshots and the relevant Minglora catalogue entry.
+- Additional repeated-looking pairs visible on sheets remain unconfirmed until full-size review.
 
-This list is intentionally conservative and is not an instruction to delete or merge. Colour, pose, animation frame, crop and other meaningful differences must be checked against the full extracted images and source screenshots before a duplicate decision is recorded.
+## Next steps
 
-## Previously compared six pairs
+1. Complete full-size/source-cell review of the remaining flagged images and all same-title variants.
+2. Correct OCR titles and map each reference image to its intended Minglora gift identity.
+3. Reconcile the 11 repeated-artwork candidates against every recorded screenshot appearance and the catalogue; preserve the source trail before choosing any canonical artwork.
+4. Keep genuinely different versions as distinct variants.
+5. Document rights/provenance for every production-bound image or create new Minglora-original replacements.
+6. Keep all screenshot-derived files review-only until human review and rights gates pass.
 
-See `gift-artwork-visual-review-notes.md` for the six individually compared pairs. That review found three distinct variant pairs and three repeated-artwork candidates. All files remain preserved.
-
-## Remaining work
-
-1. Review each record individually at full resolution, prioritizing the 1,114 OCR/crop/variant warnings.
-2. Compare truncated and low-confidence names to the original screenshot cell and catalog records.
-3. Reconcile repeated variants and duplicate appearances while preserving the full source reference trail.
-4. Complete rights/provenance review or replace unlicensed/unclear crops with newly authored Minglora artwork.
-5. Keep the collection out of production until those gates are satisfied.
-
-**Production status:** BLOCKED. Contact-sheet screening does not establish ownership, licence permission, commercial-use rights, or originality.
+**Production status:** BLOCKED. Screenshot extraction does not establish ownership, licence permission, commercial-use rights, or originality.
