@@ -52,11 +52,12 @@ test('feed, comments and LIVE gifter surfaces retain their existing badge behavi
 
 test('profile badge artwork keeps responsive sizing and original proportions', () => {
   assert.ok(css.includes('object-fit:contain;object-position:center'));
-  assert.ok(css.includes('.gp-profile-level-badge--profile{width:40px;height:40px}'));
-  assert.ok(css.includes('.gp-profile-level-badge--compact{width:24px;height:24px}'));
-  assert.ok(css.includes('.gp-profile-level-badge--gallery{display:block;width:120px;height:132px'));
-  assert.ok(css.includes('.gp-profile-level-badge--profile{width:34px;height:34px}'));
-  assert.ok(css.includes('.profile-award-art--gifter .gp-profile-level-badge--gallery{width:96px;height:112px}'));
+  assert.ok(css.includes('.gp-profile-level-badge--profile{width:48px;height:auto}'));
+  assert.ok(css.includes('.gp-profile-level-badge--inline{width:44px;height:auto}'));
+  assert.ok(css.includes('.gp-profile-level-badge--compact{width:40px;height:auto}'));
+  assert.ok(css.includes('.gp-profile-level-badge--gallery{width:170px;height:auto'));
+  assert.ok(css.includes('.profile-award-art--gifter .gp-profile-level-badge--gallery{width:170px;height:auto'));
+  assert.ok(css.includes('aspect-ratio:170 / 76'));
 });
 
 test('app asset and service-worker cache are versioned together', () => {
