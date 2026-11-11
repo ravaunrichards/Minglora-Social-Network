@@ -159,7 +159,7 @@ test('Full Screen has its own expand icon with no guest panels; Fluid Panel keep
 });
 
 test('Full Screen keeps the compact centered host stage and visible guest seats', () => {
-  assert.match(app, /value:'full-screen',label:'Full Screen',icon:'fullscreen'/);
+  assert.match(app, /value:'full-screen',label:'Full-Screen Host',icon:'fullscreen'/);
   assert.match(app, /classList\.toggle\('live-full-screen-layout',activeLiveScreenLayout==='full-screen'\)/);
   assert.doesNotMatch(app, /classList\.toggle\('live-full-screen-active',hostOnly\)/);
   assert.match(styles, /\.live-video-stage\.live-full-screen-layout:not\(\.live-audio-stage\)\{/);
