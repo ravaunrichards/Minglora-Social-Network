@@ -17,7 +17,7 @@ test("Minglora Gifter surfaces spell out Level and Levels", () => {
   ];
 
   for (const file of paths) {
-    assert.doesNotMatch(read(file), /\\bLV\\b/, file + " must not abbreviate Level as LV");
+    assert.doesNotMatch(read(file), /\bLV\b/, file + " must not abbreviate Level as LV");
   }
 
   assert.match(read("backend/modules/gifter-progression/service.js"), /Gifter · Level /);
