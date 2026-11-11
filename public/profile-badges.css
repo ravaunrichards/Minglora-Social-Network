@@ -70,3 +70,8 @@
 @media(max-width:560px){
   .profile-award-art--gifter .gp-profile-level-badge--gallery{width:96px;height:112px}
 }
+
+
+/* High-quality resampling for the original individual Gifter PNGs.
+   Existing dimensions, layout, visibility, opacity and effects remain unchanged. */
+.gp-profile-level-badge{image-rendering:auto;image-rendering:smooth}
