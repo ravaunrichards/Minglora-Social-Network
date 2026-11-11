@@ -58,3 +58,9 @@ test('Compact tools remain usable as a bottom sheet on touch devices and respect
   assert.match(compact, /@media\(hover:none\) and \(pointer:coarse\)/);
   assert.match(compact, /@media\(prefers-reduced-motion:reduce\)/);
 });
+
+test('Audio-only LIVE keeps its original speaker grid instead of becoming a flattened video block', () => {
+  assert.match(compact, /#live-video-stage\.live-audio-stage\{[\s\S]*?display:grid!important/);
+  assert.match(compact, /grid-template-rows:minmax\(36px,auto\) minmax\(0,1fr\) minmax\(32px,auto\)/);
+  assert.match(compact, /#live-video-stage\.live-audio-stage #live-speaker-list/);
+});
