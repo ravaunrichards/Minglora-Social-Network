@@ -1,6 +1,13 @@
 import { createHash } from 'node:crypto';
 import { isRelationshipBlocked } from '../relationships/friends.js';
 
+function safeProviderAssignmentRecords(records){
+  return records.map(item=>{
+    const {credentialSecretReference,...safeItem}=item||{};
+    return {...safeItem,credentialConfigured:typeof credentialSecretReference==='string'&&credentialSecretReference.trim().length>0};
+  });
+}
+
 function assertAiPersistenceResult(result,resource){
   if(result&&typeof result==='object'&&(result.skipped===true||result.ok===false)){
     throw Object.assign(new Error(resource+' were not persisted to Minglora Supabase PostgreSQL.'),{status:503});
@@ -207,7 +214,7 @@ export async function handlePersonalAiBotsAdminApi(context) {
         tasksNextOffset:Array.isArray(durableTasks)?durableTasks.length:0,
         tasksHasMore:Array.isArray(durableTasks)&&durableTasks.length===100,
         taskQueueStats:durableTaskStats&&typeof durableTaskStats==='object'?durableTaskStats:null,
-        providerAssignments:Array.isArray(providerAssignments)?providerAssignments:[],
+        providerAssignments:Array.isArray(providerAssignments)?safeProviderAssignmentRecords(providerAssignments):[],
         providerAssignmentsSource:Array.isArray(providerAssignments)?'minglora_supabase_postgresql':'unavailable',
         emailIdentities:Array.isArray(emailIdentities)?emailIdentities:[],
         emailIdentitiesSource:Array.isArray(emailIdentities)?'minglora_supabase_postgresql':'unavailable',
@@ -663,12 +670,8 @@ export async function handlePersonalAiBotsAdminApi(context) {
       }
       const result=await listAiProviderAssignments({limit,offset});
       if(!Array.isArray(result))return (json(res,503,{error:'AI provider assignment storage is unavailable.'}),true);
-      // Never return a server-side secret reference to the browser. Expose only
-      // whether a reference exists; the worker resolves it inside trusted runtime.
-      const assignments=result.map(item=>{
-        const {credentialSecretReference,...safeItem}=item||{};
-        return {...safeItem,credentialConfigured:typeof credentialSecretReference==='string'&&credentialSecretReference.trim().length>0};
-      });
+      // Never return a server-side secret reference to the browser.
+      const assignments=safeProviderAssignmentRecords(result);
       return (json(res,200,{ok:true,assignments,nextOffset:offset+assignments.length,hasMore:assignments.length===limit}),true);
     }
     if(method==='GET'&&path===root+'/emails'){
@@ -730,7 +733,7 @@ export async function handlePersonalAiBotsAdminApi(context) {
       }
       await persistCanonicalIdentities([bot],persistAiIdentities);
       const saved=await persistAiProviderAssignment(assignment);
-      return (json(res,201,{ok:true,assignment:saved, message:'Provider/model assignment saved as unverified. A real provider credential and server-side health check are still required before dispatch.'}),true);
+      return (json(res,201,{ok:true,assignment:safeProviderAssignmentRecords([saved])[0], message:'Provider/model assignment saved as unverified. A real provider credential and server-side health check are still required before dispatch.'}),true);
     }
     if(method==='PUT'&&path===root+'/network'){
       const network=setNetwork(input||{});
