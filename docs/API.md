@@ -176,6 +176,19 @@ Moderator access is restricted to MODERATOR_USER_IDS or a trusted account with a
 
 Creator analytics aggregate real playback records into distinct viewers, viewer-video pairs, recorded watch time, average watch duration and completion rate. They do not expose viewer IDs, count impressions, or estimate reach. Hidden and archived posts, owner self-views, future events and records outside the selected reporting period are excluded. The endpoint defaults to 30 days and accepts only 7, 30 or 90 days.
 
+## Video channels
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/api/video-channels` | Discover public creator channels that have real videos visible to the signed-in member; optional `q` searches channel name, description or creator |
+| GET | `/api/video-channels/subscriptions` | List the signed-in member's free video-channel subscriptions |
+| GET | `/api/video-channels/:ownerId` | Read an accessible creator channel and its latest video posts |
+| PATCH | `/api/video-channels/me` | Create or update the signed-in member's channel name, description and visibility |
+| POST | `/api/video-channels/:ownerId/subscribe` | Subscribe to a public or unlisted video channel |
+| DELETE | `/api/video-channels/:ownerId/subscribe` | Unsubscribe from a video channel |
+
+Channel subscriptions are separate from profile follows and paid creator subscriptions. Every channel requires an existing Minglora member; default channel names derive from the member's real account profile until customized. Public channels are discoverable only when they contain at least one video the viewer may access. Unlisted channels are reachable by direct link but omitted from discovery; private channels are owner-only. Channel pages recheck profile, block and per-post audience permissions before returning videos. Subscriptions and channel metadata persist in the signed-in account state for use across devices. A member may subscribe to up to 5,000 channels.
+
 ## Video playlists
 
 | Method | Endpoint | Purpose |
