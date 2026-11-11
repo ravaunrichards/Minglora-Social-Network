@@ -20,7 +20,7 @@ test('each earned Gifter Level maps to its original numbered PNG', () => {
   assert.ok(renderer.includes('String(level).padStart(2, "0")'));
   assert.ok(renderer.includes('/assets/gifter-badges/level_'));
   assert.ok(renderer.includes("alt=\"' + label + '\""));
-  assert.ok(renderer.includes("width=\"' + size + '\" height=\"' + size"));
+  assert.ok(renderer.includes("width=\"' + size[0] + '\" height=\"' + size[1]"));
   assert.ok(server.includes('Level_Badges_01-50_Individual'));
   assert.ok(server.includes("'Content-Type':'image/png'"));
 });
@@ -61,8 +61,8 @@ test('profile badge artwork keeps responsive sizing and original proportions', (
 });
 
 test('app asset and service-worker cache are versioned together', () => {
-  const appAsset = '/app.js?v=20261111-live-gifter-name-badge-1';
+  const appAsset = '/app.js?v=20261111-tiktok-readable-badge-size-2';
   assert.ok(html.includes(appAsset));
   assert.ok(worker.includes(appAsset));
-  assert.ok(worker.includes('minglora-shell-v278-self-updating-1'));
+  assert.ok(worker.includes('minglora-shell-v285-self-updating-1'));
 });
