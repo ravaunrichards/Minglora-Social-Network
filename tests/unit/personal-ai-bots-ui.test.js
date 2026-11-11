@@ -415,3 +415,22 @@ test('activity schedule UI offers a read-only timezone-aware dry-run preview',as
     'Dispatch:</strong> disabled.'
   ]) assert.ok(ui.includes(phrase),phrase);
 });
+
+
+test('Personality Laboratory exposes versioned drafts and a human approval lifecycle without enabling the bot',async()=>{
+  const ui=await read('public/personal-ai-bots.js');
+  for(const phrase of [
+    'Personality Laboratory',
+    'Create persona draft',
+    'Load version history',
+    'Run structural checks',
+    'Approve version',
+    'Activate approved version',
+    'Rollback to this version',
+    'Provider/model behavioural test: not connected',
+    'This is not a model or safety benchmark.',
+    'The bot remains in its existing activation state.'
+  ]) assert.ok(ui.includes(phrase),phrase);
+  assert.match(ui,/data-action="evaluate"/);
+  assert.match(ui,/data-action="approve"/);
+});
