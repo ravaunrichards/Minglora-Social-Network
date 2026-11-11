@@ -50,5 +50,5 @@ test('the updated app asset and service-worker cache are versioned together', ()
   const cacheName=serviceWorker.match(/CACHE_NAME='([^']+)'/)?.[1]||'';
   assert.equal(appAsset,'app.js?v=20261111-profile-verification-only-1');
   assert.ok(serviceWorker.includes('/'+appAsset));
-  assert.equal(cacheName,'minglora-shell-v275-self-updating-1');
+  assert.equal(cacheName,'minglora-shell-v276-self-updating-1');
 });
