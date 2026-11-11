@@ -50,7 +50,7 @@ Statuses: NOT STARTED · READY · IN PROGRESS · VERIFYING · COMPLETED · BLOCK
 - **Acceptance:** All 131 screenshots processed; every manifest file exists; image dimensions and hashes pass; no exact duplicate image hashes; report generated; source files remain unchanged.
 - **Status:** COMPLETED for extraction and automated integrity checks only. This does not mean the complete collection has passed human review or rights clearance.
 - **Verified result:** 131/131 captures, 2,065 labelled cells, 1,509 extracted PNG records, 556 repeated appearances merged; 1,509/1,509 assets inspected; 0 integrity errors, 0 exact duplicate file-hash groups, 0 automated image-quality flags.
-- **Latest successful artwork workflow:** https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/43088609831
+- **Latest successful artwork workflow:** https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/43090823543
 
 ### MS-GIFTS-ART-02 — Human visual review, OCR correction and variant reconciliation
 - **Objective:** Review every extracted artwork and label before any gift catalog integration.
@@ -58,7 +58,7 @@ Statuses: NOT STARTED · READY · IN PROGRESS · VERIFYING · COMPLETED · BLOCK
 - **Dependencies:** MS-GIFTS-ART-01.
 - **Tasks:** Build 24 review contact sheets; screen all thumbnails; review flagged groups at full size; reconcile same-title/different-artwork candidates; correct truncated/low-confidence labels against the source captures; document every approved, rejected, duplicate or unresolved asset.
 - **Acceptance:** Every record has a human review state and reason; no unresolved crop/name/duplicate issue is silently accepted; approved artwork maps to one deliberate catalog identity; all variants and repeated screenshot appearances remain traceable.
-- **Status:** IN PROGRESS. Contact-sheet screening covers 24/24 pages and 1,509/1,509 thumbnails. Eighteen same-title pairs (36 PNGs) were compared at full size: seven pairs are distinct artwork variants and eleven pairs appear to be repeated artwork. All files remain preserved. The first six pairs also had their source screenshots checked; direct source-cell confirmation is still pending for the other twelve pairs. The remaining 1,473 manifest records have not yet received individual full-size comparison.
+- **Status:** IN PROGRESS. Contact-sheet screening covers 24/24 pages and 1,509/1,509 thumbnails. Forty-three same-title pair comparisons have been completed at full size: twenty-six pairs are distinct artwork variants and seventeen pairs appear to be repeated artwork. The Compact base asset was compared with two variants. All source and extracted files remain preserved. Direct source screenshot cells were checked for the first six and latest twenty-five comparisons (31/43); source-cell confirmation remains pending for the twelve middle comparisons (#7–#18). The remaining 1,424 manifest records have not yet received individual full-size comparison.
 - **Review notes:** `reports/gift-artwork-visual-review-notes.md`; contact-sheet screening: `reports/gift-artwork-contact-sheet-screening.md`; machine audit: `reports/gift-artwork-audit.md`.
 
 ### MS-GIFTS-ART-03 — Rights, provenance and originality clearance
