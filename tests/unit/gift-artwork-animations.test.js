@@ -62,6 +62,21 @@ test("catalogue mapping preserves each existing gift name, Coin price and identi
   const mappedCodes = Object.keys(mapping);
   assert.equal(mappedCodes.length, output.mapped_catalogue_record_count);
   assert.ok(mappedCodes.length > 800, "the exact-title catalogue matches are mapped");
+  assert.equal(output.catalogue_records.length, catalogue.gifts.length,
+    "every catalogue record, including unmatched artwork titles, remains represented");
+
+  for (let index = 0; index < catalogue.gifts.length; index++) {
+    const gift = catalogue.gifts[index];
+    const catalogueRow = output.catalogue_records[index];
+    assert.equal(catalogueRow.code, gift.code);
+    assert.equal(catalogueRow.name, gift.name);
+    assert.equal(catalogueRow.coin_price, gift.coin_price);
+    assert.equal(catalogueRow.active, gift.active);
+    assert.equal(catalogueRow.sort_order, gift.sort_order);
+    assert.equal(catalogueRow.category, gift.category);
+    assert.equal(catalogueRow.animation_key, gift.animation_key);
+    assert.equal(catalogueRow.sound_preset, gift.sound_preset);
+  }
 
   for (const gift of catalogue.gifts) {
     const record = mapping[gift.code];
