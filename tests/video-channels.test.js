@@ -134,6 +134,9 @@ test('creator channels support real videos, privacy, subscriptions and cross-dev
   await startServer();
 
   const directory=await request(viewer.cookie,'/api/video-channels');
+  const publicDirect=await request(viewer.cookie,'/api/video-channels/'+encodeURIComponent(publicOwner.user.id));
+  const debugProfile=await request(viewer.cookie,'/api/users/'+encodeURIComponent(publicOwner.user.id));
+  console.log('VIDEO_CHANNEL_DIAGNOSTIC',JSON.stringify({directory:directory.body,directStatus:publicDirect.status,direct:publicDirect.body,profileStatus:debugProfile.status,profile:debugProfile.body?.user?{id:debugProfile.body.user.id,privacy:debugProfile.body.user.settings?.privacy}:null,postIds:JSON.parse(fs.readFileSync(path.join(dataDir,'db.json'),'utf8')).posts.map(post=>({id:post.id,userId:post.userId,audience:post.audience,mediaIds:post.mediaIds}))}));
   assert.equal(directory.status,200);
   assert.deepEqual(directory.body.channels.map(channel=>channel.ownerId),[publicOwner.user.id]);
   assert.equal(directory.body.channels[0].title,'Public Creator Channel');
