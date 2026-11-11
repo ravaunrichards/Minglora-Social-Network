@@ -836,3 +836,16 @@ test('team handoff records use existing runtime-state persistence and owner-only
   assert.match(serviceSource,/network_emergency_shutdown/);
   assert.match(serviceSource,/pausedTeams,cancelled,cancelledHandoffs,network:settings/);
 });
+
+
+test('multilingual settings are isolated in the existing owner runtime-state collection and owner API',()=>{
+  assert.match(storeSource,/'personalAiBotLanguageSettings'/);
+  assert.match(adminApiSource,/getPersonalAiBotLanguageSettings/);
+  assert.match(adminApiSource,/updatePersonalAiBotLanguageSettings/);
+  assert.match(adminApiSource,/botLanguageMatch&&method==='GET'/);
+  assert.match(adminApiSource,/botLanguageMatch&&method==='PUT'/);
+  assert.match(serviceSource,/providerCompatibility:'not_checked'/);
+  assert.match(serviceSource,/providerAdapterConnected:false/);
+  assert.match(serviceSource,/humanReviewRequired:true/);
+  assert.match(serviceSource,/input\\.humanReviewRequired!==true/);
+});
