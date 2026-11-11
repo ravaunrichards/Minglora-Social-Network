@@ -8,7 +8,6 @@
     '.gp-admin-awarded-marker',
     '.gp-live-entry-badge',
     '.creator-league-profile-badge',
-    '.profile-admin-identity'
   ].join(',');
 
   const normalizeProfileBadges = () => {
