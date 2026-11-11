@@ -131,6 +131,9 @@ test('creator channels support real videos, privacy, subscriptions and cross-dev
   const duplicate=await request(viewer.cookie,'/api/video-channels/'+encodeURIComponent(publicOwner.user.id)+'/subscribe',{method:'POST'});
   assert.equal(duplicate.status,200);
   assert.equal(duplicate.body.alreadySubscribed,true);
+  const stateAfterSubscribe=JSON.parse(fs.readFileSync(statePath,'utf8'));
+  assert.deepEqual(stateAfterSubscribe.follows,[]);
+  assert.deepEqual(stateAfterSubscribe.creatorSubscriptions,[]);
 
   await stopServer();
   await startServer();
