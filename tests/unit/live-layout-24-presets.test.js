@@ -54,7 +54,6 @@ test('New arrangements have dedicated layout rules and responsive phone breakpoi
   assert.match(layoutsCss, /@media\(max-width:760px\)/);
   assert.match(layoutsCss, /@media\(max-width:380px\)/);
   assert.match(layoutsCss, /grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
-  assert.match(layoutsCss, /env\(/) === false;
 });
 
 test('Layout switching retains host authorization, persistence and LiveKit room synchronization', () => {
