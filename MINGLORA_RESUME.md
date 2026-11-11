@@ -442,3 +442,16 @@ Continue with independent non-database work that can be built and verified in th
 - No provider, model inference, media upload, external composer handoff, publishing, messaging, worker, scheduler, production migration, deployment or member-data change was performed. PR #202 remains open/draft; do not merge, deploy or apply production migrations from this checkpoint.
 - The previous weighted project progress baseline remains 45.52%; this increment is not re-weighted and no new overall completion percentage is claimed.
 - Next safe Creator Studio step: add a read-only version comparison/details view and a review-history display, then separately design a consented handoff into the existing Minglora composer. Do not add a parallel publishing pipeline or automatic posting.
+
+
+## Creator Studio history checkpoint — read-only versions and audit (2026-11-11)
+
+- Added a collapsed, read-only “Version and review history” section to each Creator Studio draft card.
+- The history view renders the prior content versions retained by the draft service, including version number, title, save time, content format, destination, source type, rights-attestation state, caption and body. Content is escaped before display.
+- Review history is read from the existing owner Admin Centre audit events and filtered to the exact Creator Studio draft ID and event type. It displays event, timestamp and audit summary without exposing actor identifiers.
+- The UI discloses the actual retention bounds: at most the latest 10 content revisions per draft, and review events only from the current bounded Admin Centre audit window. It does not imply complete/immutable external archival history.
+- No new API, schema, runtime collection, dependency, model, worker, media, composer or publishing path was added. This is read-only presentation of existing records.
+- Added a UI regression test for version list, review audit filtering and retention notices. The test is authored but was not executed; no green CI claim is made.
+- Commits: history UI `de8bad12ff5ffd0aa238798971dfcc3632899bbe`; UI regression `93d5a26c1cf409b0d8d9f8870c6b80ac667cae44`.
+- PR #202 remains open/draft, production systems unchanged, and test execution remains unverified.
+
