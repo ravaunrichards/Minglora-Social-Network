@@ -1320,6 +1320,11 @@ test('multilingual evaluation sets store synthetic cases and owner-attested revi
   assert.throws(()=>reviewPersonalAiBotLanguageEvaluationSet(db,bot.id,created.id,{
     decision:'approve',reviewerRole:'native_speaker',evidenceReference:'',reviewerAttestation:false
   },actor,stamp,uid),/Reviewer attestation and a non-empty evidence reference are required/);
+  assert.throws(()=>reviewPersonalAiBotLanguageEvaluationSet(db,bot.id,created.id,{
+    decision:'approve',reviewerRole:'native_speaker',
+    evidenceReference:'review-record-jam-2026-01',reviewerAttestation:true,
+    reviewRubric:{semanticAccuracy:5,dialectFidelity:3,contextPreservation:4,codeSwitching:3,safetyMeaning:4}
+  },actor,stamp,uid),/whole numbers from 0 to 4/);
   const reviewed=reviewPersonalAiBotLanguageEvaluationSet(db,bot.id,created.id,{
     decision:'approve',
     reviewerRole:'native_speaker',
@@ -1334,6 +1339,7 @@ test('multilingual evaluation sets store synthetic cases and owner-attested revi
   assert.equal(reviewed.providerExecutionStatus,'not_run');
   assert.equal(reviewed.languageQualityStatus,'unverified');
   assert.equal(reviewed.reviewEvidenceReference,'review-record-jam-2026-01');
+  assert.equal(reviewed.reviewRubric.safetyMeaning,4);
   assert.deepEqual(reviewed.reviewRubric,{semanticAccuracy:4,dialectFidelity:3,contextPreservation:4,codeSwitching:3,safetyMeaning:4});
   assert.equal(db.personalAiBotTasks.length,0);
   assert.equal(bot.languages[0],'English');
