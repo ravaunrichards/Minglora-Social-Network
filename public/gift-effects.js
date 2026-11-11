@@ -103,7 +103,7 @@
   }
   async function play(gift,options={}){
     const entry=await resolveGiftSound(gift);
-    if(!entry)return false;
+    if(!entry||(!entry.playbackApproved&&options.review!==true))return false;
     const volume=Math.max(0,Math.min(1,Number(options.volume??entry.volume)||.68));
     const durationLimit=Math.max(.35,Math.min(6,Number(options.durationSeconds)||4.5));
     const identity=String(gift.code||gift.giftCode||gift.name||entry.slug||"gift");
@@ -204,7 +204,7 @@
   function show(gift,options={}){return mount(document.body,gift,options);}
   function preview(gift){
     if(!gift)return false;
-    void play(gift);
+    void play(gift,{review:true});
     const target=document.getElementById("minglora-gift-selected-model")||document.getElementById("minglora-gift-selected-image")||document.getElementById("live-gift-preview-model")||document.getElementById("live-gift-preview-image");
     if(target){
       const identity=String(gift.animation_key||gift.code||gift.name||"minglora-gift");
