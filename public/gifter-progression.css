@@ -411,16 +411,16 @@
 
 /* Individual original badge artwork: equal display boxes, no cropping or distortion. */
 .gp-level-index-item{grid-template-columns:76px minmax(0,1fr);align-items:center;gap:12px;min-height:100px}
-.gp-level-index-art{display:grid;place-items:center;width:76px;height:80px;max-width:100%;aspect-ratio:1/1;justify-self:center;align-self:center;overflow:visible;filter:drop-shadow(0 3px 5px rgba(15,23,42,.18))}
+.gp-level-index-art{display:block;width:76px;height:76px;max-width:100%;aspect-ratio:1/1;object-fit:contain;object-position:center;justify-self:center;align-self:center;filter:drop-shadow(0 3px 5px rgba(15,23,42,.18))}
 .gp-level-index-copy{display:grid;gap:5px;min-width:0;align-content:center}
 .gp-level-index-level{font-size:.74rem;line-height:1.2}
 .gp-level-index-badge{font-size:.82rem;line-height:1.25}
 .gp-level-index-coins{line-height:1.3;white-space:normal;overflow-wrap:anywhere}
 .gp-level-index-state{margin-top:1px}
 @media(max-width:980px){.gp-level-index-grid[data-layout="horizontal"]{grid-template-columns:repeat(3,minmax(0,1fr))}}
-@media(max-width:760px){.gp-level-directory-heading{align-items:flex-start;flex-direction:column}.gp-level-index-grid[data-layout="horizontal"]{grid-template-columns:repeat(2,minmax(0,1fr))}.gp-level-index-item{grid-template-columns:64px minmax(0,1fr);gap:10px;padding:10px}.gp-level-index-art{width:64px;height:68px}}
+@media(max-width:760px){.gp-level-directory-heading{align-items:flex-start;flex-direction:column}.gp-level-index-grid[data-layout="horizontal"]{grid-template-columns:repeat(2,minmax(0,1fr))}.gp-level-index-item{grid-template-columns:64px minmax(0,1fr);gap:10px;padding:10px}.gp-level-index-art{width:64px;height:64px}}
 @media(max-width:480px){.gp-level-index-grid[data-layout="horizontal"]{grid-template-columns:minmax(0,1fr)}}
-@media(max-width:360px){.gp-level-index-item{grid-template-columns:58px minmax(0,1fr);gap:9px;padding:9px}.gp-level-index-art{width:58px;height:62px}}
+@media(max-width:360px){.gp-level-index-item{grid-template-columns:58px minmax(0,1fr);gap:9px;padding:9px}.gp-level-index-art{width:58px;height:58px}}
 
 
 /* Clear identity rows for the public Gifter progression leaderboard. */
@@ -428,10 +428,10 @@
 .gp-leader-username{display:block;color:var(--muted,#667085);font-size:.7rem;line-height:1.3;overflow-wrap:anywhere}
 .gp-leader-display-name{display:flex;align-items:center;flex-wrap:wrap;gap:4px;min-width:0;font-size:.86rem;line-height:1.3;overflow-wrap:anywhere}
 .gp-leader-badge{display:inline-flex;align-items:center;gap:4px;min-width:0;max-width:100%;vertical-align:middle}
-.gp-leader-badge .gp-badge{display:inline-flex;flex:0 0 24px;width:24px;height:25px;min-width:24px;vertical-align:middle}
+.gp-leader-badge img{display:block;flex:0 0 23px;width:23px;height:23px;object-fit:contain;filter:drop-shadow(0 2px 3px rgba(12,24,48,.22));animation:gp-leader-badge-glow 7s ease-in-out infinite}
 .gp-leader-badge>span{min-width:0;color:#805817;font-size:.65rem;font-weight:850;line-height:1.25;overflow-wrap:anywhere}
 @keyframes gp-leader-badge-glow{0%,100%{filter:drop-shadow(0 1px 2px rgba(12,24,48,.18))}50%{filter:drop-shadow(0 2px 5px rgba(201,153,59,.48))}}
-@media(max-width:650px){.gp-leader-badge .gp-badge{flex-basis:22px;width:22px;height:23px;min-width:22px}.gp-leader-badge>span{font-size:.61rem}}
+@media(max-width:650px){.gp-leader-badge img{flex-basis:21px;width:21px;height:21px}.gp-leader-badge>span{font-size:.61rem}}
 @media(prefers-reduced-motion:reduce){.gp-leader-badge img{animation:none}}
 
 
@@ -441,8 +441,7 @@
 /* Show the member's earned TikTok-style level badge beside Gifter Status. */
 .gp-current-badge-row{align-items:center;gap:14px}
 .gp-current-badge-art{display:grid;place-items:center;flex:0 0 112px;width:112px;height:120px;min-width:0;overflow:visible}
-.gp-current-badge-art .gp-badge{width:104px;height:116px;min-width:104px}
-.gp-current-badge-art .gp-crest-stage{inset:0 0 12px}
+.gp-current-badge-art .gp-current-badge-image{display:block;width:104px;height:112px;max-width:100%;object-fit:contain;filter:drop-shadow(0 4px 9px rgba(15,23,42,.2))}
 .gp-current-status-copy{min-width:0;width:auto;flex:1 1 auto}
 @media(max-width:650px){
   .gp-current-badge-row{gap:9px}
