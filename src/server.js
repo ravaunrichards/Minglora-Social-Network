@@ -30,7 +30,7 @@ import { rankForYouFeed } from './domain/feed-ranking.js';
 import { rankForYouVideos } from './domain/video-ranking.js';
 import { canViewStory as canViewStoryPolicy, removeExpiredStories } from '../backend/modules/stories/service.js';
 import { canPublishGroupPost, canDeleteGroupPost, canLeaveGroup } from '../backend/modules/groups/service.js';
-import { getMutualFollowIds, normalizeFriendPreferences, validateFriendPreferencePatch } from '../backend/modules/relationships/friends.js';
+import { getActiveFollowEdges, getMutualFollowIds, isSocialAccountEligible, normalizeFriendPreferences, validateFriendPreferencePatch } from '../backend/modules/relationships/friends.js';
 import { validatePageInput, validatePageUpdate, canManagePage as canManagePagePolicy, canManagePageTeam as canManagePageTeamPolicy, canViewPageInsights as canViewPageInsightsPolicy, canAssignPageRole as canAssignPageRolePolicy, canChangePageRole as canChangePageRolePolicy, canRemovePageRole as canRemovePageRolePolicy, canDeletePagePost, canDeletePage } from '../backend/modules/pages/service.js';
 import { recordProfileView, touchProfilePresence, getProfileViewStats } from '../backend/modules/profiles/service.js';
 import { isFemaleMenstrualHealthAccount } from '../backend/modules/menstrual-health/service.js';
@@ -270,7 +270,7 @@ const LIVE_ROOM_THEMES=['studio','ocean','tropical','royal','neon','sunset','gar
 const LIVE_SCREEN_LAYOUTS=['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight','roundtable-1','roundtable-2'];
 const DEFAULT_SETTINGS={privacy:{profileVisibility:'public',allowFriendRequests:true,messageAudience:'everyone',meetWaveAudience:'everyone',friendsListAudience:'public',followersListAudience:'public',followingListAudience:'public',subscribersListAudience:'public',commentAudience:'everyone'},notifications:{inApp:true,friendRequests:true,messages:true,interactions:true,push:true,profileViews:false,calls:true,live:true,gifts:true,meetWave:true,leagues:true,account:true},preferences:{theme:'system',colorTheme:'minglora',liveRoomTheme:'studio',feedSort:'recent',reducedMotion:false,liteMode:false,keyboardShortcuts:false,displayCurrency:'USD',messengerIncomingCallSounds:true,messengerMessageSounds:true,messengerAutoOpenNewMessages:false,messengerActiveStatus:true,profileLayout:'advanced',messengerArchivedConversationIds:[],messengerRestrictedUserIds:[]},experience:DEFAULT_EXPERIENCE_SETTINGS};
 function getUserSettings(user){const saved=user?.settings||{};const preferences={...DEFAULT_SETTINGS.preferences,...(saved.preferences||{})};if(!APP_COLOR_THEMES.includes(preferences.colorTheme))preferences.colorTheme=DEFAULT_SETTINGS.preferences.colorTheme;if(!['standard','advanced','creator'].includes(preferences.profileLayout))preferences.profileLayout=DEFAULT_SETTINGS.preferences.profileLayout;if(!LIVE_ROOM_THEMES.includes(preferences.liveRoomTheme))preferences.liveRoomTheme=DEFAULT_SETTINGS.preferences.liveRoomTheme;for(const key of ['messengerArchivedConversationIds','messengerRestrictedUserIds'])if(!Array.isArray(preferences[key]))preferences[key]=[];const experience=validateExperienceSettingsPatch(DEFAULT_EXPERIENCE_SETTINGS,saved.experience||{}).settings;return {privacy:{...DEFAULT_SETTINGS.privacy,...(saved.privacy||{})},notifications:{...DEFAULT_SETTINGS.notifications,...(saved.notifications||{})},preferences,experience};}
-function isFriend(firstId,secondId){return (db.follows||[]).some(item=>item.followerId===firstId&&item.followedId===secondId)&&(db.follows||[]).some(item=>item.followerId===secondId&&item.followedId===firstId);}
+function isFriend(firstId,secondId){const follows=activeFollows();return follows.some(item=>item.followerId===firstId&&item.followedId===secondId)&&follows.some(item=>item.followerId===secondId&&item.followedId===firstId);}
 function friendPreferenceFor(viewerId,targetId){return (db.friendPreferences||[]).find(item=>item.ownerId===viewerId&&item.targetId===targetId)||null;}
 function isFriendRestricted(viewerId,ownerId){
   if(!viewerId||!ownerId||viewerId===ownerId||!isFriend(viewerId,ownerId))return false;
@@ -312,7 +312,7 @@ function canViewProfileAudience(viewerId,ownerId,audience='public'){
   if(blockedBetween(viewerId,ownerId))return false;
   if(audience==='public')return true;
   if(audience==='friends')return isFriend(viewerId,ownerId)&&!isFriendRestricted(viewerId,ownerId);
-  if(audience==='followers')return (db.follows||[]).some(edge=>edge.followerId===viewerId&&edge.followedId===ownerId);
+  if(audience==='followers')return activeFollows().some(edge=>edge.followerId===viewerId&&edge.followedId===ownerId);
   if(audience==='close_friends'){
     if(!isFriend(viewerId,ownerId)||isFriendRestricted(viewerId,ownerId))return false;
     return Boolean((db.friendPreferences||[]).some(item=>item.ownerId===ownerId&&item.targetId===viewerId&&item.isCloseFriend===true));
@@ -549,7 +549,13 @@ function isAccountBanned(account){
 }
 function isAccountBlocked(account){
   if(!account)return false;
-  return isAccountBanned(account)||['suspended','deactivated'].includes(account.status);
+  return isAccountBanned(account)||['suspended','deactivated','deleted'].includes(String(account.status||'').toLowerCase());
+}
+function activeFollows(){
+  return getActiveFollowEdges(db.follows||[],db.users||[]);
+}
+function activeProfilePresence(){
+  return (db.profileViewPresence||[]).filter(entry=>isSocialAccountEligible((db.users||[]).find(member=>member.id===entry.viewerUserId)));
 }
 function sessionUser(req){
   const session=sessionFromRequest(req);
@@ -929,11 +935,11 @@ const canViewStory = (viewerId, story) => {
   if(!story?.userId)return false;
   if(viewerId!==story.userId&&friendStoriesMuted(viewerId,story.userId))return false;
   if(story.audience==='close_friends')return canViewProfileAudience(viewerId,story.userId,'close_friends');
-  const mutualFriendships=getMutualFollowIds(db.follows||[],story.userId,db.blocks||[])
+  const mutualFriendships=getMutualFollowIds(activeFollows(),story.userId,db.blocks||[])
     .map(friendId=>({from:friendId,to:story.userId,status:'accepted'}));
   return canViewStoryPolicy({
     viewerId,story,friendships:[...(db.friendships||[]),...mutualFriendships],
-    follows:db.follows||[],blocks:db.blocks||[]
+    follows:activeFollows(),blocks:db.blocks||[]
   });
 };
 async function pruneExpiredStories() {
@@ -2046,7 +2052,7 @@ async function route(req, res) {
           posts:ownedPosts,
           comments:db.posts.flatMap(post=>(post.comments||[]).filter(comment=>comment.userId===user.id).map(comment=>({postId:post.id,...comment}))),
           friendships:(db.friendships||[]).filter(item=>item.from===user.id||item.to===user.id),
-          follows:(db.follows||[]).filter(item=>item.followerId===user.id||item.followedId===user.id),
+          follows:activeFollows().filter(item=>item.followerId===user.id||item.followedId===user.id),
           blocks:(db.blocks||[]).filter(item=>item.blockerId===user.id||item.blockedId===user.id),
           savedPosts:(db.savedPosts||[]).filter(item=>item.userId===user.id),
           savedPostCollections:(db.savedPostCollections||[]).filter(item=>item.userId===user.id),
@@ -2353,6 +2359,7 @@ async function route(req, res) {
           db.sessions=(db.sessions||[]).filter(item=>item.userId!==targetId);
           db.pendingAuth=(db.pendingAuth||[]).filter(item=>item.userId!==targetId);
         }
+        messengerRealtime?.refreshPresence(targetId);
         await saveStore();
         return json(res,200,{
           ok:true,operation,status:result.status||operation,
@@ -2785,7 +2792,7 @@ async function route(req, res) {
             }
           }
           if(action==='remove_story'&&report.targetType==='story'){const story=(db.stories||[]).find(item=>item.id===report.targetId);if(story){db.stories=db.stories.filter(item=>item.id!==story.id);db.storyViews=(db.storyViews||[]).filter(item=>item.storyId!==story.id);if(story.mediaId){const asset=(db.mediaAssets||[]).find(item=>item.id===story.mediaId);if(asset){asset.status='deleted';asset.deletedAt=now();}}}}
-          if(action==='suspend_account'&&report.targetType==='user'){const target=db.users.find(item=>item.id===report.targetId);if(target){target.status='suspended';target.suspendedAt=now();target.suspendedBy=user.id;db.sessions=db.sessions.filter(session=>session.userId!==target.id);}}
+          if(action==='suspend_account'&&report.targetType==='user'){const target=db.users.find(item=>item.id===report.targetId);if(target){target.status='suspended';target.suspendedAt=now();target.suspendedBy=user.id;db.sessions=db.sessions.filter(session=>session.userId!==target.id);messengerRealtime?.refreshPresence(target.id);}}
           (db.moderationActions||[]).unshift({id:uid(),moderatorId:user.id,reportId:report.id,action,targetType:report.targetType,targetId:report.targetId,createdAt:now()});
           (db.auditLog||[]).unshift({id:uid(),actorId:user.id,event:'moderation.action',targetType:report.targetType,targetId:report.targetId,createdAt:now()});
         }
@@ -2880,7 +2887,7 @@ async function route(req, res) {
             }
             sessions.push({
               ...session,
-              host: { ...safeUser(db.users.find(member => member.id === session.hostId), user.id), following: (db.follows || []).some(edge => edge.followerId === user.id && edge.followedId === session.hostId) },
+              host: { ...safeUser(db.users.find(member => member.id === session.hostId), user.id), following: activeFollows().some(edge => edge.followerId === user.id && edge.followedId === session.hostId) },
               viewerCount: participants.filter(participant => participant.identity !== session.hostId).length,
               viewerCountVerified: true,
               likeCount: Math.max(0, Number(session.likeCount) || 0),
@@ -2945,7 +2952,7 @@ async function route(req, res) {
         db.liveSessions = db.liveSessions || [];
         db.liveSessions.unshift(session);
         if(visibility==='public'){
-          const followerIds=[...new Set((db.follows||[]).filter(edge=>edge.followedId===user.id).map(edge=>edge.followerId))];
+          const followerIds=[...new Set(activeFollows().filter(edge=>edge.followedId===user.id).map(edge=>edge.followerId))];
           for(const followerId of followerIds)if(!blockedBetween(followerId,user.id))notify(followerId,user.id,'live',user.name+' is LIVE: '+title,{liveSessionId:id});
         }
         await saveStore();
@@ -4167,7 +4174,7 @@ async function route(req, res) {
         ensureLiveFanClubCollections(db);
         if (method === 'GET' && !action) {
           const membership = getLiveFanClubMembership(db, session.hostId, user.id);
-          const following = (db.follows || []).some(edge => edge.followerId === user.id && edge.followedId === session.hostId);
+          const following = activeFollows().some(edge => edge.followerId === user.id && edge.followedId === session.hostId);
           const status = publicLiveFanClubMembership(db, session.hostId, user.id);
           await saveStore();
           return json(res, 200, {
@@ -4217,7 +4224,7 @@ async function route(req, res) {
             fanClubMemberCount: countActiveLiveFanClubMembers(db, session.hostId)
           });
         }
-        const following = (db.follows || []).some(edge => edge.followerId === user.id && edge.followedId === session.hostId);
+        const following = activeFollows().some(edge => edge.followerId === user.id && edge.followedId === session.hostId);
         if (!following) {
           return json(res, 409, { error: 'Follow the LIVE host before joining their Fan Club.', code: 'follow_required' });
         }
@@ -4777,13 +4784,13 @@ async function route(req, res) {
       if (method==='GET' && p==='/api/feed') {
         const scope=String(url.searchParams.get('scope')||'all');
         if(!['all','following','friends','subscribers','for-you'].includes(scope))return json(res,400,{error:'Feed scope must be all, following, friends, subscribers, or for-you.'});
-        const followedIds=new Set((db.follows||[]).filter(edge=>edge.followerId===user.id).map(edge=>edge.followedId));
+        const followedIds=new Set(activeFollows().filter(edge=>edge.followerId===user.id).map(edge=>edge.followedId));
         const followedOnly=url.searchParams.get('followedOnly')==='1'&&scope==='following';
         let eligibleIds=null;
         if(scope==='following'){
           eligibleIds=followedOnly?followedIds:new Set([user.id,...followedIds]);
         } else if(scope==='friends'){
-          eligibleIds=new Set([user.id,...getMutualFollowIds(db.follows||[],user.id,db.blocks||[])]);
+          eligibleIds=new Set([user.id,...getMutualFollowIds(activeFollows(),user.id,db.blocks||[])]);
         } else if(scope==='subscribers'){
           let subscriberIds=[];
           try{
@@ -4831,7 +4838,7 @@ async function route(req, res) {
         const rawCursor=url.searchParams.get('cursor');
         const offset=rawCursor===null?0:Number(rawCursor);
         if(!Number.isInteger(rawLimit)||rawLimit<1||rawLimit>30||!Number.isInteger(offset)||offset<0)return json(res,400,{error:'Invalid For You video pagination.'});
-        const followedIds=new Set((db.follows||[]).filter(edge=>edge.followerId===user.id).map(edge=>edge.followedId));
+        const followedIds=new Set(activeFollows().filter(edge=>edge.followerId===user.id).map(edge=>edge.followedId));
         const visiblePosts=(db.posts||[]).filter(post=>
           post.status!=='hidden'&&!post.archivedAt&&
           !blockedBetween(user.id,post.userId)&&
@@ -4966,7 +4973,7 @@ async function route(req, res) {
         if(background&&!['sky','sunset','rose','violet','mint'].includes(background))return json(res,400,{error:'Unsupported text background.'});
         const requestedTagIds=input.taggedUserIds===undefined?[]:(Array.isArray(input.taggedUserIds)?[...new Set(input.taggedUserIds.map(value=>String(value||'').trim()).filter(Boolean))]:null);
         if(!requestedTagIds||requestedTagIds.length>10)return json(res,400,{error:'Tag up to 10 friends in one post.'});
-        const allowedFriendIds=new Set(getMutualFollowIds(db.follows||[],user.id,db.blocks||[]));
+        const allowedFriendIds=new Set(getMutualFollowIds(activeFollows(),user.id,db.blocks||[]));
         if(requestedTagIds.some(id=>id===user.id||!allowedFriendIds.has(id)))return json(res,400,{error:'You can tag only your Minglora friends.'});
         let soundtrack=null;try{soundtrack=resolveSoundtrackForUser(user.id,input.soundtrack);}catch(error){return json(res,error.status||400,{error:error.message});}
         const assets=ids.map(id=>(db.mediaAssets||[]).find(asset=>asset.id===id&&asset.ownerId===user.id&&asset.slot==='post'&&asset.status==='uploaded'));
@@ -5149,7 +5156,7 @@ async function route(req, res) {
       }
       if(method==='GET'&&p==='/api/discovery/people'){
         await pruneExpiredStories();
-        const follows=db.follows||[];
+        const follows=activeFollows();
         const dismissedMemberIds=new Set((db.dismissedPeopleSuggestions||[]).filter(item=>item.userId===user.id).map(item=>item.dismissedUserId));
         const activityAt=new Map();
         for(const post of db.posts||[]){
@@ -5222,7 +5229,7 @@ async function route(req, res) {
       }
       if(method==='GET'&&p==='/api/users'){
         const dismissedMemberIds=new Set((db.dismissedPeopleSuggestions||[]).filter(item=>item.userId===user.id).map(item=>item.dismissedUserId));
-        return json(res,200,{users:db.users.filter(u=>u.id!==user.id&&!dismissedMemberIds.has(u.id)&&!blockedBetween(user.id,u.id)&&canViewProfile(user.id,u)).map(u=>({...safeUser(u,user.id),friendship:isFriend(user.id,u.id)?'accepted':null,following:(db.follows||[]).some(f=>f.followerId===user.id&&f.followedId===u.id)}))});
+        return json(res,200,{users:db.users.filter(u=>u.id!==user.id&&!dismissedMemberIds.has(u.id)&&!blockedBetween(user.id,u.id)&&canViewProfile(user.id,u)).map(u=>({...safeUser(u,user.id),friendship:isFriend(user.id,u.id)?'accepted':null,following:activeFollows().some(f=>f.followerId===user.id&&f.followedId===u.id)}))});
       }
 
       m=p.match(/^\/api\/users\/([^/]+)\/(followers|following|subscribers)$/);
@@ -5249,7 +5256,7 @@ async function route(req, res) {
         }
         const sourceField=relationshipType==='followers'?'followedId':'followerId';
         const resultField=relationshipType==='followers'?'followerId':'followedId';
-        const ordered=(db.follows||[])
+        const ordered=activeFollows()
           .filter(edge=>edge[sourceField]===target.id)
           .sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));
         const seen=new Set(),users=[];
@@ -5267,6 +5274,7 @@ async function route(req, res) {
       if((method==='POST'||method==='DELETE')&&m){
         const target=db.users.find(u=>u.id===m[1]);
         if(!target||target.id===user.id)return json(res,400,{error:'Choose another valid account.'});
+        if(isAccountBlocked(target))return json(res,403,{error:'This account is restricted and cannot participate in social relationships.'});
         if(blockedBetween(user.id,target.id))return json(res,403,{error:'This relationship is unavailable.'});
         db.follows ||= [];db.friendships ||= [];
         const exists=db.follows.some(f=>f.followerId===user.id&&f.followedId===target.id);
@@ -5276,7 +5284,7 @@ async function route(req, res) {
           await requestSupabaseState('relationship_unfollow',{followerId:user.id,followedId:target.id});
           db.follows=db.follows.filter(f=>!(f.followerId===user.id&&f.followedId===target.id));
         }
-        const mutual=(db.follows||[]).some(f=>f.followerId===user.id&&f.followedId===target.id)&&(db.follows||[]).some(f=>f.followerId===target.id&&f.followedId===user.id);
+        const mutual=activeFollows().some(f=>f.followerId===user.id&&f.followedId===target.id)&&activeFollows().some(f=>f.followerId===target.id&&f.followedId===user.id);
         let friendship=(db.friendships||[]).find(f=>(f.from===user.id&&f.to===target.id)||(f.from===target.id&&f.to===user.id))||null;
         if(mutual&&!friendship){friendship={id:uid(),from:user.id,to:target.id,status:'accepted',source:'mutual_follow',createdAt:now(),updatedAt:now()};db.friendships.push(friendship);notify(target.id,user.id,'friend',`You and ${user.name} are now friends because you follow each other.`);notify(user.id,target.id,'friend',`You and ${target.name} are now friends because you follow each other.`);}
         else if(mutual&&friendship&&friendship.status!=='accepted'){friendship.status='accepted';friendship.source='mutual_follow';friendship.updatedAt=now();}
@@ -5325,7 +5333,7 @@ async function route(req, res) {
         if(!target||blockedBetween(user.id,target.id)||!canViewProfile(user.id,target))return json(res,404,{error:'User not found.'});
         const listAudience=getUserSettings(target).privacy.friendsListAudience||'public';
         if(!canViewProfileAudience(user.id,target.id,listAudience))return json(res,404,{error:'This friends list is not available.'});
-        const rows=m[2]==='friends'?(db.follows||[]).filter(f=>f.followedId===target.id&&(db.follows||[]).some(reverse=>reverse.followerId===target.id&&reverse.followedId===f.followerId)):(m[2]==='followers'?(db.follows||[]).filter(f=>f.followedId===target.id):(db.follows||[]).filter(f=>f.followerId===target.id));
+        const rows=m[2]==='friends'?activeFollows().filter(f=>f.followedId===target.id&&activeFollows().some(reverse=>reverse.followerId===target.id&&reverse.followedId===f.followerId)):(m[2]==='followers'?activeFollows().filter(f=>f.followedId===target.id):activeFollows().filter(f=>f.followerId===target.id));
         const ids=rows.map(edge=>m[2]==='following'?edge.followedId:edge.followerId);
         const users=[...new Set(ids)].map(id=>db.users.find(u=>u.id===id)).filter(u=>u&&!blockedBetween(user.id,u.id)&&canViewProfile(user.id,u)).map(safeUser);
         return json(res,200,{users,count:users.length});
@@ -5340,7 +5348,7 @@ async function route(req, res) {
           await saveStore();
         }
         const profileInsights=target.id===user.id
-          ?getProfileViewStats({views:db.profileViews||[],presence:db.profileViewPresence||[],targetUserId:target.id})
+          ?getProfileViewStats({views:db.profileViews||[],presence:activeProfilePresence(),targetUserId:target.id})
           :undefined;
         return json(res,200,{ok:true,...(profileInsights?{profileInsights}:{})});
       }
@@ -5704,7 +5712,7 @@ async function route(req, res) {
         const profilePhotos=profileMedia.filter(media=>media.mediaType==='image');
         const profileVideos=profileMedia.filter(media=>media.mediaType==='video'&&media.videoFormat!=='reel');
         const profileReels=profileMedia.filter(media=>media.mediaType==='video'&&media.videoFormat==='reel');
-        const profileFriends=[...new Set((db.follows||[]).filter(edge=>edge.followedId===target.id&&(db.follows||[]).some(reverse=>reverse.followerId===target.id&&reverse.followedId===edge.followerId)).map(edge=>edge.followerId))]
+        const profileFriends=[...new Set(activeFollows().filter(edge=>edge.followedId===target.id&&activeFollows().some(reverse=>reverse.followerId===target.id&&reverse.followedId===edge.followerId)).map(edge=>edge.followerId))]
           .map(id=>db.users.find(member=>member.id===id)).filter(member=>member&&!blockedBetween(user.id,member.id)&&canViewProfile(user.id,member)).map(member=>safeUser(member,user.id));
         // Subscription totals are loaded through the separate, supported creator-subscription
         // endpoint. They are optional profile metadata and must never block the core profile.
@@ -5724,10 +5732,10 @@ async function route(req, res) {
           friends:profileFriends,
           groups:(db.groups||[]).filter(group=>group.ownerId===target.id||(group.members||[]).includes(target.id)).map(group=>({id:group.id,name:group.name,description:group.description||'',memberCount:(group.members||[]).length,isMember:(group.members||[]).includes(target.id)})),
           friendship:isFriend(user.id,target.id)?'accepted':null,
-          following:(db.follows||[]).some(f=>f.followerId===user.id&&f.followedId===target.id),
-          followersCount:(db.follows||[]).filter(f=>f.followedId===target.id&&!blockedBetween(user.id,f.followerId)).length,
-          followingCount:(db.follows||[]).filter(f=>f.followerId===target.id&&!blockedBetween(user.id,f.followedId)).length,
-          friendsCount:[...new Set((db.follows||[]).filter(f=>f.followedId===target.id&&(db.follows||[]).some(reverse=>reverse.followerId===target.id&&reverse.followedId===f.followerId)).map(f=>f.followerId).filter(id=>!blockedBetween(user.id,id)))].length,
+          following:activeFollows().some(f=>f.followerId===user.id&&f.followedId===target.id),
+          followersCount:activeFollows().filter(f=>f.followedId===target.id&&!blockedBetween(user.id,f.followerId)).length,
+          followingCount:activeFollows().filter(f=>f.followerId===target.id&&!blockedBetween(user.id,f.followedId)).length,
+          friendsCount:[...new Set(activeFollows().filter(f=>f.followedId===target.id&&activeFollows().some(reverse=>reverse.followerId===target.id&&reverse.followedId===f.followerId)).map(f=>f.followerId).filter(id=>!blockedBetween(user.id,id)))].length,
           subscribersCount,
           likesCount:profilePosts.reduce((total,post)=>total+Object.values(post.reactions||{}).filter(reaction=>reaction==='like').length,0),
           ...(profileInsights?{profileInsights}:{})
@@ -5763,7 +5771,7 @@ async function route(req, res) {
       m=p.match(/^\/api\/friends\/([^/]+)\/(request|accept|decline)$/);
       if(method==='POST'&&m)return json(res,409,{error:'Minglora friendships are automatic. Follow each other to become friends.'});
       if(method==='GET'&&p==='/api/friends/manage'){
-        const follows=db.follows||[],blocks=db.blocks||[];
+        const follows=activeFollows(),blocks=db.blocks||[];
         const friendIds=getMutualFollowIds(follows,user.id,blocks),friendIdSet=new Set(friendIds);
         const friends=friendIds.map(targetId=>{
           const member=db.users.find(item=>item.id===targetId);
@@ -5783,7 +5791,7 @@ async function route(req, res) {
       }
       if(method==='GET'&&p==='/api/friends/lists'){
         db.friendLists||=[];
-        const currentFriendIds=new Set(getMutualFollowIds(db.follows||[],user.id,db.blocks||[]));
+        const currentFriendIds=new Set(getMutualFollowIds(activeFollows(),user.id,db.blocks||[]));
         let changed=false;
         const lists=db.friendLists.filter(item=>item.ownerId===user.id).map(item=>{
           const memberIds=[...new Set((item.memberIds||[]).filter(id=>currentFriendIds.has(id)))];
@@ -5841,7 +5849,7 @@ async function route(req, res) {
         const targetId=m[2];
         if(method==='PUT'){
           const member=db.users.find(item=>item.id===targetId);
-          const mutual=getMutualFollowIds(db.follows||[],user.id,db.blocks||[]).includes(targetId);
+          const mutual=getMutualFollowIds(activeFollows(),user.id,db.blocks||[]).includes(targetId);
           if(!member||!mutual||blockedBetween(user.id,targetId))return json(res,409,{error:'Only current mutual-follow friends can be added to a list.'});
           list.memberIds=[...new Set([...(list.memberIds||[]),targetId])];
         }else{
@@ -5853,7 +5861,7 @@ async function route(req, res) {
       m=p.match(/^\/api\/friends\/([^/]+)\/preferences$/);
       if(method==='PATCH'&&m){
         const targetId=m[1];
-        if(!getMutualFollowIds(db.follows||[],user.id,db.blocks||[]).includes(targetId))return json(res,404,{error:'A current mutual-follow friend is required to change friend preferences.'});
+        if(!getMutualFollowIds(activeFollows(),user.id,db.blocks||[]).includes(targetId))return json(res,404,{error:'A current mutual-follow friend is required to change friend preferences.'});
         const validation=validateFriendPreferencePatch(input);
         if(!validation.valid)return json(res,400,{error:validation.error});
         db.friendPreferences||=[];
@@ -5912,7 +5920,7 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
         await saveStore();return json(res,200,{removed:true,wasAccepted});
       }
       if(method==='GET'&&p==='/api/friends'){
-        const list=getMutualFollowIds(db.follows||[],user.id,db.blocks||[])
+        const list=getMutualFollowIds(activeFollows(),user.id,db.blocks||[])
           .map(targetId=>db.users.find(member=>member.id===targetId))
           .filter(member=>member&&!blockedBetween(user.id,member.id)&&canViewProfile(user.id,member))
           .map(member=>safeUser(member,user.id));
@@ -7384,7 +7392,7 @@ const messengerRealtime=createMessengerRealtimeHub({
   isBlocked:blockedBetween,
   isPresenceEnabled:userId=>{
     const member=db.users.find(item=>item.id===userId);
-    return member?getUserSettings(member).preferences.messengerActiveStatus!==false:false;
+    return member?!isAccountBlocked(member)&&getUserSettings(member).preferences.messengerActiveStatus!==false:false;
   }
 });
 server.on('upgrade',(req,socket,head)=>{
