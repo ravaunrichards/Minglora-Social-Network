@@ -111,13 +111,17 @@
       "<button type='button' class='gp-level-layout-button' data-gp-level-layout='vertical' aria-pressed='false'>Vertical</button></div></div>" +
       "<div class='gp-level-index-grid' id='gp-level-index-grid' data-layout='horizontal'>" +
       ordered.map(item => {
+        const levelNumber = Number(item.level);
+        const badgeNumber = String(levelNumber).padStart(2, "0");
         const stateLabel = item.current ? "Current" : item.adminAwarded ? "Admin awarded" : item.unlocked ? "Unlocked" : "Locked";
         const stateClass = item.current ? "is-current" : item.adminAwarded ? "is-admin-awarded" : item.unlocked ? "is-unlocked" : "is-locked";
         return "<article class='gp-level-index-item " + stateClass + "'>" +
-          "<span class='gp-level-index-level'>LV " + number(item.level) + "</span>" +
+          "<img class='gp-level-index-art' src='/assets/gifter-badges/level_" + badgeNumber + ".png' alt='Level " + number(levelNumber) + " gifter badge' loading='lazy' decoding='async' width='80' height='80'>" +
+          "<div class='gp-level-index-copy'>" +
+          "<span class='gp-level-index-level'>Level " + number(levelNumber) + "</span>" +
           "<strong class='gp-level-index-badge'>" + esc(item.tier || "Gifter") + " Gifter</strong>" +
           "<small class='gp-level-index-coins'>" + number(item.coinsRequired ?? item.xpRequired) + " Coins required</small>" +
-          "<span class='gp-level-index-state'>" + stateLabel + "</span></article>";
+          "<span class='gp-level-index-state'>" + stateLabel + "</span></div></article>";
       }).join("") + "</div></section>";
   }
 
