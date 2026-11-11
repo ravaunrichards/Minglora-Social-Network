@@ -15,7 +15,7 @@ test('Minglora Menu beside Messenger has a clean single-row header', () => {
   assert.ok(html.includes('id="minglora-menu-toggle"'));
   assert.ok(html.includes('id="minglora-menu-panel"'));
   assert.ok(html.includes('minglora-menu.css?v=20261110-facebook-profile-dropdown-1'));
-  assert.ok(html.includes('minglora-menu.js?v=20261110-facebook-profile-dropdown-1'));
+  assert.ok(html.includes('minglora-menu.js?v=20261111-ai-network-command-center-1'));
   for (const label of ['Social','Entertainment','Shopping','Personal','Professional','More from Meta','Create']) {
     assert.ok(script.includes(label), 'Menu contains ' + label);
   }
@@ -51,7 +51,7 @@ test('Search Menu is in the left Menu column above all shortcut sections', () =>
   assert.ok(script.includes('aria-controls="minglora-menu-results"'));
   assert.ok(css.includes('.minglora-menu-search-field'));
   assert.ok(css.includes('.minglora-menu-search input'));
-  assert.ok(html.includes('minglora-menu.js?v=20261110-facebook-profile-dropdown-1'));
+  assert.ok(html.includes('minglora-menu.js?v=20261111-ai-network-command-center-1'));
   assert.ok(html.includes('minglora-menu.css?v=20261110-facebook-profile-dropdown-1'));
   assert.ok(!html.includes('id="search-form"'));
   assert.ok(!html.includes('id="search-input"'));
@@ -124,7 +124,7 @@ test('Palette and profile/account menus use the same scroll-safe outside dismiss
   const appAsset = html.split('\"').find(value => value.startsWith('/app.js?v='));
   assert.ok(appAsset, 'HTML references a versioned core application bundle');
   assert.ok(worker.includes(appAsset), 'the service worker precaches the same core application bundle');
-  assert.ok(html.includes('minglora-menu.js?v=20261110-facebook-profile-dropdown-1'));
+  assert.ok(html.includes('minglora-menu.js?v=20261111-ai-network-command-center-1'));
   assert.ok(worker.includes("const CACHE_NAME='minglora-shell-v"), 'service worker cache is versioned');
   assert.ok(worker.includes('/menu-dismissal.js?v=20261110-menu-dismissal-1'));
 });
