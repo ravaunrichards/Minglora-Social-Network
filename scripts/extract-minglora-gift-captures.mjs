@@ -11,6 +11,7 @@ const ROOT = process.cwd();
 const INPUT_DIR = path.join(ROOT, "assets", "Gifts");
 const OUTPUT_DIR = path.join(ROOT, "assets", "animations", "gifts");
 const CATALOG_FILE = path.join(ROOT, "data", "minglora-gift-catalog.json");
+const ARTWORK_MANIFEST_FILE = path.join(ROOT, "assets", "Artwork", "manifest.json");
 const CATEGORIES = new Set([
   "flowers","hearts","animals","vehicles","music","sports","food_drink",
   "fashion_beauty","luxury","celebrations","fantasy","nature","travel",
