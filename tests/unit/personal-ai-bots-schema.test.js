@@ -67,6 +67,10 @@ const storeSource = await readFile(
   new URL('../../src/store.js', import.meta.url),
   'utf8'
 );
+const serviceSource = await readFile(
+  new URL('../../backend/modules/personal-ai-bots/personal-ai-bots-service.js', import.meta.url),
+  'utf8'
+);
 const discoveryUi = await readFile(
   new URL('../../public/ai-discover.js', import.meta.url),
   'utf8'
@@ -825,4 +829,6 @@ test('team handoff records use existing runtime-state persistence and owner-only
   assert.match(adminApiSource,/teamHandoffsMatch&&method==='GET'/);
   assert.match(adminApiSource,/teamHandoffsMatch&&method==='POST'/);
   assert.match(adminApiSource,/teamHandoffActionMatch&&method==='POST'/);
+  assert.match(serviceSource,/input\.privacyAttested!==true/);
+  assert.match(serviceSource,/privacyAttestedBy:actorId,privacyAttestedAt:timestamp/);
 });
