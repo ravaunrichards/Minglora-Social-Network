@@ -128,7 +128,11 @@
       "sourcePage": "https://github.com/code4fukui/sound-cc0/blob/main/bell1.wav",
       "audioUrl": "https://raw.githubusercontent.com/code4fukui/sound-cc0/main/bell1.wav",
       "intendedUse": "bell",
-      "sourceStatus": "public_file_link_not_downloaded_or_audio_previewed"
+      "sourceStatus": "repository_file_and_public_domain_dedication_verified; audio_not_downloaded_or_auditioned",
+      "bytes": 1800108,
+      "githubBlobSha": "3b7bf89fdf2a516aa27680f1c34c42af4a5025bb",
+      "sourceType": "recorded_effect",
+      "productionEligible": false
     },
     {
       "id": "cracker1",
@@ -139,7 +143,11 @@
       "sourcePage": "https://github.com/code4fukui/sound-cc0/blob/main/cracker1.wav",
       "audioUrl": "https://raw.githubusercontent.com/code4fukui/sound-cc0/main/cracker1.wav",
       "intendedUse": "celebration pop",
-      "sourceStatus": "public_file_link_not_downloaded_or_audio_previewed"
+      "sourceStatus": "repository_file_and_public_domain_dedication_verified; audio_not_downloaded_or_auditioned",
+      "bytes": 58370,
+      "githubBlobSha": "24171e187d1a3d96828f8a925c0e9feed1a1b69c",
+      "sourceType": "recorded_effect",
+      "productionEligible": false
     },
     {
       "id": "cracker1v-stereo",
@@ -150,7 +158,11 @@
       "sourcePage": "https://github.com/code4fukui/sound-cc0/blob/main/cracker1v-stereo.wav",
       "audioUrl": "https://raw.githubusercontent.com/code4fukui/sound-cc0/main/cracker1v-stereo.wav",
       "intendedUse": "celebration pop",
-      "sourceStatus": "public_file_link_not_downloaded_or_audio_previewed"
+      "sourceStatus": "repository_file_and_public_domain_dedication_verified; audio_not_downloaded_or_auditioned",
+      "bytes": 89560,
+      "githubBlobSha": "d57590ed2243eb62213bbe30f6ea05865b89b944",
+      "sourceType": "recorded_effect",
+      "productionEligible": false
     },
     {
       "id": "cracker1v",
@@ -161,7 +173,11 @@
       "sourcePage": "https://github.com/code4fukui/sound-cc0/blob/main/cracker1v.wav",
       "audioUrl": "https://raw.githubusercontent.com/code4fukui/sound-cc0/main/cracker1v.wav",
       "intendedUse": "celebration pop",
-      "sourceStatus": "public_file_link_not_downloaded_or_audio_previewed"
+      "sourceStatus": "repository_file_and_public_domain_dedication_verified; audio_not_downloaded_or_auditioned",
+      "bytes": 44802,
+      "githubBlobSha": "8c8d7acfd3aa8071d00d78c82b09a0ff1fcc4b38",
+      "sourceType": "recorded_effect",
+      "productionEligible": false
     },
     {
       "id": "cracker2",
@@ -172,7 +188,11 @@
       "sourcePage": "https://github.com/code4fukui/sound-cc0/blob/main/cracker2.wav",
       "audioUrl": "https://raw.githubusercontent.com/code4fukui/sound-cc0/main/cracker2.wav",
       "intendedUse": "celebration pop",
-      "sourceStatus": "public_file_link_not_downloaded_or_audio_previewed"
+      "sourceStatus": "repository_file_and_public_domain_dedication_verified; audio_not_downloaded_or_auditioned",
+      "bytes": 53448,
+      "githubBlobSha": "9c52548a2731ac821147f59da9477fe440a9ee7d",
+      "sourceType": "recorded_effect",
+      "productionEligible": false
     },
     {
       "id": "metal1",
@@ -183,7 +203,11 @@
       "sourcePage": "https://github.com/code4fukui/sound-cc0/blob/main/metal1.wav",
       "audioUrl": "https://raw.githubusercontent.com/code4fukui/sound-cc0/main/metal1.wav",
       "intendedUse": "metallic impact",
-      "sourceStatus": "public_file_link_not_downloaded_or_audio_previewed"
+      "sourceStatus": "repository_file_and_public_domain_dedication_verified; audio_not_downloaded_or_auditioned",
+      "bytes": 46180,
+      "githubBlobSha": "9eba344bc130b5171d8393d46ad3c6f7ed67b8f5",
+      "sourceType": "recorded_effect",
+      "productionEligible": false
     },
     {
       "id": "steel1",
@@ -194,7 +218,11 @@
       "sourcePage": "https://github.com/code4fukui/sound-cc0/blob/main/steel1.wav",
       "audioUrl": "https://raw.githubusercontent.com/code4fukui/sound-cc0/main/steel1.wav",
       "intendedUse": "musical metallic accent",
-      "sourceStatus": "public_file_link_not_downloaded_or_audio_previewed"
+      "sourceStatus": "repository_file_and_public_domain_dedication_verified; audio_not_downloaded_or_auditioned",
+      "bytes": 105638,
+      "githubBlobSha": "8bdcb068c7921b4a7ca9a35942c79d5363ff54a4",
+      "sourceType": "recorded_effect",
+      "productionEligible": false
     },
     {
       "id": "switch1",
@@ -205,7 +233,11 @@
       "sourcePage": "https://github.com/code4fukui/sound-cc0/blob/main/switch1.wav",
       "audioUrl": "https://raw.githubusercontent.com/code4fukui/sound-cc0/main/switch1.wav",
       "intendedUse": "mechanical click",
-      "sourceStatus": "public_file_link_not_downloaded_or_audio_previewed"
+      "sourceStatus": "repository_file_and_public_domain_dedication_verified; audio_not_downloaded_or_auditioned",
+      "bytes": 33964,
+      "githubBlobSha": "c9c311049111f6cf40ba287f81547df8efd79a09",
+      "sourceType": "recorded_effect",
+      "productionEligible": false
     },
     {
       "id": "wahaha",
@@ -216,7 +248,11 @@
       "sourcePage": "https://github.com/code4fukui/sound-cc0/blob/main/wahaha.wav",
       "audioUrl": "https://raw.githubusercontent.com/code4fukui/sound-cc0/main/wahaha.wav",
       "intendedUse": "human laughter",
-      "sourceStatus": "public_file_link_not_downloaded_or_audio_previewed"
+      "sourceStatus": "repository_file_and_public_domain_dedication_verified; audio_not_downloaded_or_auditioned",
+      "bytes": 82566,
+      "githubBlobSha": "1150ed2962a810c1e10d59b7d0a6c416afae2ff6",
+      "sourceType": "recorded_effect",
+      "productionEligible": false
     }
   ],
   "FreesoundCC0ReviewCandidates": [
@@ -422,7 +458,9 @@
       "sourcePage": "https://freesound.org/people/Rudmer_Rotteveel/sounds/336008/",
       "license": "CC0-1.0",
       "intendedUse": "firework and celebration gift class",
-      "sourceStatus": "licence_visible_on_source_page; direct_media_url_not_verified; review_before_bundling"
+      "sourceStatus": "licence_visible_on_source_page; direct_media_url_not_verified; review_before_bundling",
+      "licenseEvidence": "CC0 is displayed on the individual source page.",
+      "productionEligible": false
     },
     {
       "id": "firework-explosion-336009",
@@ -431,7 +469,9 @@
       "sourcePage": "https://freesound.org/people/Rudmer_Rotteveel/sounds/336009/",
       "license": "CC0-1.0",
       "intendedUse": "firework and celebration gift class",
-      "sourceStatus": "licence_visible_on_source_page; direct_media_url_not_verified; review_before_bundling"
+      "sourceStatus": "licence_visible_on_source_page; direct_media_url_not_verified; review_before_bundling",
+      "licenseEvidence": "CC0 is displayed on the individual source page.",
+      "productionEligible": false
     },
     {
       "id": "applause-777707",
@@ -440,7 +480,9 @@
       "sourcePage": "https://freesound.org/people/Sadiquecat/sounds/777707/",
       "license": "CC0-1.0",
       "intendedUse": "crowd, celebration and award gift class",
-      "sourceStatus": "licence_visible_on_source_page; direct_media_url_not_verified; review_before_bundling"
+      "sourceStatus": "licence_visible_on_source_page; direct_media_url_not_verified; review_before_bundling",
+      "licenseEvidence": "CC0 is displayed on the individual source page.",
+      "productionEligible": false
     },
     {
       "id": "ocean-waves-215574",
@@ -449,7 +491,9 @@
       "sourcePage": "https://freesound.org/people/ProductionNow/sounds/215574/",
       "license": "CC0-1.0",
       "intendedUse": "ocean, whale, yacht and sea gift class",
-      "sourceStatus": "licence_visible_on_source_page; direct_media_url_not_verified; review_before_bundling"
+      "sourceStatus": "licence_visible_on_source_page; direct_media_url_not_verified; review_before_bundling",
+      "licenseEvidence": "CC0 is displayed on the individual source page.",
+      "productionEligible": false
     },
     {
       "id": "rocket-launch-803852",
@@ -458,7 +502,9 @@
       "sourcePage": "https://freesound.org/people/Sanderboah/sounds/803852/",
       "license": "CC0-1.0",
       "intendedUse": "rocket and launch gift class",
-      "sourceStatus": "licence_visible_on_source_page; direct_media_url_not_verified; review_before_bundling"
+      "sourceStatus": "licence_visible_on_source_page; direct_media_url_not_verified; review_before_bundling",
+      "licenseEvidence": "CC0 is displayed on the individual source page.",
+      "productionEligible": false
     }
   ],
   "excludedCandidates": [
