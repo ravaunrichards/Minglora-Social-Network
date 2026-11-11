@@ -78,11 +78,13 @@
     outer.style.setProperty("--minglora-gift-rays-angle",(motionSeed%360)+"deg");
     const rotationSpeed=24+((motionSeed>>>15)%90);
     const card=document.createElement("div");card.className="minglora-gift-fx-card";
-    if(gift.model_url){
-      const model=document.createElement("model-viewer");model.className="minglora-gift-fx-model";model.src=gift.model_url;model.alt=gift.name+" original Minglora gift";
+    if(gift.animation_url){
+      const img=document.createElement("img");img.className="minglora-gift-fx-model";img.src=gift.animation_url;img.alt=gift.name+" animated gift";card.append(img);
+    }else if(gift.model_url){
+      const model=document.createElement("model-viewer");model.className="minglora-gift-fx-model";model.src=gift.model_url;model.alt=gift.name+" gift preview";
       model.setAttribute("auto-rotate","");model.setAttribute("rotation-per-second",rotationSpeed+"deg");model.setAttribute("interaction-prompt","none");model.setAttribute("shadow-intensity",".8");model.setAttribute("exposure","1.18");card.append(model);
-    }else if(gift.image_url){
-      const img=document.createElement("img");img.className="minglora-gift-fx-model";img.src=gift.image_url;img.alt=gift.name;card.append(img);
+    }else if(gift.artwork_url||gift.image_url){
+      const img=document.createElement("img");img.className="minglora-gift-fx-model";img.src=gift.artwork_url||gift.image_url;img.alt=gift.name;card.append(img);
     }else{
       const emoji=document.createElement("span");emoji.className="minglora-gift-fx-emoji";emoji.textContent=gift.emoji||"🎁";card.append(emoji);
     }
