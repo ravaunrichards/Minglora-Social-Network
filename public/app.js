@@ -3536,6 +3536,7 @@ activeLivePinnedComment=null;
         if(promotionalNote)promotionalNote.textContent="Promotional wallet: "+Number(promotionalWallet.promotionalCoins||0).toLocaleString()+" Coins · cash reserve available: USD "+(Number(promotionalWallet.availableMinor||0)/100).toFixed(2)+". Gifts are rejected when the reserve is insufficient.";
         const walletBalance=$("#live-wallet-balance");
         if(walletBalance&&role!=="host")walletBalance.textContent=wallet.wallet&&wallet.wallet.balance_coins!=null?Number(wallet.wallet.balance_coins).toLocaleString()+" Coins":"Balance unavailable";
+        await window.MingloraGiftFX?.loadCatalogMotionIndex?.();
         drawLiveGiftGrid();
       };
       refreshLiveGiftGrid=drawLiveGiftGrid;
