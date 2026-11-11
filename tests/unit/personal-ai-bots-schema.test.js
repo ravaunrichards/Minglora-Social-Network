@@ -860,4 +860,6 @@ test('multilingual evaluation sets persist in owner runtime state and never auto
   assert.match(adminApiSource,/languageEvaluationListMatch&&method==='POST'/);
   assert.match(serviceSource,/providerExecutionStatus:'not_run',languageQualityStatus:'unverified'/);
   assert.match(serviceSource,/reviewEvidenceReference/);
+  assert.match(serviceSource,/rubricKeys=\['semanticAccuracy','dialectFidelity','contextPreservation','codeSwitching','safetyMeaning'\]/);
+  assert.match(serviceSource,/Provide all five owner-attested rubric scores as whole numbers from 0 to 4/);
 });
