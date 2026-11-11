@@ -7327,6 +7327,18 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
     });
     return;
   }
+  const individualGifterBadgeMatch = /^\/assets\/gifter-badges\/level_(\d{2})\.png$/.exec(p);
+  if(individualGifterBadgeMatch){
+    const badgeLevel=Number(individualGifterBadgeMatch[1]);
+    if(badgeLevel<1||badgeLevel>50)return json(res,404,{error:'Gifter level badge not found.'});
+    const assetFile=path.join(__dirname,'..','assets','Gifters Badge Levels','Level_Badges_01-50_Individual',`level_${String(badgeLevel).padStart(2,'0')}.png`);
+    fs.readFile(assetFile,(error,data)=>{
+      if(error)return json(res,404,{error:'Gifter level badge not found.'});
+      res.writeHead(200,{'Content-Type':'image/png','Cache-Control':'public, max-age=86400',...SECURITY_HEADERS});
+      res.end(data);
+    });
+    return;
+  }
   if(p==='/assets/gifters-level-up.png'){
     const assetFile=path.join(__dirname,'..','assets','Gifters Level Up.png');
     fs.readFile(assetFile,(error,data)=>{if(error)return json(res,404,{error:'Gifter progression artwork not found.'});res.writeHead(200,{'Content-Type':'image/png','Cache-Control':'public, max-age=3600',...SECURITY_HEADERS});res.end(data);});
