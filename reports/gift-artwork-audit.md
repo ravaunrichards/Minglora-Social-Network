@@ -13,7 +13,7 @@
 
 ## Quality flags
 
-- wrong-dimensions: 1509
+- No automated image-integrity flags detected.
 
 ## Existing OCR/crop review flags
 

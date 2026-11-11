@@ -10,9 +10,7 @@
   "missing_or_invalid_assets_and_hash_errors": 0,
   "integrity_errors": [],
   "exact_duplicate_file_hash_groups": [],
-  "quality_flag_counts": {
-    "wrong-dimensions": 1509
-  },
+  "quality_flag_counts": {},
   "existing_review_queue_count": 1114,
   "existing_review_warning_counts": {
     "foreground-near-crop-boundary": 1058,
