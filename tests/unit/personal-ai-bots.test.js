@@ -39,6 +39,13 @@ import {
   getPersonalAiBotEmploymentHistory,
   createPersonalAiBotAppointment,
   previewPersonalAiBotSchedule,
+  listPersonalAiBotPersonaVersions,
+  createPersonalAiBotPersonaDraft,
+  updatePersonalAiBotPersonaDraft,
+  evaluatePersonalAiBotPersonaDraft,
+  approvePersonalAiBotPersonaVersion,
+  activatePersonalAiBotPersonaVersion,
+  rollbackPersonalAiBotPersonaVersion,
 } from '../../backend/modules/personal-ai-bots/personal-ai-bots-service.js';
 
 const makeDb=()=>({});
@@ -884,4 +891,121 @@ test('schedule preview rejects invalid ranges, timezones and daily caps',()=>{
   assert.throws(()=>previewPersonalAiBotSchedule(base,{from:'2026-11-11T00:00:00Z',days:61}),/between 1 and 60/);
   assert.throws(()=>previewPersonalAiBotSchedule({...base,timezone:'Not/A_Timezone'},{from:'2026-11-11T00:00:00Z'}),/valid IANA schedule timezone/);
   assert.throws(()=>previewPersonalAiBotSchedule({...base,maxTasksPerDay:501},{from:'2026-11-11T00:00:00Z'}),/Daily task cap/);
+});
+
+
+const validPersonaConfiguration={
+  purpose:'Help Minglora members understand approved platform features.',
+  role:'Member support assistant',
+  communicationStyle:'Clear, respectful and concise.',
+  tone:'Friendly and professional',
+  responseLength:'balanced',
+  expertise:['Minglora account navigation','General help'],
+  languagePreferences:['English'],
+  audience:'Minglora members',
+  boundaries:'Never request passwords or private authentication codes. Refer account security changes to a human.',
+  prohibitedBehaviors:'Never impersonate a human, publish content, send messages, follow members or change account settings.',
+  escalationInstructions:'Escalate account access, payment or safety concerns to an authorized human.',
+  traits:{formality:50,warmth:70,humor:20,assertiveness:35,detail:60,creativity:40,initiative:20,caution:90}
+};
+
+function createPersonaTestBot(db){
+  return createPersonalAiBot(db,{
+    displayName:'Persona Test Bot',
+    categoryId:'ai-friends'
+  },actor,stamp,uid);
+}
+
+test('Persona Laboratory creates separate versioned drafts without changing public profile or permissions',()=>{
+  const db=makeDb();
+  const bot=createPersonaTestBot(db);
+  const originalBio=bot.bio;
+  const version=createPersonalAiBotPersonaDraft(db,{
+    botId:bot.id,configuration:validPersonaConfiguration
+  },actor,stamp,uid);
+  assert.equal(version.version,1);
+  assert.equal(version.status,'draft');
+  assert.equal(bot.activePersonaVersionId,undefined);
+  assert.equal(bot.bio,originalBio);
+  assert.equal(bot.aiLabel,'AI Bot');
+  assert.deepEqual(bot.allowedAutonomousActions,[]);
+  const second=createPersonalAiBotPersonaDraft(db,{
+    botId:bot.id,baseVersionId:version.id
+  },actor,stamp,uid);
+  assert.equal(second.version,2);
+  assert.deepEqual(second.configuration,version.configuration);
+  assert.deepEqual(listPersonalAiBotPersonaVersions(db,bot.id).map(item=>item.version),[2,1]);
+});
+
+test('Persona Laboratory requires complete static checks and an explicit human approval before activation',()=>{
+  const db=makeDb();
+  const bot=createPersonaTestBot(db);
+  const draft=createPersonalAiBotPersonaDraft(db,{
+    botId:bot.id,configuration:{purpose:'',role:'',traits:{warmth:101}}
+  },actor,stamp,uid);
+  const evaluation=evaluatePersonalAiBotPersonaDraft(db,draft.id,actor,stamp,uid);
+  assert.equal(evaluation.evaluation.status,'fail');
+  assert.throws(()=>approvePersonalAiBotPersonaVersion(db,draft.id,actor,stamp,uid),/passing structural completeness evaluation/);
+  assert.throws(()=>activatePersonalAiBotPersonaVersion(db,draft.id,actor,stamp,uid),/owner-approved persona version/);
+  assert.equal(bot.status,'disabled');
+  assert.equal(bot.activePersonaVersionId,undefined);
+});
+
+test('Persona Laboratory activates only an approved static-ready version and leaves bot execution disabled',()=>{
+  const db=makeDb();
+  const bot=createPersonaTestBot(db);
+  const draft=createPersonalAiBotPersonaDraft(db,{
+    botId:bot.id,configuration:validPersonaConfiguration
+  },actor,stamp,uid);
+  const evaluated=evaluatePersonalAiBotPersonaDraft(db,draft.id,actor,stamp,uid);
+  assert.equal(evaluated.evaluation.status,'pass');
+  assert.match(evaluated.evaluation.limitations,/No model inference/);
+  const approved=approvePersonalAiBotPersonaVersion(db,draft.id,actor,stamp,uid);
+  assert.equal(approved.status,'approved');
+  const activated=activatePersonalAiBotPersonaVersion(db,draft.id,actor,stamp,uid);
+  assert.equal(activated.version.status,'active');
+  assert.equal(bot.activePersonaVersionId,draft.id);
+  assert.equal(bot.status,'disabled');
+  assert.equal(bot.enabled,false);
+  assert.deepEqual(bot.allowedAutonomousActions,[]);
+  assert.equal(bot.aiDisclosureVisible,true);
+});
+
+test('Persona Laboratory supports immutable approved history and explicit rollback',()=>{
+  const db=makeDb();
+  const bot=createPersonaTestBot(db);
+  const first=createPersonalAiBotPersonaDraft(db,{botId:bot.id,configuration:validPersonaConfiguration},actor,stamp,uid);
+  evaluatePersonalAiBotPersonaDraft(db,first.id,actor,stamp,uid);
+  approvePersonalAiBotPersonaVersion(db,first.id,actor,stamp,uid);
+  activatePersonalAiBotPersonaVersion(db,first.id,actor,stamp,uid);
+
+  assert.throws(()=>updatePersonalAiBotPersonaDraft(db,first.id,validPersonaConfiguration,actor,stamp,uid),/Only draft persona versions can be edited/);
+
+  const second=createPersonalAiBotPersonaDraft(db,{botId:bot.id,baseVersionId:first.id},actor,stamp,uid);
+  const changed={...validPersonaConfiguration,tone:'Calm and reassuring'};
+  updatePersonalAiBotPersonaDraft(db,second.id,changed,actor,stamp,uid);
+  evaluatePersonalAiBotPersonaDraft(db,second.id,actor,stamp,uid);
+  approvePersonalAiBotPersonaVersion(db,second.id,actor,stamp,uid);
+  activatePersonalAiBotPersonaVersion(db,second.id,actor,stamp,uid);
+  assert.equal(bot.activePersonaVersionId,second.id);
+
+  const rollback=rollbackPersonalAiBotPersonaVersion(db,first.id,actor,stamp,uid);
+  assert.equal(rollback.version.id,first.id);
+  assert.equal(rollback.version.status,'active');
+  assert.equal(bot.activePersonaVersionId,first.id);
+  assert.equal(bot.status,'disabled');
+});
+
+test('Persona Laboratory rejects permission and tool grants in persona configuration',()=>{
+  const db=makeDb();
+  const bot=createPersonaTestBot(db);
+  assert.throws(()=>createPersonalAiBotPersonaDraft(db,{
+    botId:bot.id,configuration:{...validPersonaConfiguration,permissions:['publish']}
+  },actor,stamp,uid),/unsupported fields/);
+  assert.throws(()=>createPersonalAiBotPersonaDraft(db,{
+    botId:bot.id,configuration:{...validPersonaConfiguration,tools:['send_message']}
+  },actor,stamp,uid),/unsupported fields/);
+  assert.throws(()=>createPersonalAiBotPersonaDraft(db,{
+    botId:bot.id,configuration:{...validPersonaConfiguration,traits:{...validPersonaConfiguration.traits,initiative:101}}
+  },actor,stamp,uid),/trait values must be whole numbers/);
 });
