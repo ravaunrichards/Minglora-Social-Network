@@ -525,6 +525,7 @@ async function main(){
     source_screenshots:processed.map(({file,width,height,detected,error})=>({file,width,height,detected,...(error?{error}:{})})),
     screenshot_count:files.length,detected_occurrences:processed.reduce((n,x)=>n+(x.detected||0),0),
     unique_gift_count:gifts.length,category_counts:categoryCounts,
+    catalog_motion_index_path:"assets/animations/gifts/catalog-motion-index.json",catalog_motion_profile_count:catalogMotionProfiles.length,
     processing_notes:[
       "Each recognized gift is extracted into its own category folder with an optimized transparent WebP poster and an individual animated SVG.",
       "Matching is by normalized gift name against the existing Minglora gift catalog; unmatched captures receive a stable slug ID.",
@@ -532,7 +533,8 @@ async function main(){
       "Artwork crops end above detected label text. Poster and animation files receive SHA-256 digests for duplicate auditing.",
       "OCR confidence, unmatched names, generic categories and short uncertain labels are surfaced as quality-review flags.",
       "Source captures are screenshots, not original animation frame sequences. SVG motion is an original presentation animation and is not a reconstruction of TikTok's proprietary animation or 3D model.",
-      "Generated assets require visual review before activating them in the live gift catalog."
+      "The compact catalogue motion index joins exact normalized-name matches to active canonical catalogue codes. It preserves each original Coin price, image URL, 3D model URL, sound and animation metadata; generated poster crops never replace production artwork.",
+      "Artwork manifest references, source capture names, source crop coordinates, OCR confidence and review flags are retained for traceability. Generated screenshot crops remain review-only."
     ],
     gifts
   };
