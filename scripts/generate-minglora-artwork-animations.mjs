@@ -75,6 +75,8 @@ async function ocrScreenshot(file) {
   assert(meta.width && meta.height, "Screenshot has unreadable dimensions: " + file);
   const targetWidth = Math.min(2400, meta.width * 2);
   const scale = targetWidth / meta.width;
+  const tileWidth = meta.width / 6;
+  const rowCount = Math.max(1, Math.min(6, Math.round(meta.height / (tileWidth * 1.15))));
   const temp = path.join(os.tmpdir(), "minglora-artwork-" + crypto.randomBytes(6).toString("hex") + ".png");
   try {
     await sharp(absolute).resize({width:targetWidth}).png().toFile(temp);
@@ -88,11 +90,11 @@ async function ocrScreenshot(file) {
       const left=Number(c[6])/scale, top=Number(c[7])/scale;
       const width=Number(c[8])/scale, height=Number(c[9])/scale;
       const cx=left+width/2, cy=top+height/2;
-      const col=clamp(Math.floor(cx/meta.width*6)+1,1,6);
-      const row=clamp(Math.floor(cy/meta.height*3)+1,1,3);
+      const col=clamp(Math.floor(cx/tileWidth)+1,1,6);
+      const row=clamp(Math.floor(cy/(meta.height/rowCount))+1,1,rowCount);
       const key=row+":"+col;
       if (!cells.has(key)) cells.set(key,[]);
-      cells.get(key).push({word,conf,left,top,width,height,cx,cy,lineKey:[c[2],c[3],c[4]].join(".")});
+      cells.get(key).push({word,conf,left,top,width,height,cx,cy,lineKey:[c[2],c[3],c[4],c[5]].join(".")});
     }
 
     const result = new Map();
@@ -114,7 +116,7 @@ async function ocrScreenshot(file) {
 
       const rowNum=Number(key.split(":")[0]);
       const cellTop=(rowNum-1)*meta.height/3;
-      const cellHeight=meta.height/3;
+      const cellHeight=meta.height/rowCount;
       const numericLines=lineData.map(line => ({
         ...line,
         nums:line.words.map(w=>({value:numericToken(w.word),word:w}))
