@@ -260,3 +260,16 @@ Continue with independent non-database work that can be built and verified in th
 - No production database, provider secret, bot record, worker process, scheduler, or deployment changed.
 - Implementation progress remains **45.52%**; this is worker safety hardening, not completion of the remaining team, model, HR, creator, finance, multilingual, analytics, or scale milestones.
 - **Next action:** continue reviewing task claim/heartbeat/complete/fail RPC authorization and lease recovery invariants. Keep execution disabled and preserve PR #202 as open/draft.
+
+
+## Follow-up checkpoint — worker lease RPC authorization tests (2026-11-11)
+
+- Continued the worker-boundary review into the durable queue SQL.
+- Reviewed the heartbeat, completion and failure RPCs. Each checks the designated Minglora owner, exact worker ID, exact lease token, owner-scoped task row, running state, and unexpired lease before changing a task.
+- Added schema regression coverage that extracts each RPC body and asserts all five authorization/lease invariants. This protects against future changes accidentally allowing stale workers or another worker to heartbeat, complete or fail a task.
+- Schema test commit: `dfbdc17c8309d1a6b7b93845c30aa5e4771f86a9`.
+- Worker social-action allowlist test commits remain `d48709fb2619d7c9b4ff9daec315864fe3fb3017` and `564f15629918bbc2b570719d9fe8562a0caa6fde`.
+- No queue migration was applied and no worker was started. The reviewed SQL remains staged only.
+- Tests are authored but not executed in this session; no green CI evidence exists for the latest commits. Keep all verification labels honest.
+- No implementation percentage increase; weighted progress remains **45.52%**.
+- **Next action:** continue auditing gateway action authorization and payload allowlists, especially the provider runtime/health and task queue operations, while preserving disabled execution defaults and production database safety.
