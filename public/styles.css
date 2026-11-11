@@ -7513,3 +7513,8 @@ dialog#minglora-profile-editor .modal-actions #save-profile-button{
 .profile-name-with-badges{display:flex;align-items:flex-start;flex-wrap:wrap;gap:4px 6px;min-width:0;max-width:100%;white-space:normal;overflow:visible;text-overflow:clip}
 .profile-name-with-badges>span:first-child{display:inline;min-width:0;max-width:100%;white-space:normal;overflow-wrap:anywhere;word-break:normal;overflow:visible;text-overflow:clip}
 .profile-username-line{min-width:0;max-width:100%;white-space:normal;overflow-wrap:anywhere;word-break:normal;overflow:visible;text-overflow:clip}
+
+.creator-ai-handoff-notice{margin:14px 20px 0;padding:12px 14px;border:1px solid #b8d3f5;border-radius:11px;background:#eff6ff;color:#183a66;font-size:13px;line-height:1.5;overflow-wrap:anywhere}
+.creator-ai-handoff-notice strong{display:block;font-weight:800}
+.creator-ai-handoff-notice p{margin:4px 0 0}
+@media(max-width:560px){.creator-ai-handoff-notice{margin:10px 12px 0;padding:10px 11px}}
