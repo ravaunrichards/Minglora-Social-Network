@@ -1803,7 +1803,7 @@ test('team handoff API is owner-controlled, one-receiver and permanently non-dis
     sourceTaskId:taskId,senderBotId:senderId,receivingBotId:receiverId,
     requiredInput:'Review the source draft for accuracy and completeness.',
     expectedOutput:'Return a structured review with findings.',
-    contextScope:'team_internal'
+    contextScope:'team_internal',privacyAttested:true
   });
   assert.equal(created.statusCode,201);
   assert.equal(created.payload.handoff.dispatchStatus,'not_dispatched');
@@ -1827,6 +1827,35 @@ test('team handoff API is owner-controlled, one-receiver and permanently non-dis
   assert.equal(listed.statusCode,200);
   assert.equal(listed.payload.handoffs.length,1);
   assert.equal(saves,3);
+});
+
+test('team handoff API requires explicit owner privacy attestation before persistence',async()=>{
+  const teamId='00000000-0000-4000-8000-000000000521';
+  const senderId='00000000-0000-4000-8000-000000000522';
+  const receiverId='00000000-0000-4000-8000-000000000523';
+  const taskId='00000000-0000-4000-8000-000000000524';
+  const db={
+    personalAiBots:[{id:senderId},{id:receiverId}],
+    personalAiBotTeams:[{id:teamId,ownerId:'owner',name:'Privacy Team',status:'enabled'}],
+    personalAiBotTeamMembers:[
+      {ownerId:'owner',teamId,botId:senderId},
+      {ownerId:'owner',teamId,botId:receiverId}
+    ],
+    personalAiBotTasks:[{id:taskId,botId:senderId,status:'awaiting_administrator_approval'}]
+  };
+  const context=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/teams/'+teamId+'/handoffs',
+    input:{
+      sourceTaskId:taskId,senderBotId:senderId,receivingBotId:receiverId,
+      requiredInput:'Review approved team information only.',
+      expectedOutput:'Return a short review to the owner.',
+      contextScope:'team_internal'
+    },db
+  });
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,400);
+  assert.match(context.res.payload.error,/owner must confirm that no private member conversation/);
+  assert.equal(db.personalAiBotTeamHandoffs.length,0);
 });
 
 test('team handoff API rejects private context, unsupported fields and non-owner access',async()=>{
