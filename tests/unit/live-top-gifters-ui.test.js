@@ -43,13 +43,13 @@ test("platform Top Gifters offers period filters, earned rank titles and working
 });
 
 test("Top Gifters assets are versioned and included in the PWA shell", () => {
-  assert.match(html, /top-gifters\.js\?v=20261107-live-top-gifters-1/);
+  assert.match(html, /top-gifters\.js\?v=20261111-tiktok-readable-badge-size-2/);
   const appAsset=html.match(/app\.js\?v=[^"']+/)?.[0]||"";
   const styleAsset=html.match(/styles\.css\?v=[^"']+/)?.[0]||"";
   assert.ok(appAsset&&sw.includes("/"+appAsset),"service worker caches the current HTML app script");
   assert.ok(styleAsset&&sw.includes("/"+styleAsset),"service worker caches the current HTML stylesheet");
   assert.match(sw, /minglora-shell-v\d+-[^']+/);
-  assert.match(sw, /top-gifters\.js\?v=20261107-live-top-gifters-1/);
+  assert.match(sw, /top-gifters\.js\?v=20261111-tiktok-readable-badge-size-2/);
   assert.match(css, /\.live-top-gifters-list/);
   assert.match(css, /\.minglora-gifter-profile/);
   assert.match(css, /\.live-weekly-title-gifters/);
