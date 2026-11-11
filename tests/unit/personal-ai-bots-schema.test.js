@@ -815,3 +815,14 @@ test('versioned AI persona records are included in the existing persistent runti
   assert.match(adminApiSource,/activatePersonalAiBotPersonaVersion/);
   assert.match(adminApiSource,/rollbackPersonalAiBotPersonaVersion/);
 });
+
+
+test('team handoff records use existing runtime-state persistence and owner-only reviewed routes',()=>{
+  assert.match(storeSource,/'personalAiBotTeamHandoffs'/);
+  assert.match(adminApiSource,/getPersonalAiBotTeamHandoffs/);
+  assert.match(adminApiSource,/createPersonalAiBotTeamHandoff/);
+  assert.match(adminApiSource,/reviewPersonalAiBotTeamHandoff/);
+  assert.match(adminApiSource,/teamHandoffsMatch&&method==='GET'/);
+  assert.match(adminApiSource,/teamHandoffsMatch&&method==='POST'/);
+  assert.match(adminApiSource,/teamHandoffActionMatch&&method==='POST'/);
+});
