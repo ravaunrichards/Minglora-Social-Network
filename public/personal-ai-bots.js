@@ -392,6 +392,9 @@
     document.querySelectorAll('.pab-persona-create').forEach(node=>node.addEventListener('click',()=>createPersonaDraft(node.dataset.bot)));
     document.querySelectorAll('.pab-language-load').forEach(node=>node.addEventListener('click',()=>loadLanguageSettings(node.dataset.bot)));
     document.querySelectorAll('.pab-language-save').forEach(node=>node.addEventListener('click',()=>saveLanguageSettings(node.dataset.bot)));
+    document.querySelectorAll('.pab-language-eval-create').forEach(node=>node.addEventListener('click',()=>createOrUpdateLanguageEvaluationSet(node.dataset.bot)));
+    document.querySelectorAll('.pab-language-eval-load').forEach(node=>node.addEventListener('click',()=>loadLanguageEvaluationSets(node.dataset.bot)));
+
 
     document.querySelectorAll('.pab-persona-load').forEach(node=>node.addEventListener('click',()=>loadPersonaVersions(node.dataset.bot)));
     document.querySelectorAll('.pab-bot-mode').forEach(node=>node.addEventListener('change',()=>{
@@ -1261,6 +1264,127 @@
       if(status)status.innerHTML='<p class="pab-notice error">'+esc(error.message||'Could not save multilingual settings.')+'</p>';
       notice('pab-task-status',error.message||'Multilingual settings could not be saved.','error');
     }
+  }
+
+  function renderLanguageEvaluationSets(botId,sets){
+    const target=document.querySelector('.pab-language-eval-list[data-language-eval-list="'+CSS.escape(botId)+'"]');
+    if(!target)return;
+    if(!sets.length){target.innerHTML='<div class="pab-empty">No synthetic language evaluation sets are registered for this bot.</div>';return;}
+    target.innerHTML=sets.map(set=>{
+      const cases=Array.isArray(set.cases)?set.cases:[];
+      const caseRows=cases.map((item,index)=>'<li><strong>Case '+(index+1)+' · '+esc(item.category||'general')+'</strong><div><small>Input:</small> '+esc(String(item.inputText||'').slice(0,220))+'</div><div><small>Reference:</small> '+esc(String(item.expectedOutput||'').slice(0,220))+'</div></li>').join('');
+      let actions='';
+      if(['draft','changes_requested'].includes(set.status)){
+        actions+='<button type="button" class="pab-btn secondary pab-language-eval-edit" data-set="'+esc(set.id)+'" data-bot="'+esc(botId)+'">Edit draft</button>';
+        actions+='<button type="button" class="pab-btn secondary pab-language-eval-action" data-set="'+esc(set.id)+'" data-bot="'+esc(botId)+'" data-action="submit">Submit for human review</button>';
+      }
+      const review=set.status==='pending_human_review'
+        ?'<div class="pab-divider"></div><p class="pab-notice">Human-review details are self-attested by the owner. Recording a review does not verify provider/model compatibility or language fluency.</p><div class="pab-field"><label>Reviewer role</label><select class="pab-select pab-language-eval-reviewer-role"><option value="native_speaker">Native speaker</option><option value="qualified_language_reviewer">Qualified language reviewer</option><option value="community_language_reviewer">Community language reviewer</option></select></div><div class="pab-field"><label>Evidence reference</label><input class="pab-input pab-language-eval-evidence" maxlength="500" placeholder="Reference to speaker review, rubric or evidence record"></div><div class="pab-field"><label>Review notes</label><textarea class="pab-textarea pab-language-eval-review-notes" maxlength="1200" placeholder="Record human reviewer observations."></textarea></div><label><input type="checkbox" class="pab-language-eval-review-attestation"> I attest that the stated reviewer role and evidence reference are accurate.</label><div class="pab-actions"><button type="button" class="pab-btn secondary pab-language-eval-review" data-set="'+esc(set.id)+'" data-bot="'+esc(botId)+'" data-decision="approve">Approve human review</button><button type="button" class="pab-btn secondary pab-language-eval-review" data-set="'+esc(set.id)+'" data-bot="'+esc(botId)+'" data-decision="changes_requested">Request changes</button><button type="button" class="pab-btn danger pab-language-eval-review" data-set="'+esc(set.id)+'" data-bot="'+esc(botId)+'" data-decision="reject">Reject set</button></div>'
+        :'';
+      return '<article class="pab-team-card"><div class="pab-team-top"><strong>'+esc(set.name)+' · '+esc(set.languageCode)+'</strong><span class="pab-status '+(set.status==='human_reviewed'?'':'off')+'">'+esc(String(set.status||'draft').replaceAll('_',' '))+'</span></div><p>'+esc(set.description||'No description.')+'</p><p><small>'+cases.length+' synthetic case(s) · Review: '+esc(set.reviewStatus||'not_reviewed')+' · Provider run: not run · Language quality: unverified</small></p><details><summary>View synthetic cases</summary><ol>'+caseRows+'</ol></details>'+review+'<div class="pab-actions">'+actions+'</div>'+(set.reviewNotes?'<p><small>Reviewer notes: '+esc(set.reviewNotes)+'</small></p>':'')+'</article>';
+    }).join('');
+    target.querySelectorAll('.pab-language-eval-action').forEach(node=>node.addEventListener('click',()=>actOnLanguageEvaluationSet(botId,node.dataset.set,node.dataset.action)));
+    target.querySelectorAll('.pab-language-eval-review').forEach(node=>node.addEventListener('click',()=>reviewLanguageEvaluationSet(botId,node.dataset.set,node.dataset.decision,node.closest('.pab-team-card'))));
+    target.querySelectorAll('.pab-language-eval-edit').forEach(node=>node.addEventListener('click',()=>editLanguageEvaluationSet(botId,node.dataset.set,sets)));
+  }
+
+  async function loadLanguageEvaluationSets(botId){
+    const status=document.querySelector('.pab-language-eval-status[data-language-eval-status="'+CSS.escape(botId)+'"]');
+    if(status)status.innerHTML='<p class="pab-notice">Loading synthetic language evaluation sets…</p>';
+    try{
+      const result=await request(API+'/bots/'+encodeURIComponent(botId)+'/languages/evaluation-sets');
+      renderLanguageEvaluationSets(botId,Array.isArray(result.evaluationSets)?result.evaluationSets:[]);
+      if(status)status.innerHTML='<p class="pab-notice">Evaluation registry loaded. Provider execution is not run and language quality remains unverified.</p>';
+    }catch(error){
+      if(status)status.innerHTML='<p class="pab-notice error">'+esc(error.message||'Could not load language evaluation sets.')+'</p>';
+    }
+  }
+
+  async function editLanguageEvaluationSet(botId,setId,sets){
+    const set=sets.find(item=>item.id===setId);
+    const panel=document.querySelector('.pab-language-settings[data-language-settings="'+CSS.escape(botId)+'"]');
+    if(!set||!panel||!['draft','changes_requested'].includes(set.status))return;
+    const value=(selector,next)=>{const field=panel.querySelector(selector);if(field)field.value=next??'';};
+    value('.pab-language-eval-name',set.name);
+    value('.pab-language-eval-code',set.languageCode);
+    value('.pab-language-eval-description',set.description);
+    value('.pab-language-eval-cases',JSON.stringify(set.cases||[],null,2));
+    const attestation=panel.querySelector('.pab-language-eval-synthetic');
+    if(attestation)attestation.checked=false;
+    panel.dataset.languageEvalEditId=setId;
+    const button=panel.querySelector('.pab-language-eval-create');
+    if(button)button.textContent='Save evaluation set edits';
+    const status=panel.querySelector('.pab-language-eval-status');
+    if(status)status.innerHTML='<p class="pab-notice">Draft loaded. Confirm the synthetic-data privacy attestation again before saving edited cases.</p>';
+  }
+
+  async function createOrUpdateLanguageEvaluationSet(botId){
+    const panel=document.querySelector('.pab-language-settings[data-language-settings="'+CSS.escape(botId)+'"]');
+    if(!panel||panel.dataset.languageLoaded!=='true'){
+      notice('pab-task-status','Load saved multilingual settings before creating evaluation sets.','error');
+      return;
+    }
+    const read=selector=>panel.querySelector(selector)?.value||'';
+    const syntheticDataAttested=panel.querySelector('.pab-language-eval-synthetic')?.checked===true;
+    if(!syntheticDataAttested){
+      notice('pab-task-status','Confirm that all evaluation examples are synthetic and contain no private member data.','error');
+      return;
+    }
+    let cases;
+    try{cases=JSON.parse(read('.pab-language-eval-cases')||'[]');}
+    catch{notice('pab-task-status','Evaluation cases must be a valid JSON array.','error');return;}
+    if(!Array.isArray(cases)){
+      notice('pab-task-status','Evaluation cases must be a JSON array.','error');
+      return;
+    }
+    const payload={
+      languageCode:read('.pab-language-eval-code').trim(),
+      name:read('.pab-language-eval-name').trim(),
+      description:read('.pab-language-eval-description').trim(),
+      cases,syntheticDataAttested:true
+    };
+    const editId=panel.dataset.languageEvalEditId||'';
+    const url=API+'/bots/'+encodeURIComponent(botId)+'/languages/evaluation-sets'+(editId?'/'+encodeURIComponent(editId):'');
+    const method=editId?'PATCH':'POST';
+    const status=panel.querySelector('.pab-language-eval-status');
+    if(status)status.innerHTML='<p class="pab-notice">Saving synthetic evaluation set…</p>';
+    try{
+      await request(url,{method,body:JSON.stringify(payload)});
+      delete panel.dataset.languageEvalEditId;
+      const button=panel.querySelector('.pab-language-eval-create');
+      if(button)button.textContent='Create evaluation set';
+      panel.querySelector('.pab-language-eval-synthetic').checked=false;
+      notice('pab-task-status',editId?'Evaluation draft updated.':'Synthetic language evaluation set created.','success');
+      await loadLanguageEvaluationSets(botId);
+    }catch(error){
+      if(status)status.innerHTML='<p class="pab-notice error">'+esc(error.message||'Could not save the evaluation set.')+'</p>';
+      notice('pab-task-status',error.message||'Could not save the evaluation set.','error');
+    }
+  }
+
+  async function actOnLanguageEvaluationSet(botId,setId,action){
+    const url=API+'/bots/'+encodeURIComponent(botId)+'/languages/evaluation-sets/'+encodeURIComponent(setId)+'/'+action;
+    try{
+      await request(url,{method:'POST',body:JSON.stringify({})});
+      notice('pab-task-status',action==='submit'?'Evaluation set submitted for human review. No model was run.':'Evaluation set updated.','success');
+      await loadLanguageEvaluationSets(botId);
+    }catch(error){notice('pab-task-status',error.message||'Could not update evaluation set.','error');}
+  }
+
+  async function reviewLanguageEvaluationSet(botId,setId,decision,card){
+    const payload={
+      decision,
+      reviewerRole:card?.querySelector('.pab-language-eval-reviewer-role')?.value||'',
+      evidenceReference:card?.querySelector('.pab-language-eval-evidence')?.value||'',
+      reviewNotes:card?.querySelector('.pab-language-eval-review-notes')?.value||'',
+      reviewerAttestation:card?.querySelector('.pab-language-eval-review-attestation')?.checked===true
+    };
+    const url=API+'/bots/'+encodeURIComponent(botId)+'/languages/evaluation-sets/'+encodeURIComponent(setId)+'/review';
+    try{
+      await request(url,{method:'POST',body:JSON.stringify(payload)});
+      notice('pab-task-status','Human review decision recorded. Provider compatibility and language quality remain unverified.','success');
+      await loadLanguageEvaluationSets(botId);
+    }catch(error){notice('pab-task-status',error.message||'Could not record language review.','error');}
   }
 
   async function saveBot(id){
