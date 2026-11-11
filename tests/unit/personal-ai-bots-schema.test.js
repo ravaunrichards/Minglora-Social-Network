@@ -863,3 +863,16 @@ test('multilingual evaluation sets persist in owner runtime state and never auto
   assert.match(serviceSource,/rubricKeys=\['semanticAccuracy','dialectFidelity','contextPreservation','codeSwitching','safetyMeaning'\]/);
   assert.match(serviceSource,/Provide all five owner-attested rubric scores as whole numbers from 0 to 4/);
 });
+
+test('Creator Studio drafts use the existing owner runtime-state store and do not add publication schema',()=>{
+  assert.match(storeSource,/'personalAiCreatorDrafts'/);
+  assert.match(serviceSource,/createPersonalAiCreatorDraft/);
+  assert.match(serviceSource,/updatePersonalAiCreatorDraft/);
+  assert.match(serviceSource,/submitPersonalAiCreatorDraft/);
+  assert.match(serviceSource,/reviewPersonalAiCreatorDraft/);
+  assert.match(adminApiSource,/creatorDraftPath/);
+  assert.match(adminApiSource,/submitPersonalAiCreatorDraft/);
+  assert.match(serviceSource,/aiIdentityDisclosureRequired:true/);
+  assert.match(serviceSource,/publishingStatus:'not_published'/);
+  assert.match(serviceSource,/handoffStatus:'not_handed_off'/);
+});
