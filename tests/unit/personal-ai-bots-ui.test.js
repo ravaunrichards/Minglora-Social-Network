@@ -562,3 +562,10 @@ test('Creator Studio exposes a manual draft and owner-review workflow with publi
   assert.ok(service.includes("publishingStatus:'not_published'"));
   assert.ok(html.includes('/personal-ai-bots.js?v=20261111-personal-ai-bots-24'));
 });
+
+test('Creator Studio editing keeps the linked AI identity immutable and omits botId from updates',async()=>{
+  const ui=await read('public/personal-ai-bots.js');
+  assert.match(ui,/const botSelect=document\.querySelector\('#pab-creator-bot'\);if\(botSelect\)botSelect\.disabled=true/);
+  assert.match(ui,/!id\?\{botId:read\('#pab-creator-bot'\)\}:\{\}/);
+  assert.match(ui,/if\(botSelect\)botSelect\.disabled=false/);
+});
