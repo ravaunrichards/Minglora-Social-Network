@@ -177,6 +177,8 @@ import {
   approvePersonalAiBotPersonaVersion,
   activatePersonalAiBotPersonaVersion,
   rollbackPersonalAiBotPersonaVersion,
+  getPersonalAiBotLanguageSettings,
+  updatePersonalAiBotLanguageSettings,
   createPersonalAiBotCategory,
   queuePersonalAiBotInstruction,
   queuePersonalAiBotFollowBatch,
@@ -865,6 +867,25 @@ export async function handlePersonalAiBotsAdminApi(context) {
       else result=rollbackPersonalAiBotPersonaVersion(db,versionId,user.id,stamp,uid);
       await saveStore();
       return (json(res,200,{ok:true,action,...result}),true);
+    }
+    const botLanguageMatch=path.match(/^\/api\/admin\/personal-ai-bots\/bots\/([0-9a-f-]{36})\/languages$/i);
+    if(botLanguageMatch&&method==='GET'){
+      const settings=getPersonalAiBotLanguageSettings(db,botLanguageMatch[1],user.id);
+      return (json(res,200,{ok:true,...settings}),true);
+    }
+    if(botLanguageMatch&&method==='PUT'){
+      const allowed=new Set([
+        'primaryLanguage','supportedLanguages','fallbackLanguage','locale',
+        'detectionMode','confidenceThreshold','responsePolicy',
+        'codeSwitchingPolicy','translationDisplay','humanReviewRequired'
+      ]);
+      if(!input||typeof input!=='object'||Array.isArray(input)||
+         Object.keys(input).some(key=>!allowed.has(key))||!Object.keys(input).length){
+        return (json(res,400,{error:'Multilingual configuration contains unsupported or missing fields.'}),true);
+      }
+      const result=updatePersonalAiBotLanguageSettings(db,botLanguageMatch[1],input,user.id,stamp,uid);
+      await saveStore();
+      return (json(res,200,{ok:true,...result}),true);
     }
     const botMatch=path.match(/^\/api\/admin\/personal-ai-bots\/bots\/([0-9a-f-]{36})$/i);
     if(botMatch&&method==='PATCH'){
