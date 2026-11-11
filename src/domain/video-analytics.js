@@ -9,6 +9,7 @@ export function summarizeCreatorVideoAnalytics(posts = [], watchEvents = [], own
   const ownerPosts = posts.filter(post =>
     post && post.userId === ownerId && post.status !== 'hidden' && !post.archivedAt
   );
+  const ownerPostIds = new Set(ownerPosts.map(post => post.id));
 
   const eventsByPost = new Map();
   const portfolioViewers = new Set();
@@ -24,7 +25,7 @@ export function summarizeCreatorVideoAnalytics(posts = [], watchEvents = [], own
     if (!Number.isFinite(timestamp) || timestamp < cutoff || timestamp > currentTime) continue;
     if (!Number.isFinite(durationMs) || durationMs < 1000 || durationMs > 3600000) continue;
     if (!Number.isFinite(watchedMs) || watchedMs < 1000) continue;
-    if (!ownerPosts.some(post => post.id === event.postId)) continue;
+    if (!ownerPostIds.has(event.postId)) continue;
 
     const safeWatchedMs = Math.min(Math.round(watchedMs), Math.round(durationMs * 1.5), 600000);
     if (safeWatchedMs < 1000) continue;
@@ -60,7 +61,7 @@ export function summarizeCreatorVideoAnalytics(posts = [], watchEvents = [], own
         completionRate: viewerCount ? completedViewers / viewerCount : 0
       };
     })
-    .sort((a, b) => Date.parse(b.createdAt || 0) - Date.parse(a.createdAt || 0));
+    .sort((a, b) => (Date.parse(b.createdAt || '') || 0) - (Date.parse(a.createdAt || '') || 0));
 
   return {
     periodDays: days,
