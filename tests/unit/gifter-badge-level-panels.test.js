@@ -44,7 +44,7 @@ test("ordered Level references each display their matching individual original b
   assert.match(progression, /src='\/assets\/gifter-badges\/level_"/);
   assert.match(progression, /String\(levelNumber\)\.padStart\(2, "0"\)/);
   assert.match(progression, /alt='" \+ esc\(badgeName\) \+ "'/);
-  assert.match(progression, /loading='lazy' decoding='async' width='80' height='80'/);
+  assert.match(progression, /loading='lazy' decoding='async' width='170' height='76'/);
   assert.doesNotMatch(progression, /MingloraGifterBadgeArt/);
   assert.match(styles, /\.gp-level-index-art\{[^}]*width:76px;height:76px[^}]*aspect-ratio:1\/1[^}]*object-fit:contain/);
   assert.match(styles, /@media\(max-width:760px\)[\s\S]*?\.gp-level-index-art\{width:64px;height:64px\}/);
@@ -82,8 +82,8 @@ test("level artwork route is an explicit allow-list and serves JPEG without expo
 test("updated progression assets and all original JPG panels are included in the app shell", () => {
   const html = read("public/index.html");
   const sw = read("public/sw.js");
-  assert.ok(html.includes("/gifter-progression.css?v=20261111-gifter-chart-fit-without-zoom-2"));
-  assert.ok(html.includes("/gifter-progression.js?v=20261110-gifter-individual-badges-1"));
+  assert.ok(html.includes("/gifter-progression.css?v=20261111-tiktok-readable-badge-size-2"));
+  assert.ok(html.includes("/gifter-progression.js?v=20261111-tiktok-readable-badge-size-2"));
   panelFiles.forEach(filename => {
     const routeName = filename.toLowerCase().replaceAll(" ", "-");
     assert.ok(sw.includes("/assets/gifter-badge-level-panels/" + routeName));
@@ -129,8 +129,8 @@ test("Gifter artwork removes unused outer padding and uses a brighter clean edge
 test("clean-edge stylesheet cache key is current in HTML and service-worker shell", () => {
   const html = read("public/index.html");
   const sw = read("public/sw.js");
-  assert.ok(html.includes("/gifter-progression.css?v=20261111-gifter-chart-fit-without-zoom-2"));
-  assert.ok(sw.includes("/gifter-progression.css?v=20261111-gifter-chart-fit-without-zoom-2"));
+  assert.ok(html.includes("/gifter-progression.css?v=20261111-tiktok-readable-badge-size-2"));
+  assert.ok(sw.includes("/gifter-progression.css?v=20261111-tiktok-readable-badge-size-2"));
   assert.ok(!sw.includes("/gifter-progression.css?v=20261110-gifter-level-polish-1"));
 });
 
@@ -146,7 +146,7 @@ test("Gifters Level-Up chart is readable in normal page view without requiring z
   assert.match(styles, /\.gp-hero-art \.gp-reference-art\{[\s\S]*?width:min\(100%,900px\)[\s\S]*?height:auto[\s\S]*?max-height:none/);
   assert.match(styles, /@media\(max-width:650px\)[\s\S]*?\.gp-hero-art \.gp-reference-art\{width:100%;height:auto;max-height:none;object-fit:contain\}/);
   assert.match(styles, /\.gp-chart-fullsize\{[\s\S]*?min-height:46px[\s\S]*?font-size:1rem/);
-  assert.ok(html.includes("/gifter-progression.css?v=20261111-gifter-chart-fit-without-zoom-2"));
-  assert.ok(sw.includes("/gifter-progression.css?v=20261111-gifter-chart-fit-without-zoom-2"));
-  assert.ok(sw.includes("minglora-shell-v278-self-updating-1"));
+  assert.ok(html.includes("/gifter-progression.css?v=20261111-tiktok-readable-badge-size-2"));
+  assert.ok(sw.includes("/gifter-progression.css?v=20261111-tiktok-readable-badge-size-2"));
+  assert.ok(sw.includes("minglora-shell-v285-self-updating-1"));
 });
