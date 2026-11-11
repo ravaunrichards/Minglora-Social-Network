@@ -440,3 +440,31 @@ test('Personality Laboratory exposes versioned drafts and a human approval lifec
   assert.match(ui,/async function duplicatePersonaDraft/);
   assert.match(ui,/method:'PATCH',body:JSON\.stringify\(\{configuration\}\)/);
 });
+
+
+test('Bot Teams exposes owner-reviewed single-receiver handoffs without automatic dispatch',async()=>{
+  const ui=await read('public/personal-ai-bots.js');
+  for(const phrase of [
+    'Create a task handoff',
+    'Existing source task',
+    'Receiving bot',
+    'Required input',
+    'Expected output',
+    'Team-internal approved context',
+    'Public context only',
+    'Create handoff for owner review',
+    'Load handoff history',
+    'Accept',
+    'Reject',
+    'Cancel',
+    'Record human-reviewed completion',
+    'Dispatch: not dispatched',
+    'No bot execution or external actions occur.',
+    'No bot execution occurred.'
+  ]) assert.ok(ui.includes(phrase),phrase);
+  assert.match(ui,/async function createTeamHandoff/);
+  assert.match(ui,/async function loadTeamHandoffs/);
+  assert.match(ui,/async function reviewTeamHandoff/);
+  assert.match(ui,/pab-team-handoff-create/);
+  assert.match(ui,/pab-team-handoff-load/);
+});
