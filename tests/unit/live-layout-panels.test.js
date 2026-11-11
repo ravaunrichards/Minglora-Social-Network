@@ -11,7 +11,7 @@ const styles = fs.readFileSync(path.join(root, 'public/styles.css'), 'utf8');
 const compact = fs.readFileSync(path.join(root, 'public/live-room-compact.css'), 'utf8');
 const liveSettings = fs.readFileSync(path.join(root, 'backend/modules/live/settings.js'), 'utf8');
 
-test('LIVE has nine host-selectable screen layouts with a safe default', () => {
+test('LIVE has 24 host-selectable screen layouts with a safe default', () => {
   assert.ok(app.includes('const LIVE_SCREEN_LAYOUT_OPTIONS=Object.freeze'), 'missing layout preset registry');
   for (const layout of ['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight','roundtable-1','roundtable-2']) {
     assert.ok(app.includes("value:'" + layout + "'"), 'missing ' + layout + ' layout');
