@@ -89,7 +89,7 @@ function animationProfile(category, seed) {
   const [preset, duration, motion] = profiles[category] || profiles.other;
   return { preset, duration, motion, phase: -((seed % 1600) / 1000).toFixed(3) + "s" };
 }
-function makeAnimationSvg(name, posterName, category, seed) {
+function makeAnimationSvg(name, posterDataUri, category, seed) {
   const p = animationProfile(category, seed);
   const escapedName = String(name).replace(/[&<>"]/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[ch]));
   const motion = {
@@ -112,7 +112,7 @@ function makeAnimationSvg(name, posterName, category, seed) {
 <defs><filter id="glow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="7" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
 <ellipse cx="128" cy="224" rx="56" ry="10" fill="#7c8db7" opacity=".22"/>
 <g class="gift-motion" style="transform-origin:128px 128px;animation:${motion} ${p.duration} ease-in-out infinite;animation-delay:${p.phase}">
-<image href="${posterName}" xlink:href="${posterName}" x="8" y="8" width="240" height="240" preserveAspectRatio="xMidYMid meet" filter="url(#glow)"/>
+<image href="${posterDataUri}" xlink:href="${posterDataUri}" x="8" y="8" width="240" height="240" preserveAspectRatio="xMidYMid meet" filter="url(#glow)"/>
 </g>
 <style>
 @keyframes giftSway{0%,100%{transform:rotate(-5deg) translateY(2px) scale(.96)}50%{transform:rotate(5deg) translateY(-8px) scale(1.04)}}
@@ -263,7 +263,8 @@ async function processScreenshot(file, catalogByName) {
       const posterBuffer=await sharp(rgba,{raw:{width:cropWidth,height:cropHeight,channels:4}})
         .resize(256,256,{fit:"contain",background:{r:0,g:0,b:0,alpha:0}})
         .webp({quality:91,alphaQuality:100,effort:5}).toBuffer();
-      const animationSource=makeAnimationSvg(originalName,posterName,category,seed);
+      const posterDataUri="data:image/webp;base64,"+posterBuffer.toString("base64");
+      const animationSource=makeAnimationSvg(originalName,posterDataUri,category,seed);
       const posterSha256=crypto.createHash("sha256").update(posterBuffer).digest("hex");
       const animationSha256=crypto.createHash("sha256").update(animationSource).digest("hex");
       const normalizedName=normalizeName(originalName);
@@ -398,7 +399,7 @@ Generated from the user-provided gallery captures in \`assets/Gifts/\`.
 
 Each gift has its own category folder containing:
 - \`poster.webp\`: transparent, normalized 256 × 256 artwork crop.
-- \`animation.svg\`: individually keyed, reduced-motion-aware animated SVG presentation.
+- \`animation.svg\`: self-contained animated SVG presentation with its WebP poster embedded, individually keyed motion and reduced-motion support. It can be displayed through a standard image element.
 
 See \`manifest.json\` for gift IDs, categories, source screenshots, crop coordinates, OCR confidence, catalog matches and per-gift asset paths. See \`extraction-report.json\` for processing totals and any failures.
 
