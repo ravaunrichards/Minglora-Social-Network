@@ -421,3 +421,15 @@
 @media(max-width:760px){.gp-level-directory-heading{align-items:flex-start;flex-direction:column}.gp-level-index-grid[data-layout="horizontal"]{grid-template-columns:repeat(2,minmax(0,1fr))}.gp-level-index-item{grid-template-columns:64px minmax(0,1fr);gap:10px;padding:10px}.gp-level-index-art{width:64px;height:64px}}
 @media(max-width:480px){.gp-level-index-grid[data-layout="horizontal"]{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:360px){.gp-level-index-item{grid-template-columns:58px minmax(0,1fr);gap:9px;padding:9px}.gp-level-index-art{width:58px;height:58px}}
+
+
+/* Clear identity rows for the public Gifter progression leaderboard. */
+.gp-leader-copy{display:grid;gap:3px;min-width:0;flex:1}
+.gp-leader-username{display:block;color:var(--muted,#667085);font-size:.7rem;line-height:1.3;overflow-wrap:anywhere}
+.gp-leader-display-name{display:flex;align-items:center;flex-wrap:wrap;gap:4px;min-width:0;font-size:.86rem;line-height:1.3;overflow-wrap:anywhere}
+.gp-leader-badge{display:inline-flex;align-items:center;gap:4px;min-width:0;max-width:100%;vertical-align:middle}
+.gp-leader-badge img{display:block;flex:0 0 23px;width:23px;height:23px;object-fit:contain;filter:drop-shadow(0 2px 3px rgba(12,24,48,.22));animation:gp-leader-badge-glow 7s ease-in-out infinite}
+.gp-leader-badge>span{min-width:0;color:#805817;font-size:.65rem;font-weight:850;line-height:1.25;overflow-wrap:anywhere}
+@keyframes gp-leader-badge-glow{0%,100%{filter:drop-shadow(0 1px 2px rgba(12,24,48,.18))}50%{filter:drop-shadow(0 2px 5px rgba(201,153,59,.48))}}
+@media(max-width:650px){.gp-leader-badge img{flex-basis:21px;width:21px;height:21px}.gp-leader-badge>span{font-size:.61rem}}
+@media(prefers-reduced-motion:reduce){.gp-leader-badge img{animation:none}}
