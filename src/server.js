@@ -28,6 +28,7 @@ import { buildSupabaseProviderCredentialPatch } from './auth-provider-credential
 import { paginateDescending } from './domain/pagination.js';
 import { rankForYouFeed } from './domain/feed-ranking.js';
 import { rankForYouVideos } from './domain/video-ranking.js';
+import { summarizeCreatorVideoAnalytics } from './domain/video-analytics.js';
 import { canViewStory as canViewStoryPolicy, removeExpiredStories } from '../backend/modules/stories/service.js';
 import { canPublishGroupPost, canDeleteGroupPost, canLeaveGroup } from '../backend/modules/groups/service.js';
 import { disconnectBlockedConnections } from '../backend/modules/relationships/blocks.js';
@@ -4845,6 +4846,19 @@ async function route(req, res) {
           const page=paginateDescending(posts,{limit:url.searchParams.has('limit')?Number(url.searchParams.get('limit')):20,cursor:url.searchParams.get('cursor')});
           return json(res,200,{posts:page.items,nextCursor:page.nextCursor,hasMore:page.hasMore,scope});
         } catch (e) { return json(res,400,{error:e.message}); }
+      }
+      if(method==='GET'&&p==='/api/creator/video-analytics'){
+        const rawDays=Number(url.searchParams.get('days')||30);
+        if(![7,30,90].includes(rawDays))return json(res,400,{error:'Analytics period must be 7, 30 or 90 days.'});
+        const creatorVideos=(db.posts||[]).filter(post=>
+          post.userId===user.id&&post.status!=='hidden'&&!post.archivedAt&&
+          (post.mediaIds||[]).some(assetId=>{
+            const asset=(db.mediaAssets||[]).find(item=>item.id===assetId);
+            return asset&&asset.status==='attached'&&asset.mediaType==='video';
+          })
+        );
+        const analytics=summarizeCreatorVideoAnalytics(creatorVideos,db.videoWatchEvents||[],user.id,Date.now(),rawDays);
+        return json(res,200,analytics);
       }
       if(method==='GET'&&p==='/api/for-you/videos'){
         const scope=String(url.searchParams.get('scope')||'for-you');
