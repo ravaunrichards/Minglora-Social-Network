@@ -117,7 +117,7 @@
         const stateLabel = item.current ? "Current" : item.adminAwarded ? "Admin awarded" : item.unlocked ? "Unlocked" : "Locked";
         const stateClass = item.current ? "is-current" : item.adminAwarded ? "is-admin-awarded" : item.unlocked ? "is-unlocked" : "is-locked";
         return "<article class='gp-level-index-item " + stateClass + "'>" +
-          "<img class='gp-level-index-art' src='/assets/gifter-badges/level_" + badgeNumber + ".png' alt='" + esc(badgeName) + "' loading='lazy' decoding='async' width='80' height='80'>" +
+          "<span class='gp-level-index-art'>" + (window.MingloraGifterBadgeArt?.render ? window.MingloraGifterBadgeArt.render({ level: levelNumber, badgeName, compact: true, placement: "directory" }) : "") + "</span>"" +
           "<div class='gp-level-index-copy'>" +
           "<span class='gp-level-index-level'>Level " + number(levelNumber) + "</span>" +
           "<strong class='gp-level-index-badge'>" + esc(badgeName) + "</strong>" +
@@ -146,8 +146,7 @@
       const level = Math.max(0, Math.min(50, Math.floor(Number(item.level) || 0)));
       const badgeName = String(item.badgeName || (level ? "Level " + level + " Gifter" : ""));
       const badgeMarkup = level
-        ? "<span class='gp-leader-badge'><img src='/assets/gifter-badges/level_" + String(level).padStart(2, "0") +
-          ".png' alt='Level " + level + " gifter badge' loading='lazy' decoding='async' width='24' height='24'><span>" +
+        ? "<span class='gp-leader-badge'>" + (window.MingloraGifterBadgeArt?.render ? window.MingloraGifterBadgeArt.render({ level, badgeName, compact: true, placement: "compact" }) : "") + "<span>" +
           esc(badgeName) + "</span></span>"
         : "";
       return "<article class='gp-leader-row " + (item.userId === current.userId ? "is-you" : "") + "'>" +
