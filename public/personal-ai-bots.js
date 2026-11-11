@@ -232,6 +232,23 @@
     html+='<div class="pab-grid">'+performanceMetric(performanceActivity.tasksCreated24h,'Tasks created · 24h')+performanceMetric(performanceActivity.tasksCompleted24h,'Marked completed · 24h')+performanceMetric(performanceActivity.tasksFailed24h,'Marked failed · 24h')+performanceMetric(performanceActivity.tasksCancelled24h,'Cancelled · 24h')+performanceMetric(performanceQueue.awaitingApproval,'Awaiting approval')+performanceMetric(performanceQueue.approvedWaitingForWorker,'Approved · waiting for worker')+performanceMetric(performanceQueue.running,'Records marked running')+performanceMetric(performanceActivity.averageCompletionMinutes24h,'Average completion · minutes')+'</div>';
     html+='<p class="pab-notice">'+esc(performanceCoverageNote)+' '+esc(performanceCoverage.taskRecordsObserved??0)+' task record(s) observed.</p>';
     html+='<div class="pab-warning">Provider inference is not connected. Provider latency, token usage, cost, model quality and scheduler execution telemetry are unavailable, not zero. This dashboard does not claim a live worker is running.</div></section>';
+    const creatorDrafts=Array.isArray(state.creatorDrafts)?state.creatorDrafts:[];
+    html+='<section class="pab-panel" aria-labelledby="pab-creator-studio-title"><div class="pab-heading"><div><h2 id="pab-creator-studio-title">AI Creator Studio</h2><p>Prepare and review disclosed AI-identity content drafts for Minglora. This workspace records manually supplied draft text; it does not generate media or publish posts.</p></div><span class="pab-tag">DRAFT ONLY</span></div>';
+    html+='<div class="pab-warning">No model generation, media upload, publishing, message sending, or external handoff is connected. Approval means approved for a future human handoff only. AI identity disclosure remains required.</div>';
+    html+='<form id="pab-creator-draft-form" class="pab-form-grid" data-edit-id=""><div class="pab-field"><label for="pab-creator-bot">AI identity</label><select class="pab-select" id="pab-creator-bot" required><option value="">Select AI identity</option>'+bots.map(bot=>'<option value="'+esc(bot.id)+'">'+esc(bot.displayName)+' · '+esc(bot.username)+'</option>').join('')+'</select></div>';
+    html+='<div class="pab-field"><label for="pab-creator-format">Content format</label><select class="pab-select" id="pab-creator-format"><option value="feed_post">Feed post</option><option value="story">Story</option><option value="reel">Reel brief</option><option value="page_post">Page post</option><option value="group_post">Group post</option><option value="event_promotion">Event promotion</option><option value="live_show_plan">LIVE show plan</option></select></div>';
+    html+='<div class="pab-field"><label for="pab-creator-destination">Minglora destination</label><select class="pab-select" id="pab-creator-destination"><option value="feed">Feed</option><option value="story">Story</option><option value="reel">Reels</option><option value="page">Page</option><option value="group">Group</option><option value="event">Event</option><option value="live">LIVE</option></select></div>';
+    html+='<div class="pab-field"><label for="pab-creator-title">Draft title</label><input class="pab-input" id="pab-creator-title" maxlength="120" required></div>';
+    html+='<div class="pab-field full"><label for="pab-creator-caption">Caption</label><textarea class="pab-textarea" id="pab-creator-caption" rows="2" maxlength="5000"></textarea></div>';
+    html+='<div class="pab-field full"><label for="pab-creator-body">Draft text / creative brief</label><textarea class="pab-textarea" id="pab-creator-body" rows="6" maxlength="20000" required></textarea></div>';
+    html+='<div class="pab-field"><label for="pab-creator-source">Content/asset source</label><select class="pab-select" id="pab-creator-source"><option value="owner_authored">Owner authored</option><option value="member_supplied">Member supplied</option><option value="licensed">Licensed</option><option value="external_reference">External reference</option></select></div>';
+    html+='<div class="pab-field"><label for="pab-creator-assets">Existing asset references (one per line, max 10)</label><textarea class="pab-textarea" id="pab-creator-assets" rows="2" maxlength="3000"></textarea></div>';
+    html+='<div class="pab-field full"><label><input type="checkbox" id="pab-creator-rights"> I confirm I have reviewed the source, permissions, likeness/voice and media rights for this draft.</label><small class="pab-notice">Required before submitting for owner review. This is an owner attestation, not independent rights verification.</small></div>';
+    html+='<div class="pab-field full"><button type="submit" class="pab-btn" id="pab-creator-save">Save draft</button><button type="button" class="pab-btn secondary" id="pab-creator-reset">New draft</button><span id="pab-creator-status" class="pab-notice" role="status" aria-live="polite">Drafts remain private to this owner. No content is published.</span></div></form>';
+    html+='<div class="pab-divider"></div><div class="pab-heading"><div><h3>Draft and review queue</h3><p>'+creatorDrafts.length+' saved draft(s) loaded. Versions are retained for the latest 10 edits per draft.</p></div></div>';
+    html+=creatorDrafts.length?'<div class="pab-audit" id="pab-creator-draft-list">'+creatorDrafts.map(draft=>creatorDraftRow(draft)).join('')+'</div>':'<div class="pab-empty" id="pab-creator-draft-list">No Creator Studio drafts have been saved.</div>';
+    html+='</section>';
+
     const identityRecordsHasMore=state.identityRecordsHasMore===true;
     html+='<section class="pab-panel"><div class="pab-heading"><div><h2>Canonical PostgreSQL AI identity records</h2><p>Read from Minglora Supabase through the owner-only runtime gateway. This list loads 100 rows at a time; the displayed number is rows loaded, not total project capacity.</p></div><span class="pab-status '+(identitySource==='minglora_supabase_postgresql'?'':'off')+'">'+(identitySource==='minglora_supabase_postgresql'?'DATABASE READ':'LEGACY ONLY')+'</span></div>';
     html+='<div class="pab-metric"><strong id="pab-identity-count">'+esc(identityRecords.length.toLocaleString())+'</strong><span>Canonical identity rows loaded</span></div>';
@@ -338,6 +355,18 @@
     html+='<section class="pab-panel"><div class="pab-heading"><div><h2>System implementation tracker</h2><p>Planned systems are shown honestly; they are not presented as active until their services and tests exist.</p></div></div><div class="pab-roadmap-grid">'+roadmapCard('Bot Personality Laboratory','Versioned persona drafts, structural checks, owner approval, activation and rollback are available; provider sandbox and behavioural evaluation remain disconnected.','Partial')+roadmapCard('Bot Teams','Owner-scoped team creation, editing, enable/pause/disable and membership assignment are implemented; cross-department collaboration and task execution are not connected.','Partial')+roadmapCard('Smart Activity Scheduling','Per-bot schedule settings stored; no scheduler worker connected.','Configuration only')+roadmapCard('Bot Performance Center','Time-stamped read-only 24-hour runtime queue snapshot is available; provider latency, token, cost and quality telemetry remain unavailable.','Partial')+roadmapCard('Multilingual Intelligence','Language preferences stored; translation provider not connected.','Configuration only')+roadmapCard('AI Creator Studio','Draft task types are queued; generation and media pipeline not connected.','Not implemented')+roadmapCard('Bot Security and Trust Center','Owner-only APIs, AI disclosure fields, rate limits, approvals and emergency shutdown foundation added.','Partial')+roadmapCard('AI Friendship and Companionship','AI friend category exists; member-facing companion sessions and consent controls not implemented.','Not implemented')+roadmapCard('AI Community Events','Event task types and category exist; event execution is not implemented.','Not implemented')+roadmapCard('Centralized Bot Command Center','Search, selection, bulk activation, pause/resume and emergency controls added.','Partial')+'</div></section>';
     root.innerHTML=html;bind();
   }
+
+  function creatorDraftRow(draft){
+    const bot=(state?.bots||[]).find(item=>item.id===draft.botId);
+    const reviewActions=draft.status==='pending_review'
+      ?'<button type="button" class="pab-btn secondary pab-creator-review" data-draft="'+esc(draft.id)+'" data-decision="approve">Approve for human handoff</button><button type="button" class="pab-btn secondary pab-creator-review" data-draft="'+esc(draft.id)+'" data-decision="changes_requested">Request changes</button><button type="button" class="pab-btn secondary pab-creator-review" data-draft="'+esc(draft.id)+'" data-decision="reject">Reject</button>'
+      :'';
+    const editAction=['draft','changes_requested'].includes(draft.status)
+      ?'<button type="button" class="pab-btn secondary pab-creator-edit" data-draft="'+esc(draft.id)+'">Edit draft</button><button type="button" class="pab-btn secondary pab-creator-submit" data-draft="'+esc(draft.id)+'">Submit for review</button>'
+      :'';
+    const archiveAction=draft.status==='archived'?'':'<button type="button" class="pab-btn secondary pab-creator-review" data-draft="'+esc(draft.id)+'" data-decision="archive">Archive</button>';
+    return '<div class="pab-audit-row"><strong>'+esc(draft.title)+' · '+esc(draft.status)+'</strong><span>'+esc(bot?.displayName||'AI identity unavailable')+' · '+esc(draft.contentFormat)+' → '+esc(draft.destination)+' · v'+esc(draft.version)+' · '+esc(date(draft.updatedAt))+'</span><div class="pab-actions">'+editAction+reviewActions+archiveAction+'</div><small>'+esc(draft.reviewNotes||'No review notes')+' · AI disclosure required · '+(draft.rightsAttested?'rights owner-attested':'rights not attested')+'</small></div>';
+  }
   function roadmapCard(title,description,status){return '<article class="pab-roadmap-card"><strong>'+esc(title)+'</strong><p>'+esc(description)+'</p><span class="pab-tag">'+esc(status)+'</span></article>';}
 
   function bind(){
@@ -375,6 +404,12 @@
     document.querySelector('#pab-team-create-form')?.addEventListener('submit',createTeam);
     document.querySelector('#pab-follow-search-button')?.addEventListener('click',searchFollowTargets);
     document.querySelector('#pab-follow-form')?.addEventListener('submit',submitFollowInstruction);
+    document.querySelector('#pab-creator-draft-form')?.addEventListener('submit',saveCreatorDraft);
+    document.querySelector('#pab-creator-reset')?.addEventListener('click',resetCreatorDraftForm);
+    document.querySelectorAll('.pab-creator-edit').forEach(node=>node.addEventListener('click',()=>editCreatorDraft(node.dataset.draft)));
+    document.querySelectorAll('.pab-creator-submit').forEach(node=>node.addEventListener('click',()=>actOnCreatorDraft(node.dataset.draft,'submit')));
+    document.querySelectorAll('.pab-creator-review').forEach(node=>node.addEventListener('click',()=>actOnCreatorDraft(node.dataset.draft,'review',node.dataset.decision)));
+
 
     document.querySelectorAll('.pab-team-save').forEach(node=>node.addEventListener('click',()=>saveTeam(node.dataset.team)));
     document.querySelectorAll('.pab-team-assign').forEach(node=>node.addEventListener('click',()=>assignTeamMembers(node.dataset.team)));
@@ -580,7 +615,7 @@
     catch(error){notice('pab-category-status',error.message,'error');}
   }
   function filterBots(){const value=String(document.querySelector('#pab-bot-filter')?.value||'').trim().toLowerCase();const population=String(document.querySelector('#pab-population-filter')?.value||'all');document.querySelectorAll('[data-bot-card]').forEach(card=>{const searchMatches=String(card.dataset.search||'').includes(value);const populationMatches=population==='all'||card.dataset.population===population;card.hidden=!(searchMatches&&populationMatches);});}
-  async function refresh(){try{state=await request(API);const batchResult=await request(API+'/batches?limit=50&offset=0');state.batchHistory=Array.isArray(batchResult.batches)?batchResult.batches:[];state.batchHistoryNextOffset=Number(batchResult.nextOffset)||state.batchHistory.length;state.batchHistoryHasMore=batchResult.hasMore===true;await loadProviderRuntimeOverview();render();}catch(error){notice('pab-network-status',error.message,'error');}}
+  async function refresh(){try{state=await request(API);const creatorDraftResult=await request(API+'/creator-studio/drafts?limit=100&offset=0');state.creatorDrafts=Array.isArray(creatorDraftResult.drafts)?creatorDraftResult.drafts:[];const batchResult=await request(API+'/batches?limit=50&offset=0');state.batchHistory=Array.isArray(batchResult.batches)?batchResult.batches:[];state.batchHistoryNextOffset=Number(batchResult.nextOffset)||state.batchHistory.length;state.batchHistoryHasMore=batchResult.hasMore===true;await loadProviderRuntimeOverview();render();}catch(error){notice('pab-network-status',error.message,'error');}}
   async function saveNetwork(){
     const enabled=!!document.querySelector('#pab-master-switch')?.checked,hybridEnabled=!!document.querySelector('#pab-hybrid-switch')?.checked;
     try{await request(API+'/network',{method:'PUT',body:JSON.stringify({enabled,hybridEnabled})});notice('pab-network-status','Network controls saved. Bots still require explicit instructions and approval.','success');await refresh();}
@@ -1402,6 +1437,59 @@
       notice('pab-task-status','Owner-attested review decision recorded. This is not independent reviewer verification; provider compatibility and language quality remain unverified.','success');
       await loadLanguageEvaluationSets(botId);
     }catch(error){notice('pab-task-status',error.message||'Could not record language review.','error');}
+  }
+
+
+  function resetCreatorDraftForm(){
+    const form=document.querySelector('#pab-creator-draft-form');if(!form)return;
+    form.reset();form.dataset.editId='';
+    const button=document.querySelector('#pab-creator-save');if(button)button.textContent='Save draft';
+    notice('pab-creator-status','New private draft. No content is published.','');
+  }
+  function editCreatorDraft(id){
+    const draft=(state?.creatorDrafts||[]).find(item=>item.id===id);if(!draft)return;
+    if(!['draft','changes_requested'].includes(draft.status)){notice('pab-creator-status','Only draft or changes-requested content can be edited.','error');return;}
+    const form=document.querySelector('#pab-creator-draft-form');if(!form)return;
+    form.dataset.editId=id;
+    const set=(selector,value)=>{const node=document.querySelector(selector);if(node)node.value=value??'';};
+    set('#pab-creator-bot',draft.botId);set('#pab-creator-format',draft.contentFormat);set('#pab-creator-destination',draft.destination);
+    set('#pab-creator-title',draft.title);set('#pab-creator-caption',draft.caption);set('#pab-creator-body',draft.body);
+    set('#pab-creator-source',draft.sourceType);set('#pab-creator-assets',(draft.assetReferences||[]).join('\n'));
+    const rights=document.querySelector('#pab-creator-rights');if(rights)rights.checked=draft.rightsAttested===true;
+    const button=document.querySelector('#pab-creator-save');if(button)button.textContent='Save version '+(Number(draft.version||1)+1);
+    notice('pab-creator-status','Editing '+draft.title+'. Saving creates a new version and resets the review state.','');
+    form.scrollIntoView({behavior:'smooth',block:'start'});
+  }
+  async function saveCreatorDraft(event){
+    event.preventDefault();
+    const read=selector=>document.querySelector(selector)?.value||'';
+    const payload={
+      botId:read('#pab-creator-bot'),contentFormat:read('#pab-creator-format'),destination:read('#pab-creator-destination'),
+      title:read('#pab-creator-title'),caption:read('#pab-creator-caption'),body:read('#pab-creator-body'),
+      sourceType:read('#pab-creator-source'),assetReferences:read('#pab-creator-assets').split('\n').map(value=>value.trim()).filter(Boolean),
+      rightsAttested:document.querySelector('#pab-creator-rights')?.checked===true
+    };
+    const form=document.querySelector('#pab-creator-draft-form'),id=form?.dataset.editId||'';
+    try{
+      const result=await request(API+'/creator-studio/drafts'+(id?'/'+encodeURIComponent(id):''),{
+        method:id?'PATCH':'POST',body:JSON.stringify(payload)
+      });
+      await refresh();
+      if(!id)resetCreatorDraftForm();
+      notice('pab-creator-status',id?'New Creator Studio version saved. Previous version retained.':'Creator Studio draft saved privately.','success');
+      return result;
+    }catch(error){notice('pab-creator-status',error.message||'Could not save Creator Studio draft.','error');}
+  }
+  async function actOnCreatorDraft(id,action,decision=''){
+    const url=API+'/creator-studio/drafts/'+encodeURIComponent(id)+'/'+(action==='submit'?'submit':'review');
+    const payload=action==='submit'?{}:{decision,reviewNotes:window.prompt('Optional review notes (max 1,200 characters):')||''};
+    if(action==='review'&&decision==='archive'&&!window.confirm('Archive this Creator Studio draft?'))return;
+    if(action==='submit'&&!window.confirm('Submit this draft for owner review? This will not publish it.'))return;
+    try{
+      const result=await request(url,{method:'POST',body:JSON.stringify(payload)});
+      await refresh();
+      notice('pab-creator-status',result.message||'Creator Studio draft updated.','success');
+    }catch(error){notice('pab-creator-status',error.message||'Could not update Creator Studio draft.','error');}
   }
 
   async function saveBot(id){
