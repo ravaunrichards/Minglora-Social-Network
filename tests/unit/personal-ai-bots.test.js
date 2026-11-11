@@ -8,6 +8,7 @@ import {
   ensurePersonalAiBotCollections,
   getPersonalAiBotCategories,
   getPersonalAiBotOverview,
+  getPersonalAiBotPerformanceSnapshot,
   createPersonalAiBot,
   createPersonalAiBotStarterSet,
   updatePersonalAiBot,
@@ -1387,4 +1388,32 @@ test('editing evaluation cases requires renewed privacy attestation and clears e
   assert.equal(edited.reviewedBy,null);
   assert.equal(edited.syntheticDataAttestedBy,actor);
   assert.equal(edited.languageQualityStatus,'unverified');
+});
+
+test('performance snapshot reports time-bounded runtime activity and unavailable integrations honestly',()=>{
+  const db={
+    personalAiBots:[{id:'active-bot',status:'enabled',lastActiveAt:'2026-11-11T09:58:00.000Z'}],
+    personalAiBotTasks:[
+      {id:'pending',status:'awaiting_administrator_approval',taskType:'assistant_request',createdAt:'2026-11-11T09:50:00.000Z'},
+      {id:'done',status:'completed',taskType:'draft_post',createdAt:'2026-11-11T09:00:00.000Z',completedAt:'2026-11-11T09:04:00.000Z'},
+      {id:'running',status:'running',taskType:'analytics_report',createdAt:'2026-11-11T09:30:00.000Z'},
+      {id:'future',status:'awaiting_administrator_approval',taskType:'other',createdAt:'2026-11-11T10:01:00.000Z'}
+    ]
+  };
+  const snapshot=getPersonalAiBotPerformanceSnapshot(db,'2026-11-11T10:00:00.000Z');
+  assert.equal(snapshot.source,'legacy_runtime_state_snapshot');
+  assert.equal(snapshot.observedAt,'2026-11-11T10:00:00.000Z');
+  assert.equal(snapshot.coverage.taskRecordsObserved,4);
+  assert.equal(snapshot.coverage.taskRecordsMayBeTruncated,false);
+  assert.deepEqual(snapshot.queue,{awaitingApproval:2,approvedWaitingForWorker:0,running:1});
+  assert.equal(snapshot.activity.tasksCreated24h,3);
+  assert.equal(snapshot.activity.tasksCompleted24h,1);
+  assert.equal(snapshot.activity.averageCompletionMinutes24h,4);
+  assert.equal(snapshot.activity.taskTypes24h.assistant_request,1);
+  assert.equal(snapshot.integrations.providerInference.available,false);
+  assert.equal(snapshot.integrations.usageTelemetry.status,'unavailable');
+});
+
+test('performance snapshot rejects invalid observation timestamps',()=>{
+  assert.throws(()=>getPersonalAiBotPerformanceSnapshot({},'not-a-time'),/valid timestamp/);
 });
