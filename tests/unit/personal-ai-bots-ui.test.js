@@ -516,6 +516,13 @@ test('Multilingual evaluation registry exposes synthetic data privacy and owner-
     'Load evaluation sets',
     'Submit for human review',
     'Record owner-attested review',
+    'Owner-attested manual rubric (0–4 per criterion)',
+    'Semantic accuracy',
+    'Dialect fidelity',
+    'Context preservation',
+    'Code-switching',
+    'Safety meaning',
+    'not a verified model quality score or a certification',
     'Request changes',
     'Reject set',
     'Provider run: not run',
@@ -526,4 +533,6 @@ test('Multilingual evaluation registry exposes synthetic data privacy and owner-
   assert.match(ui,/async function createOrUpdateLanguageEvaluationSet/);
   assert.match(ui,/async function actOnLanguageEvaluationSet/);
   assert.match(ui,/async function reviewLanguageEvaluationSet/);
+  assert.match(ui,/reviewRubric:\{/);
+  assert.match(ui,/pab-language-rubric-safety/);
 });
