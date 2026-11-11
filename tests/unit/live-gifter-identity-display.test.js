@@ -55,9 +55,9 @@ test("LIVE badge names remain legible with restrained glow, responsive sizing an
 });
 
 test("the LIVE identity assets are versioned together and refreshed in the service-worker shell", () => {
-  assert.match(html, /app\.js\?v=20261111-live-gifter-name-badge-1/);
-  assert.match(html, /gifter-badge-3d\.css\?v=20261111-live-gifter-name-badge-1/);
-  assert.match(serviceWorker, /minglora-shell-v278-self-updating-1/);
-  assert.match(serviceWorker, /app\.js\?v=20261111-live-gifter-name-badge-1/);
-  assert.match(serviceWorker, /gifter-badge-3d\.css\?v=20261111-live-gifter-name-badge-1/);
+  assert.match(html, /app\.js\?v=20261111-tiktok-readable-badge-size-2/);
+  assert.match(html, /gifter-badge-3d\.css\?v=20261111-tiktok-readable-badge-size-2/);
+  assert.match(serviceWorker, /minglora-shell-v285-self-updating-1/);
+  assert.match(serviceWorker, /app\.js\?v=20261111-tiktok-readable-badge-size-2/);
+  assert.match(serviceWorker, /gifter-badge-3d\.css\?v=20261111-tiktok-readable-badge-size-2/);
 });
