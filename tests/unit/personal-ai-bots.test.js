@@ -51,6 +51,11 @@ import {
   rollbackPersonalAiBotPersonaVersion,
   getPersonalAiBotLanguageSettings,
   updatePersonalAiBotLanguageSettings,
+  listPersonalAiBotLanguageEvaluationSets,
+  createPersonalAiBotLanguageEvaluationSet,
+  updatePersonalAiBotLanguageEvaluationSet,
+  submitPersonalAiBotLanguageEvaluationSet,
+  reviewPersonalAiBotLanguageEvaluationSet,
 } from '../../backend/modules/personal-ai-bots/personal-ai-bots-service.js';
 
 const makeDb=()=>({});
@@ -1273,4 +1278,97 @@ test('multilingual settings cannot be read or changed across bot owner boundarie
     supportedLanguages:['en'],primaryLanguage:'en',fallbackLanguage:'en',locale:'en-JM'
   },'other-owner',stamp,uid),/not found under your owner account/);
   assert.equal(db.personalAiBotLanguageSettings.length,0);
+});
+
+
+function makeSyntheticLanguageCases(prefix='Example'){
+  return Array.from({length:5},(_,index)=>({
+    inputText:prefix+' source phrase '+(index+1),
+    expectedOutput:prefix+' reviewed reference meaning '+(index+1),
+    category:index===0?'greeting':'general'
+  }));
+}
+
+function createLanguageEvaluationFixture(){
+  const db=makeDb();
+  const bot=createPersonalAiBot(db,{displayName:'Language Evaluation Bot',categoryId:'ai-friends'},actor,stamp,uid);
+  updatePersonalAiBotLanguageSettings(db,bot.id,{
+    supportedLanguages:['en','jam'],primaryLanguage:'en',fallbackLanguage:'jam',locale:'en-JM'
+  },actor,stamp,uid);
+  return {db,bot};
+}
+
+test('multilingual evaluation sets store synthetic cases and human-reviewed evidence without verifying providers',()=>{
+  const {db,bot}=createLanguageEvaluationFixture();
+  const created=createPersonalAiBotLanguageEvaluationSet(db,bot.id,{
+    languageCode:'jam',name:'Patois Sample Review Set',
+    description:'Synthetic Jamaican Creole examples for human review.',
+    cases:makeSyntheticLanguageCases('Synthetic Patois'),
+    syntheticDataAttested:true
+  },actor,stamp,uid);
+  assert.equal(created.status,'draft');
+  assert.equal(created.languageCode,'jam');
+  assert.equal(created.cases.length,5);
+  assert.equal(created.syntheticDataAttested,true);
+  assert.equal(created.syntheticDataAttestedBy,actor);
+  assert.equal(created.providerExecutionStatus,'not_run');
+  assert.equal(created.languageQualityStatus,'unverified');
+  assert.equal(listPersonalAiBotLanguageEvaluationSets(db,bot.id,actor).length,1);
+
+  const submitted=submitPersonalAiBotLanguageEvaluationSet(db,bot.id,created.id,actor,stamp,uid);
+  assert.equal(submitted.status,'pending_human_review');
+  const reviewed=reviewPersonalAiBotLanguageEvaluationSet(db,bot.id,created.id,{
+    decision:'approve',
+    reviewerRole:'native_speaker',
+    evidenceReference:'review-record-jam-2026-01',
+    reviewNotes:'Human reviewer recorded sample-level comments.',
+    reviewerAttestation:true
+  },actor,stamp,uid);
+  assert.equal(reviewed.status,'human_reviewed');
+  assert.equal(reviewed.reviewStatus,'approve');
+  assert.equal(reviewed.reviewedBy,actor);
+  assert.equal(reviewed.providerExecutionStatus,'not_run');
+  assert.equal(reviewed.languageQualityStatus,'unverified');
+  assert.equal(reviewed.reviewEvidenceReference,'review-record-jam-2026-01');
+  assert.equal(db.personalAiBotTasks.length,0);
+  assert.equal(bot.languages[0],'English');
+});
+
+test('multilingual evaluation sets require synthetic-data privacy attestation and supported languages',()=>{
+  const {db,bot}=createLanguageEvaluationFixture();
+  const cases=makeSyntheticLanguageCases();
+  assert.throws(()=>createPersonalAiBotLanguageEvaluationSet(db,bot.id,{
+    languageCode:'jam',name:'Missing Attestation',cases
+  },actor,stamp,uid),/Confirm that all evaluation examples are synthetic/);
+  assert.throws(()=>createPersonalAiBotLanguageEvaluationSet(db,bot.id,{
+    languageCode:'fr',name:'Unsupported Language',cases,syntheticDataAttested:true
+  },actor,stamp,uid),/must be enabled in this bot’s supported language settings/);
+  assert.throws(()=>createPersonalAiBotLanguageEvaluationSet(db,bot.id,{
+    languageCode:'jam',name:'Private Fields',cases:[{...cases[0],memberId:'member-1'}],syntheticDataAttested:true
+  },actor,stamp,uid),/unsupported fields/);
+  assert.throws(()=>submitPersonalAiBotLanguageEvaluationSet(db,bot.id,uid(),actor,stamp,uid),/not found/);
+  assert.equal(db.personalAiBotLanguageEvaluationSets.length,0);
+});
+
+test('editing evaluation cases requires renewed privacy attestation and clears earlier human review',()=>{
+  const {db,bot}=createLanguageEvaluationFixture();
+  const set=createPersonalAiBotLanguageEvaluationSet(db,bot.id,{
+    languageCode:'jam',name:'Editable Patois Set',cases:makeSyntheticLanguageCases(),syntheticDataAttested:true
+  },actor,stamp,uid);
+  submitPersonalAiBotLanguageEvaluationSet(db,bot.id,set.id,actor,stamp,uid);
+  reviewPersonalAiBotLanguageEvaluationSet(db,bot.id,set.id,{
+    decision:'changes_requested',reviewerRole:'qualified_language_reviewer',
+    evidenceReference:'review-comments-record-01',reviewerAttestation:true
+  },actor,stamp,uid);
+  assert.throws(()=>updatePersonalAiBotLanguageEvaluationSet(db,bot.id,set.id,{
+    cases:makeSyntheticLanguageCases('Changed case')
+  },actor,stamp,uid),/Confirm that all edited evaluation examples remain synthetic/);
+  const edited=updatePersonalAiBotLanguageEvaluationSet(db,bot.id,set.id,{
+    cases:makeSyntheticLanguageCases('Changed case'),syntheticDataAttested:true
+  },actor,stamp,uid);
+  assert.equal(edited.status,'draft');
+  assert.equal(edited.reviewStatus,'not_reviewed');
+  assert.equal(edited.reviewedBy,null);
+  assert.equal(edited.syntheticDataAttestedBy,actor);
+  assert.equal(edited.languageQualityStatus,'unverified');
 });
