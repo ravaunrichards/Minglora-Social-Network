@@ -175,14 +175,32 @@ body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layo
 body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="host-chat-split"]>.live-guest-seat.is-guest{grid-row:auto!important;min-height:0!important}
 
 /* All new presets keep seat content sized to the available cell. */
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout]>.live-guest-seat{
+body:has(#live-player-shell) #live-video-stage #live-guest-layout:is(
+  [data-live-layout="solo-host"],[data-live-layout="grid-2x2"],[data-live-layout="grid-3x2"],
+  [data-live-layout="grid-3x3"],[data-live-layout="picture-in-picture"],[data-live-layout="vertical-panels"],
+  [data-live-layout="pk-battle"],[data-live-layout="audio-guest-panel"],[data-live-layout="floating-guest-window"],
+  [data-live-layout="horizontal-guest-strip"],[data-live-layout="vertical-guest-strip"],[data-live-layout="stage-layout"],
+  [data-live-layout="screen-sharing-layout"],[data-live-layout="host-chat-split"],[data-live-layout="dual-host"]
+)>.live-guest-seat{
   box-sizing:border-box!important;min-width:0!important;min-height:0!important;
   max-width:100%!important;max-height:100%!important;overflow:hidden!important;
 }
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout]>.live-guest-layout-heading{
+body:has(#live-player-shell) #live-video-stage #live-guest-layout:is(
+  [data-live-layout="solo-host"],[data-live-layout="grid-2x2"],[data-live-layout="grid-3x2"],
+  [data-live-layout="grid-3x3"],[data-live-layout="picture-in-picture"],[data-live-layout="vertical-panels"],
+  [data-live-layout="pk-battle"],[data-live-layout="audio-guest-panel"],[data-live-layout="floating-guest-window"],
+  [data-live-layout="horizontal-guest-strip"],[data-live-layout="vertical-guest-strip"],[data-live-layout="stage-layout"],
+  [data-live-layout="screen-sharing-layout"],[data-live-layout="host-chat-split"],[data-live-layout="dual-host"]
+)>.live-guest-layout-heading{
   min-width:0!important;max-width:100%!important;overflow:hidden!important;
 }
-body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout] .live-guest-seat-meta{
+body:has(#live-player-shell) #live-video-stage #live-guest-layout:is(
+  [data-live-layout="solo-host"],[data-live-layout="grid-2x2"],[data-live-layout="grid-3x2"],
+  [data-live-layout="grid-3x3"],[data-live-layout="picture-in-picture"],[data-live-layout="vertical-panels"],
+  [data-live-layout="pk-battle"],[data-live-layout="audio-guest-panel"],[data-live-layout="floating-guest-window"],
+  [data-live-layout="horizontal-guest-strip"],[data-live-layout="vertical-guest-strip"],[data-live-layout="stage-layout"],
+  [data-live-layout="screen-sharing-layout"],[data-live-layout="host-chat-split"],[data-live-layout="dual-host"]
+) .live-guest-seat-meta{
   min-width:0!important;max-width:100%!important;overflow-wrap:anywhere!important;
 }
 
