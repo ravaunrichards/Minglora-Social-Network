@@ -605,9 +605,9 @@ test('approved Creator Studio Feed and Story drafts transfer to existing compose
   assert.match(storyComposer,/Publish story/);
   assert.match(storyComposer,/api\('\/stories'/);
   assert.match(storyComposer,/storyText\.value=initialText/);
-  assert.doesNotMatch(receiver,/api\(['"]\/stories/);
   assert.match(admin,/assetReferenceCount:Array\.isArray\(draft\.assetReferences\)/);
   const receiver=app.slice(app.indexOf('function applyPendingCreatorDraftHandoff'),app.indexOf('function openVideoComposer'));
+  assert.doesNotMatch(receiver,/api\(['"]\/stories/);
   assert.doesNotMatch(receiver,/api\(['"]\/posts/);
   const composer=app.slice(app.indexOf('function openComposer(options={})'),app.indexOf('function applyPendingCreatorDraftHandoff'));
   assert.match(composer,/api\('\/posts'/);
