@@ -17,6 +17,7 @@ test('Video Centre provides a dedicated Channels mode separate from profile foll
   assert.match(app,/Manage my channel/);
   assert.match(app,/My subscriptions/);
   assert.match(app,/data-channel-subscribe/);
+  assert.match(app,/Latest uploads from your subscriptions/);
   assert.match(server,/db\.videoChannelSubscriptions/);
   assert.match(store,/'videoChannelSubscriptions'/);
   assert.match(store,/'creatorSubscriptions'/);
