@@ -430,7 +430,6 @@ test('Personality Laboratory exposes versioned drafts and a human approval lifec
     'Duplicate as new draft',
     'Rollback to this version',
     'Activate approved version',
-    'Rollback to this version',
     'Provider/model behavioural test: not connected',
     'This is not a model or safety benchmark.',
     'The bot remains in its existing activation state.'
