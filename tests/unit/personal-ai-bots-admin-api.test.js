@@ -1773,3 +1773,97 @@ test('Persona Laboratory API lists history and draft edits invalidate stale stru
   assert.equal(edited.payload.version.configuration.tone,'Calm and reassuring');
   assert.equal(edited.payload.version.structuralEvaluation,null);
 });
+
+
+test('team handoff API is owner-controlled, one-receiver and permanently non-dispatching',async()=>{
+  const teamId='00000000-0000-4000-8000-000000000501';
+  const senderId='00000000-0000-4000-8000-000000000502';
+  const receiverId='00000000-0000-4000-8000-000000000503';
+  const taskId='00000000-0000-4000-8000-000000000504';
+  const db={
+    personalAiBots:[{id:senderId,createdBy:'owner'},{id:receiverId,createdBy:'owner'}],
+    personalAiBotTeams:[{id:teamId,ownerId:'owner',name:'Review Team',status:'enabled',enabled:true}],
+    personalAiBotTeamMembers:[
+      {id:'member-1',ownerId:'owner',teamId,botId:senderId},
+      {id:'member-2',ownerId:'owner',teamId,botId:receiverId}
+    ],
+    personalAiBotTasks:[{id:taskId,botId:senderId,status:'awaiting_administrator_approval'}]
+  };
+  let saves=0;
+  const invoke=async(method,path,input)=>{
+    const context=makeContext({
+      method,path,url:new URL('https://minglora.test'+path),input:input||{},db,
+      saveStore:async()=>{saves++;}
+    });
+    await handlePersonalAiBotsAdminApi(context);
+    return context.res;
+  };
+  const base='/api/admin/personal-ai-bots/teams/'+teamId+'/handoffs';
+  const created=await invoke('POST',base,{
+    sourceTaskId:taskId,senderBotId:senderId,receivingBotId:receiverId,
+    requiredInput:'Review the source draft for accuracy and completeness.',
+    expectedOutput:'Return a structured review with findings.',
+    contextScope:'team_internal'
+  });
+  assert.equal(created.statusCode,201);
+  assert.equal(created.payload.handoff.dispatchStatus,'not_dispatched');
+  assert.equal(created.payload.handoff.status,'pending_owner_review');
+  const id=created.payload.handoff.id;
+
+  const accepted=await invoke('POST',base+'/'+id+'/accept');
+  assert.equal(accepted.statusCode,200);
+  assert.equal(accepted.payload.handoff.status,'accepted');
+  assert.equal(accepted.payload.handoff.dispatchStatus,'not_dispatched');
+
+  const completed=await invoke('POST',base+'/'+id+'/complete',{
+    resultSummary:'Human-reviewed result recorded for this handoff.'
+  });
+  assert.equal(completed.statusCode,200);
+  assert.equal(completed.payload.handoff.status,'completed');
+  assert.equal(completed.payload.handoff.dispatchStatus,'not_dispatched');
+  assert.equal(db.personalAiBotTasks.length,1);
+
+  const listed=await invoke('GET',base);
+  assert.equal(listed.statusCode,200);
+  assert.equal(listed.payload.handoffs.length,1);
+  assert.equal(saves,3);
+});
+
+test('team handoff API rejects private context, unsupported fields and non-owner access',async()=>{
+  const teamId='00000000-0000-4000-8000-000000000511';
+  const senderId='00000000-0000-4000-8000-000000000512';
+  const receiverId='00000000-0000-4000-8000-000000000513';
+  const taskId='00000000-0000-4000-8000-000000000514';
+  const db={
+    personalAiBots:[{id:senderId},{id:receiverId}],
+    personalAiBotTeams:[{id:teamId,ownerId:'owner',name:'Review Team',status:'enabled'}],
+    personalAiBotTeamMembers:[
+      {ownerId:'owner',teamId,botId:senderId},
+      {ownerId:'owner',teamId,botId:receiverId}
+    ],
+    personalAiBotTasks:[{id:taskId,botId:senderId,status:'awaiting_administrator_approval'}]
+  };
+  const path='/api/admin/personal-ai-bots/teams/'+teamId+'/handoffs';
+  const context=makeContext({
+    method:'POST',path,
+    input:{
+      sourceTaskId:taskId,senderBotId:senderId,receivingBotId:receiverId,
+      requiredInput:'This includes private member conversation content.',
+      expectedOutput:'Return a review.',
+      contextScope:'private',
+      tools:['send_message']
+    },
+    db
+  });
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,400);
+  assert.match(context.res.payload.error,/unsupported fields/);
+
+  const denied=makeContext({
+    method:'GET',path,url:new URL('https://minglora.test'+path),
+    db,isOwnerAdmin:false
+  });
+  await handlePersonalAiBotsAdminApi(denied);
+  assert.equal(denied.res.statusCode,403);
+  assert.equal(db.personalAiBotTeamHandoffs,undefined);
+});
