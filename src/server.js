@@ -29,6 +29,7 @@ import { paginateDescending } from './domain/pagination.js';
 import { rankForYouFeed } from './domain/feed-ranking.js';
 import { rankForYouVideos } from './domain/video-ranking.js';
 import { VIDEO_PLAYLIST_MAX_ITEMS, addVideoPlaylistItem, canViewVideoPlaylist, removeVideoPlaylistItem, reorderVideoPlaylistItems, validateVideoPlaylistInput } from '../backend/modules/video/playlists.js';
+import { isVideoChannelSubscribed, subscribeToVideoChannel, unsubscribeFromVideoChannel } from '../backend/modules/video/channels.js';
 import { summarizeCreatorVideoAnalytics } from './domain/video-analytics.js';
 import { canViewStory as canViewStoryPolicy, removeExpiredStories } from '../backend/modules/stories/service.js';
 import { canPublishGroupPost, canDeleteGroupPost, canLeaveGroup } from '../backend/modules/groups/service.js';
@@ -1052,6 +1053,31 @@ function isVisibleVideoPost(viewerId, post) {
     const asset = (db.mediaAssets || []).find(item => item.id === assetId && item.ownerId === post.userId && item.slot === 'post');
     return asset && asset.status === 'attached' && asset.mediaType === 'video';
   });
+}
+function visibleVideoChannelPosts(ownerId, viewerId) {
+  return (db.posts || [])
+    .filter(post => post.userId === ownerId && isVisibleVideoPost(viewerId, post))
+    .sort((a, b) => Date.parse(b.createdAt || '') - Date.parse(a.createdAt || ''));
+}
+async function publicVideoChannel(owner, viewerId, { includeVideos = false } = {}) {
+  if (!owner || !canViewProfile(viewerId, owner) || blockedBetween(viewerId, owner.id)) return null;
+  const posts = visibleVideoChannelPosts(owner.id, viewerId);
+  if (!posts.length) return null;
+  const channel = {
+    id: owner.id,
+    owner: safeUser(owner, viewerId),
+    videoCount: posts.length,
+    isOwner: owner.id === viewerId,
+    isSubscribed: isVideoChannelSubscribed(db.videoChannelSubscriptions || [], viewerId, owner.id),
+    latestVideoAt: posts[0].createdAt || null
+  };
+  if (includeVideos) {
+    channel.videos = await Promise.all(posts.slice(0, 50).map(async post => {
+      const published = await publicPost(post, viewerId);
+      return { ...published, author: safeUser(owner, viewerId) };
+    }));
+  }
+  return channel;
 }
 async function publicVideoPlaylist(playlist, viewerId, { includeVideos = false } = {}) {
   const owner = (db.users || []).find(member => member.id === playlist.ownerId);
@@ -4905,6 +4931,56 @@ async function route(req, res) {
         const analytics=summarizeCreatorVideoAnalytics(creatorVideos,db.videoWatchEvents||[],user.id,Date.now(),rawDays);
         return json(res,200,analytics);
       }
+      if(method==='GET'&&p==='/api/video-channels'){
+        const scope=String(url.searchParams.get('scope')||'discover');
+        if(!['discover','subscriptions','mine'].includes(scope))return json(res,400,{error:'Video channel scope must be discover, subscriptions or mine.'});
+        let owners=[];
+        if(scope==='mine')owners=[user];
+        else if(scope==='subscriptions'){
+          const ownerIds=new Set((db.videoChannelSubscriptions||[]).filter(item=>item.subscriberId===user.id).map(item=>item.channelOwnerId));
+          owners=(db.users||[]).filter(member=>ownerIds.has(member.id));
+        }else owners=db.users||[];
+        const channels=[];
+        for(const owner of owners){
+          const channel=await publicVideoChannel(owner,user.id);
+          if(channel)channels.push(channel);
+        }
+        channels.sort((a,b)=>(Date.parse(b.latestVideoAt||'')||0)-(Date.parse(a.latestVideoAt||'')||0));
+        return json(res,200,{channels,scope});
+      }
+      const videoChannelSubscriptionRoute=p.match(/^\/api\/video-channels\/([^/]+)\/subscription$/);
+      if(videoChannelSubscriptionRoute&&method==='POST'){
+        const ownerId=decodeURIComponent(videoChannelSubscriptionRoute[1]);
+        if(ownerId===user.id)return json(res,400,{error:'You cannot subscribe to your own video channel.'});
+        const owner=(db.users||[]).find(member=>member.id===ownerId);
+        if(!owner||!await publicVideoChannel(owner,user.id))return json(res,404,{error:'Video channel not found.'});
+        const result=subscribeToVideoChannel(db.videoChannelSubscriptions,{
+          subscriberId:user.id,channelOwnerId:ownerId,id:uid(),createdAt:now()
+        });
+        if(result.status==='exists')return json(res,200,{ok:true,subscribed:true,alreadySubscribed:true});
+        if(result.status!=='created')return json(res,400,{error:'The channel subscription could not be saved.'});
+        await saveStore();
+        return json(res,201,{ok:true,subscribed:true,subscription:result.subscription});
+      }
+      if(videoChannelSubscriptionRoute&&method==='DELETE'){
+        const ownerId=decodeURIComponent(videoChannelSubscriptionRoute[1]);
+        const result=unsubscribeFromVideoChannel(db.videoChannelSubscriptions,{
+          subscriberId:user.id,channelOwnerId:ownerId
+        });
+        if(result.status==='not_found')return json(res,200,{ok:true,subscribed:false,alreadyUnsubscribed:true});
+        if(result.status!=='removed')return json(res,400,{error:'The channel subscription could not be removed.'});
+        await saveStore();
+        return json(res,200,{ok:true,subscribed:false});
+      }
+      const videoChannelRoute=p.match(/^\/api\/video-channels\/([^/]+)$/);
+      if(videoChannelRoute&&method==='GET'){
+        const ownerId=decodeURIComponent(videoChannelRoute[1]);
+        const owner=(db.users||[]).find(member=>member.id===ownerId);
+        const channel=await publicVideoChannel(owner,user.id,{includeVideos:true});
+        if(!channel)return json(res,404,{error:'Video channel not found.'});
+        return json(res,200,{channel});
+      }
+
       if(method==='GET'&&p==='/api/video-playlists'){
         const requestedOwnerId=String(url.searchParams.get('ownerId')||user.id).trim();
         const owner=(db.users||[]).find(member=>member.id===requestedOwnerId);
