@@ -1417,3 +1417,14 @@ test('performance snapshot reports time-bounded runtime activity and unavailable
 test('performance snapshot rejects invalid observation timestamps',()=>{
   assert.throws(()=>getPersonalAiBotPerformanceSnapshot({},'not-a-time'),/valid timestamp/);
 });
+
+test('performance snapshot discloses the runtime task history cap',()=>{
+  const db={personalAiBotTasks:Array.from({length:2000},(_,index)=>({
+    id:'task-'+index,status:'awaiting_administrator_approval',
+    taskType:'assistant_request',createdAt:'2026-11-11T09:00:00.000Z'
+  }))};
+  const snapshot=getPersonalAiBotPerformanceSnapshot(db,'2026-11-11T10:00:00.000Z');
+  assert.equal(snapshot.coverage.taskRecordsObserved,2000);
+  assert.equal(snapshot.coverage.taskRecordsMayBeTruncated,true);
+  assert.equal(snapshot.coverage.taskRecordCap,2000);
+});
