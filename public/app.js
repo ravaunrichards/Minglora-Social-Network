@@ -260,6 +260,15 @@ const gifterProfileBadge = (member, placement = "compact") => {
     (badge.liveEntranceUnlocked ? '<span class="gp-live-entry-badge" role="img" aria-label="Level 25 LIVE entrance unlocked" title="Level 25 LIVE entrance unlocked">LIVE ENTRY</span>' : '') +
     leagueBadge;
 };
+const liveGifterBadgeMarkup = (member, placement = "compact") => {
+  const badge = member?.gifterBadge;
+  if (!badge?.level) return "";
+  const level = Math.max(1, Math.min(50, Math.floor(Number(badge.level) || 1)));
+  const badgeName = String(badge.badgeName || ("Level " + level + " Gifter"));
+  return '<span class="live-gifter-badge-label" aria-label="' + esc(badgeName) + '">' +
+    gifterBadgeImageMarkup({ ...badge, level }, placement) +
+    '<span class="live-gifter-badge-name">' + esc(badgeName) + '</span></span>';
+};
 window.addEventListener('minglora:gifter-badge-updated',event=>{
   if(state.user){
     state.user.gifterBadge=event.detail?.badge||null;
@@ -1327,7 +1336,7 @@ function liveSessionCardMarkup(session){
     "<span class='live-indicator'>LIVE</span><span class='live-type-pill "+(audioOnly?'audio':'video')+"'>"+modeLabels[liveMode]+"</span>"+
     (presence?"<span class='live-room-viewers'>"+presence+"</span>":"")+
     (audioOnly?"<div class='live-directory-audio-orb'><span>♪</span></div>":liveMode==='mobile_gaming'?"<div class='live-directory-audio-orb'><span>🎮</span></div>":"<div class='live-room-avatar'><img src='"+avatar(session.host)+"' alt=''></div>")+
-    "</div><div class='live-room-details'><strong>"+esc(session.title)+"</strong><span>"+esc(session.host?.name||'Minglora creator')+"</span><small>@"+esc(session.host?.username||'member')+gifterProfileBadge(session.host,"compact")+"</small>"+
+    "</div><div class='live-room-details'><strong>"+esc(session.title)+"</strong><small class='live-room-host-username'>@"+esc(session.host?.username||'member')+"</small><span class='live-room-host-name'>"+esc(session.host?.name||'Minglora creator')+liveGifterBadgeMarkup(session.host,"compact")+"</span>"+
     "<small class='live-room-board'>"+esc(boardLabels[session.liveSettings?.board]||'General')+"</small>"+
     (session.description?"<p class='live-room-description'>"+esc(session.description)+"</p>":"")+
     "<button class='primary' data-watch-live='"+esc(session.id)+"'>"+(audioOnly?'Listen LIVE':'Watch LIVE')+"</button></div></article>";
@@ -1680,7 +1689,7 @@ function renderLiveTopGifters(items,session,weeklyTitleGifters=[]){
     (weekly.length?weekly.map(item=>{
       const member=item.user||{};
       const userId=String(member.id||"");
-      return "<article class='live-weekly-title-row'><img src='"+esc(avatar(member))+"' alt='' loading='lazy'><span><strong>"+esc(member.name||member.username||"Minglora member")+"</strong>"+gifterProfileBadge({ ...member, gifterBadge: item.gifterBadge },"compact")+"<small>Top Gifter · "+esc(item.giftName||item.giftCode||"Gift")+" · "+Number(item.giftCount||0).toLocaleString()+" sent</small></span><b>TOP GIFTER</b><button type='button' class='text-button' data-live-weekly-title-profile='"+esc(userId)+"'>Profile</button></article>";
+      return "<article class='live-weekly-title-row'><img src='"+esc(avatar(member))+"' alt='' loading='lazy'><span><small class='live-gifter-username'>@"+esc(member.username||"member")+"</small><strong>"+esc(member.name||member.username||"Minglora member")+liveGifterBadgeMarkup({ ...member, gifterBadge: item.gifterBadge },"compact")+"</strong><small>Top Gifter · "+esc(item.giftName||item.giftCode||"Gift")+" · "+Number(item.giftCount||0).toLocaleString()+" sent</small></span><b>TOP GIFTER</b><button type='button' class='text-button' data-live-weekly-title-profile='"+esc(userId)+"'>Profile</button></article>";
     }).join(""):"<p class='live-top-gifter-empty'>No weekly gift titles have been earned yet.</p>")+"</section>";
   const rowsMarkup=rows.length?rows.map((item,index)=>{
     const member=item.user||{};
@@ -1688,7 +1697,7 @@ function renderLiveTopGifters(items,session,weeklyTitleGifters=[]){
     const position=Number(item.position||index+1);
     const rankTitle=item.title||(position===1?"TOP GIFTER":position<=3?"TOP 3 GIFTER":position<=10?"TOP 10 GIFTER":"LIVE GIFTER");
     const avatarUrl=avatar(member);
-    return "<article class='live-top-gifter-row "+(position===1?"is-first":"")+"'><span class='live-top-gifter-rank'>#"+position+"</span><img src='"+esc(avatarUrl)+"' alt='' loading='lazy'><span class='live-top-gifter-person'><strong>"+esc(member.name||item.name||member.username||item.username||"Minglora member")+"</strong><small>@"+esc(member.username||item.username||"member")+"</small>"+gifterProfileBadge({ ...member, gifterBadge: item.gifterBadge },"compact")+"</span><span class='live-top-gifter-title'>"+esc(rankTitle)+"</span><strong class='live-top-gifter-coins'>"+Number(item.coinsSent??item.points??0).toLocaleString()+"<small>Coins</small></strong><button type='button' class='text-button' data-live-top-gifter-profile='"+esc(userId)+"'>Profile</button></article>";
+    return "<article class='live-top-gifter-row "+(position===1?"is-first":"")+"'><span class='live-top-gifter-rank'>#"+position+"</span><img src='"+esc(avatarUrl)+"' alt='' loading='lazy'><span class='live-top-gifter-person'><small>@"+esc(member.username||item.username||"member")+"</small><strong>"+esc(member.name||item.name||member.username||item.username||"Minglora member")+liveGifterBadgeMarkup({ ...member, gifterBadge: item.gifterBadge },"compact")+"</strong></span><span class='live-top-gifter-title'>"+esc(rankTitle)+"</span><strong class='live-top-gifter-coins'>"+Number(item.coinsSent??item.points??0).toLocaleString()+"<small>Coins</small></strong><button type='button' class='text-button' data-live-top-gifter-profile='"+esc(userId)+"'>Profile</button></article>";
   }).join(""):"<div class='live-top-gifter-empty'><strong>No Top Gifters yet</strong><small>Confirmed LIVE gifts will appear here as people support this broadcast.</small></div>";
   root.innerHTML=weeklyMarkup+"<section class='live-broadcast-top-gifters'><strong class='live-weekly-title-heading'>This LIVE · Top Gifters</strong>"+rowsMarkup+"</section>";
   root.querySelectorAll("[data-live-top-gifter-profile],[data-live-weekly-title-profile]").forEach(button=>button.addEventListener("click",()=>{
@@ -1758,7 +1767,7 @@ async function refreshLiveSpeakerPanel(session,role,room){
           request.reviewedAt?"Reviewed · "+formatTime(request.reviewedAt):"",
           request.leftAt?"Left stage · "+formatTime(request.leftAt):""
         ].filter(Boolean);
-        return "<article class='live-speaker-request-row status-"+esc(request.status)+"'><span class='live-speaker-avatar' aria-hidden='true'>"+esc(memberName.trim().slice(0,1).toUpperCase()||"M")+"</span><div class='live-speaker-meta'><strong>"+esc(memberName)+"</strong><span class='live-speaker-username'>@"+esc(request.user?.username||"member")+gifterProfileBadge(request.user,"compact")+"</span><small class='live-speaker-status'>"+esc(status)+"</small><div class='live-speaker-timeline'>"+timeline.map(item=>"<small>"+esc(item)+"</small>").join("")+"</div></div>"+actions+"</article>";
+        return "<article class='live-speaker-request-row status-"+esc(request.status)+"'><span class='live-speaker-avatar' aria-hidden='true'>"+esc(memberName.trim().slice(0,1).toUpperCase()||"M")+"</span><div class='live-speaker-meta'><span class='live-speaker-username'>@"+esc(request.user?.username||"member")+"</span><strong class='live-speaker-display-name'>"+esc(memberName)+liveGifterBadgeMarkup(request.user,"compact")+"</strong><small class='live-speaker-status'>"+esc(status)+"</small><div class='live-speaker-timeline'>"+timeline.map(item=>"<small>"+esc(item)+"</small>").join("")+"</div></div>"+actions+"</article>";
       }).join(""):guestStageEnabled
         ?"<div class='live-speaker-empty'><strong>No guest requests yet</strong><p>New requests, approvals, connected speakers and closed requests for this LIVE will all appear here.</p></div>"
         :"<div class='live-speaker-empty is-disabled'><strong>Guest stage is OFF</strong><p>Turn Guest stage ON to accept requests and add speakers. No guests can join while it is disabled.</p></div>";
@@ -1848,7 +1857,7 @@ async function refreshLiveChat(broadcastId){
       const controls=canModerateChat
         ?"<span class='live-chat-actions'>"+(activeLiveRole==="host"?"<button type='button' class='live-chat-pin"+(isPinned?" is-pinned":"")+"' data-live-chat-pin='"+esc(message.id)+"' aria-label='"+(isPinned?"Unpin":"Pin")+" this comment'>"+(isPinned?"Unpin":"Pin")+"</button>":"")+"<button type='button' class='live-chat-delete' data-live-chat-delete='"+esc(message.id)+"' aria-label='Remove this comment'>Remove</button></span>"
         :"";
-      return "<div class='live-chat-line' data-live-chat-id='"+esc(message.id)+"'><img class='live-chat-avatar' src='"+authorAvatar+"' alt='' loading='lazy'><div class='live-chat-copy'><strong>"+esc(author)+(handle?" <small class='live-chat-handle'>@"+esc(handle)+"</small>":"")+gifterProfileBadge(member)+"</strong><span>"+esc(message.body)+"</span><small class='live-chat-time'>"+timeAgo(message.created_at)+"</small></div>"+controls+"</div>";
+      return "<div class='live-chat-line' data-live-chat-id='"+esc(message.id)+"'><img class='live-chat-avatar' src='"+authorAvatar+"' alt='' loading='lazy'><div class='live-chat-copy'><strong>"+(handle?"<small class='live-chat-handle'>@"+esc(handle)+"</small> ":"")+"<span class='live-chat-display-name'>"+esc(author)+"</span>"+liveGifterBadgeMarkup(member)+"</strong><span>"+esc(message.body)+"</span><small class='live-chat-time'>"+timeAgo(message.created_at)+"</small></div>"+controls+"</div>";
     }).join("")||"<p class='muted'>Say hello to the LIVE community.</p>";
     if(wasNearBottom)list.scrollTop=list.scrollHeight;
     list.dataset.liveChatInitialized='true';
@@ -2027,10 +2036,10 @@ async function refreshLiveViewerRoster(session){
       const member=item.user||{},name=String(member.name||member.username||'Minglora member');
       const badge=item.gifterBadge,fan=item.fanClubMembership;
       const initials=name.trim().split(/\s+/).slice(0,2).map(part=>part[0]||'').join('').toUpperCase()||'M';
-      const priority=item.isGifter&&badge?.level?"<span class='live-viewer-gifter-badge'>"+gifterProfileBadge({ ...member, gifterBadge: badge },"compact")+"</span>":"";
+      const priority=item.isGifter&&badge?.level?liveGifterBadgeMarkup({ ...member, gifterBadge: badge },"compact"):"";
       const fanBadge=fan?.status==='active'?"<span class='live-viewer-fan-points'>♥ "+Number(fan.points||0).toLocaleString()+" Fan Pts</span>":"";
       const roleLabel=item.role==='guest'?'Guest speaker':'Viewer';
-      return "<div class='live-viewer-row "+(item.isGifter?'is-priority-gifter':'')+"'><span class='live-viewer-avatar' aria-hidden='true'>"+esc(initials)+"</span><span class='live-viewer-identity'><strong>"+esc(name)+"</strong><small>"+roleLabel+"</small>"+priority+fanBadge+"</span><button type='button' class='text-button' data-live-viewer-profile='"+esc(member.id||'')+"'>Profile</button></div>";
+      return "<div class='live-viewer-row "+(item.isGifter?'is-priority-gifter':'')+"'><span class='live-viewer-avatar' aria-hidden='true'>"+esc(initials)+"</span><span class='live-viewer-identity'><small class='live-viewer-handle'>@"+esc(member.username||'member')+"</small><strong>"+esc(name)+"</strong>"+priority+"<small>"+roleLabel+"</small>"+fanBadge+"</span><button type='button' class='text-button' data-live-viewer-profile='"+esc(member.id||'')+"'>Profile</button></div>";
     }).join('');
     list.querySelectorAll('[data-live-viewer-profile]').forEach(button=>button.addEventListener('click',()=>{const userId=button.dataset.liveViewerProfile;if(userId)openLiveProfilePreview(userId,session);}));
     panel.classList.toggle('has-prioritized-gifters',data.prioritized===true);
@@ -2290,7 +2299,7 @@ async function loadLiveDiscoveryBoard(tab,sessions){
       const data=await api('/live/rankings/daily');
       const items=Array.isArray(data.leaderboard)?data.leaderboard:[];
       root.innerHTML="<div class='live-ranking-heading'><strong>Daily LIVE Gifter Rankings</strong><small>Ranked by confirmed Coins sent today · "+esc(data.dayKey||'today')+"</small></div>"+
-        (items.length?items.slice(0,10).map(item=>"<button type='button' class='live-ranking-row' data-live-ranking-profile='"+esc(item.user?.id||'')+"'><span class='live-ranking-position'>#"+Number(item.position||0)+"</span><img src='"+avatar(item.user||{})+"' alt=''><span><strong>"+esc(item.user?.name||item.user?.username||'Minglora member')+"</strong><small>@"+esc(item.user?.username||'member')+"</small></span><b>"+liveCompactCount(item.points||0)+" pts</b></button>").join(''):"<p class='muted'>No Daily LIVE gift points have been recorded today yet.</p>");
+        (items.length?items.slice(0,10).map(item=>"<button type='button' class='live-ranking-row' data-live-ranking-profile='"+esc(item.user?.id||'')+"'><span class='live-ranking-position'>#"+Number(item.position||0)+"</span><img src='"+avatar(item.user||{})+"' alt=''><span><small>@"+esc(item.user?.username||'member')+"</small><strong>"+esc(item.user?.name||item.user?.username||'Minglora member')+liveGifterBadgeMarkup(item.user,"compact")+"</strong></span><b>"+liveCompactCount(item.points||0)+" pts</b></button>").join(''):"<p class='muted'>No Daily LIVE gift points have been recorded today yet.</p>");
       root.querySelectorAll('[data-live-ranking-profile]').forEach(button=>button.addEventListener('click',()=>openProfile(button.dataset.liveRankingProfile)));
     }else{
       const data=await api('/leagues/overview');
