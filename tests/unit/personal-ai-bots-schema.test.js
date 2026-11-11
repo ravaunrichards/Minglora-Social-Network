@@ -195,6 +195,21 @@ test('durable queue migration adds owner-scoped identities, leases, retries and 
   assert.match(queueSql,/REFERENCES public\.ai_identities\(identity_id,owner_admin_id\)/);
 });
 
+test('worker heartbeat, completion and failure RPCs require the active owner-scoped lease',()=>{
+  for(const name of ['minglora_ai_bot_task_heartbeat','minglora_ai_bot_task_complete','minglora_ai_bot_task_fail']){
+    const start=queueSql.indexOf('CREATE OR REPLACE FUNCTION public.'+name+'(');
+    assert.ok(start>=0,'missing '+name);
+    const end=queueSql.indexOf('$function$;',start);
+    assert.ok(end>start,'missing function terminator for '+name);
+    const body=queueSql.slice(start,end);
+    assert.match(body,/p_actor_user_id IS DISTINCT FROM '5b998c21-86b5-4621-ab37-e0808a2657b1'::uuid/);
+    assert.match(body,/owner_admin_id = p_actor_user_id/);
+    assert.match(body,/worker_id = p_worker_id/);
+    assert.match(body,/lease_token = p_lease_token/);
+    assert.match(body,/lease_expires_at > pg_catalog\.now\(\)/);
+  }
+});
+
 test('runtime gateway exposes only allowlisted owner-gated durable queue operations',()=>{
   for(const action of [
     'ai_bot_task_upsert_batch','ai_bot_task_list','ai_bot_task_stats',
