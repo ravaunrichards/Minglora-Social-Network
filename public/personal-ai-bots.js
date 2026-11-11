@@ -482,7 +482,7 @@
     try{
       const result=await request(API+'/teams/'+encodeURIComponent(teamId)+'/handoffs');
       const handoffs=Array.isArray(result.handoffs)?result.handoffs:[];
-      target.innerHTML=handoffs.length?handoffs.map(item=>teamHandoffRow(teamId,item)).join():'<div class="pab-empty">No handoffs have been created for this team.</div>';
+      target.innerHTML=handoffs.length?handoffs.map(item=>teamHandoffRow(teamId,item)).join(''):'<div class="pab-empty">No handoffs have been created for this team.</div>';
       target.querySelectorAll('.pab-handoff-action').forEach(node=>node.addEventListener('click',()=>reviewTeamHandoff(teamId,node.dataset.handoff,node.dataset.action)));
     }catch(error){target.innerHTML='<p class="pab-notice error">'+esc(error.message||'Could not load team handoff history.')+'</p>';}
   }
