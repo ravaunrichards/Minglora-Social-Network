@@ -237,9 +237,14 @@ const creatorLeagueProfileBadge = member => {
 };
 const gifterBadgeImageMarkup = (badge, placement = "compact") => {
   const level = Math.max(1, Math.min(50, Math.floor(Number(badge?.level) || 1)));
-  const badgeName = String(badge?.badgeName || ("Level " + level + " Gifter"));
-  const render = window.MingloraGifterBadgeArt?.render;
-  return render ? render({ level, badgeName, compact: true, placement }) : "";
+  const sizes = { profile: 40, inline: 28, compact: 24, gallery: 120 };
+  const size = sizes[placement] || sizes.compact;
+  const label = "Level " + level + " Gifter badge";
+  const title = esc(badge?.badgeName || ("Level " + level + " Gifter"));
+  return '<img class="gp-profile-level-badge gp-profile-level-badge--' + placement +
+    '" src="/assets/gifter-badges/level_' + String(level).padStart(2, "0") +
+    '.png" alt="' + label + '" title="' + title +
+    '" loading="lazy" decoding="async" width="' + size + '" height="' + size + '">';
 };
 const gifterProfileBadge = (member, placement = "compact") => {
   const identity = member?.newGifterIdentity?.active
