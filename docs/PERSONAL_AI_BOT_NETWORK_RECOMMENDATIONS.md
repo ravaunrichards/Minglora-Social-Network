@@ -600,7 +600,7 @@ The branch roadmap already lists all ten recommendation areas. Their current hon
 | Smart Activity Scheduling | Schedule configuration exists; scheduler worker not connected |
 | Bot Performance Center | Time-stamped read-only 24-hour runtime queue snapshot with bounded-history disclosure; provider latency, token, cost and quality telemetry remain unavailable |
 | Multilingual Intelligence | Language preferences and translation task type exist; translation adapter and quality evaluation incomplete |
-| AI Creator Studio | Draft task types exist; creator workspace and media pipeline incomplete |
+| AI Creator Studio | Owner-only manual draft workspace with edit/version history, source/rights attestation and review decisions; generation, media pipeline, composer handoff and publishing remain disconnected |
 | Security and Trust Center | Owner-only controls, labels, approval foundation, audit, reports and emergency shutdown exist; full permission, privacy and member-facing trust controls incomplete |
 | AI Friendship and Companionship | AI Friends category exists; consent-based member sessions and memory controls incomplete |
 | AI Community Events | Categories/task types exist; event integration and hosting incomplete |
