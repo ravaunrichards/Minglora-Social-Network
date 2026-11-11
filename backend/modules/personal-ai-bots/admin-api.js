@@ -493,7 +493,7 @@ export async function handlePersonalAiBotsAdminApi(context) {
       return (json(res,200,{ok:true,handoffs}),true);
     }
     if(teamHandoffsMatch&&method==='POST'){
-      const allowed=new Set(['sourceTaskId','senderBotId','receivingBotId','summary','requiredInput','expectedOutput','contextScope','deadlineAt']);
+      const allowed=new Set(['sourceTaskId','senderBotId','receivingBotId','summary','requiredInput','expectedOutput','contextScope','privacyAttested','deadlineAt']);
       if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).some(key=>!allowed.has(key))){
         return (json(res,400,{error:'Team handoff payload contains unsupported fields.'}),true);
       }
