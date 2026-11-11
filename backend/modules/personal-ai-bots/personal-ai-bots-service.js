@@ -105,7 +105,7 @@ export const PERSONAL_AI_BOT_HIGH_IMPACT_TASKS = Object.freeze([
 const COLLECTIONS = [
   'personalAiBotCategories','personalAiBots','personalAiBotTasks',
   'personalAiBotAudit','personalAiBotSettings','personalAiBotFollows',
-  'personalAiBotTeams','personalAiBotTeamMembers','personalAiBotTeamHandoffs','personalAiBotSchedules','personalAiBotPersonaVersions','personalAiBotLanguageSettings','personalAiBotLanguageEvaluationSets','personalAiBotBatches','personalAiBotDepartments','personalAiBotVacancies','personalAiBotApplications','personalAiBotAppointments','personalAiBotEmploymentHistory'
+  'personalAiBotTeams','personalAiBotTeamMembers','personalAiBotTeamHandoffs','personalAiBotSchedules','personalAiBotPersonaVersions','personalAiBotLanguageSettings','personalAiBotLanguageEvaluationSets','personalAiCreatorDrafts','personalAiBotBatches','personalAiBotDepartments','personalAiBotVacancies','personalAiBotApplications','personalAiBotAppointments','personalAiBotEmploymentHistory'
 ];
 
 export function ensurePersonalAiBotCollections(db) {
@@ -2091,6 +2091,144 @@ export function reviewPersonalAiBotLanguageEvaluationSet(db, botId, setId, input
   audit(db,actorId,'language.evaluation_set_reviewed','language_evaluation_set',record.id,
     'Recorded '+decision+' owner-attested language review and manual rubric for '+record.languageCode+'. This does not certify reviewer credentials, provider compatibility or translation-model quality.',
     timestamp,uid);
+  return record;
+}
+
+
+const PERSONAL_AI_CREATOR_FORMATS=Object.freeze([
+  'feed_post','story','reel','page_post','group_post','event_promotion','live_show_plan'
+]);
+const PERSONAL_AI_CREATOR_DESTINATIONS=Object.freeze(['feed','story','reel','page','group','event','live']);
+const PERSONAL_AI_CREATOR_SOURCES=Object.freeze(['owner_authored','member_supplied','licensed','external_reference']);
+
+function normalizePersonalAiCreatorDraftFields(input,current={}) {
+  const merged={...current,...input};
+  const text=(value,label,max,required=false)=>{
+    if(typeof value!=='string')throw Object.assign(new Error(label+' must be text.'),{status:400});
+    const result=value.trim();
+    if(result.length>max||(required&&result.length<1))throw Object.assign(new Error(label+' is '+(required?'required':'too long')+'.'),{status:400});
+    return result;
+  };
+  const botId=text(merged.botId,'AI identity',80,true);
+  const title=text(merged.title,'Draft title',120,true);
+  const contentFormat=String(merged.contentFormat||'feed_post');
+  if(!PERSONAL_AI_CREATOR_FORMATS.includes(contentFormat))throw Object.assign(new Error('Choose a supported Creator Studio content format.'),{status:400});
+  const destination=String(merged.destination||'feed');
+  if(!PERSONAL_AI_CREATOR_DESTINATIONS.includes(destination))throw Object.assign(new Error('Choose a supported Minglora destination.'),{status:400});
+  const caption=text(merged.caption||'','Caption',5000);
+  const body=text(merged.body||'','Draft content',20000,true);
+  const sourceType=String(merged.sourceType||'owner_authored');
+  if(!PERSONAL_AI_CREATOR_SOURCES.includes(sourceType))throw Object.assign(new Error('Choose a supported content source type.'),{status:400});
+  if(typeof merged.rightsAttested!=='boolean')throw Object.assign(new Error('Confirm the content and asset rights status.'),{status:400});
+  const rawRefs=merged.assetReferences??[];
+  if(!Array.isArray(rawRefs)||rawRefs.length>10)throw Object.assign(new Error('Use no more than 10 asset references.'),{status:400});
+  const assetReferences=rawRefs.map(value=>{
+    if(typeof value!=='string')throw Object.assign(new Error('Asset references must be text identifiers.'),{status:400});
+    const reference=value.trim();
+    if(reference.length>300||/^data:/i.test(reference)||/[\u0000-\u001f]/.test(reference))throw Object.assign(new Error('An asset reference is invalid or too long.'),{status:400});
+    return reference;
+  }).filter(Boolean);
+  if(sourceType==='licensed'&&merged.rightsAttested!==true){
+    throw Object.assign(new Error('Licensed content must have an explicit rights attestation.'),{status:400});
+  }
+  return {botId,title,contentFormat,destination,caption,body,sourceType,assetReferences,rightsAttested:merged.rightsAttested};
+}
+
+export function listPersonalAiCreatorDrafts(db,options={}) {
+  ensurePersonalAiBotCollections(db);
+  const limit=Number(options.limit??50),offset=Number(options.offset??0);
+  if(!Number.isInteger(limit)||limit<1||limit>100||!Number.isInteger(offset)||offset<0||offset>1000000000){
+    throw Object.assign(new Error('Creator Studio draft pagination is invalid.'),{status:400});
+  }
+  const records=db.personalAiCreatorDrafts.slice().sort((a,b)=>
+    String(b.updatedAt||b.createdAt).localeCompare(String(a.updatedAt||a.createdAt))||String(a.id).localeCompare(String(b.id))
+  );
+  return records.slice(offset,offset+limit);
+}
+
+export function createPersonalAiCreatorDraft(db,input,actorId,timestamp,uid) {
+  ensurePersonalAiBotCollections(db);
+  if(!input||typeof input!=='object'||Array.isArray(input))throw Object.assign(new Error('Creator Studio draft details are required.'),{status:400});
+  const fields=normalizePersonalAiCreatorDraftFields(input);
+  const bot=db.personalAiBots.find(item=>item.id===fields.botId);
+  if(!bot)throw Object.assign(new Error('Choose an existing Minglora AI identity.'),{status:404});
+  const record={
+    id:uid(),ownerId:actorId,...fields,
+    status:'draft',reviewStatus:'not_reviewed',reviewNotes:'',
+    aiIdentityDisclosureRequired:true,generationStatus:'not_connected',
+    publishingStatus:'not_published',handoffStatus:'not_handed_off',
+    version:1,versionHistory:[],
+    createdBy:actorId,updatedBy:actorId,createdAt:timestamp,updatedAt:timestamp,
+    submittedAt:null,reviewedAt:null,reviewedBy:null
+  };
+  db.personalAiCreatorDrafts.unshift(record);
+  if(db.personalAiCreatorDrafts.length>500)db.personalAiCreatorDrafts.length=500;
+  audit(db,actorId,'creator_draft.created','creator_draft',record.id,
+    'Created a manual Creator Studio draft for '+bot.displayName+'. No generation, publishing or external handoff occurred.',timestamp,uid);
+  return record;
+}
+
+export function updatePersonalAiCreatorDraft(db,draftId,input,actorId,timestamp,uid) {
+  ensurePersonalAiBotCollections(db);
+  const record=db.personalAiCreatorDrafts.find(item=>item.id===draftId);
+  if(!record)throw Object.assign(new Error('Creator Studio draft not found.'),{status:404});
+  if(record.ownerId!==actorId)throw Object.assign(new Error('This Creator Studio draft belongs to another owner.'),{status:403});
+  if(!['draft','changes_requested'].includes(record.status))throw Object.assign(new Error('Only draft or changes-requested content can be edited.'),{status:409});
+  const bot=db.personalAiBots.find(item=>item.id===record.botId);
+  if(!bot)throw Object.assign(new Error('The linked AI identity is no longer available.'),{status:404});
+  const fields=normalizePersonalAiCreatorDraftFields({...input,botId:record.botId},record);
+  record.versionHistory.unshift({
+    version:record.version,title:record.title,contentFormat:record.contentFormat,destination:record.destination,
+    caption:record.caption,body:record.body,sourceType:record.sourceType,
+    assetReferences:[...record.assetReferences],rightsAttested:record.rightsAttested,
+    savedAt:timestamp,savedBy:actorId
+  });
+  if(record.versionHistory.length>10)record.versionHistory.length=10;
+  Object.assign(record,fields,{
+    version:record.version+1,status:'draft',reviewStatus:'not_reviewed',reviewNotes:'',
+    reviewedAt:null,reviewedBy:null,submittedAt:null,updatedBy:actorId,updatedAt:timestamp
+  });
+  audit(db,actorId,'creator_draft.updated','creator_draft',record.id,
+    'Updated Creator Studio draft version '+record.version+'. Previous draft version retained.',timestamp,uid);
+  return record;
+}
+
+export function submitPersonalAiCreatorDraft(db,draftId,actorId,timestamp,uid) {
+  ensurePersonalAiBotCollections(db);
+  const record=db.personalAiCreatorDrafts.find(item=>item.id===draftId);
+  if(!record)throw Object.assign(new Error('Creator Studio draft not found.'),{status:404});
+  if(record.ownerId!==actorId)throw Object.assign(new Error('This Creator Studio draft belongs to another owner.'),{status:403});
+  if(record.status!=='draft')throw Object.assign(new Error('Only saved drafts can be submitted for owner review.'),{status:409});
+  if(record.rightsAttested!==true)throw Object.assign(new Error('Confirm content and media rights before submitting for review.'),{status:409});
+  if(!record.aiIdentityDisclosureRequired)throw Object.assign(new Error('AI identity disclosure cannot be disabled.'),{status:409});
+  record.status='pending_review';record.reviewStatus='pending_review';
+  record.submittedAt=timestamp;record.updatedAt=timestamp;record.updatedBy=actorId;
+  audit(db,actorId,'creator_draft.submitted','creator_draft',record.id,
+    'Submitted Creator Studio draft for owner review. No publishing or external handoff occurred.',timestamp,uid);
+  return record;
+}
+
+export function reviewPersonalAiCreatorDraft(db,draftId,input,actorId,timestamp,uid) {
+  ensurePersonalAiBotCollections(db);
+  const record=db.personalAiCreatorDrafts.find(item=>item.id===draftId);
+  if(!record)throw Object.assign(new Error('Creator Studio draft not found.'),{status:404});
+  if(record.ownerId!==actorId)throw Object.assign(new Error('This Creator Studio draft belongs to another owner.'),{status:403});
+  const decision=String(input?.decision||'');
+  const notes=String(input?.reviewNotes||'').trim();
+  if(!['approve','changes_requested','reject','archive'].includes(decision)||notes.length>1200){
+    throw Object.assign(new Error('Creator Studio review decision or notes are invalid.'),{status:400});
+  }
+  if(decision==='archive'){
+    if(record.status==='archived')throw Object.assign(new Error('This Creator Studio draft is already archived.'),{status:409});
+    record.status='archived';record.reviewStatus='archived';
+  }else{
+    if(record.status!=='pending_review')throw Object.assign(new Error('Only drafts awaiting owner review can receive a review decision.'),{status:409});
+    record.status=decision==='approve'?'approved_for_human_handoff':decision;
+    record.reviewStatus=decision;
+  }
+  record.reviewNotes=notes;record.reviewedBy=actorId;record.reviewedAt=timestamp;record.updatedBy=actorId;record.updatedAt=timestamp;
+  audit(db,actorId,'creator_draft.reviewed','creator_draft',record.id,
+    'Recorded Creator Studio review decision: '+decision+'. Approval does not publish or hand off content.',timestamp,uid);
   return record;
 }
 
