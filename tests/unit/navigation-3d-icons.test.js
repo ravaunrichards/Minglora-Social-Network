@@ -127,8 +127,8 @@ test('service-worker shell pre-caches the latest icon sprite, stylesheet and app
   assert.ok(activeScript&&serviceWorker.includes("'"+activeScript+"'"),'active app script is cached');
   assert.match(serviceWorker,/mobile-profile-navigation\.css\?v=20261108-five-profile-metrics-1/);
   assert.match(serviceWorker,/\/assets\/icons\/navigation-3d\.svg/);
-  assert.ok(html.includes('/minglora-menu.js?v=20261110-facebook-profile-dropdown-1'), 'the corrected Menu script is cache-busted');
-  assert.ok(serviceWorker.includes("'/minglora-menu.js?v=20261110-facebook-profile-dropdown-1'"), 'the corrected Menu script is in the offline shell cache');
+  assert.ok(html.includes('/minglora-menu.js?v=20261111-ai-network-command-center-1'), 'the corrected Menu script is cache-busted');
+  assert.ok(serviceWorker.includes("'/minglora-menu.js?v=20261111-ai-network-command-center-1'"), 'the corrected Menu script is in the offline shell cache');
 });
 
 test('Facebook-style top bar keeps logo, Search, five navigation tabs and account controls in left-to-right order', () => {
