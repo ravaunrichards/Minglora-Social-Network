@@ -105,7 +105,7 @@ export const PERSONAL_AI_BOT_HIGH_IMPACT_TASKS = Object.freeze([
 const COLLECTIONS = [
   'personalAiBotCategories','personalAiBots','personalAiBotTasks',
   'personalAiBotAudit','personalAiBotSettings','personalAiBotFollows',
-  'personalAiBotTeams','personalAiBotTeamMembers','personalAiBotSchedules','personalAiBotPersonaVersions','personalAiBotBatches','personalAiBotDepartments','personalAiBotVacancies','personalAiBotApplications','personalAiBotAppointments','personalAiBotEmploymentHistory'
+  'personalAiBotTeams','personalAiBotTeamMembers','personalAiBotTeamHandoffs','personalAiBotSchedules','personalAiBotPersonaVersions','personalAiBotBatches','personalAiBotDepartments','personalAiBotVacancies','personalAiBotApplications','personalAiBotAppointments','personalAiBotEmploymentHistory'
 ];
 
 export function ensurePersonalAiBotCollections(db) {
@@ -991,6 +991,132 @@ export function removePersonalAiBotFromTeam(db, teamId, botId, actorId, timestam
   db.personalAiBotTeamMembers.splice(index,1);
   audit(db,actorId,'team.member_removed','team',team.id,'Removed a bot from '+team.name+'.',timestamp,uid);
   return {ok:true,teamId,botId,memberCount:db.personalAiBotTeamMembers.filter(member=>member.teamId===teamId).length};
+}
+
+
+export function getPersonalAiBotTeamHandoffs(db, teamId, actorId) {
+  ensurePersonalAiBotCollections(db);
+  const team=db.personalAiBotTeams.find(item=>item.id===teamId&&item.ownerId===actorId);
+  if(!team)throw Object.assign(new Error('Bot team not found.'),{status:404});
+  return db.personalAiBotTeamHandoffs
+    .filter(item=>item.teamId===teamId&&item.ownerId===actorId)
+    .slice()
+    .sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));
+}
+
+export function createPersonalAiBotTeamHandoff(db, teamId, input, actorId, timestamp, uid) {
+  ensurePersonalAiBotCollections(db);
+  const team=db.personalAiBotTeams.find(item=>item.id===teamId&&item.ownerId===actorId);
+  if(!team)throw Object.assign(new Error('Bot team not found.'),{status:404});
+  if(team.status!=='enabled')throw Object.assign(new Error('New team handoffs require an enabled team.'),{status:409});
+
+  const sourceTaskId=String(input?.sourceTaskId||'').trim();
+  const senderBotId=String(input?.senderBotId||'').trim();
+  const receivingBotId=String(input?.receivingBotId||'').trim();
+  if(!sourceTaskId||!senderBotId||!receivingBotId){
+    throw Object.assign(new Error('Choose a source task, sending bot and one receiving bot.'),{status:400});
+  }
+  if(senderBotId===receivingBotId){
+    throw Object.assign(new Error('A bot cannot hand work to itself.'),{status:400});
+  }
+  const senderMembership=db.personalAiBotTeamMembers.find(item=>item.teamId===teamId&&item.botId===senderBotId&&item.ownerId===actorId);
+  const receiverMembership=db.personalAiBotTeamMembers.find(item=>item.teamId===teamId&&item.botId===receivingBotId&&item.ownerId===actorId);
+  if(!senderMembership||!receiverMembership){
+    throw Object.assign(new Error('Both sending and receiving bots must be current members of this team.'),{status:409});
+  }
+  const sourceTask=db.personalAiBotTasks.find(item=>item.id===sourceTaskId&&item.botId===senderBotId);
+  if(!sourceTask||['cancelled','rejected'].includes(sourceTask.status)){
+    throw Object.assign(new Error('Choose an existing, non-cancelled source task owned by the sending bot.'),{status:409});
+  }
+
+  const requiredInput=String(input.requiredInput||'').trim();
+  const expectedOutput=String(input.expectedOutput||'').trim();
+  const summary=String(input.summary||'').trim().slice(0,1200);
+  if(requiredInput.length<5||requiredInput.length>2500){
+    throw Object.assign(new Error('Required handoff input must be between 5 and 2,500 characters.'),{status:400});
+  }
+  if(expectedOutput.length<5||expectedOutput.length>800){
+    throw Object.assign(new Error('Expected output must be between 5 and 800 characters.'),{status:400});
+  }
+  const contextScope=String(input.contextScope||'team_internal');
+  if(!['public','team_internal'].includes(contextScope)){
+    throw Object.assign(new Error('Handoffs may use only public or team-internal context; private member conversations and bot memory are not shared.'),{status:400});
+  }
+  let deadlineAt=null;
+  if(input.deadlineAt){
+    const deadline=Date.parse(input.deadlineAt),now=Date.parse(timestamp);
+    if(!Number.isFinite(deadline)||!Number.isFinite(now)||deadline<=now||deadline>now+90*24*60*60*1000){
+      throw Object.assign(new Error('Handoff deadline must be in the future and within 90 days.'),{status:400});
+    }
+    deadlineAt=new Date(deadline).toISOString();
+  }
+
+  const idempotencyKey=[teamId,sourceTaskId,receivingBotId].join(':');
+  if(db.personalAiBotTeamHandoffs.some(item=>item.ownerId===actorId&&item.idempotencyKey===idempotencyKey)){
+    throw Object.assign(new Error('A handoff for this source task and receiving bot already exists.'),{status:409});
+  }
+  const handoff={
+    id:uid(),ownerId:actorId,teamId,teamName:team.name,
+    sourceTaskId,senderBotId,receivingBotId,
+    summary,requiredInput,expectedOutput,contextScope,deadlineAt,
+    idempotencyKey,status:'pending_owner_review',dispatchStatus:'not_dispatched',
+    acceptedBy:null,acceptedAt:null,rejectedBy:null,rejectedAt:null,
+    cancelledBy:null,cancelledAt:null,completedBy:null,completedAt:null,
+    resultSummary:'',createdBy:actorId,createdAt:timestamp,updatedBy:actorId,updatedAt:timestamp
+  };
+  db.personalAiBotTeamHandoffs.unshift(handoff);
+  if(db.personalAiBotTeamHandoffs.length>5000)db.personalAiBotTeamHandoffs.length=5000;
+  audit(db,actorId,'team.handoff_created','team_handoff',handoff.id,
+    'Created a one-receiver handoff in '+team.name+'. It is pending owner review and is not dispatched.',
+    timestamp,uid);
+  return handoff;
+}
+
+export function reviewPersonalAiBotTeamHandoff(db, teamId, handoffId, input, actorId, timestamp, uid) {
+  ensurePersonalAiBotCollections(db);
+  const team=db.personalAiBotTeams.find(item=>item.id===teamId&&item.ownerId===actorId);
+  if(!team)throw Object.assign(new Error('Bot team not found.'),{status:404});
+  const handoff=db.personalAiBotTeamHandoffs.find(item=>item.id===handoffId&&item.teamId===teamId&&item.ownerId===actorId);
+  if(!handoff)throw Object.assign(new Error('Team handoff not found.'),{status:404});
+  const action=String(input?.action||'');
+  if(!['accept','reject','cancel','complete'].includes(action)){
+    throw Object.assign(new Error('Choose accept, reject, cancel or complete.'),{status:400});
+  }
+  if(action==='accept'){
+    if(handoff.status!=='pending_owner_review')throw Object.assign(new Error('Only a handoff awaiting owner review can be accepted.'),{status:409});
+    if(team.status!=='enabled')throw Object.assign(new Error('A paused or disabled team cannot accept new handoffs.'),{status:409});
+    const senderExists=db.personalAiBotTeamMembers.some(item=>item.teamId===teamId&&item.botId===handoff.senderBotId&&item.ownerId===actorId);
+    const receiverExists=db.personalAiBotTeamMembers.some(item=>item.teamId===teamId&&item.botId===handoff.receivingBotId&&item.ownerId===actorId);
+    if(!senderExists||!receiverExists)throw Object.assign(new Error('The sending or receiving bot is no longer a team member.'),{status:409});
+    handoff.status='accepted';
+    handoff.acceptedBy=actorId;
+    handoff.acceptedAt=timestamp;
+  }else if(action==='reject'){
+    if(handoff.status!=='pending_owner_review')throw Object.assign(new Error('Only a pending handoff can be rejected.'),{status:409});
+    handoff.status='rejected';
+    handoff.rejectedBy=actorId;
+    handoff.rejectedAt=timestamp;
+  }else if(action==='cancel'){
+    if(!['pending_owner_review','accepted'].includes(handoff.status))throw Object.assign(new Error('Only pending or accepted handoffs can be cancelled.'),{status:409});
+    handoff.status='cancelled';
+    handoff.cancelledBy=actorId;
+    handoff.cancelledAt=timestamp;
+  }else{
+    if(handoff.status!=='accepted')throw Object.assign(new Error('Only an accepted handoff can be marked complete.'),{status:409});
+    const resultSummary=String(input.resultSummary||'').trim().slice(0,1200);
+    if(resultSummary.length<5)throw Object.assign(new Error('A human-reviewed result summary of at least 5 characters is required.'),{status:400});
+    handoff.status='completed';
+    handoff.completedBy=actorId;
+    handoff.completedAt=timestamp;
+    handoff.resultSummary=resultSummary;
+  }
+  handoff.updatedBy=actorId;
+  handoff.updatedAt=timestamp;
+  handoff.dispatchStatus='not_dispatched';
+  audit(db,actorId,'team.handoff_'+action,'team_handoff',handoff.id,
+    'Owner '+action+'d handoff '+handoff.id+'. No bot execution or external action was performed.',
+    timestamp,uid);
+  return handoff;
 }
 
 export function setPersonalAiBotCategoryEnabled(db, categoryId, enabled, actorId, timestamp, uid) {
