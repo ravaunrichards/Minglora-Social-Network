@@ -1983,3 +1983,89 @@ test('multilingual settings API rejects provider assertions and non-owner reads'
   assert.equal(denied.res.statusCode,403);
   assert.equal(db.personalAiBotLanguageSettings,undefined);
 });
+
+
+test('multilingual evaluation set API creates, submits and records human review without provider execution',async()=>{
+  const botId='00000000-0000-4000-8000-000000000801';
+  const db={
+    personalAiBots:[{id:botId,createdBy:'owner-1',languages:['English','Jamaican Patois']}],
+    personalAiBotLanguageSettings:[{
+      id:'language-settings-1',botId,ownerId:'owner-1',
+      configuration:{
+        supportedLanguages:['en','jam'],primaryLanguage:'en',fallbackLanguage:'jam',
+        languageQuality:[{code:'en',status:'unverified'},{code:'jam',status:'unverified'}]
+      }
+    }]
+  };
+  let saves=0;
+  const invoke=async(method,path,input={})=>{
+    const context=makeContext({
+      method,path,url:new URL('https://minglora.test'+path),input,db,
+      saveStore:async()=>{saves++;}
+    });
+    await handlePersonalAiBotsAdminApi(context);
+    return {...context.res,payload:context.res.payload?JSON.parse(JSON.stringify(context.res.payload)):null};
+  };
+  const base='/api/admin/personal-ai-bots/bots/'+botId+'/languages/evaluation-sets';
+  const cases=Array.from({length:5},(_,index)=>({
+    inputText:'Synthetic source example '+index,
+    expectedOutput:'Synthetic human reference '+index,
+    category:'general'
+  }));
+  const created=await invoke('POST',base,{
+    languageCode:'jam',name:'Patois API Test Set',description:'Synthetic test examples.',
+    cases,syntheticDataAttested:true
+  });
+  assert.equal(created.statusCode,201);
+  assert.equal(created.payload.evaluationSet.status,'draft');
+  const id=created.payload.evaluationSet.id;
+
+  const submitted=await invoke('POST',base+'/'+id+'/submit');
+  assert.equal(submitted.statusCode,200);
+  assert.equal(submitted.payload.evaluationSet.status,'pending_human_review');
+
+  const reviewed=await invoke('POST',base+'/'+id+'/review',{
+    decision:'approve',reviewerRole:'native_speaker',
+    evidenceReference:'owner-entered-language-review-001',
+    reviewNotes:'Human reviewer recorded the evaluation notes.',
+    reviewerAttestation:true
+  });
+  assert.equal(reviewed.statusCode,200);
+  assert.equal(reviewed.payload.evaluationSet.status,'human_reviewed');
+  assert.equal(reviewed.payload.evaluationSet.providerExecutionStatus,'not_run');
+  assert.equal(reviewed.payload.evaluationSet.languageQualityStatus,'unverified');
+
+  const listed=await invoke('GET',base);
+  assert.equal(listed.statusCode,200);
+  assert.equal(listed.payload.evaluationSets.length,1);
+  assert.deepEqual(db.personalAiBots[0].languages,['English','Jamaican Patois']);
+  assert.equal(saves,3);
+});
+
+test('multilingual evaluation set API requires owner privacy attestation and blocks non-owner access',async()=>{
+  const botId='00000000-0000-4000-8000-000000000802';
+  const db={
+    personalAiBots:[{id:botId,createdBy:'owner-1'}],
+    personalAiBotLanguageSettings:[{
+      id:'language-settings-2',botId,ownerId:'owner-1',
+      configuration:{supportedLanguages:['en'],primaryLanguage:'en',fallbackLanguage:'en'}
+    }]
+  };
+  const path='/api/admin/personal-ai-bots/bots/'+botId+'/languages/evaluation-sets';
+  const invalid=makeContext({
+    method:'POST',path,url:new URL('https://minglora.test'+path),
+    input:{languageCode:'en',name:'Unattested Set',cases:[{
+      inputText:'Synthetic sample',expectedOutput:'Reference sample'
+    }]},db
+  });
+  await handlePersonalAiBotsAdminApi(invalid);
+  assert.equal(invalid.res.statusCode,400);
+  assert.equal(db.personalAiBotLanguageEvaluationSets.length,0);
+
+  const denied=makeContext({
+    method:'GET',path,url:new URL('https://minglora.test'+path),db,isOwnerAdmin:false
+  });
+  await handlePersonalAiBotsAdminApi(denied);
+  assert.equal(denied.res.statusCode,403);
+  assert.equal(db.personalAiBotLanguageEvaluationSets.length,0);
+});
