@@ -1098,11 +1098,22 @@ function applyPendingCreatorDraftHandoff(){
   const identityUsername=String(payload.identityUsername||'ai_identity').trim().replace(/^@/,'').slice(0,40);
   const disclosureLine='AI-assisted content draft from '+identityName+' (@'+identityUsername+').';
   const initialText=[disclosureLine,String(payload.caption||'').trim(),String(payload.body||'').trim()].filter(Boolean).join('\n\n');
-  if(initialText.length>5000){
-    try{window.opener?.postMessage({type:'MINGLORA_CREATOR_DRAFT_REJECTED',reason:'This draft exceeds the 5,000-character limit of the existing Minglora post composer. Shorten it in Creator Studio first.'},window.location.origin);}catch{}
+  if(payload.contentFormat==='feed_post'&&payload.destination==='feed'){
+    if(initialText.length>5000){
+      try{window.opener?.postMessage({type:'MINGLORA_CREATOR_DRAFT_REJECTED',reason:'This draft exceeds the 5,000-character limit of the existing Minglora post composer. Shorten it in Creator Studio first.'},window.location.origin);}catch{}
+      return false;
+    }
+    openComposer({initialText,creatorDisclosure:{identityName,assetReferenceCount:Number(payload.assetReferenceCount)||0}});
+  }else if(payload.contentFormat==='story'&&payload.destination==='story'){
+    if(initialText.length>1000){
+      try{window.opener?.postMessage({type:'MINGLORA_CREATOR_DRAFT_REJECTED',reason:'This draft exceeds the 1,000-character limit of the existing Minglora Story composer. Shorten it in Creator Studio first.'},window.location.origin);}catch{}
+      return false;
+    }
+    openStoryComposer({initialText,creatorDisclosure:{identityName,assetReferenceCount:Number(payload.assetReferenceCount)||0}});
+  }else{
+    try{window.opener?.postMessage({type:'MINGLORA_CREATOR_DRAFT_REJECTED',reason:'This draft format or destination is not supported by the existing Minglora composers.'},window.location.origin);}catch{}
     return false;
   }
-  openComposer({initialText,creatorDisclosure:{identityName,assetReferenceCount:Number(payload.assetReferenceCount)||0}});
   try{window.opener?.postMessage({type:'MINGLORA_CREATOR_DRAFT_APPLIED',draftTitle:String(payload.draftTitle||'').slice(0,120)},window.location.origin);}catch{}
   return true;
 }
@@ -1112,8 +1123,10 @@ window.addEventListener('message',event=>{
   if(event.data?.type!=='MINGLORA_CREATOR_DRAFT_HANDOFF')return;
   const payload=event.data.payload;
   if(!payload||typeof payload!=='object'||Array.isArray(payload))return;
-  if(payload.contentFormat!=='feed_post'||payload.destination!=='feed'){
-    window.opener.postMessage({type:'MINGLORA_CREATOR_DRAFT_REJECTED',reason:'This handoff supports Feed post drafts only.'},window.location.origin);
+  const supportedFeed=payload.contentFormat==='feed_post'&&payload.destination==='feed';
+  const supportedStory=payload.contentFormat==='story'&&payload.destination==='story';
+  if(!supportedFeed&&!supportedStory){
+    window.opener.postMessage({type:'MINGLORA_CREATOR_DRAFT_REJECTED',reason:'This handoff supports approved Feed post and Story drafts only.'},window.location.origin);
     return;
   }
   const fields=['draftTitle','identityName','identityUsername','caption','body'];
@@ -7090,10 +7103,16 @@ async function openProfileStoryEditor(profileId){
   }catch(error){toast(error.message||'Could not load your active stories.');}
 }
 
-function openStoryComposer(){
+function openStoryComposer(options={}){
+  const initialText=String(options?.initialText||'').slice(0,1000);
+  const creatorDisclosure=options?.creatorDisclosure&&typeof options.creatorDisclosure==='object'?options.creatorDisclosure:null;
+  const creatorDisclosureMarkup=creatorDisclosure
+    ?'<div class="creator-ai-handoff-notice"><strong>AI-assisted draft · '+esc(creatorDisclosure.identityName||'Minglora AI identity')+'</strong><p>You are publishing as '+esc(state.user?.name||'your signed-in Minglora account')+'. Review the AI attribution in the story and keep required disclosure. '+(Number(creatorDisclosure.assetReferenceCount)>0?String(Number(creatorDisclosure.assetReferenceCount))+' asset reference(s) were not attached; select approved media manually. ':'')+'Nothing is shared until you press Publish story.</p></div>'
+    :'';
   const modal=document.createElement('div');modal.className='modal-backdrop';
-  modal.innerHTML='<section class="modal" role="dialog" aria-modal="true" aria-labelledby="story-modal-title"><div class="modal-head"><h2 id="story-modal-title">Create a story</h2><button class="modal-close" aria-label="Close">×</button></div><form class="modal-body" id="story-form"><div class="field"><label for="story-text">Text (optional)</label><textarea id="story-text" name="text" maxlength="1000" placeholder="Share a moment..."></textarea></div><div class="field"><label>Choose photos or videos (up to 10)</label><div id="story-media-picker"></div></div><div class="field"><label>Soundtrack</label><div id="story-soundtrack"></div></div><div class="field"><label for="story-audience">Audience</label><select id="story-audience" name="audience"><option value="public">Public</option><option value="friends">Friends</option><option value="followers">Followers</option><option value="private">Only me</option></select></div><p class="muted">Stories expire automatically after 24 hours.</p><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button type="submit" class="primary">Publish story</button></div></form></section>';
+  modal.innerHTML='<section class="modal" role="dialog" aria-modal="true" aria-labelledby="story-modal-title"><div class="modal-head"><h2 id="story-modal-title">Create a story</h2><button class="modal-close" aria-label="Close">×</button></div>'+creatorDisclosureMarkup+'<form class="modal-body" id="story-form"><div class="field"><label for="story-text">Text (optional)</label><textarea id="story-text" name="text" maxlength="1000" placeholder="Share a moment..."></textarea></div><div class="field"><label>Choose photos or videos (up to 10)</label><div id="story-media-picker"></div></div><div class="field"><label>Soundtrack</label><div id="story-soundtrack"></div></div><div class="field"><label for="story-audience">Audience</label><select id="story-audience" name="audience"><option value="public">Public</option><option value="friends">Friends</option><option value="followers">Followers</option><option value="private">Only me</option></select></div><p class="muted">Stories expire automatically after 24 hours.</p><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button type="submit" class="primary">Publish story</button></div></form></section>';
   document.body.append(modal);
+  const storyText=modal.querySelector('#story-text');if(storyText)storyText.value=initialText;
   const picker=createMediaPicker(modal.querySelector('#story-media-picker'),{slot:'story',maxFiles:10,maxTotalBytes:500*1024*1024});
   const soundtrack=createSoundtrackEditor(modal.querySelector('#story-soundtrack'));
   const close=()=>{picker.destroy();soundtrack.destroy();modal.remove();};
