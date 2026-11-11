@@ -125,6 +125,6 @@ test('Palette and profile/account menus use the same scroll-safe outside dismiss
   assert.ok(appAsset, 'HTML references a versioned core application bundle');
   assert.ok(worker.includes(appAsset), 'the service worker precaches the same core application bundle');
   assert.ok(html.includes('minglora-menu.js?v=20261110-facebook-profile-dropdown-1'));
-  assert.ok(worker.includes(\"const CACHE_NAME='minglora-shell-v\"), 'service worker cache is versioned');
+  assert.ok(worker.includes("const CACHE_NAME='minglora-shell-v"), 'service worker cache is versioned');
   assert.ok(worker.includes('/menu-dismissal.js?v=20261110-menu-dismissal-1'));
 });
