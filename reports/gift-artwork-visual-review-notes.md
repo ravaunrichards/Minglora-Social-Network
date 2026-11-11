@@ -2,7 +2,7 @@
 
 **Review status:** PARTIAL. Eighteen same-title candidate pairs (36 extracted PNG files) have been compared at full size. The complete 1,509-record collection has not been fully reviewed.
 
-**Review method:** Compare the full-size transparent PNGs side by side. For the first six pairs, the corresponding screenshot cells were also opened and checked. For the later twelve pairs, the full-size PNGs were compared and the manifest's source file/row/column references were recorded; direct source-screenshot-cell confirmation remains pending for those twelve pairs.
+**Review method:** Compare the full-size transparent PNGs side by side. For the first six pairs, the corresponding screenshot cells were also opened and checked. For the twelve middle comparisons (#7–#18), the full-size PNGs were compared and manifest source coordinates recorded, but direct source-screenshot-cell confirmation remains pending. The first six and the latest twenty-five comparisons were checked against their original screenshot cells.
 
 ## Individually compared pairs
 
@@ -27,16 +27,47 @@
 | Sour Buddy | `capture-20261111-050024.png`, row 3, column 2; `capture-20261111-050221.png`, row 2, column 6 | Same citrus drink character artwork | Repeated-artwork candidate; preserve both files |
 | Thumbs | `capture-20261111-044101.png`, row 2, column 2; `capture-20261111-043101.png`, row 1, column 5 | Different designs: standalone hand versus circular badge | Keep both as distinct variants |
 
+## Additional full-size comparisons (#19–#43)
+
+| # | Same-title candidate pair | Source cells | Finding | Decision |
+|---:|---|---|---|---|
+| 19 | Anniversary Cake | `capture-20261111-051759.png` r1c4 vs `capture-20261111-055543.png` r2c4 | Single cake versus large tiered pink cake | Keep distinct variants |
+| 20 | Austin | `capture-20261111-053252.png` r1c4 vs `capture-20261111-044034.png` r3c2 | Racing helmet versus crossed flags | Keep distinct variants |
+| 21 | Autumn Leaves | `capture-20261111-053449.png` r3c5 vs `capture-20261111-052534.png` r2c6 | Single leaf versus autumn tree | Keep distinct variants |
+| 22 | Azura | `capture-20261111-044519.png` r2c5 vs `capture-20261111-052534.png` r1c4 | Different card designs/artwork | Keep distinct variants |
+| 23 | Baby Hippo | `capture-20261111-044554.png` r2c3 vs r1c2 | Different hippo poses/illustrations | Keep distinct variants |
+| 24 | Balloon Gift Box | `capture-20261111-045604.png` r1c3 vs `capture-20261111-045530.png` r1c3 | Same wrapped gift-box artwork | Repeated-artwork candidate |
+| 25 | Balloons | `capture-20261111-044426.png` r3c6 vs `capture-20261111-050709.png` r2c3 | Latex balloons versus music-note balloons | Keep distinct variants |
+| 26 | Black Wolf | `capture-20261111-055638.png` r2c3 vs r3c3 | Same wolf pose with different scene/background treatment | Keep distinct scene variants |
+| 27 | Chocolate | `capture-20261111-044144.png` r2c2 vs `capture-20261111-044334.png` r4c1 | Chocolate bar versus chocolate-heart design | Keep distinct variants |
+| 28 | Chrono | `capture-20261111-055543.png` r4c1 vs r4c5 | Fiery time-wheel versus clock/orbit design | Keep distinct variants |
+| 29 | Club | `capture-20261111-054349.png` r3c2 vs `capture-20261111-054436.png` r1c2 | Same DJ booth artwork | Repeated-artwork candidate |
+| 30 | Club Cheers | `capture-20261111-043153.png` r2c4 vs r2c5 | Different heart/cheering character designs | Keep distinct variants |
+| 31 | Club Victory | `capture-20261111-045235.png` r3c5 vs `capture-20261111-045322.png` r1c2 | Different expressions/compositions | Keep distinct variants |
+| 32 | Community Heart | `capture-20261111-043101.png` r1c3 vs `capture-20261111-043332.png` r1c3 | Interlinked-heart symbol versus music-note symbol | Keep distinct variants |
+| 33 | Compact (original vs variant 2) | `capture-20261111-045604.png` r2c2 vs `capture-20261111-054940.png` r1c5 | Makeup compact versus small vehicle | Keep distinct variants |
+| 34 | Compact (original vs variant 3) | `capture-20261111-045604.png` r2c2 vs `capture-20261111-045631.png` r2c2 | Same makeup-compact artwork | Repeated-artwork candidate |
+| 35 | Crystal Crown | `capture-20261111-054349.png` r3c3 vs `capture-20261111-054436.png` r1c1 | Same crystal-crown artwork | Repeated-artwork candidate |
+| 36 | Crystal Heart | `capture-20261111-052511.png` r1c1 vs `capture-20261111-055543.png` r3c4 | Single crystal heart versus multi-heart design | Keep distinct variants |
+| 37 | Cute Cat | `capture-20261111-053353.png` r2c1 vs `capture-20261111-044144.png` r3c5 | White cat versus dark cat | Keep distinct variants |
+| 38 | Desert Wolf | `capture-20261111-055229.png` r2c4 vs `capture-20261111-055109.png` r3c4 | Same wolf pose with different scene/background treatment | Keep distinct scene variants |
+| 39 | Diamond | `capture-20261111-053824.png` r3c3 vs `capture-20261111-053858.png` r1c1 | Same pink diamond-box artwork | Repeated-artwork candidate |
+| 40 | Diamond Ring | `capture-20261111-051716.png` r2c3 vs `capture-20261111-054144.png` r3c6 | Pink versus green ring-box design | Keep distinct variants |
+| 41 | Diamond Shield | `capture-20261111-055352.png` r1c1 vs r1c4 | Different shield/emblem artwork | Keep distinct variants |
+| 42 | Dolce Vita | `capture-20261111-043614.png` r2c1 vs `capture-20261111-043226.png` r3c5 | Beach chair versus folded beach item | Keep distinct variants |
+| 43 | Embroidered | `capture-20261111-044144.png` r2c1 vs r1c2 | Same embroidered medallion artwork | Repeated-artwork candidate |
+
+
 ## Result
 
-- Full-size candidate pairs compared: **18**.
-- Extracted PNG files compared: **36**.
-- Distinct artwork variant pairs: **7** (Club Power, Grand show, Love Balloon, Crescent Lanter..., Dream Team, Ready, Thumbs).
-- Repeated-artwork candidate pairs: **11** (LIVE Pro Badge, Side by Side, Star Glasses, Air Dancer, DJ Peak, Dancing Hands, Drums, Flame heart, Night Star, Orange Juice, Sour Buddy).
+- Full-size candidate pair comparisons: **43**.
+- Pair review: **26 distinct-variant pairs** and **17 repeated-artwork candidates**.
+- Contact-sheet thumbnail screening: **24/24 pages**, covering **1,509/1,509** candidate thumbnails.
+- Source-screenshot cell comparisons: **31/43 pair comparisons** directly checked against original screenshot cells. The twelve middle comparisons (#7–#18) still need direct source-cell confirmation.
+- Pair-comparison image slots: **86**; the Compact original was used in two pair comparisons.
 - Files deleted, overwritten or merged during review: **0**.
 - Catalog identity reconciliation: **NOT COMPLETED**. Source occurrences and catalog rows still need to be reconciled before a canonical file is chosen.
-- Complete item-by-item review: **NOT COMPLETED**. The other 1,473 manifest records have not been individually full-size compared as part of these eighteen pair checks; contact-sheet thumbnails were screened separately.
-- Direct source-screenshot-cell confirmation for the later twelve pairs: **PENDING**.
+- Individual full-resolution review: **NOT COMPLETED**. The other **1,424** manifest records have not been individually compared at full size; contact-sheet thumbnails were screened separately.
 - Rights/licence provenance: **NOT REVIEWED / NOT CLEARED**.
 
-The repeated-artwork decisions are review candidates, not deletion instructions. Keep every file and all source references. Do not merge or remove a variant until the exact source appearances, catalog identity, and rights/provenance are reconciled. This report is not approval for production use.
+Repeated-artwork decisions are candidates, not deletion instructions. Keep every file and source reference. Distinct scene, pose, colour, object or composition variants remain separate. Do not merge or remove anything until exact source appearances, catalogue identity, and rights/provenance are reconciled. This report is not approval for production use.
