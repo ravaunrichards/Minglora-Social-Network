@@ -1,41 +1,239 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="650" viewBox="0 0 1200 650" role="img" aria-labelledby="title desc">
-<title id="title">Gifters Level Up</title>
-<desc id="desc">Original Minglora artwork celebrating 50 gifter levels, badges and progress.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1120" viewBox="0 0 1800 1120" role="img" aria-labelledby="title desc">
+<title id="title">Minglora Gifters Level Up — Correct Coin Requirements</title>
+<desc id="desc">All 50 Gifter levels and their exact cumulative Coins required, from Level 1 at 1 Coin to Level 50 at 97,500,000 Coins. Only successfully confirmed gifts sent count.</desc>
 <defs>
   <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#17133d"/><stop offset=".52" stop-color="#30206b"/><stop offset="1" stop-color="#612b77"/></linearGradient>
-  <radialGradient id="glow"><stop stop-color="#bd9cff" stop-opacity=".55"/><stop offset="1" stop-color="#bd9cff" stop-opacity="0"/></radialGradient>
-  <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff2b7"/><stop offset=".32" stop-color="#ffd56a"/><stop offset=".7" stop-color="#d9952f"/><stop offset="1" stop-color="#fff0a8"/></linearGradient>
-  <linearGradient id="purple" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#a68aff"/><stop offset="1" stop-color="#5533bd"/></linearGradient>
-  <filter id="shadow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="18"/></filter>
+  <radialGradient id="glow"><stop stop-color="#bd9cff" stop-opacity=".46"/><stop offset="1" stop-color="#bd9cff" stop-opacity="0"/></radialGradient>
+  <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff2b7"/><stop offset=".5" stop-color="#ffd56a"/><stop offset="1" stop-color="#d9952f"/></linearGradient>
 </defs>
-<rect width="1200" height="650" rx="54" fill="url(#bg)"/>
-<circle cx="600" cy="275" r="310" fill="url(#glow)"/>
-<g fill="#fff4bd" opacity=".9"><path d="M130 130l8 22 22 8-22 8-8 22-8-22-22-8 22-8z"/><path d="M1030 115l7 18 18 7-18 7-7 18-7-18-18-7 18-7z"/><circle cx="250" cy="300" r="5"/><circle cx="940" cy="340" r="5"/><circle cx="820" cy="120" r="4"/><circle cx="380" cy="115" r="4"/></g>
-<g opacity=".4" fill="none" stroke="#cbb8ff"><circle cx="600" cy="300" r="225" stroke-width="2" stroke-dasharray="7 18"/><circle cx="600" cy="300" r="260" stroke-width="1.5" stroke-dasharray="2 16"/></g>
-<g transform="translate(600 275)">
-  <circle r="178" fill="#080b22" opacity=".35" filter="url(#shadow)"/>
-  <circle r="154" fill="url(#gold)" stroke="#fff2bc" stroke-width="5"/>
-  <circle r="133" fill="url(#purple)" stroke="#3c267f" stroke-width="7"/>
-  <circle r="119" fill="none" stroke="#fff0b2" stroke-width="3" stroke-dasharray="5 9"/>
-  <path d="M-84 -26l42 -48 42 34 43 -56 43 70-15 68h-140z" fill="url(#gold)" stroke="#fff0b2" stroke-width="8" stroke-linejoin="round"/>
-  <circle cx="-42" cy="-75" r="13" fill="#fff5c7"/><circle cx="0" cy="-40" r="13" fill="#fff5c7"/><circle cx="43" cy="-96" r="13" fill="#fff5c7"/>
-  <path d="M-70 58h140l-16 32h-108z" fill="url(#gold)"/>
-  <text x="0" y="28" fill="#fff" font-family="Arial,sans-serif" font-size="66" font-weight="900" text-anchor="middle">LV 50</text>
-  <text x="0" y="70" fill="#f8e6ad" font-family="Arial,sans-serif" font-size="19" font-weight="800" letter-spacing="5" text-anchor="middle">GIFTER ELITE</text>
+<rect width="1800" height="1120" rx="44" fill="url(#bg)"/>
+<circle cx="900" cy="330" r="560" fill="url(#glow)"/>
+<g fill="#fff0b8" opacity=".9">
+  <path d="M95 92l7 19 19 7-19 7-7 19-7-19-19-7 19-7z"/>
+  <path d="M1700 100l7 19 19 7-19 7-7 19-7-19-19-7 19-7z"/>
+  <circle cx="300" cy="195" r="4"/><circle cx="1510" cy="184" r="4"/><circle cx="1680" cy="830" r="4"/><circle cx="115" cy="770" r="4"/>
 </g>
-<g transform="translate(170 420) rotate(-12)">
-  <rect width="145" height="145" rx="34" fill="url(#gold)" stroke="#fff1bd" stroke-width="5"/>
-  <rect x="14" y="14" width="117" height="117" rx="26" fill="url(#purple)"/>
-  <path d="M72 38c-24-25-52 8-30 30l30 30 30-30c22-22-6-55-30-30z" fill="#fff1b7"/>
-  <text x="72" y="119" fill="#fff" font-family="Arial,sans-serif" font-size="20" font-weight="900" text-anchor="middle">LV 10</text>
-</g>
-<g transform="translate(880 415) rotate(12)">
-  <rect width="145" height="145" rx="34" fill="url(#gold)" stroke="#fff1bd" stroke-width="5"/>
-  <rect x="14" y="14" width="117" height="117" rx="26" fill="url(#purple)"/>
-  <path d="M72 35l12 25 28 4-20 20 5 28-25-13-25 13 5-28-20-20 28-4z" fill="#fff1b7"/>
-  <text x="72" y="126" fill="#fff" font-family="Arial,sans-serif" font-size="20" font-weight="900" text-anchor="middle">LV 25</text>
-</g>
-<text x="600" y="64" fill="#e7dbff" font-family="Arial,sans-serif" font-size="22" font-weight="800" letter-spacing="8" text-anchor="middle">MINGLORA REWARDS</text>
-<text x="600" y="535" fill="#fff" font-family="Arial,sans-serif" font-size="61" font-weight="900" letter-spacing="2" text-anchor="middle">GIFTERS LEVEL UP</text>
-<text x="600" y="585" fill="#e9ddff" font-family="Arial,sans-serif" font-size="24" font-weight="700" letter-spacing="4" text-anchor="middle">50 LEVELS  •  BADGES  •  PROGRESS</text>
+<text x="900" y="47" text-anchor="middle" fill="#e7dbff" font-family="Inter,Arial,sans-serif" font-size="22" font-weight="800" letter-spacing="6">MINGLORA REWARDS</text>
+<text x="900" y="124" text-anchor="middle" fill="#fff" font-family="Inter,Arial,sans-serif" font-size="70" font-weight="900" letter-spacing="1.5">GIFTERS LEVEL UP</text>
+<text x="900" y="166" text-anchor="middle" fill="#e9ddff" font-family="Inter,Arial,sans-serif" font-size="23" font-weight="700" letter-spacing="2">50 LEVELS  •  50 BADGES  •  REAL GIFT PROGRESS</text>
+<path d="M70 192H1730" stroke="url(#gold)" stroke-width="5" stroke-linecap="round"/>
+
+  <g>
+    <rect x="60" y="225" width="815" height="780" rx="26" fill="#0b0926" fill-opacity="0.76" stroke="#d7c0ff" stroke-opacity="0.88" stroke-width="2"/>
+    <text x="88" y="268" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="22" font-weight="800">LEVELS 01–25</text>
+    <text x="846" y="268" text-anchor="end" fill="#d9c9f3" font-family="Inter,Arial,sans-serif" font-size="15" font-weight="700">COINS REQUIRED</text>
+    <path d="M84 286H851" stroke="#e7bd69" stroke-opacity="0.72" stroke-width="2"/>
+    <g>
+    <rect x="76" y="302" width="783" height="22" rx="7" fill="#30205e" stroke="#7e67ae" stroke-opacity="0.48"/>
+    <text x="94" y="318" fill="#f6efff" font-family="Inter,Arial,sans-serif" font-size="17" font-weight="650">LEVEL 01</text>
+    <text x="841" y="318" text-anchor="end" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="800">1</text>
+  </g><g>
+    <rect x="76" y="328" width="783" height="22" rx="7" fill="#251a4e" stroke="#7e67ae" stroke-opacity="0.48"/>
+    <text x="94" y="344" fill="#f6efff" font-family="Inter,Arial,sans-serif" font-size="17" font-weight="650">LEVEL 02</text>
+    <text x="841" y="344" text-anchor="end" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="800">8</text>
+  </g><g>
+    <rect x="76" y="354" width="783" height="22" rx="7" fill="#30205e" stroke="#7e67ae" stroke-opacity="0.48"/>
+    <text x="94" y="370" fill="#f6efff" font-family="Inter,Arial,sans-serif" font-size="17" font-weight="650">LEVEL 03</text>
+    <text x="841" y="370" text-anchor="end" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="800">18</text>
+  </g><g>
+    <rect x="76" y="380" width="783" height="22" rx="7" fill="#251a4e" stroke="#7e67ae" stroke-opacity="0.48"/>
+    <text x="94" y="396" fill="#f6efff" font-family="Inter,Arial,sans-serif" font-size="17" font-weight="650">LEVEL 04</text>
+    <text x="841" y="396" text-anchor="end" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="800">34</text>
+  </g><g>
+    <rect x="76" y="406" width="783" height="22" rx="7" fill="#30205e" stroke="#7e67ae" stroke-opacity="0.48"/>
+    <text x="94" y="422" fill="#f6efff" font-family="Inter,Arial,sans-serif" font-size="17" font-weight="650">LEVEL 05</text>
+    <text x="841" y="422" text-anchor="end" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="800">56</text>
+  </g><g>
+    <rect x="76" y="432" width="783" height="22" rx="7" fill="#251a4e" stroke="#7e67ae" stroke-opacity="0.48"/>
+    <text x="94" y="448" fill="#f6efff" font-family="Inter,Arial,sans-serif" font-size="17" font-weight="650">LEVEL 06</text>
+    <text x="841" y="448" text-anchor="end" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="800">90</text>
+  </g><g>
+    <rect x="76" y="458" width="783" height="22" rx="7" fill="#30205e" stroke="#7e67ae" stroke-opacity="0.48"/>
+    <text x="94" y="474" fill="#f6efff" font-family="Inter,Arial,sans-serif" font-size="17" font-weight="650">LEVEL 07</text>
+    <text x="841" y="474" text-anchor="end" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="800">140</text>
+  </g><g>
+    <rect x="76" y="484" width="783" height="22" rx="7" fill="#251a4e" stroke="#7e67ae" stroke-opacity="0.48"/>
+    <text x="94" y="500" fill="#f6efff" font-family="Inter,Arial,sans-serif" font-size="17" font-weight="650">LEVEL 08</text>
+    <text x="841" y="500" text-anchor="end" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="800">220</text>
+  </g><g>
+    <rect x="76" y="510" width="783" height="22" rx="7" fill="#30205e" stroke="#7e67ae" stroke-opacity="0.48"/>
+    <text x="94" y="526" fill="#f6efff" font-family="Inter,Arial,sans-serif" font-size="17" font-weight="650">LEVEL 09</text>
+    <text x="841" y="526" text-anchor="end" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="800">340</text>
+  </g><g>
+    <rect x="76" y="536" width="783" height="22" rx="7" fill="#251a4e" stroke="#7e67ae" stroke-opacity="0.48"/>
+    <text x="94" y="552" fill="#f6efff" font-family="Inter,Arial,sans-serif" font-size="17" font-weight="650">LEVEL 10</text>
+    <text x="841" y="552" text-anchor="end" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="800">530</text>
+  </g><g>
+    <rect x="76" y="562" width="783" height="22" rx="7" fill="#30205e" stroke="#7e67ae" stroke-opacity="0.48"/>
+    <text x="94" y="578" fill="#f6efff" font-family="Inter,Arial,sans-serif" font-size="17" font-weight="650">LEVEL 11</text>
+    <text x="841" y="578" text-anchor="end" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="800">820</text>
+  </g><g>
+    <rect x="76" y="588" width="783" height="22" rx="7" fill="#251a4e" stroke="#7e67ae" stroke-opacity="0.48"/>
+    <text x="94" y="604" fill="#f6efff" font-family="Inter,Arial,sans-serif" font-size="17" font-weight="650">LEVEL 12</text>
+    <text x="841" y="604" text-anchor="end" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="800">1,260</text>
+  </g><g>
+    <rect x="76" y="614" width="783" height="22" rx="7" fill="#30205e" stroke="#7e67ae" stroke-opacity="0.48"/>
+    <text x="94" y="630" fill="#f6efff" font-family="Inter,Arial,sans-serif" font-size="17" font-weight="650">LEVEL 13</text>
+    <text x="841" y="630" text-anchor="end" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="800">1,920</text>
+  </g><g>
+    <rect x="76" y="640" width="783" height="22" rx="7" fill="#251a4e" stroke="#7e67ae" stroke-opacity="0.48"/>
+    <text x="94" y="656" fill="#f6efff" font-family="Inter,Arial,sans-serif" font-size="17" font-weight="650">LEVEL 14</text>
+    <text x="841" y="656" text-anchor="end" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="800">2,840</text>
+  </g><g>
+    <rect x="76" y="666" width="783" height="22" rx="7" fill="#30205e" stroke="#7e67ae" stroke-opacity="0.48"/>
+    <text x="94" y="682" fill="#f6efff" font-family="Inter,Arial,sans-serif" font-size="17" font-weight="650">LEVEL 15</text>
+    <text x="841" y="682" text-anchor="end" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="800">4,340</text>
+  </g><g>
+    <rect x="76" y="692" width="783" height="22" rx="7" fill="#251a4e" stroke="#7e67ae" stroke-opacity="0.48"/>
+    <text x="94" y="708" fill="#f6efff" font-family="Inter,Arial,sans-serif" font-size="17" font-weight="650">LEVEL 16</text>
+    <text x="841" y="708" text-anchor="end" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="800">6,420</text>
+  </g><g>
+    <rect x="76" y="718" width="783" height="22" rx="7" fill="#30205e" stroke="#7e67ae" stroke-opacity="0.48"/>
+    <text x="94" y="734" fill="#f6efff" font-family="Inter,Arial,sans-serif" font-size="17" font-weight="650">LEVEL 17</text>
+    <text x="841" y="734" text-anchor="end" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="800">9,280</text>
+  </g><g>
+    <rect x="76" y="744" width="783" height="22" rx="7" fill="#251a4e" stroke="#7e67ae" stroke-opacity="0.48"/>
+    <text x="94" y="760" fill="#f6efff" font-family="Inter,Arial,sans-serif" font-size="17" font-weight="650">LEVEL 18</text>
+    <text x="841" y="760" text-anchor="end" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="800">13,500</text>
+  </g><g>
+    <rect x="76" y="770" width="783" height="22" rx="7" fill="#30205e" stroke="#7e67ae" stroke-opacity="0.48"/>
+    <text x="94" y="786" fill="#f6efff" font-family="Inter,Arial,sans-serif" font-size="17" font-weight="650">LEVEL 19</text>
+    <text x="841" y="786" text-anchor="end" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="800">19,400</text>
+  </g><g>
+    <rect x="76" y="796" width="783" height="22" rx="7" fill="#251a4e" stroke="#7e67ae" stroke-opacity="0.48"/>
+    <text x="94" y="812" fill="#f6efff" font-family="Inter,Arial,sans-serif" font-size="17" font-weight="650">LEVEL 20</text>
+    <text x="841" y="812" text-anchor="end" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="800">27,600</text>
+  </g><g>
+    <rect x="76" y="822" width="783" height="22" rx="7" fill="#30205e" stroke="#7e67ae" stroke-opacity="0.48"/>
+    <text x="94" y="838" fill="#f6efff" font-family="Inter,Arial,sans-serif" font-size="17" font-weight="650">LEVEL 21</text>
+    <text x="841" y="838" text-anchor="end" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="800">39,600</text>
+  </g><g>
+    <rect x="76" y="848" width="783" height="22" rx="7" fill="#251a4e" stroke="#7e67ae" stroke-opacity="0.48"/>
+    <text x="94" y="864" fill="#f6efff" font-family="Inter,Arial,sans-serif" font-size="17" font-weight="650">LEVEL 22</text>
+    <text x="841" y="864" text-anchor="end" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="800">54,600</text>
+  </g><g>
+    <rect x="76" y="874" width="783" height="22" rx="7" fill="#30205e" stroke="#7e67ae" stroke-opacity="0.48"/>
+    <text x="94" y="890" fill="#f6efff" font-family="Inter,Arial,sans-serif" font-size="17" font-weight="650">LEVEL 23</text>
+    <text x="841" y="890" text-anchor="end" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="800">75,800</text>
+  </g><g>
+    <rect x="76" y="900" width="783" height="22" rx="7" fill="#251a4e" stroke="#7e67ae" stroke-opacity="0.48"/>
+    <text x="94" y="916" fill="#f6efff" font-family="Inter,Arial,sans-serif" font-size="17" font-weight="650">LEVEL 24</text>
+    <text x="841" y="916" text-anchor="end" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="800">105,000</text>
+  </g><g>
+    <rect x="76" y="926" width="783" height="22" rx="7" fill="#76502f" stroke="#ffdd96" stroke-opacity="0.95"/>
+    <text x="94" y="942" fill="#f6efff" font-family="Inter,Arial,sans-serif" font-size="17" font-weight="650">LEVEL 25</text>
+    <text x="841" y="942" text-anchor="end" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="800">144,000</text>
+  </g>
+  </g>
+
+  <g>
+    <rect x="925" y="225" width="815" height="780" rx="26" fill="#0b0926" fill-opacity="0.76" stroke="#d7c0ff" stroke-opacity="0.88" stroke-width="2"/>
+    <text x="953" y="268" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="22" font-weight="800">LEVELS 26–50</text>
+    <text x="1711" y="268" text-anchor="end" fill="#d9c9f3" font-family="Inter,Arial,sans-serif" font-size="15" font-weight="700">COINS REQUIRED</text>
+    <path d="M949 286H1716" stroke="#e7bd69" stroke-opacity="0.72" stroke-width="2"/>
+    <g>
+    <rect x="941" y="302" width="783" height="22" rx="7" fill="#30205e" stroke="#7e67ae" stroke-opacity="0.48"/>
+    <text x="959" y="318" fill="#f6efff" font-family="Inter,Arial,sans-serif" font-size="17" font-weight="650">LEVEL 26</text>
+    <text x="1706" y="318" text-anchor="end" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="800">196,000</text>
+  </g><g>
+    <rect x="941" y="328" width="783" height="22" rx="7" fill="#251a4e" stroke="#7e67ae" stroke-opacity="0.48"/>
+    <text x="959" y="344" fill="#f6efff" font-family="Inter,Arial,sans-serif" font-size="17" font-weight="650">LEVEL 27</text>
+    <text x="1706" y="344" text-anchor="end" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="800">265,000</text>
+  </g><g>
+    <rect x="941" y="354" width="783" height="22" rx="7" fill="#30205e" stroke="#7e67ae" stroke-opacity="0.48"/>
+    <text x="959" y="370" fill="#f6efff" font-family="Inter,Arial,sans-serif" font-size="17" font-weight="650">LEVEL 28</text>
+    <text x="1706" y="370" text-anchor="end" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="800">357,000</text>
+  </g><g>
+    <rect x="941" y="380" width="783" height="22" rx="7" fill="#251a4e" stroke="#7e67ae" stroke-opacity="0.48"/>
+    <text x="959" y="396" fill="#f6efff" font-family="Inter,Arial,sans-serif" font-size="17" font-weight="650">LEVEL 29</text>
+    <text x="1706" y="396" text-anchor="end" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="800">478,000</text>
+  </g><g>
+    <rect x="941" y="406" width="783" height="22" rx="7" fill="#30205e" stroke="#7e67ae" stroke-opacity="0.48"/>
+    <text x="959" y="422" fill="#f6efff" font-family="Inter,Arial,sans-serif" font-size="17" font-weight="650">LEVEL 30</text>
+    <text x="1706" y="422" text-anchor="end" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="800">637,000</text>
+  </g><g>
+    <rect x="941" y="432" width="783" height="22" rx="7" fill="#251a4e" stroke="#7e67ae" stroke-opacity="0.48"/>
+    <text x="959" y="448" fill="#f6efff" font-family="Inter,Arial,sans-serif" font-size="17" font-weight="650">LEVEL 31</text>
+    <text x="1706" y="448" text-anchor="end" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="800">845,000</text>
+  </g><g>
+    <rect x="941" y="458" width="783" height="22" rx="7" fill="#30205e" stroke="#7e67ae" stroke-opacity="0.48"/>
+    <text x="959" y="474" fill="#f6efff" font-family="Inter,Arial,sans-serif" font-size="17" font-weight="650">LEVEL 32</text>
+    <text x="1706" y="474" text-anchor="end" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="800">1,120,000</text>
+  </g><g>
+    <rect x="941" y="484" width="783" height="22" rx="7" fill="#251a4e" stroke="#7e67ae" stroke-opacity="0.48"/>
+    <text x="959" y="500" fill="#f6efff" font-family="Inter,Arial,sans-serif" font-size="17" font-weight="650">LEVEL 33</text>
+    <text x="1706" y="500" text-anchor="end" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="800">1,470,000</text>
+  </g><g>
+    <rect x="941" y="510" width="783" height="22" rx="7" fill="#30205e" stroke="#7e67ae" stroke-opacity="0.48"/>
+    <text x="959" y="526" fill="#f6efff" font-family="Inter,Arial,sans-serif" font-size="17" font-weight="650">LEVEL 34</text>
+    <text x="1706" y="526" text-anchor="end" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="800">1,920,000</text>
+  </g><g>
+    <rect x="941" y="536" width="783" height="22" rx="7" fill="#251a4e" stroke="#7e67ae" stroke-opacity="0.48"/>
+    <text x="959" y="552" fill="#f6efff" font-family="Inter,Arial,sans-serif" font-size="17" font-weight="650">LEVEL 35</text>
+    <text x="1706" y="552" text-anchor="end" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="800">2,500,000</text>
+  </g><g>
+    <rect x="941" y="562" width="783" height="22" rx="7" fill="#30205e" stroke="#7e67ae" stroke-opacity="0.48"/>
+    <text x="959" y="578" fill="#f6efff" font-family="Inter,Arial,sans-serif" font-size="17" font-weight="650">LEVEL 36</text>
+    <text x="1706" y="578" text-anchor="end" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="800">3,230,000</text>
+  </g><g>
+    <rect x="941" y="588" width="783" height="22" rx="7" fill="#251a4e" stroke="#7e67ae" stroke-opacity="0.48"/>
+    <text x="959" y="604" fill="#f6efff" font-family="Inter,Arial,sans-serif" font-size="17" font-weight="650">LEVEL 37</text>
+    <text x="1706" y="604" text-anchor="end" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="800">4,180,000</text>
+  </g><g>
+    <rect x="941" y="614" width="783" height="22" rx="7" fill="#30205e" stroke="#7e67ae" stroke-opacity="0.48"/>
+    <text x="959" y="630" fill="#f6efff" font-family="Inter,Arial,sans-serif" font-size="17" font-weight="650">LEVEL 38</text>
+    <text x="1706" y="630" text-anchor="end" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="800">5,180,000</text>
+  </g><g>
+    <rect x="941" y="640" width="783" height="22" rx="7" fill="#251a4e" stroke="#7e67ae" stroke-opacity="0.48"/>
+    <text x="959" y="656" fill="#f6efff" font-family="Inter,Arial,sans-serif" font-size="17" font-weight="650">LEVEL 39</text>
+    <text x="1706" y="656" text-anchor="end" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="800">6,890,000</text>
+  </g><g>
+    <rect x="941" y="666" width="783" height="22" rx="7" fill="#30205e" stroke="#7e67ae" stroke-opacity="0.48"/>
+    <text x="959" y="682" fill="#f6efff" font-family="Inter,Arial,sans-serif" font-size="17" font-weight="650">LEVEL 40</text>
+    <text x="1706" y="682" text-anchor="end" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="800">8,780,000</text>
+  </g><g>
+    <rect x="941" y="692" width="783" height="22" rx="7" fill="#251a4e" stroke="#7e67ae" stroke-opacity="0.48"/>
+    <text x="959" y="708" fill="#f6efff" font-family="Inter,Arial,sans-serif" font-size="17" font-weight="650">LEVEL 41</text>
+    <text x="1706" y="708" text-anchor="end" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="800">11,200,000</text>
+  </g><g>
+    <rect x="941" y="718" width="783" height="22" rx="7" fill="#30205e" stroke="#7e67ae" stroke-opacity="0.48"/>
+    <text x="959" y="734" fill="#f6efff" font-family="Inter,Arial,sans-serif" font-size="17" font-weight="650">LEVEL 42</text>
+    <text x="1706" y="734" text-anchor="end" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="800">14,100,000</text>
+  </g><g>
+    <rect x="941" y="744" width="783" height="22" rx="7" fill="#251a4e" stroke="#7e67ae" stroke-opacity="0.48"/>
+    <text x="959" y="760" fill="#f6efff" font-family="Inter,Arial,sans-serif" font-size="17" font-weight="650">LEVEL 43</text>
+    <text x="1706" y="760" text-anchor="end" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="800">17,800,000</text>
+  </g><g>
+    <rect x="941" y="770" width="783" height="22" rx="7" fill="#30205e" stroke="#7e67ae" stroke-opacity="0.48"/>
+    <text x="959" y="786" fill="#f6efff" font-family="Inter,Arial,sans-serif" font-size="17" font-weight="650">LEVEL 44</text>
+    <text x="1706" y="786" text-anchor="end" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="800">22,300,000</text>
+  </g><g>
+    <rect x="941" y="796" width="783" height="22" rx="7" fill="#251a4e" stroke="#7e67ae" stroke-opacity="0.48"/>
+    <text x="959" y="812" fill="#f6efff" font-family="Inter,Arial,sans-serif" font-size="17" font-weight="650">LEVEL 45</text>
+    <text x="1706" y="812" text-anchor="end" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="800">30,000,000</text>
+  </g><g>
+    <rect x="941" y="822" width="783" height="22" rx="7" fill="#30205e" stroke="#7e67ae" stroke-opacity="0.48"/>
+    <text x="959" y="838" fill="#f6efff" font-family="Inter,Arial,sans-serif" font-size="17" font-weight="650">LEVEL 46</text>
+    <text x="1706" y="838" text-anchor="end" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="800">37,500,000</text>
+  </g><g>
+    <rect x="941" y="848" width="783" height="22" rx="7" fill="#251a4e" stroke="#7e67ae" stroke-opacity="0.48"/>
+    <text x="959" y="864" fill="#f6efff" font-family="Inter,Arial,sans-serif" font-size="17" font-weight="650">LEVEL 47</text>
+    <text x="1706" y="864" text-anchor="end" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="800">47,500,000</text>
+  </g><g>
+    <rect x="941" y="874" width="783" height="22" rx="7" fill="#30205e" stroke="#7e67ae" stroke-opacity="0.48"/>
+    <text x="959" y="890" fill="#f6efff" font-family="Inter,Arial,sans-serif" font-size="17" font-weight="650">LEVEL 48</text>
+    <text x="1706" y="890" text-anchor="end" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="800">60,000,000</text>
+  </g><g>
+    <rect x="941" y="900" width="783" height="22" rx="7" fill="#251a4e" stroke="#7e67ae" stroke-opacity="0.48"/>
+    <text x="959" y="916" fill="#f6efff" font-family="Inter,Arial,sans-serif" font-size="17" font-weight="650">LEVEL 49</text>
+    <text x="1706" y="916" text-anchor="end" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="800">75,000,000</text>
+  </g><g>
+    <rect x="941" y="926" width="783" height="22" rx="7" fill="#76502f" stroke="#ffdd96" stroke-opacity="0.95"/>
+    <text x="959" y="942" fill="#f6efff" font-family="Inter,Arial,sans-serif" font-size="17" font-weight="650">LEVEL 50</text>
+    <text x="1706" y="942" text-anchor="end" fill="#ffe09a" font-family="Inter,Arial,sans-serif" font-size="18" font-weight="800">97,500,000</text>
+  </g>
+  </g>
+<rect x="60" y="1022" width="1680" height="78" rx="20" fill="#09081f" fill-opacity=".92" stroke="#ffd77f" stroke-width="2"/>
+<text x="900" y="1054" text-anchor="middle" fill="#fff0c7" font-family="Inter,Arial,sans-serif" font-size="20" font-weight="800">1 CONFIRMED COIN SPENT ON A GIFT = 1 GIFTER PROGRESS POINT</text>
+<text x="900" y="1083" text-anchor="middle" fill="#e9ddff" font-family="Inter,Arial,sans-serif" font-size="16" font-weight="600">Only successfully confirmed gifts sent count.  •  LV 25 unlocks the special LIVE entrance badge.</text>
 </svg>
