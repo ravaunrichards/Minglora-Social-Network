@@ -17,7 +17,7 @@ This is a repository planning document, not a claim that every listed system is 
 | LIVE | Existing runtime includes LiveKit rooms, audio/video modes, guest participation, moderation and gifts |
 | MeetWave | Existing distinct meeting feature with rooms, invitations, chat and LiveKit provider integration |
 | Creator | Existing Creator Studio, subscriptions, gifts, earnings records and 50/50 eligible gift split |
-| Video / Reels / Watch | Partial only: video may be attached to posts and played in the feed; standalone video discovery, processing and channel systems are not complete |
+| Video / Reels / Watch | Partial: real video feeds, Watch Later and account-synced privacy-aware playlists are implemented; automated video processing, full channel subscriptions and complete Watch channel systems remain unfinished |
 | Audio | Original user-published sounds exist; licensed music catalogue is not included |
 | Marketplace / TV / dating / federation | Treat as future work unless a live runtime implementation is verified; do not revive retired standalone products or migrations blindly |
 
