@@ -425,6 +425,10 @@ test('Personality Laboratory exposes versioned drafts and a human approval lifec
     'Load version history',
     'Run structural checks',
     'Approve version',
+    'Edit draft',
+    'Save draft changes',
+    'Duplicate as new draft',
+    'Rollback to this version',
     'Activate approved version',
     'Rollback to this version',
     'Provider/model behavioural test: not connected',
@@ -433,4 +437,7 @@ test('Personality Laboratory exposes versioned drafts and a human approval lifec
   ]) assert.ok(ui.includes(phrase),phrase);
   assert.match(ui,/data-action="evaluate"/);
   assert.match(ui,/data-action="approve"/);
+  assert.match(ui,/async function editPersonaDraft/);
+  assert.match(ui,/async function duplicatePersonaDraft/);
+  assert.match(ui,/method:'PATCH',body:JSON\.stringify\(\{configuration\}\)/);
 });
