@@ -374,9 +374,8 @@
 }
 .gp-hero-art .gp-reference-art{
   display:block;
-  width:100%;
-  max-width:1100px;
-  max-height:none;
+  width:min(100%,620px);
+  max-height:300px;
   height:auto;
   margin:0 auto;
   object-fit:contain;
@@ -405,7 +404,7 @@
 .gp-chart-fullsize:focus-visible{outline:3px solid #2563eb;outline-offset:3px}
 @media(max-width:650px){
   .gp-hero-art{gap:10px;padding:10px 6px;border-radius:14px}
-  .gp-hero-art .gp-reference-art{width:100%;max-height:none}
+  .gp-hero-art .gp-reference-art{width:100%;max-height:230px}
   .gp-chart-fullsize{width:min(100%,420px);min-height:48px;font-size:1rem;padding:11px 14px}
 }
 
