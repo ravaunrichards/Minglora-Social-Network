@@ -30,6 +30,7 @@ import { rankForYouFeed } from './domain/feed-ranking.js';
 import { rankForYouVideos } from './domain/video-ranking.js';
 import { canViewStory as canViewStoryPolicy, removeExpiredStories } from '../backend/modules/stories/service.js';
 import { canPublishGroupPost, canDeleteGroupPost, canLeaveGroup } from '../backend/modules/groups/service.js';
+import { disconnectBlockedConnections } from '../backend/modules/relationships/blocks.js';
 import { getActiveFollowEdges, getMutualFollowIds, isSocialAccountEligible, normalizeFriendPreferences, validateFriendPreferencePatch } from '../backend/modules/relationships/friends.js';
 import { validatePageInput, validatePageUpdate, canManagePage as canManagePagePolicy, canManagePageTeam as canManagePageTeamPolicy, canViewPageInsights as canViewPageInsightsPolicy, canAssignPageRole as canAssignPageRolePolicy, canChangePageRole as canChangePageRolePolicy, canRemovePageRole as canRemovePageRolePolicy, canDeletePagePost, canDeletePage } from '../backend/modules/pages/service.js';
 import { recordProfileView, touchProfilePresence, getProfileViewStats } from '../backend/modules/profiles/service.js';
@@ -552,16 +553,23 @@ function isAccountBlocked(account){
   return isAccountBanned(account)||['suspended','deactivated','deleted'].includes(String(account.status||'').toLowerCase());
 }
 function activeFollows(){
-  return getActiveFollowEdges(db.follows||[],db.users||[]);
+  return getActiveFollowEdges(db.follows||[],db.users||[])
+    .filter(edge=>!blockedBetween(edge.followerId,edge.followedId));
 }
 function activeProfilePresence(){
   return (db.profileViewPresence||[]).filter(entry=>
     isSocialAccountEligible((db.users||[]).find(member=>member.id===entry.viewerUserId))
       && isSocialAccountEligible((db.users||[]).find(member=>member.id===entry.targetUserId))
+      && !blockedBetween(entry.viewerUserId,entry.targetUserId)
   );
 }
 function activePageFollows(){
-  return (db.pageFollows||[]).filter(edge=>isSocialAccountEligible((db.users||[]).find(member=>member.id===edge.userId)));
+  const pagesById=new Map((db.pages||[]).map(page=>[String(page.id),page]));
+  return (db.pageFollows||[]).filter(edge=>{
+    const page=pagesById.get(String(edge.pageId));
+    return isSocialAccountEligible((db.users||[]).find(member=>member.id===edge.userId))
+      && page && !blockedBetween(page.createdBy,edge.userId);
+  });
 }
 function sessionUser(req){
   const session=sessionFromRequest(req);
@@ -5302,18 +5310,48 @@ async function route(req, res) {
       if((method==='POST'||method==='DELETE')&&m){
         const target=db.users.find(u=>u.id===m[1]);
         if(!target||target.id===user.id)return json(res,400,{error:'Choose another valid account.'});
-        const exists=(db.blocks||[]).some(b=>b.blockerId===user.id&&b.blockedId===target.id);
-        if(method==='POST'&&!exists){
-          db.blocks.push({id:uid(),blockerId:user.id,blockedId:target.id,createdAt:now()});
-          const outgoingFollow=(db.follows||[]).some(f=>f.followerId===user.id&&f.followedId===target.id);
-          const incomingFollow=(db.follows||[]).some(f=>f.followerId===target.id&&f.followedId===user.id);
-          if(outgoingFollow)await requestSupabaseState('relationship_unfollow',{followerId:user.id,followedId:target.id});
-          if(incomingFollow)await requestSupabaseState('relationship_unfollow',{followerId:target.id,followedId:user.id});
-          db.follows=(db.follows||[]).filter(f=>!((f.followerId===user.id&&f.followedId===target.id)||(f.followerId===target.id&&f.followedId===user.id)));
-          db.friendships=db.friendships.filter(f=>!((f.from===user.id&&f.to===target.id)||(f.from===target.id&&f.to===user.id)));
+        db.blocks||=[];
+        const exists=db.blocks.some(b=>b.blockerId===user.id&&b.blockedId===target.id);
+        if(method==='POST'){
+          // Commit the block before any network waits so the pair cannot
+          // create a new relationship while old connection records are cleaned.
+          const pairFollows=(db.follows||[]).filter(edge=>
+            (edge.followerId===user.id&&edge.followedId===target.id)
+              ||(edge.followerId===target.id&&edge.followedId===user.id)
+          );
+          const uniqueEdges=[...new Map(pairFollows.map(edge=>[
+            String(edge.followerId)+'::'+String(edge.followedId),edge
+          ])).values()];
+          if(!exists)db.blocks.push({id:uid(),blockerId:user.id,blockedId:target.id,createdAt:now()});
+          const disconnected=disconnectBlockedConnections(db,user.id,target.id,now());
+          messengerRealtime?.disconnectPair(user.id,target.id,'blocked');
+          await saveStore();
+          await Promise.all(disconnected.calls.map(call=>cleanupCallRoom(call,'blocked')));
+          let followProjectionSynced=true;
+          try{
+            await Promise.all(uniqueEdges.map(edge=>requestSupabaseState('relationship_unfollow',{
+              followerId:edge.followerId,followedId:edge.followedId
+            })));
+          }catch(error){
+            followProjectionSynced=false;
+            console.warn('[Minglora block] Blocked relationship was saved, but a Supabase follow projection needs retry.',{
+              blockerId:user.id,blockedId:target.id,message:String(error?.message||error).slice(0,160)
+            });
+          }
+          return json(res,200,{
+            blocked:true,followProjectionSynced,
+            disconnected:{
+              follows:disconnected.follows,
+              friendships:disconnected.friendships,
+              friendListMembers:disconnected.friendListMembers,
+              pageFollows:disconnected.pageFollows,
+              activeCalls:disconnected.calls.length
+            }
+          });
         }
         if(method==='DELETE'&&exists)db.blocks=db.blocks.filter(b=>!(b.blockerId===user.id&&b.blockedId===target.id));
-        await saveStore();return json(res,200,{blocked:method==='POST'});
+        await saveStore();
+        return json(res,200,{blocked:false});
       }
       if(method==='GET'&&p==='/api/blocks')return json(res,200,{users:(db.blocks||[]).filter(b=>b.blockerId===user.id).map(b=>safeUser(db.users.find(u=>u.id===b.blockedId))).filter(Boolean)});
       if(method==='GET'&&p==='/api/profile-views'){
@@ -6970,6 +7008,7 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
       }
       if(method==='GET'&&p==='/api/message-groups'){
         const groups=(db.messageGroups||[]).filter(group=>group.status==='active'&&canAccessMessageGroup(db,group.id,user.id))
+          .filter(group=>getActiveMessageGroupMembers(db,group.id).every(memberId=>!blockedBetween(user.id,memberId)))
           .map(group=>({...group,memberCount:getActiveMessageGroupMembers(db,group.id).length,role:(db.messageGroupMembers||[]).find(item=>item.groupId===group.id&&item.userId===user.id)?.role||'member'}));
         return json(res,200,{groups});
       }
