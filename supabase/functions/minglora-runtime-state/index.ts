@@ -705,6 +705,22 @@ Deno.serve(async (req: Request) => {
         ]
       },
       {
+        "id": "ai-network",
+        "label": "AI Bot Network",
+        "collections": [
+          { "label": "AI network settings", "key": "aiBotSettings" },
+          { "label": "AI bots", "key": "aiBots" },
+          { "label": "AI bot teams", "key": "aiBotTeams" },
+          { "label": "AI schedules", "key": "aiBotSchedules" },
+          { "label": "AI execution records", "key": "aiBotRuns" },
+          { "label": "AI human approvals", "key": "aiBotApprovals" },
+          { "label": "AI audit events", "key": "aiBotAudit" },
+          { "label": "AI Creator Studio drafts", "key": "aiBotCreatorJobs" },
+          { "label": "AI companion consent", "key": "aiBotCompanionConsents" },
+          { "label": "AI community event drafts", "key": "aiBotCommunityEvents" }
+        ]
+      },
+      {
         "id": "audio",
         "label": "Sounds & audio",
         "collections": [
