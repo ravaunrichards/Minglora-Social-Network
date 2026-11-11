@@ -69,7 +69,8 @@ const p=designProfile(options.level),pal=P[p.tier-1],name=esc(options.badgeName|
 const style='--gp-progress:'+p.progress.toFixed(4)+';--gp-relief:'+p.relief.toFixed(3)+';--gp-glow:'+p.glow.toFixed(3)+';--gp-glow-blur:'+(3+p.progress*8).toFixed(2)+'px;--gp-orbit-opacity:' +(.32+p.progress*.42).toFixed(3)+';--gp-feather-opacity:' +(.36+p.progress*.38).toFixed(3)+';--gp-wing-highlight-opacity:' +(.48+p.progress*.34).toFixed(3)+';--gp-metal-light:'+pal.metalLight+';--gp-metal-mid:'+pal.metalMid+';--gp-metal-dark:'+pal.metalDark+';--gp-gem-light:'+pal.light+';--gp-gem-mid:'+pal.mid+';--gp-gem-dark:'+pal.dark+';--gp-gem-edge:'+pal.edge;
 const artwork=svg(p,Boolean(options.inline));
 if(options.inline)return '<span class="gp-inline-badge gp-tier-'+p.tier+' gp-level-'+p.level+'" data-gp-level="'+p.level+'" style="'+style+'" role="img" aria-label="'+name+'" title="'+name+'"><span class="gp-inline-art">'+artwork+'</span><strong>'+p.level+'</strong></span>';
-const cls='gp-badge gp-tier-'+p.tier+' gp-level-'+p.level+(options.compact?' gp-badge--small':'');
+const placement=String(options.placement||"compact").replace(/[^a-z0-9_-]/gi,"");
+const cls='gp-badge gp-tier-'+p.tier+' gp-level-'+p.level+(options.compact?' gp-badge--small':'')+(placement?' gp-badge--'+placement:'');
 return '<span class="'+cls+'" data-gp-level="'+p.level+'" style="'+style+'" role="img" aria-label="'+name+'" title="'+name+'"><span class="gp-crest-stage">'+artwork+'<i class="gp-crest-spark gp-crest-spark--one"></i><i class="gp-crest-spark gp-crest-spark--two"></i></span>'+(options.compact?'':'<span class="gp-badge-level">LV <b>'+p.level+'</b></span><span class="gp-badge-caption">GIFTER</span>')+'</span>';
 }
 window.MingloraGifterBadgeArt=Object.freeze({render,designProfile});
