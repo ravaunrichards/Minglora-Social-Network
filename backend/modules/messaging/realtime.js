@@ -287,6 +287,7 @@ export function createMessengerRealtimeHub({
     handleUpgrade,
     publish,
     refreshPresence,
+    disconnectUser,
     isConnected: userId => Boolean(socketsByUser.get(String(userId || ''))?.size),
     close
   };
