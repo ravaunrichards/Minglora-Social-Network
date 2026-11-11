@@ -75,6 +75,27 @@ test('owner creation persists a normalized identity record with separate name fi
   assert.equal(saves,1);
 });
 
+test('provider assignment listing redacts server-side credential references',async()=>{
+  const context=makeContext({
+    path:'/api/admin/personal-ai-bots/providers',
+    url:new URL('https://minglora.test/api/admin/personal-ai-bots/providers?limit=10&offset=0'),
+    listAiProviderAssignments:async options=>{
+      assert.deepEqual(options,{limit:10,offset:0});
+      return [
+        {id:'assignment-1',providerName:'Example Provider',credentialSecretReference:'secret://private/provider-key'},
+        {id:'assignment-2',providerName:'Unconfigured Provider',credentialSecretReference:null}
+      ];
+    }
+  });
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,200);
+  assert.equal(context.res.payload.assignments.length,2);
+  assert.equal(context.res.payload.assignments[0].credentialConfigured,true);
+  assert.equal(context.res.payload.assignments[1].credentialConfigured,false);
+  assert.ok(context.res.payload.assignments.every(item=>!Object.hasOwn(item,'credentialSecretReference')));
+  assert.doesNotMatch(JSON.stringify(context.res.payload),'secret://private/provider-key');
+});
+
 test('owner overview reads canonical identity rows from the persistence callback',async()=>{
   const row={id:'ai-1',firstName:'Minglora',middleName:'AI',lastName:'Companion',username:'ai_minglora_companion',population:'independent',status:'created'};
   const context=makeContext({listAiIdentities:async options=>{
