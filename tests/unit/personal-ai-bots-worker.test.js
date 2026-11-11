@@ -62,7 +62,7 @@ test('worker claims only approved low-impact text tasks and stores a human-revie
 });
 
 test('worker allowlist contains only four non-side-effecting text task types',()=>{
-  assert.deepEqual(PERSONAL_AI_BOT_WORKER_TASK_TYPES.sort(),[
+  assert.deepEqual([...PERSONAL_AI_BOT_WORKER_TASK_TYPES].sort(),[
     'analytics_report','assistant_request','moderation_review','translation'
   ]);
 });
