@@ -1,22 +1,7 @@
 {
   "title": "Minglora Gift Sound Ingestion",
-  "status": "download_attempted",
-  "downloaded": [
-    {
-      "id": "celebration-fireworks",
-      "mp3": "assets/Gift Sounds/_sources/mp3/celebration-fireworks.mp3",
-      "sourcePage": "https://commons.wikimedia.org/wiki/File:Fireworks.ogg",
-      "sourceUrl": "https://upload.wikimedia.org/wikipedia/commons/7/71/Fireworks.ogg",
-      "creator": "Stephan",
-      "license": "Public Domain dedication",
-      "originalBytes": 5565483,
-      "originalSha256": "57ef5943e3cd0a119b4feb310353f95cdb8708267441cc4140d8102e30be763b",
-      "mp3Bytes": 2470181,
-      "mp3Sha256": "a373d0e2779dc8cfa4e89fdc2d8e38a9eb4df315d7f14abef5a3fdd4ba991b0e",
-      "originalFormat": ".ogg",
-      "status": "downloaded_verified_transcoded_review_only"
-    }
-  ],
+  "status": "downloaded_review_only",
+  "downloaded": [],
   "mappedGiftFiles": [
     {
       "giftSlug": "cute-cat-variant-2",
@@ -831,162 +816,431 @@
     {
       "id": "rain-soft",
       "reason": "verified MP3 already exists",
-      "sha256": "fbef36f5b5550bebcd9276755ad4425de3b1a4b74c806e225fc1582dc2ad3bc4"
+      "sha256": "fbef36f5b5550bebcd9276755ad4425de3b1a4b74c806e225fc1582dc2ad3bc4",
+      "probe": {
+        "codec": "mp3",
+        "sampleRateHz": 44100,
+        "channels": 2,
+        "bitRate": 192000,
+        "durationSeconds": 39,
+        "bytes": 937316
+      }
     },
     {
       "id": "water-stream",
       "reason": "verified MP3 already exists",
-      "sha256": "91bc6c8092788c3c32ce3429b1b077772b7c536432edbb888a160b2530f0d78a"
+      "sha256": "91bc6c8092788c3c32ce3429b1b077772b7c536432edbb888a160b2530f0d78a",
+      "probe": {
+        "codec": "mp3",
+        "sampleRateHz": 44100,
+        "channels": 2,
+        "bitRate": 192000,
+        "durationSeconds": 71.797755,
+        "bytes": 1724751
+      }
     },
     {
       "id": "water-river",
       "reason": "verified MP3 already exists",
-      "sha256": "63a62206bec57a378a2dbb70aec0c6a5746454ae478d73687739d0dc4167ed77"
+      "sha256": "63a62206bec57a378a2dbb70aec0c6a5746454ae478d73687739d0dc4167ed77",
+      "probe": {
+        "codec": "mp3",
+        "sampleRateHz": 44100,
+        "channels": 2,
+        "bitRate": 192000,
+        "durationSeconds": 89.000249,
+        "bytes": 2137904
+      }
     },
     {
       "id": "wind-breeze",
       "reason": "verified MP3 already exists",
-      "sha256": "042eb1ce23f3388069cf9855f61ccf8c7605040387cf540bf4c5d3a95a328682"
+      "sha256": "042eb1ce23f3388069cf9855f61ccf8c7605040387cf540bf4c5d3a95a328682",
+      "probe": {
+        "codec": "mp3",
+        "sampleRateHz": 44100,
+        "channels": 2,
+        "bitRate": 192000,
+        "durationSeconds": 63.833787,
+        "bytes": 1533535
+      }
     },
     {
       "id": "nature-forest-day",
       "reason": "verified MP3 already exists",
-      "sha256": "2a43932ac2b0ffa46b9bb4bfa58284f585baad0ba93278e261b8bcdd61386f6b"
+      "sha256": "2a43932ac2b0ffa46b9bb4bfa58284f585baad0ba93278e261b8bcdd61386f6b",
+      "probe": {
+        "codec": "mp3",
+        "sampleRateHz": 44100,
+        "channels": 2,
+        "bitRate": 192000,
+        "durationSeconds": 119,
+        "bytes": 2857630
+      }
     },
     {
       "id": "animals-cat",
       "reason": "verified MP3 already exists",
-      "sha256": "02f7d71fc5d20a0d9bd57a4041849f5863bcac008c999faa8c493de6b0ed0c08"
+      "sha256": "02f7d71fc5d20a0d9bd57a4041849f5863bcac008c999faa8c493de6b0ed0c08",
+      "probe": {
+        "codec": "mp3",
+        "sampleRateHz": 44100,
+        "channels": 2,
+        "bitRate": 192000,
+        "durationSeconds": 59.103401,
+        "bytes": 1420059
+      }
     },
     {
       "id": "home-air-conditioner",
       "reason": "verified MP3 already exists",
-      "sha256": "080f7e3b3569bf935993ff213aeca86fa247609180df6273ab660d6355c20dde"
+      "sha256": "080f7e3b3569bf935993ff213aeca86fa247609180df6273ab660d6355c20dde",
+      "probe": {
+        "codec": "mp3",
+        "sampleRateHz": 44100,
+        "channels": 2,
+        "bitRate": 192000,
+        "durationSeconds": 57.368005,
+        "bytes": 1378681
+      }
     },
     {
       "id": "bell1",
       "reason": "verified MP3 already exists",
-      "sha256": "184193975d89a826d77f8f281c37891fe3571521d6f1a41089fcfb7a3c46f7e9"
+      "sha256": "184193975d89a826d77f8f281c37891fe3571521d6f1a41089fcfb7a3c46f7e9",
+      "probe": {
+        "codec": "mp3",
+        "sampleRateHz": 44100,
+        "channels": 2,
+        "bitRate": 192000,
+        "durationSeconds": 20.408889,
+        "bytes": 491563
+      }
     },
     {
       "id": "cracker1",
       "reason": "verified MP3 already exists",
-      "sha256": "3173206b305c147883c1a6710a63beb3c62c0c7cec07b71a963e192fcb6ac44f"
+      "sha256": "3173206b305c147883c1a6710a63beb3c62c0c7cec07b71a963e192fcb6ac44f",
+      "probe": {
+        "codec": "mp3",
+        "sampleRateHz": 44100,
+        "channels": 2,
+        "bitRate": 192000,
+        "durationSeconds": 0.607574,
+        "bytes": 16343
+      }
     },
     {
       "id": "cracker1v-stereo",
       "reason": "verified MP3 already exists",
-      "sha256": "a70dbd9a036573937a254529a737c4f590d7c61f2c7e62d051bd6e07c674c3d9"
+      "sha256": "a70dbd9a036573937a254529a737c4f590d7c61f2c7e62d051bd6e07c674c3d9",
+      "probe": {
+        "codec": "mp3",
+        "sampleRateHz": 44100,
+        "channels": 2,
+        "bitRate": 192000,
+        "durationSeconds": 0.50746,
+        "bytes": 13835
+      }
     },
     {
       "id": "cracker1v",
       "reason": "verified MP3 already exists",
-      "sha256": "d11718f7d5d44a25c17684cae6177ab838ad112bc7bdda104b4e41384614a59a"
+      "sha256": "d11718f7d5d44a25c17684cae6177ab838ad112bc7bdda104b4e41384614a59a",
+      "probe": {
+        "codec": "mp3",
+        "sampleRateHz": 44100,
+        "channels": 2,
+        "bitRate": 192000,
+        "durationSeconds": 0.50746,
+        "bytes": 13835
+      }
     },
     {
       "id": "cracker2",
       "reason": "verified MP3 already exists",
-      "sha256": "cf1eeb1b76d04a056993d169061bc1e47148bceb0397feba3309a694f3ed6b6e"
+      "sha256": "cf1eeb1b76d04a056993d169061bc1e47148bceb0397feba3309a694f3ed6b6e",
+      "probe": {
+        "codec": "mp3",
+        "sampleRateHz": 44100,
+        "channels": 2,
+        "bitRate": 192000,
+        "durationSeconds": 0.605488,
+        "bytes": 16343
+      }
     },
     {
       "id": "metal1",
       "reason": "verified MP3 already exists",
-      "sha256": "28ebf238b0c9e4d71365b2836a94d9a58b1b76c2e9c792c92cea4363e8acac58"
+      "sha256": "28ebf238b0c9e4d71365b2836a94d9a58b1b76c2e9c792c92cea4363e8acac58",
+      "probe": {
+        "codec": "mp3",
+        "sampleRateHz": 44100,
+        "channels": 2,
+        "bitRate": 192000,
+        "durationSeconds": 0.48059,
+        "bytes": 13208
+      }
     },
     {
       "id": "steel1",
       "reason": "verified MP3 already exists",
-      "sha256": "c9eba4d36afd286b2d8bf92fd99d5ca92f09911aaf21b01808e67e6cffe03b8c"
+      "sha256": "c9eba4d36afd286b2d8bf92fd99d5ca92f09911aaf21b01808e67e6cffe03b8c",
+      "probe": {
+        "codec": "mp3",
+        "sampleRateHz": 44100,
+        "channels": 2,
+        "bitRate": 192000,
+        "durationSeconds": 1.099955,
+        "bytes": 28255
+      }
     },
     {
       "id": "switch1",
       "reason": "verified MP3 already exists",
-      "sha256": "3be4fa8f930ce50cf18f4dffec8067410789b2d398a000e9d981ad520c2e12f3"
+      "sha256": "3be4fa8f930ce50cf18f4dffec8067410789b2d398a000e9d981ad520c2e12f3",
+      "probe": {
+        "codec": "mp3",
+        "sampleRateHz": 44100,
+        "channels": 2,
+        "bitRate": 192000,
+        "durationSeconds": 0.38458,
+        "bytes": 10701
+      }
     },
     {
       "id": "wahaha",
       "reason": "verified MP3 already exists",
-      "sha256": "e290309933d9425aac92ffbd44dcf821f72b09e1f2fb4496802e1c521ee735f3"
+      "sha256": "e290309933d9425aac92ffbd44dcf821f72b09e1f2fb4496802e1c521ee735f3",
+      "probe": {
+        "codec": "mp3",
+        "sampleRateHz": 44100,
+        "channels": 2,
+        "bitRate": 192000,
+        "durationSeconds": 0.859592,
+        "bytes": 21985
+      }
     },
     {
       "id": "animal-bee",
       "reason": "verified MP3 already exists",
-      "sha256": "1dc714ae5d10fef2ac0f5c771496220b5af01418d8d7df26c014fa0f4ae9e91e"
+      "sha256": "1dc714ae5d10fef2ac0f5c771496220b5af01418d8d7df26c014fa0f4ae9e91e",
+      "probe": {
+        "codec": "mp3",
+        "sampleRateHz": 44100,
+        "channels": 2,
+        "bitRate": 192000,
+        "durationSeconds": 1.509297,
+        "bytes": 37758
+      }
     },
     {
       "id": "animal-bird",
       "reason": "verified MP3 already exists",
-      "sha256": "4b66ab0bd90d9d829c4a903bfa419f056d9aec29829e3f17789a688a98638e0d"
+      "sha256": "4b66ab0bd90d9d829c4a903bfa419f056d9aec29829e3f17789a688a98638e0d",
+      "probe": {
+        "codec": "mp3",
+        "sampleRateHz": 44100,
+        "channels": 2,
+        "bitRate": 192000,
+        "durationSeconds": 1.509297,
+        "bytes": 37758
+      }
     },
     {
       "id": "animal-cat",
       "reason": "verified MP3 already exists",
-      "sha256": "8ccc6f35e9504f18ab85b3da3f40430d47c7e17fde53c7002188d31de8d1afc2"
+      "sha256": "8ccc6f35e9504f18ab85b3da3f40430d47c7e17fde53c7002188d31de8d1afc2",
+      "probe": {
+        "codec": "mp3",
+        "sampleRateHz": 44100,
+        "channels": 2,
+        "bitRate": 192000,
+        "durationSeconds": 1.555737,
+        "bytes": 39012
+      }
     },
     {
       "id": "animal-cow",
       "reason": "verified MP3 already exists",
-      "sha256": "4c119fcc0e339e3491328a096fed5506759a9b8111e0b1b17f25b4cdeef797d6"
+      "sha256": "4c119fcc0e339e3491328a096fed5506759a9b8111e0b1b17f25b4cdeef797d6",
+      "probe": {
+        "codec": "mp3",
+        "sampleRateHz": 44100,
+        "channels": 2,
+        "bitRate": 192000,
+        "durationSeconds": 1.253878,
+        "bytes": 31489
+      }
     },
     {
       "id": "animal-dog",
       "reason": "verified MP3 already exists",
-      "sha256": "06f6e451a97be087fcef06140be812ddc8c1e20b85724c5cc8fb8ecaea97aac5"
+      "sha256": "06f6e451a97be087fcef06140be812ddc8c1e20b85724c5cc8fb8ecaea97aac5",
+      "probe": {
+        "codec": "mp3",
+        "sampleRateHz": 44100,
+        "channels": 2,
+        "bitRate": 192000,
+        "durationSeconds": 0.905578,
+        "bytes": 23338
+      }
     },
     {
       "id": "animal-duck",
       "reason": "verified MP3 already exists",
-      "sha256": "54491fd080a970129a2738566c0126d03c048ce46a042928e3b05f0234d36884"
+      "sha256": "54491fd080a970129a2738566c0126d03c048ce46a042928e3b05f0234d36884",
+      "probe": {
+        "codec": "mp3",
+        "sampleRateHz": 44100,
+        "channels": 2,
+        "bitRate": 192000,
+        "durationSeconds": 0.835918,
+        "bytes": 21458
+      }
     },
     {
       "id": "animal-frog",
       "reason": "verified MP3 already exists",
-      "sha256": "f44fd1c33e7d0526d89fe2af92fc6bb17150f8db4dd9fb02a75d7aa266000cfd"
+      "sha256": "f44fd1c33e7d0526d89fe2af92fc6bb17150f8db4dd9fb02a75d7aa266000cfd",
+      "probe": {
+        "codec": "mp3",
+        "sampleRateHz": 44100,
+        "channels": 2,
+        "bitRate": 192000,
+        "durationSeconds": 0.580499,
+        "bytes": 15815
+      }
     },
     {
       "id": "animal-goat",
       "reason": "verified MP3 already exists",
-      "sha256": "c8058589cc729f1c267b973b33f5f7517778ce1d58fd10d213ebb2a58a4c57aa"
+      "sha256": "c8058589cc729f1c267b973b33f5f7517778ce1d58fd10d213ebb2a58a4c57aa",
+      "probe": {
+        "codec": "mp3",
+        "sampleRateHz": 44100,
+        "channels": 2,
+        "bitRate": 192000,
+        "durationSeconds": 1.509297,
+        "bytes": 37758
+      }
     },
     {
       "id": "animal-horse",
       "reason": "verified MP3 already exists",
-      "sha256": "9a725b9d257946c9a2a6987d34b95b430875bb92c904d6f6eff510e17ff20cfa"
+      "sha256": "9a725b9d257946c9a2a6987d34b95b430875bb92c904d6f6eff510e17ff20cfa",
+      "probe": {
+        "codec": "mp3",
+        "sampleRateHz": 44100,
+        "channels": 2,
+        "bitRate": 192000,
+        "durationSeconds": 1.486077,
+        "bytes": 37131
+      }
     },
     {
       "id": "animal-mouse",
       "reason": "verified MP3 already exists",
-      "sha256": "96a92a29c45a271588fd1f4d7ca4eb27d463cae31426b73a3be6ce8f70d3434e"
+      "sha256": "96a92a29c45a271588fd1f4d7ca4eb27d463cae31426b73a3be6ce8f70d3434e",
+      "probe": {
+        "codec": "mp3",
+        "sampleRateHz": 44100,
+        "channels": 2,
+        "bitRate": 192000,
+        "durationSeconds": 1.253878,
+        "bytes": 31489
+      }
     },
     {
       "id": "animal-owl",
       "reason": "verified MP3 already exists",
-      "sha256": "fb6cb8a5c8149b8186b7fcf629b32495656c0ef2ede2b4c6acc140432ac534ca"
+      "sha256": "fb6cb8a5c8149b8186b7fcf629b32495656c0ef2ede2b4c6acc140432ac534ca",
+      "probe": {
+        "codec": "mp3",
+        "sampleRateHz": 44100,
+        "channels": 2,
+        "bitRate": 192000,
+        "durationSeconds": 1.207438,
+        "bytes": 30862
+      }
     },
     {
       "id": "animal-pig",
       "reason": "verified MP3 already exists",
-      "sha256": "ec8539fa994c083847939ca1a228a6995f0a85f23bb7359822b1923d8b835f3f"
+      "sha256": "ec8539fa994c083847939ca1a228a6995f0a85f23bb7359822b1923d8b835f3f",
+      "probe": {
+        "codec": "mp3",
+        "sampleRateHz": 44100,
+        "channels": 2,
+        "bitRate": 192000,
+        "durationSeconds": 0.603719,
+        "bytes": 16442
+      }
     },
     {
       "id": "animal-rooster",
       "reason": "verified MP3 already exists",
-      "sha256": "fca38db851afe3db45c5b62a051b49756d501670eb00d5b158b57dbcc55c9e62"
+      "sha256": "fca38db851afe3db45c5b62a051b49756d501670eb00d5b158b57dbcc55c9e62",
+      "probe": {
+        "codec": "mp3",
+        "sampleRateHz": 44100,
+        "channels": 2,
+        "bitRate": 192000,
+        "durationSeconds": 1.509297,
+        "bytes": 37758
+      }
     },
     {
       "id": "animal-sheep",
       "reason": "verified MP3 already exists",
-      "sha256": "ebc151a2943fae3898bb85a9e639f621707d834e92101aedfb467dd904cd3757"
+      "sha256": "ebc151a2943fae3898bb85a9e639f621707d834e92101aedfb467dd904cd3757",
+      "probe": {
+        "codec": "mp3",
+        "sampleRateHz": 44100,
+        "channels": 2,
+        "bitRate": 192000,
+        "durationSeconds": 0.859138,
+        "bytes": 22084
+      }
     },
     {
       "id": "animal-lion",
       "reason": "verified MP3 already exists",
-      "sha256": "14048020f3d1b535309848e3c91e0a2acef6d50fb5ad45781ac5f68b9b3a3e5a"
+      "sha256": "14048020f3d1b535309848e3c91e0a2acef6d50fb5ad45781ac5f68b9b3a3e5a",
+      "probe": {
+        "codec": "mp3",
+        "sampleRateHz": 44100,
+        "channels": 2,
+        "bitRate": 192000,
+        "durationSeconds": 9.019501,
+        "bytes": 218217
+      }
     },
     {
       "id": "animal-blue-whale",
       "reason": "verified MP3 already exists",
-      "sha256": "bd3bc77fa4c1e545400e7504296dd6024ef15cc6fa734f767d9e029eb38065ce"
+      "sha256": "bd3bc77fa4c1e545400e7504296dd6024ef15cc6fa734f767d9e029eb38065ce",
+      "probe": {
+        "codec": "mp3",
+        "sampleRateHz": 44100,
+        "channels": 2,
+        "bitRate": 192000,
+        "durationSeconds": 221.862517,
+        "bytes": 5326514
+      }
+    },
+    {
+      "id": "celebration-fireworks",
+      "reason": "verified MP3 already exists",
+      "sha256": "a373d0e2779dc8cfa4e89fdc2d8e38a9eb4df315d7f14abef5a3fdd4ba991b0e",
+      "probe": {
+        "codec": "mp3",
+        "sampleRateHz": 44100,
+        "channels": 2,
+        "bitRate": 192000,
+        "durationSeconds": 102.870204,
+        "bytes": 2470181
+      }
     }
   ],
   "errors": []
