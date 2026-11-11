@@ -47,7 +47,8 @@
       title: 'Professional',
       items: [
         { label: 'Ads Manager', detail: 'Create and manage advertising campaigns', icon: 'megaphone', action: 'coming-soon', pending: true },
-        { label: 'Creator Dashboard', detail: 'Manage creator tools and performance', icon: 'creator', action: 'creator' }
+        { label: 'Creator Dashboard', detail: 'Manage creator tools and performance', icon: 'creator', action: 'creator' },
+        { label: 'Minglora AI Network', detail: 'Create and coordinate your labelled AI bots', icon: 'ai', action: 'ai-network' }
       ]
     }
   ];
@@ -286,7 +287,8 @@
         payments: 'coins',
         saved: 'saved',
         'clock-centre': 'clock-centre',
-        creator: 'creator'
+        creator: 'creator',
+        'ai-network': 'ai-network'
       };
       if (routes[action]) {
         await activateView(routes[action]);
