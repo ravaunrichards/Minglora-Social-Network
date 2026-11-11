@@ -64,3 +64,17 @@ test('Layout switching retains host authorization, persistence and LiveKit room 
   assert.match(app, /applyLiveScreenLayout\(nextLayout\)/);
   assert.match(server, /session\.liveLayout = layout/);
 });
+
+
+test('Stage, screen-share and host/chat layouts fit all nine generated participant seats', () => {
+  assert.match(app, /guests\.slice\(0,8\)/, 'guest stage supports up to eight guests plus the host');
+  assert.match(app, /while\(specs\.length<9\)/, 'guest stage preserves nine participant slots');
+  assert.ok(layoutsCss.includes('grid-template-rows:22px minmax(0,1fr) repeat(2,minmax(48px,.28fr))!important;'),
+    'Stage layout must fit two rows of four guest seats beneath the host');
+  assert.ok(layoutsCss.includes('grid-template-columns:repeat(3,minmax(0,1fr))!important;\n  grid-template-rows:22px repeat(3,minmax(0,1fr))!important;'),
+    'Screen-sharing layout must fit nine participant seats');
+  assert.ok(layoutsCss.includes('grid-template-rows:22px minmax(0,1fr) repeat(3,minmax(48px,.24fr))!important;'),
+    'Host/chat split must retain all guest rows');
+  assert.ok(layoutsCss.includes('grid-template-rows:20px minmax(0,1fr) repeat(2,minmax(42px,.24fr))!important;'),
+    'Stage layout must preserve seat capacity at phone widths');
+});
