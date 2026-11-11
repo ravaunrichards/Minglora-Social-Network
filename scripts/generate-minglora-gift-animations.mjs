@@ -372,7 +372,7 @@ function main() {
   if (artworkRows.length !== 1509) fail("Not every original Artwork folder received an animation mapping.");
   const manifest = {
     schema_version: 1,
-    generated_at: new Date().toISOString(),
+    generated_at: String(catalogManifest.generated_at || "source-catalogue"),
     source_artwork_manifest: "assets/Artwork/manifest.json",
     source_gift_screenshots: "assets/Gifts/",
     source_catalogue: "data/minglora-gift-catalog.json",
