@@ -1,0 +1,232 @@
+/* Minglora LIVE — 24 responsive host-selectable stage arrangements.
+   This layer extends the existing LiveKit stage and preserves its media,
+   role, chat, guest approval, and host-synchronization contracts. */
+body:has(#live-player-shell) .live-layout-options{
+  display:grid!important;
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,148px),1fr))!important;
+  gap:8px!important;
+  max-height:none!important;
+}
+body:has(#live-player-shell) .live-layout-option{
+  display:flex!important;
+  align-items:center!important;
+  min-width:0!important;
+  min-height:48px!important;
+  gap:8px!important;
+  padding:8px 9px!important;
+  border-radius:11px!important;
+  font-size:11px!important;
+  line-height:1.2!important;
+  white-space:normal!important;
+}
+body:has(#live-player-shell) .live-layout-option span{
+  min-width:0!important;
+  overflow-wrap:anywhere!important;
+}
+body:has(#live-player-shell) .live-layout-option svg{
+  flex:0 0 23px!important;
+  width:23px!important;
+  height:23px!important;
+}
+
+/* Solo Host */
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="solo-host"]{
+  display:grid!important;position:relative!important;grid-template-columns:minmax(0,1fr)!important;
+  grid-template-rows:minmax(0,1fr)!important;gap:0!important;
+}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="solo-host"]>.live-guest-layout-heading,
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="solo-host"]>.live-guest-seat:not(.is-host){display:none!important}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="solo-host"]>.live-guest-seat.is-host{
+  grid-column:1/-1!important;grid-row:1!important;width:100%!important;height:100%!important;min-height:0!important;
+}
+
+/* 2x2, 3x2 and 3x3 guest grids */
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="grid-2x2"]{
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  grid-template-rows:22px repeat(2,minmax(0,1fr))!important;grid-auto-flow:row!important;
+}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="grid-2x2"]>:nth-child(n+6){display:none!important}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="grid-3x2"]{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  grid-template-rows:22px repeat(2,minmax(0,1fr))!important;grid-auto-flow:row!important;
+}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="grid-3x2"]>:nth-child(n+8){display:none!important}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="grid-3x3"]{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  grid-template-rows:22px repeat(3,minmax(0,1fr))!important;grid-auto-flow:row!important;
+}
+
+/* Picture-in-Picture and Floating Guest Window */
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="picture-in-picture"],
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="floating-guest-window"]{
+  display:block!important;position:relative!important;min-height:0!important;
+}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="picture-in-picture"]>.live-guest-layout-heading,
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="floating-guest-window"]>.live-guest-layout-heading{display:none!important}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="picture-in-picture"]>.live-guest-seat.is-host,
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="floating-guest-window"]>.live-guest-seat.is-host{
+  position:absolute!important;inset:0!important;z-index:1!important;width:100%!important;height:100%!important;
+}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="picture-in-picture"]>.live-guest-seat.is-guest:nth-of-type(2){
+  position:absolute!important;right:14px!important;bottom:14px!important;z-index:8!important;
+  width:clamp(112px,28%,260px)!important;height:clamp(128px,34%,300px)!important;min-height:0!important;
+  border:2px solid rgba(255,255,255,.85)!important;box-shadow:0 10px 32px rgba(0,0,0,.38)!important;
+}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="floating-guest-window"]>.live-guest-seat.is-guest:nth-of-type(2){
+  position:absolute!important;top:14px!important;right:14px!important;z-index:8!important;
+  width:clamp(116px,30%,280px)!important;height:clamp(130px,36%,310px)!important;min-height:0!important;
+  border:2px solid rgba(255,255,255,.85)!important;box-shadow:0 10px 32px rgba(0,0,0,.38)!important;
+}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="picture-in-picture"]>.live-guest-seat.is-guest:nth-of-type(n+3),
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="picture-in-picture"]>.live-guest-seat.empty,
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="floating-guest-window"]>.live-guest-seat.is-guest:nth-of-type(n+3),
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="floating-guest-window"]>.live-guest-seat.empty{display:none!important}
+
+/* Vertical guest columns, horizontal seat strips and speaker stage */
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="vertical-panels"],
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="vertical-guest-strip"]{
+  grid-template-columns:minmax(0,1.55fr) minmax(86px,.55fr)!important;
+  grid-template-rows:22px repeat(8,minmax(0,1fr))!important;grid-auto-flow:row!important;
+}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="vertical-panels"]>.live-guest-layout-heading,
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="vertical-guest-strip"]>.live-guest-layout-heading{grid-column:1/-1!important;grid-row:1!important}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="vertical-panels"]>.live-guest-seat.is-host,
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="vertical-guest-strip"]>.live-guest-seat.is-host{
+  grid-column:1!important;grid-row:2/-1!important;min-height:0!important;
+}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="vertical-panels"]>.live-guest-seat.is-guest,
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="vertical-guest-strip"]>.live-guest-seat.is-guest{grid-column:2!important;min-height:0!important}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="horizontal-guest-strip"]{
+  grid-template-columns:repeat(8,minmax(0,1fr))!important;
+  grid-template-rows:22px minmax(0,1fr) minmax(64px,.28fr)!important;grid-auto-flow:row!important;
+}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="horizontal-guest-strip"]>.live-guest-layout-heading{grid-column:1/-1!important}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="horizontal-guest-strip"]>.live-guest-seat.is-host{
+  grid-column:1/-1!important;grid-row:2!important;
+}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="horizontal-guest-strip"]>.live-guest-seat.is-guest{grid-row:3!important;min-height:0!important}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="stage-layout"]{
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  grid-template-rows:22px minmax(0,1fr) minmax(68px,.3fr)!important;grid-auto-flow:row!important;
+}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="stage-layout"]>.live-guest-layout-heading{grid-column:1/-1!important}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="stage-layout"]>.live-guest-seat.is-host{
+  grid-column:1/-1!important;grid-row:2!important;
+}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="stage-layout"]>.live-guest-seat.is-guest{grid-row:3!important;min-height:0!important}
+
+/* PK Battle and dual-host layouts */
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="pk-battle"],
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="dual-host"]{
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  grid-template-rows:22px minmax(0,1fr)!important;grid-auto-flow:row!important;
+}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="pk-battle"]>.live-guest-layout-heading,
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="dual-host"]>.live-guest-layout-heading{grid-column:1/-1!important}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="pk-battle"]>.live-guest-seat.is-host,
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="dual-host"]>.live-guest-seat.is-host{
+  grid-column:1!important;grid-row:2!important;
+}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="pk-battle"]>.live-guest-seat.is-guest:nth-of-type(2),
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="dual-host"]>.live-guest-seat.is-guest:nth-of-type(2){
+  grid-column:2!important;grid-row:2!important;
+}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="pk-battle"]>:nth-child(n+4),
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="dual-host"]>:nth-child(n+4),
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="pk-battle"]>.live-guest-seat.empty,
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="dual-host"]>.live-guest-seat.empty{display:none!important}
+
+/* Audio Guest Panel — readable equal-size speaker tiles in audio and video LIVE. */
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="audio-guest-panel"]{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  grid-template-rows:22px repeat(3,minmax(0,1fr))!important;
+}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="audio-guest-panel"]>.live-guest-layout-heading{grid-column:1/-1!important}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="audio-guest-panel"]>.live-guest-seat{
+  min-height:0!important;align-items:center!important;justify-content:center!important;
+}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="audio-guest-panel"] .live-guest-seat-avatar{
+  width:clamp(34px,7vw,72px)!important;height:clamp(34px,7vw,72px)!important;
+}
+
+/* Screen-share mode keeps the shared media dominant and the participants visible. */
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="screen-sharing-layout"]{
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  grid-template-rows:22px repeat(2,minmax(0,1fr))!important;
+}
+body:has(#live-player-shell) #live-video-stage.has-live-screen-share #live-guest-layout[data-live-layout="screen-sharing-layout"]{
+  height:30%!important;min-height:96px!important;max-height:210px!important;
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  grid-template-rows:20px repeat(2,minmax(0,1fr))!important;
+}
+body:has(#live-player-shell) #live-video-stage.has-live-screen-share #live-guest-layout[data-live-layout="screen-sharing-layout"]>.live-guest-layout-heading{display:none!important}
+body:has(#live-player-shell) #live-video-stage.has-live-screen-share #live-guest-layout[data-live-layout="screen-sharing-layout"]>.live-guest-seat{min-height:0!important}
+
+/* Host-and-Chat Split keeps the existing live chat panel in place. */
+body:has(#live-player-shell) .live-player-layout:has(#live-guest-layout[data-live-layout="host-chat-split"]){
+  grid-template-columns:minmax(0,1.35fr) minmax(280px,.75fr)!important;
+}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="host-chat-split"]{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  grid-template-rows:22px minmax(0,1fr) repeat(2,minmax(58px,.35fr))!important;
+}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="host-chat-split"]>.live-guest-layout-heading{grid-column:1/-1!important}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="host-chat-split"]>.live-guest-seat.is-host{grid-column:1/-1!important;grid-row:2!important}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="host-chat-split"]>.live-guest-seat.is-guest{grid-row:auto!important;min-height:0!important}
+
+/* All new presets keep seat content sized to the available cell. */
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout]>.live-guest-seat{
+  box-sizing:border-box!important;min-width:0!important;min-height:0!important;
+  max-width:100%!important;max-height:100%!important;overflow:hidden!important;
+}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout]>.live-guest-layout-heading{
+  min-width:0!important;max-width:100%!important;overflow:hidden!important;
+}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout] .live-guest-seat-meta{
+  min-width:0!important;max-width:100%!important;overflow-wrap:anywhere!important;
+}
+
+/* Narrow and portrait screens reflow without hiding the stage controls or chat. */
+@media(max-width:760px){
+  body:has(#live-player-shell) .live-layout-options{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important;
+  }
+  body:has(#live-player-shell) .live-layout-option{min-height:46px!important;padding:7px!important;font-size:10px!important}
+  body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="grid-3x2"],
+  body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="grid-3x3"]{
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    grid-template-rows:22px repeat(3,minmax(0,1fr))!important;
+  }
+  body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="vertical-panels"],
+  body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="vertical-guest-strip"]{
+    grid-template-columns:minmax(0,1.1fr) minmax(76px,.65fr)!important;
+  }
+  body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="horizontal-guest-strip"]{
+    grid-template-columns:repeat(4,minmax(0,1fr))!important;
+    grid-template-rows:20px minmax(0,1fr) repeat(2,minmax(58px,.3fr))!important;
+  }
+  body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="stage-layout"],
+  body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="screen-sharing-layout"]{
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    grid-template-rows:20px minmax(0,1fr) repeat(2,minmax(58px,.3fr))!important;
+  }
+  body:has(#live-player-shell) .live-player-layout:has(#live-guest-layout[data-live-layout="host-chat-split"]){
+    grid-template-columns:minmax(0,1fr)!important;
+    grid-template-rows:minmax(0,1fr) clamp(150px,24dvh,205px)!important;
+  }
+}
+@media(max-width:380px){
+  body:has(#live-player-shell) .live-layout-options{grid-template-columns:minmax(0,1fr)!important}
+  body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="grid-3x3"]{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    grid-template-rows:20px repeat(5,minmax(0,1fr))!important;
+  }
+  body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="audio-guest-panel"]{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    grid-template-rows:20px repeat(5,minmax(0,1fr))!important;
+  }
+  body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="picture-in-picture"]>.live-guest-seat.is-guest:nth-of-type(2),
+  body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="floating-guest-window"]>.live-guest-seat.is-guest:nth-of-type(2){
+    width:36%!important;height:34%!important;right:7px!important;bottom:7px!important;
+  }
+}
