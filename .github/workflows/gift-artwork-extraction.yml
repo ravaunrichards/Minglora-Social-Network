@@ -3,7 +3,7 @@ name: Extract Minglora gift artwork
 on:
   push:
     branches:
-      - work/gifts-artwork-extraction-v2-20261111
+      - work/gifts-artwork-extraction-v3-20261111
     paths:
       - "scripts/extract-gift-artwork.py"
       - ".github/workflows/gift-artwork-extraction.yml"
@@ -26,7 +26,7 @@ jobs:
       - name: Checkout source captures
         uses: actions/checkout@v4
         with:
-          ref: work/gifts-artwork-extraction-v2-20261111
+          ref: work/gifts-artwork-extraction-v3-20261111
           fetch-depth: 1
 
       - name: Install OCR engine
@@ -75,5 +75,5 @@ jobs:
             echo "No new artwork changes to commit."
           else
             git commit -m "Extract individual gift artwork from catalogue captures"
-            git push origin HEAD:work/gifts-artwork-extraction-v2-20261111
+            git push origin HEAD:work/gifts-artwork-extraction-v3-20261111
           fi
