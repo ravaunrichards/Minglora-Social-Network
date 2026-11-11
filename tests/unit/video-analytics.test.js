@@ -1,5 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { summarizeCreatorVideoAnalytics } from '../../src/domain/video-analytics.js';
 
 const now = Date.parse('2026-11-11T12:00:00.000Z');
@@ -66,4 +69,19 @@ test('creator analytics return empty real metrics without exposing viewer identi
 test('creator analytics enforce the supported reporting periods', () => {
   const result = summarizeCreatorVideoAnalytics([], [], 'creator', now, 365);
   assert.equal(result.periodDays, 30);
+});
+
+test('Creator Studio and its authenticated API expose the same real analytics contract', () => {
+  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+  const server = fs.readFileSync(path.join(root, 'src/server.js'), 'utf8');
+  const app = fs.readFileSync(path.join(root, 'public/app.js'), 'utf8');
+  const index = fs.readFileSync(path.join(root, 'public/index.html'), 'utf8');
+  const worker = fs.readFileSync(path.join(root, 'public/sw.js'), 'utf8');
+  assert.match(server, /p===['"]\/api\/creator\/video-analytics['"]/);
+  assert.match(server, /post\.userId===user\.id/);
+  assert.match(server, /asset\.status==='attached'&&asset\.mediaType==='video'/);
+  assert.match(app, /api\(["']\/creator\/video-analytics\?days=/);
+  assert.match(app, /creator-video-analytics-period/);
+  assert.match(index, /creator-video-analytics\.css/);
+  assert.match(worker, /creator-video-analytics\.css/);
 });
