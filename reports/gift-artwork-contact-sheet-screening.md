@@ -13,13 +13,14 @@
 
 ## Full-size follow-up completed
 
-Eighteen same-title candidate pairs (36 extracted PNG files) have since been compared at full size. Results are recorded in `gift-artwork-visual-review-notes.md`.
+Forty-three same-title candidate pair comparisons have been completed at full size; the Compact original is reused when comparing two variants. Results are recorded in `gift-artwork-visual-review-notes.md`.
 
-- Distinct variant pairs: **7**.
-- Repeated-artwork candidate pairs: **11**.
-- All 36 files remain preserved. No file has been deleted, overwritten or merged.
-- First six pairs also had their source screenshots visually checked.
-- For the other twelve pairs, full-size PNGs were compared and source coordinates documented; direct screenshot-cell confirmation remains pending.
+- Distinct variant pairs: **26**.
+- Repeated-artwork candidate pairs: **17**.
+- All reviewed files remain preserved. No file has been deleted, overwritten or merged.
+- Source screenshot cells were visually checked for the first six and latest twenty-five comparisons (31/43 total).
+- For the twelve middle comparisons (#7–#18), full-size PNGs and manifest coordinates were checked, but direct screenshot-cell confirmation remains pending.
+- The review log contains all 43 comparisons and source-cell references.
 - Contact-sheet leads for additional candidates still require full-size review and are not confirmed duplicates.
 
 ## Remaining issues
@@ -34,7 +35,7 @@ Eighteen same-title candidate pairs (36 extracted PNG files) have since been com
 
 1. Complete full-size/source-cell review of the remaining flagged images and all same-title variants.
 2. Correct OCR titles and map each reference image to its intended Minglora gift identity.
-3. Reconcile the 11 repeated-artwork candidates against every recorded screenshot appearance and the catalogue; preserve the source trail before choosing any canonical artwork.
+3. Reconcile the 17 repeated-artwork candidates against every recorded screenshot appearance and the catalogue; preserve the source trail before choosing any canonical artwork.
 4. Keep genuinely different versions as distinct variants.
 5. Document rights/provenance for every production-bound image or create new Minglora-original replacements.
 6. Keep all screenshot-derived files review-only until human review and rights gates pass.
