@@ -9432,13 +9432,124 @@ async function fetchVideoCentrePage({reset=false,watchLater=false}={}){
     return incoming;
   }finally{if(requestId===state.videoRequestSequence)state.videoLoading=false;}
 }
+
+let activeVideoPlaylistId=null;
+function videoPlaylistActionMarkup(post){
+  return '<div class="video-playlist-post-action"><button type="button" data-video-add-playlist="'+esc(post.id)+'">＋ Add to playlist</button></div>';
+}
+function openVideoPlaylistEditor(playlist=null,onSaved=null){
+  const overlay=document.createElement('div');
+  overlay.className='modal-backdrop';
+  overlay.innerHTML='<section class="modal video-playlist-editor" role="dialog" aria-modal="true" aria-labelledby="video-playlist-editor-title"><div class="modal-head"><h2 id="video-playlist-editor-title">'+(playlist?'Edit playlist':'Create playlist')+'</h2><button type="button" class="modal-close" aria-label="Close">×</button></div><form class="modal-body" id="video-playlist-editor-form"><label class="field"><span>Playlist name</span><input name="title" maxlength="80" required value="'+esc(playlist?.title||'')+'" placeholder="Give your playlist a name"></label><label class="field"><span>Description</span><textarea name="description" maxlength="500" rows="3" placeholder="What is this playlist about?">'+esc(playlist?.description||'')+'</textarea></label><label class="field"><span>Who can view it?</span><select name="visibility"><option value="private" '+((playlist?.visibility||'private')==='private'?'selected':'')+'>Only me</option><option value="unlisted" '+(playlist?.visibility==='unlisted'?'selected':'')+'>Anyone with the link</option><option value="friends" '+(playlist?.visibility==='friends'?'selected':'')+'>Friends</option><option value="public" '+(playlist?.visibility==='public'?'selected':'')+'>Public</option></select></label><p class="auth-error" data-playlist-editor-error role="status"></p><button type="submit" class="primary full">'+(playlist?'Save changes':'Create playlist')+'</button></form></section>';
+  document.body.append(overlay);
+  overlay.querySelector('.modal-close')?.addEventListener('click',()=>overlay.remove());
+  overlay.addEventListener('click',event=>{if(event.target===overlay)overlay.remove();});
+  overlay.querySelector('form')?.addEventListener('submit',async event=>{
+    event.preventDefault();
+    const form=event.currentTarget,button=form.querySelector('button[type="submit"]'),error=form.querySelector('[data-playlist-editor-error]');
+    const values=Object.fromEntries(new FormData(form));
+    button.disabled=true;error.textContent='';
+    try{
+      const result=await api(playlist?'/video-playlists/'+encodeURIComponent(playlist.id):'/video-playlists',{
+        method:playlist?'PATCH':'POST',body:JSON.stringify(values)
+      });
+      overlay.remove();
+      if(typeof onSaved==='function')await onSaved(result.playlist);
+    }catch(err){error.textContent=err.message;button.disabled=false;}
+  });
+}
+async function openVideoPlaylistPicker(postId){
+  let result;
+  try{result=await api('/video-playlists');}catch(error){toast(error.message);return;}
+  const playlists=Array.isArray(result.playlists)?result.playlists:[];
+  if(!playlists.length){
+    toast('Create a playlist first, then add your video.');
+    openVideoPlaylistEditor(null,()=>{activeVideoPlaylistId=null;state.videoMode='playlists';void renderVideoCentre();});
+    return;
+  }
+  const overlay=document.createElement('div');
+  overlay.className='modal-backdrop';
+  overlay.innerHTML='<section class="modal video-playlist-editor" role="dialog" aria-modal="true" aria-labelledby="video-playlist-picker-title"><div class="modal-head"><h2 id="video-playlist-picker-title">Add to playlist</h2><button type="button" class="modal-close" aria-label="Close">×</button></div><form class="modal-body"><label class="field"><span>Choose a playlist</span><select name="playlistId" required>'+playlists.map(item=>'<option value="'+esc(item.id)+'">'+esc(item.title)+' · '+esc(item.visibility)+'</option>').join('')+'</select></label><p class="auth-error" data-playlist-picker-error role="status"></p><button type="submit" class="primary full">Add video</button><button type="button" class="secondary full" data-playlist-picker-create>Create another playlist</button></form></section>';
+  document.body.append(overlay);
+  overlay.querySelector('.modal-close')?.addEventListener('click',()=>overlay.remove());
+  overlay.querySelector('[data-playlist-picker-create]')?.addEventListener('click',()=>{
+    overlay.remove();
+    openVideoPlaylistEditor(null,async()=>{await openVideoPlaylistPicker(postId);});
+  });
+  overlay.querySelector('form')?.addEventListener('submit',async event=>{
+    event.preventDefault();
+    const form=event.currentTarget,button=form.querySelector('button[type="submit"]'),error=form.querySelector('[data-playlist-picker-error]');
+    button.disabled=true;error.textContent='';
+    try{
+      const playlistId=new FormData(form).get('playlistId');
+      await api('/video-playlists/'+encodeURIComponent(playlistId)+'/items',{method:'POST',body:JSON.stringify({postId})});
+      overlay.remove();toast('Video added to playlist.');
+    }catch(err){error.textContent=err.message;button.disabled=false;}
+  });
+}
+function bindVideoPlaylistActions(root){
+  root.querySelectorAll('[data-video-add-playlist]').forEach(button=>{
+    if(button.dataset.videoPlaylistBound==='true')return;
+    button.dataset.videoPlaylistBound='true';
+    button.addEventListener('click',()=>void openVideoPlaylistPicker(button.dataset.videoAddPlaylist));
+  });
+}
+async function renderVideoPlaylistLibrary(feed){
+  feed.innerHTML='<section class="card empty-state"><h3>Loading your playlists…</h3></section>';
+  try{
+    if(activeVideoPlaylistId){
+      const result=await api('/video-playlists/'+encodeURIComponent(activeVideoPlaylistId));
+      const playlist=result.playlist;
+      const videos=Array.isArray(playlist.videos)?playlist.videos:[];
+      feed.innerHTML='<section class="card video-playlist-detail-head"><button type="button" class="secondary" data-playlist-back>‹ All playlists</button><div><span class="eyebrow">MINGLORA WATCH · PLAYLIST</span><h2>'+esc(playlist.title)+'</h2><p>'+esc(playlist.description||'')+'</p><small>'+videos.length+' available videos · '+esc(playlist.visibility)+'</small></div>'+(playlist.isOwner?'<button type="button" class="secondary" data-playlist-edit="'+esc(playlist.id)+'">Edit playlist</button>':'')+'</section>'+(videos.length?videos.map((post,index)=>postCard(post,{videoWatchLater:true})+'<div class="video-playlist-item-actions" data-playlist-post="'+esc(post.id)+'"><button type="button" data-playlist-move="up" '+(index===0?'disabled':'')+'>Move up</button><button type="button" data-playlist-move="down" '+(index===videos.length-1?'disabled':'')+'>Move down</button>'+(playlist.isOwner?'<button type="button" data-playlist-remove>Remove from playlist</button>':'')+'</div>').join(''):'<section class="card empty-state"><h3>No videos are available in this playlist</h3><p>Videos that are private, removed or no longer shared with you are not shown.</p></section>');
+      feed.querySelector('[data-playlist-back]')?.addEventListener('click',()=>{activeVideoPlaylistId=null;void renderVideoPlaylistLibrary(feed);});
+      feed.querySelector('[data-playlist-edit]')?.addEventListener('click',()=>openVideoPlaylistEditor(playlist,()=>void renderVideoPlaylistLibrary(feed)));
+      bindFeed(feed);
+      feed.querySelectorAll('[data-playlist-post]').forEach(row=>{
+        row.querySelectorAll('[data-playlist-move]').forEach(button=>button.addEventListener('click',async()=>{
+          const ids=videos.map(post=>post.id),from=ids.indexOf(row.dataset.playlistPost),to=from+(button.dataset.playlistMove==='up'?-1:1);
+          if(from<0||to<0||to>=ids.length)return;
+          [ids[from],ids[to]]=[ids[to],ids[from]];
+          button.disabled=true;
+          try{await api('/video-playlists/'+encodeURIComponent(playlist.id)+'/order',{method:'PUT',body:JSON.stringify({orderedPostIds:ids})});await renderVideoPlaylistLibrary(feed);}
+          catch(error){button.disabled=false;toast(error.message);}
+        }));
+        row.querySelector('[data-playlist-remove]')?.addEventListener('click',async()=>{
+          const button=row.querySelector('[data-playlist-remove]');button.disabled=true;
+          try{await api('/video-playlists/'+encodeURIComponent(playlist.id)+'/items/'+encodeURIComponent(row.dataset.playlistPost),{method:'DELETE'});await renderVideoPlaylistLibrary(feed);}
+          catch(error){button.disabled=false;toast(error.message);}
+        });
+      });
+      return;
+    }
+    const result=await api('/video-playlists');
+    const playlists=Array.isArray(result.playlists)?result.playlists:[];
+    feed.innerHTML='<section class="card video-playlist-library-head"><div><h2>Your playlists</h2><p>Keep real Minglora videos organized and synced to your account.</p></div><button type="button" class="primary" data-playlist-create>＋ Create playlist</button></section>'+(playlists.length?'<div class="video-playlist-grid">'+playlists.map(playlist=>'<article class="card video-playlist-card" data-playlist-card="'+esc(playlist.id)+'"><div class="video-playlist-card-icon" aria-hidden="true">▶</div><div class="video-playlist-card-copy"><h3>'+esc(playlist.title)+'</h3><p>'+esc(playlist.description||'No description')+'</p><small>'+Number(playlist.videoCount||0)+' videos · '+esc(playlist.visibility)+'</small></div><div class="video-playlist-card-actions"><button type="button" class="primary" data-playlist-open="'+esc(playlist.id)+'">Open</button><button type="button" class="secondary" data-playlist-edit="'+esc(playlist.id)+'">Edit</button><button type="button" class="secondary" data-playlist-delete="'+esc(playlist.id)+'">Delete</button></div></article>').join('')+'</div>':'<section class="card empty-state"><div class="empty-icon">▶</div><h3>No playlists yet</h3><p>Create a playlist to organize videos you want to watch or share.</p><button type="button" class="primary" data-playlist-create>＋ Create your first playlist</button></section>');
+    feed.querySelectorAll('[data-playlist-create]').forEach(button=>button.addEventListener('click',()=>openVideoPlaylistEditor(null,()=>void renderVideoPlaylistLibrary(feed))));
+    feed.querySelectorAll('[data-playlist-open]').forEach(button=>button.addEventListener('click',()=>{activeVideoPlaylistId=button.dataset.playlistOpen;void renderVideoPlaylistLibrary(feed);}));
+    feed.querySelectorAll('[data-playlist-edit]').forEach(button=>button.addEventListener('click',()=>{
+      const playlist=playlists.find(item=>item.id===button.dataset.playlistEdit);
+      if(playlist)openVideoPlaylistEditor(playlist,()=>void renderVideoPlaylistLibrary(feed));
+    }));
+    feed.querySelectorAll('[data-playlist-delete]').forEach(button=>button.addEventListener('click',async()=>{
+      if(!window.confirm('Delete this playlist? Its video posts will not be deleted.'))return;
+      button.disabled=true;
+      try{await api('/video-playlists/'+encodeURIComponent(button.dataset.playlistDelete),{method:'DELETE'});await renderVideoPlaylistLibrary(feed);}
+      catch(error){button.disabled=false;toast(error.message);}
+    }));
+  }catch(error){
+    feed.innerHTML='<section class="card empty-state"><h3>Playlists could not be loaded</h3><p>'+esc(error.message)+'</p><button type="button" class="secondary" data-playlist-retry>Try again</button></section>';
+    feed.querySelector('[data-playlist-retry]')?.addEventListener('click',()=>void renderVideoPlaylistLibrary(feed));
+  }
+}
+
 async function renderVideoCentre(){
   const scope=['for-you','all','following','friends'].includes(state.videoScope)?state.videoScope:'for-you';
-  const mode=['videos','reels','watch-later'].includes(state.videoMode)?state.videoMode:'videos';
+  const mode=['videos','reels','watch-later','playlists'].includes(state.videoMode)?state.videoMode:'videos';
   state.videoScope=scope;
   state.videoMode=mode;
-  await fetchVideoCentrePage({reset:true,watchLater:mode==='watch-later'});
-  setContent('<div class="video-centre"><header class="card video-centre-heading"><div><span class="eyebrow">MINGLORA WATCH</span><h1>Minglora Video</h1><p>Discover videos shared by real Minglora members. Switch to Reels for a vertical swipe-through player.</p></div><button type="button" class="primary" id="video-create-button">＋ Create video post</button></header><nav class="video-centre-mode-switch" role="group" aria-label="Video experience"><button type="button" data-video-mode="videos" class="'+(mode==='videos'?'active':'')+'" aria-pressed="'+(mode==='videos'?'true':'false')+'">Videos</button><button type="button" data-video-mode="reels" class="'+(mode==='reels'?'active':'')+'" aria-pressed="'+(mode==='reels'?'true':'false')+'">Reels</button><button type="button" data-video-mode="watch-later" class="'+(mode==='watch-later'?'active':'')+'" aria-pressed="'+(mode==='watch-later'?'true':'false')+'">Watch Later</button></nav><section class="card video-centre-toolbar"><label for="video-scope">Discover videos<select id="video-scope"><option value="for-you" '+(scope==='for-you'?'selected':'')+'>For You</option><option value="all" '+(scope==='all'?'selected':'')+'>All videos</option><option value="following" '+(scope==='following'?'selected':'')+'>Following</option><option value="friends" '+(scope==='friends'?'selected':'')+'>Friends</option></select></label><label for="video-search">Search videos<input id="video-search" type="search" maxlength="100" value="'+esc(state.videoSearch||'')+'" placeholder="Search captions or creators"></label></section><section id="video-centre-feed" class="video-centre-feed" aria-live="polite"></section><p class="video-centre-note">Playback, reactions and comments come from existing Minglora member posts. This centre does not invent views or engagement.</p></div>');
+  if(mode!=='playlists')await fetchVideoCentrePage({reset:true,watchLater:mode==='watch-later'});
+  setContent('<div class="video-centre"><header class="card video-centre-heading"><div><span class="eyebrow">MINGLORA WATCH</span><h1>Minglora Video</h1><p>Discover videos shared by real Minglora members. Switch to Reels for a vertical swipe-through player.</p></div><button type="button" class="primary" id="video-create-button">＋ Create video post</button></header><nav class="video-centre-mode-switch" role="group" aria-label="Video experience"><button type="button" data-video-mode="videos" class="'+(mode==='videos'?'active':'')+'" aria-pressed="'+(mode==='videos'?'true':'false')+'">Videos</button><button type="button" data-video-mode="reels" class="'+(mode==='reels'?'active':'')+'" aria-pressed="'+(mode==='reels'?'true':'false')+'">Reels</button><button type="button" data-video-mode="watch-later" class="'+(mode==='watch-later'?'active':'')+'" aria-pressed="'+(mode==='watch-later'?'true':'false')+'">Watch Later</button><button type="button" data-video-mode="playlists" class="'+(mode==='playlists'?'active':'')+'" aria-pressed="'+(mode==='playlists'?'true':'false')+'">Playlists</button></nav><section class="card video-centre-toolbar" style="'+(mode==='playlists'?'display:none':'')+'"><label for="video-scope">Discover videos<select id="video-scope"><option value="for-you" '+(scope==='for-you'?'selected':'')+'>For You</option><option value="all" '+(scope==='all'?'selected':'')+'>All videos</option><option value="following" '+(scope==='following'?'selected':'')+'>Following</option><option value="friends" '+(scope==='friends'?'selected':'')+'>Friends</option></select></label><label for="video-search">Search videos<input id="video-search" type="search" maxlength="100" value="'+esc(state.videoSearch||'')+'" placeholder="Search captions or creators"></label></section><section id="video-centre-feed" class="video-centre-feed" aria-live="polite"></section><p class="video-centre-note">Playback, reactions and comments come from existing Minglora member posts. This centre does not invent views or engagement.</p></div>');
   const root=$('#main-content');
   const feed=root.querySelector('#video-centre-feed');
   const loadMoreVideoPage=async button=>{
@@ -9469,8 +9580,9 @@ async function renderVideoCentre(){
       }else if(matching.length){
         feed.querySelector('.empty-state')?.remove();
         const pending=document.createElement('div');
-        pending.innerHTML=matching.map(post=>postCard(post,{videoWatchLater:true})).join('');
+        pending.innerHTML=matching.map(post=>postCard(post,{videoWatchLater:true})+videoPlaylistActionMarkup(post)).join('');
         bindFeed(pending);
+        bindVideoPlaylistActions(pending);
         while(pending.firstChild)feed.insertBefore(pending.firstChild,button);
       }
       if(!matching.length&&state.videoHasMore){
@@ -9494,6 +9606,7 @@ async function renderVideoCentre(){
     }
   };
   const drawVideoPosts=()=>{
+    if(mode==='playlists'){void renderVideoPlaylistLibrary(feed);return;}
     const query=String(state.videoSearch||'').trim().toLowerCase();
     const modePosts=mode==='watch-later'?state.videoFeed:state.videoFeed.filter(post=>mode==='reels'?post.videoFormat==='reel':post.videoFormat!=='reel');
     const visible=modePosts.filter(post=>!query||[post.text,post.author?.name,post.author?.username].some(value=>String(value||'').toLowerCase().includes(query)));
@@ -9505,8 +9618,9 @@ async function renderVideoCentre(){
     }else{
       const emptyTitle=mode==='watch-later'?'Your Watch Later list is empty':'No videos found';
       const emptyCopy=mode==='watch-later'?'Save any video or Reel here to watch it later.':(query?'Try another search or change the video audience.':'There are no videos in this feed yet. Share a real video post to start the Minglora Video library.');
-      feed.innerHTML=visible.length?visible.map(post=>postCard(post,{videoWatchLater:true})).join(''):'<section class="card empty-state"><div class="empty-icon">▶</div><h3>'+emptyTitle+'</h3><p>'+emptyCopy+'</p><button type="button" class="primary" id="video-empty-create">＋ Create a video post</button></section>';
+      feed.innerHTML=visible.length?visible.map(post=>postCard(post,{videoWatchLater:true})+videoPlaylistActionMarkup(post)).join(''):'<section class="card empty-state"><div class="empty-icon">▶</div><h3>'+emptyTitle+'</h3><p>'+emptyCopy+'</p><button type="button" class="primary" id="video-empty-create">＋ Create a video post</button></section>';
       bindFeed(feed);
+      bindVideoPlaylistActions(feed);
     }
     feed.querySelector('#video-empty-create')?.addEventListener('click',()=>openVideoComposer({videoFormat:mode==='reels'?'reel':'video'}));
     if(state.videoHasMore&&mode!=='watch-later'){
@@ -9526,6 +9640,7 @@ async function renderVideoCentre(){
   root.querySelectorAll('[data-video-mode]').forEach(button=>button.addEventListener('click',async()=>{
     if(state.videoMode===button.dataset.videoMode)return;
     state.videoMode=button.dataset.videoMode;
+    if(state.videoMode!=='playlists')activeVideoPlaylistId=null;
     await renderVideoCentre();
   }));
   root.querySelector('#video-create-button')?.addEventListener('click',()=>openVideoComposer({videoFormat:mode==='reels'?'reel':'video'}));
