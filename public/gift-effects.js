@@ -200,17 +200,24 @@
   const presets=new Set(["petal-bloom","heart-pulse","creature-entrance","grand-entry","soundwave-ripple","power-impact","delight-pop","glam-spin","royal-shimmer","celebration-burst","cosmic-orbit","nature-rise","horizon-sweep","pixel-burst","warm-wave","spark-float","gift-reveal"]);
   function mount(parent,gift,options={}){
     if(!parent||!gift)return null;
-    const duration=Math.max(900,Math.min(8000,Number(options.duration)||Number(gift.animation_duration_ms)||2600));
-    const requestedPreset=gift.animation_preset||"gift-reveal";
-    const preset=presets.has(requestedPreset)?requestedPreset:"gift-reveal";
+    const originalGift=gift;
+    gift=withCatalogMotion(gift);
+    const duration=Math.max(900,Math.min(8000,Number(options.duration)||Number(gift.motion_duration_ms)||Number(gift.animation_duration_ms)||2600));
+    const requestedPreset=gift.motion_preset||gift.animation_preset||"gift-reveal";
+    const choreographyPreset=semanticChoreography[requestedPreset]||requestedPreset;
+    const preset=presets.has(choreographyPreset)?choreographyPreset:"gift-reveal";
     const animationIdentity=String(gift.animation_key||gift.code||gift.name||"minglora-gift");
     const motionSeed=hash([animationIdentity,gift.code,gift.name].join("|"));
+    const particleHue=effectHue(String(gift.motion_effect||"sparkles"),motionSeed);
     const dx=(motionSeed%81)-40,dy=-18-((motionSeed>>>7)%65),tilt=(motionSeed>>>13)%71-35;
     const spin=((motionSeed>>>19)%2?1:-1)*(50+((motionSeed>>>20)%311));
     const peak=(104+((motionSeed>>>3)%27))/100,rebound=(90+((motionSeed>>>11)%15))/100;
     const outer=document.createElement("div");
     outer.className="minglora-gift-fx minglora-fx-"+preset;
     outer.dataset.giftAnimation=animationIdentity;
+    outer.dataset.giftCode=String(originalGift.code||"");
+    outer.dataset.motionPreset=requestedPreset;
+    outer.dataset.motionEffect=String(gift.motion_effect||"sparkles");
     outer.style.setProperty("--minglora-gift-duration",duration+"ms");
     outer.style.setProperty("--minglora-gift-dx",dx+"px");
     outer.style.setProperty("--minglora-gift-dy",dy+"px");
@@ -242,7 +249,7 @@
       particle.style.setProperty("--minglora-particle-x",Math.round(Math.cos(angle)*distance)+"px");
       particle.style.setProperty("--minglora-particle-y",Math.round(Math.sin(angle)*distance)+"px");
       particle.style.setProperty("--minglora-particle-size",(4+(ps%9))+"px");
-      particle.style.setProperty("--minglora-particle-hue",String((motionSeed+i*47)%360));
+      particle.style.setProperty("--minglora-particle-hue",String((particleHue+i*19)%360));
       particle.style.setProperty("--minglora-particle-duration",(720+(ps%1200))+"ms");
       particle.style.setProperty("--minglora-particle-delay",(i*65)+"ms");
       particle.style.setProperty("--minglora-particle-spin",((ps%2?1:-1)*(90+(ps%540)))+"deg");
