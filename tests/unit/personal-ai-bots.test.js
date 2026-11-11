@@ -1009,3 +1009,19 @@ test('Persona Laboratory rejects permission and tool grants in persona configura
     botId:bot.id,configuration:{...validPersonaConfiguration,traits:{...validPersonaConfiguration.traits,initiative:101}}
   },actor,stamp,uid),/trait values must be whole numbers/);
 });
+
+
+test('Persona Laboratory rollback rejects approved versions that were never previously active',()=>{
+  const db=makeDb();
+  const bot=createPersonaTestBot(db);
+  const active=createPersonalAiBotPersonaDraft(db,{botId:bot.id,configuration:validPersonaConfiguration},actor,stamp,uid);
+  evaluatePersonalAiBotPersonaDraft(db,active.id,actor,stamp,uid);
+  approvePersonalAiBotPersonaVersion(db,active.id,actor,stamp,uid);
+  activatePersonalAiBotPersonaVersion(db,active.id,actor,stamp,uid);
+
+  const approvedOnly=createPersonalAiBotPersonaDraft(db,{botId:bot.id,baseVersionId:active.id},actor,stamp,uid);
+  evaluatePersonalAiBotPersonaDraft(db,approvedOnly.id,actor,stamp,uid);
+  approvePersonalAiBotPersonaVersion(db,approvedOnly.id,actor,stamp,uid);
+  assert.throws(()=>rollbackPersonalAiBotPersonaVersion(db,approvedOnly.id,actor,stamp,uid),/previously active/);
+  assert.equal(bot.activePersonaVersionId,active.id);
+});
