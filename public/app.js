@@ -7688,19 +7688,25 @@ function startMessengerRealtime(){
       Object.keys(state.messengerTyping||{}).forEach(key=>{
         if(key.endsWith(':'+peerId)||key.startsWith(peerId+':'))delete state.messengerTyping[key];
       });
+      const disconnectedGroupIds=new Set((state.conversations||[])
+        .filter(conversation=>conversation.kind==='group'
+          &&(conversation.group?.members||[]).some(member=>member.id===peerId))
+        .map(conversation=>String(conversation.groupId||'')).filter(Boolean));
       state.messageWindows=state.messageWindows.filter(win=>{
-        if(win.user.id!==peerId)return true;
-        cancelMessageVoiceRecording(peerId);
+        if(win.user.id!==peerId&&!(win.isGroup&&disconnectedGroupIds.has(String(win.groupId||''))))return true;
+        cancelMessageVoiceRecording(win.user.id);
         return false;
       });
       state.conversations=(state.conversations||[]).filter(conversation=>
         !(conversation.kind==='direct'&&conversation.user?.id===peerId)
+          &&!(conversation.kind==='group'&&disconnectedGroupIds.has(String(conversation.groupId||'')))
       );
       renderMessageWindows();
       paintMessengerBadge(state.conversations);
       if(state.messengerPanelOpen)renderMessengerPanelList();
       if(state.view==='messages')updateMessageInboxRows();
-      toast('This conversation is no longer available.');
+      refreshMessageConversations().catch(()=>{});
+      toast('This connection is no longer available.');
       return;
     }
     if(message.type==='typing'){
