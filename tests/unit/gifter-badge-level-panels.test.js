@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -19,6 +20,7 @@ const panelFiles = [
   "Levels 45-49.jpg",
   "Levels 50.jpg"
 ];
+const individualBadgeFiles = Array.from({ length: 50 }, (_, index) => `level_${String(index + 1).padStart(2, "0")}.png`);
 
 test("Gifters Badge Levels keeps and renders all 11 original JPGs in ascending panel order", () => {
   const progression = read("public/gifter-progression.js");
@@ -35,14 +37,37 @@ test("Gifters Badge Levels keeps and renders all 11 original JPGs in ascending p
   assert.match(progression, /gp-art-panel-stack/);
 });
 
-test("Gifters Badge Levels shows complete original panels and no separate per-level badge cards", () => {
+test("ordered Level references each display their matching individual original badge", () => {
   const progression = read("public/gifter-progression.js");
   const styles = read("public/gifter-progression.css");
-  assert.doesNotMatch(progression, /function badgeMarkup|function levelCard|function detailMarkup|data-gp-level=['"]|gp-selected-badge|gp-level25-emblem|MingloraGifterBadgeArt/);
-  assert.match(progression, /loading='lazy' decoding='async'/);
+  assert.match(progression, /gp-level-index-art/);
+  assert.match(progression, /src='\/assets\/gifter-badges\/level_"/);
+  assert.match(progression, /String\(levelNumber\)\.padStart\(2, "0"\)/);
+  assert.match(progression, /alt='Level " \+ number\(levelNumber\) \+ " gifter badge'/);
+  assert.match(progression, /loading='lazy' decoding='async' width='80' height='80'/);
+  assert.doesNotMatch(progression, /MingloraGifterBadgeArt/);
+  assert.match(styles, /\.gp-level-index-art\{[^}]*width:76px;height:76px[^}]*aspect-ratio:1\/1[^}]*object-fit:contain/);
+  assert.match(styles, /@media\(max-width:760px\)[\s\S]*?\.gp-level-index-art\{width:64px;height:64px\}/);
+  assert.match(styles, /@media\(max-width:480px\)[\s\S]*?\.gp-level-index-grid\[data-layout="horizontal"\]\{grid-template-columns:minmax\(0,1fr\)\}/);
   assert.match(styles, /\.gp-art-panel-stack\{display:grid;grid-template-columns:minmax\(0,1fr\);gap:14px/);
   assert.match(styles, /\.gp-art-panel>img\{display:block;width:100%;max-width:100%;height:auto;object-fit:contain/);
   assert.match(styles, /\.gp-art-panel--final>img\{width:auto;max-width:100%;height:auto;margin-inline:auto/);
+});
+
+test("all 50 individual badge files are valid PNGs with distinct image content", () => {
+  const progression = read("public/gifter-progression.js");
+  const server = read("src/server.js");
+  const hashes = individualBadgeFiles.map(filename => {
+    const file = path.join(root, "assets", "Gifters Badge Levels", "Level_Badges_01-50_Individual", filename);
+    assert.ok(fs.existsSync(file), filename + " exists in the original badge collection");
+    const data = fs.readFileSync(file);
+    assert.equal(data.subarray(0, 8).toString("hex"), "89504e470d0a1a0a", filename + " is a PNG");
+    return createHash("sha256").update(data).digest("hex");
+  });
+  assert.equal(new Set(hashes).size, 50, "no Level reuses another Level's badge image");
+  assert.match(progression, /String\(levelNumber\)\.padStart\(2, "0"\)/);
+  assert.match(server, /individualGifterBadgeMatch[\s\S]*?Level_Badges_01-50_Individual[\s\S]*?'Content-Type':'image\/png'/);
+  assert.match(server, /badgeLevel<1\|\|badgeLevel>50/);
 });
 
 test("level artwork route is an explicit allow-list and serves JPEG without exposing file paths", () => {
@@ -57,8 +82,8 @@ test("level artwork route is an explicit allow-list and serves JPEG without expo
 test("updated progression assets and all original JPG panels are included in the app shell", () => {
   const html = read("public/index.html");
   const sw = read("public/sw.js");
-  assert.ok(html.includes("/gifter-progression.css?v=20261110-gifter-chart-readable-1"));
-  assert.ok(html.includes("/gifter-progression.js?v=20261110-gifter-level-polish-1"));
+  assert.ok(html.includes("/gifter-progression.css?v=20261110-gifter-individual-badges-1"));
+  assert.ok(html.includes("/gifter-progression.js?v=20261110-gifter-individual-badges-1"));
   panelFiles.forEach(filename => {
     const routeName = filename.toLowerCase().replaceAll(" ", "-");
     assert.ok(sw.includes("/assets/gifter-badge-level-panels/" + routeName));
@@ -104,8 +129,8 @@ test("Gifter artwork removes unused outer padding and uses a brighter clean edge
 test("clean-edge stylesheet cache key is current in HTML and service-worker shell", () => {
   const html = read("public/index.html");
   const sw = read("public/sw.js");
-  assert.ok(html.includes("/gifter-progression.css?v=20261110-gifter-chart-readable-1"));
-  assert.ok(sw.includes("/gifter-progression.css?v=20261110-gifter-chart-readable-1"));
+  assert.ok(html.includes("/gifter-progression.css?v=20261110-gifter-individual-badges-1"));
+  assert.ok(sw.includes("/gifter-progression.css?v=20261110-gifter-individual-badges-1"));
   assert.ok(!sw.includes("/gifter-progression.css?v=20261110-gifter-level-polish-1"));
 });
 
@@ -121,7 +146,7 @@ test("Gifters Level-Up chart is readable and offers a full-size zoom view on eve
   assert.match(styles, /\.gp-hero-art \.gp-reference-art\{[\s\S]*?max-width:1100px[\s\S]*?max-height:none[\s\S]*?height:auto/);
   assert.match(styles, /@media\(max-width:650px\)[\s\S]*?\.gp-hero-art \.gp-reference-art\{width:100%;max-height:none\}/);
   assert.match(styles, /\.gp-chart-fullsize\{[\s\S]*?min-height:46px[\s\S]*?font-size:1rem/);
-  assert.ok(html.includes("/gifter-progression.css?v=20261110-gifter-chart-readable-1"));
-  assert.ok(sw.includes("/gifter-progression.css?v=20261110-gifter-chart-readable-1"));
-  assert.ok(sw.includes("minglora-shell-v272-self-updating-1"));
+  assert.ok(html.includes("/gifter-progression.css?v=20261110-gifter-individual-badges-1"));
+  assert.ok(sw.includes("/gifter-progression.css?v=20261110-gifter-individual-badges-1"));
+  assert.ok(sw.includes("minglora-shell-v273-gifter-individual-badges-1"));
 });
