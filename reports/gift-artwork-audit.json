@@ -1,0 +1,686 @@
+{
+  "status": "PASS_WITH_REVIEW_REQUIRED",
+  "scope": "Minglora screenshot-derived gift artwork extraction; read-only audit",
+  "source_capture_count_expected": 131,
+  "source_capture_count_found": 131,
+  "manifest_entries": 1509,
+  "manifest_unique_artwork_count": 1509,
+  "repeat_appearances_merged": 556,
+  "artwork_files_inspected": 1509,
+  "missing_or_invalid_assets_and_hash_errors": 0,
+  "integrity_errors": [],
+  "exact_duplicate_file_hash_groups": [],
+  "quality_flag_counts": {
+    "wrong-dimensions": 1509
+  },
+  "existing_review_queue_count": 1114,
+  "existing_review_warning_counts": {
+    "foreground-near-crop-boundary": 1058,
+    "low-ocr-confidence": 7,
+    "same-title-different-artwork-variant": 100,
+    "truncated-title": 77
+  },
+  "review_queue_manifest_mismatches": [],
+  "same_title_near_duplicate_candidates": [
+    {
+      "base_slug": "club-power",
+      "left": "club-power",
+      "right": "club-power-variant-2",
+      "phash_distance": 4,
+      "action": "manual-visual-review-required; no files merged or removed"
+    },
+    {
+      "base_slug": "grand-show",
+      "left": "grand-show",
+      "right": "grand-show-variant-2",
+      "phash_distance": 4,
+      "action": "manual-visual-review-required; no files merged or removed"
+    },
+    {
+      "base_slug": "live-pro-badge",
+      "left": "live-pro-badge",
+      "right": "live-pro-badge-variant-2",
+      "phash_distance": 4,
+      "action": "manual-visual-review-required; no files merged or removed"
+    },
+    {
+      "base_slug": "love-balloon",
+      "left": "love-balloon",
+      "right": "love-balloon-variant-2",
+      "phash_distance": 0,
+      "action": "manual-visual-review-required; no files merged or removed"
+    },
+    {
+      "base_slug": "side-side",
+      "left": "side-side",
+      "right": "side-side-variant-2",
+      "phash_distance": 2,
+      "action": "manual-visual-review-required; no files merged or removed"
+    },
+    {
+      "base_slug": "star-glasses",
+      "left": "star-glasses",
+      "right": "star-glasses-variant-2",
+      "phash_distance": 0,
+      "action": "manual-visual-review-required; no files merged or removed"
+    }
+  ],
+  "catalog_name_match_counts": {
+    "exact": 997,
+    "fuzzy-suggestions": 74,
+    "no-exact-match": 432,
+    "no-suggestion": 6
+  },
+  "catalog_name_suggestions_for_truncated_or_low_confidence": [
+    {
+      "slug": "accelerator-cro",
+      "ocr_name": "Accelerator Cro...",
+      "suggestions": [
+        "Accelerator Crown"
+      ]
+    },
+    {
+      "slug": "alami",
+      "ocr_name": "Alami",
+      "suggestions": [
+        "Go Alami"
+      ]
+    },
+    {
+      "slug": "arnold-the-warr",
+      "ocr_name": "‘Arnold the Warr...",
+      "suggestions": [
+        "Arnold the Warrior"
+      ]
+    },
+    {
+      "slug": "blessi",
+      "ocr_name": "Blessi...",
+      "suggestions": [
+        "Blessing Box"
+      ]
+    },
+    {
+      "slug": "bobo-the-clown",
+      "ocr_name": "Bobo the Clown...",
+      "suggestions": [
+        "Bobo the Clownfish",
+        "Boo the Ghost",
+        "Boo Town"
+      ]
+    },
+    {
+      "slug": "catch-the-harv",
+      "ocr_name": "Catch the Harv...",
+      "suggestions": [
+        "Catch the Harvest",
+        "Match Star"
+      ]
+    },
+    {
+      "slug": "chasing-the-dre",
+      "ocr_name": "Chasing the Dre...",
+      "suggestions": [
+        "Chasing the Dream",
+        "Chasing Glory"
+      ]
+    },
+    {
+      "slug": "cherry-blossom",
+      "ocr_name": "Cherry Blossom...",
+      "suggestions": [
+        "Cherry Blossoms",
+        "Cherry Blossom Bunny",
+        "Party Blossom"
+      ]
+    },
+    {
+      "slug": "choco-strawbe",
+      "ocr_name": "Choco Strawbe...",
+      "suggestions": [
+        "Choco Strawberries",
+        "Groove Straw",
+        "Chocolate"
+      ]
+    },
+    {
+      "slug": "christmas-caro",
+      "ocr_name": "Christmas Caro...",
+      "suggestions": [
+        "Christmas Prawn",
+        "Crystal Crown"
+      ]
+    },
+    {
+      "slug": "community-leg",
+      "ocr_name": "Community Leg...",
+      "suggestions": [
+        "Community Legends",
+        "Community Style",
+        "Community Power"
+      ]
+    },
+    {
+      "slug": "costumey-chris",
+      "ocr_name": "Costumey Chris...",
+      "suggestions": [
+        "Costumey Christmas"
+      ]
+    },
+    {
+      "slug": "crescent-lanter",
+      "ocr_name": "Crescent Lanter...",
+      "suggestions": [
+        "Crescent Lanterns",
+        "Crescent Lion",
+        "Crescent Chain"
+      ]
+    },
+    {
+      "slug": "crescent-lanter-variant-2",
+      "ocr_name": "Crescent Lanter...",
+      "suggestions": [
+        "Crescent Lanterns",
+        "Crescent Lion",
+        "Crescent Chain"
+      ]
+    },
+    {
+      "slug": "dancing-capyb",
+      "ocr_name": "Dancing Capyb...",
+      "suggestions": [
+        "Dancing Capybaras",
+        "Dancing Hands",
+        "Dancing Bears"
+      ]
+    },
+    {
+      "slug": "diamond-micro",
+      "ocr_name": "Diamond Micro...",
+      "suggestions": [
+        "Diamond Microphone",
+        "Diamond Crown",
+        "Diamond Tree"
+      ]
+    },
+    {
+      "slug": "durian-best-frie",
+      "ocr_name": "Durian Best Frie...",
+      "suggestions": [
+        "Durian Best Friends"
+      ]
+    },
+    {
+      "slug": "elephant-nature",
+      "ocr_name": "Elephant Nature...",
+      "suggestions": [
+        "Elephant Nature Reserve",
+        "Elephant trunk"
+      ]
+    },
+    {
+      "slug": "first-rose",
+      "ocr_name": "First Rose",
+      "suggestions": [
+        "My First Rose",
+        "Crystal Rose",
+        "White Rose"
+      ]
+    },
+    {
+      "slug": "garland-headpi",
+      "ocr_name": "Garland Headpi...",
+      "suggestions": [
+        "Garland Headpiece"
+      ]
+    },
+    {
+      "slug": "gobig-live-leg",
+      "ocr_name": "GoBig LIVE Leg...",
+      "suggestions": [
+        "Go Big LIVE Legends",
+        "LIVE Legends"
+      ]
+    },
+    {
+      "slug": "gold-boxing-glo",
+      "ocr_name": "Gold Boxing Glo...",
+      "suggestions": [
+        "Gold Boxing Gloves",
+        "Boxing Gloves",
+        "Golden Gallop"
+      ]
+    },
+    {
+      "slug": "graduation-bou",
+      "ocr_name": "Graduation Bou...",
+      "suggestions": [
+        "Graduation Bouquet"
+      ]
+    },
+    {
+      "slug": "hat-and-mustac",
+      "ocr_name": "Hat and Mustac...",
+      "suggestions": [
+        "Hat and Mustache"
+      ]
+    },
+    {
+      "slug": "headphone-tik",
+      "ocr_name": "Headphone Tik...",
+      "suggestions": [
+        "Headphone",
+        "DJ Headphone",
+        "Neon Headphones"
+      ]
+    },
+    {
+      "slug": "heart-earthl",
+      "ocr_name": "Heart Earthl...",
+      "suggestions": [
+        "Heart My Earthling",
+        "Hearty Talk",
+        "Heart Signal"
+      ]
+    },
+    {
+      "slug": "ice-cream-mac",
+      "ocr_name": "Ice Cream Mac...",
+      "suggestions": [
+        "Ice Cream Mic",
+        "Ice Cream Machine",
+        "Ice Cream Truck"
+      ]
+    },
+    {
+      "slug": "invincible-ham",
+      "ocr_name": "Invincible Ham...",
+      "suggestions": [
+        "Invincible Hammer",
+        "Infinite Heart"
+      ]
+    },
+    {
+      "slug": "invincible-ham-variant-2",
+      "ocr_name": "Invincible Ham...",
+      "suggestions": [
+        "Invincible Hammer",
+        "Infinite Heart"
+      ]
+    },
+    {
+      "slug": "jacaranda-sea",
+      "ocr_name": "Jacaranda Sea...",
+      "suggestions": [
+        "Jacaranda Season",
+        "Hydrangea Sea"
+      ]
+    },
+    {
+      "slug": "jollie-s-commu",
+      "ocr_name": "Jollie's Commu...",
+      "suggestions": [
+        "Jollie's Community"
+      ]
+    },
+    {
+      "slug": "julius-the-cham",
+      "ocr_name": "Julius the Cham...",
+      "suggestions": [
+        "Julius the Champion",
+        "Louis the Cardinal"
+      ]
+    },
+    {
+      "slug": "julius-the-cham-variant-2",
+      "ocr_name": "Julius the Cham...",
+      "suggestions": [
+        "Julius the Champion",
+        "Louis the Cardinal"
+      ]
+    },
+    {
+      "slug": "just-hamst",
+      "ocr_name": "Just Hamst...",
+      "suggestions": [
+        "Im Just a Hamster",
+        "Drum Hamster"
+      ]
+    },
+    {
+      "slug": "league-countd",
+      "ocr_name": "League Countd...",
+      "suggestions": [
+        "League Countdown",
+        "League Boost",
+        "League Fandom"
+      ]
+    },
+    {
+      "slug": "legendary-dem",
+      "ocr_name": "Legendary Dem...",
+      "suggestions": [
+        "Legendary Aegis",
+        "Legend Rider",
+        "Legend Marcellus"
+      ]
+    },
+    {
+      "slug": "lenossa-s-com",
+      "ocr_name": "lenossa's Com...",
+      "suggestions": [
+        "lenossa's Community Cake"
+      ]
+    },
+    {
+      "slug": "marvelous-cont",
+      "ocr_name": "Marvelous Cont...",
+      "suggestions": [
+        "Marvelous Confetti"
+      ]
+    },
+    {
+      "slug": "meowsic-trump",
+      "ocr_name": "Meowsic Trump...",
+      "suggestions": [
+        "Meowsic Trumpet"
+      ]
+    },
+    {
+      "slug": "merry-sponge",
+      "ocr_name": "Merry Sponge...",
+      "suggestions": [
+        "Merry Spongemas"
+      ]
+    },
+    {
+      "slug": "new-year-keyb",
+      "ocr_name": "New Year Keyb...",
+      "suggestions": [
+        "New Year Keyboard",
+        "New Year Table",
+        "New York Cab"
+      ]
+    },
+    {
+      "slug": "new-year-prote",
+      "ocr_name": "New Year Prote...",
+      "suggestions": [
+        "New Year Protection",
+        "New Year Table",
+        "New Year Keyboard"
+      ]
+    },
+    {
+      "slug": "nightshade-kin",
+      "ocr_name": "Nightshade Kin...",
+      "suggestions": [
+        "Nightshade Kingdom",
+        "Nightshade Seal",
+        "Nightshade Beast"
+      ]
+    },
+    {
+      "slug": "potato-transfor",
+      "ocr_name": "Potato Transfor...",
+      "suggestions": [
+        "Potato Transformation"
+      ]
+    },
+    {
+      "slug": "potato-with-ice",
+      "ocr_name": "Potato with ice...",
+      "suggestions": [
+        "Potato with ice cream",
+        "Potato to Fries",
+        "Potato in Paris"
+      ]
+    },
+    {
+      "slug": "power-diamo",
+      "ocr_name": "Power Diamo...",
+      "suggestions": [
+        "Power of Diamond",
+        "Power Gem",
+        "Power Chip"
+      ]
+    },
+    {
+      "slug": "pumpkin-carria",
+      "ocr_name": "Pumpkin Carria...",
+      "suggestions": [
+        "Pumpkin Carriage",
+        "Pumpkin Pie",
+        "Pumpkin head"
+      ]
+    },
+    {
+      "slug": "rainbow-combi",
+      "ocr_name": "Rainbow Combi...",
+      "suggestions": [
+        "Rainbow Combining",
+        "Rainbow Slide",
+        "Rainbow"
+      ]
+    },
+    {
+      "slug": "ramadan-blessi",
+      "ocr_name": "Ramadan Blessi...",
+      "suggestions": [
+        "Ramadan Blessings",
+        "Ramadan Blessing Box",
+        "Ramadan Vibes"
+      ]
+    },
+    {
+      "slug": "ramadan-celeb",
+      "ocr_name": "Ramadan Celeb...",
+      "suggestions": [
+        "Ramadan Celebration",
+        "Ramadan Welcome",
+        "Ramadan Crescent"
+      ]
+    },
+    {
+      "slug": "ramadan-cresc",
+      "ocr_name": "Ramadan Cresc...",
+      "suggestions": [
+        "Ramadan Crescent",
+        "Ramadan Vibes",
+        "Ramadan Kareem"
+      ]
+    },
+    {
+      "slug": "ramadan-welc",
+      "ocr_name": "Ramadan Welc...",
+      "suggestions": [
+        "Ramadan Welcome",
+        "Ramadan Crescent",
+        "Ramadan Vibes"
+      ]
+    },
+    {
+      "slug": "red-carpet-star",
+      "ocr_name": "Red Carpet Star...",
+      "suggestions": [
+        "Royal Red Carpet",
+        "Star of Red Carpet"
+      ]
+    },
+    {
+      "slug": "royal-lions-sce",
+      "ocr_name": "Royal Lions Sce....",
+      "suggestions": [
+        "Royal Lions Scepter"
+      ]
+    },
+    {
+      "slug": "sage-the-smart",
+      "ocr_name": "‘Sage the Smart...",
+      "suggestions": [
+        "Sage the Smart Bean",
+        "Flame heart"
+      ]
+    },
+    {
+      "slug": "salentinian-bios",
+      "ocr_name": "Salentinian Bios...",
+      "suggestions": [
+        "Salentinian Blossom"
+      ]
+    },
+    {
+      "slug": "santa-owl-surp",
+      "ocr_name": "Santa Owl Surp...",
+      "suggestions": [
+        "Santa Owl Surprise"
+      ]
+    },
+    {
+      "slug": "singing-mushro",
+      "ocr_name": "Singing Mushro...",
+      "suggestions": [
+        "Singing Mushroom",
+        "Singing Frog",
+        "Singing frogs"
+      ]
+    },
+    {
+      "slug": "snowmoon-par",
+      "ocr_name": "‘Snowmoon Par...",
+      "suggestions": [
+        "Snowmoon Parasol",
+        "Snowboard"
+      ]
+    },
+    {
+      "slug": "star-red-car",
+      "ocr_name": "Star Red Car...",
+      "suggestions": [
+        "Star of Red Carpet",
+        "Royal Red Carpet",
+        "Star Guard"
+      ]
+    },
+    {
+      "slug": "starlight-comp",
+      "ocr_name": "Starlight Comp...",
+      "suggestions": [
+        "Starlight Compass",
+        "Starlight Sceptre",
+        "Starlight Constellation"
+      ]
+    },
+    {
+      "slug": "starlight-comp-variant-2",
+      "ocr_name": "Starlight Comp...",
+      "suggestions": [
+        "Starlight Compass",
+        "Starlight Sceptre",
+        "Starlight Constellation"
+      ]
+    },
+    {
+      "slug": "supersta",
+      "ocr_name": "SuperSta...",
+      "suggestions": [
+        "Super Star",
+        "Superstar",
+        "Summer Star"
+      ]
+    },
+    {
+      "slug": "terex",
+      "ocr_name": "Terex",
+      "suggestions": [
+        "T-rex",
+        "Tiger"
+      ]
+    },
+    {
+      "slug": "time-variant-2",
+      "ocr_name": "Time.",
+      "suggestions": [
+        "Tiger",
+        "Time Warp",
+        "Show Time"
+      ]
+    },
+    {
+      "slug": "tiny-diny-the",
+      "ocr_name": "Tiny Diny the...",
+      "suggestions": [
+        "Tiny Diny Show",
+        "Tiny Diny",
+        "Tiny Diny Float"
+      ]
+    },
+    {
+      "slug": "tiny-diny-tri",
+      "ocr_name": "Tiny Diny Tri...",
+      "suggestions": [
+        "Tiny Diny Surfing",
+        "Tiny Diny",
+        "Tiny Diny on Triangle"
+      ]
+    },
+    {
+      "slug": "transfor",
+      "ocr_name": "Transfor...",
+      "suggestions": [
+        "Tractor"
+      ]
+    },
+    {
+      "slug": "ultimate-fando",
+      "ocr_name": "Ultimate FANDO....",
+      "suggestions": [
+        "Ultimate FANDOM",
+        "Ultimate Match"
+      ]
+    },
+    {
+      "slug": "undersea-kingd",
+      "ocr_name": "Undersea Kingd...",
+      "suggestions": [
+        "Undersea Kingdom"
+      ]
+    },
+    {
+      "slug": "undersea-kingd-variant-2",
+      "ocr_name": "Undersea Kingd...",
+      "suggestions": [
+        "Undersea Kingdom"
+      ]
+    },
+    {
+      "slug": "whitewind-king",
+      "ocr_name": "Whitewind King...",
+      "suggestions": [
+        "Whitewind Kingdom",
+        "Whitewind Seal",
+        "Whitewind Beast"
+      ]
+    },
+    {
+      "slug": "wind-kemen",
+      "ocr_name": "Wind Kemen...",
+      "suggestions": [
+        "Wind on Kemenche"
+      ]
+    },
+    {
+      "slug": "winning-wedne",
+      "ocr_name": "Winning Wedne...",
+      "suggestions": [
+        "Winning Wednesday",
+        "Stinging Bee"
+      ]
+    }
+  ],
+  "human_visual_review": "NOT COMPLETED",
+  "rights_and_license_review": "NOT COMPLETED",
+  "production_use": "BLOCKED until original-artwork rights/provenance is documented and human review is complete",
+  "source_capture_mutations": 0,
+  "artwork_mutations": 0
+}
