@@ -433,3 +433,7 @@
 @keyframes gp-leader-badge-glow{0%,100%{filter:drop-shadow(0 1px 2px rgba(12,24,48,.18))}50%{filter:drop-shadow(0 2px 5px rgba(201,153,59,.48))}}
 @media(max-width:650px){.gp-leader-badge img{flex-basis:21px;width:21px;height:21px}.gp-leader-badge>span{font-size:.61rem}}
 @media(prefers-reduced-motion:reduce){.gp-leader-badge img{animation:none}}
+
+
+/* TEMPORARY: hide only the incorrect Gifters Level Up chart at the top of the progression page. Keep gifter status and all other content/data intact until the chart is fixed. */
+.gp-page .gp-hero-art{display:none!important}
