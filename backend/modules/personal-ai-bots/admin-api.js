@@ -924,7 +924,7 @@ export async function handlePersonalAiBotsAdminApi(context) {
     if(languageEvaluationActionMatch&&method==='POST'){
       const action=languageEvaluationActionMatch[3];
       const allowed=action==='review'
-        ?new Set(['decision','reviewerRole','evidenceReference','reviewNotes','reviewerAttestation'])
+        ?new Set(['decision','reviewerRole','evidenceReference','reviewNotes','reviewerAttestation','reviewRubric'])
         :new Set();
       if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).some(key=>!allowed.has(key))){
         return (json(res,400,{error:'Language evaluation action contains unsupported fields.'}),true);
