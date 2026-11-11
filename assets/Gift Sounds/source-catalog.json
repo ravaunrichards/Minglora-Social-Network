@@ -221,13 +221,199 @@
   ],
   "FreesoundCC0ReviewCandidates": [
     {
+      "id": "cat-meow-110011",
+      "creator": "tuberatanka",
+      "originalTitle": "cat meow",
+      "sourcePage": "https://freesound.org/people/tuberatanka/sounds/110011/",
+      "license": "CC0-1.0",
+      "licenseEvidence": "CC0 is shown on the individual Freesound sound page.",
+      "recordingEvidence": "The uploader describes their own hungry cat meowing.",
+      "durationSeconds": 1.544,
+      "downloadAccess": "Freesound account login required for original downloads; direct media URL not retrieved.",
+      "sourceStatus": "source_page_and_license_verified; audio_not_downloaded_or_auditioned",
+      "productionEligible": false
+    },
+    {
+      "id": "bee-buzz-846433",
+      "creator": "TheKingOfGeeks360",
+      "originalTitle": "Insects - Bee; Honeybee, Buzz, Close Perspective",
+      "sourcePage": "https://freesound.org/people/TheKingOfGeeks360/sounds/846433/",
+      "license": "CC0-1.0",
+      "licenseEvidence": "CC0 is shown on the individual Freesound sound page.",
+      "recordingEvidence": "Recorded with an LG Stylus 2022; western honeybee buzz.",
+      "durationSeconds": 3.807,
+      "downloadAccess": "Freesound account login required for original downloads; direct media URL not retrieved.",
+      "sourceStatus": "source_page_and_license_verified; audio_not_downloaded_or_auditioned",
+      "productionEligible": false
+    },
+    {
+      "id": "bird-blackcap-827192",
+      "creator": "JW_Audio",
+      "originalTitle": "BIRDSong_Blackcap, Recording 4_JW Audio",
+      "sourcePage": "https://freesound.org/people/JW_Audio/sounds/827192/",
+      "license": "CC0-1.0",
+      "licenseEvidence": "CC0 is shown on the individual Freesound sound page.",
+      "recordingEvidence": "Morning Eurasian Blackcap field recording.",
+      "durationSeconds": 6.728,
+      "downloadAccess": "Freesound account login required for original downloads; direct media URL not retrieved.",
+      "sourceStatus": "source_page_and_license_verified; audio_not_downloaded_or_auditioned",
+      "productionEligible": false
+    },
+    {
+      "id": "duck-quack-418509",
+      "creator": "Mikes-MultiMedia",
+      "originalTitle": "single quack from a duck",
+      "sourcePage": "https://freesound.org/people/Mikes-MultiMedia/sounds/418509/",
+      "license": "CC0-1.0",
+      "licenseEvidence": "CC0 is shown on the individual Freesound sound page.",
+      "recordingEvidence": "Single quack extracted from a CC0 duck recording.",
+      "durationSeconds": 0.816,
+      "downloadAccess": "Freesound account login required for original downloads; direct media URL not retrieved.",
+      "sourceStatus": "source_page_and_license_verified; audio_not_downloaded_or_auditioned",
+      "productionEligible": false
+    },
+    {
+      "id": "frog-ribbit-536759",
+      "creator": "egomassive",
+      "originalTitle": "Frog.ogg",
+      "sourcePage": "https://freesound.org/people/egomassive/sounds/536759/",
+      "license": "CC0-1.0",
+      "licenseEvidence": "CC0 is shown on the individual Freesound sound page.",
+      "recordingEvidence": "Single deep ribbit; source description credits original CC0 frog recording.",
+      "durationSeconds": 0.573,
+      "downloadAccess": "Freesound account login required for original downloads; direct media URL not retrieved.",
+      "sourceStatus": "source_page_and_license_verified; audio_not_downloaded_or_auditioned",
+      "productionEligible": false
+    },
+    {
+      "id": "goat-683259",
+      "creator": "saha213131",
+      "originalTitle": "goat.mp3",
+      "sourcePage": "https://freesound.org/people/saha213131/sounds/683259/",
+      "license": "CC0-1.0",
+      "licenseEvidence": "CC0 is shown on the individual Freesound sound page.",
+      "recordingEvidence": "Recorded a neighbour's goat with a Zoom H1N.",
+      "durationSeconds": 2.459,
+      "downloadAccess": "Freesound account login required for original downloads; direct media URL not retrieved.",
+      "sourceStatus": "source_page_and_license_verified; audio_not_downloaded_or_auditioned",
+      "productionEligible": false
+    },
+    {
+      "id": "rooster-crow-435508",
+      "creator": "BenjaminNelan",
+      "originalTitle": "Rooster Crow 1",
+      "sourcePage": "https://freesound.org/people/BenjaminNelan/sounds/435508/",
+      "license": "CC0-1.0",
+      "licenseEvidence": "CC0 is shown on the individual Freesound sound page.",
+      "recordingEvidence": "Rooster crow recording.",
+      "durationSeconds": 2.157,
+      "downloadAccess": "Freesound account login required for original downloads; direct media URL not retrieved.",
+      "sourceStatus": "source_page_and_license_verified; audio_not_downloaded_or_auditioned",
+      "productionEligible": false
+    },
+    {
+      "id": "cow-moo-700380",
+      "creator": "manofham",
+      "originalTitle": "Moo 3 - Moo Moo the Cow",
+      "sourcePage": "https://freesound.org/people/manofham/sounds/700380/",
+      "license": "CC0-1.0",
+      "licenseEvidence": "CC0 is shown on the individual Freesound sound page.",
+      "recordingEvidence": "Recorded with a Zoom H1.",
+      "durationSeconds": 1.977,
+      "downloadAccess": "Freesound account login required for original downloads; direct media URL not retrieved.",
+      "sourceStatus": "source_page_and_license_verified; audio_not_downloaded_or_auditioned",
+      "productionEligible": false
+    },
+    {
+      "id": "owl-hoot-558396",
+      "creator": "Gerent",
+      "originalTitle": "owl hooting recording",
+      "sourcePage": "https://freesound.org/people/Gerent/sounds/558396/",
+      "license": "CC0-1.0",
+      "licenseEvidence": "CC0 is shown on the individual Freesound sound page.",
+      "recordingEvidence": "Owl hooting at night.",
+      "durationSeconds": 3.531,
+      "downloadAccess": "Freesound account login required for original downloads; direct media URL not retrieved.",
+      "sourceStatus": "source_page_and_license_verified; audio_not_downloaded_or_auditioned",
+      "productionEligible": false
+    },
+    {
+      "id": "sheep-bleat-669872",
+      "creator": "SergioJbs",
+      "originalTitle": "bah bala oveja/baa bleat sheep.WAV",
+      "sourcePage": "https://freesound.org/people/SergioJbs/sounds/669872/",
+      "license": "CC0-1.0",
+      "licenseEvidence": "CC0 is shown on the individual Freesound sound page.",
+      "recordingEvidence": "Sheep bleat recording.",
+      "durationSeconds": 1.782,
+      "downloadAccess": "Freesound account login required for original downloads; direct media URL not retrieved.",
+      "sourceStatus": "source_page_and_license_verified; audio_not_downloaded_or_auditioned",
+      "productionEligible": false
+    },
+    {
+      "id": "pig-oink-510974",
+      "creator": "krzpia",
+      "originalTitle": "oink.wav",
+      "sourcePage": "https://freesound.org/people/krzpia/sounds/510974/",
+      "license": "CC0-1.0",
+      "licenseEvidence": "CC0 is shown on the individual Freesound sound page.",
+      "recordingEvidence": "Small pig sound recorded on a mobile phone.",
+      "durationSeconds": 1.278,
+      "downloadAccess": "Freesound account login required for original downloads; direct media URL not retrieved.",
+      "sourceStatus": "source_page_and_license_verified; audio_not_downloaded_or_auditioned",
+      "productionEligible": false
+    },
+    {
+      "id": "mouse-squeaks-463789",
+      "creator": "shyguy014",
+      "originalTitle": "Mouse Squeaks.wav",
+      "sourcePage": "https://freesound.org/people/shyguy014/sounds/463789/",
+      "license": "CC0-1.0",
+      "licenseEvidence": "CC0 is shown on the individual Freesound sound page.",
+      "recordingEvidence": "Recorded with a Zoom H4N in stereo.",
+      "durationSeconds": 28.663,
+      "downloadAccess": "Freesound account login required for original downloads; direct media URL not retrieved.",
+      "sourceStatus": "source_page_and_license_verified; audio_not_downloaded_or_auditioned",
+      "productionEligible": false
+    },
+    {
+      "id": "horse-neigh-269571",
+      "creator": "shadoWisp",
+      "originalTitle": "horse neigh shortened.wav",
+      "sourcePage": "https://freesound.org/people/shadoWisp/sounds/269571/",
+      "license": "CC0-1.0",
+      "licenseEvidence": "CC0 is shown on the individual Freesound sound page.",
+      "recordingEvidence": "Shortened from an original horse whinny recording.",
+      "durationSeconds": 1.466,
+      "downloadAccess": "Freesound account login required for original downloads; direct media URL not retrieved.",
+      "sourceStatus": "source_page_and_license_verified; audio_not_downloaded_or_auditioned",
+      "productionEligible": false
+    },
+    {
+      "id": "dog-barking-850738",
+      "creator": "Sadiquecat",
+      "originalTitle": "Dogs Barking",
+      "sourcePage": "https://freesound.org/people/Sadiquecat/sounds/850738/",
+      "license": "CC0-1.0",
+      "licenseEvidence": "CC0 is shown on the individual Freesound sound page.",
+      "recordingEvidence": "Three dogs recorded outdoors with a DJI MIC-3; trimmed and normalized.",
+      "durationSeconds": 11.579,
+      "downloadAccess": "Freesound account login required for original downloads; direct media URL not retrieved.",
+      "sourceStatus": "source_page_and_license_verified; audio_not_downloaded_or_auditioned",
+      "productionEligible": false
+    },
+    {
       "id": "lion-roar-795986",
       "creator": "smokediggity",
       "originalTitle": "Lions_roar",
       "sourcePage": "https://freesound.org/people/smokediggity/sounds/795986/",
       "license": "CC0-1.0",
-      "intendedUse": "lion and big-cat gift class",
-      "sourceStatus": "licence_visible_on_source_page; direct_media_url_not_verified; review_before_bundling"
+      "licenseEvidence": "CC0 is shown on the individual Freesound sound page.",
+      "recordingEvidence": "Lion roar sound effect; audition required to confirm it is a natural recording.",
+      "durationSeconds": 8.059,
+      "downloadAccess": "Freesound account login required for original downloads; direct media URL not retrieved.",
+      "sourceStatus": "source_page_and_license_verified; audio_not_downloaded_or_auditioned",
+      "productionEligible": false
     },
     {
       "id": "firework-whistle-pop-336008",
@@ -274,5 +460,21 @@
       "intendedUse": "rocket and launch gift class",
       "sourceStatus": "licence_visible_on_source_page; direct_media_url_not_verified; review_before_bundling"
     }
-  ]
+  ],
+  "excludedCandidates": [
+    {
+      "id": "chicken-cluck-imitation-424076",
+      "sourcePage": "https://freesound.org/people/chanyatenn/sounds/424076/",
+      "reason": "The uploader describes this as an imitation of chicken clucking, not a genuine animal recording. Excluded to preserve the real-recording requirement."
+    }
+  ],
+  "summary": {
+    "publishedCC0FieldRecordings": 7,
+    "CC0PublicDomainEffects": 9,
+    "freesoundCC0Candidates": 20,
+    "excludedImitations": 1,
+    "downloadedAudioFiles": 0,
+    "auditionedAudioFiles": 0,
+    "productionReadyAudioFiles": 0
+  }
 }
