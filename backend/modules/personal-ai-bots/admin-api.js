@@ -211,8 +211,6 @@ export async function handlePersonalAiBotsAdminApi(context) {
         taskRecordsSource:Array.isArray(durableTasks)?'minglora_supabase_postgresql':'legacy_runtime_state',
         tasksNextOffset:Array.isArray(durableTasks)?durableTasks.length:0,
         tasksHasMore:Array.isArray(durableTasks)&&durableTasks.length===100,
-        tasksNextOffset:Array.isArray(durableTasks)?durableTasks.length:0,
-        tasksHasMore:Array.isArray(durableTasks)&&durableTasks.length===100,
         taskQueueStats:durableTaskStats&&typeof durableTaskStats==='object'?durableTaskStats:null,
         providerAssignments:Array.isArray(providerAssignments)?safeProviderAssignmentRecords(providerAssignments):[],
         providerAssignmentsSource:Array.isArray(providerAssignments)?'minglora_supabase_postgresql':'unavailable',
