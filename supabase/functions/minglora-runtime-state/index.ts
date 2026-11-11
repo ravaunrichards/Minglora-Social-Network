@@ -455,6 +455,10 @@ Deno.serve(async (req: Request) => {
             "key": "videoPlaylistItems"
           },
           {
+            "label": "Video channel subscriptions",
+            "key": "videoChannelSubscriptions"
+          },
+          {
             "label": "Media assets",
             "key": "mediaAssets"
           },
