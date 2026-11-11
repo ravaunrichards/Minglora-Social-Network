@@ -183,7 +183,7 @@
       "<article class='gp-stat-card'><span>Coins to next Level</span><strong>" + (current.maxLevel ? "MAX" : number(current.xpRemaining)) + "</strong><small>" + (current.maxLevel ? "Level 50 reached" : "More Coins needed") + "</small></article>" +
       "<article class='gp-stat-card'><span>Gifts sent</span><strong>" + number(current.giftsSent) + "</strong><small>Unique confirmed transactions</small></article>" +
       "<article class='gp-stat-card'><span>Members supported</span><strong>" + number(current.uniqueRecipients) + "</strong><small>Different recipients</small></article></section>" +
-      "<section class='gp-section card'><div class='gp-section-heading'><div><span class='gp-eyebrow'>THE FULL PROGRESSION</span><h2>Level 1–50</h2>" +
+      "<section class='gp-section card'><div class='gp-section-heading'><div><span class='gp-eyebrow'>THE FULL PROGRESSION</span><h2>Levels 1–50</h2>" +
       "<p>Earn levels with confirmed gifts, or receive an admin-awarded badge. Admin awards do not count as Coins spent.</p></div><span class='gp-level-count'>Level " + current.level + " / 50</span></div>" +
       badgePanels + "</section>" +
       levelDirectory +
