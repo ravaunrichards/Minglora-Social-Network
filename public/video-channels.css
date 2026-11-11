@@ -25,3 +25,10 @@
 .video-channel-editor input,.video-channel-editor textarea,.video-channel-editor select{width:100%;min-width:0}
 .video-channel-editor .modal-body{display:grid;gap:4px}
 @media(max-width:600px){.video-channel-library-head,.video-channel-detail-head{align-items:stretch;flex-direction:column}.video-channel-library-head>.secondary,.video-channel-detail-head>button{width:100%}.video-channel-search{grid-template-columns:1fr}.video-channel-search label{grid-column:auto}.video-channel-search button{width:100%}}
+
+.video-channel-latest-uploads{margin-top:20px}
+.video-channel-latest-heading{margin:0 0 12px}
+.video-channel-latest-heading h3{margin:4px 0;font-size:1.08rem}
+.video-channel-latest-heading p{margin:0;color:var(--muted);font-size:.9rem}
+.video-channel-latest-list{display:grid;gap:12px}
+.video-channel-latest-item>small{display:block;margin:0 0 5px 12px;color:var(--muted);font-weight:700;font-size:.82rem}
