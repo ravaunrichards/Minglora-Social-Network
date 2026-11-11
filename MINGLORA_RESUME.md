@@ -422,3 +422,6 @@ Continue with independent non-database work that can be built and verified in th
 - No production database, migrations, credentials, provider services, workers, scheduler, deployments or member records were changed. PR #202 must remain unmerged and draft pending the existing database/release gates.
 - The last previously recorded weighted baseline is 45.52%; this small observability increment has not been re-weighted, and no new overall completion percentage is claimed.
 
+
+- Follow-up wording correction: the top-line value derived from distinct bot IDs with a `running` task is now labelled “Bots with running-state tasks,” not as a count of active tasks or proof of live execution. A dedicated UI regression assertion was added. Commits: `df187e12a8eeb89f271150003855208e1e142ab9` and `c1d3e9483edbb4027bd469b25e39444c5028ec7d`.
+- Latest branch commit after this correction: `c1d3e9483edbb4027bd469b25e39444c5028ec7d`.
