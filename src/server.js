@@ -1312,7 +1312,7 @@ async function route(req, res) {
       const providerStatus = getAIProviderStatus();
       const providerReady = providerStatus.configured && providerStatus.executionEnabled;
       const settingsExisted = (db.aiBotSettings || []).some(item => item.ownerId === user.id);
-      const sub = p.slice('/api/ai-network'.length).replace(/^\\/+/, '');
+      const sub = p.slice('/api/ai-network'.length).replace(/^\/+/, '');
       const parts = sub.split('/').filter(Boolean).map(decodeURIComponent);
       if (method === 'GET' && !sub) {
         const snapshot = getAICommandCenter(db, user.id, { providerStatus });
