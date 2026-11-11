@@ -831,4 +831,7 @@ test('team handoff records use existing runtime-state persistence and owner-only
   assert.match(adminApiSource,/teamHandoffActionMatch&&method==='POST'/);
   assert.match(serviceSource,/input\.privacyAttested!==true/);
   assert.match(serviceSource,/privacyAttestedBy:actorId,privacyAttestedAt:timestamp/);
+  assert.match(serviceSource,/cancelOpenPersonalAiBotTeamHandoffs/);
+  assert.match(serviceSource,/team_paused/);
+  assert.match(serviceSource,/network_emergency_shutdown/);
 });
