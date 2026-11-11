@@ -594,6 +594,8 @@ test('approved Creator Studio feed drafts transfer to the existing composer with
   assert.match(app,/MINGLORA_CREATOR_DRAFT_READY/);
   assert.match(app,/AI-assisted content draft from /);
   assert.match(app,/Nothing is shared until you press Share post/);
+  assert.match(app,/asset reference\\\(s\\\) were not attached/);
+  assert.match(admin,/assetReferenceCount:Array\\.isArray\\(draft\\.assetReferences\\)/);
   const receiver=app.slice(app.indexOf('function applyPendingCreatorDraftHandoff'),app.indexOf('function openVideoComposer'));
   assert.doesNotMatch(receiver,/api\(['"]\/posts/);
   const composer=app.slice(app.indexOf('function openComposer(options={})'),app.indexOf('function applyPendingCreatorDraftHandoff'));
