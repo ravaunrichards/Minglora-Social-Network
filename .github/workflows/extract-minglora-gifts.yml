@@ -7,6 +7,7 @@ on:
     paths:
       - "assets/Gifts/**"
       - "scripts/extract-minglora-gift-captures.mjs"
+      - "scripts/validate-minglora-gift-animations.mjs"
       - ".github/workflows/extract-minglora-gifts.yml"
   workflow_dispatch:
 
@@ -38,6 +39,8 @@ jobs:
           npm install --no-save --no-package-lock sharp
       - name: Extract each gift into an individual animation asset
         run: node scripts/extract-minglora-gift-captures.mjs
+      - name: Validate self-contained gift animations
+        run: node scripts/validate-minglora-gift-animations.mjs
       - name: Commit generated assets to the extraction branch
         run: |
           git config user.name "github-actions[bot]"
