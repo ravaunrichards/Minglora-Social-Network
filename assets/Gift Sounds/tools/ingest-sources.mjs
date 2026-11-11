@@ -80,6 +80,37 @@ function toMp3(input, output) {
   if (result.error) throw new Error('ffmpeg unavailable: ' + result.error.message);
   if (result.status !== 0) throw new Error('ffmpeg failed: ' + (result.stderr || result.stdout));
 }
+
+function probeMp3(file) {
+  const result = spawnSync('ffprobe', [
+    '-v', 'error',
+    '-select_streams', 'a:0',
+    '-show_entries', 'stream=codec_name,sample_rate,channels,bit_rate',
+    '-show_entries', 'format=duration,size',
+    '-of', 'json',
+    file
+  ], { encoding: 'utf8' });
+  if (result.error) throw new Error('ffprobe unavailable: ' + result.error.message);
+  if (result.status !== 0) throw new Error('ffprobe failed: ' + (result.stderr || result.stdout));
+  const info = JSON.parse(result.stdout);
+  const stream = info.streams?.[0];
+  const durationSeconds = Number(info.format?.duration || 0);
+  if (!stream || stream.codec_name !== 'mp3') throw new Error('MP3 codec validation failed');
+  if (Number(stream.sample_rate) !== 44100 || Number(stream.channels) !== 2) {
+    throw new Error('MP3 must be 44.1 kHz stereo');
+  }
+  if (!Number.isFinite(durationSeconds) || durationSeconds <= 0.05) {
+    throw new Error('MP3 duration is missing or too short');
+  }
+  return {
+    codec: stream.codec_name,
+    sampleRateHz: Number(stream.sample_rate),
+    channels: Number(stream.channels),
+    bitRate: Number(stream.bit_rate || 0),
+    durationSeconds,
+    bytes: Number(info.format?.size || 0)
+  };
+}
 function publicSources() {
   return [
     ...(catalog.publishedCC0Recordings || []).map(x => ({
@@ -149,7 +180,11 @@ if (!publicMode && !fsMode) {
           const mp3 = path.join(mp3Dir, source.id + '.mp3');
           try {
             const current = await fs.readFile(mp3);
-            report.skipped.push({ id: source.id, reason: 'verified MP3 already exists', sha256: sha256(current) });
+            const probe = probeMp3(mp3);
+            report.skipped.push({
+              id: source.id, reason: 'verified MP3 already exists',
+              sha256: sha256(current), probe
+            });
             continue;
           } catch (error) {
             if (error.code !== 'ENOENT') throw error;
@@ -167,6 +202,7 @@ if (!publicMode && !fsMode) {
             await saveNew(mp3, encoded);
           }
           const encodedBytes = await fs.readFile(mp3);
+          const probe = probeMp3(mp3);
           report.downloaded.push({
             id: source.id,
             mp3: path.relative(repoRoot, mp3),
@@ -179,6 +215,7 @@ if (!publicMode && !fsMode) {
             mp3Bytes: encodedBytes.length,
             mp3Sha256: sha256(encodedBytes),
             originalFormat: ext,
+            probe,
             status: 'downloaded_verified_transcoded_review_only'
           });
         } catch (error) {
@@ -268,10 +305,42 @@ if (!publicMode && !fsMode) {
         gift.candidateMappingStatus = mapped.status;
       }
     }
+    const availableSourceIds = new Set([
+      ...report.downloaded.map(x => x.id),
+      ...report.skipped.filter(x => x.id).map(x => x.id)
+    ]);
+    const catalogueSources = [
+      ...(catalog.publishedCC0Recordings || []),
+      ...(catalog.publicDomainEffects || []),
+      ...(catalog.additionalCC0Recordings || [])
+    ];
+    for (const source of catalogueSources) {
+      if (availableSourceIds.has(source.id)) {
+        source.audioStatus = 'downloaded_verified_review_only';
+        source.reviewMp3 = path.posix.join('assets/Gift Sounds/_sources/mp3', source.id + '.mp3');
+      }
+    }
+    catalog.summary = {
+      ...(catalog.summary || {}),
+      downloadedAudioFiles: availableSourceIds.size,
+      auditionedAudioFiles: 0,
+      productionReadyAudioFiles: 0
+    };
+    catalog.lastIngestion = {
+      status: report.errors.length ? 'partial_download_review_only' : 'downloaded_review_only',
+      downloadedSourceCount: availableSourceIds.size,
+      newlyDownloadedSourceCount: report.downloaded.length,
+      mappedGiftFileCount: new Set(report.mappedGiftFiles.map(x => x.giftSlug)).size,
+      productionReadyGiftCount: 0
+    };
+    report.status = report.errors.length ? 'partial_download_review_only' : 'downloaded_review_only';
+    await fs.writeFile(path.join(root, 'source-catalog.json'), JSON.stringify(catalog, null, 2) + '\n');
+
     giftManifest.lastIngestion = {
       status: 'candidate_recordings_downloaded_review_only',
-      downloadedSourceCount: report.downloaded.length,
-      mappedGiftFileCount: report.mappedGiftFiles.length,
+      downloadedSourceCount: availableSourceIds.size,
+      newlyDownloadedSourceCount: report.downloaded.length,
+      mappedGiftFileCount: new Set(report.mappedGiftFiles.map(x => x.giftSlug)).size,
       productionReadyGiftCount: 0
     };
     await fs.writeFile(manifestPath, JSON.stringify(giftManifest, null, 2) + '\n');
