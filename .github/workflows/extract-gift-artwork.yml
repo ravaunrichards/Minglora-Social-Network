@@ -13,7 +13,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: gift-artwork-extraction
+  group: gift-artwork-extraction-fast
   cancel-in-progress: false
 
 jobs:
@@ -46,5 +46,5 @@ jobs:
             echo "No artwork changes to commit."
           else
             git commit -m "Extract individually titled gift artwork"
-            git push origin "HEAD:artwork/gift-artwork-extraction"
+            git push origin HEAD:$GITHUB_REF_NAME
           fi
