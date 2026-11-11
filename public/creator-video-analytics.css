@@ -14,3 +14,14 @@
   .creator-video-analytics-row{grid-template-columns:minmax(0,1fr) repeat(2,minmax(66px,.55fr));gap:7px;padding:9px}
   .creator-video-analytics-row .creator-video-analytics-value:last-child{grid-column:2/4}
 }
+
+.creator-analytics-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.creator-video-analytics-period-label{display:grid;gap:5px;min-width:130px;color:var(--muted);font-size:8px;font-weight:800}
+.creator-video-analytics-period-label select{width:100%;min-height:34px;padding:7px 9px;border:1px solid var(--cs-line);border-radius:9px;background:var(--card);color:var(--text);font:inherit}
+@media(max-width:700px){
+  .creator-analytics-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .creator-video-analytics-period-label{min-width:112px}
+  .creator-video-analytics-row{grid-template-columns:minmax(0,1fr) repeat(2,minmax(65px,.55fr))}
+  .creator-video-analytics-row .creator-video-analytics-value:last-child{grid-column:auto}
+  .creator-video-analytics-heading{align-items:flex-start;flex-direction:column}
+}
