@@ -1505,18 +1505,22 @@
     if(!draft||draft.status!=='approved_for_human_handoff'){
       notice('pab-creator-status','Only owner-approved drafts can be handed to the composer.','error');return;
     }
-    if(draft.contentFormat!=='feed_post'||draft.destination!=='feed'){
-      notice('pab-creator-status','The existing composer handoff currently supports Feed posts only.','error');return;
+    const isFeedDraft=draft.contentFormat==='feed_post'&&draft.destination==='feed';
+    const isStoryDraft=draft.contentFormat==='story'&&draft.destination==='story';
+    if(!isFeedDraft&&!isStoryDraft){
+      notice('pab-creator-status','The existing composer handoff supports Feed posts and Stories only.','error');return;
     }
     const bot=(state?.bots||[]).find(item=>item.id===draft.botId);
     if(!bot){notice('pab-creator-status','The linked AI identity is unavailable.','error');return;}
     const username=String(bot.username||'ai_identity').replace(/^@/,'');
     const attribution='AI-assisted content draft from '+String(bot.displayName||'Minglora AI identity')+' (@'+username+').';
     const text=[attribution,String(draft.caption||'').trim(),String(draft.body||'').trim()].filter(Boolean).join('\n\n');
-    if(text.length>5000){
-      notice('pab-creator-status','This draft exceeds the existing 5,000-character Feed composer limit. Shorten and save the draft first.','error');return;
+    const characterLimit=isStoryDraft?1000:5000;
+    if(text.length>characterLimit){
+      notice('pab-creator-status','This draft exceeds the existing '+characterLimit+'-character '+(isStoryDraft?'Story':'Feed')+' composer limit. Shorten and save the draft first.','error');return;
     }
-    if(!window.confirm('Open this approved AI draft in the existing Minglora Feed composer as your signed-in member account? The AI attribution will be included in the text. No post is published until you review and press Share post.'))return;
+    const publishAction=isStoryDraft?'Publish Story':'Share post';
+    if(!window.confirm('Open this approved AI draft in the existing Minglora '+(isStoryDraft?'Story':'Feed')+' composer as your signed-in member account? The AI attribution will be included. No content is published until you review and press '+publishAction+'. Asset references are not transferred; select media manually if needed.'))return;
     let target=null,sent=false;
     const cleanup=()=>window.removeEventListener('message',onMessage);
     const onMessage=event=>{
