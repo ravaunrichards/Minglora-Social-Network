@@ -63,6 +63,10 @@ const adminApiSource = await readFile(
   new URL('../../backend/modules/personal-ai-bots/admin-api.js', import.meta.url),
   'utf8'
 );
+const storeSource = await readFile(
+  new URL('../../src/store.js', import.meta.url),
+  'utf8'
+);
 const discoveryUi = await readFile(
   new URL('../../public/ai-discover.js', import.meta.url),
   'utf8'
@@ -799,4 +803,15 @@ test('member AI block management paginates beyond the first database page',()=>{
   assert.match(discoveryUi,/limit:'100',offset:String\(blockedOffset\)/);
   assert.match(discoveryUi,/blockedOffset=Number\.isInteger\(nextOffset\)/);
   assert.match(discoveryUi,/loadBlockedIdentities\(\{append:true\}\)/);
+});
+
+
+test('versioned AI persona records are included in the existing persistent runtime-state store',()=>{
+  assert.match(storeSource,/'personalAiBotPersonaVersions'/);
+  assert.match(adminApiSource,/listPersonalAiBotPersonaVersions/);
+  assert.match(adminApiSource,/createPersonalAiBotPersonaDraft/);
+  assert.match(adminApiSource,/evaluatePersonalAiBotPersonaDraft/);
+  assert.match(adminApiSource,/approvePersonalAiBotPersonaVersion/);
+  assert.match(adminApiSource,/activatePersonalAiBotPersonaVersion/);
+  assert.match(adminApiSource,/rollbackPersonalAiBotPersonaVersion/);
 });
