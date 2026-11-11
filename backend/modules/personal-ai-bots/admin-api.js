@@ -214,7 +214,7 @@ export async function handlePersonalAiBotsAdminApi(context) {
   const stamp=now();
   try{
     if(method==='GET'&&path===root){
-      const overview=getPersonalAiBotOverview(db);
+      const overview=getPersonalAiBotOverview(db,stamp);
       const identityRecords=typeof listAiIdentities==='function'?await listAiIdentities({limit:100,offset:0}):null;
       const durableTasks=typeof listAiBotTasks==='function'?await listAiBotTasks({limit:100,offset:0}):null;
       const durableTaskStats=typeof getAiBotTaskStats==='function'?await getAiBotTaskStats():null;
