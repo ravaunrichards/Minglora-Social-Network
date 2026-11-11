@@ -167,6 +167,9 @@ test('creator channels support real videos, privacy, subscriptions and cross-dev
   const subscriptions=await request(viewer.cookie,'/api/video-channels/subscriptions');
   assert.equal(subscriptions.status,200);
   assert.deepEqual(subscriptions.body.channels.map(channel=>channel.ownerId),[publicOwner.user.id]);
+  assert.equal(subscriptions.body.videos.length,1);
+  assert.equal(subscriptions.body.videos[0].id,'public-post-1');
+  assert.equal(subscriptions.body.videos[0].channel.title,'Public Creator Channel');
 
   const channelEdit=await request(publicOwner.cookie,'/api/video-channels/me',{
     method:'PATCH',body:JSON.stringify({title:'Updated Public Channel',description:'Saved on Minglora'})
