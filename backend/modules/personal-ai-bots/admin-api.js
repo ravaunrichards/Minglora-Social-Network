@@ -784,7 +784,7 @@ export async function handlePersonalAiBotsAdminApi(context) {
       await persistCanonicalIdentities(db.personalAiBots,persistAiIdentities);
       await persistCanonicalTasks(db.personalAiBotTasks.filter(task=>task.status==='cancelled'&&task.cancelledBy===user.id&&task.cancelledAt===stamp),persistAiBotTasks,db.personalAiBots,null);
       await saveStore();
-      return (json(res,200,{...result,message:'Emergency shutdown complete. Enabled bots were paused and open tasks were cancelled.'}),true);
+      return (json(res,200,{...result,message:'Emergency shutdown complete. Enabled bots were paused, open tasks were cancelled and open team handoffs were cancelled.'}),true);
     }
     const categoryMatch=path.match(/^\/api\/admin\/personal-ai-bots\/categories\/([a-z0-9-]+)$/i);
     if(categoryMatch&&method==='PATCH'){
