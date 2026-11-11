@@ -217,7 +217,7 @@
 .gift-level-up-copy p{margin:0 auto 14px;max-width:620px;color:rgba(255,255,255,.86);line-height:1.5}
 .gift-level-up-copy button{display:inline-flex;justify-content:center;max-width:100%;flex-wrap:wrap;white-space:normal;margin:0 auto}
 .gp-hero-art{display:flex;align-items:center;justify-content:center;min-height:0;border-radius:18px;background:linear-gradient(135deg,#eef4ff,#f8f2ff);padding:14px}
-.gp-hero-art .gp-reference-art{display:block;width:min(100%,720px);height:auto;max-height:350px;margin:0 auto;object-fit:contain}
+.gp-hero-art .gp-reference-art{display:block;width:min(100%,900px);height:auto;max-height:none;margin:0 auto;object-fit:contain}
 .gp-load-error{display:grid;gap:10px;text-align:center;justify-items:center;padding:24px}
 .gp-load-error p{max-width:680px;margin:0;color:var(--muted,#667085);overflow-wrap:anywhere}
 .gp-load-actions{display:flex;justify-content:center;align-items:center;gap:10px;flex-wrap:wrap}
@@ -225,7 +225,7 @@
   .gift-level-up-banner{grid-template-columns:1fr;gap:9px;padding:14px 12px}
   .gift-level-up-banner>img{max-height:220px}
   .gift-level-up-copy h2{font-size:1.45rem}
-  .gp-hero-art .gp-reference-art{max-height:270px}
+  .gp-hero-art .gp-reference-art{width:100%;max-height:none}
 }
 
 
@@ -374,9 +374,9 @@
 }
 .gp-hero-art .gp-reference-art{
   display:block;
-  width:min(100%,720px);
-  max-height:350px;
+  width:min(100%,900px);
   height:auto;
+  max-height:none;
   margin:0 auto;
   object-fit:contain;
 }
@@ -404,7 +404,7 @@
 .gp-chart-fullsize:focus-visible{outline:3px solid #2563eb;outline-offset:3px}
 @media(max-width:650px){
   .gp-hero-art{gap:10px;padding:10px 6px;border-radius:14px}
-  .gp-hero-art .gp-reference-art{width:100%;max-height:270px}
+  .gp-hero-art .gp-reference-art{width:100%;height:auto;max-height:none;object-fit:contain}
   .gp-chart-fullsize{width:min(100%,420px);min-height:48px;font-size:1rem;padding:11px 14px}
 }
 
