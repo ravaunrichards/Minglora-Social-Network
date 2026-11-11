@@ -98,7 +98,7 @@ test('profile overflow and administrator controls are wired to their feature han
     assert.ok(handler.includes("action==='"+action+"'"),'Missing overflow action '+action);
     assert.ok(handler.includes(handlerName),'Missing handler '+handlerName);
   }
-  assert.ok(profile.includes('profile-admin-identity'),'administrator identity remains in the shared owner profile header');
+  assert.ok(!profile.includes('profile-admin-identity'),'administrator decoration stays off profile surfaces');
   assert.ok(profile.includes('data-profile-overflow-action="verification-review"'),'administrator-only verification review remains in the profile overflow menu');
   assert.ok(handler.includes("action==='verification-review'")&&handler.includes('openProfileVerificationReviewDesk()'));
 });
