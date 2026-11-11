@@ -1298,7 +1298,7 @@ function createLanguageEvaluationFixture(){
   return {db,bot};
 }
 
-test('multilingual evaluation sets store synthetic cases and human-reviewed evidence without verifying providers',()=>{
+test('multilingual evaluation sets store synthetic cases and owner-attested review metadata without verifying providers',()=>{
   const {db,bot}=createLanguageEvaluationFixture();
   const created=createPersonalAiBotLanguageEvaluationSet(db,bot.id,{
     languageCode:'jam',name:'Patois Sample Review Set',
@@ -1327,7 +1327,7 @@ test('multilingual evaluation sets store synthetic cases and human-reviewed evid
     reviewNotes:'Human reviewer recorded sample-level comments.',
     reviewerAttestation:true
   },actor,stamp,uid);
-  assert.equal(reviewed.status,'human_reviewed');
+  assert.equal(reviewed.status,'owner_review_recorded');
   assert.equal(reviewed.reviewStatus,'approve');
   assert.equal(reviewed.reviewedBy,actor);
   assert.equal(reviewed.providerExecutionStatus,'not_run');
