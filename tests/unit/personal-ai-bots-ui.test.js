@@ -574,6 +574,7 @@ test('Creator Studio exposes read-only previous-version and review audit history
   const ui=await read('public/personal-ai-bots.js');
   for(const phrase of ['pab-creator-history','Version and review history','Previous content versions','Review and audit events','latest 10 edits','current audit window'])assert.ok(ui.includes(phrase),phrase);
   assert.match(ui,/event\.targetType==='creator_draft'&&event\.targetId===draft\.id/);
-  assert.match(ui,/versionHistory\.map/);
+  assert.match(ui,/draft\.versionHistory/);
+  assert.match(ui,/previousVersions\.map/);
   assert.match(ui,/<details class="pab-creator-history"/);
 });
