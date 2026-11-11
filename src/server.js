@@ -42,6 +42,7 @@ import { getGiftGallery, giftGalleryTimeZone, recordGiftGalleryEvent, updateGift
 import { CREATOR_LEAGUE_CLASSES, recordLiveGiftForLeagues, refundCreatorLeagueGift, getCreatorLeagueOverview, createCreatorLeagueMatch, acceptCreatorLeagueMatch, supportCreatorLeagueMatch, useCreatorLeaguePowerup, listCreatorLeagueMatches, settleExpiredLeagueMatches, settleScheduledCreatorLeagueDays } from '../backend/modules/leagues/service.js';
 import { recordGifterGift, refundGifterGift, getGifterProgressionOverview, getGifterBadgeSummary, getNewGifterIdentity, getLiveGifterLeaderboard } from '../backend/modules/gifter-progression/service.js';
 import { LIVE_FAN_CLUB_GIFT_CODES, LIVE_FAN_CLUB_JOIN_GIFT_CODE, LIVE_FAN_CLUB_JOIN_COIN_COST, ensureLiveFanClubCollections, getLiveFanClubMembership, countActiveLiveFanClubMembers, joinLiveFanClub, awardLiveFanClubPoints, publicLiveFanClubMembership } from '../backend/modules/live/fan-club.js';
+import { ensureAICollections, getAICommandCenter, getAIProviderStatus, createAIBot, updateAIBotStatus, createAIBotTeam, createAIBotSchedule, updateAIBotScheduleStatus, updateAISettings, createAICreatorJob, createAIApprovalRequest, decideAIApproval, setAICompanionConsent, createAICommunityEvent, emergencyPauseAI } from '../backend/modules/ai-network/service.js';
 import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseExchangeOAuthCode, supabaseGetAuthSettings, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseRequestMagicLink, supabaseCompletePasswordReset, supabaseGetUser, supabaseUpdateEmail, supabaseRequestPhoneChange, supabaseVerifyPhoneChange, supabaseUpdateUserMetadata, supabaseUpdateProfile } from './supabase-auth.js';
 const scrypt = promisify(crypto.scrypt);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -1303,6 +1304,97 @@ async function route(req, res) {
   if (p.startsWith('/api/') && p !== '/api/webhooks/paypal' && !['GET', 'HEAD', 'OPTIONS'].includes(method) && !isSameOriginApiWrite(req)) {
     return json(res, 403, { error: 'Cross-origin API writes are not allowed.' });
   }
+  if (p === '/api/ai-network' || p.startsWith('/api/ai-network/')) {
+    const user = sessionUser(req);
+    try {
+      requireAuth(user);
+      ensureAICollections(db);
+      const providerStatus = getAIProviderStatus();
+      const providerReady = providerStatus.configured && providerStatus.executionEnabled;
+      const settingsExisted = (db.aiBotSettings || []).some(item => item.ownerId === user.id);
+      const sub = p.slice('/api/ai-network'.length).replace(/^\\/+/, '');
+      const parts = sub.split('/').filter(Boolean).map(decodeURIComponent);
+      if (method === 'GET' && !sub) {
+        const snapshot = getAICommandCenter(db, user.id, { providerStatus });
+        if (!settingsExisted) await saveStore();
+        return json(res, 200, snapshot);
+      }
+      if (method === 'POST' && sub === 'bots') {
+        const bot = createAIBot(db, user.id, await body(req, 20000));
+        await saveStore();
+        return json(res, 201, { bot });
+      }
+      if (method === 'POST' && sub === 'teams') {
+        const team = createAIBotTeam(db, user.id, await body(req, 12000));
+        await saveStore();
+        return json(res, 201, { team });
+      }
+      if (method === 'POST' && sub === 'schedules') {
+        const schedule = createAIBotSchedule(db, user.id, await body(req, 12000));
+        await saveStore();
+        return json(res, 201, { schedule });
+      }
+      if (method === 'PATCH' && sub === 'settings') {
+        const settings = updateAISettings(db, user.id, await body(req, 12000), { providerConfigured: providerReady });
+        await saveStore();
+        return json(res, 200, { settings });
+      }
+      if (method === 'PATCH' && parts[0] === 'bots' && parts[2] === 'status' && parts.length === 3) {
+        const input = await body(req, 4000);
+        const bot = updateAIBotStatus(db, user.id, parts[1], input.status, { providerConfigured: providerReady });
+        await saveStore();
+        return json(res, 200, { bot });
+      }
+      if (method === 'PATCH' && parts[0] === 'schedules' && parts[2] === 'status' && parts.length === 3) {
+        const input = await body(req, 4000);
+        const schedule = updateAIBotScheduleStatus(db, user.id, parts[1], input.status, { providerConfigured: providerReady });
+        await saveStore();
+        return json(res, 200, { schedule });
+      }
+      if (method === 'POST' && sub === 'creator-jobs') {
+        const job = createAICreatorJob(db, user.id, await body(req, 16000));
+        await saveStore();
+        return json(res, 201, { job });
+      }
+      if (method === 'POST' && sub === 'approvals') {
+        const approval = createAIApprovalRequest(db, user.id, await body(req, 8000));
+        await saveStore();
+        return json(res, 201, { approval });
+      }
+      if (method === 'PATCH' && parts[0] === 'approvals' && parts.length === 2) {
+        const input = await body(req, 4000);
+        const approval = decideAIApproval(db, user.id, parts[1], input.decision);
+        await saveStore();
+        return json(res, 200, { approval });
+      }
+      if (method === 'POST' && sub === 'companion/consent') {
+        const input = await body(req, 4000);
+        const consent = setAICompanionConsent(db, user.id, input.enabled, input.acknowledgedAIIdentity);
+        await saveStore();
+        return json(res, 200, { consent });
+      }
+      if (method === 'POST' && sub === 'community-events') {
+        const event = createAICommunityEvent(db, user.id, await body(req, 12000));
+        await saveStore();
+        return json(res, 201, { event });
+      }
+      if (method === 'POST' && sub === 'emergency-pause') {
+        const input = await body(req, 4000);
+        const result = emergencyPauseAI(db, user.id, input.reason || 'Owner emergency pause');
+        await saveStore();
+        return json(res, 200, result);
+      }
+      if (method === 'POST' && sub === 'emergency-resume') {
+        const settings = updateAISettings(db, user.id, { globalPaused: false }, { providerConfigured: providerReady });
+        await saveStore();
+        return json(res, 200, { resumed: true, settings, botsRemainPaused: true, schedulesRemainPaused: true });
+      }
+      return json(res, 404, { error: 'Minglora AI Network route not found.' });
+    } catch (error) {
+      return json(res, Number(error?.status) || 400, { error: String(error?.message || 'Minglora AI Network request failed.') });
+    }
+  }
+
   if (method === 'POST' && p === '/api/webhooks/paypal') {
     let event;
     try { event = await body(req, 1_000_000); }
