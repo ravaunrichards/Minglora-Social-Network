@@ -383,7 +383,7 @@ async function processScreenshot(file, catalogByName) {
       if(normalizedName.length<4)qualityFlags.push("short_or_uncertain_name");
       results.push({
         id:code,name:originalName,normalized_name:normalizedName,category,
-        animation_key:"minglora-"+slugify(code),animation_preset:profile.preset,
+        animation_key:"minglora-"+slugify(code),animation_preset:profile.preset,animation_effect:profile.effect,
         animation_kind:"individual-svg-css-motion",animation_duration_ms:Math.round(Number.parseFloat(profile.duration)*1000),
         source_kind:"captured-gallery-still",source_image:"assets/Gifts/"+file,
         source_region:{x:left,y:top,width:cropWidth,height:cropHeight},
