@@ -208,3 +208,23 @@ test('Messenger can immediately disconnect a restricted account and broadcast of
   ), true);
   hub.close();
 });
+
+test('blocking a peer clears both directions of Messenger presence and typing without closing unrelated sessions', () => {
+  const { hub, connect } = createHub();
+  const alice = connect('alice');
+  const bob = connect('bob');
+  const carol = connect('carol');
+
+  alice.socket.receive({ type: 'typing', conversationId: 'bob', active: true });
+  assert.equal(hub.disconnectPair('alice', 'bob', 'blocked') > 0, true);
+
+  assert.equal(alice.socket.sent.some(item => item.type === 'presence' && item.userId === 'bob' && item.online === false), true);
+  assert.equal(bob.socket.sent.some(item => item.type === 'presence' && item.userId === 'alice' && item.online === false), true);
+  assert.equal(alice.socket.sent.some(item => item.type === 'relationship:blocked' && item.userId === 'bob'), true);
+  assert.equal(bob.socket.sent.some(item => item.type === 'relationship:blocked' && item.userId === 'alice'), true);
+  assert.equal(bob.socket.sent.some(item => item.type === 'typing' && item.userId === 'alice' && item.active === false), true);
+  assert.equal(hub.isConnected('alice'), true);
+  assert.equal(hub.isConnected('bob'), true);
+  assert.equal(carol.socket.readyState, 1);
+  hub.close();
+});
