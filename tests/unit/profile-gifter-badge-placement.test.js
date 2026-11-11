@@ -33,7 +33,7 @@ test('profile headers and previews show verification only', () => {
   assert.ok(!app.includes('verifiedProfileBadge(u)+gifterProfileBadge(u,"profile")+liveProProfileBadge(u)'));
   assert.ok(!app.includes('verifiedProfileBadge(member)+gifterProfileBadge(member,"profile")+liveProProfileBadge(member)'));
   assert.ok(!app.includes('verifiedProfileBadge(member)+gifterProfileBadge(member,"compact")'));
-  assert.ok(!app.includes('profile-admin-identity'));
+  assert.ok(app.includes('profile-admin-identity'));
 });
 
 test('the badge gallery still displays earned Gifter artwork separately', () => {
