@@ -437,3 +437,20 @@
 
 /* TEMPORARY: hide only the incorrect Gifters Level Up chart at the top of the progression page. Keep gifter status and all other content/data intact until the chart is fixed. */
 .gp-page .gp-hero-art{display:none!important}
+ 
+/* Show the member's earned TikTok-style level badge beside Gifter Status. */
+.gp-current-badge-row{align-items:center;gap:14px}
+.gp-current-badge-art{display:grid;place-items:center;flex:0 0 112px;width:112px;height:120px;min-width:0;overflow:visible}
+.gp-current-badge-art .gp-badge{width:104px;height:116px;min-width:104px}
+.gp-current-badge-art .gp-crest-stage{inset:0 0 12px}
+.gp-current-status-copy{min-width:0;width:auto;flex:1 1 auto}
+@media(max-width:650px){
+  .gp-current-badge-row{gap:9px}
+  .gp-current-badge-art{flex-basis:92px;width:92px;height:100px}
+  .gp-current-badge-art .gp-badge{width:90px;height:100px;min-width:90px}
+}
+@media(max-width:360px){
+  .gp-current-badge-row{gap:6px}
+  .gp-current-badge-art{flex-basis:82px;width:82px;height:92px}
+  .gp-current-badge-art .gp-badge{width:80px;height:90px;min-width:80px}
+}
