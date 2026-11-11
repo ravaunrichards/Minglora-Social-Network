@@ -7301,7 +7301,7 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
     }
   }
   if(p==='/assets/gifters-rewards.png'){
-    const assetFile=path.join(__dirname,'..','assets','Gifters Rewards.png');
+    const assetFile=path.join(__dirname,'..','assets','Gifters Badge Levels','Gifters Rewards.png');
     fs.readFile(assetFile,(error,data)=>{if(error)return json(res,404,{error:'Gifters rewards artwork not found.'});res.writeHead(200,{'Content-Type':'image/png','Cache-Control':'public, max-age=3600',...SECURITY_HEADERS});res.end(data);});
     return;
   }
