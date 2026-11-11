@@ -1973,7 +1973,7 @@ test('multilingual settings API rejects provider assertions and non-owner reads'
   });
   await handlePersonalAiBotsAdminApi(invalid);
   assert.equal(invalid.res.statusCode,400);
-  assert.equal(db.personalAiBotLanguageSettings.length,undefined);
+  assert.equal(db.personalAiBotLanguageSettings.length,0);
 
   const denied=makeContext({
     method:'GET',path:base,url:new URL('https://minglora.test'+base),
