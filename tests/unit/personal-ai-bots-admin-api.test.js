@@ -2031,7 +2031,7 @@ test('multilingual evaluation set API creates, submits and records human review 
     reviewerAttestation:true
   });
   assert.equal(reviewed.statusCode,200);
-  assert.equal(reviewed.payload.evaluationSet.status,'human_reviewed');
+  assert.equal(reviewed.payload.evaluationSet.status,'owner_review_recorded');
   assert.equal(reviewed.payload.evaluationSet.providerExecutionStatus,'not_run');
   assert.equal(reviewed.payload.evaluationSet.languageQualityStatus,'unverified');
 
