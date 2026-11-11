@@ -7,6 +7,7 @@ const OUTPUT_DIR = path.join(ROOT, "assets", "animations", "gifts");
 const MANIFEST_PATH = path.join(OUTPUT_DIR, "manifest.json");
 const REPORT_PATH = path.join(OUTPUT_DIR, "extraction-report.json");
 const MOTION_INDEX_PATH = path.join(OUTPUT_DIR, "catalog-motion-index.json");
+const PUBLIC_MOTION_INDEX_PATH = path.join(ROOT, "public", "assets", "animations", "gifts", "catalog-motion-index.json");
 const fail = message => { throw new Error("[gift-animation-validation] " + message); };
 const sha256 = value => crypto.createHash("sha256").update(value).digest("hex");
 
@@ -86,6 +87,8 @@ async function main() {
   // The runtime index is a strict join to the original active catalogue.
   // It must never substitute extracted screenshot crops for production artwork.
   const motionIndex = JSON.parse(await fs.readFile(MOTION_INDEX_PATH, "utf8"));
+  const publicMotionIndex = JSON.parse(await fs.readFile(PUBLIC_MOTION_INDEX_PATH, "utf8"));
+  if (JSON.stringify(publicMotionIndex) !== JSON.stringify(motionIndex)) fail("Served public motion index differs from the validated source index.");
   if (!Array.isArray(motionIndex.gifts)) fail("Canonical catalogue motion index has no gifts array.");
   if (report.catalog_motion_profiles !== motionIndex.gifts.length) fail("Motion index and extraction report totals differ.");
   const catalogCodes = new Set();
@@ -109,7 +112,8 @@ async function main() {
   process.stdout.write(
     "[gift-animation-validation] Verified " + manifest.gifts.length +
     " self-contained animated SVGs, matching WebP posters, reduced-motion support, " +
-    "and the visual-review gate (" + embeddedBytes + " embedded poster bytes).\\n"
+    "the visual-review gate (" + embeddedBytes + " embedded poster bytes), and " +
+    motionIndex.gifts.length + " canonical active catalogue motion mappings.\\n"
   );
 }
 
