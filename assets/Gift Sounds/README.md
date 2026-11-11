@@ -6,6 +6,9 @@
 - **Matching layout:** one slug-named folder per artwork item, with `sound.mp3` as the primary audio filename.
 - **Real source recordings:** **33** downloaded and integrity-checked into the source review pool.
 - **Mapped gift folders:** **101** matching Artwork folders now contain their own `sound.mp3` candidate.
+- **Active live-gift code mappings:** **71** exact active gift codes resolve to their matching recorded sound candidate.
+- **Gift sound preview:** real candidate MP3s can be auditioned with the Gifts Studio preview control.
+- **LIVE/send playback:** remains approval-gated; unapproved candidate recordings are silent in sent gifts and LIVE rooms.
 - **MP3 format validation:** passed; every source MP3 is decodable MP3, stereo, 44.1 kHz and 192 kbps.
 - **Human listening approval:** **NOT COMPLETED**.
 - **Production-ready gift sounds:** **0** until the 101 candidate clips are listened to, confirmed against the visible gift/animation and approved.
@@ -41,6 +44,10 @@ Gift folders are mapped by direct artwork subject or close event theme. Where mo
 ## 3D/spatial playback
 
 The MP3 assets retain stereo sound. They are intended to be played at the same time as the matching gift animation. Minglora's playback layer should apply real-time listener-relative positioning (pan/azimuth, distance attenuation, optional room reverb and Doppler only where the animation justifies it). These transforms should be applied at playback time rather than permanently baked into the source MP3, so the same natural recording remains correct for different listener positions and devices.
+
+## Runtime integration
+
+The existing Gifts Studio preview and animated gift presentation use `public/gift-effects.js`. The sound player resolves active gifts by their exact catalogue gift code through `gift-code-map.json`; it does not infer the sound from category alone. The current map covers 71 active gift codes. The service serves only the map and slug-specific `sound.mp3` paths through a restricted route. Unmapped gifts remain silent. Candidate audio can be auditioned in Gifts Studio, but normal send/LIVE playback requires `playbackApproved: true` for that exact mapping. Do not enable a candidate until it has been listened to and matched with the gift animation.
 
 ## Review and production gate
 
