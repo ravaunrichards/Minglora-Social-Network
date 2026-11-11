@@ -12,6 +12,7 @@ const INPUT_DIR = path.join(ROOT, "assets", "Gifts");
 const OUTPUT_DIR = path.join(ROOT, "assets", "animations", "gifts");
 const CATALOG_FILE = path.join(ROOT, "data", "minglora-gift-catalog.json");
 const ARTWORK_MANIFEST_FILE = path.join(ROOT, "assets", "Artwork", "manifest.json");
+const PUBLIC_MOTION_INDEX_FILE = path.join(ROOT, "public", "assets", "animations", "gifts", "catalog-motion-index.json");
 const CATEGORIES = new Set([
   "flowers","hearts","animals","vehicles","music","sports","food_drink",
   "fashion_beauty","luxury","celebrations","fantasy","nature","travel",
@@ -545,7 +546,10 @@ async function main(){
     source_directory:"assets/Gifts",artwork_reference_manifest:"assets/Artwork/manifest.json",
     authoritative_catalog:"data/minglora-gift-catalog.json",gifts:catalogMotionProfiles
   };
-  await fs.writeFile(path.join(OUTPUT_DIR,"catalog-motion-index.json"),JSON.stringify(motionIndex,null,2)+"\n","utf8");
+  const serializedMotionIndex=JSON.stringify(motionIndex,null,2)+"\n";
+  await fs.writeFile(path.join(OUTPUT_DIR,"catalog-motion-index.json"),serializedMotionIndex,"utf8");
+  await fs.mkdir(path.dirname(PUBLIC_MOTION_INDEX_FILE),{recursive:true});
+  await fs.writeFile(PUBLIC_MOTION_INDEX_FILE,serializedMotionIndex,"utf8");
   const report={
     screenshot_count:files.length,detected_occurrences:manifest.detected_occurrences,
     unique_gifts:gifts.length,category_counts:categoryCounts,
