@@ -26,7 +26,7 @@ test("owner platform overview inventories every active runtime collection exactl
   assert.ok(collectionBlock, "active runtime collection list exists");
   const active = [...collectionBlock[1].matchAll(/'([^']+)'/g)].map(match => match[1]).sort();
   const mapped = [...runtime.matchAll(/"key":\s*"([^"]+)"/g)].map(match => match[1]);
-  assert.equal(active.length, 79);
+  assert.equal(active.length, 80);
   assert.equal(mapped.length, active.length);
   assert.equal(new Set(mapped).size, mapped.length);
   assert.deepEqual(mapped.sort(), active);
