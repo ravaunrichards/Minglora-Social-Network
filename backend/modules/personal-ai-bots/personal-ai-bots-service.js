@@ -1548,8 +1548,8 @@ export function rollbackPersonalAiBotPersonaVersion(db, versionId, actorId, time
   const record=db.personalAiBotPersonaVersions.find(item=>item.id===versionId);
   if(!record)throw Object.assign(new Error('Persona version not found.'),{status:404});
   const bot=db.personalAiBots.find(item=>item.id===record.botId);
-  if(!bot||!bot.activePersonaVersionId||bot.activePersonaVersionId===record.id){
-    throw Object.assign(new Error('Choose a previously approved persona version to roll back to.'),{status:409});
+  if(!bot||!bot.activePersonaVersionId||bot.activePersonaVersionId===record.id||!record.activatedAt){
+    throw Object.assign(new Error('Rollback requires a persona version that was previously active.'),{status:409});
   }
   return activateApprovedPersonaVersion(db,record,actorId,timestamp,uid,'persona.version_rolled_back');
 }
