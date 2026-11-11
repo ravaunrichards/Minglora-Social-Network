@@ -105,7 +105,7 @@ export const PERSONAL_AI_BOT_HIGH_IMPACT_TASKS = Object.freeze([
 const COLLECTIONS = [
   'personalAiBotCategories','personalAiBots','personalAiBotTasks',
   'personalAiBotAudit','personalAiBotSettings','personalAiBotFollows',
-  'personalAiBotTeams','personalAiBotTeamMembers','personalAiBotTeamHandoffs','personalAiBotSchedules','personalAiBotPersonaVersions','personalAiBotLanguageSettings','personalAiBotBatches','personalAiBotDepartments','personalAiBotVacancies','personalAiBotApplications','personalAiBotAppointments','personalAiBotEmploymentHistory'
+  'personalAiBotTeams','personalAiBotTeamMembers','personalAiBotTeamHandoffs','personalAiBotSchedules','personalAiBotPersonaVersions','personalAiBotLanguageSettings','personalAiBotLanguageEvaluationSets','personalAiBotBatches','personalAiBotDepartments','personalAiBotVacancies','personalAiBotApplications','personalAiBotAppointments','personalAiBotEmploymentHistory'
 ];
 
 export function ensurePersonalAiBotCollections(db) {
@@ -1897,6 +1897,179 @@ export function updatePersonalAiBotLanguageSettings(db, botId, input, actorId, t
     'Saved multilingual configuration for one AI identity. Provider compatibility remains unverified and runtime translation remains disconnected.',
     timestamp,uid);
   return {botId,configuration,saved:true,updatedAt:timestamp};
+}
+
+
+function normalizePersonalAiBotLanguageEvaluationCases(cases, uid) {
+  if(!Array.isArray(cases)||cases.length<1||cases.length>100){
+    throw Object.assign(new Error('Provide between 1 and 100 synthetic language evaluation cases.'),{status:400});
+  }
+  return cases.map((item,index)=>{
+    if(!item||typeof item!=='object'||Array.isArray(item)||
+       Object.keys(item).some(key=>!['inputText','expectedOutput','category','reviewNotes'].includes(key))){
+      throw Object.assign(new Error('Evaluation case '+(index+1)+' contains unsupported fields.'),{status:400});
+    }
+    const inputText=String(item.inputText||'').trim();
+    const expectedOutput=String(item.expectedOutput||'').trim();
+    const category=String(item.category||'general').trim();
+    const reviewNotes=String(item.reviewNotes||'').trim().slice(0,500);
+    if(inputText.length<3||inputText.length>1800||expectedOutput.length<3||expectedOutput.length>1800){
+      throw Object.assign(new Error('Evaluation case text must be between 3 and 1,800 characters.'),{status:400});
+    }
+    if(category.length<2||category.length>60){
+      throw Object.assign(new Error('Evaluation case category must be between 2 and 60 characters.'),{status:400});
+    }
+    return {id:uid(),inputText,expectedOutput,category,reviewNotes};
+  });
+}
+
+function findOwnedPersonalAiBotLanguageEvaluationSet(db, botId, setId, actorId) {
+  const record=db.personalAiBotLanguageEvaluationSets.find(item=>
+    item.id===setId&&item.botId===botId&&item.ownerId===actorId
+  );
+  if(!record)throw Object.assign(new Error('Language evaluation set not found.'),{status:404});
+  return record;
+}
+
+export function listPersonalAiBotLanguageEvaluationSets(db, botId, actorId) {
+  getOwnedPersonalAiBotForLanguageSettings(db,botId,actorId);
+  return db.personalAiBotLanguageEvaluationSets
+    .filter(item=>item.botId===botId&&item.ownerId===actorId)
+    .slice()
+    .sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));
+}
+
+export function createPersonalAiBotLanguageEvaluationSet(db, botId, input, actorId, timestamp, uid) {
+  getOwnedPersonalAiBotForLanguageSettings(db,botId,actorId);
+  const language=getPersonalAiBotLanguageSettings(db,botId,actorId);
+  if(!language.saved){
+    throw Object.assign(new Error('Save multilingual settings before creating a language evaluation set.'),{status:409});
+  }
+  const languageCode=normalizePersonalAiBotLanguageCode(input?.languageCode,'Evaluation language');
+  if(!language.configuration.supportedLanguages.includes(languageCode)){
+    throw Object.assign(new Error('The evaluation language must be enabled in this bot’s supported language settings.'),{status:409});
+  }
+  const allowed=new Set(['languageCode','name','description','cases','syntheticDataAttested']);
+  if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).some(key=>!allowed.has(key))){
+    throw Object.assign(new Error('Language evaluation set contains unsupported fields.'),{status:400});
+  }
+  if(input.syntheticDataAttested!==true){
+    throw Object.assign(new Error('Confirm that all evaluation examples are synthetic and contain no private member data.'),{status:400});
+  }
+  const name=String(input.name||'').trim().slice(0,100);
+  const description=String(input.description||'').trim().slice(0,800);
+  if(name.length<3)throw Object.assign(new Error('Evaluation set name must contain at least 3 characters.'),{status:400});
+  const cases=normalizePersonalAiBotLanguageEvaluationCases(input.cases,uid);
+  const record={
+    id:uid(),botId,ownerId:actorId,languageCode,name,description,cases,
+    syntheticDataAttested:true,syntheticDataAttestedBy:actorId,syntheticDataAttestedAt:timestamp,
+    status:'draft',reviewStatus:'not_reviewed',reviewerRole:null,reviewEvidenceReference:null,
+    reviewedBy:null,reviewedAt:null,reviewNotes:'',
+    providerExecutionStatus:'not_run',languageQualityStatus:'unverified',
+    createdBy:actorId,createdAt:timestamp,updatedBy:actorId,updatedAt:timestamp
+  };
+  db.personalAiBotLanguageEvaluationSets.unshift(record);
+  if(db.personalAiBotLanguageEvaluationSets.length>2000)db.personalAiBotLanguageEvaluationSets.length=2000;
+  audit(db,actorId,'language.evaluation_set_created','language_evaluation_set',record.id,
+    'Created synthetic language evaluation set for '+languageCode+'. No provider or translation model was run.',
+    timestamp,uid);
+  return record;
+}
+
+export function updatePersonalAiBotLanguageEvaluationSet(db, botId, setId, input, actorId, timestamp, uid) {
+  getOwnedPersonalAiBotForLanguageSettings(db,botId,actorId);
+  const record=findOwnedPersonalAiBotLanguageEvaluationSet(db,botId,setId,actorId);
+  if(!['draft','changes_requested'].includes(record.status)){
+    throw Object.assign(new Error('Only draft or changes-requested evaluation sets can be edited.'),{status:409});
+  }
+  const allowed=new Set(['name','description','cases']);
+  if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).some(key=>!allowed.has(key))||!Object.keys(input).length){
+    throw Object.assign(new Error('Evaluation set updates contain unsupported or missing fields.'),{status:400});
+  }
+  if(Object.hasOwn(input,'name')){
+    const name=String(input.name||'').trim().slice(0,100);
+    if(name.length<3)throw Object.assign(new Error('Evaluation set name must contain at least 3 characters.'),{status:400});
+    record.name=name;
+  }
+  if(Object.hasOwn(input,'description'))record.description=String(input.description||'').trim().slice(0,800);
+  if(Object.hasOwn(input,'cases'))record.cases=normalizePersonalAiBotLanguageEvaluationCases(input.cases,uid);
+  record.status='draft';
+  record.reviewStatus='not_reviewed';
+  record.reviewedBy=null;
+  record.reviewedAt=null;
+  record.reviewEvidenceReference=null;
+  record.reviewerRole=null;
+  record.reviewNotes='';
+  record.providerExecutionStatus='not_run';
+  record.languageQualityStatus='unverified';
+  record.updatedBy=actorId;
+  record.updatedAt=timestamp;
+  audit(db,actorId,'language.evaluation_set_updated','language_evaluation_set',record.id,
+    'Updated synthetic evaluation set '+record.name+' and cleared previous review metadata.',
+    timestamp,uid);
+  return record;
+}
+
+export function submitPersonalAiBotLanguageEvaluationSet(db, botId, setId, actorId, timestamp, uid) {
+  getOwnedPersonalAiBotForLanguageSettings(db,botId,actorId);
+  const record=findOwnedPersonalAiBotLanguageEvaluationSet(db,botId,setId,actorId);
+  if(!['draft','changes_requested'].includes(record.status)){
+    throw Object.assign(new Error('Only draft evaluation sets can be submitted for human review.'),{status:409});
+  }
+  if(record.cases.length<5){
+    throw Object.assign(new Error('Add at least 5 synthetic cases before requesting human language review.'),{status:409});
+  }
+  if(record.syntheticDataAttested!==true||record.syntheticDataAttestedBy!==actorId){
+    throw Object.assign(new Error('A current owner synthetic-data privacy attestation is required.'),{status:409});
+  }
+  record.status='pending_human_review';
+  record.reviewStatus='pending';
+  record.updatedBy=actorId;
+  record.updatedAt=timestamp;
+  audit(db,actorId,'language.evaluation_set_submitted','language_evaluation_set',record.id,
+    'Submitted '+record.cases.length+' synthetic '+record.languageCode+' evaluation cases for human review. Provider execution remains disabled.',
+    timestamp,uid);
+  return record;
+}
+
+export function reviewPersonalAiBotLanguageEvaluationSet(db, botId, setId, input, actorId, timestamp, uid) {
+  getOwnedPersonalAiBotForLanguageSettings(db,botId,actorId);
+  const record=findOwnedPersonalAiBotLanguageEvaluationSet(db,botId,setId,actorId);
+  if(record.status!=='pending_human_review'){
+    throw Object.assign(new Error('Only an evaluation set pending human review can be reviewed.'),{status:409});
+  }
+  const allowed=new Set(['decision','reviewerRole','evidenceReference','reviewNotes','reviewerAttestation']);
+  if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).some(key=>!allowed.has(key))){
+    throw Object.assign(new Error('Language evaluation review contains unsupported fields.'),{status:400});
+  }
+  const decision=String(input.decision||'');
+  const reviewerRole=String(input.reviewerRole||'');
+  const evidenceReference=String(input.evidenceReference||'').trim().slice(0,500);
+  const reviewNotes=String(input.reviewNotes||'').trim().slice(0,1200);
+  if(!['approve','changes_requested','reject'].includes(decision)){
+    throw Object.assign(new Error('Choose approve, changes requested or reject.'),{status:400});
+  }
+  if(!['native_speaker','qualified_language_reviewer','community_language_reviewer'].includes(reviewerRole)){
+    throw Object.assign(new Error('Choose a supported human language-reviewer role.'),{status:400});
+  }
+  if(input.reviewerAttestation!==true||evidenceReference.length<5){
+    throw Object.assign(new Error('Reviewer attestation and a non-empty evidence reference are required.'),{status:400});
+  }
+  record.status=decision==='approve'?'human_reviewed':decision;
+  record.reviewStatus=decision;
+  record.reviewerRole=reviewerRole;
+  record.reviewEvidenceReference=evidenceReference;
+  record.reviewedBy=actorId;
+  record.reviewedAt=timestamp;
+  record.reviewNotes=reviewNotes;
+  record.providerExecutionStatus='not_run';
+  record.languageQualityStatus='unverified';
+  record.updatedBy=actorId;
+  record.updatedAt=timestamp;
+  audit(db,actorId,'language.evaluation_set_reviewed','language_evaluation_set',record.id,
+    'Recorded '+decision+' human review for '+record.languageCode+'. This does not certify provider or translation-model compatibility.',
+    timestamp,uid);
+  return record;
 }
 
 export function getPersonalAiBotOverview(db) {
