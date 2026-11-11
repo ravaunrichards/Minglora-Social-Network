@@ -75,6 +75,19 @@ test('owner creation persists a normalized identity record with separate name fi
   assert.equal(saves,1);
 });
 
+test('owner overview redacts provider credential references from initial dashboard data',async()=>{
+  const context=makeContext({
+    listAiProviderAssignments:async()=>[
+      {id:'assignment-overview',providerName:'Example Provider',credentialSecretReference:'env:MINGLORA_AI_PROVIDER_PRIVATE'}
+    ]
+  });
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,200);
+  assert.equal(context.res.payload.providerAssignments[0].credentialConfigured,true);
+  assert.ok(!Object.hasOwn(context.res.payload.providerAssignments[0],'credentialSecretReference'));
+  assert.doesNotMatch(JSON.stringify(context.res.payload),'env:MINGLORA_AI_PROVIDER_PRIVATE');
+});
+
 test('provider assignment listing redacts server-side credential references',async()=>{
   const context=makeContext({
     path:'/api/admin/personal-ai-bots/providers',
@@ -1555,5 +1568,22 @@ test('candidate application routes are owner-only and reject independent AI iden
   await handlePersonalAiBotsAdminApi(attempt);
   assert.equal(attempt.res.statusCode,409);
   assert.equal(attempt.db.personalAiBotApplications.length,0);
+});
+
+
+test('provider assignment creation never returns the server-side credential reference',async()=>{
+  const botId='00000000-0000-4000-8000-000000000401';
+  const context=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/providers',
+    input:{identityId:botId,providerName:'Example Provider',providerIdentifier:'example.provider',providerAccountReference:'default',credentialSecretReference:'env:MINGLORA_AI_PROVIDER_PRIVATE',modelName:'Example Model',modelIdentifier:'example-model'},
+    db:{personalAiBots:[{id:botId,displayName:'AI Assistant'}]},
+    persistAiIdentities:async()=>{},
+    persistAiProviderAssignment:async assignment=>({...assignment,id:'assignment-created'})
+  });
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,201);
+  assert.equal(context.res.payload.assignment.credentialConfigured,true);
+  assert.ok(!Object.hasOwn(context.res.payload.assignment,'credentialSecretReference'));
+  assert.doesNotMatch(JSON.stringify(context.res.payload),'env:MINGLORA_AI_PROVIDER_PRIVATE');
 });
 
