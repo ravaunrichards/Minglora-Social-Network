@@ -1102,7 +1102,9 @@ test('team handoff rejects private context and revalidates membership, source ta
   const due=createPersonalAiBotTeamHandoff(db,team.id,{...payload,deadlineAt:'2026-11-12T10:00:00.000Z'},actor,stamp,uid);
   assert.throws(()=>reviewPersonalAiBotTeamHandoff(db,team.id,due.id,{action:'accept'},actor,'2026-11-13T10:00:00.000Z',uid),/deadline has expired/);
 
-  const stale=createPersonalAiBotTeamHandoff(db,team.id,{...payload,deadlineAt:null,summary:'Second handoff'},actor,stamp,uid);
+  const secondTaskId=uid();
+  db.personalAiBotTasks.push({id:secondTaskId,botId:sender.id,status:'awaiting_administrator_approval',createdAt:stamp});
+  const stale=createPersonalAiBotTeamHandoff(db,team.id,{...payload,sourceTaskId:secondTaskId,deadlineAt:null,summary:'Second handoff'},actor,stamp,uid);
   const source=db.personalAiBotTasks.find(item=>item.id===taskId);
   source.status='cancelled';
   assert.throws(()=>reviewPersonalAiBotTeamHandoff(db,team.id,stale.id,{action:'accept'},actor,stamp,uid),/source task was cancelled/);
