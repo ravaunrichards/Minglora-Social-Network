@@ -2036,7 +2036,7 @@ async function refreshLiveViewerRoster(session){
       const member=item.user||{},name=String(member.name||member.username||'Minglora member');
       const badge=item.gifterBadge,fan=item.fanClubMembership;
       const initials=name.trim().split(/\s+/).slice(0,2).map(part=>part[0]||'').join('').toUpperCase()||'M';
-      const priority=item.isGifter&&badge?.level?liveGifterBadgeMarkup({ ...member, gifterBadge: badge },"compact"):"";
+      const priority=item.isGifter&&badge?.level?"<span class='live-viewer-gifter-badge'>"+liveGifterBadgeMarkup({ ...member, gifterBadge: badge },"compact")+"</span>":"";
       const fanBadge=fan?.status==='active'?"<span class='live-viewer-fan-points'>♥ "+Number(fan.points||0).toLocaleString()+" Fan Pts</span>":"";
       const roleLabel=item.role==='guest'?'Guest speaker':'Viewer';
       return "<div class='live-viewer-row "+(item.isGifter?'is-priority-gifter':'')+"'><span class='live-viewer-avatar' aria-hidden='true'>"+esc(initials)+"</span><span class='live-viewer-identity'><small class='live-viewer-handle'>@"+esc(member.username||'member')+"</small><strong>"+esc(name)+"</strong>"+priority+"<small>"+roleLabel+"</small>"+fanBadge+"</span><button type='button' class='text-button' data-live-viewer-profile='"+esc(member.id||'')+"'>Profile</button></div>";

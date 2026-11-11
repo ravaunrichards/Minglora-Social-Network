@@ -60,8 +60,8 @@ test('profile badge artwork keeps responsive sizing and original proportions', (
 });
 
 test('app asset and service-worker cache are versioned together', () => {
-  const appAsset = '/app.js?v=20261111-block-relationships-1';
+  const appAsset = '/app.js?v=20261111-live-gifter-name-badge-1';
   assert.ok(html.includes(appAsset));
   assert.ok(worker.includes(appAsset));
-  assert.ok(worker.includes('minglora-shell-v277-self-updating-1'));
+  assert.ok(worker.includes('minglora-shell-v278-self-updating-1'));
 });

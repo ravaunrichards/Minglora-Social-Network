@@ -36,7 +36,7 @@ test("LIVE comments show username, then display name, then the individual gifter
 
 test("LIVE viewer, guest-speaker, room-directory and gifter-leaderboard identities keep username and display name separate", () => {
   assert.match(app, /live-viewer-handle/);
-  assert.match(app, /liveGifterBadgeMarkup\(\{ \.\.\.member, gifterBadge: badge \}, "compact"\)/);
+  assert.match(app, /liveGifterBadgeMarkup\(\{ \.\.\.member, gifterBadge: badge \},"compact"\)/);
   assert.match(app, /live-speaker-username/);
   assert.match(app, /live-speaker-display-name/);
   assert.match(app, /live-room-host-username/);
