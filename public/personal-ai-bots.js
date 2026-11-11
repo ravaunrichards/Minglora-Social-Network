@@ -365,6 +365,13 @@
       ?'<button type="button" class="pab-btn secondary pab-creator-edit" data-draft="'+esc(draft.id)+'">Edit draft</button><button type="button" class="pab-btn secondary pab-creator-submit" data-draft="'+esc(draft.id)+'">Submit for review</button>'
       :'';
     const archiveAction=draft.status==='archived'?'':'<button type="button" class="pab-btn secondary pab-creator-review" data-draft="'+esc(draft.id)+'" data-decision="archive">Archive</button>';
+    const feedHandoffAction=draft.status==='approved_for_human_handoff'&&draft.contentFormat==='feed_post'&&draft.destination==='feed'
+      ?'<button type="button" class="pab-btn secondary pab-creator-handoff" data-draft="'+esc(draft.id)+'">Open in Minglora composer</button>'
+      :'';
+    const unsupportedHandoffNote=draft.status==='approved_for_human_handoff'&&!feedHandoffAction
+      ?'<small>Approved. Existing composer handoff is currently available for Feed posts only.</small>'
+      :'';
+
     const previousVersions=Array.isArray(draft.versionHistory)?draft.versionHistory:[];
     const reviewEvents=(state?.audit||[]).filter(event=>event.targetType==='creator_draft'&&event.targetId===draft.id&&String(event.action||'').startsWith('creator_draft.'));
     const versionRows=previousVersions.length?previousVersions.map(version=>
@@ -374,7 +381,7 @@
       '<div class="pab-audit-row"><strong>'+esc(event.action||'Review event')+'</strong><span>'+esc(date(event.createdAt))+'</span><p>'+esc(event.summary||'No audit summary available')+'</p></div>'
     ).join(''):'<div class="pab-empty">No Creator Studio review event is present in the current audit window.</div>';
     const history='<details class="pab-creator-history"><summary>Version and review history · '+previousVersions.length+' prior version(s), '+reviewEvents.length+' audit event(s)</summary><div class="pab-audit"><h4>Previous content versions</h4>'+versionRows+'<h4>Review and audit events</h4>'+reviewRows+'</div><small class="pab-notice">Content history retains the latest 10 edits. Audit events shown are limited to the Admin Centre audit window.</small></details>';
-    return '<div class="pab-audit-row"><strong>'+esc(draft.title)+' · '+esc(draft.status)+'</strong><span>'+esc(bot?.displayName||'AI identity unavailable')+' · '+esc(draft.contentFormat)+' → '+esc(draft.destination)+' · v'+esc(draft.version)+' · '+esc(date(draft.updatedAt))+'</span><div class="pab-actions">'+editAction+reviewActions+archiveAction+'</div><small>'+esc(draft.reviewNotes||'No review notes')+' · AI disclosure required · '+(draft.rightsAttested?'rights owner-attested':'rights not attested')+'</small>'+history+'</div>';
+    return '<div class="pab-audit-row"><strong>'+esc(draft.title)+' · '+esc(draft.status)+'</strong><span>'+esc(bot?.displayName||'AI identity unavailable')+' · '+esc(draft.contentFormat)+' → '+esc(draft.destination)+' · v'+esc(draft.version)+' · '+esc(date(draft.updatedAt))+'</span><div class="pab-actions">'+editAction+reviewActions+archiveAction+feedHandoffAction+'</div>'+unsupportedHandoffNote+'<small>'+esc(draft.reviewNotes||'No review notes')+' · AI disclosure required · '+(draft.rightsAttested?'rights owner-attested':'rights not attested')+'</small>'+history+'</div>';
   }
   function roadmapCard(title,description,status){return '<article class="pab-roadmap-card"><strong>'+esc(title)+'</strong><p>'+esc(description)+'</p><span class="pab-tag">'+esc(status)+'</span></article>';}
 
@@ -418,6 +425,7 @@
     document.querySelectorAll('.pab-creator-edit').forEach(node=>node.addEventListener('click',()=>editCreatorDraft(node.dataset.draft)));
     document.querySelectorAll('.pab-creator-submit').forEach(node=>node.addEventListener('click',()=>actOnCreatorDraft(node.dataset.draft,'submit')));
     document.querySelectorAll('.pab-creator-review').forEach(node=>node.addEventListener('click',()=>actOnCreatorDraft(node.dataset.draft,'review',node.dataset.decision)));
+    document.querySelectorAll('.pab-creator-handoff').forEach(node=>node.addEventListener('click',()=>handoffCreatorDraft(node.dataset.draft)));
 
 
     document.querySelectorAll('.pab-team-save').forEach(node=>node.addEventListener('click',()=>saveTeam(node.dataset.team)));
@@ -1492,6 +1500,52 @@
       return result;
     }catch(error){notice('pab-creator-status',error.message||'Could not save Creator Studio draft.','error');}
   }
+  function handoffCreatorDraft(id){
+    const draft=(state?.creatorDrafts||[]).find(item=>item.id===id);
+    if(!draft||draft.status!=='approved_for_human_handoff'){
+      notice('pab-creator-status','Only owner-approved drafts can be handed to the composer.','error');return;
+    }
+    if(draft.contentFormat!=='feed_post'||draft.destination!=='feed'){
+      notice('pab-creator-status','The existing composer handoff currently supports Feed posts only.','error');return;
+    }
+    const bot=(state?.bots||[]).find(item=>item.id===draft.botId);
+    if(!bot){notice('pab-creator-status','The linked AI identity is unavailable.','error');return;}
+    const username=String(bot.username||'ai_identity').replace(/^@/,'');
+    const attribution='AI-assisted content draft from '+String(bot.displayName||'Minglora AI identity')+' (@'+username+').';
+    const text=[attribution,String(draft.caption||'').trim(),String(draft.body||'').trim()].filter(Boolean).join('\n\n');
+    if(text.length>5000){
+      notice('pab-creator-status','This draft exceeds the existing 5,000-character Feed composer limit. Shorten and save the draft first.','error');return;
+    }
+    if(!window.confirm('Open this approved AI draft in the existing Minglora Feed composer as your signed-in member account? The AI attribution will be included in the text. No post is published until you review and press Share post.'))return;
+    let target=null,sent=false;
+    const cleanup=()=>window.removeEventListener('message',onMessage);
+    const onMessage=event=>{
+      if(event.origin!==window.location.origin||!target||event.source!==target)return;
+      if(event.data?.type==='MINGLORA_CREATOR_DRAFT_READY'&&!sent){
+        sent=true;
+        target.postMessage({type:'MINGLORA_CREATOR_DRAFT_HANDOFF',payload:{
+          draftTitle:String(draft.title||'').slice(0,120),contentFormat:draft.contentFormat,destination:draft.destination,
+          identityName:String(bot.displayName||'Minglora AI identity').slice(0,80),identityUsername:username.slice(0,40),
+          caption:String(draft.caption||''),body:String(draft.body||''),assetReferenceCount:Array.isArray(draft.assetReferences)?draft.assetReferences.length:0
+        }},window.location.origin);
+      }else if(event.data?.type==='MINGLORA_CREATOR_DRAFT_RECEIVED'){
+        notice('pab-creator-status','Draft transferred to the Minglora tab. Sign in there if requested; the composer will open after sign-in. Nothing has been published.','success');
+      }else if(event.data?.type==='MINGLORA_CREATOR_DRAFT_APPLIED'){
+        cleanup();
+        notice('pab-creator-status','Draft opened in the existing Minglora composer as your signed-in account. Review it and press Share post yourself.','success');
+      }else if(event.data?.type==='MINGLORA_CREATOR_DRAFT_REJECTED'){
+        cleanup();
+        notice('pab-creator-status',event.data.reason||'Minglora could not accept this draft handoff.','error');
+      }
+    };
+    window.addEventListener('message',onMessage);
+    target=window.open('/','_blank');
+    if(!target){
+      cleanup();
+      notice('pab-creator-status','The browser blocked the composer tab. Allow pop-ups for Minglora and try again.','error');
+    }
+  }
+
   async function actOnCreatorDraft(id,action,decision=''){
     const url=API+'/creator-studio/drafts/'+encodeURIComponent(id)+'/'+(action==='submit'?'submit':'review');
     const payload=action==='submit'?{}:{decision,reviewNotes:window.prompt('Optional review notes (max 1,200 characters):')||''};
