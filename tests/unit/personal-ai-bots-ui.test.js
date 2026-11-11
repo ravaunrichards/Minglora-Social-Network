@@ -7,7 +7,7 @@ const read=path=>readFile(new URL(path,root),'utf8');
 
 test('Personal AI Bots page loads the dedicated responsive controller and styles',async()=>{
   const html=await read('public/personal-ai-bots.html');
-  assert.match(html,/personal-ai-bots\.js\?v=20261111-personal-ai-bots-24/);
+  assert.match(html,/personal-ai-bots\.js\?v=20261111-personal-ai-bots-26/);
   assert.match(html,/personal-ai-bots\.js/);
   assert.match(html,/id="pab-root"/);
   assert.match(html,/noindex,nofollow/);
@@ -611,8 +611,8 @@ test('approved Creator Studio Feed and Story drafts transfer to existing compose
   assert.doesNotMatch(receiver,/api\(['"]\/posts/);
   const composer=app.slice(app.indexOf('function openComposer(options={})'),app.indexOf('function applyPendingCreatorDraftHandoff'));
   assert.match(composer,/api\('\/posts'/);
-  assert.match(index,/app\.js\?v=20261111-creator-studio-composer-handoff-1/);
-  assert.match(index,/styles\.css\?v=20261111-creator-studio-composer-handoff-1/);
-  assert.match(worker,/minglora-shell-v256-creator-studio-composer-handoff-1/);
+  assert.match(index,/app\.js\?v=20261111-creator-studio-story-handoff-1/);
+  assert.match(index,/styles\.css\?v=20261111-creator-studio-story-handoff-1/);
+  assert.match(worker,/minglora-shell-v257-creator-studio-story-handoff-1/);
   assert.match(styles,/creator-ai-handoff-notice/);
 });
