@@ -50,6 +50,9 @@ test('admin UI exposes the complete 15-category starter set and all five autonom
 test('dashboard contains global, category, individual, bulk and emergency controls',async()=>{
   const ui=await read('public/personal-ai-bots.js');
   for(const phrase of ['Master network switch','Category manager','Create 15 starter bots','Bot directory','Apply to selected bots','Emergency shutdown','Bot Teams','Personality','Activity schedule and daily limits']) assert.ok(ui.includes(phrase),phrase);
+  assert.match(ui,/pause enabled bots and teams, cancel open tasks and cancel open team handoffs/);
+  assert.match(ui,/result\.pausedTeams\|\|0\).*team\(s\) paused/);
+  assert.match(ui,/result\.cancelledHandoffs\|\|0\).*team handoff\(s\) cancelled/);
 });
 
 test('central Following Manager supports selected-bot batches with supervised approval',async()=>{
