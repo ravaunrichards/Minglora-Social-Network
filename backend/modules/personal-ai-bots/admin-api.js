@@ -169,6 +169,7 @@ import {
   createPersonalAiBot,
   createPersonalAiBotStarterSet,
   updatePersonalAiBot,
+  previewPersonalAiBotSchedule,
   createPersonalAiBotCategory,
   queuePersonalAiBotInstruction,
   queuePersonalAiBotFollowBatch,
@@ -757,6 +758,28 @@ export async function handlePersonalAiBotsAdminApi(context) {
       await persistCanonicalIdentities(result.bots,persistAiIdentities);
       await saveStore();
       return (json(res,200,{ok:true,...result}),true);
+    }
+    const schedulePreviewMatch=path.match(/^\\/api\\/admin\\/personal-ai-bots\\/bots\\/([0-9a-f-]{36})\\/schedule-preview$/i);
+    if(schedulePreviewMatch&&method==='GET'){
+      const bot=db.personalAiBots.find(item=>item.id===schedulePreviewMatch[1]);
+      if(!bot)return (json(res,404,{error:'Bot not found.'}),true);
+      const days=Number(url.searchParams.get('days')||14);
+      const from=url.searchParams.get('from')||stamp;
+      const preview=previewPersonalAiBotSchedule(bot.activitySchedule||{
+        timezone:'America/Jamaica',daysOfWeek:[1,2,3,4,5,6,7],
+        startTime:'00:00',endTime:'23:59',maxTasksPerDay:0
+      },{from,days});
+      const network=db.personalAiBotSettings.find(item=>item.id==='global');
+      return (json(res,200,{
+        ok:true,botId:bot.id,botStatus:bot.status,preview,
+        configurationGates:{
+          botEnabled:bot.status==='enabled',
+          globalNetworkEnabled:network?.enabled===true,
+          dailyTaskLimitConfigured:preview.dailyTaskLimit>0,
+          schedulerConnected:false,
+          dispatchEnabled:false
+        }
+      }),true);
     }
     const botMatch=path.match(/^\/api\/admin\/personal-ai-bots\/bots\/([0-9a-f-]{36})$/i);
     if(botMatch&&method==='PATCH'){
