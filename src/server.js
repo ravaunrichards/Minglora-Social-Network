@@ -7518,6 +7518,37 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
       return json(res, status, { error: e.status ? e.message : 'Internal server error.' });
     }
   }
+  // Serve only the gift sound map and slug-specific MP3s from the repository asset directory.
+  // This is intentionally narrower than the public static-file handler.
+  let giftSoundRelativePath = '';
+  try {
+    const decodedGiftSoundPath = decodeURIComponent(p);
+    const giftSoundPrefix = '/assets/Gift Sounds/';
+    if (decodedGiftSoundPath.startsWith(giftSoundPrefix)) {
+      giftSoundRelativePath = decodedGiftSoundPath.slice(giftSoundPrefix.length);
+    }
+  } catch {
+    return json(res, 400, { error: 'Invalid gift sound asset path.' });
+  }
+  if (giftSoundRelativePath === 'gift-code-map.json' ||
+      /^[a-z0-9-]+\\/sound\\.mp3$/.test(giftSoundRelativePath)) {
+    const giftSoundRoot = path.resolve(__dirname, '..', 'assets', 'Gift Sounds');
+    const giftSoundFile = path.resolve(giftSoundRoot, giftSoundRelativePath);
+    if (!giftSoundFile.startsWith(giftSoundRoot + path.sep)) {
+      return json(res, 403, { error: 'Forbidden gift sound asset path.' });
+    }
+    const extension = path.extname(giftSoundFile).toLowerCase();
+    fs.readFile(giftSoundFile, (error, data) => {
+      if (error) return json(res, 404, { error: 'Gift sound asset not found.' });
+      res.writeHead(200, {
+        'Content-Type': extension === '.json' ? 'application/json; charset=utf-8' : 'audio/mpeg',
+        'Cache-Control': 'public, max-age=86400',
+        ...SECURITY_HEADERS
+      });
+      res.end(data);
+    });
+    return;
+  }
   if(p==='/assets/gifters-rewards.png'){
     const assetFile=path.join(__dirname,'..','assets','Gifters Badge Levels','Gifters Rewards.png');
     fs.readFile(assetFile,(error,data)=>{if(error)return json(res,404,{error:'Gifters rewards artwork not found.'});res.writeHead(200,{'Content-Type':'image/png','Cache-Control':'public, max-age=3600',...SECURITY_HEADERS});res.end(data);});
