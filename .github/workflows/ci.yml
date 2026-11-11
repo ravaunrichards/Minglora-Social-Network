@@ -91,6 +91,7 @@ jobs:
           node --check public/gift-effects.js
           node --check scripts/generate-minglora-gifts.mjs
           node --check scripts/generate-minglora-sound-library.mjs
+          node --check scripts/generate-minglora-gift-animations.mjs
           node --check public/sound-studio-settings.js
           node --check backend/modules/sounds/notification-studio.js
           node --check public/auth-login.js
@@ -133,6 +134,8 @@ jobs:
         run: npm run build:gifts
       - name: Generate Minglora Sound Studio audio pack
         run: npm run build:sounds
+      - name: Generate individual animations from original gift Artwork
+        run: npm run build:gift-animations
       - name: Run automated tests
         run: npm test
 
