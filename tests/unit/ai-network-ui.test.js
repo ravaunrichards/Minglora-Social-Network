@@ -54,7 +54,7 @@ test('AI Network workspace exposes all ten recommendations and true measured/emp
   ]) assert.ok(ui.includes(label), label);
   assert.ok(ui.includes('No AI bots created yet'));
   assert.ok(ui.includes('recorded runs only'));
-  assert.ok(ui.includes('execution is disabled'));
+  assert.ok(ui.includes('Disabled until provider adapter is verified'));
   assert.ok(ui.includes('AI BOT'));
   assert.ok(ui.includes('Emergency pause all AI work'));
   assert.ok(css.includes('.ai-network-page'));
