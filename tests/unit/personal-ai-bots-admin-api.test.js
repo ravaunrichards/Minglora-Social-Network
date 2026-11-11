@@ -1651,3 +1651,87 @@ test('owner schedule preview rejects out-of-range preview horizons',async()=>{
   assert.equal(context.res.statusCode,400);
   assert.match(context.res.payload.error,/between 1 and 60/);
 });
+
+
+const validPersonaApiConfiguration={
+  purpose:'Assist Minglora members with safe platform navigation.',
+  role:'Member support assistant',
+  communicationStyle:'Clear, respectful and concise.',
+  tone:'Friendly and professional',
+  responseLength:'balanced',
+  expertise:['Minglora navigation'],
+  languagePreferences:['English'],
+  audience:'Minglora members',
+  boundaries:'Never request passwords or authentication codes. Escalate account access issues to a human.',
+  prohibitedBehaviors:'Never impersonate people, send messages, publish posts or change member account settings.',
+  escalationInstructions:'Refer payment, identity and safety issues to the authorized human support team.',
+  traits:{formality:50,warmth:70,humor:20,assertiveness:35,detail:60,creativity:40,initiative:20,caution:90}
+};
+
+test('Persona Laboratory API creates, evaluates, approves and activates a version under owner control',async()=>{
+  const botId='00000000-0000-4000-8000-000000000002';
+  const db={personalAiBots:[{
+    id:botId,displayName:'Persona API Bot',status:'disabled',enabled:false,
+    aiLabel:'AI Bot',aiDisclosureVisible:true,allowedAutonomousActions:[]
+  }]};
+  let saves=0;
+  const post=async(path,input)=>{
+    const context=makeContext({
+      method:'POST',path,
+      url:new URL('https://minglora.test'+path),
+      input:input||{},db,saveStore:async()=>{saves++;}
+    });
+    await handlePersonalAiBotsAdminApi(context);
+    return context.res;
+  };
+
+  const created=await post('/api/admin/personal-ai-bots/personas',{
+    botId,configuration:validPersonaApiConfiguration
+  });
+  assert.equal(created.statusCode,201);
+  const versionId=created.payload.version.id;
+  assert.equal(created.payload.version.version,1);
+  assert.equal(created.payload.version.status,'draft');
+
+  const evaluated=await post('/api/admin/personal-ai-bots/personas/'+versionId+'/evaluate');
+  assert.equal(evaluated.statusCode,200);
+  assert.equal(evaluated.payload.evaluation.status,'pass');
+  assert.match(evaluated.payload.evaluation.limitations,/No model inference/);
+
+  const approved=await post('/api/admin/personal-ai-bots/personas/'+versionId+'/approve');
+  assert.equal(approved.statusCode,200);
+  assert.equal(approved.payload.version.status,'approved');
+
+  const activated=await post('/api/admin/personal-ai-bots/personas/'+versionId+'/activate');
+  assert.equal(activated.statusCode,200);
+  assert.equal(activated.payload.version.status,'active');
+  assert.equal(db.personalAiBots[0].activePersonaVersionId,versionId);
+  assert.equal(db.personalAiBots[0].status,'disabled');
+  assert.equal(db.personalAiBots[0].enabled,false);
+  assert.deepEqual(db.personalAiBots[0].allowedAutonomousActions,[]);
+  assert.equal(db.personalAiBots[0].aiDisclosureVisible,true);
+  assert.equal(saves,4);
+});
+
+test('Persona Laboratory API rejects unsupported permission fields and non-owner requests',async()=>{
+  const botId='00000000-0000-4000-8000-000000000003';
+  const db={personalAiBots:[{id:botId,status:'disabled'}]};
+  const invalid=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/personas',
+    input:{botId,configuration:{...validPersonaApiConfiguration,tools:['send_message']}},
+    db
+  });
+  await handlePersonalAiBotsAdminApi(invalid);
+  assert.equal(invalid.res.statusCode,400);
+  assert.match(invalid.res.payload.error,/unsupported fields/);
+  assert.deepEqual(db.personalAiBotPersonaVersions,[]);
+
+  const denied=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/personas',
+    input:{botId,configuration:validPersonaApiConfiguration},
+    isOwnerAdmin:false,db
+  });
+  await handlePersonalAiBotsAdminApi(denied);
+  assert.equal(denied.res.statusCode,403);
+  assert.deepEqual(db.personalAiBotPersonaVersions,[]);
+});
