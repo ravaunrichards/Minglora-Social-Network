@@ -16,7 +16,11 @@ const [app, html, serviceWorker, adminCentre, badgeScript] = await Promise.all([
 test('verified profiles show only the blue check beside the username', () => {
   assert.ok(app.includes("profile-username-line\">@'+esc(u.username)+' '+verifiedProfileBadge(u)+'</p>"));
   assert.ok(!app.includes('verifiedProfileBadge(u)+gifterProfileBadge(u,"profile")+liveProProfileBadge(u)'));
-  assert.doesNotMatch(app, /profile-admin-identity/);
+  assert.ok(app.includes("+(isAdminProfile?'<div class=\"profile-admin-identity\" aria-label=\"Administrator identity\""));
+  assert.ok(app.includes('<small>Owner</small>'));
+  assert.ok(app.includes('<small>Protected</small>'));
+  assert.ok(app.includes('<small>Admin</small>'));
+  assert.match(app,/const isAdminProfile=Boolean\(isMe&&/);
 });
 
 test('profile previews and friend cards omit all non-verification badges', () => {
@@ -26,7 +30,7 @@ test('profile previews and friend cards omit all non-verification badges', () =>
   assert.ok(!app.includes('verifiedProfileBadge(member)+gifterProfileBadge(member,"profile")+liveProProfileBadge(member)'));
   assert.ok(!app.includes('verifiedProfileBadge(member)+gifterProfileBadge(member,"compact")'));
   assert.ok(badgeScript.includes("'.profile-live-pro-badge'"));
-  assert.ok(badgeScript.includes("'.profile-admin-identity'"));
+  assert.ok(!badgeScript.includes("'.profile-admin-identity'"));
 });
 
 test('the complete badge gallery remains available separately', () => {
@@ -46,5 +50,5 @@ test('the updated app asset and service-worker cache are versioned together', ()
   const cacheName=serviceWorker.match(/CACHE_NAME='([^']+)'/)?.[1]||'';
   assert.equal(appAsset,'app.js?v=20261111-profile-verification-only-1');
   assert.ok(serviceWorker.includes('/'+appAsset));
-  assert.equal(cacheName,'minglora-shell-v275-self-updating-1');
+  assert.equal(cacheName,'minglora-shell-v276-self-updating-1');
 });

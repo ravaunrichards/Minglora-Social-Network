@@ -33,7 +33,7 @@ test('profile headers and previews show verification only', () => {
   assert.ok(!app.includes('verifiedProfileBadge(u)+gifterProfileBadge(u,"profile")+liveProProfileBadge(u)'));
   assert.ok(!app.includes('verifiedProfileBadge(member)+gifterProfileBadge(member,"profile")+liveProProfileBadge(member)'));
   assert.ok(!app.includes('verifiedProfileBadge(member)+gifterProfileBadge(member,"compact")'));
-  assert.ok(!app.includes('profile-admin-identity'));
+  assert.ok(app.includes('profile-admin-identity'));
 });
 
 test('the badge gallery still displays earned Gifter artwork separately', () => {
@@ -63,5 +63,5 @@ test('app asset and service-worker cache are versioned together', () => {
   const appAsset = '/app.js?v=20261111-profile-verification-only-1';
   assert.ok(html.includes(appAsset));
   assert.ok(worker.includes(appAsset));
-  assert.ok(worker.includes('minglora-shell-v275-self-updating-1'));
+  assert.ok(worker.includes('minglora-shell-v276-self-updating-1'));
 });
