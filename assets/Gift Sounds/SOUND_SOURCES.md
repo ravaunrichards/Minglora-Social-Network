@@ -1,32 +1,37 @@
 # Minglora Gift Sound Sources
 
-This source register collects real recordings and sound effects from openly licensed sources for review and later ingestion into the Artwork-aligned gift-audio library.
+This source register collects real recordings and recorded sound effects for later use in the Artwork-aligned gift-audio library.
 
 ## Source pools
 
 ### Published CC0 field recordings
-The Ambient Sounds by Leminno public library documents seven third-party CC0 recordings with creator, original source page, release URL, sample rate, duration, byte count and SHA-256. The source README distinguishes these real field recordings from its separately generated procedural sound-design material. **Only the seven third-party recording entries are listed here; procedural material is excluded.**
+The Ambient Sounds by Leminno public library documents **7 third-party CC0 recordings** with creator, original source page, immutable release URL, sample rate, duration, byte count and SHA-256. Its README distinguishes these recordings from separately generated procedural sound-design assets. **Only the 7 genuine third-party field recordings are in this catalogue; procedural audio is excluded.**
 
 ### CC0 recorded effects
-The sound-cc0 repository describes its files as real sound effects dedicated to CC0 1.0/public domain and provides a per-file CSV. Candidate types include bell, cracker/pop, metal rack, steel pan, switch click and laughter. Listen and select the right clip before assigning a gift.
+The `code4fukui/sound-cc0` repository declares its sound files public-domain/CC0 and lists the individual recordings in its CSV. **9 file records** are catalogued: bell, cracker/pop, metal rack, steel pan, switch click and laughter. File byte counts and Git blob hashes are recorded in `source-catalog.json`.
 
 ### Freesound CC0 candidates
-Several source pages explicitly display CC0 and describe genuine recordings (lion roar, firework, applause, ocean waves, rocket launch). Their source pages are recorded here. The direct media preview/download URL is not available in this execution environment, so these entries are candidates only and are not activated in the app.
+**20 source-page candidates** are registered, including recorded cat, bee, bird, duck, frog, goat, rooster, cow, owl, sheep, pig, mouse, horse and dog sounds, plus lion roar, fireworks, applause and ocean waves. CC0 is visible on each source page. Freesound requires an account login to download originals; its API can provide high-quality MP3 previews when an API key is configured. The ingest helper will re-check the API's licence before saving any preview.
+
+One chicken-clucking imitation was explicitly excluded because its uploader describes it as an imitation, not a genuine animal recording.
 
 ## Strict acceptance gate
 
-1. Download the original or a permitted high-quality preview from the source.
-2. Re-check the per-file licence on the actual source page at ingestion time.
-3. Listen to the clip and confirm it is a real recording and appropriate for the exact gift.
+1. Confirm the current per-file licence and creator/source information.
+2. Download a genuine recording or licensed source preview; never substitute text-to-speech or an artificial placeholder.
+3. Listen to the clip and confirm that its sound actually matches the relevant gift and animation.
 4. Record creator, source URL, licence, format, duration, sample rate, SHA-256 and any required attribution.
-5. Trim only silence/unneeded lead-in and apply conservative loudness matching; preserve the original source in a review archive.
-6. Do not mark a gift sound as production-ready until its local audio file exists and has passed decoding/integrity checks.
-7. Keep every sound under the matching `assets/Artwork/<gift-slug>/` directory convention: `assets/Gift Sounds/<gift-slug>/sound.mp3`.
-8. No files are marked production-ready by this source register alone.
+5. Trim only unwanted silence/lead-in and apply conservative loudness matching; preserve an unedited source copy.
+6. Do not activate a gift sound until the local audio file exists and passes decoding/integrity checks.
+7. Keep the final gift clip at `assets/Gift Sounds/<gift-slug>/sound.mp3`, matching `assets/Artwork/<gift-slug>/artwork.png`.
+8. No file is production-ready merely because its source or licence has been catalogued.
 
-## Current status
+## Current checkpoint
 
-- 7 real CC0 field recordings have immutable release URLs and source metadata.
-- 9 CC0 public-domain effect files are identified with raw file URLs and source CSV names.
-- 6 further Freesound CC0 candidates have verified source pages.
-- **No external audio binary was downloaded in this environment**, so no audio files are claimed as bundled or tested.
+- 7 published CC0 field-recording assets with verified release metadata and hashes.
+- 9 public-domain recorded-effect files with verified repository metadata and Git blob hashes.
+- 20 CC0 source-page candidates for animal and gift-event recordings.
+- 1 imitation excluded from natural-recording consideration.
+- **0 audio binaries downloaded, 0 clips auditioned and 0 gift sounds production-ready in this repository branch.**
+
+The actual files still need to be downloaded from their sources and auditioned before being copied into per-gift folders.
