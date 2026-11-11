@@ -12,7 +12,7 @@ from pytesseract import Output
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "assets" / "Gifts"
 OUT = ROOT / "assets" / "Artwork"
-COLS, SIZE, TOL = 6, 256, 22
+COLS, SIZE, TOL = 6, 256, 14
 CAPTURE = re.compile(r"^capture-\d{8}-\d{6}\.png$", re.I)
 
 def slug(text):
@@ -27,7 +27,7 @@ def labels_for(img):
         word = re.sub(r"\s+", " ", raw).strip(" -_|")
         try: conf = float(d["conf"][i])
         except Exception: continue
-        if conf < 35 or not re.search(r"[A-Za-z]", word) or re.fullmatch(r"[\W\d_]+", word):
+        if conf < 50 or not re.search(r"[A-Za-z]", word) or re.fullmatch(r"[\W\d_]+", word):
             continue
         left, top = int(d["left"][i]), int(d["top"][i])
         bw, bh = int(d["width"][i]), int(d["height"][i])
@@ -35,6 +35,9 @@ def labels_for(img):
         cy = top + bh / 2
         if cy < h * .07 or cy > h * .92: continue
         col = min(COLS - 1, max(0, int((left + bw / 2) / (w / COLS))))
+        letters = re.sub(r"[^A-Za-z0-9]", "", word)
+        if len(letters) < 3 and word.lower() not in {"gg", "dj", "vs", "ok"}:
+            continue
         tokens.append((cy, top, left, col, word, conf))
     tokens.sort(key=lambda x: x[0])
     groups = []
@@ -50,7 +53,7 @@ def labels_for(img):
         for col, words in by_col.items():
             words.sort(key=lambda x: x[2])
             name = re.sub(r"\s+", " ", " ".join(x[4] for x in words)).strip(" -_|")
-            if len(name) >= 2:
+            if len(re.sub(r"[^A-Za-z0-9]", "", name)) >= 3 or name.lower() in {"gg", "dj", "vs", "ok"}:
                 result.append({"y": statistics.mean(x[0] for x in words),
                                "top": min(x[1] for x in words), "col": col,
                                "name": name[:70], "confidence": statistics.mean(x[5] for x in words)})
@@ -121,7 +124,7 @@ def run(source, output, expected):
             row = min(range(len(centers)), key=lambda i: abs(centers[i]-item["y"]))
             x0 = round(item["col"]*tile + tile*.10)
             x1 = round((item["col"]+1)*tile - tile*.10)
-            y0 = max(0, round(item["top"] - pitch*.84))
+            y0 = max(0, round(item["top"] - pitch*.56))
             y1 = min(img.height, item["top"]-3)
             if y1 <= y0+8: continue
             art, area, warnings = transparent_icon(img.crop((x0,y0,x1,y1)))
