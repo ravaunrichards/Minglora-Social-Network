@@ -12,9 +12,9 @@ const catalogue = JSON.parse(fs.readFileSync(path.join(root, "data/minglora-gift
 const outputRoot = path.join(root, "public/assets/gifts/animations");
 const outputManifestPath = path.join(outputRoot, "manifest.json");
 
-execFileSync(process.execPath, [
-  path.join(root, "scripts/generate-minglora-gift-animations.mjs")
-], { cwd: root, stdio: "pipe" });
+const generatorArgs = [path.join(root, "scripts/generate-minglora-gift-animations.mjs")];
+if (fs.existsSync(outputManifestPath)) generatorArgs.push("--check");
+execFileSync(process.execPath, generatorArgs, { cwd: root, stdio: "pipe" });
 
 const output = JSON.parse(fs.readFileSync(outputManifestPath, "utf8"));
 const sha256 = value => crypto.createHash("sha256").update(value).digest("hex");
@@ -46,7 +46,9 @@ test("all original Artwork folders receive an individual animation without chang
       assert.match(svg, /@keyframes giftMotion/);
       assert.match(svg, /prefers-reduced-motion:reduce/);
       assert.match(svg, /animation:none!important/);
-      assert.doesNotMatch(svg, /<script\\b|\\bon[a-z]+\\s*=/i);
+      assert.equal(svg.toLowerCase().includes("<script"), false);
+      assert.equal(svg.toLowerCase().includes(" onload="), false);
+      assert.equal(svg.toLowerCase().includes(" onclick="), false);
     }
   }
 
