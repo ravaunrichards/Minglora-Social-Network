@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  getActiveFollowEdges,
   getMutualFollowIds,
+  isSocialAccountEligible,
   isRelationshipBlocked,
   normalizeFriendPreferences,
   validateFriendPreferencePatch
@@ -71,4 +73,35 @@ test('Restricted is a supported friend preference and does not change reciprocal
   assert.equal(patch.valid, true);
   assert.equal(patch.value.isRestricted, true);
   assert.deepEqual(getMutualFollowIds(follows, 'me'), ['a']);
+});
+
+test('restricted accounts are not eligible for social activity; expired bans recover', () => {
+  const now = Date.parse('2026-11-11T00:00:00.000Z');
+  assert.equal(isSocialAccountEligible({ id: 'active', status: 'active' }, now), true);
+  assert.equal(isSocialAccountEligible({ id: 'banned', status: 'banned', bannedUntil: '2026-11-12T00:00:00.000Z' }, now), false);
+  assert.equal(isSocialAccountEligible({ id: 'permanent', status: 'banned', bannedUntil: null }, now), false);
+  assert.equal(isSocialAccountEligible({ id: 'invalid', status: 'banned', bannedUntil: 'not-a-date' }, now), false);
+  assert.equal(isSocialAccountEligible({ id: 'expired', status: 'banned', bannedUntil: '2026-11-10T00:00:00.000Z' }, now), true);
+  assert.equal(isSocialAccountEligible({ id: 'suspended', status: 'suspended' }, now), false);
+  assert.equal(isSocialAccountEligible({ id: 'deactivated', status: 'deactivated' }, now), false);
+  assert.equal(isSocialAccountEligible({ id: 'deleted', status: 'deleted' }, now), false);
+});
+
+test('active follow edges omit banned, suspended, deactivated, and unknown accounts without deleting stored records', () => {
+  const accounts = [
+    { id: 'alice', status: 'active' },
+    { id: 'bob', status: 'banned', bannedUntil: '2026-11-12T00:00:00.000Z' },
+    { id: 'carol', status: 'suspended' },
+    { id: 'dave', status: 'active' }
+  ];
+  const follows = [
+    { followerId: 'alice', followedId: 'dave' },
+    { followerId: 'bob', followedId: 'alice' },
+    { followerId: 'alice', followedId: 'bob' },
+    { followerId: 'carol', followedId: 'dave' },
+    { followerId: 'dave', followedId: 'missing' }
+  ];
+  const active = getActiveFollowEdges(follows, accounts, Date.parse('2026-11-11T00:00:00.000Z'));
+  assert.deepEqual(active, [follows[0]]);
+  assert.equal(follows.length, 5);
 });
