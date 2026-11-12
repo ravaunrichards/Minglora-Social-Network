@@ -4205,7 +4205,16 @@ function creatorAnalyticsMarkup(){
   const rows=videoRows.length?videoRows.map(video=>{
     const date=video.createdAt?new Date(video.createdAt):null;
     const dateLabel=date&&!Number.isNaN(date.getTime())?date.toLocaleDateString():'Date unavailable';
-    return "<article class='creator-video-analytics-row'><div class='creator-video-analytics-title'><strong>"+esc(video.caption||'Untitled video')+"</strong><small>"+esc(dateLabel)+"</small></div><div class='creator-video-analytics-value'><strong>"+creatorNumber(video.uniqueViewers)+"</strong><small>Unique viewers</small></div><div class='creator-video-analytics-value'><strong>"+formatDuration(video.totalWatchSeconds)+"</strong><small>Watch time</small></div><div class='creator-video-analytics-value'><strong>"+formatDuration(video.averageWatchSecondsPerViewer)+"</strong><small>Avg / viewer</small></div><div class='creator-video-analytics-value'><strong>"+percentage(video.completionRate)+"</strong><small>Completion</small></div></article>";
+    const retention=video.retention||{};
+    const retentionMarkup=retention.available&&Array.isArray(retention.points)
+      ?"<div class='creator-video-retention'><div class='creator-video-retention-heading'><strong>Audience retention</strong><small>Measured progress from "+creatorNumber(retention.sampleSize)+" unique viewers</small></div><ol>"+retention.points.map(point=>{
+        const position=Math.max(0,Math.min(100,Number(point.positionPercent)||0));
+        const rate=Math.max(0,Math.min(1,Number(point.retentionRate)||0));
+        const percent=Math.round(rate*100);
+        return "<li><span>"+position+"%</span><span class='creator-video-retention-track'><span style='width:"+percent+"%'></span></span><strong>"+percent+"%</strong></li>";
+      }).join('')+"</ol></div>"
+      :"<div class='creator-video-retention is-pending' role='status'><strong>Audience retention</strong><span>Available after at least 5 unique viewers provide playback-position data. Older playback without position samples is not estimated.</span></div>";
+    return "<div class='creator-video-analytics-item'><article class='creator-video-analytics-row'><div class='creator-video-analytics-title'><strong>"+esc(video.caption||'Untitled video')+"</strong><small>"+esc(dateLabel)+"</small></div><div class='creator-video-analytics-value'><strong>"+creatorNumber(video.uniqueViewers)+"</strong><small>Unique viewers</small></div><div class='creator-video-analytics-value'><strong>"+formatDuration(video.totalWatchSeconds)+"</strong><small>Watch time</small></div><div class='creator-video-analytics-value'><strong>"+formatDuration(video.averageWatchSecondsPerViewer)+"</strong><small>Avg / viewer</small></div><div class='creator-video-analytics-value'><strong>"+percentage(video.completionRate)+"</strong><small>Completion</small></div></article>"+retentionMarkup+"</div>";
   }).join(''):"<div class='creator-empty-state'><span>"+creatorIcon('video')+"</span><h3>No video watch data yet</h3><p>"+(videoRows.length===0?'Publish a video and let members watch it. Real viewer activity will appear here.':'No watch events were recorded during this period.')+"</p></div>";
   const profileMetrics=s.profile
     ?creatorMetric("Followers",creatorNumber(p.followersCount),"Current follower relationship count","friends")+creatorMetric("Following",creatorNumber(p.followingCount),"Current following relationship count","profile")
@@ -4221,7 +4230,7 @@ function creatorAnalyticsMarkup(){
     "<div class='creator-analytics-source'><span>✓</span><div><strong>Verified Minglora activity</strong><small>Viewer totals and watch time are aggregated from real video playback events. No estimated impressions, invented views or individual viewer identities are shown.</small></div></div>"+
     "<div class='creator-analytics-grid'>"+profileMetrics+videoMetrics+"</div>"+
     "<section class='creator-studio-panel creator-video-analytics'><div class='creator-video-analytics-heading'><h3>Video performance</h3><small>Last "+periodDays+" days · up to 30 recent videos</small></div>"+
-      (analytics?rows:"<div class='creator-empty-state'><span>"+creatorIcon('analytics')+"</span><h3>Video analytics unavailable</h3><p>"+esc(s.videoAnalyticsError||'Minglora could not load video watch analytics.')+"</p></div>")+
+      (analytics?"<div class='creator-video-analytics-list'>"+rows+"</div>":"<div class='creator-empty-state'><span>"+creatorIcon('analytics')+"</span><h3>Video analytics unavailable</h3><p>"+esc(s.videoAnalyticsError||'Minglora could not load video watch analytics.')+"</p></div>")+
       "<p class='creator-video-analytics-footnote'>Unique viewers are distinct signed-in accounts with recorded playback. Completion is based on the viewer reaching at least 85% of the video. These are not ad impressions or reach estimates.</p></section>"+
     "<section class='creator-studio-panel creator-analytics-limits'><span class='creator-eyebrow'>METRIC COVERAGE</span><h3>What Minglora can measure today</h3><div class='creator-coverage-list'><p><b>Available</b><span>Followers, following, published videos, unique video viewers, recorded watch time, average watch time per viewer-video pair and completion rate.</span></p><p><b>Still being built</b><span>Impressions/reach, audience demographics, traffic sources, retention curves, follower conversion and time-series comparisons.</span></p></div></section>";
 }
@@ -9382,11 +9391,12 @@ function bindReelPlayback(root){
     const postId=video.dataset.postId||video.closest('.minglora-reel')?.dataset.post;
     const watchedMs=Math.round(Number(video.dataset.watchBuffer||0));
     const durationMs=Math.round(Number(video.duration||0)*1000);
+    const positionMs=Math.max(0,Math.min(durationMs,Math.round(Number(video.dataset.furthestPlayedPositionMs||0))));
     if(!postId||watchedMs<1000||durationMs<1000||video.dataset.reelWatchSending==='true')return;
     video.dataset.watchBuffer='0';
     video.dataset.reelWatchSending='true';
     try{
-      await api('/videos/'+encodeURIComponent(postId)+'/watch',{method:'POST',body:JSON.stringify({watchedMs,durationMs})});
+      await api('/videos/'+encodeURIComponent(postId)+'/watch',{method:'POST',body:JSON.stringify({watchedMs,durationMs,positionMs})});
     }catch(error){
       video.dataset.watchBuffer=String(Math.min(600000,Number(video.dataset.watchBuffer||0)+watchedMs));
       console.warn('[Minglora] Reel watch signal not saved:',error?.message||error);
@@ -9397,10 +9407,12 @@ function bindReelPlayback(root){
       video.dataset.reelWatchBound='true';
       video.dataset.lastMediaTime='0';
       video.dataset.watchBuffer='0';
+      video.dataset.furthestPlayedPositionMs='0';
       video.addEventListener('timeupdate',()=>{
         const current=Number(video.currentTime||0),previous=Number(video.dataset.lastMediaTime||0),delta=current-previous;
         if(!video.paused&&delta>0&&delta<=2.5){
           video.dataset.watchBuffer=String(Number(video.dataset.watchBuffer||0)+delta*1000);
+          video.dataset.furthestPlayedPositionMs=String(Math.max(Number(video.dataset.furthestPlayedPositionMs||0),Math.round(current*1000)));
           if(Number(video.dataset.watchBuffer)>=7000)void sendWatch(video);
         }
         video.dataset.lastMediaTime=String(current);
@@ -9930,9 +9942,10 @@ function setupForYouPlayback(root){
   const sendWatch=async video=>{
     const postId=video.dataset.postId,watchedMs=Math.round(Number(video.dataset.watchBuffer||0));
     const durationMs=Math.round(Number(video.duration||0)*1000);
+    const positionMs=Math.max(0,Math.min(durationMs,Math.round(Number(video.dataset.furthestPlayedPositionMs||0))));
     video.dataset.watchBuffer='0';
     if(postId&&watchedMs>=1000&&durationMs>=1000){
-      try{await api('/videos/'+encodeURIComponent(postId)+'/watch',{method:'POST',body:JSON.stringify({watchedMs,durationMs})});}
+      try{await api('/videos/'+encodeURIComponent(postId)+'/watch',{method:'POST',body:JSON.stringify({watchedMs,durationMs,positionMs})});}
       catch(error){console.warn('[Minglora] Video watch signal not saved:',error?.message||error);}
     }
   };
@@ -9941,10 +9954,12 @@ function setupForYouPlayback(root){
     video.dataset.fypBound='true';
     video.dataset.lastMediaTime='0';
     video.dataset.watchBuffer='0';
+    video.dataset.furthestPlayedPositionMs='0';
     video.addEventListener('timeupdate',()=>{
       const current=Number(video.currentTime||0),previous=Number(video.dataset.lastMediaTime||0),delta=current-previous;
       if(!video.paused&&delta>0&&delta<=2.5){
         video.dataset.watchBuffer=String(Number(video.dataset.watchBuffer||0)+delta*1000);
+        video.dataset.furthestPlayedPositionMs=String(Math.max(Number(video.dataset.furthestPlayedPositionMs||0),Math.round(current*1000)));
         if(Number(video.dataset.watchBuffer)>=7000)void sendWatch(video);
       }
       video.dataset.lastMediaTime=String(current);
