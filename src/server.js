@@ -31,6 +31,7 @@ import { rankForYouVideos } from './domain/video-ranking.js';
 import { VIDEO_PLAYLIST_MAX_ITEMS, addVideoPlaylistItem, canViewVideoPlaylist, removeVideoPlaylistItem, reorderVideoPlaylistItems, validateVideoPlaylistInput } from '../backend/modules/video/playlists.js';
 import { VIDEO_CHANNEL_MAX_SUBSCRIPTIONS, canViewVideoChannel, subscribeToVideoChannel, unsubscribeFromVideoChannel, validateVideoChannelInput } from '../backend/modules/video/channels.js';
 import { summarizeCreatorVideoAnalytics } from './domain/video-analytics.js';
+import { enqueueVideoTranscodeJob, claimVideoTranscodeJob, completeVideoTranscodeJob, failVideoTranscodeJob, cancelVideoTranscodeJob, renewVideoTranscodeLease, isVideoTranscodeLeaseValid } from './domain/video-transcode-jobs.js';
 import { canViewStory as canViewStoryPolicy, removeExpiredStories } from '../backend/modules/stories/service.js';
 import { canPublishGroupPost, canDeleteGroupPost, canLeaveGroup } from '../backend/modules/groups/service.js';
 import { disconnectBlockedConnections } from '../backend/modules/relationships/blocks.js';
@@ -272,7 +273,7 @@ function safeUser(u,viewerId=null){
 const APP_COLOR_THEMES=['minglora','ocean','tropical','royal','emerald','rose','golden','lavender','midnight','graphite'];
 const LIVE_ROOM_THEMES=['studio','ocean','tropical','royal','neon','sunset','garden','social'];
 const LIVE_SCREEN_LAYOUTS=['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight','roundtable-1','roundtable-2'];
-const DEFAULT_SETTINGS={privacy:{profileVisibility:'public',allowFriendRequests:true,messageAudience:'everyone',meetWaveAudience:'everyone',friendsListAudience:'public',followersListAudience:'public',followingListAudience:'public',subscribersListAudience:'public',commentAudience:'everyone'},notifications:{inApp:true,friendRequests:true,messages:true,interactions:true,push:true,profileViews:false,calls:true,live:true,gifts:true,meetWave:true,leagues:true,account:true},preferences:{theme:'system',colorTheme:'minglora',liveRoomTheme:'studio',feedSort:'recent',reducedMotion:false,liteMode:false,keyboardShortcuts:false,displayCurrency:'USD',messengerIncomingCallSounds:true,messengerMessageSounds:true,messengerAutoOpenNewMessages:false,messengerActiveStatus:true,profileLayout:'advanced',messengerArchivedConversationIds:[],messengerRestrictedUserIds:[]},experience:DEFAULT_EXPERIENCE_SETTINGS};
+const DEFAULT_SETTINGS={privacy:{profileVisibility:'public',allowFriendRequests:true,messageAudience:'everyone',meetWaveAudience:'everyone',shareAudienceDemographics:false,friendsListAudience:'public',followersListAudience:'public',followingListAudience:'public',subscribersListAudience:'public',commentAudience:'everyone'},notifications:{inApp:true,friendRequests:true,messages:true,interactions:true,push:true,profileViews:false,calls:true,live:true,gifts:true,meetWave:true,leagues:true,account:true},preferences:{theme:'system',colorTheme:'minglora',liveRoomTheme:'studio',feedSort:'recent',reducedMotion:false,liteMode:false,keyboardShortcuts:false,displayCurrency:'USD',messengerIncomingCallSounds:true,messengerMessageSounds:true,messengerAutoOpenNewMessages:false,messengerActiveStatus:true,profileLayout:'advanced',messengerArchivedConversationIds:[],messengerRestrictedUserIds:[]},experience:DEFAULT_EXPERIENCE_SETTINGS};
 function getUserSettings(user){const saved=user?.settings||{};const preferences={...DEFAULT_SETTINGS.preferences,...(saved.preferences||{})};if(!APP_COLOR_THEMES.includes(preferences.colorTheme))preferences.colorTheme=DEFAULT_SETTINGS.preferences.colorTheme;if(!['standard','advanced','creator'].includes(preferences.profileLayout))preferences.profileLayout=DEFAULT_SETTINGS.preferences.profileLayout;if(!LIVE_ROOM_THEMES.includes(preferences.liveRoomTheme))preferences.liveRoomTheme=DEFAULT_SETTINGS.preferences.liveRoomTheme;for(const key of ['messengerArchivedConversationIds','messengerRestrictedUserIds'])if(!Array.isArray(preferences[key]))preferences[key]=[];const experience=validateExperienceSettingsPatch(DEFAULT_EXPERIENCE_SETTINGS,saved.experience||{}).settings;return {privacy:{...DEFAULT_SETTINGS.privacy,...(saved.privacy||{})},notifications:{...DEFAULT_SETTINGS.notifications,...(saved.notifications||{})},preferences,experience};}
 function isFriend(firstId,secondId){const follows=activeFollows();return follows.some(item=>item.followerId===firstId&&item.followedId===secondId)&&follows.some(item=>item.followerId===secondId&&item.followedId===firstId);}
 function friendPreferenceFor(viewerId,targetId){return (db.friendPreferences||[]).find(item=>item.ownerId===viewerId&&item.targetId===targetId)||null;}
@@ -331,7 +332,7 @@ function recordProfileActivity(userId,action,summary,targetType='profile',target
 
 function validateSettingsPatch(input,user){
   if(!input||typeof input!=='object'||Array.isArray(input))return {valid:false,error:'Settings must be an object.'};
-  const next=getUserSettings(user);const allowed={privacy:['profileVisibility','allowFriendRequests','messageAudience','meetWaveAudience','friendsListAudience','followersListAudience','followingListAudience','subscribersListAudience','commentAudience'],notifications:['inApp','friendRequests','messages','interactions','push','profileViews','calls','live','gifts','meetWave','leagues','account'],preferences:['theme','colorTheme','liveRoomTheme','feedSort','reducedMotion','liteMode','keyboardShortcuts','displayCurrency','messengerIncomingCallSounds','messengerMessageSounds','messengerAutoOpenNewMessages','messengerActiveStatus','profileLayout','messengerArchivedConversationIds','messengerRestrictedUserIds'],experience:Object.keys(DEFAULT_EXPERIENCE_SETTINGS)};
+  const next=getUserSettings(user);const allowed={privacy:['profileVisibility','allowFriendRequests','messageAudience','meetWaveAudience','shareAudienceDemographics','friendsListAudience','followersListAudience','followingListAudience','subscribersListAudience','commentAudience'],notifications:['inApp','friendRequests','messages','interactions','push','profileViews','calls','live','gifts','meetWave','leagues','account'],preferences:['theme','colorTheme','liveRoomTheme','feedSort','reducedMotion','liteMode','keyboardShortcuts','displayCurrency','messengerIncomingCallSounds','messengerMessageSounds','messengerAutoOpenNewMessages','messengerActiveStatus','profileLayout','messengerArchivedConversationIds','messengerRestrictedUserIds'],experience:Object.keys(DEFAULT_EXPERIENCE_SETTINGS)};
   for(const [section,values] of Object.entries(input)){
     if(!allowed[section]||!values||typeof values!=='object'||Array.isArray(values))return {valid:false,error:'Unsupported settings section.'};
     if(section==='experience'){const result=validateExperienceSettingsPatch(next.experience,values);if(!result.valid)return result;next.experience=result.settings;continue;}
@@ -343,6 +344,7 @@ function validateSettingsPatch(input,user){
       if(section==='privacy'&&['friendsListAudience','followersListAudience','followingListAudience','subscribersListAudience'].includes(key)&&!['public','friends','followers','private'].includes(value))return {valid:false,error:'Choose a valid audience for this relationship list.'};
       if(section==='privacy'&&key==='commentAudience'&&!['everyone','friends','nobody'].includes(value))return {valid:false,error:'Comment audience must be everyone, friends or nobody.'};
       if(section==='privacy'&&key==='allowFriendRequests'&&typeof value!=='boolean')return {valid:false,error:'Allow friend requests must be true or false.'};
+      if(section==='privacy'&&key==='shareAudienceDemographics'&&typeof value!=='boolean')return {valid:false,error:'Anonymous audience demographics sharing must be true or false.'};
       if(section==='notifications'&&typeof value!=='boolean')return {valid:false,error:'Notification preferences must be true or false.'};
       if(section==='preferences'&&key==='theme'&&!['system','light','dark'].includes(value))return {valid:false,error:'Theme must be system, light or dark.'};
       if(section==='preferences'&&key==='colorTheme'&&!APP_COLOR_THEMES.includes(value))return {valid:false,error:'Choose a supported Minglora colour theme.'};
@@ -985,6 +987,13 @@ async function mediaGateway(action,payload) {
   if(!response.ok)throw Object.assign(new Error(data.error||'Minglora media storage request failed.'),{status:response.status});
   return data;
 }
+function enqueueAttachedVideoTranscode(asset,post) {
+  if(!asset||asset.mediaType!=='video'||asset.slot!=='post'||asset.status!=='attached')return null;
+  const jobs=db.videoTranscodeJobs||(db.videoTranscodeJobs=[]);
+  const result=enqueueVideoTranscodeJob(jobs,{assetId:asset.id,ownerId:asset.ownerId,postId:post?.id,id:uid(),createdAt:now()});
+  if(result.status==='created'&&asset.transcodeStatus!=='ready')asset.transcodeStatus='queued';
+  return result.job||null;
+}
 async function resolveAssetUrl(asset) {
   if(!asset)return null;
   if(asset.url)return asset.url;
@@ -1037,7 +1046,15 @@ async function publicPost(p,viewerId) {
   const media=await Promise.all((p.mediaIds||[]).map(async id=>{
     const asset=(db.mediaAssets||[]).find(item=>item.id===id&&item.ownerId===p.userId&&item.slot==='post');
     if(!asset||asset.status==='deleted')return null;
-    try{return {id:asset.id,mimeType:asset.mimeType,mediaType:asset.mediaType,url:await resolveAssetUrl(asset),byteSize:asset.byteSize};}catch{return null;}
+    const derivative=asset.mediaType==='video'&&asset.transcodedAssetId
+      ?(db.mediaAssets||[]).find(item=>item.id===asset.transcodedAssetId&&item.ownerId===p.userId&&item.status==='attached'&&item.processingRole==='transcode')
+      :null;
+    const playbackAsset=derivative||asset;
+    try{
+      const item={id:asset.id,mimeType:playbackAsset.mimeType,mediaType:asset.mediaType,url:await resolveAssetUrl(playbackAsset),byteSize:playbackAsset.byteSize};
+      if(asset.mediaType==='video'&&viewerId===p.userId)item.processingStatus=asset.transcodeStatus||'queued';
+      return item;
+    }catch{return null;}
   }));
   const {imageUrl,...cleanPost}=p;
   return {...cleanPost,media:media.filter(item=>item?.url),soundtrack:await publicSoundtrack(p.soundtrack,viewerId),author:safeUser(author),taggedUsers:(p.taggedUserIds||[]).map(id=>db.users.find(member=>member.id===id)).filter(Boolean).map(member=>safeUser(member,viewerId)),reactions:p.reactions||{},reactionCount:Object.values(p.reactions||{}).length,myReaction:(p.reactions||{})[viewerId]||null,
@@ -1390,7 +1407,7 @@ async function route(req, res) {
       });
     }
   }
-  if (p.startsWith('/api/') && p !== '/api/webhooks/paypal' && !['GET', 'HEAD', 'OPTIONS'].includes(method) && !isSameOriginApiWrite(req)) {
+  if (p.startsWith('/api/') && p !== '/api/webhooks/paypal' && !p.startsWith('/api/internal/video-transcode/') && !['GET', 'HEAD', 'OPTIONS'].includes(method) && !isSameOriginApiWrite(req)) {
     return json(res, 403, { error: 'Cross-origin API writes are not allowed.' });
   }
   if (method === 'POST' && p === '/api/webhooks/paypal') {
@@ -1606,6 +1623,102 @@ async function route(req, res) {
   }
   if (p.startsWith('/api/')) {
     let input; try { if (!['GET','HEAD'].includes(method)) input=await body(req,1_000_000); } catch(e) { return json(res,e.status||400,{error:e.message}); }
+    if(p.startsWith('/api/internal/video-transcode/')){
+      if(method!=='POST')return json(res,405,{error:'Method not allowed.'});
+      const expectedToken=String(process.env.VIDEO_TRANSCODE_WORKER_TOKEN||'');
+      const authorization=String(req.headers.authorization||'');
+      const suppliedToken=authorization.startsWith('Bearer ')?authorization.slice(7).trim():'';
+      const expectedBytes=Buffer.from(expectedToken);
+      const suppliedBytes=Buffer.from(suppliedToken);
+      const authorized=expectedBytes.length>=32&&suppliedBytes.length===expectedBytes.length&&crypto.timingSafeEqual(expectedBytes,suppliedBytes);
+      if(!authorized)return json(res,expectedBytes.length>=32?401:503,{error:expectedBytes.length>=32?'Worker authentication failed.':'Video processing worker is not configured.'});
+      const jobs=db.videoTranscodeJobs||(db.videoTranscodeJobs=[]);
+      if(p==='/api/internal/video-transcode/claim'){
+        const job=claimVideoTranscodeJob(jobs,{leaseToken:crypto.randomBytes(32).toString('base64url')});
+        if(!job)return json(res,200,{job:null});
+        const sourceAsset=(db.mediaAssets||[]).find(asset=>asset.id===job.assetId&&asset.ownerId===job.ownerId&&asset.slot==='post'&&asset.mediaType==='video'&&asset.status==='attached');
+        const sourcePost=sourceAsset&&(db.posts||[]).find(post=>post.userId===job.ownerId&&(post.mediaIds||[]).includes(sourceAsset.id)&&post.status!=='hidden'&&!post.archivedAt);
+        if(!sourceAsset||!sourcePost){
+          cancelVideoTranscodeJob(jobs,{jobId:job.id,leaseToken:job.leaseToken,reason:'source_unavailable'});
+          if(sourceAsset)sourceAsset.transcodeStatus='cancelled';
+          await saveStore();
+          return json(res,200,{job:null});
+        }
+        sourceAsset.transcodeStatus='processing';
+        await saveStore();
+        try{
+          const sourceUrl=await resolveAssetUrl(sourceAsset);
+          if(!sourceUrl)throw new Error('Source video URL is unavailable.');
+          await saveStore();
+          return json(res,200,{
+            job:{id:job.id,assetId:job.assetId,ownerId:job.ownerId,attempts:job.attempts,leaseToken:job.leaseToken,leaseExpiresAt:job.leaseExpiresAt},
+            source:{url:sourceUrl,mimeType:sourceAsset.mimeType,byteSize:sourceAsset.byteSize}
+          });
+        }catch(error){
+          failVideoTranscodeJob(jobs,{jobId:job.id,leaseToken:job.leaseToken,errorCode:'SOURCE_READ_FAILED'});
+          sourceAsset.transcodeStatus='queued';
+          await saveStore();
+          return json(res,503,{error:'The source video could not be opened. The job has been returned to the retry queue.'});
+        }
+      }
+      if(p==='/api/internal/video-transcode/prepare-output'){
+        const job=jobs.find(item=>item.id===String(input.jobId||''));
+        if(!isVideoTranscodeLeaseValid(job,String(input.leaseToken||'')))return json(res,409,{error:'The video processing lease is no longer valid.'});
+        const byteSize=Number(input.byteSize);
+        if(!Number.isSafeInteger(byteSize)||byteSize<1||byteSize>500*1024*1024)return json(res,400,{error:'The processed video must be between 1 byte and 500 MB.'});
+        const previousOutput=(db.mediaAssets||[]).find(asset=>asset.id===job.outputAssetId&&asset.ownerId===job.ownerId&&asset.processingRole==='transcode');
+        if(previousOutput&&previousOutput.status!=='deleted'){
+          previousOutput.status='deleted';
+          previousOutput.deletedAt=now();
+          await mediaGateway('media_delete',{ownerId:previousOutput.ownerId,bucket:previousOutput.bucket,path:previousOutput.path}).catch(()=>{});
+        }
+        const prepared=await mediaGateway('media_upload_prepare',{ownerId:job.ownerId,slot:'post',mimeType:'video/mp4',byteSize});
+        const outputAsset={
+          id:uid(),ownerId:job.ownerId,slot:'post',bucket:prepared.bucket,path:prepared.path,
+          mimeType:'video/mp4',mediaType:'video',byteSize,originalName:'Minglora optimized video.mp4',
+          status:'uploading',processingRole:'transcode',transcodeJobId:job.id,createdAt:now()
+        };
+        db.mediaAssets.push(outputAsset);
+        job.outputAssetId=outputAsset.id;
+        job.updatedAt=now();
+        await saveStore();
+        return json(res,200,{assetId:outputAsset.id,upload:{endpoint:prepared.endpoint,token:prepared.token,signedUrl:prepared.signedUrl||null,bucket:prepared.bucket,path:prepared.path}});
+      }
+      if(p==='/api/internal/video-transcode/complete'){
+        const job=jobs.find(item=>item.id===String(input.jobId||''));
+        if(!isVideoTranscodeLeaseValid(job,String(input.leaseToken||'')))return json(res,409,{error:'The video processing lease is no longer valid.'});
+        const outputAsset=(db.mediaAssets||[]).find(asset=>asset.id===String(input.outputAssetId||'')&&asset.id===job.outputAssetId&&asset.ownerId===job.ownerId&&asset.processingRole==='transcode'&&asset.transcodeJobId===job.id&&asset.status==='uploading');
+        const sourceAsset=(db.mediaAssets||[]).find(asset=>asset.id===job.assetId&&asset.ownerId===job.ownerId&&asset.status==='attached');
+        if(!outputAsset||!sourceAsset)return json(res,409,{error:'The original or processed media record is no longer available.'});
+        const completed=await mediaGateway('media_upload_complete',{ownerId:outputAsset.ownerId,assetId:outputAsset.id,slot:'post',originalName:outputAsset.originalName,bucket:outputAsset.bucket,path:outputAsset.path,mimeType:outputAsset.mimeType,byteSize:outputAsset.byteSize});
+        outputAsset.status='attached';
+        outputAsset.attachedTo='transcode:'+sourceAsset.id;
+        outputAsset.completedAt=now();
+        sourceAsset.transcodedAssetId=outputAsset.id;
+        sourceAsset.transcodeStatus='ready';
+        completeVideoTranscodeJob(jobs,{jobId:job.id,leaseToken:job.leaseToken,outputAssetId:outputAsset.id,completedAt:now()});
+        await saveStore();
+        return json(res,200,{ok:true,status:'completed',assetId:outputAsset.id,previewUrl:completed.signedUrl||completed.url||null});
+      }
+      if(p==='/api/internal/video-transcode/heartbeat'){
+        const job=jobs.find(item=>item.id===String(input.jobId||''));
+        const renewed=renewVideoTranscodeLease(jobs,{jobId:job?.id,leaseToken:String(input.leaseToken||'')});
+        if(renewed.status!=='renewed')return json(res,409,{error:'The video processing lease is no longer valid.'});
+        await saveStore();
+        return json(res,200,{ok:true,leaseExpiresAt:renewed.leaseExpiresAt});
+      }
+      if(p==='/api/internal/video-transcode/fail'){
+        const job=jobs.find(item=>item.id===String(input.jobId||''));
+        if(!isVideoTranscodeLeaseValid(job,String(input.leaseToken||'')))return json(res,409,{error:'The video processing lease is no longer valid.'});
+        const updated=failVideoTranscodeJob(jobs,{jobId:job.id,leaseToken:job.leaseToken,errorCode:String(input.errorCode||'TRANSCODE_FAILED').replace(/[^A-Z0-9_]/gi,'').slice(0,48)||'TRANSCODE_FAILED'});
+        if(!updated||updated.status==='conflict')return json(res,409,{error:'The video processing job could not be updated.'});
+        const sourceAsset=(db.mediaAssets||[]).find(asset=>asset.id===job.assetId&&asset.ownerId===job.ownerId);
+        if(sourceAsset)sourceAsset.transcodeStatus=updated.status;
+        await saveStore();
+        return json(res,200,{ok:true,status:updated.status,availableAt:updated.availableAt||null});
+      }
+      return json(res,404,{error:'Video processing endpoint not found.'});
+    }
     const user = sessionUser(req);
     if(method==='GET'&&p==='/api/auth/providers'){
       if(AUTH_PROVIDER!=='supabase')return json(res,503,{error:'Social sign-in requires Minglora Supabase Auth.',providers:[]});
@@ -4946,7 +5059,7 @@ async function route(req, res) {
             return asset&&asset.status==='attached'&&asset.mediaType==='video';
           })
         );
-        const analytics=summarizeCreatorVideoAnalytics(creatorVideos,db.videoWatchEvents||[],user.id,Date.now(),rawDays);
+        const analytics=summarizeCreatorVideoAnalytics(creatorVideos,db.videoWatchEvents||[],user.id,Date.now(),rawDays,db.users||[]);
         return json(res,200,analytics);
       }
 
@@ -5307,9 +5420,10 @@ async function route(req, res) {
         if(assets.some(asset=>!asset))return json(res,400,{error:'One or more selected media files are no longer available. Upload them again.'});
         if(requestedVideoFormat&&(assets.length!==1||assets[0]?.mediaType!=='video'))return json(res,400,{error:'A video or Reel post must contain exactly one uploaded video file.'});
         const post={id:uid(),userId:user.id,text,mediaIds:ids,soundtrack,audience,...(feeling?{feeling}:{}),...(activity?{activity}:{}),...(location?{location}:{}),...(background&&!ids.length?{background}:{}),...(requestedTagIds.length?{taggedUserIds:requestedTagIds}:{}),...(requestedVideoFormat?{videoFormat:requestedVideoFormat}:{}),createdAt:now(),reactions:{},comments:[]};
-        assets.forEach(asset=>{asset.status='attached';asset.attachedTo=post.id;});db.posts.unshift(post);
+        assets.forEach(asset=>{asset.status='attached';asset.attachedTo=post.id;enqueueAttachedVideoTranscode(asset,post);});db.posts.unshift(post);
         requestedTagIds.forEach(taggedId=>{const taggedMember=db.users.find(member=>member.id===taggedId);if(taggedMember)notify(taggedId,user.id,'post_tagged',(user.name||'A Minglora friend')+' tagged you in a post.',{postId:post.id});});
-        await saveStore();return json(res,201,{post:await publicPost(post,user.id)});
+        await saveStore();
+        return json(res,201,{post:await publicPost(post,user.id)});
       }
       let m=p.match(/^\/api\/posts\/([^/]+)$/);
       if(method==='PATCH'&&m){
@@ -5328,8 +5442,9 @@ async function route(req, res) {
         const ids=[...new Set(validation.value.mediaIds)],assets=ids.map(id=>(db.mediaAssets||[]).find(asset=>asset.id===id&&asset.ownerId===user.id&&asset.slot==='post'&&(asset.status==='uploaded'||asset.attachedTo===post.id)));
         if(assets.some(asset=>!asset))return json(res,400,{error:'One or more selected media files are not available to this post.'});
         (db.mediaAssets||[]).filter(asset=>asset.attachedTo===post.id&&!ids.includes(asset.id)).forEach(asset=>{asset.status='uploaded';delete asset.attachedTo;});
-        assets.forEach(asset=>{asset.status='attached';asset.attachedTo=post.id;});
-        post.text=validation.value.text;post.mediaIds=ids;post.soundtrack=nextSoundtrack;post.audience=nextAudience;post.updatedAt=now();await saveStore();return json(res,200,{post:await publicPost(post,user.id)});
+        assets.forEach(asset=>{asset.status='attached';asset.attachedTo=post.id;enqueueAttachedVideoTranscode(asset,post);});
+        post.text=validation.value.text;post.mediaIds=ids;post.soundtrack=nextSoundtrack;post.audience=nextAudience;post.updatedAt=now();await saveStore();
+        return json(res,200,{post:await publicPost(post,user.id)});
       }
       if(method==='DELETE'&&m){
         const post=db.posts.find(x=>x.id===m[1]);
@@ -6299,7 +6414,8 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
         if(assets.some(asset=>!asset))return json(res,400,{error:'One or more selected group media files are unavailable.'});
         const post={id:uid(),groupId:group.id,userId:user.id,text:validation.value.text,mediaIds:ids,createdAt:now(),updatedAt:now()};
         assets.forEach(asset=>{asset.status='attached';asset.attachedTo=post.id;});
-        db.groupPosts.push(post);await saveStore();return json(res,201,{post:await publicGroupPost(post)});
+        db.groupPosts.push(post);await saveStore();
+         return json(res,201,{post:await publicGroupPost(post)});
       }
       m=p.match(/^\/api\/groups\/([^/]+)\/posts\/([^/]+)$/);
       if(method==='DELETE'&&m){
@@ -6349,7 +6465,8 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
         const createdAt=now();
         const story={id:uid(),userId:user.id,text,mediaIds,mediaId:mediaIds[0]||null,soundtrack,audience,createdAt,expiresAt:new Date(Date.now()+24*60*60*1000).toISOString()};
         assets.forEach(asset=>{asset.status='attached';asset.attachedTo=story.id;});
-        db.stories.push(story);await saveStore();return json(res,201,{story:await publicStory(story,user.id)});
+        db.stories.push(story);await saveStore();
+         return json(res,201,{story:await publicStory(story,user.id)});
       }
       m=p.match(/^\/api\/stories\/([^/]+)\/view$/);
       if(method==='POST'&&m){
@@ -6419,7 +6536,8 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
         if(assets.some(asset=>!asset))return json(res,400,{error:'One or more selected Page media files are unavailable.'});
         const post={id:uid(),pageId:page.id,publishedBy:user.id,text:validation.value.text,mediaIds:ids,createdAt:now(),updatedAt:now(),status:'published'};
         assets.forEach(asset=>{asset.status='attached';asset.attachedTo=post.id;});
-        db.pagePosts.push(post);await saveStore();return json(res,201,{post:{...await publicPagePost(post),page:{id:page.id,title:page.title,handle:page.handle}}});
+        db.pagePosts.push(post);await saveStore();
+         return json(res,201,{post:{...await publicPagePost(post),page:{id:page.id,title:page.title,handle:page.handle}}});
       }
       m=p.match(/^\/api\/pages\/([^/]+)\/posts\/([^/]+)$/);
       if(method==='DELETE'&&m){

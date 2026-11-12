@@ -285,3 +285,18 @@ The designated Creator Hub administrator receives LIVE Pro automatically when th
 - Passwords are never returned in public account objects.
 - Post updates and deletions are restricted to the post author. Unavailable posts in blocked relationships return not found for read/reaction/comment/save flows. Blocking removes the existing friend and follow edges between the two accounts.
 - Current API behavior is defined by `src/server.js`; update this document and tests whenever routes or payloads change.
+
+
+## Automated video-transcoding worker (internal)
+
+The existing video worker calls authenticated server-to-server routes using `Authorization: Bearer VIDEO_TRANSCODE_WORKER_TOKEN`:
+
+| Method | Internal path | Purpose |
+|---|---|---|
+| POST | `/api/internal/video-transcode/claim` | Claim one queued job with a leased token and return a short-lived source URL |
+| POST | `/api/internal/video-transcode/heartbeat` | Renew the current lease during longer encodes |
+| POST | `/api/internal/video-transcode/prepare-output` | Prepare a separate derivative upload through existing signed TUS media upload |
+| POST | `/api/internal/video-transcode/complete` | Verify the derivative upload and switch playback to it |
+| POST | `/api/internal/video-transcode/fail` | Record bounded retry/backoff state |
+
+The worker is packaged by `Dockerfile.video-worker` and runs separately from the web process. Original media remains the fallback; the original upload is never overwritten. See `docs/VIDEO_TRANSCODING.md`.
