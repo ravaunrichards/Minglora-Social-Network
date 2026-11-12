@@ -17,7 +17,8 @@ const collections = [
   'liveFanClubMemberships', 'liveFanClubEvents',
   'creatorSubscriptions', 'giftGalleryEvents', 'giftGallerySettings', 'giftGalleryPreferences',
   'sounds', 'soundFavorites', 'dismissedPeopleSuggestions', 'meetWaveProviderCleanupQueue',
-  'profileSections', 'profileStatuses', 'profileHighlights', 'storyArchives', 'profileActivity', 'checkIns', 'events', 'eventRsvps'
+  'profileSections', 'profileStatuses', 'profileHighlights', 'storyArchives', 'profileActivity', 'checkIns', 'events', 'eventRsvps',
+  'aiBotSettings', 'aiBots', 'aiBotTeams', 'aiBotSchedules', 'aiBotRuns', 'aiBotApprovals', 'aiBotAudit', 'aiBotCreatorJobs', 'aiBotCompanionConsents', 'aiBotCommunityEvents'
 ];
 const baseState = Object.fromEntries(collections.map(key => [key, []]));
 
