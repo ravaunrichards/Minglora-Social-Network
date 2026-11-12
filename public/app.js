@@ -519,7 +519,7 @@ function syncNavigationActive(){
   const moreButton=document.querySelector('#mobile-more-nav');
   moreButton?.classList.toggle('active',activeView==='more'||!['feed','for-you','profile','friends','live','messages'].includes(activeView));
 }
-function activateNav(view){const requestedView=view;if(requestedView==='menstrual-health'&&!isFemaleAccountForMenstrualHealth()){syncMenstrualHealthNavigation();toast('Menstrual Health is available only to female accounts.');return;}if(state.view==='for-you'&&requestedView!=='for-you'){stopForYouAutoRefresh();teardownForYouPlayback();}if(requestedView==='profile'&&state.user){state.profileTargetId=String(state.user.id);state.profileTab='posts';}if(state.view==='meetwave'&&requestedView!=='meetwave')window.MingloraMeetWave?.onNavigateAway?.();if(state.view==='leagues'&&requestedView!=='leagues')window.MingloraLeagues?.onNavigateAway?.();if(state.view==='gifter-progression'&&requestedView!=='gifter-progression')window.MingloraGifterProgression?.onNavigateAway?.();if(state.view==='feed'&&requestedView!=='feed'&&requestedView!=='for-you')stopFeedAutoSync();if(requestedView==='for-you'){state.forYouScope=normalizeForYouScope(state.forYouScope);view='for-you';}else if(requestedView==='feed'&&!restoringSavedView){state.feedScope='all';}if(view!=='profile')stopProfilePresence();if(view!=='friends')stopPeopleDiscoveryRefresh();if(view!=='profile')state.profileTargetId='';state.view=view;syncPageLayout();syncMessageRefreshPolling();syncNavigationActive();persistCurrentView();recordBrowserNavigation();return renderView();}
+function activateNav(view){const requestedView=view;if(requestedView==='menstrual-health'&&!isFemaleAccountForMenstrualHealth()){syncMenstrualHealthNavigation();toast('Menstrual Health is available only to female accounts.');return;}if(state.view==='for-you'&&requestedView!=='for-you'){stopForYouAutoRefresh();teardownForYouPlayback();}if(requestedView==='profile'&&state.user){state.profileTargetId=String(state.user.id);state.profileTab='';}if(state.view==='meetwave'&&requestedView!=='meetwave')window.MingloraMeetWave?.onNavigateAway?.();if(state.view==='leagues'&&requestedView!=='leagues')window.MingloraLeagues?.onNavigateAway?.();if(state.view==='gifter-progression'&&requestedView!=='gifter-progression')window.MingloraGifterProgression?.onNavigateAway?.();if(state.view==='feed'&&requestedView!=='feed'&&requestedView!=='for-you')stopFeedAutoSync();if(requestedView==='for-you'){state.forYouScope=normalizeForYouScope(state.forYouScope);view='for-you';}else if(requestedView==='feed'&&!restoringSavedView){state.feedScope='all';}if(view!=='profile')stopProfilePresence();if(view!=='friends')stopPeopleDiscoveryRefresh();if(view!=='profile')state.profileTargetId='';state.view=view;syncPageLayout();syncMessageRefreshPolling();syncNavigationActive();persistCurrentView();recordBrowserNavigation();return renderView();}
 window.MingloraActivateView=view=>activateNav(view);
 window.addEventListener('minglora:open-wallet',event=>{
   const tab=['recharge','earnings','exchange','currency','calculator'].includes(event.detail?.tab)?event.detail.tab:'recharge';
@@ -5021,7 +5021,7 @@ async function openProfile(id,openEditor=false){
   if(!profileId)return;
   const generation=++profileLoadGeneration;
   stopProfilePresence();
-  if(state.profileTargetId!==profileId)state.profileTab='posts';
+  if(state.profileTargetId!==profileId)state.profileTab='';
   state.profileTargetId=profileId;
   activateSilent('profile');
   persistCurrentView();
@@ -5899,6 +5899,7 @@ async function handleProfileOverflowAction(action,u,data){
   if(action==='verification-review'){await openProfileVerificationReviewDesk();return;}
 }
 let profileStylePreview=null;
+let profileStylePreviewScreenLayout='fluid-panel';
 let profileStylePreviewReturnView='settings';
 let lastProfileStyleTarget='';
 let lastRenderedProfileStyle='';
@@ -5908,15 +5909,12 @@ window.addEventListener('minglora:preview-profile-style',event=>{
   const style=system.normalize(event.detail?.style);
   const layout=system.normalizeLayout(event.detail?.screenLayout);
   profileStylePreview=style;
+  profileStylePreviewScreenLayout=layout;
   profileStylePreviewReturnView=state.view==='profile'?'profile':'settings';
   state.profileTargetId='';
   state.profileTab=system.get(style).defaultTab;
   state.view='profile';
   void openProfile(state.user.id);
-  window.setTimeout(()=>{
-    const root=document.querySelector('.minglora-profile-page');
-    if(root)root.dataset.profileScreenLayout=layout;
-  },0);
 });
 window.addEventListener('minglora:profile-style-saved',event=>{
   const system=window.MingloraProfileStyleSystem;
@@ -5932,7 +5930,7 @@ function renderProfile(data){
   activateSilent('profile');const u=data.user,isMe=u.id===state.user.id;
   const profileStyleSystem=window.MingloraProfileStyleSystem;
   const activeProfileStyle=profileStyleSystem?.normalize(isMe&&profileStylePreview?profileStylePreview:u.profileStyle)||'facebook';
-  const activeProfileScreenLayout=profileStyleSystem?.normalizeLayout(isMe&&profileStylePreview?document.querySelector('.minglora-profile-page')?.dataset.profileScreenLayout||u.profileScreenLayout:u.profileScreenLayout)||'fluid-panel';
+  const activeProfileScreenLayout=profileStyleSystem?.normalizeLayout(isMe&&profileStylePreview?profileStylePreviewScreenLayout:u.profileScreenLayout)||'fluid-panel';
   const profileStyleDefinition=profileStyleSystem?.get(activeProfileStyle)||{id:'facebook',name:'Facebook-style Profile',defaultTab:'posts',tabs:[['posts','Posts'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Reels'],['more','More']]};
   if(lastProfileStyleTarget!==u.id||lastRenderedProfileStyle!==activeProfileStyle){
     state.profileTab=profileStyleDefinition.defaultTab;

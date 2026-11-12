@@ -132,3 +132,20 @@
   .minglora-profile-page .profile-counts{flex-wrap:wrap;gap:8px!important}
   .minglora-profile-page .profile-tabs-list{gap:4px}
 }
+
+/* Accessible, selectable profile-style library cards. */
+.profile-style-library-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0}
+.profile-style-option{position:relative;display:grid;grid-template-columns:28px minmax(0,1fr);align-content:start;gap:5px 10px;min-width:0;min-height:94px;padding:13px;border:1px solid var(--line,#dce2ea);border-radius:12px;background:var(--card,#fff);color:var(--ink,#19202b);text-align:left;cursor:pointer;transition:border-color .16s ease,box-shadow .16s ease,background .16s ease}
+.profile-style-option:hover{border-color:var(--primary,#1769e0);background:color-mix(in srgb,var(--primary,#1769e0) 4%,var(--card,#fff))}
+.profile-style-option.active,.profile-style-option[aria-pressed="true"]{border:2px solid var(--primary,#1769e0);padding:12px;box-shadow:0 0 0 2px color-mix(in srgb,var(--primary,#1769e0) 10%,transparent)}
+.profile-style-option:focus-visible{outline:3px solid color-mix(in srgb,var(--primary,#1769e0) 35%,transparent);outline-offset:2px}
+.profile-style-option:disabled{opacity:.6;cursor:wait}
+.profile-style-option-mark{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--bg,#eef2f7);color:var(--primary,#1769e0);font-weight:900}
+.profile-style-option.active .profile-style-option-mark{background:var(--primary,#1769e0);color:#fff}
+.profile-style-option>strong{align-self:center;min-width:0;font-size:14px;line-height:1.3}
+.profile-style-option>small{grid-column:2;color:var(--muted,#687386);font-size:12px;line-height:1.5}
+.profile-style-library-controls{display:grid;gap:12px;margin-top:14px;padding-top:14px;border-top:1px solid var(--line,#e2e7ed)}
+.profile-style-library-actions{display:flex;flex-wrap:wrap;gap:8px}
+.profile-style-library-actions button{min-height:40px;padding:8px 13px}
+#profile-style-library-status{margin:0}
+@media(max-width:640px){.profile-style-library-grid{grid-template-columns:minmax(0,1fr);gap:8px}.profile-style-option{min-height:78px}.profile-style-library-actions button{flex:1 1 100%}}

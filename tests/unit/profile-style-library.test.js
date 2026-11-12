@@ -41,7 +41,7 @@ test('one profile data record powers style-specific navigation and keeps real ex
   assert.match(profile,/data-profile-screen-layout=/);
   assert.match(profile,/profileStyleDefinition\.tabs/);
   for(const marker of ['id="profile-follow"','id="profile-subscribe"','id="profile-message"','data-profile-call="audio"','data-profile-call="video"','id="profile-add-story"','id="edit-profile"','id="profile-overflow-trigger"'])assert.ok(profile.includes(marker),marker);
-  assert.match(app,/profileStyle:getUserSettings\(u\)\.preferences\.profileStyle/);
+  assert.match(server,/profileStyle:getUserSettings\(u\)\.preferences\.profileStyle/);
 });
 
 test('account settings provides actual preview, save, and reset controls',()=>{
