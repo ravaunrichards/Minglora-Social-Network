@@ -322,7 +322,8 @@ BEGIN
       WHEN COALESCE(item->>'identityId','') ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
       THEN NOT EXISTS (
         SELECT 1 FROM public.ai_identities AS identity
-        WHERE identity.identity_id=(item->>'identityId')::uuid AND identity.owner_admin_id=v_actor
+        WHERE identity.identity_id=(item->>'identityId')::uuid
+          AND identity.owner_admin_id=v_actor AND identity.population='organizational'
       )
       ELSE true
     END
@@ -364,7 +365,8 @@ BEGIN
          THEN NOT EXISTS (
            SELECT 1 FROM public.ai_identities AS identity
            WHERE identity.identity_id=(item->>'identityId')::uuid
-             AND identity.owner_admin_id=v_actor AND identity.status='created'
+             AND identity.owner_admin_id=v_actor
+             AND identity.population='organizational' AND identity.status='created'
          )
          ELSE true
        END
