@@ -533,3 +533,15 @@ Continue with independent non-database work that can be built and verified in th
 - No gateway source change was justified by this review; the existing owner and runtime-secret boundary was preserved.
 - Latest GitHub connector checks for the tracker update returned no combined statuses and no PR-triggered workflow runs. The exact 16-case worker file has passed locally as documented above; broader CI remains unverified.
 - Next safe work remains independent code and test hardening. Do not deploy the Edge Function or apply the staged migration from this review.
+
+
+## Checkpoint — task queue RPC and runtime-gateway security regression coverage (2026-11-12)
+
+- Continued on the existing Minglora AI Bot Network branch only; no new repository, Supabase project, service or branch was created.
+- Added four tests to `tests/unit/personal-ai-bots-schema.test.js` and imported the already-staged durable queue migration: (1) task claim is owner-gated, opt-in, approval-gated and restricted to four safe text task types; (2) heartbeat/completion/failure require the current running worker ID, lease token and unexpired lease; (3) all task queue RPC grants revoke `PUBLIC`, `anon`, and `authenticated` and grant `service_role` only; (4) the runtime gateway requires the runtime secret and designated owner before task RPC dispatch.
+- The schema test module now contains 64 tests. The four new test definitions were re-fetched from the branch and inspected. Their predicates were independently executed against the exact current migration and gateway source fetched from the same branch: **48/48 source-level assertions matched**.
+- The full updated schema test module has **not** been run with Node. A verification-container sparse clone attempt failed because DNS resolution for `github.com` is unavailable. Do not claim all 64 schema tests passed. The separate worker test module remains verified at 16/16 in the earlier exact-source Node 22 run.
+- No changes were made to task queue SQL, runtime gateway, production database, migrations, provider credentials, worker runtime enablement, or deployment. This increment adds regression coverage only.
+- Latest relevant commits: queue lease/authorization tests `1f580b07be23156146e0cb4f7703e155f3fe2f74`; tracker update `5fef26b6ffb7ae558c5981831ea312579f6f324a` (queue worker row evidence); current tracker/checkpoint updates follow in the branch log.
+- Full GitHub Actions/PR CI remains unverified; the connector returned no combined commit statuses or pull-request-triggered workflow runs for the inspected heads.
+- **Next safe step:** continue reviewing task approval, cancellation and canonical persistence paths for idempotency and status-transition correctness, then add narrow service/API regression coverage for any confirmed defect. Keep the staged migration, provider runtime, worker and scheduler disabled pending a suitable non-production Supabase environment and release authorization.
