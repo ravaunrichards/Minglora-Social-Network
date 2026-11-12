@@ -26,7 +26,7 @@ test('ten profile styles and nine screen layouts expose all 90 combinations',()=
 
 test('profile styles are separate from the existing standard/advanced/creator content layout',()=>{
   assert.match(server,/profileLayout:'advanced',profileStyle:'facebook',profileScreenLayout:'fluid-panel'/);
-  assert.match(server,/profileLayout'&&!\['standard','advanced','creator'\]/);
+  assert.match(server,/!\['standard','advanced','creator'\]\.includes\(preferences\.profileLayout\)/);
   assert.match(server,/key==='profileStyle'&&!PROFILE_STYLES\.includes\(value\)/);
   assert.match(server,/key==='profileScreenLayout'&&!LIVE_SCREEN_LAYOUTS\.includes\(value\)/);
   assert.match(server,/profileStyle:getUserSettings\(u\)\.preferences\.profileStyle/);
