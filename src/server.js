@@ -3159,7 +3159,7 @@ async function route(req, res) {
         const liveHealth = await verifyLiveKitConnection();
         if (!liveHealth.connected) return json(res, 503, { error: liveHealth.error || 'Minglora could not verify its LiveKit connection.' });
         const providedTitle = String(input.title || '').trim();
-        const hostDisplayName = String(user.name || user.username || 'Minglora').trim().slice(0, 112) || 'Minglora';
+        const hostDisplayName = Array.from(String(user.name || user.username || 'Minglora').trim()).slice(0, 112).join('') || 'Minglora';
         // The relational LIVE record requires a non-empty title, so an omitted
         // user title receives a predictable display title without a schema change.
         const title = providedTitle || hostDisplayName + "'s LIVE";
@@ -3207,7 +3207,7 @@ async function route(req, res) {
         db.liveSessions.unshift(session);
         if(visibility==='public'){
           const followerIds=[...new Set(activeFollows().filter(edge=>edge.followedId===user.id).map(edge=>edge.followerId))];
-          const liveNotice = providedTitle ? user.name+' is LIVE: '+title : user.name+' is LIVE now';
+          const liveNotice = providedTitle ? hostDisplayName+' is LIVE: '+title : hostDisplayName+' is LIVE now';
           for(const followerId of followerIds)if(!blockedBetween(followerId,user.id))notify(followerId,user.id,'live',liveNotice,{liveSessionId:id});
         }
         await saveStore();
