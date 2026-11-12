@@ -28,6 +28,7 @@ import { buildSupabaseProviderCredentialPatch } from './auth-provider-credential
 import { paginateDescending } from './domain/pagination.js';
 import { rankForYouFeed } from './domain/feed-ranking.js';
 import { rankForYouVideos } from './domain/video-ranking.js';
+import { validateVideoRemixRequest } from './domain/video-remix.js';
 import { VIDEO_PLAYLIST_MAX_ITEMS, addVideoPlaylistItem, canViewVideoPlaylist, removeVideoPlaylistItem, reorderVideoPlaylistItems, validateVideoPlaylistInput } from '../backend/modules/video/playlists.js';
 import { VIDEO_CHANNEL_MAX_SUBSCRIPTIONS, canViewVideoChannel, subscribeToVideoChannel, unsubscribeFromVideoChannel, validateVideoChannelInput } from '../backend/modules/video/channels.js';
 import { summarizeCreatorVideoAnalytics } from './domain/video-analytics.js';
@@ -1058,7 +1059,11 @@ async function publicPost(p,viewerId) {
     }catch{return null;}
   }));
   const {imageUrl,...cleanPost}=p;
-  return {...cleanPost,media:media.filter(item=>item?.url),soundtrack:await publicSoundtrack(p.soundtrack,viewerId),author:safeUser(author),taggedUsers:(p.taggedUserIds||[]).map(id=>db.users.find(member=>member.id===id)).filter(Boolean).map(member=>safeUser(member,viewerId)),reactions:p.reactions||{},reactionCount:Object.values(p.reactions||{}).length,myReaction:(p.reactions||{})[viewerId]||null,
+  const remixSourcePost=p.remixSourcePostId?(db.posts||[]).find(item=>item.id===p.remixSourcePostId):null;
+  const remixSource=remixSourcePost&&isVisibleVideoPost(viewerId,remixSourcePost)
+    ?{id:remixSourcePost.id,text:String(remixSourcePost.text||'').trim().slice(0,180),author:safeUser(db.users.find(member=>member.id===remixSourcePost.userId),viewerId)}
+    :p.remixSourcePostId?{unavailable:true}:null;
+  return {...cleanPost,allowRemix:p.allowRemix===true,remixType:p.remixType||null,remixSource,media:media.filter(item=>item?.url),soundtrack:await publicSoundtrack(p.soundtrack,viewerId),author:safeUser(author),taggedUsers:(p.taggedUserIds||[]).map(id=>db.users.find(member=>member.id===id)).filter(Boolean).map(member=>safeUser(member,viewerId)),reactions:p.reactions||{},reactionCount:Object.values(p.reactions||{}).length,myReaction:(p.reactions||{})[viewerId]||null,
     isSaved:(db.savedPosts||[]).some(saved=>saved.userId===viewerId&&saved.postId===p.id),
     isWatchLater:(db.savedPosts||[]).some(saved=>saved.userId===viewerId&&saved.postId===p.id&&saved.readLater===true),
     comments:(p.comments||[]).map(c=>({...c,author:safeUser(db.users.find(u=>u.id===c.userId))}))};
@@ -5460,6 +5465,12 @@ async function route(req, res) {
         const {text,mediaIds}=validation.value;const ids=[...new Set(mediaIds)];
         const requestedVideoFormat=input.videoFormat===undefined||input.videoFormat===null?null:String(input.videoFormat);
         if(requestedVideoFormat!==null&&!['video','reel'].includes(requestedVideoFormat))return json(res,400,{error:'Video format must be video or reel.'});
+        const remix=validateVideoRemixRequest(input,{
+          findSource:id=>(db.posts||[]).find(item=>item.id===id),
+          canViewSource:source=>isVisibleVideoPost(user.id,source)
+        });
+        if(!remix.valid)return json(res,remix.status,{error:remix.error});
+        if((remix.allowRemix||remix.remixSourcePostId)&&requestedVideoFormat===null)return json(res,400,{error:'Video responses and remix permission are available only for video posts.'});
         const audience=String(input.audience||'public');
         if(!['public','friends','close_friends','followers','private'].includes(audience))return json(res,400,{error:'Unsupported post audience.'});
         const feeling=String(input.feeling||'').trim(),activity=String(input.activity||'').trim(),location=String(input.location||'').trim(),background=String(input.background||'').trim();
@@ -5473,7 +5484,7 @@ async function route(req, res) {
         const assets=ids.map(id=>(db.mediaAssets||[]).find(asset=>asset.id===id&&asset.ownerId===user.id&&asset.slot==='post'&&asset.status==='uploaded'));
         if(assets.some(asset=>!asset))return json(res,400,{error:'One or more selected media files are no longer available. Upload them again.'});
         if(requestedVideoFormat&&(assets.length!==1||assets[0]?.mediaType!=='video'))return json(res,400,{error:'A video or Reel post must contain exactly one uploaded video file.'});
-        const post={id:uid(),userId:user.id,text,mediaIds:ids,soundtrack,audience,...(feeling?{feeling}:{}),...(activity?{activity}:{}),...(location?{location}:{}),...(background&&!ids.length?{background}:{}),...(requestedTagIds.length?{taggedUserIds:requestedTagIds}:{}),...(requestedVideoFormat?{videoFormat:requestedVideoFormat}:{}),createdAt:now(),reactions:{},comments:[]};
+        const post={id:uid(),userId:user.id,text,mediaIds:ids,soundtrack,audience,allowRemix:requestedVideoFormat?remix.allowRemix:false,...(remix.remixSourcePostId?{remixSourcePostId:remix.remixSourcePostId,remixType:remix.remixType}:{}),...(feeling?{feeling}:{}),...(activity?{activity}:{}),...(location?{location}:{}),...(background&&!ids.length?{background}:{}),...(requestedTagIds.length?{taggedUserIds:requestedTagIds}:{}),...(requestedVideoFormat?{videoFormat:requestedVideoFormat}:{}),createdAt:now(),reactions:{},comments:[]};
         assets.forEach(asset=>{asset.status='attached';asset.attachedTo=post.id;enqueueAttachedVideoTranscode(asset,post);});db.posts.unshift(post);
         requestedTagIds.forEach(taggedId=>{const taggedMember=db.users.find(member=>member.id===taggedId);if(taggedMember)notify(taggedId,user.id,'post_tagged',(user.name||'A Minglora friend')+' tagged you in a post.',{postId:post.id});});
         await saveStore();
@@ -5488,6 +5499,11 @@ async function route(req, res) {
         if(!validation.valid)return json(res,400,{error:validation.errors.join(' ')});
         let nextSoundtrack=post.soundtrack||null;
         let nextAudience=post.audience||'public';
+        let nextAllowRemix=post.allowRemix===true;
+        if(Object.prototype.hasOwnProperty.call(input,'allowRemix')){
+          if(typeof input.allowRemix!=='boolean')return json(res,400,{error:'Allow video responses must be true or false.'});
+          nextAllowRemix=input.allowRemix;
+        }
         if(Object.prototype.hasOwnProperty.call(input,'audience')){
           nextAudience=String(input.audience||'');
           if(!['public','friends','close_friends','followers','private'].includes(nextAudience))return json(res,400,{error:'Unsupported post audience.'});
@@ -5495,9 +5511,10 @@ async function route(req, res) {
         if(Object.prototype.hasOwnProperty.call(input,'soundtrack')){try{nextSoundtrack=resolveSoundtrackForUser(user.id,input.soundtrack);}catch(error){return json(res,error.status||400,{error:error.message});}}
         const ids=[...new Set(validation.value.mediaIds)],assets=ids.map(id=>(db.mediaAssets||[]).find(asset=>asset.id===id&&asset.ownerId===user.id&&asset.slot==='post'&&(asset.status==='uploaded'||asset.attachedTo===post.id)));
         if(assets.some(asset=>!asset))return json(res,400,{error:'One or more selected media files are not available to this post.'});
+        if(nextAllowRemix&&!assets.some(asset=>asset.mediaType==='video'))return json(res,400,{error:'Only a video post can allow video responses.'});
         (db.mediaAssets||[]).filter(asset=>asset.attachedTo===post.id&&!ids.includes(asset.id)).forEach(asset=>{asset.status='uploaded';delete asset.attachedTo;});
         assets.forEach(asset=>{asset.status='attached';asset.attachedTo=post.id;enqueueAttachedVideoTranscode(asset,post);});
-        post.text=validation.value.text;post.mediaIds=ids;post.soundtrack=nextSoundtrack;post.audience=nextAudience;post.updatedAt=now();await saveStore();
+        post.text=validation.value.text;post.mediaIds=ids;post.soundtrack=nextSoundtrack;post.audience=nextAudience;post.allowRemix=nextAllowRemix;post.updatedAt=now();await saveStore();
         return json(res,200,{post:await publicPost(post,user.id)});
       }
       if(method==='DELETE'&&m){
