@@ -32,6 +32,7 @@ import { VIDEO_PLAYLIST_MAX_ITEMS, addVideoPlaylistItem, canViewVideoPlaylist, r
 import { VIDEO_CHANNEL_MAX_SUBSCRIPTIONS, canViewVideoChannel, subscribeToVideoChannel, unsubscribeFromVideoChannel, validateVideoChannelInput } from '../backend/modules/video/channels.js';
 import { summarizeCreatorVideoAnalytics } from './domain/video-analytics.js';
 import { enqueueVideoTranscodeJob, claimVideoTranscodeJob, completeVideoTranscodeJob, failVideoTranscodeJob, cancelVideoTranscodeJob, renewVideoTranscodeLease, isVideoTranscodeLeaseValid } from './domain/video-transcode-jobs.js';
+import { validateVideoChannelPostInput, createVideoChannelPost, updateVideoChannelPost, deleteVideoChannelPost } from './domain/video-channel-posts.js';
 import { canViewStory as canViewStoryPolicy, removeExpiredStories } from '../backend/modules/stories/service.js';
 import { canPublishGroupPost, canDeleteGroupPost, canLeaveGroup } from '../backend/modules/groups/service.js';
 import { disconnectBlockedConnections } from '../backend/modules/relationships/blocks.js';
@@ -1120,6 +1121,20 @@ function getVideoChannel(ownerId) {
     updatedAt:null
   };
 }
+async function publicVideoChannelPost(post,viewerId){
+  if(!post||post.status==='deleted')return null;
+  const owner=(db.users||[]).find(member=>member.id===post.ownerId);
+  if(!owner)return null;
+  return {id:post.id,ownerId:post.ownerId,title:String(post.title||''),body:String(post.body||''),
+    status:'published',createdAt:post.createdAt||null,updatedAt:post.updatedAt||post.createdAt||null,
+    owner:safeUser(owner,viewerId),isOwner:viewerId===post.ownerId};
+}
+async function listPublicVideoChannelPosts(ownerId,viewerId,limit=30){
+  const rows=(db.videoChannelPosts||[]).filter(post=>post.ownerId===ownerId&&post.status==='published')
+    .sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0))
+    .slice(0,Math.max(1,Math.min(60,Number(limit)||30)));
+  return (await Promise.all(rows.map(post=>publicVideoChannelPost(post,viewerId)))).filter(Boolean);
+}
 async function publicVideoChannel(channel, viewerId, { includeVideos = false } = {}) {
   const owner=(db.users||[]).find(member=>member.id===channel?.ownerId);
   if(!owner)return null;
@@ -1139,7 +1154,8 @@ async function publicVideoChannel(channel, viewerId, { includeVideos = false } =
     isOwner:owner.id===viewerId,
     isSubscribed:Boolean(subscription),
     subscriberCount:(db.videoChannelSubscriptions||[]).filter(item=>item.ownerId===owner.id).length,
-    videoCount:videos.length
+    videoCount:videos.length,
+    updateCount:(db.videoChannelPosts||[]).filter(item=>item.ownerId===owner.id&&item.status==='published').length
   };
   if(includeVideos){
     const items=await Promise.all(videos.slice(0,40).map(post=>publicPost(post,viewerId)));
@@ -5089,7 +5105,14 @@ async function route(req, res) {
             videos.push({...published,channel:{ownerId:post.userId,title:channel.title,owner:safeUser(db.users.find(member=>member.id===post.userId),user.id)}});
           }
         }
-        return json(res,200,{channels,videos});
+        const announcements=(await Promise.all((db.videoChannelPosts||[])
+          .filter(post=>visibleOwnerIds.has(post.ownerId)&&post.status==='published')
+          .sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0)).slice(0,60)
+          .map(async post=>{
+            const channel=getVideoChannel(post.ownerId),published=await publicVideoChannelPost(post,user.id);
+            return published?{...published,channel:{ownerId:post.ownerId,title:channel?.title||'Creator channel'}}:null;
+          }))).filter(Boolean);
+        return json(res,200,{channels,videos,announcements});
       }
       if(method==='GET'&&p==='/api/video-channels'){
         const query=String(url.searchParams.get('q')||'').trim().toLowerCase().slice(0,100);
@@ -5117,6 +5140,35 @@ async function route(req, res) {
         Object.assign(channel,validation.value,{updatedAt:now()});
         await saveStore();
         return json(res,200,{channel:await publicVideoChannel(channel,user.id)});
+      }
+      if(method==='POST'&&p==='/api/video-channels/me/posts'){
+        const validation=validateVideoChannelPostInput(input);
+        if(!validation.valid)return json(res,400,{error:validation.errors.join(' ')});
+        let channel=(db.videoChannels||[]).find(item=>item.ownerId===user.id&&!item.deletedAt);
+        if(!channel){
+          channel={id:uid(),ownerId:user.id,title:String(user.name||user.username||'Minglora Channel').trim(),description:'',visibility:'public',createdAt:now(),updatedAt:now()};
+          db.videoChannels.push(channel);
+        }
+        const posts=db.videoChannelPosts||(db.videoChannelPosts=[]);
+        const created=createVideoChannelPost(posts,{id:uid(),ownerId:user.id,...validation.value,createdAt:now()});
+        if(created.status==='limit')return json(res,429,{error:'You have reached the 500 active channel-update limit.'});
+        if(created.status!=='created')return json(res,400,{error:'The channel update could not be published.'});
+        await saveStore();
+        return json(res,201,{post:await publicVideoChannelPost(created.post,user.id)});
+      }
+      const videoChannelPostRoute=p.match(/^\/api\/video-channel-posts\/([^/]+)$/);
+      if(method==='PATCH'&&videoChannelPostRoute){
+        const updated=updateVideoChannelPost(db.videoChannelPosts||[],{postId:decodeURIComponent(videoChannelPostRoute[1]),ownerId:user.id,input,updatedAt:now()});
+        if(updated.status==='not_found')return json(res,404,{error:'Channel update not found.'});
+        if(updated.status!=='updated')return json(res,400,{error:updated.errors?.join(' ')||'The channel update could not be changed.'});
+        await saveStore();
+        return json(res,200,{post:await publicVideoChannelPost(updated.post,user.id)});
+      }
+      if(method==='DELETE'&&videoChannelPostRoute){
+        const removed=deleteVideoChannelPost(db.videoChannelPosts||[],{postId:decodeURIComponent(videoChannelPostRoute[1]),ownerId:user.id,deletedAt:now()});
+        if(removed.status!=='deleted')return json(res,404,{error:'Channel update not found.'});
+        await saveStore();
+        return json(res,200,{ok:true,id:removed.post.id});
       }
       const videoChannelSubscribeRoute=p.match(/^\/api\/video-channels\/([^/]+)\/subscribe$/);
       if(videoChannelSubscribeRoute&&method==='POST'){
@@ -5152,7 +5204,9 @@ async function route(req, res) {
            !canViewVideoChannel(channel,user.id,{isBlocked:blockedBetween(user.id,ownerId),allowUnlisted:true})) {
           return json(res,404,{error:'Video channel not found.'});
         }
-        return json(res,200,{channel:await publicVideoChannel(channel,user.id,{includeVideos:true})});
+        const publicChannel=await publicVideoChannel(channel,user.id,{includeVideos:true});
+        publicChannel.posts=await listPublicVideoChannelPosts(ownerId,user.id,30);
+        return json(res,200,{channel:publicChannel});
       }
 
       if(method==='GET'&&p==='/api/video-playlists'){
