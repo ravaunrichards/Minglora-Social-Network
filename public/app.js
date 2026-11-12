@@ -421,7 +421,7 @@ let webPushSubscriptionActive=false;
 let incomingCallPollingTimer=null,incomingCallPollBusy=false,incomingCallOverlay=null,incomingCallStatusTimer=null;
 let incomingCallLastErrorAt=0;
 let outgoingCallOverlay=null,outgoingCallPending=null,callRingtoneCache={loadedAt:0,ringtone:null};
-let callRingtoneAudio=null,callToneTimer=null;
+let callRingtoneAudio=null;
 window.addEventListener('minglora:call-ringtone-updated',()=>{callRingtoneCache={loadedAt:0,ringtone:null};});
 function toast(message){const el=$('#toast');el.textContent=message;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2800)}
 function showSubscriptionReturnNotice(){
@@ -8617,7 +8617,6 @@ async function renderMessages(){
 }
 
 function stopCallTone(){
- if(callToneTimer){clearInterval(callToneTimer);callToneTimer=null;}
  if(callRingtoneAudio){callRingtoneAudio.pause();callRingtoneAudio.currentTime=0;callRingtoneAudio=null;}
  try{navigator.vibrate?.(0);}catch{}
 }
