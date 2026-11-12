@@ -55,3 +55,35 @@ test('For You interleaves creators rather than repeating one account', () => {
   assert.equal(ranked[0].id, 'a1');
   assert.equal(new Set(ranked.slice(0, 3).map(item => item.userId)).size, 3);
 });
+
+
+test('For You promotes videos and creators after explicit Interested feedback', () => {
+  const posts = [
+    post('neutral', 'creator-neutral'),
+    post('interest-source', 'creator-interest'),
+    post('same-creator', 'creator-interest')
+  ];
+  const ranked = rankForYouVideos(
+    posts, 'viewer', [], [], [],
+    [{ userId: 'viewer', postId: 'interest-source', action: 'interested' }],
+    now
+  );
+  assert.equal(ranked[0].id, 'interest-source');
+  assert.ok(ranked.findIndex(item => item.id === 'same-creator') < ranked.findIndex(item => item.id === 'neutral'));
+});
+
+test('For You interest feedback is private to the viewer and negative feedback still excludes the video', () => {
+  const posts = [post('target', 'creator-a'), post('other', 'creator-b')];
+  const ranked = rankForYouVideos(
+    posts, 'viewer', [], [], [],
+    [{ userId: 'another-viewer', postId: 'target', action: 'interested' }],
+    now
+  );
+  assert.equal(ranked[0].id, 'target');
+  const hidden = rankForYouVideos(
+    posts, 'viewer', [], [], [],
+    [{ userId: 'viewer', postId: 'target', action: 'not_interested' }],
+    now
+  );
+  assert.deepEqual(hidden.map(item => item.id), ['other']);
+});
