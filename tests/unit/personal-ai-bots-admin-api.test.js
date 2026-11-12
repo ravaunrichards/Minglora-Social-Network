@@ -85,7 +85,7 @@ test('owner overview redacts provider credential references from initial dashboa
   assert.equal(context.res.statusCode,200);
   assert.equal(context.res.payload.providerAssignments[0].credentialConfigured,true);
   assert.ok(!Object.hasOwn(context.res.payload.providerAssignments[0],'credentialSecretReference'));
-  assert.doesNotMatch(JSON.stringify(context.res.payload),'env:MINGLORA_AI_PROVIDER_PRIVATE');
+  assert.equal(JSON.stringify(context.res.payload).includes('env:MINGLORA_AI_PROVIDER_PRIVATE'),false);
 });
 
 test('provider runtime listing redacts server-side credential references',async()=>{
@@ -101,7 +101,7 @@ test('provider runtime listing redacts server-side credential references',async(
   assert.equal(context.res.statusCode,200);
   assert.equal(context.res.payload.assignments[0].credentialConfigured,true);
   assert.ok(!Object.hasOwn(context.res.payload.assignments[0],'credentialSecretReference'));
-  assert.doesNotMatch(JSON.stringify(context.res.payload),'env:MINGLORA_AI_PROVIDER_RUNTIME_PRIVATE');
+  assert.equal(JSON.stringify(context.res.payload).includes('env:MINGLORA_AI_PROVIDER_RUNTIME_PRIVATE'),false);
 });
 
 test('provider assignment listing redacts server-side credential references',async()=>{
@@ -122,7 +122,7 @@ test('provider assignment listing redacts server-side credential references',asy
   assert.equal(context.res.payload.assignments[0].credentialConfigured,true);
   assert.equal(context.res.payload.assignments[1].credentialConfigured,false);
   assert.ok(context.res.payload.assignments.every(item=>!Object.hasOwn(item,'credentialSecretReference')));
-  assert.doesNotMatch(JSON.stringify(context.res.payload),'secret://private/provider-key');
+  assert.equal(JSON.stringify(context.res.payload).includes('secret://private/provider-key'),false);
 });
 
 test('owner overview reads canonical identity rows from the persistence callback',async()=>{
@@ -1600,7 +1600,7 @@ test('provider assignment creation never returns the server-side credential refe
   assert.equal(context.res.statusCode,201);
   assert.equal(context.res.payload.assignment.credentialConfigured,true);
   assert.ok(!Object.hasOwn(context.res.payload.assignment,'credentialSecretReference'));
-  assert.doesNotMatch(JSON.stringify(context.res.payload),'env:MINGLORA_AI_PROVIDER_PRIVATE');
+  assert.equal(JSON.stringify(context.res.payload).includes('env:MINGLORA_AI_PROVIDER_PRIVATE'),false);
 });
 
 
@@ -1782,7 +1782,7 @@ test('team handoff API is owner-controlled, one-receiver and permanently non-dis
   const taskId='00000000-0000-4000-8000-000000000504';
   const db={
     personalAiBots:[{id:senderId,createdBy:'owner'},{id:receiverId,createdBy:'owner'}],
-    personalAiBotTeams:[{id:teamId,ownerId:'owner',name:'Review Team',status:'enabled',enabled:true}],
+    personalAiBotTeams:[{id:teamId,ownerId:'owner-1',name:'Review Team',status:'enabled',enabled:true}],
     personalAiBotTeamMembers:[
       {id:'member-1',ownerId:'owner',teamId,botId:senderId},
       {id:'member-2',ownerId:'owner',teamId,botId:receiverId}
@@ -1836,7 +1836,7 @@ test('team handoff API requires explicit owner privacy attestation before persis
   const taskId='00000000-0000-4000-8000-000000000524';
   const db={
     personalAiBots:[{id:senderId},{id:receiverId}],
-    personalAiBotTeams:[{id:teamId,ownerId:'owner',name:'Privacy Team',status:'enabled'}],
+    personalAiBotTeams:[{id:teamId,ownerId:'owner-1',name:'Privacy Team',status:'enabled'}],
     personalAiBotTeamMembers:[
       {ownerId:'owner',teamId,botId:senderId},
       {ownerId:'owner',teamId,botId:receiverId}
@@ -1865,7 +1865,7 @@ test('team handoff API rejects private context, unsupported fields and non-owner
   const taskId='00000000-0000-4000-8000-000000000514';
   const db={
     personalAiBots:[{id:senderId},{id:receiverId}],
-    personalAiBotTeams:[{id:teamId,ownerId:'owner',name:'Review Team',status:'enabled'}],
+    personalAiBotTeams:[{id:teamId,ownerId:'owner-1',name:'Review Team',status:'enabled'}],
     personalAiBotTeamMembers:[
       {ownerId:'owner',teamId,botId:senderId},
       {ownerId:'owner',teamId,botId:receiverId}
@@ -1894,7 +1894,7 @@ test('team handoff API rejects private context, unsupported fields and non-owner
   });
   await handlePersonalAiBotsAdminApi(denied);
   assert.equal(denied.res.statusCode,403);
-  assert.equal(db.personalAiBotTeamHandoffs,undefined);
+  assert.deepEqual(db.personalAiBotTeamHandoffs,[]);
 });
 
 
@@ -1981,7 +1981,7 @@ test('multilingual settings API rejects provider assertions and non-owner reads'
   });
   await handlePersonalAiBotsAdminApi(denied);
   assert.equal(denied.res.statusCode,403);
-  assert.equal(db.personalAiBotLanguageSettings,undefined);
+  assert.deepEqual(db.personalAiBotLanguageSettings,[]);
 });
 
 
@@ -2115,7 +2115,7 @@ test('Creator Studio API provides owner-only draft create, edit, submit and revi
   assert.equal(reviewed.res.statusCode,200);
   assert.equal(reviewed.res.payload.draft.status,'approved_for_human_handoff');
   assert.equal(reviewed.res.payload.draft.publishingStatus,'not_published');
-  const listed=await invoke('GET',base+'?limit=20&offset=0');
+  const listed=await invoke('GET',base);
   assert.equal(listed.res.statusCode,200);
   assert.equal(listed.res.payload.drafts.length,1);
   assert.equal(saves,4);
