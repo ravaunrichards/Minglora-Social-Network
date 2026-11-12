@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS public.minglora_audio_licenses (
 );
 
 CREATE TABLE IF NOT EXISTS public.minglora_audio_events (
-  event_key text PRIMARY KEY CHECK (event_key ~ '^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$'),
+  event_key text PRIMARY KEY CHECK (event_key ~ '^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$'),
   category_id uuid NOT NULL REFERENCES public.minglora_audio_categories(id) ON DELETE RESTRICT,
   label text NOT NULL CHECK (length(label) BETWEEN 2 AND 120),
   description text NOT NULL DEFAULT '',
@@ -69,7 +69,7 @@ CREATE TABLE IF NOT EXISTS public.minglora_audio_assets (
   origin_type text NOT NULL CHECK (origin_type IN ('field_recording','studio_recording','voice_recording','instrument_recording','environmental_recording','wildlife_recording','cultural_recording','user_original_recording','creator_original_recording','legacy_procedural','synthetic','ai_generated','text_to_speech','unknown')),
   authenticity_status text NOT NULL DEFAULT 'unverified' CHECK (authenticity_status IN ('unverified','verified_authentic','rejected_synthetic','rejected_ai','rejected_fake')),
   review_status text NOT NULL DEFAULT 'draft' CHECK (review_status IN ('draft','pending_review','approved','rejected','inactive','archived')),
-  original_filename text NOT NULL CHECK (original_filename ~ '^[a-z0-9]+(_[a-z0-9]+){2,}_v[0-9]{3,}\\.(mp3|m4a|ogg|opus|wav|flac|aac|webm)$'),
+  original_filename text NOT NULL CHECK (original_filename ~ '^[a-z0-9]+(_[a-z0-9]+){2,}_v[0-9]{3,}\.(mp3|m4a|ogg|opus|wav|flac|aac|webm)$'),
   storage_bucket text NOT NULL DEFAULT 'minglora-sounds' CHECK (storage_bucket = 'minglora-sounds'),
   storage_path text NOT NULL CHECK (length(storage_path) BETWEEN 3 AND 1024),
   file_format text NOT NULL CHECK (file_format IN ('mp3','m4a','ogg','opus','wav','flac','aac','webm')),
@@ -237,6 +237,7 @@ CREATE INDEX IF NOT EXISTS minglora_audio_assets_scope_status_idx ON public.ming
 CREATE INDEX IF NOT EXISTS minglora_audio_assets_sha256_idx ON public.minglora_audio_assets(sha256);
 CREATE INDEX IF NOT EXISTS minglora_audio_events_category_idx ON public.minglora_audio_events(category_id,is_active);
 CREATE INDEX IF NOT EXISTS minglora_audio_assignments_event_idx ON public.minglora_audio_assignments(event_key,is_enabled);
+CREATE UNIQUE INDEX IF NOT EXISTS minglora_audio_assignments_global_event_uidx ON public.minglora_audio_assignments(event_key) WHERE profile_id IS NULL;
 CREATE INDEX IF NOT EXISTS minglora_audio_usage_asset_created_idx ON public.minglora_audio_usage_records(asset_id,created_at DESC);
 CREATE INDEX IF NOT EXISTS minglora_audio_reports_status_idx ON public.minglora_audio_reports(status,created_at DESC);
 CREATE INDEX IF NOT EXISTS minglora_audio_projects_owner_status_idx ON public.minglora_audio_projects(owner_id,status,updated_at DESC);
