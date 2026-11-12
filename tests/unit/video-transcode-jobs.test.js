@@ -143,3 +143,20 @@ test('source deletion can cancel a currently leased job', () => {
   assert.equal(cancelled.status, 'cancelled');
   assert.equal(jobs[0].leaseToken, null);
 });
+
+test('worker implementation is isolated and preserves the original playback object', async () => {
+  const root = new URL('../../', import.meta.url);
+  const server = await (await import('node:fs/promises')).readFile(new URL('src/server.js', root), 'utf8');
+  const worker = await (await import('node:fs/promises')).readFile(new URL('backend/workers/video-transcode/worker.mjs', root), 'utf8');
+  const docker = await (await import('node:fs/promises')).readFile(new URL('Dockerfile.video-worker', root), 'utf8');
+  assert.match(server, /timingSafeEqual\(expectedBytes,suppliedBytes\)/);
+  assert.match(server, /\/api\/internal\/video-transcode\/claim/);
+  assert.match(server, /asset\.transcodedAssetId/);
+  assert.match(server, /const playbackAsset=derivative\|\|asset/);
+  assert.match(worker, /spawn\(FFMPEG_PATH, args/);
+  assert.match(worker, /\/api\/internal\/video-transcode\/heartbeat/);
+  assert.match(worker, /Tus-Resumable/);
+  assert.match(worker, /MAX_MEDIA_BYTES/);
+  assert.match(docker, /ffmpeg/);
+  assert.match(docker, /USER node/);
+});
