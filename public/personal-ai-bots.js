@@ -83,7 +83,17 @@
 
   function appointmentCard(appointment){
     const manager=appointment.reportingManagerName?appointment.reportingManagerName+' · '+(appointment.reportingManagerPositionTitle||'Position unavailable'): 'No reporting manager';
-    return '<article class="pab-category" data-appointment-card="'+esc(appointment.id)+'"><div class="pab-category-copy"><strong>'+esc(appointment.candidateDisplayName)+'</strong><p>'+esc(appointment.positionTitle)+' · '+esc(appointment.departmentName)+'</p><span class="pab-tag">'+esc(appointment.status)+'</span><p><small>Reporting manager: '+esc(manager)+'<br>Approved by: '+esc(appointment.approvedBy||'')+' · '+esc(date(appointment.appointedAt))+'</small></p><div class="pab-warning">Identity status: unchanged disabled · Permissions: none granted · External execution: not enabled</div></div></article>';
+    const transitions={
+      appointed:[['suspended','Suspend appointment'],['terminated','Terminate appointment'],['retired','Retire appointment']],
+      suspended:[['appointed','Reactivate appointment'],['terminated','Terminate appointment'],['retired','Retire appointment']],
+      terminated:[['archived','Archive employment record']],
+      retired:[['archived','Archive employment record']],
+      archived:[]
+    };
+    const actions=(transitions[appointment.status]||[]).map(([status,label])=>
+      '<button type="button" class="pab-btn secondary pab-appointment-status" data-appointment="'+esc(appointment.id)+'" data-status="'+status+'">'+label+'</button>'
+    ).join('');
+    return '<article class="pab-category" data-appointment-card="'+esc(appointment.id)+'"><div class="pab-category-copy"><strong>'+esc(appointment.candidateDisplayName)+'</strong><p>'+esc(appointment.positionTitle)+' · '+esc(appointment.departmentName)+'</p><span class="pab-tag">'+esc(appointment.status)+'</span><p><small>Reporting manager: '+esc(manager)+'<br>Approved by: '+esc(appointment.approvedBy||'')+' · '+esc(date(appointment.appointedAt))+'</small></p><div class="pab-warning">Identity status: unchanged disabled · Permissions: none granted · External execution: not enabled</div>'+(actions?'<div class="pab-field"><label>Employment note (optional)<input class="pab-input pab-appointment-notes" data-appointment="'+esc(appointment.id)+'" maxlength="2000" placeholder="Reason for this employment status change"></label></div><div class="pab-actions pab-appointment-lifecycle">'+actions+'</div><small class="pab-notice pab-appointment-status-message" data-appointment-message="'+esc(appointment.id)+'" aria-live="polite"></small>':'<p class="pab-notice">This appointment record is archived. Its employment history remains available for audit.</p>')+'</div></article>';
   }
 
   function organizationNode(appointment,childrenByManager,rendered,ancestors){
@@ -410,6 +420,7 @@
     document.querySelector('#pab-application-form')?.addEventListener('submit',createApplication);
     document.querySelectorAll('.pab-save-application').forEach(node=>node.addEventListener('click',()=>saveApplication(node.dataset.application)));
     document.querySelector('#pab-appointment-form')?.addEventListener('submit',createAppointment);
+    document.querySelectorAll('.pab-appointment-status').forEach(node=>node.addEventListener('click',()=>updateAppointmentStatus(node.dataset.appointment,node.dataset.status)));
     document.querySelector('#pab-appointment-application')?.addEventListener('change',syncAppointmentManagerRequirement);
     syncAppointmentManagerRequirement();
     document.querySelector('#pab-create-starters')?.addEventListener('click',createStarters);
@@ -1104,6 +1115,27 @@
       await refresh();
       notice('pab-appointment-notice','Owner-approved appointment recorded. The AI identity remains disabled and no permissions were granted.','success');
     }catch(error){notice('pab-appointment-notice',error.message,'error');}
+  }
+
+  async function updateAppointmentStatus(appointmentId,status){
+    const label=String(status||'').replaceAll('_',' ');
+    if(['terminated','retired','archived'].includes(status)&&
+       !window.confirm('Record the '+label+' status for this appointment? The AI identity will remain disabled and no permissions will be granted.')){
+      return;
+    }
+    const note=document.querySelector('.pab-appointment-notes[data-appointment="'+CSS.escape(appointmentId)+'"]')?.value?.trim()||'';
+    const statusNode=document.querySelector('.pab-appointment-status-message[data-appointment-message="'+CSS.escape(appointmentId)+'"]');
+    if(statusNode)statusNode.textContent='Saving employment status…';
+    try{
+      await request(API+'/appointments/'+encodeURIComponent(appointmentId),{
+        method:'PATCH',body:JSON.stringify({status,notes:note})
+      });
+      await refresh();
+      notice('pab-appointment-notice','Appointment status recorded with employment history. The AI identity remains disabled and has no permissions.','success');
+    }catch(error){
+      if(statusNode)statusNode.textContent=error.message||'Appointment status could not be saved.';
+      notice('pab-appointment-notice',error.message,'error');
+    }
   }
 
   async function createCategory(event){
