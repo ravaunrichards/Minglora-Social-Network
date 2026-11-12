@@ -46,5 +46,5 @@ test('Recommendation UI assets are versioned and cached by the service worker',(
   assert.match(index,/app\.js\?v=20261112-for-you-interest-feedback-1/);
   assert.match(worker,/for-you-tiktok\.css\?v=20261112-for-you-feedback-menu-1/);
   assert.match(worker,/app\.js\?v=20261112-for-you-interest-feedback-1/);
-  assert.match(worker,/minglora-shell-v293-for-you-interest-feedback-1/);
+  assert.match(worker,/minglora-shell-v293-self-updating-1/);
 });
