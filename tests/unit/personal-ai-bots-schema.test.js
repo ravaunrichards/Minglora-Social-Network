@@ -38,6 +38,10 @@ const autonomyModesSql = await readFile(
   new URL('../../supabase/migrations/20261109252000_minglora_ai_bot_autonomy_modes.sql', import.meta.url),
   'utf8'
 );
+const taskQueueSql = await readFile(
+  new URL('../../supabase/migrations/20261109200000_minglora_ai_bot_durable_task_queue.sql', import.meta.url),
+  'utf8'
+);
 const profileHtml = await readFile(
   new URL('../../public/ai-profile.html', import.meta.url),
   'utf8'
@@ -875,4 +879,72 @@ test('Creator Studio drafts use the existing owner runtime-state store and do no
   assert.match(serviceSource,/aiIdentityDisclosureRequired:true/);
   assert.match(serviceSource,/publishingStatus:'not_published'/);
   assert.match(serviceSource,/handoffStatus:'not_handed_off'/);
+});
+
+
+test('durable AI task claim is owner-gated, opt-in, approval-gated and limited to safe text tasks',()=>{
+  const start=taskQueueSql.indexOf('CREATE OR REPLACE FUNCTION public.minglora_ai_bot_task_claim(');
+  const end=taskQueueSql.indexOf('$function$;',start);
+  assert.ok(start>=0&&end>start,'task claim function must exist');
+  const claim=taskQueueSql.slice(start,end);
+  assert.match(claim,/p_actor_user_id IS DISTINCT FROM '5b998c21-86b5-4621-ab37-e0808a2657b1'::uuid/);
+  assert.match(claim,/NOT v_settings\.enabled OR NOT v_settings\.execution_enabled/);
+  assert.match(claim,/NOT v_settings\.provider_ready/);
+  assert.match(claim,/v_settings\.emergency_shutdown_at IS NOT NULL/);
+  assert.match(claim,/FOR UPDATE/);
+  assert.match(claim,/FOR UPDATE OF task SKIP LOCKED/);
+  assert.match(claim,/task\.status = 'approved_waiting_for_worker'/);
+  assert.match(claim,/task\.high_impact = false/);
+  assert.match(claim,/task\.task_type IN \('assistant_request','moderation_review','analytics_report','translation'\)/);
+  assert.match(claim,/task\.approval_required = true/);
+  assert.match(claim,/task\.approved_by = p_actor_user_id/);
+  assert.match(claim,/task\.approved_at IS NOT NULL/);
+  assert.match(claim,/identity\.population = 'independent'/);
+  assert.match(claim,/identity\.status = 'active'/);
+  assert.match(claim,/pg_catalog\.cardinality\(assignment\.tool_permissions\) = 0/);
+  assert.match(claim,/pg_catalog\.cardinality\(model\.tool_permissions\) = 0/);
+  assert.match(claim,/gen_random_uuid\(\)/);
+});
+
+test('AI task heartbeat, completion and failure all require the current unexpired lease owner',()=>{
+  for(const name of ['heartbeat','complete','fail']){
+    const start=taskQueueSql.indexOf('CREATE OR REPLACE FUNCTION public.minglora_ai_bot_task_'+name+'(');
+    const end=taskQueueSql.indexOf('$function$;',start);
+    assert.ok(start>=0&&end>start,'task '+name+' function must exist');
+    const body=taskQueueSql.slice(start,end);
+    assert.match(body,/p_actor_user_id IS DISTINCT FROM '5b998c21-86b5-4621-ab37-e0808a2657b1'::uuid/);
+    assert.match(body,/status = 'running'/);
+    assert.match(body,/worker_id = p_worker_id/);
+    assert.match(body,/lease_token = p_lease_token/);
+    assert.match(body,/lease_expires_at > pg_catalog\.now\(\)/);
+  }
+});
+
+test('AI task queue RPC grants are restricted to the existing Supabase service role',()=>{
+  for(const [signature] of [
+    ['upsert(jsonb,uuid)'],['upsert_batch(jsonb,uuid)'],['claim(text,integer,integer,uuid)'],
+    ['heartbeat(uuid,text,uuid,integer,uuid)'],['complete(uuid,text,uuid,jsonb,uuid)'],
+    ['fail(uuid,text,uuid,boolean,text,text,uuid)'],['list(uuid,integer,integer)'],['stats(uuid)']
+  ]){
+    const suffix=signature;
+    assert.ok(taskQueueSql.includes('REVOKE ALL ON FUNCTION public.minglora_ai_bot_task_'+suffix+' FROM PUBLIC, anon, authenticated'),
+      'public/anon/authenticated execution must be revoked for '+suffix);
+    assert.ok(taskQueueSql.includes('GRANT EXECUTE ON FUNCTION public.minglora_ai_bot_task_'+suffix+' TO service_role'),
+      'service_role execution must be granted for '+suffix);
+  }
+  assert.doesNotMatch(taskQueueSql,/GRANT EXECUTE ON FUNCTION public\.minglora_ai_bot_task_[^(]+\([^;]+\) TO (?:anon|authenticated)\b/i);
+});
+
+test('AI task runtime gateway requires runtime secret and designated owner before queue RPC dispatch',()=>{
+  assert.match(gateway,/const supplied = req\.headers\.get\("x-minglora-api-key"\)/);
+  assert.match(gateway,/constantTimeEqual\(suppliedHash, credential\.secret_sha256\)/);
+  assert.match(gateway,/if \(String\(action\)\.startsWith\("ai_bot_task_"\)\)/);
+  assert.match(gateway,/actorUserId !== AI_NETWORK_OWNER_ID/);
+  assert.match(gateway,/admin\.rpc\("minglora_ai_bot_task_claim"/);
+  assert.match(gateway,/admin\.rpc\("minglora_ai_bot_task_heartbeat"/);
+  assert.match(gateway,/admin\.rpc\("minglora_ai_bot_task_complete"/);
+  assert.match(gateway,/admin\.rpc\("minglora_ai_bot_task_fail"/);
+  assert.match(gateway,/leaseToken\)/);
+  assert.match(gateway,/byteLength > 32768/);
+  assert.match(gateway,/typeof retryable !== "boolean"/);
 });
