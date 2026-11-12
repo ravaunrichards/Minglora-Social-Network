@@ -2699,20 +2699,19 @@ async function openLiveRoom(session,role,issuedLiveKit){
   const liveHostId=String(session.hostId||session.host?.id||'');
   const liveLikeCount=Math.max(0,Number(session.likeCount)||0);
   // Stable layout contract: class='live-stage-topbar' remains present for the stage HUD.
+  // Keep creator identity and the heart counter on one row, with LIVE NOW beneath the name.
   const liveStageHud=
     "<div class='live-stage-topbar "+(role==="host"?"is-host":"")+"'>"+
       "<div class='live-stage-top-left'>"+
-        "<div class='live-host-profile-wrap'><button type='button' class='live-host-profile' data-live-profile-preview='"+esc(liveHostId)+"' aria-label='Open "+esc(liveHostName)+" profile in LIVE'>"+
-          "<img src='"+avatar(session.host||state.user)+"' alt='' loading='eager'>"+
-          "<span><strong>"+esc(liveHostName)+"</strong><small><i class='live-host-live-dot'></i> LIVE NOW</small></span>"+
-        "</button>"+
-        (role==='viewer'?"<button type='button' id='live-follow-host' class='live-follow-button' aria-pressed='"+(session.host?.following?'true':'false')+"'>"+(session.host?.following?'Following':'Follow')+"</button>":"")+
+        "<div class='live-host-profile-wrap'>"+
+          "<button type='button' class='live-host-profile' data-live-profile-preview='"+esc(liveHostId)+"' aria-label='Open "+esc(liveHostName)+" profile in LIVE'>"+
+            "<img src='"+avatar(session.host||state.user)+"' alt='' loading='eager'>"+
+            "<span class='live-host-identity-copy'><strong>"+esc(liveHostName)+"</strong><small class='live-host-live-status'><i class='live-host-live-dot'></i> LIVE NOW</small></span>"+
+          "</button>"+
+          "<div class='live-like-control live-like-count' aria-label='LIVE heart reactions'><button type='button' id='live-heart-like' class='live-heart-like' aria-label='Like this LIVE' aria-pressed='false'><span aria-hidden='true'>♥</span></button><strong id='live-reaction-count' data-count='"+liveLikeCount+"'>"+liveCompactCount(liveLikeCount)+"</strong></div>"+
+          (role==='viewer'?"<button type='button' id='live-follow-host' class='live-follow-button' aria-pressed='"+(session.host?.following?'true':'false')+"'>"+(session.host?.following?'Following':'Follow')+"</button>":"")+
         "</div>"+
-        "<div class='live-like-control live-like-count'><button type='button' id='live-heart-like' class='live-heart-like' aria-label='Like this LIVE' aria-pressed='false'><span aria-hidden='true'>♥</span></button><strong id='live-reaction-count' data-count='"+liveLikeCount+"'>"+liveCompactCount(liveLikeCount)+"</strong><small>likes</small></div>"+
         (role==='viewer'?"<button type='button' id='live-fan-club-join' class='live-fan-club-join' aria-label='Join host Fan Club for one Coin'>♥ Join · 1 Coin</button>":"")+
-      "</div>"+
-      "<div class='live-stage-top-actions'>"+
-      (role==="host"?"<button type='button' id='live-leave' class='live-host-power-button' aria-label='Power off LIVE for everyone' title='Power off LIVE'><svg viewBox='0 0 24 24' aria-hidden='true' focusable='false'><path d='M12 2v10' stroke='currentColor' stroke-width='2.2' stroke-linecap='round' fill='none'></path><path d='M7.05 4.95a8 8 0 1 0 9.9 0' stroke='currentColor' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round' fill='none'></path></svg></button>":"")+
       "</div>"+
     "</div>";
   const liveChatOverlay=liveSettings.groupChatEnabled!==false
@@ -2720,7 +2719,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
     : "<p id='live-chat-disabled-note' class='live-chat-disabled-note'>The host has turned off Group LIVE chat for this broadcast.</p>";
   setContent("<section id='live-player-shell' class='live-player-shell live-theme-"+liveTheme+" live-mode-"+liveMode+" "+(broadcastType==="audio_only"?"live-player-audio-only":"live-player-video-audio")+"'><div class='live-player-header'>"+(role==='viewer'?"<button class='live-exit-button' id='live-back' aria-label='Exit LIVE' title='Exit LIVE'>×</button>":"<button class='text-button' id='live-back'>← Live now</button>")+"<div><span class='live-indicator'>LIVE</span><span class='live-broadcast-type'>"+liveModeLabels[liveMode]+"</span><strong>"+esc(session.title)+"</strong></div><span id='live-viewer-count' class='live-viewer-count'"+(liveSettings.markViewers===false?" hidden":"")+">◉ Connecting…</span></div>"+liveEntryBanner+livePreflightBanner+
     "<div class='live-player-layout'><div class='live-video-column'>"+stageMarkup+"<div id='live-audio-root' class='live-audio-root'></div>"+
-    "<div class='live-player-controls live-icon-controls' role='group' aria-label='LIVE controls'>"+liveControls+"</div></div><aside id='live-fullscreen-chat-slot' class='live-fullscreen-chat-slot' aria-label='LIVE side panel'><div class='live-fullscreen-side-head'><strong>LIVE PANEL</strong><nav class='live-fullscreen-side-tabs' aria-label='Switch LIVE side panel'><button id='live-fullscreen-chat-tab' type='button' data-live-fullscreen-panel='chat' class='active' aria-pressed='true'>Chat</button><button id='live-fullscreen-tools-tab' type='button' data-live-fullscreen-panel='tools' aria-pressed='false'>Tools</button></nav></div></aside></div>"+liveToolsDrawer+"<div id='live-profile-preview' class='live-profile-preview hidden' aria-hidden='true'></div></section>");
+    "<div class='live-player-controls live-icon-controls' role='group' aria-label='LIVE controls'>"+liveControls+"</div></div><aside id='live-fullscreen-chat-slot' class='live-fullscreen-chat-slot' aria-label='LIVE side panel'><div class='live-fullscreen-side-head'><strong>LIVE PANEL</strong><nav class='live-fullscreen-side-tabs' aria-label='Switch LIVE side panel'><button id='live-fullscreen-chat-tab' type='button' data-live-fullscreen-panel='chat' class='active' aria-pressed='true'>Chat</button><button id='live-fullscreen-tools-tab' type='button' data-live-fullscreen-panel='tools' aria-pressed='false'>Tools</button></nav>"+(role==="host"?"<button type='button' id='live-leave' class='live-panel-end-button' aria-label='End LIVE for everyone' title='End LIVE for everyone'><svg viewBox='0 0 24 24' aria-hidden='true' focusable='false'><path d='M12 2v10' stroke='currentColor' stroke-width='2.2' stroke-linecap='round' fill='none'></path><path d='M7.05 4.95a8 8 0 1 0 9.9 0' stroke='currentColor' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round' fill='none'></path></svg><span>End LIVE</span></button>":"")+"</div></aside></div>"+liveToolsDrawer+"<div id='live-profile-preview' class='live-profile-preview hidden' aria-hidden='true'></div></section>");
     if(role==="host"){
     const cohostInviteForm=$("#live-cohost-invite-form");
     cohostInviteForm?.addEventListener("submit",async event=>{
