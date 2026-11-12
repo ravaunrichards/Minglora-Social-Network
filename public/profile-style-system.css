@@ -1,0 +1,134 @@
+/* Additive, isolated profile style experiences. Facebook keeps its established layout unchanged. */
+.minglora-profile-page{min-width:0;max-width:100%;overflow-wrap:anywhere}
+.minglora-profile-page [hidden]{display:none!important}
+.minglora-profile-page .profile-tabs-list{min-width:0;max-width:100%;overflow-x:auto;overscroll-behavior-inline:contain;scrollbar-width:thin}
+.minglora-profile-page .profile-tabs-list>button{flex:0 0 auto;white-space:nowrap}
+.profile-style-preview-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 14px;padding:12px 14px;border:1px solid var(--line,#dfe3ea);border-radius:12px;background:var(--card,#fff);color:var(--ink,#1b2430)}
+.profile-style-preview-toolbar>span{font-weight:750;font-size:13px}
+.profile-style-preview-toolbar>div{display:flex;flex-wrap:wrap;gap:8px}
+.profile-style-preview-toolbar button{min-height:36px;padding:7px 12px;border-radius:9px}
+.minglora-profile-page[data-profile-style="facebook"]{--profile-style-accent:var(--primary,#1877f2)}
+.minglora-profile-page[data-profile-style="minglora"]{--profile-style-accent:var(--primary,#1769e0)}
+.minglora-profile-page[data-profile-style="tiktok"]{--profile-style-accent:#fe2c55}
+.minglora-profile-page[data-profile-style="instagram"]{--profile-style-accent:#c13584}
+.minglora-profile-page[data-profile-style="youtube"]{--profile-style-accent:#e62117}
+.minglora-profile-page[data-profile-style="x"]{--profile-style-accent:#111}
+.minglora-profile-page[data-profile-style="linkedin"]{--profile-style-accent:#0a66c2}
+.minglora-profile-page[data-profile-style="pinterest"]{--profile-style-accent:#bd081c}
+.minglora-profile-page[data-profile-style="twitch"]{--profile-style-accent:#9147ff}
+.minglora-profile-page[data-profile-style="snapchat"]{--profile-style-accent:#d3b500}
+.minglora-profile-page:not([data-profile-style="facebook"]) .profile-tabs{border-bottom:1px solid var(--line,#e2e6ec)}
+.minglora-profile-page:not([data-profile-style="facebook"]) .profile-tabs-list>button.active{color:var(--profile-style-accent)!important}
+.minglora-profile-page:not([data-profile-style="facebook"]) .profile-tabs-list>button.active:after{background:var(--profile-style-accent)!important}
+.minglora-profile-page:not([data-profile-style="facebook"]) .profile-info{min-width:0}
+.minglora-profile-page:not([data-profile-style="facebook"]) .profile-counts{min-width:0}
+.minglora-profile-page[data-profile-style="tiktok"] .profile-cover{display:none!important}
+.minglora-profile-page[data-profile-style="tiktok"] .profile-header-card{max-width:1120px;margin-inline:auto;border:0!important;border-radius:0!important;box-shadow:none!important}
+.minglora-profile-page[data-profile-style="tiktok"] .profile-info{display:grid!important;grid-template-columns:104px minmax(0,1fr);align-items:center;gap:10px 20px;padding:24px clamp(14px,4vw,42px)!important}
+.minglora-profile-page[data-profile-style="tiktok"] .profile-avatar-edit-wrap{grid-row:1 / span 2;grid-column:1}
+.minglora-profile-page[data-profile-style="tiktok"] .profile-avatar-edit-wrap .avatar{width:96px!important;height:96px!important;border-radius:50%!important}
+.minglora-profile-page[data-profile-style="tiktok"] .profile-info-main{grid-column:2;grid-row:1}
+.minglora-profile-page[data-profile-style="tiktok"] .profile-name-with-badges{font-size:clamp(21px,3vw,30px)!important}
+.minglora-profile-page[data-profile-style="tiktok"] .profile-counts{grid-column:2;grid-row:2;display:flex!important;flex-wrap:wrap;gap:8px 22px!important;justify-content:flex-start!important}
+.minglora-profile-page[data-profile-style="tiktok"] .profile-counts>*{min-width:64px}
+.minglora-profile-page[data-profile-style="tiktok"] .profile-actions{grid-column:1 / -1;flex-wrap:wrap}
+.minglora-profile-page[data-profile-style="tiktok"] .profile-post-grid,.minglora-profile-page[data-profile-style="tiktok"] .profile-reels-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:3px!important}
+.minglora-profile-page[data-profile-style="tiktok"] .profile-post-tile,.minglora-profile-page[data-profile-style="tiktok"] .profile-reel-tile{aspect-ratio:3/4!important;border-radius:3px!important}
+.minglora-profile-page[data-profile-style="tiktok"] .profile-media-section{border:0!important;box-shadow:none!important}
+.minglora-profile-page[data-profile-style="instagram"] .profile-cover{max-width:1120px;margin-inline:auto}
+.minglora-profile-page[data-profile-style="instagram"] .profile-info{display:grid!important;grid-template-columns:clamp(92px,14vw,150px) minmax(0,1fr);gap:12px 28px;padding:22px clamp(14px,4vw,50px)!important}
+.minglora-profile-page[data-profile-style="instagram"] .profile-avatar-edit-wrap{grid-column:1;grid-row:1 / span 2}
+.minglora-profile-page[data-profile-style="instagram"] .profile-avatar-edit-wrap .avatar{width:clamp(84px,12vw,132px)!important;height:clamp(84px,12vw,132px)!important;border-radius:50%!important}
+.minglora-profile-page[data-profile-style="instagram"] .profile-info-main{grid-column:2;grid-row:1}
+.minglora-profile-page[data-profile-style="instagram"] .profile-counts{grid-column:2;grid-row:2;display:flex!important;gap:clamp(12px,4vw,36px)!important;justify-content:flex-start!important}
+.minglora-profile-page[data-profile-style="instagram"] .profile-post-grid,.minglora-profile-page[data-profile-style="instagram"] .profile-media-grid,.minglora-profile-page[data-profile-style="instagram"] .profile-reels-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:4px!important}
+.minglora-profile-page[data-profile-style="instagram"] .profile-tabs-list{justify-content:center}
+.minglora-profile-page[data-profile-style="instagram"] .profile-highlights-grid{display:flex;gap:18px;overflow-x:auto;padding:8px 0}
+.minglora-profile-page[data-profile-style="instagram"] .profile-highlight-card{flex:0 0 88px;text-align:center}
+.minglora-profile-page[data-profile-style="instagram"] .profile-highlight-card img{width:72px;height:72px;border:2px solid var(--profile-style-accent);border-radius:50%;object-fit:cover}
+.minglora-profile-page[data-profile-style="youtube"] .profile-cover{height:clamp(120px,23vw,280px)!important;overflow:hidden}
+.minglora-profile-page[data-profile-style="youtube"] .profile-cover-image{width:100%;height:100%;object-fit:cover}
+.minglora-profile-page[data-profile-style="youtube"] .profile-info{display:grid!important;grid-template-columns:88px minmax(0,1fr);gap:8px 18px;padding:18px clamp(12px,3vw,34px)!important}
+.minglora-profile-page[data-profile-style="youtube"] .profile-avatar-edit-wrap{grid-row:1 / span 2;grid-column:1}
+.minglora-profile-page[data-profile-style="youtube"] .profile-avatar-edit-wrap .avatar{width:82px!important;height:82px!important;border-radius:50%!important}
+.minglora-profile-page[data-profile-style="youtube"] .profile-info-main{grid-column:2;grid-row:1}
+.minglora-profile-page[data-profile-style="youtube"] .profile-counts{grid-column:2;grid-row:2;justify-content:flex-start!important;display:flex!important;gap:12px!important}
+.minglora-profile-page[data-profile-style="youtube"] .profile-post-grid,.minglora-profile-page[data-profile-style="youtube"] .profile-reels-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr))!important;gap:14px!important}
+.minglora-profile-page[data-profile-style="youtube"] .profile-reel-tile{aspect-ratio:16/9}
+.minglora-profile-page[data-profile-style="x"] .profile-header-card{border-radius:0!important;box-shadow:none!important}
+.minglora-profile-page[data-profile-style="x"] .profile-cover{height:clamp(120px,22vw,250px)!important}
+.minglora-profile-page[data-profile-style="x"] .profile-info{display:grid!important;grid-template-columns:92px minmax(0,1fr);gap:8px 14px;padding:12px clamp(10px,3vw,24px)!important}
+.minglora-profile-page[data-profile-style="x"] .profile-avatar-edit-wrap{grid-column:1;grid-row:1 / span 2}
+.minglora-profile-page[data-profile-style="x"] .profile-avatar-edit-wrap .avatar{width:88px!important;height:88px!important;border:4px solid var(--card,#fff)!important;border-radius:50%!important}
+.minglora-profile-page[data-profile-style="x"] .profile-info-main{grid-column:2;grid-row:1}
+.minglora-profile-page[data-profile-style="x"] .profile-counts{grid-column:2;grid-row:2;display:flex!important;justify-content:flex-start!important;gap:12px!important}
+.minglora-profile-page[data-profile-style="x"] .profile-counts>*{min-width:0}
+.minglora-profile-page[data-profile-style="x"] .profile-tabs-list{justify-content:flex-start}
+.minglora-profile-page[data-profile-style="x"] .profile-posts-view{max-width:760px;margin-inline:auto}
+.minglora-profile-page[data-profile-style="linkedin"] .profile-header-card{border-radius:12px!important}
+.minglora-profile-page[data-profile-style="linkedin"] .profile-info{display:grid!important;grid-template-columns:112px minmax(0,1fr);gap:10px 22px;padding:18px clamp(12px,3vw,30px)!important}
+.minglora-profile-page[data-profile-style="linkedin"] .profile-avatar-edit-wrap{grid-row:1 / span 2;grid-column:1}
+.minglora-profile-page[data-profile-style="linkedin"] .profile-avatar-edit-wrap .avatar{width:104px!important;height:104px!important;border-radius:50%!important}
+.minglora-profile-page[data-profile-style="linkedin"] .profile-info-main{grid-column:2;grid-row:1}
+.minglora-profile-page[data-profile-style="linkedin"] .profile-counts{grid-column:2;grid-row:2;display:flex!important;justify-content:flex-start!important;gap:12px!important}
+.minglora-profile-page[data-profile-style="linkedin"] .profile-about-sections{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.minglora-profile-page[data-profile-style="linkedin"] .profile-about-sections .about-section-card:first-child{grid-column:1/-1}
+.minglora-profile-page[data-profile-style="linkedin"] .profile-post-grid{max-width:900px}
+.minglora-profile-page[data-profile-style="pinterest"] .profile-header-card{max-width:1120px;margin-inline:auto}
+.minglora-profile-page[data-profile-style="pinterest"] .profile-info{display:grid!important;grid-template-columns:96px minmax(0,1fr);gap:8px 20px;padding:18px clamp(12px,3vw,32px)!important}
+.minglora-profile-page[data-profile-style="pinterest"] .profile-avatar-edit-wrap{grid-column:1;grid-row:1 / span 2}
+.minglora-profile-page[data-profile-style="pinterest"] .profile-avatar-edit-wrap .avatar{width:92px!important;height:92px!important;border-radius:22px!important}
+.minglora-profile-page[data-profile-style="pinterest"] .profile-info-main{grid-column:2;grid-row:1}
+.minglora-profile-page[data-profile-style="pinterest"] .profile-counts{grid-column:2;grid-row:2;display:flex!important;justify-content:flex-start!important;gap:12px!important}
+.minglora-profile-page[data-profile-style="pinterest"] .profile-albums-grid,.minglora-profile-page[data-profile-style="pinterest"] .profile-media-grid,.minglora-profile-page[data-profile-style="pinterest"] .profile-post-grid{columns:initial!important;grid-template-columns:repeat(auto-fill,minmax(150px,1fr))!important;align-items:start}
+.minglora-profile-page[data-profile-style="pinterest"] .profile-album-card,.minglora-profile-page[data-profile-style="pinterest"] .profile-media-tile{break-inside:avoid;border-radius:14px;overflow:hidden}
+.minglora-profile-page[data-profile-style="twitch"] .profile-header-card{background:#17151e!important;color:#f7f4ff!important;border:1px solid #342a47!important}
+.minglora-profile-page[data-profile-style="twitch"] .profile-info{display:grid!important;grid-template-columns:94px minmax(0,1fr);gap:8px 18px;padding:20px!important}
+.minglora-profile-page[data-profile-style="twitch"] .profile-avatar-edit-wrap{grid-column:1;grid-row:1 / span 2}
+.minglora-profile-page[data-profile-style="twitch"] .profile-avatar-edit-wrap .avatar{width:88px!important;height:88px!important;border:3px solid #9147ff!important}
+.minglora-profile-page[data-profile-style="twitch"] .profile-info-main{grid-column:2;grid-row:1}
+.minglora-profile-page[data-profile-style="twitch"] .profile-counts{grid-column:2;grid-row:2;display:flex!important;justify-content:flex-start!important;gap:12px!important}
+.minglora-profile-page[data-profile-style="twitch"] .profile-tabs{background:#201b2b!important}
+.minglora-profile-page[data-profile-style="twitch"] .profile-tabs-list>button{color:#ece6f5!important}
+.minglora-profile-page[data-profile-style="twitch"] .profile-tabs-list>button.active{color:#c7a7ff!important}
+.minglora-profile-page[data-profile-style="snapchat"] .profile-header-card{background:#fffde8!important;border:1px solid #e4d86c!important}
+.minglora-profile-page[data-profile-style="snapchat"] .profile-cover{height:clamp(100px,18vw,190px)!important}
+.minglora-profile-page[data-profile-style="snapchat"] .profile-info{display:grid!important;grid-template-columns:86px minmax(0,1fr);gap:8px 16px;padding:18px!important}
+.minglora-profile-page[data-profile-style="snapchat"] .profile-avatar-edit-wrap{grid-column:1;grid-row:1 / span 2}
+.minglora-profile-page[data-profile-style="snapchat"] .profile-avatar-edit-wrap .avatar{width:82px!important;height:82px!important;border:4px solid #fff!important;box-shadow:0 0 0 2px #e3ce27!important}
+.minglora-profile-page[data-profile-style="snapchat"] .profile-info-main{grid-column:2;grid-row:1}
+.minglora-profile-page[data-profile-style="snapchat"] .profile-counts{grid-column:2;grid-row:2;display:flex!important;justify-content:flex-start!important;gap:12px!important}
+.minglora-profile-page[data-profile-style="snapchat"] .profile-tabs-list>button.active:after{background:#d0b800!important}
+.minglora-profile-page[data-profile-style="minglora"] .profile-header-card{border:1px solid color-mix(in srgb,var(--primary,#1769e0) 32%,var(--line,#e2e8f0))!important;border-radius:18px!important;overflow:visible}
+.minglora-profile-page[data-profile-style="minglora"] .profile-info{padding:20px clamp(12px,3vw,30px)!important}
+.minglora-profile-page[data-profile-style="minglora"] .profile-counts{gap:10px!important}
+.minglora-profile-page[data-profile-style="minglora"] .profile-counts>*{border:1px solid var(--line,#e5e7eb);border-radius:12px;padding:9px 10px;background:var(--card,#fff)}
+/* Nine profile screen-layout presets are available to every style. */
+.minglora-profile-page[data-profile-screen-layout="full-screen"]{width:100%;max-width:none}
+.minglora-profile-page[data-profile-screen-layout="fluid-panel"]{width:100%;max-width:1440px;margin-inline:auto}
+.minglora-profile-page[data-profile-screen-layout="fluid-grid"] #profile-tab-panel{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:12px}
+.minglora-profile-page[data-profile-screen-layout="fixed-grid"] .profile-post-grid,.minglora-profile-page[data-profile-screen-layout="fixed-grid"] .profile-media-grid{grid-template-columns:repeat(auto-fill,minmax(170px,1fr))!important}
+.minglora-profile-page[data-profile-screen-layout="fixed-panel"]{max-width:1100px;margin-inline:auto}
+.minglora-profile-page[data-profile-screen-layout="side-by-side"] #profile-tab-panel{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+.minglora-profile-page[data-profile-screen-layout="spotlight"] .profile-header-card{max-width:1180px;margin-inline:auto}
+.minglora-profile-page[data-profile-screen-layout="spotlight"] .profile-info{padding-block:clamp(20px,4vw,42px)!important}
+.minglora-profile-page[data-profile-screen-layout="roundtable-1"] #profile-tab-panel{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.minglora-profile-page[data-profile-screen-layout="roundtable-2"] #profile-tab-panel{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.minglora-profile-page[data-profile-screen-layout="fluid-grid"] #profile-tab-panel>.card,.minglora-profile-page[data-profile-screen-layout="side-by-side"] #profile-tab-panel>.card,.minglora-profile-page[data-profile-screen-layout^="roundtable"] #profile-tab-panel>.card{min-width:0;margin:0}
+.minglora-profile-page[data-profile-screen-layout="fluid-grid"] #profile-tab-panel>.card:first-child,.minglora-profile-page[data-profile-screen-layout="side-by-side"] #profile-tab-panel>.card:first-child{min-width:0}
+@media(max-width:900px){
+  .minglora-profile-page[data-profile-screen-layout="side-by-side"] #profile-tab-panel,.minglora-profile-page[data-profile-screen-layout^="roundtable"] #profile-tab-panel{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .minglora-profile-page[data-profile-style="linkedin"] .profile-about-sections{grid-template-columns:1fr}
+}
+@media(max-width:640px){
+  .profile-style-preview-toolbar{align-items:flex-start}
+  .profile-style-preview-toolbar>div{width:100%}
+  .profile-style-preview-toolbar button{flex:1 1 auto}
+  .minglora-profile-page[data-profile-style="tiktok"] .profile-info,.minglora-profile-page[data-profile-style="instagram"] .profile-info,.minglora-profile-page[data-profile-style="youtube"] .profile-info,.minglora-profile-page[data-profile-style="x"] .profile-info,.minglora-profile-page[data-profile-style="linkedin"] .profile-info,.minglora-profile-page[data-profile-style="pinterest"] .profile-info,.minglora-profile-page[data-profile-style="twitch"] .profile-info,.minglora-profile-page[data-profile-style="snapchat"] .profile-info{grid-template-columns:68px minmax(0,1fr);gap:8px 12px;padding:14px 12px!important}
+  .minglora-profile-page[data-profile-style="tiktok"] .profile-avatar-edit-wrap .avatar,.minglora-profile-page[data-profile-style="instagram"] .profile-avatar-edit-wrap .avatar,.minglora-profile-page[data-profile-style="youtube"] .profile-avatar-edit-wrap .avatar,.minglora-profile-page[data-profile-style="x"] .profile-avatar-edit-wrap .avatar,.minglora-profile-page[data-profile-style="linkedin"] .profile-avatar-edit-wrap .avatar,.minglora-profile-page[data-profile-style="pinterest"] .profile-avatar-edit-wrap .avatar,.minglora-profile-page[data-profile-style="twitch"] .profile-avatar-edit-wrap .avatar,.minglora-profile-page[data-profile-style="snapchat"] .profile-avatar-edit-wrap .avatar{width:64px!important;height:64px!important}
+  .minglora-profile-page[data-profile-style="tiktok"] .profile-post-grid,.minglora-profile-page[data-profile-style="instagram"] .profile-post-grid,.minglora-profile-page[data-profile-style="instagram"] .profile-media-grid,.minglora-profile-page[data-profile-style="instagram"] .profile-reels-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+  .minglora-profile-page[data-profile-screen-layout="side-by-side"] #profile-tab-panel,.minglora-profile-page[data-profile-screen-layout^="roundtable"] #profile-tab-panel,.minglora-profile-page[data-profile-screen-layout="fluid-grid"] #profile-tab-panel{grid-template-columns:minmax(0,1fr)}
+  .minglora-profile-page[data-profile-screen-layout="fixed-panel"],.minglora-profile-page[data-profile-screen-layout="fixed-grid"]{max-width:100%;width:100%}
+  .minglora-profile-page .profile-counts{flex-wrap:wrap;gap:8px!important}
+  .minglora-profile-page .profile-tabs-list{gap:4px}
+}
