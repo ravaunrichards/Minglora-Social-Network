@@ -16,7 +16,7 @@ async function createEngine(fetchImpl=async()=>({ok:true,json:async()=>({sound:{
   }
   const window={addEventListener(){},dispatchEvent(){}};
   const document={visibilityState:"visible"};
-  const sandbox={window,document,Audio:FakeAudio,fetch:fetchImpl,Map,Set,Date,Number,String,Math,Promise,JSON,Error};
+  const sandbox={window,document,Audio:FakeAudio,fetch:fetchImpl,encodeURIComponent,Map,Set,Date,Number,String,Math,Promise,JSON,Error};
   const source=await readFile(new URL("../../public/universal-audio-engine.js",import.meta.url),"utf8");
   vm.runInNewContext(source,sandbox,{filename:"universal-audio-engine.js"});
   return {engine:window.MingloraAudioEngine,played,paused};
