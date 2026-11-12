@@ -93,6 +93,11 @@ async function main() {
   if (JSON.stringify(publicMotionIndex) !== JSON.stringify(motionIndex)) fail("Served public motion index differs from the validated source index.");
   if (!Array.isArray(motionIndex.gifts)) fail("Canonical catalogue motion index has no gifts array.");
   if (report.catalog_motion_profiles !== motionIndex.gifts.length) fail("Motion index and extraction report totals differ.");
+  if (report.catalog_motion_invalid_profiles?.length) fail("Some active catalogue gifts have invalid canonical fields.");
+  if (report.catalog_motion_duplicate_codes?.length) fail("The generated catalogue motion index contains duplicate gift codes.");
+  if (Number(report.catalog_motion_captured_profiles) + Number(report.catalog_motion_fallback_profiles) !== motionIndex.gifts.length) {
+    fail("Captured and fallback motion profile totals do not cover the full catalogue index.");
+  }
   const activeCatalog = (canonicalCatalog.gifts || []).filter(gift => gift.active !== false);
   if (motionIndex.gifts.length !== activeCatalog.length) fail("Motion index does not cover every active catalogue gift.");
   const catalogCodes = new Set();
@@ -135,7 +140,9 @@ async function main() {
     "[gift-animation-validation] Verified " + manifest.gifts.length +
     " self-contained animated SVGs, matching WebP posters, reduced-motion support, " +
     "the visual-review gate (" + embeddedBytes + " embedded poster bytes), and " +
-    motionIndex.gifts.length + " canonical active catalogue motion mappings.\\n"
+    motionIndex.gifts.length + " canonical active catalogue motion mappings (" +
+    report.catalog_motion_captured_profiles + " capture-matched, " +
+    report.catalog_motion_fallback_profiles + " catalogue-profile fallbacks).\\n"
   );
 }
 
