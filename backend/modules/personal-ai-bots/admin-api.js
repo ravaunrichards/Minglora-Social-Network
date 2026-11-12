@@ -323,6 +323,7 @@ export async function handlePersonalAiBotsAdminApi(context) {
         :'Review decision saved. No publishing or external handoff occurred.'}),true);
     }
     if(method==='GET'&&path===root){
+      await refreshCanonicalAiHrState(db,listAiHrState);
       const overview=getPersonalAiBotOverview(db,stamp);
       const identityRecords=typeof listAiIdentities==='function'?await listAiIdentities({limit:100,offset:0}):null;
       const durableTasks=typeof listAiBotTasks==='function'?await listAiBotTasks({limit:100,offset:0}):null;
@@ -633,6 +634,7 @@ export async function handlePersonalAiBotsAdminApi(context) {
     }
 
     if(method==='GET'&&path===root+'/applications'){
+      await refreshCanonicalAiHrState(db,listAiHrState);
       return (json(res,200,{ok:true,applications:getPersonalAiBotApplications(db)}),true);
     }
     if(method==='POST'&&path===root+'/applications'){
@@ -640,7 +642,7 @@ export async function handlePersonalAiBotsAdminApi(context) {
       if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).some(key=>!allowed.has(key))){
         return (json(res,400,{error:'Candidate application payload contains unsupported fields.'}),true);
       }
-      const application=createPersonalAiBotApplication(db,input,user.id,stamp,uid);
+      const application=await mutateAiHrState(db,persistAiHrState,()=>createPersonalAiBotApplication(db,input,user.id,stamp,uid));
       await saveStore();
       return (json(res,201,{ok:true,application}),true);
     }
@@ -650,15 +652,17 @@ export async function handlePersonalAiBotsAdminApi(context) {
       if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).some(key=>!allowed.has(key))||!Object.keys(input).length){
         return (json(res,400,{error:'Candidate application update contains unsupported or missing fields.'}),true);
       }
-      const application=updatePersonalAiBotApplication(db,applicationMatch[1],input,user.id,stamp,uid);
+      const application=await mutateAiHrState(db,persistAiHrState,()=>updatePersonalAiBotApplication(db,applicationMatch[1],input,user.id,stamp,uid));
       await saveStore();
       return (json(res,200,{ok:true,application}),true);
     }
 
     if(method==='GET'&&path===root+'/appointments'){
+      await refreshCanonicalAiHrState(db,listAiHrState);
       return (json(res,200,{ok:true,appointments:getPersonalAiBotAppointments(db)}),true);
     }
     if(method==='GET'&&path===root+'/employment-history'){
+      await refreshCanonicalAiHrState(db,listAiHrState);
       return (json(res,200,{ok:true,events:getPersonalAiBotEmploymentHistory(db)}),true);
     }
     if(method==='POST'&&path===root+'/appointments'){
@@ -667,12 +671,13 @@ export async function handlePersonalAiBotsAdminApi(context) {
          !String(input.applicationId||'').trim()){
         return (json(res,400,{error:'Appointment requests require a shortlisted candidate application and only supported reporting fields.'}),true);
       }
-      const appointment=createPersonalAiBotAppointment(db,input,user.id,stamp,uid);
+      const appointment=await mutateAiHrState(db,persistAiHrState,()=>createPersonalAiBotAppointment(db,input,user.id,stamp,uid));
       await saveStore();
       return (json(res,201,{ok:true,appointment}),true);
     }
 
     if(method==='GET'&&path===root+'/vacancies'){
+      await refreshCanonicalAiHrState(db,listAiHrState);
       return (json(res,200,{ok:true,vacancies:getPersonalAiBotVacancies(db)}),true);
     }
     if(method==='POST'&&path===root+'/vacancies'){
@@ -680,7 +685,7 @@ export async function handlePersonalAiBotsAdminApi(context) {
       if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).some(key=>!allowed.has(key))){
         return (json(res,400,{error:'Vacancy payload contains unsupported fields.'}),true);
       }
-      const vacancy=createPersonalAiBotVacancy(db,input,user.id,stamp,uid);
+      const vacancy=await mutateAiHrState(db,persistAiHrState,()=>createPersonalAiBotVacancy(db,input,user.id,stamp,uid));
       await saveStore();
       return (json(res,201,{ok:true,vacancy}),true);
     }
@@ -690,17 +695,18 @@ export async function handlePersonalAiBotsAdminApi(context) {
       if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).some(key=>!allowed.has(key))||!Object.keys(input).length){
         return (json(res,400,{error:'Vacancy update contains unsupported or missing fields.'}),true);
       }
-      const vacancy=updatePersonalAiBotVacancy(db,vacancyMatch[1],input,user.id,stamp,uid);
+      const vacancy=await mutateAiHrState(db,persistAiHrState,()=>updatePersonalAiBotVacancy(db,vacancyMatch[1],input,user.id,stamp,uid));
       await saveStore();
       return (json(res,200,{ok:true,vacancy}),true);
     }
     if(vacancyMatch&&method==='DELETE'){
-      const vacancy=updatePersonalAiBotVacancy(db,vacancyMatch[1],{status:'closed'},user.id,stamp,uid);
+      const vacancy=await mutateAiHrState(db,persistAiHrState,()=>updatePersonalAiBotVacancy(db,vacancyMatch[1],{status:'closed'},user.id,stamp,uid));
       await saveStore();
       return (json(res,200,{ok:true,vacancy}),true);
     }
 
     if(method==='GET'&&path===root+'/departments'){
+      await refreshCanonicalAiHrState(db,listAiHrState);
       return (json(res,200,{ok:true,departments:getPersonalAiBotDepartments(db)}),true);
     }
     if(method==='POST'&&path===root+'/departments'){
@@ -708,7 +714,7 @@ export async function handlePersonalAiBotsAdminApi(context) {
       if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).some(key=>!allowed.has(key))){
         return (json(res,400,{error:'Department payload contains unsupported fields.'}),true);
       }
-      const department=createPersonalAiBotDepartment(db,input,user.id,stamp,uid);
+      const department=await mutateAiHrState(db,persistAiHrState,()=>createPersonalAiBotDepartment(db,input,user.id,stamp,uid));
       await saveStore();
       return (json(res,201,{ok:true,department}),true);
     }
@@ -718,12 +724,12 @@ export async function handlePersonalAiBotsAdminApi(context) {
       if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).some(key=>!allowed.has(key))||!Object.keys(input).length){
         return (json(res,400,{error:'Department update contains unsupported or missing fields.'}),true);
       }
-      const department=updatePersonalAiBotDepartment(db,departmentMatch[1],input,user.id,stamp,uid);
+      const department=await mutateAiHrState(db,persistAiHrState,()=>updatePersonalAiBotDepartment(db,departmentMatch[1],input,user.id,stamp,uid));
       await saveStore();
       return (json(res,200,{ok:true,department}),true);
     }
     if(departmentMatch&&method==='DELETE'){
-      const department=updatePersonalAiBotDepartment(db,departmentMatch[1],{enabled:false},user.id,stamp,uid);
+      const department=await mutateAiHrState(db,persistAiHrState,()=>updatePersonalAiBotDepartment(db,departmentMatch[1],{enabled:false},user.id,stamp,uid));
       await saveStore();
       return (json(res,200,{ok:true,department}),true);
     }
