@@ -7,6 +7,8 @@
 - **Real source recordings:** **33** downloaded and integrity-checked into the source review pool.
 - **Mapped gift folders:** **101** matching Artwork folders now contain their own `sound.mp3` candidate.
 - **Active live-gift code mappings:** **71** exact active gift codes resolve to their matching recorded sound candidate.
+- **Artwork folders still awaiting a source recording:** **1,408 of 1,509** (93.3%); these remain silent rather than receiving an unrelated or synthetic sound.
+- **Active gift codes still unmapped:** **1,666 of 1,737**; 71 (4.1%) currently resolve to a candidate recording.
 - **Gift sound preview:** real candidate MP3s can be auditioned with the Gifts Studio preview control.
 - **LIVE/send playback:** remains approval-gated; unapproved candidate recordings are silent in sent gifts and LIVE rooms.
 - **MP3 format validation:** passed; every source MP3 is decodable MP3, stereo, 44.1 kHz and 192 kbps.
