@@ -30,5 +30,6 @@ test('Fluid Panel has one dominant host tile and a vertical guest rail', () => {
 test('Fluid and Fixed Grid use equal tiles and compact two-column phone grids', () => {
   assert.match(fix, /data-live-layout="fluid-grid"[\s\S]*?grid-template-columns:repeat\(3,minmax\(0,1fr\))!important/);
   assert.match(fix, /data-live-layout="fixed-grid"[\s\S]*?grid-template-columns:repeat\(3,minmax\(0,1fr\))!important/);
-  assert.match(fix, /@media\(max-width:900px\)[\s\S]*?data-live-layout="fluid-grid",[\s\S]*?grid-template-columns:repeat\(2,minmax\(0,1fr\))!important/);
+  const phoneLayouts = fix.slice(fix.lastIndexOf('@media(max-width:900px)'));
+  assert.match(phoneLayouts, /data-live-layout="fluid-grid"[\s\S]*?grid-template-columns:repeat\(2,minmax\(0,1fr\)\)!important/);
 });
