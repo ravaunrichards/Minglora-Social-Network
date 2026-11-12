@@ -15,6 +15,12 @@
       "sizes": "324x324",
       "type": "image/jpeg",
       "purpose": "any"
+    },
+    {
+      "src": "/assets/branding/minglora-infinity-m-small.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
     }
   ]
 }

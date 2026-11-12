@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">Minglora Infinity M</title>
+  <desc id="desc">A compact angular M with opposing infinity-inspired arrow strokes in cyan, violet and magenta.</desc>
+  <defs>
+    <linearGradient id="spectrum" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#ff37b8"/>
+      <stop offset=".48" stop-color="#9a63ff"/>
+      <stop offset="1" stop-color="#29e0ff"/>
+    </linearGradient>
+    <linearGradient id="metal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset=".28" stop-color="#9feeff"/>
+      <stop offset=".58" stop-color="#f5eaff"/>
+      <stop offset=".82" stop-color="#d2a7ff"/>
+      <stop offset="1" stop-color="#ffffff"/>
+    </linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="2.2" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="128" height="128" rx="24" fill="#080b16"/>
+  <g fill="none" stroke="url(#spectrum)" stroke-width="5.5" stroke-linecap="square" stroke-linejoin="miter" filter="url(#glow)">
+    <path d="M17 49V27L42 12H62"/>
+    <path d="M52 5L64 12L53 20"/>
+    <path d="M111 79V101L86 116H66"/>
+    <path d="M76 108L64 116L76 124"/>
+  </g>
+  <path d="M27 91L39 38H52L64 67L76 38H89L101 91H87L80 59L64 86L48 59L41 91Z"
+        fill="url(#metal)" stroke="url(#spectrum)" stroke-width="2.4" stroke-linejoin="bevel" filter="url(#glow)"/>
+  <path d="M40 83L48 49L64 77L80 49L88 83" fill="none" stroke="#ffffff" stroke-opacity=".8" stroke-width="2.1" stroke-linejoin="bevel"/>
+</svg>
