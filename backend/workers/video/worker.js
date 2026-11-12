@@ -9,7 +9,7 @@ import {pathToFileURL} from "node:url";
 
 const MAX_BYTES=500*1024*1024, MAX_DURATION_MS=3600000;
 export function readWorkerConfig(env=process.env){
- const required=["SUPABASE_URL","SUPABASE_STATE_API_URL","SUPABASE_PUBLISHABLE_KEY","SUPABASE_STATE_API_KEY"];
+ const required=["SUPABASE_URL","SUPABASE_STATE_API_URL","SUPABASE_PUBLISHABLE_KEY","MINGLORA_VIDEO_WORKER_API_KEY"];
  const missing=required.filter(key=>!String(env[key]||"").trim());
  if(missing.length)throw new Error("Missing worker configuration: "+missing.join(", "));
  const supabaseUrl=new URL(env.SUPABASE_URL),stateApiUrl=new URL(env.SUPABASE_STATE_API_URL);
@@ -17,7 +17,7 @@ export function readWorkerConfig(env=process.env){
   !stateApiUrl.pathname.endsWith("/functions/v1/minglora-runtime-state"))
   throw new Error("Worker Supabase URLs must use the Minglora HTTPS runtime gateway on the same project host.");
  return {supabaseUrl,stateApiUrl,publishableKey:String(env.SUPABASE_PUBLISHABLE_KEY).trim(),
-  stateApiKey:String(env.SUPABASE_STATE_API_KEY).trim(),ffmpegPath:env.FFMPEG_PATH||"ffmpeg",
+  videoWorkerApiKey:String(env.MINGLORA_VIDEO_WORKER_API_KEY).trim(),ffmpegPath:env.FFMPEG_PATH||"ffmpeg",
   ffprobePath:env.FFPROBE_PATH||"ffprobe",pollMs:Math.max(1000,Math.min(30000,Number(env.VIDEO_WORKER_POLL_MS)||5000)),
   tempDirectory:env.VIDEO_WORKER_TEMP_DIR||os.tmpdir()};
 }
@@ -70,7 +70,7 @@ async function uploadRendition(url,file,config,fetchImpl){
 }
 async function gateway(action,payload,config,fetchImpl){
  const response=await fetchImpl(config.stateApiUrl,{method:"POST",headers:{apikey:config.publishableKey,
-  "x-minglora-api-key":config.stateApiKey,"content-type":"application/json"},body:JSON.stringify({action,...payload}),signal:AbortSignal.timeout(30000)});
+  "x-minglora-api-key":config.videoWorkerApiKey,"content-type":"application/json"},body:JSON.stringify({action,...payload}),signal:AbortSignal.timeout(30000)});
  const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(String(data.error||"Minglora video gateway failed ("+response.status+")."));return data;
 }
 export async function processVideoJob(job,config,fetchImpl=fetch){
@@ -97,6 +97,7 @@ async function main(){
     process.stdout.write("[Minglora video worker] Completed "+result.jobId+" ("+result.outputBytes+" bytes).\n");
    }catch(error){
     try{await gateway("video_transcode_fail",{jobId:job.id,lockToken:job.lock_token,error:String(error?.message||error).slice(0,500)},config,fetch);}catch{}
+    try{await gateway("video_transcode_cleanup",{jobId:job.id},config,fetch);}catch{}
     process.stderr.write("[Minglora video worker] Job "+job.id+" failed: "+String(error?.message||error).slice(0,400)+"\n");
    }
   }catch(error){process.stderr.write("[Minglora video worker] Poll failed: "+String(error?.message||error).slice(0,300)+"\n");await new Promise(r=>setTimeout(r,config.pollMs));}
