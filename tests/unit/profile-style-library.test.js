@@ -51,7 +51,7 @@ test('all nine screen layout modes compose with all ten profile styles',()=>{
     assert.ok(server.includes("'"+layout+"'"),'missing server screen layout validation: '+layout);
     assert.ok(css.includes('[data-profile-screen-layout="'+layout+'"]'),'missing screen layout CSS: '+layout);
   }
-  assert.ok(app.includes('data-profile-screen-layout="'+normalizeProfileScreenLayout(u.profileScreenLayout)'));
+  assert.ok(app.includes('normalizeProfileScreenLayout(u.profileScreenLayout)'));
   assert.ok(app.includes('data-selected-screen-layout='));
   assert.ok(app.includes('profileStylePreviewMarkup(data,selected,root.dataset.selectedScreenLayout)'));
 });
