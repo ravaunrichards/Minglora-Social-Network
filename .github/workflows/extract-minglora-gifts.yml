@@ -1,0 +1,70 @@
+name: Extract individual Minglora gift animations
+
+on:
+  push:
+    branches:
+      - automation/minglora-gift-assets-extraction
+    paths:
+      - "assets/Gifts/**"
+      - "assets/Artwork/manifest.json"
+      - "data/minglora-gift-catalog.json"
+      - "scripts/extract-minglora-gift-captures.mjs"
+      - "scripts/check-minglora-gift-capture-cache.mjs"
+      - "scripts/build-minglora-gift-motion-index.mjs"
+      - "scripts/validate-minglora-gift-animations.mjs"
+      - ".github/workflows/extract-minglora-gifts.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: minglora-gift-index-build
+  cancel-in-progress: false
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out Minglora
+        uses: actions/checkout@v4
+        with:
+          ref: automation/minglora-gift-assets-extraction
+          fetch-depth: 0
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install OCR and image processing only when extraction is needed
+        if: steps.capture-cache.outputs.reuse != 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y tesseract-ocr
+          npm install --no-save --no-package-lock sharp
+      - name: Check whether the original gift capture assets can be safely reused
+        id: capture-cache
+        run: node scripts/check-minglora-gift-capture-cache.mjs
+      - name: Extract all original gift captures when any generated asset is missing
+        if: steps.capture-cache.outputs.reuse != 'true'
+        run: node scripts/extract-minglora-gift-captures.mjs
+      - name: Rebuild complete catalogue and Artwork motion index from verified captures
+        if: steps.capture-cache.outputs.reuse == 'true'
+        run: node scripts/build-minglora-gift-motion-index.mjs
+      - name: Validate self-contained animations and complete catalogue and Artwork joins
+        run: node scripts/validate-minglora-gift-animations.mjs
+      - name: Commit generated assets to the extraction branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/animations/gifts public/assets/animations/gifts
+          if git diff --cached --quiet; then
+            echo "No generated gift-asset changes to commit."
+            exit 0
+          fi
+          git commit -m "Generate complete Minglora gift animation library"
+          git fetch origin automation/minglora-gift-assets-extraction
+          git rebase origin/automation/minglora-gift-assets-extraction
+          git push origin HEAD:automation/minglora-gift-assets-extraction
