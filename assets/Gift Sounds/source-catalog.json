@@ -7067,10 +7067,10 @@
     }
   ],
   "lastIngestion": {
-    "status": "source_verified_cc0_recordings_downloaded_and_mapped",
+    "status": "downloaded_review_only",
     "downloadedSourceCount": 247,
-    "giftFolderSoundFileCount": 154,
-    "activeGiftCodeMappings": 124,
-    "humanListeningReview": "pending"
+    "newlyDownloadedSourceCount": 0,
+    "mappedGiftFileCount": 154,
+    "productionReadyGiftCount": 0
   }
 }
