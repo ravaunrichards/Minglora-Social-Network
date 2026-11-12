@@ -73,7 +73,7 @@ test('position telemetry remains optional for existing clients and is accepted b
 test('Creator Studio keeps its existing summary metrics and privacy boundaries',()=>{
   const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
   const source=fs.readFileSync(path.join(root,'src/domain/video-analytics.js'),'utf8');
-  assert.match(source,/viewerIds/===undefined|VIDEO_RETENTION_MIN_SAMPLE_SIZE/);
+  assert.match(source,/export const VIDEO_RETENTION_MIN_SAMPLE_SIZE = 5/);
   assert.match(source,/uniqueVideoViews/);
   assert.match(source,/completionRate/);
 });
