@@ -11,6 +11,8 @@ const experience = read('public/experience-center.js');
 const experienceCss = read('public/experience-center.css');
 const settings = read('public/settings.js');
 const app = read('public/app.js');
+const html = read('public/index.html');
+const serviceWorker = read('public/sw.js');
 
 test('saved appearance hydrates on every authenticated session without opening Settings', () => {
   const listener = experience.indexOf("window.addEventListener('minglora:settings-loaded',handleSettingsLoaded)");
@@ -20,6 +22,9 @@ test('saved appearance hydrates on every authenticated session without opening S
   assert.match(experience, /function handleSettingsLoaded\(event\)[\s\S]*?const experience=event\.detail\?\.experience[\s\S]*?apply\(current\)/);
   assert.match(settings, /window\.addEventListener\('minglora:session-ready',[\s\S]*?minglora:settings-loaded/);
   assert.match(app, /dispatchEvent\(new Event\('minglora:session-ready'\)\)/);
+  assert.ok(html.includes('src="'+ '/experience-center.js?v=20261112-session-style-hydration-1' +'"'), 'HTML loads the corrected script version');
+  assert.ok(serviceWorker.includes("'/experience-center.js?v=20261112-session-style-hydration-1'"), 'service worker precaches the corrected script version');
+  assert.match(serviceWorker, /CACHE_NAME='minglora-shell-v294-self-updating-1'/);
 });
 
 test('sign-out clears the previous account appearance before the next account signs in', () => {
