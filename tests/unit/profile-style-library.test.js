@@ -39,6 +39,7 @@ test('one profile data record powers style-specific navigation and keeps real ex
   const profile=app.slice(start,end);
   assert.match(profile,/data-profile-style=/);
   assert.match(profile,/data-profile-screen-layout=/);
+  for(const marker of ['data-profile-count="followers"','data-profile-count="following"','data-profile-count="friends"','data-profile-count="subscribers"','data-profile-count="posts"','data-profile-count="likes"'])assert.ok(profile.includes(marker),marker);
   assert.match(profile,/profileStyleDefinition\.tabs/);
   for(const marker of ['id="profile-follow"','id="profile-subscribe"','id="profile-message"','data-profile-call="audio"','data-profile-call="video"','id="profile-add-story"','id="edit-profile"','id="profile-overflow-trigger"'])assert.ok(profile.includes(marker),marker);
   assert.match(server,/profileStyle:getUserSettings\(u\)\.preferences\.profileStyle/);
@@ -63,6 +64,7 @@ test('each non-default style has isolated visual treatment and all layout breakp
   for(const style of styles.slice(1))assert.ok(css.includes('data-profile-style="'+style+'"'),style);
   for(const layout of layouts)assert.ok(css.includes('data-profile-screen-layout="'+layout+'"'),layout);
   assert.match(css,/@media\(max-width:640px\)/);
+  for(const marker of ['data-profile-count="followers"','data-profile-count="subscribers"','.profile-body--established','.profile-reel-tile video'])assert.ok(css.includes(marker),marker);
   assert.match(css,/minmax\(0,1fr\)/);
   assert.ok(!css.includes('data-profile-style="facebook" .profile-cover{display:none'));
 });
