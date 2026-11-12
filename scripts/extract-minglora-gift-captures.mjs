@@ -594,7 +594,7 @@ Each gift has its own category folder containing:
 - \`poster.webp\`: transparent, normalized 256 × 256 artwork crop.
 - \`animation.svg\`: self-contained animated SVG presentation with its WebP poster embedded, individually keyed motion and reduced-motion support. It can be displayed through a standard image element.
 
-See \`manifest.json\` for gift IDs, categories, source screenshots, crop coordinates, OCR confidence, catalog matches and per-gift asset paths. See \`extraction-report.json\` for processing totals and any failures.
+See \`manifest.json\` for captured gift IDs, categories, original screenshots, crop coordinates, OCR confidence and per-gift extraction paths. See \`catalog-motion-index.json\` for a motion profile for every active canonical gift, including its exact gift code, name, Coin price, original image and 3D model URLs, original animation and sound presets, and Artwork/source references. Exact capture matches receive their individual extracted motion profile; gifts not present in the captures receive a deterministic name/category motion profile over their original 3D model. \`extraction-report.json\` records capture totals, exact catalogue matches, fallback profiles and processing errors.
 
 **Source limitation:** the supplied inputs are still gallery screenshots, not original animation videos or 3D animation files. The SVG motion is an original presentation effect applied to each extracted still; it is not TikTok's proprietary animation. Original 3D motion can only be integrated when the corresponding animation/model sources are supplied. Generated gifts are marked \`needs_visual_review\` and must not be published automatically.
 
