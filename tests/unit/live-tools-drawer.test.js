@@ -8,7 +8,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 const app = read('public/app.js');
 const styles = read('public/styles.css');
-const compact = read('public/live-room-compact.css');
+const compact = read('public/live-room-compact.css');\nconst liveGuardrails = read('public/live-interface-guardrails.css');
 
 test('Goody Bags and Treasure Boxes are only mounted in the optional LIVE settings drawer', () => {
   assert.match(app, /const rewardTools=!giftsEnabled\?"":.*live-reward-panel/s);
@@ -22,13 +22,13 @@ test('Goody Bags and Treasure Boxes are only mounted in the optional LIVE settin
   assert.match(app, /id='live-heart-like'/);
   assert.doesNotMatch(app, /live-heart-button|live-reaction-button/);
   assert.match(app, /stage\?\.addEventListener\("click",event=>/);
-  assert.match(app, /id='live-leave' class='live-host-power-button'.*<svg/);
+  const panelStart = app.indexOf(\"id='live-fullscreen-chat-slot'\");\n  const panelEnd = app.indexOf('</aside></div>', panelStart);\n  const panelMarkup = app.slice(panelStart, panelEnd);\n  assert.match(panelMarkup, /live-fullscreen-side-head[\\s\\S]*?id='live-leave' class='live-panel-end-button'.*<svg/);\n  assert.doesNotMatch(app, /live-host-power-button/);\n  assert.doesNotMatch(app.slice(app.indexOf('const liveStageHud='), app.indexOf('const liveChatOverlay=')), /id='live-leave'/);
   assert.match(styles, /\.live-video-column>\.live-stage-topbar/);
   assert.match(app, /class='live-chat-overlay'/);
   assert.ok(app.includes('stage?.insertAdjacentHTML("beforebegin",liveStageHud)'));
   assert.ok(app.includes('liveChatPanel?.insertAdjacentHTML("beforeend",liveChatOverlay)'));
   assert.doesNotMatch(app, /stage\?\.insertAdjacentHTML\("beforeend",liveChatOverlay\)/);
-  assert.match(compact, /\.live-fullscreen-chat-slot\{[\s\S]*flex-direction:column!important/);
+  assert.match(compact, /\.live-fullscreen-chat-slot\{[\s\S]*flex-direction:column!important/);\n  assert.match(liveGuardrails, /\.live-panel-end-button\\{[\\s\\S]*display:inline-flex!important/);
   assert.match(roomMarkup, /liveToolsDrawer/);
 });
 
