@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "title": "Minglora Gift Sound Source Catalogue",
-  "status": "source_researched_binary_ingestion_pending",
+  "status": "downloaded_verified_review_only_optional_freesound_pending",
   "audioPolicy": "Use real field recordings or human-recorded sound effects only. Do not use robotic speech, synthetic placeholder tones, or files whose licences cannot be verified.",
-  "note": "Source URLs and licence descriptions were checked against their source documentation/pages. This catalogue does not claim the files have been downloaded, auditioned, trimmed, converted or included in the app.",
+  "note": "The 33 public CC0/public-domain source recordings in this catalogue's publishedCC0Recordings, publicDomainEffects, and additionalCC0Recordings groups are downloaded, converted or retained as MP3, and integrity/decode-verified in _sources/mp3/. They have not been human-auditioned, so all remain review-only. The 20 FreesoundCC0ReviewCandidates are separate source-page candidates; their audio has not been downloaded because the optional Freesound API key is not configured.",
   "publishedCC0Recordings": [
     {
       "id": "rain-soft",
@@ -21,7 +21,8 @@
       "encoding": "PCM16",
       "sampleRateHz": 48000,
       "audioStatus": "downloaded_verified_review_only",
-      "reviewMp3": "assets/Gift Sounds/_sources/mp3/rain-soft.mp3"
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/rain-soft.mp3",
+      "sourceStatus": "source_audio_downloaded_transcoded_and_integrity_verified; listening_review_pending"
     },
     {
       "id": "water-stream",
@@ -39,7 +40,8 @@
       "encoding": "PCM16",
       "sampleRateHz": 48000,
       "audioStatus": "downloaded_verified_review_only",
-      "reviewMp3": "assets/Gift Sounds/_sources/mp3/water-stream.mp3"
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/water-stream.mp3",
+      "sourceStatus": "source_audio_downloaded_transcoded_and_integrity_verified; listening_review_pending"
     },
     {
       "id": "water-river",
@@ -57,7 +59,8 @@
       "encoding": "PCM16",
       "sampleRateHz": 48000,
       "audioStatus": "downloaded_verified_review_only",
-      "reviewMp3": "assets/Gift Sounds/_sources/mp3/water-river.mp3"
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/water-river.mp3",
+      "sourceStatus": "source_audio_downloaded_transcoded_and_integrity_verified; listening_review_pending"
     },
     {
       "id": "wind-breeze",
@@ -75,7 +78,8 @@
       "encoding": "PCM16",
       "sampleRateHz": 48000,
       "audioStatus": "downloaded_verified_review_only",
-      "reviewMp3": "assets/Gift Sounds/_sources/mp3/wind-breeze.mp3"
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/wind-breeze.mp3",
+      "sourceStatus": "source_audio_downloaded_transcoded_and_integrity_verified; listening_review_pending"
     },
     {
       "id": "nature-forest-day",
@@ -93,7 +97,8 @@
       "encoding": "PCM16",
       "sampleRateHz": 48000,
       "audioStatus": "downloaded_verified_review_only",
-      "reviewMp3": "assets/Gift Sounds/_sources/mp3/nature-forest-day.mp3"
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/nature-forest-day.mp3",
+      "sourceStatus": "source_audio_downloaded_transcoded_and_integrity_verified; listening_review_pending"
     },
     {
       "id": "animals-cat",
@@ -111,7 +116,8 @@
       "encoding": "PCM16",
       "sampleRateHz": 48000,
       "audioStatus": "downloaded_verified_review_only",
-      "reviewMp3": "assets/Gift Sounds/_sources/mp3/animals-cat.mp3"
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/animals-cat.mp3",
+      "sourceStatus": "source_audio_downloaded_transcoded_and_integrity_verified; listening_review_pending"
     },
     {
       "id": "home-air-conditioner",
@@ -129,7 +135,8 @@
       "encoding": "PCM16",
       "sampleRateHz": 48000,
       "audioStatus": "downloaded_verified_review_only",
-      "reviewMp3": "assets/Gift Sounds/_sources/mp3/home-air-conditioner.mp3"
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/home-air-conditioner.mp3",
+      "sourceStatus": "source_audio_downloaded_transcoded_and_integrity_verified; listening_review_pending"
     }
   ],
   "publicDomainEffects": [
@@ -142,7 +149,7 @@
       "sourcePage": "https://github.com/code4fukui/sound-cc0/blob/main/bell1.wav",
       "audioUrl": "https://raw.githubusercontent.com/code4fukui/sound-cc0/main/bell1.wav",
       "intendedUse": "bell",
-      "sourceStatus": "repository_file_and_public_domain_dedication_verified; audio_not_downloaded_or_auditioned",
+      "sourceStatus": "source_file_downloaded_git_blob_verified_and_mp3_decode_verified; listening_review_pending",
       "bytes": 1800108,
       "githubBlobSha": "3b7bf89fdf2a516aa27680f1c34c42af4a5025bb",
       "sourceType": "recorded_effect",
@@ -159,7 +166,7 @@
       "sourcePage": "https://github.com/code4fukui/sound-cc0/blob/main/cracker1.wav",
       "audioUrl": "https://raw.githubusercontent.com/code4fukui/sound-cc0/main/cracker1.wav",
       "intendedUse": "celebration pop",
-      "sourceStatus": "repository_file_and_public_domain_dedication_verified; audio_not_downloaded_or_auditioned",
+      "sourceStatus": "source_file_downloaded_git_blob_verified_and_mp3_decode_verified; listening_review_pending",
       "bytes": 58370,
       "githubBlobSha": "24171e187d1a3d96828f8a925c0e9feed1a1b69c",
       "sourceType": "recorded_effect",
@@ -176,7 +183,7 @@
       "sourcePage": "https://github.com/code4fukui/sound-cc0/blob/main/cracker1v-stereo.wav",
       "audioUrl": "https://raw.githubusercontent.com/code4fukui/sound-cc0/main/cracker1v-stereo.wav",
       "intendedUse": "celebration pop",
-      "sourceStatus": "repository_file_and_public_domain_dedication_verified; audio_not_downloaded_or_auditioned",
+      "sourceStatus": "source_file_downloaded_git_blob_verified_and_mp3_decode_verified; listening_review_pending",
       "bytes": 89560,
       "githubBlobSha": "d57590ed2243eb62213bbe30f6ea05865b89b944",
       "sourceType": "recorded_effect",
@@ -193,7 +200,7 @@
       "sourcePage": "https://github.com/code4fukui/sound-cc0/blob/main/cracker1v.wav",
       "audioUrl": "https://raw.githubusercontent.com/code4fukui/sound-cc0/main/cracker1v.wav",
       "intendedUse": "celebration pop",
-      "sourceStatus": "repository_file_and_public_domain_dedication_verified; audio_not_downloaded_or_auditioned",
+      "sourceStatus": "source_file_downloaded_git_blob_verified_and_mp3_decode_verified; listening_review_pending",
       "bytes": 44802,
       "githubBlobSha": "8c8d7acfd3aa8071d00d78c82b09a0ff1fcc4b38",
       "sourceType": "recorded_effect",
@@ -210,7 +217,7 @@
       "sourcePage": "https://github.com/code4fukui/sound-cc0/blob/main/cracker2.wav",
       "audioUrl": "https://raw.githubusercontent.com/code4fukui/sound-cc0/main/cracker2.wav",
       "intendedUse": "celebration pop",
-      "sourceStatus": "repository_file_and_public_domain_dedication_verified; audio_not_downloaded_or_auditioned",
+      "sourceStatus": "source_file_downloaded_git_blob_verified_and_mp3_decode_verified; listening_review_pending",
       "bytes": 53448,
       "githubBlobSha": "9c52548a2731ac821147f59da9477fe440a9ee7d",
       "sourceType": "recorded_effect",
@@ -227,7 +234,7 @@
       "sourcePage": "https://github.com/code4fukui/sound-cc0/blob/main/metal1.wav",
       "audioUrl": "https://raw.githubusercontent.com/code4fukui/sound-cc0/main/metal1.wav",
       "intendedUse": "metallic impact",
-      "sourceStatus": "repository_file_and_public_domain_dedication_verified; audio_not_downloaded_or_auditioned",
+      "sourceStatus": "source_file_downloaded_git_blob_verified_and_mp3_decode_verified; listening_review_pending",
       "bytes": 46180,
       "githubBlobSha": "9eba344bc130b5171d8393d46ad3c6f7ed67b8f5",
       "sourceType": "recorded_effect",
@@ -244,7 +251,7 @@
       "sourcePage": "https://github.com/code4fukui/sound-cc0/blob/main/steel1.wav",
       "audioUrl": "https://raw.githubusercontent.com/code4fukui/sound-cc0/main/steel1.wav",
       "intendedUse": "musical metallic accent",
-      "sourceStatus": "repository_file_and_public_domain_dedication_verified; audio_not_downloaded_or_auditioned",
+      "sourceStatus": "source_file_downloaded_git_blob_verified_and_mp3_decode_verified; listening_review_pending",
       "bytes": 105638,
       "githubBlobSha": "8bdcb068c7921b4a7ca9a35942c79d5363ff54a4",
       "sourceType": "recorded_effect",
@@ -261,7 +268,7 @@
       "sourcePage": "https://github.com/code4fukui/sound-cc0/blob/main/switch1.wav",
       "audioUrl": "https://raw.githubusercontent.com/code4fukui/sound-cc0/main/switch1.wav",
       "intendedUse": "mechanical click",
-      "sourceStatus": "repository_file_and_public_domain_dedication_verified; audio_not_downloaded_or_auditioned",
+      "sourceStatus": "source_file_downloaded_git_blob_verified_and_mp3_decode_verified; listening_review_pending",
       "bytes": 33964,
       "githubBlobSha": "c9c311049111f6cf40ba287f81547df8efd79a09",
       "sourceType": "recorded_effect",
@@ -278,7 +285,7 @@
       "sourcePage": "https://github.com/code4fukui/sound-cc0/blob/main/wahaha.wav",
       "audioUrl": "https://raw.githubusercontent.com/code4fukui/sound-cc0/main/wahaha.wav",
       "intendedUse": "human laughter",
-      "sourceStatus": "repository_file_and_public_domain_dedication_verified; audio_not_downloaded_or_auditioned",
+      "sourceStatus": "source_file_downloaded_git_blob_verified_and_mp3_decode_verified; listening_review_pending",
       "bytes": 82566,
       "githubBlobSha": "1150ed2962a810c1e10d59b7d0a6c416afae2ff6",
       "sourceType": "recorded_effect",
@@ -562,7 +569,8 @@
     "auditionedAudioFiles": 0,
     "productionReadyAudioFiles": 0,
     "candidateGiftMappings": 20,
-    "candidateGiftFolderCount": 101
+    "candidateGiftFolderCount": 101,
+    "optionalFreesoundAudioDownloaded": 0
   },
   "additionalCC0Recordings": [
     {
@@ -577,7 +585,7 @@
       "expectedGitBlobSha": "cc7711f2eff6d39520b0627e0c56182ec962a7a9",
       "originalFormat": "M4A",
       "sourceMirror": "https://github.com/ashkansirous/ReadTheStupidText",
-      "sourceStatus": "CC0_source_documented_and_mirror_hash_available; binary_download_pending",
+      "sourceStatus": "source_audio_downloaded_transcoded_and_integrity_verified; listening_review_pending",
       "productionEligible": false,
       "audioStatus": "downloaded_verified_review_only",
       "reviewMp3": "assets/Gift Sounds/_sources/mp3/animal-bee.mp3"
@@ -594,7 +602,7 @@
       "expectedGitBlobSha": "81c016671bf7a355e480647a779a9ada990ab06f",
       "originalFormat": "M4A",
       "sourceMirror": "https://github.com/ashkansirous/ReadTheStupidText",
-      "sourceStatus": "CC0_source_documented_and_mirror_hash_available; binary_download_pending",
+      "sourceStatus": "source_audio_downloaded_transcoded_and_integrity_verified; listening_review_pending",
       "productionEligible": false,
       "audioStatus": "downloaded_verified_review_only",
       "reviewMp3": "assets/Gift Sounds/_sources/mp3/animal-bird.mp3"
@@ -611,7 +619,7 @@
       "expectedGitBlobSha": "84ff1c4cda1986e09c530c9dd39b1954d19c562e",
       "originalFormat": "M4A",
       "sourceMirror": "https://github.com/ashkansirous/ReadTheStupidText",
-      "sourceStatus": "CC0_source_documented_and_mirror_hash_available; binary_download_pending",
+      "sourceStatus": "source_audio_downloaded_transcoded_and_integrity_verified; listening_review_pending",
       "productionEligible": false,
       "audioStatus": "downloaded_verified_review_only",
       "reviewMp3": "assets/Gift Sounds/_sources/mp3/animal-cat.mp3"
@@ -628,7 +636,7 @@
       "expectedGitBlobSha": "99c24c97ba3847447dfe7e59c74659e39e8ebd47",
       "originalFormat": "M4A",
       "sourceMirror": "https://github.com/ashkansirous/ReadTheStupidText",
-      "sourceStatus": "CC0_source_documented_and_mirror_hash_available; binary_download_pending",
+      "sourceStatus": "source_audio_downloaded_transcoded_and_integrity_verified; listening_review_pending",
       "productionEligible": false,
       "audioStatus": "downloaded_verified_review_only",
       "reviewMp3": "assets/Gift Sounds/_sources/mp3/animal-cow.mp3"
@@ -645,7 +653,7 @@
       "expectedGitBlobSha": "4f308060c2b4de32c2bbdc0b9a0ac5b3bc056964",
       "originalFormat": "M4A",
       "sourceMirror": "https://github.com/ashkansirous/ReadTheStupidText",
-      "sourceStatus": "CC0_source_documented_and_mirror_hash_available; binary_download_pending",
+      "sourceStatus": "source_audio_downloaded_transcoded_and_integrity_verified; listening_review_pending",
       "productionEligible": false,
       "audioStatus": "downloaded_verified_review_only",
       "reviewMp3": "assets/Gift Sounds/_sources/mp3/animal-dog.mp3"
@@ -662,7 +670,7 @@
       "expectedGitBlobSha": "0e8569a5d0baa03cc581d28c533e2b811c71ebd6",
       "originalFormat": "M4A",
       "sourceMirror": "https://github.com/ashkansirous/ReadTheStupidText",
-      "sourceStatus": "CC0_source_documented_and_mirror_hash_available; binary_download_pending",
+      "sourceStatus": "source_audio_downloaded_transcoded_and_integrity_verified; listening_review_pending",
       "productionEligible": false,
       "audioStatus": "downloaded_verified_review_only",
       "reviewMp3": "assets/Gift Sounds/_sources/mp3/animal-duck.mp3"
@@ -679,7 +687,7 @@
       "expectedGitBlobSha": "a898784b99532a4a7827fa484580cb0c2f823ebe",
       "originalFormat": "M4A",
       "sourceMirror": "https://github.com/ashkansirous/ReadTheStupidText",
-      "sourceStatus": "CC0_source_documented_and_mirror_hash_available; binary_download_pending",
+      "sourceStatus": "source_audio_downloaded_transcoded_and_integrity_verified; listening_review_pending",
       "productionEligible": false,
       "audioStatus": "downloaded_verified_review_only",
       "reviewMp3": "assets/Gift Sounds/_sources/mp3/animal-frog.mp3"
@@ -696,7 +704,7 @@
       "expectedGitBlobSha": "01aa0c0884833e7bb2513fba5a1f83fe4506f26d",
       "originalFormat": "M4A",
       "sourceMirror": "https://github.com/ashkansirous/ReadTheStupidText",
-      "sourceStatus": "CC0_source_documented_and_mirror_hash_available; binary_download_pending",
+      "sourceStatus": "source_audio_downloaded_transcoded_and_integrity_verified; listening_review_pending",
       "productionEligible": false,
       "audioStatus": "downloaded_verified_review_only",
       "reviewMp3": "assets/Gift Sounds/_sources/mp3/animal-goat.mp3"
@@ -713,7 +721,7 @@
       "expectedGitBlobSha": "80d8e55e2d1ab0a24922d5021fec53e7f5e2cb58",
       "originalFormat": "M4A",
       "sourceMirror": "https://github.com/ashkansirous/ReadTheStupidText",
-      "sourceStatus": "CC0_source_documented_and_mirror_hash_available; binary_download_pending",
+      "sourceStatus": "source_audio_downloaded_transcoded_and_integrity_verified; listening_review_pending",
       "productionEligible": false,
       "audioStatus": "downloaded_verified_review_only",
       "reviewMp3": "assets/Gift Sounds/_sources/mp3/animal-horse.mp3"
@@ -730,7 +738,7 @@
       "expectedGitBlobSha": "38008f5c3ca78b992c57adcd3e1ee0fd4eae1908",
       "originalFormat": "M4A",
       "sourceMirror": "https://github.com/ashkansirous/ReadTheStupidText",
-      "sourceStatus": "CC0_source_documented_and_mirror_hash_available; binary_download_pending",
+      "sourceStatus": "source_audio_downloaded_transcoded_and_integrity_verified; listening_review_pending",
       "productionEligible": false,
       "audioStatus": "downloaded_verified_review_only",
       "reviewMp3": "assets/Gift Sounds/_sources/mp3/animal-mouse.mp3"
@@ -747,7 +755,7 @@
       "expectedGitBlobSha": "e8ddcfa6df676bec5481a2116a880c19daea0666",
       "originalFormat": "M4A",
       "sourceMirror": "https://github.com/ashkansirous/ReadTheStupidText",
-      "sourceStatus": "CC0_source_documented_and_mirror_hash_available; binary_download_pending",
+      "sourceStatus": "source_audio_downloaded_transcoded_and_integrity_verified; listening_review_pending",
       "productionEligible": false,
       "audioStatus": "downloaded_verified_review_only",
       "reviewMp3": "assets/Gift Sounds/_sources/mp3/animal-owl.mp3"
@@ -764,7 +772,7 @@
       "expectedGitBlobSha": "e542b2dc4761b535d54ba729399bdbe142f8f34f",
       "originalFormat": "M4A",
       "sourceMirror": "https://github.com/ashkansirous/ReadTheStupidText",
-      "sourceStatus": "CC0_source_documented_and_mirror_hash_available; binary_download_pending",
+      "sourceStatus": "source_audio_downloaded_transcoded_and_integrity_verified; listening_review_pending",
       "productionEligible": false,
       "audioStatus": "downloaded_verified_review_only",
       "reviewMp3": "assets/Gift Sounds/_sources/mp3/animal-pig.mp3"
@@ -781,7 +789,7 @@
       "expectedGitBlobSha": "2142b63c8ff0225dab8f72cb4f76c29a9a7d15f4",
       "originalFormat": "M4A",
       "sourceMirror": "https://github.com/ashkansirous/ReadTheStupidText",
-      "sourceStatus": "CC0_source_documented_and_mirror_hash_available; binary_download_pending",
+      "sourceStatus": "source_audio_downloaded_transcoded_and_integrity_verified; listening_review_pending",
       "productionEligible": false,
       "audioStatus": "downloaded_verified_review_only",
       "reviewMp3": "assets/Gift Sounds/_sources/mp3/animal-rooster.mp3"
@@ -798,7 +806,7 @@
       "expectedGitBlobSha": "c3ab64d5e9a93ce1e57a28c007e09605768705ce",
       "originalFormat": "M4A",
       "sourceMirror": "https://github.com/ashkansirous/ReadTheStupidText",
-      "sourceStatus": "CC0_source_documented_and_mirror_hash_available; binary_download_pending",
+      "sourceStatus": "source_audio_downloaded_transcoded_and_integrity_verified; listening_review_pending",
       "productionEligible": false,
       "audioStatus": "downloaded_verified_review_only",
       "reviewMp3": "assets/Gift Sounds/_sources/mp3/animal-sheep.mp3"
@@ -815,7 +823,7 @@
       "expectedBytes": null,
       "originalFormat": "OGG",
       "durationSeconds": 9.1,
-      "sourceStatus": "public_domain_source_page_verified; binary_download_pending",
+      "sourceStatus": "source_audio_downloaded_transcoded_and_integrity_verified; listening_review_pending",
       "productionEligible": false,
       "audioStatus": "downloaded_verified_review_only",
       "reviewMp3": "assets/Gift Sounds/_sources/mp3/animal-lion.mp3"
@@ -832,7 +840,7 @@
       "expectedSha1": "202a38a5a88ae2feba4991efdb7a51313618d7bc",
       "originalFormat": "OGA",
       "durationSeconds": 221.8625,
-      "sourceStatus": "CC0_source_page_and_checksum_verified; binary_download_pending",
+      "sourceStatus": "source_audio_downloaded_transcoded_and_integrity_verified; listening_review_pending",
       "productionEligible": false,
       "audioStatus": "downloaded_verified_review_only",
       "reviewMp3": "assets/Gift Sounds/_sources/mp3/animal-blue-whale.mp3"
@@ -849,7 +857,7 @@
       "expectedSha1": null,
       "originalFormat": "OGG",
       "durationSeconds": 103,
-      "sourceStatus": "public_domain_source_page_verified; binary_download_pending",
+      "sourceStatus": "source_audio_downloaded_transcoded_and_integrity_verified; listening_review_pending",
       "productionEligible": false,
       "audioStatus": "downloaded_verified_review_only",
       "reviewMp3": "assets/Gift Sounds/_sources/mp3/celebration-fireworks.mp3"
