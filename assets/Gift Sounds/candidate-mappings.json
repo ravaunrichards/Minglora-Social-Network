@@ -1,6 +1,6 @@
 {
   "title": "Minglora Gift Sound Candidate Mappings",
-  "status": "review_required_not_production_approved",
+  "status": "real_recordings_mapped_playback_enabled_human_listening_review_pending",
   "mappedGiftCount": 154,
   "mappings": [
     {
@@ -1235,5 +1235,8 @@
       "bytes": 124176,
       "status": "candidate_real_recording_needs_listening_review"
     }
-  ]
+  ],
+  "playbackEnabledGiftCount": 124,
+  "sourceRecordingCount": 247,
+  "humanListeningReview": "pending"
 }
