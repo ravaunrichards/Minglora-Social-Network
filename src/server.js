@@ -32,6 +32,7 @@ import { VIDEO_PLAYLIST_MAX_ITEMS, addVideoPlaylistItem, canViewVideoPlaylist, r
 import { VIDEO_CHANNEL_MAX_SUBSCRIPTIONS, canViewVideoChannel, subscribeToVideoChannel, unsubscribeFromVideoChannel, validateVideoChannelInput } from '../backend/modules/video/channels.js';
 import { summarizeCreatorVideoAnalytics } from './domain/video-analytics.js';
 import { enqueueVideoTranscodeJob, claimVideoTranscodeJob, completeVideoTranscodeJob, failVideoTranscodeJob, cancelVideoTranscodeJob, renewVideoTranscodeLease, isVideoTranscodeLeaseValid } from './domain/video-transcode-jobs.js';
+import { normalizeVideoRemixPolicy, canRemixVideo, createVideoCollaborationInvite, respondToVideoCollaborationInvite, listAcceptedVideoCollaboratorIds } from './domain/video-remix-collaboration.js';
 import { validateVideoChannelPostInput, createVideoChannelPost, updateVideoChannelPost, deleteVideoChannelPost } from './domain/video-channel-posts.js';
 import { canViewStory as canViewStoryPolicy, removeExpiredStories } from '../backend/modules/stories/service.js';
 import { canPublishGroupPost, canDeleteGroupPost, canLeaveGroup } from '../backend/modules/groups/service.js';
@@ -919,6 +920,7 @@ function notificationPreferenceKey(type){
   if(['live','live_moderator'].includes(type))return 'live';
   if(['gift','fan_club'].includes(type))return 'gifts';
   if(type==='meetwave_invite')return 'meetWave';
+  if(['video_remix','video_collaboration_invite','video_collaboration_response'].includes(type))return 'interactions';
   if(type==='league_match')return 'leagues';
   if(['account_security','verification_application','verification_status','admin_alert'].includes(type))return 'account';
   return null;
@@ -1057,8 +1059,22 @@ async function publicPost(p,viewerId) {
       return item;
     }catch{return null;}
   }));
+  const acceptedCollaboratorIds=listAcceptedVideoCollaboratorIds(db.videoCollaborationInvites||[],p.id);
+  const collaborators=acceptedCollaboratorIds
+    .map(id=>db.users.find(member=>member.id===id))
+    .filter(member=>member&&!blockedBetween(viewerId,member.id))
+    .map(member=>safeUser(member,viewerId));
+  const sourcePost=p.remixOfPostId?(db.posts||[]).find(item=>item.id===p.remixOfPostId):null;
+  const remixSource=sourcePost&&isVisibleVideoPost(viewerId,sourcePost)
+    ?{id:sourcePost.id,author:safeUser(db.users.find(member=>member.id===sourcePost.userId),viewerId)}
+    :null;
+  const visibleVideo=isVisibleVideoPost(viewerId,p);
+  const currentFollows=activeFollows();
+  const isFollowing=Boolean(currentFollows.some(edge=>edge.followerId===viewerId&&edge.followedId===p.userId));
+  const isFriend=getMutualFollowIds(currentFollows,viewerId,db.blocks||[]).includes(p.userId);
+  const canRemix=canRemixVideo(p,viewerId,{isVisible:visibleVideo,isBlocked:blockedBetween(viewerId,p.userId),isFollowing,isFriend});
   const {imageUrl,...cleanPost}=p;
-  return {...cleanPost,media:media.filter(item=>item?.url),soundtrack:await publicSoundtrack(p.soundtrack,viewerId),author:safeUser(author),taggedUsers:(p.taggedUserIds||[]).map(id=>db.users.find(member=>member.id===id)).filter(Boolean).map(member=>safeUser(member,viewerId)),reactions:p.reactions||{},reactionCount:Object.values(p.reactions||{}).length,myReaction:(p.reactions||{})[viewerId]||null,
+  return {...cleanPost,media:media.filter(item=>item?.url),soundtrack:await publicSoundtrack(p.soundtrack,viewerId),author:safeUser(author),remixSource,collaborators,canRemix,remixPolicy:normalizeVideoRemixPolicy(p.remixPolicy,'off')||'off',taggedUsers:(p.taggedUserIds||[]).map(id=>db.users.find(member=>member.id===id)).filter(Boolean).map(member=>safeUser(member,viewerId)),reactions:p.reactions||{},reactionCount:Object.values(p.reactions||{}).length,myReaction:(p.reactions||{})[viewerId]||null,
     isSaved:(db.savedPosts||[]).some(saved=>saved.userId===viewerId&&saved.postId===p.id),
     isWatchLater:(db.savedPosts||[]).some(saved=>saved.userId===viewerId&&saved.postId===p.id&&saved.readLater===true),
     comments:(p.comments||[]).map(c=>({...c,author:safeUser(db.users.find(u=>u.id===c.userId))}))};
@@ -5455,11 +5471,85 @@ async function route(req, res) {
         await saveStore();
         return json(res,200,{ok:true,id:sound.id});
       }
+      if(method==='GET'&&p==='/api/video-collaborations/invitations'){
+        const invitations=(db.videoCollaborationInvites||[])
+          .filter(invite=>invite.collaboratorId===user.id&&invite.status==='pending')
+          .map(invite=>({invite,post:(db.posts||[]).find(item=>item.id===invite.postId)}))
+          .filter(item=>item.post&&item.post.userId===item.invite.ownerId&&isVisibleVideoPost(user.id,item.post))
+          .map(({invite,post})=>({
+            id:invite.id,postId:post.id,createdAt:invite.createdAt,
+            creator:safeUser(db.users.find(member=>member.id===invite.ownerId),user.id),
+            post:{id:post.id,text:String(post.text||'').slice(0,180),videoFormat:post.videoFormat||'video'}
+          }));
+        return json(res,200,{invitations});
+      }
+      const collaborationResponsePrefix='/api/video-collaborations/invitations/';
+      if(method==='POST'&&p.startsWith(collaborationResponsePrefix)&&p.endsWith('/respond')){
+        const inviteId=decodeURIComponent(p.slice(collaborationResponsePrefix.length,-'/respond'.length));
+        const invite=(db.videoCollaborationInvites||[]).find(item=>item.id===inviteId);
+        if(!invite||invite.collaboratorId!==user.id)return json(res,404,{error:'Collaboration invitation not found.'});
+        const post=(db.posts||[]).find(item=>item.id===invite.postId&&item.userId===invite.ownerId);
+        if(!post||!isVisibleVideoPost(user.id,post))return json(res,404,{error:'The invited video is no longer available to you.'});
+        const response=respondToVideoCollaborationInvite(db.videoCollaborationInvites,{inviteId,collaboratorId:user.id,response:String(input.response||''),respondedAt:now()});
+        if(response.status==='conflict')return json(res,409,{error:'This collaboration invitation has already been answered.'});
+        if(response.status!=='accepted'&&response.status!=='declined')return json(res,400,{error:'Choose accept or decline.'});
+        if(response.status==='accepted')notify(invite.ownerId,user.id,'video_collaboration_response',(user.name||'A Minglora friend')+' accepted your video collaboration invitation.',{postId:post.id,inviteId});
+        await saveStore();
+        return json(res,200,{ok:true,status:response.status,postId:post.id});
+      }
+      const collaboratorPostPrefix='/api/posts/';
+      if(method==='POST'&&p.startsWith(collaboratorPostPrefix)&&p.endsWith('/collaborators')){
+        const postId=decodeURIComponent(p.slice(collaboratorPostPrefix.length,-'/collaborators'.length));
+        const post=(db.posts||[]).find(item=>item.id===postId);
+        if(!post)return json(res,404,{error:'Video post not found.'});
+        if(post.userId!==user.id)return json(res,403,{error:'Only the video creator can invite collaborators.'});
+        if(!isVisibleVideoPost(user.id,post))return json(res,400,{error:'Only a published video post can have collaborators.'});
+        const username=normalizeUsername(input.username).replace(/^@/,'');
+        if(!username||username.length>32)return json(res,400,{error:'Enter a valid Minglora username.'});
+        const collaborator=(db.users||[]).find(member=>normalizeUsername(member.username)===username);
+        if(!collaborator||collaborator.id===user.id||blockedBetween(user.id,collaborator.id))return json(res,404,{error:'That collaborator is not available.'});
+        const mutualFriends=new Set(getMutualFollowIds(activeFollows(),user.id,db.blocks||[]));
+        if(!mutualFriends.has(collaborator.id))return json(res,403,{error:'Video collaboration invitations are limited to your Minglora friends.'});
+        if(!isVisibleVideoPost(collaborator.id,post))return json(res,403,{error:'That friend cannot view this video with its current audience settings.'});
+        db.videoCollaborationInvites||=[];
+        const created=createVideoCollaborationInvite(db.videoCollaborationInvites,{postId:post.id,ownerId:user.id,collaboratorId:collaborator.id,id:uid(),createdAt:now()});
+        if(created.status==='limit')return json(res,409,{error:'This video has reached its five-collaborator limit.'});
+        if(created.status==='exists')return json(res,200,{ok:true,alreadyInvited:true,inviteId:created.invite.id});
+        if(created.status!=='created')return json(res,400,{error:'The collaboration invitation could not be created.'});
+        notify(collaborator.id,user.id,'video_collaboration_invite',(user.name||'A Minglora friend')+' invited you to collaborate on a video.',{postId:post.id,inviteId:created.invite.id});
+        await saveStore();
+        return json(res,201,{ok:true,inviteId:created.invite.id,collaborator:safeUser(collaborator,user.id)});
+      }
+      if(method==='PATCH'&&p.startsWith('/api/posts/')&&p.endsWith('/remix-settings')){
+        const postId=decodeURIComponent(p.slice('/api/posts/'.length,-'/remix-settings'.length));
+        const post=(db.posts||[]).find(item=>item.id===postId);
+        if(!post)return json(res,404,{error:'Video post not found.'});
+        if(post.userId!==user.id)return json(res,403,{error:'Only the video creator can change remix permissions.'});
+        if(!isVisibleVideoPost(user.id,post))return json(res,400,{error:'Remix permissions apply to published video posts.'});
+        const policy=normalizeVideoRemixPolicy(input.policy,null);
+        if(!policy)return json(res,400,{error:'Choose off, everyone, followers or friends.'});
+        post.remixPolicy=policy;
+        await saveStore();
+        return json(res,200,{ok:true,postId:post.id,remixPolicy:policy});
+      }
       if(method==='POST'&&p==='/api/posts'){
         const validation=validatePostInput(input);if(!validation.valid)return json(res,400,{error:validation.errors.join(' ')});
         const {text,mediaIds}=validation.value;const ids=[...new Set(mediaIds)];
         const requestedVideoFormat=input.videoFormat===undefined||input.videoFormat===null?null:String(input.videoFormat);
         if(requestedVideoFormat!==null&&!['video','reel'].includes(requestedVideoFormat))return json(res,400,{error:'Video format must be video or reel.'});
+        const requestedRemixSourceId=String(input.remixOfPostId||'').trim()||null;
+        const requestedRemixPolicy=requestedVideoFormat?normalizeVideoRemixPolicy(input.remixPolicy,'off'):null;
+        if(requestedVideoFormat&&!requestedRemixPolicy)return json(res,400,{error:'Remix policy must be off, everyone, followers or friends.'});
+        if(!requestedVideoFormat&&(requestedRemixSourceId||input.remixPolicy!==undefined))return json(res,400,{error:'Remix settings can only be used with a video post.'});
+        let remixSource=null;
+        if(requestedRemixSourceId){
+          remixSource=(db.posts||[]).find(item=>item.id===requestedRemixSourceId);
+          if(!remixSource||!isVisibleVideoPost(user.id,remixSource))return json(res,404,{error:'The original video is not available to remix.'});
+          const currentFollows=activeFollows();
+          const isFollowing=currentFollows.some(edge=>edge.followerId===user.id&&edge.followedId===remixSource.userId);
+          const isFriend=getMutualFollowIds(currentFollows,user.id,db.blocks||[]).includes(remixSource.userId);
+          if(!canRemixVideo(remixSource,user.id,{isVisible:true,isBlocked:blockedBetween(user.id,remixSource.userId),isFollowing,isFriend}))return json(res,403,{error:'The original creator has not allowed you to remix this video.'});
+        }
         const audience=String(input.audience||'public');
         if(!['public','friends','close_friends','followers','private'].includes(audience))return json(res,400,{error:'Unsupported post audience.'});
         const feeling=String(input.feeling||'').trim(),activity=String(input.activity||'').trim(),location=String(input.location||'').trim(),background=String(input.background||'').trim();
@@ -5473,9 +5563,10 @@ async function route(req, res) {
         const assets=ids.map(id=>(db.mediaAssets||[]).find(asset=>asset.id===id&&asset.ownerId===user.id&&asset.slot==='post'&&asset.status==='uploaded'));
         if(assets.some(asset=>!asset))return json(res,400,{error:'One or more selected media files are no longer available. Upload them again.'});
         if(requestedVideoFormat&&(assets.length!==1||assets[0]?.mediaType!=='video'))return json(res,400,{error:'A video or Reel post must contain exactly one uploaded video file.'});
-        const post={id:uid(),userId:user.id,text,mediaIds:ids,soundtrack,audience,...(feeling?{feeling}:{}),...(activity?{activity}:{}),...(location?{location}:{}),...(background&&!ids.length?{background}:{}),...(requestedTagIds.length?{taggedUserIds:requestedTagIds}:{}),...(requestedVideoFormat?{videoFormat:requestedVideoFormat}:{}),createdAt:now(),reactions:{},comments:[]};
+        const post={id:uid(),userId:user.id,text,mediaIds:ids,soundtrack,audience,...(feeling?{feeling}:{}),...(activity?{activity}:{}),...(location?{location}:{}),...(background&&!ids.length?{background}:{}),...(requestedTagIds.length?{taggedUserIds:requestedTagIds}:{}),...(requestedVideoFormat?{videoFormat:requestedVideoFormat,remixPolicy:requestedRemixPolicy}:{}),...(remixSource?{remixOfPostId:remixSource.id}:{}),createdAt:now(),reactions:{},comments:[]};
         assets.forEach(asset=>{asset.status='attached';asset.attachedTo=post.id;enqueueAttachedVideoTranscode(asset,post);});db.posts.unshift(post);
         requestedTagIds.forEach(taggedId=>{const taggedMember=db.users.find(member=>member.id===taggedId);if(taggedMember)notify(taggedId,user.id,'post_tagged',(user.name||'A Minglora friend')+' tagged you in a post.',{postId:post.id});});
+        if(remixSource)notify(remixSource.userId,user.id,'video_remix',(user.name||'A Minglora member')+' remixed your video.',{postId:remixSource.id,remixPostId:post.id});
         await saveStore();
         return json(res,201,{post:await publicPost(post,user.id)});
       }

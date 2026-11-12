@@ -85,3 +85,20 @@ test('Creator Studio and its authenticated API expose the same real analytics co
   assert.match(index, /creator-video-analytics\.css/);
   assert.match(worker, /creator-video-analytics\.css/);
 });
+
+
+test('Creator Studio displays anonymous audience countries with opt-in and five-member privacy safeguards', () => {
+  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+  const app = fs.readFileSync(path.join(root, 'public/app.js'), 'utf8');
+  const settings = fs.readFileSync(path.join(root, 'public/settings.js'), 'utf8');
+  const domain = fs.readFileSync(path.join(root, 'src/domain/video-analytics.js'), 'utf8');
+
+  assert.match(app, /const demographics=analytics\?\.demographics\|\|\{\}/);
+  assert.match(app, /Anonymous audience countries/);
+  assert.match(app, /No country group currently meets the minimum of five members/);
+  assert.match(app, /Smaller country groups are hidden to protect member privacy/);
+  assert.match(settings, /shareAudienceDemographics: false/);
+  assert.match(settings, /name="shareAudienceDemographics"/);
+  assert.match(settings, /Off by default/);
+  assert.match(domain, /VIDEO_DEMOGRAPHICS_MIN_SAMPLE_SIZE\s*=\s*5/);
+});

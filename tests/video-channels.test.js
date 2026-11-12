@@ -171,6 +171,40 @@ test('creator channels support real videos, privacy, subscriptions and cross-dev
   assert.equal(subscriptions.body.videos[0].id,'public-post-1');
   assert.equal(subscriptions.body.videos[0].channel.title,'Public Creator Channel');
 
+  const channelUpdate=await request(publicOwner.cookie,'/api/video-channels/me/posts',{
+    method:'POST',body:JSON.stringify({title:'Creator update',body:'New release is available.'})
+  });
+  assert.equal(channelUpdate.status,201,JSON.stringify(channelUpdate.body));
+  const updateId=channelUpdate.body.post.id;
+  const subscriberAnnouncements=await request(viewer.cookie,'/api/video-channels/subscriptions');
+  assert.equal(subscriberAnnouncements.status,200);
+  assert.equal(subscriberAnnouncements.body.announcements.length,1);
+  assert.equal(subscriberAnnouncements.body.announcements[0].id,updateId);
+  assert.equal(subscriberAnnouncements.body.announcements[0].body,'New release is available.');
+
+  const nonOwnerEdit=await request(viewer.cookie,'/api/video-channel-posts/'+encodeURIComponent(updateId),{
+    method:'PATCH',body:JSON.stringify({body:'Unauthorized edit'})
+  });
+  assert.equal(nonOwnerEdit.status,404);
+  const channelUpdateEdit=await request(publicOwner.cookie,'/api/video-channel-posts/'+encodeURIComponent(updateId),{
+    method:'PATCH',body:JSON.stringify({title:'Updated creator update',body:'Edited announcement.'})
+  });
+  assert.equal(channelUpdateEdit.status,200);
+  const editedAnnouncement=await request(viewer.cookie,'/api/video-channels/subscriptions');
+  assert.equal(editedAnnouncement.body.announcements[0].title,'Updated creator update');
+  assert.equal(editedAnnouncement.body.announcements[0].body,'Edited announcement.');
+
+  await stopServer();
+  await startServer();
+  const persistedAnnouncement=await request(viewer.cookie,'/api/video-channels/subscriptions');
+  assert.equal(persistedAnnouncement.body.announcements[0].id,updateId);
+  assert.equal(persistedAnnouncement.body.announcements[0].body,'Edited announcement.');
+
+  const deletedUpdate=await request(publicOwner.cookie,'/api/video-channel-posts/'+encodeURIComponent(updateId),{method:'DELETE'});
+  assert.equal(deletedUpdate.status,200);
+  const afterDelete=await request(viewer.cookie,'/api/video-channels/subscriptions');
+  assert.equal(afterDelete.body.announcements.some(item=>item.id===updateId),false);
+
   const channelEdit=await request(publicOwner.cookie,'/api/video-channels/me',{
     method:'PATCH',body:JSON.stringify({title:'Updated Public Channel',description:'Saved on Minglora'})
   });
