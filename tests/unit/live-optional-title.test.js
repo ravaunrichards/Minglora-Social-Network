@@ -28,6 +28,6 @@ test('Server generates a host-based fallback title and preserves the stored-titl
 });
 
 test('Untitled public broadcasts notify followers without a blank title', () => {
-  assert.match(createRoute, /const liveNotice = providedTitle \? user\.name\+' is LIVE: '\+title : user\.name\+' is LIVE now'/);
+  assert.match(createRoute, /const liveNotice = providedTitle \? hostDisplayName\+' is LIVE: '\+title : hostDisplayName\+' is LIVE now'/);
   assert.match(createRoute, /notify\(followerId,user\.id,'live',liveNotice/);
 });
