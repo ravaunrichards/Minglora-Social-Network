@@ -1390,7 +1390,7 @@ function renderLiveDirectory(sessions,status,catalog,wallet,livePro={}){
     "<section class='card live-start-card'><div class='live-preflight-heading'><div><h2>LIVE setup</h2><p class='muted'>Your settings are applied before Minglora opens the LIVE room.</p></div><span class='live-preflight-step'>1 · SET UP</span></div>"+
     "<form id='live-create-form' class='live-create-form'><fieldset class='live-mode-picker'><legend>Choose LIVE mode</legend>"+modeCards+"</fieldset>"+
     "<div class='live-preflight-fields'>"+
-      "<label class='live-preflight-field'><span>LIVE title</span><input name='title' maxlength='120' required placeholder='What are you going LIVE about?'></label>"+
+      "<label class='live-preflight-field'><span>LIVE title (optional)</span><input name='title' maxlength='120' placeholder='Add a title, or leave blank to go LIVE'></label>"+
       "<label class='live-preflight-field'><span>LIVE board</span><select name='board'>"+boardOptions.map(([value,label])=>"<option value='"+value+"'>"+label+"</option>").join("")+"</select></label>"+
       "<label class='live-preflight-field' id='live-audience-field'><span>Who can watch?</span><select name='visibility' id='live-audience-select'><option value='public'>Everyone · Public</option><option value='friends'>Friends</option><option value='subscribers'>Subscribers only</option><option value='private'>Private room</option></select></label>"+
       "<label class='live-preflight-field' id='live-quality-field'><span>Live quality</span><select name='liveQuality'><option value='auto'>Auto · Recommended</option><option value='720p'>720p · Balanced</option><option value='1080p'>1080p · High bandwidth</option></select></label>"+

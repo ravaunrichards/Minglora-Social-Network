@@ -487,3 +487,167 @@ body:has(#live-player-shell) #live-video-stage.live-audio-stage{
 @media(prefers-reduced-motion:reduce){
   body:has(#live-player-shell) #live-tools-drawer{animation:none!important;transition:none!important}
 }
+
+
+/* LIVE HUD recovery: keep host identity, Likes and host power action visible
+   in one safe row on touch screens without changing session or call behavior. */
+@media(max-width:900px){
+  body:has(#live-player-shell) .live-video-column>.live-stage-topbar{
+    position:absolute!important;inset:0!important;z-index:42!important;
+    display:block!important;width:100%!important;height:100%!important;
+    min-height:0!important;max-height:none!important;overflow:visible!important;
+    pointer-events:none!important;
+  }
+  body:has(#live-player-shell) .live-stage-topbar .live-stage-top-left{
+    position:absolute!important;top:76px!important;left:10px!important;right:54px!important;
+    display:flex!important;flex-wrap:nowrap!important;align-items:center!important;
+    gap:5px!important;width:auto!important;min-width:0!important;max-width:none!important;
+    overflow:visible!important;pointer-events:auto!important;
+  }
+  body:has(#live-player-shell) .live-stage-topbar .live-host-profile-wrap{
+    display:flex!important;flex:0 1 auto!important;align-items:center!important;
+    gap:5px!important;min-width:0!important;max-width:68%!important;overflow:visible!important;
+  }
+  body:has(#live-player-shell) .live-stage-topbar button.live-host-profile{
+    display:flex!important;flex:0 1 auto!important;align-items:center!important;gap:6px!important;
+    min-width:0!important;max-width:min(52vw,220px)!important;min-height:36px!important;
+    padding:3px 8px 3px 3px!important;overflow:visible!important;
+  }
+  body:has(#live-player-shell) .live-stage-topbar .live-host-profile>span{
+    display:flex!important;flex:0 1 auto!important;flex-direction:row!important;
+    align-items:center!important;gap:5px!important;min-width:0!important;overflow:visible!important;
+  }
+  body:has(#live-player-shell) .live-stage-topbar .live-host-profile strong{
+    display:block!important;flex:0 1 auto!important;max-width:min(31vw,132px)!important;
+    min-width:0!important;overflow:hidden!important;text-overflow:ellipsis!important;
+    white-space:nowrap!important;font-size:10px!important;
+  }
+  body:has(#live-player-shell) .live-stage-topbar .live-host-profile small{
+    display:inline-flex!important;flex:0 0 auto!important;align-items:center!important;
+    gap:3px!important;max-width:none!important;font-size:8px!important;line-height:1!important;
+    white-space:nowrap!important;padding:3px 5px!important;border-radius:999px!important;
+    background:rgba(255,255,255,.1)!important;
+  }
+  body:has(#live-player-shell) .live-stage-topbar .live-like-control{
+    position:relative!important;top:auto!important;right:auto!important;bottom:auto!important;left:auto!important;
+    display:flex!important;flex:0 0 auto!important;flex-direction:row!important;
+    align-items:center!important;justify-content:center!important;gap:4px!important;
+    min-width:0!important;min-height:36px!important;padding:2px 6px!important;
+    border:1px solid rgba(255,255,255,.2)!important;border-radius:999px!important;
+    background:rgba(7,12,21,.76)!important;backdrop-filter:blur(10px)!important;
+    -webkit-backdrop-filter:blur(10px)!important;overflow:visible!important;
+  }
+  body:has(#live-player-shell) .live-stage-topbar .live-heart-like{
+    display:grid!important;place-items:center!important;flex:0 0 28px!important;
+    width:28px!important;height:28px!important;min-width:28px!important;min-height:28px!important;
+    visibility:visible!important;opacity:1!important;
+  }
+  body:has(#live-player-shell) .live-stage-topbar .live-like-count{
+    display:block!important;flex:0 0 auto!important;min-width:0!important;
+    font-size:10px!important;line-height:1!important;white-space:nowrap!important;
+  }
+  body:has(#live-player-shell) .live-stage-topbar .live-like-control>small{display:none!important}
+  body:has(#live-player-shell) .live-stage-topbar .live-stage-top-actions{
+    position:absolute!important;top:76px!important;right:8px!important;z-index:45!important;
+    display:flex!important;flex:0 0 40px!important;align-items:center!important;
+    justify-content:center!important;width:40px!important;min-width:40px!important;
+    min-height:40px!important;overflow:visible!important;pointer-events:auto!important;
+  }
+  body:has(#live-player-shell) .live-stage-topbar .live-host-power-button{
+    position:relative!important;inset:auto!important;display:grid!important;place-items:center!important;
+    flex:0 0 38px!important;width:38px!important;height:38px!important;min-width:38px!important;
+    min-height:38px!important;max-width:38px!important;margin:0!important;padding:0!important;
+    visibility:visible!important;opacity:1!important;pointer-events:auto!important;z-index:46!important;
+    color:#fff!important;border:1px solid rgba(255,100,116,.62)!important;border-radius:50%!important;
+    background:linear-gradient(145deg,rgba(235,62,83,.96),rgba(150,25,48,.96))!important;
+    box-shadow:0 3px 14px rgba(0,0,0,.28)!important;
+  }
+  body:has(#live-player-shell) .live-stage-topbar .live-host-power-button svg{
+    display:block!important;width:21px!important;height:21px!important;visibility:visible!important;opacity:1!important;
+  }
+}
+@media(max-width:380px){
+  body:has(#live-player-shell) .live-stage-topbar .live-stage-top-left{
+    left:7px!important;right:50px!important;gap:4px!important;
+  }
+  body:has(#live-player-shell) .live-stage-topbar button.live-host-profile{
+    max-width:min(49vw,178px)!important;gap:4px!important;
+  }
+  body:has(#live-player-shell) .live-stage-topbar .live-host-profile strong{max-width:25vw!important;font-size:9px!important}
+  body:has(#live-player-shell) .live-stage-topbar .live-host-profile small{font-size:7px!important;padding:3px 4px!important}
+  body:has(#live-player-shell) .live-stage-topbar .live-like-control{gap:2px!important;padding:2px 4px!important}
+  body:has(#live-player-shell) .live-stage-topbar .live-heart-like{
+    flex-basis:26px!important;width:26px!important;height:26px!important;min-width:26px!important;
+  }
+  body:has(#live-player-shell) .live-stage-topbar .live-stage-top-actions{
+    top:76px!important;right:6px!important;width:38px!important;min-width:38px!important;
+  }
+  body:has(#live-player-shell) .live-stage-topbar .live-host-power-button{
+    flex-basis:36px!important;width:36px!important;height:36px!important;min-width:36px!important;min-height:36px!important;
+  }
+}
+
+/* TikTok-style multi-guest proportions: a dominant host window plus a
+   dedicated vertical guest rail, or evenly sized grid tiles. */
+body:has(#live-player-shell) #live-guest-layout[data-live-layout="fluid-panel"]{
+  grid-template-columns:minmax(0,2.15fr) minmax(110px,.85fr)!important;
+  grid-template-rows:26px repeat(8,minmax(0,1fr))!important;
+  grid-auto-rows:minmax(0,1fr)!important;align-content:stretch!important;gap:7px!important;
+}
+body:has(#live-player-shell) #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-host{
+  grid-column:1!important;grid-row:2/10!important;min-width:0!important;min-height:0!important;
+}
+body:has(#live-player-shell) #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest,
+body:has(#live-player-shell) #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.empty{
+  grid-column:2!important;grid-row:auto!important;min-width:0!important;min-height:0!important;
+}
+body:has(#live-player-shell) #live-guest-layout[data-live-layout="fluid-grid"]{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  grid-template-rows:26px repeat(3,minmax(0,1fr))!important;
+  grid-auto-rows:minmax(0,1fr)!important;grid-auto-flow:row!important;
+  align-content:stretch!important;gap:7px!important;
+}
+body:has(#live-player-shell) #live-guest-layout[data-live-layout="fixed-grid"]{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  grid-template-rows:26px repeat(3,minmax(0,1fr))!important;
+  grid-auto-rows:minmax(0,1fr)!important;grid-auto-flow:row!important;
+  align-content:stretch!important;gap:7px!important;
+}
+body:has(#live-player-shell) #live-guest-layout[data-live-layout="fixed-panel"]{
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  grid-template-rows:26px repeat(4,minmax(0,1fr))!important;
+  grid-auto-rows:minmax(0,1fr)!important;align-content:stretch!important;gap:7px!important;
+}
+body:has(#live-player-shell) #live-guest-layout[data-live-layout="fixed-panel"]>.live-guest-seat.is-host{
+  grid-column:1/-1!important;grid-row:2!important;
+}
+body:has(#live-player-shell) #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat,
+body:has(#live-player-shell) #live-guest-layout[data-live-layout="fluid-grid"]>.live-guest-seat,
+body:has(#live-player-shell) #live-guest-layout[data-live-layout="fixed-grid"]>.live-guest-seat,
+body:has(#live-player-shell) #live-guest-layout[data-live-layout="fixed-panel"]>.live-guest-seat{
+  box-sizing:border-box!important;width:100%!important;height:100%!important;
+  min-width:0!important;min-height:0!important;max-width:100%!important;max-height:100%!important;
+  overflow:hidden!important;
+}
+@media(max-width:900px){
+  body:has(#live-player-shell) #live-guest-layout[data-live-layout="fluid-panel"]{
+    grid-template-columns:minmax(0,1.75fr) minmax(88px,.9fr)!important;
+    grid-template-rows:24px repeat(8,minmax(0,1fr))!important;gap:5px!important;
+  }
+  body:has(#live-player-shell) #live-guest-layout[data-live-layout="fluid-grid"],
+  body:has(#live-player-shell) #live-guest-layout[data-live-layout="fixed-grid"]{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    grid-template-rows:24px repeat(5,minmax(0,1fr))!important;gap:5px!important;
+  }
+  body:has(#live-player-shell) #live-guest-layout[data-live-layout="fixed-panel"]{
+    grid-template-rows:24px repeat(4,minmax(0,1fr))!important;gap:5px!important;
+  }
+  body:has(#live-player-shell) #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-host{grid-row:2/10!important}
+}
+@media(max-width:380px){
+  body:has(#live-player-shell) #live-guest-layout[data-live-layout="fluid-panel"]{grid-template-columns:minmax(0,1.65fr) minmax(82px,.9fr)!important}
+  body:has(#live-player-shell) #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat{padding:3px!important;border-radius:8px!important}
+  body:has(#live-player-shell) #live-guest-layout[data-live-layout="fluid-grid"]>.live-guest-seat,
+  body:has(#live-player-shell) #live-guest-layout[data-live-layout="fixed-grid"]>.live-guest-seat,
+  body:has(#live-player-shell) #live-guest-layout[data-live-layout="fixed-panel"]>.live-guest-seat{padding:3px!important;border-radius:8px!important}
+}
