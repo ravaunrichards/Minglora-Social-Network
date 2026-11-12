@@ -528,7 +528,7 @@ test('Multilingual evaluation registry exposes synthetic data privacy and owner-
     'Provider run: not run',
     'Language quality: unverified',
     'reviewer role and evidence are self-attested by the bot owner, not independently verified',
-    'Provider compatibility and language quality remain unverified.'
+    'provider compatibility and language quality remain unverified.'
   ]) assert.ok(ui.includes(phrase),phrase);
   assert.match(ui,/async function createOrUpdateLanguageEvaluationSet/);
   assert.match(ui,/async function actOnLanguageEvaluationSet/);
