@@ -2020,13 +2020,11 @@ export function updatePersonalAiBotLanguageEvaluationSet(db, botId, setId, input
 
 export function submitPersonalAiBotLanguageEvaluationSet(db, botId, setId, actorId, timestamp, uid) {
   getOwnedPersonalAiBotForLanguageSettings(db,botId,actorId);
+  const record=findOwnedPersonalAiBotLanguageEvaluationSet(db,botId,setId,actorId);
   const language=getPersonalAiBotLanguageSettings(db,botId,actorId);
-  if(!language.saved||!language.configuration.supportedLanguages.includes(
-    db.personalAiBotLanguageEvaluationSets.find(item=>item.id===setId&&item.botId===botId&&item.ownerId===actorId)?.languageCode
-  )){
+  if(!language.saved||!language.configuration.supportedLanguages.includes(record.languageCode)){
     throw Object.assign(new Error('The evaluation language must remain enabled in this bot’s saved multilingual settings before submission.'),{status:409});
   }
-  const record=findOwnedPersonalAiBotLanguageEvaluationSet(db,botId,setId,actorId);
   if(!['draft','changes_requested'].includes(record.status)){
     throw Object.assign(new Error('Only draft evaluation sets can be submitted for human review.'),{status:409});
   }
