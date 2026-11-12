@@ -3158,14 +3158,18 @@ async function route(req, res) {
         if (!isLiveKitConfigured()) return json(res, 503, { error: 'Live video is not configured. Add Minglora LIVEKIT_URL, LIVEKIT_API_KEY and LIVEKIT_API_SECRET to the server environment.' });
         const liveHealth = await verifyLiveKitConnection();
         if (!liveHealth.connected) return json(res, 503, { error: liveHealth.error || 'Minglora could not verify its LiveKit connection.' });
-        const title = String(input.title || '').trim();
+        const providedTitle = String(input.title || '').trim();
+        const hostDisplayName = String(user.name || user.username || 'Minglora').trim().slice(0, 112) || 'Minglora';
+        // The relational LIVE record requires a non-empty title, so an omitted
+        // user title receives a predictable display title without a schema change.
+        const title = providedTitle || hostDisplayName + "'s LIVE";
         const selectedVisibility = String(input.visibility || 'public');
         const liveMode = String(input.liveMode || (input.broadcastType === 'audio_only' ? 'audio_only' : 'video_audio'));
         const broadcastType = broadcastTypeForLiveMode(liveMode);
         const setupResult = normalizeLiveSettings(input.liveSettings || {});
-        if (!title || title.length > 120 || !['public', 'friends', 'subscribers', 'private'].includes(selectedVisibility) ||
+        if (providedTitle.length > 120 || !['public', 'friends', 'subscribers', 'private'].includes(selectedVisibility) ||
             !LIVE_MODES.includes(liveMode) || !setupResult.valid) {
-          return json(res, 400, { error: !setupResult.valid ? setupResult.error : 'Enter a LIVE title, choose an audience and select a supported LIVE mode.' });
+          return json(res, 400, { error: !setupResult.valid ? setupResult.error : providedTitle.length > 120 ? 'LIVE titles can be up to 120 characters.' : 'Choose an audience and select a supported LIVE mode.' });
         }
         const liveSettings = setupResult.settings;
         const visibility = liveSettings.practiceMode
@@ -3203,7 +3207,8 @@ async function route(req, res) {
         db.liveSessions.unshift(session);
         if(visibility==='public'){
           const followerIds=[...new Set(activeFollows().filter(edge=>edge.followedId===user.id).map(edge=>edge.followerId))];
-          for(const followerId of followerIds)if(!blockedBetween(followerId,user.id))notify(followerId,user.id,'live',user.name+' is LIVE: '+title,{liveSessionId:id});
+          const liveNotice = providedTitle ? user.name+' is LIVE: '+title : user.name+' is LIVE now';
+          for(const followerId of followerIds)if(!blockedBetween(followerId,user.id))notify(followerId,user.id,'live',liveNotice,{liveSessionId:id});
         }
         await saveStore();
         return json(res, 201, { session, liveKit: { ...liveKit, role: 'host' } });
