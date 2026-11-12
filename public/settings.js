@@ -1,6 +1,6 @@
 (() => {
   const defaults = {
-    privacy: { profileVisibility: 'public', allowFriendRequests: true, messageAudience: 'everyone', meetWaveAudience: 'everyone' },
+    privacy: { profileVisibility: 'public', allowFriendRequests: true, messageAudience: 'everyone', meetWaveAudience: 'everyone', shareAudienceDemographics: false },
     notifications: { inApp: true, friendRequests: true, messages: true, interactions: true, push: true, profileViews: false, calls: true, live: true, gifts: true, meetWave: true, leagues: true, account: true },
     preferences: { theme: 'system', colorTheme: 'minglora', liveRoomTheme: 'studio', feedSort: 'recent', reducedMotion: false, liteMode: false, keyboardShortcuts: false, displayCurrency: 'USD', messengerIncomingCallSounds: true, messengerMessageSounds: true, messengerAutoOpenNewMessages: false, messengerActiveStatus: true, profileLayout: 'advanced', messengerArchivedConversationIds: [], messengerRestrictedUserIds: [] }
   };
@@ -290,6 +290,7 @@
               <label class="settings-field"><span><strong>Who can invite you to MeetWave?</strong><small>This setting controls meeting invitations only. It does not change direct messages, calls or LIVE access.</small></span>
                 <select name="meetWaveAudience"><option value="everyone" ${settings.privacy.meetWaveAudience === 'everyone' ? 'selected' : ''}>Everyone</option><option value="friends" ${settings.privacy.meetWaveAudience === 'friends' ? 'selected' : ''}>Friends only</option><option value="nobody" ${settings.privacy.meetWaveAudience === 'nobody' ? 'selected' : ''}>Nobody</option></select>
               </label>
+              <label class="settings-toggle"><span><strong>Share anonymous audience demographics</strong><small>Allow your country to be included in aggregate video-audience insights for creators. Country groups appear only when at least five opted-in viewers are in the same group. Your name and account are never shown. Off by default.</small></span><input type="checkbox" name="shareAudienceDemographics" ${settings.privacy.shareAudienceDemographics === true ? 'checked' : ''}></label>
               <div class="settings-subsection-heading"><strong>Who can view your lists?</strong><small>These choices apply to the corresponding profile relationship lists.</small></div>
               ${[['friendsListAudience','Friends list'],['followersListAudience','Followers list'],['followingListAudience','Following list'],['subscribersListAudience','Subscribers list']].map(([name,label])=>`<label class="settings-field"><span><strong>${label}</strong></span><select name="${name}">${[['public','Everyone'],['friends','Friends'],['followers','Followers'],['private','Only you']].map(([value,text])=>`<option value="${value}" ${(settings.privacy[name]||'public')===value?'selected':''}>${text}</option>`).join('')}</select></label>`).join('')}
             </section>
@@ -925,6 +926,7 @@
             allowFriendRequests: formData.has('allowFriendRequests'),
             messageAudience: formData.get('messageAudience'),
             meetWaveAudience: formData.get('meetWaveAudience'),
+            shareAudienceDemographics: formData.has('shareAudienceDemographics'),
             friendsListAudience: formData.get('friendsListAudience'),
             followersListAudience: formData.get('followersListAudience'),
             followingListAudience: formData.get('followingListAudience'),
