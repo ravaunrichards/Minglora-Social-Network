@@ -182,6 +182,35 @@
       const field=el.dataset.expOutput;el.textContent=String(getField(field))+(field==='fontScale'||field==='screenZoom'||field==='inAppBrightness'||field==='wallpaperOpacity'||field==='osdOpacity'?'%':'');
     });
   }
+
+  function syncMountedFields(){
+    if(!mountedForm)return;
+    mountedForm.querySelectorAll('[data-exp-field]').forEach(el=>{
+      const value=current[el.dataset.expField];
+      if(el.type==='checkbox')el.checked=value===true;
+      else if(el.type!=='file')el.value=value??'';
+    });
+    updateFieldLabels();
+    refreshStyleChoices();
+  }
+  function handleSettingsLoaded(event){
+    const experience=event.detail?.experience;
+    if(!experience||typeof experience!=='object'||Array.isArray(experience))return;
+    current={...DEFAULTS,...experience};
+    apply(current);
+    syncMountedFields();
+    const status=$('#mexp-save-status');
+    if(status)status.textContent='Loaded from your Minglora account.';
+  }
+
+  // Load account appearance as soon as the authenticated settings event arrives.
+  // This listener must exist even when the member has never opened Settings.
+  window.addEventListener('minglora:settings-loaded',handleSettingsLoaded);
+  window.addEventListener('minglora:session-ended',()=>{
+    current={...DEFAULTS};
+    apply(current);
+    syncMountedFields();
+  });
   async function persist(p){
     const result=await api('/settings',{method:'PATCH',body:JSON.stringify({experience:p})});
     current={...DEFAULTS,...(result.settings?.experience||p)};
@@ -503,9 +532,6 @@
     document.addEventListener('visibilitychange',scheduleScreenSaver);
     ['pointerdown','keydown','touchstart','scroll'].forEach(name=>window.addEventListener(name,()=>{if(screenSaverOverlay)dismissScreenSaver();else scheduleScreenSaver();},{passive:true}));
     window.addEventListener('online',refreshNetwork);window.addEventListener('offline',refreshNetwork);
-    window.addEventListener('minglora:settings-loaded',event=>{
-      const exp=event.detail?.experience;if(exp){current={...DEFAULTS,...exp};apply(current);}
-    });
     const local=(()=>{try{return JSON.parse(localStorage.getItem(LOCAL_KEY)||'null');}catch{return null;}})();
     api('/settings').then(r=>{
       current={...DEFAULTS,...(r.settings?.experience||{})};apply(current);
