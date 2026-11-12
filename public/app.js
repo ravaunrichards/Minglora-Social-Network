@@ -4201,6 +4201,16 @@ function creatorAnalyticsMarkup(){
   const percentage=value=>Math.round(Math.max(0,Math.min(1,Number(value)||0))*100)+'%';
   const summary=analytics?.summary||{};
   const periodDays=[7,30,90].includes(Number(analytics?.periodDays))?Number(analytics.periodDays):([7,30,90].includes(Number(s.analyticsPeriodDays))?Number(s.analyticsPeriodDays):30);
+  const demographics=analytics?.demographics||{};
+  const countryGroups=Array.isArray(demographics.countries)?demographics.countries:[];
+  const maxCountryViewers=Math.max(1,...countryGroups.map(item=>Math.max(0,Number(item.viewers)||0)));
+  const demographicsMarkup=demographics.available&&countryGroups.length
+    ?"<section class='creator-studio-panel creator-video-analytics creator-audience-demographics'><div class='creator-video-analytics-heading'><h3>Anonymous audience countries</h3><small>Only opted-in members · each shown group has at least "+creatorNumber(demographics.minSampleSize||5)+" members</small></div><ol class='creator-video-retention'>"+countryGroups.map(item=>{
+      const viewers=Math.max(0,Number(item.viewers)||0);
+      const width=Math.round(viewers/maxCountryViewers*100);
+      return "<li><span>"+esc(item.country||'Country')+"</span><span class='creator-video-retention-track'><span style='width:"+width+"%'></span></span><strong>"+creatorNumber(viewers)+"</strong></li>";
+    }).join('')+"</ol>"+(demographics.suppressedGroups?"<p class='creator-video-analytics-footnote'>Smaller country groups are hidden to protect member privacy.</p>":"")+"</section>"
+    :"<section class='creator-studio-panel creator-audience-demographics'><div class='creator-video-analytics-heading'><h3>Anonymous audience countries</h3></div><p class='creator-video-analytics-footnote' role='status'>No country group currently meets the minimum of five members who have opted in to anonymous audience demographics. Member identities and individual profile details are never shared.</p></section>";
   const videoRows=Array.isArray(analytics?.videos)?analytics.videos:[];
   const rows=videoRows.length?videoRows.map(video=>{
     const date=video.createdAt?new Date(video.createdAt):null;
@@ -4229,10 +4239,11 @@ function creatorAnalyticsMarkup(){
   return "<div class='creator-subpage-heading'><div><span class='creator-eyebrow'>MEASURE WHAT MATTERS</span><h2>Creator analytics</h2><p>Account-backed profile insights and real video watch activity.</p></div><label class='creator-video-analytics-period-label'>Reporting period<select id='creator-video-analytics-period' aria-label='Video analytics reporting period'><option value='7' "+(periodDays===7?'selected':'')+">Last 7 days</option><option value='30' "+(periodDays===30?'selected':'')+">Last 30 days</option><option value='90' "+(periodDays===90?'selected':'')+">Last 90 days</option></select></label></div>"+
     "<div class='creator-analytics-source'><span>✓</span><div><strong>Verified Minglora activity</strong><small>Viewer totals and watch time are aggregated from real video playback events. No estimated impressions, invented views or individual viewer identities are shown.</small></div></div>"+
     "<div class='creator-analytics-grid'>"+profileMetrics+videoMetrics+"</div>"+
+    demographicsMarkup+
     "<section class='creator-studio-panel creator-video-analytics'><div class='creator-video-analytics-heading'><h3>Video performance</h3><small>Last "+periodDays+" days · up to 30 recent videos</small></div>"+
       (analytics?"<div class='creator-video-analytics-list'>"+rows+"</div>":"<div class='creator-empty-state'><span>"+creatorIcon('analytics')+"</span><h3>Video analytics unavailable</h3><p>"+esc(s.videoAnalyticsError||'Minglora could not load video watch analytics.')+"</p></div>")+
       "<p class='creator-video-analytics-footnote'>Unique viewers are distinct signed-in accounts with recorded playback. Completion is based on the viewer reaching at least 85% of the video. These are not ad impressions or reach estimates.</p></section>"+
-    "<section class='creator-studio-panel creator-analytics-limits'><span class='creator-eyebrow'>METRIC COVERAGE</span><h3>What Minglora can measure today</h3><div class='creator-coverage-list'><p><b>Available</b><span>Followers, following, published videos, unique video viewers, recorded watch time, average watch time per viewer-video pair and completion rate.</span></p><p><b>Still being built</b><span>Impressions/reach, audience demographics, traffic sources, retention curves, follower conversion and time-series comparisons.</span></p></div></section>";
+    "<section class='creator-studio-panel creator-analytics-limits'><span class='creator-eyebrow'>METRIC COVERAGE</span><h3>What Minglora can measure today</h3><div class='creator-coverage-list'><p><b>Available</b><span>Followers, following, published videos, unique video viewers, watch time, completion rate and opt-in country groups where at least five members share the same country.</span></p><p><b>Still being built</b><span>Impressions/reach, traffic sources, follower conversion and time-series comparisons.</span></p></div></section>";
 }
 function creatorPageCard(page,details){
   const posts=details?.posts||[],canDelete=page.myRole==="owner";
