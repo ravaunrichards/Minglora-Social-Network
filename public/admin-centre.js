@@ -188,6 +188,7 @@
 
     const pageDefinitions = [
       {key:'overview',title:'Overview',group:'Dashboard',description:'A clear starting point with shortcuts to every available administration workspace.'},
+      {key:'audio',title:'Sound Management Centre',group:'Audio & Sound',description:'Manage authentic recordings, source licences, review decisions and protected platform sound assignments.',selector:'#admin-audio-management'},
       {key:'internal-operations',title:'Platform operations',group:'Dashboard',description:'Review metadata-only activity across accounts, social features, calls, meetings, LIVE and finance.',selector:'#admin-internal-operations'},
       {key:'platform-overview',title:'Platform inventory',group:'Dashboard',description:'Review live inventory counts for active Minglora runtime collections.',selector:'#admin-platform-overview'},
       {key:'profile-verification',title:'Profile verification & gifter badges',group:'Profile & Community',description:'Review member profile verification and manage the established gifter badge progression.',selector:'#admin-badge-controls'},
@@ -218,7 +219,7 @@
       return Boolean(resolveTarget(definition));
     });
     const pageByKey = new Map(availablePages.map(definition => [definition.key, definition]));
-    const groupOrder = ['Dashboard','Profile & Community','User Management','Creator Finance','Live Pro Access','Trust & Support','Administration'];
+    const groupOrder = ['Dashboard','Audio & Sound','Profile & Community','User Management','Creator Finance','Live Pro Access','Trust & Support','Administration'];
 
     const workspace = document.createElement('div');
     workspace.className = 'admin-centre-workspace';
@@ -1038,7 +1039,97 @@
     }
 
     panel.append(adminSettings);
-    root.replaceChildren(panel);
+    if (unlocked) panel.insertAdjacentHTML('beforeend', \`
+      <section class="admin-control-centre-section admin-audio-management" id="admin-audio-management" aria-labelledby="admin-audio-title">
+        <div class="admin-control-centre-section-heading">
+          <div><h3 id="admin-audio-title">Sound Management Centre</h3>
+            <p>One protected catalogue for real recordings used across Minglora. Every official asset must be authenticated and licensed before it can be assigned to a platform event.</p></div>
+          <span class="admin-control-centre-status">Owner-only · MFA protected</span>
+        </div>
+        <p class="admin-audio-policy">Synthetic tones, procedural sound effects, AI-generated voices and recordings without verified commercial-use and redistribution rights are not eligible for official platform playback. Existing member ringtone preferences remain unchanged.</p>
+        <div id="admin-audio-metrics" class="admin-audio-metrics" aria-live="polite">
+          <p class="admin-audio-empty">Loading the official audio catalogue…</p>
+        </div>
+        <div class="admin-audio-toolbar">
+          <label for="admin-audio-filter">Search registered sounds</label>
+          <input id="admin-audio-filter" type="search" maxlength="120" placeholder="Title, filename, source, category or licence">
+          <button type="button" class="secondary" id="admin-audio-refresh">Refresh catalogue</button>
+        </div>
+        <p id="admin-audio-status" class="admin-audio-status" role="status" aria-live="polite">Connecting to the private audio registry…</p>
+        <div class="admin-audio-columns">
+          <section class="admin-audio-panel">
+            <h4>Register a real recording</h4>
+            <p>Upload an actual audio file, record its original source and submit it for authenticity and licence review. Uploading does not publish or assign the recording.</p>
+            <form id="admin-audio-upload-form" class="admin-audio-form">
+              <label for="admin-audio-title-input">Recording title</label>
+              <input id="admin-audio-title-input" name="title" type="text" maxlength="120" required placeholder="Example: Jamaican dawn bird chorus">
+              <label for="admin-audio-description">Recording description</label>
+              <textarea id="admin-audio-description" name="description" rows="2" maxlength="1000" placeholder="Describe what was genuinely recorded, where and under what conditions."></textarea>
+              <div class="admin-audio-form-grid">
+                <div><label for="admin-audio-category">Category</label><select id="admin-audio-category" name="categoryKey" required><option value="">Loading categories…</option></select></div>
+                <div><label for="admin-audio-event">Optional event</label><select id="admin-audio-event" name="eventKey"><option value="">No single event assignment</option></select></div>
+              </div>
+              <label for="admin-audio-origin-type">Recording type</label>
+              <select id="admin-audio-origin-type" name="originType" required>
+                <option value="">Choose a genuine recording type</option>
+                <option value="field_recording">Field recording</option>
+                <option value="studio_recording">Studio recording</option>
+                <option value="voice_recording">Human voice recording</option>
+                <option value="instrument_recording">Musical instrument recording</option>
+                <option value="environmental_recording">Environmental recording</option>
+                <option value="wildlife_recording">Animal / wildlife recording</option>
+                <option value="cultural_recording">Cultural / traditional recording</option>
+                <option value="user_original_recording">Original user recording</option>
+                <option value="creator_original_recording">Original creator recording</option>
+              </select>
+              <label for="admin-audio-file">Audio file · maximum 50 MB</label>
+              <input id="admin-audio-file" name="audioFile" type="file" accept=".mp3,.m4a,.ogg,.opus,.wav,.flac,.aac,.webm,audio/*" required>
+              <div class="admin-audio-form-grid">
+                <div><label for="admin-audio-source">Original source website</label><input id="admin-audio-source" name="sourceWebsite" required maxlength="120" placeholder="Freesound / Xeno-canto"></div>
+                <div><label for="admin-audio-download-date">Download date</label><input id="admin-audio-download-date" name="downloadDate" type="date" required></div>
+              </div>
+              <label for="admin-audio-source-url">Exact original download / recording page</label>
+              <input id="admin-audio-source-url" name="originalDownloadPage" type="url" required maxlength="500" placeholder="https://…">
+              <div class="admin-audio-form-grid">
+                <div><label for="admin-audio-license-name">Exact licence name</label><input id="admin-audio-license-name" name="licenseName" required maxlength="120" placeholder="CC BY 4.0 / Site licence"></div>
+                <div><label for="admin-audio-license-url">Licence terms URL</label><input id="admin-audio-license-url" name="licenseUrl" type="url" required maxlength="500" placeholder="https://…"></div>
+              </div>
+              <label for="admin-audio-attribution">Required creator / source attribution</label>
+              <textarea id="admin-audio-attribution" name="attributionText" rows="2" maxlength="1000" placeholder="Original creator name and required attribution text."></textarea>
+              <div class="admin-audio-consent-list">
+                <label><input name="commercialUseAllowed" type="checkbox"> The exact licence explicitly permits commercial use.</label>
+                <label><input name="redistributionAllowed" type="checkbox"> The exact licence explicitly permits redistribution / platform delivery.</label>
+                <label><input name="attributionRequired" type="checkbox"> The licence requires attribution.</label>
+                <label><input name="rightsConfirmed" type="checkbox" required> I checked the original recording and rights information; this is not a synthetic or AI-generated sound.</label>
+              </div>
+              <button type="submit" class="primary" id="admin-audio-upload-submit">Upload and submit for review</button>
+            </form>
+          </section>
+          <section class="admin-audio-panel">
+            <h4>Assign an approved recording</h4>
+            <p>Only verified, approved authentic recordings with commercial and redistribution rights appear in this selector.</p>
+            <form id="admin-audio-assign-form" class="admin-audio-form">
+              <label for="admin-audio-assign-event">Platform event</label>
+              <select id="admin-audio-assign-event" name="eventKey" required><option value="">Choose platform event</option></select>
+              <label for="admin-audio-assign-asset">Approved recording</label>
+              <select id="admin-audio-assign-asset" name="assetId" required><option value="">No approved recordings yet</option></select>
+              <label for="admin-audio-assign-volume">Default event volume <span id="admin-audio-assign-volume-label">100%</span></label>
+              <input id="admin-audio-assign-volume" name="volume" type="range" min="0" max="1" step="0.05" value="1">
+              <label class="admin-audio-inline-check"><input type="checkbox" name="loopPlayback"> Loop this event sound</label>
+              <button type="submit" class="primary">Save platform assignment</button>
+            </form>
+            <h4 class="admin-audio-subheading">Current event assignments</h4>
+            <div id="admin-audio-assignments" class="admin-audio-assignments"><p class="admin-audio-empty">Loading sound assignments…</p></div>
+          </section>
+        </div>
+        <section class="admin-audio-library">
+          <h4>Official master sound library</h4>
+          <p>Candidate files stay pending until an authorized reviewer listens to them and verifies source rights. A catalogue entry is not considered installed until the actual file is present, checksum-verified and approved.</p>
+          <div id="admin-audio-assets" class="admin-audio-assets" aria-live="polite"><p class="admin-audio-empty">Loading registered recordings…</p></div>
+        </section>
+      </section>
+    \`);
+        root.replaceChildren(panel);
     root.dataset.adminCentreReady = 'true';
     if (unlocked) initializeInternalActivityFeed(panel);
 
@@ -1604,6 +1695,7 @@
     }
     // Build the dedicated page workspace only after all existing feature sections and controls exist.
     initializeAdminPageNavigation(panel, unlocked);
+    if (unlocked) window.MingloraAudioAdmin?.initialize(panel);
   }
 
   async function adminCentreApi(path, options = {}) {
