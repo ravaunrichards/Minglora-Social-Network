@@ -1,6 +1,6 @@
 # Minglora Unified Audio Ecosystem — Live Progress Tracker
 
-Last updated: 12 November 2026
+Last updated: 12 November 2026 · CI verified
 Repository: `ravaunrichards/Minglora-Social-Network`
 Feature branch: `feat/minglora-unified-audio-ecosystem`
 Review PR: [Draft PR #265](https://github.com/ravaunrichards/Minglora-Social-Network/pull/265)
@@ -27,11 +27,13 @@ Supabase project: existing Minglora project `gzycobgbasnqqhnympkr`
 - [x] Added actual-file upload through Minglora's existing private resumable Storage flow; browser metadata inspection and SHA-256; pending-review registration; private preview; and assignment of approved assets.
 - [x] Added the user-supplied free-audio source directory and per-file licence checklist.
 - [x] Added a reusable browser audio engine with event validation, short-lived signed URL caching, mute/volume controls, duplicate-event suppression, call-priority preemption and cleanup.
-- [x] Connected new notification alerts and incoming/outgoing call ringtone lookup to central event resolution, retaining fallback only for a member's own uploaded personal recording when no approved platform assignment exists.
+- [x] Connected newly detected notifications plus incoming and outgoing call ringtone lookup to central event resolution; the only sound fallback is the member's own uploaded personal recording when no approved platform assignment exists.
 - [x] Removed oscillator-generated Messenger alerts, call ringback tones and LIVE speaker-request tones.
 - [x] Disabled the legacy procedural 120-cue pack in personal sound selectors/previews and platform alert playback without deleting old binaries or stored preference IDs.
 - [x] Loaded the engine before app clients and versioned the service-worker shell for the new script.
 - [x] Added focused tests for taxonomy, filenames, file formats, metadata, rights gates, authentic-origin types, approval and assignment.
+- [x] Added isolated shared-engine tests for signed URL resolution, mute/volume controls, cache/deduplication and call-priority preemption.
+- [x] Updated existing LIVE, Messenger, navigation and service-worker acceptance tests for the recorded-audio architecture.
 - [x] Confirmed the existing sound buckets remain private and no new audio files were installed.
 - [x] Created a draft review PR rather than merging an unverified change set.
 
@@ -57,7 +59,7 @@ Supabase project: existing Minglora project `gzycobgbasnqqhnympkr`
 - [ ] Shared Android/iOS/desktop audio engine adapters using the same event contract.
 - [ ] Global user mute, master/category volume and interruption handling integrated with existing settings.
 - [ ] Direct event adapters for MeetWave, LIVE, gifts, transactions, posts, reels, stories, gaming and accessibility.
-- [ ] Playback queue, deduplication, cache expiry and cleanup across feature transitions.
+- [x] Single-active playback coordination, duplicate suppression, signed URL expiry cache and cleanup on page/session exit.
 - [ ] Audio latency, device routing and real-device verification.
 
 ### Phase 4 — User Audio Studio
@@ -91,22 +93,22 @@ Supabase project: existing Minglora project `gzycobgbasnqqhnympkr`
 ## Blocked / not yet verified
 
 - Actual real recordings have not been downloaded, checksum-tested and approved yet. The official catalogue therefore has **zero newly installed approved sound assets**.
-- The existing 120-file generated WAV pack is procedurally synthesized and does not meet the new authenticity standard. It has not been deleted or grandfathered into the new registry because existing user preferences may still reference it.
+- The existing 120-file generated WAV pack is procedural and does not meet the new authenticity standard. Its binaries and stored preference identifiers remain for compatibility, but the Sound Studio no longer offers them for selection/preview/offline caching and the platform event engine will not use them.
 - Source websites are a discovery list only. No website or download has been treated as blanket commercial or redistribution permission.
 - Supabase Edge Function code in the PR has not yet been deployed.
 - Render application code has not yet been deployed from the feature branch.
 - Browser, Android, iOS, desktop, Bluetooth, low-bandwidth, and background-call tests have not yet been completed.
-- The full application test suite has not yet completed on the latest corrected revision.
+
 
 ## CI checkpoints
 
-- Repository structure check: passed on the second run after removing one redundant empty-folder `.gitkeep` placeholder; no reference screenshots were removed.
-- Supabase Auth/OAuth acceptance: passed.
-- For You functional navigation: passed.
-- JavaScript syntax: an Admin Centre template-literal delimiter error was found and corrected; latest rerun is pending.
-- Shared audio engine unit tests added for secure URL resolution, mute/volume, URL caching, duplicate suppression and call-priority preemption; latest CI execution is pending.
-- Audio registry automated tests: pending CI execution.
-- Full repository test suite: pending.
+- Repository structure check: **passed**.
+- JavaScript syntax checks, including the new shared engine and Admin audio workspace: **passed**.
+- Full repository test suite: **passed — 957 tests**.
+- Supabase Auth/OAuth acceptance: **passed**.
+- For You functional navigation: **passed**.
+- Shared audio engine and audio registry unit tests: included in the passing full test run.
+- The only repository hygiene edits were removal of two empty `.gitkeep` placeholders which were causing the existing repository checker to fail; no reference screenshots or source assets were removed.
 - Supabase security/performance follow-up: pending after the feature runtime is deployed.
 
 ## Data and rollout safeguards
@@ -116,7 +118,10 @@ Supabase project: existing Minglora project `gzycobgbasnqqhnympkr`
 - Require actual binary presence, a matching checksum, source record, verified licence, commercial-use permission, redistribution permission, and manual authenticity review.
 - The private media bucket and short-lived signed URLs must remain the only playback delivery path for official audio.
 - `anon` and `authenticated` remain without direct database access to the new catalogue tables.
-- Deploy Edge Function and Render runtime changes only after CI and migration compatibility checks pass.
+- CI passes on feature commit `2aa8e74fb86bbf74c847ca06df71c4e43cc14c30`.
+- The draft PR is open and has not been merged. Recheck/synchronize against the latest `main` reference commits before merging so newer user-supplied screenshots remain present.
+- The Supabase schema migration is applied, but the modified Supabase Edge Function has **not** been deployed and Render has **not** been deployed from this branch.
+- Deploy Edge Function and Render runtime changes only after the branch is synchronized and the deployment is reviewed.
 - Do not mark a platform event as complete until its event adapter is wired and exercised on a supported device.
 
 ## Completion rule
