@@ -565,7 +565,8 @@
     "candidateGiftFolderCount": 154,
     "additionalCC0CataloguedRecordings": 231,
     "newMirrorCC0RecordingsAdded": 214,
-    "mirrorCC0CandidateGiftCount": 53
+    "mirrorCC0CandidateGiftCount": 53,
+    "activeGiftCodeMappings": 124
   },
   "additionalCC0Recordings": [
     {
@@ -7066,10 +7067,10 @@
     }
   ],
   "lastIngestion": {
-    "status": "downloaded_review_only",
+    "status": "source_verified_cc0_recordings_downloaded_and_mapped",
     "downloadedSourceCount": 247,
-    "newlyDownloadedSourceCount": 0,
-    "mappedGiftFileCount": 154,
-    "productionReadyGiftCount": 0
+    "giftFolderSoundFileCount": 154,
+    "activeGiftCodeMappings": 124,
+    "humanListeningReview": "pending"
   }
 }
