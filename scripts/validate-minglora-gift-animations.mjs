@@ -8,6 +8,7 @@ const MANIFEST_PATH = path.join(OUTPUT_DIR, "manifest.json");
 const REPORT_PATH = path.join(OUTPUT_DIR, "extraction-report.json");
 const MOTION_INDEX_PATH = path.join(OUTPUT_DIR, "catalog-motion-index.json");
 const PUBLIC_MOTION_INDEX_PATH = path.join(ROOT, "public", "assets", "animations", "gifts", "catalog-motion-index.json");
+const CATALOG_PATH = path.join(ROOT, "data", "minglora-gift-catalog.json");
 const fail = message => { throw new Error("[gift-animation-validation] " + message); };
 const sha256 = value => crypto.createHash("sha256").update(value).digest("hex");
 
@@ -88,14 +89,19 @@ async function main() {
   // It must never substitute extracted screenshot crops for production artwork.
   const motionIndex = JSON.parse(await fs.readFile(MOTION_INDEX_PATH, "utf8"));
   const publicMotionIndex = JSON.parse(await fs.readFile(PUBLIC_MOTION_INDEX_PATH, "utf8"));
+  const canonicalCatalog = JSON.parse(await fs.readFile(CATALOG_PATH, "utf8"));
   if (JSON.stringify(publicMotionIndex) !== JSON.stringify(motionIndex)) fail("Served public motion index differs from the validated source index.");
   if (!Array.isArray(motionIndex.gifts)) fail("Canonical catalogue motion index has no gifts array.");
   if (report.catalog_motion_profiles !== motionIndex.gifts.length) fail("Motion index and extraction report totals differ.");
+  const activeCatalog = (canonicalCatalog.gifts || []).filter(gift => gift.active !== false);
+  if (motionIndex.gifts.length !== activeCatalog.length) fail("Motion index does not cover every active catalogue gift.");
   const catalogCodes = new Set();
+  const motionByCode = new Map();
   for (const gift of motionIndex.gifts) {
     const code = String(gift?.code || "");
     if (!code || catalogCodes.has(code)) fail("Missing or duplicate canonical catalogue code in motion index: " + code);
     catalogCodes.add(code);
+    motionByCode.set(code, gift);
     if (gift.active !== true) fail(code + " is not an active canonical gift.");
     if (!String(gift.name || "").trim()) fail(code + " has no canonical gift name.");
     if (!Number.isFinite(Number(gift.coin_price)) || Number(gift.coin_price) < 0) fail(code + " has an invalid canonical Coin price.");
@@ -104,9 +110,25 @@ async function main() {
     if (typeof gift.original_animation_preset !== "string" || !gift.original_animation_preset) fail(code + " lost its original animation preset.");
     if (typeof gift.sound_preset !== "string" || !gift.sound_preset) fail(code + " lost its original sound preset.");
     if (typeof gift.motion_preset !== "string" || !gift.motion_preset) fail(code + " has no generated per-gift motion profile.");
-    if (!String(gift.source_image || "").startsWith("assets/Gifts/")) fail(code + " has no source Gifts capture reference.");
-    if (!Array.isArray(gift.source_capture_references) || !gift.source_capture_references.length) fail(code + " lost repeated source capture references.");
+    if (gift.source_kind === "captured-gallery-still") {
+      if (!String(gift.source_image || "").startsWith("assets/Gifts/")) fail(code + " has no source Gifts capture reference.");
+      if (!Array.isArray(gift.source_capture_references) || !gift.source_capture_references.length) fail(code + " lost its source capture references.");
+    } else if (gift.source_kind === "canonical-catalogue-profile") {
+      if (gift.source_image !== null || !Array.isArray(gift.source_capture_references) || gift.source_capture_references.length) fail(code + " has invalid catalogue-only fallback source references.");
+    } else {
+      fail(code + " has an unsupported motion profile source.");
+    }
     if (gift.artwork_reference && !String(gift.artwork_reference.path || "").startsWith("assets/Artwork/")) fail(code + " has an unsafe Artwork manifest reference.");
+  }
+  for (const canonical of activeCatalog) {
+    const code = String(canonical.code || "");
+    const mapped = motionByCode.get(code);
+    if (!mapped) fail("Active catalogue gift has no animation mapping: " + code);
+    if (mapped.name !== canonical.name || Number(mapped.coin_price) !== Number(canonical.coin_price) ||
+        mapped.image_url !== canonical.image_url || mapped.model_url !== canonical.model_url ||
+        mapped.sound_preset !== canonical.sound_preset || mapped.original_animation_preset !== canonical.animation_preset) {
+      fail(code + " does not preserve the canonical gift name, Coin price, original image, 3D model, sound or animation metadata.");
+    }
   }
 
   process.stdout.write(
