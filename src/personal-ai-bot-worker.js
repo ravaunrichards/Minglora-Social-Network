@@ -179,7 +179,7 @@ async function main() {
       nextProviderHealthCheck=Date.now()+5*60*1000;
     }
     const result=await worker.runOnce();
-    if(result.status==='failed'||result.status==='lease_invalid'||result.status==='lease_lost'){
+    if(result.status==='failed'||result.status==='lease_invalid'||result.status==='lease_lost'||result.status==='failure_unrecorded'){
       console.warn('[Minglora AI Bot Worker] Task attempt did not complete.',{
         status:result.status,errorCode:result.errorCode||null
       });
