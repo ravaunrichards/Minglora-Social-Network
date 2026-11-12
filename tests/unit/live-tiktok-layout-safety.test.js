@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const app = fs.readFileSync(path.join(root, 'public/app.js'), 'utf8');
 const css = fs.readFileSync(path.join(root, 'public/live-tiktok-compact.css'), 'utf8');
 const fix = css.slice(css.lastIndexOf('/* LIVE HUD recovery:'));
 const guardrails = fs.readFileSync(path.join(root, 'public/live-interface-guardrails.css'), 'utf8');
