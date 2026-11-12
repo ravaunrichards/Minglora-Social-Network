@@ -390,6 +390,16 @@ Deno.serve(async (req: Request) => {
        !String(media.storage_key||"").startsWith(adminUserId+"/")){
       return json(409,{error:"The uploaded file metadata does not match the original audio file."});
     }
+    const {data:storedFile,error:downloadError}=await admin.storage
+      .from("minglora-sounds").download(String(media.storage_key));
+    if(downloadError||!storedFile)return json(503,{error:"The uploaded recording could not be verified from private storage."});
+    const storedBytes=await storedFile.arrayBuffer();
+    if(storedBytes.byteLength!==Number(media.byte_size))return json(409,{error:"The uploaded recording size does not match its media record."});
+    const digest=await crypto.subtle.digest("SHA-256",storedBytes);
+    const actualSha256=Array.from(new Uint8Array(digest),byte=>byte.toString(16).padStart(2,"0")).join("");
+    if(actualSha256!==String(metadata.sha256||"").toLowerCase()){
+      return json(409,{error:"The SHA-256 checksum of the stored recording does not match the supplied checksum."});
+    }
     const {data:duplicate,error:duplicateError}=await admin.from("minglora_audio_assets")
       .select("id,title").eq("sha256",String(metadata.sha256).toLowerCase()).limit(1).maybeSingle();
     if(duplicateError)return json(503,{error:"The existing audio checksum could not be checked."});
