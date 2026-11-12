@@ -2653,9 +2653,12 @@ async function route(req, res) {
           item.bucket==='minglora-sounds'&&item.status==='uploaded'&&item.mediaType==='audio'
         );
         if(!media)return json(res,404,{error:'Upload the actual audio file to the private Minglora sound bucket before registering it.'});
+        const requestedFormat=String(metadata.fileFormat||'').toLowerCase();
+        const expectedFormat=({'audio/mpeg':'mp3','audio/mp4':'m4a','audio/ogg':'ogg','audio/webm':'webm','audio/wav':'wav','audio/x-wav':'wav','audio/flac':'flac','audio/aac':'aac'}[String(media.mimeType||'').toLowerCase()]||'');
+        const opusContainerMatch=requestedFormat==='opus'&&expectedFormat==='ogg'&&String(media.originalName||'').toLowerCase().endsWith('.opus');
         if(String(metadata.originalFilename||'')!==String(media.originalName||'')||
            Number(metadata.byteSize)!==Number(media.byteSize)||
-           String(metadata.fileFormat||'').toLowerCase()!==({'audio/mpeg':'mp3','audio/mp4':'m4a','audio/ogg':'ogg','audio/webm':'webm','audio/wav':'wav','audio/x-wav':'wav','audio/flac':'flac','audio/aac':'aac'}[String(media.mimeType||'').toLowerCase()]||'')){
+           (requestedFormat!==expectedFormat&&!opusContainerMatch)){
           return json(res,409,{error:'Audio filename, format or size does not match the uploaded file.'});
         }
         const validation=validateAudioAssetMetadata({
