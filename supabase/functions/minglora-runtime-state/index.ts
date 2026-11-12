@@ -104,6 +104,7 @@ Deno.serve(async (req: Request) => {
     "ai_identity_report_list", "ai_identity_report_review",
     "ai_bot_task_upsert_batch", "ai_bot_task_list", "ai_bot_task_stats",
     "ai_bot_task_claim", "ai_bot_task_heartbeat", "ai_bot_task_complete", "ai_bot_task_fail",
+    "ai_bot_hr_state_upsert", "ai_bot_hr_state_list",
   ];
   if (!supportedActions.includes(String(action))) {
     return json(400, { error: "Unsupported action." });
@@ -118,6 +119,57 @@ Deno.serve(async (req: Request) => {
   // Re-check the designated owner ID here as a second boundary after the Node
   // admin API's MFA/session authorization.
   const AI_NETWORK_OWNER_ID = "5b998c21-86b5-4621-ab37-e0808a2657b1";
+  if (action === "ai_bot_hr_state_upsert" || action === "ai_bot_hr_state_list") {
+    const actorUserId = String(input.actorUserId || "");
+    if (actorUserId !== AI_NETWORK_OWNER_ID) {
+      return json(403, { error: "Only the designated Minglora owner can access AI corporate HR records." });
+    }
+    if (action === "ai_bot_hr_state_list") {
+      const { data, error } = await admin.rpc("minglora_ai_bot_hr_state_list", {
+        p_owner_admin_id: actorUserId
+      });
+      if (error) return json(503, { error: "Normalized AI corporate HR records are unavailable.", code: "AI_HR_SCHEMA_NOT_READY" });
+      return json(200, { ok: true, state: data || {} });
+    }
+
+    const state = input.state;
+    const allowedRoot = new Set(["departments","vacancies","applications","appointments","employmentHistory","audit"]);
+    const limits = {departments:1000,vacancies:5000,applications:10000,appointments:10000,employmentHistory:20000,audit:2000};
+    const recordFields = {
+      departments:new Set(["id","code","name","description","builtIn","enabled","parentDepartmentId","createdBy","updatedBy","createdAt","updatedAt"]),
+      vacancies:new Set(["id","positionCode","positionTitle","departmentId","departmentCode","departmentName","title","description","requirements","slots","status","statusHistory","ownerId","createdBy","updatedBy","createdAt","updatedAt"]),
+      applications:new Set(["id","vacancyId","vacancyTitle","positionCode","positionTitle","departmentId","departmentName","identityId","candidateDisplayName","candidateUsername","population","status","statusHistory","ownerId","submittedBy","updatedBy","createdAt","updatedAt"]),
+      appointments:new Set(["id","applicationId","vacancyId","positionCode","positionTitle","positionLevel","departmentId","departmentCode","departmentName","identityId","candidateDisplayName","candidateUsername","population","reportingManagerAppointmentId","reportingManagerIdentityId","reportingManagerName","reportingManagerPositionTitle","status","ownerId","approvedBy","approvedAt","appointedAt","createdAt","updatedAt","permissions","permissionGrantStatus","identityActivationStatus","statusHistory","employmentHistory"]),
+      employmentHistory:new Set(["id","appointmentId","applicationId","identityId","vacancyId","eventType","actorId","createdAt","notes"]),
+      audit:new Set(["id","actorId","action","targetType","targetId","summary","createdAt"])
+    };
+    if (!state || typeof state !== "object" || Array.isArray(state) ||
+        Object.keys(state).some(key => !allowedRoot.has(key))) {
+      return json(400, { error: "AI HR state must contain only the supported relational collections." });
+    }
+    for (const [collection, maximum] of Object.entries(limits)) {
+      const rows = state[collection] ?? [];
+      if (!Array.isArray(rows) || rows.length > maximum ||
+          rows.some((row: any) => !row || typeof row !== "object" || Array.isArray(row) ||
+            Object.keys(row).some((key: string) => !recordFields[collection].has(key)) ||
+            (row.ownerId != null && String(row.ownerId) !== actorUserId))) {
+        return json(400, { error: "AI HR " + collection + " records are invalid or exceed their supported limit." });
+      }
+    }
+    const { data, error } = await admin.rpc("minglora_ai_bot_hr_state_upsert", {
+      p_state: state,
+      p_actor_user_id: actorUserId
+    });
+    if (error) {
+      const conflict = ["22023","22P02","23503","23505","23514"].includes(String(error.code || ""));
+      return json(conflict ? 409 : 503, {
+        error: conflict ? "AI HR records failed a relational database constraint." : "Normalized AI corporate HR storage is unavailable.",
+        code: String(error.code || "AI_HR_STORAGE_ERROR")
+      });
+    }
+    return json(200, { ok: true, result: data || {} });
+  }
+
   if (action === "ai_identity_report_list") {
     const actorUserId = String(input.actorUserId || "");
     const status = String(input.status || "pending");
