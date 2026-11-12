@@ -890,7 +890,7 @@ test('owner provider assignment and email identity lists paginate with validated
   await handlePersonalAiBotsAdminApi(providerContext);
   assert.equal(providerContext.res.statusCode,200);
   assert.deepEqual(providerOptions,{limit:25,offset:100});
-  assert.deepEqual(providerContext.res.payload.assignments,providerRows);
+  assert.deepEqual(providerContext.res.payload.assignments,providerRows.map(row=>({...row,credentialConfigured:false})));
   assert.equal(providerContext.res.payload.nextOffset,125);
   assert.equal(providerContext.res.payload.hasMore,true);
 
@@ -1733,7 +1733,7 @@ test('Persona Laboratory API rejects unsupported permission fields and non-owner
   });
   await handlePersonalAiBotsAdminApi(denied);
   assert.equal(denied.res.statusCode,403);
-  assert.equal(db.personalAiBotPersonaVersions,undefined);
+  assert.deepEqual(db.personalAiBotPersonaVersions,[]);
 });
 
 
@@ -1784,8 +1784,8 @@ test('team handoff API is owner-controlled, one-receiver and permanently non-dis
     personalAiBots:[{id:senderId,createdBy:'owner'},{id:receiverId,createdBy:'owner'}],
     personalAiBotTeams:[{id:teamId,ownerId:'owner-1',name:'Review Team',status:'enabled',enabled:true}],
     personalAiBotTeamMembers:[
-      {id:'member-1',ownerId:'owner',teamId,botId:senderId},
-      {id:'member-2',ownerId:'owner',teamId,botId:receiverId}
+      {id:'member-1',ownerId:'owner-1',teamId,botId:senderId},
+      {id:'member-2',ownerId:'owner-1',teamId,botId:receiverId}
     ],
     personalAiBotTasks:[{id:taskId,botId:senderId,status:'awaiting_administrator_approval'}]
   };
@@ -1838,8 +1838,8 @@ test('team handoff API requires explicit owner privacy attestation before persis
     personalAiBots:[{id:senderId},{id:receiverId}],
     personalAiBotTeams:[{id:teamId,ownerId:'owner-1',name:'Privacy Team',status:'enabled'}],
     personalAiBotTeamMembers:[
-      {ownerId:'owner',teamId,botId:senderId},
-      {ownerId:'owner',teamId,botId:receiverId}
+      {ownerId:'owner-1',teamId,botId:senderId},
+      {ownerId:'owner-1',teamId,botId:receiverId}
     ],
     personalAiBotTasks:[{id:taskId,botId:senderId,status:'awaiting_administrator_approval'}]
   };
@@ -1867,8 +1867,8 @@ test('team handoff API rejects private context, unsupported fields and non-owner
     personalAiBots:[{id:senderId},{id:receiverId}],
     personalAiBotTeams:[{id:teamId,ownerId:'owner-1',name:'Review Team',status:'enabled'}],
     personalAiBotTeamMembers:[
-      {ownerId:'owner',teamId,botId:senderId},
-      {ownerId:'owner',teamId,botId:receiverId}
+      {ownerId:'owner-1',teamId,botId:senderId},
+      {ownerId:'owner-1',teamId,botId:receiverId}
     ],
     personalAiBotTasks:[{id:taskId,botId:senderId,status:'awaiting_administrator_approval'}]
   };
