@@ -2655,7 +2655,7 @@ async function route(req, res) {
         if(!media)return json(res,404,{error:'Upload the actual audio file to the private Minglora sound bucket before registering it.'});
         if(String(metadata.originalFilename||'')!==String(media.originalName||'')||
            Number(metadata.byteSize)!==Number(media.byteSize)||
-           String(metadata.fileFormat||'').toLowerCase()!==String(media.mimeType||'').split('/').pop().toLowerCase().replace('mpeg','mp3')){
+           String(metadata.fileFormat||'').toLowerCase()!==({'audio/mpeg':'mp3','audio/mp4':'m4a','audio/ogg':'ogg','audio/webm':'webm','audio/wav':'wav','audio/x-wav':'wav','audio/flac':'flac','audio/aac':'aac'}[String(media.mimeType||'').toLowerCase()]||'')){
           return json(res,409,{error:'Audio filename, format or size does not match the uploaded file.'});
         }
         const validation=validateAudioAssetMetadata({
@@ -2670,7 +2670,7 @@ async function route(req, res) {
         });
         return json(res,201,registered);
       }
-      const audioReviewRoute=p.match(/^\\/api\\/admin\\/audio\\/assets\\/([0-9a-f-]{36})\\/review$/i);
+      const audioReviewRoute=p.match(/^\/api\/admin\/audio\/assets\/([0-9a-f-]{36})\/review$/i);
       if(method==='POST'&&audioReviewRoute){
         const decision=String(input.decision||'');
         if(!['approve','reject'].includes(decision))return json(res,400,{error:'Choose approve or reject.'});
@@ -2692,7 +2692,7 @@ async function route(req, res) {
         });
         return json(res,200,saved);
       }
-      const audioEventRoute=p.match(/^\\/api\\/audio\\/events\\/([a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*)$/i);
+      const audioEventRoute=p.match(/^\/api\/audio\/events\/([a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*)$/i);
       if(method==='GET'&&audioEventRoute){
         const result=await requestSupabaseState('audio_event_resolve',{eventKey:audioEventRoute[1]});
         return json(res,200,result,{'Cache-Control':'no-store'});
