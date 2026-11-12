@@ -618,3 +618,18 @@ test('approved Creator Studio Feed and Story drafts transfer to existing compose
   assert.match(worker,/minglora-shell-v257-creator-studio-story-handoff-1/);
   assert.match(styles,/creator-ai-handoff-notice/);
 });
+
+
+test('owner Admin Centre exposes audited appointment lifecycle controls without activating AI identities',async()=>{
+  const ui=await read('public/personal-ai-bots.js');
+  for(const phrase of [
+    'pab-appointment-lifecycle','pab-appointment-status','pab-appointment-notes',
+    'Suspend appointment','Reactivate appointment','Terminate appointment',
+    'Retire appointment','Archive employment record','updateAppointmentStatus',
+    'Employment note (optional)'
+  ])assert.ok(ui.includes(phrase),phrase);
+  assert.match(ui,/API\+'\/appointments\/\'+encodeURIComponent\(appointmentId\)/);
+  assert.match(ui,/method:'PATCH'/);
+  assert.match(ui,/window\.confirm\('Record the '/);
+  assert.match(ui,/The AI identity remains disabled and has no permissions/);
+});
