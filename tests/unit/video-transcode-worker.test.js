@@ -1,10 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readWorkerConfig,validateStorageUrl,buildFfmpegArgs} from "../../backend/workers/video/worker.js";
-const env={SUPABASE_URL:"https://minglora.supabase.co",SUPABASE_STATE_API_URL:"https://minglora.supabase.co/functions/v1/minglora-runtime-state",SUPABASE_PUBLISHABLE_KEY:"pub",SUPABASE_STATE_API_KEY:"x".repeat(48)};
+const env={SUPABASE_URL:"https://minglora.supabase.co",SUPABASE_STATE_API_URL:"https://minglora.supabase.co/functions/v1/minglora-runtime-state",SUPABASE_PUBLISHABLE_KEY:"pub",MINGLORA_VIDEO_WORKER_API_KEY:"x".repeat(48)};
 test("worker requires private Minglora Edge gateway configuration",()=>{
  assert.equal(readWorkerConfig(env).pollMs,5000);
- assert.throws(()=>readWorkerConfig({...env,SUPABASE_STATE_API_KEY:""}),/SUPABASE_STATE_API_KEY/);
+ assert.throws(()=>readWorkerConfig({...env,MINGLORA_VIDEO_WORKER_API_KEY:""}),/MINGLORA_VIDEO_WORKER_API_KEY/);
  assert.throws(()=>readWorkerConfig({...env,SUPABASE_STATE_API_URL:"http://elsewhere"}),/HTTPS runtime gateway/);
 });
 test("worker only accepts short-lived signed Storage URLs from its own project",()=>{
