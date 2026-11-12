@@ -66,8 +66,9 @@ test('profile counts, section tabs and profile links navigate to live views',()=
   assert.ok(profile.includes("document.querySelectorAll('.profile-tabs [data-profile-tab]')"));
   assert.ok(profile.includes("showTab(button.dataset.profileTab)"));
   for(const tab of ["['posts','Posts']","['about','About']","['friends','Friends']","['photos','Photos']","['reels','Reels']","['more','More']"]){
-    assert.ok(profile.includes(tab),'Missing profile tab '+tab);
+    assert.ok(app.includes(tab),'Missing profile tab '+tab);
   }
+  assert.ok(profile.includes('profileStyleNavigation(u.profileStyle).map'),'the selected style only changes labels, not the live tab handlers');
   assert.doesNotMatch(profile,/\['badges','Badges'\]|\['gift-gallery','Gift Gallery'\]/);
   const moreStart=app.indexOf("if(tab==='more')return",app.indexOf('function profileTabMarkup'));
   const moreEnd=app.indexOf("const previewPhotos=",moreStart);
