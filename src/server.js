@@ -5334,9 +5334,9 @@ async function route(req, res) {
             return asset&&asset.status==='attached'&&asset.mediaType==='video';
           })
         );
-        const excludedFeedback=(db.videoFeedback||[]).filter(item=>item.userId===user.id&&item.action==='not_interested');
+        const viewerFeedback=(db.videoFeedback||[]).filter(item=>item.userId===user.id);
         const orderedPosts=scope==='for-you'
-          ?rankForYouVideos(visiblePosts,user.id,activeFollows(),db.savedPosts||[],db.videoWatchEvents||[],excludedFeedback)
+          ?rankForYouVideos(visiblePosts,user.id,activeFollows(),db.savedPosts||[],db.videoWatchEvents||[],viewerFeedback)
           :visiblePosts.slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
         const page=orderedPosts.slice(offset,offset+rawLimit+1);
         const hasMore=page.length>rawLimit;
