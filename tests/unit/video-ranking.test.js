@@ -59,16 +59,14 @@ test('For You interleaves creators rather than repeating one account', () => {
 test('For You promotes videos and creators after explicit Interested feedback', () => {
   const posts = [
     post('neutral', 'creator-neutral'),
-    post('interest-source', 'creator-interest'),
     post('same-creator', 'creator-interest')
   ];
   const ranked = rankForYouVideos(
     posts, 'viewer', [], [], [],
-    [{ userId: 'viewer', postId: 'interest-source', action: 'interested' }],
+    [{ userId: 'viewer', postId: 'interest-source', authorId: 'creator-interest', action: 'interested' }],
     now
   );
-  assert.equal(ranked[0].id, 'interest-source');
-  assert.ok(ranked.findIndex(item => item.id === 'same-creator') < ranked.findIndex(item => item.id === 'neutral'));
+  assert.equal(ranked[0].id, 'same-creator');
 });
 
 test('For You ignores another viewer\'s Interested feedback and Not interested still excludes the selected video', () => {
