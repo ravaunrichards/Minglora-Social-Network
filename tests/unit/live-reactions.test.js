@@ -117,5 +117,6 @@ test('Guest camera can be disabled by the host and voice rings can be switched o
   assert.match(app, /setCameraEnabled\(false\)/);
   assert.match(app, /name='voiceRings' checked/);
   assert.match(app, /session\.liveSettings\?\.voiceRings!==false/);
-  assert.match(app, /playCallTone\(\[620,820\],520\)/);
+  assert.match(app, /window\.MingloraAudioEngine\?\.playEvent\('live\.host_notice',\{priority:40\}\)/);
+  assert.doesNotMatch(app, /playCallTone|createOscillator/);
 });
