@@ -26,6 +26,9 @@ Supabase project: existing Minglora project `gzycobgbasnqqhnympkr`
 - [x] Added an owner-only Sound Management Centre page inside the existing Admin Centre.
 - [x] Added actual-file upload through Minglora's existing private resumable Storage flow; browser metadata inspection and SHA-256; pending-review registration; private preview; and assignment of approved assets.
 - [x] Added the user-supplied free-audio source directory and per-file licence checklist.
+- [x] Added a reusable browser audio engine with event validation, short-lived signed URL caching, mute/volume controls, duplicate-event suppression, call-priority preemption and cleanup.
+- [x] Connected the existing notification poller and call ringtone lookup to central event resolution, retaining legacy user-selected playback as fallback when no approved platform assignment exists.
+- [x] Loaded the engine before app clients and versioned the service-worker shell for the new script.
 - [x] Added focused tests for taxonomy, filenames, file formats, metadata, rights gates, authentic-origin types, approval and assignment.
 - [x] Confirmed the existing sound buckets remain private and no new audio files were installed.
 - [x] Created a draft review PR rather than merging an unverified change set.
@@ -47,9 +50,11 @@ Supabase project: existing Minglora project `gzycobgbasnqqhnympkr`
 ### Phase 3 — Universal Audio Engine
 
 - [x] Server-side event resolver and secure 5-minute signed playback URL.
-- [ ] Shared browser/Android/iOS/desktop audio engine module.
+- [x] Shared browser audio engine and event playback queue with expiry-aware signed URL cache.
+- [x] Existing notification and incoming call ringtone lookup use central events first, while preserving mute, category enable and volume preferences.
+- [ ] Shared Android/iOS/desktop audio engine adapters using the same event contract.
 - [ ] Global user mute, master/category volume and interruption handling integrated with existing settings.
-- [ ] Existing messaging, calls, MeetWave, LIVE, gifts, transactions, posts, reels, stories and accessibility event adapters.
+- [ ] Direct event adapters for MeetWave, LIVE, gifts, transactions, posts, reels, stories, gaming and accessibility.
 - [ ] Playback queue, deduplication, cache expiry and cleanup across feature transitions.
 - [ ] Audio latency, device routing and real-device verification.
 
@@ -97,6 +102,7 @@ Supabase project: existing Minglora project `gzycobgbasnqqhnympkr`
 - Supabase Auth/OAuth acceptance: passed.
 - For You functional navigation: passed.
 - JavaScript syntax: an Admin Centre template-literal delimiter error was found and corrected; latest rerun is pending.
+- Shared audio engine unit tests added for secure URL resolution, mute/volume, URL caching, duplicate suppression and call-priority preemption; latest CI execution is pending.
 - Audio registry automated tests: pending CI execution.
 - Full repository test suite: pending.
 - Supabase security/performance follow-up: pending after the feature runtime is deployed.
