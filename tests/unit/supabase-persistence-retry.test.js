@@ -1,26 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
+import { readFile } from 'node:fs/promises';
 
 const storeUrl = new URL('../../src/store.js', import.meta.url).href;
-const collections = [
-  'users', 'posts', 'friendships', 'follows', 'blocks', 'friendLists', 'friendPreferences', 'savedPosts', 'savedPostCollections', 'videoWatchEvents', 'videoFeedback', 'mediaAssets',
-  
-   'groups', 'groupPosts', 'stories', 'storyViews', 'pages',
-  'pageRoles', 'pageFollows', 'pagePosts', 'pageViews',
-   'messages', 'messageConversationHides', 'messageGroups', 'messageGroupMembers', 'messageGroupMessages', 'messageConversationSettings', 'notifications', 'sessions',
-  'liveSessions', 'liveParticipants', 'liveSpeakerRequests', 'reports', 'supportTickets',
-  'supportMessages', 'moderationActions', 'auditLog', 'pendingAuth', 'calls', 'callParticipants',
-  'meetWaveRooms', 'meetWaveInvitations', 'meetWaveMessages', 'meetWaveAttendance',
-  'dataRightsRequests', 'pushSubscriptions', 'profileViews', 'profileViewPresence', 'albums',
-  'creatorLeagueProfiles', 'creatorLeagueGiftLedger', 'creatorLeagueDailyScores', 'creatorLeagueDailySettlements', 'creatorLeagueMatches', 'creatorLeaguePowerupUses', 'creatorLeagueEvents', 'gifterProgressionLedger', 'gifterBadgeAdminOverrides', 'gifterBadgeAdminAudit',
-  'liveFanClubMemberships', 'liveFanClubEvents',
-  'creatorSubscriptions', 'giftGalleryEvents', 'giftGallerySettings', 'giftGalleryPreferences',
-  'sounds', 'soundFavorites', 'dismissedPeopleSuggestions', 'meetWaveProviderCleanupQueue',
-  'profileSections', 'profileStatuses', 'profileHighlights', 'storyArchives', 'profileActivity', 'checkIns', 'events', 'eventRsvps',
-  'personalAiBotCategories', 'personalAiBots', 'personalAiBotTasks', 'personalAiBotAudit',
-  'personalAiBotSettings', 'personalAiBotFollows', 'personalAiBotTeams', 'personalAiBotTeamMembers', 'personalAiBotSchedules'
-];
+const storeSource = await readFile(new URL('../../src/store.js', import.meta.url), 'utf8');
+const collectionBlock = storeSource.match(/const COLLECTIONS = \[([\s\S]*?)\n\];/);
+assert.ok(collectionBlock, 'store collection registry exists');
+const collections = [...collectionBlock[1].matchAll(/'([^']+)'/g)].map(match => match[1]);
 const baseState = Object.fromEntries(collections.map(key => [key, []]));
 
 function runIsolated(script) {
