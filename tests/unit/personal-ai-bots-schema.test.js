@@ -948,3 +948,24 @@ test('AI task runtime gateway requires runtime secret and designated owner befor
   assert.match(gateway,/byteLength > 32768/);
   assert.match(gateway,/typeof retryable !== "boolean"/);
 });
+
+
+test('AI task upsert enforces owner approval, identity ownership, idempotency and terminal-state protection',()=>{
+  const start=taskQueueSql.indexOf('CREATE OR REPLACE FUNCTION public.minglora_ai_bot_task_upsert(');
+  const end=taskQueueSql.indexOf('$function$;',start);
+  assert.ok(start>=0&&end>start,'task upsert function must exist');
+  const upsert=taskQueueSql.slice(start,end);
+  assert.match(upsert,/p_actor_user_id IS DISTINCT FROM '5b998c21-86b5-4621-ab37-e0808a2657b1'::uuid/);
+  assert.match(upsert,/v_idempotency_key := COALESCE\(NULLIF\(p_task->>'idempotencyKey',''\)::uuid,v_id\)/);
+  assert.match(upsert,/v_status = 'approved_waiting_for_worker'[\s\S]*v_approved_by IS DISTINCT FROM p_actor_user_id OR v_approved_at IS NULL/);
+  assert.match(upsert,/v_status = 'cancelled'[\s\S]*v_cancelled_by IS DISTINCT FROM p_actor_user_id OR v_cancelled_at IS NULL/);
+  assert.match(upsert,/identity\.owner_admin_id = p_actor_user_id/);
+  assert.match(upsert,/identity\.population = 'independent'/);
+  assert.match(upsert,/IF v_task_type NOT IN \('assistant_request','moderation_review','analytics_report','translation'\)[\s\S]*v_high_impact := true/);
+  assert.match(upsert,/ON CONFLICT \(id\) DO UPDATE/);
+  assert.match(upsert,/existing_task\.idempotency_key = EXCLUDED\.idempotency_key/);
+  assert.match(upsert,/existing_task\.status IN \('completed','failed','dead_lettered','cancelled','rejected'\) THEN existing_task\.status/);
+  assert.match(upsert,/WHEN EXCLUDED\.status IN \('cancelled','rejected'\) THEN NULL ELSE existing_task\.worker_id/);
+  assert.match(upsert,/WHEN EXCLUDED\.status IN \('cancelled','rejected'\) THEN NULL ELSE existing_task\.lease_token/);
+  assert.match(upsert,/WHEN EXCLUDED\.status IN \('cancelled','rejected'\) THEN NULL ELSE existing_task\.lease_expires_at/);
+});
