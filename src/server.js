@@ -2683,7 +2683,7 @@ async function route(req, res) {
         });
         return json(res,200,reviewed);
       }
-      const audioPreviewRoute=p.match(/^\\/api\\/admin\\/audio\\/assets\\/([0-9a-f-]{36})\\/preview$/i);
+const audioPreviewRoute=p.match(/^\/api\/admin\/audio\/assets\/([0-9a-f-]{36})\/preview$/i);
       if(method==='GET'&&audioPreviewRoute){
         const preview=await requestSupabaseState('audio_admin_preview',{
           adminUserId:user.id,adminEmail:normalizeEmail(user.email||''),assetId:audioPreviewRoute[1]
@@ -2699,7 +2699,7 @@ async function route(req, res) {
         });
         return json(res,200,saved);
       }
-      const audioEventRoute=p.match(/^\/api\/audio\/events\/([a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*)$/i);
+const audioEventRoute=p.match(/^\/api\/audio\/events\/([a-z][a-z0-9_]*\.[a-z][a-z0-9_]*)$/i);
       if(method==='GET'&&audioEventRoute){
         const result=await requestSupabaseState('audio_event_resolve',{eventKey:audioEventRoute[1]});
         return json(res,200,result,{'Cache-Control':'no-store'});
