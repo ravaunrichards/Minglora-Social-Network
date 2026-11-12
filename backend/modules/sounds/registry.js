@@ -161,9 +161,12 @@ export function validateAudioAssetMetadata(input={}) {
   if (scope === "platform") {
     if (!sourceWebsite || !validHttpsUrl(originalDownloadPage)) errors.push("Platform audio requires its original website and source download page.");
     if (!licenseName || !validHttpsUrl(licenseUrl)) errors.push("Platform audio requires the exact licence name and licence URL.");
-    if (!licenseVerified) errors.push("The licence must be individually verified before platform publication.");
-    if (!commercialUseAllowed) errors.push("The licence does not confirm commercial use.");
-    if (!redistributionAllowed) errors.push("The licence does not confirm redistribution or platform delivery.");
+    if (reviewStatus === "approved") {
+      if (authenticityStatus !== "verified_authentic") errors.push("An asset must pass authenticity review before approval.");
+      if (!licenseVerified) errors.push("The licence must be individually verified before platform publication.");
+      if (!commercialUseAllowed) errors.push("The licence does not confirm commercial use.");
+      if (!redistributionAllowed) errors.push("The licence does not confirm redistribution or platform delivery.");
+    }
     if (attributionRequired && !attributionText) errors.push("Required creator attribution is missing.");
     if (!downloadDate) errors.push("Record the date the file was obtained.");
   }
