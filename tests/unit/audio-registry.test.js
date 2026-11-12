@@ -73,6 +73,20 @@ test("a platform recording requires complete source, verified licence, rights an
   ])assert.equal(validateAudioAssetMetadata({...validPlatformAsset(),...patch}).valid,false);
 });
 
+test("unverified candidates may be registered but cannot be published",()=>{
+  const candidate={
+    ...validPlatformAsset(),
+    authenticityStatus:"unverified",
+    reviewStatus:"pending_review",
+    licenseVerified:false,
+    commercialUseAllowed:false,
+    redistributionAllowed:false
+  };
+  const result=validateAudioAssetMetadata(candidate);
+  assert.equal(result.valid,true,result.errors.join(" "));
+  assert.equal(isProductionAudioEligible(candidate),false);
+});
+
 test("filename, category/event mapping, file format and technical metadata are validated",()=>{
   assert.equal(validateAudioAssetMetadata({...validPlatformAsset(),originalFilename:"sound1.wav"}).valid,false);
   assert.equal(validateAudioAssetMetadata({...validPlatformAsset(),fileFormat:"mp4"}).valid,false);
