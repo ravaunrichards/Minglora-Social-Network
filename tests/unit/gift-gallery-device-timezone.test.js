@@ -10,7 +10,7 @@ const read=file=>fs.readFileSync(path.join(root,file),'utf8');
 
 test('Gift Gallery remains reachable from the Facebook-style profile More menu',()=>{
   const app=read('public/app.js');
-  assert.match(app,/\[\['posts','Posts'\],\['about','About'\],\['friends','Friends'\],\['photos','Photos'\],\['reels','Reels'\],\['more','More'\]\]/);
+  assert.match(app,/facebook:\[\['posts','Posts'\],\['about','About'\],\['friends','Friends'\],\['photos','Photos'\],\['reels','Reels'\],\['more','More'\]\]/);
   assert.match(app,/if\(tab==='gift-gallery'\)return/);
   const moreStart=app.indexOf("if(tab==='more')return",app.indexOf('function profileTabMarkup'));
   const moreEnd=app.indexOf('const previewPhotos=',moreStart);
