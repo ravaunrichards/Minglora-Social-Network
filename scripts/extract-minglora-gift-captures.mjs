@@ -427,7 +427,7 @@ async function main(){
     if(gift.code)catalogByCode.set(String(gift.code),gift);
   }
   for(const artwork of artworkManifest.gifts||[])if(artwork.name)artworkByName.set(normalizeName(artwork.name),artwork);
-  const processed=await mapLimit(files,2,async file=>{
+  const processed=await mapLimit(files,4,async file=>{
     try{return await processScreenshot(file,catalogByName);}
     catch(error){return {file,detected:0,error:String(error?.message||error),results:[]};}
   });
