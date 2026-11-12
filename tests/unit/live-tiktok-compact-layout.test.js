@@ -25,6 +25,14 @@ test('Phones and portrait tablets use one immersive stage with overlays, not sta
   assert.match(compact, /env\(safe-area-inset-bottom/);
 });
 
+test('For You video menu offers positive and negative recommendation feedback', () => {
+  assert.match(app, /data-fyp-feedback-menu/);
+  assert.match(app, /data-fyp-interested/);
+  assert.match(app, /data-fyp-not-interested/);
+  assert.match(compact, /fyp-feedback-menu/);
+  assert.match(app, /action:'interested'/);
+});
+
 test('Desktop keeps chat integrated beside the stage and uses one compact horizontal control dock', () => {
   assert.match(compact, /grid-template-columns:minmax\(0,1fr\) clamp\(270px,25vw,340px\)/);
   assert.match(compact, /grid-template-rows:minmax\(0,1fr\) 54px/);
