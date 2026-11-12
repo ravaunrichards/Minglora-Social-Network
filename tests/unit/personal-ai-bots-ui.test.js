@@ -628,7 +628,7 @@ test('owner Admin Centre exposes audited appointment lifecycle controls without 
     'Retire appointment','Archive employment record','updateAppointmentStatus',
     'Employment note (optional)'
   ])assert.ok(ui.includes(phrase),phrase);
-  assert.match(ui,/API\+'\/appointments\/\'+encodeURIComponent\(appointmentId\)/);
+  assert.ok(ui.includes("request(API+'/appointments/'+encodeURIComponent(appointmentId)"),'lifecycle button calls the appointment PATCH endpoint');
   assert.match(ui,/method:'PATCH'/);
   assert.match(ui,/window\.confirm\('Record the '/);
   assert.match(ui,/The AI identity remains disabled and has no permissions/);
