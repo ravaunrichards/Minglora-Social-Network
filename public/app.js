@@ -421,7 +421,7 @@ let webPushSubscriptionActive=false;
 let incomingCallPollingTimer=null,incomingCallPollBusy=false,incomingCallOverlay=null,incomingCallStatusTimer=null;
 let incomingCallLastErrorAt=0;
 let outgoingCallOverlay=null,outgoingCallPending=null,callRingtoneCache={loadedAt:0,ringtone:null};
-let callRingtoneAudio=null,callToneContext=null,callToneNodes=[],callToneTimer=null;
+let callRingtoneAudio=null,callToneTimer=null;
 window.addEventListener('minglora:call-ringtone-updated',()=>{callRingtoneCache={loadedAt:0,ringtone:null};});
 function toast(message){const el=$('#toast');el.textContent=message;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2800)}
 function showSubscriptionReturnNotice(){
@@ -441,8 +441,7 @@ function showSubscriptionReturnNotice(){
 window.addEventListener('DOMContentLoaded',showSubscriptionReturnNotice,{once:true});
 function showAuth(){ window.dispatchEvent(new Event('minglora:session-ended'));stopMessengerRealtime();$('#app').classList.add('hidden');$('#auth-screen').classList.remove('hidden'); }
 function showApp(){ $('#auth-screen').classList.add('hidden');$('#app').classList.remove('hidden');$('#top-avatar').src=avatar(state.user);$('#rail-avatar').src=avatar(state.user);$('#rail-name').textContent=state.user.name;window.dispatchEvent(new Event('minglora:session-ready'));startMessengerRealtime();startBrowserNotificationPolling();startIncomingCallPolling();prepareMingloraServiceWorker();handleMingloraPushNavigation(); }
-function primeCallAudio(){try{const C=window.AudioContext||window.webkitAudioContext;if(!C)return;if(!callToneContext)callToneContext=new C();if(callToneContext.state==='suspended')void callToneContext.resume();}catch{}}
-document.addEventListener('pointerdown',primeCallAudio,{capture:true,once:true});
+
 function base64UrlToBytes(value){
   const base64=String(value||'').replace(/-/g,'+').replace(/_/g,'/');
   const padded=base64+'='.repeat((4-base64.length%4)%4);
@@ -1748,7 +1747,7 @@ async function refreshLiveSpeakerPanel(session,role,room){
       const currentPendingIds=new Set(requests.filter(request=>request.status==='requested').map(request=>String(request.userId)));
       const previousPendingIds=liveSpeakerSeenRequestsBySession.get(session.id);
       if(previousPendingIds&&session.liveSettings?.voiceRings!==false&&Array.from(currentPendingIds).some(id=>!previousPendingIds.has(id))){
-        primeCallAudio();window.setTimeout(()=>playCallTone([620,820],520),160);
+        primeCallAudio();window.setTimeout(()=>window.MingloraAudioEngine?.playEvent('live.host_notice',{priority:40}),160);
       }
       liveSpeakerSeenRequestsBySession.set(session.id,currentPendingIds);
       const pendingCount=requests.filter(request=>["requested","invited"].includes(request.status)).length;
@@ -8633,28 +8632,33 @@ function stopCallTone(){
  if(callToneTimer){clearInterval(callToneTimer);callToneTimer=null;}
  if(callRingtoneAudio){callRingtoneAudio.pause();callRingtoneAudio.currentTime=0;callRingtoneAudio=null;}
  try{navigator.vibrate?.(0);}catch{}
- for(const node of callToneNodes){try{node.stop?.();node.disconnect?.();}catch{}}
- callToneNodes=[];
 }
-function playCallTone(frequencies,durationMs=900){
- primeCallAudio();if(!callToneContext||callToneContext.state!=='running')return false;
- const start=callToneContext.currentTime;
- for(const frequency of frequencies){
-  const oscillator=callToneContext.createOscillator(),gain=callToneContext.createGain();
-  oscillator.type='sine';oscillator.frequency.value=frequency;gain.gain.setValueAtTime(0,start);
-  const experience=window.MingloraExperience?.getSettings?.();const volume=Math.max(0,Math.min(100,Number(experience?.ringtoneVolume??80)))/100;if((window.MingloraExperience?.shouldSilenceNotifications?.('call')||experience?.soundMode==='mute'||experience?.soundMode==='vibrate')||volume===0)return false;gain.gain.linearRampToValueAtTime(.12*volume,start+.035);gain.gain.setValueAtTime(.12*volume,start+Math.max(.05,durationMs/1000-.08));
-  gain.gain.linearRampToValueAtTime(0,start+durationMs/1000);oscillator.connect(gain);gain.connect(callToneContext.destination);
-  oscillator.start(start);oscillator.stop(start+durationMs/1000+.02);callToneNodes.push(oscillator,gain);
-  oscillator.onended=()=>{try{oscillator.disconnect();gain.disconnect();}catch{}};
- }
- return true;
-}
-function startCallRingback(call=null){
+
+async function startCallRingback(call=null){
  const experience=window.MingloraExperience?.getSettings?.();
  const voiceCall=call?.kind==='audio';
  const soundEnabled=voiceCall?experience?.voiceCallSound!==false:experience?.videoCallSound!==false;
- if(experience?.soundMode==='mute'||experience?.soundMode==='vibrate'||soundEnabled===false||window.MingloraExperience?.shouldSilenceNotifications?.('call')){stopCallTone();return;}
- stopCallTone();const pulse=()=>playCallTone([440,480],1850);setTimeout(pulse,120);callToneTimer=setInterval(pulse,6000);
+ if(experience?.soundMode==='mute'||experience?.soundMode==='vibrate'||soundEnabled===false||window.MingloraExperience?.shouldSilenceNotifications?.('call')){
+   stopCallTone();
+   if(experience?.soundMode==='vibrate'&&experience?.vibrateOnRing!==false)window.MingloraSoundStudio?.vibrate?.();
+   return false;
+ }
+ stopCallTone();
+ if(experience?.vibrateOnRing!==false)window.MingloraSoundStudio?.vibrate?.();
+ try{
+   const selected=await window.MingloraSoundStudio?.getCallSound?.(voiceCall?'voice':'video','outgoing');
+   if(!selected?.enabled||!selected.url)return false;
+   const audio=new Audio(selected.url);
+   audio.loop=true;audio.preload='auto';
+   audio.volume=Math.max(0,Math.min(100,Number(experience?.ringtoneVolume??80)))/100*Math.max(0,Math.min(1,Number(selected.volume??1)));
+   callRingtoneAudio=audio;
+   await audio.play();
+   return true;
+ }catch(error){
+   callRingtoneAudio=null;
+   console.warn('[Minglora] Recorded outgoing call ringback could not play:',error?.message||error);
+   return false;
+ }
 }
 async function getCallRingtone(force=false){
  if(!force&&Date.now()-callRingtoneCache.loadedAt<300000)return callRingtoneCache.ringtone;
@@ -8685,7 +8689,7 @@ async function startIncomingRingtone(call=null){
      const selected=await window.MingloraSoundStudio.getCallSound(voiceCall?'voice':'video');
      if(!selected?.enabled||!selected.url)return false;
      const audio=new Audio(selected.url);audio.loop=true;audio.preload='auto';
-     audio.volume=Math.max(0,Math.min(100,Number(experience?.ringtoneVolume??80)))/100;
+     audio.volume=Math.max(0,Math.min(100,Number(experience?.ringtoneVolume??80)))/100*Math.max(0,Math.min(1,Number(selected.volume??1)));
      callRingtoneAudio=audio;await audio.play();return true;
    }catch(error){
      callRingtoneAudio=null;
