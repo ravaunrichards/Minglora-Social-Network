@@ -244,3 +244,24 @@ test('worker rejects heartbeat intervals that cannot safely renew a lease',()=>{
   const {options}=dependencies({leaseSeconds:30,heartbeatIntervalMs:15000});
   assert.throws(()=>createPersonalAiBotWorker(options),/less than half the lease duration/);
 });
+
+
+test('worker returns on lease loss even when a provider adapter ignores AbortSignal',async()=>{
+  const {options,calls}=dependencies({
+    leaseSeconds:30,
+    heartbeatIntervalMs:1000,
+    heartbeatTask:async()=>{calls.heartbeats++;return calls.heartbeats===1;},
+    providerAdapter:{
+      providerIdentifier:'example_provider',
+      modelIdentifier:'example/model-v1',
+      generate:async()=>new Promise(()=>{})
+    }
+  });
+  const worker=createPersonalAiBotWorker(options);
+  const result=await worker.runOnce();
+  assert.equal(result.status,'lease_lost');
+  assert.equal(result.errorCode,'AI_TASK_LEASE_LOST');
+  assert.ok(calls.heartbeats>=2);
+  assert.equal(calls.completions.length,0);
+  assert.equal(calls.failures.length,0);
+});
