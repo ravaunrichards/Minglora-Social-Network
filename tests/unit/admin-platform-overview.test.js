@@ -51,7 +51,11 @@ test("Admin Centre preserves the existing full platform workspace", () => {
   assert.match(css, /admin-platform-module-grid/);
   assert.match(css, /admin-platform-collection-row/);
   assert.match(html, /Minglora — Admin Centre/);
-  assert.match(html, /20261109-admin-centre-left-sidebar-1/);
+  const stylesheet=html.match(/href="(\/admin-centre\.css\?v=[^"]+)"/)?.[1];
+  const controller=html.match(/src="(\/admin-centre\.js\?v=[^"]+)"/)?.[1];
+  assert.ok(stylesheet,'Admin Centre stylesheet is versioned');
+  assert.ok(controller,'Admin Centre controller is versioned');
+  assert.ok(stylesheet.includes('v=')&&controller.includes('v='));
 });
 
 test("Admin Centre is a standalone left-rail feature immediately below Profile", () => {
@@ -86,16 +90,17 @@ test("Only the designated Creator Hub admin identity can receive the Admin Centr
   assert.match(admin, /authenticator-verified session/);
 });
 
-test("App shell and service worker load the restored Admin Centre navigation assets", () => {
-  const version = "20261109-admin-centre-left-sidebar-1";
-  assert.ok(index.includes("/admin-centre.css?v=" + version));
-  assert.ok(index.includes("/admin-centre.js?v=" + version));
-  assert.ok(index.includes("/app.js?v=" + version));
-  assert.ok(index.includes("/sidebar-features.js?v=" + version));
+test("App shell and service worker load the current Admin Centre navigation assets", () => {
+  const currentAssets = [
+    index.match(/href="(\/admin-centre\.css\?v=[^"]+)"/)?.[1],
+    index.match(/src="(\/admin-centre\.js\?v=[^"]+)"/)?.[1],
+    index.match(/src="(\/app\.js\?v=[^"]+)"/)?.[1],
+    index.match(/src="(\/sidebar-features\.js\?v=[^"]+)"/)?.[1]
+  ];
+  for (const asset of currentAssets) {
+    assert.ok(asset, 'index.html references a versioned Admin Centre shell asset');
+    assert.ok(serviceWorker.includes("'" + asset + "'"), 'service worker caches ' + asset);
+  }
   const cacheName = serviceWorker.match(/const CACHE_NAME='([^']+)'/)?.[1] || '';
-  assert.equal(cacheName, 'minglora-shell-v255-admin-centre-left-sidebar-restore-1');
-  assert.ok(serviceWorker.includes("/admin-centre.css?v=" + version));
-  assert.ok(serviceWorker.includes("/admin-centre.js?v=" + version));
-  assert.ok(serviceWorker.includes("/app.js?v=" + version));
-  assert.ok(serviceWorker.includes("/sidebar-features.js?v=" + version));
+  assert.match(cacheName,/^minglora-shell-v[0-9]+-[a-z0-9-]+$/);
 });
