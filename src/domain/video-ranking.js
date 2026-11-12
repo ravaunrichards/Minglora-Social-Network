@@ -11,6 +11,15 @@ export function rankForYouVideos(posts = [], viewerId, follows = [], savedPosts 
   const hiddenPosts = new Set(feedback
     .filter(item => item.userId === viewerId && item.action === 'not_interested')
     .map(item => item.postId));
+  const interestedPosts = new Set(feedback
+    .filter(item => item.userId === viewerId && item.action === 'interested')
+    .map(item => item.postId));
+  const interestedCreators = new Map();
+  for (const post of posts) {
+    if (interestedPosts.has(post.id) && post.userId && post.userId !== viewerId) {
+      interestedCreators.set(post.userId, (interestedCreators.get(post.userId) || 0) + 1);
+    }
+  }
   const viewerEvents = watchEvents.filter(event => {
     if (event.userId !== viewerId) return false;
     const timestamp = Date.parse(event.createdAt || '');
@@ -55,10 +64,12 @@ export function rankForYouVideos(posts = [], viewerId, follows = [], savedPosts 
       const completionPenalty = Math.min(8, activity.completed * 2.5 + Math.max(0, activity.count - 1));
       const skipPenalty = Math.min(10, activity.skipCount * 3.5);
       const savedBonus = savedByViewer.has(post.id) ? 2 : 0;
+      const explicitInterestBonus = interestedPosts.has(post.id) ? 8 : 0;
+      const interestedCreatorBonus = Math.min(8, interestedCreators.get(post.userId) || 0) * 0.75;
       const ownPostPenalty = post.userId === viewerId ? 6 : 0;
       return {
         post,
-        score: freshness + engagement + relationship + affinity + discovery + savedBonus - completionPenalty - skipPenalty - ownPostPenalty,
+        score: freshness + engagement + relationship + affinity + discovery + savedBonus + explicitInterestBonus + interestedCreatorBonus - completionPenalty - skipPenalty - ownPostPenalty,
         timestamp: Number.isFinite(timestamp) ? timestamp : 0,
         originalIndex: index
       };
