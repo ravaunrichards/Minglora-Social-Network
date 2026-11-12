@@ -149,6 +149,70 @@ async function persistCanonicalBotSettings(settings,persistAiBotSettings) {
   const result=await persistAiBotSettings(canonicalAiBotSettings(settings));
   assertAiPersistenceResult(result,'Canonical AI network settings');
 }
+
+const AI_HR_RUNTIME_COLLECTIONS = Object.freeze([
+  'personalAiBotDepartments','personalAiBotVacancies','personalAiBotApplications',
+  'personalAiBotAppointments','personalAiBotEmploymentHistory'
+]);
+const AI_HR_AUDIT_TARGETS = new Set(['department','vacancy','application','appointment','employment_history']);
+
+function canonicalAiHrState(db) {
+  const state={
+    departments:db.personalAiBotDepartments,
+    vacancies:db.personalAiBotVacancies,
+    applications:db.personalAiBotApplications,
+    appointments:db.personalAiBotAppointments,
+    employmentHistory:db.personalAiBotEmploymentHistory,
+    audit:(db.personalAiBotAudit||[]).filter(item=>AI_HR_AUDIT_TARGETS.has(item.targetType))
+  };
+  return structuredClone(state);
+}
+
+async function persistCanonicalAiHrState(db,persistAiHrState) {
+  if(typeof persistAiHrState!=='function')return;
+  const result=await persistAiHrState(canonicalAiHrState(db));
+  assertAiPersistenceResult(result,'AI corporate HR records');
+}
+
+async function refreshCanonicalAiHrState(db,listAiHrState) {
+  if(typeof listAiHrState!=='function')return;
+  const state=await listAiHrState();
+  if(!state||typeof state!=='object'||Array.isArray(state)){
+    throw Object.assign(new Error('Normalized AI corporate HR storage returned an invalid state.'),{status:503});
+  }
+  const mappings=[
+    ['departments','personalAiBotDepartments'],
+    ['vacancies','personalAiBotVacancies'],
+    ['applications','personalAiBotApplications'],
+    ['appointments','personalAiBotAppointments'],
+    ['employmentHistory','personalAiBotEmploymentHistory']
+  ];
+  for(const [source,target] of mappings){
+    if(!Array.isArray(state[source])){
+      throw Object.assign(new Error('Normalized AI corporate HR storage omitted '+source+'.'),{status:503});
+    }
+    // Keep the legacy snapshot as a backfill source until the corresponding
+    // normalized table has at least one record; never erase existing HR data
+    // merely because a freshly deployed schema has not yet been seeded.
+    if(state[source].length>0||!Array.isArray(db[target])||db[target].length===0){
+      db[target]=state[source];
+    }
+  }
+}
+
+async function mutateAiHrState(db,persistAiHrState,mutate) {
+  const snapshot=Object.fromEntries([...AI_HR_RUNTIME_COLLECTIONS,'personalAiBotAudit'].map(key=>[
+    key,structuredClone(Array.isArray(db[key])?db[key]:[])
+  ]));
+  const result=mutate();
+  try{
+    await persistCanonicalAiHrState(db,persistAiHrState);
+  }catch(error){
+    for(const [key,value] of Object.entries(snapshot))db[key]=value;
+    throw error;
+  }
+  return result;
+}
 import {
   ensurePersonalAiBotCollections,
   getPersonalAiBotCategories,
@@ -209,7 +273,7 @@ import {
 } from './personal-ai-bots-service.js';
 
 export async function handlePersonalAiBotsAdminApi(context) {
-  const {req,res,url,method,path,user,input,db,saveStore,uid,now,json,isOwnerAdmin,isSameOriginWrite,lookupAdminMember,persistAiIdentities,listAiIdentities,persistAiBotTasks,listAiBotTasks,getAiBotTaskStats,persistAiBotSettings,persistAiProviderAssignment,listAiProviderAssignments,listAiProviderRuntime,persistAiEmailIdentity,listAiEmailIdentities,listAiIdentityReports,reviewAiIdentityReport}=context;
+  const {req,res,url,method,path,user,input,db,saveStore,uid,now,json,isOwnerAdmin,isSameOriginWrite,lookupAdminMember,persistAiIdentities,listAiIdentities,persistAiBotTasks,listAiBotTasks,getAiBotTaskStats,persistAiBotSettings,persistAiProviderAssignment,listAiProviderAssignments,listAiProviderRuntime,persistAiEmailIdentity,listAiEmailIdentities,listAiIdentityReports,reviewAiIdentityReport,persistAiHrState,listAiHrState}=context;
   const root='/api/admin/personal-ai-bots';
   if(path!==root&&!path.startsWith(root+'/'))return false;
   if(!isOwnerAdmin)return (json(res,403,{error:'Only the designated MFA-verified Minglora owner can manage the Personal AI Bots Network.'}),true);
