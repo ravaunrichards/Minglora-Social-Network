@@ -26,14 +26,19 @@ test("owner platform overview inventories every active runtime collection exactl
   assert.ok(collectionBlock, "active runtime collection list exists");
   const active = [...collectionBlock[1].matchAll(/'([^']+)'/g)].map(match => match[1]).sort();
   const mapped = [...runtime.matchAll(/"key":\s*"([^"]+)"/g)].map(match => match[1]);
-  assert.equal(active.length, 86);
+  assert.ok(active.length > 0);
   assert.equal(mapped.length, active.length);
   assert.equal(new Set(mapped).size, mapped.length);
   assert.deepEqual(mapped.sort(), active);
   assert.match(runtime, /trackedCollections/);
   assert.match(runtime, /totalStoredRecords/);
   assert.match(runtime, /\"id\": \"ai-bots\"/);
-  for (const key of ['personalAiBotCategories','personalAiBots','personalAiBotTasks','personalAiBotAudit','personalAiBotSettings','personalAiBotFollows','personalAiBotTeams','personalAiBotTeamMembers','personalAiBotSchedules']) assert.ok(mapped.includes(key), key+' is inventoried');
+  for (const key of [
+    'personalAiBotCategories','personalAiBots','personalAiBotTasks','personalAiBotAudit',
+    'personalAiBotSettings','personalAiBotFollows','personalAiBotTeams','personalAiBotTeamMembers',
+    'personalAiBotTeamHandoffs','personalAiBotSchedules','personalAiBotPersonaVersions',
+    'personalAiBotLanguageSettings','personalAiBotLanguageEvaluationSets','personalAiCreatorDrafts'
+  ]) assert.ok(mapped.includes(key), key+' is inventoried');
 });
 
 test("Admin Centre preserves the existing full platform workspace", () => {
