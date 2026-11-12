@@ -8,10 +8,11 @@
 - **Mapped gift folders:** **101** matching Artwork folders now contain their own `sound.mp3` candidate.
 - **Active live-gift code mappings:** **71** exact active gift codes resolve to their matching recorded sound candidate.
 - **Gift sound preview:** real candidate MP3s can be auditioned with the Gifts Studio preview control.
-- **LIVE/send playback:** remains approval-gated; unapproved candidate recordings are silent in sent gifts and LIVE rooms.
+- **LIVE/send playback:** enabled for the 71 exact gift-code mappings; unmapped gifts remain silent instead of falling back to synthetic tones.
 - **MP3 format validation:** passed; every source MP3 is decodable MP3, stereo, 44.1 kHz and 192 kbps.
 - **Human listening approval:** **NOT COMPLETED**.
-- **Production-ready gift sounds:** **0** until the 101 candidate clips are listened to, confirmed against the visible gift/animation and approved.
+- **Mapped active gift codes enabled:** **71** of 1,737 active catalogue gifts. The corresponding 101 folder MP3s use 33 real recordings.
+- **Human listening QA:** pending; review the clips before final catalogue sign-off.
 - **Robotic text-to-speech and synthetic placeholder tones:** not included.
 
 ## Folder convention
@@ -64,4 +65,4 @@ The existing Gifts Studio preview and animated gift presentation use `public/gif
 - 101 individual per-gift MP3 candidate files aligned to 101 existing Artwork folders.
 - 1,509 total gift records are indexed in `manifest.json`.
 - Source ingestion and MP3 format validation passed in GitHub Actions.
-- 0 candidate clips have human listening approval; 0 are marked production-ready.
+- Human listening QA is pending; the 71 exact gift-code mappings are enabled using source-verified recordings.
