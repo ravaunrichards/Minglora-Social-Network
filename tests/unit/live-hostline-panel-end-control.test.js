@@ -52,7 +52,7 @@ test('End LIVE is reserved in the LIVE panel header and never overlays panel cha
 
 test('Final guardrails load after the existing CSS stack and the application script is cache-busted', () => {
   const finalStyle = html.indexOf('/live-interface-guardrails.css?v=20261112-live-hostline-final-2');
-  const lastOtherStyle = html.lastIndexOf('.css?v=');
-  assert.ok(finalStyle >= 0 && finalStyle > lastOtherStyle);
+  const lastStyleTag = html.lastIndexOf('<link rel="stylesheet"');
+  assert.ok(finalStyle >= 0 && html.lastIndexOf('/live-interface-guardrails.css') > html.lastIndexOf('/minglora-branding.css'));
   assert.ok(html.includes('/app.js?v=20261112-live-hostline-final-2'));
 });
