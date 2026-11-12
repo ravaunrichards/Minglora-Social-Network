@@ -5,6 +5,7 @@ import {
   claimVideoTranscodeJob,
   completeVideoTranscodeJob,
   failVideoTranscodeJob,
+  renewVideoTranscodeLease,
   cancelVideoTranscodeJob,
   isVideoTranscodeLeaseValid,
   VIDEO_TRANSCODE_MAX_ATTEMPTS
@@ -71,7 +72,7 @@ test('completion requires the current unexpired lease and records the derivative
   }).status, 'conflict');
   const completed = completeVideoTranscodeJob(jobs, {
     jobId: claimed.id, leaseToken: claimed.leaseToken, outputAssetId: 'derivative-1',
-    completedAt: new Date(base + 1000).toISOString()
+    completedAt: new Date(base + 1000).toISOString(), nowMs: base + 1000
   });
   assert.equal(completed.status, 'completed');
   assert.equal(completed.job.derivativeAssetId, 'derivative-1');
@@ -98,6 +99,37 @@ test('transient failures back off and stop after the configured attempt limit', 
   assert.equal(claimVideoTranscodeJob(jobs, {
     leaseToken: 'never-claim-this-lease-abcdefghijklmnopqrstuvwxyz', nowMs
   }), null);
+});
+
+test('a valid worker can extend its lease while a long encode or upload is running', () => {
+  const jobs = queue();
+  const claimed = claimVideoTranscodeJob(jobs, {
+    leaseToken: 'lease-token-abcdefghijklmnopqrstuvwxyz', nowMs: base, leaseMs: 60_000
+  });
+  const renewed = renewVideoTranscodeLease(jobs, {
+    jobId: claimed.id, leaseToken: claimed.leaseToken, nowMs: base + 30_000, leaseMs: 120_000
+  });
+  assert.equal(renewed.status, 'renewed');
+  assert.equal(Date.parse(renewed.leaseExpiresAt), base + 150_000);
+  assert.equal(isVideoTranscodeLeaseValid(claimed, claimed.leaseToken, base + 149_999), true);
+  assert.equal(renewVideoTranscodeLease(jobs, {
+    jobId: claimed.id, leaseToken: 'expired-or-wrong-lease-token-123456', nowMs: base + 30_001
+  }).status, 'conflict');
+});
+
+test('an expired final-attempt lease is marked terminal instead of remaining stuck forever', () => {
+  const jobs = queue();
+  jobs[0].status = 'processing';
+  jobs[0].attempts = VIDEO_TRANSCODE_MAX_ATTEMPTS;
+  jobs[0].leaseToken = 'expired-lease-token-abcdefghijklmnop';
+  jobs[0].leaseExpiresAt = new Date(base - 1).toISOString();
+  const claim = claimVideoTranscodeJob(jobs, {
+    leaseToken: 'new-lease-token-abcdefghijklmnopqrstuvwxyz', nowMs: base
+  });
+  assert.equal(claim, null);
+  assert.equal(jobs[0].status, 'failed');
+  assert.equal(jobs[0].errorCode, 'LEASE_EXPIRED');
+  assert.equal(jobs[0].leaseToken, null);
 });
 
 test('source deletion can cancel a currently leased job', () => {
