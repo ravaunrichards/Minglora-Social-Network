@@ -49,7 +49,7 @@ test("every runtime gift code points to a real MP3 file in its matching artwork-
 test("mapped recorded gift sounds play on gift events and preview", () => {
   assert.match(fx, /if\(!entry\|\|\(!entry\.playbackEnabled&&options\.review!==true\)\)return false;/);
   assert.match(fx, /play\(gift,\{review:true\}\)/);
-  assert.match(fx, /if\(options\.sound!==false\)void play\(gift,options\.soundOptions\|\|\{\}\);/);
+  assert.match(fx, /if\(options\.sound!==false\)play\(gift\);/);
   assert.doesNotMatch(fx, /createOscillator|const profiles=/);
   assert.match(fx, /createBufferSource/);
   assert.match(fx, /decodeAudioData/);
