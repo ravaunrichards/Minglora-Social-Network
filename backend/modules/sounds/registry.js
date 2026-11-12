@@ -181,23 +181,18 @@ export function validateAudioAssetMetadata(input={}) {
 }
 
 export function isProductionAudioEligible(asset={}) {
+  const attributionSatisfied = asset.attributionRequired !== true ||
+    Boolean(String(asset.attributionText || "").trim());
   return Boolean(
     asset.scope === "platform" &&
     asset.reviewStatus === "approved" &&
     asset.authenticityStatus === "verified_authentic" &&
+    ACCEPTED_RECORDING_TYPES.includes(asset.originType) &&
     asset.licenseVerified === true &&
     asset.commercialUseAllowed === true &&
     asset.redistributionAllowed === true &&
-    asset.attributionRequired !== true || (
-      asset.scope === "platform" &&
-      asset.reviewStatus === "approved" &&
-      asset.authenticityStatus === "verified_authentic" &&
-      asset.licenseVerified === true &&
-      asset.commercialUseAllowed === true &&
-      asset.redistributionAllowed === true &&
-      asset.attributionRequired === true &&
-      Boolean(String(asset.attributionText||"").trim())
-    )
+    asset.rightsConfirmed === true &&
+    attributionSatisfied
   );
 }
 
