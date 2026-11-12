@@ -5350,9 +5350,9 @@ async function route(req, res) {
             return asset&&asset.status==='attached'&&asset.mediaType==='video';
           })
         );
-        const excludedFeedback=(db.videoFeedback||[]).filter(item=>item.userId===user.id&&item.action==='not_interested');
+        const viewerFeedback=(db.videoFeedback||[]).filter(item=>item.userId===user.id);
         const orderedPosts=scope==='for-you'
-          ?rankForYouVideos(visiblePosts,user.id,activeFollows(),db.savedPosts||[],db.videoWatchEvents||[],excludedFeedback)
+          ?rankForYouVideos(visiblePosts,user.id,activeFollows(),db.savedPosts||[],db.videoWatchEvents||[],viewerFeedback)
           :visiblePosts.slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
         const page=orderedPosts.slice(offset,offset+rawLimit+1);
         const hasMore=page.length>rawLimit;
@@ -5415,8 +5415,8 @@ async function route(req, res) {
         if(!['not_interested','interested'].includes(action))return json(res,400,{error:'Video feedback must be not_interested or interested.'});
         const feedback=db.videoFeedback||(db.videoFeedback=[]);
         const existing=feedback.find(item=>item.userId===user.id&&item.postId===post.id);
-        if(existing){existing.action=action;existing.updatedAt=now();}
-        else feedback.push({id:uid(),userId:user.id,postId:post.id,action,createdAt:now(),updatedAt:now()});
+        if(existing){existing.action=action;existing.authorId=post.userId;existing.updatedAt=now();}
+        else feedback.push({id:uid(),userId:user.id,postId:post.id,authorId:post.userId,action,createdAt:now(),updatedAt:now()});
         await saveStore();
         return json(res,200,{ok:true,action,postId:post.id});
       }

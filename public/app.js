@@ -9972,7 +9972,7 @@ function forYouCard(post,index){
     '<aside class="fyp-action-rail" aria-label="Post actions"><button type="button" class="fyp-action '+liked+'" data-react="'+esc(post.id)+'" data-current-reaction="'+esc(post.myReaction||'like')+'" aria-label="Like post"><span>♥</span><small>'+Number(post.reactionCount||0).toLocaleString()+'</small></button>'+
     '<button type="button" class="fyp-action" data-focus-comment="'+esc(post.id)+'" aria-label="Comment"><span>▢</span><small>'+Number((post.comments||[]).length).toLocaleString()+'</small></button><button type="button" class="fyp-action" data-toggle-save="'+esc(post.id)+'" data-saved="'+(post.isSaved?'true':'false')+'" aria-label="Save post"><span>'+(post.isSaved?'▣':'♧')+'</span><small>Save</small></button>'+
     '<button type="button" class="fyp-action" data-share="'+esc(post.id)+'" aria-label="Share post"><span>↗</span><small>Share</small></button><button type="button" class="fyp-action" data-gift-content="post" data-gift-id="'+esc(post.id)+'" data-gift-username="'+esc(author.username||'')+'" aria-label="Send gift"><span>🎁</span><small>Gift</small></button>'+
-    (isVideo?'<button type="button" class="fyp-action fyp-more-action" data-fyp-not-interested="'+esc(post.id)+'" aria-label="Not interested"><span>⋯</span><small>More</small></button>':'<button type="button" class="fyp-action fyp-more-action" data-post-menu="'+esc(post.id)+'" aria-label="Post options"><span>⋯</span><small>More</small></button>')+(isVideo?'<button type="button" class="fyp-disc" data-fyp-sound="'+esc(post.id)+'" aria-label="Toggle sound">♫</button>':'')+'</aside>'+(isVideo?'<button type="button" class="fyp-play-toggle" data-fyp-play="'+esc(post.id)+'" aria-label="Pause or play video">Ⅱ</button>':'')+'</article>';
+    (isVideo?'<button type="button" class="fyp-action fyp-more-action" data-fyp-feedback-menu="'+esc(post.id)+'" aria-label="Video recommendations" aria-controls="fyp-feedback-menu-'+esc(post.id)+'" aria-expanded="false"><span>⋯</span><small>More</small></button>':'<button type="button" class="fyp-action fyp-more-action" data-post-menu="'+esc(post.id)+'" aria-label="Post options"><span>⋯</span><small>More</small></button>')+(isVideo?'<button type="button" class="fyp-disc" data-fyp-sound="'+esc(post.id)+'" aria-label="Toggle sound">♫</button>':'')+'</aside>'+(isVideo?'<div class="fyp-feedback-menu" id="fyp-feedback-menu-'+esc(post.id)+'" hidden role="group" aria-label="Video recommendations"><button type="button" data-fyp-interested="'+esc(post.id)+'">Show me more like this</button><button type="button" data-fyp-not-interested="'+esc(post.id)+'">Not interested</button></div><button type="button" class="fyp-play-toggle" data-fyp-play="'+esc(post.id)+'" aria-label="Pause or play video">Ⅱ</button>':'')+'</article>';
 }
 function teardownForYouPlayback(){
   if(forYouPlaybackObserver){forYouPlaybackObserver.disconnect();forYouPlaybackObserver=null;}
@@ -10067,6 +10067,35 @@ function setupForYouPlayback(root){
     video.muted=!video.muted;
     button.textContent=video.muted?'♫':'🔊';
     if(!video.paused)video.play().catch(()=>{});
+  });
+  bindOnce('[data-fyp-feedback-menu]',button=>{
+    const card=button.closest('.fyp-video-card');
+    const menu=card?.querySelector('.fyp-feedback-menu');
+    if(!menu)return;
+    const opening=menu.hidden;
+    root.querySelectorAll('.fyp-feedback-menu').forEach(panel=>{
+      panel.hidden=true;
+      panel.closest('.fyp-video-card')?.querySelector('[data-fyp-feedback-menu]')?.setAttribute('aria-expanded','false');
+    });
+    menu.hidden=!opening;
+    button.setAttribute('aria-expanded',String(opening));
+  });
+  bindOnce('[data-fyp-interested]',async button=>{
+    const postId=button.dataset.fypInterested;
+    if(!postId)return;
+    button.disabled=true;
+    try{
+      await api('/videos/'+encodeURIComponent(postId)+'/feedback',{method:'POST',body:JSON.stringify({action:'interested'})});
+      const card=button.closest('.fyp-video-card');
+      const menu=card?.querySelector('.fyp-feedback-menu');
+      if(menu)menu.hidden=true;
+      card?.querySelector('[data-fyp-feedback-menu]')?.setAttribute('aria-expanded','false');
+      button.disabled=false;
+      toast('We’ll show you more videos and creators like this.');
+    }catch(error){
+      toast(error.message||'Your preference could not be saved.');
+      button.disabled=false;
+    }
   });
   bindOnce('[data-fyp-not-interested]',async button=>{
     const postId=button.dataset.fypNotInterested;
