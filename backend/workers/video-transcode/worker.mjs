@@ -59,6 +59,7 @@ function runFfmpeg(input, output) {
   return new Promise((resolve, reject) => {
     const args = [
       '-nostdin', '-hide_banner', '-loglevel', 'error', '-y',
+      '-protocol_whitelist', 'file,crypto,data',
       '-i', input,
       '-map', '0:v:0', '-map', '0:a?',
       '-vf', "scale=w='min(1280,iw)':h=-2",
@@ -146,6 +147,7 @@ async function tusUpload(filePath, upload) {
 async function processJob(claim) {
   const { job, source } = claim;
   let heartbeatInFlight = null;
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'minglora-video-'));
   const heartbeatTimer = setInterval(() => {
     if (!heartbeatInFlight) {
       heartbeatInFlight = api('/api/internal/video-transcode/heartbeat', {
@@ -156,7 +158,6 @@ async function processJob(claim) {
     }
   }, 5 * 60 * 1000);
   heartbeatTimer.unref?.();
-  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'minglora-video-'));
   const input = path.join(directory, 'source.bin');
   const output = path.join(directory, 'optimized.mp4');
   try {
