@@ -44,6 +44,122 @@ jobs:
       - name: Download, verify, convert, and map licensed recordings
         run: node "assets/Gift Sounds/tools/ingest-sources.mjs" --download-public
 
+      - name: Build the artwork-aligned human listening review bundle
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import path from 'node:path';
+          import crypto from 'node:crypto';
+
+          const root = process.cwd();
+          const output = path.join(process.env.RUNNER_TEMP, 'minglora-gift-sound-review');
+          fs.rmSync(output, { recursive: true, force: true });
+          fs.mkdirSync(output, { recursive: true });
+          const readJson = relative => JSON.parse(fs.readFileSync(path.join(root, relative), 'utf8'));
+          const manifest = readJson('assets/Gift Sounds/manifest.json');
+          const sources = readJson('assets/Gift Sounds/source-catalog.json');
+          const candidateMap = readJson('assets/Gift Sounds/candidate-mappings.json');
+          const giftMap = readJson('assets/Gift Sounds/gift-code-map.json');
+          const giftsBySlug = new Map((manifest.gifts || []).map(gift => [gift.slug, gift]));
+          const sourceById = new Map([
+            ...(sources.publishedCC0Recordings || []),
+            ...(sources.publicDomainEffects || []),
+            ...(sources.additionalCC0Recordings || [])
+          ].map(source => [source.id, source]));
+          const rows = [];
+          const sourceIds = new Set();
+          const hash = bytes => crypto.createHash('sha256').update(bytes).digest('hex');
+          const csv = value => '"' + String(value ?? '').replace(/"/g, '""') + '"';
+
+          for (const item of candidateMap.mappings || []) {
+            if (!/^[a-z0-9-]+$/.test(item.giftSlug || '')) throw new Error('Unsafe gift slug: ' + item.giftSlug);
+            const gift = giftsBySlug.get(item.giftSlug);
+            const source = sourceById.get(item.sourceId);
+            if (!gift || !source) throw new Error('Missing gift/source metadata: ' + item.giftSlug);
+            const artworkPath = gift.artwork || path.join('assets/Artwork', item.giftSlug, 'artwork.png');
+            const soundPath = item.file;
+            const artworkBytes = fs.readFileSync(path.join(root, artworkPath));
+            const soundBytes = fs.readFileSync(path.join(root, soundPath));
+            const sourcePath = source.reviewMp3;
+            if (!sourcePath) throw new Error('Missing source MP3 metadata: ' + item.sourceId);
+            const sourceBytes = fs.readFileSync(path.join(root, sourcePath));
+            if (hash(soundBytes) !== item.sha256 || soundBytes.length !== item.bytes) {
+              throw new Error('Candidate checksum/size mismatch: ' + item.giftSlug);
+            }
+            if (hash(soundBytes) !== hash(sourceBytes)) {
+              throw new Error('Candidate does not match its declared source master: ' + item.giftSlug);
+            }
+            const candidateDir = path.join(output, 'candidates', item.giftSlug);
+            fs.mkdirSync(candidateDir, { recursive: true });
+            fs.copyFileSync(path.join(root, artworkPath), path.join(candidateDir, 'artwork.png'));
+            fs.copyFileSync(path.join(root, soundPath), path.join(candidateDir, 'sound.mp3'));
+            if (!sourceIds.has(item.sourceId)) {
+              const sourceDir = path.join(output, 'source-masters');
+              fs.mkdirSync(sourceDir, { recursive: true });
+              fs.copyFileSync(path.join(root, sourcePath), path.join(sourceDir, item.sourceId + '.mp3'));
+              sourceIds.add(item.sourceId);
+            }
+            rows.push([
+              gift.title || gift.name || item.giftSlug,
+              item.giftSlug, artworkPath, soundPath, item.sourceId,
+              source.originalTitle || source.id, source.creator || '', source.license || '',
+              source.sourcePage || '', item.bytes, item.sha256,
+              '', '', '', '', '', ''
+            ]);
+          }
+
+          if (rows.length !== 101) throw new Error('Expected 101 review candidates, found ' + rows.length);
+          const headers = [
+            'gift_name','gift_slug','artwork_source_path','sound_candidate_path','source_id',
+            'source_recording_title','creator','declared_licence','source_page','bytes','sha256',
+            'listened','matches_artwork_and_animation','licence_checked_for_use','decision',
+            'reviewer','review_notes'
+          ];
+          fs.writeFileSync(path.join(output, 'REVIEW-CHECKLIST.csv'),
+            [headers, ...rows].map(row => row.map(csv).join(',')).join('\n') + '\n');
+          for (const relative of [
+            'assets/Gift Sounds/README.md',
+            'assets/Gift Sounds/SOUND_SOURCES.md',
+            'assets/Gift Sounds/source-catalog.json',
+            'assets/Gift Sounds/candidate-mappings.json',
+            'assets/Gift Sounds/gift-code-map.json',
+            'assets/Gift Sounds/manifest.json'
+          ]) {
+            fs.copyFileSync(path.join(root, relative), path.join(output, path.basename(relative)));
+          }
+          const guide = [
+            '# Minglora gift-sound human audition bundle',
+            '',
+            'This is a review-only bundle. It does not approve or activate any sound.',
+            '',
+            '- 101 candidate gift recordings with their matching artwork are in candidates/<gift-slug>/.',
+            '- 33 verified source MP3 masters are in source-masters/.',
+            '- REVIEW-CHECKLIST.csv contains one row per candidate and blank fields for human review.',
+            '- source metadata and the current runtime approval map are included for reference.',
+            '',
+            'For each candidate, listen to sound.mp3 while checking artwork.png and the matching LIVE gift animation in Minglora. Confirm provenance and commercial redistribution terms before entering an approval decision.',
+            '',
+            'Do not mark a clip approved based only on its filename, licence label, checksum or automated decode result. All runtime playbackApproved values remain false until a human has completed and recorded the review.',
+            ''
+          ].join('\n');
+          fs.writeFileSync(path.join(output, 'AUDITION-GUIDE.md'), guide);
+          console.log(JSON.stringify({
+            candidateCount: rows.length,
+            artworkCount: rows.length,
+            sourceMasterCount: sourceIds.size,
+            humanApprovalsIncluded: 0,
+            output
+          }, null, 2));
+          NODE
+
+      - name: Upload the human listening review bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: minglora-gift-sound-review-${{ github.sha }}
+          path: ${{ runner.temp }}/minglora-gift-sound-review/
+          if-no-files-found: error
+          retention-days: 30
+
       - name: Commit the verified MP3 review library to this branch only
         env:
           BRANCH_NAME: feature/gift-sounds-artwork-aligned
