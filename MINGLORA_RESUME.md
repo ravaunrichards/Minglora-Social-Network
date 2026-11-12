@@ -523,3 +523,13 @@ Continue with independent non-database work that can be built and verified in th
 - This supersedes the earlier note that the committed 16-test worker file had not been executed. The earlier 6-test smoke harness result remains historical; the stronger 16/16 run now covers all tests in the committed worker test file.
 - This still does not constitute a full repository test run, Node 24 CI run, GitHub Actions green check, Deno Edge Function integration test, database migration test, or live Supabase verification. GitHub's combined status and PR workflow lookup continued returning empty results; retain CI/full-repo status as **unverified**.
 - Updated `docs/PERSONAL_AI_BOTS.md` to reflect the worker's branch implementation and exact focused-test evidence without claiming production deployment or actual AI inference.
+
+
+### Runtime-gateway authorization review — 2026-11-12
+
+- Reviewed the exact feature-branch source for `supabase/functions/minglora-runtime-state/index.ts` around all `ai_bot_task_*` routes and the worker's direct server-gateway request contract.
+- Confirmed the gateway is POST-only, rejects missing/short runtime keys, hashes the supplied key with SHA-256 and compares it in constant time with the stored runtime secret hash, rejects bodies above 1 MB/non-object JSON, and applies an explicit designated-owner UUID check to the complete `ai_bot_task_*` action family before dispatching any queue RPC.
+- Claim/heartbeat/completion/failure routes validate worker IDs, UUIDs, lease duration, retryable type and bounded result payload; each calls the corresponding server-side RPC and returns the RPC's actual success/failure outcome. The queue SQL functions remain `SECURITY INVOKER`, revoke execution from `PUBLIC`, `anon`, and `authenticated`, and grant execution to `service_role` only.
+- No gateway source change was justified by this review; the existing owner and runtime-secret boundary was preserved.
+- Latest GitHub connector checks for the tracker update returned no combined statuses and no PR-triggered workflow runs. The exact 16-case worker file has passed locally as documented above; broader CI remains unverified.
+- Next safe work remains independent code and test hardening. Do not deploy the Edge Function or apply the staged migration from this review.
