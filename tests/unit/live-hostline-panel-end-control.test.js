@@ -31,7 +31,7 @@ test('End LIVE exists once and is inside the LIVE panel header, not on the video
   assert.doesNotMatch(hud, /live-host-power-button|id='live-leave'/);
   assert.equal((app.match(/id='live-leave'/g) || []).length, 1, 'exactly one End LIVE action is rendered');
   assert.match(app, /\$\("#live-leave"\)\?\.addEventListener\("click",async\(\)=>/);
-  assert.match(app, /liveChatPanel\?\.insertAdjacentHTML\('beforeend',liveChatOverlay\)/);
+  assert.ok(app.includes('liveChatPanel?.insertAdjacentHTML("beforeend",liveChatOverlay)'));
 });
 
 test('The stream title and session metadata have a separate safe zone above the host row', () => {
