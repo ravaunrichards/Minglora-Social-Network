@@ -105,5 +105,8 @@ test('the stylesheet loads after existing profile CSS and is versioned in the se
   const asset='/profile-style-system.css?v=20261112-profile-styles-10x9-1';
   assert.ok(html.includes(asset),'profile style system is not linked');
   assert.ok(worker.includes("'"+asset+"'"),'profile style system is not precached');
+  assert.ok(html.includes('/app.js?v=20261112-profile-style-library-10x9-1'));
+  assert.ok(worker.includes("'/app.js?v=20261112-profile-style-library-10x9-1'"));
+  assert.ok(html.includes('/settings.js?v=20261112-profile-style-library-10x9-1'));
   assert.match(worker,/minglora-shell-v299-profile-style-library-1/);
 });
