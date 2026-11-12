@@ -85,7 +85,7 @@ if(window.MingloraAudioEngine){
   const centralPlayed=await window.MingloraAudioEngine.playEvent(eventKey,{priority:key==="incoming_calls"?100:20,volume:Math.max(0,Math.min(100,Number(experience.notificationVolume??80)))/100});
   if(centralPlayed)return true;
 }
-try{await play(a.soundId,{volume:experience.notificationVolume??80});return true;}catch{return false;}
+const custom=prefs.customSounds?.find(item=>item.id===a.soundId&&item.url);if(!custom)return false;try{await play(a.soundId,{volume:experience.notificationVolume??80});return true;}catch{return false;}
 }
 async function callSound(kind,direction="incoming"){
 if(!prefs)await load();
@@ -97,8 +97,8 @@ try{
   const central=await window.MingloraAudioEngine?.resolveEvent(eventKey);
   if(central?.url)return {enabled:true,url:central.url,soundId:central.id||("platform:"+central.id),volume:central.volume,loop:central.loop===true};
 }catch{}
-const r=find(a.soundId);
-return {enabled:Boolean(r?.url),url:r?.url||"",soundId:a.soundId,volume:1,loop:true};
+const custom=prefs.customSounds?.find(item=>item.id===a.soundId&&item.url);
+return {enabled:Boolean(custom?.url),url:custom?.url||"",soundId:a.soundId,volume:1,loop:true};
 }
 async function offline(){if(!("caches"in window))throw new Error("This browser does not support offline audio storage.");const cache=await caches.open("minglora-sounds-v1");let i=0;for(const x of builtins()){const r=await fetch(x.url,{cache:"no-cache"});if(!r.ok)throw new Error("Could not cache "+x.name);await cache.put(x.url,r.clone());i++;say("Saving original sound library offline · "+i+" / 120");}say("All 120 original audio files are cached for offline playback on this device.");}
 async function upload(file){if(!file)return;if(!root.querySelector("[data-rights-confirmed]")?.checked)throw new Error("Confirm that you own this audio or have permission to use it.");if(file.size<1||file.size>20*1024*1024)throw new Error("Choose an audio file up to 20 MB.");if(typeof window.uploadMediaFile!=="function")throw new Error("Minglora's secure upload service is unavailable.");const title=file.name.replace(/\.[^.]+$/,"").slice(0,100)||"Custom sound",probe=document.createElement("audio"),url=URL.createObjectURL(file);try{const durationMs=await new Promise((resolve,reject)=>{probe.preload="metadata";probe.onloadedmetadata=()=>resolve(Number.isFinite(probe.duration)?Math.round(probe.duration*1000):0);probe.onerror=()=>reject(new Error("Could not read this audio file."));probe.src=url;});say("Uploading "+file.name+"…");const asset=await window.uploadMediaFile("ringtone",file,1,0,p=>say(p.finalizing?"Upload complete. Saving your custom sound…":"Uploading · "+p.percentage+"%"));await api("/sounds/custom",{method:"POST",body:JSON.stringify({assetId:asset.id,title,durationMs,rightsConfirmed:true})});await load();say("Custom sound added to your private library.");}finally{URL.revokeObjectURL(url);probe.removeAttribute("src");}}
