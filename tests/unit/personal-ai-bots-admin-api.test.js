@@ -2137,3 +2137,70 @@ test('Creator Studio API rejects unsupported request fields and cross-origin wri
   assert.equal(crossOrigin.res.statusCode,403);
   assert.equal(db.personalAiCreatorDrafts.length,0);
 });
+
+
+test('AI corporate HR department writes persist the full relational snapshot before success',async()=>{
+  const db={};
+  let persisted=null,saves=0;
+  const context=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/departments',
+    input:{name:'AI Workforce Quality',description:'Workforce standards and quality reviews.'},
+    db,uid:sequenceUid(4100),
+    persistAiHrState:async state=>{persisted=structuredClone(state);return {ok:true};},
+    saveStore:async()=>{saves++;}
+  });
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,201);
+  assert.equal(context.res.payload.department.name,'AI Workforce Quality');
+  assert.equal(Array.isArray(persisted.departments),true);
+  assert.equal(persisted.departments.length,21);
+  assert.deepEqual(persisted.vacancies,[]);
+  assert.deepEqual(persisted.applications,[]);
+  assert.deepEqual(persisted.appointments,[]);
+  assert.deepEqual(persisted.employmentHistory,[]);
+  assert.ok(persisted.audit.some(item=>item.action==='department.created'&&item.targetId===context.res.payload.department.id));
+  assert.equal(saves,1);
+
+  const list=makeContext({
+    method:'GET',path:'/api/admin/personal-ai-bots/departments',db:{},
+    listAiHrState:async()=>persisted
+  });
+  await handlePersonalAiBotsAdminApi(list);
+  assert.equal(list.res.statusCode,200);
+  assert.ok(list.res.payload.departments.some(item=>item.id===context.res.payload.department.id));
+  assert.ok(list.db.personalAiBotAudit.some(item=>item.action==='department.created'));
+});
+
+test('AI corporate HR write rolls back runtime state when normalized Supabase persistence fails',async()=>{
+  const db={};
+  let saves=0;
+  const context=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/departments',
+    input:{name:'Unpersisted HR Department'},
+    db,uid:sequenceUid(4200),
+    persistAiHrState:async()=>({ok:false}),
+    saveStore:async()=>{saves++;}
+  });
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,503);
+  assert.equal(db.personalAiBotDepartments.length,20);
+  assert.equal(db.personalAiBotDepartments.some(item=>item.name==='Unpersisted HR Department'),false);
+  assert.equal(db.personalAiBotAudit.some(item=>item.action==='department.created'),false);
+  assert.equal(saves,0);
+});
+
+test('AI corporate HR reads keep the existing runtime-state adapter active until the relational migration is released',async()=>{
+  const db={personalAiBotVacancies:[{
+    id:'vacancy-legacy-001',ownerId:'owner-1',title:'Legacy compatibility vacancy',
+    positionCode:'worker',positionTitle:'Worker',departmentId:'department-finance_accounting',
+    departmentCode:'finance_accounting',departmentName:'Finance and Accounting',slots:1,status:'open'
+  }]};
+  const context=makeContext({
+    method:'GET',path:'/api/admin/personal-ai-bots/vacancies',db,
+    listAiHrState:async()=>({legacyFallback:true})
+  });
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,200);
+  assert.equal(context.res.payload.vacancies.length,1);
+  assert.equal(context.res.payload.vacancies[0].id,'vacancy-legacy-001');
+});
