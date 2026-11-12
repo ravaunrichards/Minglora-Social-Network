@@ -686,7 +686,7 @@ export async function handlePersonalAiBotsAdminApi(context) {
       await saveStore();
       return (json(res,201,{ok:true,appointment}),true);
     }
-    const appointmentMatch=path.match(/^\\/api\\/admin\\/personal-ai-bots\\/appointments\\/([a-z0-9_-]+)$/i);
+    const appointmentMatch=path.match(/^\/api\/admin\/personal-ai-bots\/appointments\/([a-z0-9_-]+)$/i);
     if(appointmentMatch&&method==='PATCH'){
       const allowed=new Set(['status','notes']);
       if(!input||typeof input!=='object'||Array.isArray(input)||
