@@ -31,7 +31,7 @@ import { rankForYouVideos } from './domain/video-ranking.js';
 import { VIDEO_PLAYLIST_MAX_ITEMS, addVideoPlaylistItem, canViewVideoPlaylist, removeVideoPlaylistItem, reorderVideoPlaylistItems, validateVideoPlaylistInput } from '../backend/modules/video/playlists.js';
 import { VIDEO_CHANNEL_MAX_SUBSCRIPTIONS, canViewVideoChannel, subscribeToVideoChannel, unsubscribeFromVideoChannel, validateVideoChannelInput } from '../backend/modules/video/channels.js';
 import { summarizeCreatorVideoAnalytics } from './domain/video-analytics.js';
-import { enqueueVideoTranscodeJob, claimVideoTranscodeJob, completeVideoTranscodeJob, failVideoTranscodeJob, cancelVideoTranscodeJob, isVideoTranscodeLeaseValid } from './domain/video-transcode-jobs.js';
+import { enqueueVideoTranscodeJob, claimVideoTranscodeJob, completeVideoTranscodeJob, failVideoTranscodeJob, cancelVideoTranscodeJob, renewVideoTranscodeLease, isVideoTranscodeLeaseValid } from './domain/video-transcode-jobs.js';
 import { canViewStory as canViewStoryPolicy, removeExpiredStories } from '../backend/modules/stories/service.js';
 import { canPublishGroupPost, canDeleteGroupPost, canLeaveGroup } from '../backend/modules/groups/service.js';
 import { disconnectBlockedConnections } from '../backend/modules/relationships/blocks.js';
@@ -1643,6 +1643,8 @@ async function route(req, res) {
           await saveStore();
           return json(res,200,{job:null});
         }
+        sourceAsset.transcodeStatus='processing';
+        await saveStore();
         try{
           const sourceUrl=await resolveAssetUrl(sourceAsset);
           if(!sourceUrl)throw new Error('Source video URL is unavailable.');
@@ -1697,11 +1699,18 @@ async function route(req, res) {
         await saveStore();
         return json(res,200,{ok:true,status:'completed',assetId:outputAsset.id,previewUrl:completed.signedUrl||completed.url||null});
       }
+      if(p==='/api/internal/video-transcode/heartbeat'){
+        const job=jobs.find(item=>item.id===String(input.jobId||''));
+        const renewed=renewVideoTranscodeLease(jobs,{jobId:job?.id,leaseToken:String(input.leaseToken||'')});
+        if(renewed.status!=='renewed')return json(res,409,{error:'The video processing lease is no longer valid.'});
+        await saveStore();
+        return json(res,200,{ok:true,leaseExpiresAt:renewed.leaseExpiresAt});
+      }
       if(p==='/api/internal/video-transcode/fail'){
         const job=jobs.find(item=>item.id===String(input.jobId||''));
         if(!isVideoTranscodeLeaseValid(job,String(input.leaseToken||'')))return json(res,409,{error:'The video processing lease is no longer valid.'});
         const updated=failVideoTranscodeJob(jobs,{jobId:job.id,leaseToken:job.leaseToken,errorCode:String(input.errorCode||'TRANSCODE_FAILED').replace(/[^A-Z0-9_]/gi,'').slice(0,48)||'TRANSCODE_FAILED'});
-        if(!updated)return json(res,409,{error:'The video processing job could not be updated.'});
+        if(!updated||updated.status==='conflict')return json(res,409,{error:'The video processing job could not be updated.'});
         const sourceAsset=(db.mediaAssets||[]).find(asset=>asset.id===job.assetId&&asset.ownerId===job.ownerId);
         if(sourceAsset)sourceAsset.transcodeStatus=updated.status;
         await saveStore();
