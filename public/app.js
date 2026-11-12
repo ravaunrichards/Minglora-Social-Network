@@ -9411,11 +9411,12 @@ function renderReelCard(post,media,index){
     '</div>'+
     '<div class="minglora-reel-details">'+
       '<div class="minglora-reel-author">'+thoughtAvatarMarkup(author,'avatar',true)+'<span><strong data-profile="'+esc(author.id||'')+'">'+esc(author.name||'Minglora member')+'</strong><small>@'+esc(author.username||'')+' · '+timeAgo(post.createdAt)+'</small></span></div>'+
-      renderPostSoundtrack(post)+
+      renderPostSoundtrack(post)+videoRemixCreditMarkup(post)+
       '<div class="minglora-reel-actions">'+
         '<button type="button" class="'+(post.myReaction?'liked':'')+'" data-react="'+esc(post.id)+'">♡ '+esc(likedLabel)+' · '+Number(post.reactionCount||0).toLocaleString()+'</button>'+
         '<button type="button" data-focus-comment="'+esc(post.id)+'">Comments · '+comments.length.toLocaleString()+'</button>'+
         '<button type="button" data-watch-later="'+esc(post.id)+'" data-watch-later-saved="'+(post.isWatchLater?'true':'false')+'">'+(post.isWatchLater?'✓ Watch Later':'＋ Watch Later')+'</button>'+
+        (post.allowRemix===true&&post.userId!==state.user.id?'<button type="button" data-video-response="'+esc(post.id)+'">Video response</button>':'')+
         '<button type="button" data-toggle-save="'+esc(post.id)+'" data-saved="'+(post.isSaved?'true':'false')+'">'+(post.isSaved?'Saved':'Save')+'</button>'+
         '<button type="button" data-share="'+esc(post.id)+'">Share</button>'+
         '<button type="button" data-gift-content="post" data-gift-id="'+esc(post.id)+'" data-gift-username="'+esc(author.username||'')+'">Gift</button>'+
@@ -9994,11 +9995,11 @@ function forYouCard(post,index){
   return '<article class="fyp-video-card fyp-post-card '+(isVideo?'has-video':isImage?'has-image':'has-text')+'" data-fyp-post="'+esc(post.id)+'" data-post="'+esc(post.id)+'">'+
     mediaMarkup+'<div class="fyp-video-shade" aria-hidden="true"></div>'+(mediaCount>1?'<span class="fyp-media-count">'+mediaCountLabel+'</span>':'')+
     '<div class="fyp-overlay-bottom"><div class="fyp-creator-line"><button type="button" class="fyp-avatar-button" data-profile="'+esc(author.id||'')+'" aria-label="Open '+esc(author.name||'member')+' profile"><img class="fyp-avatar" src="'+esc(avatar(author))+'" alt=""></button><button type="button" class="fyp-creator-name" data-profile="'+esc(author.id||'')+'">@'+esc(author.username||'member')+' '+verifiedProfileBadge(author)+'</button>'+(author.id&&author.id!==state.user.id?'<button type="button" class="fyp-follow '+(following?'following':'')+'" data-foryou-follow="'+esc(author.id)+'" data-following="'+(following?'true':'false')+'">'+(following?'Following':'Follow')+'</button>':'')+'</div>'+
-    (caption&&media?'<p class="fyp-caption">'+esc(caption)+'</p>':'')+'<div class="fyp-post-meta"><span>'+esc(timeAgo(post.createdAt))+'</span>'+(mediaCount>1?'<span> · '+mediaCount+' attachments</span>':'')+'</div>'+(post.soundtrack?'<div class="fyp-sound-line">'+renderPostSoundtrack(post)+'</div>':'')+
+    (caption&&media?'<p class="fyp-caption">'+esc(caption)+'</p>':'')+videoRemixCreditMarkup(post)+'<div class="fyp-post-meta"><span>'+esc(timeAgo(post.createdAt))+'</span>'+(mediaCount>1?'<span> · '+mediaCount+' attachments</span>':'')+'</div>'+(post.soundtrack?'<div class="fyp-sound-line">'+renderPostSoundtrack(post)+'</div>':'')+
     '<form class="comment-form fyp-comment-form" data-comment-form="'+esc(post.id)+'" hidden><input name="text" maxlength="2000" placeholder="Add a comment…" aria-label="Add a comment" required><button type="submit">Send</button></form></div>'+
     '<aside class="fyp-action-rail" aria-label="Post actions"><button type="button" class="fyp-action '+liked+'" data-react="'+esc(post.id)+'" data-current-reaction="'+esc(post.myReaction||'like')+'" aria-label="Like post"><span>♥</span><small>'+Number(post.reactionCount||0).toLocaleString()+'</small></button>'+
     '<button type="button" class="fyp-action" data-focus-comment="'+esc(post.id)+'" aria-label="Comment"><span>▢</span><small>'+Number((post.comments||[]).length).toLocaleString()+'</small></button><button type="button" class="fyp-action" data-toggle-save="'+esc(post.id)+'" data-saved="'+(post.isSaved?'true':'false')+'" aria-label="Save post"><span>'+(post.isSaved?'▣':'♧')+'</span><small>Save</small></button>'+
-    '<button type="button" class="fyp-action" data-share="'+esc(post.id)+'" aria-label="Share post"><span>↗</span><small>Share</small></button><button type="button" class="fyp-action" data-gift-content="post" data-gift-id="'+esc(post.id)+'" data-gift-username="'+esc(author.username||'')+'" aria-label="Send gift"><span>🎁</span><small>Gift</small></button>'+
+    '<button type="button" class="fyp-action" data-share="'+esc(post.id)+'" aria-label="Share post"><span>↗</span><small>Share</small></button>'+(isVideo&&post.allowRemix===true&&post.userId!==state.user.id?'<button type="button" class="fyp-action fyp-video-response" data-video-response="'+esc(post.id)+'" aria-label="Create a video response"><span>↗</span><small>Respond</small></button>':'')+'<button type="button" class="fyp-action" data-gift-content="post" data-gift-id="'+esc(post.id)+'" data-gift-username="'+esc(author.username||'')+'" aria-label="Send gift"><span>🎁</span><small>Gift</small></button>'+
     (isVideo?'<button type="button" class="fyp-action fyp-more-action" data-fyp-not-interested="'+esc(post.id)+'" aria-label="Not interested"><span>⋯</span><small>More</small></button>':'<button type="button" class="fyp-action fyp-more-action" data-post-menu="'+esc(post.id)+'" aria-label="Post options"><span>⋯</span><small>More</small></button>')+(isVideo?'<button type="button" class="fyp-disc" data-fyp-sound="'+esc(post.id)+'" aria-label="Toggle sound">♫</button>':'')+'</aside>'+(isVideo?'<button type="button" class="fyp-play-toggle" data-fyp-play="'+esc(post.id)+'" aria-label="Pause or play video">Ⅱ</button>':'')+'</article>';
 }
 function teardownForYouPlayback(){
@@ -10095,6 +10096,7 @@ function setupForYouPlayback(root){
     button.textContent=video.muted?'♫':'🔊';
     if(!video.paused)video.play().catch(()=>{});
   });
+  bindOnce('[data-video-response]',button=>openVideoResponseFromButton(button));
   bindOnce('[data-fyp-not-interested]',async button=>{
     const postId=button.dataset.fypNotInterested;
     button.disabled=true;
