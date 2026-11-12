@@ -236,7 +236,7 @@
     const card=document.createElement("div");card.className="minglora-gift-fx-card";
     if(gift.model_url){
       const model=document.createElement("model-viewer");model.className="minglora-gift-fx-model";model.src=gift.model_url;model.alt=gift.name+" original Minglora gift";
-      model.setAttribute("auto-rotate","");model.setAttribute("autoplay","");model.setAttribute("rotation-per-second",rotationSpeed+"deg");model.setAttribute("interaction-prompt","none");model.setAttribute("shadow-intensity",".8");model.setAttribute("exposure","1.18");card.append(model);
+      const reducedMotion=Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);if(!reducedMotion){model.setAttribute("auto-rotate","");model.setAttribute("autoplay","");}model.setAttribute("rotation-per-second",rotationSpeed+"deg");model.setAttribute("interaction-prompt","none");model.setAttribute("shadow-intensity",".8");model.setAttribute("exposure","1.18");card.append(model);
     }else if(gift.image_url){
       const img=document.createElement("img");img.className="minglora-gift-fx-model";img.src=gift.image_url;img.alt=gift.name;card.append(img);
     }else{
