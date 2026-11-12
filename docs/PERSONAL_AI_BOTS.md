@@ -32,3 +32,12 @@ This tracker records the verified implementation state of the existing feature b
 - Latest code commits for the inventory fix: `fd0ac0ae6d204c736f3c54f1de67bff783086322` (runtime inventory), `cd62fb15f154669568917a52fa9dd7c219872fb8` (regression test). PR #202 remains open and draft.
 - Supabase production remains unchanged. Previous read-only checks still stand: existing project healthy; no deployed AI relational tables or matching migration ledger entries; no development branch. No DDL, DML, configuration, secrets, provider, worker or scheduler was changed.
 - Phase 1 relational database integration and Phase 3 normalized HR persistence remain blocked on a safe non-production database environment. Do not create a billable Supabase development branch without the user's explicit agreement; do not apply staged AI migrations to production. Overall AI Network remains incomplete.
+
+
+### CI recovery checkpoint — 2026-11-12
+
+- Latest general CI on `69bf524eaa4a028015e92cb6f41483fff1ca0e5e` passed: **1007 tests, 1007 passed, 0 failed** ([run 43270025234](https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/43270025234)). The For You navigation job passed **15/15**.
+- Corrected stale static asset-version tests to compare active `index.html` stylesheet/controller URLs with the exact entries cached by the service worker; no UI/production asset files were changed.
+- Corrected Supabase retry test fixture drift by deriving fixture collections from the existing `src/store.js` collection registry. The prior fixture omitted current identity, AI-team and other collections, which caused legitimate startup normalization writes and invalidated retry call-count assertions. All three retry scenarios now execute against a complete current state without triggering a startup migration save.
+- No CI test was removed, skipped, weakened, or suppressed. The full suite verifies current application behavior and all AI Bot tests on Node 24.
+- Production database, migrations, credentials, deployments, runtime workers and schedulers were not changed. PR #202 remains open/draft.
