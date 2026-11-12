@@ -28,6 +28,7 @@ import { buildSupabaseProviderCredentialPatch } from './auth-provider-credential
 import { paginateDescending } from './domain/pagination.js';
 import { rankForYouFeed } from './domain/feed-ranking.js';
 import { rankForYouVideos } from './domain/video-ranking.js';
+import { validateVideoDraftInput } from './domain/video-drafts.js';
 import { VIDEO_PLAYLIST_MAX_ITEMS, addVideoPlaylistItem, canViewVideoPlaylist, removeVideoPlaylistItem, reorderVideoPlaylistItems, validateVideoPlaylistInput } from '../backend/modules/video/playlists.js';
 import { VIDEO_CHANNEL_MAX_SUBSCRIPTIONS, canViewVideoChannel, subscribeToVideoChannel, unsubscribeFromVideoChannel, validateVideoChannelInput } from '../backend/modules/video/channels.js';
 import { summarizeCreatorVideoAnalytics } from './domain/video-analytics.js';
@@ -2305,6 +2306,7 @@ async function route(req, res) {
           blocks:(db.blocks||[]).filter(item=>item.blockerId===user.id||item.blockedId===user.id),
           savedPosts:(db.savedPosts||[]).filter(item=>item.userId===user.id),
           savedPostCollections:(db.savedPostCollections||[]).filter(item=>item.userId===user.id),
+          videoDrafts:(db.videoDrafts||[]).filter(item=>item.userId===user.id),
           groups:ownedGroups,
           groupPosts:(db.groupPosts||[]).filter(item=>item.userId===user.id||ownedGroupIds.has(item.groupId)),
           stories:ownedStories,
@@ -5539,6 +5541,16 @@ async function route(req, res) {
         if(requestedVideoFormat!==null&&!['video','reel'].includes(requestedVideoFormat))return json(res,400,{error:'Video format must be video or reel.'});
         const requestedRemixSourceId=String(input.remixOfPostId||'').trim()||null;
         const requestedRemixPolicy=requestedVideoFormat?normalizeVideoRemixPolicy(input.remixPolicy,'off'):null;
+        const requestedDraftId=String(input.videoDraftId||'').trim()||null;
+        const publishingDraft=requestedDraftId?(db.videoDrafts||[]).find(item=>item.id===requestedDraftId&&item.userId===user.id):null;
+        if(requestedDraftId&&!publishingDraft)return json(res,404,{error:'Video draft not found.'});
+        if(publishingDraft&&(!requestedVideoFormat||publishingDraft.videoFormat!==requestedVideoFormat||
+          publishingDraft.audience!==String(input.audience||'public')||
+          publishingDraft.remixPolicy!==(requestedRemixPolicy||'off')||
+          (publishingDraft.remixOfPostId||null)!==requestedRemixSourceId||
+          (publishingDraft.mediaIds||[]).length!==ids.length||publishingDraft.mediaIds.some(id=>!ids.includes(id)))){
+          return json(res,400,{error:'The published video details must match the selected private draft.'});
+        }
         if(requestedVideoFormat&&!requestedRemixPolicy)return json(res,400,{error:'Remix policy must be off, everyone, followers or friends.'});
         if(!requestedVideoFormat&&(requestedRemixSourceId||input.remixPolicy!==undefined))return json(res,400,{error:'Remix settings can only be used with a video post.'});
         let remixSource=null;
@@ -5567,6 +5579,7 @@ async function route(req, res) {
         assets.forEach(asset=>{asset.status='attached';asset.attachedTo=post.id;enqueueAttachedVideoTranscode(asset,post);});db.posts.unshift(post);
         requestedTagIds.forEach(taggedId=>{const taggedMember=db.users.find(member=>member.id===taggedId);if(taggedMember)notify(taggedId,user.id,'post_tagged',(user.name||'A Minglora friend')+' tagged you in a post.',{postId:post.id});});
         if(remixSource)notify(remixSource.userId,user.id,'video_remix',(user.name||'A Minglora member')+' remixed your video.',{postId:remixSource.id,remixPostId:post.id});
+        if(publishingDraft)db.videoDrafts=(db.videoDrafts||[]).filter(item=>!(item.id===publishingDraft.id&&item.userId===user.id));
         await saveStore();
         return json(res,201,{post:await publicPost(post,user.id)});
       }
@@ -5599,6 +5612,58 @@ async function route(req, res) {
         (post.mediaIds||[]).forEach(id=>{const asset=(db.mediaAssets||[]).find(item=>item.id===id);if(asset){asset.status='deleted';asset.deletedAt=now();}});
         db.savedPosts=(db.savedPosts||[]).filter(saved=>saved.postId!==post.id);
         await saveStore();return json(res,200,{ok:true,id:post.id});
+      }
+      if(method==='GET'&&p==='/api/video-drafts'){
+        const drafts=(db.videoDrafts||[])
+          .filter(item=>item.userId===user.id)
+          .sort((a,b)=>new Date(b.updatedAt||b.createdAt||0)-new Date(a.updatedAt||a.createdAt||0))
+          .map(item=>{
+            const asset=(db.mediaAssets||[]).find(media=>media.id===(item.mediaIds||[])[0]&&media.ownerId===user.id&&media.slot==='post');
+            return {
+              id:item.id,text:item.text||'',audience:item.audience||'private',
+              videoFormat:item.videoFormat||'video',remixPolicy:item.remixPolicy||'off',
+              remixOfPostId:item.remixOfPostId||null,mediaIds:[...(item.mediaIds||[])],
+              mediaName:asset?.originalName||'Uploaded video',
+              mediaSize:Number(asset?.byteSize||0),
+              mediaAvailable:Boolean(asset&&asset.status==='uploaded'&&asset.mediaType==='video'),
+              createdAt:item.createdAt||null,updatedAt:item.updatedAt||item.createdAt||null
+            };
+          });
+        return json(res,200,{drafts,count:drafts.length,maxDrafts:50});
+      }
+      if(method==='POST'&&p==='/api/video-drafts'){
+        db.videoDrafts ||= [];
+        if(db.videoDrafts.filter(item=>item.userId===user.id).length>=50)return json(res,409,{error:'You can keep up to 50 private video drafts. Delete an old draft before saving another.'});
+        const validation=validateVideoDraftInput(input);
+        if(!validation.valid)return json(res,400,{error:validation.errors.join(' ')});
+        const asset=(db.mediaAssets||[]).find(item=>item.id===validation.value.mediaIds[0]&&item.ownerId===user.id&&item.slot==='post'&&item.status==='uploaded'&&item.mediaType==='video');
+        if(!asset)return json(res,400,{error:'The selected video upload is not available for this draft. Upload it again.'});
+        const timestamp=now();
+        const draft={id:uid(),userId:user.id,...validation.value,createdAt:timestamp,updatedAt:timestamp};
+        db.videoDrafts.push(draft);
+        await saveStore();
+        return json(res,201,{draft:{id:draft.id,text:draft.text,audience:draft.audience,videoFormat:draft.videoFormat,remixPolicy:draft.remixPolicy,remixOfPostId:draft.remixOfPostId,mediaIds:draft.mediaIds,mediaName:asset.originalName||'Uploaded video',mediaSize:Number(asset.byteSize||0),mediaAvailable:true,createdAt:draft.createdAt,updatedAt:draft.updatedAt}});
+      }
+      const videoDraftMatch=p.match(/^\/api\/video-drafts\/([^/]+)$/);
+      if(method==='PATCH'&&videoDraftMatch){
+        const draftId=decodeURIComponent(videoDraftMatch[1]);
+        const draft=(db.videoDrafts||[]).find(item=>item.id===draftId&&item.userId===user.id);
+        if(!draft)return json(res,404,{error:'Video draft not found.'});
+        const validation=validateVideoDraftInput(input,draft);
+        if(!validation.valid)return json(res,400,{error:validation.errors.join(' ')});
+        const asset=(db.mediaAssets||[]).find(item=>item.id===validation.value.mediaIds[0]&&item.ownerId===user.id&&item.slot==='post'&&item.status==='uploaded'&&item.mediaType==='video');
+        if(!asset)return json(res,400,{error:'The selected video upload is not available for this draft. Upload it again.'});
+        Object.assign(draft,validation.value,{updatedAt:now()});
+        await saveStore();
+        return json(res,200,{draft:{id:draft.id,text:draft.text,audience:draft.audience,videoFormat:draft.videoFormat,remixPolicy:draft.remixPolicy,remixOfPostId:draft.remixOfPostId,mediaIds:draft.mediaIds,mediaName:asset.originalName||'Uploaded video',mediaSize:Number(asset.byteSize||0),mediaAvailable:true,createdAt:draft.createdAt,updatedAt:draft.updatedAt}});
+      }
+      if(method==='DELETE'&&videoDraftMatch){
+        const draftId=decodeURIComponent(videoDraftMatch[1]);
+        const before=(db.videoDrafts||[]).length;
+        db.videoDrafts=(db.videoDrafts||[]).filter(item=>!(item.id===draftId&&item.userId===user.id));
+        if(db.videoDrafts.length===before)return json(res,404,{error:'Video draft not found.'});
+        await saveStore();
+        return json(res,200,{ok:true,id:draftId,mediaRetained:true});
       }
       if(method==='GET'&&p==='/api/video-watch-later'){
         const records=(db.savedPosts||[]).filter(saved=>saved.userId===user.id&&saved.readLater===true);
