@@ -64,7 +64,7 @@ test('each non-default style has isolated visual treatment and all layout breakp
   for(const style of styles.slice(1))assert.ok(css.includes('data-profile-style="'+style+'"'),style);
   for(const layout of layouts)assert.ok(css.includes('data-profile-screen-layout="'+layout+'"'),layout);
   assert.match(css,/@media\(max-width:640px\)/);
-  for(const marker of ['data-profile-count="followers"','data-profile-count="subscribers"','.profile-body--established','.profile-reel-tile video'])assert.ok(css.includes(marker),marker);
+  for(const marker of ['data-profile-count="friends"','data-profile-count="subscribers"','.profile-body--established','.profile-reel-tile video'])assert.ok(css.includes(marker),marker);
   assert.match(css,/minmax\(0,1fr\)/);
   assert.ok(!css.includes('data-profile-style="facebook" .profile-cover{display:none'));
 });
