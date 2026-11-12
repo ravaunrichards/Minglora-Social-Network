@@ -20,7 +20,7 @@ test('ten profile styles and nine screen layouts expose all 90 combinations',()=
   for(const style of styles)assert.match(registry,new RegExp("id: '"+style+"'"));
   for(const layout of layouts)assert.match(registry,new RegExp("id: '"+layout+"'"));
   assert.match(registry,/const matrix = styles\.flatMap/);
-  assert.match(registry,/supports,/);
+  assert.match(registry,/const supports =/);
   assert.equal(styles.length*layouts.length,90);
 });
 
