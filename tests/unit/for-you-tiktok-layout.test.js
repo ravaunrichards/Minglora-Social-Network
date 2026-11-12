@@ -22,7 +22,7 @@ test('Minglora For You uses an edge-to-edge, TikTok-style vertical video stage',
   assert.match(css, /\.fyp-video-card\.has-video\s*\{[\s\S]*width:min\(100vw,56\.25dvh\)!important/);
   assert.match(css, /\.fyp-video-card\.has-video \.fyp-video\s*\{[\s\S]*object-fit:cover!important/);
   assert.match(html, /for-you-tiktok\.css\?v=20261111-tiktok-video-layout-1/);
-  assert.ok(sw.includes('/for-you-tiktok.css?v=20261111-tiktok-video-layout-1'));
+  assert.ok(sw.includes('/for-you-tiktok.css?v=20261112-for-you-feedback-menu-1'));
   assert.match(sw, /CACHE_NAME='minglora-shell-v[0-9]+-self-updating-1'/);
 });
 
