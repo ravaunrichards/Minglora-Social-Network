@@ -32,8 +32,8 @@ test("gift sound runtime map references active Minglora catalogue gift codes onl
     assert.ok(gift, "gift code exists in catalogue: " + code);
     assert.equal(gift.active, true, "only active gifts receive runtime mappings: " + code);
     assert.equal(entry.slug, slugify(gift.name), "sound folder aligns to the exact gift name: " + gift.name);
-    assert.equal(entry.reviewStatus, "candidate_real_recording_needs_listening_review");
-    assert.equal(entry.playbackApproved, false, "candidate sound cannot automatically play to members");
+    assert.equal(entry.reviewStatus, "real_recording_mapped_source_verified_human_audio_review_pending");
+    assert.equal(entry.playbackEnabled, true, "source-verified recordings are enabled for mapped gifts");
     assert.equal(entry.audioUrl, "/assets/Gift%20Sounds/" + entry.slug + "/sound.mp3");
   }
 });
@@ -46,8 +46,8 @@ test("every runtime gift code points to a real MP3 file in its matching artwork-
   }
 });
 
-test("candidate audio preview is permitted but unapproved gift event playback remains silent", () => {
-  assert.match(fx, /if\(!entry\|\|\(!entry\.playbackApproved&&options\.review!==true\)\)return false;/);
+test("mapped recorded gift sounds play on gift events and preview", () => {
+  assert.match(fx, /if\(!entry\|\|\(!entry\.playbackEnabled&&options\.review!==true\)\)return false;/);
   assert.match(fx, /play\(gift,\{review:true\}\)/);
   assert.match(fx, /if\(options\.sound!==false\)void play\(gift,options\.soundOptions\|\|\{\}\);/);
   assert.doesNotMatch(fx, /createOscillator|const profiles=/);
@@ -63,9 +63,9 @@ test("Gifts Studio preview and successful send preserve existing gift preview an
 
 test("gift sound map is versioned, precached and included in the current application shell", () => {
   const effectsVersion = html.match(/src="(\/gift-effects\.js\?v=[^"]+)"/)?.[1] || "";
-  assert.match(effectsVersion, /20261111-real-gift-recordings-1/);
+  assert.match(effectsVersion, /20261112-real-gift-sounds-1/);
   assert.ok(sw.includes("'" + effectsVersion + "'"), "current gift FX script is precached");
-  assert.ok(sw.includes("const CACHE_NAME='minglora-shell-v285-self-updating-1'"));
+  assert.ok(sw.includes("const CACHE_NAME='minglora-shell-v291-self-updating-1'"));
   assert.ok(sw.includes("SHELL.push('/assets/Gift%20Sounds/gift-code-map.json')"));
 });
 
@@ -78,7 +78,7 @@ test("restricted server route exposes only gift map and slug-specific MP3 files"
   assert.ok(server.includes("giftSoundFile.startsWith(giftSoundRoot + path.sep)"));
 });
 
-test("review candidate count remains aligned with the delivered per-gift MP3 files", () => {
+test("recording coverage remains aligned with the delivered per-gift MP3 files", () => {
   assert.equal(candidateMap.status, "review_required_not_production_approved");
   assert.equal(candidateMap.mappedGiftCount, candidateMap.mappings.length);
   assert.equal(new Set(candidateMap.mappings.map(item => item.giftSlug)).size, candidateMap.mappings.length);
