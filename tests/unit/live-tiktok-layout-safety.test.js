@@ -10,11 +10,14 @@ const css = fs.readFileSync(path.join(root, 'public/live-tiktok-compact.css'), '
 const fix = css.slice(css.lastIndexOf('/* LIVE HUD recovery:'));
 const guardrails = fs.readFileSync(path.join(root, 'public/live-interface-guardrails.css'), 'utf8');
 
-test('Mobile LIVE keeps host name and heart/count in the same row, with LIVE NOW below the name', () => {
-  assert.ok(guardrails.includes('top:84px!important'));
+const finalLayout = guardrails.slice(guardrails.lastIndexOf('/* Final no-overlap layout:'));
+
+test('Mobile LIVE keeps the host name and heart/count together, with LIVE NOW below the name', () => {
   assert.ok(guardrails.includes('live-host-identity-copy'));
   assert.ok(guardrails.includes('live-host-live-status'));
   assert.ok(guardrails.includes('live-like-control>small{display:none!important}'));
+  assert.ok(finalLayout.includes('grid-template-rows:minmax(210px,1fr) clamp(150px,24dvh,220px)!important'));
+  assert.ok(finalLayout.includes('grid-column:1!important;grid-row:1!important'));
   assert.ok(!app.includes("<small>likes</small>"));
 });
 
@@ -28,9 +31,10 @@ test('Host End LIVE control is inside the LIVE panel header, not over the video'
   assert.ok(panel.includes("class='live-panel-end-button'"));
   assert.ok(panel.indexOf('live-fullscreen-side-head') < panel.indexOf("id='live-leave'"));
   assert.doesNotMatch(hud, /live-host-power-button|id='live-leave'/);
-  assert.ok(guardrails.includes('.live-panel-end-button svg'));
-  assert.ok(guardrails.includes('live-fullscreen-side-head{'));
-  assert.ok(guardrails.includes('inset:36px 0 0 0!important'));
+  assert.ok(finalLayout.includes('.live-panel-end-button svg'));
+  assert.ok(finalLayout.includes('live-fullscreen-side-head{'));
+  assert.ok(finalLayout.includes('position:relative!important;inset:auto!important;grid-column:1!important;grid-row:2!important'));
+  assert.ok(finalLayout.includes('position:relative!important;inset:auto!important;display:flex!important;flex:1 1 0!important'));
 });
 
 test('Fluid Panel has one dominant host tile and a vertical guest rail', () => {
