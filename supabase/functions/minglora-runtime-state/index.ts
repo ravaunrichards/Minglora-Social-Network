@@ -408,7 +408,7 @@ Deno.serve(async (req: Request) => {
     catch{return json(400,{error:"Enter the original source page and exact licence URL."});}
     if(sourceUrl.protocol!=="https:"||licenseUrl.protocol!=="https:"||
        !String(metadata.sourceWebsite||"").trim()||!String(metadata.licenseName||"").trim()||
-       !String(metadata.downloadDate||"").match(/^\\d{4}-\\d{2}-\\d{2}$/)){
+       !String(metadata.downloadDate||"").match(/^\d{4}-\d{2}-\d{2}$/)){
       return json(400,{error:"The original source, licence and download date are required."});
     }
     const {data:source,error:sourceError}=await admin.from("minglora_audio_sources").upsert({
@@ -554,7 +554,7 @@ Deno.serve(async (req: Request) => {
 
   if (action === "audio_event_resolve") {
     const eventKey=String(input.eventKey||"");
-    if(!/^([a-z][a-z0-9_]*\\.)[a-z][a-z0-9_]*$/.test(eventKey))return json(400,{error:"Invalid audio event key."});
+    if(!/^([a-z][a-z0-9_]*\.)[a-z][a-z0-9_]*$/.test(eventKey))return json(400,{error:"Invalid audio event key."});
     const {data:event,error:eventError}=await admin.from("minglora_audio_events")
       .select("event_key,is_active").eq("event_key",eventKey).maybeSingle();
     if(eventError||!event||!event.is_active)return json(404,{error:"No active audio event is registered."});
