@@ -1,0 +1,39 @@
+name: Profile style validation
+on:
+  push:
+    branches:
+      - feat/minglora-profile-style-library-10x9-20261112
+  pull_request:
+    paths:
+      - public/app.js
+      - public/settings.js
+      - public/profile-style-system.js
+      - public/profile-style-system.css
+      - src/server.js
+      - tests/unit/profile-*.test.js
+      - .github/workflows/profile-style-validation.yml
+
+jobs:
+  validate-profile-styles:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Check profile system JavaScript syntax
+        run: |
+          node --check public/app.js
+          node --check public/settings.js
+          node --check public/profile-style-system.js
+          node --check src/server.js
+          node --check public/sw.js
+      - name: Run profile style and Facebook regression tests
+        run: node --test tests/unit/profile-*.test.js tests/unit/settings-facebook-navigation.test.js
