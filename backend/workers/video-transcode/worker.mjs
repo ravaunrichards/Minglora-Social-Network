@@ -145,6 +145,17 @@ async function tusUpload(filePath, upload) {
 
 async function processJob(claim) {
   const { job, source } = claim;
+  let heartbeatInFlight = null;
+  const heartbeatTimer = setInterval(() => {
+    if (!heartbeatInFlight) {
+      heartbeatInFlight = api('/api/internal/video-transcode/heartbeat', {
+        jobId: job.id, leaseToken: job.leaseToken
+      }).catch(error => {
+        process.stderr.write('Video worker lease heartbeat failed for job ' + job.id + ': ' + String(error?.message || error).slice(0, 120) + '\\n');
+      }).finally(() => { heartbeatInFlight = null; });
+    }
+  }, 5 * 60 * 1000);
+  heartbeatTimer.unref?.();
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'minglora-video-'));
   const input = path.join(directory, 'source.bin');
   const output = path.join(directory, 'optimized.mp4');
@@ -172,6 +183,8 @@ async function processJob(claim) {
     }
     process.stderr.write('Video transcode failed for job ' + job.id + ': ' + errorCode + '\n');
   } finally {
+    clearInterval(heartbeatTimer);
+    if (heartbeatInFlight) await heartbeatInFlight;
     await fs.rm(directory, { recursive: true, force: true }).catch(() => {});
   }
 }
