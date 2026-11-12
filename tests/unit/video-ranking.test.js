@@ -73,17 +73,27 @@ test('For You promotes videos and creators after explicit Interested feedback', 
 });
 
 test('For You interest feedback is private to the viewer and negative feedback still excludes the video', () => {
-  const posts = [post('target', 'creator-a'), post('other', 'creator-b')];
+  const posts = [post('other', 'creator-b'), post('target', 'creator-a')];
   const ranked = rankForYouVideos(
     posts, 'viewer', [], [], [],
     [{ userId: 'another-viewer', postId: 'target', action: 'interested' }],
     now
   );
-  assert.equal(ranked[0].id, 'target');
+  assert.equal(ranked[0].id, 'other');
   const hidden = rankForYouVideos(
     posts, 'viewer', [], [], [],
     [{ userId: 'viewer', postId: 'target', action: 'not_interested' }],
     now
   );
   assert.deepEqual(hidden.map(item => item.id), ['other']);
+});
+
+test('For You route passes only the signed-in member feedback into personalization', async () => {
+  const fs = await import('node:fs');
+  const path = await import('node:path');
+  const { fileURLToPath } = await import('node:url');
+  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+  const server = fs.readFileSync(path.join(root, 'src/server.js'), 'utf8');
+  assert.match(server, /const viewerFeedback=\(db\.videoFeedback\|\|\[\]\)\.filter\(item=>item\.userId===user\.id\)/);
+  assert.match(server, /rankForYouVideos\(visiblePosts,user\.id,activeFollows\(\),db\.savedPosts\|\|\[\],db\.videoWatchEvents\|\|\[\],viewerFeedback\)/);
 });
