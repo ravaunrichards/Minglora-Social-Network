@@ -422,11 +422,22 @@ async function main(){
   const catalogByName=new Map();
   const catalogByCode=new Map();
   const artworkByName=new Map();
+  const ambiguousArtworkNames=new Set();
   for(const gift of catalog.gifts||[]){
     if(gift.name)catalogByName.set(normalizeName(gift.name),gift);
     if(gift.code)catalogByCode.set(String(gift.code),gift);
   }
-  for(const artwork of artworkManifest.gifts||[])if(artwork.name)artworkByName.set(normalizeName(artwork.name),artwork);
+  // Never attach an arbitrary variant when the Artwork manifest contains
+  // duplicate visible names. Only unique normalized-name matches are trusted.
+  for(const artwork of artworkManifest.gifts||[]){
+    if(!artwork.name)continue;
+    const key=normalizeName(artwork.name);
+    if(!key||ambiguousArtworkNames.has(key))continue;
+    if(artworkByName.has(key)){
+      artworkByName.delete(key);
+      ambiguousArtworkNames.add(key);
+    }else artworkByName.set(key,artwork);
+  }
   const processed=await mapLimit(files,4,async file=>{
     try{return await processScreenshot(file,catalogByName);}
     catch(error){return {file,detected:0,error:String(error?.message||error),results:[]};}
@@ -483,6 +494,7 @@ async function main(){
   const catalogMotionCodes=new Set();
   const duplicateCatalogMotionCodes=[];
   let artworkReferenceMatches=0;
+  let artworkReferenceAmbiguousMatches=0;
   let capturedCatalogProfiles=0;
   let fallbackCatalogProfiles=0;
   let inactiveCatalogMatches=0;
@@ -501,8 +513,10 @@ async function main(){
     const extracted=extractedByCatalogCode.get(code)||null;
     const seed=parseInt(hash(code),16)>>>0;
     const fallback=animationProfile(sourceCatalog.category,seed,sourceCatalog.name);
-    const artwork=artworkByName.get(normalizeName(sourceCatalog.name));
+    const artworkKey=normalizeName(sourceCatalog.name);
+    const artwork=artworkByName.get(artworkKey)||null;
     if(artwork)artworkReferenceMatches++;
+    else if(ambiguousArtworkNames.has(artworkKey))artworkReferenceAmbiguousMatches++;
     if(extracted)capturedCatalogProfiles++;else fallbackCatalogProfiles++;
     catalogMotionCodes.add(code);
     catalogMotionProfiles.push({
@@ -579,7 +593,7 @@ async function main(){
     catalog_motion_profiles:catalogMotionProfiles.length,catalog_motion_captured_profiles:capturedCatalogProfiles,
     catalog_motion_fallback_profiles:fallbackCatalogProfiles,catalog_motion_inactive_matches:inactiveCatalogMatches,
     catalog_motion_invalid_profiles:invalidCatalogProfiles,catalog_motion_duplicate_codes:duplicateCatalogMotionCodes,
-    artwork_reference_matches:artworkReferenceMatches,
+    artwork_reference_matches:artworkReferenceMatches,artwork_reference_ambiguous_matches:artworkReferenceAmbiguousMatches,
     confidence_counts:confidenceCounts,quality_flag_counts:qualityFlagCounts,
     duplicate_poster_groups:duplicatePosterGroups,
     screenshots_with_errors:processed.filter(x=>x.error).map(x=>({file:x.file,error:x.error})),
