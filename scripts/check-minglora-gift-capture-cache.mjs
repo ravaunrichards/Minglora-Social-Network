@@ -40,12 +40,12 @@ async function main() {
   }
   const value = complete ? "true" : "false";
   if (process.env.GITHUB_OUTPUT) {
-    await fs.appendFile(process.env.GITHUB_OUTPUT, "reuse=" + value + "\\n");
+    await fs.appendFile(process.env.GITHUB_OUTPUT, "reuse=" + value + "\n");
   }
-  process.stdout.write("[gift-animation-cache] reuse=" + value + "\\n");
+  process.stdout.write("[gift-animation-cache] reuse=" + value + "\n");
 }
 
 main().catch(error => {
-  process.stderr.write(String(error?.stack || error) + "\\n");
+  process.stderr.write(String(error?.stack || error) + "\n");
   process.exitCode = 1;
 });
