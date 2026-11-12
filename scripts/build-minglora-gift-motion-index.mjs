@@ -11,7 +11,7 @@ const CATALOG_PATH = path.join(ROOT, "data", "minglora-gift-catalog.json");
 const ARTWORK_PATH = path.join(ROOT, "assets", "Artwork", "manifest.json");
 
 function normalizeName(value) {
-  return String(value || "").normalize("NFKD").replace(/[\\u0300-\\u036f]/g, "")
+  return String(value || "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
     .toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
 function hash(value) {
@@ -215,7 +215,7 @@ async function main() {
     authoritative_catalog:"data/minglora-gift-catalog.json",
     gifts:profiles
   };
-  const serialized = JSON.stringify(motionIndex, null, 2) + "\\n";
+  const serialized = JSON.stringify(motionIndex, null, 2) + "\n";
   await fs.mkdir(path.dirname(PUBLIC_INDEX), {recursive:true});
   await fs.writeFile(path.join(OUTPUT_DIR,"catalog-motion-index.json"), serialized, "utf8");
   await fs.writeFile(PUBLIC_INDEX, serialized, "utf8");
@@ -224,8 +224,10 @@ async function main() {
   manifest.catalog_motion_profile_count = profiles.length;
   manifest.processing_notes = Array.isArray(manifest.processing_notes) ? manifest.processing_notes : [];
   const note = "The catalogue motion index covers every active canonical gift, keeps the exact Coin price, original image, 3D model, original animation and sound settings, layers capture-derived motion for exact Gifts matches, and uses a deterministic name/category motion profile for the remaining active gifts. Only unique exact-name Artwork references are attached; ambiguous variants remain unlinked.";
-  if (!manifest.processing_notes.includes(note)) manifest.processing_notes.push(note);
-  await fs.writeFile(MANIFEST_PATH, JSON.stringify(manifest, null, 2) + "\\n", "utf8");
+  const oldNoteIndex = manifest.processing_notes.findIndex(value => String(value).includes("compact catalogue motion index joins"));
+  if (oldNoteIndex >= 0) manifest.processing_notes[oldNoteIndex] = note;
+  else if (!manifest.processing_notes.includes(note)) manifest.processing_notes.push(note);
+  await fs.writeFile(MANIFEST_PATH, JSON.stringify(manifest, null, 2) + "\n", "utf8");
 
   report.catalog_motion_profiles = profiles.length;
   report.catalog_motion_captured_profiles = capturedCount;
@@ -235,12 +237,12 @@ async function main() {
   report.catalog_motion_duplicate_codes = duplicates;
   report.artwork_reference_matches = artworkMatchCount;
   report.artwork_reference_ambiguous_matches = artworkAmbiguousCount;
-  await fs.writeFile(REPORT_PATH, JSON.stringify(report, null, 2) + "\\n", "utf8");
+  await fs.writeFile(REPORT_PATH, JSON.stringify(report, null, 2) + "\n", "utf8");
 
-  const readme = "# Minglora individual gift animations\\n\\n" +
-    "Generated from the original 131 source captures in assets/Gifts/. Each captured gift retains its own transparent WebP poster and self-contained animated SVG.\\n\\n" +
-    "catalog-motion-index.json maps every active canonical catalogue gift to a deterministic per-gift motion profile while preserving its exact gift code, name, Coin price, original image URL, original 3D model URL, original animation preset and sound preset. Exact capture matches use their individual Gifts motion profile. The remaining active gifts use a name/category motion profile over their original catalogue model. Unique exact-name Artwork manifest references include the original Artwork path, hash, review status and warnings; ambiguous names are never assigned an arbitrary variant.\\n\\n" +
-    "The original source captures and original catalogue artwork/models are not overwritten. Screenshot-derived assets remain marked for visual review. The motion layer is Minglora-owned choreography and is not a reproduction of TikTok's proprietary animation files.\\n";
+  const readme = "# Minglora individual gift animations\n\n" +
+    "Generated from the original 131 source captures in assets/Gifts/. Each captured gift retains its own transparent WebP poster and self-contained animated SVG.\n\n" +
+    "catalog-motion-index.json maps every active canonical catalogue gift to a deterministic per-gift motion profile while preserving its exact gift code, name, Coin price, original image URL, original 3D model URL, original animation preset and sound preset. Exact capture matches use their individual Gifts motion profile. The remaining active gifts use a name/category motion profile over their original catalogue model. Unique exact-name Artwork manifest references include the original Artwork path, hash, review status and warnings; ambiguous names are never assigned an arbitrary variant.\n\n" +
+    "The original source captures and original catalogue artwork/models are not overwritten. Screenshot-derived assets remain marked for visual review. The motion layer is Minglora-owned choreography and is not a reproduction of TikTok's proprietary animation files.\n";
   await fs.writeFile(path.join(OUTPUT_DIR,"README.md"), readme, "utf8");
 
   process.stdout.write(JSON.stringify({
@@ -253,10 +255,10 @@ async function main() {
     inactive_catalogue_gifts:inactiveCount,
     original_captured_gifts:manifest.gifts.length,
     source_screenshots:manifest.source_screenshots.length
-  }, null, 2) + "\\n");
+  }, null, 2) + "\n");
 }
 
 main().catch(error => {
-  process.stderr.write(String(error?.stack || error) + "\\n");
+  process.stderr.write(String(error?.stack || error) + "\n");
   process.exitCode = 1;
 });
