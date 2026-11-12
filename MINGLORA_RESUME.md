@@ -572,3 +572,14 @@ Continue with independent non-database work that can be built and verified in th
 - Fixed the AI-related Admin Centre overview gap: it now lists all 91 current application-store collections, including team handoffs, persona versions, multilingual settings, language evaluation sets and Creator Studio drafts. Exact-source parity check: 91 active / 91 unique mapped / no missing or extra keys. The platform overview regression test now checks the complete list without a stale fixed count.
 - Key new commits: `4fa34c281ea794ee12d8732f25a3aec53d361ad7`, `53fbea84f19b6d8cde0cc23f3ad7ac9d3ccd8f10`, `74994bf6ed7823a55e974f7d85ec8d30c3778b15`, `4b10141e25dba5b533b34d35f8dc84bef96108ae`, `feb363a95d10be5c9f28f96a311b59f42628a25c`, `e89f0f812009a9e189e74a3d2dff988e02a8cfcf`, `fd0ac0ae6d204c736f3c54f1de67bff783086322`, and `cd62fb15f154669568917a52fa9dd7c219872fb8`.
 - PR #202 remains open/draft. No production migration, database write, deployment, worker, scheduler or provider runtime change was performed. Existing Supabase project remains the only project. The next persistence milestone still requires a user-approved non-production branch because creating one can incur ongoing compute charges.
+
+
+## CI recovery checkpoint — 2026-11-12
+
+- Latest full repository CI on `69bf524eaa4a028015e92cb6f41483fff1ca0e5e` passed **1007/1007** tests; separate For You navigation job passed **15/15** ([run 43270025234](https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/43270025234)).
+- Fixed stale Admin Centre/Stories cache tests by validating the currently referenced assets between `public/index.html` and `public/sw.js` rather than freezing old version strings.
+- Fixed retry-test state drift in `tests/unit/supabase-persistence-retry.test.js`: the mocked initial state now uses the exact `COLLECTIONS` registry from `src/store.js`, so new collections cannot cause normalization-save side effects that distort request counts. This was a test fixture defect, not a production persistence behavior failure.
+- CI tests were not skipped or suppressed. Full suite contains the AI bot API, worker, UI and schema tests.
+- Latest code/test commits: Admin Centre cache-test update `ecabe5300526bce173599ef6022a00b6abc7bfd6`; Stories cache-test update `d116037d4d232b54c509bc39e140bd80796fc6f8`; Supabase fixture update `69bf524eaa4a028015e92cb6f41483fff1ca0e5e`.
+- PR #202 remains open/draft. No production database writes, migrations, deployments, provider configuration, workers or schedulers were changed.
+- Next stage remains safe Phase 1/3 relational persistence work. A live non-production Supabase branch remains uncreated because the supported branch operation may incur ongoing compute charges; do not create it without explicit user approval, and do not use production for migration testing.
