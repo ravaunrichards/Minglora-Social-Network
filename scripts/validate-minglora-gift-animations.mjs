@@ -9,8 +9,14 @@ const REPORT_PATH = path.join(OUTPUT_DIR, "extraction-report.json");
 const MOTION_INDEX_PATH = path.join(OUTPUT_DIR, "catalog-motion-index.json");
 const PUBLIC_MOTION_INDEX_PATH = path.join(ROOT, "public", "assets", "animations", "gifts", "catalog-motion-index.json");
 const CATALOG_PATH = path.join(ROOT, "data", "minglora-gift-catalog.json");
+const ARTWORK_MANIFEST_PATH = path.join(ROOT, "assets", "Artwork", "manifest.json");
 const fail = message => { throw new Error("[gift-animation-validation] " + message); };
 const sha256 = value => crypto.createHash("sha256").update(value).digest("hex");
+function normalizeGiftName(value) {
+  return String(value || "").normalize("NFKD").replace(/[\\u0300-\\u036f]/g, "")
+    .toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
 
 function safeAssetPath(relativePath, field, id) {
   if (typeof relativePath !== "string" || !relativePath.startsWith("assets/animations/gifts/")) {
@@ -90,6 +96,19 @@ async function main() {
   const motionIndex = JSON.parse(await fs.readFile(MOTION_INDEX_PATH, "utf8"));
   const publicMotionIndex = JSON.parse(await fs.readFile(PUBLIC_MOTION_INDEX_PATH, "utf8"));
   const canonicalCatalog = JSON.parse(await fs.readFile(CATALOG_PATH, "utf8"));
+  const artworkManifest = JSON.parse(await fs.readFile(ARTWORK_MANIFEST_PATH, "utf8"));
+  const artworkByName = new Map();
+  const ambiguousArtworkNames = new Set();
+  for (const artwork of artworkManifest.gifts || []) {
+    const key = normalizeGiftName(artwork.name);
+    if (!key || ambiguousArtworkNames.has(key)) continue;
+    if (artworkByName.has(key)) {
+      artworkByName.delete(key);
+      ambiguousArtworkNames.add(key);
+    } else {
+      artworkByName.set(key, artwork);
+    }
+  }
   if (JSON.stringify(publicMotionIndex) !== JSON.stringify(motionIndex)) fail("Served public motion index differs from the validated source index.");
   if (!Array.isArray(motionIndex.gifts)) fail("Canonical catalogue motion index has no gifts array.");
   if (report.catalog_motion_profiles !== motionIndex.gifts.length) fail("Motion index and extraction report totals differ.");
@@ -100,8 +119,16 @@ async function main() {
   }
   const activeCatalog = (canonicalCatalog.gifts || []).filter(gift => gift.active !== false);
   if (motionIndex.gifts.length !== activeCatalog.length) fail("Motion index does not cover every active catalogue gift.");
+  if (Number(report.artwork_reference_matches) !== artworkByName.size && Number(report.artwork_reference_matches) !== checkedArtworkReferences) {
+    fail("Artwork reference totals do not match the unique exact-name Artwork records.");
+  }
+  if (Number(report.artwork_reference_ambiguous_matches) !== checkedAmbiguousArtworkNames) {
+    fail("Ambiguous Artwork names are not reported consistently.");
+  }
   const catalogCodes = new Set();
   const motionByCode = new Map();
+  let checkedArtworkReferences = 0;
+  let checkedAmbiguousArtworkNames = 0;
   for (const gift of motionIndex.gifts) {
     const code = String(gift?.code || "");
     if (!code || catalogCodes.has(code)) fail("Missing or duplicate canonical catalogue code in motion index: " + code);
@@ -123,7 +150,20 @@ async function main() {
     } else {
       fail(code + " has an unsupported motion profile source.");
     }
-    if (gift.artwork_reference && !String(gift.artwork_reference.path || "").startsWith("assets/Artwork/")) fail(code + " has an unsafe Artwork manifest reference.");
+    const artworkKey = normalizeGiftName(gift.name);
+    const expectedArtwork = artworkByName.get(artworkKey);
+    if (expectedArtwork) {
+      if (!gift.artwork_reference) fail(code + " is missing its unique exact-name Artwork reference.");
+      const expectedPath = "assets/Artwork/" + expectedArtwork.artwork;
+      if (gift.artwork_reference.path !== expectedPath || gift.artwork_reference.sha256 !== expectedArtwork.sha256 ||
+          gift.artwork_reference.review_status !== expectedArtwork.review_status) {
+        fail(code + " Artwork reference does not match the canonical Artwork manifest.");
+      }
+      checkedArtworkReferences++;
+    } else {
+      if (gift.artwork_reference) fail(code + " has an Artwork reference where the name is not unique.");
+      if (ambiguousArtworkNames.has(artworkKey)) checkedAmbiguousArtworkNames++;
+    }
   }
   for (const canonical of activeCatalog) {
     const code = String(canonical.code || "");
