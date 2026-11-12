@@ -15,7 +15,7 @@
   let activeEvent = '';
 
   const clamp = (value,min=0,max=1) => Math.max(min,Math.min(max,Number(value)));
-  const categoryFor = eventKey => String(eventKey || '').split('.')[0] || 'system';
+  const categoryFor = eventKey => String(eventKey || '').startsWith('call.') ? 'ringtone' : 'notification';
   const isMuted = value => value === true || value === 'true';
 
   function stopEvent(eventKey) {
