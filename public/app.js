@@ -5574,14 +5574,14 @@ function normalizeProfileStyle(value){return PROFILE_STYLE_IDS.includes(value)?v
 function profileStyleNavigation(style){
   const labels={
     facebook:[['posts','Posts'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Reels'],['more','More']],
-    tiktok:[['posts','Videos'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Reels'],['more','More']],
+    tiktok:[['posts','Posts'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Videos'],['more','More']],
     instagram:[['posts','Posts'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Reels'],['more','More']],
     youtube:[['posts','Home'],['about','About'],['friends','Community'],['photos','Photos'],['reels','Videos'],['more','More']],
     x:[['posts','Posts'],['about','About'],['friends','Friends'],['photos','Media'],['reels','Videos'],['more','More']],
     linkedin:[['posts','Activity'],['about','About'],['friends','Connections'],['photos','Media'],['reels','Videos'],['more','More']],
     pinterest:[['posts','Created'],['about','About'],['friends','Friends'],['photos','Pins'],['reels','Videos'],['more','More']],
-    twitch:[['posts','Home'],['about','About'],['friends','Community'],['photos','Clips'],['reels','Videos'],['more','More']],
-    snapchat:[['posts','Stories'],['about','About'],['friends','Friends'],['photos','Spotlight'],['reels','Reels'],['more','More']],
+    twitch:[['posts','Home'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Videos'],['more','More']],
+    snapchat:[['posts','Posts'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Reels'],['more','More']],
     'custom-minglora':[['posts','Posts'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Reels'],['more','More']]
   };
   return labels[normalizeProfileStyle(style)]||labels.facebook;
@@ -6019,7 +6019,7 @@ function renderProfile(data){
     state.profileTab=nextTab;
     persistCurrentView();
     recordBrowserNavigation();
-    document.querySelectorAll('.profile-tabs [data-profile-tab]').forEach(button=>{const selected=button.dataset.profileTab===nextTab||(button.dataset.profileTab==='more'&&['checkins','events','highlights','groups','videos','badges','gift-gallery','manage'].includes(nextTab));button.classList.toggle('active',selected);button.setAttribute('aria-current',selected?'page':'false');});
+    document.querySelectorAll('.profile-tabs [data-profile-tab]').forEach(button=>{const selected=button.dataset.profileTab===nextTab||(button.dataset.profileTab==='more'&&['checkins','events','highlights','groups','videos','badges','gift-gallery','manage','style-library'].includes(nextTab));button.classList.toggle('active',selected);button.setAttribute('aria-current',selected?'page':'false');});
     const panel=$('#profile-tab-panel');if(!panel)return;
     panel.innerHTML=profileTabMarkup(data,nextTab,aboutHtml,isMe);
     bindFeed(panel);
