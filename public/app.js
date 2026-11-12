@@ -640,8 +640,24 @@ function renderSavedControls(post){
   </section>`;
 }
 
+function videoRemixCreditMarkup(post){
+  if(post.remixType!=='response')return '';
+  const source=post.remixSource;
+  if(source?.author){
+    const author=source.author;
+    return '<div class="video-remix-credit"><strong>Video response to</strong> <button type="button" data-profile="'+esc(author.id||'')+'">@'+esc(author.username||author.name||'Minglora member')+'</button></div>';
+  }
+  return '<div class="video-remix-credit">Original video unavailable</div>';
+}
+function openVideoResponseFromButton(button){
+  const source=findVisiblePost(button?.dataset?.videoResponse||'');
+  if(!source||source.allowRemix!==true){toast('This video is not available for responses.');return;}
+  openVideoComposer({videoFormat:source.videoFormat==='video'?'video':'reel',remixSource:source});
+}
 function postCard(post,options={}){
   const author=post.author||{}, comments=post.comments||[];
+  const hasVideo=(post.media||[]).some(item=>item.mediaType==='video');
+  const responseControl=hasVideo&&post.allowRemix===true&&post.userId!==state.user.id?'<button type="button" data-video-response="'+esc(post.id)+'">＋ Video response</button>':'';
   const savedControls=options.saved?renderSavedControls(post):'';
   const watchLaterControl=options.videoWatchLater?`<button type="button" data-watch-later="${esc(post.id)}" data-watch-later-saved="${post.isWatchLater?'true':'false'}">${post.isWatchLater?'✓ Watch Later':'＋ Watch Later'}</button>`:'';
   return `<article class="card post" data-post="${esc(post.id)}">
@@ -652,6 +668,7 @@ function postCard(post,options={}){
     ${post.text?`<div class="post-text">${esc(post.text)}</div>`:''}
     ${renderPostMedia(post)}
     ${renderPostSoundtrack(post)}
+    ${videoRemixCreditMarkup(post)}
     <div class="post-stats"><span>👍 ${post.reactionCount||0} ${post.reactionCount===1?'reaction':'reactions'}</span><span>${comments.length} comments</span></div>
     <div class="post-actions">
       <div class="post-reaction-control">
@@ -669,6 +686,7 @@ function postCard(post,options={}){
       </div>
       <button data-focus-comment="${esc(post.id)}">▢ &nbsp; Comment</button>
       ${watchLaterControl}
+      ${responseControl}
       <button data-toggle-save="${esc(post.id)}" data-saved="${post.isSaved?'true':'false'}">${post.isSaved?'▣ Saved':'▢ Save'}</button>
       <button data-share="${esc(post.id)}">↗ &nbsp; Share</button>
       <button type="button" data-gift-content="post" data-gift-id="${esc(post.id)}" data-gift-username="${esc(author.username||'')}">🎁 Gift</button>
@@ -745,6 +763,7 @@ function bindFeed(root=document){
     catch(err){toast(err.message);}
   }));
   root.querySelectorAll('[data-focus-comment]').forEach(el=>el.addEventListener('click',()=>root.querySelector(`[data-comment-form="${el.dataset.focusComment}"] input`)?.focus()));
+  root.querySelectorAll('[data-video-response]').forEach(button=>button.addEventListener('click',()=>openVideoResponseFromButton(button)));
   root.querySelectorAll('[data-watch-later]').forEach(btn=>btn.addEventListener('click',async()=>{
     const adding=btn.dataset.watchLaterSaved!=='true';
     btn.disabled=true;
@@ -810,14 +829,24 @@ function openReportComposer(targetType,targetId){
 }
 function openPostOptions(post){
   const owner=post.userId===state.user.id, author=post.author||{};
+  const hasVideo=(post.media||[]).some(item=>item.mediaType==='video');
+  const remixSettingAction=owner&&hasVideo?'<button class="secondary full" data-post-action="toggle-remix">'+(post.allowRemix===true?'Turn off video responses':'Allow video responses')+'</button>':'';
   const modal=document.createElement('div');modal.className='modal-backdrop';
   const actions=owner
-    ? '<button class="secondary full" data-post-action="edit">Edit post</button>'+(post.archivedAt?'':'<button class="secondary full" data-post-action="archive">Archive post</button>')+'<button class="secondary full" data-post-action="delete">Delete post</button>'
+    ? '<button class="secondary full" data-post-action="edit">Edit post</button>'+remixSettingAction+(post.archivedAt?'':'<button class="secondary full" data-post-action="archive">Archive post</button>')+'<button class="secondary full" data-post-action="delete">Delete post</button>'
     : `<button class="secondary full" data-post-action="report-post">Report this post</button><button class="secondary full" data-post-action="report-user">Report ${esc(author.name||'this member')}</button><button class="secondary full" data-post-action="block">Block ${esc(author.name||'this member')}</button>`;
   modal.innerHTML=`<section class="modal" role="dialog" aria-modal="true" aria-labelledby="post-options-title"><div class="modal-head"><h2 id="post-options-title">Post options</h2><button class="modal-close" aria-label="Close">×</button></div><div class="modal-body">${actions}<button type="button" class="secondary full modal-cancel">Cancel</button></div></section>`;
   document.body.append(modal);
   modal.querySelectorAll('.modal-close,.modal-cancel').forEach(btn=>btn.onclick=()=>modal.remove());
   modal.addEventListener('click',e=>{if(e.target===modal)modal.remove();});
+  modal.querySelector('[data-post-action="toggle-remix"]')?.addEventListener('click',async()=>{
+    const enabled=post.allowRemix!==true;
+    try{
+      await api('/posts/'+encodeURIComponent(post.id),{method:'PATCH',body:JSON.stringify({allowRemix:enabled})});
+      modal.remove();await refreshVisiblePosts();
+      toast(enabled?'Other members can now respond to this video.':'Video responses are now disabled.');
+    }catch(error){toast(error.message||'Video response permission could not be updated.');}
+  });
   modal.querySelector('[data-post-action="edit"]')?.addEventListener('click',()=>{modal.remove();openEditPost(post);});
   modal.querySelector('[data-post-action="archive"]')?.addEventListener('click',async()=>{try{await api('/profile/archive',{method:'POST',body:JSON.stringify({postId:post.id})});modal.remove();await refreshVisiblePosts();toast('Post moved to your archive.');}catch(error){toast(error.message);}});
   modal.querySelector('[data-post-action="delete"]')?.addEventListener('click',async()=>{
@@ -1030,8 +1059,13 @@ function openComposer(options={}){
 }
 
 function openVideoComposer(options={}){
+  const remixSource=options.remixSource||null;
+  const sourceAuthor=remixSource?.author||{};
+  const sourceIntro=remixSource
+    ?'<div class="video-remix-source"><span>VIDEO RESPONSE</span><strong>Responding to @'+esc(sourceAuthor.username||sourceAuthor.name||'Minglora creator')+'</strong><small>'+esc(String(remixSource.text||'Original Minglora video').slice(0,150))+'</small></div>'
+    :'';
   const modal=document.createElement('div');modal.className='modal-backdrop';
-  modal.innerHTML='<section class="modal composer-modal" role="dialog" aria-modal="true" aria-labelledby="create-video-title"><div class="modal-head"><div><span class="eyebrow">MINGLORA VIDEO</span><h2 id="create-video-title">Create a video post</h2></div><button class="modal-close" type="button" aria-label="Close">'+messenger3dIcon('close','modal-close-icon')+'</button></div><form class="modal-body" id="create-video-form"><div class="post-head"><img class="avatar" src="'+avatar(state.user)+'" alt=""><div class="post-author"><strong>'+esc(state.user.name)+'</strong><small>Share one video with your Minglora audience</small></div></div><div class="field"><label for="video-post-audience">Who can see this video?</label><select id="video-post-audience" name="audience"><option value="public">Public</option><option value="friends">Friends</option><option value="close_friends">Close Friends</option><option value="followers">Followers</option><option value="private">Only me</option></select></div><div class="field"><label for="video-post-caption">Caption</label><textarea id="video-post-caption" name="text" maxlength="5000" placeholder="Write a caption for your video…" aria-label="Video caption"></textarea></div><div class="field"><label>Choose one video file</label><div id="create-video-media-picker"></div><small>MP4, WebM or QuickTime video. Photos and audio files are not accepted in this video-only composer.</small></div><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button type="submit" class="primary">Publish video</button></div></form></section>';
+  modal.innerHTML='<section class="modal composer-modal" role="dialog" aria-modal="true" aria-labelledby="create-video-title"><div class="modal-head"><div><span class="eyebrow">MINGLORA VIDEO</span><h2 id="create-video-title">'+(remixSource?'Create a video response':'Create a video post')+'</h2></div><button class="modal-close" type="button" aria-label="Close">'+messenger3dIcon('close','modal-close-icon')+'</button></div><form class="modal-body" id="create-video-form"><div class="post-head"><img class="avatar" src="'+avatar(state.user)+'" alt=""><div class="post-author"><strong>'+esc(state.user.name)+'</strong><small>'+(remixSource?'Share your own video response':'Share one video with your Minglora audience')+'</small></div></div>'+sourceIntro+'<div class="field"><label for="video-post-audience">Who can see this video?</label><select id="video-post-audience" name="audience"><option value="public">Public</option><option value="friends">Friends</option><option value="close_friends">Close Friends</option><option value="followers">Followers</option><option value="private">Only me</option></select></div><div class="field"><label for="video-post-caption">Caption</label><textarea id="video-post-caption" name="text" maxlength="5000" placeholder="Write a caption for your video…" aria-label="Video caption"></textarea></div><div class="field"><label>Choose one video file</label><div id="create-video-media-picker"></div><small>MP4, WebM or QuickTime video. Photos and audio files are not accepted in this video-only composer.</small></div><label class="video-remix-permission"><input type="checkbox" name="allowRemix"><span><strong>Allow other members to make a video response</strong><small>Off by default. You can change this for your video from Post options.</small></span></label><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button type="submit" class="primary">'+(remixSource?'Publish video response':'Publish video')+'</button></div></form></section>';
   document.body.append(modal);
   const picker=createMediaPicker(modal.querySelector('#create-video-media-picker'),{slot:'post',maxFiles:1,accept:'video/mp4,video/webm,video/quicktime'});
   const close=()=>{picker.destroy();modal.remove();};
@@ -1048,7 +1082,7 @@ function openVideoComposer(options={}){
       const mediaIds=await picker.upload();
       if(mediaIds.length!==1)throw new Error('Upload one video file to publish a video post.');
       const values=new FormData(event.currentTarget);
-      await api('/posts',{method:'POST',body:JSON.stringify({text:values.get('text'),audience:values.get('audience'),mediaIds,videoFormat:options.videoFormat==='reel'?'reel':'video'})});
+      await api('/posts',{method:'POST',body:JSON.stringify({text:values.get('text'),audience:values.get('audience'),mediaIds,videoFormat:options.videoFormat==='video'?'video':'reel',allowRemix:values.get('allowRemix')==='on',...(remixSource?.id?{remixSourcePostId:remixSource.id,remixType:'response'}:{})})});
       close();
       if(typeof options.onPublished==='function')await options.onPublished();
       else{state.videoMode='videos';await renderVideoCentre();}
