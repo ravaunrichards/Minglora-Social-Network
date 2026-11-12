@@ -1,5 +1,5 @@
 export const VIDEO_TRANSCODE_MAX_ATTEMPTS = 4;
-export const VIDEO_TRANSCODE_LEASE_MS = 15 * 60 * 1000;
+export const VIDEO_TRANSCODE_LEASE_MS = 30 * 60 * 1000;
 const RETRY_BASE_MS = 30 * 1000;
 const RETRY_MAX_MS = 60 * 60 * 1000;
 
@@ -48,6 +48,15 @@ export function claimVideoTranscodeJob(jobs, {
   leaseMs = VIDEO_TRANSCODE_LEASE_MS
 } = {}) {
   if (!Array.isArray(jobs) || typeof leaseToken !== 'string' || leaseToken.length < 24) return null;
+  for (const job of jobs) {
+    if (job?.status === 'processing' && parseTime(job.leaseExpiresAt) <= nowMs && Number(job.attempts || 0) >= VIDEO_TRANSCODE_MAX_ATTEMPTS) {
+      job.status = 'failed';
+      job.errorCode = job.errorCode || 'LEASE_EXPIRED';
+      job.leaseToken = null;
+      job.leaseExpiresAt = null;
+      job.updatedAt = new Date(nowMs).toISOString();
+    }
+  }
   const available = jobs
     .filter(job => {
       if (!job || ['completed', 'failed', 'cancelled'].includes(job.status) || Number(job.attempts || 0) >= VIDEO_TRANSCODE_MAX_ATTEMPTS) return false;
@@ -77,11 +86,21 @@ export function isVideoTranscodeLeaseValid(job, leaseToken, nowMs = Date.now()) 
   );
 }
 
-export function completeVideoTranscodeJob(jobs, {
-  jobId, leaseToken, outputAssetId, completedAt = new Date().toISOString()
+export function renewVideoTranscodeLease(jobs, {
+  jobId, leaseToken, nowMs = Date.now(), leaseMs = VIDEO_TRANSCODE_LEASE_MS
 } = {}) {
   const job = Array.isArray(jobs) ? jobs.find(item => item.id === jobId) : null;
-  if (!isVideoTranscodeLeaseValid(job, leaseToken) || !outputAssetId) return { status: 'conflict', job: null };
+  if (!isVideoTranscodeLeaseValid(job, leaseToken, nowMs)) return { status: 'conflict', job: null };
+  job.leaseExpiresAt = new Date(nowMs + Math.max(60_000, Number(leaseMs) || VIDEO_TRANSCODE_LEASE_MS)).toISOString();
+  job.updatedAt = new Date(nowMs).toISOString();
+  return { status: 'renewed', leaseExpiresAt: job.leaseExpiresAt, job };
+}
+
+export function completeVideoTranscodeJob(jobs, {
+  jobId, leaseToken, outputAssetId, completedAt = new Date().toISOString(), nowMs = Date.now()
+} = {}) {
+  const job = Array.isArray(jobs) ? jobs.find(item => item.id === jobId) : null;
+  if (!isVideoTranscodeLeaseValid(job, leaseToken, nowMs) || !outputAssetId) return { status: 'conflict', job: null };
   job.status = 'completed';
   job.derivativeAssetId = String(outputAssetId);
   job.completedAt = String(completedAt);
