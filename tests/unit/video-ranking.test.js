@@ -72,18 +72,24 @@ test('For You promotes videos and creators after explicit Interested feedback', 
   assert.ok(ranked.findIndex(item => item.id === 'same-creator') < ranked.findIndex(item => item.id === 'neutral'));
 });
 
-test('For You interest feedback is private to the viewer and negative feedback still excludes the video', () => {
-  const posts = [post('target', 'creator-a'), post('other', 'creator-b')];
-  const ranked = rankForYouVideos(
+test('For You ignores another viewer\'s Interested feedback and negative feedback still excludes the selected video', () => {
+  const posts = [post('neutral', 'creator-b'), post('target', 'creator-a')];
+  const otherViewersFeedback = rankForYouVideos(
     posts, 'viewer', [], [], [],
     [{ userId: 'another-viewer', postId: 'target', action: 'interested' }],
     now
   );
-  assert.equal(ranked[0].id, 'target');
+  assert.equal(otherViewersFeedback[0].id, 'neutral');
+  const ownInterest = rankForYouVideos(
+    posts, 'viewer', [], [], [],
+    [{ userId: 'viewer', postId: 'target', action: 'interested' }],
+    now
+  );
+  assert.equal(ownInterest[0].id, 'target');
   const hidden = rankForYouVideos(
     posts, 'viewer', [], [], [],
     [{ userId: 'viewer', postId: 'target', action: 'not_interested' }],
     now
   );
-  assert.deepEqual(hidden.map(item => item.id), ['other']);
+  assert.deepEqual(hidden.map(item => item.id), ['neutral']);
 });
