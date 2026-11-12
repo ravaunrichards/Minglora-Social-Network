@@ -9,6 +9,8 @@ on:
       - "assets/Artwork/manifest.json"
       - "data/minglora-gift-catalog.json"
       - "scripts/extract-minglora-gift-captures.mjs"
+      - "scripts/check-minglora-gift-capture-cache.mjs"
+      - "scripts/build-minglora-gift-motion-index.mjs"
       - "scripts/validate-minglora-gift-animations.mjs"
       - ".github/workflows/extract-minglora-gifts.yml"
   workflow_dispatch:
@@ -34,7 +36,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 24
-      - name: Install OCR and image processing
+      - name: Install OCR and image processing only when extraction is needed
+        if: steps.capture-cache.outputs.reuse != 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y tesseract-ocr
