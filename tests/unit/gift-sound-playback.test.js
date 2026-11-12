@@ -2,6 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
+import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -84,4 +86,53 @@ test("review candidate count remains aligned with the delivered per-gift MP3 fil
   assert.equal(new Set(candidateMap.mappings.map(item => item.giftSlug)).size, candidateMap.mappings.length);
   assert.equal(Object.keys(runtimeMap.gifts_by_code).length, 71);
   assert.equal(candidateMap.mappings.length, 101);
+});
+
+
+test("all 33 source masters are present, MP3-decode verified and integrity-matched to the ingestion report", () => {
+  const crypto = { createHash };
+  const sourceCatalog = JSON.parse(read("assets/Gift Sounds/source-catalog.json"));
+  const ingestion = JSON.parse(read("assets/Gift Sounds/ingested-sources.json"));
+  const sources = [
+    ...(sourceCatalog.publishedCC0Recordings || []),
+    ...(sourceCatalog.publicDomainEffects || []),
+    ...(sourceCatalog.additionalCC0Recordings || [])
+  ];
+  const verificationRows = [
+    ...(ingestion.downloaded || []),
+    ...(ingestion.skipped || [])
+  ];
+  assert.equal(sources.length, 33);
+  assert.equal(verificationRows.length, 33);
+  assert.equal(ingestion.errors.length, 0);
+  for (const source of sources) {
+    const report = verificationRows.find(item => item.id === source.id);
+    assert.ok(report, "source has an ingestion verification row: " + source.id);
+    const relative = source.reviewMp3;
+    assert.ok(relative, "source has a review MP3 path: " + source.id);
+    const bytes = readFileSync(path.join(root, relative));
+    const digest = crypto.createHash("sha256").update(bytes).digest("hex");
+    assert.equal(digest, report.sha256, "source MP3 checksum matches ingestion report: " + source.id);
+    assert.equal(report.probe.codec, "mp3", "source decodes as MP3: " + source.id);
+    assert.equal(report.probe.sampleRateHz, 44100, "source sample rate is 44.1 kHz: " + source.id);
+    assert.equal(report.probe.channels, 2, "source is stereo: " + source.id);
+    assert.ok(bytes.length > 1024, "source MP3 contains audio data: " + source.id);
+  }
+});
+
+test("all 101 per-gift recordings are byte-identical to their verified source masters", () => {
+  const crypto = { createHash };
+  for (const mapping of candidateMap.mappings) {
+    const candidateFile = path.join(root, mapping.file);
+    const sourceFile = path.join(giftSoundsRoot, "_sources", "mp3", mapping.sourceId + ".mp3");
+    assert.ok(existsSync(candidateFile), "candidate exists: " + mapping.giftSlug);
+    assert.ok(existsSync(sourceFile), "verified source master exists: " + mapping.sourceId);
+    const candidateBytes = readFileSync(candidateFile);
+    const sourceBytes = readFileSync(sourceFile);
+    const candidateHash = crypto.createHash("sha256").update(candidateBytes).digest("hex");
+    const sourceHash = crypto.createHash("sha256").update(sourceBytes).digest("hex");
+    assert.equal(candidateBytes.length, mapping.bytes, "candidate byte count matches manifest: " + mapping.giftSlug);
+    assert.equal(candidateHash, mapping.sha256, "candidate checksum matches candidate map: " + mapping.giftSlug);
+    assert.equal(candidateHash, sourceHash, "candidate is an exact copy of its declared source: " + mapping.giftSlug);
+  }
 });
