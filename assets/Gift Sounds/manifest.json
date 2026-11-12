@@ -14006,8 +14006,8 @@
   ],
   "lastIngestion": {
     "status": "candidate_recordings_downloaded_review_only",
-    "downloadedSourceCount": 33,
-    "newlyDownloadedSourceCount": 0,
+    "downloadedSourceCount": 246,
+    "newlyDownloadedSourceCount": 214,
     "mappedGiftFileCount": 101,
     "productionReadyGiftCount": 0
   }

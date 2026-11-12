@@ -558,7 +558,7 @@
     "documentedMirrorCC0AnimalRecordings": 14,
     "additionalWikimediaRealRecordings": 3,
     "excludedImitations": 2,
-    "downloadedAudioFiles": 33,
+    "downloadedAudioFiles": 246,
     "auditionedAudioFiles": 0,
     "productionReadyAudioFiles": 0,
     "candidateGiftMappings": 20,
@@ -880,7 +880,9 @@
       ],
       "pack": "Fireworks With Applause Happy People",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-almitory-applause-applause-fireworks.mp3"
     },
     {
       "id": "ogacc0-expl0it3r-applause-applause-clapping-church-crowd-immersive",
@@ -909,7 +911,9 @@
       ],
       "pack": "Applause in a large hall or church",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-expl0it3r-applause-applause-clapping-church-crowd-immersive.mp3"
     },
     {
       "id": "ogacc0-isaiah-birds-birds-isaiah658",
@@ -935,7 +939,9 @@
       ],
       "pack": "Ambient Bird Sounds",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-isaiah-birds-birds-isaiah658.mp3"
     },
     {
       "id": "ogacc0-kresiek-outside-amb-outdoor1-loop",
@@ -962,7 +968,9 @@
       ],
       "pack": "AMB Outside 1",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-kresiek-outside-amb-outdoor1-loop.mp3"
     },
     {
       "id": "ogacc0-lokif-swamp-atmosphere-1",
@@ -987,7 +995,9 @@
       ],
       "pack": "Swamp Environment Audio",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-lokif-swamp-atmosphere-1.mp3"
     },
     {
       "id": "ogacc0-lokif-swamp-atmosphere-2",
@@ -1012,7 +1022,9 @@
       ],
       "pack": "Swamp Environment Audio",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-lokif-swamp-atmosphere-2.mp3"
     },
     {
       "id": "ogacc0-lokif-swamp-atmosphere-3",
@@ -1037,7 +1049,9 @@
       ],
       "pack": "Swamp Environment Audio",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-lokif-swamp-atmosphere-3.mp3"
     },
     {
       "id": "ogacc0-lokif-swamp-beast-1",
@@ -1062,7 +1076,9 @@
       ],
       "pack": "Swamp Environment Audio",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-lokif-swamp-beast-1.mp3"
     },
     {
       "id": "ogacc0-lokif-swamp-beast-2",
@@ -1087,7 +1103,9 @@
       ],
       "pack": "Swamp Environment Audio",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-lokif-swamp-beast-2.mp3"
     },
     {
       "id": "ogacc0-lokif-swamp-bubbling-1",
@@ -1112,7 +1130,9 @@
       ],
       "pack": "Swamp Environment Audio",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-lokif-swamp-bubbling-1.mp3"
     },
     {
       "id": "ogacc0-lokif-swamp-bubbling-2",
@@ -1137,7 +1157,9 @@
       ],
       "pack": "Swamp Environment Audio",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-lokif-swamp-bubbling-2.mp3"
     },
     {
       "id": "ogacc0-lokif-swamp-bubbling-3",
@@ -1162,7 +1184,9 @@
       ],
       "pack": "Swamp Environment Audio",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-lokif-swamp-bubbling-3.mp3"
     },
     {
       "id": "ogacc0-lokif-swamp-bubbling-4",
@@ -1187,7 +1211,9 @@
       ],
       "pack": "Swamp Environment Audio",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-lokif-swamp-bubbling-4.mp3"
     },
     {
       "id": "ogacc0-lokif-swamp-bug-1",
@@ -1212,7 +1238,9 @@
       ],
       "pack": "Swamp Environment Audio",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-lokif-swamp-bug-1.mp3"
     },
     {
       "id": "ogacc0-lokif-swamp-bug-2",
@@ -1237,7 +1265,9 @@
       ],
       "pack": "Swamp Environment Audio",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-lokif-swamp-bug-2.mp3"
     },
     {
       "id": "ogacc0-lokif-swamp-cicada-1",
@@ -1262,7 +1292,9 @@
       ],
       "pack": "Swamp Environment Audio",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-lokif-swamp-cicada-1.mp3"
     },
     {
       "id": "ogacc0-lokif-swamp-cicada-2",
@@ -1287,7 +1319,9 @@
       ],
       "pack": "Swamp Environment Audio",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-lokif-swamp-cicada-2.mp3"
     },
     {
       "id": "ogacc0-lokif-swamp-cricket-1",
@@ -1312,7 +1346,9 @@
       ],
       "pack": "Swamp Environment Audio",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-lokif-swamp-cricket-1.mp3"
     },
     {
       "id": "ogacc0-lokif-swamp-cricket-2",
@@ -1337,7 +1373,9 @@
       ],
       "pack": "Swamp Environment Audio",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-lokif-swamp-cricket-2.mp3"
     },
     {
       "id": "ogacc0-lokif-swamp-fly-2",
@@ -1362,7 +1400,9 @@
       ],
       "pack": "Swamp Environment Audio",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-lokif-swamp-fly-2.mp3"
     },
     {
       "id": "ogacc0-lokif-swamp-fly-3",
@@ -1387,7 +1427,9 @@
       ],
       "pack": "Swamp Environment Audio",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-lokif-swamp-fly-3.mp3"
     },
     {
       "id": "ogacc0-nocturnal-cheers-cheers-1",
@@ -1411,7 +1453,9 @@
       ],
       "pack": "Cheers",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-nocturnal-cheers-cheers-1.mp3"
     },
     {
       "id": "ogacc0-nocturnal-giggle-group-giggling",
@@ -1437,7 +1481,9 @@
       ],
       "pack": "Group giggling",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-nocturnal-giggle-group-giggling.mp3"
     },
     {
       "id": "ogacc0-pauliuw-forestbirds-forest-birds-1",
@@ -1463,7 +1509,9 @@
       ],
       "pack": "Forest bird sounds",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-pauliuw-forestbirds-forest-birds-1.mp3"
     },
     {
       "id": "ogacc0-pauliuw-forestbirds-forest-birds-10",
@@ -1489,7 +1537,9 @@
       ],
       "pack": "Forest bird sounds",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-pauliuw-forestbirds-forest-birds-10.mp3"
     },
     {
       "id": "ogacc0-pauliuw-forestbirds-forest-birds-2",
@@ -1515,7 +1565,9 @@
       ],
       "pack": "Forest bird sounds",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-pauliuw-forestbirds-forest-birds-2.mp3"
     },
     {
       "id": "ogacc0-pauliuw-forestbirds-forest-birds-3",
@@ -1541,7 +1593,9 @@
       ],
       "pack": "Forest bird sounds",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-pauliuw-forestbirds-forest-birds-3.mp3"
     },
     {
       "id": "ogacc0-pauliuw-forestbirds-forest-birds-4",
@@ -1567,7 +1621,9 @@
       ],
       "pack": "Forest bird sounds",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-pauliuw-forestbirds-forest-birds-4.mp3"
     },
     {
       "id": "ogacc0-pauliuw-forestbirds-forest-birds-5",
@@ -1593,7 +1649,9 @@
       ],
       "pack": "Forest bird sounds",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-pauliuw-forestbirds-forest-birds-5.mp3"
     },
     {
       "id": "ogacc0-pauliuw-forestbirds-forest-birds-6",
@@ -1619,7 +1677,9 @@
       ],
       "pack": "Forest bird sounds",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-pauliuw-forestbirds-forest-birds-6.mp3"
     },
     {
       "id": "ogacc0-pauliuw-forestbirds-forest-birds-7",
@@ -1645,7 +1705,9 @@
       ],
       "pack": "Forest bird sounds",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-pauliuw-forestbirds-forest-birds-7.mp3"
     },
     {
       "id": "ogacc0-pauliuw-forestbirds-forest-birds-8",
@@ -1671,7 +1733,9 @@
       ],
       "pack": "Forest bird sounds",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-pauliuw-forestbirds-forest-birds-8.mp3"
     },
     {
       "id": "ogacc0-pauliuw-forestbirds-forest-birds-9",
@@ -1697,7 +1761,9 @@
       ],
       "pack": "Forest bird sounds",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-pauliuw-forestbirds-forest-birds-9.mp3"
     },
     {
       "id": "ogacc0-pauliuw-forestbirds-raw-forest-1",
@@ -1723,7 +1789,9 @@
       ],
       "pack": "Forest bird sounds",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-pauliuw-forestbirds-raw-forest-1.mp3"
     },
     {
       "id": "ogacc0-pauliuw-forestbirds-raw-forest-2",
@@ -1749,7 +1817,9 @@
       ],
       "pack": "Forest bird sounds",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-pauliuw-forestbirds-raw-forest-2.mp3"
     },
     {
       "id": "ogacc0-pauliuw-forestbirds-raw-forest-3",
@@ -1775,7 +1845,9 @@
       ],
       "pack": "Forest bird sounds",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-pauliuw-forestbirds-raw-forest-3.mp3"
     },
     {
       "id": "ogacc0-pauliuw-forestbirds-raw-forest-4",
@@ -1802,7 +1874,9 @@
       ],
       "pack": "Forest bird sounds",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-pauliuw-forestbirds-raw-forest-4.mp3"
     },
     {
       "id": "ogacc0-pauliuw-forestbirds-raw-forest-5",
@@ -1828,7 +1902,9 @@
       ],
       "pack": "Forest bird sounds",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-pauliuw-forestbirds-raw-forest-5.mp3"
     },
     {
       "id": "ogacc0-pwl-bells-bell-ding1",
@@ -1854,7 +1930,9 @@
       ],
       "pack": "Bell dings/chimes",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-pwl-bells-bell-ding1.mp3"
     },
     {
       "id": "ogacc0-pwl-bells-bell-ding2",
@@ -1880,7 +1958,9 @@
       ],
       "pack": "Bell dings/chimes",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-pwl-bells-bell-ding2.mp3"
     },
     {
       "id": "ogacc0-pwl-bells-bell-ding3",
@@ -1906,7 +1986,9 @@
       ],
       "pack": "Bell dings/chimes",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-pwl-bells-bell-ding3.mp3"
     },
     {
       "id": "ogacc0-pwl-bells-bell-ding4",
@@ -1932,7 +2014,9 @@
       ],
       "pack": "Bell dings/chimes",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-pwl-bells-bell-ding4.mp3"
     },
     {
       "id": "ogacc0-qubodup-rustles-rustle01",
@@ -1956,7 +2040,9 @@
       ],
       "pack": "20 Rustles of dry leaves",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-qubodup-rustles-rustle01.mp3"
     },
     {
       "id": "ogacc0-qubodup-rustles-rustle02",
@@ -1980,7 +2066,9 @@
       ],
       "pack": "20 Rustles of dry leaves",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-qubodup-rustles-rustle02.mp3"
     },
     {
       "id": "ogacc0-qubodup-rustles-rustle03",
@@ -2004,7 +2092,9 @@
       ],
       "pack": "20 Rustles of dry leaves",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-qubodup-rustles-rustle03.mp3"
     },
     {
       "id": "ogacc0-qubodup-rustles-rustle04",
@@ -2028,7 +2118,9 @@
       ],
       "pack": "20 Rustles of dry leaves",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-qubodup-rustles-rustle04.mp3"
     },
     {
       "id": "ogacc0-qubodup-rustles-rustle05",
@@ -2052,7 +2144,9 @@
       ],
       "pack": "20 Rustles of dry leaves",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-qubodup-rustles-rustle05.mp3"
     },
     {
       "id": "ogacc0-qubodup-rustles-rustle06",
@@ -2076,7 +2170,9 @@
       ],
       "pack": "20 Rustles of dry leaves",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-qubodup-rustles-rustle06.mp3"
     },
     {
       "id": "ogacc0-qubodup-rustles-rustle07",
@@ -2100,7 +2196,9 @@
       ],
       "pack": "20 Rustles of dry leaves",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-qubodup-rustles-rustle07.mp3"
     },
     {
       "id": "ogacc0-qubodup-rustles-rustle08",
@@ -2124,7 +2222,9 @@
       ],
       "pack": "20 Rustles of dry leaves",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-qubodup-rustles-rustle08.mp3"
     },
     {
       "id": "ogacc0-qubodup-rustles-rustle09",
@@ -2148,7 +2248,9 @@
       ],
       "pack": "20 Rustles of dry leaves",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-qubodup-rustles-rustle09.mp3"
     },
     {
       "id": "ogacc0-qubodup-rustles-rustle10",
@@ -2172,7 +2274,9 @@
       ],
       "pack": "20 Rustles of dry leaves",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-qubodup-rustles-rustle10.mp3"
     },
     {
       "id": "ogacc0-qubodup-rustles-rustle11",
@@ -2196,7 +2300,9 @@
       ],
       "pack": "20 Rustles of dry leaves",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-qubodup-rustles-rustle11.mp3"
     },
     {
       "id": "ogacc0-qubodup-rustles-rustle12",
@@ -2220,7 +2326,9 @@
       ],
       "pack": "20 Rustles of dry leaves",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-qubodup-rustles-rustle12.mp3"
     },
     {
       "id": "ogacc0-qubodup-rustles-rustle13",
@@ -2244,7 +2352,9 @@
       ],
       "pack": "20 Rustles of dry leaves",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-qubodup-rustles-rustle13.mp3"
     },
     {
       "id": "ogacc0-qubodup-rustles-rustle14",
@@ -2268,7 +2378,9 @@
       ],
       "pack": "20 Rustles of dry leaves",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-qubodup-rustles-rustle14.mp3"
     },
     {
       "id": "ogacc0-qubodup-rustles-rustle15",
@@ -2292,7 +2404,9 @@
       ],
       "pack": "20 Rustles of dry leaves",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-qubodup-rustles-rustle15.mp3"
     },
     {
       "id": "ogacc0-qubodup-rustles-rustle16",
@@ -2316,7 +2430,9 @@
       ],
       "pack": "20 Rustles of dry leaves",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-qubodup-rustles-rustle16.mp3"
     },
     {
       "id": "ogacc0-qubodup-rustles-rustle17",
@@ -2340,7 +2456,9 @@
       ],
       "pack": "20 Rustles of dry leaves",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-qubodup-rustles-rustle17.mp3"
     },
     {
       "id": "ogacc0-qubodup-rustles-rustle18",
@@ -2364,7 +2482,9 @@
       ],
       "pack": "20 Rustles of dry leaves",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-qubodup-rustles-rustle18.mp3"
     },
     {
       "id": "ogacc0-qubodup-rustles-rustle19",
@@ -2388,7 +2508,9 @@
       ],
       "pack": "20 Rustles of dry leaves",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-qubodup-rustles-rustle19.mp3"
     },
     {
       "id": "ogacc0-qubodup-rustles-rustle20",
@@ -2412,7 +2534,9 @@
       ],
       "pack": "20 Rustles of dry leaves",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-qubodup-rustles-rustle20.mp3"
     },
     {
       "id": "ogacc0-qubodup-waves-wave-01-cc0-18363-jasinski-alkaibeach",
@@ -2439,7 +2563,9 @@
       ],
       "pack": "Beach Ocean Waves",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-qubodup-waves-wave-01-cc0-18363-jasinski-alkaibeach.mp3"
     },
     {
       "id": "ogacc0-qubodup-waves-wave-02-cc0-18363-jasinski-alkaibeach",
@@ -2466,7 +2592,9 @@
       ],
       "pack": "Beach Ocean Waves",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-qubodup-waves-wave-02-cc0-18363-jasinski-alkaibeach.mp3"
     },
     {
       "id": "ogacc0-qubodup-waves-wave-03-cc0-18363-jasinski-alkaibeach",
@@ -2493,7 +2621,9 @@
       ],
       "pack": "Beach Ocean Waves",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-qubodup-waves-wave-03-cc0-18363-jasinski-alkaibeach.mp3"
     },
     {
       "id": "ogacc0-qubodup-waves-wave-04-cc0-18363-jasinski-alkaibeach",
@@ -2520,7 +2650,9 @@
       ],
       "pack": "Beach Ocean Waves",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-qubodup-waves-wave-04-cc0-18363-jasinski-alkaibeach.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-bell-01",
@@ -2545,7 +2677,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-bell-01.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-bell-02",
@@ -2570,7 +2704,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-bell-02.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-bell-03",
@@ -2595,7 +2731,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-bell-03.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-dishes-01",
@@ -2619,7 +2757,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-dishes-01.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-dishes-02",
@@ -2643,7 +2783,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-dishes-02.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-dishes-03",
@@ -2667,7 +2809,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-dishes-03.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-dishes-04",
@@ -2692,7 +2836,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-dishes-04.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-door-01",
@@ -2716,7 +2862,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-door-01.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-door-02",
@@ -2740,7 +2888,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-door-02.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-door-close-01",
@@ -2766,7 +2916,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-door-close-01.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-door-close-02",
@@ -2792,7 +2944,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-door-close-02.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-door-close-03",
@@ -2818,7 +2972,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-door-close-03.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-door-close-04",
@@ -2844,7 +3000,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-door-close-04.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-door-open",
@@ -2869,7 +3027,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-door-open.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-explosion",
@@ -2894,7 +3054,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-explosion.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-glass-01",
@@ -2918,7 +3080,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-glass-01.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-glass-02",
@@ -2942,7 +3106,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-glass-02.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-glass-03",
@@ -2967,7 +3133,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-glass-03.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-glass-04",
@@ -2992,7 +3160,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-glass-04.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-glass-05",
@@ -3016,7 +3186,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-glass-05.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-gong-01",
@@ -3041,7 +3213,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-gong-01.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-gong-02",
@@ -3065,7 +3239,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-gong-02.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-hit-01",
@@ -3089,7 +3265,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-hit-01.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-hit-02",
@@ -3114,7 +3292,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-hit-02.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-hit-03",
@@ -3139,7 +3319,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-hit-03.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-hit-04",
@@ -3163,7 +3345,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-hit-04.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-key-open-01",
@@ -3189,7 +3373,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-key-open-01.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-key-open-02",
@@ -3214,7 +3400,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-key-open-02.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-machine-01",
@@ -3238,7 +3426,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-machine-01.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-machine-02",
@@ -3262,7 +3452,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-machine-02.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-machine-03",
@@ -3286,7 +3478,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-machine-03.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-metal-01",
@@ -3310,7 +3504,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-metal-01.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-metal-02",
@@ -3334,7 +3530,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-metal-02.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-metal-03",
@@ -3359,7 +3557,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-metal-03.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-metal-04",
@@ -3383,7 +3583,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-metal-04.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-metal-05",
@@ -3407,7 +3609,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-metal-05.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-metal-06",
@@ -3432,7 +3636,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-metal-06.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-metal-07",
@@ -3457,7 +3663,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-metal-07.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-metal-08",
@@ -3482,7 +3690,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-metal-08.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-metal-09",
@@ -3507,7 +3717,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-metal-09.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-metal-10",
@@ -3532,7 +3744,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-metal-10.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-metal-11",
@@ -3556,7 +3770,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-metal-11.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-metal-12",
@@ -3581,7 +3797,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-metal-12.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-microwave-door-close",
@@ -3607,7 +3825,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-microwave-door-close.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-microwave-door-open",
@@ -3633,7 +3853,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-microwave-door-open.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-noise-01",
@@ -3657,7 +3879,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-noise-01.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-noise-02",
@@ -3681,7 +3905,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-noise-02.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-other-01",
@@ -3705,7 +3931,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-other-01.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-other-02",
@@ -3729,7 +3957,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-other-02.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-other-03",
@@ -3753,7 +3983,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-other-03.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-other-04",
@@ -3778,7 +4010,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-other-04.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-other-05",
@@ -3802,7 +4036,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-other-05.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-other-06",
@@ -3826,7 +4062,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-other-06.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-other-07",
@@ -3851,7 +4089,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-other-07.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-paper-01",
@@ -3875,7 +4115,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-paper-01.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-paper-02",
@@ -3899,7 +4141,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-paper-02.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-paper-03",
@@ -3923,7 +4167,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-paper-03.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-paper-04",
@@ -3947,7 +4193,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-paper-04.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-plop-01",
@@ -3971,7 +4219,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-plop-01.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-plop-02",
@@ -3996,7 +4246,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-plop-02.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-pot-01",
@@ -4020,7 +4272,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-pot-01.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-pot-02",
@@ -4045,7 +4299,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-pot-02.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-shot-01",
@@ -4069,7 +4325,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-shot-01.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-shot-02",
@@ -4093,7 +4351,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-shot-02.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-slam-01",
@@ -4118,7 +4378,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-slam-01.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-slam-02",
@@ -4142,7 +4404,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-slam-02.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-slam-03",
@@ -4167,7 +4431,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-slam-03.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-slam-04",
@@ -4192,7 +4458,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-slam-04.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-slam-05",
@@ -4217,7 +4485,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-slam-05.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-slam-06",
@@ -4242,7 +4512,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-slam-06.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-slam-07",
@@ -4266,7 +4538,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-slam-07.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-splash-01",
@@ -4290,7 +4564,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-splash-01.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-splash-02",
@@ -4314,7 +4590,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-splash-02.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-spring-01",
@@ -4339,7 +4617,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-spring-01.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-spring-02",
@@ -4363,7 +4643,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-spring-02.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-spring-03",
@@ -4388,7 +4670,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-spring-03.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-spring-04",
@@ -4413,7 +4697,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-spring-04.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-spring-05",
@@ -4438,7 +4724,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-spring-05.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-spring-06",
@@ -4462,7 +4750,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-spring-06.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-spring-07",
@@ -4486,7 +4776,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-spring-07.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-spring-08",
@@ -4511,7 +4803,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-spring-08.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-spring-09",
@@ -4535,7 +4829,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-spring-09.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-switch-01",
@@ -4560,7 +4856,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-switch-01.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-switch-02",
@@ -4585,7 +4883,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-switch-02.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-toilet-01",
@@ -4609,7 +4909,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-toilet-01.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-toilet-02",
@@ -4633,7 +4935,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-toilet-02.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-tools-01",
@@ -4657,7 +4961,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-tools-01.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-tools-02",
@@ -4682,7 +4988,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-tools-02.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-tools-03",
@@ -4706,7 +5014,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-tools-03.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-tools-04",
@@ -4730,7 +5040,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-tools-04.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-tools-05",
@@ -4754,7 +5066,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-tools-05.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-weird-01",
@@ -4778,7 +5092,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-weird-01.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-weird-02",
@@ -4802,7 +5118,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-weird-02.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-weird-03",
@@ -4827,7 +5145,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-weird-03.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-weird-04",
@@ -4852,7 +5172,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-weird-04.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-weird-05",
@@ -4877,7 +5199,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-weird-05.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-wooded-box-open",
@@ -4903,7 +5227,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-wooded-box-open.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-wooden-01",
@@ -4928,7 +5254,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-wooden-01.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-wooden-02",
@@ -4952,7 +5280,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-wooden-02.mp3"
     },
     {
       "id": "ogacc0-rubberduck-100sfx-wooden-03",
@@ -4976,7 +5306,9 @@
       ],
       "pack": "100 CC0 SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-100sfx-wooden-03.mp3"
     },
     {
       "id": "ogacc0-rubberduck-water-bubble-01",
@@ -5000,7 +5332,9 @@
       ],
       "pack": "40 CC0 water / splash / slime SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-water-bubble-01.mp3"
     },
     {
       "id": "ogacc0-rubberduck-water-bubble-02",
@@ -5025,7 +5359,9 @@
       ],
       "pack": "40 CC0 water / splash / slime SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-water-bubble-02.mp3"
     },
     {
       "id": "ogacc0-rubberduck-water-bubble-03",
@@ -5049,7 +5385,9 @@
       ],
       "pack": "40 CC0 water / splash / slime SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-water-bubble-03.mp3"
     },
     {
       "id": "ogacc0-rubberduck-water-loop-bubbles-02",
@@ -5075,7 +5413,9 @@
       ],
       "pack": "40 CC0 water / splash / slime SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-water-loop-bubbles-02.mp3"
     },
     {
       "id": "ogacc0-rubberduck-water-loop-bubbles-1",
@@ -5101,7 +5441,9 @@
       ],
       "pack": "40 CC0 water / splash / slime SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-water-loop-bubbles-1.mp3"
     },
     {
       "id": "ogacc0-rubberduck-water-loop-rain",
@@ -5127,7 +5469,9 @@
       ],
       "pack": "40 CC0 water / splash / slime SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-water-loop-rain.mp3"
     },
     {
       "id": "ogacc0-rubberduck-water-loop-water-01",
@@ -5153,7 +5497,9 @@
       ],
       "pack": "40 CC0 water / splash / slime SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-water-loop-water-01.mp3"
     },
     {
       "id": "ogacc0-rubberduck-water-loop-water-02",
@@ -5179,7 +5525,9 @@
       ],
       "pack": "40 CC0 water / splash / slime SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-water-loop-water-02.mp3"
     },
     {
       "id": "ogacc0-rubberduck-water-loop-water-03",
@@ -5205,7 +5553,9 @@
       ],
       "pack": "40 CC0 water / splash / slime SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-water-loop-water-03.mp3"
     },
     {
       "id": "ogacc0-rubberduck-water-slime-01",
@@ -5229,7 +5579,9 @@
       ],
       "pack": "40 CC0 water / splash / slime SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-water-slime-01.mp3"
     },
     {
       "id": "ogacc0-rubberduck-water-slime-02",
@@ -5253,7 +5605,9 @@
       ],
       "pack": "40 CC0 water / splash / slime SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-water-slime-02.mp3"
     },
     {
       "id": "ogacc0-rubberduck-water-slime-03",
@@ -5278,7 +5632,9 @@
       ],
       "pack": "40 CC0 water / splash / slime SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-water-slime-03.mp3"
     },
     {
       "id": "ogacc0-rubberduck-water-slime-04",
@@ -5303,7 +5659,9 @@
       ],
       "pack": "40 CC0 water / splash / slime SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-water-slime-04.mp3"
     },
     {
       "id": "ogacc0-rubberduck-water-slime-05",
@@ -5327,7 +5685,9 @@
       ],
       "pack": "40 CC0 water / splash / slime SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-water-slime-05.mp3"
     },
     {
       "id": "ogacc0-rubberduck-water-slime-06",
@@ -5351,7 +5711,9 @@
       ],
       "pack": "40 CC0 water / splash / slime SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-water-slime-06.mp3"
     },
     {
       "id": "ogacc0-rubberduck-water-slime-07",
@@ -5375,7 +5737,9 @@
       ],
       "pack": "40 CC0 water / splash / slime SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-water-slime-07.mp3"
     },
     {
       "id": "ogacc0-rubberduck-water-slime-08",
@@ -5399,7 +5763,9 @@
       ],
       "pack": "40 CC0 water / splash / slime SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-water-slime-08.mp3"
     },
     {
       "id": "ogacc0-rubberduck-water-slime-09",
@@ -5424,7 +5790,9 @@
       ],
       "pack": "40 CC0 water / splash / slime SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-water-slime-09.mp3"
     },
     {
       "id": "ogacc0-rubberduck-water-slime-10",
@@ -5449,7 +5817,9 @@
       ],
       "pack": "40 CC0 water / splash / slime SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-water-slime-10.mp3"
     },
     {
       "id": "ogacc0-rubberduck-water-slime-11",
@@ -5473,7 +5843,9 @@
       ],
       "pack": "40 CC0 water / splash / slime SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-water-slime-11.mp3"
     },
     {
       "id": "ogacc0-rubberduck-water-slime-12",
@@ -5497,7 +5869,9 @@
       ],
       "pack": "40 CC0 water / splash / slime SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-water-slime-12.mp3"
     },
     {
       "id": "ogacc0-rubberduck-water-slime-13",
@@ -5521,7 +5895,9 @@
       ],
       "pack": "40 CC0 water / splash / slime SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-water-slime-13.mp3"
     },
     {
       "id": "ogacc0-rubberduck-water-slime-14",
@@ -5545,7 +5921,9 @@
       ],
       "pack": "40 CC0 water / splash / slime SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-water-slime-14.mp3"
     },
     {
       "id": "ogacc0-rubberduck-water-slime-15",
@@ -5569,7 +5947,9 @@
       ],
       "pack": "40 CC0 water / splash / slime SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-water-slime-15.mp3"
     },
     {
       "id": "ogacc0-rubberduck-water-slime-16",
@@ -5594,7 +5974,9 @@
       ],
       "pack": "40 CC0 water / splash / slime SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-water-slime-16.mp3"
     },
     {
       "id": "ogacc0-rubberduck-water-splash-01",
@@ -5618,7 +6000,9 @@
       ],
       "pack": "40 CC0 water / splash / slime SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-water-splash-01.mp3"
     },
     {
       "id": "ogacc0-rubberduck-water-splash-02",
@@ -5643,7 +6027,9 @@
       ],
       "pack": "40 CC0 water / splash / slime SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-water-splash-02.mp3"
     },
     {
       "id": "ogacc0-rubberduck-water-splash-03",
@@ -5668,7 +6054,9 @@
       ],
       "pack": "40 CC0 water / splash / slime SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-water-splash-03.mp3"
     },
     {
       "id": "ogacc0-rubberduck-water-splash-04",
@@ -5692,7 +6080,9 @@
       ],
       "pack": "40 CC0 water / splash / slime SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-water-splash-04.mp3"
     },
     {
       "id": "ogacc0-rubberduck-water-splash-05",
@@ -5717,7 +6107,9 @@
       ],
       "pack": "40 CC0 water / splash / slime SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-water-splash-05.mp3"
     },
     {
       "id": "ogacc0-rubberduck-water-splash-06",
@@ -5741,7 +6133,9 @@
       ],
       "pack": "40 CC0 water / splash / slime SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-water-splash-06.mp3"
     },
     {
       "id": "ogacc0-rubberduck-water-splash-07",
@@ -5765,7 +6159,9 @@
       ],
       "pack": "40 CC0 water / splash / slime SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-water-splash-07.mp3"
     },
     {
       "id": "ogacc0-rubberduck-water-splash-08",
@@ -5789,7 +6185,9 @@
       ],
       "pack": "40 CC0 water / splash / slime SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-water-splash-08.mp3"
     },
     {
       "id": "ogacc0-rubberduck-water-splash-09",
@@ -5814,7 +6212,9 @@
       ],
       "pack": "40 CC0 water / splash / slime SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-water-splash-09.mp3"
     },
     {
       "id": "ogacc0-rubberduck-water-splash-10",
@@ -5839,7 +6239,9 @@
       ],
       "pack": "40 CC0 water / splash / slime SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-water-splash-10.mp3"
     },
     {
       "id": "ogacc0-rubberduck-water-splash-11",
@@ -5863,7 +6265,9 @@
       ],
       "pack": "40 CC0 water / splash / slime SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-water-splash-11.mp3"
     },
     {
       "id": "ogacc0-rubberduck-water-splash-12",
@@ -5887,7 +6291,9 @@
       ],
       "pack": "40 CC0 water / splash / slime SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-water-splash-12.mp3"
     },
     {
       "id": "ogacc0-rubberduck-water-splash-13",
@@ -5911,7 +6317,9 @@
       ],
       "pack": "40 CC0 water / splash / slime SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-water-splash-13.mp3"
     },
     {
       "id": "ogacc0-rubberduck-water-splash-14",
@@ -5935,7 +6343,9 @@
       ],
       "pack": "40 CC0 water / splash / slime SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-water-splash-14.mp3"
     },
     {
       "id": "ogacc0-rubberduck-water-splash-15",
@@ -5959,7 +6369,9 @@
       ],
       "pack": "40 CC0 water / splash / slime SFX",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-rubberduck-water-splash-15.mp3"
     },
     {
       "id": "ogacc0-thimras-park-park-ambience-birds",
@@ -5986,7 +6398,9 @@
       ],
       "pack": "Park ambiences",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-thimras-park-park-ambience-birds.mp3"
     },
     {
       "id": "ogacc0-thimras-park-park-ambience-river",
@@ -6013,7 +6427,9 @@
       ],
       "pack": "Park ambiences",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-thimras-park-park-ambience-river.mp3"
     },
     {
       "id": "ogacc0-thimras-park-park-ambience-wind",
@@ -6041,7 +6457,9 @@
       ],
       "pack": "Park ambiences",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-thimras-park-park-ambience-wind.mp3"
     },
     {
       "id": "ogacc0-wolfgang-crickets-crickets-1",
@@ -6066,7 +6484,9 @@
       ],
       "pack": "Crickets Ambient Noise - loopable",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-wolfgang-crickets-crickets-1.mp3"
     },
     {
       "id": "ogacc0-ylmir-rain-1",
@@ -6090,7 +6510,9 @@
       ],
       "pack": "Rain (loopable)",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-ylmir-rain-1.mp3"
     },
     {
       "id": "ogacc0-ylmir-rain-2",
@@ -6114,7 +6536,9 @@
       ],
       "pack": "Rain (loopable)",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-ylmir-rain-2.mp3"
     },
     {
       "id": "ogacc0-ylmir-rain-3",
@@ -6138,7 +6562,9 @@
       ],
       "pack": "Rain (loopable)",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-ylmir-rain-3.mp3"
     },
     {
       "id": "ogacc0-ylmir-rain-4",
@@ -6162,7 +6588,9 @@
       ],
       "pack": "Rain (loopable)",
       "sourceStatus": "catalogued_cc0_binary_download_pending",
-      "productionEligible": false
+      "productionEligible": false,
+      "audioStatus": "downloaded_verified_review_only",
+      "reviewMp3": "assets/Gift Sounds/_sources/mp3/ogacc0-ylmir-rain-4.mp3"
     }
   ],
   "candidateGiftMappings": [
@@ -6389,9 +6817,9 @@
     }
   ],
   "lastIngestion": {
-    "status": "downloaded_review_only",
-    "downloadedSourceCount": 33,
-    "newlyDownloadedSourceCount": 0,
+    "status": "partial_download_review_only",
+    "downloadedSourceCount": 246,
+    "newlyDownloadedSourceCount": 214,
     "mappedGiftFileCount": 101,
     "productionReadyGiftCount": 0
   }
