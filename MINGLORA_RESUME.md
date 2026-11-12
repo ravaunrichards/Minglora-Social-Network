@@ -545,3 +545,11 @@ Continue with independent non-database work that can be built and verified in th
 - Latest relevant commits: queue lease/authorization tests `1f580b07be23156146e0cb4f7703e155f3fe2f74`; tracker update `5fef26b6ffb7ae558c5981831ea312579f6f324a` (queue worker row evidence); current tracker/checkpoint updates follow in the branch log.
 - Full GitHub Actions/PR CI remains unverified; the connector returned no combined commit statuses or pull-request-triggered workflow runs for the inspected heads.
 - **Next safe step:** continue reviewing task approval, cancellation and canonical persistence paths for idempotency and status-transition correctness, then add narrow service/API regression coverage for any confirmed defect. Keep the staged migration, provider runtime, worker and scheduler disabled pending a suitable non-production Supabase environment and release authorization.
+
+
+### Follow-up — task persistence/idempotency invariants (2026-11-12)
+
+- Added a fifth schema/security regression test for `minglora_ai_bot_task_upsert`: owner identity, idempotency key, owner approval and cancellation timestamps, independent-AI ownership, automatic high-impact classification for task types outside the four-worker allowlist, terminal-state non-reopening, and lease revocation on cancel/reject.
+- The schema test module now contains **65** test cases. The new upsert test's 14 source assertions all match the exact staged task SQL; the complete queue claim/lease/grant/gateway predicate set was also rechecked. Combined source-level checks across the five new tests total **62/62 matched**. This is static source verification only—the Node test runner for the expanded schema file is still not executed due unavailable GitHub network access in the verification container.
+- Confirmed no code change is needed in the current task persistence logic for the reviewed invariants: the SQL requires owner-stamped approval/cancellation, preserves terminal task states, scopes idempotent conflicts to owner/bot/key and clears leases when tasks are cancelled/rejected.
+- No production database, migration, worker or gateway changes were performed.
