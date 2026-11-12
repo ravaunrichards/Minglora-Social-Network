@@ -96,20 +96,30 @@
     const bytes = await file.arrayBuffer();
     const digest = await window.crypto.subtle.digest('SHA-256', bytes);
     const sha256 = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2,'0')).join('');
-    let durationMs = 0, sampleRateHz = null, channelCount = null;
-    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContextClass) throw new Error('Audio metadata inspection is not supported by this browser.');
-    const context = new AudioContextClass();
+    const objectUrl = URL.createObjectURL(file);
     try {
-      const decoded = await context.decodeAudioData(bytes.slice(0));
-      durationMs = Math.round(decoded.duration * 1000);
-      sampleRateHz = decoded.sampleRate;
-      channelCount = decoded.numberOfChannels;
+      const metadata = await new Promise((resolve,reject) => {
+        const audio = new Audio();
+        audio.preload = 'metadata';
+        audio.onloadedmetadata = () => {
+          const duration = Number(audio.duration);
+          if (!Number.isFinite(duration) || duration <= 0) return reject(new Error('The audio duration could not be verified.'));
+          resolve({durationMs:Math.round(duration * 1000)});
+        };
+        audio.onerror = () => reject(new Error('The selected file could not be decoded as an audio recording.'));
+        audio.src = objectUrl;
+        audio.load();
+      });
+      const durationMs = metadata.durationMs;
+      return {
+        sha256,durationMs,
+        sampleRateHz:null,
+        channelCount:null,
+        bitRateBps:Math.round(file.size * 8 * 1000 / durationMs)
+      };
     } finally {
-      await context.close().catch(() => {});
+      URL.revokeObjectURL(objectUrl);
     }
-    const bitRateBps = durationMs > 0 ? Math.round(file.size * 8 * 1000 / durationMs) : null;
-    return {sha256,durationMs,sampleRateHz,channelCount,bitRateBps};
   }
 
   function initialize(root) {
@@ -437,4 +447,15 @@
   }
 
   window.MingloraAudioAdmin = Object.freeze({initialize});
+  const root = document.querySelector('#admin-centre-root');
+  if (root) {
+    initialize(root);
+    const observer = new MutationObserver(() => {
+      if (root.querySelector('#admin-audio-management')) {
+        initialize(root);
+        observer.disconnect();
+      }
+    });
+    observer.observe(root,{childList:true,subtree:true});
+  }
 })();
