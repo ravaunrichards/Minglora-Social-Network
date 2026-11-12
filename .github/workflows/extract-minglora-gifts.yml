@@ -19,7 +19,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: minglora-gift-extraction
+  group: minglora-gift-index-build
   cancel-in-progress: false
 
 jobs:
