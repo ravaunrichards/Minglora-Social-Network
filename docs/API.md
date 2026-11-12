@@ -176,6 +176,15 @@ Moderator access is restricted to MODERATOR_USER_IDS or a trusted account with a
 
 Creator analytics aggregate real playback records into distinct viewers, viewer-video pairs, recorded watch time, average watch duration and completion rate. Audience-retention curves use optional, server-bounded playback-position samples and distinct viewers only; a curve is withheld until at least five viewers have supplied valid position data. Older events without position data remain in existing watch metrics but are not backfilled or estimated. No viewer IDs are exposed, and impressions or reach are not inferred. Hidden and archived posts, owner self-views, future events and records outside the selected reporting period are excluded. The endpoint defaults to 30 days and accepts only 7, 30 or 90 days.
 
+## Video responses and remix permissions
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| POST | `/api/posts` | Publish a video/Reel with optional `allowRemix: true`; a response post may include `remixSourcePostId` and `remixType: "response"` |
+| PATCH | `/api/posts/:id` | Video owner may enable or disable video responses with a boolean `allowRemix` |
+
+Video responses require the source creator to explicitly enable remix permission. The server rechecks source-video existence, attached video media, post visibility, profile visibility and block relationships at publish time. Responses upload their own video and retain a source attribution card; disabling permission prevents new responses but does not delete existing responses. Permission is off by default, including for older videos. This first slice provides attributed video responses, not a native split-screen Duet/Stitch compositor.
+
 ## Video channels
 
 | Method | Endpoint | Purpose |
