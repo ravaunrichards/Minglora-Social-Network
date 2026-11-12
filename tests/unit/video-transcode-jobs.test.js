@@ -53,13 +53,14 @@ test('expired leases are recovered without losing the original job identity', ()
   const first = claimVideoTranscodeJob(jobs, {
     leaseToken: 'lease-token-abcdefghijklmnopqrstuvwxyz', nowMs: base, leaseMs: 60_000
   });
+  const originalLeaseToken = first.leaseToken;
   const recovered = claimVideoTranscodeJob(jobs, {
     leaseToken: 'new-lease-token-abcdefghijklmnopqrstuvwxyz', nowMs: base + 60_001
   });
   assert.equal(recovered.id, first.id);
   assert.equal(recovered.attempts, 2);
   assert.equal(recovered.leaseToken, 'new-lease-token-abcdefghijklmnopqrstuvwxyz');
-  assert.equal(isVideoTranscodeLeaseValid(recovered, first.leaseToken, base + 60_002), false);
+  assert.equal(isVideoTranscodeLeaseValid(recovered, originalLeaseToken, base + 60_002), false);
 });
 
 test('completion requires the current unexpired lease and records the derivative reference', () => {
