@@ -561,10 +561,11 @@
     "downloadedAudioFiles": 246,
     "auditionedAudioFiles": 0,
     "productionReadyAudioFiles": 0,
-    "candidateGiftMappings": 20,
-    "candidateGiftFolderCount": 101,
+    "candidateGiftMappings": 59,
+    "candidateGiftFolderCount": 154,
     "additionalCC0CataloguedRecordings": 231,
-    "newMirrorCC0RecordingsAdded": 214
+    "newMirrorCC0RecordingsAdded": 214,
+    "mirrorCC0CandidateGiftCount": 53
   },
   "additionalCC0Recordings": [
     {
@@ -6814,6 +6815,254 @@
         "singing-sax"
       ],
       "reason": "Real steel-pan performance tone for music-themed gift artwork; do not imply this is a complete song."
+    },
+    {
+      "sourceId": "ogacc0-expl0it3r-applause-applause-clapping-church-crowd-immersive",
+      "giftSlugs": [
+        "applause",
+        "crowd-cheering",
+        "club-cheers",
+        "congratulations",
+        "fandom-cheer"
+      ]
+    },
+    {
+      "sourceId": "ogacc0-nocturnal-cheers-cheers-1",
+      "giftSlugs": [
+        "club-victory",
+        "luvx-cheer"
+      ]
+    },
+    {
+      "sourceId": "ogacc0-almitory-applause-applause-fireworks",
+      "giftSlugs": [
+        "happy-party",
+        "fest-party",
+        "birthday-party",
+        "celebration-time"
+      ]
+    },
+    {
+      "sourceId": "ogacc0-rubberduck-100sfx-bell-01",
+      "giftSlugs": [
+        "balloon-crown",
+        "bowtiful-crown",
+        "crown-world"
+      ]
+    },
+    {
+      "sourceId": "ogacc0-rubberduck-100sfx-bell-02",
+      "giftSlugs": [
+        "crystal-crown",
+        "diamond-crown"
+      ]
+    },
+    {
+      "sourceId": "ogacc0-rubberduck-100sfx-bell-03",
+      "giftSlugs": [
+        "sakura-crown",
+        "the-crown"
+      ]
+    },
+    {
+      "sourceId": "ogacc0-rubberduck-100sfx-gong-01",
+      "giftSlugs": [
+        "gold-medal",
+        "trophy"
+      ]
+    },
+    {
+      "sourceId": "ogacc0-rubberduck-100sfx-gong-02",
+      "giftSlugs": [
+        "league-trophy",
+        "champions-cup"
+      ]
+    },
+    {
+      "sourceId": "ogacc0-pwl-bells-bell-ding1",
+      "giftSlugs": [
+        "lucky-crown"
+      ]
+    },
+    {
+      "sourceId": "ogacc0-pwl-bells-bell-ding2",
+      "giftSlugs": [
+        "diamond-stage"
+      ]
+    },
+    {
+      "sourceId": "ogacc0-pwl-bells-bell-ding3",
+      "giftSlugs": [
+        "crystal-dreams"
+      ]
+    },
+    {
+      "sourceId": "ogacc0-rubberduck-100sfx-glass-02",
+      "giftSlugs": [
+        "love-glasses"
+      ]
+    },
+    {
+      "sourceId": "ogacc0-rubberduck-100sfx-glass-03",
+      "giftSlugs": [
+        "crystal-heart"
+      ]
+    },
+    {
+      "sourceId": "ogacc0-rubberduck-100sfx-glass-04",
+      "giftSlugs": [
+        "crystal-rod"
+      ]
+    },
+    {
+      "sourceId": "ogacc0-rubberduck-100sfx-metal-01",
+      "giftSlugs": [
+        "gold-necklace"
+      ]
+    },
+    {
+      "sourceId": "ogacc0-rubberduck-100sfx-metal-02",
+      "giftSlugs": [
+        "golden-chain"
+      ]
+    },
+    {
+      "sourceId": "ogacc0-rubberduck-100sfx-metal-03",
+      "giftSlugs": [
+        "diamond"
+      ]
+    },
+    {
+      "sourceId": "ogacc0-rubberduck-100sfx-metal-04",
+      "giftSlugs": [
+        "silver-fern"
+      ]
+    },
+    {
+      "sourceId": "ogacc0-rubberduck-water-bubble-01",
+      "giftSlugs": [
+        "glowing-jellyfish"
+      ]
+    },
+    {
+      "sourceId": "ogacc0-rubberduck-water-bubble-02",
+      "giftSlugs": [
+        "seahorse-pop"
+      ]
+    },
+    {
+      "sourceId": "ogacc0-rubberduck-water-splash-01",
+      "giftSlugs": [
+        "goldfish-scooping"
+      ]
+    },
+    {
+      "sourceId": "ogacc0-rubberduck-water-splash-02",
+      "giftSlugs": [
+        "puffer-fish"
+      ]
+    },
+    {
+      "sourceId": "ogacc0-rubberduck-water-splash-03",
+      "giftSlugs": [
+        "otter-with-fish"
+      ]
+    },
+    {
+      "sourceId": "ogacc0-rubberduck-water-loop-water-01",
+      "giftSlugs": [
+        "seaside-romance"
+      ]
+    },
+    {
+      "sourceId": "ogacc0-qubodup-waves-wave-01-cc0-18363-jasinski-alkaibeach",
+      "giftSlugs": [
+        "luxury-yacht"
+      ]
+    },
+    {
+      "sourceId": "ogacc0-qubodup-waves-wave-02-cc0-18363-jasinski-alkaibeach",
+      "giftSlugs": [
+        "yacht"
+      ]
+    },
+    {
+      "sourceId": "ogacc0-qubodup-waves-wave-03-cc0-18363-jasinski-alkaibeach",
+      "giftSlugs": [
+        "party-boat"
+      ]
+    },
+    {
+      "sourceId": "ogacc0-qubodup-waves-wave-04-cc0-18363-jasinski-alkaibeach",
+      "giftSlugs": [
+        "cotton-the-seal"
+      ]
+    },
+    {
+      "sourceId": "ogacc0-qubodup-rustles-rustle01",
+      "giftSlugs": [
+        "autumn-leaves"
+      ]
+    },
+    {
+      "sourceId": "ogacc0-pauliuw-forestbirds-forest-birds-1",
+      "giftSlugs": [
+        "black-swan"
+      ]
+    },
+    {
+      "sourceId": "ogacc0-pauliuw-forestbirds-forest-birds-2",
+      "giftSlugs": [
+        "swan"
+      ]
+    },
+    {
+      "sourceId": "ogacc0-pauliuw-forestbirds-forest-birds-3",
+      "giftSlugs": [
+        "pop-parrot"
+      ]
+    },
+    {
+      "sourceId": "ogacc0-thimras-park-park-ambience-birds",
+      "giftSlugs": [
+        "flamingo-groove"
+      ]
+    },
+    {
+      "sourceId": "ogacc0-thimras-park-park-ambience-river",
+      "giftSlugs": [
+        "fish-and-chips"
+      ]
+    },
+    {
+      "sourceId": "ogacc0-thimras-park-park-ambience-wind",
+      "giftSlugs": [
+        "palm-breeze"
+      ]
+    },
+    {
+      "sourceId": "ogacc0-wolfgang-crickets-crickets-1",
+      "giftSlugs": [
+        "night-star"
+      ]
+    },
+    {
+      "sourceId": "ogacc0-lokif-swamp-beast-1",
+      "giftSlugs": [
+        "baby-dragon"
+      ]
+    },
+    {
+      "sourceId": "ogacc0-lokif-swamp-beast-2",
+      "giftSlugs": [
+        "dragon-flame"
+      ]
+    },
+    {
+      "sourceId": "ogacc0-lokif-swamp-cicada-1",
+      "giftSlugs": [
+        "caterpillar-chaos"
+      ]
     }
   ],
   "lastIngestion": {
