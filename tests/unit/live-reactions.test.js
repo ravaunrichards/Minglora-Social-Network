@@ -25,14 +25,14 @@ test('LIVE likes have a white-to-red heart button and also respond to stage taps
   assert.match(styles, /\.live-like-count/);
 });
 
-test('Host profile, LIVE likes and power control occupy a separate row above the stage', () => {
-  assert.match(app, /id='live-leave' class='live-host-power-button' aria-label='Power off LIVE for everyone' title='Power off LIVE'><svg/);
+test('Host identity and heart count stay in the HUD while End LIVE is reserved in the side-panel header', () => {
+  const hudStart = app.indexOf('const liveStageHud=');\n  const hudEnd = app.indexOf('const liveChatOverlay=', hudStart);\n  const hud = app.slice(hudStart, hudEnd);\n  const panelStart = app.indexOf(\"id='live-fullscreen-chat-slot'\");\n  const panelEnd = app.indexOf('</aside></div>', panelStart);\n  const panel = app.slice(panelStart, panelEnd);\n  assert.match(panel, /live-fullscreen-side-head[\\s\\S]*?id='live-leave' class='live-panel-end-button'.*<svg/);\n  assert.doesNotMatch(hud, /live-host-power-button|id='live-leave'/);\n  assert.equal((app.match(/id='live-leave'/g) || []).length, 1);\n  assert.doesNotMatch(hud, /<small>likes<\\/small>/i);
   assert.match(app, /stage\?\.insertAdjacentHTML\("beforebegin",liveStageHud\)/);
   assert.match(app, /liveChatPanel\?\.insertAdjacentHTML\("beforeend",liveChatOverlay\)/);
   assert.doesNotMatch(app, /stage\?\.insertAdjacentHTML\("beforeend",liveChatOverlay\)/);
   assert.match(styles, /\.live-video-column>\.live-stage-topbar/);
   assert.match(styles, /position:static!important/);
-  assert.match(styles, /\.live-host-power-button svg/);
+  assert.match(read('public/live-interface-guardrails.css'), /\.live-panel-end-button svg/);
 });
 
 test('LIVE reactions travel over the room data channel and are validated before display', () => {
