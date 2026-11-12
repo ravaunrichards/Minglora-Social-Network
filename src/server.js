@@ -2683,6 +2683,13 @@ async function route(req, res) {
         });
         return json(res,200,reviewed);
       }
+      const audioPreviewRoute=p.match(/^\\/api\\/admin\\/audio\\/assets\\/([0-9a-f-]{36})\\/preview$/i);
+      if(method==='GET'&&audioPreviewRoute){
+        const preview=await requestSupabaseState('audio_admin_preview',{
+          adminUserId:user.id,adminEmail:normalizeEmail(user.email||''),assetId:audioPreviewRoute[1]
+        });
+        return json(res,200,preview,{'Cache-Control':'no-store'});
+      }
       if(method==='POST'&&p==='/api/admin/audio/assignments'){
         const validation=validateAudioAssignment(input);
         if(!validation.valid)return json(res,400,{error:validation.errors.join(' ')});
