@@ -82,7 +82,7 @@ if(["private_messages","group_messages","voice_messages"].includes(key)&&experie
 syncUniversalAudioPreferences();
 const eventKey=EVENT_BY_NOTIFICATION_CATEGORY[key]||"notification.incoming";
 if(window.MingloraAudioEngine){
-  const centralPlayed=await window.MingloraAudioEngine.playEvent(eventKey,{priority:key==="incoming_calls"?100:20,volume:Math.max(0,Math.min(100,Number(experience.notificationVolume??80)))/100});
+  const centralPlayed=await window.MingloraAudioEngine.playEvent(eventKey,{priority:key==="incoming_calls"?100:20,volume:1});
   if(centralPlayed)return true;
 }
 const custom=prefs.customSounds?.find(item=>item.id===a.soundId&&item.url);if(!custom)return false;try{await play(a.soundId,{volume:experience.notificationVolume??80});return true;}catch{return false;}
