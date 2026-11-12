@@ -1,0 +1,352 @@
+/* Minglora Profile Style System
+   Style variants change profile presentation only. Shared profile data, controls,
+   permissions, media and relationship APIs remain the single source of truth. */
+.minglora-profile-page[data-profile-style],
+.minglora-profile-page[data-profile-style] *{box-sizing:border-box}
+.minglora-profile-page[data-profile-style]{min-width:0;width:100%;max-width:100%;margin-inline:auto}
+.minglora-profile-page[data-profile-style] .profile-header-card,
+.minglora-profile-page[data-profile-style] #profile-tab-panel>.card{min-width:0;max-width:100%}
+.minglora-profile-page[data-profile-style] .profile-header-card .profile-info,
+.minglora-profile-page[data-profile-style] .profile-header-card .profile-info-main,
+.minglora-profile-page[data-profile-style] .profile-counts,
+.minglora-profile-page[data-profile-style] .profile-tabs,
+.minglora-profile-page[data-profile-style] .profile-tabs-list{min-width:0;max-width:100%}
+.minglora-profile-page[data-profile-style] .profile-tabs-list{overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin}
+.minglora-profile-page[data-profile-style] .profile-tabs-list>button{flex:0 0 auto;white-space:nowrap}
+.minglora-profile-page[data-profile-style] .profile-post-grid,
+.minglora-profile-page[data-profile-style] .profile-media-grid,
+.minglora-profile-page[data-profile-style] .profile-reels-grid,
+.minglora-profile-page[data-profile-style] .profile-albums-grid{min-width:0;max-width:100%}
+.minglora-profile-page[data-profile-style] .profile-post-tile,
+.minglora-profile-page[data-profile-style] .profile-media-tile,
+.minglora-profile-page[data-profile-style] .profile-reel-tile{min-width:0;overflow:hidden}
+.minglora-profile-page[data-profile-style] .profile-post-tile img,
+.minglora-profile-page[data-profile-style] .profile-media-tile img,
+.minglora-profile-page[data-profile-style] .profile-reel-tile video{max-width:100%;object-fit:cover}
+.minglora-profile-page[data-profile-style] .profile-counts>*{min-width:0}
+.minglora-profile-page[data-profile-style] .profile-info-main>*,
+.minglora-profile-page[data-profile-style] .profile-about,
+.minglora-profile-page[data-profile-style] .profile-about-sections{overflow-wrap:anywhere}
+.minglora-profile-page[data-profile-style] .profile-header-card .profile-actions,
+.minglora-profile-page[data-profile-style] .profile-header-card .profile-owner-actions{flex-wrap:wrap;min-width:0}
+.minglora-profile-page[data-profile-style] #profile-tab-panel{min-width:0}
+
+/* Facebook-style: deliberately retain the established, fully working default geometry. */
+.minglora-profile-page[data-profile-style="facebook"] .profile-header-card{border-radius:14px}
+
+/* TikTok-style: creator-first avatar header and video-led profile. */
+.minglora-profile-page[data-profile-style="tiktok"] .profile-header-card{border:0;border-radius:0;background:transparent;box-shadow:none}
+.minglora-profile-page[data-profile-style="tiktok"] .profile-header-card .profile-cover{display:none!important}
+.minglora-profile-page[data-profile-style="tiktok"] .profile-header-card .profile-info{display:grid;grid-template-columns:116px minmax(0,1fr);grid-template-rows:auto auto auto;align-items:start;gap:12px 20px;padding:22px 18px 18px}
+.minglora-profile-page[data-profile-style="tiktok"] .profile-header-card .profile-avatar-edit-wrap{position:static;grid-column:1;grid-row:1/span 3;width:108px;max-width:108px;margin:0}
+.minglora-profile-page[data-profile-style="tiktok"] .profile-header-card .profile-avatar-edit-wrap>.avatar{width:108px;height:108px;min-width:108px;min-height:108px;max-width:108px;max-height:108px;border:0;box-shadow:none}
+.minglora-profile-page[data-profile-style="tiktok"] .profile-header-card .profile-info-main{grid-column:2;grid-row:1;padding:0}
+.minglora-profile-page[data-profile-style="tiktok"] .profile-header-card .profile-counts{grid-column:2;grid-row:2;display:flex;justify-content:flex-start;gap:20px;border:0;padding:4px 0}
+.minglora-profile-page[data-profile-style="tiktok"] .profile-header-card .profile-actions,
+.minglora-profile-page[data-profile-style="tiktok"] .profile-header-card .profile-owner-actions{grid-column:2;grid-row:3;justify-content:flex-start}
+.minglora-profile-page[data-profile-style="tiktok"] .profile-tabs{border-bottom:1px solid var(--line);background:transparent}
+.minglora-profile-page[data-profile-style="tiktok"] .profile-tabs-list{justify-content:center}
+.minglora-profile-page[data-profile-style="tiktok"] .profile-post-grid,
+.minglora-profile-page[data-profile-style="tiktok"] .profile-reels-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+
+/* Instagram-style: compact creator identity, centered section navigation and square gallery. */
+.minglora-profile-page[data-profile-style="instagram"] .profile-header-card{border-radius:0;box-shadow:none}
+.minglora-profile-page[data-profile-style="instagram"] .profile-header-card .profile-cover{display:none!important}
+.minglora-profile-page[data-profile-style="instagram"] .profile-header-card .profile-info{display:grid;grid-template-columns:150px minmax(0,1fr);grid-template-rows:auto auto auto;gap:12px 28px;padding:28px 24px 20px}
+.minglora-profile-page[data-profile-style="instagram"] .profile-header-card .profile-avatar-edit-wrap{position:static;grid-column:1;grid-row:1/span 3;width:136px;max-width:136px;margin:0;align-items:center}
+.minglora-profile-page[data-profile-style="instagram"] .profile-header-card .profile-avatar-edit-wrap>.avatar{width:132px;height:132px;min-width:132px;min-height:132px;max-width:132px;max-height:132px;border:0}
+.minglora-profile-page[data-profile-style="instagram"] .profile-header-card .profile-info-main{grid-column:2;grid-row:1}
+.minglora-profile-page[data-profile-style="instagram"] .profile-header-card .profile-counts{grid-column:2;grid-row:2;display:flex;justify-content:flex-start;gap:24px;border:0;padding:0}
+.minglora-profile-page[data-profile-style="instagram"] .profile-header-card .profile-actions,
+.minglora-profile-page[data-profile-style="instagram"] .profile-header-card .profile-owner-actions{grid-column:2;grid-row:3}
+.minglora-profile-page[data-profile-style="instagram"] .profile-tabs{justify-content:center;border-top:1px solid var(--line)}
+.minglora-profile-page[data-profile-style="instagram"] .profile-tabs-list{justify-content:center}
+.minglora-profile-page[data-profile-style="instagram"] .profile-post-grid,
+.minglora-profile-page[data-profile-style="instagram"] .profile-media-grid,
+.minglora-profile-page[data-profile-style="instagram"] .profile-reels-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+.minglora-profile-page[data-profile-style="instagram"] .profile-post-tile,
+.minglora-profile-page[data-profile-style="instagram"] .profile-media-tile{aspect-ratio:1}
+
+/* YouTube-style: channel banner, left-aligned channel identity and channel navigation. */
+.minglora-profile-page[data-profile-style="youtube"] .profile-header-card{border-radius:12px;overflow:hidden}
+.minglora-profile-page[data-profile-style="youtube"] .profile-header-card .profile-cover{aspect-ratio:3.5/1;max-height:290px}
+.minglora-profile-page[data-profile-style="youtube"] .profile-header-card .profile-info{grid-template-columns:112px minmax(0,1fr);grid-template-rows:auto auto auto;gap:10px 20px;padding:16px 22px}
+.minglora-profile-page[data-profile-style="youtube"] .profile-header-card .profile-avatar-edit-wrap{grid-column:1;grid-row:1/span 3;width:104px;max-width:104px;margin:0;position:static}
+.minglora-profile-page[data-profile-style="youtube"] .profile-header-card .profile-avatar-edit-wrap>.avatar{width:104px;height:104px;min-width:104px;min-height:104px;max-width:104px;max-height:104px;border:0}
+.minglora-profile-page[data-profile-style="youtube"] .profile-header-card .profile-info-main{grid-column:2;grid-row:1}
+.minglora-profile-page[data-profile-style="youtube"] .profile-header-card .profile-counts{grid-column:2;grid-row:2;display:flex;gap:18px;border:0;padding:0}
+.minglora-profile-page[data-profile-style="youtube"] .profile-header-card .profile-actions,
+.minglora-profile-page[data-profile-style="youtube"] .profile-header-card .profile-owner-actions{grid-column:2;grid-row:3}
+.minglora-profile-page[data-profile-style="youtube"] .profile-tabs{border-bottom:1px solid var(--line);background:var(--card)}
+.minglora-profile-page[data-profile-style="youtube"] .profile-tabs-list{justify-content:flex-start}
+.minglora-profile-page[data-profile-style="youtube"] .profile-video-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+
+/* X-style: tighter banner and identity block; timeline content remains the native Minglora feed. */
+.minglora-profile-page[data-profile-style="x"] .profile-header-card{border-radius:0;box-shadow:none;border-bottom:1px solid var(--line)}
+.minglora-profile-page[data-profile-style="x"] .profile-header-card .profile-cover{aspect-ratio:3.8/1;max-height:235px}
+.minglora-profile-page[data-profile-style="x"] .profile-header-card .profile-info{grid-template-columns:92px minmax(0,1fr);grid-template-rows:auto auto auto;gap:8px 15px;padding:0 18px 16px}
+.minglora-profile-page[data-profile-style="x"] .profile-header-card .profile-avatar-edit-wrap{grid-column:1;grid-row:1/span 3;position:static;width:88px;max-width:88px;margin:-36px 0 0}
+.minglora-profile-page[data-profile-style="x"] .profile-header-card .profile-avatar-edit-wrap>.avatar{width:88px;height:88px;min-width:88px;min-height:88px;max-width:88px;max-height:88px;border:4px solid var(--card)}
+.minglora-profile-page[data-profile-style="x"] .profile-header-card .profile-info-main{grid-column:2;grid-row:1}
+.minglora-profile-page[data-profile-style="x"] .profile-header-card .profile-counts{grid-column:2;grid-row:2;display:flex;gap:14px;border:0;padding:0}
+.minglora-profile-page[data-profile-style="x"] .profile-header-card .profile-actions,
+.minglora-profile-page[data-profile-style="x"] .profile-header-card .profile-owner-actions{grid-column:2;grid-row:3}
+.minglora-profile-page[data-profile-style="x"] .profile-tabs{border-bottom:1px solid var(--line)}
+.minglora-profile-page[data-profile-style="x"] .profile-tabs-list{justify-content:space-between}
+.minglora-profile-page[data-profile-style="x"] #profile-tab-panel>.card{border-radius:0;box-shadow:none}
+
+/* LinkedIn-style: professional introduction card with work/education retained in About. */
+.minglora-profile-page[data-profile-style="linkedin"] .profile-header-card{border:1px solid var(--line);border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.minglora-profile-page[data-profile-style="linkedin"] .profile-header-card .profile-cover{aspect-ratio:4.2/1;max-height:235px}
+.minglora-profile-page[data-profile-style="linkedin"] .profile-header-card .profile-info{grid-template-columns:122px minmax(0,1fr);grid-template-rows:auto auto auto;gap:10px 18px;padding:0 22px 18px}
+.minglora-profile-page[data-profile-style="linkedin"] .profile-header-card .profile-avatar-edit-wrap{grid-column:1;grid-row:1/span 3;position:static;width:112px;max-width:112px;margin:-46px 0 0}
+.minglora-profile-page[data-profile-style="linkedin"] .profile-header-card .profile-avatar-edit-wrap>.avatar{width:112px;height:112px;min-width:112px;min-height:112px;max-width:112px;max-height:112px;border:4px solid var(--card)}
+.minglora-profile-page[data-profile-style="linkedin"] .profile-header-card .profile-info-main{grid-column:2;grid-row:1}
+.minglora-profile-page[data-profile-style="linkedin"] .profile-header-card .profile-counts{grid-column:2;grid-row:2;display:flex;gap:18px;border:0;padding:0}
+.minglora-profile-page[data-profile-style="linkedin"] .profile-header-card .profile-actions,
+.minglora-profile-page[data-profile-style="linkedin"] .profile-header-card .profile-owner-actions{grid-column:2;grid-row:3}
+.minglora-profile-page[data-profile-style="linkedin"] .profile-tabs-list{justify-content:flex-start}
+.minglora-profile-page[data-profile-style="linkedin"] .profile-about{border-left:4px solid #0a66c2}
+
+/* Pinterest-style: creator identity and staggered, visual-first saved-media presentation. */
+.minglora-profile-page[data-profile-style="pinterest"] .profile-header-card{border:0;border-radius:0;box-shadow:none}
+.minglora-profile-page[data-profile-style="pinterest"] .profile-header-card .profile-cover{display:none!important}
+.minglora-profile-page[data-profile-style="pinterest"] .profile-header-card .profile-info{display:flex;flex-direction:column;align-items:center;text-align:center;padding:24px 18px;gap:10px}
+.minglora-profile-page[data-profile-style="pinterest"] .profile-header-card .profile-avatar-edit-wrap{position:static;width:104px;max-width:104px;margin:0}
+.minglora-profile-page[data-profile-style="pinterest"] .profile-header-card .profile-avatar-edit-wrap>.avatar{width:104px;height:104px;min-width:104px;min-height:104px;max-width:104px;max-height:104px;border:0}
+.minglora-profile-page[data-profile-style="pinterest"] .profile-header-card .profile-info-main{width:100%;text-align:center}
+.minglora-profile-page[data-profile-style="pinterest"] .profile-header-card .profile-counts{display:flex;justify-content:center;gap:18px;border:0;padding:0}
+.minglora-profile-page[data-profile-style="pinterest"] .profile-header-card .profile-actions,
+.minglora-profile-page[data-profile-style="pinterest"] .profile-header-card .profile-owner-actions{justify-content:center}
+.minglora-profile-page[data-profile-style="pinterest"] .profile-tabs-list{justify-content:center}
+.minglora-profile-page[data-profile-style="pinterest"] .profile-media-grid,
+.minglora-profile-page[data-profile-style="pinterest"] .profile-post-grid{columns:4;column-gap:12px;display:block}
+.minglora-profile-page[data-profile-style="pinterest"] .profile-media-tile,
+.minglora-profile-page[data-profile-style="pinterest"] .profile-post-tile{display:inline-block;width:100%;margin:0 0 12px;break-inside:avoid;border-radius:14px}
+
+/* Twitch-style: channel-focused dark stage while retaining Minglora's genuine profile controls. */
+.minglora-profile-page[data-profile-style="twitch"] .profile-header-card{background:#17151f;border:1px solid #322b40;color:#f5f1ff;border-radius:12px;overflow:hidden}
+.minglora-profile-page[data-profile-style="twitch"] .profile-header-card .profile-info{background:#17151f;color:#f5f1ff}
+.minglora-profile-page[data-profile-style="twitch"] .profile-header-card .profile-info-main h1,
+.minglora-profile-page[data-profile-style="twitch"] .profile-header-card .profile-counts strong{color:#fff}
+.minglora-profile-page[data-profile-style="twitch"] .profile-header-card .profile-username-line,
+.minglora-profile-page[data-profile-style="twitch"] .profile-header-card .profile-counts span{color:#c7bfd4}
+.minglora-profile-page[data-profile-style="twitch"] .profile-header-card .profile-cover{aspect-ratio:4/1;max-height:220px}
+.minglora-profile-page[data-profile-style="twitch"] .profile-header-card .profile-tabs{background:#211c2c;border-top:1px solid #393044}
+.minglora-profile-page[data-profile-style="twitch"] .profile-header-card .profile-tabs-list>button{color:#f4efff}
+.minglora-profile-page[data-profile-style="twitch"] .profile-header-card .profile-tabs-list>button.active{color:#bf94ff;border-color:#9147ff}
+.minglora-profile-page[data-profile-style="twitch"] .profile-post-grid,
+.minglora-profile-page[data-profile-style="twitch"] .profile-reels-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+
+/* Snapchat-style: centered avatar-led profile and bright story/media navigation. */
+.minglora-profile-page[data-profile-style="snapchat"] .profile-header-card{border-radius:18px;overflow:hidden}
+.minglora-profile-page[data-profile-style="snapchat"] .profile-header-card .profile-cover{display:none!important}
+.minglora-profile-page[data-profile-style="snapchat"] .profile-header-card .profile-info{display:flex;flex-direction:column;align-items:center;text-align:center;padding:24px 16px 18px;gap:10px;background:linear-gradient(145deg,#fff8b5 0%,var(--card) 48%,#f4f6ff 100%)}
+.minglora-profile-page[data-profile-style="snapchat"] .profile-header-card .profile-avatar-edit-wrap{position:static;width:104px;max-width:104px;margin:0}
+.minglora-profile-page[data-profile-style="snapchat"] .profile-header-card .profile-avatar-edit-wrap>.avatar{width:104px;height:104px;min-width:104px;min-height:104px;max-width:104px;max-height:104px;border:4px solid #ffdf24}
+.minglora-profile-page[data-profile-style="snapchat"] .profile-header-card .profile-info-main{width:100%;text-align:center}
+.minglora-profile-page[data-profile-style="snapchat"] .profile-header-card .profile-counts{display:flex;justify-content:center;gap:18px;border:0;padding:0}
+.minglora-profile-page[data-profile-style="snapchat"] .profile-header-card .profile-actions,
+.minglora-profile-page[data-profile-style="snapchat"] .profile-header-card .profile-owner-actions{justify-content:center}
+.minglora-profile-page[data-profile-style="snapchat"] .profile-tabs-list{justify-content:center}
+.minglora-profile-page[data-profile-style="snapchat"] .profile-tabs-list>button.active{background:#ffdf24;color:#191919;border-radius:20px}
+
+/* Custom Minglora-style: original layered identity card, signature blue-violet accents. */
+.minglora-profile-page[data-profile-style="custom-minglora"] .profile-header-card{border:1px solid color-mix(in srgb,var(--blue) 22%,var(--line));border-radius:18px;overflow:hidden;box-shadow:0 12px 34px rgba(38,76,145,.10)}
+.minglora-profile-page[data-profile-style="custom-minglora"] .profile-header-card .profile-cover{aspect-ratio:3.1/1;max-height:270px;background:linear-gradient(120deg,#153f91,#4d60d4 56%,#8a63c7)}
+.minglora-profile-page[data-profile-style="custom-minglora"] .profile-header-card .profile-info{background:linear-gradient(180deg,color-mix(in srgb,var(--blue) 5%,var(--card)),var(--card));padding-bottom:20px}
+.minglora-profile-page[data-profile-style="custom-minglora"] .profile-header-card .profile-counts{padding-top:12px}
+.minglora-profile-page[data-profile-style="custom-minglora"] .profile-header-card .profile-counts>*{padding-inline:10px;border-right:1px solid var(--line)}
+.minglora-profile-page[data-profile-style="custom-minglora"] .profile-header-card .profile-counts>*:last-child{border-right:0}
+.minglora-profile-page[data-profile-style="custom-minglora"] .profile-tabs{border:1px solid var(--line);border-radius:13px;background:var(--card);padding:4px}
+.minglora-profile-page[data-profile-style="custom-minglora"] .profile-tabs-list>button.active{border-radius:9px;background:var(--blue);color:white}
+
+/* Profile Style Library: clear card grid, scrollable previews and no fixed/floating controls. */
+.profile-style-library{width:100%;max-width:1120px;margin:0 auto 18px;padding:20px}
+.profile-style-library-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
+.profile-style-library-heading h2{margin:4px 0 5px;font-size:clamp(21px,2vw,27px)}
+.profile-style-library-heading p{margin:0;color:var(--muted);line-height:1.5}
+.profile-style-eyebrow{font-size:10px;letter-spacing:.13em;font-weight:850;color:var(--blue)}
+.profile-style-count{flex:0 0 auto;padding:6px 10px;border-radius:999px;background:var(--surface-soft);font-size:12px;font-weight:750}
+.profile-style-library-workspace{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,.9fr);gap:20px;align-items:start}
+.profile-style-options{display:grid;gap:9px;max-height:720px;overflow:auto;padding:2px 6px 2px 0}
+.profile-style-option{display:grid;grid-template-columns:76px minmax(0,1fr) auto;align-items:center;gap:11px;min-width:0;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--card)}
+.profile-style-option.is-active{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue)}
+.profile-style-option-art{height:52px;position:relative;display:flex;align-items:center;justify-content:flex-start;gap:5px;padding:6px;border-radius:8px;overflow:hidden;background:linear-gradient(135deg,#e3ecff,#f7f8ff)}
+.profile-style-option-art:before{content:"";position:absolute;inset:0 0 auto;height:15px;background:linear-gradient(90deg,#356ed4,#8f70dc)}
+.profile-style-option-avatar{z-index:1;width:22px;height:22px;border-radius:50%;background:#6b84bb;border:2px solid #fff}
+.profile-style-option-lines{display:block;width:34px;height:17px;border-radius:4px;background:linear-gradient(#58677f 0 3px,transparent 3px 7px,#9aa5b7 7px 9px,transparent 9px 13px,#d4dbe7 13px 15px,transparent 15px)}
+.profile-style-option-grid{position:absolute;bottom:5px;left:6px;right:6px;display:flex;gap:3px}
+.profile-style-option-grid i{height:10px;flex:1;background:rgba(60,93,148,.18);border-radius:3px}
+.profile-style-option[data-profile-style-option="tiktok"] .profile-style-option-art{background:#191923}
+.profile-style-option[data-profile-style-option="tiktok"] .profile-style-option-art:before{display:none}
+.profile-style-option[data-profile-style-option="instagram"] .profile-style-option-art{background:#f9edf2}
+.profile-style-option[data-profile-style-style="instagram"] .profile-style-option-avatar{border:3px solid #d45c83}
+.profile-style-option[data-profile-style-option="youtube"] .profile-style-option-art:before{background:#bd2430}
+.profile-style-option[data-profile-style-option="x"] .profile-style-option-art:before{background:#151515}
+.profile-style-option[data-profile-style-option="linkedin"] .profile-style-option-art:before{background:#0a66c2}
+.profile-style-option[data-profile-style-option="pinterest"] .profile-style-option-grid i{height:16px;border-radius:5px 5px 2px 2px}
+.profile-style-option[data-profile-style-option="twitch"] .profile-style-option-art{background:#211934}
+.profile-style-option[data-profile-style-option="twitch"] .profile-style-option-art:before{background:#9147ff}
+.profile-style-option[data-profile-style-option="snapchat"] .profile-style-option-art{background:#fff9ca}
+.profile-style-option[data-profile-style-option="snapchat"] .profile-style-option-art:before{background:#ffdf24}
+.profile-style-option[data-profile-style-option="custom-minglora"] .profile-style-option-art:before{background:linear-gradient(90deg,#2458c7,#7657cf)}
+.profile-style-option-copy{display:grid;gap:3px;min-width:0}
+.profile-style-option-copy strong{font-size:13px;overflow-wrap:anywhere}
+.profile-style-option-copy small{font-size:11px;line-height:1.35;color:var(--muted)}
+.profile-style-option-state{font-size:10px;font-weight:750;color:var(--blue)}
+.profile-style-preview-button{min-height:34px;padding:6px 10px;white-space:nowrap}
+.profile-style-preview-column{min-width:0;padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--surface-soft,#f6f8fc)}
+.profile-style-preview-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}
+.profile-style-preview-heading>div{display:grid;gap:3px}
+.profile-style-preview-heading small,.profile-style-default-note{font-size:11px;color:var(--muted)}
+.profile-style-preview-frame{overflow:hidden;min-width:0;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--text)}
+.profile-style-preview-cover{height:76px;overflow:hidden;background:linear-gradient(110deg,#dce7fb,#a9bde5)}
+.profile-style-preview-cover img{width:100%;height:100%;object-fit:cover}
+.profile-style-preview-identity{display:flex;align-items:center;gap:11px;padding:10px 12px}
+.profile-style-preview-identity>img{flex:0 0 45px;width:45px;height:45px;border-radius:50%;object-fit:cover}
+.profile-style-preview-identity>div{display:grid;gap:3px;min-width:0}
+.profile-style-preview-identity strong{font-size:13px;overflow-wrap:anywhere}
+.profile-style-preview-identity small{font-size:10px;color:var(--muted)}
+.profile-style-preview-metrics{display:flex;gap:14px;flex-wrap:wrap;padding:0 12px 10px;font-size:10px;color:var(--muted)}
+.profile-style-preview-metrics b{color:var(--text);font-size:12px}
+.profile-style-preview-nav{display:flex;gap:0;overflow:hidden;border-block:1px solid var(--line)}
+.profile-style-preview-nav span{flex:1;min-width:0;padding:8px 4px;text-align:center;font-size:9px;white-space:nowrap}
+.profile-style-preview-content{display:flex;align-items:center;gap:9px;padding:12px}
+.profile-style-preview-content-mark{display:grid;place-items:center;flex:0 0 30px;height:30px;border-radius:9px;background:var(--blue);color:#fff;font-weight:850}
+.profile-style-preview-content>div{display:grid;gap:3px;min-width:0}
+.profile-style-preview-content strong{font-size:11px}
+.profile-style-preview-content small{font-size:10px;line-height:1.35;color:var(--muted)}
+.profile-style-library-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:13px}
+.profile-style-library-actions button{flex:1 1 95px;min-height:38px}
+.profile-style-library-note,.profile-style-library-footnote{color:var(--muted);font-size:11px;line-height:1.5}
+.profile-style-library-note{margin:10px 0 0}
+.profile-style-library-footnote{margin-top:17px;padding-top:13px;border-top:1px solid var(--line)}
+
+/* The miniature previews use the same recognizable layout distinctions as live profiles. */
+.profile-style-preview-frame[data-profile-style="tiktok"] .profile-style-preview-cover,
+.profile-style-preview-frame[data-profile-style="instagram"] .profile-style-preview-cover,
+.profile-style-preview-frame[data-profile-style="pinterest"] .profile-style-preview-cover,
+.profile-style-preview-frame[data-profile-style="snapchat"] .profile-style-preview-cover{display:none}
+.profile-style-preview-frame[data-profile-style="tiktok"] .profile-style-preview-identity,
+.profile-style-preview-frame[data-profile-style="instagram"] .profile-style-preview-identity{padding-top:14px}
+.profile-style-preview-frame[data-profile-style="instagram"] .profile-style-preview-identity,
+.profile-style-preview-frame[data-profile-style="pinterest"] .profile-style-preview-identity,
+.profile-style-preview-frame[data-profile-style="snapchat"] .profile-style-preview-identity{justify-content:center;text-align:center}
+.profile-style-preview-frame[data-profile-style="youtube"] .profile-style-preview-cover{height:90px}
+.profile-style-preview-frame[data-profile-style="x"] .profile-style-preview-cover{height:56px}
+.profile-style-preview-frame[data-profile-style="linkedin"] .profile-style-preview-identity{border-top:1px solid var(--line)}
+.profile-style-preview-frame[data-profile-style="twitch"]{background:#211c2c;color:#fff}
+.profile-style-preview-frame[data-profile-style="twitch"] .profile-style-preview-metrics,
+.profile-style-preview-frame[data-profile-style="twitch"] .profile-style-preview-nav{color:#e9e1f5}
+.profile-style-preview-frame[data-profile-style="snapchat"] .profile-style-preview-identity>img{border:3px solid #ffdf24}
+.profile-style-preview-frame[data-profile-style="custom-minglora"] .profile-style-preview-cover{background:linear-gradient(120deg,#153f91,#4d60d4 56%,#8a63c7)}
+.profile-style-preview-frame[data-profile-style="instagram"] .profile-style-preview-nav span,
+.profile-style-preview-frame[data-profile-style="pinterest"] .profile-style-preview-nav span{text-transform:uppercase;letter-spacing:.04em}
+
+/* Width coverage: compact phones, wide phones, tablets, laptops and large desktops. */
+@media(max-width:1024px){
+  .profile-style-library-workspace{grid-template-columns:minmax(0,1fr)}
+  .profile-style-options{max-height:460px}
+  .profile-style-preview-column{max-width:100%}
+  .minglora-profile-page[data-profile-style="youtube"] .profile-header-card .profile-info,
+  .minglora-profile-page[data-profile-style="linkedin"] .profile-header-card .profile-info{grid-template-columns:100px minmax(0,1fr)}
+  .minglora-profile-page[data-profile-style="youtube"] .profile-header-card .profile-avatar-edit-wrap,
+  .minglora-profile-page[data-profile-style="linkedin"] .profile-header-card .profile-avatar-edit-wrap{width:92px;max-width:92px}
+}
+@media(max-width:760px){
+  .profile-style-library{padding:14px}
+  .profile-style-option{grid-template-columns:58px minmax(0,1fr);gap:8px}
+  .profile-style-option-art{height:48px}
+  .profile-style-option-copy small{font-size:10px}
+  .profile-style-preview-button{grid-column:2;justify-self:start}
+  .profile-style-preview-column{padding:10px}
+  .profile-style-library-heading{gap:8px}
+  .minglora-profile-page[data-profile-style="tiktok"] .profile-header-card .profile-info,
+  .minglora-profile-page[data-profile-style="instagram"] .profile-header-card .profile-info,
+  .minglora-profile-page[data-profile-style="youtube"] .profile-header-card .profile-info,
+  .minglora-profile-page[data-profile-style="x"] .profile-header-card .profile-info,
+  .minglora-profile-page[data-profile-style="linkedin"] .profile-header-card .profile-info{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto auto auto;gap:10px;padding:14px}
+  .minglora-profile-page[data-profile-style="tiktok"] .profile-header-card .profile-avatar-edit-wrap,
+  .minglora-profile-page[data-profile-style="instagram"] .profile-header-card .profile-avatar-edit-wrap,
+  .minglora-profile-page[data-profile-style="youtube"] .profile-header-card .profile-avatar-edit-wrap,
+  .minglora-profile-page[data-profile-style="x"] .profile-header-card .profile-avatar-edit-wrap,
+  .minglora-profile-page[data-profile-style="linkedin"] .profile-header-card .profile-avatar-edit-wrap{grid-column:1;grid-row:1;position:static;margin:0;align-items:flex-start}
+  .minglora-profile-page[data-profile-style="tiktok"] .profile-header-card .profile-info-main,
+  .minglora-profile-page[data-profile-style="instagram"] .profile-header-card .profile-info-main,
+  .minglora-profile-page[data-profile-style="youtube"] .profile-header-card .profile-info-main,
+  .minglora-profile-page[data-profile-style="x"] .profile-header-card .profile-info-main,
+  .minglora-profile-page[data-profile-style="linkedin"] .profile-header-card .profile-info-main{grid-column:1;grid-row:2}
+  .minglora-profile-page[data-profile-style="tiktok"] .profile-header-card .profile-counts,
+  .minglora-profile-page[data-profile-style="instagram"] .profile-header-card .profile-counts,
+  .minglora-profile-page[data-profile-style="youtube"] .profile-header-card .profile-counts,
+  .minglora-profile-page[data-profile-style="x"] .profile-header-card .profile-counts,
+  .minglora-profile-page[data-profile-style="linkedin"] .profile-header-card .profile-counts{grid-column:1;grid-row:3;display:flex;flex-wrap:wrap;justify-content:flex-start;gap:10px;border:0;padding:0}
+  .minglora-profile-page[data-profile-style="tiktok"] .profile-header-card .profile-actions,
+  .minglora-profile-page[data-profile-style="tiktok"] .profile-header-card .profile-owner-actions,
+  .minglora-profile-page[data-profile-style="instagram"] .profile-header-card .profile-actions,
+  .minglora-profile-page[data-profile-style="instagram"] .profile-header-card .profile-owner-actions,
+  .minglora-profile-page[data-profile-style="youtube"] .profile-header-card .profile-actions,
+  .minglora-profile-page[data-profile-style="youtube"] .profile-header-card .profile-owner-actions,
+  .minglora-profile-page[data-profile-style="x"] .profile-header-card .profile-actions,
+  .minglora-profile-page[data-profile-style="x"] .profile-header-card .profile-owner-actions,
+  .minglora-profile-page[data-profile-style="linkedin"] .profile-header-card .profile-actions,
+  .minglora-profile-page[data-profile-style="linkedin"] .profile-header-card .profile-owner-actions{grid-column:1;grid-row:4}
+  .minglora-profile-page[data-profile-style="instagram"] .profile-header-card .profile-info,
+  .minglora-profile-page[data-profile-style="pinterest"] .profile-header-card .profile-info,
+  .minglora-profile-page[data-profile-style="snapchat"] .profile-header-card .profile-info{align-items:center;text-align:center}
+  .minglora-profile-page[data-profile-style="instagram"] .profile-header-card .profile-info-main,
+  .minglora-profile-page[data-profile-style="pinterest"] .profile-header-card .profile-info-main,
+  .minglora-profile-page[data-profile-style="snapchat"] .profile-header-card .profile-info-main{text-align:center}
+  .minglora-profile-page[data-profile-style="instagram"] .profile-header-card .profile-counts,
+  .minglora-profile-page[data-profile-style="pinterest"] .profile-header-card .profile-counts,
+  .minglora-profile-page[data-profile-style="snapchat"] .profile-header-card .profile-counts{justify-content:center}
+  .minglora-profile-page[data-profile-style="instagram"] .profile-header-card .profile-actions,
+  .minglora-profile-page[data-profile-style="instagram"] .profile-header-card .profile-owner-actions,
+  .minglora-profile-page[data-profile-style="pinterest"] .profile-header-card .profile-actions,
+  .minglora-profile-page[data-profile-style="pinterest"] .profile-header-card .profile-owner-actions,
+  .minglora-profile-page[data-profile-style="snapchat"] .profile-header-card .profile-actions,
+  .minglora-profile-page[data-profile-style="snapchat"] .profile-header-card .profile-owner-actions{justify-content:center}
+  .minglora-profile-page[data-profile-style="pinterest"] .profile-media-grid,
+  .minglora-profile-page[data-profile-style="pinterest"] .profile-post-grid{columns:2}
+  .minglora-profile-page[data-profile-style="youtube"] .profile-video-list{grid-template-columns:minmax(0,1fr)}
+}
+@media(max-width:430px){
+  .profile-style-library-heading{display:block}
+  .profile-style-count{display:inline-flex;margin-top:9px}
+  .profile-style-option{grid-template-columns:48px minmax(0,1fr);padding:8px}
+  .profile-style-option-art{height:42px;padding:4px}
+  .profile-style-preview-heading{display:grid}
+  .profile-style-library-actions{display:grid;grid-template-columns:1fr}
+  .minglora-profile-page[data-profile-style="tiktok"] .profile-header-card .profile-avatar-edit-wrap>.avatar,
+  .minglora-profile-page[data-profile-style="instagram"] .profile-header-card .profile-avatar-edit-wrap>.avatar{width:92px;height:92px;min-width:92px;min-height:92px;max-width:92px;max-height:92px}
+  .minglora-profile-page[data-profile-style="tiktok"] .profile-post-grid,
+  .minglora-profile-page[data-profile-style="tiktok"] .profile-reels-grid,
+  .minglora-profile-page[data-profile-style="instagram"] .profile-post-grid,
+  .minglora-profile-page[data-profile-style="instagram"] .profile-media-grid,
+  .minglora-profile-page[data-profile-style="instagram"] .profile-reels-grid,
+  .minglora-profile-page[data-profile-style="youtube"] .profile-post-grid,
+  .minglora-profile-page[data-profile-style="twitch"] .profile-post-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:360px){
+  .profile-style-library{padding:10px}
+  .profile-style-library-heading h2{font-size:20px}
+  .profile-style-option-copy small{display:none}
+  .profile-style-preview-column{padding:8px}
+  .profile-style-preview-nav span{font-size:8px;padding-inline:2px}
+  .minglora-profile-page[data-profile-style] .profile-counts{gap:4px!important}
+  .minglora-profile-page[data-profile-style] .profile-counts>*{padding-inline:3px!important}
+  .minglora-profile-page[data-profile-style="instagram"] .profile-header-card .profile-avatar-edit-wrap>.avatar,
+  .minglora-profile-page[data-profile-style="snapchat"] .profile-header-card .profile-avatar-edit-wrap>.avatar{width:84px;height:84px;min-width:84px;min-height:84px;max-width:84px;max-height:84px}
+}
+@media(min-width:1440px){
+  .minglora-profile-page[data-profile-style="pinterest"] .profile-media-grid,
+  .minglora-profile-page[data-profile-style="pinterest"] .profile-post-grid{columns:5}
+}
+@media(min-width:1920px){
+  .minglora-profile-page[data-profile-style="pinterest"] .profile-media-grid,
+  .minglora-profile-page[data-profile-style="pinterest"] .profile-post-grid{columns:6}
+}
+@media(prefers-reduced-motion:reduce){
+  .profile-style-library *{scroll-behavior:auto!important;transition:none!important;animation:none!important}
+}
