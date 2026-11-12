@@ -42,6 +42,10 @@ const taskQueueSql = await readFile(
   new URL('../../supabase/migrations/20261109200000_minglora_ai_bot_durable_task_queue.sql', import.meta.url),
   'utf8'
 );
+const aiHrSql = await readFile(
+  new URL('../../supabase/migrations/20261112180000_minglora_ai_bot_hr_relational_persistence.sql', import.meta.url),
+  'utf8'
+);
 const profileHtml = await readFile(
   new URL('../../public/ai-profile.html', import.meta.url),
   'utf8'
@@ -968,4 +972,80 @@ test('AI task upsert enforces owner approval, identity ownership, idempotency an
   assert.match(upsert,/WHEN EXCLUDED\.status IN \('cancelled','rejected'\) THEN NULL ELSE existing_task\.worker_id/);
   assert.match(upsert,/WHEN EXCLUDED\.status IN \('cancelled','rejected'\) THEN NULL ELSE existing_task\.lease_token/);
   assert.match(upsert,/WHEN EXCLUDED\.status IN \('cancelled','rejected'\) THEN NULL ELSE existing_task\.lease_expires_at/);
+});
+
+
+test('normalized AI HR migration defines owner-scoped departments, roles, vacancies, applications, appointments and histories',()=>{
+  for(const table of [
+    'ai_departments','ai_job_positions','ai_vacancies','ai_candidate_applications',
+    'ai_appointments','ai_employment_history','ai_hr_audit_logs'
+  ]) assert.ok(aiHrSql.includes('CREATE TABLE IF NOT EXISTS public.'+table),'missing HR table '+table);
+  assert.match(aiHrSql,/PRIMARY KEY \(owner_admin_id, department_id\)/);
+  assert.match(aiHrSql,/UNIQUE \(owner_admin_id, code\)/);
+  assert.match(aiHrSql,/FOREIGN KEY \(owner_admin_id,department_id\)/);
+  assert.match(aiHrSql,/FOREIGN KEY \(owner_admin_id,vacancy_id\)/);
+  assert.match(aiHrSql,/FOREIGN KEY \(owner_admin_id,application_id\)/);
+  assert.match(aiHrSql,/REFERENCES public\.ai_identities\(identity_id\)/);
+  assert.match(aiHrSql,/CREATE UNIQUE INDEX IF NOT EXISTS ai_appointments_one_active_identity_uq/);
+  for(const code of [
+    'board_chair','board_director','ceo','coo','cfo','cto','chro','ciso','cmo',
+    'other_executive_officer','department_director','deputy_department_director',
+    'department_manager','regional_manager','team_leader','supervisor',
+    'senior_specialist','junior_specialist','assistant','worker'
+  ]) assert.ok(aiHrSql.includes("('"+code+"'"),'missing position seed '+code);
+  assert.doesNotMatch(aiHrSql,/CREATE USER|CREATE ROLE|auth\.users\s*\(/i);
+});
+
+test('AI HR persistence keeps records owner-scoped and grants service-role-only access',()=>{
+  for(const table of [
+    'ai_departments','ai_job_positions','ai_vacancies','ai_candidate_applications',
+    'ai_appointments','ai_employment_history','ai_hr_audit_logs'
+  ]){
+    assert.ok(aiHrSql.includes('ALTER TABLE public.'+table+' ENABLE ROW LEVEL SECURITY'),'RLS missing '+table);
+  }
+  assert.match(aiHrSql,/REVOKE ALL ON TABLE public\.ai_departments[\s\S]*FROM PUBLIC,anon,authenticated/);
+  assert.match(aiHrSql,/TO service_role/);
+  assert.doesNotMatch(aiHrSql,/GRANT\s+[^;]*\s+TO\s+(?:anon|authenticated)\b/i);
+  for(const signature of ['minglora_ai_bot_hr_state_upsert(jsonb,uuid)','minglora_ai_bot_hr_state_list(uuid)']){
+    assert.ok(aiHrSql.includes('REVOKE ALL ON FUNCTION public.'+signature+' FROM PUBLIC,anon,authenticated'));
+    assert.ok(aiHrSql.includes('GRANT EXECUTE ON FUNCTION public.'+signature+' TO service_role'));
+  }
+  assert.match(aiHrSql,/SECURITY INVOKER/);
+  assert.match(aiHrSql,/SET search_path = ''/);
+});
+
+test('AI HR RPCs require the designated owner, owned organizational identities and disabled appointment permissions',()=>{
+  const writeStart=aiHrSql.indexOf('CREATE OR REPLACE FUNCTION public.minglora_ai_bot_hr_state_upsert(');
+  const readStart=aiHrSql.indexOf('CREATE OR REPLACE FUNCTION public.minglora_ai_bot_hr_state_list(');
+  assert.ok(writeStart>=0&&readStart>writeStart);
+  const write=aiHrSql.slice(writeStart,readStart);
+  const read=aiHrSql.slice(readStart,aiHrSql.indexOf('$function$;',readStart));
+  assert.match(write,/v_actor <> '5b998c21-86b5-4621-ab37-e0808a2657b1'::uuid/);
+  assert.match(write,/identity\.owner_admin_id=v_actor AND identity\.population='organizational'/);
+  assert.match(write,/identity\.population='organizational' AND identity\.status='created'/);
+  assert.match(write,/permissionGrantStatus/);
+  assert.match(write,/permissions/);
+  assert.match(write,/permission_grant_status text/);
+  assert.match(write,/COALESCE\(item->'permissions','\[\]'::jsonb\) <> '\[\]'::jsonb/);
+  assert.match(write,/COALESCE\(item->>'permissionGrantStatus','not_granted'\) <> 'not_granted'/);
+  assert.match(write,/COALESCE\(item->>'identityActivationStatus','unchanged_disabled'\) <> 'unchanged_disabled'/);
+  assert.match(read,/p_owner_admin_id <> '5b998c21-86b5-4621-ab37-e0808a2657b1'::uuid/);
+  for(const key of ['departments','jobPositions','vacancies','applications','appointments','employmentHistory','audit']){
+    assert.ok(read.includes("'" + key + "'"),'HR read RPC returns '+key);
+  }
+});
+
+test('AI HR runtime gateway and server adapters are owner-gated and retain legacy compatibility only when schema is unavailable',()=>{
+  assert.match(gateway,/"ai_bot_hr_state_upsert",\s*"ai_bot_hr_state_list"/);
+  assert.match(gateway,/action === "ai_bot_hr_state_upsert" \|\| action === "ai_bot_hr_state_list"/);
+  assert.match(gateway,/actorUserId !== AI_NETWORK_OWNER_ID/);
+  assert.match(gateway,/admin\.rpc\("minglora_ai_bot_hr_state_upsert"/);
+  assert.match(gateway,/admin\.rpc\("minglora_ai_bot_hr_state_list"/);
+  assert.match(serverSource,/requestSupabaseState\('ai_bot_hr_state_upsert'/);
+  assert.match(serverSource,/requestSupabaseState\('ai_bot_hr_state_list'/);
+  assert.match(serverSource,/error\?\.code==='AI_HR_SCHEMA_NOT_READY'/);
+  assert.match(adminApiSource,/persistCanonicalAiHrState/);
+  assert.match(adminApiSource,/refreshCanonicalAiHrState/);
+  assert.match(adminApiSource,/mutateAiHrState/);
+  assert.match(adminApiSource,/Only the designated MFA-verified Minglora owner/);
 });
