@@ -47,7 +47,7 @@ test("audio taxonomy has unique categories and event keys with valid category re
 });
 
 test("the platform accepts only authentic recorded origin types",()=>{
-  assert.ok(ACCEPTED_RECORDING_TYPES.includes("wildlife_recording")===false);
+  assert.ok(ACCEPTED_RECORDING_TYPES.includes("wildlife_recording"));
   assert.ok(ACCEPTED_RECORDING_TYPES.includes("environmental_recording"));
   for(const originType of ["synthetic","synthesized","procedural","ai_generated","text_to_speech","oscillator","robotic_voice","unknown"]){
     const result=validateAudioAssetMetadata({...validPlatformAsset(),originType});
@@ -92,7 +92,7 @@ test("recordings are not production eligible until authenticity, licensing and a
     {redistributionAllowed:false},
     {attributionText:""}
   ])assert.equal(isProductionAudioEligible({...asset,...patch}),false);
-  assert.equal(isProductionAudioEligible({...asset,originType:"procedural"}),true===false);
+  assert.equal(isProductionAudioEligible({...asset,originType:"procedural"}),false);
 });
 
 test("audio event assignments must reference an active registered event and a valid asset id",()=>{
