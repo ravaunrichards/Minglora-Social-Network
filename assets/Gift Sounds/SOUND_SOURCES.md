@@ -10,6 +10,9 @@ The Ambient Sounds by Leminno public library documents **7 third-party CC0 recor
 ### CC0 recorded effects
 The `code4fukui/sound-cc0` repository declares its sound files public-domain/CC0 and lists the individual recordings in its CSV. **9 file records** are catalogued: bell, cracker/pop, metal rack, steel pan, switch click and laughter. File byte counts and Git blob hashes are recorded in `source-catalog.json`.
 
+### Additional CC0/public-domain recordings
+A further **17 real recordings** are catalogued and present as verified MP3 review files: 14 CC0 animal recordings and 3 public-domain/CC0 wildlife or celebration recordings from Wikimedia Commons. Their creator, source page, licence, source URL and integrity metadata are retained in `source-catalog.json`. These files are downloaded and format-verified but have not been auditioned.
+
 ### Freesound CC0 candidates
 **20 source-page candidates** are registered, including recorded cat, bee, bird, duck, frog, goat, rooster, cow, owl, sheep, pig, mouse, horse and dog sounds, plus lion roar, fireworks, applause and ocean waves. CC0 is visible on each source page. Freesound requires an account login to download originals; its API can provide high-quality MP3 previews when an API key is configured. The ingest helper will re-check the API's licence before saving any preview.
 
@@ -38,7 +41,7 @@ One chicken-clucking imitation was explicitly excluded because its uploader desc
 - Gifts Studio preview can audition mapped candidates. Sent gifts and LIVE rooms remain silent for candidates until the individual mapping is human-approved.
 - 0 clips have human listening approval and 0 gift sounds are marked production-ready. Natural recordings can still be a poor semantic match or have unwanted background noise, so each candidate requires listening review.
 
-The actual files still need to be downloaded from their sources and auditioned before being copied into per-gift folders.
+The 33 public CC0/public-domain recordings are already downloaded and verified in the source pool, and 101 per-gift candidate files are already copied into their artwork-matched folders. What remains is human audition and approval. The separate 20 Freesound source-page candidates are not downloaded; they require the optional `FREESOUND_API_KEY`.
 
 ## Source ingestion helper
 
