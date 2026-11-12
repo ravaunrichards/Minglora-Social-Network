@@ -1878,12 +1878,24 @@ async function route(req, res) {
           return Array.isArray(result.emails)?result.emails:[];
         },
         persistAiHrState:isSupabasePersistence()?async state=>{
-          const result=await requestSupabaseState('ai_bot_hr_state_upsert',{actorUserId:user.id,state});
-          return result.result||null;
+          try{
+            const result=await requestSupabaseState('ai_bot_hr_state_upsert',{actorUserId:user.id,state});
+            return result.result||null;
+          }catch(error){
+            // Keep the existing runtime-state adapter operational until the
+            // additive relational migration is released to the active project.
+            if(error?.code==='AI_HR_SCHEMA_NOT_READY')return {ok:true,legacyFallback:true};
+            throw error;
+          }
         }:undefined,
         listAiHrState:isSupabasePersistence()?async ()=>{
-          const result=await requestSupabaseState('ai_bot_hr_state_list',{actorUserId:user.id});
-          return result.state||null;
+          try{
+            const result=await requestSupabaseState('ai_bot_hr_state_list',{actorUserId:user.id});
+            return result.state||null;
+          }catch(error){
+            if(error?.code==='AI_HR_SCHEMA_NOT_READY')return {legacyFallback:true};
+            throw error;
+          }
         }:undefined,
         listAiIdentityReports:async ({status='pending',limit=100,offset=0}={})=>{
           if(!isSupabasePersistence())return null;
