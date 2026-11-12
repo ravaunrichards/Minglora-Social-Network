@@ -237,6 +237,7 @@ import {
   getPersonalAiBotAppointments,
   getPersonalAiBotEmploymentHistory,
   createPersonalAiBotAppointment,
+  updatePersonalAiBotAppointment,
   createPersonalAiBotDepartment,
   updatePersonalAiBotDepartment,
   getPersonalAiBotOverview,
@@ -684,6 +685,19 @@ export async function handlePersonalAiBotsAdminApi(context) {
       const appointment=await mutateAiHrState(db,persistAiHrState,()=>createPersonalAiBotAppointment(db,input,user.id,stamp,uid));
       await saveStore();
       return (json(res,201,{ok:true,appointment}),true);
+    }
+    const appointmentMatch=path.match(/^\\/api\\/admin\\/personal-ai-bots\\/appointments\\/([a-z0-9_-]+)$/i);
+    if(appointmentMatch&&method==='PATCH'){
+      const allowed=new Set(['status','notes']);
+      if(!input||typeof input!=='object'||Array.isArray(input)||
+         Object.keys(input).some(key=>!allowed.has(key))||!Object.hasOwn(input,'status')){
+        return (json(res,400,{error:'Appointment lifecycle updates require a supported status and optional employment notes.'}),true);
+      }
+      const appointment=await mutateAiHrState(db,persistAiHrState,()=>updatePersonalAiBotAppointment(
+        db,appointmentMatch[1],input,user.id,stamp,uid
+      ));
+      await saveStore();
+      return (json(res,200,{ok:true,appointment}),true);
     }
 
     if(method==='GET'&&path===root+'/vacancies'){
