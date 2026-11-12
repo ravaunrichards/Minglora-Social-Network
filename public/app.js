@@ -1036,32 +1036,80 @@ function openComposer(options={}){
 }
 
 function openVideoComposer(options={}){
+  const draft=options.draft&&typeof options.draft==='object'?options.draft:null;
+  const selectedFormat=draft?.videoFormat||options.videoFormat;
   const modal=document.createElement('div');modal.className='modal-backdrop';
-  modal.innerHTML='<section class="modal composer-modal" role="dialog" aria-modal="true" aria-labelledby="create-video-title"><div class="modal-head"><div><span class="eyebrow">MINGLORA VIDEO</span><h2 id="create-video-title">Create a video post</h2></div><button class="modal-close" type="button" aria-label="Close">'+messenger3dIcon('close','modal-close-icon')+'</button></div><form class="modal-body" id="create-video-form"><div class="post-head"><img class="avatar" src="'+avatar(state.user)+'" alt=""><div class="post-author"><strong>'+esc(state.user.name)+'</strong><small>Share one video with your Minglora audience</small></div></div><div class="field"><label for="video-post-audience">Who can see this video?</label><select id="video-post-audience" name="audience"><option value="public">Public</option><option value="friends">Friends</option><option value="close_friends">Close Friends</option><option value="followers">Followers</option><option value="private">Only me</option></select></div><div class="field"><label for="video-remix-policy">Who can remix this video?</label><select id="video-remix-policy" name="remixPolicy"><option value="off">Nobody — off</option><option value="everyone">Everyone</option><option value="followers">My followers</option><option value="friends">My friends</option></select><small>You can change this permission later. Original uploads are never reused as another member’s upload.</small></div><div class="field"><label for="video-post-caption">Caption</label><textarea id="video-post-caption" name="text" maxlength="5000" placeholder="Write a caption for your video…" aria-label="Video caption"></textarea></div><div class="field"><label>Choose one video file</label><div id="create-video-media-picker"></div><small>MP4, WebM or QuickTime video. Photos and audio files are not accepted in this video-only composer.</small></div><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button type="submit" class="primary">Publish video</button></div></form></section>';
+  modal.innerHTML='<section class="modal composer-modal video-composer-modal" role="dialog" aria-modal="true" aria-labelledby="create-video-title"><div class="modal-head"><div><span class="eyebrow">MINGLORA VIDEO</span><h2 id="create-video-title">'+(draft?'Edit video draft':'Create a video post')+'</h2></div><button class="modal-close" type="button" aria-label="Close">'+messenger3dIcon('close','modal-close-icon')+'</button></div><form class="modal-body" id="create-video-form"><div class="post-head"><img class="avatar" src="'+avatar(state.user)+'" alt=""><div class="post-author"><strong>'+esc(state.user.name)+'</strong><small>'+(draft?'Your private saved video draft':'Share one video with your Minglora audience')+'</small></div></div><div class="field"><label for="video-post-audience">Who can see this video?</label><select id="video-post-audience" name="audience"><option value="public">Public</option><option value="friends">Friends</option><option value="close_friends">Close Friends</option><option value="followers">Followers</option><option value="private">Only me</option></select></div><div class="field"><label for="video-remix-policy">Who can remix this video?</label><select id="video-remix-policy" name="remixPolicy"><option value="off">Nobody — off</option><option value="everyone">Everyone</option><option value="followers">My followers</option><option value="friends">My friends</option></select><small>You can change this permission later. Original uploads are never reused as another member’s upload.</small></div><div class="field"><label for="video-post-caption">Caption</label><textarea id="video-post-caption" name="text" maxlength="5000" placeholder="Write a caption for your video…" aria-label="Video caption"></textarea></div>'+(draft?'<p class="video-draft-current-file" role="status">Saved video: <strong>'+esc(draft.mediaName||'Uploaded video')+'</strong> · '+(Number(draft.mediaSize||0)/1024/1024).toFixed(2)+' MB. Choose a new file below to replace it.</p>':'')+'<div class="field"><label>Choose one video file'+(draft?' (optional replacement)':'')+'</label><div id="create-video-media-picker"></div><small>MP4, WebM or QuickTime video. Photos and audio files are not accepted in this video-only composer.</small></div><p class="creator-inline-status" id="video-draft-composer-status" role="status"></p><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button type="button" class="secondary" id="video-save-draft">'+(draft?'Save changes':'Save draft')+'</button><button type="submit" class="primary">'+(draft?'Publish video':'Publish video')+'</button></div></form></section>';
   document.body.append(modal);
   if(options.remixOfPostId){modal.querySelector('#create-video-title').textContent='Remix this video';modal.querySelector('.post-author small').textContent='Create your own upload, with clear credit to @'+String(options.remixSourceUsername||'the original creator').replace(/^@/,'');}
   const picker=createMediaPicker(modal.querySelector('#create-video-media-picker'),{slot:'post',maxFiles:1,accept:'video/mp4,video/webm,video/quicktime'});
+  const form=modal.querySelector('#create-video-form');
+  const status=modal.querySelector('#video-draft-composer-status');
   const close=()=>{picker.destroy();modal.remove();};
+  form.elements.audience.value=draft?.audience||'public';
+  form.elements.remixPolicy.value=draft?.remixPolicy||'off';
+  form.elements.text.value=draft?.text||'';
+  const setStatus=message=>{if(status)status.textContent=message||'';};
   modal.querySelectorAll('.modal-close,.modal-cancel').forEach(button=>button.onclick=close);
   modal.addEventListener('click',event=>{if(event.target===modal)close();});
-  modal.querySelector('form').addEventListener('submit',async event=>{
-    event.preventDefault();
-    const button=modal.querySelector('button[type="submit"]');
-    button.disabled=true;
+  const getMediaIds=async()=>{
+    const selected=picker.selectedFiles();
+    if(selected.length){
+      if(selected.length!==1||!['video/mp4','video/webm','video/quicktime'].includes(String(selected[0]?.type||'').toLowerCase())){
+        throw new Error('Choose one supported MP4, WebM or QuickTime video file.');
+      }
+      const ids=await picker.upload();
+      if(ids.length!==1)throw new Error('Upload one video file.');
+      return ids;
+    }
+    if(draft&&Array.isArray(draft.mediaIds)&&draft.mediaIds.length===1)return draft.mediaIds;
+    throw new Error('Choose one video file before saving or publishing.');
+  };
+  modal.querySelector('#video-save-draft').addEventListener('click',async()=>{
+    const button=modal.querySelector('#video-save-draft');
+    button.disabled=true;setStatus('Saving your private video draft…');
     try{
-      const file=picker.selectedFiles()[0];
-      const supportedVideoTypes=new Set(['video/mp4','video/webm','video/quicktime']);
-      if(!file||!supportedVideoTypes.has(String(file.type||'').toLowerCase()))throw new Error('Choose one supported video file before publishing.');
-      const mediaIds=await picker.upload();
-      if(mediaIds.length!==1)throw new Error('Upload one video file to publish a video post.');
-      const values=new FormData(event.currentTarget);
-      await api('/posts',{method:'POST',body:JSON.stringify({text:values.get('text'),audience:values.get('audience'),mediaIds,videoFormat:options.videoFormat==='reel'?'reel':'video',remixPolicy:values.get('remixPolicy')||'off',...(options.remixOfPostId?{remixOfPostId:options.remixOfPostId}:{})})});
+      const mediaIds=await getMediaIds();
+      const values=new FormData(form);
+      const payload={
+        text:values.get('text'),
+        audience:values.get('audience'),
+        remixPolicy:values.get('remixPolicy'),
+        videoFormat:selectedFormat==='reel'?'reel':'video',
+        mediaIds,
+        ...(options.remixOfPostId?{remixOfPostId:options.remixOfPostId}:draft?.remixOfPostId?{remixOfPostId:draft.remixOfPostId}:{})
+      };
+      await api(draft?'/video-drafts/'+encodeURIComponent(draft.id):'/video-drafts',{
+        method:draft?'PATCH':'POST',body:JSON.stringify(payload)
+      });
+      close();state.videoMode='drafts';await renderVideoCentre();
+      toast(draft?'Your video draft was updated.':'Your video was saved to private drafts.');
+    }catch(error){setStatus(error.message||'The private draft could not be saved.');toast(error.message||'The private draft could not be saved.');button.disabled=false;}
+  });
+  form.addEventListener('submit',async event=>{
+    event.preventDefault();
+    const button=form.querySelector('button[type="submit"]');
+    button.disabled=true;setStatus('Publishing your video…');
+    try{
+      const mediaIds=await getMediaIds();
+      const values=new FormData(form);
+      const payload={
+        text:values.get('text'),
+        audience:values.get('audience'),
+        mediaIds,
+        videoFormat:selectedFormat==='reel'?'reel':'video',
+        remixPolicy:values.get('remixPolicy')||'off',
+        ...(options.remixOfPostId?{remixOfPostId:options.remixOfPostId}:draft?.remixOfPostId?{remixOfPostId:draft.remixOfPostId}:{}),
+        ...(draft?{videoDraftId:draft.id}:{})
+      };
+      await api('/posts',{method:'POST',body:JSON.stringify(payload)});
       close();
       if(typeof options.onPublished==='function')await options.onPublished();
-      else{state.videoMode='videos';await renderVideoCentre();}
-      toast(options.remixOfPostId?'Your attributed remix is published.':'Your video post is published.');
+      else{state.videoMode=selectedFormat==='reel'?'reels':'videos';await renderVideoCentre();}
+      toast(options.remixOfPostId?'Your attributed remix is published.':draft?'Your saved video is now published.':'Your video post is published.');
     }catch(error){
-      toast(error.message);
+      setStatus(error.message||'Your video could not be published.');
+      toast(error.message||'Your video could not be published.');
       button.disabled=false;
     }
   });
@@ -9754,13 +9802,67 @@ async function renderVideoChannelLibrary(feed){
 }
 
 
+async function renderVideoDraftLibrary(feed){
+  if(!feed)return;
+  feed.innerHTML="<section class='card empty-state'><p>Loading your private video drafts…</p></section>";
+  try{
+    const result=await api('/video-drafts');
+    const drafts=Array.isArray(result.drafts)?result.drafts:[];
+    if(!drafts.length){
+      feed.innerHTML="<section class='card empty-state video-drafts-empty'><div class='empty-icon'>▣</div><h3>No saved video drafts</h3><p>Save a video before publishing it. Drafts are private to your Minglora account and sync when you sign in on another device.</p><button type='button' class='primary' data-video-draft-create>＋ Create video draft</button></section>";
+      feed.querySelector('[data-video-draft-create]')?.addEventListener('click',()=>openVideoComposer({videoFormat:'video'}));
+      return;
+    }
+    feed.innerHTML="<div class='video-draft-library-head'><div><h2>Private drafts</h2><p>"+drafts.length+" of "+Number(result.maxDrafts||50)+" saved drafts · only you can see these</p></div><button type='button' class='primary' data-video-draft-create>＋ New draft</button></div><div class='video-draft-grid'>"+drafts.map(draft=>{
+      const updated=draft.updatedAt?new Date(draft.updatedAt):null;
+      const date=updated&&!Number.isNaN(updated.getTime())?updated.toLocaleString():'Date unavailable';
+      const size=(Number(draft.mediaSize||0)/1024/1024).toFixed(2);
+      return "<article class='card video-draft-card' data-video-draft-card='"+esc(draft.id)+"'><div class='video-draft-card-top'><span class='video-draft-format'>"+(draft.videoFormat==='reel'?'REEL':'VIDEO')+"</span><span class='video-draft-private'>PRIVATE</span></div><h3>"+esc(draft.text||'Untitled video draft')+"</h3><p class='video-draft-file'>"+esc(draft.mediaName||'Uploaded video')+" · "+size+" MB</p><p class='video-draft-meta'>Audience: "+esc(draft.audience||'private')+" · Updated "+esc(date)+"</p>"+(!draft.mediaAvailable?"<p class='video-draft-warning' role='status'>The uploaded file is unavailable. Edit this draft and select the video again before publishing.</p>":"")+"<div class='video-draft-actions'><button type='button' class='secondary' data-video-draft-edit='"+esc(draft.id)+"'>Edit</button><button type='button' class='primary' data-video-draft-publish='"+esc(draft.id)+"' "+(draft.mediaAvailable?'':'disabled')+">Publish</button><button type='button' class='secondary video-draft-delete' data-video-draft-delete='"+esc(draft.id)+"'>Delete</button></div></article>";
+    }).join('')+"</div>";
+    feed.querySelector('[data-video-draft-create]')?.addEventListener('click',()=>openVideoComposer({videoFormat:'video'}));
+    feed.querySelectorAll('[data-video-draft-edit]').forEach(button=>button.addEventListener('click',()=>{
+      const draft=drafts.find(item=>item.id===button.dataset.videoDraftEdit);
+      if(draft)openVideoComposer({draft});
+    }));
+    feed.querySelectorAll('[data-video-draft-publish]').forEach(button=>button.addEventListener('click',async()=>{
+      const draft=drafts.find(item=>item.id===button.dataset.videoDraftPublish);
+      if(!draft||!draft.mediaAvailable)return;
+      if(!window.confirm('Publish this video to your Minglora profile now? It will be removed from private drafts.'))return;
+      button.disabled=true;
+      try{
+        await api('/posts',{method:'POST',body:JSON.stringify({
+          text:draft.text,audience:draft.audience,mediaIds:draft.mediaIds,
+          videoFormat:draft.videoFormat,remixPolicy:draft.remixPolicy,
+          ...(draft.remixOfPostId?{remixOfPostId:draft.remixOfPostId}:{}),videoDraftId:draft.id
+        })});
+        toast('Your saved video is now published.');
+        state.videoMode=draft.videoFormat==='reel'?'reels':'videos';
+        await renderVideoCentre();
+      }catch(error){toast(error.message||'The video draft could not be published.');button.disabled=false;}
+    }));
+    feed.querySelectorAll('[data-video-draft-delete]').forEach(button=>button.addEventListener('click',async()=>{
+      const draft=drafts.find(item=>item.id===button.dataset.videoDraftDelete);
+      if(!draft||!window.confirm('Delete this private draft? The uploaded media file will be retained and will not be published.'))return;
+      button.disabled=true;
+      try{
+        await api('/video-drafts/'+encodeURIComponent(draft.id),{method:'DELETE'});
+        toast('Private video draft deleted. Uploaded media was retained.');
+        await renderVideoDraftLibrary(feed);
+      }catch(error){toast(error.message||'The draft could not be deleted.');button.disabled=false;}
+    }));
+  }catch(error){
+    feed.innerHTML="<section class='card empty-state'><h3>Private drafts are unavailable</h3><p>"+esc(error.message||'Minglora could not load your drafts.')+"</p><button type='button' class='secondary' data-video-draft-retry>Try again</button></section>";
+    feed.querySelector('[data-video-draft-retry]')?.addEventListener('click',()=>renderVideoDraftLibrary(feed));
+  }
+}
+
 async function renderVideoCentre(){
   const scope=['for-you','all','following','friends'].includes(state.videoScope)?state.videoScope:'for-you';
-  const mode=['videos','reels','watch-later','playlists','channels'].includes(state.videoMode)?state.videoMode:'videos';
+  const mode=['videos','reels','watch-later','drafts','playlists','channels'].includes(state.videoMode)?state.videoMode:'videos';
   state.videoScope=scope;
   state.videoMode=mode;
-  if(!['playlists','channels'].includes(mode))await fetchVideoCentrePage({reset:true,watchLater:mode==='watch-later'});
-  setContent('<div class="video-centre"><header class="card video-centre-heading"><div><span class="eyebrow">MINGLORA WATCH</span><h1>Minglora Video</h1><p>Discover videos shared by real Minglora members. Switch to Reels for a vertical swipe-through player.</p></div><div class="video-centre-header-actions"><button type="button" class="secondary" data-video-collaboration-inbox>Collaboration invitations</button><button type="button" class="primary" id="video-create-button">＋ Create video post</button></div></header><nav class="video-centre-mode-switch" role="group" aria-label="Video experience"><button type="button" data-video-mode="videos" class="'+(mode==='videos'?'active':'')+'" aria-pressed="'+(mode==='videos'?'true':'false')+'">Videos</button><button type="button" data-video-mode="reels" class="'+(mode==='reels'?'active':'')+'" aria-pressed="'+(mode==='reels'?'true':'false')+'">Reels</button><button type="button" data-video-mode="watch-later" class="'+(mode==='watch-later'?'active':'')+'" aria-pressed="'+(mode==='watch-later'?'true':'false')+'">Watch Later</button><button type="button" data-video-mode="playlists" class="'+(mode==='playlists'?'active':'')+'" aria-pressed="'+(mode==='playlists'?'true':'false')+'">Playlists</button><button type="button" data-video-mode="channels" class="'+(mode==='channels'?'active':'')+'" aria-pressed="'+(mode==='channels'?'true':'false')+'">Channels</button></nav><section class="card video-centre-toolbar" style="'+(['playlists','channels'].includes(mode)?'display:none':'')+'"><label for="video-scope">Discover videos<select id="video-scope"><option value="for-you" '+(scope==='for-you'?'selected':'')+'>For You</option><option value="all" '+(scope==='all'?'selected':'')+'>All videos</option><option value="following" '+(scope==='following'?'selected':'')+'>Following</option><option value="friends" '+(scope==='friends'?'selected':'')+'>Friends</option></select></label><label for="video-search">Search videos<input id="video-search" type="search" maxlength="100" value="'+esc(state.videoSearch||'')+'" placeholder="Search captions or creators"></label></section><section id="video-centre-feed" class="video-centre-feed" aria-live="polite"></section><p class="video-centre-note">Playback, reactions and comments come from existing Minglora member posts. This centre does not invent views or engagement.</p></div>');
+  if(!['playlists','channels','drafts'].includes(mode))await fetchVideoCentrePage({reset:true,watchLater:mode==='watch-later'});
+  setContent('<div class="video-centre"><header class="card video-centre-heading"><div><span class="eyebrow">MINGLORA WATCH</span><h1>Minglora Video</h1><p>Discover videos shared by real Minglora members. Switch to Reels for a vertical swipe-through player.</p></div><div class="video-centre-header-actions"><button type="button" class="secondary" data-video-collaboration-inbox>Collaboration invitations</button><button type="button" class="primary" id="video-create-button">＋ Create video post</button></div></header><nav class="video-centre-mode-switch" role="group" aria-label="Video experience"><button type="button" data-video-mode="videos" class="'+(mode==='videos'?'active':'')+'" aria-pressed="'+(mode==='videos'?'true':'false')+'">Videos</button><button type="button" data-video-mode="reels" class="'+(mode==='reels'?'active':'')+'" aria-pressed="'+(mode==='reels'?'true':'false')+'">Reels</button><button type="button" data-video-mode="watch-later" class="'+(mode==='watch-later'?'active':'')+'" aria-pressed="'+(mode==='watch-later'?'true':'false')+'">Watch Later</button><button type="button" data-video-mode="drafts" class="'+(mode==='drafts'?'active':'')+'" aria-pressed="'+(mode==='drafts'?'true':'false')+'">Drafts</button><button type="button" data-video-mode="playlists" class="'+(mode==='playlists'?'active':'')+'" aria-pressed="'+(mode==='playlists'?'true':'false')+'">Playlists</button><button type="button" data-video-mode="channels" class="'+(mode==='channels'?'active':'')+'" aria-pressed="'+(mode==='channels'?'true':'false')+'">Channels</button></nav><section class="card video-centre-toolbar" style="'+(['playlists','channels','drafts'].includes(mode)?'display:none':'')+'"><label for="video-scope">Discover videos<select id="video-scope"><option value="for-you" '+(scope==='for-you'?'selected':'')+'>For You</option><option value="all" '+(scope==='all'?'selected':'')+'>All videos</option><option value="following" '+(scope==='following'?'selected':'')+'>Following</option><option value="friends" '+(scope==='friends'?'selected':'')+'>Friends</option></select></label><label for="video-search">Search videos<input id="video-search" type="search" maxlength="100" value="'+esc(state.videoSearch||'')+'" placeholder="Search captions or creators"></label></section><section id="video-centre-feed" class="video-centre-feed" aria-live="polite"></section><p class="video-centre-note">Playback, reactions and comments come from existing Minglora member posts. This centre does not invent views or engagement.</p></div>');
   const root=$('#main-content');
   const feed=root.querySelector('#video-centre-feed');
   const loadMoreVideoPage=async button=>{
@@ -9817,6 +9919,7 @@ async function renderVideoCentre(){
     }
   };
   const drawVideoPosts=()=>{
+    if(mode==='drafts'){void renderVideoDraftLibrary(feed);return;}
     if(mode==='playlists'){void renderVideoPlaylistLibrary(feed);return;}
     if(mode==='channels'){void renderVideoChannelLibrary(feed);return;}
     const query=String(state.videoSearch||'').trim().toLowerCase();
@@ -9835,7 +9938,7 @@ async function renderVideoCentre(){
       bindVideoPlaylistActions(feed);
     }
     feed.querySelector('#video-empty-create')?.addEventListener('click',()=>openVideoComposer({videoFormat:mode==='reels'?'reel':'video'}));
-    if(state.videoHasMore&&mode!=='watch-later'){
+    if(state.videoHasMore&&!['watch-later','drafts'].includes(mode)){
       const button=document.createElement('button');
       button.type='button';
       button.className='primary video-centre-load-more';
