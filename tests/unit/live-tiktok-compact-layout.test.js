@@ -9,6 +9,7 @@ const app = fs.readFileSync(path.join(root, 'public/app.js'), 'utf8');
 const index = fs.readFileSync(path.join(root, 'public/index.html'), 'utf8');
 const worker = fs.readFileSync(path.join(root, 'public/sw.js'), 'utf8');
 const compact = fs.readFileSync(path.join(root, 'public/live-tiktok-compact.css'), 'utf8');
+const forYouStylesheet = fs.readFileSync(path.join(root, 'public/for-you-tiktok.css'), 'utf8');
 
 test('LIVE compact presentation is scoped to the active room and loaded after existing layout styles', () => {
   assert.match(compact, /body:has\(#live-player-shell\)/);
@@ -29,7 +30,9 @@ test('For You video menu offers positive and negative recommendation feedback', 
   assert.match(app, /data-fyp-feedback-menu/);
   assert.match(app, /data-fyp-interested/);
   assert.match(app, /data-fyp-not-interested/);
-  assert.match(compact, /fyp-feedback-menu/);
+  assert.match(forYouStylesheet, /fyp-feedback-menu/);
+  assert.ok(index.includes('/for-you-tiktok.css?v=20261111-tiktok-video-layout-2'));
+  assert.ok(worker.includes('/for-you-tiktok.css?v=20261111-tiktok-video-layout-2'));
   assert.match(app, /action:'interested'/);
 });
 
