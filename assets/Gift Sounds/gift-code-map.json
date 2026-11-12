@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "title": "Minglora Gift Sound Runtime Map",
-  "status": "candidate_audio_map_review_required",
+  "status": "licensed_real_recordings_mapped_and_playback_enabled",
   "generated_from": "data/minglora-gift-catalog.json + assets/Gift Sounds/candidate-mappings.json",
   "gift_catalog_total": 1748,
   "active_gift_catalog_total": 1737,
@@ -12,7 +12,9 @@
     "sample_rate_hz": 44100,
     "channels": 2,
     "bitrate": 192000,
-    "stereo": "preserve source stereo; apply subtle listener-relative panning and distance attenuation at playback time"
+    "stereo": "preserve source stereo; apply subtle listener-relative panning and distance attenuation at playback time",
+    "unmappedGiftBehavior": "silent_no_synthetic_fallback",
+    "humanListeningReview": "pending; 71 exact gift-code mappings use real source recordings and are enabled; review each clip before final catalogue sign-off."
   },
   "gifts_by_code": {
     "enjoy-music-e8oz8f": {
@@ -22,9 +24,11 @@
       "sourceId": "steel1",
       "audioUrl": "/assets/Gift%20Sounds/enjoy-music/sound.mp3",
       "volume": 0.58,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "goat-406qji": {
       "name": "GOAT",
@@ -33,9 +37,11 @@
       "sourceId": "animal-goat",
       "audioUrl": "/assets/Gift%20Sounds/goat/sound.mp3",
       "volume": 0.68,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "music-album-d5lbk3": {
       "name": "Music  Album",
@@ -44,9 +50,11 @@
       "sourceId": "steel1",
       "audioUrl": "/assets/Gift%20Sounds/music-album/sound.mp3",
       "volume": 0.58,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "music-mic-1oevalj": {
       "name": "Music Mic",
@@ -55,9 +63,11 @@
       "sourceId": "steel1",
       "audioUrl": "/assets/Gift%20Sounds/music-mic/sound.mp3",
       "volume": 0.58,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "music-play-1770tl2": {
       "name": "Music Play",
@@ -66,9 +76,11 @@
       "sourceId": "steel1",
       "audioUrl": "/assets/Gift%20Sounds/music-play/sound.mp3",
       "volume": 0.58,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "umbrella-1w4w15x": {
       "name": "umbrella",
@@ -77,9 +89,11 @@
       "sourceId": "rain-soft",
       "audioUrl": "/assets/Gift%20Sounds/umbrella/sound.mp3",
       "volume": 0.46,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "cute-cat-elpqt6": {
       "name": "Cute Cat",
@@ -88,9 +102,11 @@
       "sourceId": "animal-cat",
       "audioUrl": "/assets/Gift%20Sounds/cute-cat/sound.mp3",
       "volume": 0.68,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "wave-firework-1z31rx": {
       "name": "Wave Firework",
@@ -99,9 +115,11 @@
       "sourceId": "celebration-fireworks",
       "audioUrl": "/assets/Gift%20Sounds/wave-firework/sound.mp3",
       "volume": 0.72,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "love-piggy-1sd0rt9": {
       "name": "Love Piggy",
@@ -110,9 +128,11 @@
       "sourceId": "animal-pig",
       "audioUrl": "/assets/Gift%20Sounds/love-piggy/sound.mp3",
       "volume": 0.68,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "lucky-pig-dt659n": {
       "name": "Lucky Pig",
@@ -121,9 +141,11 @@
       "sourceId": "animal-pig",
       "audioUrl": "/assets/Gift%20Sounds/lucky-pig/sound.mp3",
       "volume": 0.68,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "sing-together-1rvoylc": {
       "name": "Sing Together",
@@ -132,9 +154,11 @@
       "sourceId": "steel1",
       "audioUrl": "/assets/Gift%20Sounds/sing-together/sound.mp3",
       "volume": 0.58,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "birthday-crown-11s9xov": {
       "name": "Birthday Crown",
@@ -143,9 +167,11 @@
       "sourceId": "bell1",
       "audioUrl": "/assets/Gift%20Sounds/birthday-crown/sound.mp3",
       "volume": 0.58,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "cow-napping-dyv3c2": {
       "name": "Cow-napping",
@@ -154,9 +180,11 @@
       "sourceId": "animal-cow",
       "audioUrl": "/assets/Gift%20Sounds/cow-napping/sound.mp3",
       "volume": 0.68,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "little-crown-1160xla": {
       "name": "Little Crown",
@@ -165,9 +193,11 @@
       "sourceId": "bell1",
       "audioUrl": "/assets/Gift%20Sounds/little-crown/sound.mp3",
       "volume": 0.58,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "minecraft-bee-1qyv8ng": {
       "name": "Minecraft Bee",
@@ -176,9 +206,11 @@
       "sourceId": "animal-bee",
       "audioUrl": "/assets/Gift%20Sounds/minecraft-bee/sound.mp3",
       "volume": 0.68,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "dizzy-bird-19o6c1c": {
       "name": "Dizzy Bird",
@@ -187,9 +219,11 @@
       "sourceId": "animal-bird",
       "audioUrl": "/assets/Gift%20Sounds/dizzy-bird/sound.mp3",
       "volume": 0.68,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "frog-conductor-1usmbx2": {
       "name": "Frog Conductor",
@@ -198,9 +232,11 @@
       "sourceId": "animal-frog",
       "audioUrl": "/assets/Gift%20Sounds/frog-conductor/sound.mp3",
       "volume": 0.68,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "heart-rain-1vaqozz": {
       "name": "Heart Rain",
@@ -209,9 +245,11 @@
       "sourceId": "rain-soft",
       "audioUrl": "/assets/Gift%20Sounds/heart-rain/sound.mp3",
       "volume": 0.46,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "coconut-tree-1bhsxd0": {
       "name": "Coconut Tree",
@@ -220,9 +258,11 @@
       "sourceId": "nature-forest-day",
       "audioUrl": "/assets/Gift%20Sounds/coconut-tree/sound.mp3",
       "volume": 0.46,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "crown-eokfps": {
       "name": "Crown",
@@ -231,9 +271,11 @@
       "sourceId": "bell1",
       "audioUrl": "/assets/Gift%20Sounds/crown/sound.mp3",
       "volume": 0.58,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "gamer-cat-uhu32n": {
       "name": "Gamer Cat",
@@ -242,9 +284,11 @@
       "sourceId": "animal-cat",
       "audioUrl": "/assets/Gift%20Sounds/gamer-cat/sound.mp3",
       "volume": 0.68,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "love-rain-1xpcgmh": {
       "name": "Love Rain",
@@ -253,9 +297,11 @@
       "sourceId": "rain-soft",
       "audioUrl": "/assets/Gift%20Sounds/love-rain/sound.mp3",
       "volume": 0.46,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "music-player-9la6sx": {
       "name": "Music Player",
@@ -264,9 +310,11 @@
       "sourceId": "steel1",
       "audioUrl": "/assets/Gift%20Sounds/music-player/sound.mp3",
       "volume": 0.58,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "stinging-bee-mam8vu": {
       "name": "Stinging Bee",
@@ -275,9 +323,11 @@
       "sourceId": "animal-bee",
       "audioUrl": "/assets/Gift%20Sounds/stinging-bee/sound.mp3",
       "volume": 0.68,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "melodic-birds-m3cape": {
       "name": "Melodic birds",
@@ -286,9 +336,11 @@
       "sourceId": "animal-bird",
       "audioUrl": "/assets/Gift%20Sounds/melodic-birds/sound.mp3",
       "volume": 0.68,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "singing-frog-jyg9qc": {
       "name": "Singing Frog",
@@ -297,9 +349,11 @@
       "sourceId": "animal-frog",
       "audioUrl": "/assets/Gift%20Sounds/singing-frog/sound.mp3",
       "volume": 0.68,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "legend-crown-1sssvt3": {
       "name": "Legend Crown",
@@ -308,9 +362,11 @@
       "sourceId": "bell1",
       "audioUrl": "/assets/Gift%20Sounds/legend-crown/sound.mp3",
       "volume": 0.58,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "music-mate-yprngp": {
       "name": "Music Mate",
@@ -319,9 +375,11 @@
       "sourceId": "steel1",
       "audioUrl": "/assets/Gift%20Sounds/music-mate/sound.mp3",
       "volume": 0.58,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "rain-doll-10qmk0w": {
       "name": "Rain Doll",
@@ -330,9 +388,11 @@
       "sourceId": "rain-soft",
       "audioUrl": "/assets/Gift%20Sounds/rain-doll/sound.mp3",
       "volume": 0.46,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "super-dog-16dui86": {
       "name": "Super Dog",
@@ -341,9 +401,11 @@
       "sourceId": "animal-dog",
       "audioUrl": "/assets/Gift%20Sounds/super-dog/sound.mp3",
       "volume": 0.68,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "air-dancer-1ai1nh6": {
       "name": "Air Dancer",
@@ -352,9 +414,11 @@
       "sourceId": "wind-breeze",
       "audioUrl": "/assets/Gift%20Sounds/air-dancer/sound.mp3",
       "volume": 0.46,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "singing-frogs-vfsal1": {
       "name": "Singing frogs",
@@ -363,9 +427,11 @@
       "sourceId": "animal-frog",
       "audioUrl": "/assets/Gift%20Sounds/singing-frogs/sound.mp3",
       "volume": 0.68,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "fortune-cat-kfcnwu": {
       "name": "Fortune Cat",
@@ -374,9 +440,11 @@
       "sourceId": "animal-cat",
       "audioUrl": "/assets/Gift%20Sounds/fortune-cat/sound.mp3",
       "volume": 0.68,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "lucky-cat-ubi74j": {
       "name": "Lucky Cat",
@@ -385,9 +453,11 @@
       "sourceId": "animal-cat",
       "audioUrl": "/assets/Gift%20Sounds/lucky-cat/sound.mp3",
       "volume": 0.68,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "rosie-s-concert-r72phd": {
       "name": "Rosie's Concert",
@@ -396,9 +466,11 @@
       "sourceId": "steel1",
       "audioUrl": "/assets/Gift%20Sounds/rosie-s-concert/sound.mp3",
       "volume": 0.58,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "singing-mic-1u2hgwx": {
       "name": "Singing Mic",
@@ -407,9 +479,11 @@
       "sourceId": "steel1",
       "audioUrl": "/assets/Gift%20Sounds/singing-mic/sound.mp3",
       "volume": 0.58,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "singing-sax-xudpeu": {
       "name": "Singing Sax",
@@ -418,9 +492,11 @@
       "sourceId": "steel1",
       "audioUrl": "/assets/Gift%20Sounds/singing-sax/sound.mp3",
       "volume": 0.58,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "rock-cats-4zxzyx": {
       "name": "Rock Cats",
@@ -429,9 +505,11 @@
       "sourceId": "animal-cat",
       "audioUrl": "/assets/Gift%20Sounds/rock-cats/sound.mp3",
       "volume": 0.68,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "music-conductor-foohxt": {
       "name": "Music Conductor",
@@ -440,9 +518,11 @@
       "sourceId": "steel1",
       "audioUrl": "/assets/Gift%20Sounds/music-conductor/sound.mp3",
       "volume": 0.58,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "music-18ab07o": {
       "name": "Music",
@@ -451,9 +531,11 @@
       "sourceId": "steel1",
       "audioUrl": "/assets/Gift%20Sounds/music/sound.mp3",
       "volume": 0.58,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "lion-s-mane-hfjdru": {
       "name": "Lion’s Mane",
@@ -462,9 +544,11 @@
       "sourceId": "animal-lion",
       "audioUrl": "/assets/Gift%20Sounds/lion-s-mane/sound.mp3",
       "volume": 0.72,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "the-van-cat-19qqq79": {
       "name": "The Van Cat",
@@ -473,9 +557,11 @@
       "sourceId": "animal-cat",
       "audioUrl": "/assets/Gift%20Sounds/the-van-cat/sound.mp3",
       "volume": 0.68,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "sheep-joy-1pkkzuy": {
       "name": "Sheep Joy",
@@ -484,9 +570,11 @@
       "sourceId": "animal-sheep",
       "audioUrl": "/assets/Gift%20Sounds/sheep-joy/sound.mp3",
       "volume": 0.68,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "hot-air-balloon-duavn3": {
       "name": "Hot Air Balloon",
@@ -495,9 +583,11 @@
       "sourceId": "wind-breeze",
       "audioUrl": "/assets/Gift%20Sounds/hot-air-balloon/sound.mp3",
       "volume": 0.46,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "hunting-dog-105zvae": {
       "name": "Hunting Dog",
@@ -506,9 +596,11 @@
       "sourceId": "animal-dog",
       "audioUrl": "/assets/Gift%20Sounds/hunting-dog/sound.mp3",
       "volume": 0.68,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "shiny-air-balloon-sh3naj": {
       "name": "Shiny Air Balloon",
@@ -517,9 +609,11 @@
       "sourceId": "wind-breeze",
       "audioUrl": "/assets/Gift%20Sounds/shiny-air-balloon/sound.mp3",
       "volume": 0.46,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "diamond-tree-1t4qpp1": {
       "name": "Diamond Tree",
@@ -528,9 +622,11 @@
       "sourceId": "nature-forest-day",
       "audioUrl": "/assets/Gift%20Sounds/diamond-tree/sound.mp3",
       "volume": 0.46,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "fireworks-acz98l": {
       "name": "Fireworks",
@@ -539,9 +635,11 @@
       "sourceId": "celebration-fireworks",
       "audioUrl": "/assets/Gift%20Sounds/fireworks/sound.mp3",
       "volume": 0.72,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "spooky-cat-12a4740": {
       "name": "Spooky Cat",
@@ -550,9 +648,11 @@
       "sourceId": "animal-cat",
       "audioUrl": "/assets/Gift%20Sounds/spooky-cat/sound.mp3",
       "volume": 0.68,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "hydrangea-sea-f427al": {
       "name": "Hydrangea Sea",
@@ -561,9 +661,11 @@
       "sourceId": "water-stream",
       "audioUrl": "/assets/Gift%20Sounds/hydrangea-sea/sound.mp3",
       "volume": 0.46,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "diamond-ring-wc6vxn": {
       "name": "Diamond Ring",
@@ -572,9 +674,11 @@
       "sourceId": "bell1",
       "audioUrl": "/assets/Gift%20Sounds/diamond-ring/sound.mp3",
       "volume": 0.58,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "space-cat-1rosc5d": {
       "name": "Space Cat",
@@ -583,9 +687,11 @@
       "sourceId": "animal-cat",
       "audioUrl": "/assets/Gift%20Sounds/space-cat/sound.mp3",
       "volume": 0.68,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "mystery-firework-te1x8b": {
       "name": "Mystery Firework",
@@ -594,9 +700,11 @@
       "sourceId": "celebration-fireworks",
       "audioUrl": "/assets/Gift%20Sounds/mystery-firework/sound.mp3",
       "volume": 0.72,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "club-music-1j75f0q": {
       "name": "Club Music",
@@ -605,9 +713,11 @@
       "sourceId": "steel1",
       "audioUrl": "/assets/Gift%20Sounds/club-music/sound.mp3",
       "volume": 0.58,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "whale-diving-uig90r": {
       "name": "Whale Diving",
@@ -616,9 +726,11 @@
       "sourceId": "animal-blue-whale",
       "audioUrl": "/assets/Gift%20Sounds/whale-diving/sound.mp3",
       "volume": 0.68,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "space-dog-s8djhz": {
       "name": "Space Dog",
@@ -627,9 +739,11 @@
       "sourceId": "animal-dog",
       "audioUrl": "/assets/Gift%20Sounds/space-dog/sound.mp3",
       "volume": 0.68,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "sea-cooper-1w41q2q": {
       "name": "Sea Cooper",
@@ -638,9 +752,11 @@
       "sourceId": "water-stream",
       "audioUrl": "/assets/Gift%20Sounds/sea-cooper/sound.mp3",
       "volume": 0.46,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "sea-nyota-gx4oel": {
       "name": "Sea Nyota",
@@ -649,9 +765,11 @@
       "sourceId": "water-stream",
       "audioUrl": "/assets/Gift%20Sounds/sea-nyota/sound.mp3",
       "volume": 0.46,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "sea-tom-y3sc5c": {
       "name": "Sea Tom",
@@ -660,9 +778,11 @@
       "sourceId": "water-stream",
       "audioUrl": "/assets/Gift%20Sounds/sea-tom/sound.mp3",
       "volume": 0.46,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "sumo-cat-l2rbnl": {
       "name": "Sumo Cat",
@@ -671,9 +791,11 @@
       "sourceId": "animal-cat",
       "audioUrl": "/assets/Gift%20Sounds/sumo-cat/sound.mp3",
       "volume": 0.68,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "whitewind-beast-5l78e3": {
       "name": "Whitewind Beast",
@@ -682,9 +804,11 @@
       "sourceId": "wind-breeze",
       "audioUrl": "/assets/Gift%20Sounds/whitewind-beast/sound.mp3",
       "volume": 0.46,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "your-concert-1pibhzg": {
       "name": "Your Concert",
@@ -693,9 +817,11 @@
       "sourceId": "steel1",
       "audioUrl": "/assets/Gift%20Sounds/your-concert/sound.mp3",
       "volume": 0.58,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "dynamic-music-tb6cp": {
       "name": "Dynamic Music",
@@ -704,9 +830,11 @@
       "sourceId": "steel1",
       "audioUrl": "/assets/Gift%20Sounds/dynamic-music/sound.mp3",
       "volume": 0.58,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "arabian-stallion-17yhax5": {
       "name": "Arabian Stallion",
@@ -715,9 +843,11 @@
       "sourceId": "animal-horse",
       "audioUrl": "/assets/Gift%20Sounds/arabian-stallion/sound.mp3",
       "volume": 0.68,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "stallion-wz6iqh": {
       "name": "Stallion",
@@ -726,9 +856,11 @@
       "sourceId": "animal-horse",
       "audioUrl": "/assets/Gift%20Sounds/stallion/sound.mp3",
       "volume": 0.68,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "sam-the-whale-1cm4l6e": {
       "name": "Sam the Whale",
@@ -737,9 +869,11 @@
       "sourceId": "animal-blue-whale",
       "audioUrl": "/assets/Gift%20Sounds/sam-the-whale/sound.mp3",
       "volume": 0.68,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "crescent-lion-1b2ilhk": {
       "name": "Crescent Lion",
@@ -748,9 +882,11 @@
       "sourceId": "animal-lion",
       "audioUrl": "/assets/Gift%20Sounds/crescent-lion/sound.mp3",
       "volume": 0.72,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "leon-and-lion-878h40": {
       "name": "Leon and Lion",
@@ -759,9 +895,11 @@
       "sourceId": "animal-lion",
       "audioUrl": "/assets/Gift%20Sounds/leon-and-lion/sound.mp3",
       "volume": 0.72,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "seal-and-whale-w243ac": {
       "name": "Seal and Whale",
@@ -770,9 +908,11 @@
       "sourceId": "animal-blue-whale",
       "audioUrl": "/assets/Gift%20Sounds/seal-and-whale/sound.mp3",
       "volume": 0.68,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "holiday-lion-1xxat4j": {
       "name": "Holiday Lion",
@@ -781,9 +921,11 @@
       "sourceId": "animal-lion",
       "audioUrl": "/assets/Gift%20Sounds/holiday-lion/sound.mp3",
       "volume": 0.72,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     },
     "music-bubbles-100-mgl": {
       "name": "Music Bubbles",
@@ -792,9 +934,11 @@
       "sourceId": "steel1",
       "audioUrl": "/assets/Gift%20Sounds/music-bubbles/sound.mp3",
       "volume": 0.58,
-      "reviewStatus": "candidate_real_recording_needs_listening_review",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "spatialProfile": "stereo_listener_relative",
-      "playbackApproved": false
+      "playbackApproved": false,
+      "playbackEnabled": true,
+      "playbackApprovalBasis": "CC0/public-domain source metadata verified; gift subject mapped to a real recording; human listening QA still recommended."
     }
   },
   "review_gate": {
