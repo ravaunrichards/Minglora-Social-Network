@@ -99,5 +99,5 @@ test('new profile stylesheet and JavaScript are versioned and cached by the serv
   assert.ok(html.includes('/app.js?v=20261112-profile-style-library-10x9-1'));
   assert.ok(worker.includes("'/app.js?v=20261112-profile-style-library-10x9-1'"));
   assert.ok(html.includes('/settings.js?v=20261112-profile-style-library-10x9-1'));
-  assert.match(worker,/minglora-shell-v299-profile-style-library-1/);
+  assert.match(worker,/minglora-shell-v299-self-updating-1/);
 });
