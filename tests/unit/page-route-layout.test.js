@@ -68,7 +68,7 @@ test('Settings is a real restorable page and uses the shared standalone layout',
   const appAsset = html.split('\"').find(value => value.startsWith('/app.js?v='));
   assert.ok(appAsset && worker.includes(appAsset),
     'The browser and service worker use the same current page-routing bundle');
-  assert.ok(html.includes('/settings.js?v=20261110-standalone-settings-page-1'),
+  assert.ok(html.includes('/settings.js?v=20261112-profile-style-library-10x9-2'),
     'The browser receives the updated Settings page bundle');
 });
 
