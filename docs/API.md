@@ -285,3 +285,8 @@ The designated Creator Hub administrator receives LIVE Pro automatically when th
 - Passwords are never returned in public account objects.
 - Post updates and deletions are restricted to the post author. Unavailable posts in blocked relationships return not found for read/reaction/comment/save flows. Blocking removes the existing friend and follow edges between the two accounts.
 - Current API behavior is defined by `src/server.js`; update this document and tests whenever routes or payloads change.
+
+
+## Video processing worker
+
+Internal server-to-server Edge actions: `video_transcode_enqueue`, `video_transcode_claim`, `video_transcode_complete`, and `video_transcode_fail`. They use the authenticated Minglora gateway, atomic SQL leases, short-lived signed Storage URLs and the private `minglora-video-renditions` bucket. Original uploads remain available until a derivative is confirmed ready. See `backend/workers/video/README.md`.
