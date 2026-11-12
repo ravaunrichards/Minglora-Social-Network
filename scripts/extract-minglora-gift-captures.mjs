@@ -468,25 +468,42 @@ async function main(){
   const duplicatePosterGroups=[...posterGroups.entries()].filter(([,items])=>items.length>1).map(([sha256,items])=>({
     sha256,gifts:items.map(item=>({id:item.id,name:item.name,source_image:item.source_image}))
   }));
-  // Exact joins preserve production gift names, Coin prices, original artwork,
-  // original 3D models and sounds. Only the motion profile is layered on.
+  // Build one motion record for EVERY active production gift. Exact source
+  // captures add the richer individual profile; remaining catalogue gifts get
+  // deterministic name/category choreography based on their original model.
+  const extractedByCatalogCode=new Map();
+  for(const extracted of gifts){
+    const code=String(extracted.matched_catalog_code||"");
+    const sourceCatalog=catalogByCode.get(code);
+    if(!sourceCatalog||normalizeName(sourceCatalog.name)!==extracted.normalized_name)continue;
+    if(extractedByCatalogCode.has(code))continue;
+    extractedByCatalogCode.set(code,extracted);
+  }
   const catalogMotionProfiles=[];
   const catalogMotionCodes=new Set();
   const duplicateCatalogMotionCodes=[];
   let artworkReferenceMatches=0;
+  let capturedCatalogProfiles=0;
+  let fallbackCatalogProfiles=0;
   let inactiveCatalogMatches=0;
-  for(const extracted of gifts){
-    const code=String(extracted.matched_catalog_code||"");
-    if(!code)continue;
-    const sourceCatalog=catalogByCode.get(code);
-    if(!sourceCatalog||normalizeName(sourceCatalog.name)!==extracted.normalized_name)continue;
+  const invalidCatalogProfiles=[];
+  for(const sourceCatalog of catalog.gifts||[]){
     if(sourceCatalog.active===false){inactiveCatalogMatches++;continue;}
-    if(catalogMotionCodes.has(code)){duplicateCatalogMotionCodes.push(code);continue;}
-    if(!Number.isFinite(Number(sourceCatalog.coin_price))||Number(sourceCatalog.coin_price)<0)continue;
-    if(typeof sourceCatalog.image_url!=="string"||!sourceCatalog.image_url.startsWith("/assets/"))continue;
-    if(typeof sourceCatalog.model_url!=="string"||!sourceCatalog.model_url.startsWith("/assets/"))continue;
+    const code=String(sourceCatalog.code||"");
+    if(!code||catalogMotionCodes.has(code)){duplicateCatalogMotionCodes.push(code);continue;}
+    if(!Number.isFinite(Number(sourceCatalog.coin_price))||Number(sourceCatalog.coin_price)<0||
+       typeof sourceCatalog.image_url!=="string"||!sourceCatalog.image_url.startsWith("/assets/")||
+       typeof sourceCatalog.model_url!=="string"||!sourceCatalog.model_url.startsWith("/assets/")||
+       !String(sourceCatalog.name||"").trim()){
+      invalidCatalogProfiles.push({code,name:sourceCatalog.name||null});
+      continue;
+    }
+    const extracted=extractedByCatalogCode.get(code)||null;
+    const seed=parseInt(hash(code),16)>>>0;
+    const fallback=animationProfile(sourceCatalog.category,seed,sourceCatalog.name);
     const artwork=artworkByName.get(normalizeName(sourceCatalog.name));
     if(artwork)artworkReferenceMatches++;
+    if(extracted)capturedCatalogProfiles++;else fallbackCatalogProfiles++;
     catalogMotionCodes.add(code);
     catalogMotionProfiles.push({
       code:sourceCatalog.code,name:sourceCatalog.name,category:sourceCatalog.category,emoji:sourceCatalog.emoji,
@@ -494,17 +511,22 @@ async function main(){
       image_url:sourceCatalog.image_url,model_url:sourceCatalog.model_url,
       animation_key:sourceCatalog.animation_key,original_animation_preset:sourceCatalog.animation_preset,
       sound_preset:sourceCatalog.sound_preset,original_animation_duration_ms:sourceCatalog.animation_duration_ms,
-      motion_preset:extracted.animation_preset,motion_effect:extracted.animation_effect,
-      motion_duration_ms:extracted.animation_duration_ms,
-      source_kind:extracted.source_kind,source_image:extracted.source_image,
-      source_region:extracted.source_region,source_capture_references:extracted.sources,
-      ocr_confidence:extracted.ocr_confidence,
+      motion_preset:extracted?.animation_preset||fallback.preset,
+      motion_effect:extracted?.animation_effect||fallback.effect,
+      motion_duration_ms:extracted?.animation_duration_ms||Math.round(Number.parseFloat(fallback.duration)*1000),
+      motion_phase:fallback.phase,motion_phase_index:fallback.phaseIndex,
+      motion_seed:seed,
+      source_kind:extracted?"captured-gallery-still":"canonical-catalogue-profile",
+      source_image:extracted?.source_image||null,
+      source_region:extracted?.source_region||null,
+      source_capture_references:extracted?.sources||[],
+      ocr_confidence:extracted?.ocr_confidence??null,
       artwork_reference:artwork?{
         path:"assets/Artwork/"+artwork.artwork,sha256:artwork.sha256,
         source_primary:artwork.source_primary,warnings:artwork.warnings||[],
         review_status:artwork.review_status
       }:null,
-      visual_review_status:"needs_visual_review"
+      visual_review_status:extracted?"needs_visual_review":"catalogue-original-artwork"
     });
   }
   catalogMotionProfiles.sort((a,b)=>a.name.localeCompare(b.name)||a.code.localeCompare(b.code));
@@ -534,7 +556,7 @@ async function main(){
       "Artwork crops end above detected label text. Poster and animation files receive SHA-256 digests for duplicate auditing.",
       "OCR confidence, unmatched names, generic categories and short uncertain labels are surfaced as quality-review flags.",
       "Source captures are screenshots, not original animation frame sequences. SVG motion is an original presentation animation and is not a reconstruction of TikTok's proprietary animation or 3D model.",
-      "The compact catalogue motion index joins exact normalized-name matches to active canonical catalogue codes. It preserves each original Coin price, image URL, 3D model URL, sound and animation metadata; generated poster crops never replace production artwork.",
+      "The catalogue motion index includes every active canonical gift. Exact capture matches receive their per-gift capture-derived motion; every other active gift receives a deterministic name/category profile over its original catalogue 3D model. Canonical name, Coin price, image URL, 3D model URL, sound and original animation metadata are preserved; screenshot crops never replace production artwork.",
       "Artwork manifest references, source capture names, source crop coordinates, OCR confidence and review flags are retained for traceability. Generated screenshot crops remain review-only."
     ],
     gifts
@@ -554,8 +576,10 @@ async function main(){
     screenshot_count:files.length,detected_occurrences:manifest.detected_occurrences,
     unique_gifts:gifts.length,category_counts:categoryCounts,
     matched_catalog_gifts:matchedCatalogCount,unmatched_catalog_gifts:gifts.length-matchedCatalogCount,
-    catalog_motion_profiles:catalogMotionProfiles.length,catalog_motion_inactive_matches:inactiveCatalogMatches,
-    catalog_motion_duplicate_codes:duplicateCatalogMotionCodes,artwork_reference_matches:artworkReferenceMatches,
+    catalog_motion_profiles:catalogMotionProfiles.length,catalog_motion_captured_profiles:capturedCatalogProfiles,
+    catalog_motion_fallback_profiles:fallbackCatalogProfiles,catalog_motion_inactive_matches:inactiveCatalogMatches,
+    catalog_motion_invalid_profiles:invalidCatalogProfiles,catalog_motion_duplicate_codes:duplicateCatalogMotionCodes,
+    artwork_reference_matches:artworkReferenceMatches,
     confidence_counts:confidenceCounts,quality_flag_counts:qualityFlagCounts,
     duplicate_poster_groups:duplicatePosterGroups,
     screenshots_with_errors:processed.filter(x=>x.error).map(x=>({file:x.file,error:x.error})),
