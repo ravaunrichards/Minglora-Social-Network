@@ -14,7 +14,7 @@ The worker does not receive the Supabase service-role key. It uses the Render-to
 - Apply migration 074 to Minglora Supabase.
 - Deploy the updated `minglora-runtime-state` Edge Function.
 - Provision a separate Render Background Worker using this Dockerfile and repository-root build context. Do not repurpose the web service.
-- Store `SUPABASE_URL`, `SUPABASE_STATE_API_URL`, `SUPABASE_PUBLISHABLE_KEY` and `SUPABASE_STATE_API_KEY` as private worker environment secrets.
+- Store `SUPABASE_URL`, `SUPABASE_STATE_API_URL`, `SUPABASE_PUBLISHABLE_KEY` and `MINGLORA_VIDEO_WORKER_API_KEY` as private worker environment secrets.
 - Start with one worker and monitor CPU, memory, temp disk, queue retries and storage costs.
 
 Merging source code alone does not activate processing. Provisioning a worker may incur charges and requires separate cost review.
