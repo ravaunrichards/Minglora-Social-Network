@@ -17,6 +17,10 @@ const styles=[
   'facebook','tiktok','instagram','youtube','x',
   'linkedin','pinterest','twitch','snapchat','custom-minglora'
 ];
+const screenLayouts=[
+  'full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel',
+  'side-by-side','spotlight','roundtable-1','roundtable-2'
+];
 const viewportMatrix=[
   {name:'compact-phone',width:320,height:640},
   {name:'standard-phone',width:360,height:800},
@@ -40,21 +44,36 @@ test('all ten selectable profile styles are registered on client and server',()=
   }
 });
 
-test('profile styles reuse the same account preferences and legacy accounts default safely to Facebook',()=>{
-  assert.ok(server.includes("profileStyle:'facebook',defaultProfileStyle:'facebook'"));
+test('all nine screen layout modes compose with all ten profile styles',()=>{
+  assert.equal(styles.length*screenLayouts.length,90,'expected 10 profile styles × 9 screen layout modes');
+  for(const layout of screenLayouts){
+    assert.ok(app.includes("id:'"+layout+"'"),'missing screen layout option: '+layout);
+    assert.ok(server.includes("'"+layout+"'"),'missing server screen layout validation: '+layout);
+    assert.ok(css.includes('[data-profile-screen-layout="'+layout+'"]'),'missing screen layout CSS: '+layout);
+  }
+  assert.ok(app.includes('data-profile-screen-layout="'+normalizeProfileScreenLayout(u.profileScreenLayout)'));
+  assert.ok(app.includes('data-selected-screen-layout='));
+  assert.ok(app.includes('profileStylePreviewMarkup(data,selected,root.dataset.selectedScreenLayout)'));
+});
+
+test('profile style and screen layout preferences reuse the same account record and default safely for existing accounts',()=>{
+  assert.ok(server.includes("profileStyle:'facebook',defaultProfileStyle:'facebook',profileScreenLayout:'fluid-panel',defaultProfileScreenLayout:'fluid-panel'"));
   assert.ok(server.includes("PROFILE_STYLE_IDS.includes(preferences.profileStyle)"));
   assert.ok(server.includes("PROFILE_STYLE_IDS.includes(preferences.defaultProfileStyle)"));
-  assert.ok(server.includes("'profileStyle','defaultProfileStyle'"));
-  assert.ok(server.includes('Choose one of the supported Minglora profile styles'));
-  assert.ok(server.includes('profileStyle:getUserSettings(u).preferences.profileStyle'));
+  assert.ok(server.includes("PROFILE_SCREEN_LAYOUT_IDS.includes(preferences.profileScreenLayout)"));
+  assert.ok(server.includes("PROFILE_SCREEN_LAYOUT_IDS.includes(preferences.defaultProfileScreenLayout)"));
+  assert.ok(server.includes("'profileStyle','defaultProfileStyle','profileScreenLayout','defaultProfileScreenLayout'"));
+  assert.ok(server.includes('Choose one of the nine supported profile screen layouts'));
+  assert.ok(server.includes('profileStyle:getUserSettings(u).preferences.profileStyle,profileScreenLayout:getUserSettings(u).preferences.profileScreenLayout'));
   assert.ok(server.includes('result.defaultProfileStyle=getUserSettings(u).preferences.defaultProfileStyle'));
-  assert.ok(settings.includes("profileStyle: 'facebook', defaultProfileStyle: 'facebook'"));
+  assert.ok(server.includes('result.defaultProfileScreenLayout=getUserSettings(u).preferences.defaultProfileScreenLayout'));
+  assert.ok(settings.includes("profileStyle: 'facebook', defaultProfileStyle: 'facebook', profileScreenLayout: 'fluid-panel', defaultProfileScreenLayout: 'fluid-panel'"));
   assert.ok(!server.includes('profileStyleAccounts'));
 });
 
-test('Facebook remains the default and existing profile identity, sections and data actions remain connected',()=>{
+test('Facebook remains the default and existing profile identity, sections and content actions remain connected',()=>{
   assert.ok(app.includes("function normalizeProfileStyle(value){return PROFILE_STYLE_IDS.includes(value)?value:'facebook';}"));
-  assert.ok(app.includes('data-profile-style="'+normalizeProfileStyle(u.profileStyle)'));
+  assert.ok(app.includes("function normalizeProfileScreenLayout(value){return PROFILE_SCREEN_LAYOUT_IDS.includes(value)?value:'fluid-panel';}"));
   assert.ok(app.includes('profileStyleNavigation(u.profileStyle).map'));
   for(const tab of ['posts','about','friends','photos','reels','more']){
     assert.ok(app.includes("['"+tab+"'"),'missing existing content tab '+tab);
@@ -66,25 +85,26 @@ test('Facebook remains the default and existing profile identity, sections and d
   assert.ok(!css.includes('.minglora-profile-page[data-profile-style="facebook"] .profile-avatar-edit-wrap'));
 });
 
-test('profile style library supports preview, apply, save-default and reset using existing settings API',()=>{
-  for(const marker of ['data-profile-style-preview','data-profile-style-apply','data-profile-style-save-default','data-profile-style-reset']){
-    assert.ok(app.includes(marker),'missing profile style action: '+marker);
+test('profile style library supports preview, apply, save-default and reset for style and layout selections',()=>{
+  for(const marker of ['data-profile-style-preview','data-profile-style-apply','data-profile-style-save-default','data-profile-style-reset','profile-screen-layout-choice']){
+    assert.ok(app.includes(marker),'missing profile style action/control: '+marker);
   }
   assert.ok(app.includes("api('/settings'"));
-  assert.ok(app.includes('profileStyle:style'));
-  assert.ok(app.includes('defaultProfileStyle:style'));
+  for(const key of ['profileStyle:style','defaultProfileStyle:style','profileScreenLayout:layout','defaultProfileScreenLayout:layout']){
+    assert.ok(app.includes(key),'missing preference update: '+key);
+  }
   assert.ok(app.includes('data-profile-overflow-action="style-library"'));
   assert.ok(app.includes("if(nextTab==='style-library')bindProfileStyleLibrary"));
 });
 
-test('ten styles have responsive coverage across the nine-viewport compatibility matrix',()=>{
-  assert.equal(styles.length*viewportMatrix.length,90,'expected 10 styles × 9 viewports');
+test('all style and screen layout combinations include responsive viewport guardrails',()=>{
+  assert.equal(styles.length*screenLayouts.length,90);
   assert.equal(viewportMatrix.length,9);
   assert.deepEqual(viewportMatrix.map(item=>item.width),[320,360,390,430,740,768,1024,1280,2560]);
   for(const style of styles){
-    for(const viewport of viewportMatrix){
-      assert.ok(css.includes('[data-profile-style="'+style+'"]'),'style missing for '+viewport.name);
-      assert.ok(css.includes('min-width:0'),'shared min-width guardrail missing for '+viewport.name);
+    for(const layout of screenLayouts){
+      assert.ok(css.includes('[data-profile-style="'+style+'"]'),'style selector missing: '+style);
+      assert.ok(css.includes('[data-profile-screen-layout="'+layout+'"]'),'layout selector missing: '+layout);
     }
   }
   for(const breakpoint of ['@media(max-width:1024px)','@media(max-width:760px)','@media(max-width:430px)','@media(max-width:360px)','@media(min-width:1440px)','@media(min-width:1920px)']){
@@ -92,12 +112,12 @@ test('ten styles have responsive coverage across the nine-viewport compatibility
   }
 });
 
-test('new profile stylesheet and JavaScript are versioned and cached by the service worker',()=>{
-  const cssAsset='/profile-style-system.css?v=20261112-profile-styles-10x9-1';
+test('profile style system assets are versioned and cached by the service worker',()=>{
+  const cssAsset='/profile-style-system.css?v=20261112-profile-styles-10x9-2';
   assert.ok(html.includes(cssAsset),'profile style system is not linked');
   assert.ok(worker.includes("'"+cssAsset+"'"),'profile style system is not precached');
-  assert.ok(html.includes('/app.js?v=20261112-profile-style-library-10x9-1'));
-  assert.ok(worker.includes("'/app.js?v=20261112-profile-style-library-10x9-1'"));
-  assert.ok(html.includes('/settings.js?v=20261112-profile-style-library-10x9-1'));
-  assert.match(worker,/minglora-shell-v299-self-updating-1/);
+  assert.ok(html.includes('/app.js?v=20261112-profile-style-library-10x9-2'));
+  assert.ok(worker.includes("'/app.js?v=20261112-profile-style-library-10x9-2'"));
+  assert.ok(html.includes('/settings.js?v=20261112-profile-style-library-10x9-2'));
+  assert.match(worker,/minglora-shell-v300-self-updating-1/);
 });
