@@ -553,3 +553,12 @@ Continue with independent non-database work that can be built and verified in th
 - The schema test module now contains **65** test cases. The new upsert test's 14 source assertions all match the exact staged task SQL; the complete queue claim/lease/grant/gateway predicate set was also rechecked. Combined source-level checks across the five new tests total **62/62 matched**. This is static source verification only—the Node test runner for the expanded schema file is still not executed due unavailable GitHub network access in the verification container.
 - Confirmed no code change is needed in the current task persistence logic for the reviewed invariants: the SQL requires owner-stamped approval/cancellation, preserves terminal task states, scopes idempotent conflicts to owner/bot/key and clears leases when tasks are cancelled/rejected.
 - No production database, migration, worker or gateway changes were performed.
+
+
+### Live Supabase release-gate confirmation (2026-11-12)
+
+- Read-only verification of existing Minglora project `gzycobgbasnqqhnympkr`: project status is `ACTIVE_HEALTHY` on PostgreSQL 17.11.
+- `information_schema.tables` query for public table names matching `ai_%` or `minglora_ai_bot_%` returned **zero rows**.
+- Migration-ledger query for `minglora_ai%`, `%ai_bot%` and `%ai_identity%` returned **zero rows**.
+- Supabase development-branch listing returned **zero branches**.
+- No DDL, DML, migration, setting, credential, branch or service change was performed by these checks. The branch-creation tool can incur ongoing charges; do not create a development branch until the user has agreed to the cost. Never apply the staged AI migrations to the live production database as a workaround.
