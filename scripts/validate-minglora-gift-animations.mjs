@@ -119,8 +119,8 @@ async function main() {
   }
   const activeCatalog = (canonicalCatalog.gifts || []).filter(gift => gift.active !== false);
   if (motionIndex.gifts.length !== activeCatalog.length) fail("Motion index does not cover every active catalogue gift.");
-  if (Number(report.artwork_reference_matches) !== artworkByName.size && Number(report.artwork_reference_matches) !== checkedArtworkReferences) {
-    fail("Artwork reference totals do not match the unique exact-name Artwork records.");
+  if (Number(report.artwork_reference_matches) !== checkedArtworkReferences) {
+    fail("Artwork reference totals do not match unique exact-name Artwork references in the motion index.");
   }
   if (Number(report.artwork_reference_ambiguous_matches) !== checkedAmbiguousArtworkNames) {
     fail("Ambiguous Artwork names are not reported consistently.");
