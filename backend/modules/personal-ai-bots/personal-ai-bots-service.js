@@ -878,6 +878,81 @@ export function createPersonalAiBotAppointment(db,input,actorId,timestamp,uid) {
   };
 }
 
+export function updatePersonalAiBotAppointment(db,appointmentId,input,actorId,timestamp,uid) {
+  ensurePersonalAiBotCollections(db);
+  const appointment=db.personalAiBotAppointments.find(item=>item.id===appointmentId&&item.ownerId===actorId);
+  if(!appointment)throw Object.assign(new Error('Appointment not found.'),{status:404});
+  const transitions={
+    appointed:['suspended','terminated','retired'],
+    suspended:['appointed','terminated','retired'],
+    terminated:['archived'],
+    retired:['archived'],
+    archived:[]
+  };
+  const nextStatus=String(input?.status||'');
+  if(!Object.hasOwn(transitions,appointment.status)||!transitions[appointment.status].includes(nextStatus)){
+    throw Object.assign(new Error('Appointment status transition is not permitted.'),{status:409});
+  }
+  if(!Array.isArray(appointment.permissions)||appointment.permissions.length!==0||
+     (appointment.permissionGrantStatus||'not_granted')!=='not_granted'||
+     (appointment.identityActivationStatus||'unchanged_disabled')!=='unchanged_disabled'){
+    throw Object.assign(new Error('This appointment has unexpected permissions or activation state and requires a security review.'),{status:409});
+  }
+  const candidate=db.personalAiBots.find(item=>item.id===appointment.identityId&&item.population==='organizational');
+  if(!candidate)throw Object.assign(new Error('The linked organizational AI identity is unavailable.'),{status:409});
+  if(nextStatus==='appointed'){
+    if(String(candidate.status||'').toLowerCase()!=='disabled'||candidate.enabled!==false){
+      throw Object.assign(new Error('An appointment can only be reactivated while its AI identity remains disabled.'),{status:409});
+    }
+    if(db.personalAiBotAppointments.some(item=>item.ownerId===actorId&&item.id!==appointment.id&&
+      item.identityId===candidate.id&&['appointed','suspended'].includes(item.status))){
+      throw Object.assign(new Error('This AI identity already has another active appointment.'),{status:409});
+    }
+  }
+  const notes=String(input.notes||'').trim();
+  if(notes.length>2000)throw Object.assign(new Error('Employment notes cannot exceed 2,000 characters.'),{status:400});
+  appointment.status=nextStatus;
+  appointment.updatedAt=timestamp;
+  appointment.statusHistory||=[];
+  appointment.employmentHistory||=[];
+  appointment.statusHistory.push({status:nextStatus,actorId,createdAt:timestamp});
+  const defaultNotes=nextStatus==='suspended'
+    ?'Owner suspended this appointment. AI identity remains disabled and no permissions are granted.'
+    :nextStatus==='appointed'
+      ?'Owner reactivated the appointment. AI identity remains disabled and no permissions are granted.'
+      :nextStatus==='terminated'
+        ?'Owner terminated this appointment. AI identity remains disabled and no permissions are granted.'
+        :nextStatus==='retired'
+          ?'Owner retired this appointment. AI identity remains disabled and no permissions are granted.'
+          :'Owner archived this employment record. AI identity remains disabled and no permissions are granted.';
+  const event={
+    id:'employment-'+uid(),
+    appointmentId:appointment.id,
+    applicationId:appointment.applicationId,
+    identityId:appointment.identityId,
+    vacancyId:appointment.vacancyId,
+    eventType:nextStatus,
+    actorId,
+    createdAt:timestamp,
+    notes:notes||defaultNotes
+  };
+  appointment.employmentHistory.push({
+    eventType:event.eventType,actorId,createdAt:timestamp,notes:event.notes
+  });
+  db.personalAiBotEmploymentHistory.push(event);
+  audit(db,actorId,'appointment.status_changed','appointment',appointment.id,
+    'Updated '+appointment.candidateDisplayName+' appointment status to '+nextStatus+'. AI identity remains disabled and has no permissions.',
+    timestamp,uid);
+  audit(db,actorId,'employment.'+nextStatus,'employment_history',event.id,
+    'Recorded '+nextStatus+' employment history for '+appointment.candidateDisplayName+'.',
+    timestamp,uid);
+  return {
+    ...appointment,
+    statusHistory:appointment.statusHistory.map(item=>({...item})),
+    employmentHistory:appointment.employmentHistory.map(item=>({...item}))
+  };
+}
+
 export function createPersonalAiBotCategory(db, input, actorId, timestamp, uid) {
   ensurePersonalAiBotCollections(db);
   const name=String(input.name||'').trim().replace(/\s+/g,' ');
