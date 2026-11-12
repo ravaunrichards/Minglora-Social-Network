@@ -11,16 +11,10 @@
   "theme_color": "#1769e0",
   "icons": [
     {
-      "src": "/assets/branding/minglora-infinity-m.jpg",
-      "sizes": "324x324",
-      "type": "image/jpeg",
-      "purpose": "any"
-    },
-    {
-      "src": "/assets/branding/minglora-infinity-m-small.svg",
+      "src": "/assets/Logo.png",
       "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "type": "image/png",
+      "purpose": "any"
     }
   ]
 }
