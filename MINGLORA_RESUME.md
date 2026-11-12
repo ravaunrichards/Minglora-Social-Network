@@ -514,3 +514,12 @@ Continue with independent non-database work that can be built and verified in th
 - Added a regression asserting that a never-resolving provider adapter cannot hold the worker after lease loss. The feature-branch worker test module now has 16 test cases.
 - Additional commits after the previous checkpoint: abort-race worker hardening `5b681cede68ff44c07bdde2edc84242a24585f39`; ignore-cancellation regression `8c7410b2007838f4476b488a816c69f13efe8c0e`; final adapter cancellation documentation `70440c4e57ec1b37cae97a250d77c9ea8721d7b2`.
 - The isolated Node harness was rerun against a local mirror of the updated worker control flow: **6 passed / 0 failed**. This remains a focused harness and does not replace the committed 16-test suite or CI, both still unverified.
+
+
+### Verification correction — full focused worker suite executed (2026-11-12)
+
+- The exact current branch versions of `backend/modules/personal-ai-bots/worker.js` (blob `3e0273b32928c86c7892c43a8f081fed1f014aba`) and `tests/unit/personal-ai-bots-worker.test.js` (blob `6505b9071883028427a6c850625b9378cbff6bd6`) were fetched, copied into an isolated local directory, and run together with Node v22.16.0.
+- Result: **16 tests passed, 0 failed**, with no skipped/cancelled tests. The exact fetched worker module also passed `node --check`.
+- This supersedes the earlier note that the committed 16-test worker file had not been executed. The earlier 6-test smoke harness result remains historical; the stronger 16/16 run now covers all tests in the committed worker test file.
+- This still does not constitute a full repository test run, Node 24 CI run, GitHub Actions green check, Deno Edge Function integration test, database migration test, or live Supabase verification. GitHub's combined status and PR workflow lookup continued returning empty results; retain CI/full-repo status as **unverified**.
+- Updated `docs/PERSONAL_AI_BOTS.md` to reflect the worker's branch implementation and exact focused-test evidence without claiming production deployment or actual AI inference.
