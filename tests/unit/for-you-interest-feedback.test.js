@@ -1,50 +1,112 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { readFile } from 'node:fs/promises';
+import { rankForYouVideos } from '../../src/domain/video-ranking.js';
 
-const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
-const app=fs.readFileSync(path.join(root,'public/app.js'),'utf8');
-const styles=fs.readFileSync(path.join(root,'public/for-you-tiktok.css'),'utf8');
-const index=fs.readFileSync(path.join(root,'public/index.html'),'utf8');
-const worker=fs.readFileSync(path.join(root,'public/sw.js'),'utf8');
-const server=fs.readFileSync(path.join(root,'src/server.js'),'utf8');
-
-test('For You video cards expose both positive and negative recommendation controls in one compact menu',()=>{
-  assert.match(app,/data-fyp-feedback-menu=/);
-  assert.match(app,/data-fyp-interested=/);
-  assert.match(app,/Show me more like this/);
-  assert.match(app,/data-fyp-not-interested=/);
-  assert.match(app,/Not interested/);
+const read = path => readFile(new URL(path, import.meta.url), 'utf8');
+const now = Date.parse('2026-11-08T18:00:00.000Z');
+const post = (id, userId, extra = {}) => ({
+  id, userId, createdAt: new Date(now - 60 * 60 * 1000).toISOString(),
+  reactions: {}, comments: [], mediaIds: ['video-' + id], ...extra
 });
 
-test('For You preference menu stays accessible, exclusive and closes after saving',()=>{
-  assert.match(app,/aria-controls="fyp-feedback-menu-/);
-  assert.match(app,/aria-expanded="false"/);
-  assert.match(app,/root\.querySelectorAll\('\.fyp-feedback-menu'\)/);
-  assert.match(app,/aria-expanded','false'/);
-  assert.match(app,/menu\.hidden=true/);
-  assert.match(styles,/\.fyp-feedback-menu\[hidden\]\{display:none!important\}/);
+test('For You ranking learns creator interest from genuine completion and watch activity', () => {
+  const posts = [post('new', 'new-creator'), post('known', 'known-creator')];
+  const ranked = rankForYouVideos(
+    posts, 'viewer', [], [],
+    [{ userId: 'viewer', authorId: 'known-creator', postId: 'older-video', watchedMs: 18000, durationMs: 20000, completed: true, createdAt: new Date(now - 1000).toISOString() }],
+    [], now
+  );
+  assert.equal(ranked[0].id, 'known');
 });
 
-test('For You preference menu remains touch-friendly on small phones',()=>{
-  assert.match(styles,/@media\(max-width:420px\)/);
-  assert.match(styles,/min-height:40px!important/);
-  assert.match(styles,/max-height:min\(45vh,320px\)/);
-  assert.match(styles,/overscroll-behavior:contain!important/);
+test('For You removes videos a viewer marked Not interested', () => {
+  const posts = [post('keep', 'creator-a'), post('hide', 'creator-b')];
+  const ranked = rankForYouVideos(
+    posts, 'viewer', [], [], [],
+    [{ userId: 'viewer', postId: 'hide', action: 'not_interested' }],
+    now
+  );
+  assert.deepEqual(ranked.map(item => item.id), ['keep']);
 });
 
-test('For You feedback endpoint accepts both interest actions and persists them per member',()=>{
-  assert.match(server,/\['not_interested','interested'\]/);
-  assert.match(server,/existing\.action=action/);
-  assert.match(server,/userId:user\.id,postId:post\.id,action,createdAt:now\(\)/);
+test('For You gives relationship and saved-content signals weight without inventing events', () => {
+  const posts = [post('cold', 'unfamiliar'), post('followed', 'followed'), post('saved', 'saved-author')];
+  const ranked = rankForYouVideos(
+    posts, 'viewer',
+    [{ followerId: 'viewer', followedId: 'followed' }],
+    [{ userId: 'viewer', postId: 'saved' }],
+    [], [], now
+  );
+  assert.ok(ranked.findIndex(item => item.id === 'followed') < ranked.findIndex(item => item.id === 'cold'));
+  assert.ok(ranked.findIndex(item => item.id === 'saved') < ranked.findIndex(item => item.id === 'cold'));
+  assert.equal(ranked.length, 3);
 });
 
-test('Recommendation UI assets are versioned and cached by the service worker',()=>{
-  assert.match(index,/for-you-tiktok\.css\?v=20261112-for-you-feedback-menu-1/);
-  assert.match(index,/app\.js\?v=20261112-for-you-interest-feedback-1/);
-  assert.match(worker,/for-you-tiktok\.css\?v=20261112-for-you-feedback-menu-1/);
-  assert.match(worker,/app\.js\?v=20261112-for-you-interest-feedback-1/);
-  assert.match(worker,/minglora-shell-v293-self-updating-1/);
+test('For You interleaves creators instead of repeating one account', () => {
+  const posts = [
+    post('a1', 'creator-a', { reactions: Object.fromEntries(Array.from({ length: 50 }, (_, i) => ['u' + i, 'like'])) }),
+    post('a2', 'creator-a', { reactions: Object.fromEntries(Array.from({ length: 40 }, (_, i) => ['v' + i, 'like'])) }),
+    post('b1', 'creator-b'),
+    post('c1', 'creator-c')
+  ];
+  const ranked = rankForYouVideos(posts, 'viewer', [], [], [], [], now);
+  assert.equal(ranked[0].id, 'a1');
+  assert.equal(new Set(ranked.slice(0, 3).map(item => item.userId)).size, 3);
+});
+
+test('For You is a full-screen swipe feed with phone navigation and selectable post scopes', async () => {
+  const [app, styles, html] = await Promise.all([
+    read('../../public/app.js'),
+    read('../../public/styles.css'),
+    read('../../public/index.html')
+  ]);
+  assert.match(app, /RESTORABLE_VIEWS=new Set\(\[[^\]]*'for-you'/);
+  assert.match(app, /requestedView==='for-you'\)[\s\S]*view='for-you'/);
+  assert.match(app, /state\.view==='for-you'\)await renderForYouFeed\(\)/);
+  assert.match(app, /async function renderForYouFeed\(\)/);
+  assert.match(app, /api\('\/feed\?'/);
+  assert.match(app, /data-fyp-scope="for-you"/);
+  assert.match(app, /data-fyp-scope="following"/);
+  assert.match(app, /data-fyp-scope="following"/);
+  assert.match(app, /data-fyp-scope="for-you"/);
+  assert.match(app, /fyp-avatar-button/);
+  assert.match(app, /fyp-action-rail/);
+  assert.doesNotMatch(app, /fyp-bottom-nav|data-fyp-nav="(?:feed|friends|create|messages|profile)"|data-fyp-home/);
+  assert.match(styles, /body\.minglora-for-you-active \.topbar[\s\S]*display:none!important/);
+  assert.match(styles, /\.fyp-stream\{[\s\S]*scroll-snap-type:y mandatory/);
+  assert.match(styles, /\.fyp-video-card\{[\s\S]*height:100dvh/);
+  assert.doesNotMatch(styles, /\.fyp-bottom-nav|\.fyp-brand/);
+  assert.match(styles, /\.fyp-action-rail\{/);
+  assert.match(styles, /\.fyp-overlay-bottom\{bottom:calc\(17px \+ env\(safe-area-inset-bottom\)\)\}/);
+  assert.match(html, /data-view="for-you"/);
+});
+
+test('For You playback uses real videos, auto-pauses off-screen videos and records watch time', async () => {
+  const app = await read('../../public/app.js');
+  assert.match(app, /data-fyp-video[^>]*playsinline[^>]*loop muted preload=/);
+  assert.match(app, /new IntersectionObserver\(/);
+  assert.match(app, /threshold:\[0,0\.7,1\]/);
+  assert.match(app, /if\(other!==video\)other\.pause\(\)/);
+  assert.match(app, /api\('\/videos\/'\+encodeURIComponent\(postId\)\+'\/watch'/);
+  assert.match(app, /data-fyp-not-interested/);
+  assert.match(app, /action:'not_interested'/);
+  assert.doesNotMatch(app, /fakeForYouVideos|sampleForYouVideos|seedForYouFeed/i);
+});
+
+test('For You API enforces viewer visibility and persists validated watch and feedback events', async () => {
+  const [server, store] = await Promise.all([
+    read('../../src/server.js'),
+    read('../../src/store.js')
+  ]);
+  assert.match(server, /p==='\/api\/for-you\/videos'/);
+  assert.match(server, /rankForYouVideos\(visiblePosts,user\.id,activeFollows\(\),db\.savedPosts\|\|\[\],db\.videoWatchEvents\|\|\[\],viewerFeedback\)/);
+  assert.match(server, /canViewProfileAudience\(user\.id,post\.userId,post\.audience\|\|'public'\)/);
+  assert.match(server, /new RegExp\('\^\/api\/videos\/\(\[\^\/\]\+\)\/watch\$'\)/);
+  assert.match(server, /new RegExp\('\^\/api\/videos\/\(\[\^\/\]\+\)\/feedback\$'\)/);
+  assert.match(server, /durationMs>3600000/);
+  assert.match(server, /videoWatchEvents/);
+  assert.match(server, /videoFeedback/);
+  assert.match(server, /const viewerFeedback=\(db\.videoFeedback\|\|\[\]\)\.filter\(item=>item\.userId===user\.id\)/);
+  assert.match(store, /'videoWatchEvents', 'videoFeedback'/);
 });
