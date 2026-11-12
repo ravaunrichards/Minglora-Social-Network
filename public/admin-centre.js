@@ -1039,7 +1039,7 @@
     }
 
     panel.append(adminSettings);
-    if (unlocked) panel.insertAdjacentHTML('beforeend', \`
+    if (unlocked) panel.insertAdjacentHTML('beforeend', `
       <section class="admin-control-centre-section admin-audio-management" id="admin-audio-management" aria-labelledby="admin-audio-title">
         <div class="admin-control-centre-section-heading">
           <div><h3 id="admin-audio-title">Sound Management Centre</h3>
@@ -1128,7 +1128,7 @@
           <div id="admin-audio-assets" class="admin-audio-assets" aria-live="polite"><p class="admin-audio-empty">Loading registered recordings…</p></div>
         </section>
       </section>
-    \`);
+    `);
         root.replaceChildren(panel);
     root.dataset.adminCentreReady = 'true';
     if (unlocked) initializeInternalActivityFeed(panel);
