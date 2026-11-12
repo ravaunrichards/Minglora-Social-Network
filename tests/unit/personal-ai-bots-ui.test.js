@@ -173,7 +173,7 @@ test('owner Admin Centre pages canonical AI identity records with a verified cur
   assert.match(api,/path===root\+'\/identities'/);
   assert.match(api,/nextOffset:offset\+result\.length/);
   assert.match(api,/hasMore:result\.length===limit/);
-  assert.ok(html.includes('/personal-ai-bots.js?v=20261111-personal-ai-bots-24'));
+  assert.ok(html.includes('/personal-ai-bots.js?v=20261111-personal-ai-bots-26'));
 });
 
 test('owner Admin Centre paginates provider assignments and AI email identity records',async()=>{
@@ -196,7 +196,7 @@ test('owner Admin Centre paginates provider assignments and AI email identity re
   assert.match(api,/listAiEmailIdentities\(\{limit:100,offset:0\}\)/);
   assert.match(api,/path===root\+'\/providers'/);
   assert.match(api,/path===root\+'\/emails'/);
-  assert.ok(html.includes('/personal-ai-bots.js?v=20261111-personal-ai-bots-24'));
+  assert.ok(html.includes('/personal-ai-bots.js?v=20261111-personal-ai-bots-26'));
 });
 
 test('owner Admin Centre paginates task queue and follow/unfollow history together',async()=>{
@@ -217,7 +217,7 @@ test('owner Admin Centre paginates task queue and follow/unfollow history togeth
   assert.match(api,/tasksNextOffset/);
   assert.match(api,/tasksHasMore/);
   assert.match(api,/hasMore:result\.length===limit/);
-  assert.ok(html.includes('/personal-ai-bots.js?v=20261111-personal-ai-bots-24'));
+  assert.ok(html.includes('/personal-ai-bots.js?v=20261111-personal-ai-bots-26'));
 });
 
 test('owner Admin Centre paginates AI identity batch history without losing owner scope',async()=>{
@@ -238,7 +238,7 @@ test('owner Admin Centre paginates AI identity batch history without losing owne
   assert.match(api,/url\.searchParams\.get\('offset'\)\|\|0/);
   assert.match(api,/nextOffset:offset\+batches\.length/);
   assert.match(api,/hasMore:offset\+batches\.length<ownedBatches\.length/);
-  assert.ok(html.includes('/personal-ai-bots.js?v=20261111-personal-ai-bots-24'));
+  assert.ok(html.includes('/personal-ai-bots.js?v=20261111-personal-ai-bots-26'));
 });
 
 test('owner Admin Centre exposes a real paginated AI profile report review queue',async()=>{
@@ -266,7 +266,7 @@ test('owner Admin Centre exposes a real paginated AI profile report review queue
   assert.match(api,/safetyReportsHasMore/);
   assert.match(api,/nextOffset:offset\+reports\.length/);
   assert.match(api,/hasMore:reports\.length===limit/);
-  assert.ok(html.includes('/personal-ai-bots.js?v=20261111-personal-ai-bots-24'));
+  assert.ok(html.includes('/personal-ai-bots.js?v=20261111-personal-ai-bots-26'));
   assert.match(css,/\.pab-report-card/);
   assert.match(css,/\.pab-report-resolution/);
 });
@@ -331,7 +331,7 @@ test('owner Admin Centre exposes the 20-department catalogue and safe hierarchy 
   assert.match(ui,/Recorded appointments:/);
   assert.match(ui,/position\.code&&\['appointed','suspended'\]\.includes\(item\.status\)/);
   assert.doesNotMatch(ui,/No AI has been appointed/,'position catalogue must not contradict the existing appointment workflow');
-  assert.ok(html.includes('/personal-ai-bots.js?v=20261111-personal-ai-bots-24'),'Admin Centre script cache version is current');
+  assert.ok(html.includes('/personal-ai-bots.js?v=20261111-personal-ai-bots-26'),'Admin Centre script cache version is current');
   assert.match(service,/PERSONAL_AI_BOT_DEPARTMENTS = Object\.freeze/);
   assert.equal((service.match(/\{code:'[a-z_]+',name:'[^']+'/g)||[]).length>=20,true);
 });
@@ -352,7 +352,7 @@ test('owner Admin Centre exposes corporate vacancy creation and safe status cont
   assert.ok(service.includes("status:'open'"));
   assert.ok(service.includes('statusHistory'));
   assert.ok(api.includes("root+'/vacancies'"));
-  assert.ok(html.includes('/personal-ai-bots.js?v=20261111-personal-ai-bots-24'));
+  assert.ok(html.includes('/personal-ai-bots.js?v=20261111-personal-ai-bots-26'));
 });
 
 test('owner Admin Centre exposes approval-gated appointments and employment history without activating AI identities',async()=>{
@@ -373,7 +373,7 @@ test('owner Admin Centre exposes approval-gated appointments and employment hist
   assert.ok(service.includes("position.reportsTo.length"));
   assert.match(ui,/The AI identity stays disabled, no permissions are granted/);
   assert.match(ui,/reportingManagerPositionTitle\|\|'Position unavailable'/);
-  assert.ok(html.includes('/personal-ai-bots.js?v=20261111-personal-ai-bots-24'));
+  assert.ok(html.includes('/personal-ai-bots.js?v=20261111-personal-ai-bots-26'));
 });
 
 
@@ -389,7 +389,7 @@ test('owner Admin Centre exposes organizational candidate submission and review 
   assert.match(ui,/Only existing AI identities with population "organizational" can be submitted/);
   assert.ok(service.includes("candidate.population!=='organizational'"));
   assert.ok(api.includes("root+'/applications'"));
-  assert.ok(html.includes('/personal-ai-bots.js?v=20261111-personal-ai-bots-24'));
+  assert.ok(html.includes('/personal-ai-bots.js?v=20261111-personal-ai-bots-26'));
 });
 
 
@@ -527,7 +527,7 @@ test('Multilingual evaluation registry exposes synthetic data privacy and owner-
     'Reject set',
     'Provider run: not run',
     'Language quality: unverified',
-    'owner-entered and self-attested by the bot owner, not independently verified',
+    'reviewer role and evidence are self-attested by the bot owner, not independently verified',
     'Provider compatibility and language quality remain unverified.'
   ]) assert.ok(ui.includes(phrase),phrase);
   assert.match(ui,/async function createOrUpdateLanguageEvaluationSet/);
@@ -560,7 +560,7 @@ test('Creator Studio exposes a manual draft and owner-review workflow with publi
   assert.ok(api.includes("root+'/creator-studio/drafts'"));
   assert.ok(service.includes('createPersonalAiCreatorDraft'));
   assert.ok(service.includes("publishingStatus:'not_published'"));
-  assert.ok(html.includes('/personal-ai-bots.js?v=20261111-personal-ai-bots-24'));
+  assert.ok(html.includes('/personal-ai-bots.js?v=20261111-personal-ai-bots-26'));
 });
 
 test('Creator Studio editing keeps the linked AI identity immutable and omits botId from updates',async()=>{
