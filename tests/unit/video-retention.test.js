@@ -77,3 +77,41 @@ test('Creator Studio keeps its existing summary metrics and privacy boundaries',
   assert.match(source,/uniqueVideoViews/);
   assert.match(source,/completionRate/);
 });
+
+
+test('audience demographics include only opted-in viewers and suppress groups smaller than five',()=>{
+  const ids=['viewer-a','viewer-b','viewer-c','viewer-d','viewer-e'];
+  const events=ids.map(id=>event(id,5000));
+  const members=ids.map(id=>({id,country:'Jamaica',settings:{privacy:{shareAudienceDemographics:true}}}));
+  const privateIds=['private-a','private-b','private-c','private-d'];
+  members.push(...privateIds.map(id=>({id,country:'United States',settings:{privacy:{shareAudienceDemographics:false}}})));
+  events.push(...privateIds.map(id=>event(id,5000)));
+  const result=summarizeCreatorVideoAnalytics([video],events,'creator',now,30,members).demographics;
+  assert.equal(result.available,true);
+  assert.deepEqual(result.countries,[{country:'Jamaica',viewers:5}]);
+  assert.equal(result.suppressedGroups,false);
+  const serialized=JSON.stringify(result);
+  for(const id of [...ids,...privateIds])assert.equal(serialized.includes(id),false);
+});
+
+test('audience demographic groups below five opted-in viewers are suppressed',()=>{
+  const ids=['viewer-a','viewer-b','viewer-c','viewer-d'];
+  const members=ids.map(id=>({id,country:'Jamaica',settings:{privacy:{shareAudienceDemographics:true}}}));
+  const result=summarizeCreatorVideoAnalytics([video],ids.map(id=>event(id,5000)),'creator',now,30,members).demographics;
+  assert.equal(result.available,false);
+  assert.equal(result.suppressedGroups,true);
+  assert.deepEqual(result.countries,[]);
+});
+
+test('demographic aggregation counts distinct opted-in viewers once and ignores missing consent or invalid countries',()=>{
+  const ids=['viewer-a','viewer-b','viewer-c','viewer-d','viewer-e'];
+  const events=ids.flatMap(id=>[event(id,5000),event(id,6000,{id:'repeat-'+id})]);
+  const members=ids.map(id=>({id,country:'Jamaica',settings:{privacy:{shareAudienceDemographics:true}}}));
+  members.push(
+    {id:'viewer-f',country:'Jamaica',settings:{privacy:{shareAudienceDemographics:false}}},
+    {id:'viewer-g',country:'',settings:{privacy:{shareAudienceDemographics:true}}}
+  );
+  events.push(event('viewer-f',5000),event('viewer-g',5000));
+  const result=summarizeCreatorVideoAnalytics([video],events,'creator',now,30,members).demographics;
+  assert.deepEqual(result.countries,[{country:'Jamaica',viewers:5}]);
+});
