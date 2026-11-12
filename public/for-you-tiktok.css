@@ -542,3 +542,9 @@ body.minglora-for-you-active .fyp-feedback-menu button:active,
 body.minglora-for-you-active .fyp-feedback-menu button:focus-visible{
   background:rgba(255,255,255,.14)!important;outline:2px solid rgba(255,255,255,.45)!important;
 }
+
+body.minglora-for-you-active .fyp-feedback-menu{max-height:min(45vh,320px)!important;overflow-y:auto!important;overscroll-behavior:contain!important}
+body.minglora-for-you-active .fyp-feedback-menu button{white-space:normal!important;line-height:1.35!important}
+@media(max-width:420px){
+  body.minglora-for-you-active .fyp-feedback-menu{right:59px!important;min-width:160px!important;max-width:calc(100vw - 86px)!important}
+}
