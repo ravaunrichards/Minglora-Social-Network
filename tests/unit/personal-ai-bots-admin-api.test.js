@@ -2204,3 +2204,86 @@ test('AI corporate HR reads keep the existing runtime-state adapter active until
   assert.equal(context.res.payload.vacancies.length,1);
   assert.equal(context.res.payload.vacancies[0].id,'vacancy-legacy-001');
 });
+
+
+test('owner controls appointment suspension, reactivation, termination and archival with employment audit and no AI activation',async()=>{
+  const identityId='00000000-0000-4000-8000-000000004101';
+  const appointmentId='appointment-lifecycle-4101';
+  const db={
+    personalAiBots:[{id:identityId,population:'organizational',status:'disabled',enabled:false,displayName:'Lifecycle Candidate'}],
+    personalAiBotAppointments:[{
+      id:appointmentId,ownerId:'owner-1',identityId,population:'organizational',
+      candidateDisplayName:'Lifecycle Candidate',applicationId:'application-4101',
+      vacancyId:'vacancy-4101',positionCode:'worker',positionTitle:'Worker',
+      status:'appointed',permissions:[],permissionGrantStatus:'not_granted',
+      identityActivationStatus:'unchanged_disabled',statusHistory:[],employmentHistory:[]
+    }]
+  };
+  let saves=0,persisted=null;
+  const update=async(status)=>{
+    const context=makeContext({
+      method:'PATCH',path:'/api/admin/personal-ai-bots/appointments/'+appointmentId,
+      input:{status,notes:'Owner-reviewed employment status change.'},db,
+      persistAiHrState:async state=>{persisted=structuredClone(state);return {ok:true};},
+      saveStore:async()=>{saves++;},uid:sequenceUid(4300+saves*10)
+    });
+    await handlePersonalAiBotsAdminApi(context);
+    return context;
+  };
+  const suspended=await update('suspended');
+  assert.equal(suspended.res.statusCode,200);
+  assert.equal(suspended.res.payload.appointment.status,'suspended');
+  const reactivated=await update('appointed');
+  assert.equal(reactivated.res.statusCode,200);
+  const terminated=await update('terminated');
+  assert.equal(terminated.res.statusCode,200);
+  const archived=await update('archived');
+  assert.equal(archived.res.statusCode,200);
+  assert.equal(archived.res.payload.appointment.status,'archived');
+  assert.deepEqual(archived.res.payload.appointment.statusHistory.map(item=>item.status),[
+    'suspended','appointed','terminated','archived'
+  ]);
+  assert.deepEqual(persisted.appointments[0].permissions,[]);
+  assert.equal(persisted.appointments[0].permissionGrantStatus,'not_granted');
+  assert.equal(persisted.appointments[0].identityActivationStatus,'unchanged_disabled');
+  assert.deepEqual(persisted.employmentHistory.map(item=>item.eventType),[
+    'suspended','appointed','terminated','archived'
+  ]);
+  assert.equal(db.personalAiBots[0].status,'disabled');
+  assert.equal(db.personalAiBots[0].enabled,false);
+  assert.equal(saves,4);
+});
+
+test('appointment lifecycle rejects unsupported transitions and unauthorized permission grants',async()=>{
+  const identityId='00000000-0000-4000-8000-000000004102';
+  const appointmentId='appointment-lifecycle-4102';
+  const db={
+    personalAiBots:[{id:identityId,population:'organizational',status:'disabled',enabled:false}],
+    personalAiBotAppointments:[{
+      id:appointmentId,ownerId:'owner-1',identityId,population:'organizational',
+      candidateDisplayName:'Archived Candidate',status:'archived',permissions:[],
+      permissionGrantStatus:'not_granted',identityActivationStatus:'unchanged_disabled',
+      statusHistory:[],employmentHistory:[]
+    }]
+  };
+  const invalid=makeContext({
+    method:'PATCH',path:'/api/admin/personal-ai-bots/appointments/'+appointmentId,
+    input:{status:'appointed'},db
+  });
+  await handlePersonalAiBotsAdminApi(invalid);
+  assert.equal(invalid.res.statusCode,409);
+  assert.equal(db.personalAiBotAppointments[0].status,'archived');
+  const unsupported=makeContext({
+    method:'PATCH',path:'/api/admin/personal-ai-bots/appointments/'+appointmentId,
+    input:{status:'appointed',permissions:['send_message']},db
+  });
+  await handlePersonalAiBotsAdminApi(unsupported);
+  assert.equal(unsupported.res.statusCode,400);
+  assert.equal(db.personalAiBotAppointments[0].status,'archived');
+  const denied=makeContext({
+    method:'PATCH',path:'/api/admin/personal-ai-bots/appointments/'+appointmentId,
+    input:{status:'appointed'},db,isOwnerAdmin:false
+  });
+  await handlePersonalAiBotsAdminApi(denied);
+  assert.equal(denied.res.statusCode,403);
+});
