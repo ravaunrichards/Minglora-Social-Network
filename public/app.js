@@ -6037,7 +6037,7 @@ function renderProfile(data){
     state.profileTab=nextTab;
     persistCurrentView();
     recordBrowserNavigation();
-    document.querySelectorAll('.profile-tabs [data-profile-tab]').forEach(button=>{const selected=button.dataset.profileTab===nextTab||(button.dataset.profileTab==='more'&&['checkins','events','highlights','groups','videos','badges','gift-gallery','manage','style-library'].includes(nextTab));button.classList.toggle('active',selected);button.setAttribute('aria-current',selected?'page':'false');});
+    document.querySelectorAll('.profile-tabs [data-profile-tab]').forEach(button=>{const selected=button.dataset.profileTab===nextTab||(button.dataset.profileTab==='more'&&(nextTab==='style-library'||['checkins','events','highlights','groups','videos','badges','gift-gallery','manage'].includes(nextTab)));button.classList.toggle('active',selected);button.setAttribute('aria-current',selected?'page':'false');});
     const panel=$('#profile-tab-panel');if(!panel)return;
     panel.innerHTML=profileTabMarkup(data,nextTab,aboutHtml,isMe);
     bindFeed(panel);
