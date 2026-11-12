@@ -12,6 +12,7 @@
 - **MP3 format validation:** passed; every source MP3 is decodable MP3, stereo, 44.1 kHz and 192 kbps.
 - **Human listening approval:** **NOT COMPLETED**.
 - **Production-ready gift sounds:** **0** until the 101 candidate clips are listened to, confirmed against the visible gift/animation and approved.
+- **Optional Freesound source-page candidates:** 20 catalogued; 0 downloaded. They are not counted in the 33-file verified review pool.
 - **Robotic text-to-speech and synthetic placeholder tones:** not included.
 
 ## Folder convention
