@@ -289,4 +289,4 @@ The designated Creator Hub administrator receives LIVE Pro automatically when th
 
 ## Video processing worker
 
-Internal server-to-server Edge actions: `video_transcode_enqueue`, `video_transcode_claim`, `video_transcode_complete`, and `video_transcode_fail`. They use the authenticated Minglora gateway, atomic SQL leases, short-lived signed Storage URLs and the private `minglora-video-renditions` bucket. Original uploads remain available until a derivative is confirmed ready. See `backend/workers/video/README.md`.
+Internal server-to-server Edge actions: `video_transcode_enqueue`, `video_transcode_claim`, `video_transcode_complete`, and `video_transcode_fail` and `video_transcode_cleanup`. They use the authenticated Minglora gateway, atomic SQL leases, short-lived signed Storage URLs and the private `minglora-video-renditions` bucket. Original uploads remain available until a derivative is confirmed ready. See `backend/workers/video/README.md`.
