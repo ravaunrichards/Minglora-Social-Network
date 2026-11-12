@@ -412,7 +412,7 @@ function bindPaletteSwitcher(){
 }
 
 let toastTimer;
-let messageRefreshKnownIncomingIds=new Set(),messageRefreshKnownIncomingPrimed=false,messengerMessageSoundContext=null;
+let messageRefreshKnownIncomingIds=new Set(),messageRefreshKnownIncomingPrimed=false;
 let browserNotificationTimer=null;
 let notificationFilter='all',notificationSearch='';
 let browserNotificationSeen=new Set();
@@ -8374,21 +8374,9 @@ function messengerPreferences(){return state.settings?.preferences||{};}
 function messengerPreference(key,fallback){const value=messengerPreferences()[key];return value===undefined?fallback:value;}
 function playMessengerMessageSound(category='message'){
   try{
-    if(window.MingloraSoundStudio?.playNotification){void window.MingloraSoundStudio.playNotification(category);return;}
-    const experience=window.MingloraExperience?.getSettings?.();
-    if((window.MingloraExperience?.shouldSilenceNotifications?.('message')||experience?.soundMode==='mute')||experience?.messageSound===false)return;
     if(state.settings?.preferences?.messengerMessageSounds===false)return;
-    const AudioContextClass=window.AudioContext||window.webkitAudioContext;
-    if(!AudioContextClass)return;
-    const context=callToneContext||messengerMessageSoundContext||new AudioContextClass();
-    messengerMessageSoundContext=context;
-    if(context.state!=='running')return;
-    const oscillator=context.createOscillator(),gain=context.createGain(),start=context.currentTime;
-    const volume=Math.max(0,Math.min(100,Number(experience?.notificationVolume??80)))/100;
-    oscillator.type='sine';oscillator.frequency.setValueAtTime(740,start);oscillator.frequency.setValueAtTime(990,start+.075);
-    gain.gain.setValueAtTime(0,start);gain.gain.linearRampToValueAtTime(.075*volume,start+.018);gain.gain.linearRampToValueAtTime(0,start+.17);
-    oscillator.connect(gain);gain.connect(context.destination);oscillator.start(start);oscillator.stop(start+.18);
-    oscillator.onended=()=>{try{oscillator.disconnect();gain.disconnect();}catch{}};
+    if(window.MingloraSoundStudio?.playNotification){void window.MingloraSoundStudio.playNotification(category);return;}
+    void window.MingloraAudioEngine?.playEvent('message.incoming',{priority:50});
   }catch{}
 }
 function ensureMessengerPanel(){
