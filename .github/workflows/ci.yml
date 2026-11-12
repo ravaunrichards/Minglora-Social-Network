@@ -102,6 +102,7 @@ jobs:
           node --check public/auth-providers-admin.js
           node --check src/server.js
           node --check src/domain/video-transcode-jobs.js
+          node --check src/domain/video-channel-posts.js
           node --check backend/workers/video-transcode/worker.mjs
           node --check src/oauth-flow-state.js
           node --check src/oauth-authorization.js
