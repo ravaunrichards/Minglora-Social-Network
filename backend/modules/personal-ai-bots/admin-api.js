@@ -187,6 +187,7 @@ async function refreshCanonicalAiHrState(db,listAiHrState) {
     ['appointments','personalAiBotAppointments'],
     ['employmentHistory','personalAiBotEmploymentHistory']
   ];
+  if(state.legacyFallback===true)return;
   for(const [source,target] of mappings){
     if(!Array.isArray(state[source])){
       throw Object.assign(new Error('Normalized AI corporate HR storage omitted '+source+'.'),{status:503});
@@ -197,6 +198,15 @@ async function refreshCanonicalAiHrState(db,listAiHrState) {
     if(state[source].length>0||!Array.isArray(db[target])||db[target].length===0){
       db[target]=state[source];
     }
+  }
+  if(Array.isArray(state.audit)){
+    const currentAudit=Array.isArray(db.personalAiBotAudit)?db.personalAiBotAudit:[];
+    const existingHr=currentAudit.filter(item=>AI_HR_AUDIT_TARGETS.has(item.targetType));
+    const retainedNonHr=currentAudit.filter(item=>!AI_HR_AUDIT_TARGETS.has(item.targetType));
+    const hrAudit=state.audit.length>0||existingHr.length===0?state.audit:existingHr;
+    db.personalAiBotAudit=[...hrAudit,...retainedNonHr]
+      .sort((left,right)=>String(right.createdAt||'').localeCompare(String(left.createdAt||'')))
+      .slice(0,1000);
   }
 }
 
