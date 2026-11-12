@@ -108,6 +108,19 @@ jobs:
             ]);
           }
 
+          // Include the full 33-recording source pool, not only masters used by the current 101 gift mappings.
+          const sourceDir = path.join(output, 'source-masters');
+          fs.mkdirSync(sourceDir, { recursive: true });
+          for (const source of sourceById.values()) {
+            if (!source.reviewMp3) throw new Error('Missing source MP3 metadata: ' + source.id);
+            const sourceBytes = fs.readFileSync(path.join(root, source.reviewMp3));
+            if (sourceBytes.length < 1024) throw new Error('Source master is unexpectedly small: ' + source.id);
+            if (!sourceIds.has(source.id)) {
+              fs.copyFileSync(path.join(root, source.reviewMp3), path.join(sourceDir, source.id + '.mp3'));
+              sourceIds.add(source.id);
+            }
+          }
+
           if (rows.length !== 101) throw new Error('Expected 101 review candidates, found ' + rows.length);
           const headers = [
             'gift_name','gift_slug','artwork_source_path','sound_candidate_path','source_id',
