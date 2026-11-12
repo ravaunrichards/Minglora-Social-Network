@@ -7514,22 +7514,3 @@ dialog#minglora-profile-editor .modal-actions #save-profile-button{
 .profile-name-with-badges>span:first-child{display:inline;min-width:0;max-width:100%;white-space:normal;overflow-wrap:anywhere;word-break:normal;overflow:visible;text-overflow:clip}
 .profile-username-line{min-width:0;max-width:100%;white-space:normal;overflow-wrap:anywhere;word-break:normal;overflow:visible;text-overflow:clip}
 
-
-/* Minglora official Infinity M brand mark. Preserve its square artwork without text distortion. */
-.brand-mark{
-  overflow:hidden;
-  padding:0;
-  background:#080b16!important;
-  color:transparent!important;
-  font-size:0!important;
-  line-height:0;
-  box-shadow:0 4px 14px rgba(30,105,225,.24),inset 0 1px 0 rgba(255,255,255,.16)!important;
-  flex-shrink:0;
-}
-.brand-mark>img{
-  display:block;
-  width:100%;
-  height:100%;
-  object-fit:contain;
-  border-radius:inherit;
-}

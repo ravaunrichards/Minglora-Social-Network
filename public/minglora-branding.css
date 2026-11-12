@@ -1,62 +1,9 @@
-/* Minglora Infinity M: compact brand mark for embedded creator surfaces. */
-.creator-studio-brand-mark{
-  background:#080b16 url('/assets/branding/minglora-infinity-m-small.svg') center/cover no-repeat!important;
-  color:transparent!important;
-  font-size:0!important;
-  text-shadow:none!important;
-  overflow:hidden;
-}
-.creator-studio-brand-mark:after{
-  border-color:rgba(255,255,255,.17)!important;
-}
-
-
-/* Use the existing uploaded Minglora M artwork from /assets/Logo.png.
-   Keep the source image intact; contain it without redrawing or cropping. */
-#home-brand.brand{
-  display:flex!important;
-  align-items:center!important;
-  justify-content:center!important;
-  flex:0 0 44px!important;
-  width:44px!important;
-  min-width:44px!important;
-  height:44px!important;
-  min-height:44px!important;
-  gap:0!important;
-  padding:0!important;
-}
-#home-brand .brand-logo-img{
-  display:block!important;
-  width:44px!important;
-  height:44px!important;
-  max-width:44px!important;
-  max-height:44px!important;
-  flex:0 0 44px!important;
-  object-fit:contain!important;
-  object-position:center!important;
-  border:0!important;
-  border-radius:0!important;
-  background:transparent!important;
-  box-shadow:none!important;
-}
-.auth-brand-logo{
-  display:block;
-  width:64px;
-  height:64px;
-  max-width:100%;
-  margin:0 auto 10px;
-  object-fit:contain;
-  object-position:center;
-  border:0;
-  border-radius:0;
-  background:transparent;
-  box-shadow:none;
-}
-@media(max-width:700px){
-  #home-brand.brand{flex-basis:38px!important;width:38px!important;min-width:38px!important;height:38px!important;min-height:38px!important}
-  #home-brand .brand-logo-img{width:38px!important;height:38px!important;max-width:38px!important;max-height:38px!important;flex-basis:38px!important}
-}
-@media(max-width:390px){
-  #home-brand.brand{flex-basis:34px!important;width:34px!important;min-width:34px!important;height:34px!important;min-height:34px!important}
-  #home-brand .brand-logo-img{width:34px!important;height:34px!important;max-width:34px!important;max-height:34px!important;flex-basis:34px!important}
-}
+/* Official Minglora source logo: assets/Logo/Logo.jpg. Do not use preview artwork. */
+#home-brand.brand{display:flex!important;align-items:center!important;justify-content:center!important;flex:0 0 48px!important;width:48px!important;min-width:48px!important;height:48px!important;min-height:48px!important;gap:0!important;padding:0!important}
+#home-brand .brand-logo-img{display:block!important;width:48px!important;height:48px!important;max-width:48px!important;max-height:48px!important;flex:0 0 48px!important;object-fit:contain!important;object-position:center!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important}
+.auth-brand-logo{display:block;width:64px;height:64px;max-width:100%;margin:0 auto 10px;object-fit:contain;object-position:center;border:0;border-radius:0;background:transparent;box-shadow:none}
+/* Use this same original artwork on creator-facing surfaces. */
+.creator-studio-brand-mark{background:transparent url('/assets/Logo/Logo.jpg') center/contain no-repeat!important;color:transparent!important;font-size:0!important;text-shadow:none!important;overflow:hidden}
+.creator-studio-brand-mark:after{display:none!important}
+@media(max-width:700px){#home-brand.brand{flex-basis:42px!important;width:42px!important;min-width:42px!important;height:42px!important;min-height:42px!important}#home-brand .brand-logo-img{width:42px!important;height:42px!important;max-width:42px!important;max-height:42px!important;flex-basis:42px!important}}
+@media(max-width:390px){#home-brand.brand{flex-basis:36px!important;width:36px!important;min-width:36px!important;height:36px!important;min-height:36px!important}#home-brand .brand-logo-img{width:36px!important;height:36px!important;max-width:36px!important;max-height:36px!important;flex-basis:36px!important}}
