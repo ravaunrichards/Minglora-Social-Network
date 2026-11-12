@@ -6,13 +6,14 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const css = fs.readFileSync(path.join(root, 'public/live-tiktok-compact.css'), 'utf8');
-const fix = fs.readFileSync(path.join(root, 'public/live-interface-guardrails.css'), 'utf8');
+const fix = css.slice(css.lastIndexOf('/* LIVE HUD recovery:'));
+const guardrails = fs.readFileSync(path.join(root, 'public/live-interface-guardrails.css'), 'utf8');
 
 test('Mobile LIVE keeps host name and heart/count in the same row, with LIVE NOW below the name', () => {
-  assert.ok(fix.includes('top:84px!important'));
-  assert.ok(fix.includes('live-host-identity-copy'));
-  assert.ok(fix.includes('live-host-live-status'));
-  assert.ok(fix.includes('live-like-control>small{display:none!important}'));
+  assert.ok(guardrails.includes('top:84px!important'));
+  assert.ok(guardrails.includes('live-host-identity-copy'));
+  assert.ok(guardrails.includes('live-host-live-status'));
+  assert.ok(guardrails.includes('live-like-control>small{display:none!important}'));
   assert.ok(!app.includes("<small>likes</small>"));
 });
 
@@ -26,9 +27,9 @@ test('Host End LIVE control is inside the LIVE panel header, not over the video'
   assert.ok(panel.includes("class='live-panel-end-button'"));
   assert.ok(panel.indexOf('live-fullscreen-side-head') < panel.indexOf("id='live-leave'"));
   assert.doesNotMatch(hud, /live-host-power-button|id='live-leave'/);
-  assert.ok(fix.includes('.live-panel-end-button svg'));
-  assert.ok(fix.includes('live-fullscreen-side-head{'));
-  assert.ok(fix.includes('inset:36px 0 0 0!important'));
+  assert.ok(guardrails.includes('.live-panel-end-button svg'));
+  assert.ok(guardrails.includes('live-fullscreen-side-head{'));
+  assert.ok(guardrails.includes('inset:36px 0 0 0!important'));
 });
 
 test('Fluid Panel has one dominant host tile and a vertical guest rail', () => {
