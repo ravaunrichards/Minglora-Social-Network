@@ -56,7 +56,7 @@ test('profile style assets load before app.js and are explicitly cached',()=>{
   assert.ok(html.includes('profile-style-system.css'));
   assert.ok(worker.includes('profile-style-system.js'));
   assert.ok(worker.includes('profile-style-system.css'));
-  assert.match(worker,/minglora-shell-v299-profile-style-library-1/);
+  assert.match(worker,/minglora-shell-v299-self-updating-1/);
 });
 
 test('each non-default style has isolated visual treatment and all layout breakpoints reflow safely',()=>{
