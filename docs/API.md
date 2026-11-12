@@ -300,3 +300,16 @@ The existing video worker calls authenticated server-to-server routes using `Aut
 | POST | `/api/internal/video-transcode/fail` | Record bounded retry/backoff state |
 
 The worker is packaged by `Dockerfile.video-worker` and runs separately from the web process. Original media remains the fallback; the original upload is never overwritten. See `docs/VIDEO_TRANSCODING.md`.
+
+
+## Creator channel publishing
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/api/video-channels/:ownerId` | Returns channel details, accessible video uploads and recent published updates |
+| POST | `/api/video-channels/me/posts` | Publish a text update to the signed-in member's channel |
+| PATCH | `/api/video-channel-posts/:id` | Edit an update owned by the signed-in member |
+| DELETE | `/api/video-channel-posts/:id` | Soft-delete an update owned by the signed-in member |
+| GET | `/api/video-channels/subscriptions` | Also includes recent updates from the member's subscribed channels |
+
+Channel updates are separate from regular feed posts and video uploads. Titles are limited to 100 characters, messages to 3,000 characters and active updates to 500 per owner. A channel's existing visibility, profile-privacy and block rules control who can read updates; only the owner can edit or delete them.
