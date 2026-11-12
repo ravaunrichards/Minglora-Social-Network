@@ -378,7 +378,7 @@
         fill:"none"
       });
     }
-    if(options.sound!==false)void play(gift,options.soundOptions||{});
+    if(options.sound!==false)play(gift);
     setTimeout(()=>outer.remove(),duration+250);
     return outer;
   }
