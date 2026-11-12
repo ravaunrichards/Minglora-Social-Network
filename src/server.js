@@ -1877,6 +1877,14 @@ async function route(req, res) {
           const result=await requestSupabaseState('ai_email_identity_list',{actorUserId:user.id,identityId,limit,offset});
           return Array.isArray(result.emails)?result.emails:[];
         },
+        persistAiHrState:isSupabasePersistence()?async state=>{
+          const result=await requestSupabaseState('ai_bot_hr_state_upsert',{actorUserId:user.id,state});
+          return result.result||null;
+        }:undefined,
+        listAiHrState:isSupabasePersistence()?async ()=>{
+          const result=await requestSupabaseState('ai_bot_hr_state_list',{actorUserId:user.id});
+          return result.state||null;
+        }:undefined,
         listAiIdentityReports:async ({status='pending',limit=100,offset=0}={})=>{
           if(!isSupabasePersistence())return null;
           const result=await requestSupabaseState('ai_identity_report_list',{actorUserId:user.id,status,limit,offset});
