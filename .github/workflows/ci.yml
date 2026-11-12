@@ -83,6 +83,7 @@ jobs:
         run: npm run check:repo
       - name: Check JavaScript syntax
         run: |
+          node --check public/universal-audio-engine.js
           node --check public/app.js
           node --check public/app-lock.js
           node --check public/menu-dismissal.js
