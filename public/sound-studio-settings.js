@@ -4,6 +4,13 @@ const ROOT_ID="minglora-sound-studio-root",THEMES={classic:"Classic",modern:"Mod
 let root=null,manifest=null,prefs=null,experience=null,activeAudio=null,saveQueue=Promise.resolve();
 const played=new Set(),VIBRATION={none:[],short:[55],double:[70,75,70],classic:[110,85,110],heartbeat:[95,65,190,110],pulse:[250,110,250],long:[420]};
 const MAP={message:"private_messages",group_message:"group_messages",group_messages:"group_messages",follow:"new_followers",friend:"new_friends",friend_request:"new_friends",voice_message:"voice_messages",reply:"replies",reaction:"reactions",comment:"comments",mention:"mentions_tags",tag:"mentions_tags",missed_voice_call:"missed_voice_calls",missed_video_call:"missed_video_calls",call:"incoming_calls",live:"live_notifications",live_moderator:"live_notifications",meetwave_invite:"meeting_invitations",meeting_invite:"meeting_invitations",meeting_reminder:"meeting_reminders",gift:"gifts_received",coin:"coins_received",coins:"coins_received",payment:"payments_transactions",transaction:"payments_transactions",marketplace_order:"marketplace_orders",security:"security_alerts",login:"login_alerts",system:"system_notifications"};
+const EVENT_BY_NOTIFICATION_CATEGORY={
+private_messages:"message.incoming",group_messages:"message.group_incoming",voice_messages:"message.voice_received",
+missed_voice_calls:"call.missed",missed_video_calls:"call.missed",incoming_calls:"call.incoming_voice",
+live_notifications:"live.started",meeting_invitations:"meetwave.invitation",meeting_reminders:"meetwave.reminder",
+gifts_received:"gift.received",coins_received:"coin.received",payments_transactions:"payment.success",
+security_alerts:"security.account_alert",login_alerts:"security.login_alert",system_notifications:"notification.system"
+};
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 async function api(path,options={}){const r=await fetch("/api"+path,{...options,credentials:"same-origin",headers:{"Content-Type":"application/json",...(window.MingloraDeviceContextHeaders?.()||{}),...(options.headers||{})}});const data=await r.json().catch(()=>({}));if(!r.ok)throw new Error(data.error||"Minglora request failed ("+r.status+").");return data;}
 const builtins=()=>manifest?[...manifest.voiceRingtones,...manifest.videoRingtones,...manifest.notifications]:[];
@@ -14,10 +21,10 @@ function accountCacheKey(){try{const id=typeof state!=="undefined"?String(state.
 function rememberPreferences(){const key=accountCacheKey();if(!key||!prefs)return;try{const safePrefs={...prefs,customSounds:(prefs.customSounds||[]).map(item=>({id:item.id,title:item.title,mimeType:item.mimeType,durationMs:item.durationMs||0}))};localStorage.setItem(key,JSON.stringify({preferences:safePrefs,experience:experience||{},savedAt:Date.now()}));}catch{}}
 function readRememberedPreferences(){const key=accountCacheKey();if(!key)return null;try{const saved=JSON.parse(localStorage.getItem(key)||"null");return saved?.preferences? saved:null;}catch{return null;}}
 async function load(force=false){if(!manifest||force){const r=await fetch("/assets/sound-studio/manifest.json",{cache:"no-cache"});if(!r.ok)throw new Error("The 120 original sound files have not been generated yet.");manifest=await r.json();if(manifest.counts?.total!==120||manifest.voiceRingtones?.length!==30||manifest.videoRingtones?.length!==30||manifest.notifications?.length!==60)throw new Error("The original sound pack failed its 120-file check.");}
-try{const [a,b]=await Promise.all([api("/sounds/preferences"),api("/settings")]);prefs=a.settings;prefs.customSounds=a.customSounds||[];experience=b.settings?.experience||{};rememberPreferences();render();}
+try{const [a,b]=await Promise.all([api("/sounds/preferences"),api("/settings")]);prefs=a.settings;prefs.customSounds=a.customSounds||[];experience=b.settings?.experience||{};syncUniversalAudioPreferences();rememberPreferences();render();}
 catch(error){const saved=readRememberedPreferences();if(!saved)throw error;prefs=saved.preferences;prefs.customSounds=prefs.customSounds||[];experience=saved.experience||{};render();say("Offline preview mode: cached preferences and built-in sounds are available. Custom uploads and saving changes require a connection.");}}
 async function savePrefs(patch){saveQueue=saveQueue.catch(()=>{}).then(async()=>{const r=await api("/sounds/preferences",{method:"PATCH",body:JSON.stringify(patch)});prefs=r.settings;prefs.customSounds=r.customSounds||prefs.customSounds||[];rememberPreferences();render();say("Sound preferences saved to your Minglora account.");});return saveQueue;}
-async function saveExp(patch){saveQueue=saveQueue.catch(()=>{}).then(async()=>{const r=await api("/settings",{method:"PATCH",body:JSON.stringify({experience:patch})});experience=r.settings?.experience||experience;rememberPreferences();window.dispatchEvent(new CustomEvent("minglora:settings-loaded",{detail:r.settings}));say("Sound and vibration settings saved.");});return saveQueue;}
+async function saveExp(patch){saveQueue=saveQueue.catch(()=>{}).then(async()=>{const r=await api("/settings",{method:"PATCH",body:JSON.stringify({experience:patch})});experience=r.settings?.experience||experience;syncUniversalAudioPreferences();rememberPreferences();window.dispatchEvent(new CustomEvent("minglora:settings-loaded",{detail:r.settings}));say("Sound and vibration settings saved.");});return saveQueue;}
 function say(message,error=false){const n=root?.querySelector("[data-sound-status]");if(n){n.textContent=message;n.classList.toggle("sound-studio-danger",error);}}
 function opts(items,selected){return items.map(x=>'<option value="'+esc(x.id)+'"'+(x.id===selected?" selected":"")+'>'+esc(x.name||x.title||"Custom sound")+"</option>").join("");}
 function callCard(kind,title,list){const s=prefs[kind==="voice"?"voiceCall":"videoCall"],fav=prefs.favorites.includes(s.soundId);return '<article class="sound-studio-card"><h4>'+title+'</h4><label class="sound-studio-toggle"><span>Enable this ringtone<small>Independent from the other call type.</small></span><input type="checkbox" data-call-enabled="'+kind+'"'+(s.enabled!==false?" checked":"")+'></label><label class="sound-studio-field"><span>Selected ringtone</span><select data-call-select="'+kind+'">'+opts(list,s.soundId)+"</select></label><div class=\"sound-studio-actions\"><button type=\"button\" class=\"secondary\" data-preview-call=\""+kind+"\">Preview selected</button><button type=\"button\" class=\"secondary\" data-favorite=\""+esc(s.soundId)+"\" aria-pressed=\""+fav+"\">"+(fav?"★":"☆")+"</button></div></article>";}
@@ -52,10 +59,46 @@ root.querySelector("[data-theme-filter]").value=filter;
 async function applyTheme(theme){const index=Object.keys(THEMES).indexOf(theme);if(index<0)return;const patch={theme,voiceCall:{soundId:"voice-"+String(index*5+1).padStart(2,"0")},videoCall:{soundId:"video-"+String(index*5+1).padStart(2,"0")},notifications:{}};Object.keys(prefs.notifications).forEach((key,i)=>patch.notifications[key]={soundId:"notification-"+String(index*10+(i%10)+1).padStart(2,"0")});await savePrefs(patch);}
 async function favorite(id){const set=new Set(prefs.favorites);set.has(id)?set.delete(id):set.add(id);await savePrefs({favorites:[...set]});}
 function categoryKey(type){const key=String(type||"").toLowerCase().replace(/[\s-]+/g,"_");return MAP[key]||(prefs?.notifications?.[key]?key:"system_notifications");}
+function syncUniversalAudioPreferences(){
+window.MingloraAudioEngine?.setPreferences({
+  muted:experience?.soundMode==="mute",
+  masterVolume:1,
+  categoryVolumes:{
+    notification:Math.max(0,Math.min(100,Number(experience?.notificationVolume??80)))/100,
+    ringtone:Math.max(0,Math.min(100,Number(experience?.ringtoneVolume??80)))/100
+  }
+});
+}
 function quiet(kind){return experience?.soundMode==="mute"||window.MingloraExperience?.shouldSilenceNotifications?.(kind)===true;}
 function vibrate(){if(!navigator.vibrate)return false;try{return navigator.vibrate(VIBRATION[experience?.vibrationPattern||"classic"]||VIBRATION.classic);}catch{return false;}}
-async function notification(type,id=""){if(!prefs){try{await load();}catch{return false;}}const key=categoryKey(type),a=prefs.notifications?.[key];if(id){if(played.has(id))return false;played.add(id);if(played.size>250)played.delete(played.values().next().value);}if(!a||a.enabled===false||experience.notificationSound===false||quiet("notification"))return false;if(experience.vibrateOnNotification!==false)vibrate();if(experience.soundMode==="vibrate")return false;if(["private_messages","group_messages","voice_messages"].includes(key)&&experience.messageSound===false)return false;try{await play(a.soundId,{volume:experience.notificationVolume??80});return true;}catch{return false;}}
-async function callSound(kind){if(!prefs)await load();const isVideo=kind==="video",a=prefs[isVideo?"videoCall":"voiceCall"],on=isVideo?experience.videoCallSound!==false:experience.voiceCallSound!==false;if(!on||a.enabled===false||quiet("call")||experience.soundMode==="vibrate")return {enabled:false,url:""};const r=find(a.soundId);return {enabled:Boolean(r?.url),url:r?.url||"",soundId:a.soundId};}
+async function notification(type,id=""){
+if(!prefs){try{await load();}catch{return false;}}
+const key=categoryKey(type),a=prefs.notifications?.[key];
+if(id){if(played.has(id))return false;played.add(id);if(played.size>250)played.delete(played.values().next().value);}
+if(!a||a.enabled===false||experience.notificationSound===false||quiet("notification"))return false;
+if(experience.vibrateOnNotification!==false)vibrate();
+if(experience.soundMode==="vibrate")return false;
+if(["private_messages","group_messages","voice_messages"].includes(key)&&experience.messageSound===false)return false;
+syncUniversalAudioPreferences();
+const eventKey=EVENT_BY_NOTIFICATION_CATEGORY[key]||"notification.incoming";
+if(window.MingloraAudioEngine){
+  const centralPlayed=await window.MingloraAudioEngine.playEvent(eventKey,{priority:key==="incoming_calls"?100:20,volume:Math.max(0,Math.min(100,Number(experience.notificationVolume??80)))/100});
+  if(centralPlayed)return true;
+}
+try{await play(a.soundId,{volume:experience.notificationVolume??80});return true;}catch{return false;}
+}
+async function callSound(kind){
+if(!prefs)await load();
+const isVideo=kind==="video",a=prefs[isVideo?"videoCall":"voiceCall"],on=isVideo?experience.videoCallSound!==false:experience.voiceCallSound!==false;
+if(!on||a.enabled===false||quiet("call")||experience.soundMode==="vibrate")return {enabled:false,url:""};
+syncUniversalAudioPreferences();
+try{
+  const central=await window.MingloraAudioEngine?.resolveEvent(isVideo?"call.incoming_video":"call.incoming_voice");
+  if(central?.url)return {enabled:true,url:central.url,soundId:central.id||("platform:"+central.id),volume:central.volume,loop:central.loop===true};
+}catch{}
+const r=find(a.soundId);
+return {enabled:Boolean(r?.url),url:r?.url||"",soundId:a.soundId};
+}
 async function offline(){if(!("caches"in window))throw new Error("This browser does not support offline audio storage.");const cache=await caches.open("minglora-sounds-v1");let i=0;for(const x of builtins()){const r=await fetch(x.url,{cache:"no-cache"});if(!r.ok)throw new Error("Could not cache "+x.name);await cache.put(x.url,r.clone());i++;say("Saving original sound library offline · "+i+" / 120");}say("All 120 original audio files are cached for offline playback on this device.");}
 async function upload(file){if(!file)return;if(!root.querySelector("[data-rights-confirmed]")?.checked)throw new Error("Confirm that you own this audio or have permission to use it.");if(file.size<1||file.size>20*1024*1024)throw new Error("Choose an audio file up to 20 MB.");if(typeof window.uploadMediaFile!=="function")throw new Error("Minglora's secure upload service is unavailable.");const title=file.name.replace(/\.[^.]+$/,"").slice(0,100)||"Custom sound",probe=document.createElement("audio"),url=URL.createObjectURL(file);try{const durationMs=await new Promise((resolve,reject)=>{probe.preload="metadata";probe.onloadedmetadata=()=>resolve(Number.isFinite(probe.duration)?Math.round(probe.duration*1000):0);probe.onerror=()=>reject(new Error("Could not read this audio file."));probe.src=url;});say("Uploading "+file.name+"…");const asset=await window.uploadMediaFile("ringtone",file,1,0,p=>say(p.finalizing?"Upload complete. Saving your custom sound…":"Uploading · "+p.percentage+"%"));await api("/sounds/custom",{method:"POST",body:JSON.stringify({assetId:asset.id,title,durationMs,rightsConfirmed:true})});await load();say("Custom sound added to your private library.");}finally{URL.revokeObjectURL(url);probe.removeAttribute("src");}}
 async function restore(){if(!confirm("Restore default ringtones, notification sounds, volumes, vibration and Do Not Disturb settings? Uploaded files will be kept."))return;const patch={theme:"classic",voiceCall:{soundId:"voice-01",enabled:true},videoCall:{soundId:"video-01",enabled:true},notifications:{},favorites:[]};Object.keys(prefs.notifications).forEach((k,i)=>patch.notifications[k]={soundId:"notification-"+String(i%10+1).padStart(2,"0"),enabled:true});await savePrefs(patch);await saveExp({soundMode:"sound",ringtoneVolume:80,notificationVolume:80,voiceCallSound:true,videoCallSound:true,notificationSound:true,messageSound:true,vibrateOnRing:true,vibrateOnNotification:true,vibrationPattern:"classic",dndEnabled:false,dndStart:"22:00",dndEnd:"07:00",dndAllowedCalls:"none"});say("Default settings restored. Your custom uploads remain saved.");}
