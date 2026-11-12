@@ -1,4 +1,5 @@
 export const VIDEO_RETENTION_MIN_SAMPLE_SIZE = 5;
+export const VIDEO_DEMOGRAPHICS_MIN_SAMPLE_SIZE = 5;
 const VIDEO_RETENTION_THRESHOLDS = Object.freeze([0, 0.25, 0.5, 0.75, 0.9, 1]);
 
 function summarizeRetention(viewers) {
@@ -25,7 +26,44 @@ function summarizeRetention(viewers) {
  * Aggregate real Minglora video watch events for the authenticated creator.
  * Viewer identities are never returned; only per-video and portfolio totals leave this module.
  */
-export function summarizeCreatorVideoAnalytics(posts = [], watchEvents = [], ownerId, nowMs = Date.now(), periodDays = 30) {
+function summarizeAudienceDemographics(viewerIds, members = []) {
+  const byId = new Map((Array.isArray(members) ? members : [])
+    .filter(member => member && typeof member.id === 'string')
+    .map(member => [member.id, member]));
+  const countries = new Map();
+  let suppressedGroups = false;
+  for (const viewerId of viewerIds) {
+    const member = byId.get(viewerId);
+    if (member?.settings?.privacy?.shareAudienceDemographics !== true) continue;
+    const country = String(member.country || '').trim().replace(/[\u0000-\u001f\u007f]/g, '').replace(/\s+/g, ' ').slice(0, 64);
+    if (!/^[\p{L}\p{M} .’'()-]{2,64}$/u.test(country)) continue;
+    const key = country.toLocaleLowerCase('en');
+    const existing = countries.get(key) || { country, viewers: 0 };
+    existing.viewers += 1;
+    countries.set(key, existing);
+  }
+  const visible = [];
+  for (const item of countries.values()) {
+    if (item.viewers < VIDEO_DEMOGRAPHICS_MIN_SAMPLE_SIZE) {
+      suppressedGroups = true;
+      continue;
+    }
+    visible.push(item);
+  }
+  visible.sort((a, b) => b.viewers - a.viewers || a.country.localeCompare(b.country));
+  return {
+    available: visible.length > 0,
+    minSampleSize: VIDEO_DEMOGRAPHICS_MIN_SAMPLE_SIZE,
+    suppressedGroups,
+    countries: visible
+  };
+}
+
+/**
+ * Aggregate real Minglora video watch events for the authenticated creator.
+ * Viewer identities are never returned; only per-video and portfolio totals leave this module.
+ */
+export function summarizeCreatorVideoAnalytics(posts = [], watchEvents = [], ownerId, nowMs = Date.now(), periodDays = 30, members = []) {
   const days = [7, 30, 90].includes(Number(periodDays)) ? Number(periodDays) : 30;
   const currentTime = Number.isFinite(Number(nowMs)) ? Number(nowMs) : Date.now();
   const cutoff = currentTime - days * 24 * 60 * 60 * 1000;
@@ -100,6 +138,7 @@ export function summarizeCreatorVideoAnalytics(posts = [], watchEvents = [], own
   return {
     periodDays: days,
     generatedAt: new Date(currentTime).toISOString(),
+    demographics: summarizeAudienceDemographics(portfolioViewers, members),
     summary: {
       publishedVideos: videos.length,
       uniqueViewers: portfolioViewers.size,
