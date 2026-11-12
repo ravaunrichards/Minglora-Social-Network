@@ -80,9 +80,11 @@ test('Home Stories use a Facebook-style create card, scrollable story rail and n
   assert.match(css, /\.story-create-card/);
   assert.match(css, /\.story-viewer-fullscreen-card/);
   assert.match(css, /@media\(max-width:760px\)[\s\S]*\.story-viewer-fullscreen-card/);
-  assert.ok(html.includes('/styles.css?v=20261108-facebook-stories-2'));
+  const activeStylesheet=html.match(/href="(\/styles\.css\?v=[^"]+)"/)?.[1];
+  assert.ok(activeStylesheet,'index references the application stylesheet');
+  assert.ok(sw.includes("'" + activeStylesheet + "'"),'service worker caches the current application stylesheet');
   assert.match(html,/\/app\.js\?v=[^"']+/);
-  assert.ok(sw.includes('/styles.css?v=20261108-facebook-stories-2'));
+
   const activeAppScript=html.match(/src="(\/app\.js\?v=[^"]+)"/)?.[1];
   assert.ok(activeAppScript,'index references the app controller');
   assert.ok(sw.includes("'"+activeAppScript+"'"),'service worker caches the current app controller');
