@@ -178,3 +178,69 @@ test('worker refuses a provider adapter for the wrong assigned model',async()=>{
   assert.equal(calls.failures.length,1);
   assert.equal(calls.failures[0].retryable,false);
 });
+
+
+test('worker renews its lease periodically for the full provider generation window',async()=>{
+  const {options,calls}=dependencies({
+    leaseSeconds:30,
+    heartbeatIntervalMs:1000,
+    providerAdapter:{
+      providerIdentifier:'example_provider',
+      modelIdentifier:'example/model-v1',
+      generate:async()=>new Promise(resolve=>setTimeout(()=>resolve({text:'Long-running reviewed draft.'}),2300))
+    }
+  });
+  const worker=createPersonalAiBotWorker(options);
+  const result=await worker.runOnce();
+  assert.equal(result.status,'completed');
+  assert.ok(calls.heartbeats>=3,'initial heartbeat plus periodic renewals are required');
+  assert.equal(calls.completions.length,1);
+  assert.equal(calls.failures.length,0);
+});
+
+test('worker aborts provider generation and never completes after a periodic lease renewal fails',async()=>{
+  const {options,calls}=dependencies({
+    leaseSeconds:30,
+    heartbeatIntervalMs:1000,
+    heartbeatTask:async()=>{calls.heartbeats++;return calls.heartbeats===1;},
+    providerAdapter:{
+      providerIdentifier:'example_provider',
+      modelIdentifier:'example/model-v1',
+      generate:async(_request,{signal})=>new Promise((resolve,reject)=>{
+        const onAbort=()=>reject(signal.reason||new Error('Provider generation aborted after lease loss.'));
+        if(signal.aborted)onAbort();
+        else signal.addEventListener('abort',onAbort,{once:true});
+        setTimeout(()=>resolve({text:'This result must not be saved.'}),3000);
+      })
+    }
+  });
+  const worker=createPersonalAiBotWorker(options);
+  const result=await worker.runOnce();
+  assert.equal(result.status,'lease_lost');
+  assert.equal(result.errorCode,'AI_TASK_LEASE_LOST');
+  assert.ok(calls.heartbeats>=2);
+  assert.equal(calls.completions.length,0);
+  assert.equal(calls.failures.length,0);
+});
+
+test('worker reports an unrecorded failure when the failure RPC rejects lease ownership',async()=>{
+  const {options,calls}=dependencies({
+    providerAdapter:{
+      providerIdentifier:'example_provider',
+      modelIdentifier:'example/model-v1',
+      generate:async()=>{throw Object.assign(new Error('Provider unavailable.'),{code:'PROVIDER_UNAVAILABLE'});}
+    },
+    failTask:async task=>{calls.failures.push(task);return {ok:false,reason:'lease_not_owned_or_expired'};}
+  });
+  const worker=createPersonalAiBotWorker(options);
+  const result=await worker.runOnce();
+  assert.equal(result.status,'failure_unrecorded');
+  assert.equal(result.errorCode,'AI_TASK_FAILURE_NOT_RECORDED');
+  assert.equal(calls.failures.length,1);
+  assert.equal(calls.completions.length,0);
+});
+
+test('worker rejects heartbeat intervals that cannot safely renew a lease',()=>{
+  const {options}=dependencies({leaseSeconds:30,heartbeatIntervalMs:15000});
+  assert.throws(()=>createPersonalAiBotWorker(options),/less than half the lease duration/);
+});
