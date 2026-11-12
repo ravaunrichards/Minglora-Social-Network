@@ -1136,7 +1136,7 @@ test('team handoff rejects private context and revalidates membership, source ta
   const secondTaskId=uid();
   db.personalAiBotTasks.push({id:secondTaskId,botId:sender.id,status:'awaiting_administrator_approval',createdAt:stamp});
   const stale=createPersonalAiBotTeamHandoff(db,team.id,{...payload,sourceTaskId:secondTaskId,deadlineAt:null,summary:'Second handoff'},actor,stamp,uid);
-  const source=db.personalAiBotTasks.find(item=>item.id===taskId);
+  const source=db.personalAiBotTasks.find(item=>item.id===secondTaskId);
   source.status='cancelled';
   assert.throws(()=>reviewPersonalAiBotTeamHandoff(db,team.id,stale.id,{action:'accept'},actor,stamp,uid),/source task was cancelled/);
 });
@@ -1218,7 +1218,7 @@ test('emergency shutdown cancels open handoffs and preserves their audit history
   assert.equal(retained.status,'cancelled');
   assert.equal(retained.cancellationReason,'network_emergency_shutdown');
   assert.equal(retained.dispatchStatus,'not_dispatched');
-  assert.ok(db.personalAiBotAudit.some(item=>item.action==='team.handoff_cancelled'&&item.entityId===handoff.id));
+  assert.ok(db.personalAiBotAudit.some(item=>item.action==='team.handoff_cancelled'&&item.targetId===handoff.id));
 });
 
 
