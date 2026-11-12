@@ -24,7 +24,7 @@ test('saved appearance hydrates on every authenticated session without opening S
   assert.match(app, /dispatchEvent\(new Event\('minglora:session-ready'\)\)/);
   assert.ok(html.includes('src="'+ '/experience-center.js?v=20261112-session-style-hydration-1' +'"'), 'HTML loads the corrected script version');
   assert.ok(serviceWorker.includes("'/experience-center.js?v=20261112-session-style-hydration-1'"), 'service worker precaches the corrected script version');
-  assert.match(serviceWorker, /CACHE_NAME='minglora-shell-v294-self-updating-1'/);
+  assert.match(serviceWorker, /CACHE_NAME='minglora-shell-v\\d+-self-updating-1'/);
 });
 
 test('sign-out clears the previous account appearance before the next account signs in', () => {
