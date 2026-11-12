@@ -108,14 +108,14 @@ const safeDate = value => {
   const date = new Date(value);
   return !Number.isNaN(date.getTime()) ? date.toISOString() : null;
 };
-const validFileName = value => /^[a-z0-9]+(?:_[a-z0-9]+){2,}_v[0-9]{3,}\\.(mp3|m4a|ogg|opus|wav|flac|aac|webm)$/i.test(String(value||""));
+const validFileName = value => /^[a-z0-9]+(?:_[a-z0-9]+){2,}_v[0-9]{3,}\.(mp3|m4a|ogg|opus|wav|flac|aac|webm)$/i.test(String(value||""));
 
 export function validateAudioAssetMetadata(input={}) {
   const scope = safeText(input.scope,24);
   const categoryKey = safeText(input.categoryKey,80);
   const eventKey = safeText(input.eventKey,100);
   const originalFilename = safeText(input.originalFilename,180);
-  const fileFormat = safeText(input.fileFormat,12).toLowerCase().replace(/^\\./,"");
+  const fileFormat = safeText(input.fileFormat,12).toLowerCase().replace(/^\./,"");
   const originType = safeText(input.originType,40).toLowerCase();
   const authenticityStatus = safeText(input.authenticityStatus,40).toLowerCase() || "unverified";
   const reviewStatus = safeText(input.reviewStatus,32).toLowerCase() || "draft";
