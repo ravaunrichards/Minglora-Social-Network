@@ -9632,6 +9632,32 @@ function openVideoChannelEditor(channel,onSaved=null){
     }catch(err){error.textContent=err.message;button.disabled=false;}
   });
 }
+function videoChannelPostMarkup(post) {
+  const date=post.createdAt?new Date(post.createdAt).toLocaleString():'';
+  return '<article class="card video-channel-post" data-video-channel-post="'+esc(post.id)+'"><header><strong>'+esc(post.title||'Channel update')+'</strong><time>'+esc(date)+'</time></header><p>'+esc(post.body||'')+'</p>'+(post.isOwner?'<footer><button type="button" class="secondary" data-channel-post-edit="'+esc(post.id)+'">Edit</button><button type="button" class="secondary" data-channel-post-delete="'+esc(post.id)+'">Delete</button></footer>':'')+'</article>';
+}
+function openVideoChannelPostEditor(post,onSaved=null) {
+  const overlay=document.createElement('div');
+  overlay.className='modal-backdrop';
+  overlay.innerHTML='<section class="modal video-channel-editor" role="dialog" aria-modal="true" aria-labelledby="video-channel-post-editor-title"><div class="modal-head"><h2 id="video-channel-post-editor-title">'+(post?'Edit channel update':'Publish channel update')+'</h2><button type="button" class="modal-close" aria-label="Close">×</button></div><form class="modal-body"><label class="field"><span>Title (optional)</span><input name="title" maxlength="100" value="'+esc(post?.title||'')+'" placeholder="Update headline"></label><label class="field"><span>Message</span><textarea name="body" rows="6" required maxlength="3000" placeholder="Share news with your channel subscribers">'+esc(post?.body||'')+'</textarea></label><p class="auth-error" data-video-channel-post-error role="status"></p><button type="submit" class="primary full">'+(post?'Save update':'Publish update')+'</button></form></section>';
+  document.body.append(overlay);
+  overlay.querySelector('.modal-close')?.addEventListener('click',()=>overlay.remove());
+  overlay.addEventListener('click',event=>{if(event.target===overlay)overlay.remove();});
+  overlay.querySelector('form')?.addEventListener('submit',async event=>{
+    event.preventDefault();
+    const form=event.currentTarget,button=form.querySelector('button[type="submit"]'),error=form.querySelector('[data-video-channel-post-error]');
+    button.disabled=true;error.textContent='';
+    try{
+      const values=Object.fromEntries(new FormData(form));
+      const result=await api(post?'/video-channel-posts/'+encodeURIComponent(post.id):'/video-channels/me/posts',{
+        method:post?'PATCH':'POST',body:JSON.stringify(values)
+      });
+      overlay.remove();
+      if(typeof onSaved==='function')await onSaved(result.post);
+      toast(post?'Channel update saved.':'Channel update published.');
+    }catch(err){error.textContent=err.message;button.disabled=false;}
+  });
+}
 async function setVideoChannelSubscription(channel,subscribe){
   const result=await api('/video-channels/'+encodeURIComponent(channel.ownerId)+'/subscribe',{method:subscribe?'POST':'DELETE'});
   toast(subscribe?(result.alreadySubscribed?'Already subscribed.':'Subscribed to channel.'):'Channel subscription removed.');
@@ -9643,7 +9669,9 @@ async function renderVideoChannelLibrary(feed){
       const result=await api('/video-channels/'+encodeURIComponent(activeVideoChannelId));
       const channel=result.channel;
       const videos=Array.isArray(channel.videos)?channel.videos:[];
-      feed.innerHTML='<section class="card video-channel-detail-head"><button type="button" class="secondary" data-video-channel-back>‹ Channels</button><div class="video-channel-detail-copy"><span class="eyebrow">MINGLORA WATCH · CHANNEL</span><h2>'+esc(channel.title)+'</h2><p>'+esc(channel.description||'')+'</p><small>'+Number(channel.subscriberCount||0)+' subscribers · '+Number(channel.videoCount||0)+' videos'+(channel.visibility==='unlisted'?' · Unlisted':'')+'</small><div class="video-channel-owner-line"><span>'+esc(channel.owner?.name||channel.owner?.username||'Minglora member')+'</span></div></div>'+(channel.isOwner?'<button type="button" class="secondary" data-video-channel-edit>Edit channel</button>':'<button type="button" class="'+(channel.isSubscribed?'secondary':'primary')+'" data-video-channel-subscribe="'+(channel.isSubscribed?'off':'on')+'">'+(channel.isSubscribed?'Subscribed · Unsubscribe':'＋ Subscribe')+'</button>')+'</section>'+(videos.length?videos.map(post=>postCard(post,{videoWatchLater:true})+videoPlaylistActionMarkup(post)).join(''):'<section class="card empty-state"><div class="empty-icon">▶</div><h3>No accessible videos yet</h3><p>Videos appear here when this creator publishes posts that you are allowed to view.</p>'+(channel.isOwner?'<button type="button" class="primary" data-video-channel-publish>＋ Publish a video</button>':'')+'</section>');
+      const channelPosts=Array.isArray(channel.posts)?channel.posts:[];
+      const updatesMarkup='<section class="video-channel-updates"><div class="video-channel-updates-heading"><div><span class="eyebrow">CHANNEL COMMUNITY</span><h3>Channel updates</h3><p>News and posts published by this creator.</p></div>'+(channel.isOwner?'<button type="button" class="primary" data-channel-post-create>＋ Post an update</button>':'')+'</div>'+(channelPosts.length?channelPosts.map(videoChannelPostMarkup).join(''):'<div class="card video-channel-post-empty"><p>No channel updates have been published yet.</p></div>')+'</section>';
+      feed.innerHTML='<section class="card video-channel-detail-head"><button type="button" class="secondary" data-video-channel-back>‹ Channels</button><div class="video-channel-detail-copy"><span class="eyebrow">MINGLORA WATCH · CHANNEL</span><h2>'+esc(channel.title)+'</h2><p>'+esc(channel.description||'')+'</p><small>'+Number(channel.subscriberCount||0)+' subscribers · '+Number(channel.videoCount||0)+' videos'+(channel.visibility==='unlisted'?' · Unlisted':'')+'</small><div class="video-channel-owner-line"><span>'+esc(channel.owner?.name||channel.owner?.username||'Minglora member')+'</span></div></div>'+(channel.isOwner?'<button type="button" class="secondary" data-video-channel-edit>Edit channel</button>':'<button type="button" class="'+(channel.isSubscribed?'secondary':'primary')+'" data-video-channel-subscribe="'+(channel.isSubscribed?'off':'on')+'">'+(channel.isSubscribed?'Subscribed · Unsubscribe':'＋ Subscribe')+'</button>')+'</section>'+updatesMarkup+(videos.length?videos.map(post=>postCard(post,{videoWatchLater:true})+videoPlaylistActionMarkup(post)).join(''):'<section class="card empty-state"><div class="empty-icon">▶</div><h3>No accessible videos yet</h3><p>Videos appear here when this creator publishes posts that you are allowed to view.</p>'+(channel.isOwner?'<button type="button" class="primary" data-video-channel-publish>＋ Publish a video</button>':'')+'</section>');
       feed.querySelector('[data-video-channel-back]')?.addEventListener('click',()=>{activeVideoChannelId=null;void renderVideoChannelLibrary(feed);});
       feed.querySelector('[data-video-channel-edit]')?.addEventListener('click',()=>openVideoChannelEditor(channel,()=>void renderVideoChannelLibrary(feed)));
       feed.querySelector('[data-video-channel-subscribe]')?.addEventListener('click',async event=>{
@@ -9652,6 +9680,17 @@ async function renderVideoChannelLibrary(feed){
         catch(error){button.disabled=false;toast(error.message);}
       });
       feed.querySelector('[data-video-channel-publish]')?.addEventListener('click',()=>openVideoComposer({videoFormat:'video'}));
+      feed.querySelector('[data-channel-post-create]')?.addEventListener('click',()=>openVideoChannelPostEditor(null,()=>void renderVideoChannelLibrary(feed)));
+      feed.querySelectorAll('[data-channel-post-edit]').forEach(button=>button.addEventListener('click',()=>{
+        const post=channelPosts.find(item=>item.id===button.dataset.channelPostEdit);
+        if(post)openVideoChannelPostEditor(post,()=>void renderVideoChannelLibrary(feed));
+      }));
+      feed.querySelectorAll('[data-channel-post-delete]').forEach(button=>button.addEventListener('click',async()=>{
+        if(!window.confirm('Delete this channel update?'))return;
+        button.disabled=true;
+        try{await api('/video-channel-posts/'+encodeURIComponent(button.dataset.channelPostDelete),{method:'DELETE'});await renderVideoChannelLibrary(feed);}
+        catch(error){button.disabled=false;toast(error.message);}
+      }));
       bindFeed(feed);
       bindVideoPlaylistActions(feed);
       return;
@@ -9680,6 +9719,13 @@ async function renderVideoChannelLibrary(feed){
       catch(error){button.disabled=false;toast(error.message);}
     }));
     if(activeVideoChannelScope==='subscriptions'){
+      const announcements=Array.isArray(subscriptions.announcements)?subscriptions.announcements:[];
+      if(announcements.length){
+        const section=document.createElement('section');
+        section.className='video-channel-announcements';
+        section.innerHTML='<div class="video-channel-latest-heading"><span class="eyebrow">YOUR CHANNEL FEED</span><h3>Latest channel updates</h3><p>Announcements from creators you subscribe to.</p></div><div class="video-channel-announcement-list">'+announcements.map(post=>'<div class="video-channel-announcement-item"><small>From '+esc(post.channel?.title||post.owner?.name||'Subscribed channel')+'</small>'+videoChannelPostMarkup(post)+'</div>').join('')+'</div>';
+        feed.append(section);
+      }
       const uploads=Array.isArray(subscriptions.videos)?subscriptions.videos:[];
       if(uploads.length){
         const section=document.createElement('section');
