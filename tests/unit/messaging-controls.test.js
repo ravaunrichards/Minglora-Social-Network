@@ -108,10 +108,12 @@ test('Messenger restrictions are enforced for incoming messages and archived cha
   assert.ok(app.includes('const archivedIds=new Set(messengerPreferences().messengerArchivedConversationIds||[])'));
   assert.ok(app.includes('const visibleConversations=state.conversations.filter(conversation=>!archivedIds.has(conversation.user.id))'));
 });
-test('Messenger notification sound reuses the user-activated call audio context', async()=>{
+test('Messenger notifications use the shared recorded-audio engine without oscillator fallbacks', async()=>{
   const app=await read('../../public/app.js');
-  assert.ok(app.includes('const context=callToneContext||messengerMessageSoundContext||new AudioContextClass()'));
-  assert.ok(app.includes('if(context.state!==\'running\')return'));
+  assert.ok(app.includes('window.MingloraSoundStudio?.playNotification'));
+  assert.ok(app.includes("window.MingloraAudioEngine?.playEvent('message.incoming',{priority:50})"));
+  assert.doesNotMatch(app, /playMessengerMessageSound[\\s\\S]*?createOscillator/);
+  assert.doesNotMatch(app, /playCallTone|createOscillator/);
 });
 
 test('Group Messenger windows expose real voice and video call entry points',async()=>{
