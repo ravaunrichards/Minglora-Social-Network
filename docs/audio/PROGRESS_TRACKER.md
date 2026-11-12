@@ -27,7 +27,9 @@ Supabase project: existing Minglora project `gzycobgbasnqqhnympkr`
 - [x] Added actual-file upload through Minglora's existing private resumable Storage flow; browser metadata inspection and SHA-256; pending-review registration; private preview; and assignment of approved assets.
 - [x] Added the user-supplied free-audio source directory and per-file licence checklist.
 - [x] Added a reusable browser audio engine with event validation, short-lived signed URL caching, mute/volume controls, duplicate-event suppression, call-priority preemption and cleanup.
-- [x] Connected the existing notification poller and call ringtone lookup to central event resolution, retaining legacy user-selected playback as fallback when no approved platform assignment exists.
+- [x] Connected new notification alerts and incoming/outgoing call ringtone lookup to central event resolution, retaining fallback only for a member's own uploaded personal recording when no approved platform assignment exists.
+- [x] Removed oscillator-generated Messenger alerts, call ringback tones and LIVE speaker-request tones.
+- [x] Disabled the legacy procedural 120-cue pack in personal sound selectors/previews and platform alert playback without deleting old binaries or stored preference IDs.
 - [x] Loaded the engine before app clients and versioned the service-worker shell for the new script.
 - [x] Added focused tests for taxonomy, filenames, file formats, metadata, rights gates, authentic-origin types, approval and assignment.
 - [x] Confirmed the existing sound buckets remain private and no new audio files were installed.
