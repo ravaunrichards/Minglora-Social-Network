@@ -50,6 +50,7 @@ export function createPersonalAiBotWorker({
   providerAdapter,
   resolveProviderAdapter,
   leaseSeconds = 180,
+  heartbeatIntervalMs = Math.max(5000, Math.floor(leaseSeconds * 1000 / 3)),
   logger = console
 }) {
   const id = String(workerId || '').trim();
@@ -59,6 +60,10 @@ export function createPersonalAiBotWorker({
   }
   if (!Number.isInteger(leaseSeconds) || leaseSeconds < 30 || leaseSeconds > 300) {
     throw new RangeError('Worker lease duration must be between 30 and 300 seconds.');
+  }
+  if (!Number.isInteger(heartbeatIntervalMs) || heartbeatIntervalMs < 1000 ||
+      heartbeatIntervalMs >= leaseSeconds * 1000 / 2) {
+    throw new RangeError('Worker heartbeat interval must be at least one second and less than half the lease duration.');
   }
 
   let stopped = false;
@@ -74,6 +79,59 @@ export function createPersonalAiBotWorker({
 
     running = true;
     let leasedTask = null;
+    let heartbeatTimer = null;
+    let heartbeatInFlight = null;
+    let heartbeatError = null;
+    let leaseLost = false;
+    const leaseAbortController = new AbortController();
+
+    const stopLeaseHeartbeat = async () => {
+      if (heartbeatTimer !== null) {
+        clearInterval(heartbeatTimer);
+        heartbeatTimer = null;
+      }
+      if (heartbeatInFlight) await heartbeatInFlight;
+    };
+
+    const renewLease = () => {
+      if (heartbeatError) return Promise.resolve(false);
+      if (heartbeatInFlight) return heartbeatInFlight;
+      heartbeatInFlight = (async () => {
+        try {
+          const renewed = await heartbeatTask({
+            ...leasedTask,
+            workerId: id,
+            leaseSeconds
+          });
+          if (renewed !== true) {
+            leaseLost = true;
+            throw Object.assign(new Error('The task lease was lost while the provider was generating.'), {
+              code: 'AI_TASK_LEASE_LOST',
+              retryable: false
+            });
+          }
+          return true;
+        } catch (error) {
+          heartbeatError = error;
+          if (!leaseAbortController.signal.aborted) leaseAbortController.abort(error);
+          return false;
+        } finally {
+          heartbeatInFlight = null;
+        }
+      })();
+      return heartbeatInFlight;
+    };
+
+    const recordTaskFailure = async payload => {
+      try {
+        const result = await failTask(payload);
+        if (result === false || result?.ok === false) return { recorded: false, leaseLost: true };
+        return { recorded: true };
+      } catch (error) {
+        return { recorded: false, error };
+      }
+    };
+
     try {
       const claimResult = await claimTasks({ workerId: id, limit: 1, leaseSeconds });
       const tasks = Array.isArray(claimResult) ? claimResult : claimResult?.tasks;
@@ -88,13 +146,20 @@ export function createPersonalAiBotWorker({
         Boolean(task.approvedBy) &&
         Boolean(task.approvedAt);
       if (!permitted) {
-        await failTask({
+        const failure = await recordTaskFailure({
           ...leasedTask,
           workerId: id,
           retryable: false,
           errorCode: 'TASK_POLICY_BLOCKED',
           errorMessage: 'The task is not an approved, low-impact text-generation task.'
         });
+        if (!failure.recorded) {
+          return {
+            status: failure.leaseLost ? 'lease_lost' : 'failure_unrecorded',
+            claimed: 1,
+            errorCode: failure.leaseLost ? 'AI_TASK_LEASE_LOST' : 'AI_TASK_FAILURE_NOT_RECORDED'
+          };
+        }
         return { status: 'policy_blocked', claimed: 1 };
       }
 
@@ -111,28 +176,46 @@ export function createPersonalAiBotWorker({
         });
       }
 
-      const heartbeatOk = await heartbeatTask({
-        ...leasedTask,
-        workerId: id,
-        leaseSeconds
-      });
-      if (heartbeatOk !== true) return { status: 'lease_lost', claimed: 1 };
+      const heartbeatOk = await renewLease();
+      if (heartbeatOk !== true) {
+        return { status: 'lease_lost', claimed: 1, errorCode: 'AI_TASK_LEASE_LOST' };
+      }
 
-      const generated = await adapter.generate({
-        task: {
-          id: String(task.id),
-          botId: String(task.botId || ''),
-          type: String(task.taskType),
-          instruction: String(task.instruction || ''),
-          approvedAt: String(task.approvedAt)
-        },
-        responseMode: 'draft',
-        tools: [],
-        toolAccess: 'disabled',
-        externalActionsAllowed: false
-      }, {
-        signal: AbortSignal.timeout(90000)
-      });
+      // Keep the lease alive throughout provider execution. The configured
+      // lease may be as short as 30 seconds while generation can run for 90.
+      // A failed renewal aborts the provider request before another worker can
+      // safely reclaim the task.
+      heartbeatTimer = setInterval(() => {
+        void renewLease();
+      }, heartbeatIntervalMs);
+
+      let generated;
+      try {
+        generated = await adapter.generate({
+          task: {
+            id: String(task.id),
+            botId: String(task.botId || ''),
+            type: String(task.taskType),
+            instruction: String(task.instruction || ''),
+            approvedAt: String(task.approvedAt)
+          },
+          responseMode: 'draft',
+          tools: [],
+          toolAccess: 'disabled',
+          externalActionsAllowed: false
+        }, {
+          signal: AbortSignal.any([
+            leaseAbortController.signal,
+            AbortSignal.timeout(90000)
+          ])
+        });
+      } finally {
+        await stopLeaseHeartbeat();
+      }
+
+      if (leaseLost) return { status: 'lease_lost', claimed: 1, errorCode: 'AI_TASK_LEASE_LOST' };
+      if (heartbeatError) throw heartbeatError;
+
       const result = normalizeProviderOutput(generated, adapter);
       const completed = await completeTask({
         ...leasedTask,
@@ -147,20 +230,33 @@ export function createPersonalAiBotWorker({
       if (completed !== true) return { status: 'lease_lost', claimed: 1 };
       return { status: 'completed', claimed: 1, taskId: leasedTask.taskId };
     } catch (error) {
+      await stopLeaseHeartbeat();
+      if (leaseLost) {
+        return { status: 'lease_lost', claimed: 1, errorCode: 'AI_TASK_LEASE_LOST' };
+      }
+
+      let failureRecorded = true;
       if (leasedTask) {
-        try {
-          await failTask({
-            ...leasedTask,
-            workerId: id,
-            retryable: error?.retryable !== false,
-            errorCode: String(error?.code || 'AI_PROVIDER_EXECUTION_FAILED').slice(0,80),
-            errorMessage: String(error?.message || 'The provider could not complete the draft.').slice(0,500)
-          });
-        } catch (failureError) {
+        const failure = await recordTaskFailure({
+          ...leasedTask,
+          workerId: id,
+          retryable: error?.retryable !== false,
+          errorCode: String(error?.code || 'AI_PROVIDER_EXECUTION_FAILED').slice(0,80),
+          errorMessage: String(error?.message || 'The provider could not complete the draft.').slice(0,500)
+        });
+        failureRecorded = failure.recorded;
+        if (!failureRecorded && failure.error) {
           logger.error?.('[Minglora AI Bot Worker] Could not record task failure.', {
-            message: String(failureError?.message || failureError).slice(0,180)
+            message: String(failure.error?.message || failure.error).slice(0,180)
           });
         }
+      }
+      if (!failureRecorded) {
+        return {
+          status: 'failure_unrecorded',
+          claimed: leasedTask ? 1 : 0,
+          errorCode: 'AI_TASK_FAILURE_NOT_RECORDED'
+        };
       }
       return {
         status: 'failed',
@@ -168,6 +264,7 @@ export function createPersonalAiBotWorker({
         errorCode: String(error?.code || 'AI_PROVIDER_EXECUTION_FAILED').slice(0,80)
       };
     } finally {
+      if (heartbeatTimer !== null) clearInterval(heartbeatTimer);
       running = false;
     }
   }
