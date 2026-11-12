@@ -506,3 +506,11 @@ Continue with independent non-database work that can be built and verified in th
 - No live Supabase schema/migration, Edge Function, production data, provider credential, actual provider request, worker process, scheduler, Render service or deployment was changed. Production AI tables remain absent and the staged AI migrations remain unapplied. The worker remains disabled by default. No email mailbox is provisioned.
 - The 10-billion identity goal remains an architecture target, not a measured capacity. The historical weighted implementation checkpoint remains **45.52% (46% rounded)**; this reliability fix does not justify changing that percentage.
 - **Next safe action:** continue the task queue/authorization security review and add regression coverage for the remaining RPC and runtime-gateway boundaries. Keep production migrations, provider execution, workers, scheduling, autonomy and release disabled pending an approved non-production database and required release authorization.
+
+
+### Follow-up — bounded exit when adapters ignore cancellation (2026-11-12)
+
+- Extended the worker's provider wait to race the adapter promise against the combined lease-loss and 90-second timeout signal. The worker therefore exits its task attempt when cancellation fires even when an adapter neglects to reject on the signal; it cannot force-cancel a remote request handled by a non-compliant adapter.
+- Added a regression asserting that a never-resolving provider adapter cannot hold the worker after lease loss. The feature-branch worker test module now has 16 test cases.
+- Additional commits after the previous checkpoint: abort-race worker hardening `5b681cede68ff44c07bdde2edc84242a24585f39`; ignore-cancellation regression `8c7410b2007838f4476b488a816c69f13efe8c0e`; final adapter cancellation documentation `70440c4e57ec1b37cae97a250d77c9ea8721d7b2`.
+- The isolated Node harness was rerun against a local mirror of the updated worker control flow: **6 passed / 0 failed**. This remains a focused harness and does not replace the committed 16-test suite or CI, both still unverified.
