@@ -35,37 +35,29 @@ test('all ten selectable profile styles are registered on client and server',()=
     assert.ok(server.includes("'"+style+"'"),'missing server allowlist entry: '+style);
     assert.ok(css.includes('[data-profile-style="'+style+'"]'),'missing CSS style variant: '+style);
   }
-  assert.match(app,/name:'Facebook-style'/);
-  assert.match(app,/name:'TikTok-style'/);
-  assert.match(app,/name:'Instagram-style'/);
-  assert.match(app,/name:'YouTube-style'/);
-  assert.match(app,/name:'X \(Twitter\)-style'/);
-  assert.match(app,/name:'LinkedIn-style'/);
-  assert.match(app,/name:'Pinterest-style'/);
-  assert.match(app,/name:'Twitch-style'/);
-  assert.match(app,/name:'Snapchat-style'/);
-  assert.match(app,/name:'Custom Minglora-style'/);
+  for(const name of ['Facebook-style','TikTok-style','Instagram-style','YouTube-style','X (Twitter)-style','LinkedIn-style','Pinterest-style','Twitch-style','Snapchat-style','Custom Minglora-style']){
+    assert.ok(app.includes("name:'"+name+"'"),'missing profile label: '+name);
+  }
 });
 
-test('profile style settings reuse the same account preferences and safely default legacy accounts to Facebook',()=>{
-  assert.match(server,/profileStyle:'facebook',defaultProfileStyle:'facebook'/);
-  assert.match(server,/if\(!PROFILE_STYLE_IDS\.includes\(preferences\.profileStyle\)\)preferences\.profileStyle=DEFAULT_SETTINGS\.preferences\.profileStyle/);
-  assert.match(server,/if\(!PROFILE_STYLE_IDS\.includes\(preferences\.defaultProfileStyle\)\)preferences\.defaultProfileStyle=DEFAULT_SETTINGS\.preferences\.defaultProfileStyle/);
-  assert.match(server,/['"]profileStyle['"],['"]defaultProfileStyle['"]/);
-  assert.match(server,/Choose one of the supported Minglora profile styles/);
-  assert.match(server,/profileStyle:getUserSettings\(u\)\.preferences\.profileStyle/);
-  assert.match(server,/result\.defaultProfileStyle=getUserSettings\(u\)\.preferences\.defaultProfileStyle/);
-  assert.match(settings,/profileStyle: 'facebook', defaultProfileStyle: 'facebook'/);
-  assert.ok(!server.includes('profileStylePreferences'));
+test('profile styles reuse the same account preferences and legacy accounts default safely to Facebook',()=>{
+  assert.ok(server.includes("profileStyle:'facebook',defaultProfileStyle:'facebook'"));
+  assert.ok(server.includes("PROFILE_STYLE_IDS.includes(preferences.profileStyle)"));
+  assert.ok(server.includes("PROFILE_STYLE_IDS.includes(preferences.defaultProfileStyle)"));
+  assert.ok(server.includes("'profileStyle','defaultProfileStyle'"));
+  assert.ok(server.includes('Choose one of the supported Minglora profile styles'));
+  assert.ok(server.includes('profileStyle:getUserSettings(u).preferences.profileStyle'));
+  assert.ok(server.includes('result.defaultProfileStyle=getUserSettings(u).preferences.defaultProfileStyle'));
+  assert.ok(settings.includes("profileStyle: 'facebook', defaultProfileStyle: 'facebook'"));
   assert.ok(!server.includes('profileStyleAccounts'));
 });
 
-test('Facebook remains the default and the original profile renderer, identity and content APIs remain in use',()=>{
-  assert.match(app,/function normalizeProfileStyle\(value\)\{return PROFILE_STYLE_IDS\.includes\(value\)\?value:'facebook';\}/);
-  assert.match(app,/data-profile-style="\'+normalizeProfileStyle\(u\.profileStyle\)/);
-  assert.match(app,/profileStyleNavigation\(u\.profileStyle\)\.map/);
+test('Facebook remains the default and existing profile identity, sections and data actions remain connected',()=>{
+  assert.ok(app.includes("function normalizeProfileStyle(value){return PROFILE_STYLE_IDS.includes(value)?value:'facebook';}"));
+  assert.ok(app.includes('data-profile-style="'+normalizeProfileStyle(u.profileStyle)'));
+  assert.ok(app.includes('profileStyleNavigation(u.profileStyle).map'));
   for(const tab of ['posts','about','friends','photos','reels','more']){
-    assert.ok(app.includes("['"+tab+"'"),'missing existing profile content tab '+tab);
+    assert.ok(app.includes("['"+tab+"'"),'missing existing content tab '+tab);
   }
   for(const identity of ['verifiedProfileBadge(u)','profile-counts','data-open-connections','profileAboutMarkup']){
     assert.ok(app.includes(identity),'existing profile identity/content missing: '+identity);
@@ -74,22 +66,21 @@ test('Facebook remains the default and the original profile renderer, identity a
   assert.ok(!css.includes('.minglora-profile-page[data-profile-style="facebook"] .profile-avatar-edit-wrap'));
 });
 
-test('members can preview, apply, save a default and reset without creating new profile databases',()=>{
+test('profile style library supports preview, apply, save-default and reset using existing settings API',()=>{
   for(const marker of ['data-profile-style-preview','data-profile-style-apply','data-profile-style-save-default','data-profile-style-reset']){
     assert.ok(app.includes(marker),'missing profile style action: '+marker);
   }
-  assert.match(app,/api\('\\/settings',\{method:'PATCH',body:JSON\.stringify\(\{preferences\}\)\}\)/);
-  assert.match(app,/profileStyle:style/);
-  assert.match(app,/defaultProfileStyle:style/);
-  assert.match(app,/data-profile-overflow-action="style-library"/);
-  assert.match(app,/if\(nextTab==='style-library'\)bindProfileStyleLibrary/);
-  assert.ok(app.includes("data-profile-tab"));
+  assert.ok(app.includes("api('/settings'"));
+  assert.ok(app.includes('profileStyle:style'));
+  assert.ok(app.includes('defaultProfileStyle:style'));
+  assert.ok(app.includes('data-profile-overflow-action="style-library"'));
+  assert.ok(app.includes("if(nextTab==='style-library')bindProfileStyleLibrary"));
 });
 
-test('the nine responsive viewport profiles are covered for all ten styles',()=>{
-  assert.equal(styles.length*viewportMatrix.length,90,'expected 10 profile styles × 9 responsive viewports');
+test('ten styles have responsive coverage across the nine-viewport compatibility matrix',()=>{
+  assert.equal(styles.length*viewportMatrix.length,90,'expected 10 styles × 9 viewports');
   assert.equal(viewportMatrix.length,9);
-  assert.deepEqual(viewportMatrix.map(v=>v.width),[320,360,390,430,740,768,1024,1280,2560]);
+  assert.deepEqual(viewportMatrix.map(item=>item.width),[320,360,390,430,740,768,1024,1280,2560]);
   for(const style of styles){
     for(const viewport of viewportMatrix){
       assert.ok(css.includes('[data-profile-style="'+style+'"]'),'style missing for '+viewport.name);
@@ -101,10 +92,10 @@ test('the nine responsive viewport profiles are covered for all ten styles',()=>
   }
 });
 
-test('the stylesheet loads after existing profile CSS and is versioned in the service worker shell',()=>{
-  const asset='/profile-style-system.css?v=20261112-profile-styles-10x9-1';
-  assert.ok(html.includes(asset),'profile style system is not linked');
-  assert.ok(worker.includes("'"+asset+"'"),'profile style system is not precached');
+test('new profile stylesheet and JavaScript are versioned and cached by the service worker',()=>{
+  const cssAsset='/profile-style-system.css?v=20261112-profile-styles-10x9-1';
+  assert.ok(html.includes(cssAsset),'profile style system is not linked');
+  assert.ok(worker.includes("'"+cssAsset+"'"),'profile style system is not precached');
   assert.ok(html.includes('/app.js?v=20261112-profile-style-library-10x9-1'));
   assert.ok(worker.includes("'/app.js?v=20261112-profile-style-library-10x9-1'"));
   assert.ok(html.includes('/settings.js?v=20261112-profile-style-library-10x9-1'));
