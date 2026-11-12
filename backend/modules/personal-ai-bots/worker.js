@@ -15,6 +15,20 @@ function taskLease(task, workerId) {
   return { taskId, leaseToken };
 }
 
+function waitForAbort(promise, signal) {
+  if (signal.aborted) {
+    return Promise.reject(signal.reason || new Error('The provider request was aborted.'));
+  }
+  let onAbort;
+  const aborted = new Promise((resolve, reject) => {
+    onAbort = () => reject(signal.reason || new Error('The provider request was aborted.'));
+    signal.addEventListener('abort', onAbort, { once: true });
+  });
+  return Promise.race([promise, aborted]).finally(() => {
+    if (onAbort) signal.removeEventListener('abort', onAbort);
+  });
+}
+
 function normalizeProviderOutput(output, providerAdapter) {
   const content = typeof output === 'string'
     ? output
@@ -190,8 +204,12 @@ export function createPersonalAiBotWorker({
       }, heartbeatIntervalMs);
 
       let generated;
+      const providerSignal = AbortSignal.any([
+        leaseAbortController.signal,
+        AbortSignal.timeout(90000)
+      ]);
       try {
-        generated = await adapter.generate({
+        const providerRequest = Promise.resolve().then(() => adapter.generate({
           task: {
             id: String(task.id),
             botId: String(task.botId || ''),
@@ -203,12 +221,11 @@ export function createPersonalAiBotWorker({
           tools: [],
           toolAccess: 'disabled',
           externalActionsAllowed: false
-        }, {
-          signal: AbortSignal.any([
-            leaseAbortController.signal,
-            AbortSignal.timeout(90000)
-          ])
-        });
+        }, { signal: providerSignal }));
+        // Race the provider promise against cancellation. An adapter must
+        // honor AbortSignal to stop its external request, but a broken adapter
+        // cannot keep this worker blocked after lease loss or the hard timeout.
+        generated = await waitForAbort(providerRequest, providerSignal);
       } finally {
         await stopLeaseHeartbeat();
       }
