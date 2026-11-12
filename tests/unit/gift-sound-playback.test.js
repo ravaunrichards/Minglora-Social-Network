@@ -79,9 +79,9 @@ test("restricted server route exposes only gift map and slug-specific MP3 files"
 });
 
 test("recording coverage remains aligned with the delivered per-gift MP3 files", () => {
-  assert.equal(candidateMap.status, "review_required_not_production_approved");
+  assert.equal(candidateMap.status, "real_recordings_mapped_playback_enabled_human_listening_review_pending");
   assert.equal(candidateMap.mappedGiftCount, candidateMap.mappings.length);
   assert.equal(new Set(candidateMap.mappings.map(item => item.giftSlug)).size, candidateMap.mappings.length);
-  assert.equal(Object.keys(runtimeMap.gifts_by_code).length, 71);
-  assert.equal(candidateMap.mappings.length, 101);
+  assert.equal(Object.keys(runtimeMap.gifts_by_code).length, 124);
+  assert.equal(candidateMap.mappings.length, 154);
 });
