@@ -558,7 +558,7 @@
     "documentedMirrorCC0AnimalRecordings": 14,
     "additionalWikimediaRealRecordings": 3,
     "excludedImitations": 2,
-    "downloadedAudioFiles": 246,
+    "downloadedAudioFiles": 247,
     "auditionedAudioFiles": 0,
     "productionReadyAudioFiles": 0,
     "candidateGiftMappings": 59,
@@ -7066,10 +7066,10 @@
     }
   ],
   "lastIngestion": {
-    "status": "partial_download_review_only",
-    "downloadedSourceCount": 246,
-    "newlyDownloadedSourceCount": 214,
-    "mappedGiftFileCount": 101,
+    "status": "downloaded_review_only",
+    "downloadedSourceCount": 247,
+    "newlyDownloadedSourceCount": 0,
+    "mappedGiftFileCount": 154,
     "productionReadyGiftCount": 0
   }
 }

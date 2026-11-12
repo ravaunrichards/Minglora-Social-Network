@@ -233,9 +233,12 @@
       "title": "Applause",
       "artwork": "assets/Artwork/applause/artwork.png",
       "expectedSound": "assets/Gift Sounds/applause/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-expl0it3r-applause-applause-clapping-church-crowd-immersive",
+      "candidateSoundFile": "assets/Gift Sounds/applause/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "arabian-cheetah",
@@ -403,9 +406,12 @@
       "title": "Autumn Leaves",
       "artwork": "assets/Artwork/autumn-leaves/artwork.png",
       "expectedSound": "assets/Gift Sounds/autumn-leaves/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-qubodup-rustles-rustle01",
+      "candidateSoundFile": "assets/Gift Sounds/autumn-leaves/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "autumn-leaves-variant-2",
@@ -484,9 +490,12 @@
       "title": "Baby Dragon",
       "artwork": "assets/Artwork/baby-dragon/artwork.png",
       "expectedSound": "assets/Gift Sounds/baby-dragon/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-lokif-swamp-beast-1",
+      "candidateSoundFile": "assets/Gift Sounds/baby-dragon/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "baby-hippo",
@@ -538,9 +547,12 @@
       "title": "Balloon Crown",
       "artwork": "assets/Artwork/balloon-crown/artwork.png",
       "expectedSound": "assets/Gift Sounds/balloon-crown/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-rubberduck-100sfx-bell-01",
+      "candidateSoundFile": "assets/Gift Sounds/balloon-crown/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "balloon-gift-box",
@@ -861,9 +873,12 @@
       "title": "Birthday Party",
       "artwork": "assets/Artwork/birthday-party/artwork.png",
       "expectedSound": "assets/Gift Sounds/birthday-party/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-almitory-applause-applause-fireworks",
+      "candidateSoundFile": "assets/Gift Sounds/birthday-party/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "black-bear",
@@ -888,9 +903,12 @@
       "title": "Black Swan",
       "artwork": "assets/Artwork/black-swan/artwork.png",
       "expectedSound": "assets/Gift Sounds/black-swan/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-pauliuw-forestbirds-forest-birds-1",
+      "candidateSoundFile": "assets/Gift Sounds/black-swan/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "black-tiger",
@@ -1104,9 +1122,12 @@
       "title": "Bowtiful Crown",
       "artwork": "assets/Artwork/bowtiful-crown/artwork.png",
       "expectedSound": "assets/Gift Sounds/bowtiful-crown/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-rubberduck-100sfx-bell-01",
+      "candidateSoundFile": "assets/Gift Sounds/bowtiful-crown/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "box-destiny",
@@ -1473,9 +1494,12 @@
       "title": "Caterpillar Chaos",
       "artwork": "assets/Artwork/caterpillar-chaos/artwork.png",
       "expectedSound": "assets/Gift Sounds/caterpillar-chaos/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-lokif-swamp-cicada-1",
+      "candidateSoundFile": "assets/Gift Sounds/caterpillar-chaos/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "catrina",
@@ -1518,9 +1542,12 @@
       "title": "Celebration Time",
       "artwork": "assets/Artwork/celebration-time/artwork.png",
       "expectedSound": "assets/Gift Sounds/celebration-time/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-almitory-applause-applause-fireworks",
+      "candidateSoundFile": "assets/Gift Sounds/celebration-time/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "cello-romance",
@@ -1554,9 +1581,12 @@
       "title": "Champions Cup",
       "artwork": "assets/Artwork/champions-cup/artwork.png",
       "expectedSound": "assets/Gift Sounds/champions-cup/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-rubberduck-100sfx-gong-02",
+      "candidateSoundFile": "assets/Gift Sounds/champions-cup/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "charge",
@@ -1950,9 +1980,12 @@
       "title": "Club Cheers",
       "artwork": "assets/Artwork/club-cheers/artwork.png",
       "expectedSound": "assets/Gift Sounds/club-cheers/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-expl0it3r-applause-applause-clapping-church-crowd-immersive",
+      "candidateSoundFile": "assets/Gift Sounds/club-cheers/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "club-cheers-variant-2",
@@ -2008,9 +2041,12 @@
       "title": "Club Victory",
       "artwork": "assets/Artwork/club-victory/artwork.png",
       "expectedSound": "assets/Gift Sounds/club-victory/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-nocturnal-cheers-cheers-1",
+      "candidateSoundFile": "assets/Gift Sounds/club-victory/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "club-victory-variant-2",
@@ -2201,9 +2237,12 @@
       "title": "Congratulations",
       "artwork": "assets/Artwork/congratulations/artwork.png",
       "expectedSound": "assets/Gift Sounds/congratulations/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-expl0it3r-applause-applause-clapping-church-crowd-immersive",
+      "candidateSoundFile": "assets/Gift Sounds/congratulations/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "convertible",
@@ -2318,9 +2357,12 @@
       "title": "Cotton The Seal",
       "artwork": "assets/Artwork/cotton-the-seal/artwork.png",
       "expectedSound": "assets/Gift Sounds/cotton-the-seal/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-qubodup-waves-wave-04-cc0-18363-jasinski-alkaibeach",
+      "candidateSoundFile": "assets/Gift Sounds/cotton-the-seal/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "couch-potato",
@@ -2443,9 +2485,12 @@
       "title": "Crowd Cheering",
       "artwork": "assets/Artwork/crowd-cheering/artwork.png",
       "expectedSound": "assets/Gift Sounds/crowd-cheering/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-expl0it3r-applause-applause-clapping-church-crowd-immersive",
+      "candidateSoundFile": "assets/Gift Sounds/crowd-cheering/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "crown",
@@ -2465,9 +2510,12 @@
       "title": "Crown World",
       "artwork": "assets/Artwork/crown-world/artwork.png",
       "expectedSound": "assets/Gift Sounds/crown-world/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-rubberduck-100sfx-bell-01",
+      "candidateSoundFile": "assets/Gift Sounds/crown-world/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "cruiser",
@@ -2483,9 +2531,12 @@
       "title": "Crystal Crown",
       "artwork": "assets/Artwork/crystal-crown/artwork.png",
       "expectedSound": "assets/Gift Sounds/crystal-crown/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-rubberduck-100sfx-bell-02",
+      "candidateSoundFile": "assets/Gift Sounds/crystal-crown/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "crystal-crown-variant-2",
@@ -2501,18 +2552,24 @@
       "title": "Crystal Dreams",
       "artwork": "assets/Artwork/crystal-dreams/artwork.png",
       "expectedSound": "assets/Gift Sounds/crystal-dreams/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-pwl-bells-bell-ding3",
+      "candidateSoundFile": "assets/Gift Sounds/crystal-dreams/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "crystal-heart",
       "title": "Crystal Heart",
       "artwork": "assets/Artwork/crystal-heart/artwork.png",
       "expectedSound": "assets/Gift Sounds/crystal-heart/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-rubberduck-100sfx-glass-03",
+      "candidateSoundFile": "assets/Gift Sounds/crystal-heart/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "crystal-heart-variant-2",
@@ -2528,9 +2585,12 @@
       "title": "Crystal Rod",
       "artwork": "assets/Artwork/crystal-rod/artwork.png",
       "expectedSound": "assets/Gift Sounds/crystal-rod/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-rubberduck-100sfx-glass-04",
+      "candidateSoundFile": "assets/Gift Sounds/crystal-rod/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "cub-sass-clouds",
@@ -2824,18 +2884,24 @@
       "title": "Diamond",
       "artwork": "assets/Artwork/diamond/artwork.png",
       "expectedSound": "assets/Gift Sounds/diamond/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-rubberduck-100sfx-metal-03",
+      "candidateSoundFile": "assets/Gift Sounds/diamond/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "diamond-crown",
       "title": "Diamond Crown",
       "artwork": "assets/Artwork/diamond-crown/artwork.png",
       "expectedSound": "assets/Gift Sounds/diamond-crown/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-rubberduck-100sfx-bell-02",
+      "candidateSoundFile": "assets/Gift Sounds/diamond-crown/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "diamond-flight",
@@ -2922,9 +2988,12 @@
       "title": "Diamond Stage",
       "artwork": "assets/Artwork/diamond-stage/artwork.png",
       "expectedSound": "assets/Gift Sounds/diamond-stage/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-pwl-bells-bell-ding2",
+      "candidateSoundFile": "assets/Gift Sounds/diamond-stage/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "diamond-tree",
@@ -3110,9 +3179,12 @@
       "title": "Dragon Flame",
       "artwork": "assets/Artwork/dragon-flame/artwork.png",
       "expectedSound": "assets/Gift Sounds/dragon-flame/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-lokif-swamp-beast-2",
+      "candidateSoundFile": "assets/Gift Sounds/dragon-flame/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "dream-big",
@@ -3581,9 +3653,12 @@
       "title": "Fandom Cheer",
       "artwork": "assets/Artwork/fandom-cheer/artwork.png",
       "expectedSound": "assets/Gift Sounds/fandom-cheer/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-expl0it3r-applause-applause-clapping-church-crowd-immersive",
+      "candidateSoundFile": "assets/Gift Sounds/fandom-cheer/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "fandom-fan",
@@ -3716,9 +3791,12 @@
       "title": "Fest Party",
       "artwork": "assets/Artwork/fest-party/artwork.png",
       "expectedSound": "assets/Gift Sounds/fest-party/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-almitory-applause-applause-fireworks",
+      "candidateSoundFile": "assets/Gift Sounds/fest-party/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "fest-pop",
@@ -3927,9 +4005,12 @@
       "title": "Fish And Chips",
       "artwork": "assets/Artwork/fish-and-chips/artwork.png",
       "expectedSound": "assets/Gift Sounds/fish-and-chips/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-thimras-park-park-ambience-river",
+      "candidateSoundFile": "assets/Gift Sounds/fish-and-chips/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "fist-bump",
@@ -3999,9 +4080,12 @@
       "title": "Flamingo Groove",
       "artwork": "assets/Artwork/flamingo-groove/artwork.png",
       "expectedSound": "assets/Gift Sounds/flamingo-groove/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-thimras-park-park-ambience-birds",
+      "candidateSoundFile": "assets/Gift Sounds/flamingo-groove/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "floral-lute",
@@ -4730,9 +4814,12 @@
       "title": "Glowing Jellyfish",
       "artwork": "assets/Artwork/glowing-jellyfish/artwork.png",
       "expectedSound": "assets/Gift Sounds/glowing-jellyfish/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-rubberduck-water-bubble-01",
+      "candidateSoundFile": "assets/Gift Sounds/glowing-jellyfish/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "goal-highlight",
@@ -4859,9 +4946,12 @@
       "title": "Gold Medal",
       "artwork": "assets/Artwork/gold-medal/artwork.png",
       "expectedSound": "assets/Gift Sounds/gold-medal/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-rubberduck-100sfx-gong-01",
+      "candidateSoundFile": "assets/Gift Sounds/gold-medal/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "gold-microphone",
@@ -4886,18 +4976,24 @@
       "title": "Gold Necklace",
       "artwork": "assets/Artwork/gold-necklace/artwork.png",
       "expectedSound": "assets/Gift Sounds/gold-necklace/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-rubberduck-100sfx-metal-01",
+      "candidateSoundFile": "assets/Gift Sounds/gold-necklace/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "golden-chain",
       "title": "Golden Chain",
       "artwork": "assets/Artwork/golden-chain/artwork.png",
       "expectedSound": "assets/Gift Sounds/golden-chain/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-rubberduck-100sfx-metal-02",
+      "candidateSoundFile": "assets/Gift Sounds/golden-chain/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "golden-falcons",
@@ -4949,9 +5045,12 @@
       "title": "Goldfish Scooping",
       "artwork": "assets/Artwork/goldfish-scooping/artwork.png",
       "expectedSound": "assets/Gift Sounds/goldfish-scooping/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-rubberduck-water-splash-01",
+      "candidateSoundFile": "assets/Gift Sounds/goldfish-scooping/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "gomalaki",
@@ -5309,9 +5408,12 @@
       "title": "Happy Party",
       "artwork": "assets/Artwork/happy-party/artwork.png",
       "expectedSound": "assets/Gift Sounds/happy-party/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-almitory-applause-applause-fireworks",
+      "candidateSoundFile": "assets/Gift Sounds/happy-party/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "harbour-bridge",
@@ -6575,9 +6677,12 @@
       "title": "League Trophy",
       "artwork": "assets/Artwork/league-trophy/artwork.png",
       "expectedSound": "assets/Gift Sounds/league-trophy/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-rubberduck-100sfx-gong-02",
+      "candidateSoundFile": "assets/Gift Sounds/league-trophy/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "legacy-bloom",
@@ -7239,9 +7344,12 @@
       "title": "Love Glasses",
       "artwork": "assets/Artwork/love-glasses/artwork.png",
       "expectedSound": "assets/Gift Sounds/love-glasses/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-rubberduck-100sfx-glass-02",
+      "candidateSoundFile": "assets/Gift Sounds/love-glasses/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "love-ksa",
@@ -7476,9 +7584,12 @@
       "title": "Lucky Crown",
       "artwork": "assets/Artwork/lucky-crown/artwork.png",
       "expectedSound": "assets/Gift Sounds/lucky-crown/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-pwl-bells-bell-ding1",
+      "candidateSoundFile": "assets/Gift Sounds/lucky-crown/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "lucky-hat",
@@ -7543,18 +7654,24 @@
       "title": "Luvx Cheer",
       "artwork": "assets/Artwork/luvx-cheer/artwork.png",
       "expectedSound": "assets/Gift Sounds/luvx-cheer/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-nocturnal-cheers-cheers-1",
+      "candidateSoundFile": "assets/Gift Sounds/luvx-cheer/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "luxury-yacht",
       "title": "Luxury Yacht",
       "artwork": "assets/Artwork/luxury-yacht/artwork.png",
       "expectedSound": "assets/Gift Sounds/luxury-yacht/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-qubodup-waves-wave-01-cc0-18363-jasinski-alkaibeach",
+      "candidateSoundFile": "assets/Gift Sounds/luxury-yacht/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "lyric-mail",
@@ -8624,9 +8741,12 @@
       "title": "Night Star",
       "artwork": "assets/Artwork/night-star/artwork.png",
       "expectedSound": "assets/Gift Sounds/night-star/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-wolfgang-crickets-crickets-1",
+      "candidateSoundFile": "assets/Gift Sounds/night-star/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "night-star-variant-2",
@@ -8750,9 +8870,12 @@
       "title": "Otter With Fish",
       "artwork": "assets/Artwork/otter-with-fish/artwork.png",
       "expectedSound": "assets/Gift Sounds/otter-with-fish/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-rubberduck-water-splash-03",
+      "candidateSoundFile": "assets/Gift Sounds/otter-with-fish/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "out",
@@ -8858,9 +8981,12 @@
       "title": "Palm Breeze",
       "artwork": "assets/Artwork/palm-breeze/artwork.png",
       "expectedSound": "assets/Gift Sounds/palm-breeze/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-thimras-park-park-ambience-wind",
+      "candidateSoundFile": "assets/Gift Sounds/palm-breeze/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "pan-muerto",
@@ -8948,9 +9074,12 @@
       "title": "Party Boat",
       "artwork": "assets/Artwork/party-boat/artwork.png",
       "expectedSound": "assets/Gift Sounds/party-boat/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-qubodup-waves-wave-03-cc0-18363-jasinski-alkaibeach",
+      "candidateSoundFile": "assets/Gift Sounds/party-boat/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "party-bus",
@@ -9299,9 +9428,12 @@
       "title": "Pop Parrot",
       "artwork": "assets/Artwork/pop-parrot/artwork.png",
       "expectedSound": "assets/Gift Sounds/pop-parrot/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-pauliuw-forestbirds-forest-birds-3",
+      "candidateSoundFile": "assets/Gift Sounds/pop-parrot/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "pork-rice-bow",
@@ -9569,9 +9701,12 @@
       "title": "Puffer Fish",
       "artwork": "assets/Artwork/puffer-fish/artwork.png",
       "expectedSound": "assets/Gift Sounds/puffer-fish/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-rubberduck-water-splash-02",
+      "candidateSoundFile": "assets/Gift Sounds/puffer-fish/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "pug",
@@ -10516,9 +10651,12 @@
       "title": "Sakura Crown",
       "artwork": "assets/Artwork/sakura-crown/artwork.png",
       "expectedSound": "assets/Gift Sounds/sakura-crown/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-rubberduck-100sfx-bell-03",
+      "candidateSoundFile": "assets/Gift Sounds/sakura-crown/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "sakura-flute",
@@ -10738,9 +10876,12 @@
       "title": "Seahorse Pop",
       "artwork": "assets/Artwork/seahorse-pop/artwork.png",
       "expectedSound": "assets/Gift Sounds/seahorse-pop/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-rubberduck-water-bubble-02",
+      "candidateSoundFile": "assets/Gift Sounds/seahorse-pop/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "seal",
@@ -10769,9 +10910,12 @@
       "title": "Seaside Romance",
       "artwork": "assets/Artwork/seaside-romance/artwork.png",
       "expectedSound": "assets/Gift Sounds/seaside-romance/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-rubberduck-water-loop-water-01",
+      "candidateSoundFile": "assets/Gift Sounds/seaside-romance/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "secret-society",
@@ -10993,9 +11137,12 @@
       "title": "Silver Fern",
       "artwork": "assets/Artwork/silver-fern/artwork.png",
       "expectedSound": "assets/Gift Sounds/silver-fern/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-rubberduck-100sfx-metal-04",
+      "candidateSoundFile": "assets/Gift Sounds/silver-fern/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "silver-sports-car",
@@ -12255,9 +12402,12 @@
       "title": "Swan",
       "artwork": "assets/Artwork/swan/artwork.png",
       "expectedSound": "assets/Gift Sounds/swan/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-pauliuw-forestbirds-forest-birds-2",
+      "candidateSoundFile": "assets/Gift Sounds/swan/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "sweet-flutter",
@@ -12462,9 +12612,12 @@
       "title": "The Crown",
       "artwork": "assets/Artwork/the-crown/artwork.png",
       "expectedSound": "assets/Gift Sounds/the-crown/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-rubberduck-100sfx-bell-03",
+      "candidateSoundFile": "assets/Gift Sounds/the-crown/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "the-dreamy",
@@ -13087,9 +13240,12 @@
       "title": "Trophy",
       "artwork": "assets/Artwork/trophy/artwork.png",
       "expectedSound": "assets/Gift Sounds/trophy/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-rubberduck-100sfx-gong-01",
+      "candidateSoundFile": "assets/Gift Sounds/trophy/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "tropical-mask",
@@ -13869,9 +14025,12 @@
       "title": "Yacht",
       "artwork": "assets/Artwork/yacht/artwork.png",
       "expectedSound": "assets/Gift Sounds/yacht/sound.mp3",
-      "audioStatus": "awaiting_verified_real_recording",
+      "audioStatus": "candidate_real_recording_downloaded_not_auditioned",
       "source": null,
-      "license": null
+      "license": null,
+      "candidateSourceId": "ogacc0-qubodup-waves-wave-02-cc0-18363-jasinski-alkaibeach",
+      "candidateSoundFile": "assets/Gift Sounds/yacht/sound.mp3",
+      "candidateMappingStatus": "candidate_real_recording_needs_listening_review"
     },
     {
       "slug": "yes-tiktok-live",
@@ -14006,9 +14165,9 @@
   ],
   "lastIngestion": {
     "status": "candidate_recordings_downloaded_review_only",
-    "downloadedSourceCount": 246,
-    "newlyDownloadedSourceCount": 214,
-    "mappedGiftFileCount": 101,
+    "downloadedSourceCount": 247,
+    "newlyDownloadedSourceCount": 0,
+    "mappedGiftFileCount": 154,
     "productionReadyGiftCount": 0
   }
 }

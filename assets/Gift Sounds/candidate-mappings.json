@@ -1,7 +1,7 @@
 {
   "title": "Minglora Gift Sound Candidate Mappings",
   "status": "review_required_not_production_approved",
-  "mappedGiftCount": 101,
+  "mappedGiftCount": 154,
   "mappings": [
     {
       "giftSlug": "cute-cat-variant-2",
@@ -809,6 +809,430 @@
       "sourceId": "steel1",
       "sha256": "c9eba4d36afd286b2d8bf92fd99d5ca92f09911aaf21b01808e67e6cffe03b8c",
       "bytes": 28255,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "applause",
+      "file": "assets/Gift Sounds/applause/sound.mp3",
+      "sourceId": "ogacc0-expl0it3r-applause-applause-clapping-church-crowd-immersive",
+      "sha256": "0bbf3782dd40d57784e95d0198175f375c431a3da60ab849cad0b39604e0769c",
+      "bytes": 939824,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "crowd-cheering",
+      "file": "assets/Gift Sounds/crowd-cheering/sound.mp3",
+      "sourceId": "ogacc0-expl0it3r-applause-applause-clapping-church-crowd-immersive",
+      "sha256": "0bbf3782dd40d57784e95d0198175f375c431a3da60ab849cad0b39604e0769c",
+      "bytes": 939824,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "club-cheers",
+      "file": "assets/Gift Sounds/club-cheers/sound.mp3",
+      "sourceId": "ogacc0-expl0it3r-applause-applause-clapping-church-crowd-immersive",
+      "sha256": "0bbf3782dd40d57784e95d0198175f375c431a3da60ab849cad0b39604e0769c",
+      "bytes": 939824,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "congratulations",
+      "file": "assets/Gift Sounds/congratulations/sound.mp3",
+      "sourceId": "ogacc0-expl0it3r-applause-applause-clapping-church-crowd-immersive",
+      "sha256": "0bbf3782dd40d57784e95d0198175f375c431a3da60ab849cad0b39604e0769c",
+      "bytes": 939824,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "fandom-cheer",
+      "file": "assets/Gift Sounds/fandom-cheer/sound.mp3",
+      "sourceId": "ogacc0-expl0it3r-applause-applause-clapping-church-crowd-immersive",
+      "sha256": "0bbf3782dd40d57784e95d0198175f375c431a3da60ab849cad0b39604e0769c",
+      "bytes": 939824,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "club-victory",
+      "file": "assets/Gift Sounds/club-victory/sound.mp3",
+      "sourceId": "ogacc0-nocturnal-cheers-cheers-1",
+      "sha256": "a7a560c64baf10760c9d1873ff749682a411d88dd9b87fdf4f20f7c97c6d5295",
+      "bytes": 42048,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "luvx-cheer",
+      "file": "assets/Gift Sounds/luvx-cheer/sound.mp3",
+      "sourceId": "ogacc0-nocturnal-cheers-cheers-1",
+      "sha256": "a7a560c64baf10760c9d1873ff749682a411d88dd9b87fdf4f20f7c97c6d5295",
+      "bytes": 42048,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "happy-party",
+      "file": "assets/Gift Sounds/happy-party/sound.mp3",
+      "sourceId": "ogacc0-almitory-applause-applause-fireworks",
+      "sha256": "21b944144a0b2663454aa1ec20865d50687b8b21c0e44b4ccb02066062e22106",
+      "bytes": 1441375,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "fest-party",
+      "file": "assets/Gift Sounds/fest-party/sound.mp3",
+      "sourceId": "ogacc0-almitory-applause-applause-fireworks",
+      "sha256": "21b944144a0b2663454aa1ec20865d50687b8b21c0e44b4ccb02066062e22106",
+      "bytes": 1441375,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "birthday-party",
+      "file": "assets/Gift Sounds/birthday-party/sound.mp3",
+      "sourceId": "ogacc0-almitory-applause-applause-fireworks",
+      "sha256": "21b944144a0b2663454aa1ec20865d50687b8b21c0e44b4ccb02066062e22106",
+      "bytes": 1441375,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "celebration-time",
+      "file": "assets/Gift Sounds/celebration-time/sound.mp3",
+      "sourceId": "ogacc0-almitory-applause-applause-fireworks",
+      "sha256": "21b944144a0b2663454aa1ec20865d50687b8b21c0e44b4ccb02066062e22106",
+      "bytes": 1441375,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "balloon-crown",
+      "file": "assets/Gift Sounds/balloon-crown/sound.mp3",
+      "sourceId": "ogacc0-rubberduck-100sfx-bell-01",
+      "sha256": "a802bf894d0e1379f4f94c1de904f43405df540c0a8a5202b4fe9889dbc24891",
+      "bytes": 27628,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "bowtiful-crown",
+      "file": "assets/Gift Sounds/bowtiful-crown/sound.mp3",
+      "sourceId": "ogacc0-rubberduck-100sfx-bell-01",
+      "sha256": "a802bf894d0e1379f4f94c1de904f43405df540c0a8a5202b4fe9889dbc24891",
+      "bytes": 27628,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "crown-world",
+      "file": "assets/Gift Sounds/crown-world/sound.mp3",
+      "sourceId": "ogacc0-rubberduck-100sfx-bell-01",
+      "sha256": "a802bf894d0e1379f4f94c1de904f43405df540c0a8a5202b4fe9889dbc24891",
+      "bytes": 27628,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "crystal-crown",
+      "file": "assets/Gift Sounds/crystal-crown/sound.mp3",
+      "sourceId": "ogacc0-rubberduck-100sfx-bell-02",
+      "sha256": "e5ebfa308535619bb23170e80b9f54742dee76a4fda14e4f025918e2ed87fb28",
+      "bytes": 11328,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "diamond-crown",
+      "file": "assets/Gift Sounds/diamond-crown/sound.mp3",
+      "sourceId": "ogacc0-rubberduck-100sfx-bell-02",
+      "sha256": "e5ebfa308535619bb23170e80b9f54742dee76a4fda14e4f025918e2ed87fb28",
+      "bytes": 11328,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "sakura-crown",
+      "file": "assets/Gift Sounds/sakura-crown/sound.mp3",
+      "sourceId": "ogacc0-rubberduck-100sfx-bell-03",
+      "sha256": "5a6a2ed76088325bdd38b74cf50e6b095a40f3246630e9732699b0746f427775",
+      "bytes": 30763,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "the-crown",
+      "file": "assets/Gift Sounds/the-crown/sound.mp3",
+      "sourceId": "ogacc0-rubberduck-100sfx-bell-03",
+      "sha256": "5a6a2ed76088325bdd38b74cf50e6b095a40f3246630e9732699b0746f427775",
+      "bytes": 30763,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "gold-medal",
+      "file": "assets/Gift Sounds/gold-medal/sound.mp3",
+      "sourceId": "ogacc0-rubberduck-100sfx-gong-01",
+      "sha256": "c11ef6b6fe961df2516ff62cd6c043007f17f02c718c6a6c53ddd5fb359eef73",
+      "bytes": 33270,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "trophy",
+      "file": "assets/Gift Sounds/trophy/sound.mp3",
+      "sourceId": "ogacc0-rubberduck-100sfx-gong-01",
+      "sha256": "c11ef6b6fe961df2516ff62cd6c043007f17f02c718c6a6c53ddd5fb359eef73",
+      "bytes": 33270,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "league-trophy",
+      "file": "assets/Gift Sounds/league-trophy/sound.mp3",
+      "sourceId": "ogacc0-rubberduck-100sfx-gong-02",
+      "sha256": "5b9d03659dcc1dd55863146a7282b72fb4be437e9398adfd49614e677aa11ab2",
+      "bytes": 23866,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "champions-cup",
+      "file": "assets/Gift Sounds/champions-cup/sound.mp3",
+      "sourceId": "ogacc0-rubberduck-100sfx-gong-02",
+      "sha256": "5b9d03659dcc1dd55863146a7282b72fb4be437e9398adfd49614e677aa11ab2",
+      "bytes": 23866,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "lucky-crown",
+      "file": "assets/Gift Sounds/lucky-crown/sound.mp3",
+      "sourceId": "ogacc0-pwl-bells-bell-ding1",
+      "sha256": "5cd7ec751faa1907fa2a06d50b60a8760b53685070d36af187e27c954b91d98f",
+      "bytes": 22612,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "diamond-stage",
+      "file": "assets/Gift Sounds/diamond-stage/sound.mp3",
+      "sourceId": "ogacc0-pwl-bells-bell-ding2",
+      "sha256": "4aff49df8fecbfc64ed37767b0a0398d99b745d94633b648feb8a3c6c308f426",
+      "bytes": 31390,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "crystal-dreams",
+      "file": "assets/Gift Sounds/crystal-dreams/sound.mp3",
+      "sourceId": "ogacc0-pwl-bells-bell-ding3",
+      "sha256": "62086f35fbccceb9b09ae833c83367243fa9a9a633290d8c12f9e4e4ed9e5b42",
+      "bytes": 34524,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "love-glasses",
+      "file": "assets/Gift Sounds/love-glasses/sound.mp3",
+      "sourceId": "ogacc0-rubberduck-100sfx-glass-02",
+      "sha256": "170cae12f9e1c8ffe28f10f9d1eb4a63df6bdb63159228e6ba92cca06529764f",
+      "bytes": 9447,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "crystal-heart",
+      "file": "assets/Gift Sounds/crystal-heart/sound.mp3",
+      "sourceId": "ogacc0-rubberduck-100sfx-glass-03",
+      "sha256": "290f2aa0858a8c78cbe2b97831111a4b20c9b9a087680e2ef3527896b2522e0e",
+      "bytes": 9447,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "crystal-rod",
+      "file": "assets/Gift Sounds/crystal-rod/sound.mp3",
+      "sourceId": "ogacc0-rubberduck-100sfx-glass-04",
+      "sha256": "6097ec2ec00b5f72dba5bc1158f517d8a131a2e39ec9b11252d0a2109e4664f6",
+      "bytes": 13835,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "gold-necklace",
+      "file": "assets/Gift Sounds/gold-necklace/sound.mp3",
+      "sourceId": "ogacc0-rubberduck-100sfx-metal-01",
+      "sha256": "d430328f0f96431b1a0a659ad5e0934df1591c88766471a5f3d5b916cc09c1a1",
+      "bytes": 12581,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "golden-chain",
+      "file": "assets/Gift Sounds/golden-chain/sound.mp3",
+      "sourceId": "ogacc0-rubberduck-100sfx-metal-02",
+      "sha256": "a5cc72a05a6fe97eb0b7e1ed40226dc01c578fe60ca71afb9df976e23d50832e",
+      "bytes": 6939,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "diamond",
+      "file": "assets/Gift Sounds/diamond/sound.mp3",
+      "sourceId": "ogacc0-rubberduck-100sfx-metal-03",
+      "sha256": "2badb74c64902b99c3884fb4b9f142380f07654df611fd2f7f42acd9c6b10f6a",
+      "bytes": 8820,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "silver-fern",
+      "file": "assets/Gift Sounds/silver-fern/sound.mp3",
+      "sourceId": "ogacc0-rubberduck-100sfx-metal-04",
+      "sha256": "955ea62131b1126c475811801d96152c344be9ca2dbcb02e53f81555238ff313",
+      "bytes": 12581,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "glowing-jellyfish",
+      "file": "assets/Gift Sounds/glowing-jellyfish/sound.mp3",
+      "sourceId": "ogacc0-rubberduck-water-bubble-01",
+      "sha256": "7ba39828cf2fd6c254e47efff9172f038df2ceaefa232e4432110ae0d2d4b75b",
+      "bytes": 18224,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "seahorse-pop",
+      "file": "assets/Gift Sounds/seahorse-pop/sound.mp3",
+      "sourceId": "ogacc0-rubberduck-water-bubble-02",
+      "sha256": "24393a36631d9570b64fb24170f6d5483be92f709657fe8c6aa69bbb2e027720",
+      "bytes": 10074,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "goldfish-scooping",
+      "file": "assets/Gift Sounds/goldfish-scooping/sound.mp3",
+      "sourceId": "ogacc0-rubberduck-water-splash-01",
+      "sha256": "2de6020206e981f5962de87a73d54c81ee85a73e1e4bfd40ddb30414beff0759",
+      "bytes": 34524,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "puffer-fish",
+      "file": "assets/Gift Sounds/puffer-fish/sound.mp3",
+      "sourceId": "ogacc0-rubberduck-water-splash-02",
+      "sha256": "9f39bbbb291caca2f019ec016e26d0dc39ca4cdfba005224bfe6d27264cedda6",
+      "bytes": 18851,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "otter-with-fish",
+      "file": "assets/Gift Sounds/otter-with-fish/sound.mp3",
+      "sourceId": "ogacc0-rubberduck-water-splash-03",
+      "sha256": "24c6fd91e07dec487642fb29f50045a5314ee4a54d37472a5009d448900bd58c",
+      "bytes": 20105,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "seaside-romance",
+      "file": "assets/Gift Sounds/seaside-romance/sound.mp3",
+      "sourceId": "ogacc0-rubberduck-water-loop-water-01",
+      "sha256": "f889cad8a4754110fbf68a290fbaa2e84fd96bf19a8b0f1c69e25b865b243c2a",
+      "bytes": 82799,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "luxury-yacht",
+      "file": "assets/Gift Sounds/luxury-yacht/sound.mp3",
+      "sourceId": "ogacc0-qubodup-waves-wave-01-cc0-18363-jasinski-alkaibeach",
+      "sha256": "2962e35b1dabf1b8ee6d5beb27935ffd33da294c392e6c9917e5cea5f00b6439",
+      "bytes": 86560,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "yacht",
+      "file": "assets/Gift Sounds/yacht/sound.mp3",
+      "sourceId": "ogacc0-qubodup-waves-wave-02-cc0-18363-jasinski-alkaibeach",
+      "sha256": "768503dd3c0cf003d58ba50ef6cfbb40b1684c2873f1ffe9624842db72b49c0e",
+      "bytes": 54586,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "party-boat",
+      "file": "assets/Gift Sounds/party-boat/sound.mp3",
+      "sourceId": "ogacc0-qubodup-waves-wave-03-cc0-18363-jasinski-alkaibeach",
+      "sha256": "b3150d6bb9a73a7d4229066fad8e8f084ec747e3865b4c7dd3689eb52ec6ce45",
+      "bytes": 49571,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "cotton-the-seal",
+      "file": "assets/Gift Sounds/cotton-the-seal/sound.mp3",
+      "sourceId": "ogacc0-qubodup-waves-wave-04-cc0-18363-jasinski-alkaibeach",
+      "sha256": "89fb3058b73441d8856c9ebbda517042b6bbc6c6d91e7abbeb95633d905cac6d",
+      "bytes": 80291,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "autumn-leaves",
+      "file": "assets/Gift Sounds/autumn-leaves/sound.mp3",
+      "sourceId": "ogacc0-qubodup-rustles-rustle01",
+      "sha256": "69246edd052662aada7461f56a3a7792919e5c8a3976b72d60a40422060f0b28",
+      "bytes": 37659,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "black-swan",
+      "file": "assets/Gift Sounds/black-swan/sound.mp3",
+      "sourceId": "ogacc0-pauliuw-forestbirds-forest-birds-1",
+      "sha256": "20d4506c07906945fbd7c1cb07be879d247c7490cdc25c88f014afcfa73aaaa2",
+      "bytes": 67125,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "swan",
+      "file": "assets/Gift Sounds/swan/sound.mp3",
+      "sourceId": "ogacc0-pauliuw-forestbirds-forest-birds-2",
+      "sha256": "71407417a5dd447a24183467aea1aff7658d3285396bd6ea5f80fe77686ce5be",
+      "bytes": 124176,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "pop-parrot",
+      "file": "assets/Gift Sounds/pop-parrot/sound.mp3",
+      "sourceId": "ogacc0-pauliuw-forestbirds-forest-birds-3",
+      "sha256": "a4de2f14451600cc0b9e200a99130a792cf17d7461f1e4eb1fc8b17eb9cc5090",
+      "bytes": 58975,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "flamingo-groove",
+      "file": "assets/Gift Sounds/flamingo-groove/sound.mp3",
+      "sourceId": "ogacc0-thimras-park-park-ambience-birds",
+      "sha256": "2e375bcb869e0666feb90159a35c4fb3e0c0ba4793a9dbe2f92e1a5a3a6b5282",
+      "bytes": 1441375,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "fish-and-chips",
+      "file": "assets/Gift Sounds/fish-and-chips/sound.mp3",
+      "sourceId": "ogacc0-thimras-park-park-ambience-river",
+      "sha256": "367617209c871057fab3baf09086894ec749024846a814386aa99abfddb39fb7",
+      "bytes": 1441375,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "palm-breeze",
+      "file": "assets/Gift Sounds/palm-breeze/sound.mp3",
+      "sourceId": "ogacc0-thimras-park-park-ambience-wind",
+      "sha256": "d06d9a48d275c520b374e47fb0026f99d7e5773bdfdca651fc07af9f2dd225dd",
+      "bytes": 1441375,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "night-star",
+      "file": "assets/Gift Sounds/night-star/sound.mp3",
+      "sourceId": "ogacc0-wolfgang-crickets-crickets-1",
+      "sha256": "473bc6b00ce55d7ca78619149d18549f6df82e0f175227a1b3d0d5e31b7f6875",
+      "bytes": 276523,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "baby-dragon",
+      "file": "assets/Gift Sounds/baby-dragon/sound.mp3",
+      "sourceId": "ogacc0-lokif-swamp-beast-1",
+      "sha256": "d382c30393a79ea68cd8974d421a6854813d7c44aabd3ed7afad2afe9cd4d68a",
+      "bytes": 481532,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "dragon-flame",
+      "file": "assets/Gift Sounds/dragon-flame/sound.mp3",
+      "sourceId": "ogacc0-lokif-swamp-beast-2",
+      "sha256": "ba63c29436311cdd6791828d9c746a0e49791ac62e35d511f8ca44c96241b028",
+      "bytes": 341724,
+      "status": "candidate_real_recording_needs_listening_review"
+    },
+    {
+      "giftSlug": "caterpillar-chaos",
+      "file": "assets/Gift Sounds/caterpillar-chaos/sound.mp3",
+      "sourceId": "ogacc0-lokif-swamp-cicada-1",
+      "sha256": "f6abd4a65d0cbec39f69502f65819b649395a529a1fac69698433719b0a88e8d",
+      "bytes": 124176,
       "status": "candidate_real_recording_needs_listening_review"
     }
   ]
