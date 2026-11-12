@@ -14,10 +14,13 @@ export function rankForYouVideos(posts = [], viewerId, follows = [], savedPosts 
   const interestedPosts = new Set(feedback
     .filter(item => item.userId === viewerId && item.action === 'interested')
     .map(item => item.postId));
+  const visibleCreatorByPost = new Map(posts.map(post => [post.id, post.userId]));
   const interestedCreators = new Map();
-  for (const post of posts) {
-    if (interestedPosts.has(post.id) && post.userId && post.userId !== viewerId) {
-      interestedCreators.set(post.userId, (interestedCreators.get(post.userId) || 0) + 1);
+  for (const item of feedback) {
+    if (item.userId !== viewerId || item.action !== 'interested') continue;
+    const authorId = item.authorId || visibleCreatorByPost.get(item.postId);
+    if (authorId && authorId !== viewerId) {
+      interestedCreators.set(authorId, (interestedCreators.get(authorId) || 0) + 1);
     }
   }
   const viewerEvents = watchEvents.filter(event => {
