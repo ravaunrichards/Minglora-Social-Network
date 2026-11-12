@@ -39,9 +39,16 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y tesseract-ocr
           npm install --no-save --no-package-lock sharp
-      - name: Extract each gift into an individual animation asset
+      - name: Check whether the original gift capture assets can be safely reused
+        id: capture-cache
+        run: node scripts/check-minglora-gift-capture-cache.mjs
+      - name: Extract all original gift captures when any generated asset is missing
+        if: steps.capture-cache.outputs.reuse != 'true'
         run: node scripts/extract-minglora-gift-captures.mjs
-      - name: Validate self-contained animations and catalogue joins
+      - name: Rebuild complete catalogue and Artwork motion index from verified captures
+        if: steps.capture-cache.outputs.reuse == 'true'
+        run: node scripts/build-minglora-gift-motion-index.mjs
+      - name: Validate self-contained animations and complete catalogue and Artwork joins
         run: node scripts/validate-minglora-gift-animations.mjs
       - name: Commit generated assets to the extraction branch
         shell: bash
