@@ -948,7 +948,7 @@
       "audioUrl": "/assets/Gift%20Sounds/applause/sound.mp3",
       "volume": 0.65,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -960,7 +960,7 @@
       "audioUrl": "/assets/Gift%20Sounds/crowd-cheering/sound.mp3",
       "volume": 0.65,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -972,7 +972,7 @@
       "audioUrl": "/assets/Gift%20Sounds/club-cheers/sound.mp3",
       "volume": 0.65,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -984,7 +984,7 @@
       "audioUrl": "/assets/Gift%20Sounds/congratulations/sound.mp3",
       "volume": 0.65,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -996,7 +996,7 @@
       "audioUrl": "/assets/Gift%20Sounds/fandom-cheer/sound.mp3",
       "volume": 0.65,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -1008,7 +1008,7 @@
       "audioUrl": "/assets/Gift%20Sounds/club-victory/sound.mp3",
       "volume": 0.65,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -1020,7 +1020,7 @@
       "audioUrl": "/assets/Gift%20Sounds/luvx-cheer/sound.mp3",
       "volume": 0.65,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -1032,7 +1032,7 @@
       "audioUrl": "/assets/Gift%20Sounds/happy-party/sound.mp3",
       "volume": 0.65,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -1044,7 +1044,7 @@
       "audioUrl": "/assets/Gift%20Sounds/fest-party/sound.mp3",
       "volume": 0.65,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -1056,7 +1056,7 @@
       "audioUrl": "/assets/Gift%20Sounds/birthday-party/sound.mp3",
       "volume": 0.65,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -1068,7 +1068,7 @@
       "audioUrl": "/assets/Gift%20Sounds/celebration-time/sound.mp3",
       "volume": 0.65,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -1080,7 +1080,7 @@
       "audioUrl": "/assets/Gift%20Sounds/balloon-crown/sound.mp3",
       "volume": 0.58,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -1092,7 +1092,7 @@
       "audioUrl": "/assets/Gift%20Sounds/bowtiful-crown/sound.mp3",
       "volume": 0.58,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -1104,7 +1104,7 @@
       "audioUrl": "/assets/Gift%20Sounds/crown-world/sound.mp3",
       "volume": 0.58,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -1116,7 +1116,7 @@
       "audioUrl": "/assets/Gift%20Sounds/crystal-crown/sound.mp3",
       "volume": 0.58,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -1128,7 +1128,7 @@
       "audioUrl": "/assets/Gift%20Sounds/diamond-crown/sound.mp3",
       "volume": 0.58,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -1140,7 +1140,7 @@
       "audioUrl": "/assets/Gift%20Sounds/sakura-crown/sound.mp3",
       "volume": 0.58,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -1152,7 +1152,7 @@
       "audioUrl": "/assets/Gift%20Sounds/the-crown/sound.mp3",
       "volume": 0.58,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -1164,7 +1164,7 @@
       "audioUrl": "/assets/Gift%20Sounds/gold-medal/sound.mp3",
       "volume": 0.58,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -1176,7 +1176,7 @@
       "audioUrl": "/assets/Gift%20Sounds/trophy/sound.mp3",
       "volume": 0.58,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -1188,7 +1188,7 @@
       "audioUrl": "/assets/Gift%20Sounds/league-trophy/sound.mp3",
       "volume": 0.58,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -1200,7 +1200,7 @@
       "audioUrl": "/assets/Gift%20Sounds/champions-cup/sound.mp3",
       "volume": 0.58,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -1212,7 +1212,7 @@
       "audioUrl": "/assets/Gift%20Sounds/lucky-crown/sound.mp3",
       "volume": 0.58,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -1224,7 +1224,7 @@
       "audioUrl": "/assets/Gift%20Sounds/diamond-stage/sound.mp3",
       "volume": 0.58,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -1236,7 +1236,7 @@
       "audioUrl": "/assets/Gift%20Sounds/crystal-dreams/sound.mp3",
       "volume": 0.58,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -1248,7 +1248,7 @@
       "audioUrl": "/assets/Gift%20Sounds/love-glasses/sound.mp3",
       "volume": 0.54,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -1260,7 +1260,7 @@
       "audioUrl": "/assets/Gift%20Sounds/crystal-heart/sound.mp3",
       "volume": 0.54,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -1272,7 +1272,7 @@
       "audioUrl": "/assets/Gift%20Sounds/crystal-rod/sound.mp3",
       "volume": 0.54,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -1284,7 +1284,7 @@
       "audioUrl": "/assets/Gift%20Sounds/gold-necklace/sound.mp3",
       "volume": 0.54,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -1296,7 +1296,7 @@
       "audioUrl": "/assets/Gift%20Sounds/golden-chain/sound.mp3",
       "volume": 0.54,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -1308,7 +1308,7 @@
       "audioUrl": "/assets/Gift%20Sounds/diamond/sound.mp3",
       "volume": 0.54,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -1320,7 +1320,7 @@
       "audioUrl": "/assets/Gift%20Sounds/silver-fern/sound.mp3",
       "volume": 0.54,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -1332,7 +1332,7 @@
       "audioUrl": "/assets/Gift%20Sounds/glowing-jellyfish/sound.mp3",
       "volume": 0.6,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -1344,7 +1344,7 @@
       "audioUrl": "/assets/Gift%20Sounds/seahorse-pop/sound.mp3",
       "volume": 0.6,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -1356,7 +1356,7 @@
       "audioUrl": "/assets/Gift%20Sounds/goldfish-scooping/sound.mp3",
       "volume": 0.56,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -1368,7 +1368,7 @@
       "audioUrl": "/assets/Gift%20Sounds/puffer-fish/sound.mp3",
       "volume": 0.56,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -1380,7 +1380,7 @@
       "audioUrl": "/assets/Gift%20Sounds/otter-with-fish/sound.mp3",
       "volume": 0.56,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -1392,7 +1392,7 @@
       "audioUrl": "/assets/Gift%20Sounds/seaside-romance/sound.mp3",
       "volume": 0.46,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -1404,7 +1404,7 @@
       "audioUrl": "/assets/Gift%20Sounds/luxury-yacht/sound.mp3",
       "volume": 0.46,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -1416,7 +1416,7 @@
       "audioUrl": "/assets/Gift%20Sounds/yacht/sound.mp3",
       "volume": 0.46,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -1428,7 +1428,7 @@
       "audioUrl": "/assets/Gift%20Sounds/party-boat/sound.mp3",
       "volume": 0.46,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -1440,7 +1440,7 @@
       "audioUrl": "/assets/Gift%20Sounds/cotton-the-seal/sound.mp3",
       "volume": 0.46,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -1452,7 +1452,7 @@
       "audioUrl": "/assets/Gift%20Sounds/autumn-leaves/sound.mp3",
       "volume": 0.46,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -1464,7 +1464,7 @@
       "audioUrl": "/assets/Gift%20Sounds/black-swan/sound.mp3",
       "volume": 0.46,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -1476,7 +1476,7 @@
       "audioUrl": "/assets/Gift%20Sounds/swan/sound.mp3",
       "volume": 0.46,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -1488,7 +1488,7 @@
       "audioUrl": "/assets/Gift%20Sounds/pop-parrot/sound.mp3",
       "volume": 0.46,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -1500,7 +1500,7 @@
       "audioUrl": "/assets/Gift%20Sounds/flamingo-groove/sound.mp3",
       "volume": 0.46,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -1512,7 +1512,7 @@
       "audioUrl": "/assets/Gift%20Sounds/fish-and-chips/sound.mp3",
       "volume": 0.46,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -1524,7 +1524,7 @@
       "audioUrl": "/assets/Gift%20Sounds/palm-breeze/sound.mp3",
       "volume": 0.46,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -1536,7 +1536,7 @@
       "audioUrl": "/assets/Gift%20Sounds/night-star/sound.mp3",
       "volume": 0.46,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -1548,7 +1548,7 @@
       "audioUrl": "/assets/Gift%20Sounds/baby-dragon/sound.mp3",
       "volume": 0.46,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -1560,7 +1560,7 @@
       "audioUrl": "/assets/Gift%20Sounds/dragon-flame/sound.mp3",
       "volume": 0.46,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     },
@@ -1572,7 +1572,7 @@
       "audioUrl": "/assets/Gift%20Sounds/caterpillar-chaos/sound.mp3",
       "volume": 0.46,
       "playbackEnabled": true,
-      "reviewStatus": "real_cc0_recording_mapped_human_listening_review_pending",
+      "reviewStatus": "real_recording_mapped_source_verified_human_audio_review_pending",
       "playbackApprovalBasis": "Individual CC0/public-domain source metadata, source file size and source Git blob hash verified; gift artwork subject matched to the recorded sound category.",
       "spatialProfile": "stereo_listener_relative"
     }
