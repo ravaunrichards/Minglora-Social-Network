@@ -3,7 +3,7 @@ name: Build Minglora gift sound review library
 on:
   push:
     branches:
-      - feature/gift-sounds-artwork-aligned
+      - feature/gift-sounds-artwork-aligned-v2
     paths:
       - 'assets/Gift Sounds/source-catalog.json'
       - 'assets/Gift Sounds/tools/ingest-sources.mjs'
@@ -25,7 +25,7 @@ jobs:
       - name: Check out the isolated gift-sound branch
         uses: actions/checkout@v4
         with:
-          ref: feature/gift-sounds-artwork-aligned
+          ref: feature/gift-sounds-artwork-aligned-v2
           persist-credentials: true
 
       - name: Set up Node.js
@@ -46,7 +46,7 @@ jobs:
 
       - name: Commit the verified MP3 review library to this branch only
         env:
-          BRANCH_NAME: feature/gift-sounds-artwork-aligned
+          BRANCH_NAME: feature/gift-sounds-artwork-aligned-v2
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -55,5 +55,5 @@ jobs:
             echo "No new or changed gift audio assets to commit."
           else
             git commit -m "Add verified natural gift sound review MP3s"
-            git push origin HEAD:feature/gift-sounds-artwork-aligned
+            git push origin HEAD:feature/gift-sounds-artwork-aligned-v2
           fi
