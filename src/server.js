@@ -5190,6 +5190,12 @@ async function route(req, res) {
         const watchedMs=Number(input.watchedMs),durationMs=Number(input.durationMs);
         if(!Number.isFinite(watchedMs)||!Number.isFinite(durationMs)||watchedMs<0||durationMs<1000||durationMs>3600000)return json(res,400,{error:'Invalid video watch event.'});
         const safeDurationMs=Math.round(durationMs);
+        const hasPosition=input.positionMs!==undefined&&input.positionMs!==null;
+        const requestedPositionMs=hasPosition?input.positionMs:null;
+        if(hasPosition&&(!Number.isSafeInteger(requestedPositionMs)||requestedPositionMs<0||requestedPositionMs>safeDurationMs)){
+          return json(res,400,{error:'Invalid video playback position.'});
+        }
+        const safePositionMs=hasPosition?requestedPositionMs:null;
         const safeWatchedMs=Math.min(Math.round(watchedMs),Math.round(safeDurationMs*1.5),600000);
         if(safeWatchedMs<1000)return json(res,200,{tracked:false});
         const completed=safeWatchedMs>=Math.max(5000,safeDurationMs*0.85);
@@ -5199,9 +5205,14 @@ async function route(req, res) {
           recent.watchedMs=Math.min(Math.round(safeDurationMs*1.5),Number(recent.watchedMs||0)+safeWatchedMs);
           recent.durationMs=safeDurationMs;
           recent.completed=recent.completed===true||completed;
+          if(safePositionMs!==null){
+            recent.positionMs=Math.max(Number.isSafeInteger(recent.positionMs)?recent.positionMs:0,safePositionMs);
+          }
           recent.createdAt=now();
         }else{
-          events.push({id:uid(),userId:user.id,postId:post.id,authorId:post.userId,watchedMs:safeWatchedMs,durationMs:safeDurationMs,completed,createdAt:now()});
+          const event={id:uid(),userId:user.id,postId:post.id,authorId:post.userId,watchedMs:safeWatchedMs,durationMs:safeDurationMs,completed,createdAt:now()};
+          if(safePositionMs!==null)event.positionMs=safePositionMs;
+          events.push(event);
         }
         if(events.length>20000)db.videoWatchEvents=events.slice(-20000);
         await saveStore();

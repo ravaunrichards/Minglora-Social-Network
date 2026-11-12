@@ -1,3 +1,26 @@
+export const VIDEO_RETENTION_MIN_SAMPLE_SIZE = 5;
+const VIDEO_RETENTION_THRESHOLDS = Object.freeze([0, 0.25, 0.5, 0.75, 0.9, 1]);
+
+function summarizeRetention(viewers) {
+  const sample = [...viewers.values()].filter(viewer => viewer.hasProgress);
+  if (sample.length < VIDEO_RETENTION_MIN_SAMPLE_SIZE) {
+    return { available: false, minSampleSize: VIDEO_RETENTION_MIN_SAMPLE_SIZE, sampleSize: null, points: [] };
+  }
+  return {
+    available: true,
+    minSampleSize: VIDEO_RETENTION_MIN_SAMPLE_SIZE,
+    sampleSize: sample.length,
+    points: VIDEO_RETENTION_THRESHOLDS.map(threshold => {
+      const retainedViewers = sample.filter(viewer => viewer.furthestProgressRatio >= threshold).length;
+      return {
+        positionPercent: Math.round(threshold * 100),
+        retainedViewers,
+        retentionRate: retainedViewers / sample.length
+      };
+    })
+  };
+}
+
 /**
  * Aggregate real Minglora video watch events for the authenticated creator.
  * Viewer identities are never returned; only per-video and portfolio totals leave this module.
@@ -31,9 +54,19 @@ export function summarizeCreatorVideoAnalytics(posts = [], watchEvents = [], own
     if (safeWatchedMs < 1000) continue;
     const ratio = safeWatchedMs / durationMs;
     const byViewer = eventsByPost.get(event.postId) || new Map();
-    const viewer = byViewer.get(event.userId) || { watchedMs: 0, completed: false };
+    const viewer = byViewer.get(event.userId) || {
+      watchedMs: 0,
+      completed: false,
+      hasProgress: false,
+      furthestProgressRatio: 0
+    };
     viewer.watchedMs += safeWatchedMs;
     viewer.completed ||= event.completed === true || ratio >= 0.85;
+    const positionMs = event.positionMs;
+    if (Number.isSafeInteger(positionMs) && positionMs >= 0 && positionMs <= Math.round(durationMs)) {
+      viewer.hasProgress = true;
+      viewer.furthestProgressRatio = Math.max(viewer.furthestProgressRatio, positionMs / durationMs);
+    }
     byViewer.set(event.userId, viewer);
     eventsByPost.set(event.postId, byViewer);
     portfolioViewers.add(event.userId);
@@ -58,7 +91,8 @@ export function summarizeCreatorVideoAnalytics(posts = [], watchEvents = [], own
         averageWatchSecondsPerViewer: viewerCount
           ? Math.round((totalVideoWatchMs / viewerCount / 1000) * 10) / 10
           : 0,
-        completionRate: viewerCount ? completedViewers / viewerCount : 0
+        completionRate: viewerCount ? completedViewers / viewerCount : 0,
+        retention: summarizeRetention(viewers)
       };
     })
     .sort((a, b) => (Date.parse(b.createdAt || '') || 0) - (Date.parse(a.createdAt || '') || 0));
