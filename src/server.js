@@ -987,18 +987,6 @@ async function mediaGateway(action,payload) {
   if(!response.ok)throw Object.assign(new Error(data.error||'Minglora media storage request failed.'),{status:response.status});
   return data;
 }
-async function enqueueVideoTranscodes(contentType,contentId,ownerId,assets) {
-  for(const asset of (assets||[]).filter(item=>item?.mediaType==='video'&&item.status==='attached'&&item.ownerId===ownerId&&item.bucket&&item.path)){
-    try{
-      await mediaGateway('video_transcode_enqueue',{assetId:asset.id,ownerId,contentType,contentId,
-        bucket:asset.bucket,path:asset.path,mimeType:asset.mimeType,byteSize:asset.byteSize});
-    }catch(error){
-      console.warn('[Minglora video] Transcode enqueue unavailable; original playback remains enabled.',{
-        assetId:asset.id,contentType,message:String(error?.message||error).slice(0,160)
-      });
-    }
-  }
-}
 function enqueueAttachedVideoTranscode(asset,post) {
   if(!asset||asset.mediaType!=='video'||asset.slot!=='post'||asset.status!=='attached')return null;
   const jobs=db.videoTranscodeJobs||(db.videoTranscodeJobs=[]);
@@ -5435,7 +5423,6 @@ async function route(req, res) {
         assets.forEach(asset=>{asset.status='attached';asset.attachedTo=post.id;enqueueAttachedVideoTranscode(asset,post);});db.posts.unshift(post);
         requestedTagIds.forEach(taggedId=>{const taggedMember=db.users.find(member=>member.id===taggedId);if(taggedMember)notify(taggedId,user.id,'post_tagged',(user.name||'A Minglora friend')+' tagged you in a post.',{postId:post.id});});
         await saveStore();
-        await enqueueVideoTranscodes('post',post.id,user.id,assets);
         return json(res,201,{post:await publicPost(post,user.id)});
       }
       let m=p.match(/^\/api\/posts\/([^/]+)$/);
@@ -5457,7 +5444,6 @@ async function route(req, res) {
         (db.mediaAssets||[]).filter(asset=>asset.attachedTo===post.id&&!ids.includes(asset.id)).forEach(asset=>{asset.status='uploaded';delete asset.attachedTo;});
         assets.forEach(asset=>{asset.status='attached';asset.attachedTo=post.id;enqueueAttachedVideoTranscode(asset,post);});
         post.text=validation.value.text;post.mediaIds=ids;post.soundtrack=nextSoundtrack;post.audience=nextAudience;post.updatedAt=now();await saveStore();
-        await enqueueVideoTranscodes('post',post.id,user.id,assets);
         return json(res,200,{post:await publicPost(post,user.id)});
       }
       if(method==='DELETE'&&m){
@@ -6429,7 +6415,6 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
         const post={id:uid(),groupId:group.id,userId:user.id,text:validation.value.text,mediaIds:ids,createdAt:now(),updatedAt:now()};
         assets.forEach(asset=>{asset.status='attached';asset.attachedTo=post.id;});
         db.groupPosts.push(post);await saveStore();
-         await enqueueVideoTranscodes('group_post',post.id,user.id,assets);
          return json(res,201,{post:await publicGroupPost(post)});
       }
       m=p.match(/^\/api\/groups\/([^/]+)\/posts\/([^/]+)$/);
@@ -6481,7 +6466,6 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
         const story={id:uid(),userId:user.id,text,mediaIds,mediaId:mediaIds[0]||null,soundtrack,audience,createdAt,expiresAt:new Date(Date.now()+24*60*60*1000).toISOString()};
         assets.forEach(asset=>{asset.status='attached';asset.attachedTo=story.id;});
         db.stories.push(story);await saveStore();
-         await enqueueVideoTranscodes('story',story.id,user.id,assets);
          return json(res,201,{story:await publicStory(story,user.id)});
       }
       m=p.match(/^\/api\/stories\/([^/]+)\/view$/);
@@ -6553,7 +6537,6 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
         const post={id:uid(),pageId:page.id,publishedBy:user.id,text:validation.value.text,mediaIds:ids,createdAt:now(),updatedAt:now(),status:'published'};
         assets.forEach(asset=>{asset.status='attached';asset.attachedTo=post.id;});
         db.pagePosts.push(post);await saveStore();
-         await enqueueVideoTranscodes('page_post',post.id,user.id,assets);
          return json(res,201,{post:{...await publicPagePost(post),page:{id:page.id,title:page.title,handle:page.handle}}});
       }
       m=p.match(/^\/api\/pages\/([^/]+)\/posts\/([^/]+)$/);
