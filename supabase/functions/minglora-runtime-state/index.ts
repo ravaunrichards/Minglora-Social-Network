@@ -36,18 +36,23 @@ Deno.serve(async (req: Request) => {
   const supplied = req.headers.get("x-minglora-api-key") || "";
   if (!supplied || supplied.length < 40) return json(401, { error: "Unauthorized." });
 
-  const { data: credential, error: credentialError } = await admin
-    .from("minglora_runtime_api_secrets")
-    .select("secret_sha256")
-    .eq("name", "render_runtime")
-    .maybeSingle();
+  const configuredVideoWorkerKey = Deno.env.get("MINGLORA_VIDEO_WORKER_API_KEY") || "";
+  const videoWorkerAuthorized = configuredVideoWorkerKey.length >= 40 &&
+    constantTimeEqual(supplied, configuredVideoWorkerKey);
+  if (!videoWorkerAuthorized) {
+    const { data: credential, error: credentialError } = await admin
+      .from("minglora_runtime_api_secrets")
+      .select("secret_sha256")
+      .eq("name", "render_runtime")
+      .maybeSingle();
 
-  if (credentialError || !credential?.secret_sha256) {
-    return json(503, { error: "Runtime authorization is unavailable." });
-  }
-  const suppliedHash = await sha256(supplied);
-  if (!constantTimeEqual(suppliedHash, credential.secret_sha256)) {
-    return json(401, { error: "Unauthorized." });
+    if (credentialError || !credential?.secret_sha256) {
+      return json(503, { error: "Runtime authorization is unavailable." });
+    }
+    const suppliedHash = await sha256(supplied);
+    if (!constantTimeEqual(suppliedHash, credential.secret_sha256)) {
+      return json(401, { error: "Unauthorized." });
+    }
   }
 
   const length = Number(req.headers.get("content-length") || 0);
@@ -89,7 +94,7 @@ Deno.serve(async (req: Request) => {
     "economy_admin_platform_payout_request", "economy_admin_platform_payout_update", "relationship_follow", "relationship_unfollow",
     "auth_register_user", "account_deletion_request",
     "profile_verification_get", "profile_verification_submit", "profile_verification_admin_members", "profile_verification_admin_set", "profile_verification_admin_queue", "profile_verification_admin_review", "profile_verification_alert_mark_read",
-    "video_transcode_enqueue", "video_transcode_claim", "video_transcode_complete", "video_transcode_fail",
+    "video_transcode_enqueue", "video_transcode_claim", "video_transcode_complete", "video_transcode_fail", "video_transcode_cleanup",
     "subscription_creator_get", "subscription_apply", "subscription_admin_queue", "subscription_admin_review",
     "subscription_tier_store", "subscription_enable", "subscription_checkout_prepare",
     "subscription_checkout_attach", "subscription_my", "subscription_access_check", "subscription_cancel_lookup",
@@ -98,6 +103,11 @@ Deno.serve(async (req: Request) => {
   ];
   if (!supportedActions.includes(String(action))) {
     return json(400, { error: "Unsupported action." });
+  }
+  if (videoWorkerAuthorized && ![
+    "video_transcode_claim", "video_transcode_complete", "video_transcode_fail", "video_transcode_cleanup"
+  ].includes(String(action))) {
+    return json(403, { error: "The video worker key cannot access this action." });
   }
 
   const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -3191,7 +3201,7 @@ Deno.serve(async (req: Request) => {
     const {error:assetError}=await admin.from("media_assets").upsert({
       id:assetId,owner_id:ownerId,storage_key:objectPath,storage_bucket:bucket,
       media_type:mediaType,mime_type:mimeType,byte_size:byteSize,
-      processing_status:mediaType==="video"?"pending":"ready",slot,asset_status:assetStatus,original_name:originalName,
+      processing_status:mediaType==="video"&&["post","story","group","page"].includes(slot)?"pending":"ready",slot,asset_status:assetStatus,original_name:originalName,
       attached_to:assetStatus==="attached"?"profile:"+slot:null,completed_at:new Date().toISOString()
     },{onConflict:"id"});
     if(assetError)return json(503,{error:"Upload completed in Storage but media metadata could not be registered. Retry completion."});
@@ -3216,9 +3226,24 @@ Deno.serve(async (req: Request) => {
     if(!validUuid(ownerId)||!allowedBuckets.includes(bucket)||!objectPath.startsWith(ownerId+"/")||objectPath.includes("..")||objectPath.includes("\\\\")){
       return json(400,{error:"Invalid media deletion reference."});
     }
+    const transcodeBuckets=["minglora-post-media","minglora-stories","minglora-group-media","minglora-page-media"];
+    if(transcodeBuckets.includes(bucket)){
+      const {data:job}=await admin.from("video_transcode_jobs")
+        .select("id,status,output_bucket,output_path").eq("owner_id",ownerId)
+        .eq("source_bucket",bucket).eq("source_path",objectPath).maybeSingle();
+      if(job){
+        await admin.from("video_transcode_jobs").update({
+          status:"cancelled",lock_token:null,locked_at:null,last_error:"Source media was deleted",updated_at:new Date().toISOString()
+        }).eq("id",job.id);
+        if(job.status==="ready"){
+          await admin.storage.from(String(job.output_bucket)).remove([String(job.output_path)]);
+        }
+      }
+    }
     const {error}=await admin.storage.from(bucket).remove([objectPath]);
     if(error)return json(502,{error:"Minglora could not remove the stored file."});
-    const {error:assetError}=await admin.from("media_assets").update({asset_status:"deleted",processing_status:"deleted"}).eq("owner_id",ownerId).eq("storage_bucket",bucket).eq("storage_key",objectPath);
+    const {error:assetError}=await admin.from("media_assets").update({asset_status:"deleted",processing_status:"deleted"})
+      .eq("owner_id",ownerId).eq("storage_bucket",bucket).eq("storage_key",objectPath);
     if(assetError)return json(503,{error:"File was removed from Storage but its media record could not be retired."});
     return json(200,{ok:true});
   }
@@ -3282,6 +3307,18 @@ Deno.serve(async (req: Request) => {
     const {data,error}=await admin.rpc("fail_minglora_video_transcode",{p_job_id:jobId,p_lock_token:lockToken,p_error:errorMessage});
     if(error||!data)return json(409,{error:"This video job lease is no longer current."});
     return json(200,{ok:true,status:data});
+  }
+
+  if (action === "video_transcode_cleanup") {
+    const jobId=String(input.jobId||"");
+    if(!validUuid(jobId))return json(400,{error:"Invalid video cleanup reference."});
+    const {data:job,error:jobError}=await admin.from("video_transcode_jobs")
+      .select("status,output_bucket,output_path").eq("id",jobId).maybeSingle();
+    if(jobError||!job)return json(404,{error:"Video transcode job not found."});
+    if(job.status!=="cancelled")return json(409,{error:"Only cancelled video jobs can be cleaned up."});
+    const {error}=await admin.storage.from(String(job.output_bucket)).remove([String(job.output_path)]);
+    if(error)return json(503,{error:"Cancelled video rendition cleanup can be retried."});
+    return json(200,{ok:true});
   }
 
   if (action === "media_sign") {
