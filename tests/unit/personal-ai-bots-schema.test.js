@@ -993,7 +993,9 @@ test('normalized AI HR migration defines owner-scoped departments, roles, vacanc
     'department_manager','regional_manager','team_leader','supervisor',
     'senior_specialist','junior_specialist','assistant','worker'
   ]) assert.ok(aiHrSql.includes("('"+code+"'"),'missing position seed '+code);
-  assert.doesNotMatch(aiHrSql,/CREATE USER|CREATE ROLE|auth\.users\s*\(/i);
+  assert.doesNotMatch(aiHrSql,/CREATE\s+(?:USER|ROLE)\b/i);
+  assert.doesNotMatch(aiHrSql,/CREATE TABLE IF NOT EXISTS public\.(?:profiles|users)\b/i);
+  assert.match(aiHrSql,/REFERENCES auth\.users\(id\)/);
 });
 
 test('AI HR persistence keeps records owner-scoped and grants service-role-only access',()=>{
@@ -1025,7 +1027,8 @@ test('AI HR RPCs require the designated owner, owned organizational identities a
   assert.match(write,/identity\.population='organizational' AND identity\.status='created'/);
   assert.match(write,/permissionGrantStatus/);
   assert.match(write,/permissions/);
-  assert.match(write,/permission_grant_status text/);
+  assert.match(aiHrSql,/permission_grant_status text NOT NULL DEFAULT 'not_granted'/);
+  assert.match(aiHrSql,/identity_activation_status text NOT NULL DEFAULT 'unchanged_disabled'/);
   assert.match(write,/COALESCE\(item->'permissions','\[\]'::jsonb\) <> '\[\]'::jsonb/);
   assert.match(write,/COALESCE\(item->>'permissionGrantStatus','not_granted'\) <> 'not_granted'/);
   assert.match(write,/COALESCE\(item->>'identityActivationStatus','unchanged_disabled'\) <> 'unchanged_disabled'/);
