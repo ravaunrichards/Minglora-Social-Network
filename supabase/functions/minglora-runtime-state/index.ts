@@ -71,7 +71,7 @@ Deno.serve(async (req: Request) => {
 
   const action = input.action;
   const supportedActions = [
-    "internal_activity_feed", "audio_admin_catalog_list", "audio_admin_asset_register", "audio_admin_asset_review", "audio_admin_assignment_set", "audio_event_resolve",
+    "internal_activity_feed", "audio_admin_catalog_list", "audio_admin_preview", "audio_admin_asset_register", "audio_admin_asset_review", "audio_admin_assignment_set", "audio_event_resolve",
     "admin_users_list", "admin_user_set_ban", "admin_audit_log", "admin_audit_log",
     "streambay_cleanup", "load", "save", "health", "media_sign", "media_upload_prepare", "media_upload_complete", "media_delete",
     "live_broadcast_create", "live_broadcast_end", "live_chat_list", "live_chat_send", "live_chat_delete",
@@ -331,6 +331,20 @@ Deno.serve(async (req: Request) => {
       .contains("permissions",["platform:admin"]).limit(1).maybeSingle();
     return !error && Boolean(data?.user_id);
   };
+
+  if (action === "audio_admin_preview") {
+    const adminUserId=String(input.adminUserId||""),adminEmail=String(input.adminEmail||"");
+    if (!await isAudioAdmin(adminUserId,adminEmail)) return json(403,{error:"The audio preview requires the MFA-protected Minglora owner session."});
+    const assetId=String(input.assetId||"");
+    if(!validUuid(assetId))return json(400,{error:"Choose a valid audio asset."});
+    const {data:asset,error:assetError}=await admin.from("minglora_audio_assets")
+      .select("id,title,storage_bucket,storage_path,scope,review_status")
+      .eq("id",assetId).eq("scope","platform").maybeSingle();
+    if(assetError||!asset)return json(404,{error:"The registered audio file was not found."});
+    const {data:signed,error:signedError}=await admin.storage.from(asset.storage_bucket).createSignedUrl(asset.storage_path,300);
+    if(signedError||!signed?.signedUrl)return json(503,{error:"A temporary private preview URL could not be created."});
+    return json(200,{assetId:asset.id,title:asset.title,url:signed.signedUrl,expiresIn:300,reviewStatus:asset.review_status});
+  }
 
   if (action === "audio_admin_catalog_list") {
     const adminUserId=String(input.adminUserId||""),adminEmail=String(input.adminEmail||"");
