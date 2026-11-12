@@ -1405,7 +1405,12 @@ Deno.serve(async (req: Request) => {
           { "label": "AI bot follows (reserved)", "key": "personalAiBotFollows" },
           { "label": "AI bot teams (reserved)", "key": "personalAiBotTeams" },
           { "label": "AI bot team members (reserved)", "key": "personalAiBotTeamMembers" },
-          { "label": "AI bot schedules (reserved)", "key": "personalAiBotSchedules" }
+          { "label": "AI team handoffs", "key": "personalAiBotTeamHandoffs" },
+          { "label": "AI bot schedules (reserved)", "key": "personalAiBotSchedules" },
+          { "label": "AI personality versions", "key": "personalAiBotPersonaVersions" },
+          { "label": "AI multilingual settings", "key": "personalAiBotLanguageSettings" },
+          { "label": "AI language evaluation sets", "key": "personalAiBotLanguageEvaluationSets" },
+          { "label": "AI Creator Studio drafts", "key": "personalAiCreatorDrafts" }
         ]
       }
     ];
