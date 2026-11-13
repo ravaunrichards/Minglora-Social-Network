@@ -137,6 +137,17 @@ export async function handleHelpCenterRoute({
       if (method === "POST" && path === "/api/help/admin/subcategories") return result(200, await send("help_admin_subcategory_update", input));
       const subcategoryMatch = path.match(/^\/api\/help\/admin\/subcategories\/([0-9a-f-]+)$/i);
       if (method === "PATCH" && subcategoryMatch) return result(200, await send("help_admin_subcategory_update", { ...input, id: subcategoryMatch[1] }));
+      const assetSignMatch = path.match(/^\\/api\\/help\\/admin\\/articles\\/([0-9a-f-]+)\\/assets\\/sign$/i);
+      if (method === "POST" && assetSignMatch) return result(200, await send("help_admin_asset_sign", {
+        articleId:assetSignMatch[1], assetType:asText(input.assetType,10), contentType:asText(input.contentType,100)
+      }));
+      const assetRecordMatch = path.match(/^\\/api\\/help\\/admin\\/articles\\/([0-9a-f-]+)\\/assets$/i);
+      if (method === "POST" && assetRecordMatch) return result(201, await send("help_admin_asset_record", {
+        articleId:assetRecordMatch[1], storagePath:asText(input.storagePath,300), assetType:asText(input.assetType,10),
+        altText:asText(input.altText,200), caption:asText(input.caption,300), sortOrder:input.sortOrder
+      }));
+      const assetDeleteMatch = path.match(/^\\/api\\/help\\/admin\\/assets\\/([0-9a-f-]+)$/i);
+      if (method === "DELETE" && assetDeleteMatch) return result(200, await send("help_admin_asset_delete", { assetId:assetDeleteMatch[1] }));
       if (method === "POST" && path === "/api/help/admin/translations") return result(200, await send("help_admin_translation_update", input));
     }
   } catch (error) {
