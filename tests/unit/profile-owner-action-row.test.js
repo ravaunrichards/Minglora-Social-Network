@@ -35,7 +35,7 @@ test('profile cover and portrait are separate blocks with a clear gap and indepe
   assert.ok(app.includes('avatar(u)'));
   assert.ok(app.includes('class="profile-avatar-edit-wrap"><img class="avatar"'));
   assert.ok(app.includes("const profileThoughtMarkup=data.profileStatus?.text"));
-  assert.ok(app.includes("[['posts','Posts'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Reels'],['more','More']]"));
+  assert.ok(app.includes("[['posts','All'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Reels'],['more','More']]"));
 });
 
 test('profile thought cloud sits in its own row above the portrait while name and username align beside it',()=>{
