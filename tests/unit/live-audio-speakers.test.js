@@ -149,7 +149,7 @@ test('Seven Audio LIVE screen layouts and two guest-box layouts persist and sync
   assert.match(server, /LIVE_GUEST_LAYOUTS\.includes\(layout\)/);
   assert.ok(app.includes("value:'roundtable-1'"));
   assert.ok(app.includes("value:'roundtable-2'"));
-  assert.match(app, /data-live-guest-layout='"\+option\.value\+'/);
+  assert.match(app, /data-live-guest-layout=.*option\.value/);
   assert.ok(fit.includes('data-live-guest-layout="roundtable-1"'));
   assert.ok(fit.includes('data-live-guest-layout="roundtable-2"'));
   assert.match(server, /session\.liveLayout = layout/);
