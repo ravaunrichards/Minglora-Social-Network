@@ -110,5 +110,5 @@ test('popular metrics are based on recorded article views rather than hard-coded
   assert.match(reporting, /create or replace function public\.help_center_popular/);
   assert.match(reporting, /sum\(v\.view_count\)/);
   assert.match(edge, /help_center_popular/);
-  assert.match(html, /Popular questions/);
+  assert.match(page, /Popular questions/);
 });
