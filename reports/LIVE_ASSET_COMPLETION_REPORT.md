@@ -116,3 +116,17 @@ This is a distinct per-gift motion-file delivery, not a claim that all gifts hav
 These are automated CI and Chromium browser-render results. They do not replace physical-device GPU, memory, battery, thermal, camera, audio or network testing on Android, iPhone, tablet, foldable and TV devices. The full 1,121-reference manual review, original-art rights/provenance checks, the 1,114 queued extracted-art reviews, premium custom 3D artwork/scenes, mastered per-gift audio, the complete 18-theme art pass, gift copy/export controls and device QA remain outstanding. The separate gift-asset repository was not identifiable among the connected repositories, so no files were written to an unverified repository.
 
 **Release status:** PR #274 remains open and draft; it is not merged or deployed.
+
+
+## Gift copy/export tools — verified 2026-11-13
+
+- [x] Copy the selected gift's complete canonical JSON record, including every field supplied by the live `/coins/catalog` response.
+- [x] Copy the full current gift catalogue as a JSON export with a record count.
+- [x] Copy the complete saved Minglora gift-system requirements and notes from `public/gift-system-requirements.md`.
+- [x] Use the Clipboard API with a legacy text-area fallback.
+- [x] Version the Gift Studio script and service-worker shell together; precache the saved requirements for supported offline access.
+- [x] Add regression coverage for all three copy actions and their cache wiring.
+
+Validation at commit `cdf24cae8ae3f319b3bbc65dd587e7f4bdf2e719`: CI #10905 passed; **979 tests passed, 0 failed**. The four gift-copy/cache tests passed. The generated 1,737 individual per-gift motion assets passed their integrity and uniqueness checks again. Visual QA runs #40 and #67 were still running when this report entry was prepared.
+
+Copy exports preserve all metadata returned by the backend. The implementation does not manufacture missing descriptions or prices, and does not modify the canonical gift catalogue, wallet, or transaction records.
