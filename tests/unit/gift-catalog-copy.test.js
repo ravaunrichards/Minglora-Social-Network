@@ -39,5 +39,5 @@ test("the copied gift tools and requirements are cache-versioned for live client
   assert.ok(html.includes("/gifts.js?v=20261113-complete-gift-artwork-gate-1"));
   assert.ok(worker.includes("/gifts.js?v=20261113-complete-gift-artwork-gate-1"));
   assert.ok(worker.includes("SHELL.push('/gift-system-requirements.md')"));
-  assert.ok(worker.includes("minglora-shell-v305-self-updating-1"));
+  assert.ok(worker.includes("minglora-shell-v306-self-updating-1"));
 });
