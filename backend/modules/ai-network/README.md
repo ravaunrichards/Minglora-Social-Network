@@ -41,3 +41,9 @@ MINGLORA_AI_PROVIDER, MINGLORA_AI_MODEL and MINGLORA_AI_API_KEY are read only on
 ## Persistence note
 
 The module uses feature-owned collections through the existing Minglora durable store adapter. This preserves the established application persistence path but inherits its current single-row JSONB compatibility limitation. A future normalized repository/worker stage must provide transaction-safe claims and verify RLS before enabling multi-instance execution.
+
+## Corporate governance foundation
+
+The feature branch now includes an owner-scoped corporate workspace backed by the additive `ai_network` organization migration. It exposes department and position templates, organization creation, and per-organization department/position provisioning through the existing authenticated Supabase runtime gateway. The UI reports only records returned by the database; it does not create employees or assert that positions are filled.
+
+The corporate SQL migration and runtime Edge Function handler are source-only until reviewed and deployed. The API deliberately reports the center unavailable when the runtime action or migration is missing. Recruitment, candidate applications, appointments, employee status transitions, succession planning, department budgets and execution authority are not implemented by this foundation yet.
