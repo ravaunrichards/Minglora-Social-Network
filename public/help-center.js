@@ -283,6 +283,17 @@
       '</div><div id="hc-revision-list"></div>':'')+'</section>';
     host.scrollIntoView({block:'nearest',behavior:'smooth'});
     host.querySelector('[data-hc-editor-close]')?.addEventListener('click',()=>{host.innerHTML='';});
+    const categoryField=host.querySelector('select[name="categoryId"]');
+    const topicField=host.querySelector('#hc-editor-subcategories');
+    const filterTopics=()=>{
+      if(!categoryField||!topicField)return;
+      for(const option of topicField.options){
+        const visible=option.dataset.categoryId===categoryField.value;
+        option.hidden=!visible;option.disabled=!visible;
+        if(!visible)option.selected=false;
+      }
+    };
+    categoryField?.addEventListener('change',filterTopics);filterTopics();
     host.querySelector('#hc-admin-editor-form')?.addEventListener('submit',async event=>{
       event.preventDefault();const form=event.currentTarget;const data=new FormData(form);
       const values=Object.fromEntries(data.entries());values.featured=data.has('featured');values.subcategoryIds=data.getAll('subcategoryIds');
