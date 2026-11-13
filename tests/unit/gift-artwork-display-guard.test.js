@@ -10,6 +10,7 @@ const styles = read("public/styles.css");
 const liveStyles = read("public/live-gift-access.css");
 const giftStudio = read("public/gifts.js");
 const liveApp = read("public/app.js");
+const giftEffects = read("public/gift-effects.js");
 const html = read("public/index.html");
 const worker = read("public/sw.js");
 
@@ -52,4 +53,26 @@ test("the app and service worker versions move together for artwork and runtime 
   assert.ok(worker.includes(giftsRef));
   assert.ok(worker.includes(stylesRef));
   assert.match(worker, /const CACHE_NAME='minglora-shell-v306-self-updating-1';/);
+});
+
+
+test("incoming LIVE gift events only animate a successfully loaded canonical catalogue image", () => {
+  assert.ok(liveApp.includes("const catalogueGift=liveGiftCatalogue.find(item=>String(item.code)===code)"));
+  assert.ok(liveApp.includes("const expectedImage='/assets/gifts/catalog/'+code+'.svg'"));
+  assert.ok(liveApp.includes("const expectedModel='/assets/gifts/catalog/'+code+'.gltf'"));
+  assert.ok(liveApp.includes("const imageProbe=new Image()"));
+  assert.ok(liveApp.includes("imageProbe.naturalWidth<1||imageProbe.naturalHeight<1"));
+  assert.ok(liveApp.includes("window.MingloraGiftFX?.mount(stage,gift)"));
+  assert.ok(!liveApp.includes("image_url:String(event.imageUrl||event.image_url||'')"));
+  assert.ok(!liveApp.includes("model_url:String(event.modelUrl||event.model_url||'')"));
+});
+
+test("the gift-effect runtime requires canonical artwork and falls back only to that gift's original image", () => {
+  assert.ok(giftEffects.includes("function hasCanonicalGiftArtwork(gift)"));
+  assert.ok(giftEffects.includes("if(!parent||!gift||!hasCanonicalGiftArtwork(gift))return null;"));
+  assert.ok(giftEffects.includes("fallbackImage.src=gift.image_url"));
+  assert.ok(giftEffects.includes("model.addEventListener(\"error\","));
+  assert.ok(giftEffects.includes("if(modelFailed)fallbackImage.hidden=false"));
+  assert.ok(!giftEffects.includes("emoji.textContent=gift.emoji||\"🎁\""));
+  assert.ok(giftEffects.includes("if(!gift||!hasCanonicalGiftArtwork(gift))return false;"));
 });
