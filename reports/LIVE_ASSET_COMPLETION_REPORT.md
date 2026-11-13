@@ -66,4 +66,14 @@ The visual QA branch is intentionally additive. It does not change gift prices, 
 
 The reference audit was corrected after opening the underlying images: `072900`, `072931` and `073154` are the actual desktop LIVE room samples; `074126` is a scheduler screenshot and `072050` is a video/feed detail. See `reports/REFERENCE_ASSET_AUDIT.md` and the updated machine-readable reference manifest. Only sampled dimensions are filled; the rest remain explicitly pending.
 
-**Follow-on branch validation:** pending GitHub Actions Node 24 CI at the time this report was updated. Do not treat the earlier successful CI run #10698 as validation of this follow-on branch.
+## Follow-on branch validation
+
+GitHub Actions completed successfully on code commit `29bf8a5ed6d790b8dd334cdd65a27f196a3775ac` on 2026-11-13:
+
+- **CI run #10879:** passed, including Node 24 setup, dependency install/audit, repository structure check, JavaScript syntax, 1,748-row gift asset build, 1,737-entry LIVE motion-index build, Sound Studio asset build, and **971 automated tests passed / 0 failed**.
+- **Supabase Auth provider acceptance:** passed.
+- **For You functional navigation:** passed.
+- **LIVE and MeetWave layout-independence visual matrix #27:** passed; evidence artifact uploaded.
+- **Chromium profile/layout viewport matrix #54:** passed; evidence artifact uploaded.
+
+These are GitHub-hosted automated build, test and browser-render checks. They are not physical-device tests, a full manual review of 1,121 screenshots, or proof of iOS/tablet/foldable/Smart TV performance. The report-only update that records these results does not change application source code.
