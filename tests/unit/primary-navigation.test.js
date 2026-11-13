@@ -62,7 +62,7 @@ test('Menstrual Health is restored with a 3D icon and shown only to female accou
 
 test('profile navigation keeps creator tabs and the More menu available',()=>{
   assert.ok(app.includes("profileStyleNavigation(u.profileStyle).map(([key,label])=>"));
-  assert.ok(app.includes("facebook:[['posts','Posts'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Reels'],['more','More']]"));
+  assert.ok(app.includes("facebook:[['posts','All'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Reels'],['more','More']]"));
   assert.ok(app.includes('profile-more-menu'),'profile More menu markup is present');
   for(const section of ['Check-ins','Events','Highlights','Groups','Videos','Badges','Gift Gallery','Photo albums','Manage sections']){
     assert.ok(app.includes(section),section+' remains represented in the profile More section');
