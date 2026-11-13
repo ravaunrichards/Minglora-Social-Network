@@ -27,6 +27,10 @@ test("Gift Studio hides broken/non-canonical artwork and disables sending until 
   assert.ok(giftStudio.includes("state.unavailableArtwork"));
   assert.ok(giftStudio.includes("image.complete&&image.naturalWidth>0&&image.naturalHeight>0"));
   assert.ok(giftStudio.includes("Complete gift artwork could not be loaded"));
+  assert.ok(giftStudio.includes("aria-disabled='"+String(!ready)+"'"));
+  assert.ok(giftStudio.includes("disabled title='Loading complete gift artwork'"));
+  assert.ok(giftStudio.includes("button.disabled=false"));
+  assert.ok(giftStudio.includes("state.loadedArtwork"));
   assert.ok(giftStudio.includes("grid.querySelectorAll(\"img[data-gift-artwork-code]\")"));
   assert.ok(!giftStudio.includes("The artwork image could not load. Showing the gift icon instead."));
   assert.ok(!giftStudio.includes("gift-emoji-preview"));
@@ -37,6 +41,9 @@ test("LIVE picker hides broken/non-canonical artwork and refuses send until comp
   assert.ok(liveApp.includes("const liveGiftArtworkReady=new Set()"));
   assert.ok(liveApp.includes("const liveGiftHasCanonicalArtwork=item=>"));
   assert.ok(liveApp.includes("data-live-gift-artwork-code"));
+  assert.ok(liveApp.includes("class='live-gift-pick-button' disabled aria-disabled='true'"));
+  assert.ok(liveApp.includes('giftGrid?.addEventListener("load"'));
+  assert.ok(liveApp.includes('button.setAttribute("aria-disabled","false")'));
   assert.ok(liveApp.includes("Complete artwork unavailable — gift withheld"));
   assert.ok(liveApp.includes("!liveGiftArtworkReady.has(String(gift.code))"));
   assert.ok(!liveApp.includes("live-gift-card-emoji"));
