@@ -3802,8 +3802,7 @@ Deno.serve(async (req: Request) => {
       ? input.payload
       : {};
     const supportedTaskCommands = [
-      "create_task", "list_tasks", "approve_task", "reject_task", "cancel_task",
-      "claim_next_task", "heartbeat_task", "complete_task", "fail_task"
+      "create_task", "list_tasks", "approve_task", "reject_task", "cancel_task"
     ];
 
     if (!validUuid(actorUserId)) {
