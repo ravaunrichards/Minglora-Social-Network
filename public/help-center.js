@@ -2,6 +2,7 @@
 "use strict";
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
 const state={bootstrap:null,categories:[],subcategories:[],results:[],query:"",category:"",subcategory:"",offset:0,hasMore:false,member:false,bookmarks:new Set(),article:null,adminOverview:null,currentAdminTab:"articles",currentArticleId:"",currentTranslationId:"",debounce:null};
+const FEATURE_TOPICS=[{"title":"Getting Started with Minglora","category":"getting-started","subcategory":"introduction-to-minglora"},{"title":"Registration & Account Creation","category":"accounts-registration","subcategory":"creating-an-account"},{"title":"Login & Account Recovery","category":"passwords-security","subcategory":"account-recovery"},{"title":"Account Security & Verification","category":"passwords-security","subcategory":"account-protection"},{"title":"Profiles & Personal Information","category":"profiles-personalization","subcategory":"creating-a-profile"},{"title":"Profile Pictures & Cover Photos","category":"profiles-personalization","subcategory":"profile-pictures"},{"title":"Friends & Following","category":"friends-followers","subcategory":"following-and-unfollowing"},{"title":"News Feed & Posts","category":"home-feed-posts","subcategory":"understanding-the-home-feed"},{"title":"Reactions & Comments","category":"home-feed-posts","subcategory":"reactions-and-comments"},{"title":"Photos, Videos & Albums","category":"photos-albums","subcategory":"creating-and-editing-albums"},{"title":"Stories & Highlights","category":"videos-reels-stories","subcategory":"creating-and-viewing-stories"},{"title":"Reels & Short Videos","category":"videos-reels-stories","subcategory":"creating-and-publishing-reels"},{"title":"Video Centre","category":"videos-reels-stories","subcategory":"watching-reels-and-video-centre"},{"title":"Messenger & Private Messaging","category":"messenger","subcategory":"private-and-group-conversations"},{"title":"Voice & Video Calling","category":"voice-video-calls","subcategory":"making-and-receiving-video-calls"},{"title":"Minglora LIVE","category":"live-streaming","subcategory":"understanding-minglora-live"},{"title":"MeetWave Meetings","category":"meetwave","subcategory":"introduction-to-meetwave"},{"title":"Creator Studio","category":"creator-features","subcategory":"creator-studio"},{"title":"Creator Hub & Creator Tools","category":"creator-features","subcategory":"creator-hub-and-network"},{"title":"Creator Earnings & Payouts","category":"creator-earnings-payouts","subcategory":"understanding-creator-earnings"},{"title":"Minglora Coins & Wallet","category":"gifts-coins","subcategory":"understanding-minglora-coins-and-wallet"},{"title":"Gifts, Rewards & Badges","category":"gifts-coins","subcategory":"rewards-and-badges"},{"title":"Groups & Communities","category":"groups-pages","subcategory":"creating-joining-and-leaving-groups"},{"title":"Pages & Page Management","category":"groups-pages","subcategory":"creating-and-managing-pages"},{"title":"Notifications","category":"notifications-activity","subcategory":"understanding-notifications"},{"title":"Settings & Preferences","category":"settings-accessibility","subcategory":"general-settings"},{"title":"Privacy & Data Protection","category":"privacy-permissions","subcategory":"data-privacy-and-personal-information"},{"title":"Blocking, Reporting & Moderation","category":"safety-reporting","subcategory":"reporting-members-and-content"},{"title":"Technical Support & Troubleshooting","category":"troubleshooting","subcategory":"login-and-registration-problems"},{"title":"Policies, Terms & Community Guidelines","category":"rules-policies-information","subcategory":"community-standards-and-platform-rules"}];
 const locale=(navigator.language||"en").split("-")[0].toLowerCase();
 const themePalettes={
 minglora:{light:["#f1f3f7","#ffffff","#172033","#6d7688","#e3e7ee","#1769e0","#eaf2ff"],dark:["#111827","#1c2738","#edf2fb","#a8b3c5","#344257","#1769e0","#203d65"]},
@@ -53,12 +54,27 @@ function renderCategoryCards(){
 $("#hc-categories").innerHTML=state.categories.map(x=>'<button class="hc-category-card" type="button" data-hc-category="'+esc(x.slug)+'"><span class="hc-category-icon"><svg viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg#'+esc(x.icon||"request")+'"></use></svg></span><span class="hc-category-copy"><strong>'+esc(x.title)+'</strong><small>'+esc(x.description||"Browse questions")+(Number(x.articleCount||0)?" · "+Number(x.articleCount)+" published":"")+(x.isTranslated===false?" · English version (translation pending)":"")+'</small></span></button>').join("")||empty("Categories unavailable","Refresh the Help Center.");
 $$("[data-hc-category]").forEach(b=>b.onclick=()=>openCategory(b.dataset.hcCategory));
 }
+function renderFeatureTopics(){
+const container=$("#hc-feature-topics");
+if(!container)return;
+container.innerHTML=FEATURE_TOPICS.map((topic,index)=>{
+const parent=cat(topic.category);
+const icon=parent?.icon||"request";
+return '<button class="hc-feature-topic" type="button" data-hc-topic="'+index+'"><span class="hc-category-icon"><svg viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg#'+esc(icon)+'"></use></svg></span><span><strong>'+esc(topic.title)+'</strong><small>'+esc(parent?.title||"Help Center")+'</small></span></button>';
+}).join("");
+$("[data-hc-topic]").forEach(button=>button.onclick=()=>{
+const topic=FEATURE_TOPICS[Number(button.dataset.hcTopic)];
+if(topic)openCategory(topic.category,topic.subcategory);
+});
+}
 function renderHome(){
-section("hc-home");renderCategoryCards();
+section("hc-home");renderCategoryCards();renderFeatureTopics();
 const collections=[["popular","hc-popular"],["featured","hc-featured"]];
 collections.forEach(([key,id])=>{const rows=state.bootstrap[key]||[];$("#hc-"+key+"-section").hidden=!rows.length;$("#"+id).innerHTML=rows.map(questionCard).join("");});
 const recent=state.bootstrap.recent||[];$("#hc-recent-section").hidden=!recent.length;
 $("#hc-recent").innerHTML=recent.map(x=>'<a class="hc-question-row" href="/help-center.html?article='+encodeURIComponent(x.slug)+'"><span><strong>'+esc(x.title)+'</strong><p>'+esc(x.excerpt||"")+'</p><small>Updated '+esc(date(x.updatedAt))+'</small></span><span class="hc-row-arrow">›</span></a>').join("");
+const added=state.bootstrap.recentlyAdded||[];$("#hc-added-section").hidden=!added.length;
+$("#hc-added").innerHTML=added.map(x=>'<a class="hc-question-row" href="/help-center.html?article='+encodeURIComponent(x.slug)+'"><span><strong>'+esc(x.title)+'</strong><p>'+esc(x.excerpt||"")+'</p><small>Published '+esc(date(x.publishedAt))+'</small></span><span class="hc-row-arrow">›</span></a>').join("");
 $("#hc-year").textContent=new Date().getFullYear();
 announcement(!Number(state.bootstrap.articleCount||0)?"The category directory is ready. No verified Q&A articles have been published yet.":"");
 renderPersonal().catch(()=>{});
