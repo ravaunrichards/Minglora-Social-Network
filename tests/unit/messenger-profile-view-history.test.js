@@ -42,14 +42,20 @@ test('profile picture remains in the avatar column and upload is controlled from
   assert.match(profileCss,/\.profile-avatar-edit-wrap/);
   assert.match(profileCss,/\.minglora-profile-page \.profile-header-card \.profile-avatar-edit-wrap>\.avatar\{[^}]*object-fit:cover/);
 });
-test('profile count row shows six real aligned profile metrics',()=>{
-  for(const kind of ['followers','following','friends'])assert.match(app,new RegExp('data-open-connections="'+kind+'"'));
-  assert.match(app,/profile-count-item/);
-  assert.ok(app.includes('Number(data.likesCount||0).toLocaleString()'));
-  const countStart=app.indexOf('class="profile-counts"');
-  const countEnd=app.indexOf("</div>'+'</div><nav",countStart);
-  const countMarkup=app.slice(countStart,countEnd);
-  assert.ok(countMarkup.indexOf('<span>Posts</span>')<countMarkup.indexOf('<span>Likes</span>'),'Likes follows Posts in the profile metric row');
+test('profile count row uses the shared renderer and Facebook retains six real metrics',()=>{
+  const entryStart=app.indexOf('function profileMetricEntries(data,style){');
+  const markupStart=app.indexOf('function profileMetricsMarkup(data,style){',entryStart);
+  const previewStart=app.indexOf('function profileStylePreviewMarkup',markupStart);
+  assert.ok(entryStart>=0&&markupStart>entryStart&&previewStart>markupStart);
+  const entries=app.slice(entryStart,markupStart);
+  const markup=app.slice(markupStart,previewStart);
+  for(const metric of ['followers','following','friends','subscribers','posts','likes'])assert.ok(entries.includes(metric+':'),'missing real '+metric+' metric');
+  assert.ok(entries.includes("facebook:['followers','following','friends','subscribers','posts','likes']"),'Facebook retains six metrics and its stable order');
+  assert.ok(entries.includes('likes:Number(data.likesCount||0)'),'likes uses the real profile count');
+  assert.ok(markup.includes('class="profile-counts"'),'the shared renderer owns the metric row');
+  assert.ok(markup.includes('data-open-connections="'+item.id+'"'),'connection counts remain interactive');
+  assert.ok(markup.includes('profile-count-item'),'non-interactive metric markup remains available');
+  assert.ok(app.includes('profileMetricsMarkup(data,u.profileStyle)'),'the profile uses the shared renderer');
   assert.match(read('public/profile-admin-layout-parity.css'),/grid-template-columns: repeat\(6, minmax\(0, 1fr\)\) !important/);
   assert.doesNotMatch(app,/profile-live-insights|Profile views · 30 days|Viewing now/);
 });
