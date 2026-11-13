@@ -11,6 +11,7 @@ on:
       - 'src/server.js'
       - 'supabase/functions/minglora-runtime-state/**'
       - 'supabase/migrations/*ai_identity*'
+      - 'supabase/migrations/*ai_corporate*'
       - 'tests/unit/ai-network*.test.js'
       - '.github/workflows/ai-network-checks.yml'
 
