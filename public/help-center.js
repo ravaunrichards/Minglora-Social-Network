@@ -1,4 +1,4 @@
-const $ = selector => document.querySelector(selector);
+const $ = (selector, root=document) => root.querySelector(selector);
 const state={categories:[],subcategories:[],popular:[],featured:[],recent:[],articles:[],adminAccess:false,currentCategory:null,currentSubcategory:null,currentArticle:null,adminOverview:null,bookmarks:[]};
 const esc=value=>String(value??"").replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
 const sprite=name=>'<svg viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg#'+esc(name)+'"></use></svg>';
@@ -45,7 +45,7 @@ function setContentMode(mode){
   $(".hc-discovery-grid").hidden=mode==="article"||mode==="bookmarks"||mode==="results";
   $("#hc-recent-section").hidden=mode==="article"||mode==="bookmarks"||mode==="results"||!state.recent.length;
   $("#hc-directory-empty").hidden=mode==="article"||mode==="bookmarks"||mode==="results"||state.articles.length>0;
-  if(mode!=="admin")$("#hc-admin").hidden=true;
+  $("#hc-admin").hidden=mode!=="admin";
 }
 async function runSearch(query="",category="",subcategory=""){
   const params=new URLSearchParams({q:query,limit:"40"});
@@ -57,17 +57,25 @@ async function runSearch(query="",category="",subcategory=""){
   $("#hc-results-list").innerHTML=result.results.length?result.results.map(r=>renderQuestion(r)).join(""):'<p class="hc-empty-inline">No published questions match this search yet. Try another phrase or category, or contact Minglora Support.</p>';
   setContentMode("results");$("#hc-results").hidden=false;
 }
-function renderCategoryDetail(slug){
+async function loadCategoryQuestions(categorySlug,subcategorySlug=""){
+  const params=new URLSearchParams({q:"",category:categorySlug,limit:"40"});
+  if(subcategorySlug)params.set("subcategory",subcategorySlug);
+  const result=await api("/search?"+params.toString());
+  $("#hc-category-questions").innerHTML=result.results.length?result.results.map(r=>renderQuestion(r)).join("")
+    :'<p class="hc-empty-inline">No verified questions are published for this topic yet. Use Contact Support for assistance.</p>';
+}
+async function renderCategoryDetail(slug){
   const category=state.categories.find(c=>c.slug===slug);if(!category)return;
   state.currentCategory=slug;state.currentSubcategory=null;
   $("#hc-category-detail-title").textContent=category.title;
   $("#hc-category-description").textContent=category.description||"Browse the subtopics within this area.";
   const subcategories=state.subcategories.filter(s=>s.categoryId===category.id).sort((a,b)=>a.sortOrder-b.sortOrder);
   $("#hc-subcategory-pills").innerHTML='<button type="button" data-subcategory="" aria-pressed="true">All topics</button>'+subcategories.map(s=>'<button type="button" data-subcategory="'+esc(s.slug)+'" aria-pressed="false">'+esc(s.title)+'</button>').join("");
-  $("#hc-category-questions").innerHTML=category.articleCount?'<p class="hc-empty-inline">Choose a subtopic or search within this category to find published answers.</p>':'<p class="hc-empty-inline">No verified Q&amp;A articles have been published in this category yet. Use Contact Support for assistance.</p>';
   $("#hc-category-detail").hidden=false;$("#hc-results").hidden=true;$("#hc-article-view").hidden=true;$("#hc-bookmarks-view").hidden=true;$("#hc-categories").hidden=false;
   $(".hc-discovery-grid").hidden=true;$("#hc-recent-section").hidden=true;$("#hc-directory-empty").hidden=true;
   $("#hc-category-filter").value=slug;$("#hc-subcategory-filter").innerHTML='<option value="">All subcategories</option>'+subcategories.map(s=>'<option value="'+esc(s.slug)+'">'+esc(s.title)+'</option>').join("");$("#hc-subcategory-filter").disabled=!subcategories.length;
+  $("#hc-category-questions").innerHTML='<p class="hc-empty-inline">Loading published questions…</p>';
+  try{await loadCategoryQuestions(slug);}catch(error){$("#hc-category-questions").innerHTML='<p class="hc-empty-inline">'+esc(error.message)+'</p>';}
 }
 function markdownInline(source){
   let value=esc(source);
@@ -154,6 +162,7 @@ async function loadAdmin(){
     renderCategoryGrid();renderAdmin();$("#hc-admin").hidden=false;
   }catch(error){$("#hc-admin").hidden=true;if(error.status!==403)showError(error.message);}
 }
+function field(form,name){return form.elements.namedItem(name);}
 function resetArticleForm(){const form=$("#hc-article-form");form.reset();form.articleId.value="";$("#hc-editor-heading").textContent="Create a Help article";$("#hc-editor-status").textContent="";updateSubcategoryChoices();}
 function updateSubcategoryChoices(selected=""){
   const form=$("#hc-article-form"),categoryId=form.categoryId.value;
@@ -163,9 +172,9 @@ function updateSubcategoryChoices(selected=""){
 function editArticle(id,locale){
   const row=(state.adminOverview?.articles||[]).find(x=>x.article_id===id&&x.locale===locale);if(!row)return;
   const form=$("#hc-article-form"),a=row.help_articles||{};
-  form.articleId.value=a.id;form.title.value=row.title;form.slug.value=a.slug;form.categoryId.value=a.category_id;updateSubcategoryChoices(a.subcategory_id||"");
-  form.locale.value=row.locale;form.excerpt.value=row.excerpt||"";form.answerMarkdown.value=row.answer_markdown||"";
-  form.searchTerms.value=(row.search_terms||[]).join(", ");form.sourceReference.value=row.source_reference||"";form.isFeatured.checked=Boolean(a.is_featured);
+  field(form,"articleId").value=a.id;field(form,"title").value=row.title;field(form,"slug").value=a.slug;field(form,"categoryId").value=a.category_id;updateSubcategoryChoices(a.subcategory_id||"");
+  field(form,"locale").value=row.locale;field(form,"excerpt").value=row.excerpt||"";field(form,"answerMarkdown").value=row.answer_markdown||"";
+  field(form,"searchTerms").value=(row.search_terms||[]).join(", ");field(form,"sourceReference").value=row.source_reference||"";field(form,"isFeatured").checked=Boolean(a.is_featured);
   $("#hc-editor-heading").textContent="Edit Help article";$("#hc-editor-status").textContent="Saving edits returns the article to Draft so it must be reviewed again.";
   form.scrollIntoView({behavior:"smooth",block:"start"});
 }
@@ -178,8 +187,9 @@ function wireEvents(){
   $("#hc-subcategory-filter").addEventListener("change",()=>runSearch($("#hc-search-input").value.trim(),$("#hc-category-filter").value,$("#hc-subcategory-filter").value).catch(error=>showError(error.message)));
   $("#hc-clear-search").addEventListener("click",()=>{ $("#hc-search-input").value="";$("#hc-category-filter").value="";$("#hc-subcategory-filter").innerHTML='<option value="">All subcategories</option>';$("#hc-subcategory-filter").disabled=true;$("#hc-results").hidden=true;setContentMode("home");});
   $("#hc-category-clear").addEventListener("click",()=>{ $("#hc-category-detail").hidden=true;$("#hc-categories").hidden=false;$(".hc-discovery-grid").hidden=false;$("#hc-recent-section").hidden=!state.recent.length;$("#hc-directory-empty").hidden=state.articles.length>0;});
-  $("#hc-category-grid").addEventListener("click",event=>{const card=event.target.closest("[data-category]");if(card)renderCategoryDetail(card.dataset.category);});
-  $("#hc-category-detail").addEventListener("click",event=>{const button=event.target.closest("[data-subcategory]");if(!button)return;const category=state.currentCategory;const slug=button.dataset.subcategory;$("#hc-subcategory-pills").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b===button)));const title=slug?state.subcategories.find(s=>s.slug===slug)?.title:"All topics";$("#hc-category-questions").innerHTML='<p class="hc-empty-inline">No published questions are available for '+esc(title||"this topic")+' yet. Search another topic or contact Support.</p>';if(category){$("#hc-category-filter").value=category;$("#hc-subcategory-filter").value=slug;}});
+  $("#hc-category-grid").addEventListener("click",event=>{const card=event.target.closest("[data-category]");if(card)renderCategoryDetail(card.dataset.category).catch(error=>showError(error.message));});
+  $("#hc-category-detail").addEventListener("click",event=>{const button=event.target.closest("[data-subcategory]");if(!button)return;const category=state.currentCategory;const slug=button.dataset.subcategory;state.currentSubcategory=slug||null;$("#hc-subcategory-pills").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b===button)));if(category){$("#hc-category-filter").value=category;$("#hc-subcategory-filter").value=slug;loadCategoryQuestions(category,slug).catch(error=>showError(error.message));}});
+  $("#hc-breadcrumb").addEventListener("click",event=>{if(event.target.closest("#hc-breadcrumb-home")){history.pushState({},"","/help-center.html");setContentMode("home");$("#hc-categories").hidden=false;$(".hc-discovery-grid").hidden=false;$("#hc-recent-section").hidden=!state.recent.length;}else if(event.target.closest("#hc-breadcrumb-category")&&state.currentArticle?.article?.category?.slug){renderCategoryDetail(state.currentArticle.article.category.slug).catch(error=>showError(error.message));}});
   document.body.addEventListener("click",event=>{
     const article=event.target.closest("[data-open-article]");if(article){openArticle(article.dataset.openArticle);return;}
     const category=event.target.closest("[data-edit-category]");if(category){const c=state.categories.find(x=>x.id===category.dataset.editCategory);if(!c)return;const f=$("#hc-category-form");f.categoryId.value=c.id;f.title.value=c.title;f.slug.value=c.slug;f.description.value=c.description||"";f.icon.value=c.icon;f.sortOrder.value=c.sortOrder||0;f.scrollIntoView({behavior:"smooth",block:"center"});return;}
@@ -188,22 +198,27 @@ function wireEvents(){
     const revisions=event.target.closest("[data-revisions]");if(revisions){loadRevisions(revisions.dataset.revisions);return;}
     const restore=event.target.closest("[data-restore-revision]");if(restore){restoreRevision(restore.dataset.restoreRevision);return;}
   });
-  $("#hc-breadcrumb-home").addEventListener("click",()=>window.location.assign("/help-center.html"));
   $("#hc-bookmark-toggle").addEventListener("click",async()=>{
     const a=state.currentArticle?.article;if(!a)return;
-    try{await api("/bookmarks/"+encodeURIComponent(a.translationId),{method:"POST",body:"{}"});$("#hc-bookmark-toggle").textContent="Saved";}catch(error){$("#hc-feedback-message").textContent=error.status===401?"Sign in to save this answer.":error.message;}
+    try{
+      const saved=state.bookmarks.some(row=>row.translation_id===a.translationId);
+      await api("/bookmarks/"+encodeURIComponent(a.translationId),{method:saved?"DELETE":"POST",body:"{}"});
+      if(saved)state.bookmarks=state.bookmarks.filter(row=>row.translation_id!==a.translationId);
+      else state.bookmarks.push({translation_id:a.translationId});
+      $("#hc-bookmark-toggle").textContent=saved?"Save answer":"Saved";
+    }catch(error){$("#hc-feedback-message").textContent=error.status===401?"Sign in to save this answer.":error.message;}
   });
   $("#hc-feedback-yes").addEventListener("click",()=>sendFeedback(true));
   $("#hc-feedback-no").addEventListener("click",()=>sendFeedback(false));
   $("#hc-saved-open").addEventListener("click",loadBookmarks);
-  $("#hc-bookmarks-close").addEventListener("click",()=>{setContentMode("home");$("#hc-categories").hidden=false;});
+  $("#hc-bookmarks-close").addEventListener("click",()=>{setContentMode("home");$("#hc-categories").hidden=false;$(".hc-discovery-grid").hidden=false;$("#hc-recent-section").hidden=!state.recent.length;$("#hc-directory-empty").hidden=state.articles.length>0;});
   $("#hc-editor-reset").addEventListener("click",resetArticleForm);
   $("#hc-article-form").addEventListener("change",event=>{if(event.target.name==="categoryId")updateSubcategoryChoices();});
-  $("#hc-article-form").addEventListener("input",event=>{if(event.target.name==="title"&&!$("#hc-article-form").articleId.value){const slug=event.target.value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");$("#hc-article-form").slug.value=slug;}});
+  $("#hc-article-form").addEventListener("input",event=>{if(event.target.name==="title"&&!field($("#hc-article-form"),"articleId").value){const slug=event.target.value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");$("#hc-article-form").slug.value=slug;}});
   $("#hc-article-form").addEventListener("submit",async event=>{
     event.preventDefault();const form=event.currentTarget,button=form.querySelector('button[type="submit"]'),status=$("#hc-editor-status");button.disabled=true;status.textContent="Saving draft…";
-    try{const payload=Object.fromEntries(new FormData(form).entries());payload.isFeatured=form.isFeatured.checked;payload.searchTerms=String(payload.searchTerms||"").split(",").map(x=>x.trim()).filter(Boolean);
-      const result=await api("/admin/articles",{method:"POST",body:JSON.stringify(payload)});status.textContent="Saved as Draft. It is not visible to members.";await refreshAdmin();form.articleId.value=result.articleId;$("#hc-editor-heading").textContent="Edit Help article";
+    try{const payload=Object.fromEntries(new FormData(form).entries());payload.isFeatured=field(form,"isFeatured").checked;payload.searchTerms=String(payload.searchTerms||"").split(",").map(x=>x.trim()).filter(Boolean);
+      const result=await api("/admin/articles",{method:"POST",body:JSON.stringify(payload)});status.textContent="Saved as Draft. It is not visible to members.";await refreshAdmin();field(form,"articleId").value=result.articleId;$("#hc-editor-heading").textContent="Edit Help article";
     }catch(error){status.textContent=error.message;}finally{button.disabled=false;}
   });
   $("#hc-category-form").addEventListener("submit",async event=>{
