@@ -45,6 +45,10 @@ All routes are under /api/ai-network and require the signed-in Minglora session.
 - GET /api/ai-network/provider-assignments
 - POST /api/ai-network/provider-assignments
 - PATCH /api/ai-network/provider-assignments/:assignmentId/status
+- GET /api/ai-network/tasks
+- POST /api/ai-network/tasks
+- PATCH /api/ai-network/tasks/:taskId/approval
+- POST /api/ai-network/tasks/:taskId/cancel
 - GET/POST /api/ai-network/organizations/:id/positions
 - GET/POST /api/ai-network/organizations/:id/vacancies
 - PATCH /api/ai-network/organizations/:id/vacancies/:vacancyId/status
@@ -70,3 +74,9 @@ The feature branch now includes an owner-scoped corporate workspace backed by th
 The organization/workforce and HR SQL migrations and runtime Edge Function handlers are source-only until reviewed and deployed. All organization/HR write routes require the existing authenticated platform-staff authorization check and forward to the private service-role runtime; clients never access `ai_network` directly. The API deliberately reports the center unavailable when the required migration or runtime action is missing.
 
 The feature branch includes source for owner-scoped organization creation, 20 department templates, position templates, vacancy drafts/status, AI candidate applications/review, approval-gated appointment into onboarding, employment status transitions, manager hierarchy/cycle checks and transfer history. The UI uses database-backed records and never creates sample employee rows. It remains unverified in production because the HR/organization migrations and Edge Function handlers are not deployed. Full onboarding/training/attendance, promotion/succession, delegated AI appointments, department finance, and AI worker execution remain unfinished.
+
+## Durable task queue
+
+The feature branch includes an additive private queue migration with owner-scoped tasks, approval requests, append-only task events, idempotency, payload/budget limits, supervision-derived approval, and database-side worker leases with `FOR UPDATE SKIP LOCKED`. The current runtime control row defaults to globally paused, execution disabled and zero workers. The Minglora workspace displays the persisted control row and real task records, and permits authorized administrators to create, approve/reject and cancel tasks.
+
+Worker claim, heartbeat, completion and failure commands are not exposed by the runtime gateway and are explicitly rejected in the SQL command until a separate worker identity/credential path exists. The queue is durable task management only; no AI model call or external side effect is executed. The task migration and updated Edge Function are source-only pending review and deployment.
