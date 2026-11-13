@@ -3,7 +3,7 @@
 
   const API = '/api/ai-network';
   const root = () => document.getElementById('main-content');
-  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, organizationError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '' };
+  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, organizationError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', aiTasks: [], taskRuntime: null, taskError: '' };
   const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[character]));
@@ -170,6 +170,19 @@
       state.identityRegistry = null;
       state.identityCategories = [];
       state.identityError = error.message || 'Relational AI identity service is unavailable.';
+    }
+  }
+
+  async function loadAITaskQueue() {
+    state.taskError = '';
+    try {
+      const result = await request('/tasks');
+      state.aiTasks = list(result.tasks);
+      state.taskRuntime = result.runtime || null;
+    } catch (error) {
+      state.aiTasks = [];
+      state.taskRuntime = null;
+      state.taskError = error.message || 'AI task queue is unavailable.';
     }
   }
 
@@ -467,6 +480,83 @@
       'ai-network-span-2');
   }
 
+  function renderAITaskQueueCenter() {
+    const tasks = list(state.aiTasks);
+    const identities = list(state.identityRegistry?.identities).filter(row =>
+      row.identity?.status === 'active' && row.identity?.enabled === true
+    );
+    const identityOptions = identities.map(row => ({
+      value:row.identity.identity_id,
+      label:(row.name?.display_name || row.name?.full_name || 'AI identity') +
+        (row.name?.username ? ' (@' + row.name.username + ')' : '')
+    })).filter(option => option.value);
+    const runtime = state.taskRuntime || {};
+    const runtimeLabel = state.taskError
+      ? '<div class="ai-network-alert ai-network-alert--warning" role="status">' + esc(state.taskError) + '</div>'
+      : '<div class="ai-network-task-runtime"><div><span>Global pause</span>' + pill(runtime.global_paused === true ? 'PAUSED' : 'NOT PAUSED', runtime.global_paused === true ? 'warning' : 'success') + '</div>' +
+        '<div><span>Execution enabled</span>' + pill(runtime.execution_enabled === true ? 'ENABLED' : 'DISABLED', runtime.execution_enabled === true ? 'warning' : 'success') + '</div>' +
+        '<div><span>Worker limit</span><strong>' + number(runtime.max_concurrent_workers) + '</strong></div>' +
+        '<div><span>Lease length</span><strong>' + number(runtime.lease_seconds) + ' sec</strong></div></div>';
+    const taskRows = tasks.length
+      ? '<div class="ai-network-list">' + tasks.map(task => {
+          const status = task.status || 'unknown';
+          const awaitingApproval = status === 'pending_approval';
+          const canCancel = ['pending_approval','queued','observation_only'].includes(status);
+          const identity = identityOptions.find(item => item.value === task.identity_id);
+          const action = task.action_class || 'other';
+          return '<article class="ai-network-list-row ai-network-task-row"><div class="ai-network-list-main"><div><strong>' +
+            esc(task.task_title || 'AI task') + '</strong><div class="ai-network-meta">' +
+            pill(status, awaitingApproval ? 'warning' : status === 'succeeded' ? 'success' : 'neutral') + ' ' +
+            pill(action) + ' ' + pill(task.autonomy_mode || 'unknown') +
+            '</div><small>' + esc(identity?.label || ('AI identity ' + String(task.identity_id || '').slice(0,8))) +
+            ' · ' + esc(task.task_type || '') + '</small><p>Scheduled ' + esc(date(task.scheduled_for)) +
+            ' · Priority ' + number(task.priority) + ' · Attempts ' + number(task.attempt_count) + '/' + number(task.max_attempts) +
+            '</p>' + (task.requires_approval ? '<small>Human approval required · ' + esc(task.approved_at ? 'Approved ' + date(task.approved_at) : 'Approval pending') + '</small>' : '<small>No approval required under the recorded supervision policy</small>') +
+            (task.failure_reason ? '<p class="ai-network-note">' + esc(task.failure_reason) + '</p>' : '') +
+            '</div></div>' +
+            (awaitingApproval ? '<form class="ai-network-inline-form ai-network-task-action" data-ai-form="task-approval" data-task-id="' + esc(task.task_id) + '">' +
+              '<label><span>Decision</span><select name="status">' + options([{value:'approved',label:'Approve'},{value:'rejected',label:'Reject'}], 'approved') + '</select></label>' +
+              '<label><span>Review reason</span><input name="reason" required minlength="3" maxlength="1000" placeholder="Explain the decision"></label>' +
+              '<button class="secondary" type="submit">Save decision</button></form>' : '') +
+            (canCancel ? '<form class="ai-network-inline-form ai-network-task-action" data-ai-form="task-cancel" data-task-id="' + esc(task.task_id) + '">' +
+              '<label><span>Cancellation reason</span><input name="reason" required minlength="3" maxlength="1000" placeholder="Why cancel this task?"></label>' +
+              '<button class="secondary" type="submit">Cancel task</button></form>' : '') +
+            '</article>';
+        }).join('') + '</div>'
+      : empty('No AI tasks are recorded for this account.');
+    const createForm = identityOptions.length
+      ? '<form class="ai-network-form ai-network-task-form" data-ai-form="task-create">' +
+        '<div class="ai-network-form-title">Add a durable AI task</div>' +
+        '<p class="ai-network-note">Supervision and approval requirements are derived from the selected AI identity in the database. This form cannot grant autonomy or start a worker.</p>' +
+        '<div class="ai-network-form-grid"><label>AI identity<select name="identityId" required>' + options(identityOptions, identityOptions[0].value) + '</select></label>' +
+        '<label>Task title<input name="taskTitle" required minlength="3" maxlength="180" placeholder="Review creator support enquiries"></label>' +
+        '<label>Task type<input name="taskType" required minlength="2" maxlength="80" pattern="[a-z][a-z0-9_.-]{1,79}" placeholder="support.review"></label>' +
+        '<label>Action class<select name="actionClass">' + options([
+          {value:'read_only',label:'Read only'},{value:'content',label:'Content'},{value:'social',label:'Social'},
+          {value:'external',label:'External action'},{value:'financial',label:'Financial'},{value:'security',label:'Security'},
+          {value:'moderation',label:'Moderation'},{value:'other',label:'Other'}
+        ], 'read_only') + '</select></label>' +
+        '<label>Scheduled for<input type="datetime-local" name="scheduledFor" required></label>' +
+        '<label>Priority (1 is highest)<input type="number" name="priority" min="1" max="10000" value="100" required></label>' +
+        '<label>Maximum attempts<input type="number" name="maxAttempts" min="1" max="10" value="3" required></label>' +
+        '<label>Token budget<input type="number" name="tokenBudget" min="0" max="100000000" value="0" required></label>' +
+        '<label>Cost limit USD<input type="number" name="costLimitUsd" min="0" max="1000000" step="0.000001" value="0" required></label></div>' +
+        '<label>Task payload (JSON object)<textarea name="taskPayload" rows="3" maxlength="65536" placeholder="{}" required>{}</textarea></label>' +
+        '<button class="primary" type="submit">Save task to queue</button></form>'
+      : '<p class="ai-network-note">No active, enabled AI identity is available. Create and authorize an AI identity before queuing a task.</p>';
+    const pending = tasks.filter(task => task.status === 'pending_approval').length;
+    const queued = tasks.filter(task => task.status === 'queued').length;
+    const running = tasks.filter(task => task.status === 'running').length;
+    return card('Durable Task Queue & Human Approvals', '03 · TASKS', runtimeLabel +
+      '<div class="ai-network-command-grid"><div><span>Recorded tasks</span><strong>' + number(tasks.length) + '</strong></div>' +
+      '<div><span>Pending approval</span><strong>' + number(pending) + '</strong></div>' +
+      '<div><span>Queued</span><strong>' + number(queued) + '</strong></div>' +
+      '<div><span>Running leases</span><strong>' + number(running) + '</strong></div></div>' +
+      createForm + '<div><h4>Task history</h4>' + taskRows + '</div>' +
+      '<p class="ai-network-note">Safety state is read from the persisted runtime-control row. Worker execution stays paused and disabled by default. Tasks are stored and approvals are audited, but no task executes until a separate verified worker, provider adapter and secrets integration are deployed.</p>',
+      'ai-network-span-2');
+  }
+
   function renderAIOrganizationCenter() {
     const organizations = list(state.organizationRegistry?.organizations);
     const organizationRows = organizations.length
@@ -633,6 +723,7 @@
       '<div class="ai-network-grid">' +
       renderAIIdentityRegistry() +
       renderAIProviderCenter() +
+      renderAITaskQueueCenter() +
       renderAIOrganizationCenter() +
       card('Bot Personality Laboratory', '01 · PERSONALITY', '<p>Build unique AI helpers with a clear purpose, tone, traits, expertise and permitted tasks.</p>' +
         renderBotRows(bots) + '<form class="ai-network-form" data-ai-form="bot"><div class="ai-network-form-title">Create a new AI bot</div>' +
@@ -700,6 +791,7 @@
       state.snapshot = await request();
       await loadAIIdentityRegistry();
       await loadAIProviderRegistry();
+      await loadAITaskQueue();
       await loadAIOrganizationRegistry();
       renderSnapshot(state.snapshot);
     } catch (error) {
@@ -713,6 +805,8 @@
     if (message) setNotice(message);
     state.snapshot = await request();
     await loadAIIdentityRegistry();
+    await loadAIProviderRegistry();
+    await loadAITaskQueue();
     await loadAIOrganizationRegistry();
     renderSnapshot(state.snapshot);
   }
@@ -804,6 +898,39 @@
         is_public: false
       });
       if (value('emailAddress')) payload.email = { email_address: value('emailAddress') };
+    } else if (kind === 'task-create') {
+      path = '/tasks';
+      form.dataset.idempotencyKey = form.dataset.idempotencyKey || window.crypto.randomUUID();
+      let taskPayload;
+      try { taskPayload = JSON.parse(value('taskPayload')); }
+      catch { throw new Error('Task payload must be valid JSON.'); }
+      if (!taskPayload || typeof taskPayload !== 'object' || Array.isArray(taskPayload)) {
+        throw new Error('Task payload must be a JSON object.');
+      }
+      const scheduled = value('scheduledFor');
+      if (!scheduled || Number.isNaN(new Date(scheduled).getTime())) throw new Error('Choose a valid scheduled date and time.');
+      payload.identity_id = value('identityId');
+      payload.task_title = value('taskTitle');
+      payload.task_type = value('taskType').toLowerCase();
+      payload.action_class = value('actionClass');
+      payload.scheduled_for = new Date(scheduled).toISOString();
+      payload.priority = Number(value('priority'));
+      payload.max_attempts = Number(value('maxAttempts'));
+      payload.token_budget = Number(value('tokenBudget'));
+      payload.cost_limit_usd = Number(value('costLimitUsd'));
+      payload.task_payload = taskPayload;
+      payload.idempotency_key = form.dataset.idempotencyKey;
+    } else if (kind === 'task-approval') {
+      const taskId = form.dataset.taskId;
+      if (!taskId) throw new Error('Task details are missing.');
+      path = '/tasks/' + encodeURIComponent(taskId) + '/approval';
+      payload.status = value('status');
+      payload.reason = value('reason');
+    } else if (kind === 'task-cancel') {
+      const taskId = form.dataset.taskId;
+      if (!taskId) throw new Error('Task details are missing.');
+      path = '/tasks/' + encodeURIComponent(taskId) + '/cancel';
+      payload.reason = value('reason');
     } else if (kind === 'provider-account') {
       path = '/provider-accounts';
       payload.provider_name = value('providerName').toLowerCase();
@@ -966,11 +1093,17 @@
       payload.companionOptIn = form.querySelector('[name="companionOptIn"]').checked;
       payload.companionAcknowledged = form.querySelector('[name="companionAcknowledgedAIIdentity"]').checked;
     } else return;
-    const patchKinds = ['settings','languages','vacancy-status','application-review','employment-status','employment-manager','provider-assignment-status'];
+    const patchKinds = ['settings','languages','vacancy-status','application-review','employment-status','employment-manager','provider-assignment-status','task-approval'];
     const result = await request(path, { method: patchKinds.includes(kind) ? 'PATCH' : 'POST', body: payload });
     form.reset();
-    if (['identity','organization','vacancy','application','appointment','employment-transfer'].includes(kind)) form.dataset.idempotencyKey = window.crypto.randomUUID();
-    const message = kind === 'provider-account'
+    if (['identity','organization','vacancy','application','appointment','employment-transfer','task-create'].includes(kind)) form.dataset.idempotencyKey = window.crypto.randomUUID();
+    const message = kind === 'task-create'
+      ? 'Task saved to the durable queue; approval policy comes from the selected AI identity.'
+      : kind === 'task-approval'
+        ? 'Task approval decision recorded.'
+        : kind === 'task-cancel'
+          ? 'Task cancellation recorded.'
+          : kind === 'provider-account'
       ? 'Provider account reference saved as unconfigured; no credentials were stored.'
       : kind === 'provider-model'
         ? 'Provider model metadata saved; availability and access are not verified.'
