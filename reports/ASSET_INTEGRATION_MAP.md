@@ -4,6 +4,7 @@
 |---|---|---|
 | LIVE room shell | `public/app.js` plus room CSS | `public/live-tiktok-compact.css`, `public/live-room-compact.css`, `public/live-room-fit.css` |
 | LIVE gift browser | `public/app.js`, paginated category/search tools | `public/live-gift-access.css` |
+| LIVE Goody Bag / Treasure Box cards | `renderLiveRewardDrops()` in `public/app.js` | `/assets/icons/live-reward-icons.svg#goody-bag`, `/assets/icons/live-reward-icons.svg#treasure-box`; precached in `public/sw.js` |
 | Gift Studio | `public/gifts.js` | `data/minglora-gift-catalog.json`, `/assets/gifts/catalog/<code>.svg`, `<code>.gltf` |
 | Gift playback and preview | `public/gift-effects.js`, `window.MingloraGiftFX` | SVG/GLTF paths and `catalog-motion-index.json` |
 | Gift motion profiles | New generator in this branch | `scripts/generate-live-gift-motion-index.mjs` → `public/assets/animations/gifts/catalog-motion-index.json` |
@@ -57,3 +58,10 @@ The loader validates exact same-origin preset paths. Existing inline choreograph
 Gift Studio and LIVE gift cards use canonical local artwork/model URLs only. Gift Studio thumbnails use `object-fit: contain`; LIVE already uses full-fit containment, and the animation overlay layer is also contained. Artwork failure marks the gift unavailable in the current picker, removes its visible preview, and disables send. LIVE verifies the source artwork image has loaded with non-zero intrinsic dimensions before enabling the send action. These client-side display gates do not delete or rewrite catalogue rows, names, coin prices, gift IDs, active flags, wallet records or transactions. The full backend gift list remains available for faithful record copy/export.
 
 HTML app/style/gift asset references and the service-worker shell cache were advanced together: app/gifts use `20261113-complete-gift-artwork-gate-1`, styles use `20261113-gift-artwork-contain-1`, and the shell cache is v305.
+
+
+## Original LIVE reward-drop artwork
+
+The room's Goody Bag and Treasure Box reward cards and the empty reward state now use two separate Minglora-authored SVG symbols from `public/assets/icons/live-reward-icons.svg`. The vector artwork uses original shapes, gradients and highlight/shadow detail; it is a lightweight UI illustration, not a 3D model or rendered cinematic gift. The service worker precaches the sprite, and the LIVE renderer references the two explicit symbol IDs.
+
+The change is presentation-only. Reward-drop creation, wallet funding, escrow, participant entry, claims, settlement, refunds, and audit ledger paths are unchanged.
