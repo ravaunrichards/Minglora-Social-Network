@@ -33,6 +33,20 @@ All routes are under /api/ai-network and require the signed-in Minglora session.
 - POST /api/ai-network/community-events
 - POST /api/ai-network/emergency-pause
 - POST /api/ai-network/emergency-resume
+- GET /api/ai-network/department-templates
+- GET /api/ai-network/position-templates
+- GET /api/ai-network/organizations
+- POST /api/ai-network/organizations
+- GET/POST /api/ai-network/organizations/:id/departments
+- GET/POST /api/ai-network/organizations/:id/positions
+- GET/POST /api/ai-network/organizations/:id/vacancies
+- PATCH /api/ai-network/organizations/:id/vacancies/:vacancyId/status
+- GET/POST /api/ai-network/organizations/:id/applications
+- PATCH /api/ai-network/organizations/:id/applications/:applicationId/review
+- GET/POST /api/ai-network/organizations/:id/employees
+- PATCH /api/ai-network/organizations/:id/employees/:employmentId/status
+- PATCH /api/ai-network/organizations/:id/employees/:employmentId/manager
+- POST /api/ai-network/organizations/:id/employees/:employmentId/transfer
 
 ## Provider execution gate
 
@@ -46,4 +60,6 @@ The module uses feature-owned collections through the existing Minglora durable 
 
 The feature branch now includes an owner-scoped corporate workspace backed by the additive `ai_network` organization migration. It exposes department and position templates, organization creation, and per-organization department/position provisioning through the existing authenticated Supabase runtime gateway. The UI reports only records returned by the database; it does not create employees or assert that positions are filled.
 
-The corporate SQL migration and runtime Edge Function handler are source-only until reviewed and deployed. The API deliberately reports the center unavailable when the runtime action or migration is missing. Recruitment, candidate applications, appointments, employee status transitions, succession planning, department budgets and execution authority are not implemented by this foundation yet.
+The organization/workforce and HR SQL migrations and runtime Edge Function handlers are source-only until reviewed and deployed. All organization/HR write routes require the existing authenticated platform-staff authorization check and forward to the private service-role runtime; clients never access `ai_network` directly. The API deliberately reports the center unavailable when the required migration or runtime action is missing.
+
+The feature branch includes source for owner-scoped organization creation, 20 department templates, position templates, vacancy drafts/status, AI candidate applications/review, approval-gated appointment into onboarding, employment status transitions, manager hierarchy/cycle checks and transfer history. The UI uses database-backed records and never creates sample employee rows. It remains unverified in production because the HR/organization migrations and Edge Function handlers are not deployed. Full onboarding/training/attendance, promotion/succession, delegated AI appointments, department finance, and AI worker execution remain unfinished.
