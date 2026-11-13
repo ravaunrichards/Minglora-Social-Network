@@ -92,6 +92,8 @@ jobs:
           node --check scripts/generate-minglora-gifts.mjs
           node --check scripts/generate-minglora-sound-library.mjs
           node --check scripts/generate-live-gift-motion-index.mjs
+          node --check scripts/generate-live-gift-animation-assets.mjs
+          node --check scripts/build-gift-artwork-eligibility.mjs
           node --check public/sound-studio-settings.js
           node --check backend/modules/sounds/notification-studio.js
           node --check public/auth-login.js
@@ -137,6 +139,10 @@ jobs:
           node --check src/domain/relationships.js
       - name: Generate original Minglora gift assets
         run: npm run build:gifts
+      - name: Generate LIVE gift animation assets
+        run: npm run build:live-gift-animations
+      - name: Verify extracted gift artwork completeness gate
+        run: npm run check:gift-artwork-eligibility
       - name: Generate LIVE gift motion index
         run: npm run build:live-gift-motion
       - name: Generate Minglora Sound Studio audio pack

@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "generator": "Minglora LIVE gift animation asset generator",
+  "id": "power-impact",
+  "label": "Power Impact",
+  "description": "A strong impact and controlled rebound for sports gifts.",
+  "category_targets": [
+    "sports",
+    "games"
+  ],
+  "duration_ms": 2050,
+  "easing": "cubic-bezier(.17,.85,.3,1)",
+  "keyframes": [
+    {
+      "offset": 0,
+      "opacity": 0,
+      "transform": "translate3d(0,-38px,0) scale(.68)",
+      "filter": "brightness(.8)"
+    },
+    {
+      "offset": 0.3,
+      "opacity": 1,
+      "transform": "translate3d(0,8px,0) scale(1.2)",
+      "filter": "brightness(1.35)"
+    },
+    {
+      "offset": 0.54,
+      "opacity": 1,
+      "transform": "translate3d(0,-4px,0) scale(.95)",
+      "filter": "brightness(1.1)"
+    },
+    {
+      "offset": 0.74,
+      "opacity": 1,
+      "transform": "translate3d(0,2px,0) scale(1.04)",
+      "filter": "none"
+    },
+    {
+      "offset": 1,
+      "opacity": 1,
+      "transform": "translate3d(0,0,0) rotateZ(0deg) scale(1)",
+      "filter": "none"
+    }
+  ],
+  "reduced_motion": {
+    "respect_prefers_reduced_motion": true,
+    "duration_ms": 320,
+    "iterations": 1,
+    "autoplay": false
+  }
+}

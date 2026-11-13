@@ -23,8 +23,11 @@ test('Gifts opens with a visible selected 3D preview before the long catalogue',
 test('gift previews retain visible artwork when the 3D model or artwork cannot load', () => {
   assert.match(gifts, /addEventListener\("load"/);
   assert.match(gifts, /addEventListener\("error"/);
-  assert.match(gifts, /The 3D model could not load/);
-  assert.match(gifts, /The artwork image could not load/);
+  assert.match(gifts, /The 3D model failed to load/);
+  assert.match(gifts, /Complete gift artwork could not be loaded/);
+  assert.match(gifts, /state\.unavailableArtwork\.add\(code\)/);
+  assert.match(gifts, /if\(send\)send\.disabled=true/);
+  assert.match(styles, /object-fit:contain/);
   assert.match(styles, /\.gift-preview-stage img,\.gift-preview-stage model-viewer/);
   assert.match(styles, /\.gift-preview-fallback/);
 });

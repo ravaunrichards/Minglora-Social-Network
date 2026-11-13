@@ -2,7 +2,7 @@
 
 **Audit date:** 2026-11-13  
 **Repository:** `ravaunrichards/Minglora-Social-Network`  
-**Branch for this audit and safe integration:** `feat/minglora-live-assets-audit-motion-index-20261113`
+**Branch for this audit and safe integration:** `feat/minglora-live-visual-assets-qa-20261113`
 
 ## Reference inventory
 
@@ -21,14 +21,17 @@ The complete file-by-file listing is recorded in `reports/minglora-live-referenc
 
 ## Visual samples inspected
 
-- Android LIVE fan-club join sheet: `assets/reference/android/Screenshot_20261112_015315_TikTok.jpg` (portrait viewport, 832 px wide in the inspected image). It shows the creator header, Join entry, audience/leaderboard overlays, Fan/SuperFan tabs, benefit icons and a fixed bottom action.
-- Android SuperFan state: `assets/reference/android/Screenshot_20261112_015407_TikTok.jpg`. It shows the paid membership presentation, upgraded badge, benefits and a separate action treatment.
-- Desktop video + comments layout: `assets/reference/Laptop PC Web/Minglora TikTok/capture-20261112-072050.png` (1365×635 inspected). The reference has a left navigation rail, central media stage, adjacent action rail and right comments panel.
-- Desktop LIVE co-host room: `assets/reference/Laptop PC Web/Minglora TikTok/capture-20261112-074126.png` (1365×636 inspected). It has left LIVE navigation, a 3×2 guest stage, viewer roster and separate right chat panel.
-- Other inspected desktop captures include the Get Coins panel and creator account scheduler screen. They are comparison context, not LIVE art.
+- Android LIVE Fan Club join sheet: `assets/reference/android/Screenshot_20261112_015315_TikTok.jpg`. It shows the creator header, Join entry, audience/leaderboard overlays, Fan/SuperFan tabs, benefit icons and fixed bottom action.
+- Android SuperFan state: `assets/reference/android/Screenshot_20261112_015407_TikTok.jpg`. It shows the paid membership presentation, upgraded badge, benefits and separate action treatment.
+- Desktop multi-guest LIVE room: `assets/reference/Laptop PC Web/Minglora TikTok/capture-20261112-072900.png` (**1366×644**). It shows a two-person video stage, creator identity header, right-side viewer and chat panel, and a fixed bottom gift tray.
+- Desktop LIVE expanded gift picker: `assets/reference/Laptop PC Web/Minglora TikTok/capture-20261112-072931.png` (**1366×642**). It shows the same room with a raised gift-selection grid over the stage, while the separate viewer/chat panel remains visible.
+- Desktop single-host LIVE room: `assets/reference/Laptop PC Web/Minglora TikTok/capture-20261112-073154.png` (**1366×642**). It shows one vertical host stream, follow action, viewer list/chat and a bottom gift tray.
+- Desktop LIVE discovery page: `assets/reference/Laptop PC Web/Minglora TikTok/capture-20261112-072813.png` (**1366×636**). This is the discovery/listing view, not an in-room control screen.
+- `capture-20261112-072050.png` (**1363×636**) is a video/feed detail with comments, not a LIVE room.
+- `capture-20261112-074126.png` (**1364×638**) is a creator scheduler page, not a LIVE room. It is not used as evidence for LIVE guest layouts.
 
-Only these representative screenshots were visually sampled in this pass. The entire reference tree was inventoried by path, Git blob identity and file size; a complete per-image visual review and per-image dimension/transparency extraction for all 1,121 references has **not** been completed. No original reference was altered or copied into a production asset directory.
-
+The six desktop PNG dimensions above were read from their PNG IHDR headers. The six images were directly opened for visual classification. The full 1,121-image reference tree remains inventoried by path, Git blob identity and size; the remaining screenshots have not all received a human visual review or per-image dimension/transparency audit. No reference was moved, overwritten or copied into production artwork.
+  
 ## Preservation and source-of-truth rules
 
 - Keep `assets/reference/` and `assets/Gifts/` read-only.

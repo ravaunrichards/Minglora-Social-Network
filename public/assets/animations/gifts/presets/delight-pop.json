@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "generator": "Minglora LIVE gift animation asset generator",
+  "id": "delight-pop",
+  "label": "Delight Pop",
+  "description": "A compact pop and settle for food and playful gifts.",
+  "category_targets": [
+    "food_drink"
+  ],
+  "duration_ms": 1900,
+  "easing": "cubic-bezier(.17,.85,.3,1)",
+  "keyframes": [
+    {
+      "offset": 0,
+      "opacity": 0,
+      "transform": "scale(.15) translateY(18px)",
+      "filter": "brightness(.8)"
+    },
+    {
+      "offset": 0.36,
+      "opacity": 1,
+      "transform": "scale(1.24) translateY(-8px)",
+      "filter": "brightness(1.25)"
+    },
+    {
+      "offset": 0.68,
+      "opacity": 1,
+      "transform": "scale(.94) translateY(2px)",
+      "filter": "none"
+    },
+    {
+      "offset": 1,
+      "opacity": 1,
+      "transform": "translate3d(0,0,0) rotateZ(0deg) scale(1)",
+      "filter": "none"
+    }
+  ],
+  "reduced_motion": {
+    "respect_prefers_reduced_motion": true,
+    "duration_ms": 320,
+    "iterations": 1,
+    "autoplay": false
+  }
+}

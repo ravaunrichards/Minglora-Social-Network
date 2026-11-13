@@ -97,7 +97,8 @@ test("every gift has its own animation key and a distinct movement signature", (
 
 test("catalog previews and sent gifts use each gift animation identity", () => {
   assert.match(giftEffectsSource, /const animationIdentity=String\(gift\.animation_key/);
-  assert.match(giftEffectsSource, /target\.animate\(frames/);
+  assert.match(giftEffectsSource, /animateGiftSubject\(target,gift/);
+  assert.match(giftEffectsSource, /element\.animate\(frames/);
   assert.match(giftEffectsSource, /minglora-gift-fx-particles/);
   assert.match(giftEffectsSource, /dataset\.giftAnimation=animationIdentity/);
 });

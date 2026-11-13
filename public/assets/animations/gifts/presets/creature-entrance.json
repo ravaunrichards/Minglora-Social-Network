@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "generator": "Minglora LIVE gift animation asset generator",
+  "id": "creature-entrance",
+  "label": "Creature Entrance",
+  "description": "A friendly character entrance with a landing bounce.",
+  "category_targets": [
+    "animals"
+  ],
+  "duration_ms": 2450,
+  "easing": "cubic-bezier(.17,.85,.3,1)",
+  "keyframes": [
+    {
+      "offset": 0,
+      "opacity": 0,
+      "transform": "translate3d(0,32px,0) rotateZ(-13deg) scale(.68)",
+      "filter": "brightness(.82)"
+    },
+    {
+      "offset": 0.24,
+      "opacity": 1,
+      "transform": "translate3d(0,-12px,0) rotateZ(8deg) scale(1.12)",
+      "filter": "brightness(1.22)"
+    },
+    {
+      "offset": 0.58,
+      "opacity": 1,
+      "transform": "translate3d(0,5px,0) rotateZ(-5deg) scale(.97)",
+      "filter": "none"
+    },
+    {
+      "offset": 0.78,
+      "opacity": 1,
+      "transform": "translate3d(0,-2px,0) rotateZ(2deg) scale(1.02)",
+      "filter": "none"
+    },
+    {
+      "offset": 1,
+      "opacity": 1,
+      "transform": "translate3d(0,0,0) rotateZ(0deg) scale(1)",
+      "filter": "none"
+    }
+  ],
+  "reduced_motion": {
+    "respect_prefers_reduced_motion": true,
+    "duration_ms": 320,
+    "iterations": 1,
+    "autoplay": false
+  }
+}

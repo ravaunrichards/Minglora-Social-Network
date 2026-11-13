@@ -1,0 +1,774 @@
+{
+  "schema_version": 1,
+  "title": "Minglora Gift Animation Catalogue",
+  "format": "web-animations-keyframes",
+  "runtime": "Web Animations API",
+  "generator": "Minglora LIVE gift animation asset generator",
+  "notes": [
+    "Original same-origin animation definitions; no third-party runtime dependency.",
+    "Preset choreography is shared by compatible gifts; each gift retains its own artwork, model and identity.",
+    "Reduced-motion preferences are respected."
+  ],
+  "presets": [
+    {
+      "id": "petal-bloom",
+      "label": "Petal Bloom",
+      "description": "A soft petal-like reveal and gentle settle.",
+      "category_targets": [
+        "flowers",
+        "nature"
+      ],
+      "duration_ms": 2200,
+      "easing": "cubic-bezier(.17,.85,.3,1)",
+      "keyframes": [
+        {
+          "offset": 0,
+          "opacity": 0,
+          "transform": "scale(.5) rotateZ(-24deg)",
+          "filter": "brightness(.85)"
+        },
+        {
+          "offset": 0.34,
+          "opacity": 1,
+          "transform": "scale(1.16) rotateZ(10deg)",
+          "filter": "brightness(1.24)"
+        },
+        {
+          "offset": 0.7,
+          "opacity": 1,
+          "transform": "scale(.98) rotateZ(-3deg)",
+          "filter": "none"
+        },
+        {
+          "offset": 1,
+          "opacity": 1,
+          "transform": "translate3d(0,0,0) rotateZ(0deg) scale(1)",
+          "filter": "none"
+        }
+      ],
+      "reduced_motion": {
+        "respect_prefers_reduced_motion": true,
+        "duration_ms": 320,
+        "iterations": 1,
+        "autoplay": false
+      }
+    },
+    {
+      "id": "heart-pulse",
+      "label": "Heart Pulse",
+      "description": "A warm pulse and rebound for love and reaction gifts.",
+      "category_targets": [
+        "hearts",
+        "reactions"
+      ],
+      "duration_ms": 2000,
+      "easing": "cubic-bezier(.17,.85,.3,1)",
+      "keyframes": [
+        {
+          "offset": 0,
+          "opacity": 0,
+          "transform": "scale(.76)",
+          "filter": "brightness(.9)"
+        },
+        {
+          "offset": 0.25,
+          "opacity": 1,
+          "transform": "scale(1.17)",
+          "filter": "brightness(1.2)"
+        },
+        {
+          "offset": 0.48,
+          "opacity": 1,
+          "transform": "scale(.93)",
+          "filter": "none"
+        },
+        {
+          "offset": 0.68,
+          "opacity": 1,
+          "transform": "scale(1.08)",
+          "filter": "brightness(1.12)"
+        },
+        {
+          "offset": 1,
+          "opacity": 1,
+          "transform": "translate3d(0,0,0) rotateZ(0deg) scale(1)",
+          "filter": "none"
+        }
+      ],
+      "reduced_motion": {
+        "respect_prefers_reduced_motion": true,
+        "duration_ms": 320,
+        "iterations": 1,
+        "autoplay": false
+      }
+    },
+    {
+      "id": "creature-entrance",
+      "label": "Creature Entrance",
+      "description": "A friendly character entrance with a landing bounce.",
+      "category_targets": [
+        "animals"
+      ],
+      "duration_ms": 2450,
+      "easing": "cubic-bezier(.17,.85,.3,1)",
+      "keyframes": [
+        {
+          "offset": 0,
+          "opacity": 0,
+          "transform": "translate3d(0,32px,0) rotateZ(-13deg) scale(.68)",
+          "filter": "brightness(.82)"
+        },
+        {
+          "offset": 0.24,
+          "opacity": 1,
+          "transform": "translate3d(0,-12px,0) rotateZ(8deg) scale(1.12)",
+          "filter": "brightness(1.22)"
+        },
+        {
+          "offset": 0.58,
+          "opacity": 1,
+          "transform": "translate3d(0,5px,0) rotateZ(-5deg) scale(.97)",
+          "filter": "none"
+        },
+        {
+          "offset": 0.78,
+          "opacity": 1,
+          "transform": "translate3d(0,-2px,0) rotateZ(2deg) scale(1.02)",
+          "filter": "none"
+        },
+        {
+          "offset": 1,
+          "opacity": 1,
+          "transform": "translate3d(0,0,0) rotateZ(0deg) scale(1)",
+          "filter": "none"
+        }
+      ],
+      "reduced_motion": {
+        "respect_prefers_reduced_motion": true,
+        "duration_ms": 320,
+        "iterations": 1,
+        "autoplay": false
+      }
+    },
+    {
+      "id": "grand-entry",
+      "label": "Grand Entry",
+      "description": "A bold rising entrance for large and vehicle gifts.",
+      "category_targets": [
+        "vehicles",
+        "luxury"
+      ],
+      "duration_ms": 2400,
+      "easing": "cubic-bezier(.17,.85,.3,1)",
+      "keyframes": [
+        {
+          "offset": 0,
+          "opacity": 0,
+          "transform": "translate3d(0,38px,0) rotateZ(-6deg) scale(.6)",
+          "filter": "brightness(.8)"
+        },
+        {
+          "offset": 0.3,
+          "opacity": 1,
+          "transform": "translate3d(0,-8px,0) rotateZ(4deg) scale(1.16)",
+          "filter": "brightness(1.3)"
+        },
+        {
+          "offset": 0.7,
+          "opacity": 1,
+          "transform": "translate3d(0,-4px,0) rotateZ(-2deg) scale(.98)",
+          "filter": "none"
+        },
+        {
+          "offset": 1,
+          "opacity": 1,
+          "transform": "translate3d(0,0,0) rotateZ(0deg) scale(1)",
+          "filter": "none"
+        }
+      ],
+      "reduced_motion": {
+        "respect_prefers_reduced_motion": true,
+        "duration_ms": 320,
+        "iterations": 1,
+        "autoplay": false
+      }
+    },
+    {
+      "id": "soundwave-ripple",
+      "label": "Soundwave Ripple",
+      "description": "A rhythmic rise-and-fall motion for music gifts.",
+      "category_targets": [
+        "music"
+      ],
+      "duration_ms": 2150,
+      "easing": "cubic-bezier(.17,.85,.3,1)",
+      "keyframes": [
+        {
+          "offset": 0,
+          "opacity": 0,
+          "transform": "translate3d(0,14px,0) rotateZ(-10deg) scale(.82)",
+          "filter": "brightness(.84)"
+        },
+        {
+          "offset": 0.22,
+          "opacity": 1,
+          "transform": "translate3d(0,-8px,0) rotateZ(9deg) scale(1.1)",
+          "filter": "brightness(1.22)"
+        },
+        {
+          "offset": 0.48,
+          "opacity": 1,
+          "transform": "translate3d(0,6px,0) rotateZ(-6deg) scale(.95)",
+          "filter": "none"
+        },
+        {
+          "offset": 0.74,
+          "opacity": 1,
+          "transform": "translate3d(0,-4px,0) rotateZ(4deg) scale(1.04)",
+          "filter": "none"
+        },
+        {
+          "offset": 1,
+          "opacity": 1,
+          "transform": "translate3d(0,0,0) rotateZ(0deg) scale(1)",
+          "filter": "none"
+        }
+      ],
+      "reduced_motion": {
+        "respect_prefers_reduced_motion": true,
+        "duration_ms": 320,
+        "iterations": 1,
+        "autoplay": false
+      }
+    },
+    {
+      "id": "power-impact",
+      "label": "Power Impact",
+      "description": "A strong impact and controlled rebound for sports gifts.",
+      "category_targets": [
+        "sports",
+        "games"
+      ],
+      "duration_ms": 2050,
+      "easing": "cubic-bezier(.17,.85,.3,1)",
+      "keyframes": [
+        {
+          "offset": 0,
+          "opacity": 0,
+          "transform": "translate3d(0,-38px,0) scale(.68)",
+          "filter": "brightness(.8)"
+        },
+        {
+          "offset": 0.3,
+          "opacity": 1,
+          "transform": "translate3d(0,8px,0) scale(1.2)",
+          "filter": "brightness(1.35)"
+        },
+        {
+          "offset": 0.54,
+          "opacity": 1,
+          "transform": "translate3d(0,-4px,0) scale(.95)",
+          "filter": "brightness(1.1)"
+        },
+        {
+          "offset": 0.74,
+          "opacity": 1,
+          "transform": "translate3d(0,2px,0) scale(1.04)",
+          "filter": "none"
+        },
+        {
+          "offset": 1,
+          "opacity": 1,
+          "transform": "translate3d(0,0,0) rotateZ(0deg) scale(1)",
+          "filter": "none"
+        }
+      ],
+      "reduced_motion": {
+        "respect_prefers_reduced_motion": true,
+        "duration_ms": 320,
+        "iterations": 1,
+        "autoplay": false
+      }
+    },
+    {
+      "id": "delight-pop",
+      "label": "Delight Pop",
+      "description": "A compact pop and settle for food and playful gifts.",
+      "category_targets": [
+        "food_drink"
+      ],
+      "duration_ms": 1900,
+      "easing": "cubic-bezier(.17,.85,.3,1)",
+      "keyframes": [
+        {
+          "offset": 0,
+          "opacity": 0,
+          "transform": "scale(.15) translateY(18px)",
+          "filter": "brightness(.8)"
+        },
+        {
+          "offset": 0.36,
+          "opacity": 1,
+          "transform": "scale(1.24) translateY(-8px)",
+          "filter": "brightness(1.25)"
+        },
+        {
+          "offset": 0.68,
+          "opacity": 1,
+          "transform": "scale(.94) translateY(2px)",
+          "filter": "none"
+        },
+        {
+          "offset": 1,
+          "opacity": 1,
+          "transform": "translate3d(0,0,0) rotateZ(0deg) scale(1)",
+          "filter": "none"
+        }
+      ],
+      "reduced_motion": {
+        "respect_prefers_reduced_motion": true,
+        "duration_ms": 320,
+        "iterations": 1,
+        "autoplay": false
+      }
+    },
+    {
+      "id": "cosmic-orbit",
+      "label": "Cosmic Orbit",
+      "description": "An orbit-style turn and reveal for fantasy and celestial gifts.",
+      "category_targets": [
+        "fantasy",
+        "symbols"
+      ],
+      "duration_ms": 2600,
+      "easing": "cubic-bezier(.17,.85,.3,1)",
+      "keyframes": [
+        {
+          "offset": 0,
+          "opacity": 0,
+          "transform": "rotateZ(-80deg) scale(.58)",
+          "filter": "brightness(.8)"
+        },
+        {
+          "offset": 0.34,
+          "opacity": 1,
+          "transform": "rotateZ(25deg) scale(1.16)",
+          "filter": "brightness(1.3)"
+        },
+        {
+          "offset": 0.68,
+          "opacity": 1,
+          "transform": "rotateZ(-18deg) scale(.97)",
+          "filter": "brightness(1.08)"
+        },
+        {
+          "offset": 1,
+          "opacity": 1,
+          "transform": "translate3d(0,0,0) rotateZ(0deg) scale(1)",
+          "filter": "none"
+        }
+      ],
+      "reduced_motion": {
+        "respect_prefers_reduced_motion": true,
+        "duration_ms": 320,
+        "iterations": 1,
+        "autoplay": false
+      }
+    },
+    {
+      "id": "spark-float",
+      "label": "Spark Float",
+      "description": "A light floating entrance for community and everyday gifts.",
+      "category_targets": [
+        "community",
+        "other"
+      ],
+      "duration_ms": 2250,
+      "easing": "cubic-bezier(.17,.85,.3,1)",
+      "keyframes": [
+        {
+          "offset": 0,
+          "opacity": 0,
+          "transform": "translate3d(-5px,28px,0) rotateZ(-7deg) scale(.72)",
+          "filter": "brightness(.82)"
+        },
+        {
+          "offset": 0.3,
+          "opacity": 1,
+          "transform": "translate3d(6px,-14px,0) rotateZ(5deg) scale(1.08)",
+          "filter": "brightness(1.2)"
+        },
+        {
+          "offset": 0.7,
+          "opacity": 1,
+          "transform": "translate3d(0,-5px,0) rotateZ(-2deg) scale(.98)",
+          "filter": "none"
+        },
+        {
+          "offset": 1,
+          "opacity": 1,
+          "transform": "translate3d(0,0,0) rotateZ(0deg) scale(1)",
+          "filter": "none"
+        }
+      ],
+      "reduced_motion": {
+        "respect_prefers_reduced_motion": true,
+        "duration_ms": 320,
+        "iterations": 1,
+        "autoplay": false
+      }
+    },
+    {
+      "id": "celebration-burst",
+      "label": "Celebration Burst",
+      "description": "A bright burst and settle for celebratory gifts.",
+      "category_targets": [
+        "celebrations"
+      ],
+      "duration_ms": 2150,
+      "easing": "cubic-bezier(.17,.85,.3,1)",
+      "keyframes": [
+        {
+          "offset": 0,
+          "opacity": 0,
+          "transform": "scale(.2) rotateZ(-18deg)",
+          "filter": "brightness(.7)"
+        },
+        {
+          "offset": 0.28,
+          "opacity": 1,
+          "transform": "scale(1.3) rotateZ(12deg)",
+          "filter": "brightness(1.6) saturate(1.4)"
+        },
+        {
+          "offset": 0.58,
+          "opacity": 1,
+          "transform": "scale(.94) rotateZ(-6deg)",
+          "filter": "brightness(1.15)"
+        },
+        {
+          "offset": 1,
+          "opacity": 1,
+          "transform": "translate3d(0,0,0) rotateZ(0deg) scale(1)",
+          "filter": "none"
+        }
+      ],
+      "reduced_motion": {
+        "respect_prefers_reduced_motion": true,
+        "duration_ms": 320,
+        "iterations": 1,
+        "autoplay": false
+      }
+    },
+    {
+      "id": "gift-reveal",
+      "label": "Gift Reveal",
+      "description": "A general-purpose reveal where no specialist motion is selected.",
+      "category_targets": [
+        "other"
+      ],
+      "duration_ms": 1900,
+      "easing": "cubic-bezier(.17,.85,.3,1)",
+      "keyframes": [
+        {
+          "offset": 0,
+          "opacity": 0,
+          "transform": "translate3d(0,22px,0) rotateZ(-8deg) scale(.68)",
+          "filter": "brightness(.78) saturate(.8)"
+        },
+        {
+          "offset": 0.2,
+          "opacity": 1,
+          "transform": "translate3d(0,-8px,0) rotateZ(6deg) scale(1.15)",
+          "filter": "brightness(1.3) saturate(1.35)"
+        },
+        {
+          "offset": 0.52,
+          "opacity": 1,
+          "transform": "translate3d(0,3px,0) rotateZ(-3deg) scale(.97)",
+          "filter": "brightness(1.12)"
+        },
+        {
+          "offset": 0.78,
+          "opacity": 1,
+          "transform": "translate3d(0,-1px,0) rotateZ(1deg) scale(1.04)",
+          "filter": "none"
+        },
+        {
+          "offset": 1,
+          "opacity": 1,
+          "transform": "translate3d(0,0,0) rotateZ(0deg) scale(1)",
+          "filter": "none"
+        }
+      ],
+      "reduced_motion": {
+        "respect_prefers_reduced_motion": true,
+        "duration_ms": 320,
+        "iterations": 1,
+        "autoplay": false
+      }
+    },
+    {
+      "id": "glam-spin",
+      "label": "Glam Spin",
+      "description": "A polished spin for fashion, beauty and creator spotlight gifts.",
+      "category_targets": [
+        "fashion_beauty"
+      ],
+      "duration_ms": 2350,
+      "easing": "cubic-bezier(.17,.85,.3,1)",
+      "keyframes": [
+        {
+          "offset": 0,
+          "opacity": 0,
+          "transform": "rotateZ(-75deg) scale(.5)",
+          "filter": "brightness(.82) saturate(.82)"
+        },
+        {
+          "offset": 0.34,
+          "opacity": 1,
+          "transform": "rotateZ(16deg) scale(1.16)",
+          "filter": "brightness(1.32) saturate(1.3)"
+        },
+        {
+          "offset": 0.72,
+          "opacity": 1,
+          "transform": "rotateZ(-7deg) scale(.98)",
+          "filter": "brightness(1.1)"
+        },
+        {
+          "offset": 1,
+          "opacity": 1,
+          "transform": "translate3d(0,0,0) rotateZ(0deg) scale(1)",
+          "filter": "none"
+        }
+      ],
+      "reduced_motion": {
+        "respect_prefers_reduced_motion": true,
+        "duration_ms": 320,
+        "iterations": 1,
+        "autoplay": false
+      }
+    },
+    {
+      "id": "royal-shimmer",
+      "label": "Royal Shimmer",
+      "description": "A premium shimmer and settle for luxury gifts.",
+      "category_targets": [
+        "luxury",
+        "fashion_beauty"
+      ],
+      "duration_ms": 2500,
+      "easing": "cubic-bezier(.17,.85,.3,1)",
+      "keyframes": [
+        {
+          "offset": 0,
+          "opacity": 0,
+          "transform": "scale(.76) rotateZ(-5deg)",
+          "filter": "brightness(.72) saturate(.8)"
+        },
+        {
+          "offset": 0.3,
+          "opacity": 1,
+          "transform": "scale(1.12) rotateZ(4deg)",
+          "filter": "brightness(1.6) saturate(1.4)"
+        },
+        {
+          "offset": 0.66,
+          "opacity": 1,
+          "transform": "scale(1.01) rotateZ(-2deg)",
+          "filter": "brightness(1.22)"
+        },
+        {
+          "offset": 1,
+          "opacity": 1,
+          "transform": "translate3d(0,0,0) rotateZ(0deg) scale(1)",
+          "filter": "none"
+        }
+      ],
+      "reduced_motion": {
+        "respect_prefers_reduced_motion": true,
+        "duration_ms": 320,
+        "iterations": 1,
+        "autoplay": false
+      }
+    },
+    {
+      "id": "nature-rise",
+      "label": "Nature Rise",
+      "description": "A gentle upward reveal for botanical and nature gifts.",
+      "category_targets": [
+        "nature",
+        "flowers"
+      ],
+      "duration_ms": 2350,
+      "easing": "cubic-bezier(.17,.85,.3,1)",
+      "keyframes": [
+        {
+          "offset": 0,
+          "opacity": 0,
+          "transform": "translate3d(0,26px,0) scale(.82)",
+          "filter": "brightness(.9)"
+        },
+        {
+          "offset": 0.3,
+          "opacity": 1,
+          "transform": "translate3d(0,-12px,0) scale(1.06)",
+          "filter": "brightness(1.14)"
+        },
+        {
+          "offset": 0.7,
+          "opacity": 1,
+          "transform": "translate3d(0,-4px,0) scale(.98)",
+          "filter": "none"
+        },
+        {
+          "offset": 1,
+          "opacity": 1,
+          "transform": "translate3d(0,0,0) rotateZ(0deg) scale(1)",
+          "filter": "none"
+        }
+      ],
+      "reduced_motion": {
+        "respect_prefers_reduced_motion": true,
+        "duration_ms": 320,
+        "iterations": 1,
+        "autoplay": false
+      }
+    },
+    {
+      "id": "horizon-sweep",
+      "label": "Horizon Sweep",
+      "description": "A lateral travel motion for journeys and vehicle gifts.",
+      "category_targets": [
+        "travel",
+        "vehicles"
+      ],
+      "duration_ms": 2450,
+      "easing": "cubic-bezier(.17,.85,.3,1)",
+      "keyframes": [
+        {
+          "offset": 0,
+          "opacity": 0,
+          "transform": "translate3d(-56px,18px,0) rotateZ(-8deg) scale(.76)",
+          "filter": "brightness(.82)"
+        },
+        {
+          "offset": 0.3,
+          "opacity": 1,
+          "transform": "translate3d(12px,-10px,0) rotateZ(5deg) scale(1.1)",
+          "filter": "brightness(1.25)"
+        },
+        {
+          "offset": 0.7,
+          "opacity": 1,
+          "transform": "translate3d(28px,4px,0) rotateZ(-3deg) scale(.96)",
+          "filter": "brightness(1.08)"
+        },
+        {
+          "offset": 1,
+          "opacity": 1,
+          "transform": "translate3d(0,0,0) rotateZ(0deg) scale(1)",
+          "filter": "none"
+        }
+      ],
+      "reduced_motion": {
+        "respect_prefers_reduced_motion": true,
+        "duration_ms": 320,
+        "iterations": 1,
+        "autoplay": false
+      }
+    },
+    {
+      "id": "pixel-burst",
+      "label": "Pixel Burst",
+      "description": "A crisp stepped reveal for digital and gaming gifts.",
+      "category_targets": [
+        "games"
+      ],
+      "duration_ms": 1850,
+      "easing": "cubic-bezier(.17,.85,.3,1)",
+      "keyframes": [
+        {
+          "offset": 0,
+          "opacity": 0,
+          "transform": "scale(.15) rotateZ(-45deg)",
+          "filter": "brightness(.72)"
+        },
+        {
+          "offset": 0.25,
+          "opacity": 1,
+          "transform": "scale(1.25) rotateZ(10deg)",
+          "filter": "brightness(1.45)"
+        },
+        {
+          "offset": 0.56,
+          "opacity": 1,
+          "transform": "scale(.92) rotateZ(-5deg)",
+          "filter": "brightness(1.12)"
+        },
+        {
+          "offset": 0.76,
+          "opacity": 1,
+          "transform": "scale(1.04) rotateZ(2deg)",
+          "filter": "none"
+        },
+        {
+          "offset": 1,
+          "opacity": 1,
+          "transform": "translate3d(0,0,0) rotateZ(0deg) scale(1)",
+          "filter": "none"
+        }
+      ],
+      "reduced_motion": {
+        "respect_prefers_reduced_motion": true,
+        "duration_ms": 320,
+        "iterations": 1,
+        "autoplay": false
+      }
+    },
+    {
+      "id": "warm-wave",
+      "label": "Warm Wave",
+      "description": "A friendly wave motion for community and Caribbean-themed gifts.",
+      "category_targets": [
+        "community",
+        "travel"
+      ],
+      "duration_ms": 2300,
+      "easing": "cubic-bezier(.17,.85,.3,1)",
+      "keyframes": [
+        {
+          "offset": 0,
+          "opacity": 0,
+          "transform": "translate3d(-24px,12px,0) rotateZ(-5deg) scale(.86)",
+          "filter": "brightness(.85)"
+        },
+        {
+          "offset": 0.3,
+          "opacity": 1,
+          "transform": "translate3d(12px,-8px,0) rotateZ(5deg) scale(1.06)",
+          "filter": "brightness(1.16)"
+        },
+        {
+          "offset": 0.65,
+          "opacity": 1,
+          "transform": "translate3d(-8px,3px,0) rotateZ(-3deg) scale(.98)",
+          "filter": "none"
+        },
+        {
+          "offset": 1,
+          "opacity": 1,
+          "transform": "translate3d(0,0,0) rotateZ(0deg) scale(1)",
+          "filter": "none"
+        }
+      ],
+      "reduced_motion": {
+        "respect_prefers_reduced_motion": true,
+        "duration_ms": 320,
+        "iterations": 1,
+        "autoplay": false
+      }
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "generator": "Minglora LIVE gift animation asset generator",
+  "id": "soundwave-ripple",
+  "label": "Soundwave Ripple",
+  "description": "A rhythmic rise-and-fall motion for music gifts.",
+  "category_targets": [
+    "music"
+  ],
+  "duration_ms": 2150,
+  "easing": "cubic-bezier(.17,.85,.3,1)",
+  "keyframes": [
+    {
+      "offset": 0,
+      "opacity": 0,
+      "transform": "translate3d(0,14px,0) rotateZ(-10deg) scale(.82)",
+      "filter": "brightness(.84)"
+    },
+    {
+      "offset": 0.22,
+      "opacity": 1,
+      "transform": "translate3d(0,-8px,0) rotateZ(9deg) scale(1.1)",
+      "filter": "brightness(1.22)"
+    },
+    {
+      "offset": 0.48,
+      "opacity": 1,
+      "transform": "translate3d(0,6px,0) rotateZ(-6deg) scale(.95)",
+      "filter": "none"
+    },
+    {
+      "offset": 0.74,
+      "opacity": 1,
+      "transform": "translate3d(0,-4px,0) rotateZ(4deg) scale(1.04)",
+      "filter": "none"
+    },
+    {
+      "offset": 1,
+      "opacity": 1,
+      "transform": "translate3d(0,0,0) rotateZ(0deg) scale(1)",
+      "filter": "none"
+    }
+  ],
+  "reduced_motion": {
+    "respect_prefers_reduced_motion": true,
+    "duration_ms": 320,
+    "iterations": 1,
+    "autoplay": false
+  }
+}

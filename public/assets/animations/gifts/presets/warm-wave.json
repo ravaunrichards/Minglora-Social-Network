@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "generator": "Minglora LIVE gift animation asset generator",
+  "id": "warm-wave",
+  "label": "Warm Wave",
+  "description": "A friendly wave motion for community and Caribbean-themed gifts.",
+  "category_targets": [
+    "community",
+    "travel"
+  ],
+  "duration_ms": 2300,
+  "easing": "cubic-bezier(.17,.85,.3,1)",
+  "keyframes": [
+    {
+      "offset": 0,
+      "opacity": 0,
+      "transform": "translate3d(-24px,12px,0) rotateZ(-5deg) scale(.86)",
+      "filter": "brightness(.85)"
+    },
+    {
+      "offset": 0.3,
+      "opacity": 1,
+      "transform": "translate3d(12px,-8px,0) rotateZ(5deg) scale(1.06)",
+      "filter": "brightness(1.16)"
+    },
+    {
+      "offset": 0.65,
+      "opacity": 1,
+      "transform": "translate3d(-8px,3px,0) rotateZ(-3deg) scale(.98)",
+      "filter": "none"
+    },
+    {
+      "offset": 1,
+      "opacity": 1,
+      "transform": "translate3d(0,0,0) rotateZ(0deg) scale(1)",
+      "filter": "none"
+    }
+  ],
+  "reduced_motion": {
+    "respect_prefers_reduced_motion": true,
+    "duration_ms": 320,
+    "iterations": 1,
+    "autoplay": false
+  }
+}

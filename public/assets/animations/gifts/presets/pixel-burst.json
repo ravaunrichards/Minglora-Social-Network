@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "generator": "Minglora LIVE gift animation asset generator",
+  "id": "pixel-burst",
+  "label": "Pixel Burst",
+  "description": "A crisp stepped reveal for digital and gaming gifts.",
+  "category_targets": [
+    "games"
+  ],
+  "duration_ms": 1850,
+  "easing": "cubic-bezier(.17,.85,.3,1)",
+  "keyframes": [
+    {
+      "offset": 0,
+      "opacity": 0,
+      "transform": "scale(.15) rotateZ(-45deg)",
+      "filter": "brightness(.72)"
+    },
+    {
+      "offset": 0.25,
+      "opacity": 1,
+      "transform": "scale(1.25) rotateZ(10deg)",
+      "filter": "brightness(1.45)"
+    },
+    {
+      "offset": 0.56,
+      "opacity": 1,
+      "transform": "scale(.92) rotateZ(-5deg)",
+      "filter": "brightness(1.12)"
+    },
+    {
+      "offset": 0.76,
+      "opacity": 1,
+      "transform": "scale(1.04) rotateZ(2deg)",
+      "filter": "none"
+    },
+    {
+      "offset": 1,
+      "opacity": 1,
+      "transform": "translate3d(0,0,0) rotateZ(0deg) scale(1)",
+      "filter": "none"
+    }
+  ],
+  "reduced_motion": {
+    "respect_prefers_reduced_motion": true,
+    "duration_ms": 320,
+    "iterations": 1,
+    "autoplay": false
+  }
+}

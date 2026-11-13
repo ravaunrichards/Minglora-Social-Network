@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "generator": "Minglora LIVE gift animation asset generator",
+  "id": "celebration-burst",
+  "label": "Celebration Burst",
+  "description": "A bright burst and settle for celebratory gifts.",
+  "category_targets": [
+    "celebrations"
+  ],
+  "duration_ms": 2150,
+  "easing": "cubic-bezier(.17,.85,.3,1)",
+  "keyframes": [
+    {
+      "offset": 0,
+      "opacity": 0,
+      "transform": "scale(.2) rotateZ(-18deg)",
+      "filter": "brightness(.7)"
+    },
+    {
+      "offset": 0.28,
+      "opacity": 1,
+      "transform": "scale(1.3) rotateZ(12deg)",
+      "filter": "brightness(1.6) saturate(1.4)"
+    },
+    {
+      "offset": 0.58,
+      "opacity": 1,
+      "transform": "scale(.94) rotateZ(-6deg)",
+      "filter": "brightness(1.15)"
+    },
+    {
+      "offset": 1,
+      "opacity": 1,
+      "transform": "translate3d(0,0,0) rotateZ(0deg) scale(1)",
+      "filter": "none"
+    }
+  ],
+  "reduced_motion": {
+    "respect_prefers_reduced_motion": true,
+    "duration_ms": 320,
+    "iterations": 1,
+    "autoplay": false
+  }
+}

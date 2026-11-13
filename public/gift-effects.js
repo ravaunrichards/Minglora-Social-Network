@@ -11,6 +11,41 @@
   function hash(value){let h=2166136261;for(const ch of String(value||"")){h^=ch.charCodeAt(0);h=Math.imul(h,16777619);}return h>>>0;}
   let catalogMotionIndex=null;
   let catalogMotionLoadPromise=null;
+  let motionPresetAssets=new Map();
+  let motionPresetLoadPromise=null;
+  const perGiftMotionAssets=new Map();
+  async function loadMotionPresetAssets(){
+    if(motionPresetAssets.size)return motionPresetAssets.size;
+    if(motionPresetLoadPromise)return motionPresetLoadPromise;
+    motionPresetLoadPromise=(async()=>{
+      try{
+        const response=await fetch("/assets/animations/gifts/preset-index.json",{credentials:"same-origin",cache:"force-cache"});
+        if(!response.ok)throw new Error("Gift animation preset index unavailable.");
+        const index=await response.json();
+        const entries=Array.isArray(index?.presets)?index.presets:[];
+        const results=await Promise.allSettled(entries.map(async entry=>{
+          const id=String(entry?.id||"");
+          if(!/^[a-z0-9-]{2,48}$/.test(id))return null;
+          const expected="/assets/animations/gifts/presets/"+id+".json";
+          if(entry.url!==expected)return null;
+          const assetResponse=await fetch(expected,{credentials:"same-origin",cache:"force-cache"});
+          if(!assetResponse.ok)return null;
+          const asset=await assetResponse.json();
+          if(asset?.id!==id||!Array.isArray(asset.keyframes)||asset.keyframes.length<3)return null;
+          if(!asset.keyframes.every(frame=>Number.isFinite(frame.offset)&&Number.isFinite(frame.opacity)&&typeof frame.transform==="string"))return null;
+          return [id,asset];
+        }));
+        const loaded=new Map();
+        for(const result of results)if(result.status==="fulfilled"&&result.value)loaded.set(result.value[0],result.value[1]);
+        motionPresetAssets=loaded;
+        return loaded.size;
+      }catch(error){
+        motionPresetLoadPromise=null;
+        return motionPresetAssets.size;
+      }
+    })();
+    return motionPresetLoadPromise;
+  }
   const semanticChoreography={
     "firework-burst":"celebration-burst",
     "rocket-launch":"grand-entry",
@@ -34,6 +69,7 @@
     if(catalogMotionLoadPromise)return catalogMotionLoadPromise;
     catalogMotionLoadPromise=(async()=>{
       try{
+        await loadMotionPresetAssets();
         const response=await fetch("/assets/animations/gifts/catalog-motion-index.json",{credentials:"same-origin",cache:"force-cache"});
         if(!response.ok)throw new Error("Gift motion index is not available yet.");
         const payload=await response.json();
@@ -43,6 +79,8 @@
           const code=String(item?.code||"");
           if(!code||item.active!==true||typeof item.motion_preset!=="string")continue;
           if(typeof item.image_url!=="string"||typeof item.model_url!=="string")continue;
+          const expectedMotionUrl="/assets/animations/gifts/per-gift/"+code+".json";
+          if(item.motion_asset_url!==expectedMotionUrl)item.motion_asset_url=null;
           next.set(code,item);
         }
         catalogMotionIndex=next;
@@ -57,7 +95,52 @@
   function withCatalogMotion(gift){
     if(!gift||!catalogMotionIndex)return gift;
     const profile=catalogMotionIndex.get(String(gift.code||""));
-    return profile?{...gift,motion_preset:profile.motion_preset,motion_effect:profile.motion_effect,motion_duration_ms:profile.motion_duration_ms}:gift;
+    return profile?{...gift,motion_preset:profile.motion_preset,motion_effect:profile.motion_effect,motion_duration_ms:profile.motion_duration_ms,motion_asset_url:profile.motion_asset_url}:gift;
+  }
+  async function loadPerGiftMotionAsset(gift){
+    const code=String(gift?.code||"");
+    if(!/^[a-z0-9_-]{1,59}$/.test(code))return null;
+    const expected="/assets/animations/gifts/per-gift/"+code+".json";
+    if(gift.motion_asset_url!==expected)return null;
+    if(perGiftMotionAssets.has(code))return perGiftMotionAssets.get(code);
+    const pending=(async()=>{
+      try{
+        const response=await fetch(expected,{credentials:"same-origin",cache:"force-cache"});
+        if(!response.ok)return null;
+        const asset=await response.json();
+        if(asset?.schema_version!==1||asset?.generator!=="Minglora LIVE per-gift motion generator"||asset.code!==code)return null;
+        if(asset.animation_key!==gift.animation_key||!Array.isArray(asset.keyframes)||asset.keyframes.length<3)return null;
+        let prior=-1;
+        for(const frame of asset.keyframes){
+          if(!Number.isFinite(frame.offset)||frame.offset<=prior||frame.offset<0||frame.offset>1)return null;
+          if(!Number.isFinite(frame.opacity)||frame.opacity<0||frame.opacity>1)return null;
+          if(typeof frame.transform!=="string"||frame.transform.length>360||/url\s*\(/i.test(frame.transform))return null;
+          if(typeof frame.filter!=="string"||frame.filter.length>120||/url\s*\(/i.test(frame.filter))return null;
+          prior=frame.offset;
+        }
+        if(asset.keyframes[0].offset!==0||asset.keyframes.at(-1).offset!==1)return null;
+        return asset;
+      }catch{return null;}
+    })();
+    perGiftMotionAssets.set(code,pending);
+    const asset=await pending;
+    if(!asset)perGiftMotionAssets.delete(code);
+    return asset;
+  }
+  function animateGiftSubject(element,gift,values,duration){
+    if(!element||typeof element.animate!=="function")return;
+    const reduced=Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);
+    void loadPerGiftMotionAsset(gift).then(asset=>{
+      if(!element.isConnected)return;
+      const frames=asset?.keyframes||buildPreviewFrames(gift.motion_preset||gift.animation_preset||"gift-reveal",values);
+      try{
+        element.animate(frames,{
+          duration:reduced?320:Math.max(950,Math.min(4200,Number(asset?.duration_ms)||Number(gift.motion_duration_ms)||duration||2200)),
+          easing:"cubic-bezier(.17,.85,.3,1)",
+          fill:"none"
+        });
+      }catch{}
+    });
   }
   function effectHue(effect,seed){
     const base={petals:334,waves:198,rings:46,trail:194,orbits:270,bubbles:178,sparkles:45};
@@ -65,6 +148,10 @@
   }
   function buildPreviewFrames(preset,v){
     const {dx,dy,tilt,spin,peak,rebound}=v;
+    const externalPreset=motionPresetAssets.get(String(preset||""));
+    if(externalPreset&&Array.isArray(externalPreset.keyframes)){
+      return externalPreset.keyframes.map(frame=>({offset:frame.offset,opacity:frame.opacity,transform:frame.transform,filter:frame.filter||"none"}));
+    }
     const neutral={offset:1,opacity:1,transform:"translate3d(0,0,0) rotateZ(0deg) scale(1)",filter:"none"};
     if(preset==="firework-burst"||preset==="celebration-burst")return [
       {offset:0,opacity:0,transform:"scale(.22) rotateZ(-18deg)",filter:"brightness(.7)"},
@@ -198,8 +285,12 @@
     }catch{return false;}
   }
   const presets=new Set(["petal-bloom","heart-pulse","creature-entrance","grand-entry","soundwave-ripple","power-impact","delight-pop","glam-spin","royal-shimmer","celebration-burst","cosmic-orbit","nature-rise","horizon-sweep","pixel-burst","warm-wave","spark-float","gift-reveal"]);
+  function hasCanonicalGiftArtwork(gift){
+    const code=String(gift?.code||"");
+    return /^[a-z0-9_-]{1,59}$/.test(code)&&gift.image_url==="/assets/gifts/catalog/"+code+".svg";
+  }
   function mount(parent,gift,options={}){
-    if(!parent||!gift)return null;
+    if(!parent||!gift||!hasCanonicalGiftArtwork(gift))return null;
     const originalGift=gift;
     gift=withCatalogMotion(gift);
     // Keep the catalogue's original choreography as the outer gift entrance.
@@ -234,13 +325,34 @@
     outer.style.setProperty("--minglora-gift-rays-angle",(motionSeed%360)+"deg");
     const rotationSpeed=24+((motionSeed>>>15)%90);
     const card=document.createElement("div");card.className="minglora-gift-fx-card";
-    if(gift.model_url){
-      const model=document.createElement("model-viewer");model.className="minglora-gift-fx-model";model.src=gift.model_url;model.alt=gift.name+" original Minglora gift";
-      const reducedMotion=Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);if(!reducedMotion){model.setAttribute("auto-rotate","");model.setAttribute("autoplay","");}model.setAttribute("rotation-per-second",rotationSpeed+"deg");model.setAttribute("interaction-prompt","none");model.setAttribute("shadow-intensity",".8");model.setAttribute("exposure","1.18");card.append(model);
-    }else if(gift.image_url){
-      const img=document.createElement("img");img.className="minglora-gift-fx-model";img.src=gift.image_url;img.alt=gift.name;card.append(img);
+    const code=String(gift.code||"");
+    const canonicalModelUrl="/assets/gifts/catalog/"+code+".gltf";
+    if(gift.model_url===canonicalModelUrl){
+      const model=document.createElement("model-viewer");model.className="minglora-gift-fx-model";model.src=canonicalModelUrl;model.alt=gift.name+" original Minglora gift";
+      const fallbackImage=document.createElement("img");
+      fallbackImage.className="minglora-gift-fx-model";
+      fallbackImage.src=gift.image_url;
+      fallbackImage.alt=gift.name+" complete original Minglora artwork";
+      fallbackImage.hidden=true;
+      let modelFailed=false,fallbackFailed=false;
+      model.addEventListener("error",()=>{
+        modelFailed=true;
+        model.hidden=true;
+        if(fallbackImage.complete&&fallbackImage.naturalWidth>0)fallbackImage.hidden=false;
+        else if(fallbackFailed||fallbackImage.complete)outer.remove();
+      },{once:true});
+      fallbackImage.addEventListener("load",()=>{
+        if(modelFailed)fallbackImage.hidden=false;
+      },{once:true});
+      fallbackImage.addEventListener("error",()=>{
+        fallbackFailed=true;
+        if(modelFailed)outer.remove();
+      },{once:true});
+      const reducedMotion=Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);if(!reducedMotion){model.setAttribute("auto-rotate","");model.setAttribute("autoplay","");}model.setAttribute("rotation-per-second",rotationSpeed+"deg");model.setAttribute("interaction-prompt","none");model.setAttribute("shadow-intensity",".8");model.setAttribute("exposure","1.18");card.append(model,fallbackImage);
     }else{
-      const emoji=document.createElement("span");emoji.className="minglora-gift-fx-emoji";emoji.textContent=gift.emoji||"🎁";card.append(emoji);
+      const img=document.createElement("img");img.className="minglora-gift-fx-model";img.src=gift.image_url;img.alt=gift.name+" complete original Minglora artwork";
+      img.addEventListener("error",()=>outer.remove(),{once:true});
+      card.append(img);
     }
     const caption=document.createElement("strong");caption.className="minglora-gift-fx-caption";caption.textContent=gift.name||"Minglora Gift";card.append(caption);
     const rays=document.createElement("span");rays.className="minglora-gift-fx-rays";
@@ -284,14 +396,8 @@
     }
     outer.append(card,rays,particles);parent.append(outer);
     const motionElement=card.querySelector(".minglora-gift-fx-model");
-    if(motionElement&&gift.motion_preset&&typeof motionElement.animate==="function"){
-      const reduced=Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);
-      const semanticFrames=buildPreviewFrames(gift.motion_preset,{dx,dy,tilt,spin,peak,rebound});
-      motionElement.animate(semanticFrames,{
-        duration:reduced?320:Math.max(950,Math.min(4200,Number(gift.motion_duration_ms)||duration)),
-        easing:"cubic-bezier(.17,.85,.3,1)",
-        fill:"none"
-      });
+    if(motionElement&&gift.motion_preset){
+      animateGiftSubject(motionElement,gift,{dx,dy,tilt,spin,peak,rebound},duration);
     }
     if(options.sound!==false)play(gift);
     setTimeout(()=>outer.remove(),duration+250);
@@ -299,7 +405,7 @@
   }
   function show(gift,options={}){return mount(document.body,gift,options);}
   function preview(gift){
-    if(!gift)return false;
+    if(!gift||!hasCanonicalGiftArtwork(gift))return false;
     gift=withCatalogMotion(gift);
     play(gift);
     const target=document.getElementById("minglora-gift-selected-model")||document.getElementById("minglora-gift-selected-image")||document.getElementById("live-gift-preview-model")||document.getElementById("live-gift-preview-image");
@@ -312,8 +418,7 @@
       const preset=gift.motion_preset||gift.animation_preset||"gift-reveal";
       const frames=buildPreviewFrames(preset,{dx,dy,tilt,spin,peak,rebound});
       if(typeof target.animate==="function"){
-        const reduced=Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);
-        target.animate(frames,{duration:reduced?320:Math.max(950,Math.min(4200,Number(gift.motion_duration_ms)||Number(gift.animation_duration_ms)||2200)),easing:"cubic-bezier(.17,.85,.3,1)",fill:"none"});
+        animateGiftSubject(target,gift,{dx,dy,tilt,spin,peak,rebound},Number(gift.animation_duration_ms)||2200);
       }else{
         target.classList.remove("minglora-gift-preview-pulse");void target.offsetWidth;target.classList.add("minglora-gift-preview-pulse");
       }
@@ -321,5 +426,5 @@
     return true;
   }
   void loadCatalogMotionIndex();
-  window.MingloraGiftFX={prime,play,show,mount,preview,loadCatalogMotionIndex,withCatalogMotion};
+  window.MingloraGiftFX={prime,play,show,mount,preview,loadCatalogMotionIndex,loadPerGiftMotionAsset,withCatalogMotion};
 })();

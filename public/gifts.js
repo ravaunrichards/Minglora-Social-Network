@@ -1,6 +1,6 @@
 (() => {
   "use strict";
-  const state={gifts:[],balance:null,promoWallet:null,selectedCode:"",category:"all",search:"",recipient:"",page:0,pageSize:72,sort:"high"};
+  const state={gifts:[],balance:null,promoWallet:null,selectedCode:"",category:"all",search:"",recipient:"",page:0,pageSize:72,sort:"high",unavailableArtwork:new Set(),loadedArtwork:new Set()};
   const labels={all:"All gifts",flowers:"Flowers",hearts:"Love & hearts",animals:"Animals & creatures",vehicles:"Vehicles",music:"Music",sports:"Sports",food_drink:"Food & drinks",fashion_beauty:"Fashion & beauty",luxury:"Luxury",celebrations:"Celebrations",fantasy:"Fantasy & cosmic",nature:"Nature",travel:"Travel",games:"Games",community:"Community",symbols:"Symbols",other:"More gifts"};
   const emojis={all:"✦",flowers:"🌹",hearts:"💖",animals:"🦁",vehicles:"🚀",music:"🎵",sports:"🏆",food_drink:"🍰",fashion_beauty:"👑",luxury:"💎",celebrations:"🎉",fantasy:"✨",nature:"🌴",travel:"🌍",games:"🎮",community:"🤝",symbols:"🔆",other:"🎁"};
   const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -13,31 +13,86 @@
     return data;
   }
   function categories(){
-    const available=new Set(state.gifts.map(g=>g.category));
+    const available=new Set(state.gifts.filter(g=>hasCanonicalGiftArtwork(g)&&!state.unavailableArtwork.has(String(g.code))).map(g=>g.category));
     return ["all",...Object.keys(labels).filter(k=>k!=="all"&&available.has(k))];
   }
   function categoryMarkup(){
     return categories().map(k=>"<button type='button' class='gift-category-chip "+(state.category===k?"active":"")+"' data-gift-category='"+k+"'><span>"+emojis[k]+"</span> "+labels[k]+"</button>").join("");
   }
+  function hasCanonicalGiftArtwork(g){
+    const code=String(g?.code||"");
+    return /^[a-z0-9_-]{1,59}$/.test(code)&&g.image_url==="/assets/gifts/catalog/"+code+".svg"&&g.model_url==="/assets/gifts/catalog/"+code+".gltf";
+  }
   function filtered(){
     const q=state.search.trim().toLowerCase();
-    const rows=state.gifts.filter(g=>(state.category==="all"||g.category===state.category)&&(!q||(g.name+" "+(labels[g.category]||"")+" "+g.code+" "+String(g.coin_price)).toLowerCase().includes(q)));
+    const rows=state.gifts.filter(g=>hasCanonicalGiftArtwork(g)&&!state.unavailableArtwork.has(String(g.code))&&(state.category==="all"||g.category===state.category)&&(!q||(g.name+" "+(labels[g.category]||"")+" "+g.code+" "+String(g.coin_price)).toLowerCase().includes(q)));
     if(state.sort==="name")rows.sort((a,b)=>a.name.localeCompare(b.name));
     else if(state.sort==="high")rows.sort((a,b)=>Number(b.asset_version==="2")-Number(a.asset_version==="2")||b.coin_price-a.coin_price||a.name.localeCompare(b.name));
     else rows.sort((a,b)=>a.coin_price-b.coin_price||a.name.localeCompare(b.name));
     return rows;
   }
-  function selected(){return state.gifts.find(g=>g.code===state.selectedCode)||null;}
+  function selected(){const gift=state.gifts.find(g=>g.code===state.selectedCode)||null;return gift&&hasCanonicalGiftArtwork(gift)&&!state.unavailableArtwork.has(String(gift.code))?gift:null;}
+  async function copyText(value){
+    const text=String(value??"");
+    if(!text)return false;
+    try{
+      if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(text);return true;}
+    }catch{}
+    const area=document.createElement("textarea");
+    area.value=text;
+    area.setAttribute("readonly","");
+    area.setAttribute("aria-hidden","true");
+    area.style.position="fixed";
+    area.style.opacity="0";
+    area.style.pointerEvents="none";
+    document.body.appendChild(area);
+    area.select();
+    area.setSelectionRange(0,area.value.length);
+    let copied=false;
+    try{copied=Boolean(document.execCommand?.("copy"));}catch{}
+    area.remove();
+    return copied;
+  }
+  function copyFeedback(statusId,message,success){
+    const status=document.getElementById(statusId);
+    if(status)status.textContent=success?message:"Copy could not be completed. Check your browser clipboard permission and try again.";
+    if(success)window.toast?.(message);
+  }
+  async function copySelectedGiftRecord(){
+    const gift=selected();
+    if(!gift){copyFeedback("minglora-gift-copy-selected-status","",false);return;}
+    const copied=await copyText(JSON.stringify(gift,null,2));
+    copyFeedback("minglora-gift-copy-selected-status",copied?"Copied the complete "+gift.name+" gift record.":"",copied);
+  }
+  async function copyAllGiftRecords(){
+    const payload={schema_version:1,gift_count:state.gifts.length,gifts:state.gifts};
+    const copied=state.gifts.length>0&&await copyText(JSON.stringify(payload,null,2));
+    copyFeedback("minglora-gift-copy-all-status",copied?"Copied all "+state.gifts.length.toLocaleString()+" gift records with their available metadata.":"",copied);
+  }
+  async function copyGiftRequirements(){
+    try{
+      const response=await fetch("/gift-system-requirements.md",{credentials:"same-origin",cache:"no-cache"});
+      if(!response.ok)throw new Error("Requirements notes are unavailable.");
+      const notes=await response.text();
+      if(!notes.trim())throw new Error("Requirements notes are empty.");
+      const copied=await copyText(notes);
+      copyFeedback("minglora-gift-copy-all-status",copied?"Copied the complete Minglora gift-system requirements.":"",copied);
+    }catch{
+      copyFeedback("minglora-gift-copy-all-status","",false);
+    }
+  }
   function card(g){
-    const image=g.image_url?"<img class='gift-card-image' loading='lazy' decoding='async' src='"+esc(g.image_url)+"' alt='Original Minglora artwork: "+esc(g.name)+"'>":"<span class='gift-emoji-preview' aria-label='"+esc(g.name)+"'>"+esc(g.emoji||"🎁")+"</span>";
-    return "<button type='button' class='gift-catalog-card "+(state.selectedCode===g.code?"selected":"")+"' data-gift-select='"+esc(g.code)+"' aria-pressed='"+(state.selectedCode===g.code)+"'><span class='gift-catalog-art'>"+image+"</span><strong>"+esc(g.name)+"</strong><small>◈ "+Number(g.coin_price).toLocaleString()+" Coins</small></button>";
+    const code=String(g.code);
+    const image="<img class='gift-card-image' data-gift-artwork-code='"+esc(code)+"' loading='lazy' decoding='async' src='"+esc(g.image_url)+"' alt='Complete Minglora gift artwork: "+esc(g.name)+"'>";
+    const ready=state.loadedArtwork.has(code);
+    return "<button type='button' class='gift-catalog-card "+(state.selectedCode===g.code?"selected":"")+"' data-gift-select='"+esc(g.code)+"' aria-pressed='"+(state.selectedCode===g.code)+"' aria-disabled='"+String(!ready)+"' "+(ready?"":"disabled title='Loading complete gift artwork'")+"><span class='gift-catalog-art'>"+image+"</span><strong>"+esc(g.name)+"</strong><small>◈ "+Number(g.coin_price).toLocaleString()+" Coins</small></button>";
   }
   function updateSelected(){
     const g=selected(),title=document.getElementById("minglora-gift-selected"),price=document.getElementById("minglora-gift-selected-price");
     const image=document.getElementById("minglora-gift-selected-image"),model=document.getElementById("minglora-gift-selected-model");
     const fallback=document.getElementById("minglora-gift-selected-fallback");
     const previewStatus=document.getElementById("minglora-gift-preview-status");
-    const sound=document.getElementById("minglora-gift-sound"),send=document.getElementById("minglora-gift-send");
+    const sound=document.getElementById("minglora-gift-sound"),send=document.getElementById("minglora-gift-send"),copySelected=document.getElementById("minglora-gift-copy-selected");
     if(title)title.textContent=g?g.name:"Choose a gift above";
     if(price)price.textContent=g?Number(g.coin_price).toLocaleString()+" Minglora Coins · "+(labels[g.category]||"Gift"):"Select a gift to preview it";
     if(image){
@@ -47,9 +102,9 @@
       image.hidden=!g?.image_url;
     }
     if(fallback){
-      fallback.textContent=g?.emoji||"🎁";
-      fallback.hidden=Boolean(g?.image_url);
-      fallback.setAttribute("aria-label",g?g.name+" gift artwork fallback":"Gift preview unavailable");
+      fallback.textContent="";
+      fallback.hidden=true;
+      fallback.setAttribute("aria-label","Gift artwork unavailable");
     }
     if(model){
       const nextCode=g?.code||"";
@@ -78,8 +133,10 @@
         if(previewStatus)previewStatus.textContent=g?"Showing the original gift artwork.":"Choose a gift to preview it.";
       }
     }
-    if(sound)sound.disabled=!g;
-    if(send)send.disabled=!g;
+    const artworkReady=Boolean(g&&image&&image.complete&&image.naturalWidth>0&&image.naturalHeight>0);
+    if(sound)sound.disabled=!artworkReady;
+    if(send)send.disabled=!artworkReady;
+    if(copySelected)copySelected.disabled=!g;
   }
   function bindPreviewEvents(){
     const model=document.getElementById("minglora-gift-selected-model");
@@ -100,14 +157,25 @@
       if(!code||state.selectedCode!==code)return;
       model.hidden=true;
       if(image)image.hidden=!image.getAttribute("src");
-      if(fallback)fallback.hidden=Boolean(image?.getAttribute("src"));
-      if(previewStatus)previewStatus.textContent="The 3D model could not load. Showing the original gift artwork instead.";
+      if(fallback)fallback.hidden=true;
+      if(previewStatus)previewStatus.textContent="The 3D model failed to load. Showing the complete original artwork instead.";
+    });
+    image?.addEventListener("load",()=>{
+      if(image.dataset.previewCode!==state.selectedCode)return;
+      updateSelected();
     });
     image?.addEventListener("error",()=>{
-      if(image.dataset.previewCode!==state.selectedCode)return;
+      const code=String(image.dataset.previewCode||"");
+      if(!code||state.selectedCode!==code)return;
+      state.unavailableArtwork.add(code);
       image.hidden=true;
-      if(fallback)fallback.hidden=false;
-      if(previewStatus)previewStatus.textContent="The artwork image could not load. Showing the gift icon instead.";
+      if(model){model.hidden=true;model.removeAttribute("src");}
+      if(fallback)fallback.hidden=true;
+      if(previewStatus)previewStatus.textContent="Complete gift artwork could not be loaded. This gift has been withheld and cannot be sent.";
+      if(sound)sound.disabled=true;
+      if(send)send.disabled=true;
+      if(copySelected)copySelected.disabled=true;
+      drawGrid();
     });
   }
   function drawGrid(){
@@ -117,7 +185,26 @@
     if(count)count.textContent=rows.length.toLocaleString()+" gifts";
     grid.innerHTML=shown.length?shown.map(card).join(""):"<div class='gift-empty-state'>No gifts match your search.</div>";
     if(more){more.hidden=shown.length>=rows.length;more.textContent="Show more gifts · "+Math.max(0,rows.length-shown.length).toLocaleString()+" remaining";}
-    grid.querySelectorAll("[data-gift-select]").forEach(b=>b.addEventListener("click",()=>{state.selectedCode=b.dataset.giftSelect;drawGrid();updateSelected();}));
+    grid.querySelectorAll("[data-gift-select]").forEach(b=>b.addEventListener("click",()=>{if(b.disabled)return;state.selectedCode=b.dataset.giftSelect;drawGrid();updateSelected();}));
+    grid.querySelectorAll("img[data-gift-artwork-code]").forEach(image=>{
+      const code=String(image.dataset.giftArtworkCode||"");
+      const markLoaded=()=>{
+        if(!code||image.naturalWidth<1||image.naturalHeight<1||state.unavailableArtwork.has(code))return;
+        state.loadedArtwork.add(code);
+        const button=image.closest("[data-gift-select]");
+        if(button){button.disabled=false;button.setAttribute("aria-disabled","false");button.removeAttribute("title");}
+      };
+      const markUnavailable=()=>{
+        if(!code||state.unavailableArtwork.has(code))return;
+        state.unavailableArtwork.add(code);
+        state.loadedArtwork.delete(code);
+        if(state.selectedCode===code){const next=filtered()[0];state.selectedCode=next?.code||"";}
+        drawGrid();
+      };
+      image.addEventListener("load",markLoaded,{once:true});
+      image.addEventListener("error",markUnavailable,{once:true});
+      if(image.complete){if(image.naturalWidth>0&&image.naturalHeight>0)markLoaded();else markUnavailable();}
+    });
     updateSelected();
   }
   async function render(){
@@ -133,8 +220,8 @@
     main.innerHTML=
       "<section class='gift-level-up-banner' aria-labelledby='minglora-gifter-rewards-title'><img src='/assets/gifters-rewards.png' alt='Gifters Rewards' loading='eager' decoding='async'><div class='gift-level-up-copy'><span class='eyebrow'>MINGLORA GIFTER REWARDS</span><h2 id='minglora-gifter-rewards-title'>Gifters Rewards</h2><p>Explore Minglora’s gifter rewards, then open your level journey to track badges and all 50 levels.</p><button type='button' class='primary' id='minglora-gifter-level-up-open'>View all 50 levels</button></div></section>"+
       "<section class='page-heading gift-page-heading'><div><span class='eyebrow'>Minglora Gift Studio</span><h1>Every moment deserves a gift 🎁</h1><p class='muted'>Explore the complete Minglora collection. Each gift has original Minglora artwork, a rotatable 3D preview, animated presentation and its own sound effect.</p><button type='button' class='secondary' id='minglora-gifter-progress'>View Gifter LV &amp; Badges</button></div><div class='gift-balance-pill'><small>Your balance</small><strong>"+esc(balance)+"</strong><button type='button' class='secondary' id='minglora-gift-recharge'>Recharge Coins</button></div></section>"+
-      "<section class='card gift-preview-panel'><div class='gift-preview-copy'><span class='eyebrow'>Live 3D gift preview</span><h2 id='minglora-gift-selected'>Choose a gift below</h2><p class='muted' id='minglora-gift-selected-price'>Select a gift to preview it</p><p class='gift-preview-status' id='minglora-gift-preview-status' role='status' aria-live='polite'>Your selected gift preview will appear here.</p><div class='gift-preview-actions'><button type='button' class='secondary' id='minglora-gift-sound' disabled>♫ Preview sound</button></div></div><div class='gift-preview-stage' aria-label='Selected gift artwork and 3D preview'><img id='minglora-gift-selected-image' alt='' hidden><span id='minglora-gift-selected-fallback' class='gift-preview-fallback' hidden>🎁</span><model-viewer id='minglora-gift-selected-model' camera-controls auto-rotate rotation-per-second='22deg' interaction-prompt='none' shadow-intensity='.7' exposure='1.12' loading='eager' reveal='auto' hidden></model-viewer></div></section>"+
-      "<section class='card gift-catalogue-panel'><div class='gift-catalogue-toolbar'><div><h2>The complete gift collection</h2><p class='muted'>"+state.gifts.length.toLocaleString()+" individual Minglora gifts · original artwork and 3D previews</p></div><span class='gift-count' id='minglora-gift-count'>"+state.gifts.length+" gifts</span></div>"+
+      "<section class='card gift-preview-panel'><div class='gift-preview-copy'><span class='eyebrow'>Live 3D gift preview</span><h2 id='minglora-gift-selected'>Choose a gift below</h2><p class='muted' id='minglora-gift-selected-price'>Select a gift to preview it</p><p class='gift-preview-status' id='minglora-gift-preview-status' role='status' aria-live='polite'>Your selected gift preview will appear here.</p><div class='gift-preview-actions'><button type='button' class='secondary' id='minglora-gift-sound' disabled>♫ Preview sound</button><button type='button' class='secondary' id='minglora-gift-copy-selected' disabled>Copy gift record</button></div><p id='minglora-gift-copy-selected-status' class='gift-send-status' role='status' aria-live='polite'></p></div><div class='gift-preview-stage' aria-label='Selected gift artwork and 3D preview'><img id='minglora-gift-selected-image' alt='' hidden><span id='minglora-gift-selected-fallback' class='gift-preview-fallback' hidden>🎁</span><model-viewer id='minglora-gift-selected-model' camera-controls auto-rotate rotation-per-second='22deg' interaction-prompt='none' shadow-intensity='.7' exposure='1.12' loading='eager' reveal='auto' hidden></model-viewer></div></section>"+
+      "<section class='card gift-catalogue-panel'><div class='gift-catalogue-toolbar'><div><h2>The complete gift collection</h2><p class='muted'>"+state.gifts.length.toLocaleString()+" individual Minglora gifts · original artwork and 3D previews</p></div><div class='gift-copy-actions' style='display:flex;gap:8px;align-items:center;flex-wrap:wrap'><button type='button' class='secondary' id='minglora-gift-copy-all'>Copy all gift records</button><button type='button' class='secondary' id='minglora-gift-copy-requirements'>Copy notes &amp; requirements</button><span id='minglora-gift-copy-all-status' role='status' aria-live='polite'></span></div><span class='gift-count' id='minglora-gift-count'>"+state.gifts.length+" gifts</span></div>"+
       "<div class='gift-browse-controls'><label class='gift-search-label'><span>Find a gift</span><input id='minglora-gift-search' type='search' placeholder='Search every gift by name…' value='"+esc(state.search)+"'></label><label class='gift-sort-label'><span>Sort</span><select id='minglora-gift-sort'><option value='high'>Price: high to low · Premium first</option><option value='price'>Price: low to high</option><option value='name'>Name A–Z</option></select></label></div>"+
       "<div class='gift-category-row' id='minglora-gift-categories'>"+categoryMarkup()+"</div><div class='gift-catalogue-grid' id='minglora-gift-grid'></div><button type='button' class='secondary gift-load-more' id='minglora-gift-more' hidden>Show more gifts</button></section>"+
       "<section class='card gift-send-panel'><div class='gift-send-panel-heading'><div><span class='eyebrow'>Send a gift</span><h2>Choose who receives it</h2></div></div><form id='minglora-gift-form' class='gift-send-form'>"+
@@ -150,6 +237,9 @@
     });
     document.getElementById("minglora-gift-more")?.addEventListener("click",()=>{state.page++;drawGrid();});
     document.getElementById("minglora-gift-sound")?.addEventListener("click",()=>{const g=selected();if(g){window.MingloraGiftFX?.prime();window.MingloraGiftFX?.preview(g);}});
+    document.getElementById("minglora-gift-copy-selected")?.addEventListener("click",copySelectedGiftRecord);
+    document.getElementById("minglora-gift-copy-all")?.addEventListener("click",copyAllGiftRecords);
+    document.getElementById("minglora-gift-copy-requirements")?.addEventListener("click",copyGiftRequirements);
     document.getElementById("minglora-gift-recipient")?.addEventListener("input",e=>{state.recipient=e.target.value;});
     document.getElementById("minglora-gift-recharge")?.addEventListener("click",()=>window.activateNav?.("coins"));
     document.getElementById("minglora-gifter-progress")?.addEventListener("click",()=>window.activateNav?.("gifter-progression"));document.getElementById("minglora-gifter-level-up-open")?.addEventListener("click",()=>window.activateNav?.("gifter-progression"));
