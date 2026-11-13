@@ -255,3 +255,42 @@ test('MeetWave Full Screen shows Guest Seats 1–8 in the normal, non-expanded p
   assert.ok(fit.includes('grid-template-columns:repeat(3,minmax(0,1fr))!important'));
   assert.ok(fit.includes('grid-template-rows:22px minmax(0,1.08fr) repeat(3,minmax(0,.82fr))!important'));
 });
+
+test('MeetWave screen and guest-box preferences persist independently per signed-in account across room entries', () => {
+  assert.ok(server.includes('const MEETWAVE_SCREEN_LAYOUTS=PROFILE_SCREEN_LAYOUT_IDS;'));
+  assert.ok(server.includes('const MEETWAVE_GUEST_LAYOUTS=LIVE_GUEST_LAYOUTS;'));
+  assert.ok(server.includes("meetWaveScreenLayout:'fluid-grid',meetWaveGuestLayout:'roundtable-1'"));
+  assert.ok(server.includes("'meetWaveScreenLayout','meetWaveGuestLayout'"));
+  assert.ok(server.includes("key==='meetWaveScreenLayout'&&!MEETWAVE_SCREEN_LAYOUTS.includes(value)"));
+  assert.ok(server.includes("key==='meetWaveGuestLayout'&&!MEETWAVE_GUEST_LAYOUTS.includes(value)"));
+
+  assert.ok(js.includes('async function restoreMeetWaveLayouts()'));
+  assert.ok(js.includes("const result=await api('/settings')"));
+  assert.ok(js.includes('preferences.meetWaveScreenLayout'));
+  assert.ok(js.includes('preferences.meetWaveGuestLayout'));
+  assert.ok(js.includes('function persistMeetWaveLayouts()'));
+  assert.ok(js.includes("api('/settings',{method:'PATCH',body:JSON.stringify(body)})"));
+  assert.ok(js.includes('meetWaveScreenLayout:activeLayout,meetWaveGuestLayout:activeGuestLayout'));
+  assert.ok(js.includes('void persistMeetWaveLayouts();'));
+
+  const join=js.slice(js.indexOf('async function joinRoom(id)'),js.indexOf('async function disconnect()'));
+  assert.ok(join.includes('await restoreMeetWaveLayouts();setContent(meetingMarkup(activeRoom,activeRole));applyMeetingLayout(activeLayout)'));
+  assert.ok(!join.includes("activeLayout='fluid-grid'"), 'room entry must not reset the account preference');
+
+  assert.ok(js.includes("document.querySelectorAll('[data-mw-layout]').forEach(button=>button.onclick=()=>{applyMeetingLayout(button.dataset.mwLayout);void persistMeetWaveLayouts();});"));
+  assert.ok(js.includes("document.querySelectorAll('[data-mw-guest-layout]').forEach(button=>button.onclick=()=>{applyMeetingGuestLayout(button.dataset.mwGuestLayout);void persistMeetWaveLayouts();});"));
+});
+
+test('MeetWave guest-box choices remain separate from screen grid geometry and the support column', () => {
+  const contract=css.slice(css.lastIndexOf('/* FINAL SEVEN-PLUS-TWO CONTRACT:'));
+  const guestPart=contract.slice(contract.indexOf('/* Roundtable modes'));
+  for(const layout of ['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight']) {
+    assert.ok(contract.includes('data-screen-layout="'+layout+'"'), layout+' owns a screen-grid template');
+  }
+  assert.ok(guestPart.includes('data-guest-layout="roundtable-1"'));
+  assert.ok(guestPart.includes('data-guest-layout="roundtable-2"'));
+  assert.doesNotMatch(guestPart,/grid-template-(columns|rows)/, 'Roundtable guest arrangements must not override the seven screen-grid templates');
+  assert.ok(js.includes('class="mw-support-column live-fullscreen-chat-slot"'));
+  assert.ok(js.includes('id="mw-participants-panel"'));
+  assert.ok(js.includes('id="mw-chat-panel"'));
+});
