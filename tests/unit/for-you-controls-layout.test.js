@@ -79,9 +79,9 @@ test('Home Stories use a Facebook-style create card, scrollable story rail and n
   assert.match(css, /\.story-create-card/);
   assert.match(css, /\.story-viewer-fullscreen-card/);
   assert.match(css, /@media\(max-width:760px\)[\s\S]*\.story-viewer-fullscreen-card/);
-  assert.ok(html.includes('/styles.css?v=20261113-screen-guest-layout-separation-1'));
+  assert.ok(html.includes('/styles.css?v=20261113-screen-guest-layout-separation-2'));
   assert.match(html,/\/app\.js\?v=[^"']+/);
-  assert.ok(sw.includes('/styles.css?v=20261113-screen-guest-layout-separation-1'));
+  assert.ok(sw.includes('/styles.css?v=20261113-screen-guest-layout-separation-2'));
   const activeAppAsset = html.match(/src="(\/app\.js\?v=[^"]+)"/)?.[1] || '';
   assert.ok(activeAppAsset && sw.includes("'" + activeAppAsset + "'"));
   assert.match(sw, /^const CACHE_NAME='minglora-shell-v[0-9]+-self-updating-1';$/m);
