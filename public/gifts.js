@@ -203,7 +203,7 @@
       };
       image.addEventListener("load",markLoaded,{once:true});
       image.addEventListener("error",markUnavailable,{once:true});
-      if(image.complete){if(image.naturalWidth>0&&image.naturalHeight>0)markLoaded();else markUnavailable();}
+      if(image.complete&&image.naturalWidth>0&&image.naturalHeight>0)markLoaded();
     });
     updateSelected();
   }
