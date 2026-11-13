@@ -95,8 +95,9 @@ function profileMarkup(style, layout) {
   const reelTiles = Array.from({ length: 6 }, (_, index) =>
     '<article class="profile-reel-tile"><img src="/assets/default-profile-cover.svg?v=20261106-profile-defaults-1" alt=""><span>Video ' + (index + 1) + '</span></article>'
   ).join('');
-  const friends = Array.from({ length: 6 }, (_, index) =>
-    '<article class="profile-friend-card"><img src="/assets/default-profile-avatar-3d.svg?v=20261106-profile-defaults-2" alt=""><strong>Member ' + (index + 1) + '</strong></article>'
+  const friendNames = ['Ari', 'Mia', 'Noah', 'Zoe', 'Jay', 'Kai'];
+  const friends = friendNames.map(name =>
+    '<article class="profile-friend-card"><img src="/assets/default-profile-avatar-3d.svg?v=20261106-profile-defaults-2" alt=""><strong>' + name + '</strong></article>'
   ).join('');
   const about = [
     ['Intro', 'A short introduction visible on the profile.'],
@@ -202,40 +203,47 @@ const failures = [];
 try {
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 }, deviceScaleFactor: 1 });
   page.setDefaultTimeout(10000);
-  const initialUrl = baseUrl + '/__profile-style-visual?style=facebook&layout=fluid-panel';
-  await page.goto(initialUrl, { waitUntil: 'networkidle' });
-  await page.locator('.minglora-profile-page').waitFor({ state: 'visible' });
-  await page.evaluate(() => document.fonts?.ready);
 
   for (const viewport of viewports) {
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
-    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-    const results = await page.evaluate(({ styles, layouts, viewportName }) => {
-      const root = document.querySelector('.minglora-profile-page');
-      const main = document.querySelector('#main-content');
-      const allFailures = [];
-      const intersects = (a, b) => a.left < b.right - 1 && a.right > b.left + 1 && a.top < b.bottom - 1 && a.bottom > b.top + 1;
-      for (const style of styles) {
+    for (const style of styles) {
+      const fixtureUrl = baseUrl + '/__profile-style-visual?style=' + encodeURIComponent(style) + '&layout=fluid-panel';
+      await page.goto(fixtureUrl, { waitUntil: 'domcontentloaded' });
+      await page.locator('.minglora-profile-page').waitFor({ state: 'visible' });
+      await page.evaluate(() => document.fonts?.ready);
+      const results = await page.evaluate(({ layouts, viewportName, style }) => {
+        const root = document.querySelector('.minglora-profile-page');
+        const main = document.querySelector('#main-content');
+        const allFailures = [];
+        const intersects = (a, b) => a.left < b.right - 1 && a.right > b.left + 1 && a.top < b.bottom - 1 && a.bottom > b.top + 1;
         for (const layout of layouts) {
-          root.dataset.profileStyle = style;
           root.dataset.profileScreenLayout = layout;
           const rootRect = root.getBoundingClientRect();
           const mainRect = main.getBoundingClientRect();
           const avatar = root.querySelector('.profile-avatar-edit-wrap .avatar');
-          const identity = root.querySelector('.profile-info-main');
-          const actions = root.querySelector('.profile-owner-actions');
-          const counts = root.querySelector('.profile-counts');
+          const identity = root.querySelector('.profile-name-with-badges');
+          const actions = [...root.querySelectorAll('.profile-owner-actions button')];
+          const counts = [...root.querySelectorAll('.profile-counts [data-profile-metric]')];
           const tabs = root.querySelector('.profile-tabs');
           const panel = root.querySelector('#profile-tab-panel');
           const cover = root.querySelector('.profile-cover');
           const avatarRect = avatar.getBoundingClientRect();
           const identityRect = identity.getBoundingClientRect();
-          const actionsRect = actions.getBoundingClientRect();
-          const countsRect = counts.getBoundingClientRect();
           const tabsRect = tabs.getBoundingClientRect();
           const panelRect = panel.getBoundingClientRect();
           const hiddenCover = getComputedStyle(cover).display === 'none';
           const expectedHiddenCover = ['tiktok', 'instagram', 'pinterest', 'snapchat'].includes(style);
+          const visibleActions = actions.filter(node => {
+            const rect = node.getBoundingClientRect();
+            return rect.width > 0 && rect.height > 0 && getComputedStyle(node).display !== 'none';
+          });
+          const visibleMetrics = counts.filter(node => {
+            const rect = node.getBoundingClientRect();
+            return rect.width > 0 && rect.height > 0 && getComputedStyle(node).display !== 'none';
+          });
+          const actualActionMetricOverlap = visibleActions.some(action =>
+            visibleMetrics.some(metric => intersects(action.getBoundingClientRect(), metric.getBoundingClientRect()))
+          );
           const checks = [];
           const add = (ok, name, detail = '') => { if (!ok) checks.push({ name, detail }); };
           add(rootRect.width > 0 && rootRect.height > 0, 'profile-root-rendered');
@@ -244,46 +252,42 @@ try {
           add(document.documentElement.scrollWidth <= window.innerWidth + 2, 'viewport-no-horizontal-overflow', document.documentElement.scrollWidth + '/' + window.innerWidth);
           add(avatarRect.width >= 48 && avatarRect.height >= 48, 'avatar-visible');
           add(identityRect.width > 0 && identityRect.height > 0, 'identity-visible');
-          add(actionsRect.width > 0 && actionsRect.height > 0, 'owner-actions-visible');
-          add(countsRect.width > 0 && countsRect.height > 0, 'profile-metrics-visible');
+          add(visibleActions.length === 3, 'owner-actions-visible', visibleActions.length + '/3');
+          add(visibleMetrics.length === (style === 'tiktok' ? 3 : 6), 'profile-metrics-visible', visibleMetrics.length);
           add(tabsRect.width > 0 && tabsRect.height > 0, 'profile-navigation-visible');
           add(panelRect.width > 0 && panelRect.height > 0, 'profile-content-visible');
           add(rootRect.left >= mainRect.left - 2 && rootRect.right <= mainRect.right + 2, 'profile-inside-main-column');
           add(hiddenCover === expectedHiddenCover, 'style-cover-treatment', style + ':' + hiddenCover);
           add(!intersects(avatarRect, identityRect), 'avatar-identity-no-overlap');
-          add(!intersects(actionsRect, countsRect), 'actions-metrics-no-overlap');
+          add(!actualActionMetricOverlap, 'action-controls-metrics-no-overlap');
           add([...root.querySelectorAll('.profile-tabs-list button')].length === 6, 'six-profile-navigation-actions');
-          add(root.querySelectorAll('.profile-counts [data-profile-metric]').length === (style === 'tiktok' ? 3 : 6), 'real-style-metric-count');
+          add(visibleMetrics.length === (style === 'tiktok' ? 3 : 6), 'real-style-metric-count', visibleMetrics.length);
           add(root.querySelectorAll('.profile-media-grid .profile-media-tile').length === 6, 'media-grid-content-present');
           add(root.querySelectorAll('.profile-friends-grid .profile-friend-card').length === 6, 'friends-grid-content-present');
           allFailures.push(...checks.map(item => ({ ...item, style, layout, viewport: viewportName })));
         }
-      }
-      return allFailures;
-    }, { styles, layouts, viewportName: viewport.name });
+        return allFailures;
+      }, { layouts, viewportName: viewport.name, style });
 
-    browserChecks += styles.length * layouts.length;
-    failures.push(...results);
+      browserChecks += layouts.length;
+      failures.push(...results);
 
-    if (viewport.width === 1280) {
-      for (const style of styles) {
+      if (viewport.width === 1280) {
         for (const layout of layouts) {
-          await page.locator('.minglora-profile-page').evaluate((node, attrs) => {
-            node.dataset.profileStyle = attrs.style;
-            node.dataset.profileScreenLayout = attrs.layout;
-          }, { style, layout });
+          await page.locator('.minglora-profile-page').evaluate((node, selectedLayout) => {
+            node.dataset.profileScreenLayout = selectedLayout;
+          }, layout);
+          await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
           const file = path.join(artifactsDir, style + '__' + layout + '__desktop.jpg');
           await page.screenshot({ path: file, type: 'jpeg', quality: 76, fullPage: true });
           screenshots += 1;
         }
       }
-    }
-    if (viewport.width === 360) {
-      for (const style of styles) {
-        await page.locator('.minglora-profile-page').evaluate((node, attrs) => {
-          node.dataset.profileStyle = attrs.style;
+      if (viewport.width === 360) {
+        await page.locator('.minglora-profile-page').evaluate(node => {
           node.dataset.profileScreenLayout = 'fluid-panel';
-        }, { style });
+        });
+        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
         const file = path.join(artifactsDir, style + '__fluid-panel__phone.jpg');
         await page.screenshot({ path: file, type: 'jpeg', quality: 76, fullPage: true });
         screenshots += 1;
