@@ -363,7 +363,7 @@
       };
       payload.profile = { gender: value('gender') };
       if (value('emailAddress')) payload.email = { email_address: value('emailAddress') };
-    if (kind === 'bot') {
+    } else if (kind === 'bot') {
       path = '/bots';
       payload.name = value('name');
       payload.purpose = value('purpose');
