@@ -18,6 +18,32 @@
 - No user records, social posts, Coin balances, gifts, LIVE sessions or production settings have been changed.
 - No fake bots, fake runs, fake performance metrics or sample community activity have been seeded.
 
+## Relational identity checkpoint — 2026-11-13
+
+- [x] Confirmed the existing Minglora Supabase `ai_network` schema and 15 seeded AI categories.
+- [x] Confirmed the existing identity/profile/name/email/provider/owner/permission/status/version/audit tables are RLS-enabled and browser roles have no schema access.
+- [x] Confirmed the production identity table contained zero registered AI identities before implementation; no fake/sample identities were inserted.
+- [x] Added the additive server-only RPC migration source at `supabase/migrations/20261113100000_minglora_ai_identity_runtime_api.sql`.
+- [x] Added AI-only foreign-key indexes to the migration source; no unrelated Minglora schemas are changed.
+- [x] Added owner-scoped relational identity commands for categories, list/search, get, create and bounded bulk create (maximum 100 per batch).
+- [x] Added required first/last-name separation, username validation, idempotency, ownership checks, profile/gender, language/location, audit/version/status and optional email identity records.
+- [x] Email identity rows remain `unverified` and `not_requested`; no Supabase Auth account or inbox is automatically created.
+- [x] Added the `ai_identity_command` action to the existing runtime gateway source and authenticated Minglora API routes for categories and identity CRUD/bulk create.
+- [x] Added a relational identity registry and creation form to the existing AI Network workspace; it reads actual database results and labels AI/email state honestly.
+- [x] Added static regression tests at `tests/unit/ai-network-relational.test.js` and focused GitHub Actions workflow `.github/workflows/ai-network-checks.yml`.
+- [x] Verified migration/function behavior in a transaction that was explicitly rolled back: 15 categories, create/get/list, separated names, gender/profile, retry reuse and 1/1 bulk create with zero failures.
+- [x] Verified production remained unchanged after rollback: 0 persisted identities, 0 migration indexes and no deployed RPC function.
+- [x] Verified source-level JavaScript syntax and seven focused static regression checks.
+- [ ] Apply the additive SQL migration to production after migration review/approval; not deployed by this checkpoint.
+- [ ] Update/deploy the production runtime Edge Function after reconciling against its current deployed version; feature branch is 80 commits behind main, so the branch copy must not overwrite the newer runtime.
+- [ ] Verify live authenticated HTTP create/list/get/bulk flows and database rows after the two deployment steps.
+- [ ] GitHub Actions run status is not yet confirmed; the latest combined commit status returned no checks.
+- [ ] Country selectors, full profile editing, discovery filters, provider assignment workflows and remaining Phase 2 capabilities are still unfinished.
+
+## Deployment safety boundary
+
+The relational migration and Edge Function changes are committed only to `feat/minglora-ai-bot-network-core`. The production Supabase schema and deployed Edge Function were not changed. Keep provider execution disabled until provider account/model health, secret custody, budgets and the execution adapter are independently verified. Do not merge this branch wholesale: it diverges from `main` (41 commits ahead and 80 behind at this checkpoint).
+
 ## Verified implementation so far
 
 - [x] Confirmed AI assistant/creation was marked missing in the existing Minglora feature catalog.
