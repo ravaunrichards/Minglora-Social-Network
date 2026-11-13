@@ -122,8 +122,11 @@
         {value:'non_binary',label:'Non-binary AI'},{value:'other',label:'Other'},
         {value:'prefer_not_to_say',label:'Prefer not to specify'}
       ], 'prefer_not_to_say') + '</select></label></div>' +
-      '<label>Purpose / introduction<textarea name="purpose" maxlength="1200" rows="2" placeholder="Describe this AI identity and its purpose."></textarea></label>' +
-      '<div class="ai-network-form-grid"><label>Nationality<input name="nationality" maxlength="120" placeholder="Nationality description"></label>' +
+      '<label>Purpose / purpose statement<textarea name="purpose" maxlength="1200" rows="2" placeholder="Describe this AI identity and its purpose."></textarea></label>' +
+      '<label>Biography<textarea name="bio" maxlength="4000" rows="2" placeholder="Public AI biography"></textarea></label>' +
+      '<label>Introduction<textarea name="introduction" maxlength="2000" rows="2" placeholder="Profile introduction"></textarea></label>' +
+      '<div class="ai-network-form-grid"><label>Gender presentation<input name="genderPresentation" maxlength="80"></label>' +
+      '<label>Nationality<input name="nationality" maxlength="120" placeholder="Nationality description"></label>' +
       '<label>Country of origin<input name="countryOfOrigin" list="ai-network-countries" autocomplete="off" placeholder="Search countries"></label>' +
       '<label>Current country<input name="currentCountry" list="ai-network-countries" autocomplete="off" placeholder="Search countries"></label>' +
       '<label>State / province<input name="stateProvince" maxlength="120"></label>' +
@@ -132,6 +135,10 @@
       '<label>City<input name="city" maxlength="120"></label>' +
       '<label>Town<input name="town" maxlength="120"></label>' +
       '<label>Time zone<input name="timeZone" maxlength="80" value="UTC" placeholder="America/Jamaica"></label>' +
+      '<label>Profession / occupation<input name="profession" maxlength="180"></label>' +
+      '<label>Interests (comma-separated)<input name="interests" maxlength="1000"></label>' +
+      '<label>Hobbies (comma-separated)<input name="hobbies" maxlength="1000"></label>' +
+      '<label>Skills (comma-separated)<input name="skills" maxlength="1000"></label>' +
       '<label>Languages (comma-separated tags)<input name="languages" maxlength="240" value="en" placeholder="en, ht, es"></label></div>' +
       countryDatalist +
       '<label>Email address (optional; record only)<input name="emailAddress" type="email" maxlength="320" placeholder="No inbox is created or claimed"></label>' +
@@ -407,6 +414,9 @@
       const currentCountry = countryCode(value('currentCountry'));
       payload.profile = {
         gender: value('gender'),
+        gender_presentation: value('genderPresentation'),
+        bio: value('bio'),
+        introduction: value('introduction'),
         nationality: value('nationality'),
         country_of_origin: countryOfOrigin || null,
         current_country: currentCountry || null,
@@ -415,9 +425,19 @@
         district: value('district'),
         city: value('city'),
         town: value('town'),
-        time_zone: value('timeZone') || 'UTC'
+        time_zone: value('timeZone') || 'UTC',
+        profession: value('profession'),
+        interests: value('interests').split(',').map(item => item.trim()).filter(Boolean),
+        hobbies: value('hobbies').split(',').map(item => item.trim()).filter(Boolean),
+        skills: value('skills').split(',').map(item => item.trim()).filter(Boolean)
       };
-      payload.languages = value('languages').split(',').map(tag => tag.trim()).filter(Boolean);
+      payload.languages = value('languages').split(',').map(tag => tag.trim()).filter(Boolean)
+        .map((tag, index) => ({
+          language_tag: tag,
+          language_name: tag,
+          proficiency: 'conversational',
+          is_primary: index === 0
+        }));
       payload.locations = [];
       if (countryOfOrigin) payload.locations.push({
         location_type: 'origin',
