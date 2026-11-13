@@ -74,24 +74,55 @@ export async function handleHelpCenterAction(
     const categorySlug = asText(input.categorySlug, 120);
     const subcategorySlug = asText(input.subcategorySlug, 140);
     const ids: string[] = [];
+    let matchedCatalogQuery = false;
+    if (categorySlug) {
+      const { data: category } = await admin.from("help_categories").select("id").eq("slug", categorySlug).maybeSingle();
+      if (!category?.id) return json(200, { articles: [], total: 0 });
+      ids.push(String(category.id));
+    } else if (query) {
+      const pattern = "%" + query.replace(/[\\%_]/g, "\\    const ids: string[] = [];
     if (categorySlug) {
       const { data: category } = await admin.from("help_categories").select("id").eq("slug", categorySlug).maybeSingle();
       if (!category?.id) return json(200, { articles: [], total: 0 });
       ids.push(String(category.id));
     }
+    let subcategoryArticleIds: string[] = [];") + "%";
+      const { data: categoryMatches } = await admin.from("help_categories").select("id").eq("active", true).ilike("name", pattern).limit(5);
+      if (categoryMatches?.length) {
+        for (const match of categoryMatches) ids.push(String(match.id));
+        matchedCatalogQuery = true;
+      }
+    }
     let subcategoryArticleIds: string[] = [];
+    if (query && !subcategorySlug) {
+      const pattern = "%" + query.replace(/[\\%_]/g, "\\    const ids: string[] = [];
+    if (categorySlug) {
+      const { data: category } = await admin.from("help_categories").select("id").eq("slug", categorySlug).maybeSingle();
+      if (!category?.id) return json(200, { articles: [], total: 0 });
+      ids.push(String(category.id));
+    }
+    let subcategoryArticleIds: string[] = [];") + "%";
+      const { data: subcategoryMatches } = await admin.from("help_subcategories").select("id").eq("active", true).ilike("name", pattern).limit(10);
+      if (subcategoryMatches?.length) {
+        const { data: matchedLinks } = await admin.from("help_article_subcategories").select("article_id").in("subcategory_id", subcategoryMatches.map((item: any) => item.id));
+        subcategoryArticleIds = [...new Set((matchedLinks || []).map((item: any) => String(item.article_id)))];
+        matchedCatalogQuery = true;
+      }
+    }
     if (subcategorySlug) {
       const { data: subcategory } = await admin.from("help_subcategories").select("id").eq("slug", subcategorySlug).eq("active", true).maybeSingle();
       if (!subcategory?.id) return json(200, { articles: [], total: 0 });
       const { data: links } = await admin.from("help_article_subcategories").select("article_id").eq("subcategory_id", subcategory.id);
       subcategoryArticleIds = [...new Set((links || []).map((item: any) => String(item.article_id)))];
       if (!subcategoryArticleIds.length) return json(200, { articles: [], total: 0 });
+      matchedCatalogQuery = false;
     }
     const applyFilters = (queryBuilder: any) => {
       let result = queryBuilder.eq("status", "published");
-      if (ids.length) result = result.eq("category_id", ids[0]);
+      if (ids.length === 1) result = result.eq("category_id", ids[0]);
+      else if (ids.length > 1) result = result.in("category_id", ids);
       if (subcategoryArticleIds.length) result = result.in("id", subcategoryArticleIds);
-      if (query) result = result.textSearch("search_vector", query, { config: "english", type: "websearch" });
+      if (query && !matchedCatalogQuery) result = result.textSearch("search_vector", query, { config: "english", type: "websearch" });
       return result;
     };
 
@@ -116,10 +147,13 @@ export async function handleHelpCenterAction(
     let queryBuilder = applyFilters(admin.from("help_articles").select(publishedSelect, { count: "exact" }));
     if (action === "help_featured") queryBuilder = queryBuilder.eq("featured", true);
     const order = action === "help_recently_updated" || input.sort === "updated"
-      ? "updated_at" : "published_at";
-    queryBuilder = queryBuilder.order(order, { ascending: false }).range((page - 1) * limit, page * limit - 1);
+      ? "updated_at" : input.sort === "alphabetical" ? "question" : "published_at";
+    queryBuilder = queryBuilder.order(order, { ascending: input.sort === "alphabetical" }).range((page - 1) * limit, page * limit - 1);
     const { data, error, count } = await queryBuilder;
     if (error) return json(503, { error: "Help Center articles could not be loaded." });
+    if (query && isUuid(actorUserId)) {
+      await admin.from("help_search_events").insert({ user_id: actorUserId, search_query: query, results_count: Number(count || 0) });
+    }
     return json(200, { articles: data || [], total: count || 0, page, limit });
   }
 
@@ -131,7 +165,10 @@ export async function handleHelpCenterAction(
     if (error) return json(503, { error: "This Help Center article could not be loaded." });
     if (!article) return json(404, { error: "This published Help Center article was not found." });
     if (isUuid(actorUserId)) {
-      await admin.from("help_article_views").insert({ article_id: article.id, user_id: actorUserId });
+      await admin.from("help_article_views").upsert(
+        { article_id: article.id, user_id: actorUserId },
+        { onConflict: "article_id,user_id,view_day", ignoreDuplicates: true }
+      );
     }
     const [links, relatedLinks, translations, assets, bookmark, feedback] = await Promise.all([
       admin.from("help_article_subcategories").select("help_subcategories(id,slug,name,kind)")
@@ -155,12 +192,16 @@ export async function handleHelpCenterAction(
       const byId = new Map((data || []).map((item: any) => [String(item.id), item]));
       related = (relatedLinks.data || []).map((item: any) => byId.get(String(item.related_article_id))).filter(Boolean);
     }
+    const signedAssets = await Promise.all((assets.data || []).map(async (asset: any) => {
+      const signed = await admin.storage.from(asset.storage_bucket).createSignedUrl(asset.storage_path, 3600);
+      return { ...asset, url: signed.error ? null : signed.data?.signedUrl || null };
+    }));
     return json(200, {
       article,
       subcategories: (links.data || []).map((item: any) => item.help_subcategories).filter(Boolean),
       related,
       translations: translations.data || [],
-      assets: assets.data || [],
+      assets: signedAssets.filter((asset: any) => Boolean(asset.url)), 
       bookmarked: Boolean(bookmark.data),
       myFeedback: feedback.data?.helpful ?? null
     });
@@ -282,11 +323,17 @@ export async function handleHelpCenterAction(
         content_snapshot: snapshot, changed_by: actorUserId, revision_note: asText(input.revisionNote, 300)
       });
       if (revisionError) return json(503, { error: "A revision snapshot could not be secured; the article was not changed." });
-      const patch = {
+      const patch: Record<string, unknown> = {
         slug, question, category_id: categoryId, excerpt: asText(input.excerpt, 360),
         answer_markdown: asText(input.answerMarkdown, 30000), source_reference: asText(input.sourceReference, 300),
         featured: input.featured === true, updated_at: new Date().toISOString()
       };
+      // Editing a published answer sends it back through review; changes never bypass approval. 
+      if (current.status === "published") {
+        patch.status = "review";
+        patch.published_at = null;
+        patch.publisher_id = null;
+      }
       const { data: article, error } = await admin.from("help_articles").update(patch).eq("id", articleId).select("*").single();
       if (error) return json(409, { error: "The article could not be updated. Its previous revision is preserved." });
       const subcategoryIds = uniqueIds(input.subcategoryIds);
