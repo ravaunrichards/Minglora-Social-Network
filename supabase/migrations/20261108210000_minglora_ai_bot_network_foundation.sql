@@ -809,8 +809,11 @@ BEGIN
     updated_at=pg_catalog.now();
 
 
-  DELETE FROM public.ai_identity_languages WHERE identity_id=v_id;
-  IF pg_catalog.jsonb_typeof(p_identity->'languages')='array' THEN
+  IF p_identity ? 'languages' THEN
+    IF pg_catalog.jsonb_typeof(p_identity->'languages') <> 'array' THEN
+      RAISE EXCEPTION 'AI identity languages must be an array when supplied.' USING ERRCODE = '22023';
+    END IF;
+    DELETE FROM public.ai_identity_languages WHERE identity_id=v_id;
     FOR v_language IN SELECT value FROM pg_catalog.jsonb_array_elements(p_identity->'languages')
     LOOP
       IF pg_catalog.jsonb_typeof(v_language)='object' THEN
