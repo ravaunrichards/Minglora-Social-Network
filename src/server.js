@@ -1361,6 +1361,12 @@ async function route(req, res) {
       }
 
       const runAIOrganizationCommand = async (aiAction, payload = {}) => {
+        if (!isModerator(user, req)) {
+          throw Object.assign(
+            new Error('Only an authorized Minglora platform administrator with the required active session can manage AI corporate records.'),
+            { status: 403 }
+          );
+        }
         if (!isSupabasePersistence()) {
           throw Object.assign(
             new Error('AI corporate records require Minglora Supabase persistence.'),
@@ -1403,6 +1409,9 @@ async function route(req, res) {
       }
       if (method === 'POST' && sub === 'organizations') {
         const input = await body(req, 12000);
+        if (!input || typeof input !== 'object' || Array.isArray(input)) {
+          throw Object.assign(new Error('Organization input must be a JSON object.'), { status: 400 });
+        }
         const result = await runAIOrganizationCommand('create_organization', input);
         return json(res, result?.reused ? 200 : 201, { organization: result });
       }
@@ -1422,6 +1431,9 @@ async function route(req, res) {
         }
         if (method === 'POST') {
           const input = await body(req, 20000);
+          if (!input || typeof input !== 'object' || Array.isArray(input)) {
+            throw Object.assign(new Error('Organization template input must be a JSON object.'), { status: 400 });
+          }
           input.organization_id = organizationId;
           const result = await runAIOrganizationCommand(isDepartment ? 'create_departments' : 'create_positions', input);
           return json(res, 200, result || {});
