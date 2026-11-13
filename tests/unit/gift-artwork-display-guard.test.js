@@ -65,6 +65,7 @@ test("incoming LIVE gift events only animate a successfully loaded canonical cat
   const eventEnd=liveApp.indexOf("function renderLiveTopGifters",eventStart);
   const eventHandler=liveApp.slice(eventStart,eventEnd);
   assert.ok(eventHandler.indexOf("rememberLiveGiftEvent(eventId)")<eventHandler.indexOf("new Image()"),"deduplicate before starting a potentially retried artwork request");
+  assert.ok(eventHandler.indexOf("liveGiftEventsLastSeenAt=createdAt")<eventHandler.indexOf("new Image()"),"advance the event cursor even when artwork fails");
   assert.ok(liveApp.includes("imageProbe.naturalWidth<1||imageProbe.naturalHeight<1"));
   assert.ok(liveApp.includes("window.MingloraGiftFX?.mount(stage,gift)"));
   assert.ok(!liveApp.includes("image_url:String(event.imageUrl||event.image_url||'')"));
@@ -77,6 +78,8 @@ test("the gift-effect runtime requires canonical artwork and falls back only to 
   assert.ok(giftEffects.includes("fallbackImage.src=gift.image_url"));
   assert.ok(giftEffects.includes("model.addEventListener(\"error\","));
   assert.ok(giftEffects.includes("if(modelFailed)fallbackImage.hidden=false"));
+  assert.ok(giftEffects.includes("fallbackFailed=false"));
+  assert.ok(giftEffects.includes("if(modelFailed)outer.remove()"));
   assert.ok(!giftEffects.includes("emoji.textContent=gift.emoji||\"🎁\""));
   assert.ok(giftEffects.includes("if(!gift||!hasCanonicalGiftArtwork(gift))return false;"));
 });
