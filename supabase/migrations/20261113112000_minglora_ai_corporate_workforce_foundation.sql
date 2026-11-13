@@ -233,6 +233,7 @@ declare
   v_org_description text;
   v_idempotency_key text;
   v_organization_id uuid;
+  v_inserted_id uuid;
   v_department_key text;
   v_position_key text;
   v_item jsonb;
@@ -369,7 +370,7 @@ begin
         select v_organization_id,t.template_key,t.display_name,t.description,'active',p_actor_user_id
         from ai_network.ai_department_templates t where t.template_key=v_department_key
         on conflict (organization_id,department_key) do nothing
-        returning department_id into v_organization_id;
+        returning department_id into v_inserted_id;
         if found then v_created_count:=v_created_count+1;
         else v_existing_count:=v_existing_count+1;
         end if;
@@ -422,7 +423,7 @@ begin
                t.description,t.default_supervision_level,t.default_permissions,'proposed',p_actor_user_id
         from ai_network.ai_position_templates t where t.template_key=v_position_key
         on conflict (organization_id,position_key) do nothing
-        returning position_id into v_organization_id;
+        returning position_id into v_inserted_id;
         if found then v_created_count:=v_created_count+1;
         else v_existing_count:=v_existing_count+1;
         end if;
