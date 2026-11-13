@@ -1680,6 +1680,7 @@ function presentLiveGiftEvent(event){
   const expectedModel='/assets/gifts/catalog/'+code+'.gltf';
   if(catalogueGift.image_url!==expectedImage||catalogueGift.model_url!==expectedModel)return false;
   const eventId=String(event.id||event.giftTransactionId||event.gift_transaction_id||'');
+  if(!rememberLiveGiftEvent(eventId))return false;
   const gift={...catalogueGift};
   const stage=$('#live-video-stage');
   if(!stage)return false;
@@ -1688,7 +1689,6 @@ function presentLiveGiftEvent(event){
   const completePresentation=()=>{
     if(settled||!imageProbe.complete||imageProbe.naturalWidth<1||imageProbe.naturalHeight<1)return;
     settled=true;
-    if(!rememberLiveGiftEvent(eventId))return;
     window.MingloraGiftFX?.mount(stage,gift);
     const sender=String(event.sender?.name||event.sender?.username||'A Minglora member');
     const recipient=String(event.recipient?.name||activeLiveSession?.host?.name||'');
