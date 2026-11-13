@@ -8,14 +8,14 @@
 ## Completed in this branch
 
 - [x] Read-only traversal of the reference Git tree; 1,121 reference images identified across Android and desktop comparison folders.
-- [x] Machine-readable 1,121-image reference manifest added at `reports/minglora-live-reference-assets.json` with file paths, formats, byte sizes and Git blob IDs; pixel dimensions/transparency are explicitly pending.
-- [x] Representative Android fan-club and desktop multi-guest LIVE screenshots visually inspected.
+- [x] Machine-readable 1,121-image reference manifest at `reports/minglora-live-reference-assets.json` records paths, formats, sizes and Git blob IDs; the follow-up pass added pixel dimensions for 23 desktop TikTok PNGs and eight Android JPEGs. Remaining dimensions and PNG alpha-pixel checks are still pending.
+- [x] Eight Android reference screenshots and 23 desktop TikTok screenshots visually opened and classified; desktop layouts include LIVE discovery, solo-host, multi-guest and gift-picker states.
 - [x] Existing 131 gift screenshot captures and 1,509 extracted crop records identified; preservation/rights restrictions documented.
 - [x] Canonical 1,748-row gift catalogue inspected: 1,737 active and 11 inactive.
 - [x] Existing 45 standalone Minglora GLTF models and gift generation/runtime code identified.
 - [x] Missing LIVE gift motion-index integration identified and addressed with a deterministic generator, active-gift-only output and regression tests.
 - [x] Seven requested asset audit/catalogue/integration/quality/completion documents added under `reports/`.
-- [x] Six desktop TikTok screenshots visually inspected and PNG IHDR dimensions recorded in the machine-readable reference manifest; mistaken scheduler/feed classifications were corrected.
+- [x] Twenty-three desktop TikTok screenshots visually inspected and PNG IHDR dimensions recorded; six large desktop images remain pending. Feed, creator-profile, scheduler, recharge and discovery pages were explicitly separated from in-room LIVE layouts.
 - [x] Original 16-symbol LIVE dock SVG sprite added at `public/assets/icons/live-control-icons.svg`, wired into `public/app.js`, precached in `public/sw.js`, and covered by a new unit test.
 - [x] No original reference screenshots, extracted art, gift prices, balances, user records, LiveKit configuration or existing production assets were changed.
 
@@ -27,7 +27,7 @@
 
 ## Partial / not completed
 
-- Full human visual review of 1,121 reference screenshots and 1,509 extracted gift crops.
+- Full human visual review of the 1,121 reference screenshots and 1,509 extracted gift crops; the current direct visual pass covers 23/29 desktop TikTok references and 8/1,071 Android references, not the complete folders.
 - Per-file dimension/transparency audit of all image files.
 - Rights/licence clearance for the extracted catalogue crops.
 - Dedicated original high-detail 3D models for every gift; existing generated GLTFs are procedural primitive-mesh artwork.
@@ -187,3 +187,14 @@ GitHub Actions Node 24 CI run **#10914** on commit `3e54c50163ecc8052517304bd413
 - [x] Updated HTML and service-worker references together; app/gift scripts use `20261113-complete-gift-artwork-gate-1`, styles use `20261113-gift-artwork-contain-1`, and shell cache is v305.
 
 **Validation caveat:** CI validation for the latest display-gate commit is still pending at the time of this entry. Do not mark this delivery verified until the new Node 24 CI run completes. Physical Android/iPhone/tablet/foldable/desktop/TV rendering and a human visual check of all 1,509 source crops remain outstanding. No screenshot-derived crop was automatically promoted to production.
+
+
+## Additional direct reference inspection — 2026-11-13
+
+- [x] Opened and classified **23 of 29** desktop TikTok reference PNGs. Exact PNG width/height values were recorded from file headers. The sample covers the desktop LIVE discovery/watch preview, solo-host stage, two-person stage, four-position and six-position guest grids, gift-picker overlay, and adjacent creator/profile, video/feed, short-drama, Coins and scheduler screens.
+- [x] Opened and classified **8 of 1,071** Android TikTok JPEG references. All eight measure **1080×2408**. The inspected states include Fan Club join, SuperFan upgrade, first-recharge offer, creator profile/follow/Fan Club actions, and three creator gift-gallery views.
+- [x] Marked JPEG transparency as not applicable by format; this is not a pixel-level alpha analysis of the PNG art/reference images.
+- [x] Added each sample's observed classification and measured dimensions to the machine-readable manifest. Original reference screenshots remain untouched.
+- [ ] Six desktop TikTok images did not return usable base64 image data in the connected preview pass and remain uninspected. The other Android references and all desktop Facebook reference images remain in the inventory, not fully reviewed.
+
+The Android gift-gallery screenshots contain third-party names, art and Coin labels. They remain read-only comparison evidence and are not treated as cleared Minglora production artwork. No image, price or brand from these screenshots was copied into the production catalogue.
