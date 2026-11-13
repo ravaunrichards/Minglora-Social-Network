@@ -81,3 +81,8 @@
 @media(max-width:900px){.ai-network-grid{grid-template-columns:1fr}.ai-network-span-2{grid-column:auto}.ai-network-quick-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.ai-network-command-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.ai-network-page{gap:12px;padding:8px}.ai-network-hero{display:grid;gap:12px;padding:17px;border-radius:15px}.ai-network-hero-status{justify-content:flex-start;max-width:none}.ai-network-form-grid,.ai-network-safety-grid{grid-template-columns:1fr}.ai-network-check-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ai-network-card{padding:13px;border-radius:14px}.ai-network-list-row{align-items:flex-start;flex-direction:column}.ai-network-list-main{width:100%}.ai-network-row-actions{width:100%;justify-content:flex-start}.ai-network-row-actions button{flex:1 1 auto}.ai-network-metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ai-network-provider{flex-direction:column}.ai-network-safety-actions{display:grid;grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){.ai-network-spinner{animation:none}}
+
+.ai-network-organization-row{align-items:flex-start}
+.ai-network-organization-actions{display:flex;flex-wrap:wrap;gap:7px}
+.ai-network-inline-form{display:inline-flex;margin:0}
+.ai-network-inline-form button{min-height:34px}
