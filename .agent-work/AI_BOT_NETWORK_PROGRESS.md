@@ -146,3 +146,17 @@ Do not report a percentage until every requirement is decomposed and weighted. A
 - [x] Live `minglora-runtime-state` Edge Function remains on deployed version 115; the feature-branch HR/provider gateway handlers are not deployed.
 - [x] No production migration, Edge Function deployment, AI record creation, human Auth creation, credential creation or destructive operation was performed.
 
+## Durable task queue and human approval checkpoint — 2026-11-13
+
+- [x] Added private relational task, approval, runtime-control and task-event tables with RLS and service-role-only access.
+- [x] Runtime controls initialize globally paused, execution disabled and worker limit zero.
+- [x] Added owner-scoped identity-bound task creation, payload/budget limits, idempotency and secret-key rejection.
+- [x] Approval requirements are derived from the AI identity's stored supervision level and task action class; observation-only tasks cannot execute.
+- [x] Added administrator approval/rejection/cancellation and immutable event history.
+- [x] Added database worker lease/recovery/concurrency source with skip-locked claims and verified identity/provider health checks.
+- [x] Worker lease operations are deliberately blocked in the SQL until a separate worker identity and credential system exists; worker commands are not runtime-gateway-allowlisted.
+- [x] Added authenticated task queue API, Minglora workspace controls and focused regression tests.
+- [ ] Run CI for the task queue increment.
+- [ ] Task migration and updated Edge Function are source-only; no task tables or controls have been deployed to production.
+- [ ] No task/approval records, worker credentials, model calls or external operations have been created or executed.
+
