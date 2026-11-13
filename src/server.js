@@ -1360,6 +1360,38 @@ async function route(req, res) {
         return json(res, 200, result || { created_count: 0, failed_count: 0, created: [], failed: [] });
       }
 
+      const runAIHRCommand = async (aiAction, payload = {}) => {
+        if (!isModerator(user, req)) {
+          throw Object.assign(
+            new Error('Only an authorized Minglora platform administrator with the required active session can manage AI recruitment and workforce records.'),
+            { status: 403 }
+          );
+        }
+        if (!isSupabasePersistence()) {
+          throw Object.assign(new Error('AI HR records require Minglora Supabase persistence.'), { status: 503 });
+        }
+        try {
+          const response = await requestSupabaseState('ai_hr_command', {
+            actorUserId: user.id,
+            aiAction,
+            payload
+          });
+          if (response?.skipped) {
+            throw Object.assign(new Error('AI HR records are unavailable in local-only persistence mode.'), { status: 503 });
+          }
+          return response?.result;
+        } catch (error) {
+          const message = String(error?.message || '');
+          if (/unsupported action|unsupported AI HR command|function .*minglora_ai_hr_command.*does not exist|could not find the function|schema cache/i.test(message)) {
+            throw Object.assign(
+              new Error('The AI recruitment and workforce migration and runtime gateway must be deployed before this operation is available. No HR data was changed.'),
+              { status: 503 }
+            );
+          }
+          throw error;
+        }
+      };
+
       const runAIOrganizationCommand = async (aiAction, payload = {}) => {
         if (!isModerator(user, req)) {
           throw Object.assign(
@@ -1437,6 +1469,67 @@ async function route(req, res) {
           input.organization_id = organizationId;
           const result = await runAIOrganizationCommand(isDepartment ? 'create_departments' : 'create_positions', input);
           return json(res, 200, result || {});
+        }
+      }
+
+      if (parts[0] === 'organizations' && parts.length >= 3 &&
+          ['vacancies', 'applications', 'employees'].includes(parts[2])) {
+        const organizationId = parts[1];
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(organizationId)) {
+          throw Object.assign(new Error('A valid organization ID is required.'), { status: 400 });
+        }
+        const resource = parts[2];
+        const basePayload = { organization_id: organizationId };
+        const readBody = async () => {
+          const input = await body(req, 24000);
+          if (!input || typeof input !== 'object' || Array.isArray(input)) {
+            throw Object.assign(new Error('AI HR input must be a JSON object.'), { status: 400 });
+          }
+          return { ...basePayload, ...input, organization_id: organizationId };
+        };
+
+        if (parts.length === 3 && method === 'GET') {
+          const command = resource === 'vacancies' ? 'list_vacancies'
+            : resource === 'applications' ? 'list_applications' : 'list_employees';
+          const result = await runAIHRCommand(command, basePayload);
+          return json(res, 200, { [resource]: Array.isArray(result) ? result : [] });
+        }
+        if (parts.length === 3 && method === 'POST') {
+          const input = await readBody();
+          const command = resource === 'vacancies' ? 'create_vacancy'
+            : resource === 'applications' ? 'create_application' : 'appoint_employee';
+          const result = await runAIHRCommand(command, input);
+          const reused = Boolean(result?.reused);
+          return json(res, reused ? 200 : 201, result || {});
+        }
+        if (parts.length === 5) {
+          const recordId = parts[3];
+          if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(recordId)) {
+            throw Object.assign(new Error('A valid AI HR record ID is required.'), { status: 400 });
+          }
+          const action = parts[4];
+          const input = method === 'PATCH' || method === 'POST' ? await readBody() : basePayload;
+          let command = '';
+          if (resource === 'vacancies' && action === 'status' && method === 'PATCH') {
+            command = 'set_vacancy_status';
+            input.vacancy_id = recordId;
+          } else if (resource === 'applications' && action === 'review' && method === 'PATCH') {
+            command = 'review_application';
+            input.application_id = recordId;
+          } else if (resource === 'employees' && action === 'status' && method === 'PATCH') {
+            command = 'transition_employment';
+            input.employment_id = recordId;
+          } else if (resource === 'employees' && action === 'manager' && method === 'PATCH') {
+            command = 'set_employment_manager';
+            input.employment_id = recordId;
+          } else if (resource === 'employees' && action === 'transfer' && method === 'POST') {
+            command = 'transfer_employee';
+            input.employment_id = recordId;
+          }
+          if (command) {
+            const result = await runAIHRCommand(command, input);
+            return json(res, 200, result || {});
+          }
         }
       }
       if (method === 'GET' && !sub) {
