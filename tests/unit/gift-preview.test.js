@@ -20,11 +20,14 @@ test('Gifts opens with a visible selected 3D preview before the long catalogue',
   assert.match(gifts, /id='minglora-gift-preview-status'/);
 });
 
-test('gift previews retain visible artwork when the 3D model or artwork cannot load', () => {
+test('gift previews never substitute cartoon or emoji fallbacks when a 3D asset fails', () => {
   assert.match(gifts, /addEventListener\("load"/);
   assert.match(gifts, /addEventListener\("error"/);
-  assert.match(gifts, /The 3D model could not load/);
-  assert.match(gifts, /The artwork image could not load/);
+  assert.match(gifts, /The selected 3D model could not load/);
+  assert.match(gifts, /The gift artwork could not load/);
+  assert.match(gifts, /No cartoon icon will be substituted/);
+  assert.match(gifts, /3D model unavailable/);
+  assert.doesNotMatch(gifts, /gift-emoji-preview/);
   assert.match(styles, /\.gift-preview-stage img,\.gift-preview-stage model-viewer/);
   assert.match(styles, /\.gift-preview-fallback/);
 });
