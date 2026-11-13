@@ -4,7 +4,8 @@
 
 alter table ai_network.ai_employment_records
   add column if not exists application_id uuid,
-  add column if not exists idempotency_key text;
+  add column if not exists idempotency_key text,
+  add column if not exists replaces_employment_id uuid;
 
 create unique index if not exists ai_employment_records_application_uq
   on ai_network.ai_employment_records (application_id)
@@ -15,6 +16,9 @@ create unique index if not exists ai_employment_records_org_idempotency_uq
 create unique index if not exists ai_employment_records_one_current_role_uq
   on ai_network.ai_employment_records (organization_id, identity_id)
   where employment_status in ('onboarding','active','restricted','suspended');
+create unique index if not exists ai_employment_records_single_replacement_uq
+  on ai_network.ai_employment_records (replaces_employment_id)
+  where replaces_employment_id is not null;
 
 create table if not exists ai_network.ai_recruitment_vacancies (
   vacancy_id uuid primary key default gen_random_uuid(),
@@ -97,6 +101,11 @@ alter table ai_network.ai_employment_records
   add constraint ai_employment_records_application_fk
   foreign key (organization_id, application_id)
   references ai_network.ai_recruitment_applications(organization_id, application_id)
+  on delete restrict;
+alter table ai_network.ai_employment_records
+  add constraint ai_employment_records_replaces_fk
+  foreign key (organization_id, replaces_employment_id)
+  references ai_network.ai_employment_records(organization_id, employment_id)
   on delete restrict;
 
 alter table ai_network.ai_recruitment_vacancies enable row level security;
@@ -200,8 +209,11 @@ begin
     v_openings := coalesce(nullif(v_payload->>'openings','')::integer,1);
     v_idempotency_key := nullif(trim(v_payload->>'idempotency_key'),'');
     if length(v_title)<3 then raise exception using errcode = '22023', message = 'Vacancy title must contain at least three characters.'; end if;
-    if jsonb_typeof(v_requirements)<>'array' or jsonb_array_length(v_requirements)>50 then
-      raise exception using errcode = '22023', message = 'Requirements must be an array of at most 50 items.';
+    if jsonb_typeof(v_requirements)<>'array' then
+      raise exception using errcode = '22023', message = 'Requirements must be supplied as an array.';
+    end if;
+    if jsonb_array_length(v_requirements)>50 then
+      raise exception using errcode = '22023', message = 'Requirements must contain at most 50 items.';
     end if;
     if v_openings<1 or v_openings>1000 then raise exception using errcode = '22023', message = 'Vacancy openings must be between 1 and 1000.'; end if;
     if v_idempotency_key is null or length(v_idempotency_key)<8 or length(v_idempotency_key)>160 then
@@ -277,13 +289,22 @@ begin
     ) then raise exception using errcode = '22023', message = 'Vacancy is not open or all openings have been filled.'; end if;
     if not exists (
       select 1 from ai_network.ai_identities i
-      where i.identity_id=v_identity_id and (
-        i.owner_user_id=p_actor_user_id or exists (
-          select 1 from ai_network.ai_identity_owners o
-          where o.identity_id=i.identity_id and o.owner_type='user' and o.owner_user_id=p_actor_user_id
+      where i.identity_id=v_identity_id
+        and i.status not in ('suspended','archived','retired')
+        and (
+          i.owner_user_id=p_actor_user_id or exists (
+            select 1 from ai_network.ai_identity_owners o
+            where o.identity_id=i.identity_id and o.owner_type='human_user' and o.owner_user_id=p_actor_user_id
+          )
         )
-      )
-    ) then raise exception using errcode = '42501', message = 'AI identity is not owned or managed by this Minglora administrator.'; end if;
+    ) then raise exception using errcode = '42501', message = 'AI identity is unavailable or is not owned by this Minglora administrator.'; end if;
+    select a.application_id into v_application_id from ai_network.ai_recruitment_applications a
+    where a.vacancy_id=v_vacancy_id and a.identity_id=v_identity_id;
+    if v_application_id is not null then
+      v_reused := true;
+      select to_jsonb(a) into v_result from ai_network.ai_recruitment_applications a where a.application_id=v_application_id;
+      return jsonb_build_object('application',v_result,'reused',true);
+    end if;
     v_reused := false;
     insert into ai_network.ai_recruitment_applications (
       organization_id,vacancy_id,identity_id,application_status,cover_note,submitted_by_user_id,idempotency_key
@@ -442,7 +463,7 @@ begin
     v_status := lower(coalesce(v_payload->>'status',''));
     v_reason := left(trim(coalesce(v_payload->>'reason','')),1000);
     if length(v_reason)<3 then raise exception using errcode = '22023', message = 'A reason of at least three characters is required for an employment status change.'; end if;
-    select e.employment_status,e.manager_employment_id into v_previous_status,v_old_manager_employment_id
+    select e.employment_status into v_previous_status
     from ai_network.ai_employment_records e
     where e.employment_id=v_employment_id and e.organization_id=v_organization_id for update;
     if v_previous_status is null then raise exception using errcode = 'P0002', message = 'Employment record not found.'; end if;
@@ -467,11 +488,11 @@ begin
   if v_action = 'set_employment_manager' then
     v_employment_id := nullif(v_payload->>'employment_id','')::uuid;
     v_manager_employment_id := nullif(v_payload->>'manager_employment_id','')::uuid;
-    select p.hierarchy_level into v_rank
+    select e.manager_employment_id,p.hierarchy_level into v_old_manager_employment_id,v_rank
     from ai_network.ai_employment_records e
     join ai_network.ai_positions p on p.position_id=e.position_id and p.organization_id=e.organization_id
     where e.employment_id=v_employment_id and e.organization_id=v_organization_id
-      and e.employment_status in ('onboarding','active','restricted','suspended') for update;
+      and e.employment_status in ('onboarding','active','restricted','suspended') for update of e;
     if v_rank is null then raise exception using errcode = 'P0002', message = 'Current employment record not found.'; end if;
     if v_manager_employment_id is not null then
       select p.hierarchy_level into v_manager_rank
@@ -525,14 +546,18 @@ begin
       into v_identity_id,v_previous_status,v_employment_type,v_job_description,v_workload
     from ai_network.ai_employment_records e
     where e.employment_id=v_employment_id and e.organization_id=v_organization_id for update;
-    if v_identity_id is null or v_previous_status not in ('active','restricted','suspended') then
-      raise exception using errcode = 'P0002', message = 'Only a current employee can be transferred.';
+    if v_identity_id is null then
+      raise exception using errcode = 'P0002', message = 'Employment record not found.';
     end if;
-    if exists(select 1 from ai_network.ai_employment_records e where e.organization_id=v_organization_id and e.identity_id=v_identity_id and e.idempotency_key=v_idempotency_key) then
-      select e.employment_id into v_new_employment_id from ai_network.ai_employment_records e
-      where e.organization_id=v_organization_id and e.identity_id=v_identity_id and e.idempotency_key=v_idempotency_key;
+    select e.employment_id into v_new_employment_id from ai_network.ai_employment_records e
+    where e.organization_id=v_organization_id and e.replaces_employment_id=v_employment_id
+      and e.idempotency_key=v_idempotency_key;
+    if v_new_employment_id is not null then
       select to_jsonb(e) into v_result from ai_network.ai_employment_records e where e.employment_id=v_new_employment_id;
       return jsonb_build_object('employment',v_result,'reused',true);
+    end if;
+    if v_previous_status not in ('active','restricted','suspended') then
+      raise exception using errcode = 'P0002', message = 'Only a current employee can be transferred.';
     end if;
     if not exists(select 1 from ai_network.ai_departments d where d.organization_id=v_organization_id and d.department_id=v_department_id and d.status='active') then
       raise exception using errcode = '22023', message = 'Destination department must be active.';
@@ -541,11 +566,27 @@ begin
     where p.position_id=v_position_id and p.organization_id=v_organization_id and p.status in ('active','proposed','restricted');
     if v_rank is null then raise exception using errcode = '22023', message = 'Destination position is unavailable.'; end if;
     if v_manager_employment_id is not null then
+      if v_manager_employment_id=v_employment_id then
+        raise exception using errcode = '22023', message = 'An employee cannot manage their own transferred position.';
+      end if;
       select p.hierarchy_level into v_manager_rank
       from ai_network.ai_employment_records e
       join ai_network.ai_positions p on p.position_id=e.position_id and p.organization_id=e.organization_id
       where e.employment_id=v_manager_employment_id and e.organization_id=v_organization_id and e.employment_status='active';
       if v_manager_rank is null or v_manager_rank<=v_rank then raise exception using errcode = '22023', message = 'New manager must be active and hold a higher-level position.'; end if;
+      if exists (
+        with recursive chain(employment_id,manager_employment_id,path,cycle) as (
+          select e.employment_id,e.manager_employment_id,array[e.employment_id]::uuid[],false
+          from ai_network.ai_employment_records e
+          where e.employment_id=v_manager_employment_id and e.organization_id=v_organization_id
+          union all
+          select e.employment_id,e.manager_employment_id,c.path||e.employment_id,e.employment_id=any(c.path)
+          from chain c join ai_network.ai_employment_records e
+            on e.employment_id=c.manager_employment_id and e.organization_id=v_organization_id
+          where c.manager_employment_id is not null and not c.cycle
+        )
+        select 1 from chain where employment_id=v_employment_id
+      ) then raise exception using errcode = '22023', message = 'Transfer reporting changes cannot create a managerial cycle.'; end if;
     end if;
     update ai_network.ai_employment_records e
     set employment_status='transferred',end_date=current_date,updated_at=now()
@@ -553,12 +594,12 @@ begin
     insert into ai_network.ai_employment_records (
       organization_id,identity_id,department_id,position_id,manager_employment_id,
       employment_status,employment_type,job_description,workload_percentage,start_date,
-      schedule_preferences,assigned_by_user_id,idempotency_key
+      schedule_preferences,assigned_by_user_id,idempotency_key,replaces_employment_id
     )
     select v_organization_id,v_identity_id,v_department_id,v_position_id,v_manager_employment_id,
       'onboarding',v_employment_type,coalesce(nullif(v_payload->>'job_description',''),v_job_description),
       v_workload,current_date,coalesce(v_payload->'schedule_preferences',e.schedule_preferences),
-      p_actor_user_id,v_idempotency_key
+      p_actor_user_id,v_idempotency_key,v_employment_id
     from ai_network.ai_employment_records e
     where e.employment_id=v_employment_id and e.organization_id=v_organization_id
     returning employment_id into v_new_employment_id;
