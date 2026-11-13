@@ -76,7 +76,7 @@ function buildGiftAnimation(gift, ordinal, presets) {
     const baseTransform = String(frame.transform || "none");
     return {
       ...frame,
-      transform: "translate3d(" + x + "px," + y + "px,0) rotateZ(" + rotation + "deg) " + baseTransform
+      transform: "translate3d(" + x + "px," + y + "px,0) rotateZ(" + rotation + "deg) " + baseTransform + " rotateZ(" + ordinalDrift.toFixed(3) + "deg)"
     };
   });
   return {
