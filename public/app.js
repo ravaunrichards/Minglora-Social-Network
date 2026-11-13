@@ -10967,6 +10967,16 @@ async function enterMingloraApp(user,showWelcome=false){
     }else toast('Open Settings → Security to finish administrator authenticator setup.');
     return;
   }
+  const supportDestination=params.get('mingloraSupport');
+  if(supportDestination){
+    params.delete('mingloraSupport');
+    const remaining=params.toString();
+    window.history.replaceState(null,'',window.location.pathname+(remaining?'?'+remaining:'')+window.location.hash);
+    if(['contact','inbox','report-problem'].includes(supportDestination)&&window.MingloraSettings?.openSupport){
+      try{await window.MingloraSettings.openSupport(supportDestination);return;}
+      catch(error){toast(error.message||'Support could not be opened.');}
+    }
+  }
   await renderSidebar();await updateNotificationDot();await updateMessengerBadge();
   if(params.get('paypal')==='coins'||params.get('paypal')==='cancel'){await finishPaypalCoinReturn();if(state.view!=='coins')activateNav('feed');}
   else await restoreLastView();
