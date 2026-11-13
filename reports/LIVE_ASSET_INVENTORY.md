@@ -42,7 +42,7 @@ These are the catalogue's actual stored categories, not the 18 conceptual catego
 - `public/index.html` includes the LIVE room CSS, gift-access CSS, `gift-effects.js` and `gifts.js`.
 - `public/app.js` loads the motion index through the gift runtime.
 - `public/sw.js` pre-caches `/assets/animations/gifts/catalog-motion-index.json`.
-- The LIVE layout code already supports the nine saved screen-layout identifiers validated by `tests/unit/live-layout-panels.test.js`.
+- The LIVE layout code supports seven screen-layout identifiers plus two separate Roundtable guest-box identifiers, validated by the LIVE layout regression tests.
 - Gift picker CSS includes category selection, search, sort, preview, paginated grid and responsive 3-column/2-column small-phone rules.
 
 ## Asset types not found as complete production libraries
