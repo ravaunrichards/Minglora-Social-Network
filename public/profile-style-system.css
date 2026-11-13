@@ -495,3 +495,76 @@
 .profile-screen-layout-picker small{color:var(--muted);font-size:10px;line-height:1.4}
 
 .profile-style-preview-frame[data-profile-screen-layout="fluid-panel"]{width:100%!important;max-width:100%!important;border-radius:12px!important}
+
+
+/* Previews use current account media/posts; no demo tiles or fabricated stats. */
+.profile-style-preview-cover-empty{display:grid;place-items:center;width:100%;height:100%;font-size:10px;color:var(--muted)}
+.profile-style-preview-content{display:block;min-width:0;padding:10px}
+.profile-style-preview-post{padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:var(--card)}
+.profile-style-preview-post small,.profile-style-preview-video p{font-size:9px;color:var(--muted)}
+.profile-style-preview-post p{margin:6px 0 0;font-size:11px;line-height:1.45;overflow-wrap:anywhere}
+.profile-style-preview-empty{margin:0;padding:12px 8px;text-align:center;font-size:10px;color:var(--muted)}
+.profile-style-preview-gallery{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px}
+.profile-style-preview-gallery img{display:block;width:100%;aspect-ratio:1;min-width:0;object-fit:cover;border-radius:3px}
+.profile-style-preview-video video{display:block;width:100%;max-height:220px;aspect-ratio:9/16;object-fit:cover;border-radius:8px;background:#111}
+.profile-style-preview-video p{margin:6px 0 0;overflow-wrap:anywhere}
+
+/* TikTok reference alignment: name left, profile image right, metrics and actions below. */
+.minglora-profile-page[data-profile-style="tiktok"] .profile-header-card .profile-info{
+  grid-template-columns:minmax(0,1fr) 116px !important;
+  grid-template-rows:auto auto auto !important;
+  align-items:center !important;
+}
+.minglora-profile-page[data-profile-style="tiktok"] .profile-header-card .profile-avatar-edit-wrap{
+  grid-column:2 !important;grid-row:1 !important;justify-self:end !important;
+}
+.minglora-profile-page[data-profile-style="tiktok"] .profile-header-card .profile-info-main{
+  grid-column:1 !important;grid-row:1 !important;text-align:left !important;
+}
+.minglora-profile-page[data-profile-style="tiktok"] .profile-header-card .profile-counts{
+  grid-column:1 / -1 !important;grid-row:2 !important;justify-content:flex-start !important;
+  flex-wrap:wrap !important;overflow-wrap:anywhere !important;
+}
+.minglora-profile-page[data-profile-style="tiktok"] .profile-header-card .profile-actions,
+.minglora-profile-page[data-profile-style="tiktok"] .profile-header-card .profile-owner-actions{
+  grid-column:1 / -1 !important;grid-row:3 !important;justify-content:flex-start !important;
+}
+.minglora-profile-page[data-profile-style="tiktok"] .profile-counts [data-profile-metric="following"]{order:1}
+.minglora-profile-page[data-profile-style="tiktok"] .profile-counts [data-profile-metric="followers"]{order:2}
+.minglora-profile-page[data-profile-style="tiktok"] .profile-counts [data-profile-metric="likes"]{order:3}
+.minglora-profile-page[data-profile-style="tiktok"] .profile-counts [data-profile-metric="posts"]{order:4}
+.minglora-profile-page[data-profile-style="tiktok"] .profile-counts [data-profile-metric="friends"]{order:5}
+.minglora-profile-page[data-profile-style="tiktok"] .profile-counts [data-profile-metric="subscribers"]{order:6}
+.minglora-profile-page[data-profile-style="tiktok"] .profile-video-list{
+  display:grid !important;grid-template-columns:repeat(3,minmax(0,1fr)) !important;gap:4px !important;
+}
+.minglora-profile-page[data-profile-style="tiktok"] .profile-video-row{display:block !important;min-width:0}
+.minglora-profile-page[data-profile-style="tiktok"] .profile-video-row video{
+  display:block;width:100%;aspect-ratio:9/16;object-fit:cover;background:#111;
+}
+.minglora-profile-page[data-profile-style="tiktok"] .profile-video-row>div{padding:5px;min-width:0;overflow-wrap:anywhere}
+@media(max-width:760px){
+  .minglora-profile-page[data-profile-style="tiktok"] .profile-header-card .profile-info{
+    grid-template-columns:minmax(0,1fr) 96px !important;
+    grid-template-rows:auto auto auto !important;
+    gap:10px !important;padding:14px !important;
+  }
+  .minglora-profile-page[data-profile-style="tiktok"] .profile-header-card .profile-avatar-edit-wrap{
+    grid-column:2 !important;grid-row:1 !important;justify-self:end !important;
+  }
+  .minglora-profile-page[data-profile-style="tiktok"] .profile-header-card .profile-info-main{
+    grid-column:1 !important;grid-row:1 !important;
+  }
+  .minglora-profile-page[data-profile-style="tiktok"] .profile-header-card .profile-counts{
+    grid-column:1 / -1 !important;grid-row:2 !important;display:flex !important;
+    flex-wrap:nowrap !important;overflow-x:auto !important;max-width:100% !important;
+  }
+  .minglora-profile-page[data-profile-style="tiktok"] .profile-header-card .profile-actions,
+  .minglora-profile-page[data-profile-style="tiktok"] .profile-header-card .profile-owner-actions{
+    grid-column:1 / -1 !important;grid-row:3 !important;flex-wrap:wrap !important;
+  }
+  .minglora-profile-page[data-profile-style="tiktok"] .profile-video-list{grid-template-columns:repeat(3,minmax(0,1fr)) !important}
+}
+@media(max-width:360px){
+  .minglora-profile-page[data-profile-style="tiktok"] .profile-video-list{grid-template-columns:repeat(2,minmax(0,1fr)) !important}
+}
