@@ -1,6 +1,6 @@
 (() => {
   "use strict";
-  const state={gifts:[],balance:null,promoWallet:null,selectedCode:"",category:"all",search:"",recipient:"",page:0,pageSize:72,sort:"high",unavailableArtwork:new Set()};
+  const state={gifts:[],balance:null,promoWallet:null,selectedCode:"",category:"all",search:"",recipient:"",page:0,pageSize:72,sort:"high",unavailableArtwork:new Set(),loadedArtwork:new Set()};
   const labels={all:"All gifts",flowers:"Flowers",hearts:"Love & hearts",animals:"Animals & creatures",vehicles:"Vehicles",music:"Music",sports:"Sports",food_drink:"Food & drinks",fashion_beauty:"Fashion & beauty",luxury:"Luxury",celebrations:"Celebrations",fantasy:"Fantasy & cosmic",nature:"Nature",travel:"Travel",games:"Games",community:"Community",symbols:"Symbols",other:"More gifts"};
   const emojis={all:"✦",flowers:"🌹",hearts:"💖",animals:"🦁",vehicles:"🚀",music:"🎵",sports:"🏆",food_drink:"🍰",fashion_beauty:"👑",luxury:"💎",celebrations:"🎉",fantasy:"✨",nature:"🌴",travel:"🌍",games:"🎮",community:"🤝",symbols:"🔆",other:"🎁"};
   const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -82,8 +82,10 @@
     }
   }
   function card(g){
-    const image="<img class='gift-card-image' data-gift-artwork-code='"+esc(g.code)+"' loading='lazy' decoding='async' src='"+esc(g.image_url)+"' alt='Complete Minglora gift artwork: "+esc(g.name)+"'>";
-    return "<button type='button' class='gift-catalog-card "+(state.selectedCode===g.code?"selected":"")+"' data-gift-select='"+esc(g.code)+"' aria-pressed='"+(state.selectedCode===g.code)+"'><span class='gift-catalog-art'>"+image+"</span><strong>"+esc(g.name)+"</strong><small>◈ "+Number(g.coin_price).toLocaleString()+" Coins</small></button>";
+    const code=String(g.code);
+    const image="<img class='gift-card-image' data-gift-artwork-code='"+esc(code)+"' loading='lazy' decoding='async' src='"+esc(g.image_url)+"' alt='Complete Minglora gift artwork: "+esc(g.name)+"'>";
+    const ready=state.loadedArtwork.has(code);
+    return "<button type='button' class='gift-catalog-card "+(state.selectedCode===g.code?"selected":"")+"' data-gift-select='"+esc(g.code)+"' aria-pressed='"+(state.selectedCode===g.code)+"' aria-disabled='"+String(!ready)+"' "+(ready?"":"disabled title='Loading complete gift artwork'")+"><span class='gift-catalog-art'>"+image+"</span><strong>"+esc(g.name)+"</strong><small>◈ "+Number(g.coin_price).toLocaleString()+" Coins</small></button>";
   }
   function updateSelected(){
     const g=selected(),title=document.getElementById("minglora-gift-selected"),price=document.getElementById("minglora-gift-selected-price");
@@ -183,17 +185,26 @@
     if(count)count.textContent=rows.length.toLocaleString()+" gifts";
     grid.innerHTML=shown.length?shown.map(card).join(""):"<div class='gift-empty-state'>No gifts match your search.</div>";
     if(more){more.hidden=shown.length>=rows.length;more.textContent="Show more gifts · "+Math.max(0,rows.length-shown.length).toLocaleString()+" remaining";}
-    grid.querySelectorAll("[data-gift-select]").forEach(b=>b.addEventListener("click",()=>{state.selectedCode=b.dataset.giftSelect;drawGrid();updateSelected();}));
-    grid.querySelectorAll("img[data-gift-artwork-code]").forEach(image=>image.addEventListener("error",()=>{
+    grid.querySelectorAll("[data-gift-select]").forEach(b=>b.addEventListener("click",()=>{if(b.disabled)return;state.selectedCode=b.dataset.giftSelect;drawGrid();updateSelected();}));
+    grid.querySelectorAll("img[data-gift-artwork-code]").forEach(image=>{
       const code=String(image.dataset.giftArtworkCode||"");
-      if(!code||state.unavailableArtwork.has(code))return;
-      state.unavailableArtwork.add(code);
-      if(state.selectedCode===code){
-        const next=filtered()[0];
-        state.selectedCode=next?.code||"";
-      }
-      drawGrid();
-    },{once:true}));
+      const markLoaded=()=>{
+        if(!code||image.naturalWidth<1||image.naturalHeight<1||state.unavailableArtwork.has(code))return;
+        state.loadedArtwork.add(code);
+        const button=image.closest("[data-gift-select]");
+        if(button){button.disabled=false;button.setAttribute("aria-disabled","false");button.removeAttribute("title");}
+      };
+      const markUnavailable=()=>{
+        if(!code||state.unavailableArtwork.has(code))return;
+        state.unavailableArtwork.add(code);
+        state.loadedArtwork.delete(code);
+        if(state.selectedCode===code){const next=filtered()[0];state.selectedCode=next?.code||"";}
+        drawGrid();
+      };
+      image.addEventListener("load",markLoaded,{once:true});
+      image.addEventListener("error",markUnavailable,{once:true});
+      if(image.complete){if(image.naturalWidth>0&&image.naturalHeight>0)markLoaded();else markUnavailable();}
+    });
     updateSelected();
   }
   async function render(){
