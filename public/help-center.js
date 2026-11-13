@@ -175,7 +175,7 @@ function editArticle(id,locale){
   const form=$("#hc-article-form"),a=row.help_articles||{};
   field(form,"articleId").value=a.id;field(form,"title").value=row.title;field(form,"slug").value=a.slug;field(form,"categoryId").value=a.category_id;updateSubcategoryChoices(a.subcategory_id||"");
   field(form,"locale").value=row.locale;field(form,"excerpt").value=row.excerpt||"";field(form,"answerMarkdown").value=row.answer_markdown||"";
-  field(form,"searchTerms").value=(row.search_terms||[]).join(", ");field(form,"sourceReference").value=row.source_reference||"";field(form,"isFeatured").checked=Boolean(a.is_featured);
+  field(form,"searchTerms").value=(row.search_terms||[]).join(", ");field(form,"relatedSlugs").value=(state.adminOverview?.relatedByArticle?.[id]||[]).join(", ");field(form,"sourceReference").value=row.source_reference||"";field(form,"isFeatured").checked=Boolean(a.is_featured);
   $("#hc-editor-heading").textContent="Edit Help article";$("#hc-editor-status").textContent="Saving edits returns the article to Draft so it must be reviewed again.";
   form.scrollIntoView({behavior:"smooth",block:"start"});
 }
@@ -218,7 +218,7 @@ function wireEvents(){
   $("#hc-article-form").addEventListener("input",event=>{if(event.target.name==="title"&&!field($("#hc-article-form"),"articleId").value){const slug=event.target.value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");$("#hc-article-form").slug.value=slug;}});
   $("#hc-article-form").addEventListener("submit",async event=>{
     event.preventDefault();const form=event.currentTarget,button=form.querySelector('button[type="submit"]'),status=$("#hc-editor-status");button.disabled=true;status.textContent="Saving draft…";
-    try{const payload=Object.fromEntries(new FormData(form).entries());payload.isFeatured=field(form,"isFeatured").checked;payload.searchTerms=String(payload.searchTerms||"").split(",").map(x=>x.trim()).filter(Boolean);
+    try{const payload=Object.fromEntries(new FormData(form).entries());payload.isFeatured=field(form,"isFeatured").checked;payload.searchTerms=String(payload.searchTerms||"").split(",").map(x=>x.trim()).filter(Boolean);payload.relatedSlugs=String(payload.relatedSlugs||"").split(",").map(x=>x.trim().toLowerCase()).filter(Boolean).slice(0,10);
       const result=await api("/admin/articles",{method:"POST",body:JSON.stringify(payload)});status.textContent="Saved as Draft. It is not visible to members.";await refreshAdmin();field(form,"articleId").value=result.articleId;$("#hc-editor-heading").textContent="Edit Help article";
     }catch(error){status.textContent=error.message;}finally{button.disabled=false;}
   });
