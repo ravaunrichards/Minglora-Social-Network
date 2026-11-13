@@ -31,5 +31,5 @@ test('the service worker precaches the sprite and the HTML refreshes the app ren
   assert.ok(worker.includes("SHELL.push('/assets/icons/live-control-icons.svg')"));
   assert.ok(worker.includes("'/app.js?v=20261113-complete-gift-artwork-gate-1'"));
   assert.ok(html.includes('/app.js?v=20261113-complete-gift-artwork-gate-1'));
-  assert.ok(worker.includes("const CACHE_NAME='minglora-shell-v305-self-updating-1'"));
+  assert.ok(worker.includes("const CACHE_NAME='minglora-shell-v306-self-updating-1'"));
 });
