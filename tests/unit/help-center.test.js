@@ -20,3 +20,13 @@ const js=read("public/help-center.js");assert.doesNotMatch(js,/Sample question|D
 test("Editorial workflow buttons mirror the staged publishing lifecycle",()=>{
 const js=read("public/help-center.js");for(const stage of ["submit_review","complete_fact_check","approve","publish","archive","restore"])assert.ok(js.includes(stage));
 });
+
+test("The deployed Help Center Edge Function is version-controlled and guarded",()=>{
+const edge=read("supabase/functions/minglora-help-center/index.ts");
+assert.match(edge,/Deno\.serve/);
+assert.match(edge,/x-minglora-api-key/);
+assert.match(edge,/requireStaff/);
+assert.match(edge,/view_history/);
+assert.match(edge,/admin_article_get/);
+assert.match(edge,/help_related_articles/);
+});
