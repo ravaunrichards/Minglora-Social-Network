@@ -57,7 +57,7 @@
 
 ## Deployment safety boundary
 
-The relational migration, authenticated Node API, AI workspace and reconciled Edge Function changes are committed only to `feat/minglora-ai-bot-network-core`. The production Supabase schema and deployed Edge Function were not changed. Keep provider execution disabled until provider account/model health, secret custody, budgets and the execution adapter are independently verified. Do not merge this branch wholesale: it remains materially diverged from `main`. The Edge Function source was selectively synchronized with `main`, but the rest of the feature branch remains divergent; compare and reconcile before any release.
+The relational migration, authenticated Node API, AI workspace and reconciled Edge Function changes are committed only to `feat/minglora-ai-bot-network-core`. Corporate routes require existing platform-staff authorization, including MFA-verified owner sessions. The production Supabase schema and deployed Edge Function were not changed. Full CI passed at branch commit `54a9648cbbd4736e4523bb92b9e4d571d60a9826`; AI Network checks passed at the same commit. Keep provider execution disabled until provider account/model health, secret custody, budgets and the execution adapter are independently verified. Do not merge this branch wholesale: it remains materially diverged from `main`. The Edge Function source was selectively synchronized with `main`, but the rest of the feature branch remains divergent; compare and reconcile before any release.
 
 ## Verified implementation so far
 
@@ -79,7 +79,7 @@ The relational migration, authenticated Node API, AI workspace and reconciled Ed
 
 ## Not yet verified / unfinished
 
-- [ ] Run CI and correct all test failures.
+- [x] Run the AI Network workflow and full repository CI; fixed the real 91-collection registry mismatch and aligned Supabase persistence fixtures. Latest full CI run 11186 and AI Network run 40 both passed.
 - [ ] Add the responsive AI Network workspace and navigation entry.
 - [ ] Add the provider adapter; keep execution disabled until it passes security and integration tests.
 - [ ] Add durable scheduler/worker claims, retries, idempotency, and per-owner budget reservation.
