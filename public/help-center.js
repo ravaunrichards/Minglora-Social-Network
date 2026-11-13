@@ -84,7 +84,31 @@ function highlight(value,query){
 const input=String(value??"");
 const terms=String(query||"").trim().split(/\s+/).filter(term=>term.length>1).slice(0,8);
 if(!terms.length)return esc(input);
-const pattern=new RegExp("("+terms.map(term=>term.replace(/[.*+?^${}()|[\]\\]/g,"\\function renderRows(rows){
+const lower=input.toLowerCase(),matches=[];
+for(const term of terms){
+  const needle=term.toLowerCase();
+  let position=0;
+  while((position=lower.indexOf(needle,position))!==-1){
+    matches.push({start:position,end:position+needle.length});
+    position+=needle.length;
+  }
+}
+if(!matches.length)return esc(input);
+matches.sort((a,b)=>a.start-b.start||b.end-a.end);
+const merged=[];
+for(const item of matches){
+  const prior=merged[merged.length-1];
+  if(prior&&item.start<=prior.end)prior.end=Math.max(prior.end,item.end);
+  else merged.push({...item});
+}
+let output="",cursor=0;
+for(const item of merged){
+  output+=esc(input.slice(cursor,item.start))+'<mark class="hc-search-match">'+esc(input.slice(item.start,item.end))+'</mark>';
+  cursor=item.end;
+}
+return output+esc(input.slice(cursor));
+}
+function renderRows(rows){
 $("#hc-directory-results").innerHTML=rows.length?rows.map(x=>'<a class="hc-question-row" href="/help-center.html?article='+encodeURIComponent(x.article_slug)+'"><span><strong>'+esc(x.question)+'</strong><p>'+esc(x.excerpt||"")+'</p><small>'+esc(x.category_title)+(x.subcategory_title?" · "+esc(x.subcategory_title):"")+" · Updated "+esc(date(x.updated_at))+'</small></span><span class="hc-row-arrow">›</span></a>').join(""):empty(state.query?"No matching published answers":"No published answers in this section yet","Try another phrase or contact Support if you still need help.");
 }")).join("|")+")","gi");
 return input.split(pattern).map(part=>terms.some(term=>part.toLowerCase()===term.toLowerCase())?'<mark class="hc-search-match">'+esc(part)+'</mark>':esc(part)).join("");
