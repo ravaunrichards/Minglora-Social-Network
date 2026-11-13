@@ -614,3 +614,29 @@
   .minglora-profile-page[data-profile-style="tiktok"] .profile-header-card .profile-avatar-edit-wrap{width:74px !important;max-width:74px !important}
   .minglora-profile-page[data-profile-style="tiktok"] .profile-header-card .profile-avatar-edit-wrap>.avatar{width:72px !important;height:72px !important;min-width:72px !important;min-height:72px !important;max-width:72px !important;max-height:72px !important}
 }
+
+
+/* LinkedIn mobile header: keep the avatar inside its own grid row so the
+   professional identity name never collides with the portrait at narrow widths. */
+@media(max-width:760px){
+  .minglora-profile-page[data-profile-style="linkedin"] .profile-header-card .profile-info{
+    row-gap:16px!important;
+  }
+  .minglora-profile-page[data-profile-style="linkedin"] .profile-header-card .profile-avatar-edit-wrap{
+    width:clamp(72px,23vw,88px)!important;
+    min-width:clamp(72px,23vw,88px)!important;
+    max-width:clamp(72px,23vw,88px)!important;
+    height:clamp(72px,23vw,88px)!important;
+    min-height:clamp(72px,23vw,88px)!important;
+    max-height:clamp(72px,23vw,88px)!important;
+    margin:0!important;
+  }
+  .minglora-profile-page[data-profile-style="linkedin"] .profile-header-card .profile-avatar-edit-wrap>.avatar{
+    width:clamp(72px,23vw,88px)!important;
+    height:clamp(72px,23vw,88px)!important;
+    min-width:clamp(72px,23vw,88px)!important;
+    min-height:clamp(72px,23vw,88px)!important;
+    max-width:clamp(72px,23vw,88px)!important;
+    max-height:clamp(72px,23vw,88px)!important;
+  }
+}
