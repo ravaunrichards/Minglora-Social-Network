@@ -73,7 +73,7 @@ Deno.serve(async (req: Request) => {
   const supportedActions = [
     "internal_activity_feed",
     "admin_users_list", "admin_user_set_ban", "admin_audit_log", "admin_audit_log",
-    "streambay_cleanup", "ai_identity_command", "ai_organization_command", "load", "save", "health", "media_sign", "media_upload_prepare", "media_upload_complete", "media_delete",
+    "streambay_cleanup", "ai_identity_command", "ai_organization_command", "ai_hr_command", "ai_provider_command", "ai_task_command", "load", "save", "health", "media_sign", "media_upload_prepare", "media_upload_complete", "media_delete",
     "live_broadcast_create", "live_broadcast_end", "live_chat_list", "live_chat_send", "live_chat_delete",
     "live_participant_mark_connected", "live_participant_mark_left", "live_speaker_request", "live_speaker_requests_list", "live_speaker_request_status",
     "live_speaker_request_review", "live_speaker_mark_connected", "live_speaker_mark_left",
