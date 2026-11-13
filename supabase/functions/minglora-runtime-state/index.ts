@@ -117,6 +117,9 @@ Deno.serve(async (req: Request) => {
     "help_admin_category_update",
     "help_admin_subcategory_update",
     "help_admin_translation_update",
+    "help_admin_asset_sign",
+    "help_admin_asset_record",
+    "help_admin_asset_delete",
   ];
   if (!supportedActions.includes(String(action))) {
     return json(400, { error: "Unsupported action." });
