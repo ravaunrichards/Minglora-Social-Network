@@ -3,7 +3,7 @@
 
   const API = '/api/ai-network';
   const root = () => document.getElementById('main-content');
-  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, organizationError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', aiTasks: [], taskRuntime: null, taskError: '' };
+  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, organizationError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', aiTasks: [], taskRuntime: null, taskError: '' };
   const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[character]));
@@ -96,6 +96,77 @@
     }).join('') + '</div>';
   }
 
+  function renderAIDiscoveryCenter() {
+    const results = list(state.discoveryResults?.identities);
+    const selected = (key, value) => (Array.isArray(state.discoveryFilters[key]) ? state.discoveryFilters[key] : []).includes(value);
+    const multi = (name, label, items, size = 4) => '<label>' + esc(label) + '<select name="' + esc(name) + '" multiple size="' + size + '">' +
+      items.map(item => '<option value="' + esc(item.value) + '"' + (selected(name,item.value) ? ' selected' : '') + '>' + esc(item.label) + '</option>').join('') +
+      '</select></label>';
+    const categories = list(state.identityCategories).map(item => ({value:item.category_key,label:item.display_name}));
+    const genders = [
+      {value:'female',label:'Female AI'},{value:'male',label:'Male AI'},
+      {value:'non_binary',label:'Non-binary'},{value:'other',label:'Other'},
+      {value:'prefer_not_to_say',label:'Prefer not to specify'}
+    ];
+    const populations = [
+      {value:'independent',label:'Independent AI'},{value:'organizational',label:'Organizational AI'},
+      {value:'specialized_service',label:'Specialized AI service'}
+    ];
+    const countries = COUNTRY_CODES.map(code => ({value:code,label:countryLabel(code) + ' (' + code + ')'}));
+    const identityRows = results.length ? '<div class="ai-network-list">' + results.map(item => {
+      const name = item.name || {}, profile = item.profile || {};
+      const followAction = item.is_following
+        ? '<button type="button" class="secondary" data-ai-action="unfollow-ai" data-id="' + esc(item.identity_id) + '">Unfollow</button>'
+        : item.follow_requested
+          ? '<span class="ai-network-note">Follow request pending</span>'
+          : '<button type="button" class="primary" data-ai-action="follow-ai" data-id="' + esc(item.identity_id) + '">Follow AI</button>';
+      return '<article class="ai-network-list-row"><div class="ai-network-list-main"><div class="ai-network-avatar" aria-hidden="true">AI</div><div><strong>' +
+        esc(name.display_name || [name.first_name,name.last_name].filter(Boolean).join(' ') || 'AI member') + '</strong>' +
+        '<div class="ai-network-meta">' + pill('AI PROFILE','ai') + ' ' + pill(item.category_key || 'AI') + ' ' + pill(profile.gender || 'not specified') + '</div>' +
+        '<p>' + esc(profile.bio || profile.introduction || 'AI identity profile') + '</p>' +
+        '<small>@' + esc(name.username || '') + ' · ' + esc(profile.profession || 'Profession not listed') + ' · ' +
+        number(item.follower_count) + ' followers · ' + esc(list(item.languages).map(lang => lang.language_tag).join(', ')) + '</small></div></div>' +
+        '<div class="ai-network-row-actions">' + followAction + '</div></article>';
+    }).join('') + '</div>' : empty('No public active AI profiles match these filters yet. Results appear only when real profiles have been approved and enabled.');
+    const groupRows = state.savedDiscoveryGroups.length
+      ? '<div class="ai-network-list">' + state.savedDiscoveryGroups.map(group =>
+          '<article class="ai-network-list-row"><div class="ai-network-list-main"><div><strong>' + esc(group.group_name) + '</strong><p>Saved discovery filters</p></div></div>' +
+          '<div class="ai-network-row-actions"><button type="button" class="secondary" data-ai-action="apply-discovery-group" data-id="' + esc(group.group_id) + '">Apply</button>' +
+          '<button type="button" class="secondary" data-ai-action="delete-discovery-group" data-id="' + esc(group.group_id) + '">Delete</button></div></article>'
+        ).join('') + '</div>' : empty('No saved discovery groups yet.');
+    const requests = state.followRequests.length
+      ? '<div class="ai-network-list">' + state.followRequests.map(item =>
+          '<article class="ai-network-list-row"><div class="ai-network-list-main"><div><strong>' + esc(item.name?.display_name || item.name?.username || 'Minglora member') +
+          '</strong><p>Requests to follow ' + esc(item.identity_id) + '</p></div></div><div class="ai-network-row-actions">' +
+          '<button type="button" class="primary" data-ai-action="review-follow" data-id="' + esc(item.follow_id) + '" data-decision="approve">Approve</button>' +
+          '<button type="button" class="secondary" data-ai-action="review-follow" data-id="' + esc(item.follow_id) + '" data-decision="decline">Decline</button></div></article>'
+        ).join('') + '</div>' : empty('No follow requests for identities you manage.');
+    return card('Worldwide AI Discovery', 'DISCOVER · FOLLOW · SAVE FILTERS',
+      (state.discoveryError ? '<div class="ai-network-alert ai-network-alert--warning" role="status">' + esc(state.discoveryError) + '</div>' :
+        '<p class="ai-network-note">Search public, active AI identities. Follower counts and following status come from stored relationship records; private profiles are not exposed in public results.</p>') +
+      '<form class="ai-network-form" data-ai-form="discovery">' +
+      '<label>Search by name or username<input name="search" value="' + esc(state.discoveryFilters.search || '') + '" maxlength="120" placeholder="Search AI profiles"></label>' +
+      '<div class="ai-network-form-grid">' + multi('category_keys','AI categories',categories,5) + multi('populations','AI population',populations,3) +
+      multi('genders','Gender',genders,5) + multi('countries','Country (search list)',countries,6) + '</div>' +
+      '<div class="ai-network-form-grid"><label>Languages (comma-separated tags)<input name="languages" value="' + esc(list(state.discoveryFilters.languages).join(', ')) + '" placeholder="en, ht, es"></label>' +
+      '<label>Interests and hobbies (comma-separated)<input name="interests" value="' + esc(list(state.discoveryFilters.interests).join(', ')) + '" placeholder="music, travel, science"></label>' +
+      '<label>Skills (comma-separated)<input name="skills" value="' + esc(list(state.discoveryFilters.skills).join(', ')) + '" placeholder="education, design"></label>' +
+      '<label>Capabilities (comma-separated)<input name="capabilities" value="' + esc(list(state.discoveryFilters.capabilities).join(', ')) + '" placeholder="text, voice, image"></label>' +
+      '<label>Profession contains<input name="profession" value="' + esc(state.discoveryFilters.profession || '') + '" maxlength="100"></label>' +
+      '<label>Region, parish, city or district (comma-separated)<input name="regions" value="' + esc(list(state.discoveryFilters.regions).join(', ')) + '"></label></div>' +
+      '<div class="ai-network-form-grid"><label>Sort<select name="sort">' + options([{value:'newest',label:'Newest'},{value:'popular',label:'Most followed'}],state.discoveryFilters.sort || 'newest') + '</select></label>' +
+      '<label>Created within (days; 0 means any time)<input type="number" name="recent_days" min="0" max="3650" value="' + esc(state.discoveryFilters.recent_days || 0) + '"></label></div>' +
+      '<button class="primary" type="submit">Search AI profiles</button></form>' +
+      '<div class="ai-network-discovery-results"><strong>' + number(state.discoveryResults?.total) + ' matching public AI profiles</strong>' + identityRows + '</div>' +
+      '<form class="ai-network-form" data-ai-form="saved-discovery-group"><div class="ai-network-form-title">Save current discovery filters</div>' +
+      '<label>Group name<input name="groupName" required minlength="2" maxlength="80" placeholder="Jamaican AI educators"></label>' +
+      '<button type="submit" class="secondary">Save discovery group</button></form>' +
+      '<div class="ai-network-discovery-groups"><h3>Saved discovery groups</h3>' + groupRows + '</div>' +
+      '<div class="ai-network-discovery-requests"><h3>Follow requests for your AI profiles</h3>' + requests + '</div>' +
+      '<div class="ai-network-note">You follow ' + number(state.following.length) + ' AI profiles. Human and AI engagement metrics remain separate.</div>',
+      'ai-network-span-2');
+  }
+
   function renderAIIdentityRegistry() {
     const registry = state.identityRegistry;
     const categories = list(state.identityCategories);
@@ -170,6 +241,35 @@
       state.identityRegistry = null;
       state.identityCategories = [];
       state.identityError = error.message || 'Relational AI identity service is unavailable.';
+    }
+  }
+
+  async function loadAIDiscovery(filters = state.discoveryFilters) {
+    state.discoveryError = '';
+    state.discoveryFilters = filters && typeof filters === 'object' ? filters : {};
+    try {
+      const params = new URLSearchParams();
+      for (const [key, raw] of Object.entries(state.discoveryFilters)) {
+        const values = Array.isArray(raw) ? raw : raw === undefined || raw === null || raw === '' ? [] : [raw];
+        for (const value of values) params.append(key, String(value));
+      }
+      params.set('limit', '24');
+      const [result, following, requests, groups] = await Promise.all([
+        request('/discover?' + params.toString()),
+        request('/following'),
+        request('/follow-requests'),
+        request('/saved-groups')
+      ]);
+      state.discoveryResults = result || { identities: [], total: 0 };
+      state.following = list(following.following);
+      state.followRequests = list(requests.requests);
+      state.savedDiscoveryGroups = list(groups.groups);
+    } catch (error) {
+      state.discoveryResults = { identities: [], total: 0 };
+      state.following = [];
+      state.followRequests = [];
+      state.savedDiscoveryGroups = [];
+      state.discoveryError = error.message || 'AI discovery is not available yet.';
     }
   }
 
@@ -722,6 +822,7 @@
       '<div class="ai-network-quick-stats"><div><span>My bots</span><strong>' + number(performance.botCount) + '</strong></div><div><span>Teams</span><strong>' + number(performance.teamCount) + '</strong></div><div><span>Pending reviews</span><strong>' + number(performance.pendingApprovals) + '</strong></div><div><span>Recorded runs</span><strong>' + number(performance.measuredRunCount) + '</strong></div></div>' +
       '<div class="ai-network-grid">' +
       renderAIIdentityRegistry() +
+      renderAIDiscoveryCenter() +
       renderAIProviderCenter() +
       renderAITaskQueueCenter() +
       renderAIOrganizationCenter() +
@@ -790,6 +891,8 @@
     try {
       state.snapshot = await request();
       await loadAIIdentityRegistry();
+    await loadAIDiscovery();
+      await loadAIDiscovery();
       await loadAIProviderRegistry();
       await loadAITaskQueue();
       await loadAIOrganizationRegistry();
@@ -805,6 +908,7 @@
     if (message) setNotice(message);
     state.snapshot = await request();
     await loadAIIdentityRegistry();
+    await loadAIDiscovery();
     await loadAIProviderRegistry();
     await loadAITaskQueue();
     await loadAIOrganizationRegistry();
@@ -817,7 +921,38 @@
     const value = key => String(data.get(key) ?? '').trim();
     const payload = {};
     let path = '';
-    if (kind === 'identity-bulk') {
+    if (kind === 'discovery') {
+      const many = key => data.getAll(key).map(item => String(item).trim()).filter(Boolean);
+      const csv = key => value(key).split(',').map(item => item.trim()).filter(Boolean);
+      state.discoveryFilters = {
+        search: value('search'),
+        category_keys: many('category_keys'),
+        populations: many('populations'),
+        genders: many('genders'),
+        countries: many('countries'),
+        languages: csv('languages'),
+        interests: csv('interests'),
+        skills: csv('skills'),
+        capabilities: csv('capabilities'),
+        regions: csv('regions'),
+        profession: value('profession'),
+        recent_days: Math.min(Math.max(Number(value('recent_days')) || 0, 0), 3650),
+        sort: value('sort') === 'popular' ? 'popular' : 'newest'
+      };
+      await loadAIDiscovery(state.discoveryFilters);
+      setNotice('AI discovery filters applied.');
+      renderSnapshot(state.snapshot);
+      return;
+    } else if (kind === 'saved-discovery-group') {
+      const result = await request('/saved-groups', {
+        method: 'POST',
+        body: { group_name: value('groupName'), filters: state.discoveryFilters }
+      });
+      await loadAIDiscovery();
+      setNotice('Discovery group saved.');
+      renderSnapshot(state.snapshot);
+      return;
+    } else if (kind === 'identity-bulk') {
       path = '/identities/bulk';
       let items;
       try { items = JSON.parse(value('items')); }
@@ -1156,7 +1291,17 @@
     state.busy = true;
     try {
       if (action === 'reload') return await load();
-      if (action === 'bot-status') await request('/bots/' + encodeURIComponent(id) + '/status', { method:'PATCH', body:{ status:button.dataset.status } });
+      if (action === 'follow-ai') await request('/follow', { method:'POST', body:{ identity_id:id } });
+      else if (action === 'unfollow-ai') await request('/following/' + encodeURIComponent(id), { method:'DELETE' });
+      else if (action === 'review-follow') await request('/follow-requests/' + encodeURIComponent(id), { method:'PATCH', body:{ decision:button.dataset.decision } });
+      else if (action === 'apply-discovery-group') {
+        const group = state.savedDiscoveryGroups.find(item => item.group_id === id);
+        if (!group) throw new Error('Saved discovery group was not found.');
+        state.discoveryFilters = group.filters || {};
+        await loadAIDiscovery(state.discoveryFilters);
+      }
+      else if (action === 'delete-discovery-group') await request('/saved-groups/' + encodeURIComponent(id), { method:'DELETE' });
+      else if (action === 'bot-status') await request('/bots/' + encodeURIComponent(id) + '/status', { method:'PATCH', body:{ status:button.dataset.status } });
       else if (action === 'approval') await request('/approvals/' + encodeURIComponent(id), { method:'PATCH', body:{ decision:button.dataset.decision } });
       else if (action === 'emergency-pause') await request('/emergency-pause', { method:'POST', body:{ reason:'Owner initiated emergency pause from the AI Network command center.' } });
       else if (action === 'emergency-resume') await request('/emergency-resume', { method:'POST', body:{} });

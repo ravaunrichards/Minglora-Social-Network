@@ -124,3 +124,10 @@
 .ai-network-task-action button{align-self:end}
 .ai-network-task-form .ai-network-note{margin:0 0 6px}
 @media(max-width:760px){.ai-network-task-runtime{grid-template-columns:repeat(2,minmax(0,1fr))}.ai-network-task-row{display:grid}.ai-network-task-action{display:grid}.ai-network-task-action label{min-width:0}}
+
+.ai-network-discovery-results,.ai-network-discovery-groups,.ai-network-discovery-requests{display:grid;gap:10px;margin-top:16px}
+.ai-network-discovery-results>strong{font-size:.9rem}
+.ai-network-discovery-center select[multiple]{min-height:112px;max-height:170px}
+.ai-network-discovery-center .ai-network-form-grid{align-items:start}
+.ai-network-discovery-results .ai-network-list-row{align-items:center}
+@media(max-width:760px){.ai-network-discovery-center select[multiple]{min-height:92px}}

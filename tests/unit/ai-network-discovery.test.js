@@ -54,7 +54,7 @@ test('private profiles create approval requests while public profiles follow imm
 test('bulk following is bounded, duplicate safe, and saved groups are owner scoped', () => {
   assert.ok(migration.includes('jsonb_array_length(v_payload->\'identity_ids\')>100'));
   assert.ok(migration.includes('on conflict(identity_id,follower_user_id) do nothing'));
-  assert.ok(migration.includes('where owner_user_id=p_actor_user_id'));
+  assert.ok(migration.includes('where g.owner_user_id=p_actor_user_id'));
   assert.ok(migration.includes('octet_length(filters::text)<=16384'));
 });
 
@@ -69,6 +69,7 @@ test('runtime gateway exposes discovery only through the authenticated AI comman
     assert.ok(handler.includes('"'+action+'"'),'Missing gateway command '+action);
   }
   assert.ok(handler.includes('validUuid(actorUserId)'));
+  assert.ok(handler.includes('\\\\s*:'), 'discovery requests reject credential-like field names');
   assert.ok(handler.includes('admin.rpc("minglora_ai_discovery_command"'));
 });
 
