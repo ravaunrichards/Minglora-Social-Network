@@ -40,7 +40,8 @@
         { label: 'Your Ad Activity', detail: 'Review ads associated with your account', icon: 'activity', action: 'coming-soon', pending: true },
         { label: 'Memories', detail: 'Revisit moments you have shared', icon: 'restore', action: 'coming-soon', pending: true },
         { label: 'Saved', detail: 'Find posts and videos you saved', icon: 'saved', action: 'saved' },
-        { label: 'Clock Centre', detail: 'Clocks, world time, alarms and timers', icon: 'clock', action: 'clock-centre' }
+        { label: 'Clock Centre', detail: 'Clocks, world time, alarms and timers', icon: 'clock', action: 'clock-centre' },
+        { label: 'Help Center', detail: 'Find verified answers about using Minglora', icon: 'request', action: 'help-center' }
       ]
     },
     {
@@ -228,7 +229,9 @@
 
     async function runCreateAction(action) {
       closeMenu();
-      if (action === 'post') {
+      if (action === 'help-center') {
+        window.location.assign('/help-center.html');
+      } else if (action === 'post') {
         if (typeof window.openComposer === 'function') window.openComposer();
         else document.getElementById('open-composer')?.click();
       } else if (action === 'story') {

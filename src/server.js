@@ -9,6 +9,7 @@ import { DEFAULT_EXPERIENCE_SETTINGS, validateExperienceSettingsPatch } from './
 import { promisify } from 'node:util';
 import { appOrigin, isAllowedAppOrigin } from './app-origin.js';
 import { db, saveStore, uid, now, persistenceHealth, requestSupabaseState, isSupabasePersistence } from './store.js';
+import { requestHelpCenter } from './help-center-client.js';
 import { broadcastLiveKitData, createLiveKitToken, deleteLiveKitRoom, ensureLiveKitRoom, isLiveKitConfigured, listLiveKitParticipants, removeLiveKitParticipant, verifyLiveKitConnection, LIVEKIT_TRACK_SOURCE } from '../backend/modules/live/livekit.js';
 import { LIVE_MODES, broadcastTypeForLiveMode, getLivePublishSourceNames, normalizeLiveSettings } from '../backend/modules/live/settings.js';
 import { canAccessMeetWaveRoom, canManageMeetWaveParticipants, canReceiveMeetWaveInvitation, meetWaveRoomJoinAvailability, normalizeMeetWaveMessage, validateMeetWaveRoomInput, MEETWAVE_PARTICIPANT_LIMIT } from '../backend/modules/meetwave/service.js';
@@ -2067,7 +2068,100 @@ async function route(req, res) {
       }
       if (method==='POST' && p==='/api/auth/logout') { const sid=cookie(req,'sid'); if(sid){const id=decodeURIComponent(sid).split('.')[0]; db.sessions=db.sessions.filter(s=>s.id!==id); await saveStore();} return json(res,200,{ok:true},{'Set-Cookie':clearAppSessionCookie()}); }
       if (method==='GET' && p==='/api/auth/me') return json(res,200,{user:user?safeUser(user,user.id):null});
+      if(method==='GET'&&p==='/api/help-center/bootstrap'){
+        try{return json(res,200,await requestHelpCenter('bootstrap',{actorUserId:user?.id||'',locale:url.searchParams.get('locale')||'en'}));}
+        catch(error){return json(res,error.status||503,{error:error.message||'Help Center is unavailable.'});}
+      }
+      if(method==='GET'&&p==='/api/help-center/search'){
+        const query=String(url.searchParams.get('q')||'').trim().slice(0,120);
+        try{return json(res,200,await requestHelpCenter('search',{
+          actorUserId:user?.id||'',locale:url.searchParams.get('locale')||'en',query,
+          categorySlug:String(url.searchParams.get('category')||'').slice(0,120),
+          subcategorySlug:String(url.searchParams.get('subcategory')||'').slice(0,120),
+          limit:Math.min(50,Math.max(1,Number(url.searchParams.get('limit'))||20)),
+          offset:Math.max(0,Number(url.searchParams.get('offset'))||0)
+        }));}
+        catch(error){return json(res,error.status||503,{error:error.message||'Help Center search is unavailable.'});}
+      }
+      const publicHelpArticle=p.match(/^\/api\/help-center\/articles\/([^/]+)$/);
+      if(method==='GET'&&publicHelpArticle){
+        try{return json(res,200,await requestHelpCenter('article',{
+          actorUserId:user?.id||'',slug:decodeURIComponent(publicHelpArticle[1]),locale:url.searchParams.get('locale')||'en'
+        }));}
+        catch(error){return json(res,error.status||503,{error:error.message||'This Help Center article is unavailable.'});}
+      }
       requireAuth(user);
+      if(p==='/api/help-center/bootstrap'&&method==='GET'){
+        try{return json(res,200,await requestHelpCenter('bootstrap',{actorUserId:user.id,locale:url.searchParams.get('locale')||'en'}));}
+        catch(error){return json(res,error.status||503,{error:error.message||'Help Center is unavailable.'});}
+      }
+      if(p==='/api/help-center/search'&&method==='GET'){
+        const query=String(url.searchParams.get('q')||'').trim().slice(0,120);
+        try{return json(res,200,await requestHelpCenter('search',{
+          actorUserId:user.id,locale:url.searchParams.get('locale')||'en',query,
+          categorySlug:String(url.searchParams.get('category')||'').slice(0,120),
+          subcategorySlug:String(url.searchParams.get('subcategory')||'').slice(0,120),
+          limit:Math.min(50,Math.max(1,Number(url.searchParams.get('limit'))||20)),
+          offset:Math.max(0,Number(url.searchParams.get('offset'))||0)
+        }));}
+        catch(error){return json(res,error.status||503,{error:error.message||'Help Center search is unavailable.'});}
+      }
+      if(p==='/api/help-center/bookmarks'&&method==='GET'){
+        try{return json(res,200,await requestHelpCenter('bookmarks',{actorUserId:user.id}));}
+        catch(error){return json(res,error.status||503,{error:error.message||'Saved Help Center articles are unavailable.'});}
+      }
+      if(p==='/api/help-center/recently-viewed'&&method==='GET'){
+        try{return json(res,200,await requestHelpCenter('recently_viewed',{actorUserId:user.id,locale:url.searchParams.get('locale')||'en'}));}
+        catch(error){return json(res,error.status||503,{error:error.message||'Recently viewed Help Center articles are unavailable.'});}
+      }
+      const helpArticleMatch=p.match(/^\/api\/help-center\/articles\/([^/]+)$/);
+      if(helpArticleMatch&&method==='GET'){
+        try{return json(res,200,await requestHelpCenter('article',{actorUserId:user.id,slug:decodeURIComponent(helpArticleMatch[1]),locale:url.searchParams.get('locale')||'en'}));}
+        catch(error){return json(res,error.status||503,{error:error.message||'This Help Center article is unavailable.'});}
+      }
+      const helpArticleActionMatch=p.match(/^\/api\/help-center\/articles\/([^/]+)\/(view|feedback)$/);
+      if(helpArticleActionMatch&&method==='POST'){
+        const slug=decodeURIComponent(helpArticleActionMatch[1]);
+        try{
+          if(helpArticleActionMatch[2]==='view')return json(res,200,await requestHelpCenter('record_view',{
+            actorUserId:user.id,translationId:String(input.translationId||'')
+          }));
+          return json(res,200,await requestHelpCenter('feedback',{
+            actorUserId:user.id,translationId:String(input.translationId||''),
+            helpful:input.helpful,note:String(input.note||'').slice(0,1000)
+          }));
+        }catch(error){return json(res,error.status||503,{error:error.message||'Your Help Center response could not be saved.'});}
+      }
+      const helpBookmarkMatch=p.match(/^\/api\/help-center\/bookmarks\/([^/]+)$/);
+      if(helpBookmarkMatch&&(method==='POST'||method==='DELETE')){
+        try{return json(res,200,await requestHelpCenter(method==='POST'?'bookmark_add':'bookmark_remove',{
+          actorUserId:user.id,translationId:decodeURIComponent(helpBookmarkMatch[1])
+        }));}
+        catch(error){return json(res,error.status||503,{error:error.message||'Your saved articles could not be updated.'});}
+      }
+      if(p.startsWith('/api/help-center/admin/')){
+        if(!isModerator(user,req))return json(res,403,{error:'Help Center administrator access is required.'});
+        let action='',payload={actorUserId:user.id};
+        if(p==='/api/help-center/admin/overview'&&method==='GET'){
+          action='admin_overview';payload.locale=url.searchParams.get('locale')||'en';
+        }else if(p==='/api/help-center/admin/articles'&&method==='POST'){
+          action='admin_article_save';payload={...input,actorUserId:user.id};
+        }else if(p==='/api/help-center/admin/articles/transition'&&method==='POST'){
+          action='admin_transition';payload={...payload,...input};
+        }else if(p==='/api/help-center/admin/articles/revisions'&&method==='GET'){
+          action='admin_revisions';payload.translationId=url.searchParams.get('translationId')||'';
+        }else if(p==='/api/help-center/admin/articles/restore'&&method==='POST'){
+          action='admin_restore_revision';payload={...payload,...input};
+        }else if(p==='/api/help-center/admin/categories'&&method==='POST'){
+          action='admin_category_save';payload={...payload,...input};
+        }else if(p==='/api/help-center/admin/subcategories'&&method==='POST'){
+          action='admin_subcategory_save';payload={...payload,...input};
+        }else{
+          return json(res,404,{error:'Help Center administration route not found.'});
+        }
+        try{return json(res,200,await requestHelpCenter(action,payload));}
+        catch(error){return json(res,error.status||503,{error:error.message||'Help Center administration is unavailable.'});}
+      }
       if(p==='/api/menstrual-health'||p.startsWith('/api/menstrual-health/')){
         if(!isFemaleMenstrualHealthAccount(user))return json(res,403,{error:'Menstrual Health is available only to female accounts.'});
         if(AUTH_PROVIDER!=='supabase')return json(res,503,{error:'Menstrual Health requires Minglora Supabase Auth and private database storage.'});
