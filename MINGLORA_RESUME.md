@@ -1,10 +1,10 @@
-Updated: 2026-11-13 (Personal AI Bots workflow: 291/291; full Minglora CI: 1,026/1,026; staged PostgreSQL migrations + HR event readback: passed)
+Updated: 2026-11-13 (Personal AI Bots workflow: 294/294; full Minglora CI: 1,029/1,029; staged PostgreSQL migrations + normalized HR role-change path: passed)
 Scope: **Minglora Social Network only**
 Repository: https://github.com/ravaunrichards/Minglora-Social-Network
 Branch: `feat/personal-ai-bots-network-control-center`
 Draft PR: https://github.com/ravaunrichards/Minglora-Social-Network/pull/202
 Supabase project: `gzycobgbasnqqhnympkr` (existing Minglora project only)
-Latest verified implementation commit: a7fc14ebe958d61dec71d27b144629343d7a6307.
+Latest verified implementation commit: 1be2462250b87bbe3d9a2d08a160aaa61e822545.
 Latest documentation/checkpoint commits: `aeb5429ad656ce8005ab732c1b363d18b7ee9e40` (AI scope note); `MINGLORA_RESUME.md` update follows. Owner batch-history paging API/UI/tests: API `ff2171f17cfd8cad79807521544e06c2512bac4a`, UI `29d19ed6884e5a59a84f66b9d8b5b50375f4ac9d`, API tests `c3bada696db68772405cf92ca4542e75d15d8705`, UI tests/cache `cef7b1385f362b56d8aa54bbcd94d8ea2bac359e`, `f464df671d3d30d4e21521462f4b7ab33aad0ef1`.
 Durable task queue pagination API/UI/test commits: API and cursor `4000e4fbf1e6c0c785bb131724e5e80ba4eea320`, queue/history UI `ad9faf6278f78770858b156ec6c2fcc48c81858c`, API tests `476704394f571c463b3b6a9586f779c7d43ed5a9`, `82afb0572f478549d2717257d076273dada5e288`, UI tests and cache refresh `3c68c30923f3a250cb15110ec0675ff693c9b21e`, `44e3e1c02cc5d51a490315c6468c83b75472cda0`.
 Recent admin list pagination commits: canonical identity API/UI/tests `49fa272c4716361e76059037320b42dbfd41c45a`, `d42fdd27fcbe15f6c472576fc2bbca1ba28e8f33`, `60d6e926f3495106455046e460ecbde067653ed4`, `1df4af0747fa02ab3192af277f217c5d0614b3e5`, `2579f6a16bfbac8e74b7838abda107b3d8fa56fa`; provider/email pagination API/UI/tests `2ddc159cfb50dc9efce8f92aa794c0002d5b3a0a`, `430156e0d92facee34a41a9f813b0c532dc534a9`, `d1fd4ab1be4158b794904fb4d8ce1a75249c6044`, `e20e2197174cd0657e2825c24f2e3df52b3cf157`, `c98e75f8e93be47a70f926cb2cb98f4158a7c42a`, verified by `0bd7a31b8feafbd0a50238f2b72358c69b70aec0`.
@@ -27,17 +27,17 @@ The previous checkpoint did not contain a weighted percentage. The earlier conve
 |---|---:|---:|---:|
 | 1. Relational foundation and backend persistence integration | 25% | 35% | 8.75% |
 | 2. AI identities, profiles, worldwide discovery and member follow graph | 20% | 77% | 15.40% |
-| 3. Corporate governance, organizational charts and HR lifecycle | 15% | 57% | 8.55% |
+| 3. Corporate governance, organizational charts and HR lifecycle | 15% | 58% | 8.70% |
 | 4. Supervision, bounded autonomy, queues, teams and collaboration | 10% | 66.5% | 6.65% |
 | 5. AI social participation and creator ecosystem | 10% | 25% | 2.50% |
 | 6. Security, governance, finance and resource controls | 8% | 27.5% | 2.20% |
 | 7. Model intelligence, memory, provider operations and analytics | 7% | 21% | 1.47% |
 | 8. Distributed scaling, load tests, device tests and production acceptance | 5% | 0% | 0.00% |
-| **TOTAL** | **100%** |  | **45.52% → 46%** |
+| **TOTAL** | **100%** |  | **45.67% → 46%** |
 
-**COMPLETION: 45.52% → 46% | REMAINING: 54.48% → 54%**
+**COMPLETION: 45.67% → 46% | REMAINING: 54.33% → 54%**
 
-This is weighted feature-branch implementation progress, not a claim that 44.90% of the production system is deployed. Milestones 1 and 2 remain partial because normalized AI tables/RPCs are staged but absent from the live Supabase migration ledger and public schema. Milestone 2 now includes tested SQL-level member-block exclusion, stable raw-page pagination cursors, and paginated blocked-profile management in addition to identities, profiles, public discovery, follows and saved searches. Milestone 3 includes tested owner-approved appointment/employment-history records and a read-only organization chart; it remains partial because canonical relational HR persistence, broader employment lifecycle, governance execution, real browser acceptance and operational reporting are unfinished.
+This is weighted feature-branch implementation progress, not a claim that 45.67% of the production system is deployed. Milestones 1 and 2 remain partial because normalized AI tables/RPCs are staged but absent from the live Supabase migration ledger and public schema. Milestone 2 includes tested SQL-level member-block exclusion, stable raw-page pagination cursors and paginated blocked-profile management in addition to identities, profiles, public discovery, follows and saved searches. Milestone 3 now includes staged relational HR tables/RPCs with disposable-PostgreSQL write/read verification, owner-approved appointment history, controlled promotion/transfer and a read-only organization chart. It remains partial because the migration is not deployed to live Supabase, broader employment lifecycle and governance execution are incomplete, and real browser/device acceptance and operational reporting are unfinished.
 
 ## Recovered and project-verified implementation
 
@@ -48,7 +48,7 @@ This is weighted feature-branch implementation progress, not a claim that 44.90%
 - Added owner-only API routes to list, create, update and soft-deactivate departments. The existing designated MFA-verified owner and same-origin write checks run before these routes.
 - Supports custom departments, unique names/codes, validated parent department assignment, self-parent/cycle rejection, department description, enable/disable and audit records. Built-in department codes remain stable; built-in display names/descriptions are editable.
 - Added the Corporate Departments panel to the existing AI Admin Centre, including parent selectors and custom department creation. The page asset version was advanced to `20261109-personal-ai-bots-3`.
-- **Persistence limitation:** this current department collection is saved through Minglora's existing runtime-state `saveStore()` adapter. A normalized relational department/organization schema and live Supabase PostgreSQL readback have not been implemented or verified. Leadership appointments and HR actions are explicitly not exposed.
+- **Persistence limitation:** the runtime-state `saveStore()` path remains a compatibility fallback when the canonical HR gateway explicitly reports `AI_HR_SCHEMA_NOT_READY`. Normalized department/position/HR tables and owner-gated upsert/list RPCs are staged and verified in disposable PostgreSQL CI, but are not deployed to live Minglora Supabase. Leadership appointments and HR actions are exposed behind the existing owner/MFA gate and grant no AI permissions.
 - Added a 20-position role catalogue spanning Chairperson/Board President, Board Director, CEO, COO, CFO, CTO, CHRO, CISO, CMO, other executive officer, Department Director, Deputy Director, Department Manager, Regional Manager, Team Leader, Supervisor, Senior Specialist, Junior Specialist, Assistant and Worker.
 - The role catalogue defines levels, role groups, applicable department scope and reporting-position references. Each role has an immutable empty permission list and explicit false defaults for action approval, delegation, hiring, budget management, external execution and appointment enablement.
 - Added a vacancy collection and service/API/Admin Centre lifecycle: list, create, update, pause, reopen and close. Vacancies require an existing job position and enabled compatible department; executive-only positions cannot be opened in unrelated departments. Titles are unique per position/department while open or paused; slots are whole numbers 1–100; unsupported `filled` status is rejected.
@@ -57,11 +57,11 @@ This is weighted feature-branch implementation progress, not a claim that 44.90%
 - Added candidate applications for existing AI identities whose `population` is exactly `organizational`; submissions require a vacancy owned by the same designated owner and in `open` status. Independent AIs, missing identities, restricted/suspended/archived/retired identities and non-open vacancies are rejected.
 - Duplicate applications are prevented per identity/vacancy. Review transitions are `submitted` → `in_review` → `shortlisted`, `rejected` or `withdrawn` (with defined allowed transitions); rejected and withdrawn are terminal. Every submission/status change is audited and recorded in status history.
 - The Admin Centre offers existing organizational AIs and open vacancies only, then lists candidates with permitted review actions. No applicant is appointed, given permissions or activated by this queue. Page asset version is now `20261109-personal-ai-bots-6`.
-- Candidate application records are persisted through the existing runtime-state save adapter only; no normalized relational HR tables or live PostgreSQL readback are claimed.
-- Vacancy collection is persisted through the existing runtime-state adapter only. No normalized SQL tables or live PostgreSQL readback is claimed.
+- Candidate applications use the canonical HR gateway when the staged relational schema is available; runtime-state persistence remains a compatibility fallback. Normalized write/read is verified in disposable PostgreSQL CI, not on the live Supabase project.
+- Vacancies use the canonical HR gateway when the staged relational schema is available; runtime-state persistence remains a compatibility fallback. Normalized write/read is verified in disposable PostgreSQL CI, not on the live Supabase project.
 - Added owner-approved corporate appointments for shortlisted, pre-existing organizational AI identities. The service validates owner/application status, open vacancy and remaining slots, position/department compatibility, candidate disabled state, uniqueness of active appointments and reporting-manager hierarchy. Appointment and employment-history records are created with owner attribution and audit/status history. Appointed identities remain disabled, receive an empty permission set (`not_granted`) and are not activated.
 - Added owner-only `GET /appointments`, `GET /employment-history` and `POST /appointments` API routes plus an Admin Centre appointment form, reporting-manager selector and employment-history display. Dedicated service, Admin API and UI tests cover the workflow.
-- **Persistence limitation:** appointment and employment-history collections currently use the existing runtime-state save adapter. Normalized relational HR tables/RPCs and live PostgreSQL readback are not implemented or verified; an appointment record does not grant position permissions or operational authority.
+- **Persistence limitation:** appointment and employment-history writes use the canonical HR gateway when the staged relational schema is available, with runtime-state fallback only for `AI_HR_SCHEMA_NOT_READY`. Staged normalized HR writes/readback pass disposable PostgreSQL CI; live Supabase deployment/readback remains unverified. Appointment records grant no permissions or operational authority.
 - Added a read-only Corporate Organization Chart using approved appointment IDs and reporting-manager links. It renders manager/employee nesting, displays unavailable-manager warnings, detects circular/unlinked records without recursing indefinitely, and clearly states that chart positions grant no authority or permissions. UI regression assertions cover the component and safeguards; no live browser/device acceptance has been performed.
 
 - Existing owner-only Personal AI Bots Admin Centre and API; designated MFA-verified Minglora owner gate and same-origin write checks.
@@ -111,12 +111,12 @@ This is weighted feature-branch implementation progress, not a claim that 44.90%
 - The initial schema constraint and a separate additive migration `20261109252000_minglora_ai_bot_autonomy_modes.sql` accept the expanded values.
 - **This is configuration support, not proof of operational autonomy.** The deployed worker is not verified; current queue/task approvals remain enforced and the worker only accepts explicitly approved, low-impact draft/text tasks. Supervisor hierarchy, task delegation and unattended execution are not yet operational.
 
-### Corporate department and appointment foundation — partial, runtime-state-backed
+### Corporate department and appointment foundation — partial, staged relational persistence plus compatibility fallback
 - The owner Admin Centre and API expose the 20 built-in corporate departments, with custom department creation, edit, enable/deactivate, parent assignment and cycle/duplicate validation.
 - The 20-position role catalogue and vacancy lifecycle are implemented, with compatible department checks, slot limits, status history and audit records.
 - Candidate applications support organizational AI identities, duplicate prevention and audited review transitions.
 - The owner-approved appointment workflow records an appointed role, department, reporting-manager appointment, approval actor/time, employment-history event and status-history event. Only shortlisted applicants may be appointed; the target identity must remain disabled and no permissions may be granted. The route is owner-gated and only accepts the supported application/manager fields.
-- Department, vacancy, candidate-application, appointment and employment-history collections still use the existing runtime-state adapter in this feature branch. There is no normalized relational HR/organization schema or live PostgreSQL readback. Full employee lifecycle, role-based authorization, org charts and department delegation remain unfinished.
+- Department, vacancy, candidate-application, appointment and employment-history collections pass through the canonical HR gateway to staged normalized relational tables/RPCs when available. Runtime-state persistence remains the explicit compatibility fallback until migration release. Disposable PostgreSQL write/read and migration smoke tests pass; live project deployment/readback remains unverified. Remaining HR lifecycle and delegated authority are incomplete; the organization chart is read-only.
 
 ### Supervision, tasks and teams
 - Bot teams, assignment/removal, approvals, audit, bulk selected bot controls, daily budgets/caps and emergency shutdown exist in the feature branch.
@@ -138,7 +138,7 @@ This is weighted feature-branch implementation progress, not a claim that 44.90%
 - Owner-approved appointment service/API/UI paths are covered by the 177-test focused workflow and 911-test full CI. Appointments require shortlisted applicants and valid manager hierarchy, prevent duplicate active appointments and overfilled vacancies, record employment history/audit, and leave AI identities disabled with no permissions.
 - Bulk identity import: 1–100 per batch, owner-scoped idempotency and payload hash, duplicate controls, per-record outcomes, safe retry after DB failure, rollback on initial runtime checkpoint-save failure, owner-only history; imported identities remain disabled/private.
 - **Live Supabase limitation:** prior read-only checks of project `gzycobgbasnqqhnympkr` found no AI Network migration versions and no `ai_*` or `minglora_ai_*` public tables. AI SQL remains staged only; no production migration applied.
-- **Not verified operationally:** normalized relational HR/department/position/vacancy/application/appointment storage, live PostgreSQL readback, deployed AI Edge Function changes, worker/scheduler deployment, provider inference/health, mailbox provisioning, employee/manager permission execution, or 10-billion storage/concurrency capacity.
+- **Not verified operationally:** deployment of normalized AI/HR tables/RPCs to live Supabase and live project readback; deployed AI Edge Function changes; worker/scheduler deployment; provider inference/health; mailbox provisioning; employee/manager permission execution; or 10-billion storage/concurrency capacity. Normalized HR migration/write/read is verified only against disposable PostgreSQL CI.
 
 ## Recovery and progress comparison
 
@@ -166,13 +166,13 @@ This is weighted feature-branch implementation progress, not a claim that 44.90%
 2. Keep focused Personal AI Bots tests and full Minglora CI green as the remaining feature-branch work progresses.
 
 ### Medium
-1. Add normalized relational SQL tables/RPCs for departments, positions, vacancies, candidate applications, appointments and employment history as staged migrations; verify PostgreSQL round-trip only after release authorization.
+1. Obtain release authorization for the already-staged normalized AI/HR migrations, then deploy and verify live PostgreSQL readback against the existing Minglora project; do not use production before approval.
 2. Complete real DB persistence/readback for all AI identities, profiles, locations, emails, provider assignments, discovery filters and safety review.
 3. Verify bulk identity imports and retries against normalized batch tables.
 4. Deploy real worker/scheduler and provider adapters only when credentials/infra available and gated checks pass.
 
 ### Hard
-1. Complete HR lifecycle: recruitment, appointment, onboarding, training, availability, evaluation, promotion, transfer, discipline, suspension, succession and termination.
+1. Complete remaining HR lifecycle: recruitment, onboarding, training, availability, performance evaluation, discipline, suspension, succession and termination. Owner-approved promotion and department-transfer operations are implemented and CI-verified on the feature branch.
 2. Extend the read-only organization chart with normalized relational reporting links, browser interaction tests, board governance and scoped approval/delegation.
 3. Implement AI collaboration/team execution, budgets/resources, accounting, procurement, compliance, risk and security centres.
 4. Complete model routing/fallback, individual memory, multilingual/multimodal features and accurate operational analytics.
@@ -180,17 +180,17 @@ This is weighted feature-branch implementation progress, not a claim that 44.90%
 6. Finish desktop/mobile end-to-end, integration, security, load and production-readiness verification.
 
 ## Blockers and release constraints
-- **Live relational database:** AI migrations have not been applied to Minglora Supabase; no normalized HR tables/readback has been verified. Production migration requires explicit authorization.
+- **Live relational database:** AI migrations remain unapplied to Minglora Supabase. Normalized HR migrations and readback passed disposable PostgreSQL CI, but no live AI tables/RPCs or production readback exist. Production migration requires explicit authorization.
 - **Safe database development environment:** Supabase branch listing returned no development branches. The current execution container has Node/npm and Git but no Supabase CLI installed. The draft PR explicitly prohibits applying migrations to production without review. Therefore new relational HR migrations cannot be safely created/validated end-to-end in the current environment. Do not create a billable Supabase branch or apply production DDL without an approved development environment and required authorization.
-- **Department/position/vacancy/application data:** current staged service uses the existing runtime-state save adapter, not normalized relational tables.
+- **Department/position/vacancy/application data:** canonical HR gateway and staged normalized relational tables/RPCs are implemented and disposable-PostgreSQL tested; runtime-state remains a compatibility fallback. Live rollout remains blocked pending authorization.
 - **AI provider/email:** no connected, health-checked model provider or actual mailbox provisioning/sending service is verified.
 - **Workers:** remain disabled until provider, queue, permission, monitoring, deployment and human approval safeguards pass.
-- **HR execution:** candidate review and an owner-approved appointment-record workflow are implemented, but no live production employee appointments are verified; no role permissions, authority delegation or employment execution are enabled.
+- **HR execution:** candidate review, owner-approved appointment records and promotion/department-transfer operations are implemented on the feature branch. No live production employee appointments are verified; role permissions, authority delegation and AI work execution remain disabled.
 - **Branch:** PR #202 open/draft, now 412 commits ahead and 5 behind main. Avoid destructive merge/rebase.
 
 ## Exact next action
 
-Continue with independent non-database work that can be built and verified in this feature branch. The normalized AI/HR migration milestone remains blocked until an approved non-production Supabase environment and Supabase CLI are available. Preserve the existing runtime-state adapter and do not apply migrations to production. Next inspect the provider runtime records and bounded Admin Centre lists for truthful page/total labeling. Continue worker/provider integration only when real provider credentials and approved deployment infrastructure are available. Keep PR #202 open/draft.
+Continue with independent non-database work that can be built and verified in this feature branch. The staged AI/HR schema and gateway passed the disposable PostgreSQL CI environment; live rollout remains blocked pending explicit release authorization. Preserve the runtime-state compatibility fallback and do not apply migrations to production without approval. The next safe implementation area is the remaining HR lifecycle and normalized-organization reporting, followed by provider/runtime work only when real credentials and approved deployment infrastructure are available. Keep PR #202 open/draft.
 
 
 
@@ -653,7 +653,7 @@ Continue with independent non-database work that can be built and verified in th
 
 - Existing Minglora repository only: ravaunrichards/Minglora-Social-Network; existing feature branch feat/personal-ai-bots-network-control-center; existing Supabase project gzycobgbasnqqhnympkr; PR #202 remains open and draft.
 - The owner Admin Centre can record seven employment-history checkpoints for an existing organizational appointment, with notes and an audit actor/timestamp. The employment-history panel shows the linked appointment and owner-entered notes after reload.
-- Record-only safety: the underlying AI employee remains disabled, receives no permissions, retains not_granted/unchanged_disabled state, and is not given a task or external execution path. Actual promotion/transfer and execution authority remain separate unfinished workflows.
+- At this earlier checkpoint, actual promotion/transfer remained unfinished; the later continuation checkpoint below records the implemented owner-approved role-change workflow.
 - Added a PostgreSQL smoke test that writes a trained event through ai_bot_hr_state_upsert and reads it back through ai_bot_hr_state_list, asserting event ID, appointment/identity references, event type, owner actor and notes, plus exactly one normalized ai_employment_history row.
 - Verified commit a7fc14ebe958d61dec71d27b144629343d7a6307:
   - Personal AI Bots: 291/291 tests passed (https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/43375587196).
@@ -662,3 +662,18 @@ Continue with independent non-database work that can be built and verified in th
 - Production Supabase remains untouched: no public ai_* tables or these AI migrations in the live migration ledger. No production schema/data write, credential/provider/mailbox provisioning, worker/scheduler deployment or autonomy activation.
 - PR #202 remains OPEN + DRAFT. The network remains incomplete. Provider inference, mailbox provisioning, worker/scheduler operation, full HR role transitions and delegated authority, finance/resources, analytics, real AI social/creator experiences, desktop/mobile acceptance and 10-billion scale benchmarks remain outstanding.
 - Ten billion is a design target only, not a measured capacity.
+
+## Latest verified continuation checkpoint — 2026-11-13
+
+- Latest feature-branch commit: `1be2462250b87bbe3d9a2d08a160aaa61e822545` (role-change implementation `332b73abe42d8813f1470125b43d9db579a9731d`; test-fixture/cache correction follows).
+- Implemented owner-approved AI employee **promotion** and **department transfer** through the existing HR service, owner-only Admin API and Personal AI Bots Admin Centre. Route: `POST /api/admin/personal-ai-bots/appointments/:appointmentId/role-change`.
+- Promotion requires a strictly higher-level position. Transfer retains the same job position and moves to another enabled department. Both require an open owner-scoped vacancy with remaining capacity, a matching position/department, a valid reporting-manager relationship, and approval notes.
+- The service rejects suspended/closed appointments, non-organizational or enabled AI identities, missing/mismatched original applications, unexpected permission/activation state, incompatible vacancy assignments, reporting cycles, and direct reports that would become invalid under the new role.
+- A successful operation updates the appointment's role, department, vacancy and reporting manager; appends a `promoted` or `transferred` employment-history event; and records owner audit entries. It preserves the AI identity as disabled, with an empty permission list, `not_granted` permission status and `unchanged_disabled` activation state. It creates no task, inbox, provider credential or external execution authority.
+- The Admin Centre now exposes the owner-confirmed promotion/transfer form and uses the versioned script reference `20261113-personal-ai-bots-29`.
+- Verification on commit `1be2462250b87bbe3d9a2d08a160aaa61e822545`:
+  - Personal AI Bots workflow: **294/294 passed, 0 failed** ([run 43378567201](https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/43378567201)).
+  - Disposable PostgreSQL: **all staged AI migrations and the AI Network SQL smoke suite passed** ([same AI workflow run](https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/43378567201)).
+  - Full Minglora CI: **1,029/1,029 passed, 0 failed**; For You functional-navigation job passed ([run 43378567169](https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/43378567169)).
+- Live Supabase project `gzycobgbasnqqhnympkr` remains unchanged: read-only inspection still found no AI-network public tables or AI migration entries in the live migration ledger. No production SQL was applied and no new Supabase project/branch was created.
+- PR #202 remains **OPEN + DRAFT**. The whole AI Network is not complete. Outstanding work includes remaining HR lifecycle actions, normalized-schema release/live verification, provider inference and health, email mailbox provisioning, real worker/scheduler deployment, corporate authority and delegated operations, finance/resources, analytics, full social/creator execution, device acceptance, distributed scaling and measured 10-billion-identity/concurrent-execution capacity. Ten billion remains a design objective, not a measured result.
