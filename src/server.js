@@ -277,8 +277,9 @@ function safeUser(u,viewerId=null){
 const APP_COLOR_THEMES=['minglora','ocean','tropical','royal','emerald','rose','golden','lavender','midnight','graphite'];
 const LIVE_ROOM_THEMES=['studio','ocean','tropical','royal','neon','sunset','garden','social'];
 const PROFILE_STYLE_IDS=['facebook','tiktok','instagram','youtube','x','linkedin','pinterest','twitch','snapchat','custom-minglora'];
-const PROFILE_SCREEN_LAYOUT_IDS=['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight','roundtable-1','roundtable-2'];
-const LIVE_SCREEN_LAYOUTS=['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight','roundtable-1','roundtable-2'];
+const PROFILE_SCREEN_LAYOUT_IDS=['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight'];
+const LIVE_SCREEN_LAYOUTS=['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight'];
+const LIVE_GUEST_LAYOUTS=['roundtable-1','roundtable-2'];
 const DEFAULT_SETTINGS={privacy:{profileVisibility:'public',allowFriendRequests:true,messageAudience:'everyone',meetWaveAudience:'everyone',shareAudienceDemographics:false,friendsListAudience:'public',followersListAudience:'public',followingListAudience:'public',subscribersListAudience:'public',commentAudience:'everyone'},notifications:{inApp:true,friendRequests:true,messages:true,interactions:true,push:true,profileViews:false,calls:true,live:true,gifts:true,meetWave:true,leagues:true,account:true},preferences:{theme:'system',colorTheme:'minglora',liveRoomTheme:'studio',feedSort:'recent',reducedMotion:false,liteMode:false,keyboardShortcuts:false,displayCurrency:'USD',messengerIncomingCallSounds:true,messengerMessageSounds:true,messengerAutoOpenNewMessages:false,messengerActiveStatus:true,profileLayout:'advanced',profileStyle:'facebook',defaultProfileStyle:'facebook',profileScreenLayout:'fluid-panel',defaultProfileScreenLayout:'fluid-panel',messengerArchivedConversationIds:[],messengerRestrictedUserIds:[]},experience:DEFAULT_EXPERIENCE_SETTINGS};
 function getUserSettings(user){const saved=user?.settings||{};const preferences={...DEFAULT_SETTINGS.preferences,...(saved.preferences||{})};if(!APP_COLOR_THEMES.includes(preferences.colorTheme))preferences.colorTheme=DEFAULT_SETTINGS.preferences.colorTheme;if(!['standard','advanced','creator'].includes(preferences.profileLayout))preferences.profileLayout=DEFAULT_SETTINGS.preferences.profileLayout;if(!PROFILE_STYLE_IDS.includes(preferences.profileStyle))preferences.profileStyle=DEFAULT_SETTINGS.preferences.profileStyle;if(!PROFILE_STYLE_IDS.includes(preferences.defaultProfileStyle))preferences.defaultProfileStyle=DEFAULT_SETTINGS.preferences.defaultProfileStyle;if(!PROFILE_SCREEN_LAYOUT_IDS.includes(preferences.profileScreenLayout))preferences.profileScreenLayout=DEFAULT_SETTINGS.preferences.profileScreenLayout;if(!PROFILE_SCREEN_LAYOUT_IDS.includes(preferences.defaultProfileScreenLayout))preferences.defaultProfileScreenLayout=DEFAULT_SETTINGS.preferences.defaultProfileScreenLayout;if(!LIVE_ROOM_THEMES.includes(preferences.liveRoomTheme))preferences.liveRoomTheme=DEFAULT_SETTINGS.preferences.liveRoomTheme;for(const key of ['messengerArchivedConversationIds','messengerRestrictedUserIds'])if(!Array.isArray(preferences[key]))preferences[key]=[];const experience=validateExperienceSettingsPatch(DEFAULT_EXPERIENCE_SETTINGS,saved.experience||{}).settings;return {privacy:{...DEFAULT_SETTINGS.privacy,...(saved.privacy||{})},notifications:{...DEFAULT_SETTINGS.notifications,...(saved.notifications||{})},preferences,experience};}
 function isFriend(firstId,secondId){const follows=activeFollows();return follows.some(item=>item.followerId===firstId&&item.followedId===secondId)&&follows.some(item=>item.followerId===secondId&&item.followedId===firstId);}
@@ -359,7 +360,7 @@ function validateSettingsPatch(input,user){
       if(section==='preferences'&&key==='displayCurrency'&&!['USD','JMD','CAD','GBP','EUR','TTD','BBD','XCD','GYD','AUD','JPY','INR','NGN','ZAR','KES'].includes(value))return {valid:false,error:'Choose a supported display currency.'};
       if(section==='preferences'&&key==='profileLayout'&&!['standard','advanced','creator'].includes(value))return {valid:false,error:'Choose a supported profile layout.'};
       if(section==='preferences'&&['profileStyle','defaultProfileStyle'].includes(key)&&!PROFILE_STYLE_IDS.includes(value))return {valid:false,error:'Choose one of the supported Minglora profile styles.'};
-      if(section==='preferences'&&['profileScreenLayout','defaultProfileScreenLayout'].includes(key)&&!PROFILE_SCREEN_LAYOUT_IDS.includes(value))return {valid:false,error:'Choose one of the nine supported profile screen layouts.'};
+      if(section==='preferences'&&['profileScreenLayout','defaultProfileScreenLayout'].includes(key)&&!PROFILE_SCREEN_LAYOUT_IDS.includes(value))return {valid:false,error:'Choose one of the seven supported profile screen layouts.'};
       if(section==='preferences'&&['reducedMotion','liteMode','keyboardShortcuts','messengerIncomingCallSounds','messengerMessageSounds','messengerAutoOpenNewMessages','messengerActiveStatus'].includes(key)&&typeof value!=='boolean')return {valid:false,error:'Messenger and motion preferences must be true or false.'};
       if(section==='preferences'&&['messengerArchivedConversationIds','messengerRestrictedUserIds'].includes(key)&&(!Array.isArray(value)||value.length>500||value.some(id=>typeof id!=='string'||!id.trim()||id.length>128)))return {valid:false,error:'Messenger account lists must contain valid account identifiers.'};
       if(section==='preferences'&&['messengerArchivedConversationIds','messengerRestrictedUserIds'].includes(key))next[section][key]=[...new Set(value)];
@@ -3202,7 +3203,7 @@ async function route(req, res) {
         const liveTheme = LIVE_ROOM_THEMES.includes(requestedLiveTheme) ? requestedLiveTheme : DEFAULT_SETTINGS.preferences.liveRoomTheme;
         ensureLiveFanClubCollections(db);
         const session = {
-          id, roomName, hostId: user.id, title, visibility, broadcastType, liveMode, liveSettings, liveLayout: 'full-screen',
+          id, roomName, hostId: user.id, title, visibility, broadcastType, liveMode, liveSettings, liveLayout: 'full-screen', liveGuestLayout: 'roundtable-1',
           description: liveSettings.aboutMe, liveTheme, likeCount: 0, status: 'live', createdAt: now(), endedAt: null
         };
         await requestSupabaseState('live_broadcast_create',{
@@ -3299,6 +3300,18 @@ async function route(req, res) {
         session.liveLayout = layout;
         await saveStore();
         return json(res, 200, { ok: true, liveLayout: session.liveLayout });
+      }
+      const liveGuestLayoutMatch = p.match(/^\/api\/live\/sessions\/([^/]+)\/guest-layout$/);
+      if (liveGuestLayoutMatch) {
+        if (method !== 'PATCH') return json(res, 405, { error: 'Use PATCH to update the LIVE guest-box layout.' });
+        const session = (db.liveSessions || []).find(item => item.id === liveGuestLayoutMatch[1] && item.status === 'live');
+        if (!session || blockedBetween(user.id, session.hostId)) return json(res, 404, { error: 'LIVE session not found.' });
+        if (session.hostId !== user.id) return json(res, 403, { error: 'Only the LIVE host can change the guest-box layout.' });
+        const layout = String(input.layout || '');
+        if (!LIVE_GUEST_LAYOUTS.includes(layout)) return json(res, 400, { error: 'Choose Roundtable 1 or Roundtable 2 for the LIVE guest-box layout.' });
+        session.liveGuestLayout = layout;
+        await saveStore();
+        return json(res, 200, { ok: true, liveGuestLayout: session.liveGuestLayout });
       }
       const liveModeratorsMatch = p.match(/^\/api\/live\/sessions\/([^/]+)\/moderators(?:\/([^/]+))?$/);
       if (liveModeratorsMatch) {
