@@ -614,3 +614,24 @@ Continue with independent non-database work that can be built and verified in th
 - This verifies the migration contract with repository tests; it does **not** verify PostgreSQL execution. The new migration and all earlier AI migrations remain staged only. No live Supabase DDL/DML, provider configuration, mailbox provisioning, worker/scheduler deployment, or production rollout was performed.
 - Current release gate remains unchanged: live AI tables/RLS and canonical production readback are not verified; actual provider inference and email inbox provisioning are not connected; distributed 10-billion identity capacity and concurrent execution are not benchmarked. The PR remains open and draft.
 - **Next safe step:** obtain an approved non-production PostgreSQL environment before applying and integration-testing the staged identity, queue, and HR migrations. Do not apply them to production as a shortcut.
+
+## AI identity persistence hardening checkpoint — language and permission records (2026-11-12, America/Jamaica)
+
+- Continued on the existing Minglora AI Bot Network feature branch `feat/personal-ai-bots-network-control-center`, draft PR #202. No new repository, project, branch, or service was created.
+- **Fixed partial-update language retention** in the staged canonical identity migration. The `ai_identity_languages` rows are now replaced only when the payload explicitly supplies a valid languages array. A malformed supplied value is rejected rather than silently deleting preferences. A schema regression verifies that omission cannot reach the delete operation.
+- **Completed the normalized AI permission write/read path**:
+  - Canonical identity snapshots now include effective permissions only when the bot is enabled and operating in `hybrid` or `autonomous_within_limits`; supervised, paused, and disabled bots synchronize an empty effective grant set.
+  - The existing runtime gateway accepts only the explicit `permissions` field; unrecognized fields remain rejected.
+  - The canonical PostgreSQL identity RPC validates the permission array and enforces the five-action allowlist: `analytics_read`, `moderation_flag`, `draft_content`, `translate_content`, and `prepare_faq_draft`.
+  - Permission rows are upserted into `ai_identity_permissions` with explicit scopes and the designated human owner as grantor. Removed grants are marked `allowed=false` rather than deleting their records. Permission synchronization is audited.
+  - The canonical identity list RPC now returns permission codes, resource scopes, allowed state, grantor, expiry and update metadata.
+  - Added API and schema regressions for canonical grant synchronization and for clearing effective grants on supervised/paused bots.
+- The prior HR reporting-manager integrity constraints remain staged and covered by the earlier passing regression run.
+- Verification on head `06bb5f299662c1345f2c6d282b34ed844cf9cf99`:
+  - Personal AI Bots workflow: **286 passed / 0 failed / 0 skipped**; Node 24 syntax checks passed.
+  - Full Minglora repository test step: **1,021 passed / 0 failed / 0 skipped**.
+  - For You functional navigation: passed.
+  - Dependency audit and repository structure checks completed successfully in the full workflow.
+- These are branch CI and source-contract results, not PostgreSQL execution. All AI migrations remain staged and the live Minglora Supabase project remains unchanged. No production data, provider secrets, mailboxes, worker/scheduler deployment, or autonomy settings were changed.
+- The 10-billion identity target remains a design objective; production database capacity, distributed partitioning, simultaneous execution and disaster recovery are not benchmarked.
+- **Next safe step:** obtain an approved non-production PostgreSQL environment to apply and integration-test the staged identity, provider, email, task-queue and HR migrations together. Do not apply these migrations to production as a workaround.
