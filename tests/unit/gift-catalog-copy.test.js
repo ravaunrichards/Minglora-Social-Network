@@ -36,8 +36,8 @@ test("Gift Studio can copy the saved gift requirements and uses a clipboard fall
 });
 
 test("the copied gift tools and requirements are cache-versioned for live clients",()=>{
-  assert.ok(html.includes("/gifts.js?v=20261113-live-category-icons-1"));
-  assert.ok(worker.includes("/gifts.js?v=20261113-live-category-icons-1"));
+  assert.ok(html.includes("/gifts.js?v=20261113-live-reward-art-icons-1"));
+  assert.ok(worker.includes("/gifts.js?v=20261113-live-reward-art-icons-1"));
   assert.ok(worker.includes("SHELL.push('/gift-system-requirements.md')"));
-  assert.ok(worker.includes("minglora-shell-v307-self-updating-1"));
+  assert.ok(worker.includes("minglora-shell-v308-self-updating-1"));
 });
