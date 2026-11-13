@@ -304,6 +304,12 @@ begin
     return jsonb_build_object('task',v_result);
   end if;
 
+  -- Worker claims and lease callbacks stay unavailable until an independent worker identity,
+  -- short-lived worker credential and per-worker authorization path are deployed.
+  if v_action in ('claim_next_task','heartbeat_task','complete_task','fail_task') then
+    raise exception using errcode = '42501', message = 'AI worker authentication is not deployed; task execution is disabled.';
+  end if;
+
   if v_action = 'claim_next_task' then
     v_worker_id := trim(coalesce(v_payload->>'worker_id',''));
     if length(v_worker_id)<2 or length(v_worker_id)>120 then
