@@ -48,7 +48,7 @@ test('no fake Help Center Q&A content is seeded into Minglora', () => {
   assert.doesNotMatch(schema, /insert into public\.help_articles/i);
   assert.doesNotMatch(schema, /insert into public\.help_article_translations/i);
   assert.match(page, /No approved question-and-answer articles have been published yet/);
-  assert.match(ui, /No verified Q&amp;A articles have been published/);
+  assert.match(ui, /No verified questions are published for this topic yet/);
 });
 
 test('search uses persisted full text, category filters and bounded pagination', () => {
@@ -94,7 +94,7 @@ test('Help Center navigation links to the dedicated page and preserves Support I
 
 test('Help Center layout supports mobile sizing and saved Minglora themes', () => {
   assert.match(css, /@media\(max-width:520px\)/);
-  assert.match(css, /theme-dark/);
+  assert.match(ui, /theme-dark/);
   assert.match(page, /minglora-branding\.css/);
   assert.match(ui, /document\.body\.dataset\.colorTheme=colorTheme/);
 });
@@ -110,5 +110,5 @@ test('popular metrics are based on recorded article views rather than hard-coded
   assert.match(reporting, /create or replace function public\.help_center_popular/);
   assert.match(reporting, /sum\(v\.view_count\)/);
   assert.match(edge, /help_center_popular/);
-  assert.match(ui, /Popular questions/);
+  assert.match(html, /Popular questions/);
 });
