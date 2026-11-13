@@ -349,6 +349,6 @@ END;
 $function$;
 
 REVOKE ALL ON FUNCTION public.minglora_ai_identity_discover(text,jsonb,text,integer,integer,uuid) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.minglora_ai_identity_discover(text,jsonb,text,integer,integer) TO service_role;
+GRANT EXECUTE ON FUNCTION public.minglora_ai_identity_discover(text,jsonb,text,integer,integer,uuid) TO service_role;
 
 COMMIT;
