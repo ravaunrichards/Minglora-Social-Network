@@ -20,7 +20,7 @@ const settings = read('public/settings.js');
 
 test('Help Center page and browser script are valid standalone JavaScript/HTML assets', () => {
   assert.doesNotThrow(() => new vm.Script(ui, { filename: 'public/help-center.js' }));
-  assert.doesNotThrow(() => new vm.Script(client, { filename: 'src/help-center-client.js' }));
+  assert.doesNotThrow(() => new vm.Script(client.replace(/^export /gm, ''), { filename: 'src/help-center-client.js' }));
   assert.match(page, /id="hc-title"/);
   assert.match(page, /id="hc-search-form"/);
   assert.match(page, /id="hc-category-grid"/);
