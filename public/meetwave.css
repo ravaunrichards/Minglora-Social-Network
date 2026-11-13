@@ -2403,7 +2403,7 @@
 /* FINAL SEVEN-PLUS-TWO CONTRACT: the screen preset owns the MeetWave grid template. */
 .mw-meeting #mw-screen-stage[data-screen-layout="full-screen"] #mw-grid[data-layout="full-screen"]{grid-template-columns:repeat(4,minmax(0,1fr))!important;grid-template-rows:24px minmax(0,1.5fr) repeat(2,minmax(0,.72fr))!important;grid-auto-rows:minmax(0,1fr)!important}
 .mw-meeting #mw-screen-stage[data-screen-layout="fluid-panel"] #mw-grid[data-layout="fluid-panel"]{grid-template-columns:repeat(4,minmax(0,1fr))!important;grid-template-rows:24px repeat(3,minmax(0,1fr))!important;grid-auto-rows:minmax(110px,1fr)!important}
-.mw-meeting #mw-screen-stage[data-screen-layout="fluid-grid"] #mw-grid[data-layout="fluid-grid"]{grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr))!important;grid-auto-rows:minmax(112px,1fr)!important}
+.mw-meeting #mw-screen-stage[data-screen-layout="fluid-grid"] #mw-grid[data-layout="fluid-grid"]{grid-template-columns:repeat(auto-fill,minmax(min(100%,180px),1fr))!important;grid-auto-rows:minmax(112px,1fr)!important}
 .mw-meeting #mw-screen-stage[data-screen-layout="fixed-grid"] #mw-grid[data-layout="fixed-grid"]{grid-template-columns:repeat(3,minmax(0,1fr))!important;grid-auto-rows:minmax(128px,1fr)!important}
 .mw-meeting #mw-screen-stage[data-screen-layout="fixed-panel"] #mw-grid[data-layout="fixed-panel"]{grid-template-columns:repeat(2,minmax(0,1fr))!important;grid-auto-rows:minmax(142px,1fr)!important}
 .mw-meeting #mw-screen-stage[data-screen-layout="side-by-side"] #mw-grid[data-layout="side-by-side"]{grid-template-columns:repeat(2,minmax(0,1fr))!important;grid-auto-rows:minmax(132px,1fr)!important}
@@ -2411,7 +2411,7 @@
 @media(max-width:760px){
 .mw-meeting #mw-screen-stage[data-screen-layout="full-screen"] #mw-grid[data-layout="full-screen"]{grid-template-columns:repeat(3,minmax(0,1fr))!important;grid-template-rows:22px minmax(0,1.35fr) repeat(3,minmax(0,.72fr))!important}
 .mw-meeting #mw-screen-stage[data-screen-layout="fluid-panel"] #mw-grid[data-layout="fluid-panel"]{grid-template-columns:repeat(2,minmax(0,1fr))!important;grid-template-rows:22px repeat(4,minmax(0,1fr))!important}
-.mw-meeting #mw-screen-stage[data-screen-layout="fluid-grid"] #mw-grid[data-layout="fluid-grid"]{grid-template-columns:repeat(auto-fit,minmax(min(100%,108px),1fr))!important;grid-auto-rows:minmax(78px,1fr)!important}
+.mw-meeting #mw-screen-stage[data-screen-layout="fluid-grid"] #mw-grid[data-layout="fluid-grid"]{grid-template-columns:repeat(auto-fill,minmax(min(100%,108px),1fr))!important;grid-auto-rows:minmax(78px,1fr)!important}
 .mw-meeting #mw-screen-stage[data-screen-layout="fixed-grid"] #mw-grid[data-layout="fixed-grid"]{grid-template-columns:repeat(2,minmax(0,1fr))!important;grid-auto-rows:minmax(78px,1fr)!important}
 .mw-meeting #mw-screen-stage[data-screen-layout="fixed-panel"] #mw-grid[data-layout="fixed-panel"]{grid-template-columns:repeat(2,minmax(0,1fr))!important;grid-template-rows:22px minmax(0,1.1fr) repeat(4,minmax(0,.78fr))!important}
 .mw-meeting #mw-screen-stage[data-screen-layout="side-by-side"] #mw-grid[data-layout="side-by-side"]{grid-template-columns:repeat(2,minmax(0,1fr))!important;grid-auto-rows:minmax(78px,1fr)!important}
