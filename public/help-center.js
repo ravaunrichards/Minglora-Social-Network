@@ -110,6 +110,7 @@ return output+esc(input.slice(cursor));
 }
 function renderRows(rows){
 $("#hc-directory-results").innerHTML=rows.length?rows.map(x=>'<a class="hc-question-row" href="/help-center.html?article='+encodeURIComponent(x.article_slug)+'"><span><strong>'+highlight(x.question,state.query)+'</strong><p>'+highlight(x.excerpt||"",state.query)+'</p><small>'+esc(x.category_title)+(x.subcategory_title?" · "+esc(x.subcategory_title):"")+" · Updated "+esc(date(x.updated_at))+'</small></span><span class="hc-row-arrow">›</span></a>').join(""):empty(state.query?"No matching published answers":"No published answers in this section yet","Try another phrase or contact Support if you still need help.");
+}
 async function openDirectory(o={}){
 state.query=o.query||"";state.category=o.category||"";state.subcategory=o.subcategory||"";
 $("#hc-search-input").value=state.query;section("hc-directory");$("#hc-directory-title").textContent=cat(state.category)?.title||(state.query?"Search results":"All questions");
