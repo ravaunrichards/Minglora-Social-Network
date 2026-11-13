@@ -26,7 +26,7 @@ test('provider account registration cannot accept or persist credentials', () =>
   for (const key of ["'api_key'","'apiKey'","'access_token'","'accessToken'","'password'","'credential'","'secret'","'credential_secret_ref'"]) {
     assert.ok(migration.includes(key), 'Missing forbidden credential field: ' + key);
   }
-  assert.ok(migration.includes("credential_secret_ref,null"));
+  assert.ok(migration.includes('credential_secret_ref,provider_configuration,status,health_status') && migration.includes("null,'{}'::jsonb,'unconfigured','unknown'"));
   assert.ok(migration.includes("'unconfigured','unknown'"));
   assert.ok(migration.includes("'status',a.status"));
   assert.ok(!migration.includes("'credential_secret_ref',a.credential_secret_ref"));
@@ -108,7 +108,7 @@ test('provider workspace uses real rows and does not offer credential or activat
     'Model assignment saved as pending',
     'credentials not stored here',
     'health unknown',
-    'No API key, password, token or secret reference is accepted'
+    'no API key, password, token or secret reference is accepted'
   ]) assert.ok(ui.includes(token), 'Missing provider workspace behavior: ' + token);
   assert.ok(!ui.includes('name="apiKey"'));
   assert.ok(!ui.includes('name="secret"'));
