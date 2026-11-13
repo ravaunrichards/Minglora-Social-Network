@@ -43,7 +43,7 @@ test("each LIVE motion entry resolves the exact unique artwork, model, animation
     assert.match(entry.model_url, /^\/assets\/gifts\/catalog\/[a-z0-9_-]+\.gltf$/);
     assert.ok(["petals", "waves", "rings", "trail", "orbits", "bubbles", "sparkles"].includes(entry.motion_effect));
   }
-  assert.equal(codes.size, active.length);
+  assert.equal(codes.size, source.gifts.filter(gift => gift.active === true).length);
 });
 
 test("runtime and service worker use the generated index at the same canonical path", () => {
