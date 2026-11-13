@@ -1779,7 +1779,7 @@ async function route(req, res) {
     const user = sessionUser(req);
     const helpActor={actorUserId:user?.id||''};
     const helpRespond=async(action,payload={})=>{
-      try{return json(res,200,await helpCenterGateway(action,{...helpActor,...payload}));}
+      try{return json(res,200,await helpCenterGateway(action,{...payload,...helpActor}));}
       catch(error){return json(res,error.status||503,{error:error.message||'Minglora Help Center is unavailable.'});}
     };
     if(method==='GET'&&p==='/api/help-center/bootstrap'){
