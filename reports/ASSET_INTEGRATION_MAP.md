@@ -45,3 +45,8 @@ The loader validates exact same-origin preset paths. Existing inline choreograph
 ## Individual gift motion file integration
 
 `scripts/generate-live-gift-motion-index.mjs` now creates `public/assets/animations/gifts/per-gift/<gift-code>.json` for every active canonical gift and adds an exact local `motion_asset_url` to `catalog-motion-index.json`. `public/gift-effects.js` lazy-loads and validates the matching file when a gift is previewed or played, then applies the unique keyframes to the existing gift image/model. If the file is unavailable or invalid, the runtime falls back to the existing shared preset choreography. The files are deliberately not all precached, avoiding a large initial LIVE room download.
+
+
+## Gift record copy/export
+
+`public/gifts.js` exposes copy actions for the currently selected complete catalogue record, the full set of records returned by the actual `/coins/catalog` API, and the saved `public/gift-system-requirements.md` notes. JSON copy preserves fields supplied by the backend and does not invent absent descriptions, prices, IDs or metadata. Clipboard API is preferred, with a text-area fallback for browsers that do not provide Clipboard API. The app script query and service-worker shell cache have been advanced together; the requirements file is included in the offline shell cache.
