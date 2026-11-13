@@ -97,6 +97,8 @@ jobs:
           node --check public/auth-login.js
           node --check public/sw.js
           node --check public/settings.js
+          node --check public/help-center.js
+          node --check tests/unit/help-center.test.js
           node --check public/experience-center.js
           node --check src/domain/experience-settings.js
           node --check public/admin-centre.js
