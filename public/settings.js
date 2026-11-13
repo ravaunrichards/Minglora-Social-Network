@@ -697,6 +697,7 @@
       let currentMenuPage='home';
       let returnToMenuPage='settings';
       function showSettingsMenuPage(page){
+        if(page==='help-center'){window.location.assign('/help-center.html');return;}
         const target=settingsMenuPages.find(item=>item.dataset.settingsPage===page);
         if(!target)return;
         currentMenuPage=page;settingsNavigation.hidden=false;settingsForm.hidden=true;
@@ -1031,7 +1032,28 @@
     }
   }
 
-  window.MingloraSettings = { open: openSettings, render: openSettings };
+  async function openSupport(destination='contact'){
+    await openSettings();
+    await new Promise(resolve=>window.requestAnimationFrame(()=>window.requestAnimationFrame(resolve)));
+    const click=selector=>{const button=document.querySelector(selector);if(!button)throw new Error('The requested Support option is not available.');button.click();};
+    if(destination==='inbox'){
+      click('#settings-navigation [data-settings-open-page="help-support"]');
+      await new Promise(resolve=>window.requestAnimationFrame(resolve));
+      click('#settings-navigation [data-settings-page="help-support"] [data-settings-title="Support Inbox"]');
+      return true;
+    }
+    if(destination==='report-problem'){
+      click('#settings-navigation [data-settings-open-page="help-support"]');
+      await new Promise(resolve=>window.requestAnimationFrame(resolve));
+      click('#settings-navigation [data-settings-page="help-support"] [data-settings-report-problem]');
+      return true;
+    }
+    click('#settings-navigation [data-settings-open-page="report-support"]');
+    await new Promise(resolve=>window.requestAnimationFrame(resolve));
+    click('#settings-navigation [data-settings-page="report-support"] [data-settings-title="Contact Support"]');
+    return true;
+  }
+  window.MingloraSettings = { open: openSettings, render: openSettings, openSupport };
   document.addEventListener('DOMContentLoaded', () => {
     document.querySelector('#rail-settings')?.addEventListener('click', openSettings);
     window.addEventListener('minglora:session-ready', async () => { try { const result = await api('/settings'); applyPreferences(result.settings); window.dispatchEvent(new CustomEvent('minglora:settings-loaded', { detail: result.settings })); } catch {} });
