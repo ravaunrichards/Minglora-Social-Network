@@ -48,3 +48,8 @@ The follow-on change adds 17 individual keyframe JSON files and a deterministic 
 ## Individual per-gift keyframe delivery
 
 The LIVE motion generator now emits one distinct, same-origin Web Animations keyframe JSON for each active gift code (1,737 at the current canonical catalogue revision). A stable code-derived variation plus unique sorted ordinal differentiates each keyframe sequence. Files are fetched lazily on gift preview/play, validated against the expected gift code and animation identity, and fall back to the existing 17 preset files on any missing/invalid response. CI tests validate the full inventory and uniqueness of keyframe signatures, along with deterministic output. This improves per-gift animation identity and separation; it does **not** replace original artwork, produce photorealistic/cinematic models, create individual mastered sound effects, or satisfy real-device QA.
+
+
+## Standalone model rights and integrity register
+
+The 45 standalone GLTF files present in `public/assets/gifts/` are now indexed with verified repository paths, byte sizes and Git blob identities. Automated tests recompute each Git blob SHA from the checked-out bytes. This confirms file identity and repository presence only. All 45 matching rights records remain **UNVERIFIED**; no licence or production, commercial, modification or redistribution rights are inferred from the filenames or repository location.
