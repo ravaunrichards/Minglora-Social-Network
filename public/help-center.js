@@ -189,7 +189,7 @@ function wireEvents(){
   $("#hc-category-clear").addEventListener("click",()=>{ $("#hc-category-detail").hidden=true;$("#hc-categories").hidden=false;$(".hc-discovery-grid").hidden=false;$("#hc-recent-section").hidden=!state.recent.length;$("#hc-directory-empty").hidden=state.articles.length>0;});
   $("#hc-category-grid").addEventListener("click",event=>{const card=event.target.closest("[data-category]");if(card)renderCategoryDetail(card.dataset.category).catch(error=>showError(error.message));});
   $("#hc-category-detail").addEventListener("click",event=>{const button=event.target.closest("[data-subcategory]");if(!button)return;const category=state.currentCategory;const slug=button.dataset.subcategory;state.currentSubcategory=slug||null;$("#hc-subcategory-pills").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b===button)));if(category){$("#hc-category-filter").value=category;$("#hc-subcategory-filter").value=slug;loadCategoryQuestions(category,slug).catch(error=>showError(error.message));}});
-  $("#hc-breadcrumb").addEventListener("click",event=>{if(event.target.closest("#hc-breadcrumb-home")){history.pushState({},"","/help-center.html");setContentMode("home");$("#hc-categories").hidden=false;$(".hc-discovery-grid").hidden=false;$("#hc-recent-section").hidden=!state.recent.length;}else if(event.target.closest("#hc-breadcrumb-category")&&state.currentArticle?.article?.category?.slug){renderCategoryDetail(state.currentArticle.article.category.slug).catch(error=>showError(error.message));}});
+  $("#hc-breadcrumb").addEventListener("click",event=>{if(event.target.closest("#hc-breadcrumb-home")){history.pushState({},"","/help-center.html");setContentMode("home");$("#hc-categories").hidden=false;$(".hc-discovery-grid").hidden=false;$("#hc-recent-section").hidden=!state.recent.length;$("#hc-directory-empty").hidden=state.articles.length>0;}else if(event.target.closest("#hc-breadcrumb-category")&&state.currentArticle?.article?.category?.slug){renderCategoryDetail(state.currentArticle.article.category.slug).catch(error=>showError(error.message));}});
   document.body.addEventListener("click",event=>{
     const article=event.target.closest("[data-open-article]");if(article){openArticle(article.dataset.openArticle);return;}
     const category=event.target.closest("[data-edit-category]");if(category){const c=state.categories.find(x=>x.id===category.dataset.editCategory);if(!c)return;const f=$("#hc-category-form");field(f,"categoryId").value=c.id;field(f,"title").value=c.title;field(f,"slug").value=c.slug;field(f,"description").value=c.description||"";field(f,"icon").value=c.icon;field(f,"sortOrder").value=c.sortOrder||0;f.scrollIntoView({behavior:"smooth",block:"center"});return;}
@@ -223,7 +223,7 @@ function wireEvents(){
   });
   $("#hc-category-form").addEventListener("submit",async event=>{
     event.preventDefault();const form=event.currentTarget,button=form.querySelector('button[type="submit"]');button.disabled=true;
-    try{const payload=Object.fromEntries(new FormData(form).entries());await api("/admin/categories",{method:"POST",body:JSON.stringify(payload)});form.reset();form.categoryId.value="";await refreshAdmin();}catch(error){showError(error.message);}finally{button.disabled=false;}
+    try{const payload=Object.fromEntries(new FormData(form).entries());await api("/admin/categories",{method:"POST",body:JSON.stringify(payload)});form.reset();field(form,"categoryId").value="";await refreshAdmin();}catch(error){showError(error.message);}finally{button.disabled=false;}
   });
   $("#hc-category-reset").addEventListener("click",()=>$("#hc-category-form").reset());
   $("#hc-subcategory-form").addEventListener("submit",async event=>{
@@ -250,9 +250,30 @@ async function restoreRevision(id){
   if(!window.confirm("Restore this revision as a new Draft? The current version will be saved in revision history."))return;
   try{await api("/admin/articles/restore",{method:"POST",body:JSON.stringify({revisionId:id})});await refreshAdmin();showStatus("Revision restored as Draft. Review it before publishing.");}catch(error){showError(error.message);}
 }
+async function applyTheme(){
+  const prefersDark=window.matchMedia?.("(prefers-color-scheme: dark)").matches===true;
+  document.body.classList.toggle("theme-dark",prefersDark);
+  document.body.classList.toggle("theme-system",true);
+  document.body.style.colorScheme="light dark";
+  try{
+    const response=await fetch("/api/settings",{credentials:"same-origin",headers:{Accept:"application/json"}});
+    if(!response.ok)return;
+    const result=await response.json(),preferences=result.settings?.preferences||{};
+    const mode=["light","dark","system"].includes(preferences.theme)?preferences.theme:"system";
+    const themes=["minglora","ocean","tropical","royal","emerald","rose","golden","lavender","midnight","graphite"];
+    const colorTheme=themes.includes(preferences.colorTheme)?preferences.colorTheme:"minglora";
+    document.body.classList.toggle("theme-dark",mode==="dark"||(mode==="system"&&prefersDark));
+    document.body.classList.toggle("theme-system",mode==="system");
+    document.body.classList.toggle("reduce-motion",preferences.reducedMotion===true);
+    document.body.classList.toggle("lite-mode",preferences.liteMode===true);
+    document.body.dataset.colorTheme=colorTheme;
+    document.body.style.colorScheme=mode==="system"?"light dark":mode;
+  }catch{}
+}
 async function boot(){
   wireEvents();
   try{
+    await applyTheme();
     const bootstrap=await api("/bootstrap");
     state.categories=bootstrap.categories||[];state.subcategories=bootstrap.subcategories||[];
     state.popular=bootstrap.popular||[];state.featured=bootstrap.featured||[];state.recent=bootstrap.recent||[];
