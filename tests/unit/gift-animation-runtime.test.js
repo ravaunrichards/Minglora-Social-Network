@@ -27,6 +27,8 @@ test("gift animations preserve and play original artwork, 3D models, Coin values
   assert.ok(effects.includes('if(options.sound!==false)play(gift)'));
   assert.ok(effects.includes('caption.textContent=gift.name'));
   assert.ok(!effects.includes('gift.coin_price='));
+  assert.ok(!effects.includes('gift.emoji||"🎁"'), "missing artwork must never become a cartoon emoji");
+  assert.ok(!effects.includes("minglora-gift-fx-emoji"), "shared LIVE effects must not render emoji gift substitutes");
 });
 
 test("each gift receives subject-specific motion and a matching effect layer", () => {
