@@ -13,6 +13,7 @@ on:
       - 'supabase/migrations/*ai_identity*'
       - 'supabase/migrations/*ai_corporate*'
       - 'supabase/migrations/*ai_hr*'
+      - 'supabase/migrations/*ai_provider*'
       - 'tests/unit/ai-network*.test.js'
       - '.github/workflows/ai-network-checks.yml'
 
