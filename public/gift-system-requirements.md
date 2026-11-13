@@ -62,3 +62,10 @@ Verify that identified unwanted gifts are no longer active, no duplicate gift re
 ## Current implementation boundary
 
 The current LIVE build includes an existing canonical gift catalogue and generated asset pipeline. Per-gift motion JSON is generated for every active catalogue gift and loaded lazily by code. Extracted screenshot-derived gift crops remain review-only until human review and provenance/licence status are resolved. Premium hand-authored 3D scenes, dedicated mastered per-gift audio, a fully verified 18-theme artwork collection, and physical-device QA must be tracked as separate outstanding work rather than marked complete.
+
+
+## 15. Complete-artwork display and send gate
+
+A gift may be shown as selectable or sent only when its complete original artwork is available and renders within the presentation area. Never use `object-fit: cover` or any other thumbnail treatment that crops, clips, stretches or hides part of the gift. Use full-fit containment, preserve aspect ratio and keep the whole artwork visible. Do not replace broken, missing, partial or rejected gift artwork with an emoji or a generic substitute. Withhold that gift from the usable picker and disable preview/send until its canonical asset is available. A failed image/model request must not create a transaction. Keep the complete backend catalogue available for exact record export; the display gate must not rewrite gift names, prices, IDs, active flags, balances or transaction history.
+
+Source-extraction warnings are not proof that an artwork is definitely clipped; they are review blockers. An asset with no automated warning is not automatically approved. Human review must confirm every edge and part of the actual gift is present, and rights/provenance must be documented before screenshot-derived artwork enters production.
