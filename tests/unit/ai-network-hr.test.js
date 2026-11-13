@@ -10,6 +10,7 @@ const read = path => readFileSync(resolve(root, path), 'utf8');
 const migration = read('supabase/migrations/20261113131000_minglora_ai_hr_recruitment_and_employment_workflows.sql');
 const runtime = read('supabase/functions/minglora-runtime-state/index.ts');
 const server = read('src/server.js');
+const ui = read('public/ai-network.js');
 
 test('recruitment and employment records remain private and service-role only', () => {
   for (const table of ['ai_recruitment_vacancies','ai_recruitment_applications','ai_recruitment_history']) {
@@ -96,4 +97,21 @@ test('HR API routes require authorized platform staff and never write local demo
   }
   assert.match(route, /The AI recruitment and workforce migration and runtime gateway must be deployed/i);
   assert.match(route, /No HR data was changed/i);
+});
+
+test('HR workspace uses database-backed options and exposes lifecycle controls', () => {
+  assert.match(ui, /async function loadAIOrganizationRegistry/);
+  assert.match(ui, /request\(base \+ '\/vacancies'\)/);
+  assert.match(ui, /request\(base \+ '\/applications'\)/);
+  assert.match(ui, /request\(base \+ '\/employees'\)/);
+  for (const kind of ['vacancy','vacancy-status','application','application-review','appointment','employment-status','employment-manager','employment-transfer']) {
+    assert.ok(ui.includes("data-ai-form=\"" + kind + "\"") || ui.includes("kind === '" + kind + "'"),
+      'Missing HR form or submit action: ' + kind);
+  }
+  assert.match(ui, /identityRecords\.map/);
+  assert.match(ui, /departmentOptions/);
+  assert.match(ui, /positionOptions/);
+  assert.match(ui, /identityOptions\.length/);
+  assert.match(ui, /No AI employees have been appointed/);
+  assert.match(ui, /No recruitment vacancies have been created/);
 });
