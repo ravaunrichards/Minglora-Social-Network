@@ -126,8 +126,8 @@ test('profile style system assets are versioned and cached by the service worker
   const cssAsset='/profile-style-system.css?v=20261113-profile-styles-10x9-3';
   assert.ok(html.includes(cssAsset),'profile style system is not linked');
   assert.ok(worker.includes("'"+cssAsset+"'"),'profile style system is not precached');
-  assert.ok(html.includes('/app.js?v=20261113-profile-style-library-10x9-3'));
-  assert.ok(worker.includes("'/app.js?v=20261113-profile-style-library-10x9-3'"));
+  assert.ok(html.includes('/app.js?v=20261113-screen-guest-layout-separation-1'));
+  assert.ok(worker.includes("'/app.js?v=20261113-screen-guest-layout-separation-1'"));
   assert.ok(html.includes('/settings.js?v=20261112-profile-style-library-10x9-2'));
   assert.match(worker,/minglora-shell-v300-self-updating-1/);
 });
