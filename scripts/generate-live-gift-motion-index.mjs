@@ -7,7 +7,7 @@ const SOURCE = path.join(ROOT, "data", "minglora-gift-catalog.json");
 const PRESET_SOURCE = path.join(ROOT, "assets", "animations", "gifts", "animation-catalog.json");
 const OUTPUT = path.join(ROOT, "public", "assets", "animations", "gifts", "catalog-motion-index.json");
 const MOTION_DIR = path.join(ROOT, "public", "assets", "animations", "gifts", "per-gift");
-const GENERATOR = "Minglora LIVE motion index generator";
+const GENERATOR = "Minglora LIVE gift motion index generator";
 const ASSET_GENERATOR = "Minglora LIVE per-gift motion generator";
 const checkOnly = process.argv.includes("--check");
 
