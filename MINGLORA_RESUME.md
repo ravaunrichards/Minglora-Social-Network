@@ -1,10 +1,10 @@
-Updated: 2026-11-10 07:10 UTC (Personal AI Bots workflow #635: 193/193; full Minglora CI #8664: 928/928)
+Updated: 2026-11-13 (Personal AI Bots workflow: 290/290; full Minglora CI: 1,025/1,025; staged PostgreSQL migrations and smoke tests: passed)
 Scope: **Minglora Social Network only**
 Repository: https://github.com/ravaunrichards/Minglora-Social-Network
 Branch: `feat/personal-ai-bots-network-control-center`
 Draft PR: https://github.com/ravaunrichards/Minglora-Social-Network/pull/202
 Supabase project: `gzycobgbasnqqhnympkr` (existing Minglora project only)
-Latest verified implementation commit: `f464df671d3d30d4e21521462f4b7ab33aad0ef1`.
+Latest verified implementation commit: 693e4ce9778a4be4f6d432efadaf9a64819c1d02.
 Latest documentation/checkpoint commits: `aeb5429ad656ce8005ab732c1b363d18b7ee9e40` (AI scope note); `MINGLORA_RESUME.md` update follows. Owner batch-history paging API/UI/tests: API `ff2171f17cfd8cad79807521544e06c2512bac4a`, UI `29d19ed6884e5a59a84f66b9d8b5b50375f4ac9d`, API tests `c3bada696db68772405cf92ca4542e75d15d8705`, UI tests/cache `cef7b1385f362b56d8aa54bbcd94d8ea2bac359e`, `f464df671d3d30d4e21521462f4b7ab33aad0ef1`.
 Durable task queue pagination API/UI/test commits: API and cursor `4000e4fbf1e6c0c785bb131724e5e80ba4eea320`, queue/history UI `ad9faf6278f78770858b156ec6c2fcc48c81858c`, API tests `476704394f571c463b3b6a9586f779c7d43ed5a9`, `82afb0572f478549d2717257d076273dada5e288`, UI tests and cache refresh `3c68c30923f3a250cb15110ec0675ff693c9b21e`, `44e3e1c02cc5d51a490315c6468c83b75472cda0`.
 Recent admin list pagination commits: canonical identity API/UI/tests `49fa272c4716361e76059037320b42dbfd41c45a`, `d42fdd27fcbe15f6c472576fc2bbca1ba28e8f33`, `60d6e926f3495106455046e460ecbde067653ed4`, `1df4af0747fa02ab3192af277f217c5d0614b3e5`, `2579f6a16bfbac8e74b7838abda107b3d8fa56fa`; provider/email pagination API/UI/tests `2ddc159cfb50dc9efce8f92aa794c0002d5b3a0a`, `430156e0d92facee34a41a9f813b0c532dc534a9`, `d1fd4ab1be4158b794904fb4d8ce1a75249c6044`, `e20e2197174cd0657e2825c24f2e3df52b3cf157`, `c98e75f8e93be47a70f926cb2cb98f4158a7c42a`, verified by `0bd7a31b8feafbd0a50238f2b72358c69b70aec0`.
@@ -635,3 +635,17 @@ Continue with independent non-database work that can be built and verified in th
 - These are branch CI and source-contract results, not PostgreSQL execution. All AI migrations remain staged and the live Minglora Supabase project remains unchanged. No production data, provider secrets, mailboxes, worker/scheduler deployment, or autonomy settings were changed.
 - The 10-billion identity target remains a design objective; production database capacity, distributed partitioning, simultaneous execution and disaster recovery are not benchmarked.
 - **Next safe step:** obtain an approved non-production PostgreSQL environment to apply and integration-test the staged identity, provider, email, task-queue and HR migrations together. Do not apply these migrations to production as a workaround.
+
+## Latest verified checkpoint — 2026-11-13
+
+- Repository scope remains Minglora Social Network only: ravaunrichards/Minglora-Social-Network, branch feat/personal-ai-bots-network-control-center, existing Supabase project gzycobgbasnqqhnympkr, draft PR #202.
+- Added owner-only, audit-backed employment-history records to the existing organizational AI appointment flow. Supported history events are onboarded, trained, work-assigned (history only), attendance recorded, performance reviewed, disciplinary investigation recorded and succession planned. Owner API and Admin Centre UI save event type, notes, actor and timestamp.
+- The event recorder does not promote, transfer, activate or authorize an AI employee. It verifies the linked organizational identity remains disabled, with no permissions, no permission grant and unchanged activation state; it creates no work task or external action.
+- Staged SQL integrity fixes were applied in the feature branch: complete foundation migration after removing the duplicated tail; one canonical ai_names declaration with updated_at; repaired queue settings RPC and service-role-only grant; corrected discovery RPC grant signature; parenthesized HR collection guards; schema tests aligned to the true six-argument discovery signature.
+- Verified head 693e4ce9778a4be4f6d432efadaf9a64819c1d02:
+  - Personal AI Bots CI: 290/290 passed (run https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/43374674576).
+  - Disposable PostgreSQL: all staged AI migrations through HR manager integrity applied; identity/provider/email/HR smoke suite passed.
+  - Full Minglora CI: 1,025/1,025 passed (run https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/43374674564); functional-navigation job also passed.
+- Read-only production Supabase inspection still returns no public ai_* tables and no matching AI migration versions in the live migration ledger. No production schema, data, credentials, provider connections, email service, worker, scheduler or autonomy settings were changed.
+- PR #202 remains OPEN + DRAFT. No merge or production deployment was performed.
+- The complete AI Network is still incomplete. Provider inference, mailbox provisioning, full employment role transitions/delegation, workers/scheduler deployment, finance/resource controls, production analytics, member-facing creator/social depth, device acceptance, distributed scaling and the 10-billion capacity benchmarks remain outstanding. Ten billion is a design goal, not measured capacity.
