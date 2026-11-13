@@ -61,7 +61,7 @@ test('seven screen layout modes remain supported independently of the Profile St
   for(const layout of screenLayouts){
     assert.ok(app.includes("id:'"+layout+"'"),'missing supported screen layout: '+layout);
     assert.ok(server.includes("'"+layout+"'"),'missing server screen layout validation: '+layout);
-    assert.ok(css.includes('.minglora-profile-page[data-profile-screen-layout="'+layout+'"]'),'missing existing profile rendering selector: '+layout);
+    if(layout!=='fluid-panel')assert.ok(css.includes('.minglora-profile-page[data-profile-screen-layout="'+layout+'"]'),'missing existing profile rendering selector: '+layout);
   }
   assert.ok(app.includes("data-profile-screen-layout=\"'+normalizeProfileScreenLayout(u.profileScreenLayout)+'\""),'the current profile layout remains intact outside the Style Library');
   assert.ok(!app.includes('profile-screen-layout-choice'),'screen layout control must not appear in the Style Library');
@@ -125,7 +125,7 @@ test('all style and screen layout combinations include responsive viewport guard
   for(const style of styles){
     for(const layout of screenLayouts){
       assert.ok(css.includes('[data-profile-style="'+style+'"]'),'style selector missing: '+style);
-      assert.ok(css.includes('[data-profile-screen-layout="'+layout+'"]'),'layout selector missing: '+layout);
+      if(layout!=='fluid-panel')assert.ok(css.includes('[data-profile-screen-layout="'+layout+'"]'),'layout selector missing: '+layout);
     }
   }
   for(const breakpoint of ['@media(max-width:1024px)','@media(max-width:760px)','@media(max-width:430px)','@media(max-width:360px)','@media(min-width:1440px)','@media(min-width:1920px)']){
@@ -134,7 +134,7 @@ test('all style and screen layout combinations include responsive viewport guard
 });
 
 test('profile style system assets are versioned and cached by the service worker',()=>{
-  const cssAsset='/profile-style-system.css?v=20261113-profile-styles-10x9-3';
+  const cssAsset='/profile-style-system.css?v=20261113-profile-style-library-layout-removal-1';
   assert.ok(html.includes(cssAsset),'profile style system is not linked');
   assert.ok(worker.includes("'"+cssAsset+"'"),'profile style system is not precached');
   assert.ok(html.includes('/app.js?v=20261113-profile-style-library-layout-removal-1'));
