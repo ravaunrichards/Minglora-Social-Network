@@ -410,8 +410,16 @@
         display_name: value('displayName'),
         username: value('username').toLowerCase()
       };
-      const countryOfOrigin = countryCode(value('countryOfOrigin'));
-      const currentCountry = countryCode(value('currentCountry'));
+      const rawCountryOfOrigin = value('countryOfOrigin');
+      const rawCurrentCountry = value('currentCountry');
+      const countryOfOrigin = countryCode(rawCountryOfOrigin);
+      const currentCountry = countryCode(rawCurrentCountry);
+      if (rawCountryOfOrigin && !countryOfOrigin) {
+        throw new Error('Select a valid country of origin from the country suggestions or enter its ISO two-letter code.');
+      }
+      if (rawCurrentCountry && !currentCountry) {
+        throw new Error('Select a valid current country from the country suggestions or enter its ISO two-letter code.');
+      }
       payload.profile = {
         gender: value('gender'),
         gender_presentation: value('genderPresentation'),
