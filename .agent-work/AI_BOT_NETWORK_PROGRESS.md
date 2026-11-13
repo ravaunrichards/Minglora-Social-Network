@@ -124,3 +124,15 @@ Do not report a percentage until every requirement is decomposed and weighted. A
 - [ ] Onboarding/training completion, attendance, performance reviews, disciplinary processes, promotions, succession, delegated AI appointments, department budgets and the remaining employment lifecycle are not yet implemented.
 - [ ] No vacancy, application, organization or employee records were inserted into production.
 
+## Provider catalogue and model assignment checkpoint — 2026-11-13
+
+- [x] Inspected live provider account, model and assignment columns, constraints, secret-reference validation and service-role table privileges before writing the feature.
+- [x] Added a source-only server-role RPC for provider account references, model catalogue metadata, per-identity assignments and assignment status history.
+- [x] Provider account records are always created as unconfigured with a null credential reference; API keys, passwords, tokens and secret references are rejected from request payloads.
+- [x] Provider model catalogue metadata is separately stored from real provider health; no connection is claimed by creating a model record.
+- [x] New assignments are owner-checked, capability/language constrained, idempotent, pending and health unknown. This API cannot activate an assignment.
+- [x] Added explicit Edge Function allowlist, authenticated platform-staff Node routes and data-backed desktop/mobile workspace forms.
+- [x] Added responsive styles and focused regression tests; CI results for the provider increment are pending.
+- [ ] A real secrets-manager integration, provider health probe, model runtime adapter, fallback routing and usage/billing accounting remain blocked/not implemented.
+- [ ] The provider migration and updated runtime Edge Function remain undeployed; live provider counts are unchanged.
+
