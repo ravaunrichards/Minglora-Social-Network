@@ -27,7 +27,7 @@ test('gift previews retain visible artwork when the 3D model or artwork cannot l
   assert.match(gifts, /Complete gift artwork could not be loaded/);
   assert.match(gifts, /state\.unavailableArtwork\.add\(code\)/);
   assert.match(gifts, /if\(send\)send\.disabled=true/);
-  assert.match(gifts, /object-fit:contain/);
+  assert.match(styles, /object-fit:contain/);
   assert.match(styles, /\.gift-preview-stage img,\.gift-preview-stage model-viewer/);
   assert.match(styles, /\.gift-preview-fallback/);
 });
