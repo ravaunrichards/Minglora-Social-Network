@@ -119,14 +119,26 @@ async function articleResult(slug: string, locale: string) {
 }
 async function adminOverview(locale: string) {
   const structure=await categoriesPayload(locale);
-  const [{data:articles,error:articleError},{data:searches,error:searchError}] = await Promise.all([
+  const [{data:articles,error:articleError},{data:searches,error:searchError},{data:related,error:relatedError}] = await Promise.all([
     admin!.from("help_article_translations").select("id,article_id,locale,title,excerpt,status,updated_at,source_reference,source_verified_at,approved_by,help_articles!inner(id,slug,category_id,subcategory_id,is_featured,is_active)")
       .order("updated_at",{ascending:false}).limit(500),
     admin!.from("help_search_events").select("query_normalized,result_count,search_count,last_searched_at")
-      .order("search_count",{ascending:false}).limit(30)
+      .order("search_count",{ascending:false}).limit(30),
+    admin!.from("help_related_articles").select("article_id,related_article_id,sort_order").order("sort_order")
   ]);
-  if (articleError || searchError) throw articleError || searchError;
-  return {...structure,articles:articles||[],popularSearches:searches||[]};
+  if (articleError || searchError || relatedError) throw articleError || searchError || relatedError;
+  const relatedIds=[...new Set((related||[]).map((row:any)=>row.related_article_id))];
+  const {data:relatedArticles,error:relatedArticleError}=relatedIds.length
+    ? await admin!.from("help_articles").select("id,slug").in("id",relatedIds)
+    : {data:[],error:null};
+  if (relatedArticleError) throw relatedArticleError;
+  const slugById=new Map((relatedArticles||[]).map((row:any)=>[row.id,row.slug]));
+  const relatedByArticle:Record<string,string[]>={};
+  for (const row of related||[]) {
+    const relatedSlug=slugById.get(row.related_article_id);
+    if (relatedSlug) (relatedByArticle[row.article_id] ||= []).push(relatedSlug);
+  }
+  return {...structure,articles:articles||[],popularSearches:searches||[],relatedByArticle};
 }
 async function saveArticle(input:any, actor:string) {
   const articleId=requiredText(input.articleId,64);
@@ -140,6 +152,17 @@ async function saveArticle(input:any, actor:string) {
   if(!/^[a-z]{2}(?:-[A-Z]{2})?$/.test(locale)) return {error:"Use a language code such as en or es-MX.",status:400};
   const source=requiredText(input.sourceReference,500);
   const terms=Array.isArray(input.searchTerms)?input.searchTerms.map((x:any)=>requiredText(x,80)).filter(Boolean).slice(0,30):[];
+  const relatedSlugs=Array.isArray(input.relatedSlugs)
+    ? [...new Set(input.relatedSlugs.map((x:any)=>requiredText(x,120).toLowerCase()).filter(Boolean))].slice(0,10)
+    : [...new Set(String(input.relatedSlugs??"").split(",").map(x=>requiredText(x,120).toLowerCase()).filter(Boolean))].slice(0,10);
+  if (relatedSlugs.some((value:string)=>!SLUG.test(value)||value===slug))
+    return {error:"Related article slugs must be valid and cannot point to the current article.",status:400};
+  const {data:relatedTargets,error:relatedTargetsError}=relatedSlugs.length
+    ? await admin!.from("help_articles").select("id,slug").in("slug",relatedSlugs).eq("is_active",true)
+    : {data:[],error:null};
+  if (relatedTargetsError) throw relatedTargetsError;
+  if ((relatedTargets||[]).length!==relatedSlugs.length || (articleId && (relatedTargets||[]).some((row:any)=>row.id===articleId)))
+    return {error:"Choose up to 10 existing, active articles other than the current article.",status:400};
   if (!SLUG.test(slug)||!title||answer.trim().length<1||answer.length>100000||!UUID.test(categoryId))
     return {error:"Enter a valid article slug, title, category and answer (maximum 100,000 characters).",status:400};
   const {data:category,error:categoryError}=await admin!.from("help_categories").select("id").eq("id",categoryId).eq("is_active",true).maybeSingle();
@@ -194,6 +217,32 @@ async function saveArticle(input:any, actor:string) {
     }
     translation=created;
   }
+  const keywordValues=[...new Set(terms.map((term:string)=>term.trim().toLocaleLowerCase()).filter(Boolean))];
+  if (keywordValues.length) {
+    const {error:keywordInsertError}=await admin!.from("help_keywords").upsert(
+      keywordValues.map((keyword:string)=>({translation_id:translation.id,keyword})),
+      {onConflict:"translation_id,keyword"}
+    );
+    if (keywordInsertError) throw keywordInsertError;
+  }
+  let keywordDelete=admin!.from("help_keywords").delete().eq("translation_id",translation.id);
+  if (keywordValues.length) keywordDelete=keywordDelete.not("keyword","in",`(${keywordValues.map((value:string)=>JSON.stringify(value)).join(",")})`);
+  const {error:keywordDeleteError}=await keywordDelete;
+  if (keywordDeleteError) throw keywordDeleteError;
+
+  const relatedValues=(relatedTargets||[]).map((row:any,index:number)=>({
+    article_id:article.id,related_article_id:row.id,sort_order:index+1
+  }));
+  if (relatedValues.length) {
+    const {error:relatedInsertError}=await admin!.from("help_related_articles").upsert(
+      relatedValues,{onConflict:"article_id,related_article_id"}
+    );
+    if (relatedInsertError) throw relatedInsertError;
+  }
+  let relatedDelete=admin!.from("help_related_articles").delete().eq("article_id",article.id);
+  if (relatedValues.length) relatedDelete=relatedDelete.not("related_article_id","in",`(${relatedValues.map((row:any)=>row.related_article_id).join(",")})`);
+  const {error:relatedDeleteError}=await relatedDelete;
+  if (relatedDeleteError) throw relatedDeleteError;
   return {articleId:article.id,translationId:translation.id,status:translation.status,title:translation.title};
 }
 
