@@ -121,6 +121,15 @@ test('every new bot table is RLS enabled and service-role-only',()=>{
   assert.match(sql,/exclude_from_human_follow_counts boolean NOT NULL DEFAULT true/);
 });
 
+test('canonical AI identity visibility flag is persisted in the identity table',()=>{
+  const identityTableStart=sql.indexOf('CREATE TABLE IF NOT EXISTS public.ai_identities');
+  const namesTableStart=sql.indexOf('CREATE TABLE IF NOT EXISTS public.ai_names',identityTableStart);
+  const identityTable=sql.slice(identityTableStart,namesTableStart);
+  assert.match(identityTable,/public_profile_enabled boolean NOT NULL DEFAULT false/);
+  assert.match(sql,/public_profile_enabled=EXCLUDED\.public_profile_enabled/);
+  assert.match(sql,/'publicProfileEnabled',i\.public_profile_enabled/);
+});
+
 test('canonical AI identity schema includes all requested relational data areas',()=>{
   for(const table of [
     'ai_identities','ai_profiles','ai_names','ai_emails','ai_provider_accounts',
