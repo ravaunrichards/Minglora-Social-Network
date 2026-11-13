@@ -620,50 +620,12 @@ BEGIN
      OR (p_settings ? 'automaticSuspensionEnabled' AND pg_catalog.jsonb_typeof(p_settings->'automaticSuspensionEnabled') IS DISTINCT FROM 'boolean')
      OR (p_settings ? 'maxConcurrentExecutions' AND (
        pg_catalog.jsonb_typeof(p_settings->'maxConcurrentExecutions') IS DISTINCT FROM 'number'
-       OR (p_settings->>'maxConcurrentExecutions') !~ '^[0-9]+(jsonb,uuid) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.minglora_ai_bot_task_upsert(jsonb,uuid) TO service_role;
-REVOKE ALL ON FUNCTION public.minglora_ai_bot_task_upsert_batch(jsonb,uuid) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.minglora_ai_bot_task_upsert_batch(jsonb,uuid) TO service_role;
-REVOKE ALL ON FUNCTION public.minglora_ai_bot_task_claim(text,integer,integer,uuid) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.minglora_ai_bot_task_claim(text,integer,integer,uuid) TO service_role;
-REVOKE ALL ON FUNCTION public.minglora_ai_bot_task_heartbeat(uuid,text,uuid,integer,uuid) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.minglora_ai_bot_task_heartbeat(uuid,text,uuid,integer,uuid) TO service_role;
-REVOKE ALL ON FUNCTION public.minglora_ai_bot_task_complete(uuid,text,uuid,jsonb,uuid) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.minglora_ai_bot_task_complete(uuid,text,uuid,jsonb,uuid) TO service_role;
-REVOKE ALL ON FUNCTION public.minglora_ai_bot_task_fail(uuid,text,uuid,boolean,text,text,uuid) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.minglora_ai_bot_task_fail(uuid,text,uuid,boolean,text,text,uuid) TO service_role;
-REVOKE ALL ON FUNCTION public.minglora_ai_bot_task_list(uuid,integer,integer) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.minglora_ai_bot_task_list(uuid,integer,integer) TO service_role;
-REVOKE ALL ON FUNCTION public.minglora_ai_bot_task_stats(uuid) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.minglora_ai_bot_task_stats(uuid) TO service_role;
-REVOKE ALL ON FUNCTION public.minglora_ai_bot_settings_update(jsonb,uuid) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.minglora_ai_bot_settings_update(jsonb,uuid) TO service_role;
-
-COMMIT;
-
+       OR (p_settings->>'maxConcurrentExecutions') !~ '^[0-9]+$'
        OR (p_settings->>'maxConcurrentExecutions')::integer NOT BETWEEN 0 AND 10000
      ))
      OR (p_settings ? 'dailyExecutionBudget' AND (
        pg_catalog.jsonb_typeof(p_settings->'dailyExecutionBudget') IS DISTINCT FROM 'number'
-       OR (p_settings->>'dailyExecutionBudget') !~ '^[0-9]+(jsonb,uuid) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.minglora_ai_bot_task_upsert(jsonb,uuid) TO service_role;
-REVOKE ALL ON FUNCTION public.minglora_ai_bot_task_upsert_batch(jsonb,uuid) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.minglora_ai_bot_task_upsert_batch(jsonb,uuid) TO service_role;
-REVOKE ALL ON FUNCTION public.minglora_ai_bot_task_claim(text,integer,integer,uuid) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.minglora_ai_bot_task_claim(text,integer,integer,uuid) TO service_role;
-REVOKE ALL ON FUNCTION public.minglora_ai_bot_task_heartbeat(uuid,text,uuid,integer,uuid) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.minglora_ai_bot_task_heartbeat(uuid,text,uuid,integer,uuid) TO service_role;
-REVOKE ALL ON FUNCTION public.minglora_ai_bot_task_complete(uuid,text,uuid,jsonb,uuid) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.minglora_ai_bot_task_complete(uuid,text,uuid,jsonb,uuid) TO service_role;
-REVOKE ALL ON FUNCTION public.minglora_ai_bot_task_fail(uuid,text,uuid,boolean,text,text,uuid) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.minglora_ai_bot_task_fail(uuid,text,uuid,boolean,text,text,uuid) TO service_role;
-REVOKE ALL ON FUNCTION public.minglora_ai_bot_task_list(uuid,integer,integer) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.minglora_ai_bot_task_list(uuid,integer,integer) TO service_role;
-REVOKE ALL ON FUNCTION public.minglora_ai_bot_task_stats(uuid) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.minglora_ai_bot_task_stats(uuid) TO service_role;
-
-COMMIT;
-
+       OR (p_settings->>'dailyExecutionBudget') !~ '^[0-9]+$'
        OR (p_settings->>'dailyExecutionBudget')::integer NOT BETWEEN 0 AND 1000000
      ))
      OR (p_settings ? 'emergencyShutdownAt' AND

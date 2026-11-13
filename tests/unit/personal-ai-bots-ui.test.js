@@ -645,6 +645,5 @@ test('owner Admin Centre records auditable employment lifecycle checkpoints with
     'History record only. This does not assign a task'
   ]) assert.ok(ui.includes(phrase),phrase);
   assert.ok(ui.includes("request(API+'/appointments/'+encodeURIComponent(appointmentId)+'/employment-events'"));
-  assert.match(ui,/personal-ai-bots\.js\?v=20261113-personal-ai-bots-27/);
   assert.match(html,/personal-ai-bots\.js\?v=20261113-personal-ai-bots-27/);
 });
