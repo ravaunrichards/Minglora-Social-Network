@@ -2,9 +2,9 @@
 
 ## Scope and status
 
-This change adds ten profile experiences and nine profile screen-layout modes to the existing Minglora Social Network. The selected style and screen layout are presentation preferences on the same Minglora member account. The change does not create extra accounts, user tables, profile content tables, media stores, or relationship graphs.
+This specification covers ten profile experiences and seven profile screen-layout modes in the existing Minglora Social Network. The selected style and screen layout are presentation preferences on the same Minglora member account. The change does not create extra accounts, user tables, profile content tables, media stores, or relationship graphs.
 
-Implementation is on \`feat/profile-style-library-10x9\` and PR #266. It is not a production release until review, CI and deployment verification are complete.
+The ten-style Profile Style Library was introduced through PR #266. PR #269 corrected the separation between seven profile screen layouts and two independent LIVE/MeetWave guest-box layouts. PR #269 is merged and its CI, profile visual QA and seven-plus-two layout visual QA passed; deployment status must still be verified separately for each environment.
 
 ## Ten profile styles
 
@@ -62,15 +62,15 @@ The active style and layout travel with the member profile, so visitors see the 
 
 ## Responsive widths
 
-In addition to the nine named screen-layout modes, CSS guardrails and responsive breakpoints cover compact and standard phones, phone landscape, tablet portrait/landscape, laptop and large desktop widths. The unit test enumerates a representative nine-width matrix (320, 360, 390, 430, 740, 768, 1024, 1280 and 2560 CSS pixels) as a supplemental responsive contract.
+In addition to the seven named screen-layout modes, CSS guardrails and responsive breakpoints cover compact and standard phones, phone landscape, tablet portrait/landscape, laptop and large desktop widths. The unit test enumerates a representative nine-width matrix (320, 360, 390, 430, 740, 768, 1024, 1280 and 2560 CSS pixels) as a supplemental responsive contract.
 
 ## Verification
 
-- \`tests/unit/profile-style-library.test.js\` covers the ten style IDs, nine screen-layout IDs, all 90 combinations at the structural level, preference validation/defaults, owner-only default exposure, preview/apply/save/reset wiring, preserved profile content hooks and asset cache versions.
+- \`tests/unit/profile-style-library.test.js\` covers the ten style IDs, seven screen-layout IDs, all 70 combinations at the structural level, preference validation/defaults, owner-only default exposure, preview/apply/save/reset wiring, preserved profile content hooks and asset cache versions.
 - Main CI syntax checks cover \`public/app.js\`, \`src/server.js\`, \`public/sw.js\` and \`public/settings.js\`, followed by the full \`npm test\` suite.
 - The separate \`Minglora profile visual QA\` workflow runs two Chromium suites: a lightweight production-CSS fixture and an integration suite that boots the actual \`public/index.html\` app, uses the real \`app.js\` session bootstrap and profile event handlers, and renders through production \`renderProfile()\`. Only \`/api/*\` responses are stubbed with disposable test data; external requests are blocked, service workers are disabled, and no live Supabase account or data is touched.
-- Each suite checks the 10 styles × 9 layouts at all nine viewport widths (810 scenarios per suite; 1,620 total). The real-app suite verifies the active style/layout, avatar and identity, owner actions, style-specific metrics, six navigation actions, content panel, overlap and horizontal-overflow guardrails.
-- Each run uploads 90 desktop screenshots (all style/layout pairs) plus ten 360px phone screenshots per suite (200 screenshots total), alongside the matrix JSON report, to the \`minglora-profile-visual-evidence\` artifact. This is browser layout QA with inspectable screenshots, not pixel-baseline comparison or a test of live Supabase data.
+- Each suite checks the 10 styles × 7 layouts at all nine viewport widths (630 scenarios per suite; 1,260 total). The real-app suite verifies the active style/layout, avatar and identity, owner actions, style-specific metrics, six navigation actions, content panel, overlap and horizontal-overflow guardrails.
+- Each run uploads 70 desktop screenshots (all style/layout pairs) plus ten 360px phone screenshots per suite (160 screenshots total), alongside the matrix JSON report, to the \`minglora-profile-visual-evidence\` artifact. This is browser layout QA with inspectable screenshots, not pixel-baseline comparison or a test of live Supabase data.
 
 ## Supplied reference collection and coverage
 
