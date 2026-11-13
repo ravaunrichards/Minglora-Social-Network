@@ -281,6 +281,16 @@ begin
     if v_idempotency_key is null or length(v_idempotency_key)<8 or length(v_idempotency_key)>160 then
       raise exception using errcode = '22023', message = 'A stable application idempotency key is required.';
     end if;
+    -- Return a prior application before checking whether the vacancy is still open.
+    -- A retried client request must not create duplicates or fail after the role is paused/closed.
+    select a.application_id into v_application_id
+    from ai_network.ai_recruitment_applications a
+    where a.organization_id=v_organization_id and a.vacancy_id=v_vacancy_id and a.identity_id=v_identity_id;
+    if v_application_id is not null then
+      select to_jsonb(a) into v_result from ai_network.ai_recruitment_applications a
+      where a.application_id=v_application_id and a.organization_id=v_organization_id;
+      return jsonb_build_object('application',v_result,'reused',true);
+    end if;
     if not exists (
       select 1 from ai_network.ai_recruitment_vacancies v
       where v.vacancy_id=v_vacancy_id and v.organization_id=v_organization_id
@@ -298,13 +308,6 @@ begin
           )
         )
     ) then raise exception using errcode = '42501', message = 'AI identity is unavailable or is not owned by this Minglora administrator.'; end if;
-    select a.application_id into v_application_id from ai_network.ai_recruitment_applications a
-    where a.vacancy_id=v_vacancy_id and a.identity_id=v_identity_id;
-    if v_application_id is not null then
-      v_reused := true;
-      select to_jsonb(a) into v_result from ai_network.ai_recruitment_applications a where a.application_id=v_application_id;
-      return jsonb_build_object('application',v_result,'reused',true);
-    end if;
     v_reused := false;
     insert into ai_network.ai_recruitment_applications (
       organization_id,vacancy_id,identity_id,application_status,cover_note,submitted_by_user_id,idempotency_key
@@ -406,6 +409,17 @@ begin
       end if;
       raise exception using errcode = '42501', message = 'Only an approved AI application can be appointed.';
     end if;
+    if not exists (
+      select 1 from ai_network.ai_identities i
+      where i.identity_id=v_identity_id
+        and i.status not in ('suspended','archived','retired')
+        and (
+          i.owner_user_id=p_actor_user_id or exists (
+            select 1 from ai_network.ai_identity_owners o
+            where o.identity_id=i.identity_id and o.owner_type='human_user' and o.owner_user_id=p_actor_user_id
+          )
+        )
+    ) then raise exception using errcode = '42501', message = 'Approved AI identity is no longer available to this administrator.'; end if;
     select v.department_id,v.position_id into v_department_id,v_position_id
     from ai_network.ai_recruitment_vacancies v
     where v.vacancy_id=v_vacancy_id and v.organization_id=v_organization_id and v.owner_user_id=p_actor_user_id;
