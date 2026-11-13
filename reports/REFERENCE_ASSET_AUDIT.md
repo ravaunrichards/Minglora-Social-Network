@@ -9,8 +9,8 @@
 | Source | Files | Formats | Total size |
 |---|---:|---|---:|
 | `assets/reference/android/` | 1,071 | JPEG | 360,192,780 bytes |
-| `assets/reference/Laptop PC Web/tiktok/` | 29 | PNG | 19,050,395 bytes |
-| `assets/reference/Laptop PC Web/facebook/` | 21 | PNG | 8,577,230 bytes |
+| `assets/reference/Laptop PC Web/Minglora TikTok/` | 29 | PNG | 19,050,395 bytes |
+| `assets/reference/Laptop PC Web/Minglora Facebook/` | 21 | PNG | 8,577,230 bytes |
 | **Reference image total** | **1,121 images** | 1,071 JPEG + 50 PNG | **387,820,405 bytes** (plus one 1-byte `.gitkeep` marker in the folder) |
 
 The root reference Git tree was traversed recursively and was not truncated. The Android folder contains 1,071 JPEGs; the desktop TikTok folder contains 29 PNGs; the desktop Facebook comparison folder contains 21 PNGs. The repository separately contains 131 gift-catalogue capture screenshots in `assets/Gifts/`.
@@ -23,8 +23,8 @@ The complete file-by-file listing is recorded in `reports/minglora-live-referenc
 
 - Android LIVE fan-club join sheet: `assets/reference/android/Screenshot_20261112_015315_TikTok.jpg` (portrait viewport, 832 px wide in the inspected image). It shows the creator header, Join entry, audience/leaderboard overlays, Fan/SuperFan tabs, benefit icons and a fixed bottom action.
 - Android SuperFan state: `assets/reference/android/Screenshot_20261112_015407_TikTok.jpg`. It shows the paid membership presentation, upgraded badge, benefits and a separate action treatment.
-- Desktop video + comments layout: `assets/reference/Laptop PC Web/tiktok/capture-20261112-072050.png` (1365×635 inspected). The reference has a left navigation rail, central media stage, adjacent action rail and right comments panel.
-- Desktop LIVE co-host room: `assets/reference/Laptop PC Web/tiktok/capture-20261112-074126.png` (1365×636 inspected). It has left LIVE navigation, a 3×2 guest stage, viewer roster and separate right chat panel.
+- Desktop video + comments layout: `assets/reference/Laptop PC Web/Minglora TikTok/capture-20261112-072050.png` (1365×635 inspected). The reference has a left navigation rail, central media stage, adjacent action rail and right comments panel.
+- Desktop LIVE co-host room: `assets/reference/Laptop PC Web/Minglora TikTok/capture-20261112-074126.png` (1365×636 inspected). It has left LIVE navigation, a 3×2 guest stage, viewer roster and separate right chat panel.
 - Other inspected desktop captures include the Get Coins panel and creator account scheduler screen. They are comparison context, not LIVE art.
 
 Only these representative screenshots were visually sampled in this pass. The entire reference tree was inventoried by path, Git blob identity and file size; a complete per-image visual review and per-image dimension/transparency extraction for all 1,121 references has **not** been completed. No original reference was altered or copied into a production asset directory.

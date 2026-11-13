@@ -75,8 +75,8 @@ In addition to the seven named screen-layout modes, CSS guardrails and responsiv
 The checked-in `assets/reference` collection remains preserved in place and contains at least **1,050 image files** in the current inventory (the Android directory exceeds the GitHub contents API's 1,000-entry listing cap):
 
 - `assets/reference/android/`: 1,000+ JPEG screenshots, including newer unlabelled, TikTok and Facebook captures.
-- `assets/reference/Laptop PC Web/facebook/`: 21 desktop PNG captures.
-- `assets/reference/Laptop PC Web/tiktok/`: 29 desktop PNG captures.
+- `assets/reference/Laptop PC Web/Minglora Facebook/`: 21 desktop PNG captures.
+- `assets/reference/Laptop PC Web/Minglora TikTok/`: 29 desktop PNG captures.
 
 Representative Android Facebook and TikTok profile references and desktop Facebook/TikTok captures were sampled during this review. The TikTok Android profile capture `assets/reference/android/Screenshot_20261112_081840_TikTok.jpg` shows the creator identity on the left, avatar on the right, Following/Followers/Likes metrics, Follow and Message actions, story-highlight circles and a three-column short-video gallery. Minglora's TikTok style follows those layout cues with the account's real three headline metrics, a right-aligned avatar, real profile Highlights, and the existing video records in a three-column grid while retaining Minglora's own relationship, subscription and calling controls.
 
