@@ -334,16 +334,18 @@
       fallbackImage.src=gift.image_url;
       fallbackImage.alt=gift.name+" complete original Minglora artwork";
       fallbackImage.hidden=true;
-      let modelFailed=false;
+      let modelFailed=false,fallbackFailed=false;
       model.addEventListener("error",()=>{
         modelFailed=true;
         model.hidden=true;
         if(fallbackImage.complete&&fallbackImage.naturalWidth>0)fallbackImage.hidden=false;
+        else if(fallbackFailed||fallbackImage.complete)outer.remove();
       },{once:true});
       fallbackImage.addEventListener("load",()=>{
         if(modelFailed)fallbackImage.hidden=false;
       },{once:true});
       fallbackImage.addEventListener("error",()=>{
+        fallbackFailed=true;
         if(modelFailed)outer.remove();
       },{once:true});
       const reducedMotion=Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);if(!reducedMotion){model.setAttribute("auto-rotate","");model.setAttribute("autoplay","");}model.setAttribute("rotation-per-second",rotationSpeed+"deg");model.setAttribute("interaction-prompt","none");model.setAttribute("shadow-intensity",".8");model.setAttribute("exposure","1.18");card.append(model,fallbackImage);
