@@ -198,3 +198,47 @@ GitHub Actions Node 24 CI run **#10914** on commit `3e54c50163ecc8052517304bd413
 - [ ] Six desktop TikTok images did not return usable base64 image data in the connected preview pass and remain uninspected. The other Android references and all desktop Facebook reference images remain in the inventory, not fully reviewed.
 
 The Android gift-gallery screenshots contain third-party names, art and Coin labels. They remain read-only comparison evidence and are not treated as cleared Minglora production artwork. No image, price or brand from these screenshots was copied into the production catalogue.
+
+
+## Latest follow-up checkpoint — 2026-11-13 — branch head `f2700e8dd68f870e768eb36bd49ec71576581522`
+
+### Direct reference inspection
+
+- [x] Opened and classified 23/29 desktop TikTok reference PNGs, storing their measured PNG dimensions and visual classifications in `reports/minglora-live-reference-assets.json`.
+- [x] Opened and classified 8/1,071 Android TikTok reference JPEGs; each inspected image measured 1080×2408 at the JPEG SOF0 header.
+- [x] Expanded `reports/REFERENCE_ASSET_AUDIT.md` and `reports/LIVE_LAYOUT_MEASUREMENTS.md` with the inspected room states and clear distinctions between discovery/watch preview, in-room LIVE stages, and unrelated creator/feed pages.
+- [ ] Six desktop TikTok images remain uninspected because the connected repository preview did not return usable image data; remaining Android and all 21 desktop Facebook references are inventoried but not fully human reviewed.
+
+### Original LIVE reward-drop assets
+
+- [x] Added `public/assets/icons/live-reward-icons.svg` with separate original `goody-bag` and `treasure-box` vector artwork, including layered geometry, gradients, highlights and metallic details.
+- [x] Integrated the artwork in `renderLiveRewardDrops()` in `public/app.js`, including the empty state.
+- [x] Added the sprite to the offline service-worker shell and advanced the shell cache and renderer version together.
+- [x] Added `tests/unit/live-reward-icons.test.js`; refreshed cache-version assertions in the affected existing unit tests.
+- [x] Kept reward-drop API operations, wallet/escrow balances, entry/claim rules, award/refund settlement and ledger records unchanged.
+
+### Current-head validation
+
+GitHub Actions workflow run **#10917** (run ID `43480227597`) on branch head `f2700e8dd68f870e768eb36bd49ec71576581522` completed:
+
+- Node.js 24 install and dependency audit: passed; zero reported dependency vulnerabilities.
+- Repository structure checks: passed.
+- JavaScript syntax checks: passed.
+- Minglora gift generator: passed.
+- LIVE animation asset generator: passed.
+- Extracted artwork eligibility gate: passed.
+- LIVE per-gift motion index generator: passed.
+- Sound Studio asset generator: passed.
+- Automated tests: **998 passed, 0 failed**.
+- Supabase Auth provider acceptance: passed.
+- For You functional navigation: passed.
+
+The initial run exposed four old tests pinned to the previous service-worker cache token. Those test expectations were updated to the new matching HTML/service-worker token; the new current-head run above passed.
+
+### Release status and outstanding work
+
+**Asset mission remains PARTIALLY COMPLETE.** The directly inspected references and the new reward-drop vector assets are recorded, and the current CI checkpoint is green. The full 1,121-reference human review, all 1,509 crop-level visual/rights decisions, rights clearance for the 45 existing standalone GLTFs, premium hand-authored gift artwork/models, individually mastered gift sounds, complete 18-theme curated collections, Lottie/Rive/animated-GLTF scene production, and physical device performance testing are not complete.
+
+The existing generated 1,748 SVG/GLTF gift set remains a procedural baseline: its generator still overlays emoji glyphs on many designs and uses procedural primitive meshes for GLTF models. It must not be described as the requested premium hand-authored catalogue. The 17 shared motion presets and 1,737 generated per-gift Web Animation keyframe files are not cinematic 3D gift-specific scenes.
+
+**PR #274 remains open, draft, unmerged and undeployed.** No changes were made to `main`; physical Android, iPhone, tablet, foldable, desktop, laptop or TV hardware testing was not performed in this pass.
