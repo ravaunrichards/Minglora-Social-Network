@@ -2,6 +2,7 @@
   "use strict";
   const state={gifts:[],balance:null,promoWallet:null,selectedCode:"",category:"all",search:"",recipient:"",page:0,pageSize:72,sort:"high",unavailableArtwork:new Set(),loadedArtwork:new Set()};
   const labels={all:"All gifts",flowers:"Flowers",hearts:"Love & hearts",animals:"Animals & creatures",vehicles:"Vehicles",music:"Music",sports:"Sports",food_drink:"Food & drinks",fashion_beauty:"Fashion & beauty",luxury:"Luxury",celebrations:"Celebrations",fantasy:"Fantasy & cosmic",nature:"Nature",travel:"Travel",games:"Games",community:"Community",symbols:"Symbols",other:"More gifts"};
+const LIVE_GIFT_CATEGORY_ICON_KEYS = new Set(["all","flowers","hearts","animals","vehicles","music","sports","food_drink","fashion_beauty","luxury","celebrations","fantasy","nature","travel","games","community","symbols","everyday","reactions","seasonal","jamaican_culture","other"]);
   const emojis={all:"✦",flowers:"🌹",hearts:"💖",animals:"🦁",vehicles:"🚀",music:"🎵",sports:"🏆",food_drink:"🍰",fashion_beauty:"👑",luxury:"💎",celebrations:"🎉",fantasy:"✨",nature:"🌴",travel:"🌍",games:"🎮",community:"🤝",symbols:"🔆",other:"🎁"};
   const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   async function request(path,options={}) {
@@ -17,7 +18,7 @@
     return ["all",...Object.keys(labels).filter(k=>k!=="all"&&available.has(k))];
   }
   function categoryMarkup(){
-    return categories().map(k=>"<button type='button' class='gift-category-chip "+(state.category===k?"active":"")+"' data-gift-category='"+k+"'><span>"+emojis[k]+"</span> "+labels[k]+"</button>").join("");
+    return categories().map(k=>{const icon=LIVE_GIFT_CATEGORY_ICON_KEYS.has(k)?k:"other";return "<button type='button' class='gift-category-chip "+(state.category===k?"active":"")+"' data-gift-category='"+k+"'><svg class='gift-category-icon' viewBox='0 0 24 24' aria-hidden='true' focusable='false'><use href='/assets/icons/live-gift-category-icons.svg#"+icon+"'></use></svg><span>"+labels[k]+"</span></button>";}).join("");
   }
   function hasCanonicalGiftArtwork(g){
     const code=String(g?.code||"");

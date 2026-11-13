@@ -48,3 +48,10 @@
  .live-gift-results-heading small{text-align:left}
 }
 @media(max-width:380px){.live-gift-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Original Minglora SVG artwork for the LIVE and Gift Studio category chips. */
+.live-gift-category-row button{display:inline-flex;align-items:center;gap:6px}
+.gift-category-icon{display:inline-block;flex:0 0 20px;width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round;vertical-align:middle}
+.live-gift-category-row button .gift-category-icon{width:17px;height:17px;flex-basis:17px}
+.gift-category-chip{display:inline-flex;align-items:center;gap:7px}
+.gift-category-chip .gift-category-icon{width:19px;height:19px;flex-basis:19px}

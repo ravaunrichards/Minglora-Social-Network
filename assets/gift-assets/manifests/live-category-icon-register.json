@@ -1,0 +1,195 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-11-13",
+  "library": "Minglora LIVE gift category artwork",
+  "source_repository": "ravaunrichards/Minglora-Social-Network",
+  "source_branch": "feat/minglora-live-visual-assets-qa-20261113",
+  "source_commit": "9ad179c6f3284e5ed85f341dc887d4f26fb4ee7d",
+  "asset_path": "public/assets/icons/live-gift-category-icons.svg",
+  "format": "SVG symbol sprite",
+  "symbol_count": 22,
+  "source_type": "Original Minglora-authored vector geometry in this change; no external art, logos, stock files, or screenshots embedded.",
+  "rights_status": "Newly authored original vector artwork in the repository. No third-party image reuse or external licence dependency.",
+  "integration": [
+    "LIVE gift-picker category chips in public/app.js",
+    "Gift Studio category chips in public/gifts.js"
+  ],
+  "symbols": [
+    {
+      "id": "all",
+      "label": "All gifts",
+      "path": "/assets/icons/live-gift-category-icons.svg#all",
+      "vector": true,
+      "device_scaling": "scalable SVG",
+      "status": "integrated"
+    },
+    {
+      "id": "flowers",
+      "label": "Flowers",
+      "path": "/assets/icons/live-gift-category-icons.svg#flowers",
+      "vector": true,
+      "device_scaling": "scalable SVG",
+      "status": "integrated"
+    },
+    {
+      "id": "hearts",
+      "label": "Love and hearts",
+      "path": "/assets/icons/live-gift-category-icons.svg#hearts",
+      "vector": true,
+      "device_scaling": "scalable SVG",
+      "status": "integrated"
+    },
+    {
+      "id": "animals",
+      "label": "Animals and creatures",
+      "path": "/assets/icons/live-gift-category-icons.svg#animals",
+      "vector": true,
+      "device_scaling": "scalable SVG",
+      "status": "integrated"
+    },
+    {
+      "id": "vehicles",
+      "label": "Vehicles",
+      "path": "/assets/icons/live-gift-category-icons.svg#vehicles",
+      "vector": true,
+      "device_scaling": "scalable SVG",
+      "status": "integrated"
+    },
+    {
+      "id": "music",
+      "label": "Music",
+      "path": "/assets/icons/live-gift-category-icons.svg#music",
+      "vector": true,
+      "device_scaling": "scalable SVG",
+      "status": "integrated"
+    },
+    {
+      "id": "sports",
+      "label": "Sports",
+      "path": "/assets/icons/live-gift-category-icons.svg#sports",
+      "vector": true,
+      "device_scaling": "scalable SVG",
+      "status": "integrated"
+    },
+    {
+      "id": "food_drink",
+      "label": "Food and drinks",
+      "path": "/assets/icons/live-gift-category-icons.svg#food_drink",
+      "vector": true,
+      "device_scaling": "scalable SVG",
+      "status": "integrated"
+    },
+    {
+      "id": "fashion_beauty",
+      "label": "Fashion and beauty",
+      "path": "/assets/icons/live-gift-category-icons.svg#fashion_beauty",
+      "vector": true,
+      "device_scaling": "scalable SVG",
+      "status": "integrated"
+    },
+    {
+      "id": "luxury",
+      "label": "Luxury",
+      "path": "/assets/icons/live-gift-category-icons.svg#luxury",
+      "vector": true,
+      "device_scaling": "scalable SVG",
+      "status": "integrated"
+    },
+    {
+      "id": "celebrations",
+      "label": "Celebrations",
+      "path": "/assets/icons/live-gift-category-icons.svg#celebrations",
+      "vector": true,
+      "device_scaling": "scalable SVG",
+      "status": "integrated"
+    },
+    {
+      "id": "fantasy",
+      "label": "Fantasy and cosmic",
+      "path": "/assets/icons/live-gift-category-icons.svg#fantasy",
+      "vector": true,
+      "device_scaling": "scalable SVG",
+      "status": "integrated"
+    },
+    {
+      "id": "nature",
+      "label": "Nature",
+      "path": "/assets/icons/live-gift-category-icons.svg#nature",
+      "vector": true,
+      "device_scaling": "scalable SVG",
+      "status": "integrated"
+    },
+    {
+      "id": "travel",
+      "label": "Travel",
+      "path": "/assets/icons/live-gift-category-icons.svg#travel",
+      "vector": true,
+      "device_scaling": "scalable SVG",
+      "status": "integrated"
+    },
+    {
+      "id": "games",
+      "label": "Games",
+      "path": "/assets/icons/live-gift-category-icons.svg#games",
+      "vector": true,
+      "device_scaling": "scalable SVG",
+      "status": "integrated"
+    },
+    {
+      "id": "community",
+      "label": "Community",
+      "path": "/assets/icons/live-gift-category-icons.svg#community",
+      "vector": true,
+      "device_scaling": "scalable SVG",
+      "status": "integrated"
+    },
+    {
+      "id": "symbols",
+      "label": "Symbols",
+      "path": "/assets/icons/live-gift-category-icons.svg#symbols",
+      "vector": true,
+      "device_scaling": "scalable SVG",
+      "status": "integrated"
+    },
+    {
+      "id": "everyday",
+      "label": "Everyday gifts",
+      "path": "/assets/icons/live-gift-category-icons.svg#everyday",
+      "vector": true,
+      "device_scaling": "scalable SVG",
+      "status": "integrated"
+    },
+    {
+      "id": "reactions",
+      "label": "Reactions",
+      "path": "/assets/icons/live-gift-category-icons.svg#reactions",
+      "vector": true,
+      "device_scaling": "scalable SVG",
+      "status": "integrated"
+    },
+    {
+      "id": "seasonal",
+      "label": "Seasonal",
+      "path": "/assets/icons/live-gift-category-icons.svg#seasonal",
+      "vector": true,
+      "device_scaling": "scalable SVG",
+      "status": "integrated"
+    },
+    {
+      "id": "jamaican_culture",
+      "label": "Jamaican culture",
+      "path": "/assets/icons/live-gift-category-icons.svg#jamaican_culture",
+      "vector": true,
+      "device_scaling": "scalable SVG",
+      "status": "integrated"
+    },
+    {
+      "id": "other",
+      "label": "More gifts",
+      "path": "/assets/icons/live-gift-category-icons.svg#other",
+      "vector": true,
+      "device_scaling": "scalable SVG",
+      "status": "integrated"
+    }
+  ]
+}

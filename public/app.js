@@ -3445,6 +3445,7 @@ activeLivePinnedComment=null;
       };
       const liveGiftCategoryNames={flowers:"Flowers",hearts:"Love & hearts",animals:"Animals & creatures",vehicles:"Vehicles",music:"Music",sports:"Sports",food_drink:"Food & drinks",fashion_beauty:"Fashion & beauty",luxury:"Luxury",celebrations:"Celebrations",fantasy:"Fantasy & cosmic",nature:"Nature",travel:"Travel",games:"Games",community:"Community",symbols:"Symbols",everyday:"Everyday",reactions:"Reactions",seasonal:"Seasonal",jamaican_culture:"Jamaican culture",other:"More gifts"};
       const liveGiftCategoryName=key=>liveGiftCategoryNames[String(key||"").toLowerCase()]||String(key||"More gifts").replace(/[_-]+/g," ").replace(/\b\w/g,char=>char.toUpperCase());
+      const LIVE_GIFT_CATEGORY_ICON_KEYS = new Set(["all","flowers","hearts","animals","vehicles","music","sports","food_drink","fashion_beauty","luxury","celebrations","fantasy","nature","travel","games","community","symbols","everyday","reactions","seasonal","jamaican_culture","other"]);
       const liveGiftArtworkUnavailable=new Set();
       const liveGiftArtworkReady=new Set();
       const liveGiftHasCanonicalArtwork=item=>{
@@ -3468,7 +3469,7 @@ activeLivePinnedComment=null;
         const names=[...new Set(base.map(item=>String(item.category||"other")))].sort((a,b)=>liveGiftCategoryName(a).localeCompare(liveGiftCategoryName(b)));
         if(liveGiftCategory!=="all"&&!names.includes(liveGiftCategory))liveGiftCategory="all";
         const chips=[{key:"all",label:"All categories"},...names.map(key=>({key,label:liveGiftCategoryName(key)}))];
-        liveGiftCategories.innerHTML=chips.map(item=>"<button type='button' data-live-gift-category='"+esc(item.key)+"' class='"+(liveGiftCategory===item.key?"active":"")+"' aria-pressed='"+String(liveGiftCategory===item.key)+"'>"+esc(item.label)+"</button>").join("");
+        liveGiftCategories.innerHTML=chips.map(item=>{const icon=LIVE_GIFT_CATEGORY_ICON_KEYS.has(item.key)?item.key:"other";return "<button type='button' data-live-gift-category='"+esc(item.key)+"' class='"+(liveGiftCategory===item.key?"active":"")+"' aria-pressed='"+String(liveGiftCategory===item.key)+"'><svg class='gift-category-icon' viewBox='0 0 24 24' aria-hidden='true' focusable='false'><use href='/assets/icons/live-gift-category-icons.svg#"+icon+"'></use></svg><span>"+esc(item.label)+"</span></button>";}).join("");
       };
       const updateLiveGiftPreview=()=>{
         const gift=liveGiftByCode(liveGiftSelectedCode);
