@@ -3441,10 +3441,20 @@ activeLivePinnedComment=null;
       };
       const liveGiftCategoryNames={flowers:"Flowers",hearts:"Love & hearts",animals:"Animals & creatures",vehicles:"Vehicles",music:"Music",sports:"Sports",food_drink:"Food & drinks",fashion_beauty:"Fashion & beauty",luxury:"Luxury",celebrations:"Celebrations",fantasy:"Fantasy & cosmic",nature:"Nature",travel:"Travel",games:"Games",community:"Community",symbols:"Symbols",everyday:"Everyday",reactions:"Reactions",seasonal:"Seasonal",jamaican_culture:"Jamaican culture",other:"More gifts"};
       const liveGiftCategoryName=key=>liveGiftCategoryNames[String(key||"").toLowerCase()]||String(key||"More gifts").replace(/[_-]+/g," ").replace(/\b\w/g,char=>char.toUpperCase());
-      const liveGiftByCode=code=>liveGiftCatalogue.find(item=>String(item.code)===String(code))||null;
+      const liveGiftArtworkUnavailable=new Set();
+      const liveGiftArtworkReady=new Set();
+      const liveGiftHasCanonicalArtwork=item=>{
+        const code=String(item?.code||"");
+        return /^[a-z0-9_-]{1,59}$/.test(code)&&item.image_url==="/assets/gifts/catalog/"+code+".svg"&&item.model_url==="/assets/gifts/catalog/"+code+".gltf";
+      };
+      const liveGiftByCode=code=>{
+        const item=liveGiftCatalogue.find(gift=>String(gift.code)===String(code))||null;
+        return item&&liveGiftHasCanonicalArtwork(item)&&!liveGiftArtworkUnavailable.has(String(item.code))?item:null;
+      };
       const drawLiveGiftCategories=()=>{
         if(!liveGiftCategories)return;
         let base=liveGiftCatalogue.filter(item=>{
+          if(!liveGiftHasCanonicalArtwork(item)||liveGiftArtworkUnavailable.has(String(item.code)))return false;
           const teamGift=MINGLORA_FAN_CLUB_GIFT_CODES.includes(item.code);
           if(liveGiftScope==="team")return teamGift;
           if(liveGiftScope==="favorites")return liveGiftFavorites.has(String(item.code));
@@ -3461,7 +3471,7 @@ activeLivePinnedComment=null;
         if(!liveGiftPreview)return;
         liveGiftPreview.hidden=!gift;
         if(!gift){
-          if(liveGiftPreviewArt)liveGiftPreviewArt.innerHTML="<span aria-hidden='true'>🎁</span>";
+          if(liveGiftPreviewArt)liveGiftPreviewArt.innerHTML="<span class='live-gift-preview-unavailable'>Choose a gift with complete artwork</span>";
           if(liveGiftPreviewName)liveGiftPreviewName.textContent="Choose a gift";
           if(liveGiftPreviewPrice)liveGiftPreviewPrice.textContent="";
           if(liveGiftPreviewNote)liveGiftPreviewNote.textContent="Preview the animation and sound before sending.";
@@ -3478,8 +3488,8 @@ activeLivePinnedComment=null;
         if(liveGiftPreviewArt){
           const fallback=gift.image_url?"<img class='live-gift-preview-fallback' src='"+esc(gift.image_url)+"' alt='"+esc(gift.name||"Gift")+"' hidden>":"";
           const art=gift.model_url
-            ?"<model-viewer id='live-gift-preview-model' class='live-gift-preview-model' src='"+esc(gift.model_url)+"' "+(gift.image_url?"poster='"+esc(gift.image_url)+"' ":"")+"camera-controls auto-rotate rotation-per-second='22deg' interaction-prompt='none' shadow-intensity='.65' exposure='1.1' alt='"+esc(gift.name||"Minglora gift")+"'></model-viewer>"+fallback
-            :gift.image_url?"<img id='live-gift-preview-image' class='live-gift-preview-image' src='"+esc(gift.image_url)+"' alt='"+esc(gift.name||"Gift")+"'>":"<span class='live-gift-preview-emoji' aria-label='"+esc(gift.name||"Gift")+"'>"+esc(gift.emoji||"🎁")+"</span>";
+            ?"<model-viewer id='live-gift-preview-model' class='live-gift-preview-model' src='"+esc(gift.model_url)+"' poster='"+esc(gift.image_url)+"' camera-controls auto-rotate rotation-per-second='22deg' interaction-prompt='none' shadow-intensity='.65' exposure='1.1' alt='"+esc(gift.name||"Minglora gift")+"'></model-viewer>"+fallback
+            :"<span class='live-gift-preview-unavailable'>Complete artwork unavailable</span>";
           liveGiftPreviewArt.innerHTML=art;
           const model=liveGiftPreviewArt.querySelector("model-viewer");
           const fallbackImage=liveGiftPreviewArt.querySelector(".live-gift-preview-fallback");
@@ -3515,6 +3525,7 @@ activeLivePinnedComment=null;
         const query=liveGiftQuery.trim().toLowerCase();
         const filtered=liveGiftCatalogue.filter(item=>{
           const code=String(item.code||"");
+          if(!liveGiftHasCanonicalArtwork(item)||liveGiftArtworkUnavailable.has(code))return false;
           const teamGift=MINGLORA_FAN_CLUB_GIFT_CODES.includes(code);
           const inScope=liveGiftScope==="team"?teamGift:liveGiftScope==="favorites"?liveGiftFavorites.has(code):liveGiftScope==="recent"?liveGiftRecent.includes(code):true;
           const inCategory=liveGiftCategory==="all"||String(item.category||"other")===liveGiftCategory;
@@ -3530,7 +3541,7 @@ activeLivePinnedComment=null;
         if(liveGiftCount)liveGiftCount.textContent=filtered.length.toLocaleString()+" gifts"+(liveGiftScope==="favorites"?" · Favorites":liveGiftScope==="recent"?" · Recently sent":liveGiftScope==="team"?" · Team Gifts":"");
         giftGrid.innerHTML=shown.length?shown.map(gift=>{
           const code=String(gift.code||"");
-          const art=gift.image_url?"<img class='live-gift-image' loading='lazy' decoding='async' src='"+esc(gift.image_url)+"' alt='Original Minglora artwork: "+esc(gift.name||"Gift")+"'>":"<span class='live-gift-card-emoji'>"+esc(gift.emoji||"🎁")+"</span>";
+          const art="<img class='live-gift-image' data-live-gift-artwork-code='"+esc(code)+"' loading='lazy' decoding='async' src='"+esc(gift.image_url)+"' alt='Complete original Minglora artwork: "+esc(gift.name||"Gift")+"'>";
           const teamGift=MINGLORA_FAN_CLUB_GIFT_CODES.includes(code);
           const locked=role!=="host"&&teamGift&&!liveFanClubState?.isMember;
           const favorite=liveGiftFavorites.has(code);
@@ -3553,7 +3564,7 @@ activeLivePinnedComment=null;
           liveGiftCatalogue=[];
         }else{
           liveGiftCatalogue=Array.isArray(results[0].value?.gifts)?results[0].value.gifts:[];
-          if(!liveGiftByCode(liveGiftSelectedCode))liveGiftSelectedCode=String(liveGiftCatalogue[0]?.code||"");
+          if(!liveGiftByCode(liveGiftSelectedCode)){const first=liveGiftCatalogue.find(item=>liveGiftHasCanonicalArtwork(item)&&!liveGiftArtworkUnavailable.has(String(item.code)));liveGiftSelectedCode=String(first?.code||"");}
         }
         const wallet=results[1].status==="fulfilled"?results[1].value:{wallet:null};
         const promotionalWallet=results[2].status==="fulfilled"?(results[2].value.wallet||{}):{};
