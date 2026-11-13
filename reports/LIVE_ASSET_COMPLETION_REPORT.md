@@ -219,7 +219,7 @@ The Android gift-gallery screenshots contain third-party names, art and Coin lab
 
 ### Current-head validation
 
-GitHub Actions workflow run **#10917** (run ID `43480227597`) on branch head `f2700e8dd68f870e768eb36bd49ec71576581522` completed:
+GitHub Actions workflow run **#11034** (run ID `43480394087`) on branch head `603b4a47848e23a7c2c2f153eab97ff151550d82` completed:
 
 - Node.js 24 install and dependency audit: passed; zero reported dependency vulnerabilities.
 - Repository structure checks: passed.
