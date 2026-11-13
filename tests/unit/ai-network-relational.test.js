@@ -78,6 +78,8 @@ test('AI workspace uses real relational identity results and separate name input
   assert.match(ui, /name="currentCountry" list="ai-network-countries"/);
   assert.match(ui, /country_of_origin: countryOfOrigin/);
   assert.match(ui, /current_country: currentCountry/);
+  assert.match(ui, /Select a valid country of origin/);
+  assert.match(ui, /Select a valid current country/);
   assert.match(ui, /is_primary: index === 0/);
   assert.match(ui, /data-ai-form="identity-bulk"/);
   assert.match(ui, /JSON\.parse\(value\('items'\)\)/);
