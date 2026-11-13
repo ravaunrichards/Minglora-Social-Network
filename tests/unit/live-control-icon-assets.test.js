@@ -29,7 +29,7 @@ test('LIVE controls use the external sprite through a strict local symbol allowl
 });
 test('the service worker precaches the sprite and the HTML refreshes the app renderer', () => {
   assert.ok(worker.includes("SHELL.push('/assets/icons/live-control-icons.svg')"));
-  assert.ok(worker.includes("'/app.js?v=20261113-live-category-icons-1'"));
-  assert.ok(html.includes('/app.js?v=20261113-live-category-icons-1'));
-  assert.ok(worker.includes("const CACHE_NAME='minglora-shell-v307-self-updating-1'"));
+  assert.ok(worker.includes("'/app.js?v=20261113-live-reward-art-icons-1'"));
+  assert.ok(html.includes('/app.js?v=20261113-live-reward-art-icons-1'));
+  assert.ok(worker.includes("const CACHE_NAME='minglora-shell-v308-self-updating-1'"));
 });
