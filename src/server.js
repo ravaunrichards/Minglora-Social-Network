@@ -2068,6 +2068,28 @@ async function route(req, res) {
       }
       if (method==='POST' && p==='/api/auth/logout') { const sid=cookie(req,'sid'); if(sid){const id=decodeURIComponent(sid).split('.')[0]; db.sessions=db.sessions.filter(s=>s.id!==id); await saveStore();} return json(res,200,{ok:true},{'Set-Cookie':clearAppSessionCookie()}); }
       if (method==='GET' && p==='/api/auth/me') return json(res,200,{user:user?safeUser(user,user.id):null});
+      if(method==='GET'&&p==='/api/help-center/bootstrap'){
+        try{return json(res,200,await requestHelpCenter('bootstrap',{actorUserId:user?.id||'',locale:url.searchParams.get('locale')||'en'}));}
+        catch(error){return json(res,error.status||503,{error:error.message||'Help Center is unavailable.'});}
+      }
+      if(method==='GET'&&p==='/api/help-center/search'){
+        const query=String(url.searchParams.get('q')||'').trim().slice(0,120);
+        try{return json(res,200,await requestHelpCenter('search',{
+          actorUserId:user?.id||'',locale:url.searchParams.get('locale')||'en',query,
+          categorySlug:String(url.searchParams.get('category')||'').slice(0,120),
+          subcategorySlug:String(url.searchParams.get('subcategory')||'').slice(0,120),
+          limit:Math.min(50,Math.max(1,Number(url.searchParams.get('limit'))||20)),
+          offset:Math.max(0,Number(url.searchParams.get('offset'))||0)
+        }));}
+        catch(error){return json(res,error.status||503,{error:error.message||'Help Center search is unavailable.'});}
+      }
+      const publicHelpArticle=p.match(/^\/api\/help-center\/articles\/([^/]+)$/);
+      if(method==='GET'&&publicHelpArticle){
+        try{return json(res,200,await requestHelpCenter('article',{
+          actorUserId:user?.id||'',slug:decodeURIComponent(publicHelpArticle[1]),locale:url.searchParams.get('locale')||'en'
+        }));}
+        catch(error){return json(res,error.status||503,{error:error.message||'This Help Center article is unavailable.'});}
+      }
       requireAuth(user);
       if(p==='/api/help-center/bootstrap'&&method==='GET'){
         try{return json(res,200,await requestHelpCenter('bootstrap',{actorUserId:user.id,locale:url.searchParams.get('locale')||'en'}));}
