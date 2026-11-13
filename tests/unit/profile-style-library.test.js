@@ -113,13 +113,13 @@ test('all style and screen layout combinations include responsive viewport guard
 });
 
 test('profile style system assets are versioned and cached by the service worker',()=>{
-  const cssAsset='/profile-style-system.css?v=20261112-profile-styles-10x9-2';
+  const cssAsset='/profile-style-system.css?v=20261113-profile-styles-10x9-3';
   assert.ok(html.includes(cssAsset),'profile style system is not linked');
   assert.ok(worker.includes("'"+cssAsset+"'"),'profile style system is not precached');
-  assert.ok(html.includes('/app.js?v=20261112-profile-style-library-10x9-2'));
-  assert.ok(worker.includes("'/app.js?v=20261112-profile-style-library-10x9-2'"));
-  assert.ok(html.includes('/settings.js?v=20261112-profile-style-library-10x9-2'));
-  assert.match(worker,/minglora-shell-v300-self-updating-1/);
+  assert.ok(html.includes('/app.js?v=20261113-profile-style-library-10x9-3'));
+  assert.ok(worker.includes("'/app.js?v=20261113-profile-style-library-10x9-3'"));
+  assert.ok(html.includes('/settings.js?v=20261113-profile-style-library-10x9-3'));
+  assert.match(worker,/minglora-shell-v301-profile-style-10x9-3/);
 });
 
 test('profile styles route to distinct native content sections and order live metrics by style',()=>{
