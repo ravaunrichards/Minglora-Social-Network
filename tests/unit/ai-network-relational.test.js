@@ -66,7 +66,11 @@ test('AI workspace uses real relational identity results and separate name input
   assert.match(ui, /payload\.name\s*=\s*\{[\s\S]*first_name:[\s\S]*last_name:/);
   assert.match(ui, /payload\.idempotency_key\s*=\s*form\.dataset\.idempotencyKey/);
   assert.match(ui, /Registered identities/);
-  assert.match(ui, /COUNTRY_CODES = '[A-Z ]+'\.split\(' '\)/);
+  const countryCodes = ui.match(/const COUNTRY_CODES = '([A-Z ]+)'/);
+  assert.ok(countryCodes, 'ISO country and territory codes must be present.');
+  const countryList = countryCodes[1].split(' ');
+  assert.equal(countryList.length, 249);
+  assert.equal(new Set(countryList).size, 249);
   assert.match(ui, /name="countryOfOrigin" list="ai-network-countries"/);
   assert.match(ui, /name="currentCountry" list="ai-network-countries"/);
   assert.match(ui, /country_of_origin: countryOfOrigin/);
