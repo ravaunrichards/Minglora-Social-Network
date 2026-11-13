@@ -16,6 +16,7 @@
 | `public/live-gift-access.css` | Search, category chips, previews and responsive gift grid | LIVE gift picker layout |
 | `public/live-tiktok-compact.css` | Compact room shell and responsive stage/chat treatment | LIVE room presentation layer |
 | `public/assets/icons/navigation-3d.svg` | One SVG symbol sheet with multiple navigation symbols | Shared icon source |
+| `public/assets/icons/live-control-icons.svg` | 16 original vector symbols for current LIVE dock controls and states | Dedicated LIVE SVG sprite used by `public/app.js`; precached by the service worker |
 | `public/assets/icons/minglora-push.svg` | One standalone SVG | Push/notification graphic |
 | `assets/icons/`, `assets/animations/`, `assets/manifests/` | Documentation-only directories before this work | Source/design workspaces, not complete production packs |
 
@@ -48,3 +49,8 @@ These are the catalogue's actual stored categories, not the 18 conceptual catego
 ## Asset types not found as complete production libraries
 
 The inspected `assets/animations/` directory had only a README before this branch. The existing app animation implementation is JavaScript/CSS/Web Animations; no populated Lottie or Rive collection was found there. No gift GLTF animation channels, KTX2 texture pack or per-gift recorded audio pack were verified. Do not imply these formats or packs are complete.
+
+
+## Visual control asset update — 2026-11-13
+
+The visual QA branch adds `public/assets/icons/live-control-icons.svg`, a 16-symbol original Minglora SVG sprite. The existing LIVE control renderer in `public/app.js` selects symbols from a fixed allowlist; it does not accept arbitrary fragment names. The service worker precaches the sprite, and the app script/cache version is advanced together. Existing click handlers, labels, pressed states and room role checks remain in place. This is the dedicated pack for the current LIVE dock controls, not a claim that every moderator, filter, effect, ranking, fan-club and accessibility sub-control in the broader brief is finished.
