@@ -119,8 +119,8 @@ Do not report a percentage until every requirement is decomposed and weighted. A
 - [x] Added server-only HR RPC and explicit Edge Function command allowlist.
 - [x] Added authenticated platform-staff Node API endpoints and data-backed workspace forms for vacancies, applications, reviews, appointments, employee statuses, managers and transfers.
 - [x] Added responsive HR workspace styles and focused regression checks.
-- [ ] Run final CI after HR source, test and migration-retry hardening commits.
-- [ ] Production organization/HR migrations and runtime Edge Function handlers remain undeployed; live Supabase tables and workflows are not active.
-- [ ] Onboarding/training, attendance, promotions, succession, delegated appointments, budgets and complete employment lifecycle are not yet implemented.
+- [x] Run final CI after HR source, test and migration-retry hardening commits: full CI run #11205 and AI Network check #59 passed on commit `08ed07d95fee367e7cfa398bbc78821fd7e68820`.
+- [ ] Production identity runtime, organization/HR migrations and updated runtime Edge Function handlers remain undeployed; live Supabase tables and workflows are not active. The live project still reports 0 AI identities, 0 profiles, 0 emails and 0 provider assignments.
+- [ ] Onboarding/training completion, attendance, performance reviews, disciplinary processes, promotions, succession, delegated AI appointments, department budgets and the remaining employment lifecycle are not yet implemented.
 - [ ] No vacancy, application, organization or employee records were inserted into production.
 
