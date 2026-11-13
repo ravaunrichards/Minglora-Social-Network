@@ -428,6 +428,7 @@
   }
 
   async function openSettingsDestination(destination) {
+    if(destination==='help-center'){window.location.assign('/help-center.html');return;}
     const openSettings = window.MingloraSettings?.open;
     if (typeof openSettings !== 'function') {
       throw new Error('Minglora Settings could not be opened. Please try again.');
