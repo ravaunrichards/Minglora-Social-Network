@@ -3493,13 +3493,44 @@ activeLivePinnedComment=null;
           liveGiftPreviewArt.innerHTML=art;
           const model=liveGiftPreviewArt.querySelector("model-viewer");
           const fallbackImage=liveGiftPreviewArt.querySelector(".live-gift-preview-fallback");
-          model?.addEventListener("error",()=>{if(fallbackImage)fallbackImage.hidden=false;model.hidden=true;});
+          const artworkCode=String(gift.code);
+          const rejectArtwork=()=>{
+            if(liveGiftSelectedCode!==artworkCode)return;
+            liveGiftArtworkUnavailable.add(artworkCode);
+            liveGiftArtworkReady.delete(artworkCode);
+            if(model){model.hidden=true;model.removeAttribute("src");}
+            if(fallbackImage)fallbackImage.hidden=true;
+            if(liveGiftPreviewArt)liveGiftPreviewArt.innerHTML="<span class='live-gift-preview-unavailable'>Complete artwork unavailable — gift withheld</span>";
+            if(liveGiftPreviewNote)liveGiftPreviewNote.textContent="This gift is unavailable because its complete artwork could not be loaded. It cannot be sent.";
+            if(liveGiftPreviewSound)liveGiftPreviewSound.disabled=true;
+            if(liveGiftSendSelected)liveGiftSendSelected.disabled=true;
+            drawLiveGiftGrid();
+          };
+          const confirmArtwork=()=>{
+            if(liveGiftSelectedCode!==artworkCode||!fallbackImage||!fallbackImage.complete||fallbackImage.naturalWidth<1||fallbackImage.naturalHeight<1)return;
+            if(liveGiftArtworkUnavailable.has(artworkCode))return;
+            liveGiftArtworkReady.add(artworkCode);
+            if(liveGiftPreviewNote)liveGiftPreviewNote.textContent="Complete gift artwork loaded. Preview the animation and sound, then send it to the LIVE host.";
+            if(liveGiftPreviewSound)liveGiftPreviewSound.disabled=false;
+            const isTeamGift=MINGLORA_FAN_CLUB_GIFT_CODES.includes(artworkCode);
+            const locked=role!=="host"&&isTeamGift&&!liveFanClubState?.isMember;
+            if(liveGiftSendSelected)liveGiftSendSelected.disabled=role==="host"||!giftsEnabled||locked||liveGiftSending;
+          };
+          fallbackImage?.addEventListener("load",confirmArtwork,{once:true});
+          fallbackImage?.addEventListener("error",rejectArtwork,{once:true});
+          if(fallbackImage?.complete){if(fallbackImage.naturalWidth>0)confirmArtwork();else rejectArtwork();}
+          model?.addEventListener("error",()=>{
+            if(liveGiftSelectedCode!==artworkCode)return;
+            model.hidden=true;
+            if(fallbackImage&&liveGiftArtworkReady.has(artworkCode))fallbackImage.hidden=false;
+            if(!liveGiftArtworkReady.has(artworkCode)&&liveGiftPreviewNote)liveGiftPreviewNote.textContent="The 3D model failed to load. Checking the complete artwork before enabling this gift.";
+          });
         }
-        if(liveGiftPreviewSound)liveGiftPreviewSound.disabled=false;
+        if(liveGiftPreviewSound)liveGiftPreviewSound.disabled=!liveGiftArtworkReady.has(String(gift.code));
         const isTeamGift=MINGLORA_FAN_CLUB_GIFT_CODES.includes(gift.code);
         const locked=role!=="host"&&isTeamGift&&!liveFanClubState?.isMember;
         if(liveGiftSendSelected){
-          liveGiftSendSelected.disabled=role==="host"||!giftsEnabled||locked||liveGiftSending;
+          liveGiftSendSelected.disabled=role==="host"||!giftsEnabled||locked||liveGiftSending||!liveGiftArtworkReady.has(String(gift.code));
           liveGiftSendSelected.textContent=role==="host"?"Viewer-only preview":locked?"Join Fan Club to unlock":!giftsEnabled?"Gifting unavailable":"Quick send · "+Number(gift.coin_price||0).toLocaleString()+" Coins";
         }
       };
@@ -3588,6 +3619,16 @@ activeLivePinnedComment=null;
         const button=event.target.closest("[data-live-gift-category]");if(!button)return;
         liveGiftCategory=button.dataset.liveGiftCategory||"all";liveGiftVisible=48;drawLiveGiftGrid();
       });
+      giftGrid?.addEventListener("error",event=>{
+        const image=event.target;
+        if(!image?.matches?.("[data-live-gift-artwork-code]"))return;
+        const code=String(image.dataset.liveGiftArtworkCode||"");
+        if(!code)return;
+        liveGiftArtworkUnavailable.add(code);
+        liveGiftArtworkReady.delete(code);
+        if(liveGiftSelectedCode===code)liveGiftSelectedCode="";
+        drawLiveGiftGrid();
+      },true);
       giftGrid?.addEventListener("click",event=>{
         const favoriteButton=event.target.closest("[data-live-gift-favorite]");
         if(favoriteButton){
