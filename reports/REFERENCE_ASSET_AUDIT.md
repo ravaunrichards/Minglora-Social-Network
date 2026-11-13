@@ -30,7 +30,14 @@ The complete file-by-file listing is recorded in `reports/minglora-live-referenc
 - `capture-20261112-072050.png` (**1363×636**) is a video/feed detail with comments, not a LIVE room.
 - `capture-20261112-074126.png` (**1364×638**) is a creator scheduler page, not a LIVE room. It is not used as evidence for LIVE guest layouts.
 
-The six desktop PNG dimensions above were read from their PNG IHDR headers. The six images were directly opened for visual classification. The full 1,121-image reference tree remains inventoried by path, Git blob identity and size; the remaining screenshots have not all received a human visual review or per-image dimension/transparency audit. No reference was moved, overwritten or copied into production artwork.
+The image records were expanded during the 2026-11-13 follow-up pass. **23 of the 29 desktop TikTok PNGs were opened and visually classified**, and their exact PNG IHDR width/height values are now recorded in the machine-readable manifest. The 23 include LIVE discovery/previews, solo-host rooms, multi-guest stages, a gift-picker overlay, creator/profile screens, feed/video pages, a Coins recharge panel and a scheduler/level-up dialog. The six large desktop PNGs that did not return usable image data in this pass remain pending rather than being guessed. Desktop Facebook and Android image dimensions/transparency, and human review of the full 1,121-image tree, are still incomplete. No reference was moved, overwritten or copied into production artwork.
+
+The 23 reviewed TikTok screenshots establish several distinct layout states:
+- **Solo-host room:** portrait video stage, creator identity/follow action, a separate viewer/chat rail and a bottom gift dock.
+- **Multi-guest rooms:** two-person stage, four-position participant arrangement and six-position grid variants, with a separate viewer/chat rail.
+- **Gift-picker state:** a stage overlay that keeps the viewer/chat rail visible and retains the room's bottom gift dock.
+- **Discovery/preview:** separate browse/watch-preview pages with category navigation; these are not in-room control layouts.
+- **Non-LIVE controls:** feed/video detail, short-drama discovery, creator profile, scheduler, account-level modal and Coins recharge views. These have been explicitly classified as non-room references so they are not used to infer LIVE room geometry.
   
 ## Preservation and source-of-truth rules
 
