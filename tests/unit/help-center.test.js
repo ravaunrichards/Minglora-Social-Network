@@ -23,6 +23,7 @@ const js=read("public/help-center.js");for(const stage of ["submit_review","comp
 
 test("The deployed Help Center Edge Function is version-controlled and guarded",()=>{
 const edge=read("supabase/functions/minglora-help-center/index.ts");
+const server=read("src/server.js");
 assert.match(edge,/Deno\.serve/);
 assert.match(edge,/x-minglora-api-key/);
 assert.match(edge,/requireStaff/);
@@ -33,5 +34,5 @@ assert.match(edge,/mfa_required/);
 assert.match(edge,/mfaVerified===true/);
 assert.match(edge,/help_center:approve/);
 assert.match(edge,/help_center:publish/);
-assert.match(server,/mfaVerified:activeHelpSession\\?\\.mfaVerified===true/);
+assert.match(server,/mfaVerified:activeHelpSession\?\.mfaVerified===true/);
 });
