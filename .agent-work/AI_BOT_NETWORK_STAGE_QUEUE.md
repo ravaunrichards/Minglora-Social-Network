@@ -21,6 +21,21 @@ Statuses: NOT STARTED · READY · IN PROGRESS · VERIFYING · COMPLETED · BLOCK
 - Unit/regression tests.
 **Acceptance:** all tests pass; cross-owner access is rejected; no live actions or generated responses are fabricated.
 
+## AI-NETWORK-01A — Relational AI identity persistence
+**Status:** VERIFYING — source committed; production deployment not applied
+- Existing `ai_network` schema and 15 categories verified in the existing Minglora Supabase project.
+- Server-only RPC source supports owner-scoped category listing, paged list/search, get, one-at-a-time create, and batches up to 100.
+- Separate first/last names, unique username/profile identifier, idempotency, identity ownership, profile/gender, language/location, audit/version/status records and optional email identity metadata.
+- No Supabase Auth user is created for an AI identity.
+- Email metadata is recorded as unverified / not requested until a connected email provider confirms provisioning.
+- Service-role-only grants; browser roles retain no access to the private `ai_network` schema.
+- AI-specific foreign-key indexes added to migration source.
+- Authenticated Node API and private runtime-gateway source added; actual UI identity registry reads live API results.
+- Rollback-only database test passed create/get/list/search/idempotent retry and single-item bulk create; transaction rolled back and production row count remains zero.
+- Source-level syntax and static regression checks passed; GitHub Actions result is still unconfirmed.
+**Acceptance before COMPLETED:** apply reviewed migration, reconcile/update the currently deployed runtime Edge Function without overwriting newer code, deploy, run authenticated create/get/list/bulk tests, verify row-level records and RLS from Supabase, then verify desktop/mobile UI.
+**Safety boundary:** no production migration or Edge Function deployment has occurred yet.
+
 ## AI-NETWORK-02 — Central AI Bot Command Center
 **Status:** READY
 - Responsive workspace and navigation entry.
