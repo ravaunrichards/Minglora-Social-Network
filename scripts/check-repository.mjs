@@ -79,7 +79,9 @@ async function inspectDirectory(directory, relative = '') {
     }
     if (!entry.isFile()) continue;
     fileCount += 1;
-    if (entry.name === '.gitkeep' && !entries.some((sibling) => sibling.isFile() && sibling.name !== '.gitkeep')) {
+    // A .gitkeep is only an empty-directory placeholder when it is the
+    // directory's sole entry. Populated child directories count as real content.
+    if (entry.name === '.gitkeep' && entries.length === 1) {
       failures.push(`Placeholder file is not allowed: ${child}`);
     }
     const body = await readFile(absolute);
