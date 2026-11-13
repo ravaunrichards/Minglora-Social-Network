@@ -189,6 +189,46 @@ BEGIN
     'organizational','appointed',v_owner,pg_catalog.now(),pg_catalog.now()
   );
 
+  -- Exercise the same normalized employment-history write/read path used by the owner API.
+  v_result := public.minglora_ai_bot_hr_state_upsert(
+    pg_catalog.jsonb_build_object(
+      'employmentHistory',pg_catalog.jsonb_build_array(pg_catalog.jsonb_build_object(
+        'id','employment-event-smoke-1',
+        'appointmentId','appointment-board-chair',
+        'applicationId','application-board-chair',
+        'identityId',v_org_one::text,
+        'vacancyId','vacancy-board-chair',
+        'eventType','trained',
+        'actorId',v_owner::text,
+        'createdAt',pg_catalog.now(),
+        'notes','CI verifies normalized employment-history event persistence and readback.'
+      ))
+    ),
+    v_owner
+  );
+  IF v_result->>'ok' <> 'true' THEN
+    RAISE EXCEPTION 'Normalized employment-history event write failed.';
+  END IF;
+  v_list := public.minglora_ai_bot_hr_state_list(v_owner);
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.jsonb_array_elements(v_list->'employmentHistory') AS event(item)
+    WHERE item->>'id'='employment-event-smoke-1'
+      AND item->>'appointmentId'='appointment-board-chair'
+      AND item->>'identityId'=v_org_one::text
+      AND item->>'eventType'='trained'
+      AND item->>'actorId'=v_owner::text
+      AND item->>'notes'='CI verifies normalized employment-history event persistence and readback.'
+  ) THEN
+    RAISE EXCEPTION 'Normalized employment-history readback omitted the event, appointment, actor or notes.';
+  END IF;
+  SELECT count(*) INTO v_count
+  FROM public.ai_employment_history
+  WHERE owner_admin_id=v_owner AND employment_event_id='employment-event-smoke-1';
+  IF v_count <> 1 THEN
+    RAISE EXCEPTION 'Expected one normalized employment-history row, found %.',v_count;
+  END IF;
+
   -- The manager appointment exists and the referenced identity exists, but they
   -- deliberately point to different AI identities. The composite FK must reject it.
   BEGIN
