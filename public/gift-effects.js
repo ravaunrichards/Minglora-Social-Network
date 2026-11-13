@@ -285,8 +285,12 @@
     }catch{return false;}
   }
   const presets=new Set(["petal-bloom","heart-pulse","creature-entrance","grand-entry","soundwave-ripple","power-impact","delight-pop","glam-spin","royal-shimmer","celebration-burst","cosmic-orbit","nature-rise","horizon-sweep","pixel-burst","warm-wave","spark-float","gift-reveal"]);
+  function hasCanonicalGiftArtwork(gift){
+    const code=String(gift?.code||"");
+    return /^[a-z0-9_-]{1,59}$/.test(code)&&gift.image_url==="/assets/gifts/catalog/"+code+".svg";
+  }
   function mount(parent,gift,options={}){
-    if(!parent||!gift)return null;
+    if(!parent||!gift||!hasCanonicalGiftArtwork(gift))return null;
     const originalGift=gift;
     gift=withCatalogMotion(gift);
     // Keep the catalogue's original choreography as the outer gift entrance.
@@ -321,13 +325,32 @@
     outer.style.setProperty("--minglora-gift-rays-angle",(motionSeed%360)+"deg");
     const rotationSpeed=24+((motionSeed>>>15)%90);
     const card=document.createElement("div");card.className="minglora-gift-fx-card";
-    if(gift.model_url){
-      const model=document.createElement("model-viewer");model.className="minglora-gift-fx-model";model.src=gift.model_url;model.alt=gift.name+" original Minglora gift";
-      const reducedMotion=Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);if(!reducedMotion){model.setAttribute("auto-rotate","");model.setAttribute("autoplay","");}model.setAttribute("rotation-per-second",rotationSpeed+"deg");model.setAttribute("interaction-prompt","none");model.setAttribute("shadow-intensity",".8");model.setAttribute("exposure","1.18");card.append(model);
-    }else if(gift.image_url){
-      const img=document.createElement("img");img.className="minglora-gift-fx-model";img.src=gift.image_url;img.alt=gift.name;card.append(img);
+    const code=String(gift.code||"");
+    const canonicalModelUrl="/assets/gifts/catalog/"+code+".gltf";
+    if(gift.model_url===canonicalModelUrl){
+      const model=document.createElement("model-viewer");model.className="minglora-gift-fx-model";model.src=canonicalModelUrl;model.alt=gift.name+" original Minglora gift";
+      const fallbackImage=document.createElement("img");
+      fallbackImage.className="minglora-gift-fx-model";
+      fallbackImage.src=gift.image_url;
+      fallbackImage.alt=gift.name+" complete original Minglora artwork";
+      fallbackImage.hidden=true;
+      let modelFailed=false;
+      model.addEventListener("error",()=>{
+        modelFailed=true;
+        model.hidden=true;
+        if(fallbackImage.complete&&fallbackImage.naturalWidth>0)fallbackImage.hidden=false;
+      },{once:true});
+      fallbackImage.addEventListener("load",()=>{
+        if(modelFailed)fallbackImage.hidden=false;
+      },{once:true});
+      fallbackImage.addEventListener("error",()=>{
+        if(modelFailed)outer.remove();
+      },{once:true});
+      const reducedMotion=Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);if(!reducedMotion){model.setAttribute("auto-rotate","");model.setAttribute("autoplay","");}model.setAttribute("rotation-per-second",rotationSpeed+"deg");model.setAttribute("interaction-prompt","none");model.setAttribute("shadow-intensity",".8");model.setAttribute("exposure","1.18");card.append(model,fallbackImage);
     }else{
-      const emoji=document.createElement("span");emoji.className="minglora-gift-fx-emoji";emoji.textContent=gift.emoji||"🎁";card.append(emoji);
+      const img=document.createElement("img");img.className="minglora-gift-fx-model";img.src=gift.image_url;img.alt=gift.name+" complete original Minglora artwork";
+      img.addEventListener("error",()=>outer.remove(),{once:true});
+      card.append(img);
     }
     const caption=document.createElement("strong");caption.className="minglora-gift-fx-caption";caption.textContent=gift.name||"Minglora Gift";card.append(caption);
     const rays=document.createElement("span");rays.className="minglora-gift-fx-rays";
@@ -380,7 +403,7 @@
   }
   function show(gift,options={}){return mount(document.body,gift,options);}
   function preview(gift){
-    if(!gift)return false;
+    if(!gift||!hasCanonicalGiftArtwork(gift))return false;
     gift=withCatalogMotion(gift);
     play(gift);
     const target=document.getElementById("minglora-gift-selected-model")||document.getElementById("minglora-gift-selected-image")||document.getElementById("live-gift-preview-model")||document.getElementById("live-gift-preview-image");
