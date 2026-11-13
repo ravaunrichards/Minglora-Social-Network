@@ -40,6 +40,9 @@ test('bulk identity creation is bounded and isolates individual failures', () =>
   assert.match(migration, /exception when others then/i);
   assert.match(migration, /'failed_count'/i);
   assert.match(migration, /'created_count'/i);
+  assert.match(migration, /'reused_count'/i);
+  assert.match(migration, /v_result->>'reused'/i);
+  assert.match(ui, /result\.reused_count/);
 });
 
 test('runtime gateway validates actor IDs and allowlists AI identity commands', () => {
