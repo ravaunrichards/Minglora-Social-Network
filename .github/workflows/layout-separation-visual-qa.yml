@@ -11,7 +11,7 @@ permissions:
 jobs:
   layout-matrix:
     name: LIVE and MeetWave layout independence matrix
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
