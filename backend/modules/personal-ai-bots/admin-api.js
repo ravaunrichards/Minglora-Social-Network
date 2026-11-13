@@ -80,6 +80,9 @@ function canonicalAiIdentity(bot) {
     avatar_preferences:bot.avatarPreferences&&typeof bot.avatarPreferences==='object'?bot.avatarPreferences:{},
     ...(locations.length?{locations}:{}),
     ...(Array.isArray(bot.capabilities)?{capabilities:bot.capabilities}:{}),
+    permissions:bot.status==='enabled'&&['hybrid','autonomous_within_limits'].includes(bot.autonomyMode)&&Array.isArray(bot.allowedAutonomousActions)
+      ?bot.allowedAutonomousActions:[]
+    ,
     memory_enabled:bot.memoryEnabled===true,
     memory_configuration:bot.memoryConfiguration&&typeof bot.memoryConfiguration==='object'?bot.memoryConfiguration:{},
     visibility:['public','friends','private'].includes(bot.visibility)?bot.visibility:'private',
