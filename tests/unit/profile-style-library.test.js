@@ -132,7 +132,7 @@ test('profile styles route to distinct native content sections and order live me
   assert.ok(app.includes("snapchat:[['highlights','Stories'],['reels','Spotlight']"));
   assert.ok(app.includes('function profileMetricEntries(data,style)'));
   assert.ok(app.includes("tiktok:['following','followers','likes','posts','friends','subscribers']"));
-  assert.ok(app.includes("'+profileMetricsMarkup(data,u.profileStyle)"));
+  assert.ok(app.includes("+profileActionMarkup+profileMetricsMarkup(data,u.profileStyle)"));
 });
 
 test('profile style preview renders the current account media and posts, not generic demo content',()=>{
