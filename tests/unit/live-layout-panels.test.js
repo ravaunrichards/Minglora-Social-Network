@@ -26,10 +26,11 @@ test('LIVE has seven host-selectable screen layouts with a safe default', () => 
 test('LIVE guest-box layouts are separate, persisted and synchronized independently', () => {
   for (const layout of ['roundtable-1','roundtable-2']) {
     assert.ok(app.includes("value:'" + layout + "'"), layout + ' must be available as a guest-box layout');
-    assert.ok(app.includes("data-live-guest-layout='" + layout + "'"), layout + ' must use the guest-box selector');
+
     assert.ok(styles.includes('data-live-guest-layout="' + layout + '"'), layout + ' guest-box styles must use their own attribute');
     assert.ok(server.includes("'" + layout + "'"));
   }
+  assert.match(app, /data-live-guest-layout='"\+option\.value\+'/);
   assert.match(server, /LIVE_GUEST_LAYOUTS=\['roundtable-1','roundtable-2'\]/);
   assert.match(server, /liveGuestLayout: 'roundtable-1'/);
   assert.match(server, /const liveGuestLayoutMatch = p\.match/);
