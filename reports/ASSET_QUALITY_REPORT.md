@@ -64,3 +64,10 @@ A fail-closed eligibility manifest was added at `assets/gift-assets/manifests/ar
 Gift Studio and LIVE now require canonical local artwork/model paths for the usable picker. A broken artwork load removes the gift from the display list, removes its preview and disables send; no emoji/generic gift image is used as a substitute. The backend catalogue remains intact for record copy/export and historical integrity. Sending is not enabled until the actual artwork image has loaded with non-zero intrinsic dimensions. CI tests verify the containment rules, fail-closed behavior, and matching HTML/service-worker asset cache versions.
 
 The new gate checks file loading and intrinsic dimensions; it does not replace a human review of every artwork's full silhouette and detail. Premium hand-authored models, rights clearance, full manual visual inspection and physical-device QA remain outstanding.
+
+
+## LIVE reward-drop artwork — 2026-11-13
+
+Two original Minglora vector symbols were added for the Goody Bag and Treasure Box room cards, plus the empty reward-drop state. They use individual shapes, layered gradients, metallic trim and highlight/shadow details; they replace the previous emoji illustrations in those three reward-art positions. The asset is same-origin and service-worker precached. A focused regression test verifies symbol identity, geometry, renderer references and cache wiring.
+
+This is original vector UI artwork, not the requested premium 3D gift-model library. It does not establish completion of all LIVE icon states or the broader gift animation, audio, filter/effect and device-validation requirements.
