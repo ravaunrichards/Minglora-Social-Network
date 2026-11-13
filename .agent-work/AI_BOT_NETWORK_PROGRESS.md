@@ -48,7 +48,7 @@
 
 - **Phase 1 — Foundation:** Existing 16-table `ai_network` schema and 15 category records verified. Additive server-only identity RPC/API source, identity UI and tests are committed to the feature branch and rollback-tested. Production database migration remains unapplied.
 - **Phase 2 — Identity/profile/discovery:** Individual and bounded bulk identity creation, separate first/last names, population/category, gender, 249 country/territory options, profile/location/language basics and owner-scoped list/get are staged. Profile editing/media, worldwide discovery filters/saved groups, following, social engagement and provider/model assignment management remain unfinished.
-- **Phase 3 — Corporate governance/workforce:** Not started. Read-only schema inventory confirmed no organization, department, position, employment, vacancy/recruitment or HR-history tables in the current `ai_network` schema.
+- **Phase 3 — Corporate governance/workforce:** PARTIALLY IMPLEMENTED ON FEATURE BRANCH. Added an additive private-schema migration source for owner-scoped organizations, 20 department templates, position templates, departments, positions, employment records and history; added a server-only organization RPC and runtime gateway handler; and wired authenticated Node API plus AI workspace forms for organization creation and template provisioning. The SQL and Edge Function are not deployed. Recruitment, appointments, employee status changes, reporting-chain operations, succession planning and complete workforce management remain unfinished.
 - **Phase 4 — Supervision/autonomy/collaboration:** Only the safe starting defaults and existing legacy approval/pause primitives exist. Hierarchical delegation, identity permission management, task queue/leases, worker execution and multi-agent teamwork are not verified.
 - **Phase 5 — Social/creator integration:** Existing AI workspace has draft/team/schedule/event records, but relational AI identity profiles are not yet connected to Minglora social posts, messaging, groups, LIVE or Creator Studio end-to-end.
 - **Phase 6 — Finance/resources/security:** Identity-layer credential separation and service-role boundary are staged; corporate budgets, actual resource metering, procurement, reconciliation and full security operations are not implemented.
@@ -97,3 +97,14 @@ The relational migration, authenticated Node API, AI workspace and reconciled Ed
 ## Completion reporting
 
 Do not report a percentage until every requirement is decomposed and weighted. A route or UI shell alone is not completion. Keep each recommendation status in AI_BOT_NETWORK_STAGE_QUEUE.md and mark it complete only after the corresponding acceptance tests and deployed checks pass.
+
+## Corporate governance wiring checkpoint — 2026-11-13
+
+- [x] Added owner-authenticated Node API routes for department/position templates, organization listing and creation, and organization department/position listing and provisioning.
+- [x] Routed corporate commands through the existing private Minglora Supabase runtime gateway; clients do not receive direct access to `ai_network`.
+- [x] Added AI workspace organization creation, department provisioning and position preparation forms with idempotency keys and database-derived counts.
+- [x] Added focused regression coverage for private grants, owner-scoped commands, all 20 department templates, runtime allowlisting and UI/API wiring.
+- [x] Updated the AI Network workflow to run for the corporate migration.
+- [ ] Production migration and Edge Function deployment remain unapplied; the workspace correctly reports the staged corporate foundation as unavailable until both are deployed.
+- [ ] Recruitment, candidate applications, appointments, employee lifecycle operations, reporting-chain validation and succession planning remain incomplete.
+- [ ] No organization, department, position, employee, or AI identity data was inserted into production during this checkpoint.
