@@ -1493,6 +1493,7 @@ test('owner-approved AI promotions and department transfers update appointments 
   const application=createPersonalAiBotApplication(db,{
     identityId:employee.id,vacancyId:originalVacancy.id
   },actor,stamp,uid);
+  db.personalAiBotApplications.find(item=>item.id===application.id).status='appointed';
   application.status='appointed';
   const ceo={
     id:'appointment-ceo',ownerId:actor,identityId:'manager-ceo',population:'organizational',
