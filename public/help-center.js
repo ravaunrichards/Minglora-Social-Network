@@ -3,6 +3,41 @@
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
 const state={bootstrap:null,categories:[],subcategories:[],results:[],query:"",category:"",subcategory:"",offset:0,hasMore:false,member:false,bookmarks:new Set(),article:null,adminOverview:null,currentAdminTab:"articles",currentArticleId:"",currentTranslationId:"",debounce:null};
 const locale=(navigator.language||"en").split("-")[0].toLowerCase();
+const themePalettes={
+minglora:{light:["#f1f3f7","#ffffff","#172033","#6d7688","#e3e7ee","#1769e0","#eaf2ff"],dark:["#111827","#1c2738","#edf2fb","#a8b3c5","#344257","#1769e0","#203d65"]},
+ocean:{light:["#edf7f7","#ffffff","#123238","#58757b","#d2e7e7","#0f766e","#e1f4f2"],dark:["#0c2027","#142d35","#e5f5f5","#a4c5c8","#2b4d55","#0f766e","#183e43"]},
+tropical:{light:["#fff5ef","#ffffff","#3d2928","#816563","#f1d9d0","#e45b4d","#ffe7df"],dark:["#251a1b","#382426","#fff0e9","#d6aaa0","#5b3837","#e45b4d","#4b292b"]},
+royal:{light:["#f5f1fc","#ffffff","#2d2341","#766b89","#e5dcf3","#7146c7","#eee7ff"],dark:["#1c1730","#2a2143","#f2ebff","#c1b3dd","#493a68","#7146c7","#382a58"]},
+emerald:{light:["#f0f7f0","#ffffff","#1b3326","#607568","#dbe9dc","#16834f","#e1f3e4"],dark:["#10251c","#19362a","#e9f8ee","#a9c9b2","#315542","#16834f","#1d4836"]},
+rose:{light:["#fff2f5","#ffffff","#3a202b","#806574","#f0d8e1","#be315f","#ffe5ed"],dark:["#291923","#3a2431","#fff0f5","#d5aebe","#5b394e","#be315f","#51273a"]},
+golden:{light:["#fff8eb","#ffffff","#382c1b","#7b6a50","#efe2c8","#a16207","#fff0cc"],dark:["#292116","#3b3020","#fff5df","#d2bd93","#5b492c","#a16207","#4c391c"]},
+lavender:{light:["#f7f4ff","#ffffff","#302a45","#766f8a","#e8e1f6","#7864c8","#eee9ff"],dark:["#201d32","#302b49","#f5f0ff","#c4bbdf","#494166","#7864c8","#3d355e"]},
+midnight:{light:["#f0f7fc","#ffffff","#16283e","#61788e","#d8e7f3","#0ea5e9","#e1f5ff"],dark:["#0b1424","#14233a","#eff8ff","#a9c5db","#28415f","#38bdf8","#173858"]},
+graphite:{light:["#eef1f4","#ffffff","#202a35","#687582","#dce2e8","#64748b","#e4e9ef"],dark:["#171d25","#242d38","#edf1f5","#b0bac5","#3a4653","#94a3b8","#35414e"]}
+};
+async function applyMemberTheme(){
+  const apply=(preferences={})=>{
+    const key=Object.hasOwn(themePalettes,preferences.colorTheme)?preferences.colorTheme:"minglora";
+    const mode=["light","dark","system"].includes(preferences.theme)?preferences.theme:"system";
+    const systemDark=window.matchMedia?.("(prefers-color-scheme: dark)").matches||false;
+    const dark=mode==="dark"||(mode==="system"&&systemDark);
+    const values=themePalettes[key][dark?"dark":"light"];
+    document.body.classList.toggle("theme-dark",mode==="dark");
+    document.body.classList.toggle("theme-system",mode==="system");
+    document.body.dataset.colorTheme=key;
+    document.body.style.colorScheme=mode==="system"?"light dark":mode;
+    ["bg","panel","text","muted","line","blue","blue-soft"].forEach((name,index)=>document.body.style.setProperty("--hc-"+name,values[index]));
+  };
+  try{
+    const response=await api("/api/settings");
+    const preferences=response?.settings?.preferences||{};
+    apply(preferences);
+    if(preferences.theme==="system"&&window.matchMedia){
+      const media=window.matchMedia("(prefers-color-scheme: dark)");
+      media.addEventListener?.("change",()=>apply(preferences));
+    }
+  }catch{}
+}
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const date=v=>{const d=new Date(v);return v&&!Number.isNaN(d.getTime())?d.toLocaleDateString(undefined,{year:"numeric",month:"short",day:"numeric"}):"Date unavailable";};
 async function api(url,options={}){const headers={...(options.body?{"Content-Type":"application/json"}:{}),...(options.headers||{})};const response=await fetch(url,{credentials:"same-origin",...options,headers});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||"The Help Center request could not be completed.");return data;}
@@ -194,7 +229,7 @@ $("#hc-load-more").onclick=async()=>{const b=$("#hc-load-more");b.disabled=true;
 adminTabs();
 }
 async function boot(){
-wire();categoryOptions();
+wire();categoryOptions();applyMemberTheme();
 try{
 const results=await Promise.all([api("/api/help-center/bootstrap?locale="+encodeURIComponent(locale)),api("/api/auth/me").catch(()=>null)]);
 state.bootstrap=results[0];state.categories=state.bootstrap.categories||[];state.subcategories=state.bootstrap.subcategories||[];state.member=Boolean(results[1]?.user?.id);categoryOptions();renderHome();
