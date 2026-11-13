@@ -31,9 +31,9 @@ Statuses: NOT STARTED · READY · IN PROGRESS · VERIFYING · COMPLETED · BLOCK
 - Service-role-only grants; browser roles retain no access to the private `ai_network` schema.
 - AI-specific foreign-key indexes added to migration source.
 - Authenticated Node API and private runtime-gateway source added; actual UI identity registry reads live API results.
-- Rollback-only database test passed create/get/list/search/idempotent retry and single-item bulk create; transaction rolled back and production row count remains zero.
+- Rollback-only database tests passed create/get/list/search/idempotent retry, bounded bulk create, two primary/non-primary language records and separate origin/current location records; transactions rolled back and production row count remains zero.
 - Source-level syntax and static regression checks passed; GitHub Actions result is still unconfirmed.
-**Acceptance before COMPLETED:** apply reviewed migration, reconcile/update the currently deployed runtime Edge Function without overwriting newer code, deploy, run authenticated create/get/list/bulk tests, verify row-level records and RLS from Supabase, then verify desktop/mobile UI.
+**Acceptance before COMPLETED:** apply reviewed migration, reconcile/update the currently deployed runtime Edge Function without overwriting newer code, deploy, run authenticated create/get/list/bulk tests, verify row-level records and RLS from Supabase, then verify desktop/mobile UI. Discovery filters/saved groups, profile editing/media, following and provider assignments remain separate Phase 2 work.
 **Safety boundary:** no production migration or Edge Function deployment has occurred yet.
 
 ## AI-NETWORK-02 — Central AI Bot Command Center
