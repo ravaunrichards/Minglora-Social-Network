@@ -15,8 +15,10 @@ test('the original Minglora LIVE control sprite contains every active icon and s
   const actual = [...sprite.matchAll(/<symbol id="([^"]+)" viewBox="0 0 24 24">/g)].map(match => match[1]);
   assert.deepEqual(actual, expected);
   for (const id of expected) {
-    const symbol = sprite.match(new RegExp('<symbol id="' + id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '"[\\s\\S]*?<\\/symbol>'));
-    assert.ok(symbol && /<(?:path|rect|circle)/.test(symbol[0]), 'missing vector geometry: ' + id);
+    const start = sprite.indexOf('<symbol id="' + id + '"');
+    const end = sprite.indexOf('</symbol>', start);
+    assert.ok(start >= 0 && end > start, 'missing symbol: ' + id);
+    assert.match(sprite.slice(start, end), /<(?:path|rect|circle)/, 'missing vector geometry: ' + id);
   }
   assert.match(sprite, /stroke="currentColor"/);
 });
