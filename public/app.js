@@ -2441,7 +2441,7 @@ function renderLiveRewardDrops(drops,role){
   const root=$('#live-reward-list');if(!root)return;
   const items=Array.isArray(drops)?drops:[];
   if(!items.length){
-    root.innerHTML="<div class='live-reward-empty'><span aria-hidden='true'>🎁</span><strong>No reward drops yet</strong><small>The host can launch a Goody Bag or Treasure Box during this LIVE.</small></div>";
+    root.innerHTML="<div class='live-reward-empty'><svg class='live-reward-empty-icon' viewBox='0 0 64 64' width='42' height='42' aria-hidden='true' focusable='false'><use href='/assets/icons/live-reward-icons.svg#goody-bag'></use></svg><strong>No reward drops yet</strong><small>The host can launch a Goody Bag or Treasure Box during this LIVE.</small></div>";
     return;
   }
   root.innerHTML=items.map(drop=>{
@@ -2481,7 +2481,7 @@ function renderLiveRewardDrops(drops,role){
       ?"<small class='live-reward-condition'>Comment <strong>"+esc(drop.keyword||'the keyword')+"</strong> in LIVE chat to participate.</small>"
       :"<small class='live-reward-condition'>"+(goody?'Tap to enter the random draw.':'First eligible viewers to claim receive Coins.')+"</small>";
     return "<article class='live-reward-card "+(goody?'goody':'treasure')+"' data-live-reward-card='"+esc(drop.id)+"'>"+
-      "<div class='live-reward-art' aria-hidden='true'><span>"+(goody?'🎁':'💎')+"</span></div>"+
+      "<div class='live-reward-art' aria-hidden='true'><svg class='live-reward-art-icon' viewBox='0 0 64 64' width='44' height='44' focusable='false'><use href='/assets/icons/live-reward-icons.svg#"+(goody?'goody-bag':'treasure-box')+"'></use></svg></div>"+
       "<div class='live-reward-main'><div class='live-reward-title-row'><strong>"+(goody?'Goody Bag':'Treasure Box')+"</strong><span class='live-reward-state "+(active?'active':drop.status==='refunded'?'refunded':'complete')+"'>"+(active?'LIVE':drop.status==='refunded'?'REFUNDED':'COMPLETE')+"</span></div>"+
       "<div class='live-reward-pot'>"+Number(drop.totalCoins||0).toLocaleString()+" <span>Coins</span></div>"+
       "<small class='live-reward-meta'>"+Number(drop.participantCount||0).toLocaleString()+" joined · "+Number(drop.winnerCount||0).toLocaleString()+" winner"+(Number(drop.winnerCount||0)===1?'':'s')+"</small>"+
