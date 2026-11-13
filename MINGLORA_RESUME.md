@@ -594,3 +594,23 @@ Continue with independent non-database work that can be built and verified in th
 - Added four schema/gateway assertions and three HR route regression tests covering normalized full-snapshot writes, readback, rollback on relational persistence failure and compatibility behavior. Latest run for head `7a7cc201f1b1b4a5310c64e2d79d15a2c8a16361`: AI suite **279/279**, repository suite **1014/1014**, For You navigation **15/15**, all passed ([AI run 43274284770](https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/43274284770), [full CI run 43274284577](https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/43274284577)).
 - The HR migration remains staged only. It has not been executed against a PostgreSQL instance or deployed to production, and production tables, policies and RLS have not been verified. The previous read-only Supabase check found no AI HR tables; retain this as **implemented on branch, not live-verified**.
 - PR #202 remains open/draft. No database DDL/DML, provider credentials, workers, schedulers or deployments were changed. A paid/chargeable development branch remains uncreated pending user approval.
+
+## AI Bot Network checkpoint — reporting-manager relational integrity (2026-11-12, America/Jamaica)
+
+- Continued on the existing Minglora AI Bot Network branch `feat/personal-ai-bots-network-control-center`, draft PR #202. No repository, Supabase project, or service was created.
+- Reviewed the normalized HR appointment schema and found the manager appointment ID and manager AI identity ID were separate foreign-key references. The service validated that pair, but the database did not independently guarantee they identified the same appointment.
+- Added staged additive migration `supabase/migrations/20261112203000_minglora_ai_bot_hr_manager_integrity.sql`:
+  - Adds a unique key for `(owner_admin_id, appointment_id, identity_id)`.
+  - Adds a composite self-referencing foreign key so a manager appointment and manager AI identity must match under the same owner.
+  - Adds a paired-nullability check so both manager references are absent for top-level roles or both present for subordinate roles.
+  - Adds a no-self-manager constraint.
+  - Contains no table/column deletion, DML, identity activation, or permission grants. The constraints are additive and idempotently guarded.
+- Added a regression to `tests/unit/personal-ai-bots-schema.test.js` covering composite manager referential integrity, paired nullability, deferrability, no-self-manager validation, and absence of destructive SQL.
+- Verification on head `48167e9c27c23926b4b2143196ae6b562731a9eb`:
+  - Personal AI Bots workflow: **283 passed / 0 failed**, Node 24 syntax checks passed.
+  - Full Minglora repository test workflow: **1,018 passed / 0 failed / 0 skipped**.
+  - For You functional navigation: **passed** (15/15).
+  - All three GitHub Actions checks completed successfully.
+- This verifies the migration contract with repository tests; it does **not** verify PostgreSQL execution. The new migration and all earlier AI migrations remain staged only. No live Supabase DDL/DML, provider configuration, mailbox provisioning, worker/scheduler deployment, or production rollout was performed.
+- Current release gate remains unchanged: live AI tables/RLS and canonical production readback are not verified; actual provider inference and email inbox provisioning are not connected; distributed 10-billion identity capacity and concurrent execution are not benchmarked. The PR remains open and draft.
+- **Next safe step:** obtain an approved non-production PostgreSQL environment before applying and integration-testing the staged identity, queue, and HR migrations. Do not apply them to production as a shortcut.
