@@ -46,7 +46,7 @@
 
 ## Deployment safety boundary
 
-The relational migration, authenticated Node API, AI workspace and reconciled Edge Function changes are committed only to `feat/minglora-ai-bot-network-core`. The production Supabase schema and deployed Edge Function were not changed. Keep provider execution disabled until provider account/model health, secret custody, budgets and the execution adapter are independently verified. Do not merge this branch wholesale: it diverges from `main` (56 commits ahead and 80 behind at the latest checkpoint). The Edge Function source was selectively synchronized with `main`, but the rest of the feature branch remains divergent.
+The relational migration, authenticated Node API, AI workspace and reconciled Edge Function changes are committed only to `feat/minglora-ai-bot-network-core`. The production Supabase schema and deployed Edge Function were not changed. Keep provider execution disabled until provider account/model health, secret custody, budgets and the execution adapter are independently verified. Do not merge this branch wholesale: it remains materially diverged from `main`. The Edge Function source was selectively synchronized with `main`, but the rest of the feature branch remains divergent; compare and reconcile before any release.
 
 ## Verified implementation so far
 
