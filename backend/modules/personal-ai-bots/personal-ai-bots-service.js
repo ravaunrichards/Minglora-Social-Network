@@ -953,6 +953,58 @@ export function updatePersonalAiBotAppointment(db,appointmentId,input,actorId,ti
   };
 }
 
+
+const PERSONAL_AI_BOT_RECORDABLE_EMPLOYMENT_EVENTS = new Set([
+  'onboarded','trained','work_assigned','attendance_recorded',
+  'performance_reviewed','disciplinary_investigation','succession_planned'
+]);
+
+/**
+ * Record-only HR lifecycle checkpoint. Does not create tasks, change roles,
+ * grant permissions, provision an inbox, or activate the AI identity.
+ */
+export function recordPersonalAiBotEmploymentEvent(db, appointmentId, input, actorId, timestamp, uid) {
+  ensurePersonalAiBotCollections(db);
+  const appointment=db.personalAiBotAppointments.find(item=>item.id===appointmentId&&item.ownerId===actorId);
+  if(!appointment)throw Object.assign(new Error('Appointment not found.'),{status:404});
+  if(!['appointed','suspended'].includes(appointment.status)){
+    throw Object.assign(new Error('Employment events can only be recorded for an appointed or suspended AI employee.'),{status:409});
+  }
+  if(appointment.population!=='organizational'){
+    throw Object.assign(new Error('Employment history requires an organizational AI appointment.'),{status:409});
+  }
+  if(!Array.isArray(appointment.permissions)||appointment.permissions.length!==0||
+     (appointment.permissionGrantStatus||'not_granted')!=='not_granted'||
+     (appointment.identityActivationStatus||'unchanged_disabled')!=='unchanged_disabled'){
+    throw Object.assign(new Error('This appointment has an unexpected permission or activation state and requires a security review.'),{status:409});
+  }
+  const candidate=db.personalAiBots.find(item=>item.id===appointment.identityId&&item.population==='organizational');
+  if(!candidate||String(candidate.status||'').toLowerCase()!=='disabled'||candidate.enabled!==false){
+    throw Object.assign(new Error('The linked AI employee must remain disabled before HR history can be updated.'),{status:409});
+  }
+  const eventType=String(input?.eventType||'').trim();
+  if(!PERSONAL_AI_BOT_RECORDABLE_EMPLOYMENT_EVENTS.has(eventType)){
+    throw Object.assign(new Error('Choose a supported employment history event.'),{status:400});
+  }
+  const notes=String(input?.notes||'').trim();
+  if(notes.length<3||notes.length>2000){
+    throw Object.assign(new Error('Employment event notes must be between 3 and 2,000 characters.'),{status:400});
+  }
+  const event={
+    id:'employment-'+uid(),appointmentId:appointment.id,applicationId:appointment.applicationId,
+    identityId:appointment.identityId,vacancyId:appointment.vacancyId,eventType,actorId,
+    createdAt:timestamp,notes
+  };
+  appointment.employmentHistory||=[];
+  appointment.employmentHistory.push({eventType,actorId,createdAt:timestamp,notes});
+  appointment.updatedAt=timestamp;
+  db.personalAiBotEmploymentHistory.push(event);
+  audit(db,actorId,'employment.'+eventType,'employment_history',event.id,
+    'Recorded '+eventType.replaceAll('_',' ')+' HR history for '+String(appointment.candidateDisplayName||'the AI employee')+'. No permissions or execution authority were changed.',
+    timestamp,uid);
+  return {...event};
+}
+
 export function createPersonalAiBotCategory(db, input, actorId, timestamp, uid) {
   ensurePersonalAiBotCollections(db);
   const name=String(input.name||'').trim().replace(/\s+/g,' ');

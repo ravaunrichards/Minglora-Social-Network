@@ -2317,3 +2317,47 @@ test('appointment lifecycle rejects unsupported transitions and unauthorized per
   await handlePersonalAiBotsAdminApi(denied);
   assert.equal(denied.res.statusCode,403);
 });
+
+ 
+test('owner employment event route persists a record-only HR event without activating the AI employee',async()=>{
+  const identityId='00000000-0000-4000-8000-000000004902';
+  const appointmentId='appointment-employment-event-4902';
+  const db={
+    personalAiBots:[{id:identityId,population:'organizational',status:'disabled',enabled:false}],
+    personalAiBotAppointments:[{
+      id:appointmentId,ownerId:'owner-1',identityId,population:'organizational',
+      candidateDisplayName:'Training AI',applicationId:'application-4902',vacancyId:'vacancy-4902',
+      status:'appointed',permissions:[],permissionGrantStatus:'not_granted',
+      identityActivationStatus:'unchanged_disabled',employmentHistory:[]
+    }]
+  };
+  let persisted=null,saves=0;
+  const context=makeContext({
+    method:'POST',
+    path:'/api/admin/personal-ai-bots/appointments/'+appointmentId+'/employment-events',
+    input:{eventType:'trained',notes:'Completed the owner-reviewed training checkpoint.'},
+    db,uid:sequenceUid(9900),
+    persistAiHrState:async state=>{persisted=structuredClone(state);return {ok:true};},
+    saveStore:async()=>{saves++;}
+  });
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,201);
+  assert.equal(context.res.payload.recordOnly,true);
+  assert.equal(context.res.payload.event.eventType,'trained');
+  assert.equal(db.personalAiBotAppointments[0].status,'appointed');
+  assert.equal(db.personalAiBots[0].status,'disabled');
+  assert.deepEqual(db.personalAiBotAppointments[0].permissions,[]);
+  assert.equal(persisted.employmentHistory.length,1);
+  assert.equal(persisted.employmentHistory[0].eventType,'trained');
+  assert.equal(saves,1);
+
+  const invalid=makeContext({
+    method:'POST',
+    path:'/api/admin/personal-ai-bots/appointments/'+appointmentId+'/employment-events',
+    input:{eventType:'promoted',notes:'No promotion workflow was invoked.'},
+    db
+  });
+  await handlePersonalAiBotsAdminApi(invalid);
+  assert.equal(invalid.res.statusCode,400);
+  assert.equal(db.personalAiBotEmploymentHistory.length,1);
+});

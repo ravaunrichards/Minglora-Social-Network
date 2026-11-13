@@ -47,6 +47,7 @@ import {
   getPersonalAiBotAppointments,
   getPersonalAiBotEmploymentHistory,
   createPersonalAiBotAppointment,
+  recordPersonalAiBotEmploymentEvent,
   previewPersonalAiBotSchedule,
   listPersonalAiBotPersonaVersions,
   createPersonalAiBotPersonaDraft,
@@ -1470,4 +1471,39 @@ test('Creator Studio rejects unsupported formats, excessive assets, data URIs an
   const draft=createPersonalAiCreatorDraft(db,base,actor,stamp,uid);
   assert.throws(()=>updatePersonalAiCreatorDraft(db,draft.id,{title:'Changed'},'other-owner',stamp,uid),/another owner/);
   assert.throws(()=>reviewPersonalAiCreatorDraft(db,draft.id,{decision:'approve'},actor,stamp,uid),/awaiting owner review/);
+});
+
+ 
+test('employment lifecycle events are owner-scoped audit records and never activate AI employees',()=>{
+  const identityId='00000000-0000-4000-8000-000000004901';
+  const appointmentId='appointment-employment-event-4901';
+  const db={
+    personalAiBots:[{id:identityId,population:'organizational',status:'disabled',enabled:false}],
+    personalAiBotAppointments:[{
+      id:appointmentId,ownerId:actor,identityId,population:'organizational',
+      candidateDisplayName:'Training AI',applicationId:'application-4901',vacancyId:'vacancy-4901',
+      status:'appointed',permissions:[],permissionGrantStatus:'not_granted',
+      identityActivationStatus:'unchanged_disabled',employmentHistory:[]
+    }]
+  };
+  const event=recordPersonalAiBotEmploymentEvent(db,appointmentId,{
+    eventType:'trained',notes:'Completed owner-reviewed onboarding training.'
+  },actor,stamp,uid);
+  assert.equal(event.eventType,'trained');
+  assert.equal(event.actorId,actor);
+  assert.equal(db.personalAiBotAppointments[0].status,'appointed');
+  assert.equal(db.personalAiBotAppointments[0].employmentHistory.length,1);
+  assert.equal(db.personalAiBotEmploymentHistory.length,1);
+  assert.equal(db.personalAiBots[0].status,'disabled');
+  assert.equal(db.personalAiBots[0].enabled,false);
+  assert.deepEqual(db.personalAiBotAppointments[0].permissions,[]);
+  assert.equal(db.personalAiBotAppointments[0].permissionGrantStatus,'not_granted');
+  assert.equal(db.personalAiBotAppointments[0].identityActivationStatus,'unchanged_disabled');
+  assert.ok(db.personalAiBotAudit.some(item=>item.action==='employment.trained'&&item.targetId===event.id));
+  assert.throws(()=>recordPersonalAiBotEmploymentEvent(db,appointmentId,{
+    eventType:'promoted',notes:'Promotion requires a distinct owner-reviewed workflow.'
+  },actor,stamp,uid),/supported employment history event/);
+  assert.throws(()=>recordPersonalAiBotEmploymentEvent(db,appointmentId,{
+    eventType:'trained',notes:'Cross-owner access must fail.'
+  },'another-owner',stamp,uid),/Appointment not found/);
 });

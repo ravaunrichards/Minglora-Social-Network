@@ -93,7 +93,18 @@
     const actions=(transitions[appointment.status]||[]).map(([status,label])=>
       '<button type="button" class="pab-btn secondary pab-appointment-status" data-appointment="'+esc(appointment.id)+'" data-status="'+status+'">'+label+'</button>'
     ).join('');
-    return '<article class="pab-category" data-appointment-card="'+esc(appointment.id)+'"><div class="pab-category-copy"><strong>'+esc(appointment.candidateDisplayName)+'</strong><p>'+esc(appointment.positionTitle)+' · '+esc(appointment.departmentName)+'</p><span class="pab-tag">'+esc(appointment.status)+'</span><p><small>Reporting manager: '+esc(manager)+'<br>Approved by: '+esc(appointment.approvedBy||'')+' · '+esc(date(appointment.appointedAt))+'</small></p><div class="pab-warning">Identity status: unchanged disabled · Permissions: none granted · External execution: not enabled</div>'+(actions?'<div class="pab-field"><label>Employment note (optional)<input class="pab-input pab-appointment-notes" data-appointment="'+esc(appointment.id)+'" maxlength="2000" placeholder="Reason for this employment status change"></label></div><div class="pab-actions pab-appointment-lifecycle">'+actions+'</div><small class="pab-notice pab-appointment-status-message" data-appointment-message="'+esc(appointment.id)+'" aria-live="polite"></small>':'<p class="pab-notice">This appointment record is archived. Its employment history remains available for audit.</p>')+'</div></article>';
+    const eventOptions=[
+      ['onboarded','Onboarding completed'],['trained','Training completed'],
+      ['work_assigned','Work assignment recorded (history only)'],
+      ['attendance_recorded','Attendance recorded'],
+      ['performance_reviewed','Performance review recorded'],
+      ['disciplinary_investigation','Disciplinary investigation recorded'],
+      ['succession_planned','Succession plan recorded']
+    ].map(([value,label])=>'<option value="'+value+'">'+label+'</option>').join('');
+    const eventRecorder=['appointed','suspended'].includes(appointment.status)
+      ?'<div class="pab-field pab-employment-event-form"><label>Employment lifecycle event<select class="pab-select pab-employment-event-type" data-appointment="'+esc(appointment.id)+'">'+eventOptions+'</select></label><label>Event notes<textarea class="pab-textarea pab-employment-event-notes" data-appointment="'+esc(appointment.id)+'" maxlength="2000" required placeholder="Record the owner-reviewed outcome or reference"></textarea></label><div class="pab-actions"><button type="button" class="pab-btn secondary pab-employment-event" data-appointment="'+esc(appointment.id)+'">Record employment event</button></div><small class="pab-notice pab-employment-event-message" data-employment-event-message="'+esc(appointment.id)+'" aria-live="polite"></small><div class="pab-warning">History record only. This does not assign a task, change a job position, grant permissions, create an inbox or activate the AI employee.</div></div>'
+      :'';
+    return '<article class="pab-category" data-appointment-card="'+esc(appointment.id)+'"><div class="pab-category-copy"><strong>'+esc(appointment.candidateDisplayName)+'</strong><p>'+esc(appointment.positionTitle)+' · '+esc(appointment.departmentName)+'</p><span class="pab-tag">'+esc(appointment.status)+'</span><p><small>Reporting manager: '+esc(manager)+'<br>Approved by: '+esc(appointment.approvedBy||'')+' · '+esc(date(appointment.appointedAt))+'</small></p><div class="pab-warning">Identity status: unchanged disabled · Permissions: none granted · External execution: not enabled</div>'+(actions?'<div class="pab-field"><label>Employment note (optional)<input class="pab-input pab-appointment-notes" data-appointment="'+esc(appointment.id)+'" maxlength="2000" placeholder="Reason for this employment status change"></label></div><div class="pab-actions pab-appointment-lifecycle">'+actions+'</div><small class="pab-notice pab-appointment-status-message" data-appointment-message="'+esc(appointment.id)+'" aria-live="polite"></small>':'<p class="pab-notice">This appointment record is closed. Its employment history remains available for audit.</p>')+eventRecorder+'</div></article>';
   }
 
   function organizationNode(appointment,childrenByManager,rendered,ancestors){
@@ -421,6 +432,7 @@
     document.querySelectorAll('.pab-save-application').forEach(node=>node.addEventListener('click',()=>saveApplication(node.dataset.application)));
     document.querySelector('#pab-appointment-form')?.addEventListener('submit',createAppointment);
     document.querySelectorAll('.pab-appointment-status').forEach(node=>node.addEventListener('click',()=>updateAppointmentStatus(node.dataset.appointment,node.dataset.status)));
+    document.querySelectorAll('.pab-employment-event').forEach(node=>node.addEventListener('click',()=>recordEmploymentEvent(node.dataset.appointment)));
     document.querySelector('#pab-appointment-application')?.addEventListener('change',syncAppointmentManagerRequirement);
     syncAppointmentManagerRequirement();
     document.querySelector('#pab-create-starters')?.addEventListener('click',createStarters);
@@ -1115,6 +1127,28 @@
       await refresh();
       notice('pab-appointment-notice','Owner-approved appointment recorded. The AI identity remains disabled and no permissions were granted.','success');
     }catch(error){notice('pab-appointment-notice',error.message,'error');}
+  }
+
+  async function recordEmploymentEvent(appointmentId){
+    const card=document.querySelector('[data-appointment-card="'+CSS.escape(appointmentId)+'"]');
+    const eventType=card?.querySelector('.pab-employment-event-type')?.value||'';
+    const notes=card?.querySelector('.pab-employment-event-notes')?.value?.trim()||'';
+    const statusNode=card?.querySelector('.pab-employment-event-message');
+    if(!eventType||notes.length<3||notes.length>2000){
+      if(statusNode)statusNode.textContent='Choose an employment event and enter notes between 3 and 2,000 characters.';
+      return;
+    }
+    if(statusNode)statusNode.textContent='Saving employment history…';
+    try{
+      await request(API+'/appointments/'+encodeURIComponent(appointmentId)+'/employment-events',{
+        method:'POST',body:JSON.stringify({eventType,notes})
+      });
+      await refresh();
+      notice('pab-appointment-notice','Employment history event recorded. This was an audit entry only; no task, permissions or AI activation were created.','success');
+    }catch(error){
+      if(statusNode)statusNode.textContent=error.message||'Employment event could not be saved.';
+      notice('pab-appointment-notice',error.message,'error');
+    }
   }
 
   async function updateAppointmentStatus(appointmentId,status){
