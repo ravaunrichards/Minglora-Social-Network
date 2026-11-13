@@ -1,6 +1,6 @@
 (() => {
   "use strict";
-  const state={gifts:[],balance:null,promoWallet:null,selectedCode:"",category:"all",search:"",recipient:"",page:0,pageSize:72,sort:"high"};
+  const state={gifts:[],balance:null,promoWallet:null,selectedCode:"",category:"all",search:"",recipient:"",page:0,pageSize:72,sort:"high",unavailableArtwork:new Set()};
   const labels={all:"All gifts",flowers:"Flowers",hearts:"Love & hearts",animals:"Animals & creatures",vehicles:"Vehicles",music:"Music",sports:"Sports",food_drink:"Food & drinks",fashion_beauty:"Fashion & beauty",luxury:"Luxury",celebrations:"Celebrations",fantasy:"Fantasy & cosmic",nature:"Nature",travel:"Travel",games:"Games",community:"Community",symbols:"Symbols",other:"More gifts"};
   const emojis={all:"✦",flowers:"🌹",hearts:"💖",animals:"🦁",vehicles:"🚀",music:"🎵",sports:"🏆",food_drink:"🍰",fashion_beauty:"👑",luxury:"💎",celebrations:"🎉",fantasy:"✨",nature:"🌴",travel:"🌍",games:"🎮",community:"🤝",symbols:"🔆",other:"🎁"};
   const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -19,15 +19,19 @@
   function categoryMarkup(){
     return categories().map(k=>"<button type='button' class='gift-category-chip "+(state.category===k?"active":"")+"' data-gift-category='"+k+"'><span>"+emojis[k]+"</span> "+labels[k]+"</button>").join("");
   }
+  function hasCanonicalGiftArtwork(g){
+    const code=String(g?.code||"");
+    return /^[a-z0-9_-]{1,59}$/.test(code)&&g.image_url==="/assets/gifts/catalog/"+code+".svg"&&g.model_url==="/assets/gifts/catalog/"+code+".gltf";
+  }
   function filtered(){
     const q=state.search.trim().toLowerCase();
-    const rows=state.gifts.filter(g=>(state.category==="all"||g.category===state.category)&&(!q||(g.name+" "+(labels[g.category]||"")+" "+g.code+" "+String(g.coin_price)).toLowerCase().includes(q)));
+    const rows=state.gifts.filter(g=>hasCanonicalGiftArtwork(g)&&!state.unavailableArtwork.has(String(g.code))&&(state.category==="all"||g.category===state.category)&&(!q||(g.name+" "+(labels[g.category]||"")+" "+g.code+" "+String(g.coin_price)).toLowerCase().includes(q)));
     if(state.sort==="name")rows.sort((a,b)=>a.name.localeCompare(b.name));
     else if(state.sort==="high")rows.sort((a,b)=>Number(b.asset_version==="2")-Number(a.asset_version==="2")||b.coin_price-a.coin_price||a.name.localeCompare(b.name));
     else rows.sort((a,b)=>a.coin_price-b.coin_price||a.name.localeCompare(b.name));
     return rows;
   }
-  function selected(){return state.gifts.find(g=>g.code===state.selectedCode)||null;}
+  function selected(){const gift=state.gifts.find(g=>g.code===state.selectedCode)||null;return gift&&hasCanonicalGiftArtwork(gift)&&!state.unavailableArtwork.has(String(gift.code))?gift:null;}
   async function copyText(value){
     const text=String(value??"");
     if(!text)return false;
@@ -78,7 +82,7 @@
     }
   }
   function card(g){
-    const image=g.image_url?"<img class='gift-card-image' loading='lazy' decoding='async' src='"+esc(g.image_url)+"' alt='Original Minglora artwork: "+esc(g.name)+"'>":"<span class='gift-emoji-preview' aria-label='"+esc(g.name)+"'>"+esc(g.emoji||"🎁")+"</span>";
+    const image="<img class='gift-card-image' data-gift-artwork-code='"+esc(g.code)+"' loading='lazy' decoding='async' src='"+esc(g.image_url)+"' alt='Complete Minglora gift artwork: "+esc(g.name)+"'>";
     return "<button type='button' class='gift-catalog-card "+(state.selectedCode===g.code?"selected":"")+"' data-gift-select='"+esc(g.code)+"' aria-pressed='"+(state.selectedCode===g.code)+"'><span class='gift-catalog-art'>"+image+"</span><strong>"+esc(g.name)+"</strong><small>◈ "+Number(g.coin_price).toLocaleString()+" Coins</small></button>";
   }
   function updateSelected(){
@@ -96,9 +100,9 @@
       image.hidden=!g?.image_url;
     }
     if(fallback){
-      fallback.textContent=g?.emoji||"🎁";
-      fallback.hidden=Boolean(g?.image_url);
-      fallback.setAttribute("aria-label",g?g.name+" gift artwork fallback":"Gift preview unavailable");
+      fallback.textContent="";
+      fallback.hidden=true;
+      fallback.setAttribute("aria-label","Gift artwork unavailable");
     }
     if(model){
       const nextCode=g?.code||"";
@@ -127,8 +131,9 @@
         if(previewStatus)previewStatus.textContent=g?"Showing the original gift artwork.":"Choose a gift to preview it.";
       }
     }
-    if(sound)sound.disabled=!g;
-    if(send)send.disabled=!g;
+    const artworkReady=Boolean(g&&image&&image.complete&&image.naturalWidth>0&&image.naturalHeight>0);
+    if(sound)sound.disabled=!artworkReady;
+    if(send)send.disabled=!artworkReady;
     if(copySelected)copySelected.disabled=!g;
   }
   function bindPreviewEvents(){
@@ -150,14 +155,25 @@
       if(!code||state.selectedCode!==code)return;
       model.hidden=true;
       if(image)image.hidden=!image.getAttribute("src");
-      if(fallback)fallback.hidden=Boolean(image?.getAttribute("src"));
-      if(previewStatus)previewStatus.textContent="The 3D model could not load. Showing the original gift artwork instead.";
+      if(fallback)fallback.hidden=true;
+      if(previewStatus)previewStatus.textContent="The 3D model failed to load. Showing the complete original artwork instead.";
+    });
+    image?.addEventListener("load",()=>{
+      if(image.dataset.previewCode!==state.selectedCode)return;
+      updateSelected();
     });
     image?.addEventListener("error",()=>{
-      if(image.dataset.previewCode!==state.selectedCode)return;
+      const code=String(image.dataset.previewCode||"");
+      if(!code||state.selectedCode!==code)return;
+      state.unavailableArtwork.add(code);
       image.hidden=true;
-      if(fallback)fallback.hidden=false;
-      if(previewStatus)previewStatus.textContent="The artwork image could not load. Showing the gift icon instead.";
+      if(model){model.hidden=true;model.removeAttribute("src");}
+      if(fallback)fallback.hidden=true;
+      if(previewStatus)previewStatus.textContent="Complete gift artwork could not be loaded. This gift has been withheld and cannot be sent.";
+      if(sound)sound.disabled=true;
+      if(send)send.disabled=true;
+      if(copySelected)copySelected.disabled=true;
+      drawGrid();
     });
   }
   function drawGrid(){
@@ -168,6 +184,16 @@
     grid.innerHTML=shown.length?shown.map(card).join(""):"<div class='gift-empty-state'>No gifts match your search.</div>";
     if(more){more.hidden=shown.length>=rows.length;more.textContent="Show more gifts · "+Math.max(0,rows.length-shown.length).toLocaleString()+" remaining";}
     grid.querySelectorAll("[data-gift-select]").forEach(b=>b.addEventListener("click",()=>{state.selectedCode=b.dataset.giftSelect;drawGrid();updateSelected();}));
+    grid.querySelectorAll("img[data-gift-artwork-code]").forEach(image=>image.addEventListener("error",()=>{
+      const code=String(image.dataset.giftArtworkCode||"");
+      if(!code||state.unavailableArtwork.has(code))return;
+      state.unavailableArtwork.add(code);
+      if(state.selectedCode===code){
+        const next=filtered()[0];
+        state.selectedCode=next?.code||"";
+      }
+      drawGrid();
+    },{once:true}));
     updateSelected();
   }
   async function render(){
@@ -175,7 +201,7 @@
     main.innerHTML="<section class='card empty-state'><h3>Loading Minglora Gifts</h3><p>Connecting to the complete gift collection…</p></section>";
     const results=await Promise.allSettled([request("/coins/catalog"),request("/coins/wallet"),request("/coins/promotional-gift-wallet")]);
     if(results[0].status!=="fulfilled")throw results[0].reason;
-    state.gifts=Array.isArray(results[0].value.gifts)?results[0].value.gifts:[];
+    state.gifts=Array.isArray(results[0].value.gifts)?results[0].value.gifts.filter(hasCanonicalGiftArtwork):[];
     await window.MingloraGiftFX?.loadCatalogMotionIndex?.();
     state.balance=results[1].status==="fulfilled"?Number(results[1].value.wallet?.balance_coins??0):null;state.promoWallet=results[2].status==="fulfilled"?(results[2].value.wallet||null):null;
     if(!state.selectedCode&&state.gifts.length)state.selectedCode=state.gifts[0].code;
