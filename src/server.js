@@ -1360,6 +1360,38 @@ async function route(req, res) {
         return json(res, 200, result || { created_count: 0, failed_count: 0, created: [], failed: [] });
       }
 
+      const runAIProviderCommand = async (aiAction, payload = {}) => {
+        if (!isModerator(user, req)) {
+          throw Object.assign(
+            new Error('Only an authorized Minglora platform administrator with the required active session can manage AI provider assignments.'),
+            { status: 403 }
+          );
+        }
+        if (!isSupabasePersistence()) {
+          throw Object.assign(new Error('AI provider records require Minglora Supabase persistence.'), { status: 503 });
+        }
+        try {
+          const response = await requestSupabaseState('ai_provider_command', {
+            actorUserId: user.id,
+            aiAction,
+            payload
+          });
+          if (response?.skipped) {
+            throw Object.assign(new Error('AI provider records are unavailable in local-only persistence mode.'), { status: 503 });
+          }
+          return response?.result;
+        } catch (error) {
+          const message = String(error?.message || '');
+          if (/unsupported action|unsupported AI provider command|function .*minglora_ai_provider_command.*does not exist|could not find the function|schema cache/i.test(message)) {
+            throw Object.assign(
+              new Error('The AI provider catalogue migration and runtime gateway must be deployed before this operation is available. No provider data was changed.'),
+              { status: 503 }
+            );
+          }
+          throw error;
+        }
+      };
+
       const runAIHRCommand = async (aiAction, payload = {}) => {
         if (!isModerator(user, req)) {
           throw Object.assign(
@@ -1426,6 +1458,57 @@ async function route(req, res) {
           throw error;
         }
       };
+
+      if (method === 'GET' && sub === 'provider-accounts') {
+        const result = await runAIProviderCommand('list_provider_accounts');
+        return json(res, 200, { provider_accounts: Array.isArray(result) ? result : [] });
+      }
+      if (method === 'POST' && sub === 'provider-accounts') {
+        const input = await body(req, 12000);
+        if (!input || typeof input !== 'object' || Array.isArray(input)) {
+          throw Object.assign(new Error('Provider account input must be a JSON object.'), { status: 400 });
+        }
+        const result = await runAIProviderCommand('create_provider_account', input);
+        return json(res, result?.reused ? 200 : 201, result || {});
+      }
+      if (method === 'GET' && sub === 'provider-models') {
+        const result = await runAIProviderCommand('list_provider_models');
+        return json(res, 200, { provider_models: Array.isArray(result) ? result : [] });
+      }
+      if (method === 'POST' && sub === 'provider-models') {
+        const input = await body(req, 16000);
+        if (!input || typeof input !== 'object' || Array.isArray(input)) {
+          throw Object.assign(new Error('Provider model input must be a JSON object.'), { status: 400 });
+        }
+        const result = await runAIProviderCommand('create_provider_model', input);
+        return json(res, result?.reused ? 200 : 201, result || {});
+      }
+      if (method === 'GET' && sub === 'provider-assignments') {
+        const result = await runAIProviderCommand('list_provider_assignments');
+        return json(res, 200, { assignments: Array.isArray(result) ? result : [] });
+      }
+      if (method === 'POST' && sub === 'provider-assignments') {
+        const input = await body(req, 16000);
+        if (!input || typeof input !== 'object' || Array.isArray(input)) {
+          throw Object.assign(new Error('Provider assignment input must be a JSON object.'), { status: 400 });
+        }
+        const result = await runAIProviderCommand('assign_provider_model', input);
+        return json(res, result?.reused ? 200 : 201, result || {});
+      }
+      if (parts[0] === 'provider-assignments' && parts.length === 3 &&
+          parts[2] === 'status' && method === 'PATCH') {
+        const assignmentId = parts[1];
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(assignmentId)) {
+          throw Object.assign(new Error('A valid provider assignment ID is required.'), { status: 400 });
+        }
+        const input = await body(req, 8000);
+        if (!input || typeof input !== 'object' || Array.isArray(input)) {
+          throw Object.assign(new Error('Provider assignment status input must be a JSON object.'), { status: 400 });
+        }
+        input.assignment_id = assignmentId;
+        const result = await runAIProviderCommand('set_provider_assignment_status', input);
+        return json(res, 200, result || {});
+      }
 
       if (method === 'GET' && sub === 'department-templates') {
         const templates = await runAIOrganizationCommand('list_department_templates');
