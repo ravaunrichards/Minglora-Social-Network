@@ -44,6 +44,7 @@ import { isFemaleMenstrualHealthAccount } from '../backend/modules/menstrual-hea
 import { getPlatformAdminBadge, getProfileVerificationBadge } from './platform-badges.js';
 import { listActiveCreatorSubscriptions } from '../backend/modules/subscriptions/service.js';
 import { SOUND_AUDIO_MIME_TYPES, validateSoundInput, normalizeSoundtrackInput, canUseSound, soundUsageCounts } from '../backend/modules/sounds/service.js';
+import { validateAudioAssetMetadata, validateAudioAssignment } from '../backend/modules/sounds/registry.js';
 import { getGiftGallery, giftGalleryTimeZone, recordGiftGalleryEvent, updateGiftGallerySettings } from '../backend/modules/gift-gallery/service.js';
 import { CREATOR_LEAGUE_CLASSES, recordLiveGiftForLeagues, refundCreatorLeagueGift, getCreatorLeagueOverview, createCreatorLeagueMatch, acceptCreatorLeagueMatch, supportCreatorLeagueMatch, useCreatorLeaguePowerup, listCreatorLeagueMatches, settleExpiredLeagueMatches, settleScheduledCreatorLeagueDays } from '../backend/modules/leagues/service.js';
 import { recordGifterGift, refundGifterGift, getGifterProgressionOverview, getGifterBadgeSummary, getNewGifterIdentity, getLiveGifterLeaderboard } from '../backend/modules/gifter-progression/service.js';
@@ -2632,6 +2633,79 @@ async function route(req, res) {
         if(!['all','account.ban','account.unban'].includes(actionFilter))return json(res,400,{error:'Choose a supported administrator audit action filter.'});
         const result=await requestSupabaseState('admin_audit_log',{actorUserId:user.id,limit,search,actionFilter});
         return json(res,200,result);
+      }
+
+      const audioAdminAuthorized = () => isDesignatedCreatorHubAdmin(user) && isModerator(user,req) && hasActiveReviewerSession(user);
+      if((method==='GET'||method==='POST')&&p.startsWith('/api/admin/audio/')){
+        if(!audioAdminAuthorized())return json(res,403,{error:'Only the MFA-verified Minglora owner can manage official platform audio.'});
+      }
+      if(method==='GET'&&p==='/api/admin/audio/catalog'){
+        const catalog=await requestSupabaseState('audio_admin_catalog_list',{
+          adminUserId:user.id,adminEmail:normalizeEmail(user.email||'')
+        });
+        return json(res,200,catalog);
+      }
+      if(method==='POST'&&p==='/api/admin/audio/assets'){
+        const mediaAssetId=String(input.mediaAssetId||'').trim();
+        const metadata=input.metadata&&typeof input.metadata==='object'?input.metadata:{};
+        const media=(db.mediaAssets||[]).find(item=>
+          item.id===mediaAssetId&&item.ownerId===user.id&&item.slot==='sound'&&
+          item.bucket==='minglora-sounds'&&item.status==='uploaded'&&item.mediaType==='audio'
+        );
+        if(!media)return json(res,404,{error:'Upload the actual audio file to the private Minglora sound bucket before registering it.'});
+        const requestedFormat=String(metadata.fileFormat||'').toLowerCase();
+        const expectedFormat=({'audio/mpeg':'mp3','audio/mp4':'m4a','audio/ogg':'ogg','audio/webm':'webm','audio/wav':'wav','audio/x-wav':'wav','audio/flac':'flac','audio/aac':'aac'}[String(media.mimeType||'').toLowerCase()]||'');
+        const opusContainerMatch=requestedFormat==='opus'&&expectedFormat==='ogg'&&String(media.originalName||'').toLowerCase().endsWith('.opus');
+        if(String(metadata.originalFilename||'')!==String(media.originalName||'')||
+           Number(metadata.byteSize)!==Number(media.byteSize)||
+           (requestedFormat!==expectedFormat&&!opusContainerMatch)){
+          return json(res,409,{error:'Audio filename, format or size does not match the uploaded file.'});
+        }
+        const validation=validateAudioAssetMetadata({
+          ...metadata,scope:'platform',reviewStatus:'pending_review',
+          authenticityStatus:'unverified',licenseVerified:false,
+          sha256:String(metadata.sha256||'').toLowerCase()
+        });
+        if(!validation.valid)return json(res,400,{error:validation.errors.join(' ')});
+        const registered=await requestSupabaseState('audio_admin_asset_register',{
+          adminUserId:user.id,adminEmail:normalizeEmail(user.email||''),
+          mediaAssetId,metadata:validation.value
+        });
+        return json(res,201,registered);
+      }
+      const audioReviewRoute=p.match(/^\/api\/admin\/audio\/assets\/([0-9a-f-]{36})\/review$/i);
+      if(method==='POST'&&audioReviewRoute){
+        const decision=String(input.decision||'');
+        if(!['approve','reject'].includes(decision))return json(res,400,{error:'Choose approve or reject.'});
+        const reviewed=await requestSupabaseState('audio_admin_asset_review',{
+          adminUserId:user.id,adminEmail:normalizeEmail(user.email||''),
+          assetId:audioReviewRoute[1],decision,
+          confirmAuthenticity:input.confirmAuthenticity===true,
+          confirmLicenseReview:input.confirmLicenseReview===true,
+          rejectionType:String(input.rejectionType||'').slice(0,40)
+        });
+        return json(res,200,reviewed);
+      }
+const audioPreviewRoute=p.match(/^\/api\/admin\/audio\/assets\/([0-9a-f-]{36})\/preview$/i);
+      if(method==='GET'&&audioPreviewRoute){
+        const preview=await requestSupabaseState('audio_admin_preview',{
+          adminUserId:user.id,adminEmail:normalizeEmail(user.email||''),assetId:audioPreviewRoute[1]
+        });
+        return json(res,200,preview,{'Cache-Control':'no-store'});
+      }
+      if(method==='POST'&&p==='/api/admin/audio/assignments'){
+        const validation=validateAudioAssignment(input);
+        if(!validation.valid)return json(res,400,{error:validation.errors.join(' ')});
+        const saved=await requestSupabaseState('audio_admin_assignment_set',{
+          adminUserId:user.id,adminEmail:normalizeEmail(user.email||''),
+          ...validation.value,loopPlayback:input.loopPlayback===true
+        });
+        return json(res,200,saved);
+      }
+const audioEventRoute=p.match(/^\/api\/audio\/events\/([a-z][a-z0-9_]*\.[a-z][a-z0-9_]*)$/i);
+      if(method==='GET'&&audioEventRoute){
+        const result=await requestSupabaseState('audio_event_resolve',{eventKey:audioEventRoute[1]});
+        return json(res,200,result,{'Cache-Control':'no-store'});
       }
 
       if(method==='GET'&&p==='/api/admin/internal-activity'){

@@ -71,7 +71,7 @@ Deno.serve(async (req: Request) => {
 
   const action = input.action;
   const supportedActions = [
-    "internal_activity_feed",
+    "internal_activity_feed", "audio_admin_catalog_list", "audio_admin_preview", "audio_admin_asset_register", "audio_admin_asset_review", "audio_admin_assignment_set", "audio_event_resolve",
     "admin_users_list", "admin_user_set_ban", "admin_audit_log", "admin_audit_log",
     "streambay_cleanup", "load", "save", "health", "media_sign", "media_upload_prepare", "media_upload_complete", "media_delete",
     "live_broadcast_create", "live_broadcast_end", "live_chat_list", "live_chat_send", "live_chat_delete",
@@ -322,6 +322,269 @@ Deno.serve(async (req: Request) => {
     const minor = Math.round(amount * 100);
     return Number.isSafeInteger(minor) ? minor : null;
   };
+
+  const isAudioAdmin = async (userId: string, email: string) => {
+    if (userId !== "5b998c21-86b5-4621-ab37-e0808a2657b1" ||
+        email.trim().toLowerCase() !== "creatorhubcreatornetwork@gmail.com") return false;
+    const { data, error } = await admin.from("minglora_platform_staff")
+      .select("user_id").eq("user_id",userId).eq("role","owner").eq("active",true)
+      .contains("permissions",["platform:admin"]).limit(1).maybeSingle();
+    return !error && Boolean(data?.user_id);
+  };
+
+  if (action === "audio_admin_preview") {
+    const adminUserId=String(input.adminUserId||""),adminEmail=String(input.adminEmail||"");
+    if (!await isAudioAdmin(adminUserId,adminEmail)) return json(403,{error:"The audio preview requires the MFA-protected Minglora owner session."});
+    const assetId=String(input.assetId||"");
+    if(!validUuid(assetId))return json(400,{error:"Choose a valid audio asset."});
+    const {data:asset,error:assetError}=await admin.from("minglora_audio_assets")
+      .select("id,title,storage_bucket,storage_path,scope,review_status")
+      .eq("id",assetId).eq("scope","platform").maybeSingle();
+    if(assetError||!asset)return json(404,{error:"The registered audio file was not found."});
+    const {data:signed,error:signedError}=await admin.storage.from(asset.storage_bucket).createSignedUrl(asset.storage_path,300);
+    if(signedError||!signed?.signedUrl)return json(503,{error:"A temporary private preview URL could not be created."});
+    return json(200,{assetId:asset.id,title:asset.title,url:signed.signedUrl,expiresIn:300,reviewStatus:asset.review_status});
+  }
+
+  if (action === "audio_admin_catalog_list") {
+    const adminUserId=String(input.adminUserId||""),adminEmail=String(input.adminEmail||"");
+    if (!await isAudioAdmin(adminUserId,adminEmail)) return json(403,{error:"The audio catalogue requires the MFA-protected Minglora owner session."});
+    const [categoriesResult,eventsResult,assetsResult,assignmentsResult] = await Promise.all([
+      admin.from("minglora_audio_categories").select("id,category_key,label,sort_order,is_active").order("sort_order"),
+      admin.from("minglora_audio_events").select("event_key,label,description,is_active,minglora_audio_categories(category_key,label)").order("event_key"),
+      admin.from("minglora_audio_assets").select("id,asset_key,title,description,scope,event_key,original_filename,file_format,duration_ms,file_size_bytes,sha256,authenticity_status,review_status,commercial_use_allowed,redistribution_allowed,attribution_required,attribution_text,license_verified,created_at,updated_at,minglora_audio_categories(category_key,label),minglora_audio_licenses(license_name,license_url,verification_status),minglora_audio_sources(website_name,source_url)").eq("scope","platform").order("created_at",{ascending:false}).limit(200),
+      admin.from("minglora_audio_assignments").select("id,event_key,asset_id,is_enabled,volume,loop_playback,playback_speed,updated_at,minglora_audio_assets(title,original_filename,review_status,authenticity_status)").is("profile_id",null).order("event_key")
+    ]);
+    if(categoriesResult.error||eventsResult.error||assetsResult.error||assignmentsResult.error) return json(503,{error:"The audio registry is unavailable. Apply the reviewed audio schema migration before opening this workspace."});
+    const categories=categoriesResult.data||[],events=eventsResult.data||[],assets=assetsResult.data||[],assignments=assignmentsResult.data||[];
+    const bytes=assets.reduce((sum:any,item:any)=>sum+Number(item.file_size_bytes||0),0);
+    return json(200,{categories,events,assets,assignments,summary:{
+      totalAssets:assets.length,
+      pendingReview:assets.filter((item:any)=>item.review_status==="pending_review").length,
+      approvedAssets:assets.filter((item:any)=>item.review_status==="approved").length,
+      inactiveAssets:assets.filter((item:any)=>["inactive","archived","rejected"].includes(item.review_status)).length,
+      activeAssignments:assignments.filter((item:any)=>item.is_enabled).length,
+      storageBytes:bytes
+    }});
+  }
+
+  if (action === "audio_admin_asset_register") {
+    const adminUserId=String(input.adminUserId||""),adminEmail=String(input.adminEmail||"");
+    if (!await isAudioAdmin(adminUserId,adminEmail)) return json(403,{error:"The audio catalogue requires the MFA-protected Minglora owner session."});
+    const mediaAssetId=String(input.mediaAssetId||"");
+    const metadata=input.metadata&&typeof input.metadata==="object"?input.metadata:{};
+    if(!validUuid(mediaAssetId)||metadata.scope!=="platform"||metadata.rightsConfirmed!==true||
+       !/^[a-f0-9]{64}$/i.test(String(metadata.sha256||""))||
+       !["field_recording","studio_recording","voice_recording","instrument_recording","environmental_recording","wildlife_recording","cultural_recording","user_original_recording","creator_original_recording"].includes(String(metadata.originType||""))){
+      return json(400,{error:"The platform audio metadata is incomplete or does not describe an authentic recording."});
+    }
+    const {data:media,error:mediaError}=await admin.from("media_assets")
+      .select("id,owner_id,storage_bucket,storage_key,media_type,mime_type,byte_size,slot,asset_status,original_name")
+      .eq("id",mediaAssetId).eq("owner_id",adminUserId).eq("slot","sound")
+      .eq("storage_bucket","minglora-sounds").eq("asset_status","uploaded").maybeSingle();
+    if(mediaError||!media||media.media_type!=="audio"||Number(media.byte_size)<=0||Number(media.byte_size)>52428800){
+      return json(404,{error:"The uploaded audio file is not present in the private Minglora sound bucket."});
+    }
+    if(String(media.original_name||"")!==String(metadata.originalFilename||"")||
+       Number(media.byte_size)!==Number(metadata.byteSize)||
+       !String(media.storage_key||"").startsWith(adminUserId+"/")){
+      return json(409,{error:"The uploaded file metadata does not match the original audio file."});
+    }
+    const {data:storedFile,error:downloadError}=await admin.storage
+      .from("minglora-sounds").download(String(media.storage_key));
+    if(downloadError||!storedFile)return json(503,{error:"The uploaded recording could not be verified from private storage."});
+    const storedBytes=await storedFile.arrayBuffer();
+    if(storedBytes.byteLength!==Number(media.byte_size))return json(409,{error:"The uploaded recording size does not match its media record."});
+    const digest=await crypto.subtle.digest("SHA-256",storedBytes);
+    const actualSha256=Array.from(new Uint8Array(digest),byte=>byte.toString(16).padStart(2,"0")).join("");
+    if(actualSha256!==String(metadata.sha256||"").toLowerCase()){
+      return json(409,{error:"The SHA-256 checksum of the stored recording does not match the supplied checksum."});
+    }
+    const {data:duplicate,error:duplicateError}=await admin.from("minglora_audio_assets")
+      .select("id,title").eq("sha256",String(metadata.sha256).toLowerCase()).limit(1).maybeSingle();
+    if(duplicateError)return json(503,{error:"The existing audio checksum could not be checked."});
+    if(duplicate)return json(409,{error:"This exact audio file is already registered in the Minglora catalogue.",duplicate});
+    const {data:category,error:categoryError}=await admin.from("minglora_audio_categories")
+      .select("id").eq("category_key",String(metadata.categoryKey||"")).eq("is_active",true).maybeSingle();
+    if(categoryError||!category)return json(400,{error:"Choose an active audio category."});
+    if(metadata.eventKey){
+      const {data:event,error:eventError}=await admin.from("minglora_audio_events")
+        .select("event_key").eq("event_key",String(metadata.eventKey)).eq("category_id",category.id).eq("is_active",true).maybeSingle();
+      if(eventError||!event)return json(400,{error:"The selected audio event is unavailable or belongs to another category."});
+    }
+    let sourceUrl:URL;
+    let licenseUrl:URL;
+    try{sourceUrl=new URL(String(metadata.originalDownloadPage||""));licenseUrl=new URL(String(metadata.licenseUrl||""));}
+    catch{return json(400,{error:"Enter the original source page and exact licence URL."});}
+    if(sourceUrl.protocol!=="https:"||licenseUrl.protocol!=="https:"||
+       !String(metadata.sourceWebsite||"").trim()||!String(metadata.licenseName||"").trim()||
+       !String(metadata.downloadDate||"").match(/^\d{4}-\d{2}-\d{2}$/)){
+      return json(400,{error:"The original source, licence and download date are required."});
+    }
+    const {data:source,error:sourceError}=await admin.from("minglora_audio_sources").upsert({
+      website_name:String(metadata.sourceWebsite).trim().slice(0,120),domain:sourceUrl.hostname,
+      source_url:sourceUrl.toString(),terms_url:licenseUrl.toString(),source_type:"external_library",
+      accessed_at:new Date().toISOString(),created_by:adminUserId
+    },{onConflict:"domain,source_url"}).select("id").single();
+    if(sourceError||!source)return json(503,{error:"The original audio source could not be recorded."});
+    const {data:license,error:licenseError}=await admin.from("minglora_audio_licenses").insert({
+      license_name:String(metadata.licenseName).trim().slice(0,120),license_url:licenseUrl.toString(),
+      commercial_use_allowed:metadata.commercialUseAllowed===true,
+      redistribution_allowed:metadata.redistributionAllowed===true,
+      attribution_required:metadata.attributionRequired===true,
+      attribution_text:String(metadata.attributionText||"").trim().slice(0,1000),
+      modification_allowed:metadata.modificationAllowed===true,
+      verification_status:"pending",notes:String(metadata.licenseNotes||"").trim().slice(0,1000)
+    }).select("id").single();
+    if(licenseError||!license)return json(503,{error:"The audio licence record could not be created."});
+    const assetKey="audio_"+crypto.randomUUID().replace(/-/g,"");
+    const format=String(metadata.fileFormat||"").toLowerCase();
+    const {data:asset,error:assetError}=await admin.from("minglora_audio_assets").insert({
+      asset_key:assetKey,title:String(metadata.title).trim().slice(0,120),
+      description:String(metadata.description||"").trim().slice(0,1000),scope:"platform",
+      category_id:category.id,event_key:metadata.eventKey?String(metadata.eventKey):null,
+      owner_id:null,source_id:source.id,license_id:license.id,
+      origin_type:String(metadata.originType),authenticity_status:"unverified",review_status:"pending_review",
+      original_filename:String(media.original_name),storage_bucket:"minglora-sounds",storage_path:String(media.storage_key),
+      file_format:format,duration_ms:Number(metadata.durationMs),
+      sample_rate_hz:Number(metadata.sampleRateHz)||null,bit_rate_bps:Number(metadata.bitRateBps)||null,
+      channel_count:Number(metadata.channelCount)||null,file_size_bytes:Number(media.byte_size),
+      sha256:String(metadata.sha256).toLowerCase(),
+      commercial_use_allowed:metadata.commercialUseAllowed===true,
+      redistribution_allowed:metadata.redistributionAllowed===true,
+      attribution_required:metadata.attributionRequired===true,
+      attribution_text:String(metadata.attributionText||"").trim().slice(0,1000),
+      license_verified:false,rights_confirmed:true,download_date:String(metadata.downloadDate),
+      created_by:adminUserId
+    }).select("id,asset_key,title,review_status").single();
+    if(assetError||!asset)return json(503,{error:"The uploaded audio metadata could not be registered."});
+    const {error:versionError}=await admin.from("minglora_audio_asset_versions").insert({
+      asset_id:asset.id,version_number:1,original_filename:String(media.original_name),
+      storage_bucket:"minglora-sounds",storage_path:String(media.storage_key),file_format:format,
+      duration_ms:Number(metadata.durationMs),file_size_bytes:Number(media.byte_size),
+      sha256:String(metadata.sha256).toLowerCase(),change_note:"Initial approved-source candidate",created_by:adminUserId
+    });
+    if(versionError){
+      await admin.from("minglora_audio_assets").delete().eq("id",asset.id);
+      return json(503,{error:"The initial audio asset version could not be recorded. The catalogue entry was rolled back."});
+    }
+    const {error:attachError}=await admin.from("media_assets").update({
+      asset_status:"attached",attached_to:"platform_audio:"+asset.id
+    }).eq("id",mediaAssetId).eq("owner_id",adminUserId);
+    if(attachError){
+      await admin.from("minglora_audio_assets").delete().eq("id",asset.id);
+      return json(503,{error:"The uploaded media record could not be linked to its catalogue entry."});
+    }
+    await admin.from("minglora_audio_audit_logs").insert({
+      actor_id:adminUserId,action:"audio.asset.registered",entity_type:"audio_asset",
+      entity_id:asset.id,metadata:{assetKey,sourceDomain:sourceUrl.hostname,reviewStatus:"pending_review"}
+    });
+    return json(201,{ok:true,asset,notice:"Uploaded recording registered and held for authenticity and licence review."});
+  }
+
+  if (action === "audio_admin_asset_review") {
+    const adminUserId=String(input.adminUserId||""),adminEmail=String(input.adminEmail||"");
+    if (!await isAudioAdmin(adminUserId,adminEmail)) return json(403,{error:"The audio catalogue requires the MFA-protected Minglora owner session."});
+    const assetId=String(input.assetId||""),decision=String(input.decision||"");
+    if(!validUuid(assetId)||!["approve","reject"].includes(decision))return json(400,{error:"Choose a valid audio review decision."});
+    const {data:asset,error:assetError}=await admin.from("minglora_audio_assets")
+      .select("id,title,scope,license_id,commercial_use_allowed,redistribution_allowed,attribution_required,attribution_text,rights_confirmed,authenticity_status,review_status")
+      .eq("id",assetId).eq("scope","platform").maybeSingle();
+    if(assetError||!asset)return json(404,{error:"The audio asset was not found."});
+    if(asset.review_status!=="pending_review"&&asset.review_status!=="draft")return json(409,{error:"Only a draft or pending audio asset can be reviewed."});
+    if(decision==="approve"){
+      if(input.confirmAuthenticity!==true||input.confirmLicenseReview!==true||
+         asset.rights_confirmed!==true||asset.commercial_use_allowed!==true||
+         asset.redistribution_allowed!==true||
+         (asset.attribution_required&&!String(asset.attribution_text||"").trim())){
+        return json(400,{error:"Approval requires a verified real recording, explicit commercial-use rights, redistribution rights and required attribution."});
+      }
+      const {error:licenseError}=await admin.from("minglora_audio_licenses").update({
+        verification_status:"verified",verified_by:adminUserId,verified_at:new Date().toISOString()
+      }).eq("id",asset.license_id);
+      if(licenseError)return json(503,{error:"The audio licence could not be marked as verified."});
+      const {data:updated,error:updateError}=await admin.from("minglora_audio_assets").update({
+        authenticity_status:"verified_authentic",review_status:"approved",license_verified:true,
+        approved_by:adminUserId,approved_at:new Date().toISOString(),updated_at:new Date().toISOString()
+      }).eq("id",assetId).select("id,title,review_status,authenticity_status").single();
+      if(updateError||!updated)return json(503,{error:"The audio asset approval could not be saved."});
+      await admin.from("minglora_audio_audit_logs").insert({
+        actor_id:adminUserId,action:"audio.asset.approved",entity_type:"audio_asset",entity_id:assetId,
+        metadata:{title:asset.title,licenseVerified:true,authenticityVerified:true}
+      });
+      return json(200,{ok:true,asset:updated});
+    }
+    const rejectionType=String(input.rejectionType||"").toLowerCase();
+    const authenticityStatus=["synthetic","ai","misrepresented"].includes(rejectionType)
+      ? (rejectionType==="synthetic"?"rejected_synthetic":rejectionType==="ai"?"rejected_ai":"rejected_fake")
+      : "unverified";
+    const {data:updated,error:updateError}=await admin.from("minglora_audio_assets").update({
+      review_status:"rejected",authenticity_status:authenticityStatus,updated_at:new Date().toISOString()
+    }).eq("id",assetId).select("id,title,review_status,authenticity_status").single();
+    if(updateError||!updated)return json(503,{error:"The audio rejection could not be saved."});
+    await admin.from("minglora_audio_audit_logs").insert({
+      actor_id:adminUserId,action:"audio.asset.rejected",entity_type:"audio_asset",entity_id:assetId,
+      metadata:{title:asset.title,rejectionType:rejectionType.slice(0,40)}
+    });
+    return json(200,{ok:true,asset:updated});
+  }
+
+  if (action === "audio_admin_assignment_set") {
+    const adminUserId=String(input.adminUserId||""),adminEmail=String(input.adminEmail||"");
+    if (!await isAudioAdmin(adminUserId,adminEmail)) return json(403,{error:"The audio catalogue requires the MFA-protected Minglora owner session."});
+    const eventKey=String(input.eventKey||""),assetId=String(input.assetId||"");
+    const volume=Number(input.volume??1),enabled=input.enabled!==false,loop=input.loopPlayback===true;
+    if(!validUuid(assetId)||!Number.isFinite(volume)||volume<0||volume>1)return json(400,{error:"Choose an approved asset and a volume between zero and one."});
+    const {data:event,error:eventError}=await admin.from("minglora_audio_events")
+      .select("event_key,is_active").eq("event_key",eventKey).maybeSingle();
+    if(eventError||!event||!event.is_active)return json(400,{error:"This platform event is not currently active."});
+    const {data:asset,error:assetError}=await admin.from("minglora_audio_assets")
+      .select("id,title,scope,review_status,authenticity_status,license_verified,commercial_use_allowed,redistribution_allowed,attribution_required,attribution_text")
+      .eq("id",assetId).maybeSingle();
+    if(assetError||!asset||asset.scope!=="platform"||asset.review_status!=="approved"||
+       asset.authenticity_status!=="verified_authentic"||asset.license_verified!==true||
+       asset.commercial_use_allowed!==true||asset.redistribution_allowed!==true||
+       (asset.attribution_required&&!String(asset.attribution_text||"").trim())){
+      return json(400,{error:"Only fully verified authentic recordings with commercial and redistribution permission can be assigned to platform events."});
+    }
+    const {data:existing,error:existingError}=await admin.from("minglora_audio_assignments")
+      .select("id").eq("event_key",eventKey).is("profile_id",null).maybeSingle();
+    if(existingError)return json(503,{error:"The current sound assignment could not be checked."});
+    const values={asset_id:assetId,is_enabled:enabled,volume,loop_playback:loop,playback_speed:1,updated_by:adminUserId,updated_at:new Date().toISOString()};
+    const result=existing
+      ? await admin.from("minglora_audio_assignments").update(values).eq("id",existing.id).select("id,event_key,asset_id,is_enabled,volume,loop_playback").single()
+      : await admin.from("minglora_audio_assignments").insert({event_key:eventKey,profile_id:null,...values}).select("id,event_key,asset_id,is_enabled,volume,loop_playback").single();
+    if(result.error||!result.data)return json(503,{error:"The platform sound assignment could not be saved."});
+    await admin.from("minglora_audio_audit_logs").insert({
+      actor_id:adminUserId,action:"audio.assignment.updated",entity_type:"audio_assignment",entity_id:result.data.id,
+      metadata:{eventKey,assetId,title:asset.title,enabled,volume}
+    });
+    return json(200,{ok:true,assignment:result.data});
+  }
+
+  if (action === "audio_event_resolve") {
+    const eventKey=String(input.eventKey||"");
+    if(!/^([a-z][a-z0-9_]*\.)[a-z][a-z0-9_]*$/.test(eventKey))return json(400,{error:"Invalid audio event key."});
+    const {data:event,error:eventError}=await admin.from("minglora_audio_events")
+      .select("event_key,is_active").eq("event_key",eventKey).maybeSingle();
+    if(eventError||!event||!event.is_active)return json(404,{error:"No active audio event is registered."});
+    const {data:assignment,error:assignmentError}=await admin.from("minglora_audio_assignments")
+      .select("id,asset_id,volume,loop_playback,playback_speed")
+      .eq("event_key",eventKey).eq("is_enabled",true).is("profile_id",null).maybeSingle();
+    if(assignmentError)return json(503,{error:"The assigned audio event could not be read."});
+    if(!assignment)return json(200,{eventKey,sound:null});
+    const {data:asset,error:assetError}=await admin.from("minglora_audio_assets")
+      .select("id,title,storage_bucket,storage_path,review_status,authenticity_status,license_verified,commercial_use_allowed,redistribution_allowed,attribution_required,attribution_text")
+      .eq("id",assignment.asset_id).maybeSingle();
+    if(assetError||!asset||asset.review_status!=="approved"||asset.authenticity_status!=="verified_authentic"||
+       asset.license_verified!==true||asset.commercial_use_allowed!==true||asset.redistribution_allowed!==true||
+       (asset.attribution_required&&!String(asset.attribution_text||"").trim())){
+      return json(503,{error:"The assigned sound is not eligible for platform playback."});
+    }
+    const {data:signed,error:signedError}=await admin.storage.from(asset.storage_bucket).createSignedUrl(asset.storage_path,300);
+    if(signedError||!signed?.signedUrl)return json(503,{error:"A secure playback URL could not be created."});
+    return json(200,{eventKey,sound:{id:asset.id,title:asset.title,url:signed.signedUrl,volume:assignment.volume,loop:assignment.loop_playback,playbackSpeed:assignment.playback_speed,expiresIn:300}});
+  }
 
   if (action === "internal_activity_feed") {
     const requestedLimit = Math.floor(Number(input.limit || 50));

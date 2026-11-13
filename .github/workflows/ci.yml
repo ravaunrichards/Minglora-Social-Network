@@ -83,6 +83,7 @@ jobs:
         run: npm run check:repo
       - name: Check JavaScript syntax
         run: |
+          node --check public/universal-audio-engine.js
           node --check public/app.js
           node --check public/app-lock.js
           node --check public/menu-dismissal.js
@@ -92,6 +93,7 @@ jobs:
           node --check scripts/generate-minglora-gifts.mjs
           node --check scripts/generate-minglora-sound-library.mjs
           node --check public/sound-studio-settings.js
+          node --check public/audio-admin-centre.js
           node --check backend/modules/sounds/notification-studio.js
           node --check public/auth-login.js
           node --check public/sw.js
