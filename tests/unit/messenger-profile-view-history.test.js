@@ -53,7 +53,7 @@ test('profile count row uses the shared renderer and Facebook retains six real m
   assert.ok(entries.includes("facebook:['followers','following','friends','subscribers','posts','likes']"),'Facebook retains six metrics and its stable order');
   assert.ok(entries.includes('likes:Number(data.likesCount||0)'),'likes uses the real profile count');
   assert.ok(markup.includes('class="profile-counts"'),'the shared renderer owns the metric row');
-  assert.ok(markup.includes('data-open-connections="'+item.id+'"'),'connection counts remain interactive');
+  assert.ok(markup.includes("data-open-connections=\"'+item.id+'\""),'connection counts remain interactive');
   assert.ok(markup.includes('profile-count-item'),'non-interactive metric markup remains available');
   assert.ok(app.includes('profileMetricsMarkup(data,u.profileStyle)'),'the profile uses the shared renderer');
   assert.match(read('public/profile-admin-layout-parity.css'),/grid-template-columns: repeat\(6, minmax\(0, 1fr\)\) !important/);
