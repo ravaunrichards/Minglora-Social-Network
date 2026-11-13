@@ -45,3 +45,12 @@ assert.match(migration,/ct\.title ilike/);
 assert.match(migration,/st\.title ilike/);
 assert.match(migration,/greatest\(1,least\(coalesce\(p_limit,20\),50\)\)/);
 });
+
+test("Help Center member data excludes anonymous Supabase sessions",()=>{
+const edge=read("supabase/functions/minglora-help-center/index.ts");
+const migration=read("supabase/migrations/20261113223111_minglora_help_center_permanent_members_only.sql");
+assert.match(edge,/requirePermanentMember/);
+assert.match(edge,/is_anonymous/);
+assert.match(migration,/as restrictive/);
+assert.match(migration,/auth\.jwt\(\)->>'is_anonymous'/);
+});
