@@ -66,6 +66,7 @@ declare
   v_assignment_languages text[];
   v_result jsonb;
   v_reused boolean := false;
+  v_model_active boolean := false;
 begin
   if current_user <> 'service_role' then
     raise exception using errcode = '42501', message = 'AI provider commands are restricted to the Minglora server runtime.';
@@ -286,9 +287,9 @@ begin
         and i.status not in ('suspended','archived','retired')
     ) then raise exception using errcode = '42501', message = 'AI identity is unavailable or not owned by this administrator.'; end if;
     select m.provider_name,m.model_capabilities,m.supported_languages,m.is_active
-      into v_provider_name,v_model_capabilities,v_supported_languages,v_reused
+      into v_provider_name,v_model_capabilities,v_supported_languages,v_model_active
     from ai_network.ai_provider_models m where m.model_id=v_model_id;
-    if v_provider_name is null or not coalesce(v_reused,false) then
+    if v_provider_name is null or not coalesce(v_model_active,false) then
       raise exception using errcode = '22023', message = 'Provider model is missing or inactive in the catalogue.';
     end if;
     if v_provider_account_id is not null and not exists (
