@@ -848,7 +848,7 @@
 .mw-meeting .live-player-controls.live-icon-controls .live-control-button{
   flex:0 0 48px!important;width:48px!important;min-width:48px!important;max-width:48px!important;min-height:62px!important
 }
-/* Nine local-only screen arrangements. Participant tiles remain mounted and visible. */
+/* Seven screen modes; the two Roundtable guest-box arrangements are selected independently. Participant tiles remain mounted and visible. */
 .mw-meeting .mw-video-grid[data-layout="full-screen"]{grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr))!important;min-height:calc(100dvh - 190px)!important}
 .mw-meeting .mw-video-grid[data-layout="fluid-panel"]{grid-template-columns:minmax(0,1fr) minmax(160px,.42fr)!important;grid-auto-rows:minmax(145px,1fr)}
 .mw-meeting .mw-video-grid[data-layout="fluid-panel"] .mw-video-tile.is-focused{grid-column:1;grid-row:1 / span 3;aspect-ratio:auto!important}
