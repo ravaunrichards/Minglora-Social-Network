@@ -1777,7 +1777,11 @@ async function route(req, res) {
       return json(res,404,{error:'Video processing endpoint not found.'});
     }
     const user = sessionUser(req);
-    const helpActor={actorUserId:user?.id||''};
+    const activeHelpSession=user?sessionFromRequest(req):null;
+    const helpActor={
+      actorUserId:user?.id||'',
+      mfaVerified:activeHelpSession?.mfaVerified===true
+    };
     const helpRespond=async(action,payload={})=>{
       try{return json(res,200,await helpCenterGateway(action,{...payload,...helpActor}));}
       catch(error){return json(res,error.status||503,{error:error.message||'Minglora Help Center is unavailable.'});}
