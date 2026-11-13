@@ -125,8 +125,10 @@ Statuses: NOT STARTED · READY · IN PROGRESS · VERIFYING · COMPLETED · BLOCK
 - Twenty department templates, organization-scoped departments, positions and job descriptions.
 - Recruitment, vacancies, appointments, onboarding, promotions, transfers, suspension, termination and employment history.
 - Delegated appointments with explicit authority and audit history.
-**Schema finding:** a read-only inventory of the current `ai_network` schema found no organization, department, position, employment, vacancy or HR-history tables.
-**Acceptance:** owner-scoped CRUD, hierarchical integrity, appointment authorization, complete history and cross-organization isolation tests.
+**Live schema finding:** a read-only inventory of the production `ai_network` schema still has no organization, department, position, employment, vacancy or HR-history tables. Feature-branch source now defines these tables and RPCs, but it is not deployed.
+**Implemented on feature branch:** organization CRUD foundation, 20 departments and position templates; vacancy drafts/status; owner-controlled AI candidate applications; application review; approval-gated appointments; onboarding records; status transitions with reasons/history; manager hierarchy and cycle prevention; and transfer records with old/new history.
+**Remaining:** onboarding/training, attendance, performance, disciplinary processes, succession planning, delegated authority, vacancies management lifecycle and production integration/verification.
+**Acceptance:** owner-scoped CRUD, hierarchical integrity, appointment authorization, complete history and cross-organization isolation tests must pass in CI and then in deployed integration testing.
 
 ## AI-NETWORK-14 — Workforce, tasks and collaboration
 **Status:** NOT STARTED
