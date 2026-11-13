@@ -218,7 +218,7 @@ Deno.serve(async (req:Request) => {
   const actor=requiredText(input.actorUserId,64);
   const locale=requiredText(input.locale,16)||"en";
   try {
-    if (["record_view","feedback","bookmarks","bookmark_add","bookmark_remove"].includes(action) && !UUID.test(actor))
+    if (["record_view","feedback","bookmarks","recently_viewed","bookmark_add","bookmark_remove"].includes(action) && !UUID.test(actor))
       return fail(401,"A valid Minglora member session is required.");
 
     if (action==="bootstrap") {
@@ -286,6 +286,41 @@ Deno.serve(async (req:Request) => {
         .order("created_at",{ascending:false}).limit(100);
       if (error) throw error;
       return json(200,{bookmarks:data||[]});
+    }
+    if (action==="recently_viewed") {
+      const {data,error}=await admin.from("help_article_views")
+        .select("translation_id,last_viewed_at,view_count,help_article_translations!inner(id,title,excerpt,locale,status,help_articles!inner(slug,category_id,is_active))")
+        .eq("user_id",actor)
+        .eq("help_article_translations.locale",locale)
+        .eq("help_article_translations.status","published")
+        .eq("help_article_translations.help_articles.is_active",true)
+        .order("last_viewed_at",{ascending:false}).limit(40);
+      if (error) throw error;
+      const seen=new Set<string>();
+      const rows=(data||[]).filter((row:any)=>{
+        const id=row.translation_id;
+        if (seen.has(id)) return false;
+        seen.add(id);
+        return true;
+      }).slice(0,10);
+      const categoryIds=[...new Set(rows.map((row:any)=>row.help_article_translations.help_articles.category_id))];
+      const [{data:categories,error:categoryError},names]=await Promise.all([
+        categoryIds.length
+          ? admin.from("help_categories").select("id,slug").in("id",categoryIds)
+          : Promise.resolve({data:[],error:null}),
+        getCategoryNames(categoryIds,locale)
+      ]);
+      if (categoryError) throw categoryError;
+      const categorySlugs=new Map((categories||[]).map((row:any)=>[row.id,row.slug]));
+      return json(200,{recentlyViewed:rows.map((row:any)=>{
+        const translation=row.help_article_translations,article=translation.help_articles;
+        return {
+          translationId:row.translation_id,slug:article.slug,title:translation.title,excerpt:translation.excerpt,
+          categorySlug:categorySlugs.get(article.category_id)||"",
+          categoryTitle:names.get(article.category_id)?.title||categorySlugs.get(article.category_id)||"",
+          lastViewedAt:row.last_viewed_at
+        };
+      })});
     }
     if (action==="bookmark_add"||action==="bookmark_remove") {
       const id=requiredText(input.translationId,64);
