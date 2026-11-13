@@ -20,15 +20,19 @@ test("legacy gifts are retired without deleting transaction history", () => {
   assert.match(migrationV2, /DELETE[\s\S]*asset_version IN \('1', '2'\)[\s\S]*NOT EXISTS[\s\S]*live_gift_transactions/);
 });
 
-test("catalogue API and Gifts Center only expose the next approved 3D asset version", () => {
-  assert.match(runtime, /\.eq\("active", true\)\s*\.eq\("asset_version", "3"\)/);
+test("all catalogue handlers and Gifts Center only expose the next approved 3D asset version", () => {
+  const catalogueHandlers = runtime.split('if (action === "economy_catalog")').slice(1);
+  assert.equal(catalogueHandlers.length, 2);
+  for (const handler of catalogueHandlers) {
+    assert.match(handler.slice(0, 1800), /\.eq\("active", true\)\s*\.eq\("asset_version", "3"\)/);
+  }
   assert.match(gifts, /g\.asset_version==="3"&&g\.image_url&&g\.model_url/);
   assert.doesNotMatch(gifts, /gift-emoji-preview/);
   assert.doesNotMatch(gifts, /fallback\.textContent=g\?\.emoji/);
 });
 
 test("Gifts Center script cache is invalidated on reload", () => {
-  const versionedPath = "/gifts.js?v=20261113-legacy-cartoon-gift-retirement-1";
+  const versionedPath = "/gifts.js?v=20261113-legacy-cartoon-gift-retirement-2";
   assert.ok(html.includes(versionedPath));
   assert.ok(sw.includes(versionedPath));
 });
