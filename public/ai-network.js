@@ -3,7 +3,7 @@
 
   const API = '/api/ai-network';
   const root = () => document.getElementById('main-content');
-  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, organizationError: '' };
+  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, organizationError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '' };
   const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[character]));
@@ -170,6 +170,25 @@
       state.identityRegistry = null;
       state.identityCategories = [];
       state.identityError = error.message || 'Relational AI identity service is unavailable.';
+    }
+  }
+
+  async function loadAIProviderRegistry() {
+    state.providerError = '';
+    try {
+      const [accounts, models, assignments] = await Promise.all([
+        request('/provider-accounts'),
+        request('/provider-models'),
+        request('/provider-assignments')
+      ]);
+      state.providerAccounts = list(accounts.provider_accounts);
+      state.providerModels = list(models.provider_models);
+      state.providerAssignments = list(assignments.assignments);
+    } catch (error) {
+      state.providerAccounts = [];
+      state.providerModels = [];
+      state.providerAssignments = [];
+      state.providerError = error.message || 'AI provider catalogue is unavailable.';
     }
   }
 
@@ -345,6 +364,109 @@
       '<div><h5>AI employees</h5>' + employeeRows + '</div></section>';
   }
 
+  function renderAIProviderCenter() {
+    const accounts = list(state.providerAccounts);
+    const models = list(state.providerModels);
+    const assignments = list(state.providerAssignments);
+    const identityRecords = list(state.identityRegistry?.identities);
+    const identityOptions = identityRecords.map(row => ({
+      value: row.identity?.identity_id || '',
+      label: (row.name?.display_name || row.name?.full_name || 'AI identity') +
+        (row.name?.username ? ' (@' + row.name.username + ')' : '')
+    })).filter(item => item.value);
+    const accountOptions = [{value:'',label:'No account reference (pending)'}].concat(accounts.map(account => ({
+      value:account.provider_account_id,
+      label:account.provider_name + ' · ' + account.provider_identifier + ' · ' + (account.status || 'unconfigured')
+    })));
+    const modelOptions = models.map(model => ({
+      value:model.model_id,
+      label:model.provider_name + ' · ' + model.model_name + (model.model_version ? ' · ' + model.model_version : '')
+    }));
+    const accountRows = accounts.length
+      ? '<div class="ai-network-list">' + accounts.map(account =>
+          '<article class="ai-network-list-row"><div class="ai-network-list-main"><div><strong>' +
+          esc(account.provider_name) + ' · ' + esc(account.provider_identifier) + '</strong><div class="ai-network-meta">' +
+          pill(account.status || 'unconfigured') + ' ' + pill('health ' + (account.health_status || 'unknown')) +
+          '</div><small>Account metadata only · credentials not stored here</small></div></div></article>'
+        ).join('') + '</div>'
+      : empty('No provider account references registered.');
+    const modelRows = models.length
+      ? '<div class="ai-network-list">' + models.map(model =>
+          '<article class="ai-network-list-row"><div class="ai-network-list-main"><div><strong>' +
+          esc(model.model_name) + '</strong><div class="ai-network-meta">' +
+          pill(model.provider_name) + ' ' + pill(model.model_version || 'version unspecified') +
+          '</div><small>' + esc(model.model_identifier) + ' · ' +
+          esc(list(model.model_capabilities).join(', ') || 'No capability metadata') + '</small><p>' +
+          ['text','image','audio','video','voice','tool'].filter(capability => model[capability + '_capability']).join(' · ') +
+          '</p></div></div></article>'
+        ).join('') + '</div>'
+      : empty('No provider model metadata is registered.');
+    const assignmentRows = assignments.length
+      ? '<div class="ai-network-list">' + assignments.map(row => {
+          const assignment = row.assignment || {};
+          const identity = row.identity || {};
+          const model = row.model || {};
+          const account = row.provider_account || null;
+          const statusChoices = assignment.assignment_status === 'revoked'
+            ? [{value:'revoked',label:'Revoked'}]
+            : [{value:'pending',label:'Pending'},{value:'restricted',label:'Restricted'},{value:'disabled',label:'Disabled'},{value:'revoked',label:'Revoked'}];
+          return '<article class="ai-network-list-row ai-network-provider-row"><div class="ai-network-list-main"><div><strong>' +
+            esc(identity.display_name || identity.username || 'AI identity') + '</strong><div class="ai-network-meta">' +
+            pill(assignment.assignment_status || 'pending') + ' ' + pill('health ' + (assignment.provider_health_status || 'unknown')) +
+            '</div><small>' + esc(model.provider_name || '') + ' · ' + esc(model.model_name || '') +
+            '</small><p>Priority ' + number(assignment.routing_priority) + ' · ' +
+            esc(list(assignment.assigned_capabilities).join(', ') || 'Capabilities not assigned') +
+            '</p><small>' + esc(account ? account.provider_identifier + ' · ' + account.status : 'No provider account reference') +
+            '</small></div></div>' +
+            '<form class="ai-network-inline-form" data-ai-form="provider-assignment-status" data-assignment-id="' + esc(assignment.assignment_id || '') + '">' +
+            '<label><span>Assignment status</span><select name="status">' + options(statusChoices, assignment.assignment_status || 'pending') + '</select></label>' +
+            '<label><span>Reason</span><input name="reason" required minlength="3" maxlength="1000" placeholder="Why is this assignment changing?"></label>' +
+            '<button class="secondary" type="submit">Save status</button></form></article>';
+        }).join('') + '</div>'
+      : empty('No provider model assignments have been registered.');
+    const warning = state.providerError
+      ? '<div class="ai-network-alert ai-network-alert--warning" role="status">' + esc(state.providerError) + '</div>'
+      : '<p class="ai-network-note">Provider account records begin unconfigured. Model assignments begin pending with health unknown. Nothing here verifies access to the provider or activates model execution.</p>';
+    const accountForm = '<form class="ai-network-form" data-ai-form="provider-account">' +
+      '<div class="ai-network-form-title">Register a provider account reference</div>' +
+      '<div class="ai-network-form-grid"><label>Provider identifier<input name="providerName" required minlength="2" maxlength="80" pattern="[a-z0-9][a-z0-9._-]+" placeholder="openai"></label>' +
+      '<label>Account reference<input name="providerIdentifier" required minlength="1" maxlength="160" placeholder="platform-account-a"></label>' +
+      '<label>Account ownership<select name="accountType">' + options([{value:'user',label:'User managed'},{value:'managed',label:'Managed account'}], 'user') + '</select></label></div>' +
+      '<button class="secondary" type="submit">Save unconfigured account reference</button></form>';
+    const modelForm = '<form class="ai-network-form" data-ai-form="provider-model">' +
+      '<div class="ai-network-form-title">Register model catalogue metadata</div>' +
+      '<div class="ai-network-form-grid"><label>Provider name<input name="providerName" required minlength="2" maxlength="80" pattern="[a-z0-9][a-z0-9._-]+" placeholder="openai"></label>' +
+      '<label>Model display name<input name="modelName" required minlength="2" maxlength="160" placeholder="Model display name"></label>' +
+      '<label>Model identifier<input name="modelIdentifier" required maxlength="180" placeholder="provider-model-id"></label>' +
+      '<label>Model version<input name="modelVersion" maxlength="80" placeholder="Optional version"></label></div>' +
+      '<label>Declared capabilities (comma separated)<input name="modelCapabilities" maxlength="1200" placeholder="text, reasoning, tools"></label>' +
+      '<label>Declared language tags (comma separated)<input name="supportedLanguages" maxlength="1200" placeholder="en, en-JM, es"></label>' +
+      '<fieldset><legend>Declared model modalities</legend><div class="ai-network-checkbox-grid">' +
+      ['text','image','audio','video','voice','tool'].map(type => '<label><input type="checkbox" name="' + type + 'Capability"> ' + type.toUpperCase() + '</label>').join('') +
+      '</div></fieldset><button class="secondary" type="submit">Save model catalogue record</button></form>';
+    const assignmentForm = identityOptions.length && modelOptions.length
+      ? '<form class="ai-network-form" data-ai-form="provider-assignment">' +
+        '<div class="ai-network-form-title">Assign a model to an AI identity</div>' +
+        '<div class="ai-network-form-grid"><label>AI identity<select name="identityId" required>' + options(identityOptions, identityOptions[0].value) + '</select></label>' +
+        '<label>Primary model<select name="modelId" required>' + options(modelOptions, modelOptions[0].value) + '</select></label>' +
+        '<label>Provider account reference<select name="providerAccountId">' + options(accountOptions, '') + '</select></label>' +
+        '<label>Fallback model (optional)<select name="fallbackModelId">' + options([{value:'',label:'No fallback configured'}].concat(modelOptions), '') + '</select></label>' +
+        '<label>Routing priority<input type="number" name="routingPriority" min="1" max="10000" value="100" required></label></div>' +
+        '<label>Assigned capabilities (comma separated)<input name="assignedCapabilities" maxlength="1200" placeholder="Must exist in the selected model metadata"></label>' +
+        '<label>Supported language tags (comma separated)<input name="assignmentLanguages" maxlength="1200" placeholder="Optional language restrictions"></label>' +
+        '<button class="primary" type="submit">Save pending model assignment</button></form>'
+      : '<p class="ai-network-note">Register or load at least one AI identity and one provider model before assigning a model.</p>';
+    return card('Provider & Model Assignment Center', '02 · PROVIDERS', warning +
+      '<div class="ai-network-command-grid"><div><span>Account references</span><strong>' + number(accounts.length) + '</strong></div>' +
+      '<div><span>Catalogue models</span><strong>' + number(models.length) + '</strong></div>' +
+      '<div><span>Identity assignments</span><strong>' + number(assignments.length) + '</strong></div></div>' +
+      '<div class="ai-network-provider-columns"><div><h4>Provider accounts</h4>' + accountRows + accountForm + '</div>' +
+      '<div><h4>Model catalogue</h4>' + modelRows + modelForm + '</div></div>' +
+      assignmentForm + '<div><h4>Identity assignments</h4>' + assignmentRows + '</div>' +
+      '<p class="ai-network-note">Security boundary: no API key, password, token or secret reference is accepted or displayed. Account status remains unconfigured and assignment status remains pending until a separate approved secret-management integration and live provider health verification are completed. Model catalogue metadata is not proof of model access.</p>',
+      'ai-network-span-2');
+  }
+
   function renderAIOrganizationCenter() {
     const organizations = list(state.organizationRegistry?.organizations);
     const organizationRows = organizations.length
@@ -510,6 +632,7 @@
       '<div class="ai-network-quick-stats"><div><span>My bots</span><strong>' + number(performance.botCount) + '</strong></div><div><span>Teams</span><strong>' + number(performance.teamCount) + '</strong></div><div><span>Pending reviews</span><strong>' + number(performance.pendingApprovals) + '</strong></div><div><span>Recorded runs</span><strong>' + number(performance.measuredRunCount) + '</strong></div></div>' +
       '<div class="ai-network-grid">' +
       renderAIIdentityRegistry() +
+      renderAIProviderCenter() +
       renderAIOrganizationCenter() +
       card('Bot Personality Laboratory', '01 · PERSONALITY', '<p>Build unique AI helpers with a clear purpose, tone, traits, expertise and permitted tasks.</p>' +
         renderBotRows(bots) + '<form class="ai-network-form" data-ai-form="bot"><div class="ai-network-form-title">Create a new AI bot</div>' +
@@ -576,6 +699,7 @@
     try {
       state.snapshot = await request();
       await loadAIIdentityRegistry();
+      await loadAIProviderRegistry();
       await loadAIOrganizationRegistry();
       renderSnapshot(state.snapshot);
     } catch (error) {
@@ -680,6 +804,35 @@
         is_public: false
       });
       if (value('emailAddress')) payload.email = { email_address: value('emailAddress') };
+    } else if (kind === 'provider-account') {
+      path = '/provider-accounts';
+      payload.provider_name = value('providerName').toLowerCase();
+      payload.provider_identifier = value('providerIdentifier');
+      payload.account_type = value('accountType');
+    } else if (kind === 'provider-model') {
+      path = '/provider-models';
+      payload.provider_name = value('providerName').toLowerCase();
+      payload.model_name = value('modelName');
+      payload.model_identifier = value('modelIdentifier');
+      payload.model_version = value('modelVersion');
+      payload.model_capabilities = value('modelCapabilities').split(',').map(item => item.trim().toLowerCase()).filter(Boolean);
+      payload.supported_languages = value('supportedLanguages').split(',').map(item => item.trim()).filter(Boolean);
+      for (const type of ['text','image','audio','video','voice','tool']) payload[type + '_capability'] = data.has(type + 'Capability');
+    } else if (kind === 'provider-assignment') {
+      path = '/provider-assignments';
+      payload.identity_id = value('identityId');
+      payload.model_id = value('modelId');
+      payload.provider_account_id = value('providerAccountId') || null;
+      payload.fallback_model_id = value('fallbackModelId') || null;
+      payload.routing_priority = Number(value('routingPriority'));
+      payload.assigned_capabilities = value('assignedCapabilities').split(',').map(item => item.trim().toLowerCase()).filter(Boolean);
+      payload.supported_languages = value('assignmentLanguages').split(',').map(item => item.trim()).filter(Boolean);
+    } else if (kind === 'provider-assignment-status') {
+      const assignmentId = form.dataset.assignmentId;
+      if (!assignmentId) throw new Error('Provider assignment details are missing.');
+      path = '/provider-assignments/' + encodeURIComponent(assignmentId) + '/status';
+      payload.status = value('status');
+      payload.reason = value('reason');
     } else if (kind === 'organization') {
       path = '/organizations';
       form.dataset.idempotencyKey = form.dataset.idempotencyKey || window.crypto.randomUUID();
@@ -813,11 +966,19 @@
       payload.companionOptIn = form.querySelector('[name="companionOptIn"]').checked;
       payload.companionAcknowledged = form.querySelector('[name="companionAcknowledgedAIIdentity"]').checked;
     } else return;
-    const patchKinds = ['settings','languages','vacancy-status','application-review','employment-status','employment-manager'];
+    const patchKinds = ['settings','languages','vacancy-status','application-review','employment-status','employment-manager','provider-assignment-status'];
     const result = await request(path, { method: patchKinds.includes(kind) ? 'PATCH' : 'POST', body: payload });
     form.reset();
     if (['identity','organization','vacancy','application','appointment','employment-transfer'].includes(kind)) form.dataset.idempotencyKey = window.crypto.randomUUID();
-    const message = kind === 'identity'
+    const message = kind === 'provider-account'
+      ? 'Provider account reference saved as unconfigured; no credentials were stored.'
+      : kind === 'provider-model'
+        ? 'Provider model metadata saved; availability and access are not verified.'
+        : kind === 'provider-assignment'
+          ? 'Model assignment saved as pending; provider execution remains disabled.'
+          : kind === 'provider-assignment-status'
+            ? 'Provider assignment status updated.'
+            : kind === 'identity'
       ? 'AI identity record saved in Minglora Supabase.'
       : kind === 'identity-bulk'
         ? 'Bulk identity batch: ' + number(result.created_count) + ' created; ' + number(result.reused_count) + ' reused; ' + number(result.failed_count) + ' failed.'
