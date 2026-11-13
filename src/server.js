@@ -1360,6 +1360,38 @@ async function route(req, res) {
         return json(res, 200, result || { created_count: 0, failed_count: 0, created: [], failed: [] });
       }
 
+      const runAITaskCommand = async (aiAction, payload = {}) => {
+        if (!isModerator(user, req)) {
+          throw Object.assign(
+            new Error('Only an authorized Minglora platform administrator with the required active session can manage the AI task queue.'),
+            { status: 403 }
+          );
+        }
+        if (!isSupabasePersistence()) {
+          throw Object.assign(new Error('AI task records require Minglora Supabase persistence.'), { status: 503 });
+        }
+        try {
+          const response = await requestSupabaseState('ai_task_command', {
+            actorUserId: user.id,
+            aiAction,
+            payload
+          });
+          if (response?.skipped) {
+            throw Object.assign(new Error('AI task records are unavailable in local-only persistence mode.'), { status: 503 });
+          }
+          return response?.result;
+        } catch (error) {
+          const message = String(error?.message || '');
+          if (/unsupported action|unsupported AI task command|function .*minglora_ai_task_command.*does not exist|could not find the function|schema cache/i.test(message)) {
+            throw Object.assign(
+              new Error('The AI task queue migration and runtime gateway must be deployed before this operation is available. No task data was changed.'),
+              { status: 503 }
+            );
+          }
+          throw error;
+        }
+      };
+
       const runAIProviderCommand = async (aiAction, payload = {}) => {
         if (!isModerator(user, req)) {
           throw Object.assign(
@@ -1458,6 +1490,46 @@ async function route(req, res) {
           throw error;
         }
       };
+
+      if (method === 'GET' && sub === 'tasks') {
+        const result = await runAITaskCommand('list_tasks');
+        return json(res, 200, result || { tasks: [], runtime: null });
+      }
+      if (method === 'POST' && sub === 'tasks') {
+        const input = await body(req, 72000);
+        if (!input || typeof input !== 'object' || Array.isArray(input)) {
+          throw Object.assign(new Error('AI task input must be a JSON object.'), { status: 400 });
+        }
+        const result = await runAITaskCommand('create_task', input);
+        return json(res, result?.reused ? 200 : 201, result || {});
+      }
+      if (parts[0] === 'tasks' && parts.length === 3 && method === 'PATCH' && parts[2] === 'approval') {
+        const taskId = parts[1];
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(taskId)) {
+          throw Object.assign(new Error('A valid AI task ID is required.'), { status: 400 });
+        }
+        const input = await body(req, 8000);
+        if (!input || typeof input !== 'object' || Array.isArray(input) || !['approved','rejected'].includes(input.status)) {
+          throw Object.assign(new Error('Choose approved or rejected for this task review.'), { status: 400 });
+        }
+        input.task_id = taskId;
+        input.reason = String(input.reason || '');
+        const result = await runAITaskCommand(input.status === 'approved' ? 'approve_task' : 'reject_task', input);
+        return json(res, 200, result || {});
+      }
+      if (parts[0] === 'tasks' && parts.length === 3 && method === 'POST' && parts[2] === 'cancel') {
+        const taskId = parts[1];
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(taskId)) {
+          throw Object.assign(new Error('A valid AI task ID is required.'), { status: 400 });
+        }
+        const input = await body(req, 8000);
+        if (!input || typeof input !== 'object' || Array.isArray(input)) {
+          throw Object.assign(new Error('Task cancellation input must be a JSON object.'), { status: 400 });
+        }
+        input.task_id = taskId;
+        const result = await runAITaskCommand('cancel_task', input);
+        return json(res, 200, result || {});
+      }
 
       if (method === 'GET' && sub === 'provider-accounts') {
         const result = await runAIProviderCommand('list_provider_accounts');
