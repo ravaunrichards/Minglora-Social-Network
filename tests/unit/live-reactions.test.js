@@ -82,15 +82,20 @@ test('Audio Only LIVE removes the oversized microphone and keeps the room compac
 });
 
 
-test('Minglora LIVE exposes the nine requested switchable screen layouts', () => {
-  const layouts = ['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight','roundtable-1','roundtable-2'];
+test('Minglora LIVE exposes seven screen layouts and separate guest-box layouts', () => {
+  const layouts = ['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight'];
   for (const layout of layouts) {
     assert.match(app, new RegExp("value:'" + layout + "'"));
     assert.ok(styles.includes('data-live-layout="' + layout + '"'));
   }
-  assert.match(server, /LIVE_SCREEN_LAYOUTS=\['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight','roundtable-1','roundtable-2'\]/);
+  assert.match(server, /LIVE_SCREEN_LAYOUTS=\['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight'\]/);
   assert.match(app, /function applyLiveScreenLayout/);
   assert.match(app, /topic:"minglora-live-layout"/);
+  assert.match(server, /LIVE_GUEST_LAYOUTS=\['roundtable-1','roundtable-2'\]/);
+  for (const layout of ['roundtable-1','roundtable-2']) {
+    assert.ok(app.includes("value:'" + layout + "'"));
+    assert.ok(styles.includes('data-live-guest-layout="' + layout + '"'));
+  }
   assert.match(app, /data-live-tools-panel-target='permissions'/);
 });
 
