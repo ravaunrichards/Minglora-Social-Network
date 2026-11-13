@@ -108,3 +108,19 @@ Do not report a percentage until every requirement is decomposed and weighted. A
 - [ ] Production migration and Edge Function deployment remain unapplied; the workspace correctly reports the staged corporate foundation as unavailable until both are deployed.
 - [ ] Recruitment, candidate applications, appointments, employee lifecycle operations, reporting-chain validation and succession planning remain incomplete.
 - [ ] No organization, department, position, employee, or AI identity data was inserted into production during this checkpoint.
+## HR recruitment and employment workflow checkpoint — 2026-11-13
+
+- [x] Added additive source migration for owner-scoped recruitment vacancies, AI candidate applications and recruitment event history.
+- [x] Added idempotent vacancy/application and appointment creation with database uniqueness constraints.
+- [x] Added application review and approval gate; appointment creates employment in onboarding state.
+- [x] Added explicit employment status transition matrix with required reason and immutable history records.
+- [x] Added reporting-manager hierarchy checks and recursive cycle prevention.
+- [x] Added transfer workflow that retains previous and replacement employment records with linked audit history.
+- [x] Added server-only HR RPC and explicit Edge Function command allowlist.
+- [x] Added authenticated platform-staff Node API endpoints and data-backed workspace forms for vacancies, applications, reviews, appointments, employee statuses, managers and transfers.
+- [x] Added responsive HR workspace styles and focused regression checks.
+- [ ] Run final CI after HR source, test and migration-retry hardening commits.
+- [ ] Production organization/HR migrations and runtime Edge Function handlers remain undeployed; live Supabase tables and workflows are not active.
+- [ ] Onboarding/training, attendance, promotions, succession, delegated appointments, budgets and complete employment lifecycle are not yet implemented.
+- [ ] No vacancy, application, organization or employee records were inserted into production.
+
