@@ -147,6 +147,8 @@ function htmlFixture(style, layout) {
 function contentType(file) {
   const ext = path.extname(file).toLowerCase();
   return ({
+    '.html': 'text/html; charset=utf-8',
+    '.webmanifest': 'application/manifest+json',
     '.css': 'text/css; charset=utf-8',
     '.js': 'text/javascript; charset=utf-8',
     '.svg': 'image/svg+xml',
