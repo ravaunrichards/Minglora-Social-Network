@@ -32,7 +32,10 @@ test('LIVE guest-box layouts are separate, persisted and synchronized independen
   }
   assert.match(server, /LIVE_GUEST_LAYOUTS=\['roundtable-1','roundtable-2'\]/);
   assert.match(server, /liveGuestLayout: 'roundtable-1'/);
-  assert.match(server, /guest-layout\$\/\);/);
+  assert.match(server, /const liveGuestLayoutMatch = p\.match/);
+  assert.match(server, /Only the LIVE host can change the guest-box layout/);
+  assert.match(server, /LIVE_GUEST_LAYOUTS\.includes\(layout\)/);
+  assert.match(server, /session\.liveGuestLayout = layout/);
   assert.match(app, /topic:"minglora-live-guest-layout"/);
   assert.match(app, /applyLiveGuestLayout\(nextLayout\)/);
 });
