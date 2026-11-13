@@ -20,8 +20,8 @@ const seatMarkup=Array.from({length:9},(_,index)=>{
 const browser=await chromium.launch({headless:true});
 let combinations=0;
 function assertStableScreenGeometry(current,baseline,message){
-  const currentColumns=String(current[0]).trim().split(/\s+/).map(Number);
-  const baselineColumns=String(baseline[0]).trim().split(/\s+/).map(Number);
+  const currentColumns=String(current[0]).trim().split(/\s+/).map(parseFloat);
+  const baselineColumns=String(baseline[0]).trim().split(/\s+/).map(parseFloat);
   assert.equal(currentColumns.length,baselineColumns.length,message+' (column count)');
   for(let index=0;index<currentColumns.length;index++){
     assert.ok(Math.abs(currentColumns[index]-baselineColumns[index])<=1,message+' (column '+(index+1)+': '+currentColumns[index]+'px versus '+baselineColumns[index]+'px)');
