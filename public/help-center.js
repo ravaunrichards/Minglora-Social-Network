@@ -1,5 +1,5 @@
 const $ = (selector, root=document) => root.querySelector(selector);
-const state={categories:[],subcategories:[],popular:[],featured:[],recent:[],articles:[],adminAccess:false,currentCategory:null,currentSubcategory:null,currentArticle:null,adminOverview:null,bookmarks:[]};
+const state={categories:[],subcategories:[],popular:[],featured:[],recent:[],recentlyViewed:[],articles:[],adminAccess:false,currentCategory:null,currentSubcategory:null,currentArticle:null,adminOverview:null,bookmarks:[]};
 const esc=value=>String(value??"").replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
 const sprite=name=>'<svg viewBox="0 0 64 64" aria-hidden="true"><use href="/assets/icons/navigation-3d.svg#'+esc(name)+'"></use></svg>';
 const dateLabel=value=>{const date=new Date(value);return Number.isNaN(date.getTime())?"":date.toLocaleDateString(undefined,{year:"numeric",month:"short",day:"numeric"});};
@@ -44,6 +44,7 @@ function setContentMode(mode){
   $("#hc-categories").hidden=mode==="article"||mode==="bookmarks";
   $(".hc-discovery-grid").hidden=mode==="article"||mode==="bookmarks"||mode==="results";
   $("#hc-recent-section").hidden=mode==="article"||mode==="bookmarks"||mode==="results"||!state.recent.length;
+  $("#hc-recently-viewed-section").hidden=mode!=="home"||!state.recentlyViewed.length;
   $("#hc-directory-empty").hidden=mode==="article"||mode==="bookmarks"||mode==="results"||state.articles.length>0;
   $("#hc-admin").hidden=mode!=="admin";
 }
@@ -284,6 +285,13 @@ async function boot(){
     if(state.recent.length){$("#hc-recent-section").hidden=false;renderQuestionList("#hc-recent-list",state.recent,"No recently updated answers.");}
     $("#hc-directory-empty").hidden=Boolean(bootstrap.articleCount);
     api("/bookmarks").then(data=>{state.bookmarks=data.bookmarks||[];if(state.currentArticle?.article)$("#hc-bookmark-toggle").textContent=state.bookmarks.some(row=>row.translation_id===state.currentArticle.article.translationId)?"Saved":"Save answer";}).catch(()=>{});
+    api("/recently-viewed").then(data=>{
+      state.recentlyViewed=data.recentlyViewed||[];
+      if(state.recentlyViewed.length){
+        renderQuestionList("#hc-recently-viewed-list",state.recentlyViewed,"No recently viewed answers.");
+        $("#hc-recently-viewed-section").hidden=false;
+      }
+    }).catch(()=>{});
     if(bootstrap.adminAccess)await loadAdmin();
     const articleSlug=new URLSearchParams(location.search).get("article");
     if(articleSlug)await openArticle(articleSlug);
