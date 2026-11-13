@@ -11,9 +11,13 @@
 | `assets/reference/android/` | 1,071 | JPEG | 360,192,780 bytes |
 | `assets/reference/Laptop PC Web/tiktok/` | 29 | PNG | 19,050,395 bytes |
 | `assets/reference/Laptop PC Web/facebook/` | 21 | PNG | 8,577,230 bytes |
-| **Reference folder total** | **1,121 images** | 1,071 JPEG + 50 PNG | **387,820,406 bytes** (plus one `.gitkeep`) |
+| **Reference image total** | **1,121 images** | 1,071 JPEG + 50 PNG | **387,820,405 bytes** (plus one 1-byte `.gitkeep` marker in the folder) |
 
 The root reference Git tree was traversed recursively and was not truncated. The Android folder contains 1,071 JPEGs; the desktop TikTok folder contains 29 PNGs; the desktop Facebook comparison folder contains 21 PNGs. The repository separately contains 131 gift-catalogue capture screenshots in `assets/Gifts/`.
+
+## Machine-readable inventory
+
+The complete file-by-file listing is recorded in `reports/minglora-live-reference-assets.json` (1,121 records). It includes each repository path, filename, format, byte size, Git blob SHA, source group and explicit pending markers for dimensions/transparency/human review.
 
 ## Visual samples inspected
 
