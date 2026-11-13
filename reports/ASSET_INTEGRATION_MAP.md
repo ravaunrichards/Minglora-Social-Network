@@ -27,7 +27,7 @@ No prices, balances, transactions, account state, LiveKit credentials, or existi
 
 ## LIVE dock icon delivery
 
-The dedicated 16-symbol sprite is loaded through external SVG `<use>` references from the same-origin application asset path. The icon key is checked against a fixed allowlist before a fragment URL is constructed. `public/index.html` versions the updated application script, while `public/sw.js` uses shell cache v302 and precaches the sprite. No new runtime dependency or server endpoint is introduced.
+The dedicated 16-symbol sprite is loaded through external SVG `<use>` references from the same-origin application asset path. The icon key is checked against a fixed allowlist before a fragment URL is constructed. `public/index.html` versions the updated application script, while `public/sw.js` uses the latest shell cache and precaches the sprite. No new runtime dependency or server endpoint is introduced.
 
 
 ## Separate animation asset files
@@ -50,3 +50,10 @@ The loader validates exact same-origin preset paths. Existing inline choreograph
 ## Gift record copy/export
 
 `public/gifts.js` exposes copy actions for the currently selected complete catalogue record, the full set of records returned by the actual `/coins/catalog` API, and the saved `public/gift-system-requirements.md` notes. JSON copy preserves fields supplied by the backend and does not invent absent descriptions, prices, IDs or metadata. Clipboard API is preferred, with a text-area fallback for browsers that do not provide Clipboard API. The app script query and service-worker shell cache have been advanced together; the requirements file is included in the offline shell cache.
+
+
+## Full-artwork display and delivery gate — 2026-11-13
+
+Gift Studio and LIVE gift cards use canonical local artwork/model URLs only. Gift Studio thumbnails use `object-fit: contain`; LIVE already uses full-fit containment, and the animation overlay layer is also contained. Artwork failure marks the gift unavailable in the current picker, removes its visible preview, and disables send. LIVE verifies the source artwork image has loaded with non-zero intrinsic dimensions before enabling the send action. These client-side display gates do not delete or rewrite catalogue rows, names, coin prices, gift IDs, active flags, wallet records or transactions. The full backend gift list remains available for faithful record copy/export.
+
+HTML app/style/gift asset references and the service-worker shell cache were advanced together: app/gifts use `20261113-complete-gift-artwork-gate-1`, styles use `20261113-gift-artwork-contain-1`, and the shell cache is v305.
