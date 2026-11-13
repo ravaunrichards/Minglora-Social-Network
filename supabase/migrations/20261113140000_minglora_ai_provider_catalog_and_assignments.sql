@@ -26,6 +26,9 @@ create unique index if not exists ai_provider_assignments_identity_model_no_acco
   on ai_network.ai_provider_assignments(identity_id, model_id)
   where provider_account_id is null;
 
+alter table ai_network.ai_provider_accounts enable row level security;
+alter table ai_network.ai_provider_models enable row level security;
+alter table ai_network.ai_provider_assignments enable row level security;
 alter table ai_network.ai_provider_assignment_history enable row level security;
 grant select, insert on ai_network.ai_provider_assignment_history to service_role;
 grant select, insert, update on ai_network.ai_provider_accounts to service_role;
@@ -344,14 +347,24 @@ begin
     ) values (
       v_identity_id,v_provider_account_id,v_model_id,v_fallback_model_id,v_priority,
       v_assigned_capabilities,v_assignment_languages,'pending','unknown'
-    ) returning assignment_id into v_assignment_id;
-    insert into ai_network.ai_provider_assignment_history(
+    ) on conflict do nothing
+    returning assignment_id into v_assignment_id;
+    if v_assignment_id is null then
+      v_reused := true;
+      select a.assignment_id into v_assignment_id
+      from ai_network.ai_provider_assignments a
+      where a.identity_id=v_identity_id and a.model_id=v_model_id
+        and a.provider_account_id is not distinct from v_provider_account_id;
+    end if;
+    if not v_reused then
+      insert into ai_network.ai_provider_assignment_history(
       assignment_id,identity_id,actor_user_id,action,previous_status,new_status,reason,metadata
-    ) values (
-      v_assignment_id,v_identity_id,p_actor_user_id,'assigned',null,'pending',
-      'Provider/model metadata assignment created; connection health is unverified.',
-      jsonb_build_object('model_id',v_model_id,'provider_account_id',v_provider_account_id,'fallback_model_id',v_fallback_model_id)
-    );
+      ) values (
+        v_assignment_id,v_identity_id,p_actor_user_id,'assigned',null,'pending',
+        'Provider/model metadata assignment created; connection health is unverified.',
+        jsonb_build_object('model_id',v_model_id,'provider_account_id',v_provider_account_id,'fallback_model_id',v_fallback_model_id)
+      );
+    end if;
     select jsonb_build_object(
       'assignment_id',a.assignment_id,'identity_id',a.identity_id,'model_id',a.model_id,
       'provider_account_id',a.provider_account_id,'fallback_model_id',a.fallback_model_id,
@@ -359,7 +372,7 @@ begin
       'supported_languages',a.supported_languages,'assignment_status',a.assignment_status,
       'provider_health_status',a.provider_health_status
     ) into v_result from ai_network.ai_provider_assignments a where a.assignment_id=v_assignment_id;
-    return jsonb_build_object('assignment',v_result,'reused',false);
+    return jsonb_build_object('assignment',v_result,'reused',v_reused);
   end if;
 
   if v_action = 'set_provider_assignment_status' then
