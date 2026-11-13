@@ -1053,7 +1053,8 @@
     click('#settings-navigation [data-settings-page="report-support"] [data-settings-title="Contact Support"]');
     return true;
   }
-  window.MingloraSettings = { open: openSettings, render: openSettings, openSupport };
+  window.MingloraSettings = { open: openSettings, render: openSettings };
+  window.MingloraSettings.openSupport = openSupport;
   document.addEventListener('DOMContentLoaded', () => {
     document.querySelector('#rail-settings')?.addEventListener('click', openSettings);
     window.addEventListener('minglora:session-ready', async () => { try { const result = await api('/settings'); applyPreferences(result.settings); window.dispatchEvent(new CustomEvent('minglora:settings-loaded', { detail: result.settings })); } catch {} });
