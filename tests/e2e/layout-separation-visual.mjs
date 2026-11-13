@@ -24,7 +24,7 @@ function assertStableScreenGeometry(current,baseline,message){
   const baselineColumns=String(baseline[0]).trim().split(/\\s+/).map(Number);
   assert.equal(currentColumns.length,baselineColumns.length,message+' (column count)');
   for(let index=0;index<currentColumns.length;index++){
-    assert.ok(Math.abs(currentColumns[index]-baselineColumns[index])<=1,message+' (column '+(index+1)+' differs by more than 1px)');
+    assert.ok(Math.abs(currentColumns[index]-baselineColumns[index])<=1,message+' (column '+(index+1)+': '+currentColumns[index]+'px versus '+baselineColumns[index]+'px)');
   }
   assert.deepEqual(current.slice(1),baseline.slice(1),message);
 }
