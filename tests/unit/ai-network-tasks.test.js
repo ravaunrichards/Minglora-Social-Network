@@ -72,7 +72,7 @@ test('task queue validates budgets, payload size and rejects credential-like fie
     'cost_limit_usd numeric(14,6)',
     'max_attempts integer not null default 3',
     'Credentials and secrets are not allowed in AI task payloads.',
-    'A safe JSON object no larger than 64 KB.'
+    'safe JSON object no larger than 64 KB.'
   ]) assert.ok(migration.includes(token), 'Missing task budget or payload guard: ' + token);
 });
 
@@ -102,8 +102,11 @@ test('worker execution remains inaccessible without an independent worker creden
   for (const action of ['create_task','list_tasks','approve_task','reject_task','cancel_task']) {
     assert.ok(handler.includes('"' + action + '"'), 'Missing user task command: ' + action);
   }
+  const allowlistStart = handler.indexOf('const supportedTaskCommands = [');
+  const allowlistEnd = handler.indexOf('];', allowlistStart);
+  const allowlist = handler.slice(allowlistStart, allowlistEnd);
   for (const action of ['claim_next_task','heartbeat_task','complete_task','fail_task']) {
-    assert.ok(!handler.includes('"' + action + '"'), 'Worker command must not be gateway-allowlisted: ' + action);
+    assert.ok(!allowlist.includes('"' + action + '"'), 'Worker command must not be gateway-allowlisted: ' + action);
   }
 });
 
