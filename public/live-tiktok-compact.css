@@ -1,6 +1,6 @@
 /* Minglora LIVE — compact, integrated, cross-device presentation.
    Presentation-only layer: keep the existing room DOM, LiveKit tracks, controls,
-   chat, guest permissions, gifts, roles, and nine saved stage layout IDs intact. */
+   chat, guest permissions, gifts and roles intact; seven screen layout IDs and two independent guest-box IDs remain separate. */
 
 body:has(#live-player-shell){
   --minglora-live-header:0px!important;
