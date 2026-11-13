@@ -70,7 +70,8 @@ In addition to the nine named screen-layout modes, CSS guardrails and responsive
 
 - \`tests/unit/profile-style-library.test.js\` covers the ten style IDs, nine screen-layout IDs, all 90 combinations at the structural level, preference validation/defaults, owner-only default exposure, preview/apply/save/reset wiring, preserved profile content hooks and asset cache versions.
 - Main CI syntax checks cover \`public/app.js\`, \`src/server.js\`, \`public/sw.js\` and \`public/settings.js\`, followed by the full \`npm test\` suite.
-- The combination test is structural responsive coverage. It is not a pixel-level browser screenshot run; actual browser rendering across all 90 combinations remains required before calling visual QA complete.
+- The separate \`Minglora profile visual QA\` workflow uses Chromium and the production stylesheet stack. It checks the 10 styles × 9 screen layouts at all nine viewport widths (810 browser-rendered scenarios), including overflow and key-element layout guards. The disposable fixture does not authenticate to Supabase or touch real account data.
+- Each browser run uploads 90 desktop screenshots (all style/layout pairs) plus 10 phone screenshots to the \`minglora-profile-visual-evidence\` artifact. This is browser layout QA, not pixel-perfect cloning of third-party interfaces or a test of live Supabase data.
 
 ## Supplied reference collection and coverage
 
