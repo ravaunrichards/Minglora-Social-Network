@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#1769e0">
+  <meta name="description" content="Find verified answers and help using Minglora.">
+  <title>Help Center — Minglora</title>
+  <link rel="icon" type="image/jpeg" href="/assets/Logo/Logo.jpg">
+  <link rel="stylesheet" href="/styles.css?v=20261113-screen-guest-layout-separation-2">
+  <link rel="stylesheet" href="/help-center.css?v=20261113-help-center-1">
+</head>
+<body class="hc-body">
+  <div class="hc-shell">
+    <header class="hc-topbar">
+      <a class="hc-brand" href="/" aria-label="Minglora home">
+        <img src="/assets/Logo/Logo.jpg" alt="" width="38" height="38">
+        <span>Minglora</span>
+      </a>
+      <nav class="hc-top-links" aria-label="Help Center navigation">
+        <a href="#hc-categories">Browse topics</a>
+        <a href="/#settings">Help &amp; Support</a>
+        <a href="/#settings">Support Inbox</a>
+        <a class="hc-back-home" href="/">Back to Minglora</a>
+      </nav>
+    </header>
+
+    <main class="hc-main">
+      <section class="hc-hero" aria-labelledby="hc-title">
+        <div class="hc-hero-copy">
+          <p class="hc-eyebrow">MINGLORA HELP CENTER</p>
+          <h1 id="hc-title">How can we help you?</h1>
+          <p>Search verified guidance, or browse topics about your account, conversations, community and creator tools.</p>
+        </div>
+        <form id="hc-search-form" class="hc-search" role="search">
+          <svg aria-hidden="true" viewBox="0 0 64 64"><use href="/assets/icons/navigation-3d.svg#search"></use></svg>
+          <input id="hc-search-input" type="search" name="q" placeholder="Search questions and answers" aria-label="Search all Help Center questions and answers" autocomplete="off" list="hc-search-suggestions">
+          <datalist id="hc-search-suggestions"></datalist>
+          <button type="submit">Search</button>
+        </form>
+        <div class="hc-hero-actions">
+          <a href="/#settings">Contact Support</a>
+          <a href="/#settings">Open Support Inbox</a>
+          <button type="button" id="hc-saved-open">Saved answers</button>
+        </div>
+      </section>
+
+      <div id="hc-error" class="hc-alert" role="alert" hidden></div>
+      <div id="hc-status" class="hc-status" role="status" aria-live="polite"></div>
+
+      <section id="hc-results" class="hc-section" hidden aria-labelledby="hc-results-title">
+        <div class="hc-section-heading">
+          <div><p class="hc-eyebrow">SEARCH</p><h2 id="hc-results-title">Search results</h2></div>
+          <button type="button" class="hc-quiet-button" id="hc-clear-search">Clear search</button>
+        </div>
+        <div class="hc-filters">
+          <label>Category<select id="hc-category-filter"><option value="">All categories</option></select></label>
+          <label>Subcategory<select id="hc-subcategory-filter" disabled><option value="">All subcategories</option></select></label>
+        </div>
+        <div id="hc-results-list" class="hc-question-list"></div>
+      </section>
+
+      <section id="hc-categories" class="hc-section" aria-labelledby="hc-categories-title">
+        <div class="hc-section-heading">
+          <div><p class="hc-eyebrow">FIND YOUR TOPIC</p><h2 id="hc-categories-title">Browse by category</h2></div>
+          <span id="hc-category-total" class="hc-count"></span>
+        </div>
+        <div id="hc-category-grid" class="hc-category-grid"></div>
+      </section>
+
+      <section id="hc-category-detail" class="hc-section" hidden aria-labelledby="hc-category-detail-title">
+        <div class="hc-section-heading">
+          <div><p class="hc-eyebrow">CATEGORY</p><h2 id="hc-category-detail-title"></h2></div>
+          <button type="button" class="hc-quiet-button" id="hc-category-clear">All categories</button>
+        </div>
+        <p id="hc-category-description" class="hc-description"></p>
+        <div id="hc-subcategory-pills" class="hc-pills"></div>
+        <div id="hc-category-questions" class="hc-question-list"></div>
+      </section>
+
+      <div class="hc-discovery-grid">
+        <section id="hc-featured-section" class="hc-section" hidden aria-labelledby="hc-featured-title">
+          <div class="hc-section-heading"><div><p class="hc-eyebrow">EDITOR PICK</p><h2 id="hc-featured-title">Recommended questions</h2></div></div>
+          <div id="hc-featured-list" class="hc-question-list"></div>
+        </section>
+        <section id="hc-popular-section" class="hc-section" hidden aria-labelledby="hc-popular-title">
+          <div class="hc-section-heading"><div><p class="hc-eyebrow">MEMBER ACTIVITY</p><h2 id="hc-popular-title">Popular questions</h2></div></div>
+          <div id="hc-popular-list" class="hc-question-list"></div>
+        </section>
+      </div>
+
+      <section id="hc-recent-section" class="hc-section" hidden aria-labelledby="hc-recent-title">
+        <div class="hc-section-heading"><div><p class="hc-eyebrow">LATEST UPDATES</p><h2 id="hc-recent-title">Recently updated answers</h2></div></div>
+        <div id="hc-recent-list" class="hc-question-list hc-question-list--wide"></div>
+      </section>
+
+      <section id="hc-directory-empty" class="hc-empty-state">
+        <div class="hc-empty-icon" aria-hidden="true">?</div>
+        <h2>Verified answers are being prepared</h2>
+        <p>The Help Center directory and topics are ready. No approved question-and-answer articles have been published yet. We will only show guidance that has been checked against Minglora’s current features.</p>
+        <div class="hc-empty-actions">
+          <a href="/#settings">Contact Minglora Support</a>
+          <a href="/#settings">Open Support Inbox</a>
+        </div>
+      </section>
+
+      <section id="hc-article-view" class="hc-article-view" hidden aria-label="Help Center article">
+        <nav class="hc-breadcrumb" id="hc-breadcrumb" aria-label="Breadcrumb"></nav>
+        <article class="hc-article">
+          <div class="hc-article-heading">
+            <div><p class="hc-eyebrow">MINGLORA HELP ARTICLE</p><h1 id="hc-article-title"></h1><p id="hc-article-meta" class="hc-muted"></p></div>
+            <button type="button" id="hc-bookmark-toggle" class="hc-outline-button">Save answer</button>
+          </div>
+          <p id="hc-article-excerpt" class="hc-article-excerpt"></p>
+          <div id="hc-article-content" class="hc-article-content"></div>
+          <div class="hc-related-wrap" id="hc-related-wrap" hidden><h2>Related questions</h2><div id="hc-related-list" class="hc-question-list"></div></div>
+          <section class="hc-feedback" aria-labelledby="hc-feedback-title">
+            <h2 id="hc-feedback-title">Was this answer helpful?</h2>
+            <p>Let us know whether this article resolved your question.</p>
+            <div><button type="button" id="hc-feedback-yes">Yes, this helped</button><button type="button" id="hc-feedback-no">No, I still need help</button></div>
+            <p id="hc-feedback-message" role="status" aria-live="polite"></p>
+          </section>
+        </article>
+        <div class="hc-article-support"><strong>Still need help?</strong><span>Contact the Minglora Support team or check your existing support conversations.</span><a href="/#settings">Contact Support</a><a href="/#settings">Support Inbox</a></div>
+      </section>
+
+      <section id="hc-bookmarks-view" class="hc-section" hidden>
+        <div class="hc-section-heading"><div><p class="hc-eyebrow">YOUR LIBRARY</p><h2>Saved answers</h2></div><button type="button" id="hc-bookmarks-close" class="hc-quiet-button">Back to Help Center</button></div>
+        <div id="hc-bookmarks-list" class="hc-question-list"></div>
+      </section>
+
+      <section id="hc-admin" class="hc-admin" hidden aria-labelledby="hc-admin-title">
+        <div class="hc-section-heading"><div><p class="hc-eyebrow">AUTHORIZED EDITORS</p><h2 id="hc-admin-title">Help Center management</h2></div><span class="hc-admin-label">Staff access</span></div>
+        <p class="hc-description">Create and review real Help Center content. Drafts are not visible to members. Publishing is limited to content that has passed the review and fact-check workflow.</p>
+        <div class="hc-admin-grid">
+          <form id="hc-article-form" class="hc-admin-card">
+            <input type="hidden" name="articleId">
+            <h3 id="hc-editor-heading">Create a Help article</h3>
+            <label>Question title<input name="title" maxlength="240" required></label>
+            <label>Article URL slug<input name="slug" maxlength="120" required pattern="[a-z0-9]+(-[a-z0-9]+)*"></label>
+            <div class="hc-form-pair">
+              <label>Category<select name="categoryId" required></select></label>
+              <label>Subcategory<select name="subcategoryId"><option value="">Choose a subcategory</option></select></label>
+            </div>
+            <label>Language<select name="locale"><option value="en">English</option></select></label>
+            <label>Short answer preview<textarea name="excerpt" rows="2" maxlength="600"></textarea></label>
+            <label>Full answer / instructions<textarea name="answerMarkdown" rows="9" required></textarea></label>
+            <p class="hc-editor-hint">You can use headings, numbered steps, bullet lists, links, and Markdown images such as ![Screenshot description](https://...). Add video demonstrations as secure HTTPS links.</p>
+            <label>Search terms and alternative wording<input name="searchTerms" placeholder="sign in, cannot log in, account access"></label>
+            <label>Source reference for fact-checking<input name="sourceReference" maxlength="500" placeholder="Verified app screen, approved policy, QA reference or test record"></label>
+            <label class="hc-check"><input name="isFeatured" type="checkbox"> Feature this approved article on the Help Center home page</label>
+            <div class="hc-form-actions"><button type="submit">Save draft</button><button type="button" id="hc-editor-reset" class="hc-quiet-button">New article</button></div>
+            <p id="hc-editor-status" role="status" aria-live="polite"></p>
+          </form>
+          <div class="hc-admin-side">
+            <form id="hc-category-form" class="hc-admin-card">
+              <h3>Manage categories</h3>
+              <input type="hidden" name="categoryId">
+              <label>Category name<input name="title" maxlength="120" required></label>
+              <label>Category slug<input name="slug" maxlength="120" required pattern="[a-z0-9]+(-[a-z0-9]+)*"></label>
+              <label>Short description<input name="description" maxlength="500"></label>
+              <label>3D icon<select name="icon"><option value="request">Help / Support</option><option value="home">Home</option><option value="profile">Profile</option><option value="lock">Security</option><option value="friends">Friends</option><option value="photo">Photos</option><option value="video">Video</option><option value="messages">Messenger</option><option value="call">Calls</option><option value="groups">Groups</option><option value="live">LIVE</option><option value="creator">Creator</option><option value="gift">Gifts</option><option value="coins">Coins</option><option value="meetwave">MeetWave</option><option value="activity">Activity</option><option value="privacy">Privacy</option><option value="settings">Settings</option><option value="search">Troubleshooting</option></select></label>
+              <label>Display order<input name="sortOrder" type="number" min="0" max="999" value="99"></label>
+              <div class="hc-form-actions"><button type="submit">Save category</button><button type="button" id="hc-category-reset" class="hc-quiet-button">New</button></div>
+              <div id="hc-category-admin-list" class="hc-admin-mini-list"></div>
+            </form>
+            <form id="hc-subcategory-form" class="hc-admin-card">
+              <h3>Add a subcategory</h3>
+              <label>Parent category<select name="categoryId" required></select></label>
+              <label>Subcategory name<input name="title" maxlength="120" required></label>
+              <label>Subcategory slug<input name="slug" maxlength="120" required pattern="[a-z0-9]+(-[a-z0-9]+)*"></label>
+              <label>Short description<input name="description" maxlength="500"></label>
+              <label>Display order<input name="sortOrder" type="number" min="0" max="999" value="99"></label>
+              <div class="hc-form-actions"><button type="submit">Add subcategory</button></div>
+            </form>
+          </div>
+        </div>
+        <section class="hc-admin-articles"><h3>Content and approval queue</h3><div id="hc-admin-article-list" class="hc-question-list"></div></section>
+        <section class="hc-admin-articles"><h3>Revision history</h3><div id="hc-admin-revisions" class="hc-admin-revisions"></div></section>
+        <section class="hc-admin-articles"><h3>Searches with no matching articles</h3><div id="hc-admin-searches" class="hc-admin-mini-list"></div></section>
+      </section>
+    </main>
+
+    <footer class="hc-footer">
+      <a href="/">Minglora</a><span>Help Center</span><a href="/#settings">Help &amp; Support</a>
+    </footer>
+  </div>
+  <script type="module" src="/help-center.js?v=20261113-help-center-1"></script>
+</body>
+</html>
