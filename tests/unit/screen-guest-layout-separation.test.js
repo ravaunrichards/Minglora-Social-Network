@@ -70,8 +70,8 @@ test('MeetWave screen CSS owns grid templates while Roundtable only positions th
   assert.ok(end>0);
   const guestRules=guest.slice(0,end);
   for(const layout of two)assert.ok(guestRules.includes('data-guest-layout="'+layout+'"'));
-  assert.match(guestRules,/#mw-screen-stage\\[data-screen-layout\\] #mw-grid\\[data-layout\\]\\[data-guest-layout="roundtable-1"\\]/);
-  assert.match(guestRules,/#mw-screen-stage\\[data-screen-layout\\] #mw-grid\\[data-layout\\]\\[data-guest-layout="roundtable-2"\\]/);
+  assert.ok(guestRules.includes('#mw-screen-stage[data-screen-layout] #mw-grid[data-layout][data-guest-layout="roundtable-1"]'));
+  assert.ok(guestRules.includes('#mw-screen-stage[data-screen-layout] #mw-grid[data-layout][data-guest-layout="roundtable-2"]'));
   assert.doesNotMatch(guestRules,/grid-template-(columns|rows)/);
 });
 
