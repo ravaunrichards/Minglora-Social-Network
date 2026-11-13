@@ -120,7 +120,7 @@ Statuses: NOT STARTED · READY · IN PROGRESS · VERIFYING · COMPLETED · BLOCK
 ## Master specification extensions
 
 ## AI-NETWORK-13 — Corporate governance and HR
-**Status:** IN PROGRESS — organization/department/position foundation and workspace wiring committed; production deployment pending
+**Status:** PARTIALLY IMPLEMENTED — organization/department/position foundation, HR source workflows and workspace wiring committed; CI green; production deployment pending
 - Organizations, board/executive hierarchy and reporting relationships.
 - Twenty department templates, organization-scoped departments, positions and job descriptions.
 - Recruitment, vacancies, appointments, onboarding, promotions, transfers, suspension, termination and employment history.
