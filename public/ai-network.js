@@ -113,11 +113,17 @@
       '<label>Email address (optional; record only)<input name="emailAddress" type="email" maxlength="320" placeholder="No inbox is created or claimed"></label>' +
       '<button class="primary" type="submit" ' + (!categories.length || !window.crypto?.randomUUID ? 'disabled' : '') + '>Create relational AI identity</button>' +
       '</form>';
+    const bulkForm = '<form class="ai-network-form" data-ai-form="identity-bulk">' +
+      '<div class="ai-network-form-title">Bulk import AI identities (1–100 per batch)</div>' +
+      '<p class="ai-network-note">Paste a JSON array. Each item uses the same name, category, population and profile fields as the single-identity form. Every item gets its own record; failed rows are reported and can be retried with the same idempotency key.</p>' +
+      '<label>Identity batch JSON<textarea name="items" required rows="8" maxlength="180000" spellcheck="false" placeholder=\'[{"population":"independent","category_key":"ai_friends","idempotency_key":"import-row-000001","name":{"first_name":"Ava","last_name":"Morgan","username":"ava_morgan_01"},"profile":{"gender":"female"}}]\'></textarea></label>' +
+      '<button class="primary" type="submit" ' + (!categories.length ? 'disabled' : '') + '>Import identity batch</button>' +
+      '</form>';
     return card('AI Identity & Profile Registry', 'RELATIONAL IDENTITY FOUNDATION',
       '<p>Registered identities are stored individually in Minglora Supabase. Human authentication accounts are kept separate.</p>' +
       warning + '<div class="ai-network-quick-stats"><div><span>Registered identities</span><strong>' +
       (registry ? number(registry.total) : 'Unavailable') + '</strong></div><div><span>Categories available</span><strong>' + number(categories.length) +
-      '</strong></div></div>' + renderAIIdentityRows(registry) + form, 'ai-network-span-2');
+      '</strong></div></div>' + renderAIIdentityRows(registry) + form + bulkForm, 'ai-network-span-2');
   }
 
   async function loadAIIdentityRegistry() {
@@ -347,7 +353,19 @@
     const value = key => String(data.get(key) ?? '').trim();
     const payload = {};
     let path = '';
-    if (kind === 'identity') {
+    if (kind === 'identity-bulk') {
+      path = '/identities/bulk';
+      let items;
+      try { items = JSON.parse(value('items')); }
+      catch { throw new Error('Bulk identity input must be valid JSON.'); }
+      if (!Array.isArray(items) || items.length < 1 || items.length > 100) {
+        throw new Error('A bulk identity batch must contain between 1 and 100 JSON objects.');
+      }
+      if (items.some(item => !item || typeof item !== 'object' || Array.isArray(item))) {
+        throw new Error('Every bulk identity row must be a JSON object.');
+      }
+      payload.items = items;
+    } else if (kind === 'identity') {
       path = '/identities';
       form.dataset.idempotencyKey = form.dataset.idempotencyKey || window.crypto.randomUUID();
       payload.population = value('population');
@@ -412,10 +430,15 @@
       payload.companionOptIn = form.querySelector('[name="companionOptIn"]').checked;
       payload.companionAcknowledged = form.querySelector('[name="companionAcknowledgedAIIdentity"]').checked;
     } else return;
-    await request(path, { method: kind === 'settings' || kind === 'languages' ? 'PATCH' : 'POST', body: payload });
+    const result = await request(path, { method: kind === 'settings' || kind === 'languages' ? 'PATCH' : 'POST', body: payload });
     form.reset();
     if (kind === 'identity') form.dataset.idempotencyKey = window.crypto.randomUUID();
-    await refresh(kind === 'identity' ? 'AI identity record saved in Minglora Supabase.' : 'Saved successfully.');
+    const message = kind === 'identity'
+      ? 'AI identity record saved in Minglora Supabase.'
+      : kind === 'identity-bulk'
+        ? 'Bulk identity batch: ' + number(result.created_count) + ' created; ' + number(result.failed_count) + ' failed.'
+        : 'Saved successfully.';
+    await refresh(message);
   }
 
   const onSubmit = async event => {
