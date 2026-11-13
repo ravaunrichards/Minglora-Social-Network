@@ -1801,6 +1801,7 @@ async function route(req, res) {
     if(method==='POST'&&p==='/api/help-center/record-view')return helpRespond('record_view',{translationId:String(input.translationId||'')});
     if(method==='POST'&&p==='/api/help-center/feedback')return helpRespond('feedback',{translationId:String(input.translationId||''),helpful:input.helpful,note:String(input.note||'').slice(0,1000)});
     if(method==='GET'&&p==='/api/help-center/bookmarks')return user?helpRespond('bookmarks'):json(res,401,{error:'Sign in to view saved answers.'});
+    if(method==='GET'&&p==='/api/help-center/view-history')return user?helpRespond('view_history'):json(res,401,{error:'Sign in to view recently accessed answers.'});
     if(method==='POST'&&p==='/api/help-center/bookmarks')return helpRespond('bookmark_add',{translationId:String(input.translationId||'')});
     const helpBookmarkMatch=p.match(/^\/api\/help-center\/bookmarks\/([0-9a-f-]{36})$/i);
     if(method==='DELETE'&&helpBookmarkMatch)return helpRespond('bookmark_remove',{translationId:helpBookmarkMatch[1]});
