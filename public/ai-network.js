@@ -3,7 +3,7 @@
 
   const API = '/api/ai-network';
   const root = () => document.getElementById('main-content');
-  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '' };
+  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationError: '' };
   const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[character]));
@@ -173,6 +173,66 @@
     }
   }
 
+  async function loadAIOrganizationRegistry() {
+    state.organizationError = '';
+    try {
+      const [registry, departmentResult, positionResult] = await Promise.all([
+        request('/organizations'),
+        request('/department-templates'),
+        request('/position-templates')
+      ]);
+      state.organizationRegistry = registry;
+      state.departmentTemplates = list(departmentResult.templates);
+      state.positionTemplates = list(positionResult.templates);
+    } catch (error) {
+      state.organizationRegistry = null;
+      state.departmentTemplates = [];
+      state.positionTemplates = [];
+      state.organizationError = error.message || 'AI corporate records are not available.';
+    }
+  }
+
+
+  function renderAIOrganizationCenter() {
+    const organizations = list(state.organizationRegistry?.organizations);
+    const organizationRows = organizations.length
+      ? '<div class="ai-network-list">' + organizations.map(record => {
+          const organization = record.organization || {};
+          const organizationId = organization.organization_id || '';
+          return '<article class="ai-network-list-row ai-network-organization-row"><div class="ai-network-list-main"><div class="ai-network-avatar ai-network-avatar--team" aria-hidden="true">ORG</div><div><strong>' +
+            esc(organization.organization_name || 'AI organization') + '</strong><div class="ai-network-meta">' +
+            pill(organization.status || 'proposed') + ' ' + pill(organization.organization_type || 'company') +
+            '</div><small>' + esc(organization.organization_slug || '') + '</small><p>' +
+            number(record.department_count) + ' departments · ' + number(record.position_count) + ' positions</p></div></div>' +
+            '<div class="ai-network-organization-actions">' +
+            '<form class="ai-network-inline-form" data-ai-form="organization-departments" data-organization-id="' + esc(organizationId) + '">' +
+            '<button class="secondary" type="submit"' + (!organizationId || !state.departmentTemplates.length ? ' disabled' : '') + '>Provision departments (' + number(state.departmentTemplates.length) + ')</button></form>' +
+            '<form class="ai-network-inline-form" data-ai-form="organization-positions" data-organization-id="' + esc(organizationId) + '">' +
+            '<button class="secondary" type="submit"' + (!organizationId || !state.positionTemplates.length ? ' disabled' : '') + '>Prepare positions (' + number(state.positionTemplates.length) + ')</button></form>' +
+            '</div></article>';
+        }).join('') + '</div>'
+      : empty('No AI organizations are registered for this account yet.');
+    const warning = state.organizationError
+      ? '<div class="ai-network-alert ai-network-alert--warning" role="status">' + esc(state.organizationError) + '</div>'
+      : '<p class="ai-network-note">This center reads and writes owner-scoped organization records through the Minglora server runtime. It does not create AI employees or human login accounts automatically.</p>';
+    const templates = '<div class="ai-network-command-grid"><div><span>Department templates</span><strong>' +
+      number(state.departmentTemplates.length) + '</strong></div><div><span>Position templates</span><strong>' +
+      number(state.positionTemplates.length) + '</strong></div></div>';
+    const createForm = '<form class="ai-network-form" data-ai-form="organization">' +
+      '<div class="ai-network-form-title">Create an AI organization</div>' +
+      '<div class="ai-network-form-grid"><label>Organization name<input name="organizationName" required minlength="2" maxlength="160" placeholder="Minglora AI Operations"></label>' +
+      '<label>Unique organization slug<input name="organizationSlug" required minlength="3" maxlength="80" pattern="[a-z0-9][a-z0-9-]{1,78}[a-z0-9]" placeholder="minglora-ai-operations"></label>' +
+      '<label>Organization type<select name="organizationType">' + options([
+        {value:'platform',label:'Platform'},{value:'company',label:'Company'},
+        {value:'agency',label:'Agency'},{value:'community',label:'Community'},{value:'other',label:'Other'}
+      ], 'company') + '</select></label></div>' +
+      '<label>Description<textarea name="organizationDescription" maxlength="2000" rows="2" placeholder="Purpose, ownership and scope"></textarea></label>' +
+      '<button class="primary" type="submit">Create organization record</button></form>';
+    return card('Corporate Governance & Workforce', '11 · ORGANIZATIONS', '<p>Establish an owner-controlled organization, then provision its department and position structures from the verified templates.</p>' +
+      warning + templates + organizationRows + createForm +
+      '<p class="ai-network-note">Current scope: organization, 20 department templates and position templates. Recruitment, employee appointments, reporting-chain changes, payroll and employment lifecycle actions are not yet connected. Department and position creation does not imply that AI staff have been hired.</p>', 'ai-network-span-2');
+  }
+
   function renderTeams(teams, bots) {
     const rows = teams.length
       ? '<div class="ai-network-list">' + teams.map(team => {
@@ -298,6 +358,7 @@
       '<div class="ai-network-quick-stats"><div><span>My bots</span><strong>' + number(performance.botCount) + '</strong></div><div><span>Teams</span><strong>' + number(performance.teamCount) + '</strong></div><div><span>Pending reviews</span><strong>' + number(performance.pendingApprovals) + '</strong></div><div><span>Recorded runs</span><strong>' + number(performance.measuredRunCount) + '</strong></div></div>' +
       '<div class="ai-network-grid">' +
       renderAIIdentityRegistry() +
+      renderAIOrganizationCenter() +
       card('Bot Personality Laboratory', '01 · PERSONALITY', '<p>Build unique AI helpers with a clear purpose, tone, traits, expertise and permitted tasks.</p>' +
         renderBotRows(bots) + '<form class="ai-network-form" data-ai-form="bot"><div class="ai-network-form-title">Create a new AI bot</div>' +
         '<label>Bot name<input name="name" required minlength="2" maxlength="40" placeholder="Community Guide"></label>' +
@@ -363,6 +424,7 @@
     try {
       state.snapshot = await request();
       await loadAIIdentityRegistry();
+      await loadAIOrganizationRegistry();
       renderSnapshot(state.snapshot);
     } catch (error) {
       state.error = error.message;
@@ -375,6 +437,7 @@
     if (message) setNotice(message);
     state.snapshot = await request();
     await loadAIIdentityRegistry();
+    await loadAIOrganizationRegistry();
     renderSnapshot(state.snapshot);
   }
 
@@ -465,6 +528,26 @@
         is_public: false
       });
       if (value('emailAddress')) payload.email = { email_address: value('emailAddress') };
+    } else if (kind === 'organization') {
+      path = '/organizations';
+      form.dataset.idempotencyKey = form.dataset.idempotencyKey || window.crypto.randomUUID();
+      payload.organization_name = value('organizationName');
+      payload.organization_slug = value('organizationSlug').toLowerCase();
+      payload.organization_type = value('organizationType');
+      payload.description = value('organizationDescription');
+      payload.idempotency_key = form.dataset.idempotencyKey;
+    } else if (kind === 'organization-departments') {
+      const organizationId = form.dataset.organizationId;
+      if (!organizationId) throw new Error('Choose a valid organization before provisioning departments.');
+      if (!state.departmentTemplates.length) throw new Error('Department templates are not available yet.');
+      path = '/organizations/' + encodeURIComponent(organizationId) + '/departments';
+      payload.department_keys = state.departmentTemplates.map(template => template.template_key);
+    } else if (kind === 'organization-positions') {
+      const organizationId = form.dataset.organizationId;
+      if (!organizationId) throw new Error('Choose a valid organization before preparing positions.');
+      if (!state.positionTemplates.length) throw new Error('Position templates are not available yet.');
+      path = '/organizations/' + encodeURIComponent(organizationId) + '/positions';
+      payload.position_keys = state.positionTemplates.map(template => template.template_key);
     } else if (kind === 'bot') {
       path = '/bots';
       payload.name = value('name');
@@ -517,11 +600,18 @@
     const result = await request(path, { method: kind === 'settings' || kind === 'languages' ? 'PATCH' : 'POST', body: payload });
     form.reset();
     if (kind === 'identity') form.dataset.idempotencyKey = window.crypto.randomUUID();
+    if (kind === 'organization') form.dataset.idempotencyKey = window.crypto.randomUUID();
     const message = kind === 'identity'
       ? 'AI identity record saved in Minglora Supabase.'
       : kind === 'identity-bulk'
         ? 'Bulk identity batch: ' + number(result.created_count) + ' created; ' + number(result.reused_count) + ' reused; ' + number(result.failed_count) + ' failed.'
-        : 'Saved successfully.';
+        : kind === 'organization'
+          ? 'AI organization record saved. Its initial status is proposed.'
+          : kind === 'organization-departments'
+            ? 'Department setup: ' + number(result.created_count) + ' created; ' + number(result.existing_count) + ' already existed.'
+            : kind === 'organization-positions'
+              ? 'Position setup: ' + number(result.created_count) + ' prepared; ' + number(result.existing_count) + ' already existed.'
+              : 'Saved successfully.';
     await refresh(message);
   }
 
