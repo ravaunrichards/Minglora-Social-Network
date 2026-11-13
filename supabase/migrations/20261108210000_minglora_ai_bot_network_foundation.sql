@@ -688,10 +688,13 @@ BEGIN
     RAISE EXCEPTION 'AI profile location, education or capability collections exceed their supported format or size.' USING ERRCODE = '22023';
   END IF;
 
-  IF p_identity ? 'permissions' AND
-     CASE WHEN pg_catalog.jsonb_typeof(p_identity->'permissions')='array'
-       THEN pg_catalog.jsonb_array_length(p_identity->'permissions') > 5 ELSE true END THEN
-    RAISE EXCEPTION 'AI identity permissions must be an array of at most five approved actions.' USING ERRCODE = '22023';
+  IF p_identity ? 'permissions' THEN
+    IF pg_catalog.jsonb_typeof(p_identity->'permissions') <> 'array' THEN
+      RAISE EXCEPTION 'AI identity permissions must be an array.' USING ERRCODE = '22023';
+    END IF;
+    IF pg_catalog.jsonb_array_length(p_identity->'permissions') > 5 THEN
+      RAISE EXCEPTION 'AI identity permissions may contain at most five approved actions.' USING ERRCODE = '22023';
+    END IF;
   END IF;
 
   IF v_category IS NOT NULL THEN
