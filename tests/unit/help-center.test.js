@@ -38,7 +38,7 @@ assert.match(server,/mfaVerified:activeHelpSession\?\.mfaVerified===true/);
 });
 
 test("search indexes article content, keywords, and canonical category and subcategory names",()=>{
-const migration=read("supabase/migrations/20261113203000_minglora_help_center_taxonomy_search.sql");
+const migration=read("supabase/migrations/20261113222317_minglora_help_center_taxonomy_search.sql");
 assert.match(migration,/t\.search_document@@websearch_to_tsquery/);
 assert.match(migration,/help_keywords/);
 assert.match(migration,/ct\.title ilike/);
