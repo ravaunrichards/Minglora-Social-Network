@@ -668,4 +668,7 @@ GRANT EXECUTE ON FUNCTION public.minglora_ai_bot_task_list(uuid,integer,integer)
 REVOKE ALL ON FUNCTION public.minglora_ai_bot_task_stats(uuid) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.minglora_ai_bot_task_stats(uuid) TO service_role;
 
+REVOKE ALL ON FUNCTION public.minglora_ai_bot_settings_update(jsonb,uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.minglora_ai_bot_settings_update(jsonb,uuid) TO service_role;
+
 COMMIT;
