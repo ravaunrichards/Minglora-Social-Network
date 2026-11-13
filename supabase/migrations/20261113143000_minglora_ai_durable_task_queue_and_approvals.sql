@@ -48,7 +48,7 @@ create table if not exists ai_network.ai_task_queue (
   updated_at timestamptz not null default now(),
   unique (owner_user_id,task_id),
   unique (owner_user_id,idempotency_key),
-  check ((status='running') = (worker_id is not null and lease_token is not null and lease_expires_at is not null))
+  check ((status='running' and worker_id is not null and lease_token is not null and lease_expires_at is not null) or (status<>'running' and worker_id is null and lease_token is null and lease_expires_at is null))
 );
 create index if not exists ai_task_queue_owner_status_schedule_idx
   on ai_network.ai_task_queue(owner_user_id,status,scheduled_for,priority desc,created_at);
@@ -135,6 +135,8 @@ declare
   v_scheduled_for timestamptz;
   v_lease_seconds integer;
   v_max_workers integer;
+  v_execution_enabled boolean;
+  v_global_paused boolean;
   v_attempt_count integer;
   v_task_payload jsonb;
   v_result jsonb;
@@ -223,9 +225,14 @@ begin
     on conflict (owner_user_id,idempotency_key) do nothing
     returning task_id into v_task_id;
     if v_task_id is null then
-      select q.task_id into v_task_id from ai_network.ai_task_queue q
+      select q.* into v_row from ai_network.ai_task_queue q
       where q.owner_user_id=p_actor_user_id and q.idempotency_key=v_payload->>'idempotency_key';
-      select to_jsonb(q) into v_result from ai_network.ai_task_queue q where q.task_id=v_task_id and q.owner_user_id=p_actor_user_id;
+      if v_row.task_id is null or v_row.identity_id<>v_identity_id
+         or v_row.task_type<>v_task_type or v_row.task_title<>v_task_title
+         or v_row.action_class<>v_action_class or v_row.task_payload<>v_task_payload then
+        raise exception using errcode = '23505', message = 'Task idempotency key was already used for a different task request.';
+      end if;
+      select to_jsonb(q) into v_result from ai_network.ai_task_queue q where q.task_id=v_row.task_id and q.owner_user_id=p_actor_user_id;
       return jsonb_build_object('task',v_result,'reused',true);
     end if;
     insert into ai_network.ai_task_events(owner_user_id,task_id,actor_type,actor_user_id,event_type,new_status,reason,metadata)
@@ -261,13 +268,14 @@ begin
     if length(v_reason)<3 then raise exception using errcode = '22023', message = 'A review reason of at least three characters is required.'; end if;
     select q.status into v_previous_status from ai_network.ai_task_queue q
     where q.task_id=v_task_id and q.owner_user_id=p_actor_user_id for update;
-    if v_previous_status<>'pending_approval' then
+    if v_previous_status is distinct from 'pending_approval' then
       raise exception using errcode = 'P0002', message = 'Task is not awaiting approval.';
     end if;
     v_status := case when v_action='approve_task' then 'queued' else 'rejected' end;
     update ai_network.ai_task_queue q
     set status=v_status,approved_by_user_id=case when v_action='approve_task' then p_actor_user_id else null end,
-        approved_at=case when v_action='approve_task' then now() else null end,updated_at=now()
+        approved_at=case when v_action='approve_task' then now() else null end,
+        finished_at=case when v_action='reject_task' then now() else null end,updated_at=now()
     where q.task_id=v_task_id and q.owner_user_id=p_actor_user_id;
     update ai_network.ai_task_approvals a
     set approval_status=case when v_action='approve_task' then 'approved' else 'rejected' end,
@@ -302,9 +310,9 @@ begin
       raise exception using errcode = '22023', message = 'A valid worker identifier is required.';
     end if;
     select c.execution_enabled,c.global_paused,c.max_concurrent_workers,c.lease_seconds
-      into v_requires_approval,v_reused,v_max_workers,v_lease_seconds
+      into v_execution_enabled,v_global_paused,v_max_workers,v_lease_seconds
     from ai_network.ai_task_runtime_controls c where c.control_key='primary';
-    if not coalesce(v_requires_approval,false) or coalesce(v_reused,true) or coalesce(v_max_workers,0)=0 then
+    if not coalesce(v_execution_enabled,false) or coalesce(v_global_paused,true) or coalesce(v_max_workers,0)=0 then
       return jsonb_build_object('claimed',false,'reason','runtime_paused_or_disabled');
     end if;
     with expired as (
@@ -327,8 +335,15 @@ begin
     where q.owner_user_id=p_actor_user_id and q.status='queued' and q.scheduled_for<=now()
       and q.attempt_count<q.max_attempts
       and exists (
+        select 1 from ai_network.ai_identities i
+        where i.identity_id=q.identity_id and i.owner_user_id=p_actor_user_id
+          and i.status='active' and i.enabled=true
+      )
+      and exists (
         select 1 from ai_network.ai_provider_assignments a
-        where a.identity_id=q.identity_id and a.assignment_status='active' and a.provider_health_status='healthy'
+        join ai_network.ai_provider_accounts pa on pa.provider_account_id=a.provider_account_id
+        where a.identity_id=q.identity_id and a.assignment_status='active'
+          and a.provider_health_status='healthy' and pa.status='configured' and pa.health_status='healthy'
       )
     order by q.priority asc,q.scheduled_for asc,q.created_at asc
     for update skip locked limit 1;
