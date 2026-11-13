@@ -71,3 +71,17 @@ In addition to the nine named screen-layout modes, CSS guardrails and responsive
 - \`tests/unit/profile-style-library.test.js\` covers the ten style IDs, nine screen-layout IDs, all 90 combinations at the structural level, preference validation/defaults, owner-only default exposure, preview/apply/save/reset wiring, preserved profile content hooks and asset cache versions.
 - Main CI syntax checks cover \`public/app.js\`, \`src/server.js\`, \`public/sw.js\` and \`public/settings.js\`, followed by the full \`npm test\` suite.
 - The combination test is structural responsive coverage. It is not a pixel-level browser screenshot run; actual browser rendering across all 90 combinations remains required before calling visual QA complete.
+
+## Supplied reference collection and coverage
+
+The checked-in `assets/reference` collection contains **1,013 image files** and remains preserved in place:
+
+- `assets/reference/android/`: 963 JPEG screenshots (919 filenames marked TikTok, one Facebook, one Chrome and 42 without a platform label).
+- `assets/reference/Laptop PC Web/facebook/`: 21 desktop PNG captures.
+- `assets/reference/Laptop PC Web/tiktok/`: 29 desktop PNG captures.
+
+Representative Android Facebook and TikTok profile references and desktop Facebook/TikTok captures were sampled during this review. The TikTok Android profile emphasizes a creator identity row with the avatar to the right, Following/Followers/Likes metrics, Message/Following actions and a three-column short-video gallery. Its Minglora style now maps Videos to the real Videos view, displays existing account metrics in a TikTok-oriented order, aligns the creator identity/avatar, and uses a three-column native video grid while preserving Minglora relationship controls.
+
+The supplied image collection directly covers Facebook and TikTok. It does not contain identifiable reference folders for Instagram, YouTube, X, LinkedIn, Pinterest, Twitch or Snapchat. Those eight implementations therefore use original Minglora presentations inspired by each style's established high-level patterns; they are not claimed to be pixel-perfect clones. Unlabeled Android images remain unclassified rather than being guessed. Reference screenshots are not copied into the public app bundle.
+
+Profile Style Library previews now use the signed-in profile's available cover image, avatar, current post, photo/albums and videos. Empty account media areas show empty states rather than invented activity or sample statistics.
