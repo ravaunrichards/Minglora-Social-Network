@@ -2,7 +2,7 @@
   const defaults = {
     privacy: { profileVisibility: 'public', allowFriendRequests: true, messageAudience: 'everyone', meetWaveAudience: 'everyone', shareAudienceDemographics: false },
     notifications: { inApp: true, friendRequests: true, messages: true, interactions: true, push: true, profileViews: false, calls: true, live: true, gifts: true, meetWave: true, leagues: true, account: true },
-    preferences: { theme: 'system', colorTheme: 'minglora', liveRoomTheme: 'studio', feedSort: 'recent', reducedMotion: false, liteMode: false, keyboardShortcuts: false, displayCurrency: 'USD', messengerIncomingCallSounds: true, messengerMessageSounds: true, messengerAutoOpenNewMessages: false, messengerActiveStatus: true, profileLayout: 'advanced', messengerArchivedConversationIds: [], messengerRestrictedUserIds: [] }
+    preferences: { theme: 'system', colorTheme: 'minglora', liveRoomTheme: 'studio', feedSort: 'recent', reducedMotion: false, liteMode: false, keyboardShortcuts: false, displayCurrency: 'USD', messengerIncomingCallSounds: true, messengerMessageSounds: true, messengerAutoOpenNewMessages: false, messengerActiveStatus: true, profileLayout: 'advanced', profileStyle: 'facebook', profileScreenLayout: 'fluid-panel', messengerArchivedConversationIds: [], messengerRestrictedUserIds: [] }
   };
 
   const APP_THEMES = [
@@ -277,6 +277,11 @@
               <p class="settings-note">Campaign and subscription management will be added to their dedicated tools when those workflows are available. This page links to the existing wallet rather than creating duplicate transaction controls.</p>
               <p class="settings-note">Edit your public profile details, profile picture, cover photo and individual About visibility controls. Email changes are requested through the secure sign-in provider and take effect after email confirmation.</p>
               <div class="settings-profile-actions"><button type="button" class="primary" id="edit-profile-from-settings">Edit profile</button><button type="button" class="secondary" id="profile-privacy-from-settings">Profile visibility controls</button></div>
+            </section>
+            <section class="settings-card profile-style-library-card" id="settings-profile-style-library" data-settings-category="account">
+              <h2 class="settings-section-title">Profile Style Library</h2>
+              <p class="settings-note">Choose how your one Minglora profile is presented. All styles use the same account, followers, friends, posts, photos, albums, videos, reels and About information.</p>
+              <div id="profile-style-library-root"></div>
             </section>
             <section class="settings-card" id="settings-privacy" data-settings-category="visibility">
               ${sectionHeading('Privacy &amp; audience')}
@@ -663,6 +668,67 @@
         }
       }
       const settingsForm = document.querySelector('#settings-form');
+      const profileStyleLibraryRoot=document.querySelector('#profile-style-library-root');
+      const profileStyleSystem=window.MingloraProfileStyleSystem;
+      let selectedProfileStyle=profileStyleSystem?.normalize(settings.preferences.profileStyle)||'facebook';
+      let selectedProfileScreenLayout=profileStyleSystem?.normalizeLayout(settings.preferences.profileScreenLayout)||'fluid-panel';
+      function renderProfileStyleLibrary(){
+        if(!profileStyleLibraryRoot||!profileStyleSystem)return;
+        profileStyleLibraryRoot.innerHTML=
+          '<div class="profile-style-library-grid">'+profileStyleSystem.styles.map(style=>
+            '<button type="button" class="profile-style-option'+(selectedProfileStyle===style.id?' active':'')+'" data-profile-style-option="'+style.id+'" aria-pressed="'+(selectedProfileStyle===style.id?'true':'false')+'">'+
+              '<span class="profile-style-option-mark" aria-hidden="true">'+(selectedProfileStyle===style.id?'✓':'')+'</span>'+
+              '<strong>'+escapeHtml(style.name)+'</strong><small>'+escapeHtml(style.description)+'</small></button>'
+          ).join('')+'</div>'+
+          '<div class="profile-style-library-controls">'+
+            '<label class="settings-field"><span><strong>Screen layout</strong><small>Nine responsive layout presets are supported with every profile style.</small></span>'+
+              '<select id="profile-style-screen-layout">'+profileStyleSystem.screenLayouts.map(layout=>'<option value="'+layout.id+'" '+(selectedProfileScreenLayout===layout.id?'selected':'')+'>'+escapeHtml(layout.name)+'</option>').join('')+'</select></label>'+
+            '<div class="profile-style-library-actions"><button type="button" class="secondary" id="profile-style-preview">Preview selected style</button><button type="button" class="primary" id="profile-style-save">Save as default</button><button type="button" class="secondary" id="profile-style-reset">Reset to Facebook default</button></div>'+
+            '<p class="settings-note" id="profile-style-library-status" role="status" aria-live="polite">Current default: '+escapeHtml(profileStyleSystem.get(selectedProfileStyle).name)+'. Changes are saved to your Minglora account.</p>'+
+          '</div>';
+        profileStyleLibraryRoot.querySelectorAll('[data-profile-style-option]').forEach(button=>button.addEventListener('click',()=>{
+          selectedProfileStyle=profileStyleSystem.normalize(button.dataset.profileStyleOption);
+          renderProfileStyleLibrary();
+        }));
+        profileStyleLibraryRoot.querySelector('#profile-style-screen-layout')?.addEventListener('change',event=>{
+          selectedProfileScreenLayout=profileStyleSystem.normalizeLayout(event.currentTarget.value);
+        });
+        profileStyleLibraryRoot.querySelector('#profile-style-preview')?.addEventListener('click',()=>{
+          window.dispatchEvent(new CustomEvent('minglora:preview-profile-style',{detail:{style:selectedProfileStyle,screenLayout:selectedProfileScreenLayout}}));
+        });
+        const persistProfileStyle=async(reset=false)=>{
+          const status=profileStyleLibraryRoot.querySelector('#profile-style-library-status');
+          const buttons=[...profileStyleLibraryRoot.querySelectorAll('button')];
+          buttons.forEach(button=>button.disabled=true);
+          if(status)status.textContent='Saving your profile style…';
+          const style=reset?'facebook':selectedProfileStyle;
+          const layout=reset?'fluid-panel':selectedProfileScreenLayout;
+          try{
+            const saved=await api('/settings',{method:'PATCH',body:JSON.stringify({preferences:{profileStyle:style,profileScreenLayout:layout}})});
+            selectedProfileStyle=profileStyleSystem.normalize(saved.settings?.preferences?.profileStyle);
+            selectedProfileScreenLayout=profileStyleSystem.normalizeLayout(saved.settings?.preferences?.profileScreenLayout);
+            settings.preferences={...settings.preferences,...(saved.settings?.preferences||{})};
+            renderProfileStyleLibrary();
+            const currentStatus=profileStyleLibraryRoot.querySelector('#profile-style-library-status');
+            if(currentStatus)currentStatus.textContent=reset?'Reset to Facebook-style Profile. Your account data was not changed.':'Your default profile style and screen layout are saved across your Minglora sessions.';
+            window.dispatchEvent(new CustomEvent('minglora:profile-style-saved',{detail:{style:selectedProfileStyle,screenLayout:selectedProfileScreenLayout}}));
+          }catch(error){
+            buttons.forEach(button=>button.disabled=false);
+            if(status)status.textContent='Not saved. '+error.message;
+          }
+        };
+        profileStyleLibraryRoot.querySelector('#profile-style-save')?.addEventListener('click',()=>void persistProfileStyle(false));
+        profileStyleLibraryRoot.querySelector('#profile-style-reset')?.addEventListener('click',()=>void persistProfileStyle(true));
+      }
+      renderProfileStyleLibrary();
+      window.addEventListener('minglora:profile-style-saved',event=>{
+        if(!profileStyleSystem)return;
+        selectedProfileStyle=profileStyleSystem.normalize(event.detail?.style);
+        selectedProfileScreenLayout=profileStyleSystem.normalizeLayout(event.detail?.screenLayout);
+        settings.preferences={...settings.preferences,profileStyle:selectedProfileStyle,profileScreenLayout:selectedProfileScreenLayout};
+        renderProfileStyleLibrary();
+      });
+
       document.querySelector('#settings-display-currency')?.addEventListener('change',event=>{
         displayCurrency=event.currentTarget.value||'USD';
         void refreshSettingsCurrency();
