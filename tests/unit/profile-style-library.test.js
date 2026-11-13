@@ -134,7 +134,7 @@ test('all style and screen layout combinations include responsive viewport guard
 });
 
 test('profile style system assets are versioned and cached by the service worker',()=>{
-  const cssAsset='/profile-style-system.css?v=20261113-live-control-svg-pack-1';
+  const cssAsset='/profile-style-system.css?v=20261113-profile-style-library-layout-removal-1';
   assert.ok(html.includes(cssAsset),'profile style system is not linked');
   assert.ok(worker.includes("'"+cssAsset+"'"),'profile style system is not precached');
   assert.ok(html.includes('/app.js?v=20261113-live-control-svg-pack-1'));
