@@ -122,10 +122,10 @@ test('Audio LIVE follows the Video LIVE panel grid without collapsing or clippin
 
 const AUDIO_LIVE_LAYOUTS = [
   'full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel',
-  'side-by-side','spotlight','roundtable-1','roundtable-2'
+  'side-by-side','spotlight'
 ];
 
-test('Audio LIVE defines a real rounded grid template for each of the nine presets', () => {
+test('Audio LIVE defines a real rounded grid template for each of the seven screen presets', () => {
   for (const layout of AUDIO_LIVE_LAYOUTS) {
     const selectorIndex = fit.indexOf(`data-live-layout="${layout}"`);
     assert.ok(selectorIndex >= 0, layout + ' selector must exist');
@@ -140,12 +140,17 @@ test('Audio LIVE defines a real rounded grid template for each of the nine prese
   assert.match(fit, /\.live-audio-stage #live-guest-layout\.audio-guest-layout/);
 });
 
-test('All nine Audio LIVE layouts are persisted and synchronized to room participants', () => {
+test('Seven Audio LIVE screen layouts and two guest-box layouts persist and synchronize independently', () => {
   for (const layout of AUDIO_LIVE_LAYOUTS) {
     assert.ok(server.includes("'" + layout + "'"), layout + ' must be accepted by the server');
     assert.ok(app.includes("value:'" + layout + "'"), layout + ' must be available in the selector');
   }
   assert.match(server, /LIVE_SCREEN_LAYOUTS\.includes\(layout\)/);
+  assert.match(server, /LIVE_GUEST_LAYOUTS\.includes\(layout\)/);
+  assert.ok(app.includes("data-live-guest-layout='roundtable-1'"));
+  assert.ok(app.includes("data-live-guest-layout='roundtable-2'"));
+  assert.ok(fit.includes('data-live-guest-layout="roundtable-1"'));
+  assert.ok(fit.includes('data-live-guest-layout="roundtable-2"'));
   assert.match(server, /session\.liveLayout = layout/);
   assert.match(app, /topic:"minglora-live-layout"/);
   assert.match(app, /applyLiveScreenLayout\(nextLayout\)/);
