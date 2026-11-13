@@ -27,9 +27,23 @@ BEGIN
         appointment_id,
         identity_id
       )
-      MATCH FULL
       ON DELETE RESTRICT
       DEFERRABLE INITIALLY DEFERRED;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_constraint
+    WHERE conname = 'ai_appointments_reporting_manager_pair_check'
+      AND conrelid = 'public.ai_appointments'::regclass
+  ) THEN
+    ALTER TABLE public.ai_appointments
+      ADD CONSTRAINT ai_appointments_reporting_manager_pair_check
+      CHECK (
+        (reporting_manager_appointment_id IS NULL AND reporting_manager_identity_id IS NULL)
+        OR
+        (reporting_manager_appointment_id IS NOT NULL AND reporting_manager_identity_id IS NOT NULL)
+      );
   END IF;
 
   IF NOT EXISTS (
