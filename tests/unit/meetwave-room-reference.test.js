@@ -140,7 +140,6 @@ test('Every host and guest seat keeps equal dimensions across seven screen layou
   for (const layout of ['roundtable-1','roundtable-2']) {
     assert.ok(css.includes('#mw-grid[data-guest-layout="'+layout+'"]'), layout+' guest-box selector is present');
   }
-  }
   assert.ok(finalFit.includes('.mw-video-tile{'));
   assert.ok(finalFit.includes('width:100%!important'));
   assert.ok(finalFit.includes('height:100%!important'));
