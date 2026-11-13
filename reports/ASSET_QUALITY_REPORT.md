@@ -53,3 +53,14 @@ The LIVE motion generator now emits one distinct, same-origin Web Animations key
 ## Standalone model rights and integrity register
 
 The 45 standalone GLTF files present in `public/assets/gifts/` are now indexed with verified repository paths, byte sizes and Git blob identities. Automated tests recompute each Git blob SHA from the checked-out bytes. This confirms file identity and repository presence only. All 45 matching rights records remain **UNVERIFIED**; no licence or production, commercial, modification or redistribution rights are inferred from the filenames or repository location.
+
+
+## Complete-artwork display gate — 2026-11-13
+
+The Gift Studio artwork tile previously used `object-fit: cover`, which could crop the edges of a square gift image. It now uses `object-fit: contain`, centered with preserved aspect ratio. The gift-effect model/image layer also uses containment, and the existing LIVE gift picker already uses containment for its artwork.
+
+A fail-closed eligibility manifest was added at `assets/gift-assets/manifests/artwork-eligibility.json`, generated from the read-only screenshot extraction manifest and the exact canonical gift catalogue. It inventories all 1,509 extracted PNG records, their SHA-256, source screenshot/cell, source warnings and exact/ambiguous/unmatched catalogue-name mapping. It marks all 1,509 as not production-eligible until human inspection and rights evidence exist. Of those records, 1,058 have the extractor's source-edge warning and are marked `BLOCKED_POTENTIAL_CLIP`; 451 have no edge warning, which is explicitly **not proof of completeness**. The audit found 995 exact unique catalogue-name matches, 512 unmatched labels and 2 ambiguous name matches. It does not guess a catalogue mapping or invent any gift metadata.
+
+Gift Studio and LIVE now require canonical local artwork/model paths for the usable picker. A broken artwork load removes the gift from the display list, removes its preview and disables send; no emoji/generic gift image is used as a substitute. The backend catalogue remains intact for record copy/export and historical integrity. Sending is not enabled until the actual artwork image has loaded with non-zero intrinsic dimensions. CI tests verify the containment rules, fail-closed behavior, and matching HTML/service-worker asset cache versions.
+
+The new gate checks file loading and intrinsic dimensions; it does not replace a human review of every artwork's full silhouette and detail. Premium hand-authored models, rights clearance, full manual visual inspection and physical-device QA remain outstanding.
