@@ -53,13 +53,13 @@ test("the app and service worker versions move together for artwork and runtime 
   const appRef = html.match(/app\.js\?v=[^"']+/)?.[0] || "";
   const giftsRef = html.match(/gifts\.js\?v=[^"']+/)?.[0] || "";
   const stylesRef = html.match(/styles\.css\?v=[^"']+/)?.[0] || "";
-  assert.ok(appRef.includes("live-category-icons-1"));
-  assert.ok(giftsRef.includes("live-category-icons-1"));
+  assert.ok(appRef.includes("live-reward-art-icons-1"));
+  assert.ok(giftsRef.includes("live-reward-art-icons-1"));
   assert.ok(stylesRef.includes("gift-artwork-contain-1"));
   assert.ok(worker.includes(appRef));
   assert.ok(worker.includes(giftsRef));
   assert.ok(worker.includes(stylesRef));
-  assert.match(worker, /const CACHE_NAME='minglora-shell-v307-self-updating-1';/);
+  assert.match(worker, /const CACHE_NAME='minglora-shell-v308-self-updating-1';/);
 });
 
 
