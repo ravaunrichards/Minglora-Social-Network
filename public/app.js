@@ -2340,26 +2340,11 @@ function bindLiveDiscoveryBoards(sessions){
   });
   void loadLiveDiscoveryBoard('daily',sessions);
 }
+const LIVE_CONTROL_ICON_SYMBOLS = new Set(["mic","mic-off","camera","camera-off","flip","multi-guest","cohost","message","screen","fullscreen","gift","volume","volume-off","settings","share","end"]);
 function liveControlIcon(name){
-  const paths={
-    mic:"<rect x='9' y='3' width='6' height='12' rx='3'/><path d='M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6'/>",
-    "mic-off":"<path d='m3 3 18 18M9 9v2a3 3 0 0 0 5.1 2.1M15 9V6a3 3 0 0 0-5.8-1M5 11a7 7 0 0 0 12 5M12 18v3M9 21h6'/>",
-    camera:"<rect x='3' y='6' width='13' height='12' rx='2'/><path d='m16 10 5-3v10l-5-3z'/>",
-    "camera-off":"<path d='m3 3 18 18M10 6h4a2 2 0 0 1 2 2v2l5-3v10l-5-3v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2'/>",
-    flip:"<path d='M20 7v5h-5M4 17v-5h5'/><path d='M5.6 9A7 7 0 0 1 18 6l2 1M4 17l2 1a7 7 0 0 0 12.4-3'/>",
-    "multi-guest":"<circle cx='12' cy='6.5' r='3'/><circle cx='5' cy='9' r='2.3'/><circle cx='19' cy='9' r='2.3'/><path d='M6 21v-2a6 6 0 0 1 12 0v2M1.5 20v-1.2A4.3 4.3 0 0 1 5 14.6M22.5 20v-1.2a4.3 4.3 0 0 0-3.5-4.2'/>",
-    cohost:"<circle cx='8' cy='7' r='3'/><circle cx='17' cy='7' r='3'/><path d='M2 20v-1.5A5.5 5.5 0 0 1 7.5 13h1A5.5 5.5 0 0 1 14 18.5V20M13.5 13h1A5.5 5.5 0 0 1 20 19v1M10 16h4m-2-2v4'/>",
-    message:"<path d='M21 11.5a8.5 8.5 0 0 1-8.5 8.5 8.7 8.7 0 0 1-4-.95L3 21l1.95-5.5A8.7 8.7 0 0 1 4 11.5 8.5 8.5 0 1 1 21 11.5Z'/>",
-    screen:"<rect x='2.5' y='3.5' width='19' height='14' rx='2'/><path d='M8 21h8M12 17.5V21M9 10l2 2 4-4'/>",
-    fullscreen:"<path d='M8 3H3v5M16 3h5v5M21 16v5h-5M8 21H3v-5'/>",
-    gift:"<rect x='3' y='8' width='18' height='13' rx='2'/><path d='M12 8v13M3 12h18M12 8H7.5a2.5 2.5 0 1 1 2.4-3.2L12 8Zm0 0h4.5a2.5 2.5 0 1 0-2.4-3.2L12 8Z'/>",
-    volume:"<path d='M11 5 6 9H3v6h3l5 4z'/><path d='M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13'/>",
-    "volume-off":"<path d='m3 3 18 18M11 5 6 9H3v6h3l2 1.6M11 19l-1.5-1.2M16 9.5a5 5 0 0 1 .2 5M19 6.5a9 9 0 0 1 .5 10'/>",
-    settings:"<path d='M12 8.2a3.8 3.8 0 1 0 0 7.6 3.8 3.8 0 0 0 0-7.6Z'/><path d='m19.4 15 .1.1 1.2 1-1.5 2.6-1.5-.6a8 8 0 0 1-1.7 1l-.2 1.6h-3l-.3-1.6a8 8 0 0 1-1.7-1l-1.5.6-1.5-2.6 1.2-1a7 7 0 0 1 0-2l-1.2-1 1.5-2.6 1.5.6a8 8 0 0 1 1.7-1l.3-1.6h3l.2 1.6a8 8 0 0 1 1.7 1l1.5-.6 1.5 2.6-1.2 1a7 7 0 0 1 0 2Z'/>",
-    share:"<path d='M12 16V3m0 0L7 8m5-5 5 5'/><path d='M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7'/>",
-    end:"<path d='M4 14.5c4.7-4.7 11.3-4.7 16 0l-2.2 3.2a1 1 0 0 1-1.2.35l-2.8-1.15a1 1 0 0 1-.62-.93v-1.1a10 10 0 0 0-2.36 0V16a1 1 0 0 1-.62.93l-2.8 1.15a1 1 0 0 1-1.2-.35L4 14.5Z'/>"
-  };
-  return "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true' focusable='false'>"+(paths[name]||"")+"</svg>";
+  const key=String(name||'');
+  const symbol=LIVE_CONTROL_ICON_SYMBOLS.has(key)?key:'gift';
+  return "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true' focusable='false'><use href='/assets/icons/live-control-icons.svg#"+symbol+"' xlink:href='/assets/icons/live-control-icons.svg#"+symbol+"'></use></svg>";
 }
 function liveControlButton(id,icon,label,caption,options={}){
   const pressed=options.pressed===undefined?"":" aria-pressed='"+String(Boolean(options.pressed))+"'";
