@@ -1681,6 +1681,8 @@ function presentLiveGiftEvent(event){
   if(catalogueGift.image_url!==expectedImage||catalogueGift.model_url!==expectedModel)return false;
   const eventId=String(event.id||event.giftTransactionId||event.gift_transaction_id||'');
   if(!rememberLiveGiftEvent(eventId))return false;
+  const createdAt=String(event.createdAt||'');
+  if(createdAt&&createdAt>liveGiftEventsLastSeenAt)liveGiftEventsLastSeenAt=createdAt;
   const gift={...catalogueGift};
   const stage=$('#live-video-stage');
   if(!stage)return false;
@@ -1693,8 +1695,6 @@ function presentLiveGiftEvent(event){
     const sender=String(event.sender?.name||event.sender?.username||'A Minglora member');
     const recipient=String(event.recipient?.name||activeLiveSession?.host?.name||'');
     if(String(event.sender?.id||'')!==String(state.user?.id||''))toast(sender+' sent '+gift.name+(recipient?' to '+recipient:'')+' 🎁');
-    const createdAt=String(event.createdAt||'');
-    if(createdAt&&createdAt>liveGiftEventsLastSeenAt)liveGiftEventsLastSeenAt=createdAt;
   };
   imageProbe.addEventListener('load',completePresentation,{once:true});
   imageProbe.addEventListener('error',()=>{settled=true;},{once:true});
