@@ -19,7 +19,7 @@ const styles=[
 ];
 const screenLayouts=[
   'full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel',
-  'side-by-side','spotlight','roundtable-1','roundtable-2'
+  'side-by-side','spotlight'
 ];
 const viewportMatrix=[
   {name:'compact-phone',width:320,height:640},
@@ -44,8 +44,8 @@ test('all ten selectable profile styles are registered on client and server',()=
   }
 });
 
-test('all nine screen layout modes compose with all ten profile styles',()=>{
-  assert.equal(styles.length*screenLayouts.length,90,'expected 10 profile styles × 9 screen layout modes');
+test('all seven screen layout modes compose with all ten profile styles',()=>{
+  assert.equal(styles.length*screenLayouts.length,70,'expected 10 profile styles × 7 screen layout modes');
   for(const layout of screenLayouts){
     assert.ok(app.includes("id:'"+layout+"'"),'missing screen layout option: '+layout);
     assert.ok(server.includes("'"+layout+"'"),'missing server screen layout validation: '+layout);
@@ -63,7 +63,7 @@ test('profile style and screen layout preferences reuse the same account record 
   assert.ok(server.includes("PROFILE_SCREEN_LAYOUT_IDS.includes(preferences.profileScreenLayout)"));
   assert.ok(server.includes("PROFILE_SCREEN_LAYOUT_IDS.includes(preferences.defaultProfileScreenLayout)"));
   assert.ok(server.includes("'profileStyle','defaultProfileStyle','profileScreenLayout','defaultProfileScreenLayout'"));
-  assert.ok(server.includes('Choose one of the nine supported profile screen layouts'));
+  assert.ok(server.includes('Choose one of the seven supported profile screen layouts'));
   assert.ok(server.includes('profileStyle:getUserSettings(u).preferences.profileStyle,profileScreenLayout:getUserSettings(u).preferences.profileScreenLayout'));
   assert.ok(server.includes('result.defaultProfileStyle=getUserSettings(u).preferences.defaultProfileStyle'));
   assert.ok(server.includes('result.defaultProfileScreenLayout=getUserSettings(u).preferences.defaultProfileScreenLayout'));
@@ -98,7 +98,7 @@ test('profile style library supports preview, apply, save-default and reset for 
 });
 
 test('all style and screen layout combinations include responsive viewport guardrails',()=>{
-  assert.equal(styles.length*screenLayouts.length,90);
+  assert.equal(styles.length*screenLayouts.length,70);
   assert.equal(viewportMatrix.length,9);
   assert.deepEqual(viewportMatrix.map(item=>item.width),[320,360,390,430,740,768,1024,1280,2560]);
   for(const style of styles){
