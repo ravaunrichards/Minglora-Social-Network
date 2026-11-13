@@ -19,7 +19,8 @@ test('profile identity stays compact and About information is shown in its own s
   assert.notEqual(headerStart,-1);
   assert.notEqual(headerEnd,-1);
   const identity=app.slice(headerStart,headerEnd);
-  assert.match(app.slice(renderAt,app.indexOf('const showTab=',renderAt)),/class="profile-counts"/);
+  assert.match(app.slice(renderAt,app.indexOf('const showTab=',renderAt)),/profileMetricsMarkup\(data,u\.profileStyle\)/);
+  assert.match(app,/function profileMetricsMarkup\(data,style\)[\s\S]*?class="profile-counts"/);
   assert.match(identity,/u\.name/);
   assert.match(identity,/u\.username/);
   assert.doesNotMatch(identity,/u\.(bio|location)/);
