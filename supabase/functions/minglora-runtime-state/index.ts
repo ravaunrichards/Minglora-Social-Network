@@ -443,7 +443,7 @@ Deno.serve(async (req: Request) => {
       "country_of_origin","current_country","time_zone","personality","gender_presentation",
       "communication_style","interests","hobbies","education","profession","skills","languages",
       "avatar_storage_reference","cover_storage_reference","voice_preferences","avatar_preferences",
-      "locations","capabilities","memory_enabled","memory_configuration","visibility","created_at"
+      "locations","capabilities","permissions","memory_enabled","memory_configuration","visibility","created_at"
     ]);
     if (identities.some((identity: any) => Object.keys(identity).some((key: string) => !allowedFields.has(key)))) {
       return json(400, { error: "AI identity payload contains an unsupported field; provider secrets are not accepted." });
