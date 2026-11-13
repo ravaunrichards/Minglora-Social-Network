@@ -1,0 +1,22 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),"../..");
+const read=p=>fs.readFileSync(path.join(root,p),"utf8");
+test("Help Center is a standalone responsive page",()=>{
+const html=read("public/help-center.html"),css=read("public/help-center.css"),js=read("public/help-center.js");
+assert.match(html,/How can we help you\?/);assert.match(html,/hc-search-input/);assert.match(html,/hc-categories/);assert.match(html,/hc-article/);
+assert.match(css,/@media\(max-width:560px\)/);assert.match(js,/\/api\/help-center\/bootstrap/);assert.match(js,/\/api\/help-center\/search/);assert.match(js,/\/api\/help-center\/articles\//);assert.match(js,/function markdown/);
+});
+test("Help Center reuses existing support-ticket flows",()=>{
+const s=read("public/settings.js"),a=read("public/app.js"),m=read("public/minglora-menu.js"),server=read("src/server.js");
+assert.match(s,/window\.location\.assign\('\/help-center\.html'\)/);assert.match(s,/openSupport/);assert.match(a,/mingloraSupport/);assert.match(m,/destination==='help-center'/);assert.match(server,/\/api\/support\/tickets/);assert.match(server,/helpCenterGateway/);
+});
+test("No sample articles or fabricated member statistics are embedded",()=>{
+const js=read("public/help-center.js");assert.doesNotMatch(js,/Sample question|Demo question|fake views|1,234 views/i);assert.match(js,/No verified Q&A articles have been published yet/);
+});
+test("Editorial workflow buttons mirror the staged publishing lifecycle",()=>{
+const js=read("public/help-center.js");for(const stage of ["submit_review","complete_fact_check","approve","publish","archive","restore"])assert.ok(js.includes(stage));
+});
