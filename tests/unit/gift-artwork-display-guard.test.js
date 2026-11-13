@@ -61,6 +61,10 @@ test("incoming LIVE gift events only animate a successfully loaded canonical cat
   assert.ok(liveApp.includes("const expectedImage='/assets/gifts/catalog/'+code+'.svg'"));
   assert.ok(liveApp.includes("const expectedModel='/assets/gifts/catalog/'+code+'.gltf'"));
   assert.ok(liveApp.includes("const imageProbe=new Image()"));
+  const eventStart=liveApp.indexOf("function presentLiveGiftEvent(event){");
+  const eventEnd=liveApp.indexOf("function renderLiveTopGifters",eventStart);
+  const eventHandler=liveApp.slice(eventStart,eventEnd);
+  assert.ok(eventHandler.indexOf("rememberLiveGiftEvent(eventId)")<eventHandler.indexOf("new Image()"),"deduplicate before starting a potentially retried artwork request");
   assert.ok(liveApp.includes("imageProbe.naturalWidth<1||imageProbe.naturalHeight<1"));
   assert.ok(liveApp.includes("window.MingloraGiftFX?.mount(stage,gift)"));
   assert.ok(!liveApp.includes("image_url:String(event.imageUrl||event.image_url||'')"));
