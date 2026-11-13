@@ -3795,6 +3795,46 @@ Deno.serve(async (req: Request) => {
   }
 
 
+  if (action === "ai_provider_command") {
+    const actorUserId = String(input.actorUserId || "");
+    const aiAction = String(input.aiAction || "");
+    const payload = input.payload && typeof input.payload === "object" && !Array.isArray(input.payload)
+      ? input.payload
+      : {};
+    const supportedProviderCommands = [
+      "list_provider_accounts", "list_provider_models", "list_provider_assignments",
+      "create_provider_account", "create_provider_model", "assign_provider_model",
+      "set_provider_assignment_status"
+    ];
+
+    if (!validUuid(actorUserId)) {
+      return json(400, { error: "A valid signed-in Minglora user is required for AI provider access." });
+    }
+    if (!supportedProviderCommands.includes(aiAction)) {
+      return json(400, { error: "Unsupported AI provider command." });
+    }
+    if (["create_provider_account","create_provider_model","assign_provider_model","set_provider_assignment_status"].includes(aiAction)) {
+      const secretFields = ["api_key","apiKey","access_token","accessToken","password","credential","credentials","secret","provider_secret","credential_secret_ref"];
+      if (secretFields.some(field => Object.prototype.hasOwnProperty.call(payload, field))) {
+        return json(400, { error: "Provider credentials must be added through an approved secrets manager, not this API." });
+      }
+    }
+
+    const { data, error } = await admin.rpc("minglora_ai_provider_command", {
+      p_action: aiAction,
+      p_actor_user_id: actorUserId,
+      p_payload: payload
+    });
+    if (error) {
+      const code = String(error.code || "");
+      const status = code === "42501" ? 403 : code === "P0002" ? 404 : code === "23505" ? 409 : 400;
+      return json(status, {
+        error: String(error.message || "Minglora AI provider request failed.").slice(0, 240)
+      });
+    }
+    return json(200, { result: data });
+  }
+
   if (action === "ai_hr_command") {
     const actorUserId = String(input.actorUserId || "");
     const aiAction = String(input.aiAction || "");
