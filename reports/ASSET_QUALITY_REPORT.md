@@ -43,3 +43,8 @@ The sprite keeps the existing 24×24 line-art geometry and `currentColor` treatm
 ## Separate animation preset quality gates
 
 The follow-on change adds 17 individual keyframe JSON files and a deterministic generator. The generator validates supported unique IDs, duration bounds, strictly increasing frame offsets spanning 0–1, bounded opacity, local transform/filter fields and explicit reduced-motion metadata. CI builds and checks the pack. The runtime only loads the expected same-origin preset paths and retains its existing inline fallback. These files are native Web Animations API definitions; they are not Lottie/Rive files, recorded video, or animated GLTF channels. Premium per-gift audio, photorealistic models and physical-device GPU/memory testing remain open.
+
+
+## Individual per-gift keyframe delivery
+
+The LIVE motion generator now emits one distinct, same-origin Web Animations keyframe JSON for each active gift code (1,737 at the current canonical catalogue revision). A stable code-derived variation plus unique sorted ordinal differentiates each keyframe sequence. Files are fetched lazily on gift preview/play, validated against the expected gift code and animation identity, and fall back to the existing 17 preset files on any missing/invalid response. CI tests validate the full inventory and uniqueness of keyframe signatures, along with deterministic output. This improves per-gift animation identity and separation; it does **not** replace original artwork, produce photorealistic/cinematic models, create individual mastered sound effects, or satisfy real-device QA.

@@ -30,7 +30,11 @@ All 17 presets below have separate runtime JSON files under `public/assets/anima
 
 ## Per-gift motion mapping
 
-The existing `catalog-motion-index.json` links 1,737 unique active gift codes to local SVG/model paths, animation identity, motion preset, duration, one of seven effect layers and a sound preset. The effect layers are petals, waves, rings, trail, orbits, bubbles and sparkles.
+The generated `catalog-motion-index.json` links all **1,737 active gift codes** to local SVG/model paths, a unique animation identity, the existing category choreography, duration, one of seven effect layers, a sound preset and an exact same-origin `motion_asset_url`.
+
+The LIVE motion builder also creates **one distinct keyframe JSON file per active gift** under `public/assets/animations/gifts/per-gift/<gift-code>.json`. Each file carries the canonical gift code and animation key, its source semantic preset, duration, reduced-motion metadata and a stable subject/ordinal-specific keyframe variation. The generated files are lazy-loaded when a gift is previewed or played; they are not all downloaded with the initial room. The existing 17 preset files remain as a compatibility fallback if an individual file cannot be loaded.
+
+The generator's `--check` mode verifies the motion index and every generated per-gift file byte-for-byte. The unit suite checks that all active gifts have a corresponding asset and that no two active gifts share the same keyframe signature. Retired gift rows are excluded from the runtime motion index and no catalogue prices, gift status flags, transactions or balances are edited.
 
 ## Runtime and accessibility
 
@@ -43,3 +47,8 @@ The existing `catalog-motion-index.json` links 1,737 unique active gift codes to
 ## Honest format boundary
 
 These are separately stored and runtime-loaded animation definitions—not Lottie/Rive files, recorded animated video, or embedded GLTF skeletal clips. The current audio runtime synthesizes category-based Web Audio cues. A full mastered, synchronized per-gift sound library and cinematic custom scenes have not been produced.
+
+
+## Individual motion asset scope
+
+The per-gift files are individualized Web Animations API keyframes applied to each gift's existing generated SVG or GLTF model. They provide a unique motion variation and a separate runtime asset for every active gift; they are **not** individually modelled cinematic 3D scenes, Lottie/Rive files, rendered video, or authored GLTF skeletal clips. Premium high-detail models, transparent original artwork, dedicated mastered gift audio and physical-device rendering/performance checks remain separate release gates.

@@ -88,3 +88,13 @@ These are GitHub-hosted automated build, test and browser-render checks. They ar
 - [x] Added a controlled gift-art/model/audio/manifests source workspace, plus separate gift catalogue, animation catalogue and recommendation reports.
 
 The **file-based animation preset library and directory structure** are delivered by this follow-on. The complete premium art mission remains **partially complete**: the extracted crops still need human review and rights clearance; high-detail individually authored premium models, per-gift mastered audio, cinematic gift-specific scenes, Lottie/Rive options and real-device GPU/memory/battery QA have not been produced or verified. The 17 presets are reusable choreography files, not 1,737 unique cinematic animations.
+
+
+## Individual per-gift motion asset delivery — 2026-11-13
+
+- [x] Extended the existing LIVE motion-index generator to emit one versioned, subject-aware keyframe JSON file per active gift under `public/assets/animations/gifts/per-gift/`.
+- [x] Added an exact local `motion_asset_url` to each active gift's motion-index record.
+- [x] Updated the playback/preview runtime to fetch the individual file on demand, validate its gift identity and keyframes, and fall back to the established 17 shared presets when the individual file is unavailable.
+- [x] Extended unit checks to validate per-gift file presence, gift/animation identity, unique keyframe signatures, and deterministic generator output.
+
+This is a distinct per-gift motion-file delivery, not a claim that all gifts have hand-keyframed cinematic scenes or individually authored 3D models. The runtime continues to use the existing SVG/GLTF models and existing generated sound profiles. Premium artwork provenance, the 1,114-item manual review queue, per-gift mastered sound, rights clearance, and physical-device testing remain outstanding. No canonical gift names, coin prices, active/retired flags, wallet values, gift ledger entries, user data, LiveKit credentials, or source reference images were changed by this motion-only update.

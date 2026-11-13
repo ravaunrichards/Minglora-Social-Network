@@ -13,6 +13,7 @@
   let catalogMotionLoadPromise=null;
   let motionPresetAssets=new Map();
   let motionPresetLoadPromise=null;
+  const perGiftMotionAssets=new Map();
   async function loadMotionPresetAssets(){
     if(motionPresetAssets.size)return motionPresetAssets.size;
     if(motionPresetLoadPromise)return motionPresetLoadPromise;
@@ -78,6 +79,8 @@
           const code=String(item?.code||"");
           if(!code||item.active!==true||typeof item.motion_preset!=="string")continue;
           if(typeof item.image_url!=="string"||typeof item.model_url!=="string")continue;
+          const expectedMotionUrl="/assets/animations/gifts/per-gift/"+code+".json";
+          if(item.motion_asset_url!==expectedMotionUrl)item.motion_asset_url=null;
           next.set(code,item);
         }
         catalogMotionIndex=next;
@@ -92,7 +95,52 @@
   function withCatalogMotion(gift){
     if(!gift||!catalogMotionIndex)return gift;
     const profile=catalogMotionIndex.get(String(gift.code||""));
-    return profile?{...gift,motion_preset:profile.motion_preset,motion_effect:profile.motion_effect,motion_duration_ms:profile.motion_duration_ms}:gift;
+    return profile?{...gift,motion_preset:profile.motion_preset,motion_effect:profile.motion_effect,motion_duration_ms:profile.motion_duration_ms,motion_asset_url:profile.motion_asset_url}:gift;
+  }
+  async function loadPerGiftMotionAsset(gift){
+    const code=String(gift?.code||"");
+    if(!/^[a-z0-9_-]{1,59}$/.test(code))return null;
+    const expected="/assets/animations/gifts/per-gift/"+code+".json";
+    if(gift.motion_asset_url!==expected)return null;
+    if(perGiftMotionAssets.has(code))return perGiftMotionAssets.get(code);
+    const pending=(async()=>{
+      try{
+        const response=await fetch(expected,{credentials:"same-origin",cache:"force-cache"});
+        if(!response.ok)return null;
+        const asset=await response.json();
+        if(asset?.schema_version!==1||asset?.generator!=="Minglora LIVE per-gift motion generator"||asset.code!==code)return null;
+        if(asset.animation_key!==gift.animation_key||!Array.isArray(asset.keyframes)||asset.keyframes.length<3)return null;
+        let prior=-1;
+        for(const frame of asset.keyframes){
+          if(!Number.isFinite(frame.offset)||frame.offset<=prior||frame.offset<0||frame.offset>1)return null;
+          if(!Number.isFinite(frame.opacity)||frame.opacity<0||frame.opacity>1)return null;
+          if(typeof frame.transform!=="string"||frame.transform.length>360||/url\s*\(/i.test(frame.transform))return null;
+          if(typeof frame.filter!=="string"||frame.filter.length>120||/url\s*\(/i.test(frame.filter))return null;
+          prior=frame.offset;
+        }
+        if(asset.keyframes[0].offset!==0||asset.keyframes.at(-1).offset!==1)return null;
+        return asset;
+      }catch{return null;}
+    })();
+    perGiftMotionAssets.set(code,pending);
+    const asset=await pending;
+    if(!asset)perGiftMotionAssets.delete(code);
+    return asset;
+  }
+  function animateGiftSubject(element,gift,values,duration){
+    if(!element||typeof element.animate!=="function")return;
+    const reduced=Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);
+    void loadPerGiftMotionAsset(gift).then(asset=>{
+      if(!element.isConnected)return;
+      const frames=asset?.keyframes||buildPreviewFrames(gift.motion_preset||gift.animation_preset||"gift-reveal",values);
+      try{
+        element.animate(frames,{
+          duration:reduced?320:Math.max(950,Math.min(4200,Number(asset?.duration_ms)||Number(gift.motion_duration_ms)||duration||2200)),
+          easing:"cubic-bezier(.17,.85,.3,1)",
+          fill:"none"
+        });
+      }catch{}
+    });
   }
   function effectHue(effect,seed){
     const base={petals:334,waves:198,rings:46,trail:194,orbits:270,bubbles:178,sparkles:45};
@@ -323,14 +371,8 @@
     }
     outer.append(card,rays,particles);parent.append(outer);
     const motionElement=card.querySelector(".minglora-gift-fx-model");
-    if(motionElement&&gift.motion_preset&&typeof motionElement.animate==="function"){
-      const reduced=Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);
-      const semanticFrames=buildPreviewFrames(gift.motion_preset,{dx,dy,tilt,spin,peak,rebound});
-      motionElement.animate(semanticFrames,{
-        duration:reduced?320:Math.max(950,Math.min(4200,Number(gift.motion_duration_ms)||duration)),
-        easing:"cubic-bezier(.17,.85,.3,1)",
-        fill:"none"
-      });
+    if(motionElement&&gift.motion_preset){
+      animateGiftSubject(motionElement,gift,{dx,dy,tilt,spin,peak,rebound},duration);
     }
     if(options.sound!==false)play(gift);
     setTimeout(()=>outer.remove(),duration+250);
@@ -351,8 +393,7 @@
       const preset=gift.motion_preset||gift.animation_preset||"gift-reveal";
       const frames=buildPreviewFrames(preset,{dx,dy,tilt,spin,peak,rebound});
       if(typeof target.animate==="function"){
-        const reduced=Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);
-        target.animate(frames,{duration:reduced?320:Math.max(950,Math.min(4200,Number(gift.motion_duration_ms)||Number(gift.animation_duration_ms)||2200)),easing:"cubic-bezier(.17,.85,.3,1)",fill:"none"});
+        animateGiftSubject(target,gift,{dx,dy,tilt,spin,peak,rebound},Number(gift.animation_duration_ms)||2200);
       }else{
         target.classList.remove("minglora-gift-preview-pulse");void target.offsetWidth;target.classList.add("minglora-gift-preview-pulse");
       }
@@ -360,5 +401,5 @@
     return true;
   }
   void loadCatalogMotionIndex();
-  window.MingloraGiftFX={prime,play,show,mount,preview,loadCatalogMotionIndex,withCatalogMotion};
+  window.MingloraGiftFX={prime,play,show,mount,preview,loadCatalogMotionIndex,loadPerGiftMotionAsset,withCatalogMotion};
 })();
