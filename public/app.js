@@ -3643,12 +3643,15 @@ activeLivePinnedComment=null;
       liveGiftSortControl?.addEventListener("change",()=>{liveGiftSort=liveGiftSortControl.value;liveGiftVisible=48;drawLiveGiftGrid();});
       liveGiftMore?.addEventListener("click",()=>{liveGiftVisible+=48;drawLiveGiftGrid();});
       liveGiftPreviewSound?.addEventListener("click",()=>{
-        const gift=liveGiftByCode(liveGiftSelectedCode);if(!gift)return;
+        const gift=liveGiftByCode(liveGiftSelectedCode);if(!gift||!liveGiftArtworkReady.has(String(gift.code)))return;
         window.MingloraGiftFX?.preview(gift);
       });
       liveGiftSendSelected?.addEventListener("click",async()=>{
         const gift=liveGiftByCode(liveGiftSelectedCode);
-        if(!gift||liveGiftSending||role==="host"||!giftsEnabled)return;
+        if(!gift||!liveGiftArtworkReady.has(String(gift.code))||liveGiftSending||role==="host"||!giftsEnabled){
+          if(gift&&!liveGiftArtworkReady.has(String(gift.code)))toast("This gift cannot be previewed or sent until its complete artwork loads.");
+          return;
+        }
         const teamGift=MINGLORA_FAN_CLUB_GIFT_CODES.includes(gift.code);
         if(teamGift&&!liveFanClubState?.isMember){toast("Join the host Fan Club to unlock Team Gifts.");return;}
         liveGiftSending=true;window.MingloraGiftFX?.prime();updateLiveGiftPreview();
