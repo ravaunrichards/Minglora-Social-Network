@@ -74,13 +74,13 @@ In addition to the nine named screen-layout modes, CSS guardrails and responsive
 
 ## Supplied reference collection and coverage
 
-The checked-in `assets/reference` collection contains **1,013 image files** and remains preserved in place:
+The checked-in `assets/reference` collection remains preserved in place and contains at least **1,050 image files** in the current inventory (the Android directory exceeds the GitHub contents API's 1,000-entry listing cap):
 
-- `assets/reference/android/`: 963 JPEG screenshots (919 filenames marked TikTok, one Facebook, one Chrome and 42 without a platform label).
+- `assets/reference/android/`: 1,000+ JPEG screenshots, including newer unlabelled, TikTok and Facebook captures.
 - `assets/reference/Laptop PC Web/facebook/`: 21 desktop PNG captures.
 - `assets/reference/Laptop PC Web/tiktok/`: 29 desktop PNG captures.
 
-Representative Android Facebook and TikTok profile references and desktop Facebook/TikTok captures were sampled during this review. The TikTok Android profile emphasizes a creator identity row with the avatar to the right, Following/Followers/Likes metrics, Message/Following actions and a three-column short-video gallery. Its Minglora style now maps Videos to the real Videos view, displays existing account metrics in a TikTok-oriented order, aligns the creator identity/avatar, and uses a three-column native video grid while preserving Minglora relationship controls.
+Representative Android Facebook and TikTok profile references and desktop Facebook/TikTok captures were sampled during this review. The TikTok Android profile capture `assets/reference/android/Screenshot_20261112_081840_TikTok.jpg` shows the creator identity on the left, avatar on the right, Following/Followers/Likes metrics, Follow and Message actions, story-highlight circles and a three-column short-video gallery. Minglora's TikTok style follows those layout cues with the account's real three headline metrics, a right-aligned avatar, real profile Highlights, and the existing video records in a three-column grid while retaining Minglora's own relationship, subscription and calling controls.
 
 The supplied image collection directly covers Facebook and TikTok. It does not contain identifiable reference folders for Instagram, YouTube, X, LinkedIn, Pinterest, Twitch or Snapchat. Those eight implementations therefore use original Minglora presentations inspired by each style's established high-level patterns; they are not claimed to be pixel-perfect clones. Unlabeled Android images remain unclassified rather than being guessed. Reference screenshots are not copied into the public app bundle.
 
