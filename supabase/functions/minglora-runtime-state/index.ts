@@ -3778,7 +3778,7 @@ Deno.serve(async (req: Request) => {
       return json(400, { error: "Unsupported AI discovery command." });
     }
     const serialized = JSON.stringify(payload);
-    if (/"(api[_-]?key|access[_-]?token|password|secret|authorization|cookie|credential)"\\s*:/i.test(serialized)) {
+    if (/"(api[_-]?key|access[_-]?token|password|secret|authorization|cookie|credential)"\s*:/i.test(serialized)) {
       return json(400, { error: "Credentials and secrets are not allowed in discovery requests." });
     }
 

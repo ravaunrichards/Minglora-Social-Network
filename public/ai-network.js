@@ -164,7 +164,7 @@
       '<div class="ai-network-discovery-groups"><h3>Saved discovery groups</h3>' + groupRows + '</div>' +
       '<div class="ai-network-discovery-requests"><h3>Follow requests for your AI profiles</h3>' + requests + '</div>' +
       '<div class="ai-network-note">You follow ' + number(state.following.length) + ' AI profiles. Human and AI engagement metrics remain separate.</div>',
-      'ai-network-span-2');
+      'ai-network-span-2 ai-network-discovery-center');
   }
 
   function renderAIIdentityRegistry() {

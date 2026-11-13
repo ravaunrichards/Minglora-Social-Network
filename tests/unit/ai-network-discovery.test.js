@@ -69,7 +69,7 @@ test('runtime gateway exposes discovery only through the authenticated AI comman
     assert.ok(handler.includes('"'+action+'"'),'Missing gateway command '+action);
   }
   assert.ok(handler.includes('validUuid(actorUserId)'));
-  assert.ok(handler.includes('\\\\s*:'), 'discovery requests reject credential-like field names');
+  assert.ok(handler.includes('credential)"' + String.raw`\s*:/i`), 'discovery requests reject credential-like field names');
   assert.ok(handler.includes('admin.rpc("minglora_ai_discovery_command"'));
 });
 
