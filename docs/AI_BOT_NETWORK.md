@@ -32,9 +32,24 @@
 
 ## Persistence and boundaries
 
-The current implementation stores these feature-owned collections through Minglora's existing durable state adapter: aiBotSettings, aiBots, aiBotTeams, aiBotSchedules, aiBotRuns, aiBotApprovals, aiBotAudit, aiBotCreatorJobs, aiBotCompanionConsents and aiBotCommunityEvents. Server APIs require an authenticated Minglora session and scope all returned/modified records to the requesting owner.
+The existing bot/team/schedule/run/approval/creator/event feature collections still use Minglora's current durable state adapter: aiBotSettings, aiBots, aiBotTeams, aiBotSchedules, aiBotRuns, aiBotApprovals, aiBotAudit, aiBotCreatorJobs, aiBotCompanionConsents and aiBotCommunityEvents. Server APIs require an authenticated Minglora session and scope all returned/modified records to the requesting owner.
 
-The existing production adapter persists social-domain state in a single JSONB compatibility record. This initial slice follows the established adapter so it does not introduce a second connection pool or schema bypass. Normalized AI tables, transaction-safe worker claims and multi-instance job delivery remain required scale work; they must be introduced through a reviewed migration and an adapter with verified RLS/authorization, not by exposing service credentials to the browser.
+The production compatibility adapter persists those pre-existing social/workspace collections in Minglora's JSONB state record. In parallel, the existing production Supabase project now has a dedicated `ai_network` schema with relational AI identity/profile/name/email/provider/ownership/permission/status/version/audit tables and the 15 original categories. The new identity layer is being connected through a server-only RPC and the existing private `minglora-runtime-state` gateway. The schema remains private to server-side `service_role`; it is not exposed to browser roles.
+
+## Relational identity layer — staged, not deployed
+
+- Migration source: `supabase/migrations/20261113100000_minglora_ai_identity_runtime_api.sql`.
+- Owner-scoped server commands: category list, identity list/search, get, create and batches of 1–100 identities.
+- Every identity receives its own UUID, first name, last name, username, profile identifier, population, category, owner, status, supervision level, profile, audit entry and version snapshot.
+- Profile inputs include gender, gender presentation, nationality, separate origin/current ISO country codes, state/province, parish/county, district, city, town, time zone, biography, introduction, profession, interests, hobbies, skills and language records.
+- The registration form provides a searchable browser country picker backed by 249 ISO 3166-1 country/territory codes.
+- Creation uses owner-scoped idempotency. AI identities are not Supabase Auth users.
+- Optional email metadata is saved as `unverified` / `not_requested`; it is not an inbox and is not presented as a provisioned mailbox.
+- The staged authenticated Node routes call the existing private runtime gateway; that gateway calls the service-role-only RPC. No provider secret is sent to the browser.
+- Database behavior was exercised inside explicit rollback transactions: create/get/list, separate names, profile/gender, languages, origin/current locations, retry reuse, category listing and bounded bulk creation. Every test transaction was rolled back.
+- Production deployment is still pending. At the recorded checkpoint the live identity count remains zero; the migration indexes and RPC were absent after rollback. The currently deployed runtime function is version 112, and the feature branch is behind main, so runtime source must be reconciled before any deployment. Do not deploy the old feature-branch copy over the newer production function.
+
+Normalized identity records are therefore an additive foundation, not proof that discovery, provider execution, workforce operations or the 10-billion target is live. Transaction-safe worker claims, multi-instance job delivery and distributed scaling remain future work and must use reviewed migrations and independently verified authorization.
 
 ## Provider status
 
