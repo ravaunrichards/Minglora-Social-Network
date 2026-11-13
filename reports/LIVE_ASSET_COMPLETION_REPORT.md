@@ -1,7 +1,8 @@
 # Minglora LIVE — Asset Completion Report
 
 **Date:** 2026-11-13  
-**Working branch:** `feat/minglora-live-assets-audit-motion-index-20261113`  
+**Original audit branch:** `feat/minglora-live-assets-audit-motion-index-20261113`  
+**Follow-on visual QA branch:** `feat/minglora-live-visual-assets-qa-20261113`  
 **Base:** `main` at `0135432109fdfe334ea28f9af54b39b9d71c08cc`
 
 ## Completed in this branch
@@ -14,6 +15,8 @@
 - [x] Existing 45 standalone Minglora GLTF models and gift generation/runtime code identified.
 - [x] Missing LIVE gift motion-index integration identified and addressed with a deterministic generator, active-gift-only output and regression tests.
 - [x] Seven requested asset audit/catalogue/integration/quality/completion documents added under `reports/`.
+- [x] Six desktop TikTok screenshots visually inspected and PNG IHDR dimensions recorded in the machine-readable reference manifest; mistaken scheduler/feed classifications were corrected.
+- [x] Original 16-symbol LIVE dock SVG sprite added at `public/assets/icons/live-control-icons.svg`, wired into `public/app.js`, precached in `public/sw.js`, and covered by a new unit test.
 - [x] No original reference screenshots, extracted art, gift prices, balances, user records, LiveKit configuration or existing production assets were changed.
 
 ## Existing capabilities confirmed
@@ -55,3 +58,12 @@ A local build was not run in this workspace because the repository is not mounte
 ## Current status
 
 **Asset system: PARTIALLY COMPLETE.** The existing catalogue and presentation pipeline is substantial, and the missing motion-index build step is repaired in this branch. The user's full premium visual asset mission remains open until the human review, rights, high-detail art, sound and device validation items above are completed.
+
+
+## Follow-on visual QA branch — 2026-11-13
+
+The visual QA branch is intentionally additive. It does not change gift prices, active/retired catalogue flags, wallets, gift ledgers, user records, LiveKit credentials, broadcast state or existing room event handlers. It externalizes the current LIVE dock icon geometry into one original SVG symbol file and keeps the old control IDs, labels and event listeners. The app JavaScript cache token and service-worker shell cache were advanced so installed clients can fetch the new renderer and sprite together.
+
+The reference audit was corrected after opening the underlying images: `072900`, `072931` and `073154` are the actual desktop LIVE room samples; `074126` is a scheduler screenshot and `072050` is a video/feed detail. See `reports/REFERENCE_ASSET_AUDIT.md` and the updated machine-readable reference manifest. Only sampled dimensions are filled; the rest remain explicitly pending.
+
+**Follow-on branch validation:** pending GitHub Actions Node 24 CI at the time this report was updated. Do not treat the earlier successful CI run #10698 as validation of this follow-on branch.
