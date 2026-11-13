@@ -17,7 +17,7 @@ test('the overlay contract loads after mobile styles and is included in the serv
   for (const asset of [
     '/layout-safety.css?v=20261110-facebook-menu-size-scroll-2',
     '/phone-experience.css?v=20261108-phone-overlay-panels-1',
-    '/meetwave.css?v=20261108-meetwave-dialog-overlays-1'
+    '/meetwave.css?v=20261113-meetwave-guest-box-layout-separation-1'
   ]) assert.ok(sw.includes("'" + asset + "'"), 'service worker caches ' + asset);
   assert.match(sw,/^const CACHE_NAME='minglora-shell-v[0-9]+-[^']+';$/m);
 });
