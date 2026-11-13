@@ -72,7 +72,7 @@ test('runtime gateway exposes discovery only through the authenticated AI comman
   assert.ok(handler.includes('admin.rpc("minglora_ai_discovery_command"'));
 });
 
-test('AI discovery Node endpoints require a signed-in user and preserve the public/admin boundary', () => {
+test('AI discovery Node endpoints require a signed-in user without the platform-moderator gate', () => {
   const start=server.indexOf("if (p === '/api/ai-network'");
   const end=server.indexOf("if (method === 'POST' && p === '/api/webhooks/paypal')",start);
   const route=server.slice(start,end);
@@ -81,5 +81,8 @@ test('AI discovery Node endpoints require a signed-in user and preserve the publ
   assert.ok(route.includes("sub === 'following'"));
   assert.ok(route.includes("requestSupabaseState('ai_discovery_command'"));
   assert.ok(route.includes('requireAuth(user)'));
-  assert.ok(!route.includes('isModerator(user, req)\n          throw Object.assign(\n            new Error(\'Only an authorized Minglora platform administrator'));
+  const discoveryStart=route.indexOf('const runAIDiscoveryCommand');
+  const identityStart=route.indexOf('const runAIIdentityCommand',discoveryStart);
+  const discoveryHelper=route.slice(discoveryStart,identityStart);
+  assert.ok(!discoveryHelper.includes('isModerator(user, req)'));
 });

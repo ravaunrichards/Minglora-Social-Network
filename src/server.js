@@ -1315,6 +1315,107 @@ async function route(req, res) {
       const sub = p.slice('/api/ai-network'.length).replace(/^\/+/, '');
       const parts = sub.split('/').filter(Boolean).map(decodeURIComponent);
 
+      const runAIDiscoveryCommand = async (aiAction, payload = {}) => {
+        if (!isSupabasePersistence()) {
+          throw Object.assign(new Error('AI discovery requires Minglora Supabase persistence.'), { status: 503 });
+        }
+        try {
+          const response = await requestSupabaseState('ai_discovery_command', {
+            actorUserId: user.id,
+            aiAction,
+            payload
+          });
+          if (response?.skipped) {
+            throw Object.assign(new Error('AI discovery is unavailable in local-only persistence mode.'), { status: 503 });
+          }
+          return response?.result;
+        } catch (error) {
+          const message = String(error?.message || '');
+          if (/unsupported action|unsupported AI discovery command|function .*minglora_ai_discovery_command.*does not exist|could not find the function|schema cache/i.test(message)) {
+            throw Object.assign(
+              new Error('The AI discovery migration and runtime gateway must be deployed before this operation is available. No follow or discovery data was changed.'),
+              { status: 503 }
+            );
+          }
+          throw error;
+        }
+      };
+
+      if (method === 'GET' && sub === 'discover') {
+        const discoveryUrl = new URL(req.url || '/', 'http://localhost');
+        const list = key => discoveryUrl.searchParams.getAll(key)
+          .flatMap(value => value.split(','))
+          .map(value => value.trim())
+          .filter(Boolean)
+          .slice(0, 260);
+        const numeric = (key, fallback, max) => {
+          const parsed = Number.parseInt(discoveryUrl.searchParams.get(key) || String(fallback), 10);
+          return Number.isFinite(parsed) ? Math.min(Math.max(parsed, 0), max) : fallback;
+        };
+        const filters = {
+          search: String(discoveryUrl.searchParams.get('search') || '').slice(0, 120),
+          category_keys: list('category'),
+          populations: list('population'),
+          genders: list('gender'),
+          countries: list('country').map(value => value.toUpperCase()),
+          nationalities: list('nationality'),
+          languages: list('language'),
+          interests: list('interest'),
+          skills: list('skill'),
+          capabilities: list('capability'),
+          regions: list('region'),
+          profession: String(discoveryUrl.searchParams.get('profession') || '').slice(0, 100),
+          recent_days: numeric('recent_days', 0, 3650),
+          sort: discoveryUrl.searchParams.get('sort') === 'popular' ? 'popular' : 'newest'
+        };
+        const result = await runAIDiscoveryCommand('discover', {
+          filters,
+          limit: numeric('limit', 24, 100) || 24,
+          offset: numeric('offset', 0, 1000000)
+        });
+        return json(res, 200, result || { identities: [], total: 0, limit: 24, offset: 0 });
+      }
+      if (method === 'GET' && sub === 'following') {
+        const result = await runAIDiscoveryCommand('list_following');
+        return json(res, 200, result || { following: [] });
+      }
+      if (method === 'GET' && sub === 'follow-requests') {
+        const result = await runAIDiscoveryCommand('list_follow_requests');
+        return json(res, 200, result || { requests: [] });
+      }
+      if (method === 'POST' && sub === 'follow') {
+        const input = await body(req, 8000);
+        const result = await runAIDiscoveryCommand('follow', input);
+        return json(res, 200, result || {});
+      }
+      if (method === 'POST' && sub === 'bulk-follow') {
+        const input = await body(req, 12000);
+        const result = await runAIDiscoveryCommand('bulk_follow', input);
+        return json(res, 200, result || { created_or_reused: 0 });
+      }
+      if (method === 'DELETE' && parts[0] === 'following' && parts.length === 2) {
+        const result = await runAIDiscoveryCommand('unfollow', { identity_id: parts[1] });
+        return json(res, 200, result || { unfollowed: false });
+      }
+      if (method === 'PATCH' && parts[0] === 'follow-requests' && parts.length === 2) {
+        const input = await body(req, 8000);
+        const result = await runAIDiscoveryCommand('review_follow_request', { ...input, follow_id: parts[1] });
+        return json(res, 200, result || {});
+      }
+      if (method === 'GET' && sub === 'saved-groups') {
+        const result = await runAIDiscoveryCommand('list_saved_groups');
+        return json(res, 200, result || { groups: [] });
+      }
+      if (method === 'POST' && sub === 'saved-groups') {
+        const input = await body(req, 20000);
+        const result = await runAIDiscoveryCommand('save_discovery_group', input);
+        return json(res, 201, result || {});
+      }
+      if (method === 'DELETE' && parts[0] === 'saved-groups' && parts.length === 2) {
+        const result = await runAIDiscoveryCommand('delete_saved_group', { group_id: parts[1] });
+        return json(res, 200, result || { deleted: false });
+      }
+
       const runAIIdentityCommand = async (aiAction, payload = {}) => {
         if (!isSupabasePersistence()) {
           throw Object.assign(
