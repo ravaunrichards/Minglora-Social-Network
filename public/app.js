@@ -1673,32 +1673,36 @@ function rememberLiveGiftEvent(eventId){
 function presentLiveGiftEvent(event){
   if(!event||typeof event!=='object')return false;
   if(event.broadcastId&&String(event.broadcastId)!==String(activeLiveSession?.id||''))return false;
+  const code=String(event.giftCode||'');
+  const catalogueGift=liveGiftCatalogue.find(item=>String(item.code)===code);
+  if(!catalogueGift||!/^([a-z0-9_-]{1,59})$/.test(code))return false;
+  const expectedImage='/assets/gifts/catalog/'+code+'.svg';
+  const expectedModel='/assets/gifts/catalog/'+code+'.gltf';
+  if(catalogueGift.image_url!==expectedImage||catalogueGift.model_url!==expectedModel)return false;
   const eventId=String(event.id||event.giftTransactionId||event.gift_transaction_id||'');
-  if(!rememberLiveGiftEvent(eventId))return false;
-  const catalogueGift=liveGiftCatalogue.find(item=>item.code===String(event.giftCode||''));
-  const gift=catalogueGift?{
-    ...catalogueGift,
-    code:catalogueGift.code||event.giftCode,
-    name:catalogueGift.name||event.giftName||'Minglora Gift',
-    image_url:catalogueGift.image_url||event.imageUrl||event.image_url||'',
-    model_url:catalogueGift.model_url||event.modelUrl||event.model_url||'',
-    emoji:catalogueGift.emoji||event.emoji||'🎁'
-  }:{
-    code:String(event.giftCode||''),
-    name:String(event.giftName||'Minglora Gift'),
-    image_url:String(event.imageUrl||event.image_url||''),
-    model_url:String(event.modelUrl||event.model_url||''),
-    emoji:String(event.emoji||'🎁'),
-    animation_preset:String(event.animationPreset||'gift-reveal'),
-    animation_duration_ms:Number(event.animationDurationMs)||2600
-  };
+  const gift={...catalogueGift};
   const stage=$('#live-video-stage');
-  if(stage)window.MingloraGiftFX?.mount(stage,gift);
-  const sender=String(event.sender?.name||event.sender?.username||'A Minglora member');
-  const recipient=String(event.recipient?.name||activeLiveSession?.host?.name||'');
-  if(String(event.sender?.id||'')!==String(state.user?.id||''))toast(sender+' sent '+gift.name+(recipient?' to '+recipient:'')+' 🎁');
-  const createdAt=String(event.createdAt||'');
-  if(createdAt&&createdAt>liveGiftEventsLastSeenAt)liveGiftEventsLastSeenAt=createdAt;
+  if(!stage)return false;
+  const imageProbe=new Image();
+  let settled=false;
+  const completePresentation=()=>{
+    if(settled||!imageProbe.complete||imageProbe.naturalWidth<1||imageProbe.naturalHeight<1)return;
+    settled=true;
+    if(!rememberLiveGiftEvent(eventId))return;
+    window.MingloraGiftFX?.mount(stage,gift);
+    const sender=String(event.sender?.name||event.sender?.username||'A Minglora member');
+    const recipient=String(event.recipient?.name||activeLiveSession?.host?.name||'');
+    if(String(event.sender?.id||'')!==String(state.user?.id||''))toast(sender+' sent '+gift.name+(recipient?' to '+recipient:'')+' 🎁');
+    const createdAt=String(event.createdAt||'');
+    if(createdAt&&createdAt>liveGiftEventsLastSeenAt)liveGiftEventsLastSeenAt=createdAt;
+  };
+  imageProbe.addEventListener('load',completePresentation,{once:true});
+  imageProbe.addEventListener('error',()=>{settled=true;},{once:true});
+  imageProbe.src=expectedImage;
+  if(imageProbe.complete){
+    if(imageProbe.naturalWidth>0)completePresentation();
+    else settled=true;
+  }
   return true;
 }
 function renderLiveTopGifters(items,session,weeklyTitleGifters=[]){
