@@ -51,5 +51,5 @@ test("the app and service worker versions move together for artwork and runtime 
   assert.ok(worker.includes(appRef));
   assert.ok(worker.includes(giftsRef));
   assert.ok(worker.includes(stylesRef));
-  assert.match(worker, /const CACHE_NAME='minglora-shell-v305-self-updating-1';/);
+  assert.match(worker, /const CACHE_NAME='minglora-shell-v306-self-updating-1';/);
 });
