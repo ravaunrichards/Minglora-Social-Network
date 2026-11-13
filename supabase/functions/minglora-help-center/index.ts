@@ -27,13 +27,19 @@ function constantTimeEqual(a: string,b: string) {
   for (let i=0;i<a.length;i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return diff === 0;
 }
-async function requireStaff(actorUserId: string) {
+async function requireStaff(actorUserId: string, mfaVerified: boolean) {
   if (!UUID.test(actorUserId)) return null;
   const { data, error } = await admin!.from("minglora_platform_staff")
-    .select("user_id,role,active,permissions").eq("user_id",actorUserId).eq("active",true).maybeSingle();
+    .select("user_id,role,active,permissions,mfa_required").eq("user_id",actorUserId).eq("active",true).maybeSingle();
   if (error || !data) return null;
-  const permissions = Array.isArray(data.permissions) ? data.permissions : [];
-  return permissions.includes("platform:admin") || permissions.includes("help_center:manage") ? data : null;
+  if (data.mfa_required === true && mfaVerified !== true) return null;
+  const permissions = Array.isArray(data.permissions) ? data.permissions.map(String) : [];
+  const accessPermissions = [
+    "platform:admin","help_center:manage","help_center:review",
+    "help_center:fact_check","help_center:approve","help_center:publish"
+  ];
+  return permissions.some((permission:string) => accessPermissions.includes(permission))
+    ? { ...data, permissions } : null;
 }
 async function localizedNameMap(table: "help_category_translations" | "help_subcategory_translations",
   idColumn: "category_id" | "subcategory_id", ids: string[], locale: string) {
@@ -248,6 +254,7 @@ Deno.serve(async (req:Request) => {
 
   const action=requiredText(input.action,40);
   const actor=requiredText(input.actorUserId,64);
+  const mfaVerified=input.mfaVerified===true;
   const locale=requiredText(input.locale,16)||"en";
   try {
     if (["record_view","feedback","bookmarks","view_history","bookmark_add","bookmark_remove"].includes(action) && !UUID.test(actor))
@@ -287,7 +294,7 @@ Deno.serve(async (req:Request) => {
         popularRows=fallback.data||[];
       }
       return json(200,{categories:cats,subcategories:structure.subcategories,popular:popularRows,featured,recent,
-        articleCount:currentPublished.length,locale,adminAccess:Boolean((await requireStaff(actor)))});
+        articleCount:currentPublished.length,locale,adminAccess:Boolean((await requireStaff(actor,mfaVerified)))});
     }
     if (action==="search") {
       const query=requiredText(input.query,120);
@@ -357,8 +364,14 @@ Deno.serve(async (req:Request) => {
       return json(200,{ok:true});
     }
 
-    const staff=await requireStaff(actor);
+    const staff=await requireStaff(actor,mfaVerified);
     if (!staff) return fail(403,"Help Center content-management permission is required.");
+    const staffPermissions=Array.isArray(staff.permissions)?staff.permissions.map(String):[];
+    const isPlatformAdmin=staffPermissions.includes("platform:admin");
+    const canManageContent=isPlatformAdmin||staffPermissions.includes("help_center:manage");
+    const managementActions=new Set(["admin_article_save","admin_category_save","admin_subcategory_save","admin_restore_revision"]);
+    if (managementActions.has(action)&&!canManageContent)
+      return fail(403,"Help Center editor permission is required for this change.");
     if (action==="admin_overview") return json(200,await adminOverview(locale));
     if (action==="admin_article_get") {
       const id=requiredText(input.translationId,64);
@@ -400,6 +413,15 @@ Deno.serve(async (req:Request) => {
       const transitions:Record<string,string>={submit_review:"review",complete_fact_check:"fact_check",approve:"approved",publish:"published",archive:"archived",restore:"draft"};
       const next=transitions[transition];
       if (!next) return fail(400,"Choose a supported publishing workflow action.");
+      const transitionPermissions:Record<string,string>={
+        submit_review:"help_center:manage",complete_fact_check:"help_center:fact_check",
+        approve:"help_center:approve",publish:"help_center:publish",
+        archive:"help_center:manage",restore:"help_center:manage"
+      };
+      const requiredPermission=transitionPermissions[transition];
+      const canFactCheck=transition==="complete_fact_check"&&staffPermissions.includes("help_center:review");
+      if (!isPlatformAdmin&&!staffPermissions.includes(requiredPermission)&&!canFactCheck)
+        return fail(403,"Your Help Center role does not have permission for this publishing stage.");
       if (transition==="submit_review"&&t.status!=="draft") return fail(409,"Only a draft can be submitted for review.");
       if (transition==="complete_fact_check"&&(t.status!=="review"||!t.source_reference)) return fail(409,"Add a source reference and complete review before fact-checking.");
       if (transition==="approve"&&(t.status!=="fact_check"||!t.source_verified_at)) return fail(409,"Complete the fact-check stage before approval.");
