@@ -131,8 +131,21 @@ test('profile styles route to distinct native content sections and order live me
   assert.ok(app.includes("twitch:[['posts','Home'],['videos','Videos'],['reels','Clips']"));
   assert.ok(app.includes("snapchat:[['highlights','Stories'],['reels','Spotlight']"));
   assert.ok(app.includes('function profileMetricEntries(data,style)'));
-  assert.ok(app.includes("tiktok:['following','followers','likes','posts','friends','subscribers']"));
+  assert.ok(app.includes("tiktok:['following','followers','likes']"));
   assert.ok(app.includes("+profileActionMarkup+profileMetricsMarkup(data,u.profileStyle)"));
+});
+
+test('TikTok profile follows the supplied creator reference while retaining Minglora controls',()=>{
+  assert.ok(app.includes("tiktok:['following','followers','likes']"),'TikTok shows its three real headline metrics');
+  assert.ok(app.includes("if(state.profileTargetId!==profileId)state.profileTab=null;"),'new profiles select their own native start tab');
+  assert.ok(app.includes("const requestedTab=state.profileTab||profileStyleNavigation(u.profileStyle)[0]?.[0]||'posts';"),'TikTok opens Videos by default');
+  assert.ok(app.includes('data-profile-tiktok-highlight-open'),'real Highlights can be opened from the creator header');
+  assert.ok(app.includes('data-profile-tiktok-highlight-add'),'the owner can manage Highlights from the creator header');
+  assert.ok(app.includes('profile-tiktok-video-grid'),'TikTok Videos use a three-column gallery');
+  assert.ok(css.includes('grid-template-columns:minmax(0,1fr) 116px'),'the TikTok avatar is positioned in the right column');
+  assert.ok(css.includes('grid-column:2 !important'),'the TikTok avatar uses the right column');
+  assert.ok(css.includes('.profile-tiktok-highlights'),'the reference Highlights strip has dedicated styles');
+  assert.ok(fs.existsSync(path.join(root,'assets/reference/android/Screenshot_20261112_081840_TikTok.jpg')),'the supplied TikTok profile screenshot remains in the repository');
 });
 
 test('profile style preview renders the current account media and posts, not generic demo content',()=>{
