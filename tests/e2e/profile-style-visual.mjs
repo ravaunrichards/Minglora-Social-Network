@@ -112,7 +112,7 @@ function profileMarkup(style, layout) {
       cover +
       '<div class="profile-info">' +
         '<div class="profile-avatar-edit-wrap"><img class="avatar" src="/assets/default-profile-avatar-3d.svg?v=20261106-profile-defaults-2" alt="Profile picture"></div>' +
-        '<div class="profile-info-main"><h1 class="profile-name-with-badges"><span>Minglora Creator</span></h1><p class="profile-username-line">@minglora_creator</p><p>Creator and community member</p></div>' +
+        '<div class="profile-info-main"><h1 class="profile-name-with-badges"><span>Minglora Creator</span></h1><p class="profile-username-line">@minglora_creator</p></div>' +
         actions +
         '<div class="profile-counts" aria-label="Profile counts">' + metricMarkup(style) + '</div>' +
       '</div>' +
@@ -213,7 +213,7 @@ try {
     const results = await page.evaluate(({ styles, layouts, viewportName }) => {
       const root = document.querySelector('.minglora-profile-page');
       const main = document.querySelector('#main-content');
-      const checks = [];
+      const allFailures = [];
       const intersects = (a, b) => a.left < b.right - 1 && a.right > b.left + 1 && a.top < b.bottom - 1 && a.bottom > b.top + 1;
       for (const style of styles) {
         for (const layout of layouts) {
@@ -256,10 +256,10 @@ try {
           add(root.querySelectorAll('.profile-counts [data-profile-metric]').length === (style === 'tiktok' ? 3 : 6), 'real-style-metric-count');
           add(root.querySelectorAll('.profile-media-grid .profile-media-tile').length === 6, 'media-grid-content-present');
           add(root.querySelectorAll('.profile-friends-grid .profile-friend-card').length === 6, 'friends-grid-content-present');
-          return checks.map(item => ({ ...item, style, layout, viewport: viewportName }));
+          allFailures.push(...checks.map(item => ({ ...item, style, layout, viewport: viewportName })));
         }
       }
-      return checks;
+      return allFailures;
     }, { styles, layouts, viewportName: viewport.name });
 
     browserChecks += styles.length * layouts.length;
