@@ -27,6 +27,11 @@ function constantTimeEqual(a: string,b: string) {
   for (let i=0;i<a.length;i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return diff === 0;
 }
+async function requirePermanentMember(actorUserId: string): Promise<boolean> {
+  if (!UUID.test(actorUserId)) return false;
+  const { data, error } = await admin!.auth.admin.getUserById(actorUserId);
+  return !error && Boolean(data.user) && data.user.is_anonymous !== true;
+}
 async function requireStaff(actorUserId: string, mfaVerified: boolean) {
   if (!UUID.test(actorUserId)) return null;
   const { data, error } = await admin!.from("minglora_platform_staff")
@@ -257,8 +262,12 @@ Deno.serve(async (req:Request) => {
   const mfaVerified=input.mfaVerified===true;
   const locale=requiredText(input.locale,16)||"en";
   try {
-    if (["record_view","feedback","bookmarks","view_history","bookmark_add","bookmark_remove"].includes(action) && !UUID.test(actor))
-      return fail(401,"A valid Minglora member session is required.");
+    const memberActions=["record_view","feedback","bookmarks","view_history","bookmark_add","bookmark_remove"];
+    if (memberActions.includes(action)) {
+      if (!UUID.test(actor)) return fail(401,"A valid Minglora member session is required.");
+      if (!(await requirePermanentMember(actor)))
+        return fail(403,"Sign in with a permanent Minglora account to save answers or submit feedback.");
+    }
 
     if (action==="bootstrap") {
       const structure=await categoriesPayload(locale);
