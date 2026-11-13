@@ -102,6 +102,7 @@ declare
   v_created jsonb := '[]'::jsonb;
   v_failed jsonb := '[]'::jsonb;
   v_created_count integer := 0;
+  v_reused_count integer := 0;
   v_failed_count integer := 0;
   v_index integer := 0;
 begin
@@ -265,7 +266,11 @@ begin
         v_index := v_index + 1;
         v_result := public.minglora_ai_identity_command('create', p_actor_user_id, v_item);
         v_created := v_created || jsonb_build_array(v_result);
-        v_created_count := v_created_count + 1;
+        if coalesce((v_result->>'reused')::boolean, false) then
+          v_reused_count := v_reused_count + 1;
+        else
+          v_created_count := v_created_count + 1;
+        end if;
       exception when others then
         v_failed := v_failed || jsonb_build_array(jsonb_build_object(
           'index', v_index,
@@ -278,6 +283,8 @@ begin
     end loop;
     return jsonb_build_object(
       'created_count', v_created_count,
+      'reused_count', v_reused_count,
+      'succeeded_count', v_created_count + v_reused_count,
       'failed_count', v_failed_count,
       'created', v_created,
       'failed', v_failed
