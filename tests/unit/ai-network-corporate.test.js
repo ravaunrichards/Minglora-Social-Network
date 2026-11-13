@@ -47,8 +47,8 @@ test('organization creation is owner-scoped and retry-safe', () => {
   assert.match(migration, /ai_organizations_owner_idempotency_uq/i);
   assert.match(migration, /on conflict \(owner_user_id,idempotency_key\)[\s\S]*do nothing/i);
   assert.match(migration, /where o\.owner_user_id=p_actor_user_id/i);
-  assert.match(migration, /create departments/i);
-  assert.match(migration, /create positions/i);
+  assert.match(migration, /v_action\s*=\s*'create_departments'/i);
+  assert.match(migration, /v_action\s*=\s*'create_positions'/i);
   assert.match(migration, /ai_employment_records/i);
   assert.match(migration, /ai_employment_history/i);
 });
