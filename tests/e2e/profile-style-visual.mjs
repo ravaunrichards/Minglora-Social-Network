@@ -161,6 +161,57 @@ function contentType(file) {
   })[ext] || 'application/octet-stream';
 }
 
+let activeVisualProfileCase = { style: 'facebook', layout: 'fluid-panel', sequence: 0 };
+
+function visualQaApiResponse(pathname) {
+  const user = {
+    id: 'visual-qa-member',
+    name: 'Minglora Visual QA Member',
+    username: 'visual_qa_member',
+    email: 'visual-qa@example.test',
+    profileStyle: activeVisualProfileCase.style,
+    profileScreenLayout: activeVisualProfileCase.layout,
+    profileLayout: 'advanced',
+    avatar: '/assets/default-profile-avatar-3d.svg',
+    cover: '/assets/default-profile-cover.svg',
+    bio: 'A browser-only sample account for validating Minglora profile layouts.',
+    platformRole: 'member'
+  };
+  if (pathname === '/api/auth/me') return { user };
+  if (pathname === '/api/users') return { users: [] };
+  if (pathname === '/api/discovery/people') return { users: [] };
+  if (pathname === '/api/groups') return { groups: [] };
+  if (pathname === '/api/feed') return { posts: [] };
+  if (pathname === '/api/stories') return { stories: [] };
+  if (pathname === '/api/notifications') return { notifications: [] };
+  if (pathname === '/api/messages') return { conversations: [] };
+  if (pathname === '/api/settings') return { settings: { preferences: {} } };
+  if (/^\/api\/users\/qa-profile-[0-9]+$/.test(pathname)) {
+    return {
+      user,
+      posts: [],
+      friends: [],
+      photos: [],
+      albums: [],
+      reels: [],
+      following: true,
+      friendship: 'accepted',
+      followersCount: 1284,
+      followingCount: 316,
+      friendsCount: 87,
+      subscribersCount: 42,
+      likesCount: 975,
+      subscription: { activeSubscribers: 42, settings: { subscriptions_enabled: false }, tier: null }
+    };
+  }
+  if (/^\/api\/users\/qa-profile-[0-9]+\/profile-status$/.test(pathname)) return { status: null };
+  if (/^\/api\/users\/qa-profile-[0-9]+\/check-ins$/.test(pathname)) return { checkIns: [] };
+  if (/^\/api\/users\/qa-profile-[0-9]+\/events$/.test(pathname)) return { events: [] };
+  if (/^\/api\/users\/qa-profile-[0-9]+\/highlights$/.test(pathname)) return { highlights: [] };
+  if (pathname.startsWith('/api/subscriptions/creator/')) return { subscription: null };
+  return {};
+}
+
 const server = http.createServer((req, res) => {
   const requestUrl = new URL(req.url || '/', 'http://127.0.0.1');
   if (requestUrl.pathname === '/__profile-style-visual') {
@@ -173,7 +224,14 @@ const server = http.createServer((req, res) => {
     res.end(htmlFixture(style, layout));
     return;
   }
-  const relative = decodeURIComponent(requestUrl.pathname).replace(/^\/+/, '');
+  if (requestUrl.pathname.startsWith('/api/')) {
+    const payload = visualQaApiResponse(requestUrl.pathname);
+    res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+    res.end(JSON.stringify(payload));
+    return;
+  }
+  const requestedPath = decodeURIComponent(requestUrl.pathname).replace(/^\/+/, '');
+  const relative = requestedPath || 'index.html';
   const file = path.resolve(publicDir, relative);
   if (!file.startsWith(publicDir + path.sep)) {
     res.writeHead(403); res.end('Forbidden'); return;
