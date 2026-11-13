@@ -413,11 +413,12 @@ try {
           const root = document.querySelector('.minglora-profile-page');
           const main = document.querySelector('#main-content');
           const avatar = root?.querySelector('.profile-avatar-edit-wrap .avatar');
-          const identity = root?.querySelector('.profile-name-with-badges span:first-child') ||
-            root?.querySelector('.profile-name-with-badges');
-          const identityRange = document.createRange();
-          if (identity) identityRange.selectNodeContents(identity);
-          const identityRect = identity ? identityRange.getBoundingClientRect() : null;
+          const identity = root?.querySelector('.profile-header-card .profile-info-main');
+          const nameNode = identity?.querySelector('.profile-name-with-badges span:first-child') ||
+            identity?.querySelector('.profile-name-with-badges') ||
+            identity?.querySelector('h1');
+          const identityRect = identity?.getBoundingClientRect();
+          const nameRect = nameNode?.getBoundingClientRect();
           const avatarRect = avatar?.getBoundingClientRect();
           const rootRect = root?.getBoundingClientRect();
           const mainRect = main?.getBoundingClientRect();
@@ -436,7 +437,8 @@ try {
           add(Boolean(root && rootRect?.width > 0 && rootRect?.height > 0), 'production-profile-rendered');
           add(Boolean(main && rootRect?.left >= mainRect.left - 2 && rootRect?.right <= mainRect.right + 2), 'production-profile-within-main-column');
           add(Boolean(avatarRect?.width >= 48 && avatarRect?.height >= 48), 'production-avatar-visible');
-          add(Boolean(identityRect?.width > 0 && identityRect?.height > 0), 'production-identity-visible');
+          add(Boolean(identityRect?.width > 0 && identityRect?.height > 0), 'production-identity-container-visible');
+          add(Boolean(nameRect?.width > 0 && nameRect?.height > 0), 'production-display-name-visible');
           add(!intersects(avatarRect, identityRect), 'production-avatar-identity-no-overlap');
           add(actions.length === 3, 'production-owner-actions-visible', actions.length + '/3');
           add(metrics.length === (style === 'tiktok' ? 3 : 6), 'production-style-metrics-visible', metrics.length);
