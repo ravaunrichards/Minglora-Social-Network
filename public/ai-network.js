@@ -3,7 +3,7 @@
 
   const API = '/api/ai-network';
   const root = () => document.getElementById('main-content');
-  const state = { snapshot: null, busy: false, error: '', notice: '' };
+  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '' };
   const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[character]));
@@ -61,6 +61,79 @@
       (bot.status !== 'archived' ? '<button type="button" class="secondary" data-ai-action="bot-status" data-id="' + esc(bot.id) + '" data-status="archived">Archive</button>' : '') +
       '</div></article>'
     ).join('') + '</div>';
+  }
+
+  function renderAIIdentityRows(registry) {
+    const identities = list(registry?.identities);
+    if (!identities.length) return empty('No AI identities are registered in the relational database yet.');
+    return '<div class="ai-network-list">' + identities.map(record => {
+      const identity = record.identity || {};
+      const name = record.name || {};
+      const profile = record.profile || {};
+      const email = record.primary_email;
+      const display = name.display_name || name.full_name || [name.first_name, name.last_name].filter(Boolean).join(' ');
+      const emailStatus = email
+        ? 'Email record: ' + esc(email.provisioning_status || 'not_requested') + ' · ' + esc(email.verification_status || 'unverified')
+        : 'No email identity record';
+      return '<article class="ai-network-list-row"><div class="ai-network-list-main">' +
+        '<div class="ai-network-avatar" aria-hidden="true">AI</div><div><strong>' + esc(display || 'AI identity') + '</strong>' +
+        '<div class="ai-network-meta">' + pill('AI IDENTITY', 'ai') + ' ' + pill(identity.status || 'created') + ' ' + pill(identity.population || 'independent') + '</div>' +
+        '<small>@' + esc(name.username || 'username unavailable') + ' · ' + esc(identity.category_key || 'uncategorized') + ' · ' + esc(profile.gender || 'not specified') + '</small>' +
+        '<p>' + emailStatus + '</p><small>' + esc(identity.identity_id || '') + '</small></div></div></article>';
+    }).join('') + '</div>';
+  }
+
+  function renderAIIdentityRegistry() {
+    const registry = state.identityRegistry;
+    const categories = list(state.identityCategories);
+    const categoryOptions = categories.map(category => ({ value:category.category_key, label:category.display_name }));
+    const warning = state.identityError
+      ? '<div class="ai-network-alert ai-network-alert--warning" role="status">' + esc(state.identityError) + '</div>'
+      : '<p class="ai-network-note">Each record is a distinct AI identity. No human login account or email inbox is created.</p>';
+    const form = '<form class="ai-network-form" data-ai-form="identity">' +
+      '<div class="ai-network-form-title">Register an AI identity</div>' +
+      '<div class="ai-network-form-grid"><label>First name<input name="firstName" required maxlength="80" autocomplete="off"></label>' +
+      '<label>Last name<input name="lastName" required maxlength="80" autocomplete="off"></label>' +
+      '<label>Middle name (optional)<input name="middleName" maxlength="80" autocomplete="off"></label>' +
+      '<label>Display name<input name="displayName" maxlength="120" placeholder="Defaults to full name"></label>' +
+      '<label>Username<input name="username" required minlength="3" maxlength="30" pattern="[a-z0-9_]+" autocomplete="off" placeholder="lowercase_username"></label>' +
+      '<label>AI category<select name="categoryKey" required ' + (!categories.length ? 'disabled' : '') + '>' +
+      (categoryOptions.length ? options(categoryOptions, categoryOptions[0].value) : '<option value="">Categories unavailable</option>') + '</select></label>' +
+      '<label>AI population<select name="population">' + options([
+        {value:'independent',label:'Independent AI'},
+        {value:'organizational',label:'Organizational AI'},
+        {value:'specialized_service',label:'Specialized AI service'}
+      ], 'independent') + '</select></label>' +
+      '<label>Gender<select name="gender">' + options([
+        {value:'female',label:'Female AI'},{value:'male',label:'Male AI'},
+        {value:'non_binary',label:'Non-binary AI'},{value:'other',label:'Other'},
+        {value:'prefer_not_to_say',label:'Prefer not to specify'}
+      ], 'prefer_not_to_say') + '</select></label></div>' +
+      '<label>Purpose / introduction<textarea name="purpose" maxlength="1200" rows="2" placeholder="Describe this AI identity and its purpose."></textarea></label>' +
+      '<label>Email address (optional; record only)<input name="emailAddress" type="email" maxlength="320" placeholder="No inbox is created or claimed"></label>' +
+      '<button class="primary" type="submit" ' + (!categories.length || !window.crypto?.randomUUID ? 'disabled' : '') + '>Create relational AI identity</button>' +
+      '</form>';
+    return card('AI Identity & Profile Registry', 'RELATIONAL IDENTITY FOUNDATION',
+      '<p>Registered identities are stored individually in Minglora Supabase. Human authentication accounts are kept separate.</p>' +
+      warning + '<div class="ai-network-quick-stats"><div><span>Registered identities</span><strong>' +
+      (registry ? number(registry.total) : 'Unavailable') + '</strong></div><div><span>Categories available</span><strong>' + number(categories.length) +
+      '</strong></div></div>' + renderAIIdentityRows(registry) + form, 'ai-network-span-2');
+  }
+
+  async function loadAIIdentityRegistry() {
+    state.identityError = '';
+    try {
+      const [registry, categoryResult] = await Promise.all([
+        request('/identities?limit=10'),
+        request('/categories')
+      ]);
+      state.identityRegistry = registry;
+      state.identityCategories = list(categoryResult.categories);
+    } catch (error) {
+      state.identityRegistry = null;
+      state.identityCategories = [];
+      state.identityError = error.message || 'Relational AI identity service is unavailable.';
+    }
   }
 
   function renderTeams(teams, bots) {
@@ -187,6 +260,7 @@
       (state.error ? '<div class="ai-network-alert ai-network-alert--error" role="alert">' + esc(state.error) + '</div>' : '') +
       '<div class="ai-network-quick-stats"><div><span>My bots</span><strong>' + number(performance.botCount) + '</strong></div><div><span>Teams</span><strong>' + number(performance.teamCount) + '</strong></div><div><span>Pending reviews</span><strong>' + number(performance.pendingApprovals) + '</strong></div><div><span>Recorded runs</span><strong>' + number(performance.measuredRunCount) + '</strong></div></div>' +
       '<div class="ai-network-grid">' +
+      renderAIIdentityRegistry() +
       card('Bot Personality Laboratory', '01 · PERSONALITY', '<p>Build unique AI helpers with a clear purpose, tone, traits, expertise and permitted tasks.</p>' +
         renderBotRows(bots) + '<form class="ai-network-form" data-ai-form="bot"><div class="ai-network-form-title">Create a new AI bot</div>' +
         '<label>Bot name<input name="name" required minlength="2" maxlength="40" placeholder="Community Guide"></label>' +
@@ -251,6 +325,7 @@
     host.innerHTML = '<section class="ai-network-loading" role="status"><span class="ai-network-spinner" aria-hidden="true"></span><strong>Opening your AI Network workspace…</strong></section>';
     try {
       state.snapshot = await request();
+      await loadAIIdentityRegistry();
       renderSnapshot(state.snapshot);
     } catch (error) {
       state.error = error.message;
@@ -262,6 +337,7 @@
   async function refresh(message) {
     if (message) setNotice(message);
     state.snapshot = await request();
+    await loadAIIdentityRegistry();
     renderSnapshot(state.snapshot);
   }
 
@@ -271,6 +347,22 @@
     const value = key => String(data.get(key) ?? '').trim();
     const payload = {};
     let path = '';
+    if (kind === 'identity') {
+      path = '/identities';
+      form.dataset.idempotencyKey = form.dataset.idempotencyKey || window.crypto.randomUUID();
+      payload.population = value('population');
+      payload.category_key = value('categoryKey');
+      payload.idempotency_key = form.dataset.idempotencyKey;
+      payload.purpose = value('purpose');
+      payload.name = {
+        first_name: value('firstName'),
+        middle_name: value('middleName'),
+        last_name: value('lastName'),
+        display_name: value('displayName'),
+        username: value('username').toLowerCase()
+      };
+      payload.profile = { gender: value('gender') };
+      if (value('emailAddress')) payload.email = { email_address: value('emailAddress') };
     if (kind === 'bot') {
       path = '/bots';
       payload.name = value('name');
@@ -322,7 +414,8 @@
     } else return;
     await request(path, { method: kind === 'settings' || kind === 'languages' ? 'PATCH' : 'POST', body: payload });
     form.reset();
-    await refresh('Saved successfully.');
+    if (kind === 'identity') form.dataset.idempotencyKey = window.crypto.randomUUID();
+    await refresh(kind === 'identity' ? 'AI identity record saved in Minglora Supabase.' : 'Saved successfully.');
   }
 
   const onSubmit = async event => {
