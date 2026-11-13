@@ -271,7 +271,7 @@ export async function handleHelpCenterAction(
 
     if (action === "help_admin_article_list") {
       const status = asText(input.status, 20);
-      let query = admin.from("help_articles").select("id,slug,question,excerpt,category_id,status,featured,author_id,reviewer_id,approver_id,publisher_id,published_at,updated_at,help_categories(name,slug)", { count: "exact" })
+      let query = admin.from("help_articles").select("id,slug,question,excerpt,category_id,status,featured,author_id,reviewer_id,approver_id,publisher_id,published_at,updated_at,help_categories(name,slug),help_article_subcategories(subcategory_id)", { count: "exact" })
         .order("updated_at", { ascending: false }).range(0, 199);
       if (status && status !== "all") query = query.eq("status", status);
       const { data, error, count } = await query;
