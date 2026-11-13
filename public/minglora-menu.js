@@ -428,6 +428,12 @@
   }
 
   async function openSettingsDestination(destination) {
+    if (destination === 'help-center') {
+      if (typeof window.closeAccountSwitcherMenu === 'function') window.closeAccountSwitcherMenu();
+      if (typeof window.MingloraActivateView !== 'function') throw new Error('The Help Center could not be opened. Please try again.');
+      window.MingloraActivateView('help-center');
+      return;
+    }
     const openSettings = window.MingloraSettings?.open;
     if (typeof openSettings !== 'function') {
       throw new Error('Minglora Settings could not be opened. Please try again.');
