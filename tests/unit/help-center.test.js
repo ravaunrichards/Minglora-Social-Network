@@ -36,3 +36,12 @@ assert.match(edge,/help_center:approve/);
 assert.match(edge,/help_center:publish/);assert.match(edge,/recentlyAdded/);
 assert.match(server,/mfaVerified:activeHelpSession\?\.mfaVerified===true/);
 });
+
+test("search indexes article content, keywords, and canonical category and subcategory names",()=>{
+const migration=read("supabase/migrations/20261113203000_minglora_help_center_taxonomy_search.sql");
+assert.match(migration,/t\.search_document@@websearch_to_tsquery/);
+assert.match(migration,/help_keywords/);
+assert.match(migration,/ct\.title ilike/);
+assert.match(migration,/st\.title ilike/);
+assert.match(migration,/greatest\(1,least\(coalesce\(p_limit,20\),50\)\)/);
+});
