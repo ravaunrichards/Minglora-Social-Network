@@ -512,7 +512,7 @@
     const message = kind === 'identity'
       ? 'AI identity record saved in Minglora Supabase.'
       : kind === 'identity-bulk'
-        ? 'Bulk identity batch: ' + number(result.created_count) + ' created; ' + number(result.failed_count) + ' failed.'
+        ? 'Bulk identity batch: ' + number(result.created_count) + ' created; ' + number(result.reused_count) + ' reused; ' + number(result.failed_count) + ' failed.'
         : 'Saved successfully.';
     await refresh(message);
   }
