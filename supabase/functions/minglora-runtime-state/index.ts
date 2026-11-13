@@ -3795,6 +3795,45 @@ Deno.serve(async (req: Request) => {
   }
 
 
+  if (action === "ai_task_command") {
+    const actorUserId = String(input.actorUserId || "");
+    const aiAction = String(input.aiAction || "");
+    const payload = input.payload && typeof input.payload === "object" && !Array.isArray(input.payload)
+      ? input.payload
+      : {};
+    const supportedTaskCommands = [
+      "create_task", "list_tasks", "approve_task", "reject_task", "cancel_task",
+      "claim_next_task", "heartbeat_task", "complete_task", "fail_task"
+    ];
+
+    if (!validUuid(actorUserId)) {
+      return json(400, { error: "A valid signed-in Minglora user is required for AI task access." });
+    }
+    if (!supportedTaskCommands.includes(aiAction)) {
+      return json(400, { error: "Unsupported AI task command." });
+    }
+    if (["create_task","complete_task"].includes(aiAction)) {
+      const serialized = JSON.stringify(payload);
+      if (/"(api[_-]?key|access[_-]?token|password|secret|authorization|cookie|credential)"\s*:/i.test(serialized)) {
+        return json(400, { error: "Credentials and secrets are not allowed in AI task payloads or results." });
+      }
+    }
+
+    const { data, error } = await admin.rpc("minglora_ai_task_command", {
+      p_action: aiAction,
+      p_actor_user_id: actorUserId,
+      p_payload: payload
+    });
+    if (error) {
+      const code = String(error.code || "");
+      const status = code === "42501" ? 403 : code === "P0002" ? 404 : code === "23505" ? 409 : 400;
+      return json(status, {
+        error: String(error.message || "Minglora AI task request failed.").slice(0, 240)
+      });
+    }
+    return json(200, { result: data });
+  }
+
   if (action === "ai_provider_command") {
     const actorUserId = String(input.actorUserId || "");
     const aiAction = String(input.aiAction || "");
