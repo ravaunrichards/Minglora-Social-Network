@@ -27,7 +27,8 @@ test('LIVE Goody Bag and Treasure Box use distinct original vector artwork',()=>
 
 test('the actual LIVE reward list renders its original SVG icons without emoji artwork',()=>{
   assert.ok(app.includes("live-reward-icons.svg#goody-bag"));
-  assert.ok(app.includes("live-reward-icons.svg#"+(goody?'goody-bag':'treasure-box')"));
+  assert.ok(app.includes("live-reward-icons.svg#"));
+  assert.ok(app.includes("(goody?'goody-bag':'treasure-box')"));
   assert.ok(app.includes("live-reward-empty-icon"));
   assert.doesNotMatch(app,/<div class='live-reward-art'[^\n]*>[^<]*<span>/);
 });
