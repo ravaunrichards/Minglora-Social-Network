@@ -29,7 +29,9 @@
 - [x] Added required first/last-name separation, username validation, idempotency, ownership checks, profile/gender, language/location, audit/version/status and optional email identity records.
 - [x] Email identity rows remain `unverified` and `not_requested`; no Supabase Auth account or inbox is automatically created.
 - [x] Added the `ai_identity_command` action to the existing runtime gateway source and authenticated Minglora API routes for categories and identity CRUD/bulk create.
-- [x] Added a relational identity registry and creation form to the existing AI Network workspace; it reads actual database results and labels AI/email state honestly.
+- [x] Added a relational identity registry, individual creation form and controlled 1–100 JSON bulk-import form to the existing AI Network workspace; it reads actual database results and labels AI/email state honestly.
+- [x] Added searchable country-of-origin/current-country inputs for 249 unique ISO 3166-1 country and territory codes, plus profile location, nationality, profession, interests, hobbies, skills, gender presentation, biography, introduction and primary-language inputs.
+- [x] Verified the relational GET response returns two language records (one primary) and separate origin/current location records in a rollback-only transaction.
 - [x] Added static regression tests at `tests/unit/ai-network-relational.test.js` and focused GitHub Actions workflow `.github/workflows/ai-network-checks.yml`.
 - [x] Verified migration/function behavior in a transaction that was explicitly rolled back: 15 categories, create/get/list, separated names, gender/profile, retry reuse and 1/1 bulk create with zero failures.
 - [x] Verified production remained unchanged after rollback: 0 persisted identities, 0 migration indexes and no deployed RPC function.
@@ -38,7 +40,7 @@
 - [ ] Update/deploy the production runtime Edge Function after reconciling against its current deployed version; feature branch is 80 commits behind main, so the branch copy must not overwrite the newer runtime.
 - [ ] Verify live authenticated HTTP create/list/get/bulk flows and database rows after the two deployment steps.
 - [ ] GitHub Actions run status is not yet confirmed; the latest combined commit status returned no checks.
-- [ ] Country selectors, full profile editing, discovery filters, provider assignment workflows and remaining Phase 2 capabilities are still unfinished.
+- [ ] Full profile editing/media uploads, global discovery filters and saved discovery groups, following workflows, provider assignment workflows and remaining Phase 2 capabilities are still unfinished.
 
 ## Deployment safety boundary
 
