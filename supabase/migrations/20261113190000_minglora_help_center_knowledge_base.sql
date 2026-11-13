@@ -129,7 +129,8 @@ CREATE TABLE IF NOT EXISTS public.help_article_views (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   article_id uuid NOT NULL REFERENCES public.help_articles(id) ON DELETE CASCADE,
   user_id uuid REFERENCES public.profiles(id) ON DELETE SET NULL,
-  viewed_at timestamptz NOT NULL DEFAULT now()
+  viewed_at timestamptz NOT NULL DEFAULT now(),
+  view_day date GENERATED ALWAYS AS ((viewed_at AT TIME ZONE 'UTC')::date) STORED
 );
 
 CREATE TABLE IF NOT EXISTS public.help_article_assets (
@@ -157,10 +158,12 @@ CREATE INDEX IF NOT EXISTS help_subcategories_category_sort_idx ON public.help_s
 CREATE INDEX IF NOT EXISTS help_articles_published_category_idx ON public.help_articles(category_id,published_at DESC) WHERE status='published';
 CREATE INDEX IF NOT EXISTS help_articles_search_gin_idx ON public.help_articles USING gin(search_vector) WHERE status='published';
 CREATE INDEX IF NOT EXISTS help_articles_updated_idx ON public.help_articles(updated_at DESC) WHERE status='published';
+CREATE UNIQUE INDEX IF NOT EXISTS help_articles_unique_active_question_idx ON public.help_articles ((lower(trim(question)))) WHERE status <> 'archived';
 CREATE INDEX IF NOT EXISTS help_article_subcategories_subcategory_idx ON public.help_article_subcategories(subcategory_id,sort_order);
 CREATE INDEX IF NOT EXISTS help_article_feedback_article_idx ON public.help_article_feedback(article_id,helpful);
 CREATE INDEX IF NOT EXISTS help_article_views_article_date_idx ON public.help_article_views(article_id,viewed_at DESC);
 CREATE INDEX IF NOT EXISTS help_article_views_user_date_idx ON public.help_article_views(user_id,viewed_at DESC) WHERE user_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS help_article_views_daily_unique_idx ON public.help_article_views(article_id,user_id,view_day);
 CREATE INDEX IF NOT EXISTS help_search_events_date_idx ON public.help_search_events(created_at DESC);
 
 ALTER TABLE public.help_categories ENABLE ROW LEVEL SECURITY;
@@ -275,5 +278,65 @@ FROM seed s JOIN public.help_categories c ON c.slug=s."categorySlug"
 ON CONFLICT(slug) DO UPDATE SET
  category_id=EXCLUDED.category_id,name=EXCLUDED.name,kind=EXCLUDED.kind,
  source_specs=EXCLUDED.source_specs,sort_order=EXCLUDED.sort_order,updated_at=now();
+
+
+CREATE OR REPLACE FUNCTION public.help_replace_article_subcategories(
+  p_article_id uuid,
+  p_subcategory_ids uuid[] DEFAULT ARRAY[]::uuid[]
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $
+DECLARE
+  article_category_id uuid;
+BEGIN
+  SELECT category_id INTO article_category_id
+  FROM public.help_articles
+  WHERE id = p_article_id
+  FOR UPDATE;
+
+  IF article_category_id IS NULL THEN
+    RAISE EXCEPTION 'Help Center article not found';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM unnest(COALESCE(p_subcategory_ids, ARRAY[]::uuid[])) AS requested(id)
+    LEFT JOIN public.help_subcategories AS sub ON sub.id = requested.id
+    WHERE sub.id IS NULL OR sub.active IS NOT TRUE OR sub.category_id <> article_category_id
+  ) THEN
+    RAISE EXCEPTION 'One or more Help Center topics do not belong to the selected category';
+  END IF;
+
+  DELETE FROM public.help_article_subcategories WHERE article_id = p_article_id;
+
+  INSERT INTO public.help_article_subcategories(article_id,subcategory_id,sort_order)
+  SELECT p_article_id, selected.id,
+         row_number() OVER (ORDER BY selected.ordinality)::integer - 1
+  FROM (
+    SELECT DISTINCT ON (requested.id) requested.id, requested.ordinality
+    FROM unnest(COALESCE(p_subcategory_ids, ARRAY[]::uuid[])) WITH ORDINALITY AS requested(id,ordinality)
+    ORDER BY requested.id,requested.ordinality
+  ) AS selected;
+END;
+$;
+
+REVOKE ALL ON FUNCTION public.help_replace_article_subcategories(uuid,uuid[]) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.help_replace_article_subcategories(uuid,uuid[]) TO service_role;
+
+INSERT INTO storage.buckets(id,name,public,file_size_limit,allowed_mime_types)
+VALUES (
+  'minglora-help-center',
+  'minglora-help-center',
+  false,
+  104857600,
+  ARRAY['image/jpeg','image/png','image/webp','image/avif','video/mp4','video/webm']
+)
+ON CONFLICT(id) DO UPDATE SET
+  public=false,
+  file_size_limit=EXCLUDED.file_size_limit,
+  allowed_mime_types=EXCLUDED.allowed_mime_types;
 
 COMMIT;
