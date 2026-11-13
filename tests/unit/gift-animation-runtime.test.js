@@ -21,7 +21,9 @@ test("LIVE and Gift Studio load the canonical per-gift motion index by exact gif
 });
 
 test("gift animations preserve and play original artwork, 3D models, Coin values and sounds", () => {
-  assert.ok(effects.includes("model.src=gift.model_url"));
+  assert.ok(effects.includes("function hasCanonicalGiftArtwork(gift)"));
+  assert.ok(effects.includes("model.src=canonicalModelUrl"));
+  assert.ok(effects.includes("fallbackImage.src=gift.image_url"));
   assert.ok(effects.includes('img.src=gift.image_url'));
   assert.ok(effects.includes('if(!reducedMotion){model.setAttribute("auto-rotate","");model.setAttribute("autoplay","");}'));
   assert.ok(effects.includes('if(options.sound!==false)play(gift)'));
