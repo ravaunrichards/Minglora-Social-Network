@@ -144,6 +144,20 @@ test('provider credential columns store references, never raw secrets',()=>{
   assert.ok(sql.includes('Never store raw API keys, tokens or passwords here'));
 });
 
+test('partial AI identity updates preserve languages unless a languages array is explicitly supplied',()=>{
+  const upsertStart=sql.indexOf('CREATE OR REPLACE FUNCTION public.minglora_ai_identity_upsert(');
+  const batchStart=sql.indexOf('CREATE OR REPLACE FUNCTION public.minglora_ai_identity_upsert_batch(');
+  const upsert=sql.slice(upsertStart,batchStart);
+  const languageStart=upsert.indexOf("IF p_identity ? 'languages' THEN");
+  const locationsStart=upsert.indexOf("IF p_identity ? 'locations' THEN");
+  assert.ok(languageStart>=0&&locationsStart>languageStart);
+  const languageBlock=upsert.slice(languageStart,locationsStart);
+  assert.match(languageBlock,/IF pg_catalog\.jsonb_typeof\(p_identity->'languages'\) <> 'array' THEN/);
+  assert.match(languageBlock,/DELETE FROM public\.ai_identity_languages WHERE identity_id=v_id/);
+  assert.doesNotMatch(upsert.slice(0,languageStart),/DELETE FROM public\.ai_identity_languages/);
+  assert.doesNotMatch(upsert.slice(locationsStart),/DELETE FROM public\.ai_identity_languages/);
+});
+
 test('canonical identity RPCs are service-role-only and owner-gated at the gateway',()=>{
   assert.ok(sql.includes('CREATE OR REPLACE FUNCTION public.minglora_ai_identity_upsert('));
   assert.ok(sql.includes('CREATE OR REPLACE FUNCTION public.minglora_ai_identity_upsert_batch('));
