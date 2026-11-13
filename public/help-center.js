@@ -80,8 +80,17 @@ if(!append){state.offset=0;state.results=[];}
 const p=new URLSearchParams({query,locale,limit:"20",offset:String(state.offset)});if(category)p.set("category",category);if(subcategory)p.set("subcategory",subcategory);
 const d=await api("/api/help-center/search?"+p.toString());state.results=append?state.results.concat(d.results||[]):d.results||[];state.hasMore=Boolean(d.hasMore);state.offset+=(d.results||[]).length;return state.results;
 }
-function renderRows(rows){
+function highlight(value,query){
+const input=String(value??"");
+const terms=String(query||"").trim().split(/\s+/).filter(term=>term.length>1).slice(0,8);
+if(!terms.length)return esc(input);
+const pattern=new RegExp("("+terms.map(term=>term.replace(/[.*+?^${}()|[\]\\]/g,"\\function renderRows(rows){
 $("#hc-directory-results").innerHTML=rows.length?rows.map(x=>'<a class="hc-question-row" href="/help-center.html?article='+encodeURIComponent(x.article_slug)+'"><span><strong>'+esc(x.question)+'</strong><p>'+esc(x.excerpt||"")+'</p><small>'+esc(x.category_title)+(x.subcategory_title?" · "+esc(x.subcategory_title):"")+" · Updated "+esc(date(x.updated_at))+'</small></span><span class="hc-row-arrow">›</span></a>').join(""):empty(state.query?"No matching published answers":"No published answers in this section yet","Try another phrase or contact Support if you still need help.");
+}")).join("|")+")","gi");
+return input.split(pattern).map(part=>terms.some(term=>part.toLowerCase()===term.toLowerCase())?'<mark class="hc-search-match">'+esc(part)+'</mark>':esc(part)).join("");
+}
+function renderRows(rows){
+$("#hc-directory-results").innerHTML=rows.length?rows.map(x=>'<a class="hc-question-row" href="/help-center.html?article='+encodeURIComponent(x.article_slug)+'"><span><strong>'+highlight(x.question,state.query)+'</strong><p>'+highlight(x.excerpt||"",state.query)+'</p><small>'+esc(x.category_title)+(x.subcategory_title?" · "+esc(x.subcategory_title):"")+" · Updated "+esc(date(x.updated_at))+'</small></span><span class="hc-row-arrow">›</span></a>').join(""):empty(state.query?"No matching published answers":"No published answers in this section yet","Try another phrase or contact Support if you still need help.");
 }
 async function openDirectory(o={}){
 state.query=o.query||"";state.category=o.category||"";state.subcategory=o.subcategory||"";
@@ -98,6 +107,11 @@ $$("[data-hc-sub]").forEach(b=>b.onclick=()=>openCategory(slug,b.dataset.hcSub))
 }
 function inlineMarkdown(v){
 let t=esc(v);
+t=t.replace(/!\[([^\]]*)\]\(([^)]+)\)/g,(m,alt,raw)=>{
+  const url=raw.trim();
+  if(!/^https:\/\//i.test(url)&&!/^\/(?!\/)/.test(url))return alt;
+  return '<figure class="hc-media-figure"><img src="'+esc(url)+'" alt="'+esc(alt)+'" loading="lazy" decoding="async" referrerpolicy="no-referrer"><figcaption>'+esc(alt)+'</figcaption></figure>';
+});
 t=t.replace(/\[([^\]]+)\]\(([^)]+)\)/g,(m,label,raw)=>/^(https?:\/\/|mailto:|\/|#)/i.test(raw.trim())?'<a href="'+esc(raw.trim())+'"'+(/^https?:\/\//i.test(raw.trim())?' target="_blank" rel="noopener noreferrer"':'')+'>'+label+'</a>':label);
 t=t.replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>");
 t=t.replace(/(^|[^*])\*([^*]+)\*/g,"$1<em>$2</em>");
@@ -121,7 +135,7 @@ function addRecent(article){try{const old=JSON.parse(localStorage.getItem("mingl
 async function openArticle(slug){
 section("hc-article");$("#hc-article-answer").innerHTML='<div class="hc-loading">Loading answer…</div>';
 try{const d=await api("/api/help-center/articles/"+encodeURIComponent(slug)+"?locale="+encodeURIComponent(locale)),a=d.article;state.article=a;
-$("#hc-article-title").textContent=a.title;$("#hc-article-excerpt").textContent=a.excerpt||"";$("#hc-article-updated").textContent="Last updated "+date(a.updatedAt);$("#hc-article-locale").textContent="Language: "+a.locale;$("#hc-article-answer").innerHTML=markdown(a.answerMarkdown);
+$("#hc-article-title").textContent=a.title;$("#hc-article-excerpt").textContent=a.excerpt||"";$("#hc-article-updated").textContent="Last updated "+date(a.updatedAt);$("#hc-article-locale").textContent=a.locale===locale?"Language: "+a.locale:(a.locale==="en"&&locale!=="en"?"English version · "+locale.toUpperCase()+" translation pending":"Language: "+a.locale);$("#hc-article-answer").innerHTML=markdown(a.answerMarkdown);
 $("#hc-article-category").textContent=a.category?.title||"Help Center";$("#hc-article-category").href="/help-center.html?category="+encodeURIComponent(a.category?.slug||"");$("#hc-article-subcategory").textContent=a.subcategory?.title||"";
 $("#hc-feedback-status").textContent=(d.feedback?.helpful||0)+" found this helpful · "+(d.feedback?.notHelpful||0)+" still need help";$("#hc-feedback-status").dataset.translationId=a.translationId;
 $("#hc-related-section").hidden=!(d.related||[]).length;$("#hc-related").innerHTML=(d.related||[]).map(x=>questionRow({slug:x.slug,title:x.title,excerpt:x.excerpt,category_title:a.category?.title})).join("");
@@ -178,12 +192,17 @@ function renderAdminEditor(d={}){
 const categories=state.adminOverview?.categories||state.categories,categoryId=d.categoryId||categories[0]?.id||"";
 const subs=(state.adminOverview?.subcategories||state.subcategories).filter(x=>x.category_id===categoryId||x.categoryId===categoryId);
 const host=$("#hc-admin-editor");if(!host)return;
-host.innerHTML='<div class="hc-admin-panel"><h2>'+(d.articleId?"Edit article":"Create article")+'</h2><form id="hc-article-form" class="hc-admin-form"><div class="hc-inline-fields"><label>Question / title<input name="title" required maxlength="180" value="'+esc(d.title||"")+'"></label><label>URL slug<input name="slug" required pattern="[a-z0-9]+(-[a-z0-9]+)*" maxlength="120" value="'+esc(d.slug||"")+'"></label></div><div class="hc-inline-fields"><label>Category<select name="categoryId" required>'+categories.map(x=>'<option value="'+esc(x.id)+'"'+(x.id===categoryId?" selected":"")+'>'+esc(x.title)+'</option>').join("")+'</select></label><label>Subcategory<select name="subcategoryId"><option value="">Choose subcategory</option>'+subs.map(x=>'<option value="'+esc(x.id)+'"'+(x.id===(d.subcategoryId||"")?" selected":"")+'>'+esc(x.title)+'</option>').join("")+'</select></label></div><div class="hc-inline-fields"><label>Language / locale<input name="locale" value="'+esc(d.locale||"en")+'" pattern="[a-z]{2}(-[A-Z]{2})?"></label><label>Short answer preview<input name="excerpt" maxlength="400" value="'+esc(d.excerpt||"")+'"></label></div><label>Full answer (Markdown)<textarea name="answerMarkdown" maxlength="100000" required>'+esc(d.answerMarkdown||"")+'</textarea></label><div class="hc-inline-fields"><label>Search keywords, comma separated<input name="searchTerms" value="'+esc((d.searchTerms||[]).join(", "))+'"></label><label>Approved source / reference<input name="sourceReference" maxlength="500" required value="'+esc(d.sourceReference||"")+'" placeholder="Reference document, verified app route, or evidence"></label></div><label><input type="checkbox" name="isFeatured"'+(d.isFeatured?" checked":"")+'> Feature after approval</label><div class="hc-admin-actions"><button type="submit" class="hc-primary-button">Save draft</button><button type="button" id="hc-editor-close" class="hc-secondary-button">Close</button></div><p id="hc-editor-status" class="hc-admin-status" role="status"></p></form><div id="hc-workflow" class="hc-admin-actions"></div><div id="hc-revisions"></div></div>';
+host.innerHTML='<div class="hc-admin-panel"><h2>'+(d.articleId?"Edit article":"Create article")+'</h2><form id="hc-article-form" class="hc-admin-form"><div class="hc-inline-fields"><label>Question / title<input name="title" required maxlength="180" value="'+esc(d.title||"")+'"></label><label>URL slug<input name="slug" required pattern="[a-z0-9]+(-[a-z0-9]+)*" maxlength="120" value="'+esc(d.slug||"")+'"></label></div><div class="hc-inline-fields"><label>Category<select name="categoryId" required>'+categories.map(x=>'<option value="'+esc(x.id)+'"'+(x.id===categoryId?" selected":"")+'>'+esc(x.title)+'</option>').join("")+'</select></label><label>Subcategory<select name="subcategoryId"><option value="">Choose subcategory</option>'+subs.map(x=>'<option value="'+esc(x.id)+'"'+(x.id===(d.subcategoryId||"")?" selected":"")+'>'+esc(x.title)+'</option>').join("")+'</select></label></div><div class="hc-inline-fields"><label>Language / locale<input name="locale" value="'+esc(d.locale||"en")+'" pattern="[a-z]{2}(-[A-Z]{2})?"></label><label>Short answer preview<input name="excerpt" maxlength="400" value="'+esc(d.excerpt||"")+'"></label></div><label>Full answer (Markdown)<textarea name="answerMarkdown" maxlength="100000" required>'+esc(d.answerMarkdown||"")+'</textarea></label><div class="hc-inline-fields"><label>Search keywords, comma separated<input name="searchTerms" value="'+esc((d.searchTerms||[]).join(", "))+'"></label><label>Related questions (select one or more)<select name="relatedArticleIds" multiple size="5">'+(state.adminOverview?.articles||[]).filter(x=>x.help_articles?.id&&x.help_articles.id!==d.articleId).map(x=>'<option value="'+esc(x.help_articles.id)+'"'+((d.relatedArticleIds||[]).includes(x.help_articles.id)?" selected":"")+'>'+esc(x.title)+' · '+esc(x.status)+'</option>').join("")+'</select></label><label>Approved source / reference<input name="sourceReference" maxlength="500" required value="'+esc(d.sourceReference||"")+'" placeholder="Reference document, verified app route, or evidence"></label></div><label><input type="checkbox" name="isFeatured"'+(d.isFeatured?" checked":"")+'> Feature after approval</label><div class="hc-admin-actions"><button type="submit" class="hc-primary-button">Save draft</button><button type="button" id="hc-preview-answer" class="hc-secondary-button">Preview answer</button><button type="button" id="hc-editor-close" class="hc-secondary-button">Close</button></div><div id="hc-answer-preview" class="hc-prose hc-admin-panel" hidden></div><p id="hc-editor-status" class="hc-admin-status" role="status"></p></form><div id="hc-workflow" class="hc-admin-actions"></div><div id="hc-revisions"></div></div>';
 $("#hc-editor-close").onclick=()=>$("#hc-admin-editor").innerHTML="";
+$("#hc-preview-answer").onclick=()=>{
+  const preview=$("#hc-answer-preview");
+  preview.hidden=!preview.hidden;
+  if(!preview.hidden)preview.innerHTML=markdown(form.elements.answerMarkdown.value);
+};
 const form=$("#hc-article-form");
 form.elements.categoryId.onchange=()=>{const list=(state.adminOverview?.subcategories||state.subcategories).filter(x=>(x.category_id||x.categoryId)===form.elements.categoryId.value);form.elements.subcategoryId.innerHTML='<option value="">Choose subcategory</option>'+list.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.title)+'</option>').join("");};
 form.onsubmit=async event=>{
-event.preventDefault();const values=Object.fromEntries(new FormData(form));values.articleId=d.articleId||"";values.searchTerms=String(values.searchTerms||"").split(",").map(x=>x.trim()).filter(Boolean);values.isFeatured=form.elements.isFeatured.checked;
+event.preventDefault();const values=Object.fromEntries(new FormData(form));values.articleId=d.articleId||"";values.searchTerms=String(values.searchTerms||"").split(",").map(x=>x.trim()).filter(Boolean);values.relatedArticleIds=[...form.elements.relatedArticleIds.selectedOptions].map(x=>x.value);values.isFeatured=form.elements.isFeatured.checked;
 const btn=form.querySelector('button[type=submit]'),status=$("#hc-editor-status");btn.disabled=true;status.textContent="Saving draft…";
 try{const saved=await adminApi("/api/help-center/admin/articles",{method:"POST",body:JSON.stringify(values)});state.currentArticleId=saved.articleId;state.currentTranslationId=saved.translationId;await refreshAdmin();await editAdminArticle(saved.translationId);adminStatus("Draft saved. It is not visible to members.");}
 catch(e){status.textContent=e.message;}finally{btn.disabled=false;}
