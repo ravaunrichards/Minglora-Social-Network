@@ -517,7 +517,7 @@ test('public AI discovery exposes only explicitly public enabled identities',()=
   assert.match(discoverySql,/identity\.public_profile_enabled = true/);
   assert.match(discoverySql,/profile\.visibility = 'public'/);
   assert.match(discoverySql,/NOT EXISTS \([\s\S]*?FROM public\.ai_identity_blocks AS block[\s\S]*?block\.identity_id=identity\.identity_id[\s\S]*?block\.user_id=p_viewer_user_id/,'AI block filtering is enforced in the indexed SQL discovery query');
-  assert.match(discoverySql,/GRANT EXECUTE ON FUNCTION public\.minglora_ai_identity_discover\(text,jsonb,text,integer,integer\) TO service_role/);
+  assert.match(discoverySql,/GRANT EXECUTE ON FUNCTION public\.minglora_ai_identity_discover\(text,jsonb,text,integer,integer,uuid\) TO service_role/);
   assert.match(discoverySql,/WHERE enabled = true AND verification_status = 'verified'/);
   for(const filter of [
     'gender','nationality','countryOfOrigin','currentCountry','countryCode',

@@ -257,12 +257,12 @@ BEGIN
   v_employment := COALESCE(p_state->'employmentHistory','[]'::jsonb);
   v_audit := COALESCE(p_state->'audit','[]'::jsonb);
 
-  IF CASE WHEN pg_catalog.jsonb_typeof(v_departments)<>'array' THEN true ELSE pg_catalog.jsonb_array_length(v_departments)>1000 END OR
-     CASE WHEN pg_catalog.jsonb_typeof(v_vacancies)<>'array' THEN true ELSE pg_catalog.jsonb_array_length(v_vacancies)>5000 END OR
-     CASE WHEN pg_catalog.jsonb_typeof(v_applications)<>'array' THEN true ELSE pg_catalog.jsonb_array_length(v_applications)>10000 END OR
-     CASE WHEN pg_catalog.jsonb_typeof(v_appointments)<>'array' THEN true ELSE pg_catalog.jsonb_array_length(v_appointments)>10000 END OR
-     CASE WHEN pg_catalog.jsonb_typeof(v_employment)<>'array' THEN true ELSE pg_catalog.jsonb_array_length(v_employment)>20000 END OR
-     CASE WHEN pg_catalog.jsonb_typeof(v_audit)<>'array' THEN true ELSE pg_catalog.jsonb_array_length(v_audit)>2000 END THEN
+  IF (CASE WHEN pg_catalog.jsonb_typeof(v_departments)<>'array' THEN true ELSE pg_catalog.jsonb_array_length(v_departments)>1000 END) OR
+     (CASE WHEN pg_catalog.jsonb_typeof(v_vacancies)<>'array' THEN true ELSE pg_catalog.jsonb_array_length(v_vacancies)>5000 END) OR
+     (CASE WHEN pg_catalog.jsonb_typeof(v_applications)<>'array' THEN true ELSE pg_catalog.jsonb_array_length(v_applications)>10000 END) OR
+     (CASE WHEN pg_catalog.jsonb_typeof(v_appointments)<>'array' THEN true ELSE pg_catalog.jsonb_array_length(v_appointments)>10000 END) OR
+     (CASE WHEN pg_catalog.jsonb_typeof(v_employment)<>'array' THEN true ELSE pg_catalog.jsonb_array_length(v_employment)>20000 END) OR
+     (CASE WHEN pg_catalog.jsonb_typeof(v_audit)<>'array' THEN true ELSE pg_catalog.jsonb_array_length(v_audit)>2000 END) THEN
     RAISE EXCEPTION 'One or more HR state collections are invalid or exceed their limits.' USING ERRCODE = '22023';
   END IF;
 
