@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { handleHelpCenterAction } from "./help-center.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const secretKeys = JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS") || "{}");
@@ -94,10 +95,35 @@ Deno.serve(async (req: Request) => {
     "subscription_checkout_attach", "subscription_my", "subscription_access_check", "subscription_cancel_lookup",
     "subscription_cancel_mark", "subscription_paypal_webhook",
     "subscription_bonus_review",
+    "help_access",
+    "help_categories_list",
+    "help_articles_list",
+    "help_popular",
+    "help_featured",
+    "help_recently_updated",
+    "help_article_get",
+    "help_article_feedback",
+    "help_bookmarks_list",
+    "help_bookmark_set",
+    "help_recent_list",
+    "help_admin_article_list",
+    "help_admin_article_create",
+    "help_admin_article_update",
+    "help_admin_article_workflow",
+    "help_admin_revision_list",
+    "help_admin_revision_restore",
+    "help_admin_feedback",
+    "help_admin_unanswered",
+    "help_admin_category_update",
+    "help_admin_subcategory_update",
+    "help_admin_translation_update",
   ];
   if (!supportedActions.includes(String(action))) {
     return json(400, { error: "Unsupported action." });
   }
+
+  const helpCenterResponse = await handleHelpCenterAction(admin, String(action), input, json);
+  if (helpCenterResponse) return helpCenterResponse;
 
   const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   const validUuid = (value: unknown) => uuidPattern.test(String(value || ""));
