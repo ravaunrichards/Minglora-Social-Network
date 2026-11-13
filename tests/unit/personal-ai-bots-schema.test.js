@@ -46,6 +46,10 @@ const aiHrSql = await readFile(
   new URL('../../supabase/migrations/20261112180000_minglora_ai_bot_hr_relational_persistence.sql', import.meta.url),
   'utf8'
 );
+const aiHrIntegritySql = await readFile(
+  new URL('../../supabase/migrations/20261112203000_minglora_ai_bot_hr_manager_integrity.sql', import.meta.url),
+  'utf8'
+);
 const profileHtml = await readFile(
   new URL('../../public/ai-profile.html', import.meta.url),
   'utf8'
@@ -1036,6 +1040,14 @@ test('AI HR RPCs require the designated owner, owned organizational identities a
   for(const key of ['departments','jobPositions','vacancies','applications','appointments','employmentHistory','audit']){
     assert.ok(read.includes("'" + key + "'"),'HR read RPC returns '+key);
   }
+});
+
+test('AI HR manager appointment and manager identity must reference the same reporting record',()=>{
+  assert.match(aiHrIntegritySql,/CREATE UNIQUE INDEX IF NOT EXISTS ai_appointments_owner_appointment_identity_uq[\\s\\S]*ON public\\.ai_appointments \\(owner_admin_id, appointment_id, identity_id\\)/);
+  assert.match(aiHrIntegritySql,/FOREIGN KEY \\(\\s*owner_admin_id,\\s*reporting_manager_appointment_id,\\s*reporting_manager_identity_id\\s*\\)[\\s\\S]*REFERENCES public\\.ai_appointments \\(\\s*owner_admin_id,\\s*appointment_id,\\s*identity_id\\s*\\)[\\s\\S]*MATCH FULL/);
+  assert.match(aiHrIntegritySql,/DEFERRABLE INITIALLY DEFERRED/);
+  assert.match(aiHrIntegritySql,/reporting_manager_appointment_id IS NULL\\s+OR reporting_manager_appointment_id <> appointment_id/);
+  assert.doesNotMatch(aiHrIntegritySql,/DROP TABLE|DROP COLUMN|DELETE FROM|TRUNCATE/i);
 });
 
 test('AI HR runtime gateway and server adapters are owner-gated and retain legacy compatibility only when schema is unavailable',()=>{
