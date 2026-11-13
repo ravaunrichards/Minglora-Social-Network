@@ -2418,6 +2418,8 @@
 .mw-meeting #mw-screen-stage[data-screen-layout="spotlight"] #mw-grid[data-layout="spotlight"]{grid-template-columns:repeat(3,minmax(0,1fr))!important;grid-auto-rows:minmax(78px,1fr)!important}
 }
 /* Roundtable modes change host-seat placement only; they never set grid templates. */
-#mw-screen-stage[data-screen-layout] #mw-grid[data-layout][data-guest-layout="roundtable-1"]>.live-guest-seat.is-host{grid-column:2!important;grid-row:3!important}
-#mw-screen-stage[data-screen-layout] #mw-grid[data-layout][data-guest-layout="roundtable-2"]>.live-guest-seat.is-host{grid-column:span 2!important;grid-row:span 2!important}
+.mw-meeting:not(.live-full-screen-active) #mw-screen-stage[data-screen-layout] #mw-grid[data-layout][data-guest-layout="roundtable-1"]>.live-guest-seat.is-host,
+.mw-meeting.live-full-screen-active #mw-screen-stage[data-screen-layout] #mw-grid[data-layout][data-guest-layout="roundtable-1"]>.live-guest-seat.is-host{grid-column:2!important;grid-row:3!important}
+.mw-meeting:not(.live-full-screen-active) #mw-screen-stage[data-screen-layout] #mw-grid[data-layout][data-guest-layout="roundtable-2"]>.live-guest-seat.is-host,
+.mw-meeting.live-full-screen-active #mw-screen-stage[data-screen-layout] #mw-grid[data-layout][data-guest-layout="roundtable-2"]>.live-guest-seat.is-host{grid-column:span 2!important;grid-row:span 2!important}
 /* END FINAL MEETWAVE LAYOUT INDEPENDENCE CONTRACT. */
