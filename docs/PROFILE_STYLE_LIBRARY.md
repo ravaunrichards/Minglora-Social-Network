@@ -21,9 +21,9 @@ Implementation is on \`feat/profile-style-library-10x9\` and PR #266. It is not 
 
 The styles use familiar, high-level interface patterns and original Minglora assets, not third-party logos or official platform assets.
 
-## Nine profile screen layouts
+## Seven profile screen layouts
 
-All nine modes are available in the Profile Style Library screen-layout selector and compose with every profile style:
+All seven screen-layout modes are available in the Profile Style Library screen-layout selector and compose with every profile style:
 
 1. **Full Screen** — edge-to-edge profile canvas and full-width content.
 2. **Fluid Panel** — flexible, centered panels; default mode to preserve the existing Facebook profile geometry.
@@ -32,10 +32,8 @@ All nine modes are available in the Profile Style Library screen-layout selector
 5. **Fixed Panel** — centered panel with a stable maximum reading width.
 6. **Side by Side** — profile sections and media in adjacent columns.
 7. **Spotlight** — centered identity presentation and focused main content.
-8. **Roundtable 1** — balanced two-column profile panels.
-9. **Roundtable 2** — compact multi-panel layout with a featured main column.
 
-This creates **10 × 9 = 90 profile style/screen-layout combinations**. The existing LIVE/meeting mode definitions and their host/guest controls are not modified; profile layouts use separate preference keys and CSS attributes.
+This creates **10 × 7 = 70 profile style/screen-layout combinations**. **Roundtable 1 and Roundtable 2 are not profile screen layouts.** They are separate guest-box arrangements inside LIVE and MeetWave guest panels/grids, with independent selectors and controls.
 
 ## Unified account preferences
 
@@ -55,7 +53,7 @@ The existing \`profileLayout\` preference (\`standard\`, \`advanced\`, \`creator
 Open the three-dot menu on your own profile and choose **Profile Style Library**.
 
 - **Preview** previews any of the ten profile styles and selected screen layout without changing saved preferences.
-- **Profile screen layout** selects one of the nine named modes for the preview and next Apply/Save action.
+- **Profile screen layout** selects one of the seven named screen modes for the preview and next Apply/Save action.
 - **Apply** saves the active profile style and screen layout.
 - **Save as default** stores both preferred defaults across sessions and devices.
 - **Reset to Default** reapplies both saved defaults.
