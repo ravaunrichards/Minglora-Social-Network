@@ -98,3 +98,21 @@ The **file-based animation preset library and directory structure** are delivere
 - [x] Extended unit checks to validate per-gift file presence, gift/animation identity, unique keyframe signatures, and deterministic generator output.
 
 This is a distinct per-gift motion-file delivery, not a claim that all gifts have hand-keyframed cinematic scenes or individually authored 3D models. The runtime continues to use the existing SVG/GLTF models and existing generated sound profiles. Premium artwork provenance, the 1,114-item manual review queue, per-gift mastered sound, rights clearance, and physical-device testing remain outstanding. No canonical gift names, coin prices, active/retired flags, wallet values, gift ledger entries, user data, LiveKit credentials, or source reference images were changed by this motion-only update.
+
+
+## Latest verified run — head `a6bda76e7039f55af81dfc1737c5debbbb667719` — 2026-11-13
+
+- **GitHub Actions CI #10899:** passed on Node 24.
+- **Automated tests:** 975 passed, 0 failed.
+- **Dependency audit:** completed successfully with no reported vulnerable dependencies.
+- **Repository structure and JavaScript syntax checks:** passed.
+- **Gift build:** generated/verified 1,748 SVG assets and 1,748 GLTF models from the existing canonical generator.
+- **Shared LIVE animation presets:** 17 files generated and verified.
+- **Per-gift LIVE motion:** 1,737 distinct, code-bound keyframe JSON files generated and verified; tests checked file presence, identity and unique keyframe signatures.
+- **Sound Studio build:** passed; the existing 120-file WAV pack was generated.
+- **Seven-plus-two responsive layout visual QA #37:** passed.
+- **Profile style/viewport visual QA #64:** passed and uploaded its matrix artifact.
+
+These are automated CI and Chromium browser-render results. They do not replace physical-device GPU, memory, battery, thermal, camera, audio or network testing on Android, iPhone, tablet, foldable and TV devices. The full 1,121-reference manual review, original-art rights/provenance checks, the 1,114 queued extracted-art reviews, premium custom 3D artwork/scenes, mastered per-gift audio, the complete 18-theme art pass, gift copy/export controls and device QA remain outstanding. The separate gift-asset repository was not identifiable among the connected repositories, so no files were written to an unverified repository.
+
+**Release status:** PR #274 remains open and draft; it is not merged or deployed.
