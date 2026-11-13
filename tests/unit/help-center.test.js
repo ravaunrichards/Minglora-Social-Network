@@ -112,3 +112,11 @@ test('popular metrics are based on recorded article views rather than hard-coded
   assert.match(edge, /help_center_popular/);
   assert.match(page, /Popular questions/);
 });
+
+test('recently viewed answers are retrieved only through the authenticated member API', () => {
+  assert.match(server, /api\\/help-center\\/recently-viewed/);
+  assert.match(edge, /action==="recently_viewed"/);
+  assert.match(edge, /eq\\("user_id",actor\\)/);
+  assert.match(page, /hc-recently-viewed-section/);
+  assert.match(ui, /api\\("\\/recently-viewed"\\)/);
+});
