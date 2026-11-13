@@ -344,10 +344,11 @@
         "width": 1363,
         "height": 636
       },
-      "dimensions_audit": "PNG IHDR width/height verified during visual QA",
+      "dimensions_audit": "PNG IHDR width/height verified during direct visual QA",
       "transparency_audit": "pending",
-      "human_visual_review": "inspected-not-live-reference",
-      "reuse_status": "layout guidance only; not production artwork"
+      "human_visual_review": "inspected",
+      "reuse_status": "layout guidance only; not production artwork",
+      "visual_review_notes": "video/feed detail with comments; not a LIVE room"
     },
     {
       "id": "accdf464026b862d9fa88c1a63bb72bbb64d7dae",
@@ -388,11 +389,15 @@
       "file_size_bytes": 606782,
       "git_blob_sha": "b0f3171cbb8852f38bcd6c40cfc2920e91d3ab2c",
       "visual_role": "reference-only; do not copy branded artwork",
-      "dimensions_px": null,
-      "dimensions_audit": "pending",
+      "dimensions_px": {
+        "width": 1366,
+        "height": 638
+      },
+      "dimensions_audit": "PNG IHDR width/height verified during direct visual QA",
       "transparency_audit": "pending",
-      "human_visual_review": "sampled-only",
-      "reuse_status": "layout guidance only; not production artwork"
+      "human_visual_review": "inspected",
+      "reuse_status": "layout guidance only; not production artwork",
+      "visual_review_notes": "vertical short-video feed player; not a LIVE room"
     },
     {
       "id": "d095fa7b59f04c334f08a96918c1de8bba393e43",
@@ -403,11 +408,15 @@
       "file_size_bytes": 440055,
       "git_blob_sha": "d095fa7b59f04c334f08a96918c1de8bba393e43",
       "visual_role": "reference-only; do not copy branded artwork",
-      "dimensions_px": null,
-      "dimensions_audit": "pending",
+      "dimensions_px": {
+        "width": 1366,
+        "height": 641
+      },
+      "dimensions_audit": "PNG IHDR width/height verified during direct visual QA",
       "transparency_audit": "pending",
-      "human_visual_review": "sampled-only",
-      "reuse_status": "layout guidance only; not production artwork"
+      "human_visual_review": "inspected",
+      "reuse_status": "layout guidance only; not production artwork",
+      "visual_review_notes": "vertical short-video feed screen; not a LIVE room"
     },
     {
       "id": "25f061e151323db32165df95c97be17a8191413b",
@@ -418,11 +427,15 @@
       "file_size_bytes": 740605,
       "git_blob_sha": "25f061e151323db32165df95c97be17a8191413b",
       "visual_role": "reference-only; do not copy branded artwork",
-      "dimensions_px": null,
-      "dimensions_audit": "pending",
+      "dimensions_px": {
+        "width": 1366,
+        "height": 641
+      },
+      "dimensions_audit": "PNG IHDR width/height verified during direct visual QA",
       "transparency_audit": "pending",
-      "human_visual_review": "sampled-only",
-      "reuse_status": "layout guidance only; not production artwork"
+      "human_visual_review": "inspected",
+      "reuse_status": "layout guidance only; not production artwork",
+      "visual_review_notes": "Short dramas discovery listing; not a LIVE room"
     },
     {
       "id": "e6557859b056891f13e64ac744f829f12aded8f0",
@@ -452,10 +465,11 @@
         "width": 1366,
         "height": 636
       },
-      "dimensions_audit": "PNG IHDR width/height verified during visual QA",
+      "dimensions_audit": "PNG IHDR width/height verified during direct visual QA",
       "transparency_audit": "pending",
       "human_visual_review": "inspected",
-      "reuse_status": "layout guidance only; not production artwork"
+      "reuse_status": "layout guidance only; not production artwork",
+      "visual_review_notes": "LIVE discovery/listing with category navigation and click-to-watch entry; not an in-room control screen"
     },
     {
       "id": "f8fbb3c7280f98c1ca0f96dc0420246e1ee3ed28",
@@ -470,10 +484,11 @@
         "width": 1366,
         "height": 644
       },
-      "dimensions_audit": "PNG IHDR width/height verified during visual QA",
+      "dimensions_audit": "PNG IHDR width/height verified during direct visual QA",
       "transparency_audit": "pending",
       "human_visual_review": "inspected",
-      "reuse_status": "layout guidance only; not production artwork"
+      "reuse_status": "layout guidance only; not production artwork",
+      "visual_review_notes": "multi-guest LIVE room with two-person stage, separate viewer/chat rail and bottom gift dock"
     },
     {
       "id": "5084db016dc878c9eb5b6752eec11aaf5e6c4b1f",
@@ -488,10 +503,11 @@
         "width": 1366,
         "height": 642
       },
-      "dimensions_audit": "PNG IHDR width/height verified during visual QA",
+      "dimensions_audit": "PNG IHDR width/height verified during direct visual QA",
       "transparency_audit": "pending",
       "human_visual_review": "inspected",
-      "reuse_status": "layout guidance only; not production artwork"
+      "reuse_status": "layout guidance only; not production artwork",
+      "visual_review_notes": "multi-guest LIVE room with gift-picker overlay over the stage while viewer/chat rail remains visible"
     },
     {
       "id": "34d09feec41930d11e407fdfb788f0ffe272aa6a",
@@ -502,11 +518,15 @@
       "file_size_bytes": 346541,
       "git_blob_sha": "34d09feec41930d11e407fdfb788f0ffe272aa6a",
       "visual_role": "reference-only; do not copy branded artwork",
-      "dimensions_px": null,
-      "dimensions_audit": "pending",
+      "dimensions_px": {
+        "width": 1366,
+        "height": 637
+      },
+      "dimensions_audit": "PNG IHDR width/height verified during direct visual QA",
       "transparency_audit": "pending",
-      "human_visual_review": "sampled-only",
-      "reuse_status": "layout guidance only; not production artwork"
+      "human_visual_review": "inspected",
+      "reuse_status": "layout guidance only; not production artwork",
+      "visual_review_notes": "multi-guest LIVE room with stage, viewer/chat rail and dock; no expanded gift overlay"
     },
     {
       "id": "63fb5a055f866b3f080df08fef700c8d4caae6e3",
@@ -521,10 +541,11 @@
         "width": 1366,
         "height": 642
       },
-      "dimensions_audit": "PNG IHDR width/height verified during visual QA",
+      "dimensions_audit": "PNG IHDR width/height verified during direct visual QA",
       "transparency_audit": "pending",
       "human_visual_review": "inspected",
-      "reuse_status": "layout guidance only; not production artwork"
+      "reuse_status": "layout guidance only; not production artwork",
+      "visual_review_notes": "single-host LIVE room with portrait stage, follow action, viewer/chat rail and gift dock"
     },
     {
       "id": "2fd93feba1fb17e936fe372a5ca65e75abd72b2b",
@@ -535,11 +556,15 @@
       "file_size_bytes": 41919,
       "git_blob_sha": "2fd93feba1fb17e936fe372a5ca65e75abd72b2b",
       "visual_role": "reference-only; do not copy branded artwork",
-      "dimensions_px": null,
-      "dimensions_audit": "pending",
+      "dimensions_px": {
+        "width": 551,
+        "height": 487
+      },
+      "dimensions_audit": "PNG IHDR width/height verified during direct visual QA",
       "transparency_audit": "pending",
-      "human_visual_review": "sampled-only",
-      "reuse_status": "layout guidance only; not production artwork"
+      "human_visual_review": "inspected",
+      "reuse_status": "layout guidance only; not production artwork",
+      "visual_review_notes": "Get Coins and recharge panel; related monetization UI, not a LIVE room"
     },
     {
       "id": "c5e814b2146308bd7d9366ac70ec996fc52b2571",
@@ -550,11 +575,15 @@
       "file_size_bytes": 242930,
       "git_blob_sha": "c5e814b2146308bd7d9366ac70ec996fc52b2571",
       "visual_role": "reference-only; do not copy branded artwork",
-      "dimensions_px": null,
-      "dimensions_audit": "pending",
+      "dimensions_px": {
+        "width": 1364,
+        "height": 639
+      },
+      "dimensions_audit": "PNG IHDR width/height verified during direct visual QA",
       "transparency_audit": "pending",
-      "human_visual_review": "sampled-only",
-      "reuse_status": "layout guidance only; not production artwork"
+      "human_visual_review": "inspected",
+      "reuse_status": "layout guidance only; not production artwork",
+      "visual_review_notes": "LIVE watch preview with expanded navigation and click-to-watch prompt; discovery/preview, not a live room control layout"
     },
     {
       "id": "fd08ac61bb3a10e2d00d7924056de53b201bdc0a",
@@ -580,11 +609,15 @@
       "file_size_bytes": 370739,
       "git_blob_sha": "f8c27377afe4df2def9f4ecc77584574640da028",
       "visual_role": "reference-only; do not copy branded artwork",
-      "dimensions_px": null,
-      "dimensions_audit": "pending",
+      "dimensions_px": {
+        "width": 1366,
+        "height": 635
+      },
+      "dimensions_audit": "PNG IHDR width/height verified during direct visual QA",
       "transparency_audit": "pending",
-      "human_visual_review": "sampled-only",
-      "reuse_status": "layout guidance only; not production artwork"
+      "human_visual_review": "inspected",
+      "reuse_status": "layout guidance only; not production artwork",
+      "visual_review_notes": "vertical short-video feed screen; not a LIVE room"
     },
     {
       "id": "6a766ea297723ca273dae89038bbaa015edb99ab",
@@ -595,11 +628,15 @@
       "file_size_bytes": 442334,
       "git_blob_sha": "6a766ea297723ca273dae89038bbaa015edb99ab",
       "visual_role": "reference-only; do not copy branded artwork",
-      "dimensions_px": null,
-      "dimensions_audit": "pending",
+      "dimensions_px": {
+        "width": 1366,
+        "height": 645
+      },
+      "dimensions_audit": "PNG IHDR width/height verified during direct visual QA",
       "transparency_audit": "pending",
-      "human_visual_review": "sampled-only",
-      "reuse_status": "layout guidance only; not production artwork"
+      "human_visual_review": "inspected",
+      "reuse_status": "layout guidance only; not production artwork",
+      "visual_review_notes": "vertical short-video feed screen; not a LIVE room"
     },
     {
       "id": "c3f6f4d34b72ae195ca5476823d8edfc4152fbec",
@@ -625,11 +662,15 @@
       "file_size_bytes": 27891,
       "git_blob_sha": "c0e634391318fbfa421ec4d05f40ac17d0bf5b04",
       "visual_role": "reference-only; do not copy branded artwork",
-      "dimensions_px": null,
-      "dimensions_audit": "pending",
+      "dimensions_px": {
+        "width": 481,
+        "height": 525
+      },
+      "dimensions_audit": "PNG IHDR width/height verified during direct visual QA",
       "transparency_audit": "pending",
-      "human_visual_review": "sampled-only",
-      "reuse_status": "layout guidance only; not production artwork"
+      "human_visual_review": "inspected",
+      "reuse_status": "layout guidance only; not production artwork",
+      "visual_review_notes": "creator account level-up modal; not a LIVE room"
     },
     {
       "id": "d73c7f777b4adf1a59dd99257eb3f02d76b07695",
@@ -644,10 +685,11 @@
         "width": 1364,
         "height": 638
       },
-      "dimensions_audit": "PNG IHDR width/height verified during visual QA",
+      "dimensions_audit": "PNG IHDR width/height verified during direct visual QA",
       "transparency_audit": "pending",
-      "human_visual_review": "inspected-not-live-reference",
-      "reuse_status": "layout guidance only; not production artwork"
+      "human_visual_review": "inspected",
+      "reuse_status": "layout guidance only; not production artwork",
+      "visual_review_notes": "creator scheduler page; not a LIVE room"
     },
     {
       "id": "b783ff31109fbd14e51bb7c3e03c68fe0b4725e9",
@@ -658,11 +700,15 @@
       "file_size_bytes": 788343,
       "git_blob_sha": "b783ff31109fbd14e51bb7c3e03c68fe0b4725e9",
       "visual_role": "reference-only; do not copy branded artwork",
-      "dimensions_px": null,
-      "dimensions_audit": "pending",
+      "dimensions_px": {
+        "width": 1363,
+        "height": 633
+      },
+      "dimensions_audit": "PNG IHDR width/height verified during direct visual QA",
       "transparency_audit": "pending",
-      "human_visual_review": "sampled-only",
-      "reuse_status": "layout guidance only; not production artwork"
+      "human_visual_review": "inspected",
+      "reuse_status": "layout guidance only; not production artwork",
+      "visual_review_notes": "Short dramas discovery listing; not a LIVE room"
     },
     {
       "id": "8905b6c02233969cbebf13cfa511967adaf4045e",
@@ -673,11 +719,15 @@
       "file_size_bytes": 988348,
       "git_blob_sha": "8905b6c02233969cbebf13cfa511967adaf4045e",
       "visual_role": "reference-only; do not copy branded artwork",
-      "dimensions_px": null,
-      "dimensions_audit": "pending",
+      "dimensions_px": {
+        "width": 1366,
+        "height": 638
+      },
+      "dimensions_audit": "PNG IHDR width/height verified during direct visual QA",
       "transparency_audit": "pending",
-      "human_visual_review": "sampled-only",
-      "reuse_status": "layout guidance only; not production artwork"
+      "human_visual_review": "inspected",
+      "reuse_status": "layout guidance only; not production artwork",
+      "visual_review_notes": "creator profile and video grid; not a LIVE room"
     },
     {
       "id": "dd8555a558fcc20d15bddf350cb2498846e4313a",
@@ -688,11 +738,15 @@
       "file_size_bytes": 956113,
       "git_blob_sha": "dd8555a558fcc20d15bddf350cb2498846e4313a",
       "visual_role": "reference-only; do not copy branded artwork",
-      "dimensions_px": null,
-      "dimensions_audit": "pending",
+      "dimensions_px": {
+        "width": 1366,
+        "height": 643
+      },
+      "dimensions_audit": "PNG IHDR width/height verified during direct visual QA",
       "transparency_audit": "pending",
-      "human_visual_review": "sampled-only",
-      "reuse_status": "layout guidance only; not production artwork"
+      "human_visual_review": "inspected",
+      "reuse_status": "layout guidance only; not production artwork",
+      "visual_review_notes": "creator profile with expanded navigation; not a LIVE room"
     },
     {
       "id": "3e507dc368d89089cd23020e351e6bc7d6bd2d13",
@@ -703,11 +757,15 @@
       "file_size_bytes": 374253,
       "git_blob_sha": "3e507dc368d89089cd23020e351e6bc7d6bd2d13",
       "visual_role": "reference-only; do not copy branded artwork",
-      "dimensions_px": null,
-      "dimensions_audit": "pending",
+      "dimensions_px": {
+        "width": 1364,
+        "height": 632
+      },
+      "dimensions_audit": "PNG IHDR width/height verified during direct visual QA",
       "transparency_audit": "pending",
-      "human_visual_review": "sampled-only",
-      "reuse_status": "layout guidance only; not production artwork"
+      "human_visual_review": "inspected",
+      "reuse_status": "layout guidance only; not production artwork",
+      "visual_review_notes": "LIVE discovery/watch preview with category strip and click-to-watch prompt; not an in-room control screen"
     },
     {
       "id": "a7ea61d43ec155a636ccb954504760e1e5bf072a",
@@ -733,11 +791,15 @@
       "file_size_bytes": 469297,
       "git_blob_sha": "5686bdbc653ddc7b6211d16cb1d2f44a603be1b0",
       "visual_role": "reference-only; do not copy branded artwork",
-      "dimensions_px": null,
-      "dimensions_audit": "pending",
+      "dimensions_px": {
+        "width": 1366,
+        "height": 638
+      },
+      "dimensions_audit": "PNG IHDR width/height verified during direct visual QA",
       "transparency_audit": "pending",
-      "human_visual_review": "sampled-only",
-      "reuse_status": "layout guidance only; not production artwork"
+      "human_visual_review": "inspected",
+      "reuse_status": "layout guidance only; not production artwork",
+      "visual_review_notes": "multi-guest LIVE room with a four-position participant arrangement and separate viewer/chat rail"
     },
     {
       "id": "ae3a0f7d0d49c6e06d11a6dcee129c370b0b06ad",
@@ -748,11 +810,15 @@
       "file_size_bytes": 416478,
       "git_blob_sha": "ae3a0f7d0d49c6e06d11a6dcee129c370b0b06ad",
       "visual_role": "reference-only; do not copy branded artwork",
-      "dimensions_px": null,
-      "dimensions_audit": "pending",
+      "dimensions_px": {
+        "width": 1366,
+        "height": 634
+      },
+      "dimensions_audit": "PNG IHDR width/height verified during direct visual QA",
       "transparency_audit": "pending",
-      "human_visual_review": "sampled-only",
-      "reuse_status": "layout guidance only; not production artwork"
+      "human_visual_review": "inspected",
+      "reuse_status": "layout guidance only; not production artwork",
+      "visual_review_notes": "multi-guest LIVE room with a six-position grid and viewer/chat rail"
     },
     {
       "id": "b31fc73413f81209e20edcb430ee9fcf70f8864c",
@@ -763,11 +829,15 @@
       "file_size_bytes": 673067,
       "git_blob_sha": "b31fc73413f81209e20edcb430ee9fcf70f8864c",
       "visual_role": "reference-only; do not copy branded artwork",
-      "dimensions_px": null,
-      "dimensions_audit": "pending",
+      "dimensions_px": {
+        "width": 1366,
+        "height": 639
+      },
+      "dimensions_audit": "PNG IHDR width/height verified during direct visual QA",
       "transparency_audit": "pending",
-      "human_visual_review": "sampled-only",
-      "reuse_status": "layout guidance only; not production artwork"
+      "human_visual_review": "inspected",
+      "reuse_status": "layout guidance only; not production artwork",
+      "visual_review_notes": "multi-guest LIVE room with four participant tiles and bottom gift dock"
     },
     {
       "id": "ee8eb331a3b49b368bfeabb5a93ea8862deed975",
@@ -778,11 +848,15 @@
       "file_size_bytes": 457537,
       "git_blob_sha": "ee8eb331a3b49b368bfeabb5a93ea8862deed975",
       "visual_role": "reference-only; do not copy branded artwork",
-      "dimensions_px": null,
-      "dimensions_audit": "pending",
+      "dimensions_px": {
+        "width": 1366,
+        "height": 641
+      },
+      "dimensions_audit": "PNG IHDR width/height verified during direct visual QA",
       "transparency_audit": "pending",
-      "human_visual_review": "sampled-only",
-      "reuse_status": "layout guidance only; not production artwork"
+      "human_visual_review": "inspected",
+      "reuse_status": "layout guidance only; not production artwork",
+      "visual_review_notes": "single-host LIVE room with portrait stage, viewer/chat rail and bottom gift dock"
     },
     {
       "id": "7704edce10f7b7acbf6a207e1ef353480639107e",
@@ -16849,5 +16923,11 @@
       "human_visual_review": "sampled-only",
       "reuse_status": "layout guidance only; not production artwork"
     }
-  ]
+  ],
+  "visual_review_summary": {
+    "desktop_tiktok_images_human_inspected": 23,
+    "desktop_tiktok_images_total": 29,
+    "desktop_tiktok_uninspected": 6,
+    "inspection_note": "23 desktop TikTok PNG references were opened and visually classified on 2026-11-13. Six larger images could not be rendered through the connected repository file preview in this pass and remain pending. Desktop Facebook and Android screenshots are inventoried but not covered by this 23-image visual pass."
+  }
 }
