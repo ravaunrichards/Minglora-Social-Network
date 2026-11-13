@@ -18,7 +18,7 @@
 | `public/assets/icons/navigation-3d.svg` | One SVG symbol sheet with multiple navigation symbols | Shared icon source |
 | `public/assets/icons/live-control-icons.svg` | 16 original vector symbols for current LIVE dock controls and states | Dedicated LIVE SVG sprite used by `public/app.js`; precached by the service worker |
 | `public/assets/icons/minglora-push.svg` | One standalone SVG | Push/notification graphic |
-| `assets/icons/`, `assets/animations/`, `assets/manifests/` | Documentation-only directories before this work | Source/design workspaces, not complete production packs |
+| `assets/icons/`, `assets/animations/`, `assets/manifests/` | Partial source and documentation workspaces | Not complete production packs |
 
 The gift generator emits 1,748 SVGs plus 1,748 GLTF files into `public/assets/gifts/catalog/` when run. These outputs are generated during CI and the application's `prestart` lifecycle; they are not present as committed files in the audited `main` tree. The generator currently emits all catalogue rows, including retired records; only 1,737 rows are marked active.
 
@@ -68,3 +68,13 @@ The follow-on branch adds the source animation catalogue at `assets/animations/g
 - The build-time motion generator creates **1,737** active-gift keyframe JSON assets at `public/assets/animations/gifts/per-gift/<gift-code>.json`. The runtime fetches each file lazily by its canonical gift code.
 - `tests/unit/gift-asset-register.test.js` verifies all 45 model files, byte sizes and Git blob identities, plus the corresponding unresolved rights records.
 - These 45 models are inventory records for files already in the main repository. They are not evidence that the designated separate gift-asset repository was found, or that every model is bound to a catalogue gift.
+
+
+## Complete artwork visibility gate — 2026-11-13
+
+- Gift Studio thumbnails now use centered `object-fit: contain`, not `cover`; animation overlays also use full-fit containment.
+- LIVE gift cards keep their existing contained image rendering.
+- Both Gift Studio and LIVE exclude gifts with non-canonical local artwork/model paths or a previously failed artwork request.
+- Preview and send are disabled until the selected original artwork has successfully loaded with non-zero intrinsic dimensions.
+- Broken artwork is withheld rather than replaced with an emoji or generic image. The full backend catalogue remains available for exact record copy/export.
+- The generated artwork eligibility register covers all 1,509 extracted crops. 1,058 are potential source-edge clipping blockers; the other 451 are review candidates only, not approved assets. All remain blocked pending human visual review and rights/provenance evidence.
