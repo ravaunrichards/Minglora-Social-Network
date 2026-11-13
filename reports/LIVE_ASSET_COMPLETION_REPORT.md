@@ -7,6 +7,7 @@
 ## Completed in this branch
 
 - [x] Read-only traversal of the reference Git tree; 1,121 reference images identified across Android and desktop comparison folders.
+- [x] Machine-readable 1,121-image reference manifest added at `reports/minglora-live-reference-assets.json` with file paths, formats, byte sizes and Git blob IDs; pixel dimensions/transparency are explicitly pending.
 - [x] Representative Android fan-club and desktop multi-guest LIVE screenshots visually inspected.
 - [x] Existing 131 gift screenshot captures and 1,509 extracted crop records identified; preservation/rights restrictions documented.
 - [x] Canonical 1,748-row gift catalogue inspected: 1,737 active and 11 inactive.
