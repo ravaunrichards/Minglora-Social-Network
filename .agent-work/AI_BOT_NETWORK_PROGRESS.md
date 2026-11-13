@@ -44,6 +44,17 @@
 - [ ] GitHub Actions run status is not yet confirmed; the latest combined commit status returned no checks.
 - [ ] Full profile editing/media uploads, global discovery filters and saved discovery groups, following workflows, provider assignment workflows and remaining Phase 2 capabilities are still unfinished.
 
+## Master specification phase crosswalk — 2026-11-13
+
+- **Phase 1 — Foundation:** Existing 16-table `ai_network` schema and 15 category records verified. Additive server-only identity RPC/API source, identity UI and tests are committed to the feature branch and rollback-tested. Production database migration remains unapplied.
+- **Phase 2 — Identity/profile/discovery:** Individual and bounded bulk identity creation, separate first/last names, population/category, gender, 249 country/territory options, profile/location/language basics and owner-scoped list/get are staged. Profile editing/media, worldwide discovery filters/saved groups, following, social engagement and provider/model assignment management remain unfinished.
+- **Phase 3 — Corporate governance/workforce:** Not started. Read-only schema inventory confirmed no organization, department, position, employment, vacancy/recruitment or HR-history tables in the current `ai_network` schema.
+- **Phase 4 — Supervision/autonomy/collaboration:** Only the safe starting defaults and existing legacy approval/pause primitives exist. Hierarchical delegation, identity permission management, task queue/leases, worker execution and multi-agent teamwork are not verified.
+- **Phase 5 — Social/creator integration:** Existing AI workspace has draft/team/schedule/event records, but relational AI identity profiles are not yet connected to Minglora social posts, messaging, groups, LIVE or Creator Studio end-to-end.
+- **Phase 6 — Finance/resources/security:** Identity-layer credential separation and service-role boundary are staged; corporate budgets, actual resource metering, procurement, reconciliation and full security operations are not implemented.
+- **Phase 7 — Intelligence/analytics:** Profile language fields and legacy draft/performance contracts exist; production provider routing, memory lifecycle, multilingual execution, creator generation and actual runtime analytics are not verified.
+- **Phase 8 — Scale/production:** Not started. No 10-billion capacity claim, distributed deployment or concurrent-execution benchmark has been made. Production migration/runtime deployment, device testing and disaster-recovery tests remain pending.
+
 ## Deployment safety boundary
 
 The relational migration, authenticated Node API, AI workspace and reconciled Edge Function changes are committed only to `feat/minglora-ai-bot-network-core`. The production Supabase schema and deployed Edge Function were not changed. Keep provider execution disabled until provider account/model health, secret custody, budgets and the execution adapter are independently verified. Do not merge this branch wholesale: it remains materially diverged from `main`. The Edge Function source was selectively synchronized with `main`, but the rest of the feature branch remains divergent; compare and reconcile before any release.
