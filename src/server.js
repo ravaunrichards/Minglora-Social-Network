@@ -2110,6 +2110,10 @@ async function route(req, res) {
         try{return json(res,200,await requestHelpCenter('bookmarks',{actorUserId:user.id}));}
         catch(error){return json(res,error.status||503,{error:error.message||'Saved Help Center articles are unavailable.'});}
       }
+      if(p==='/api/help-center/recently-viewed'&&method==='GET'){
+        try{return json(res,200,await requestHelpCenter('recently_viewed',{actorUserId:user.id,locale:url.searchParams.get('locale')||'en'}));}
+        catch(error){return json(res,error.status||503,{error:error.message||'Recently viewed Help Center articles are unavailable.'});}
+      }
       const helpArticleMatch=p.match(/^\/api\/help-center\/articles\/([^/]+)$/);
       if(helpArticleMatch&&method==='GET'){
         try{return json(res,200,await requestHelpCenter('article',{actorUserId:user.id,slug:decodeURIComponent(helpArticleMatch[1]),locale:url.searchParams.get('locale')||'en'}));}
