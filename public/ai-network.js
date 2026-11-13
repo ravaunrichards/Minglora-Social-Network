@@ -22,6 +22,19 @@
   const empty = message => '<p class="ai-network-empty">' + esc(message) + '</p>';
   const pill = (label, kind = 'neutral') => '<span class="ai-network-pill ai-network-pill--' + kind + '">' + esc(label) + '</span>';
   const list = values => Array.isArray(values) ? values : [];
+  const COUNTRY_CODES = 'AF AL DZ AS AD AO AI AQ AG AR AM AW AU AT AZ BS BH BD BB BY BE BZ BJ BM BT BO BQ BA BW BV BR IO BN BG BF BI CV KH CM CA KY CF TD CL CN CX CC CO KM CG CD CK CR HR CU CW CY CZ CI DK DJ DM DO EC EG SV GQ ER EE SZ ET FK FO FJ FI FR GF PF TF GA GM GE DE GH GI GR GL GD GP GU GT GG GN GW GY HT HM VA HN HK HU IS IN ID IR IQ IE IM IL IT JM JP JE JO KZ KE KI KW KG LA LV LB LS LR LY LI LT LU MO MG MW MY MV ML MT MH MQ MR MU YT MX FM MD MC MN ME MS MA MZ MM NA NR NP NL NC NZ NI NE NG NU NF KP MK MP NO OM PK PW PS PA PG PY PE PH PN PL PT PR QA RO RU RW RE BL SH KN LC MF PM VC WS SM ST SA SN RS SC SL SG SX SK SI SB SO ZA GS KR SS ES LK SD SR SJ SE CH SY TW TJ TZ TH TL TG TK TO TT TN TM TC TV TR UG UA AE GB US UM UY UZ VU VE VN VG VI WF EH YE ZM ZW AX'.split(' ');
+  const regionNames = typeof Intl !== 'undefined' && typeof Intl.DisplayNames === 'function'
+    ? new Intl.DisplayNames(['en'], { type: 'region' })
+    : null;
+  const countryLabel = code => regionNames?.of(code) || code;
+  const countryCode = value => {
+    const normalized = String(value ?? '').trim();
+    if (/^[A-Za-z]{2}$/.test(normalized) && COUNTRY_CODES.includes(normalized.toUpperCase())) return normalized.toUpperCase();
+    return COUNTRY_CODES.find(code => countryLabel(code).toLowerCase() === normalized.toLowerCase()) || '';
+  };
+  const countryDatalist = '<datalist id="ai-network-countries">' + COUNTRY_CODES.map(code =>
+    '<option value="' + esc(countryLabel(code)) + '"></option>'
+  ).join('') + '</datalist>';
 
   async function request(path = '', options = {}) {
     const response = await fetch(API + path, {
@@ -110,6 +123,17 @@
         {value:'prefer_not_to_say',label:'Prefer not to specify'}
       ], 'prefer_not_to_say') + '</select></label></div>' +
       '<label>Purpose / introduction<textarea name="purpose" maxlength="1200" rows="2" placeholder="Describe this AI identity and its purpose."></textarea></label>' +
+      '<div class="ai-network-form-grid"><label>Nationality<input name="nationality" maxlength="120" placeholder="Nationality description"></label>' +
+      '<label>Country of origin<input name="countryOfOrigin" list="ai-network-countries" autocomplete="off" placeholder="Search countries"></label>' +
+      '<label>Current country<input name="currentCountry" list="ai-network-countries" autocomplete="off" placeholder="Search countries"></label>' +
+      '<label>State / province<input name="stateProvince" maxlength="120"></label>' +
+      '<label>Parish / county<input name="parishCounty" maxlength="120"></label>' +
+      '<label>District<input name="district" maxlength="120"></label>' +
+      '<label>City<input name="city" maxlength="120"></label>' +
+      '<label>Town<input name="town" maxlength="120"></label>' +
+      '<label>Time zone<input name="timeZone" maxlength="80" value="UTC" placeholder="America/Jamaica"></label>' +
+      '<label>Languages (comma-separated tags)<input name="languages" maxlength="240" value="en" placeholder="en, ht, es"></label></div>' +
+      countryDatalist +
       '<label>Email address (optional; record only)<input name="emailAddress" type="email" maxlength="320" placeholder="No inbox is created or claimed"></label>' +
       '<button class="primary" type="submit" ' + (!categories.length || !window.crypto?.randomUUID ? 'disabled' : '') + '>Create relational AI identity</button>' +
       '</form>';
@@ -379,7 +403,39 @@
         display_name: value('displayName'),
         username: value('username').toLowerCase()
       };
-      payload.profile = { gender: value('gender') };
+      const countryOfOrigin = countryCode(value('countryOfOrigin'));
+      const currentCountry = countryCode(value('currentCountry'));
+      payload.profile = {
+        gender: value('gender'),
+        nationality: value('nationality'),
+        country_of_origin: countryOfOrigin || null,
+        current_country: currentCountry || null,
+        state_province: value('stateProvince'),
+        parish_county: value('parishCounty'),
+        district: value('district'),
+        city: value('city'),
+        town: value('town'),
+        time_zone: value('timeZone') || 'UTC'
+      };
+      payload.languages = value('languages').split(',').map(tag => tag.trim()).filter(Boolean);
+      payload.locations = [];
+      if (countryOfOrigin) payload.locations.push({
+        location_type: 'origin',
+        country_code: countryOfOrigin,
+        country_name: countryLabel(countryOfOrigin)
+      });
+      if (currentCountry) payload.locations.push({
+        location_type: 'current',
+        country_code: currentCountry,
+        country_name: countryLabel(currentCountry),
+        state_province: value('stateProvince'),
+        parish_county: value('parishCounty'),
+        district: value('district'),
+        city: value('city'),
+        town: value('town'),
+        time_zone: value('timeZone') || 'UTC',
+        is_public: false
+      });
       if (value('emailAddress')) payload.email = { email_address: value('emailAddress') };
     } else if (kind === 'bot') {
       path = '/bots';
