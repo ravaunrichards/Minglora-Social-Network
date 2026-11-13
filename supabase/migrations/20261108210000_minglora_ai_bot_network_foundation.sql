@@ -338,7 +338,9 @@ CREATE TABLE IF NOT EXISTS public.ai_identities (
   owner_admin_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
   source_system text NOT NULL DEFAULT 'minglora' CHECK (char_length(source_system) BETWEEN 2 AND 40),
   source_identity_id uuid,
-  public_profile_slug text NOT NULL UNIQUE CHECK (public_profile_slug ~ '^[a-z0-9]+(-[a-z0-9]+)*
+  public_profile_slug text NOT NULL UNIQUE CHECK (public_profile_slug ~ '^[a-z0-9]+(-[a-z0-9]+)*$'),
+  public_profile_enabled boolean NOT NULL DEFAULT false,
+  created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE (owner_admin_id,source_system,source_identity_id)
 );
