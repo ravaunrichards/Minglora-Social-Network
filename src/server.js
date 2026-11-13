@@ -2141,7 +2141,7 @@ async function route(req, res) {
         if(p==='/api/help-center/admin/overview'&&method==='GET'){
           action='admin_overview';payload.locale=url.searchParams.get('locale')||'en';
         }else if(p==='/api/help-center/admin/articles'&&method==='POST'){
-          action='admin_article_save';payload={...payload,...input};
+          action='admin_article_save';payload={...input,actorUserId:user.id};
         }else if(p==='/api/help-center/admin/articles/transition'&&method==='POST'){
           action='admin_transition';payload={...payload,...input};
         }else if(p==='/api/help-center/admin/articles/revisions'&&method==='GET'){
