@@ -7,6 +7,7 @@ const SHELL=['/','/assets/default-profile-cover.svg?v=20261106-profile-defaults-
 SHELL.push('/live-tiktok-compact.css?v=20261111-live-tiktok-compact-1');
 SHELL.push('/creator-video-analytics.css?v=20261111-video-analytics-1');
 SHELL.push('/assets/animations/gifts/catalog-motion-index.json');
+SHELL.push('/gift-effects.js?v=20261113-gift-animation-assets-1');
 SHELL.push('/assets/animations/gifts/preset-index.json');
 for(const preset of ["celebration-burst","cosmic-orbit","creature-entrance","delight-pop","gift-reveal","glam-spin","grand-entry","heart-pulse","horizon-sweep","nature-rise","petal-bloom","pixel-burst","power-impact","royal-shimmer","soundwave-ripple","spark-float","warm-wave"]){
   SHELL.push('/assets/animations/gifts/presets/'+preset+'.json');
