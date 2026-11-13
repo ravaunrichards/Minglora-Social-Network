@@ -153,8 +153,8 @@ The current-head test log explicitly verifies that every active gift has a disti
 
 ## Remaining release gates — reconfirmed at current head
 
-- The 1,509 extracted PNG artwork crops remain review-only. Their ownership/licence and modification/distribution rights have not been established; the empty rights register is intentional and must not be interpreted as clearance.
-- `assets/gift-assets/` is currently a controlled workspace with README instructions and empty source/approved artwork, model and audio folders. Its `asset-register.json` and `rights-register.json` contain no approved asset entries. It is not a completed, populated production asset library.
+- The 1,509 extracted PNG artwork crops remain review-only. Their ownership/licence and modification/distribution rights have not been established. The artwork eligibility manifest records every crop; the 45 standalone-model rights entries are all `UNVERIFIED`, not production clearance.
+- `assets/gift-assets/` is a controlled workspace with instructions, a populated 45-file standalone GLTF inventory, a 45-entry unverified rights register, and a 1,509-record extracted-artwork eligibility register. Source/approved artwork and audio master folders still do not contain a full production library. It is not a completed premium asset library.
 - The generated SVG/GLTF catalogue is a procedural Minglora baseline, not the requested premium hand-authored 3D artwork for every gift. The 1,737 individual motion JSON files are distinct Web Animations API keyframes applied to existing artwork/models, not individually modelled cinematic GLTF scenes.
 - Gift audio continues to use synthesized runtime cues; no complete individually mastered per-gift sound library is verified.
 - The full per-image human review of 1,121 references, all 1,509 crop rights/review decisions, all 18 requested editorial gift collections, and physical Android/iPhone/tablet/foldable/desktop/TV device validation remain incomplete.
@@ -172,3 +172,18 @@ The current-head test log explicitly verifies that every active gift has a disti
 - [x] Added tests that verify every listed file exists, its byte size and actual Git blob SHA match the inventory, and every rights record remains unapproved until evidence is supplied.
 
 GitHub Actions Node 24 CI run **#10914** on commit `3e54c50163ecc8052517304bd41390a36916ef56` passed, including repository checks, asset generators, the automated test job, Supabase Auth acceptance and For You navigation checks. The 45 existing models are inventoried, not newly produced premium art. This does not fill the empty artwork/audio source/master folders, establish rights or replace the missing designated separate gift-asset repository.
+
+
+## Complete-artwork visibility and send gate — 2026-11-13
+
+- [x] Corrected Gift Studio catalogue thumbnail fitting from `object-fit: cover` to centered `object-fit: contain`; the whole artwork remains visible without stretching or clipping.
+- [x] Applied full-fit containment to gift-effect image/model presentation.
+- [x] Added a canonical artwork/model path check to the Gift Studio and LIVE display lists.
+- [x] Added fail-closed handling for broken artwork loads: the affected gift is withheld from the current usable picker; preview and sending are disabled; no emoji/generic substitute is displayed.
+- [x] LIVE sending is not enabled until the selected original artwork has successfully loaded with non-zero intrinsic dimensions. A failed 3D model may fall back only to the same gift's successfully loaded original artwork.
+- [x] Preserved the complete backend gift list for faithful record/catalogue copy/export; no gift names, IDs, coin prices, active flags, balances, wallet records or transaction history are rewritten by the display gate.
+- [x] Added `assets/gift-assets/manifests/artwork-eligibility.json` for all 1,509 screenshot-extracted crops. 1,058 contain the source-edge warning and are potential crop blockers; 451 have no edge warning but remain human-review candidates, not approved assets. The manifest records 995 exact unique catalogue name matches, 512 unmatched labels and 2 ambiguous matches.
+- [x] Added deterministic generator and CI check via `npm run check:gift-artwork-eligibility`; automated tests cover crop-warning status, rights gate, path mapping and the display/send fail-closed behavior.
+- [x] Updated HTML and service-worker references together; app/gift scripts use `20261113-complete-gift-artwork-gate-1`, styles use `20261113-gift-artwork-contain-1`, and shell cache is v305.
+
+**Validation caveat:** CI validation for the latest display-gate commit is still pending at the time of this entry. Do not mark this delivery verified until the new Node 24 CI run completes. Physical Android/iPhone/tablet/foldable/desktop/TV rendering and a human visual check of all 1,509 source crops remain outstanding. No screenshot-derived crop was automatically promoted to production.
