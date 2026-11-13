@@ -161,3 +161,14 @@ The current-head test log explicitly verifies that every active gift has a disti
 - The separate gift-asset repository was not present among the 36 repositories accessible to the connected GitHub account. No unverified repository was created or modified.
 
 **Release status:** PR #274 remains open, draft, unmerged and undeployed. The code and CI results are verified on the feature branch; production release remains blocked on the rights, premium asset, repository and device-validation gates above.
+
+
+
+## Standalone gift-model inventory and rights gate — 2026-11-13
+
+- [x] Replaced the empty asset-register placeholder with a 45-record inventory of the existing standalone GLTF models in `public/assets/gifts/`.
+- [x] Recorded each model's canonical source path, runtime URL, byte size and Git blob SHA. Catalogue binding and visual review remain explicitly unverified.
+- [x] Added a 45-record rights-review register. Every entry remains `UNVERIFIED`; no owner, licence or commercial/modification/redistribution permission was invented.
+- [x] Added tests that verify every listed file exists, its byte size and actual Git blob SHA match the inventory, and every rights record remains unapproved until evidence is supplied.
+
+GitHub Actions Node 24 CI run **#10914** on commit `3e54c50163ecc8052517304bd41390a36916ef56` passed, including repository checks, asset generators, the automated test job, Supabase Auth acceptance and For You navigation checks. The 45 existing models are inventoried, not newly produced premium art. This does not fill the empty artwork/audio source/master folders, establish rights or replace the missing designated separate gift-asset repository.
