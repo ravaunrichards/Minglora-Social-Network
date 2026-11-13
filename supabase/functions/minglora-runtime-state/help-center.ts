@@ -294,13 +294,14 @@ export async function handleHelpCenterAction(
       };
       const { data: article, error } = await admin.from("help_articles").insert(draft).select("*").single();
       if (error) return json(409, { error: "The draft could not be created. Check for a duplicate question or category." });
-      const snapshot = { slug: article.slug, category_id: article.category_id, question: article.question, excerpt: article.excerpt, answer_markdown: article.answer_markdown, status: article.status, featured: article.featured, source_reference: article.source_reference };
-      await admin.from("help_article_revisions").insert({ article_id: article.id, revision_no: 1, content_snapshot: snapshot, changed_by: actorUserId, revision_note: "Initial draft" });
       const subcategoryIds = uniqueIds(input.subcategoryIds);
-      if (subcategoryIds.length) {
-        const { error: linkError } = await admin.from("help_article_subcategories").insert(subcategoryIds.map((subcategoryId, index) => ({ article_id: article.id, subcategory_id: subcategoryId, sort_order: index })));
-        if (linkError) return json(409, { error: "The draft exists, but its topic links could not be saved. Edit the draft to finish organizing it." });
-      }
+      const { error: linkError } = await admin.rpc("help_replace_article_subcategories", {
+        p_article_id: article.id, p_subcategory_ids: subcategoryIds
+      });
+      if (linkError) return json(409, { error: "The draft exists, but its topic links could not be saved. Edit the draft to finish organizing it." });
+      const snapshot = { slug: article.slug, category_id: article.category_id, question: article.question, excerpt: article.excerpt, answer_markdown: article.answer_markdown, status: article.status, featured: article.featured, source_reference: article.source_reference, subcategory_ids: subcategoryIds };
+      const { error: revisionError } = await admin.from("help_article_revisions").insert({ article_id: article.id, revision_no: 1, content_snapshot: snapshot, changed_by: actorUserId, revision_note: "Initial draft" });
+      if (revisionError) return json(503, { error: "The draft was created, but its first revision could not be secured." });
       return json(201, { article });
     }
 
@@ -317,7 +318,8 @@ export async function handleHelpCenterAction(
       if (duplicate?.length) return json(409, { error: "A matching question already exists. Merge or update the existing article to avoid duplication." });
       const { data: latest } = await admin.from("help_article_revisions").select("revision_no")
         .eq("article_id", articleId).order("revision_no", { ascending: false }).limit(1).maybeSingle();
-      const snapshot = { slug: current.slug, category_id: current.category_id, question: current.question, excerpt: current.excerpt, answer_markdown: current.answer_markdown, status: current.status, featured: current.featured, source_reference: current.source_reference };
+      const { data: currentTopicLinks } = await admin.from("help_article_subcategories").select("subcategory_id").eq("article_id", articleId);
+      const snapshot = { slug: current.slug, category_id: current.category_id, question: current.question, excerpt: current.excerpt, answer_markdown: current.answer_markdown, status: current.status, featured: current.featured, source_reference: current.source_reference, subcategory_ids: (currentTopicLinks || []).map((item: any) => String(item.subcategory_id)) };
       const { error: revisionError } = await admin.from("help_article_revisions").insert({
         article_id: articleId, revision_no: Number(latest?.revision_no || 0) + 1,
         content_snapshot: snapshot, changed_by: actorUserId, revision_note: asText(input.revisionNote, 300)
@@ -337,12 +339,10 @@ export async function handleHelpCenterAction(
       const { data: article, error } = await admin.from("help_articles").update(patch).eq("id", articleId).select("*").single();
       if (error) return json(409, { error: "The article could not be updated. Its previous revision is preserved." });
       const subcategoryIds = uniqueIds(input.subcategoryIds);
-      const { error: deleteLinksError } = await admin.from("help_article_subcategories").delete().eq("article_id", articleId);
-      if (deleteLinksError) return json(503, { error: "The article was updated, but its topic links need review." });
-      if (subcategoryIds.length) {
-        const { error: linkError } = await admin.from("help_article_subcategories").insert(subcategoryIds.map((subcategoryId, index) => ({ article_id: articleId, subcategory_id: subcategoryId, sort_order: index })));
-        if (linkError) return json(409, { error: "The article was updated, but its topic links need review." });
-      }
+      const { error: linkError } = await admin.rpc("help_replace_article_subcategories", {
+        p_article_id: articleId, p_subcategory_ids: subcategoryIds
+      });
+      if (linkError) return json(409, { error: "The article was saved, but its topic mapping needs review. Its previous topic links remain preserved." });
       return json(200, { article });
     }
 
@@ -363,7 +363,8 @@ export async function handleHelpCenterAction(
       }
       const { data: latest } = await admin.from("help_article_revisions").select("revision_no")
         .eq("article_id", articleId).order("revision_no", { ascending: false }).limit(1).maybeSingle();
-      const snapshot = { slug: current.slug, category_id: current.category_id, question: current.question, excerpt: current.excerpt, answer_markdown: current.answer_markdown, status: current.status, featured: current.featured, source_reference: current.source_reference };
+      const { data: currentTopicLinks } = await admin.from("help_article_subcategories").select("subcategory_id").eq("article_id", articleId);
+      const snapshot = { slug: current.slug, category_id: current.category_id, question: current.question, excerpt: current.excerpt, answer_markdown: current.answer_markdown, status: current.status, featured: current.featured, source_reference: current.source_reference, subcategory_ids: (currentTopicLinks || []).map((item: any) => String(item.subcategory_id)) };
       const { error: revisionError } = await admin.from("help_article_revisions").insert({
         article_id: articleId, revision_no: Number(latest?.revision_no || 0) + 1,
         content_snapshot: snapshot, changed_by: actorUserId,
@@ -416,6 +417,10 @@ export async function handleHelpCenterAction(
         status: "draft", published_at: null, approver_id: null, publisher_id: null, updated_at: new Date().toISOString()
       }).eq("id", articleId).select("*").single();
       if (error) return json(409, { error: "The earlier content could not be restored." });
+      const { error: topicsError } = await admin.rpc("help_replace_article_subcategories", {
+        p_article_id: articleId, p_subcategory_ids: uniqueIds(restore.subcategory_ids)
+      });
+      if (topicsError) return json(409, { error: "The article content was restored as a draft, but its topic mapping needs review." });
       return json(200, { article, restoredAs: "draft" });
     }
 
@@ -469,6 +474,61 @@ export async function handleHelpCenterAction(
         : await admin.from("help_subcategories").insert(patch).select("*").single();
       if (result.error) return json(409, { error: "The Help Center topic could not be saved." });
       return json(200, { subcategory: result.data });
+    }
+
+    if (action === "help_admin_asset_sign") {
+      const articleId = String(input.articleId || "");
+      const assetType = String(input.assetType || "");
+      const contentType = asText(input.contentType, 100).toLowerCase();
+      const mimeExtensions: Record<string,string> = {
+        "image/jpeg":"jpg","image/png":"png","image/webp":"webp","image/avif":"avif",
+        "video/mp4":"mp4","video/webm":"webm"
+      };
+      if (!isUuid(articleId) || !["image","video"].includes(assetType) || !mimeExtensions[contentType] ||
+          (assetType === "image" && !contentType.startsWith("image/")) ||
+          (assetType === "video" && !contentType.startsWith("video/"))) {
+        return json(400, { error: "Choose a supported instructional image or video." });
+      }
+      const { data: article } = await admin.from("help_articles").select("id").eq("id",articleId).maybeSingle();
+      if (!article) return json(404, { error: "The Help Center article was not found." });
+      const storagePath = articleId + "/" + crypto.randomUUID() + "." + mimeExtensions[contentType];
+      const { data, error } = await admin.storage.from("minglora-help-center").createSignedUploadUrl(storagePath);
+      if (error || !data?.signedUrl) return json(503, { error: "A secure upload link could not be created." });
+      return json(200, { bucket:"minglora-help-center", path:storagePath, signedUrl:data.signedUrl, token:data.token, contentType });
+    }
+
+    if (action === "help_admin_asset_record") {
+      const articleId = String(input.articleId || "");
+      const storagePath = asText(input.storagePath, 300);
+      const assetType = String(input.assetType || "");
+      const fileName = storagePath.split("/").pop() || "";
+      if (!isUuid(articleId) || !["image","video"].includes(assetType) ||
+          !storagePath.startsWith(articleId + "/") || storagePath.includes("..") ||
+          !/^[0-9a-f-]+\\.(jpg|png|webp|avif|mp4|webm)$/i.test(fileName)) {
+        return json(400, { error: "The uploaded Help Center media reference is invalid." });
+      }
+      const { data: article } = await admin.from("help_articles").select("id").eq("id",articleId).maybeSingle();
+      if (!article) return json(404, { error: "The Help Center article was not found." });
+      const { data: files, error: fileError } = await admin.storage.from("minglora-help-center").list(articleId,{search:fileName,limit:10});
+      if (fileError || !(files || []).some((file:any)=>file.name===fileName)) return json(409, { error: "The uploaded file could not be verified in private storage." });
+      const { data, error } = await admin.from("help_article_assets").insert({
+        article_id:articleId,asset_type:assetType,storage_bucket:"minglora-help-center",storage_path:storagePath,
+        alt_text:asText(input.altText,200),caption:asText(input.caption,300),sort_order:Math.max(0,Math.min(999,Number(input.sortOrder)||0))
+      }).select("*").single();
+      if (error) return json(409, { error: "The media file exists, but its article attachment could not be saved." });
+      return json(201,{asset:data});
+    }
+
+    if (action === "help_admin_asset_delete") {
+      const assetId = String(input.assetId || "");
+      if (!isUuid(assetId)) return json(400,{error:"Choose an instructional image or video."});
+      const { data: asset } = await admin.from("help_article_assets").select("*").eq("id",assetId).maybeSingle();
+      if (!asset) return json(404,{error:"The Help Center media attachment was not found."});
+      const { error: storageError } = await admin.storage.from(asset.storage_bucket).remove([asset.storage_path]);
+      if (storageError) return json(503,{error:"The private storage file could not be removed; its article record was preserved."});
+      const { error } = await admin.from("help_article_assets").delete().eq("id",assetId);
+      if (error) return json(503,{error:"The file was removed from storage, but its metadata requires administrator repair."});
+      return json(200,{deleted:true});
     }
 
     if (action === "help_admin_translation_update") {
