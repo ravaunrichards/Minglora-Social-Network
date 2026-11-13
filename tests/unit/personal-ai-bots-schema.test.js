@@ -158,6 +158,21 @@ test('partial AI identity updates preserve languages unless a languages array is
   assert.doesNotMatch(upsert.slice(locationsStart),/DELETE FROM public\.ai_identity_languages/);
 });
 
+test('canonical AI identity upsert persists and returns only the approved low-risk permission records',()=>{
+  const upsertStart=sql.indexOf('CREATE OR REPLACE FUNCTION public.minglora_ai_identity_upsert(');
+  const batchStart=sql.indexOf('CREATE OR REPLACE FUNCTION public.minglora_ai_identity_upsert_batch(');
+  const upsert=sql.slice(upsertStart,batchStart);
+  const listStart=sql.indexOf('CREATE OR REPLACE FUNCTION public.minglora_ai_identity_list(');
+  const list=sql.slice(listStart,sql.indexOf('REVOKE ALL ON FUNCTION public.minglora_ai_identity_upsert',listStart));
+  assert.match(upsert,/p_identity \? 'permissions'/);
+  assert.match(upsert,/DELETE FROM public\.ai_identity_permissions|UPDATE public\.ai_identity_permissions/);
+  assert.match(upsert,/analytics_read','moderation_flag','draft_content','translate_content','prepare_faq_draft/);
+  assert.match(upsert,/INSERT INTO public\.ai_identity_permissions/);
+  assert.match(upsert,/identity\.permissions_synchronized/);
+  assert.match(list,/'permissions',COALESCE/);
+  assert.match(list,/FROM public\.ai_identity_permissions AS permission/);
+});
+
 test('canonical identity RPCs are service-role-only and owner-gated at the gateway',()=>{
   assert.ok(sql.includes('CREATE OR REPLACE FUNCTION public.minglora_ai_identity_upsert('));
   assert.ok(sql.includes('CREATE OR REPLACE FUNCTION public.minglora_ai_identity_upsert_batch('));
