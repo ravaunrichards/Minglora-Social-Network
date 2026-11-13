@@ -7,6 +7,24 @@
   const MEETWAVE_PARTICIPANT_LIMIT = MEETWAVE_GUEST_LIMIT + 1;
   const MEETING_SCREEN_LAYOUTS = { 'full-screen':'Full Screen', 'fluid-panel':'Fluid Panel', 'fluid-grid':'Fluid Grid', 'fixed-grid':'Fixed Grid', 'fixed-panel':'Fixed Panel', 'side-by-side':'Side by Side', spotlight:'Spotlight' };
   const MEETING_GUEST_LAYOUTS = { 'roundtable-1':'Roundtable 1', 'roundtable-2':'Roundtable 2' };
+  let meetWaveLayoutSaveQueue = Promise.resolve();
+  async function restoreMeetWaveLayouts(){
+    activeLayout='fluid-grid';activeGuestLayout='roundtable-1';
+    try{
+      const result=await api('/settings');
+      const preferences=result?.settings?.preferences||{};
+      if(Object.prototype.hasOwnProperty.call(MEETING_SCREEN_LAYOUTS,preferences.meetWaveScreenLayout))activeLayout=preferences.meetWaveScreenLayout;
+      if(Object.prototype.hasOwnProperty.call(MEETING_GUEST_LAYOUTS,preferences.meetWaveGuestLayout))activeGuestLayout=preferences.meetWaveGuestLayout;
+    }catch(error){
+      console.warn('[Minglora MeetWave] Layout preferences could not be loaded:',error?.message||error);
+    }
+  }
+  function persistMeetWaveLayouts(){
+    const body={preferences:{meetWaveScreenLayout:activeLayout,meetWaveGuestLayout:activeGuestLayout}};
+    meetWaveLayoutSaveQueue=meetWaveLayoutSaveQueue.catch(()=>{}).then(()=>api('/settings',{method:'PATCH',body:JSON.stringify(body)}));
+    void meetWaveLayoutSaveQueue.catch(error=>note('MeetWave layout preference could not be saved to your account: '+(error?.message||'Please try again.'),true));
+    return meetWaveLayoutSaveQueue;
+  }
   const note = (message, error=false) => { const target=$('#mw-status')||$('#mw-room-status'); if(target){target.textContent=message;target.classList.toggle('is-error',error);} };
   function setRoomControlState(id,active,caption,actionLabel){
     const button=$('#'+id);
@@ -384,7 +402,7 @@
       clearPendingGuestJoin();
     }
     const result=await api(endpoint(id)+'/join',{method:'POST',body:'{}'});
-    clearPendingGuestJoin();activeRoom=info.room;activeRole=result.role||'participant';activeLayout='fluid-grid';setContent(meetingMarkup(activeRoom,activeRole));messageIds=new Set();screenOn=false;
+    clearPendingGuestJoin();activeRoom=info.room;activeRole=result.role||'participant';await restoreMeetWaveLayouts();setContent(meetingMarkup(activeRoom,activeRole));applyMeetingLayout(activeLayout);messageIds=new Set();screenOn=false;
     roomClient=new client.Room({adaptiveStream:true,dynacast:true});
     roomClient.on(client.RoomEvent.TrackSubscribed,(track,publication,participant)=>{ensureParticipantSeat(participant);attachTrack(track,participant);updateCount();});
     roomClient.on(client.RoomEvent.TrackUnsubscribed,(track,publication,participant)=>{track.detach().forEach(element=>element.remove());if(track.kind==='video'&&participant){const identity=participant.identity.replace(/[^a-zA-Z0-9_-]/g,'_');const source=String(track.source||'').toLowerCase().includes('screen')?'screen-share':'camera';const tile=$('#mw-tile-'+identity+(source==='screen-share'?'-screen':''));if(source==='screen-share'){tile?.remove();const share=$('#mw-screen-share-stage');if(share&&!share.querySelector('.mw-screen-share-tile')){share.hidden=true;$('#mw-screen-stage')?.classList.remove('has-screen-share');}}else if(tile&&!tile.querySelector('video')&&!tile.querySelector('.mw-video-placeholder')){const placeholder=document.createElement('div');placeholder.className='mw-video-placeholder';placeholder.textContent='Camera off';tile.prepend(placeholder);}}});
@@ -437,8 +455,8 @@
     $('#mw-fullscreen').onclick=toggleMeetingFullscreen;
     $('#mw-settings').onclick=()=>setMeetWaveSideTab('settings');
     $('#mw-settings-close').onclick=()=>setMeetWaveSideTab('chat');
-    document.querySelectorAll('[data-mw-layout]').forEach(button=>button.onclick=()=>applyMeetingLayout(button.dataset.mwLayout));
-    document.querySelectorAll('[data-mw-guest-layout]').forEach(button=>button.onclick=()=>applyMeetingGuestLayout(button.dataset.mwGuestLayout));
+    document.querySelectorAll('[data-mw-layout]').forEach(button=>button.onclick=()=>{applyMeetingLayout(button.dataset.mwLayout);void persistMeetWaveLayouts();});
+    document.querySelectorAll('[data-mw-guest-layout]').forEach(button=>button.onclick=()=>{applyMeetingGuestLayout(button.dataset.mwGuestLayout);void persistMeetWaveLayouts();});
     $('#mw-people-toggle').onclick=()=>setMeetWaveSideTab('people');
     $('#mw-chat-toggle').onclick=()=>setMeetWaveSideTab('chat');
     $('#mw-panel-chat-tab').onclick=()=>setMeetWaveSideTab('chat');
