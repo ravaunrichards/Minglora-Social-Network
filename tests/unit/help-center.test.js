@@ -120,3 +120,11 @@ test('recently viewed answers are retrieved only through the authenticated membe
   assert.ok(page.includes("hc-recently-viewed-section"));
   assert.ok(ui.includes('api("/recently-viewed")'));
 });
+
+test('article editor maintains keyword and related-article metadata without creating duplicate tables', () => {
+  assert.ok(page.includes('name="relatedSlugs"'));
+  assert.ok(ui.includes('payload.relatedSlugs='));
+  assert.ok(edge.includes('help_keywords").upsert'));
+  assert.ok(edge.includes('help_related_articles").upsert'));
+  assert.ok(edge.includes('relatedByArticle'));
+});
