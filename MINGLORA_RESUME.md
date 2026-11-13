@@ -13,6 +13,24 @@ Recent verified privacy/discovery fixes: public profile blocked-member privacy `
 PR must remain **OPEN + DRAFT**. Do not merge, deploy, or apply production migrations without the required review/authorization.
 
 
+## Critical live-schema reconciliation — read-only verification, 2026-11-13
+
+**This section supersedes earlier statements that the live Minglora project has no AI schema at all.** The project has no PR-202-style AI identity tables in `public`, but it does have an existing, separate private schema named `ai_network`.
+
+Verified on the existing Supabase project `gzycobgbasnqqhnympkr`:
+
+- Migration ledger includes `20261113072348 / minglora_ai_identity_relational_foundation` and `20261113072843 / minglora_ai_identity_lifecycle_and_assignment_guards`.
+- The private `ai_network` schema contains 16 base tables: categories, identities, names, profiles, emails, provider accounts/models/assignments, locations, languages, capabilities, permissions, owners, status history, versions and audit logs.
+- Core identity/name/profile/provider-assignment tables inspected had zero rows. No identities were seeded.
+- RLS is enabled on all 16 tables. No table policies are defined; `anon` and `authenticated` have no schema USAGE or table SELECT privileges. `service_role` has schema USAGE and table access. Keep this schema private and continue to enforce the designated owner boundary in the server-side gateway.
+- The current public service-role-only RPCs are `minglora_ai_network_create_identity(uuid,jsonb)`, `minglora_ai_network_get_identity(uuid,uuid)` and `minglora_ai_network_set_identity_status(uuid,uuid,text,text)`. The create RPC stores names, profiles, emails, locations, languages, capabilities, permissions and provider assignments in `ai_network`; it returns a database-generated identity UUID.
+- The active PR-202 branch currently uses a different persistence contract, including `minglora_ai_identity_upsert_batch` and `minglora_ai_identity_list`, backed by staged `public.*` migrations. Those RPCs were not found in the live project, and the PR's staged public tables are not the same schema as the live `ai_network.*` tables.
+- PR #202 head at this inspection was `e4dbdb47eafe9198221c219bb3113414fd35e0b1`. The connected status reader returned no combined commit statuses and no PR workflow runs for this exact head. The last recorded 294/294 focused and 1,029/1,029 full-suite results belong to an earlier commit and must not be represented as verification of this head.
+- PR #202 remains OPEN + DRAFT. Do not merge it or apply its staged AI/HR migrations to production until the architecture is reconciled and reviewed. Do not create duplicate identity tables or attempt a production write to test the RPCs.
+- Safe next step: reconcile the branch to the already-existing `ai_network` schema through a reviewed, non-production integration/test path; preserve its private-schema and service-role-only access model; then verify identity create/read/update/list and provider/email records with disposable PostgreSQL integration tests before any production release.
+
+No production SQL, data, credentials, services, or settings were changed during this inspection. The 10-billion identity target remains an architecture objective only, not a live count or measured capacity.
+
 ## Original task
 
 Implement the complete Minglora AI Bot Network master specification: independent public AI identities, organizational AI employees, specialized backend AIs, full individual profiles and provider/email identity records, worldwide discovery, social interactions, corporate governance/HR, supervised and bounded autonomous work, AI teams, creator/community features, security, finance/resource operations, intelligence, analytics, and a distributed architecture designed for a 10-billion-identity target.
