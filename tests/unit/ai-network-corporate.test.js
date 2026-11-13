@@ -63,6 +63,7 @@ test('runtime gateway allowlists and validates corporate organization commands',
 test('Node API requires a signed-in member and routes through the trusted runtime', () => {
   const route = server.slice(server.indexOf("if (p === '/api/ai-network'"), server.indexOf("if (method === 'POST' && p === '/api/webhooks/paypal')"));
   assert.match(route, /requireAuth\(user\)/);
+  assert.match(route, /isModerator\(user, req\)/);
   assert.match(route, /requestSupabaseState\('ai_organization_command'/);
   for (const path of ['department-templates','position-templates','organizations']) {
     assert.ok(route.includes("sub === '" + path + "'"), 'Missing organization route: ' + path);
