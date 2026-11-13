@@ -5586,31 +5586,54 @@ function normalizeProfileStyle(value){return PROFILE_STYLE_IDS.includes(value)?v
 function normalizeProfileScreenLayout(value){return PROFILE_SCREEN_LAYOUT_IDS.includes(value)?value:'fluid-panel';}
 function profileStyleNavigation(style){
   const labels={
-    facebook:[['posts','Posts'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Reels'],['more','More']],
-    tiktok:[['posts','Posts'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Videos'],['more','More']],
-    instagram:[['posts','Posts'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Reels'],['more','More']],
-    youtube:[['posts','Home'],['about','About'],['friends','Community'],['photos','Photos'],['reels','Videos'],['more','More']],
+    facebook:[['posts','All'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Reels'],['more','More']],
+    tiktok:[['videos','Videos'],['posts','Posts'],['friends','Friends'],['photos','Photos'],['about','About'],['more','More']],
+    instagram:[['posts','Posts'],['reels','Reels'],['photos','Photos'],['friends','Friends'],['about','About'],['more','More']],
+    youtube:[['posts','Home'],['videos','Videos'],['reels','Shorts'],['friends','Community'],['about','About'],['more','More']],
     x:[['posts','Posts'],['about','About'],['friends','Friends'],['photos','Media'],['reels','Videos'],['more','More']],
     linkedin:[['posts','Activity'],['about','About'],['friends','Connections'],['photos','Media'],['reels','Videos'],['more','More']],
-    pinterest:[['posts','Created'],['about','About'],['friends','Friends'],['photos','Pins'],['reels','Videos'],['more','More']],
-    twitch:[['posts','Home'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Videos'],['more','More']],
-    snapchat:[['posts','Posts'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Reels'],['more','More']],
-    'custom-minglora':[['posts','Posts'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Reels'],['more','More']]
+    pinterest:[['photos','Pins'],['posts','Created'],['friends','Friends'],['about','About'],['reels','Videos'],['more','More']],
+    twitch:[['posts','Home'],['videos','Videos'],['reels','Clips'],['about','About'],['friends','Community'],['more','More']],
+    snapchat:[['highlights','Stories'],['reels','Spotlight'],['posts','Posts'],['friends','Friends'],['photos','Photos'],['more','More']],
+    'custom-minglora':[['posts','All'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Reels'],['more','More']]
   };
   return labels[normalizeProfileStyle(style)]||labels.facebook;
 }
-function profileStylePreviewMarkup(data,style,screenLayout='fluid-panel'){
-  const user=data.user||{},name=esc(user.name||'Your name');
-  const username=esc(user.username?'@'+user.username:'@username');
-  const followers=Number(data.followersCount||0).toLocaleString();
-  const following=Number(data.followingCount||0).toLocaleString();
-  const posts=(Array.isArray(data.posts)?data.posts.length:0).toLocaleString();
-  const cover=user.cover?'<img src="'+esc(user.cover)+'" alt="" loading="lazy">':'';
-  const nav=profileStyleNavigation(style).map(([key,label])=>'<span>'+esc(label)+'</span>').join('');
-  return '<div class="profile-style-preview-frame" data-profile-style="'+style+'" data-profile-screen-layout="'+normalizeProfileScreenLayout(screenLayout)+'"><div class="profile-style-preview-cover">'+cover+'</div>'+
+function profileMetricEntries(data,style){
+  const values={followers:Number(data.followersCount||0),following:Number(data.followingCount||0),friends:Number(data.friendsCount||0),subscribers:Number(data.subscribersCount||0),posts:Array.isArray(data.posts)?data.posts.length:0,likes:Number(data.likesCount||0)};
+  const labels={followers:'Followers',following:'Following',friends:'Friends',subscribers:'Subscribers',posts:'Posts',likes:'Likes'};
+  const orders={facebook:['followers','following','friends','subscribers','posts','likes'],tiktok:['following','followers','likes','posts','friends','subscribers'],instagram:['posts','followers','following','likes','friends','subscribers'],youtube:['subscribers','posts','followers','likes','following','friends'],x:['posts','followers','following','likes','friends','subscribers'],linkedin:['followers','friends','posts','following','subscribers','likes'],pinterest:['followers','following','posts','likes','friends','subscribers'],twitch:['followers','subscribers','posts','likes','following','friends'],snapchat:['friends','followers','following','posts','likes','subscribers'],'custom-minglora':['followers','following','friends','subscribers','posts','likes']};
+  return (orders[normalizeProfileStyle(style)]||orders.facebook).map(id=>({id,label:labels[id],value:values[id],interactive:['followers','following','friends','subscribers'].includes(id)}));
+}
+function profileMetricsMarkup(data,style){
+  const entries=profileMetricEntries(data,style);
+  return '<div class="profile-counts" aria-label="Profile counts">'+entries.map(item=>item.interactive
+    ?'<button type="button" class="connection-count" data-profile-metric="'+item.id+'" data-open-connections="'+item.id+'" aria-label="Open '+item.label.toLowerCase()+'"><strong>'+Number(item.value).toLocaleString()+'</strong><span>'+item.label+'</span></button>'
+    :'<div class="profile-count-item" data-profile-metric="'+item.id+'"><strong>'+Number(item.value).toLocaleString()+'</strong><span>'+item.label+'</span></div>').join('')+'</div>';
+}function profileStylePreviewMarkup(data,style,screenLayout='fluid-panel'){
+  const user=data.user||{};
+  const name=esc(user.name||'Minglora member');
+  const username=user.username?'@'+esc(user.username):'Minglora profile';
+  const photos=Array.isArray(data.photos)?data.photos:[];
+  const albums=Array.isArray(data.albums)?data.albums:[];
+  const media=[...photos,...albums.flatMap(album=>Array.isArray(album.photos)?album.photos:[])].filter(item=>item&&item.url).filter((item,index,all)=>all.findIndex(other=>item.id&&other.id?other.id===item.id:other.url===item.url)===index).slice(0,6);
+  const reels=Array.isArray(data.reels)?data.reels.filter(item=>item&&item.url):[];
+  const posts=Array.isArray(data.posts)?data.posts:[];
+  const latest=posts[0]||null;
+  const text=String(latest&&(latest.text||latest.caption||latest.content)||'').trim();
+  const coverVisible=!['tiktok','instagram','pinterest','snapchat'].includes(style);
+  const cover=coverVisible?'<div class="profile-style-preview-cover">'+(user.cover?'<img src="'+esc(user.cover)+'" alt="" loading="lazy">':'<span class="profile-style-preview-cover-empty">No cover photo</span>')+'</div>':'';
+  const metrics=profileMetricEntries(data,style).map(item=>'<span data-preview-metric="'+item.id+'"><b>'+Number(item.value).toLocaleString()+'</b> '+item.label+'</span>').join('');
+  const nav=profileStyleNavigation(style).map(item=>'<span data-preview-tab="'+item[0]+'">'+esc(item[1])+'</span>').join('');
+  const postMarkup=latest?'<article class="profile-style-preview-post"><small>Latest post'+(latest.createdAt?' · '+esc(timeAgo(latest.createdAt)):'')+'</small><p>'+esc((text||'Post shared on this profile.').slice(0,180))+'</p></article>':'<p class="profile-style-preview-empty">No posts shared yet.</p>';
+  const videoMarkup=reels.length?'<article class="profile-style-preview-video"><video controls playsinline preload="metadata" src="'+esc(reels[0].url)+'"></video>'+(reels[0].postText?'<p>'+esc(String(reels[0].postText).slice(0,120))+'</p>':'')+'</article>':'<p class="profile-style-preview-empty">No videos shared yet.</p>';
+  const galleryMarkup=media.length?'<div class="profile-style-preview-gallery">'+media.map(item=>'<img src="'+esc(item.url)+'" alt="" loading="lazy">').join('')+'</div>':'<p class="profile-style-preview-empty">No photos shared yet.</p>';
+  const content=['tiktok','youtube','twitch'].includes(style)?(reels.length?videoMarkup:postMarkup):['instagram','pinterest','snapchat'].includes(style)?(media.length?galleryMarkup:reels.length?videoMarkup:postMarkup):postMarkup;
+  return '<div class="profile-style-preview-frame" data-profile-style="'+style+'" data-profile-screen-layout="'+normalizeProfileScreenLayout(screenLayout)+'">'+cover+
     '<div class="profile-style-preview-identity"><img src="'+esc(avatar(user))+'" alt="" loading="lazy"><div><strong>'+name+'</strong><small>'+username+'</small></div></div>'+
-    '<div class="profile-style-preview-metrics"><span><b>'+followers+'</b> Followers</span><span><b>'+following+'</b> Following</span><span><b>'+posts+'</b> Posts</span></div>'+
-    '<div class="profile-style-preview-nav">'+nav+'</div><div class="profile-style-preview-content"><span class="profile-style-preview-content-mark" aria-hidden="true">M</span><div><strong>Your real Minglora content</strong><small>Posts, photos, reels, connections and About details stay on this same account.</small></div></div></div>';
+    '<div class="profile-style-preview-metrics">'+metrics+'</div>'+
+    '<div class="profile-style-preview-nav">'+nav+'</div>'+
+    '<div class="profile-style-preview-content">'+content+'</div></div>';
 }
 function profileStyleLibraryMarkup(data){
   const user=data.user||{},active=normalizeProfileStyle(user.profileStyle),defaultStyle=normalizeProfileStyle(user.defaultProfileStyle),screenLayout=normalizeProfileScreenLayout(user.profileScreenLayout),defaultScreenLayout=normalizeProfileScreenLayout(user.defaultProfileScreenLayout);
