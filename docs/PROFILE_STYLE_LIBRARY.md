@@ -2,7 +2,7 @@
 
 ## Scope and status
 
-This change adds ten profile experiences and seven profile screen-layout modes to the existing Minglora Social Network. The selected style and screen layout are presentation preferences on the same Minglora member account. The change does not create extra accounts, user tables, profile content tables, media stores, or relationship graphs.
+This change adds ten profile experiences to the existing Minglora Social Network. Profile Style Library manages profile styles only; it does not display or modify screen-layout choices. Existing screen-layout preferences and the separate LIVE/MeetWave layout controls are left independent. The change does not create extra accounts, user tables, profile content tables, media stores, or relationship graphs.
 
 The original Profile Style Library was introduced in PR #266. The seven-screen/two-guest-box separation was merged into `main` in PR #269 on 2026-11-13. Confirm the active hosting deployment separately; a merged pull request alone does not prove production deployment.
 
@@ -23,7 +23,7 @@ The styles use familiar, high-level interface patterns and original Minglora ass
 
 ## Seven profile screen layouts
 
-All seven screen-layout modes are available in the Profile Style Library screen-layout selector and compose with every profile style:
+These seven screen-layout modes are separate from the ten profile style choices. They are not displayed or selected in Profile Style Library; the library changes only the profile's visual style:
 
 1. **Full Screen** — edge-to-edge profile canvas and full-width content.
 2. **Fluid Panel** — flexible, centered panels; default mode to preserve the existing Facebook profile geometry.
@@ -33,7 +33,7 @@ All seven screen-layout modes are available in the Profile Style Library screen-
 6. **Side by Side** — profile sections and media in adjacent columns.
 7. **Spotlight** — centered identity presentation and focused main content.
 
-This creates **10 × 7 = 70 profile style/screen-layout combinations**. **Roundtable 1 and Roundtable 2 are not profile screen layouts.** They are separate guest-box arrangements inside LIVE and MeetWave guest panels/grids, with independent selectors and controls.
+The profile style choices remain independent of LIVE/MeetWave screen layouts. **Roundtable 1 and Roundtable 2 are guest-box arrangements**, not profile styles or profile layout choices; they remain in the LIVE and MeetWave guest panels/grids with their own controls.
 
 ## Unified account preferences
 
@@ -41,8 +41,7 @@ The existing \`user.settings.preferences\` record and \`PATCH /api/settings\` ro
 
 - \`profileStyle\` — active public profile style.
 - \`defaultProfileStyle\` — owner's preferred default style.
-- \`profileScreenLayout\` — active public profile screen layout.
-- \`defaultProfileScreenLayout\` — owner's preferred default screen layout.
+Screen-layout preferences are not read or written by Profile Style Library. Applying or saving a profile style leaves those existing values untouched.
 
 All values are validated against allowlists. Accounts that predate these preferences safely resolve to Facebook-style and Fluid Panel. The active style/layout are included in the public profile payload; preferred defaults are included only for the profile owner.
 
@@ -52,11 +51,10 @@ The existing \`profileLayout\` preference (\`standard\`, \`advanced\`, \`creator
 
 Open the three-dot menu on your own profile and choose **Profile Style Library**.
 
-- **Preview** previews any of the ten profile styles and selected screen layout without changing saved preferences.
-- **Profile screen layout** selects one of the seven named screen modes for the preview and next Apply/Save action.
-- **Apply** saves the active profile style and screen layout.
-- **Save as default** stores both preferred defaults across sessions and devices.
-- **Reset to Default** reapplies both saved defaults.
+- **Preview** previews any of the ten profile styles without changing saved preferences.
+- **Apply** saves the active profile style only.
+- **Save as default** stores the preferred profile style across sessions and devices.
+- **Reset to Default** reapplies the saved profile-style default. Existing screen-layout preferences are not modified by these actions.
 
 The active style and layout travel with the member profile, so visitors see the selected experience. The underlying existing posts, About, friends, photos, reels, profile media, privacy checks and relationships remain the same.
 
