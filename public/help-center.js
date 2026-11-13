@@ -201,10 +201,13 @@
     state.subcategory=null;
     const categoryName=article.help_categories?.name||state.category?.name||'Help Center';
     const related=payload.related||[];
+    const media=(payload.assets||[]).map(asset=>asset.asset_type==='video'
+      ?'<figure class="hc-media-figure"><video controls preload="metadata" src="'+esc(asset.url)+'"></video><figcaption>'+esc(asset.caption||asset.alt_text||'')+'</figcaption></figure>'
+      :'<figure class="hc-media-figure"><img loading="lazy" src="'+esc(asset.url)+'" alt="'+esc(asset.alt_text||'Instructional image')+'"><figcaption>'+esc(asset.caption||'')+'</figcaption></figure>').join('');
     set('<div class="hc-shell">'+backBar([categoryName,article.question])+
       '<div class="hc-article-layout"><article class="hc-article-main"><p class="hc-eyebrow">'+esc(categoryName)+'</p><h1>'+esc(article.question)+'</h1>'+
       '<p class="hc-article-updated">Last updated '+fmtDate(article.updated_at)+'</p>'+
-      '<div class="hc-article-answer">'+markdown(article.answer_markdown)+'</div>'+
+      '<div class="hc-article-answer">'+markdown(article.answer_markdown)+'</div><div class="hc-article-media">'+media+'</div>'+
       '<div class="hc-answer-feedback"><strong>Was this answer helpful?</strong><div>'+button('Yes, this helped','data-hc-feedback="yes"')+button('No, I still need help','data-hc-feedback="no"','hc-button hc-button-secondary')+'</div><p id="hc-feedback-status" aria-live="polite"></p></div>'+
       '<div class="hc-article-contact">'+button(payload.bookmarked?'Remove bookmark':'Save answer','data-hc-bookmark','hc-button hc-button-secondary')+button('Contact Support','data-hc-contact')+'</div></article>'+
       '<aside class="hc-article-aside"><section><h2>Related questions</h2>'+(related.length?related.map(item=>articleCard(item)).join(''): '<p class="hc-muted">Related answers will appear as reviewed articles are published.</p>')+'</section>'+
@@ -269,22 +272,45 @@
       '<form id="hc-admin-editor-form"><label>Question title<input name="question" maxlength="180" required value="'+esc(article?.question||'')+'"></label>'+
       '<label>Main category<select name="categoryId" required><option value="">Choose category</option>'+categories.map(c=>'<option value="'+esc(c.id)+'" '+(article?.category_id===c.id?'selected':'')+'>'+esc(c.name)+'</option>').join('')+'</select></label>'+
       '<label>Short answer preview<input name="excerpt" maxlength="360" value="'+esc(article?.excerpt||'')+'"></label>'+
+      '<label>Topics and subcategories<select name="subcategoryIds" id="hc-editor-subcategories" multiple size="6">'+categories.flatMap(c=>(c.subcategories||[]).map(sub=>'<option value="'+esc(sub.id)+'" data-category-id="'+esc(c.id)+'" '+((article?.help_article_subcategories||[]).some(link=>link.subcategory_id===sub.id)?'selected':'')+'>'+esc(c.name+' · '+sub.name)+'</option>')).join('')+'</select><small>Select only topics that match the chosen main category.</small></label>'+
       '<label>Full answer<textarea name="answerMarkdown" rows="10" maxlength="30000" placeholder="Write the verified answer. Use headings, numbered steps and bullet points where helpful." required>'+esc(article?.answer_markdown||'')+'</textarea></label>'+
       '<label>Source / verification note<input name="sourceReference" maxlength="300" value="'+esc(article?.source_reference||'')+'" placeholder="Link or note for the verified Minglora behavior"></label>'+
       '<label class="hc-checkbox-label"><input type="checkbox" name="featured" '+(article?.featured?'checked':'')+'> Feature this answer after publication</label>'+
       '<label>Revision note<input name="revisionNote" maxlength="300" placeholder="What changed and why"></label>'+
       '<div class="hc-editor-actions"><button class="hc-search-submit" type="submit">'+(article?'Save revision':'Save draft')+'</button>'+(article?'<span class="hc-status-pill">Current status: '+esc(article.status)+'</span>':'')+'</div><p class="hc-form-status" id="hc-admin-editor-status" aria-live="polite"></p></form>'+
+      (article?'<section class="hc-media-editor"><h3>Instructional images and videos</h3><p>Attach a verified screenshot, illustration or demonstration video to this draft.</p><label>Choose an image or video<input type="file" id="hc-media-file" accept="image/jpeg,image/png,image/webp,image/avif,video/mp4,video/webm"></label><label>Alternative text<input id="hc-media-alt" maxlength="200" placeholder="Describe the image for accessibility"></label><label>Caption<input id="hc-media-caption" maxlength="300" placeholder="Optional caption"></label>'+button('Upload selected media','data-hc-upload','hc-button hc-button-secondary')+'<p class="hc-form-status" id="hc-media-status" aria-live="polite"></p></section>':'')+
       (article?'<div class="hc-workflow-actions">'+[['review','Submit for review'],['fact_check','Complete fact-check'],['approval','Submit for approval'],['published','Publish approved answer'],['unpublished','Unpublish'],['archived','Archive']].map(([status,label])=>button(esc(label),'data-hc-workflow="'+status+'"','hc-button hc-button-secondary')).join('')+
       '</div><div id="hc-revision-list"></div>':'')+'</section>';
     host.scrollIntoView({block:'nearest',behavior:'smooth'});
     host.querySelector('[data-hc-editor-close]')?.addEventListener('click',()=>{host.innerHTML='';});
     host.querySelector('#hc-admin-editor-form')?.addEventListener('submit',async event=>{
       event.preventDefault();const form=event.currentTarget;const data=new FormData(form);
-      const values=Object.fromEntries(data.entries());values.featured=data.has('featured');
+      const values=Object.fromEntries(data.entries());values.featured=data.has('featured');values.subcategoryIds=data.getAll('subcategoryIds');
       const status=host.querySelector('#hc-admin-editor-status');
       const action=article?'/api/help/admin/articles/'+article.id:'/api/help/admin/articles';
-      try{await api(action,{method:article?'PATCH':'POST',body:JSON.stringify(values)});if(status)status.textContent='Saved. The answer remains in draft or review until approved.';await renderAdmin();}
+      try{const saved=await api(action,{method:article?'PATCH':'POST',body:JSON.stringify(values)});if(status)status.textContent='Saved. The answer remains in draft or review until approved.';await renderAdmin();if(!article&&saved.article){state.editing=saved.article;await openEditor(saved.article);const note=host.querySelector('#hc-admin-editor-status');if(note)note.textContent='Draft saved. You can now attach instructional images or video.';}}
       catch(error){if(status)status.textContent=error.message;}
+    });
+    host.querySelector('[data-hc-upload]')?.addEventListener('click',async()=>{
+      const file=host.querySelector('#hc-media-file')?.files?.[0];
+      const status=host.querySelector('#hc-media-status');const uploadButton=host.querySelector('[data-hc-upload]');
+      if(!file){if(status)status.textContent='Choose an image or video first.';return;}
+      const allowed=['image/jpeg','image/png','image/webp','image/avif','video/mp4','video/webm'];
+      if(!allowed.includes(file.type)||file.size>100*1024*1024){if(status)status.textContent='Choose a supported image or video smaller than 100 MB.';return;}
+      uploadButton.disabled=true;
+      try{
+        const assetType=file.type.startsWith('image/')?'image':'video';
+        const signed=await api('/api/help/admin/articles/'+article.id+'/assets/sign',{method:'POST',body:JSON.stringify({assetType,contentType:file.type})});
+        const upload=await fetch(signed.signedUrl,{method:'PUT',headers:{'Content-Type':file.type},body:file});
+        if(!upload.ok)throw new Error('The file upload failed. Please try again.');
+        await api('/api/help/admin/articles/'+article.id+'/assets',{method:'POST',body:JSON.stringify({
+          storagePath:signed.path,assetType,altText:host.querySelector('#hc-media-alt')?.value||file.name,
+          caption:host.querySelector('#hc-media-caption')?.value||''
+        })});
+        if(status)status.textContent='Media uploaded and attached to the article.';
+        host.querySelector('#hc-media-file').value='';
+      }catch(error){if(status)status.textContent=error.message;}
+      finally{uploadButton.disabled=false;}
     });
     host.querySelectorAll('[data-hc-workflow]').forEach(btn=>btn.addEventListener('click',async()=>{
       const status=host.querySelector('#hc-admin-editor-status');
