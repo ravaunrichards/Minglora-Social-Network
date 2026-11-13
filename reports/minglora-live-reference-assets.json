@@ -14,7 +14,7 @@
     },
     "tree_truncated": false
   },
-  "fields_note": "Pixel dimensions, alpha transparency, quality and per-image human visual review were not extracted for every record in this pass; these fields are explicitly marked pending.",
+  "fields_note": "Pixel dimensions, alpha transparency, quality and per-image human visual review were not extracted for every record in this pass; these fields are explicitly marked pending. Six desktop TikTok captures have verified PNG IHDR dimensions and direct visual classification in the 2026-11-13 LIVE visual QA pass. This is a sampled subset, not a full visual review of all references.",
   "assets": [
     {
       "id": "7a64349a053c7b1e65a0f59bd3ea7d56b5e5a541",
@@ -340,10 +340,13 @@
       "file_size_bytes": 915521,
       "git_blob_sha": "8c441b804ff4f5597f7d7bcb27457fb0085c593b",
       "visual_role": "reference-only; do not copy branded artwork",
-      "dimensions_px": null,
-      "dimensions_audit": "pending",
+      "dimensions_px": {
+        "width": 1363,
+        "height": 636
+      },
+      "dimensions_audit": "PNG IHDR width/height verified during visual QA",
       "transparency_audit": "pending",
-      "human_visual_review": "sampled-only",
+      "human_visual_review": "inspected-not-live-reference",
       "reuse_status": "layout guidance only; not production artwork"
     },
     {
@@ -445,10 +448,13 @@
       "file_size_bytes": 284784,
       "git_blob_sha": "69d2116f5c037410be3084267dfd7d6b27621b83",
       "visual_role": "reference-only; do not copy branded artwork",
-      "dimensions_px": null,
-      "dimensions_audit": "pending",
+      "dimensions_px": {
+        "width": 1366,
+        "height": 636
+      },
+      "dimensions_audit": "PNG IHDR width/height verified during visual QA",
       "transparency_audit": "pending",
-      "human_visual_review": "sampled-only",
+      "human_visual_review": "inspected",
       "reuse_status": "layout guidance only; not production artwork"
     },
     {
@@ -460,10 +466,13 @@
       "file_size_bytes": 423207,
       "git_blob_sha": "f8fbb3c7280f98c1ca0f96dc0420246e1ee3ed28",
       "visual_role": "reference-only; do not copy branded artwork",
-      "dimensions_px": null,
-      "dimensions_audit": "pending",
+      "dimensions_px": {
+        "width": 1366,
+        "height": 644
+      },
+      "dimensions_audit": "PNG IHDR width/height verified during visual QA",
       "transparency_audit": "pending",
-      "human_visual_review": "sampled-only",
+      "human_visual_review": "inspected",
       "reuse_status": "layout guidance only; not production artwork"
     },
     {
@@ -475,10 +484,13 @@
       "file_size_bytes": 387617,
       "git_blob_sha": "5084db016dc878c9eb5b6752eec11aaf5e6c4b1f",
       "visual_role": "reference-only; do not copy branded artwork",
-      "dimensions_px": null,
-      "dimensions_audit": "pending",
+      "dimensions_px": {
+        "width": 1366,
+        "height": 642
+      },
+      "dimensions_audit": "PNG IHDR width/height verified during visual QA",
       "transparency_audit": "pending",
-      "human_visual_review": "sampled-only",
+      "human_visual_review": "inspected",
       "reuse_status": "layout guidance only; not production artwork"
     },
     {
@@ -505,10 +517,13 @@
       "file_size_bytes": 382407,
       "git_blob_sha": "63fb5a055f866b3f080df08fef700c8d4caae6e3",
       "visual_role": "reference-only; do not copy branded artwork",
-      "dimensions_px": null,
-      "dimensions_audit": "pending",
+      "dimensions_px": {
+        "width": 1366,
+        "height": 642
+      },
+      "dimensions_audit": "PNG IHDR width/height verified during visual QA",
       "transparency_audit": "pending",
-      "human_visual_review": "sampled-only",
+      "human_visual_review": "inspected",
       "reuse_status": "layout guidance only; not production artwork"
     },
     {
@@ -625,10 +640,13 @@
       "file_size_bytes": 53983,
       "git_blob_sha": "d73c7f777b4adf1a59dd99257eb3f02d76b07695",
       "visual_role": "reference-only; do not copy branded artwork",
-      "dimensions_px": null,
-      "dimensions_audit": "pending",
+      "dimensions_px": {
+        "width": 1364,
+        "height": 638
+      },
+      "dimensions_audit": "PNG IHDR width/height verified during visual QA",
       "transparency_audit": "pending",
-      "human_visual_review": "sampled-only",
+      "human_visual_review": "inspected-not-live-reference",
       "reuse_status": "layout guidance only; not production artwork"
     },
     {
