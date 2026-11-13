@@ -1314,6 +1314,51 @@ async function route(req, res) {
       const settingsExisted = (db.aiBotSettings || []).some(item => item.ownerId === user.id);
       const sub = p.slice('/api/ai-network'.length).replace(/^\/+/, '');
       const parts = sub.split('/').filter(Boolean).map(decodeURIComponent);
+
+      const runAIIdentityCommand = async (aiAction, payload = {}) => {
+        if (!isSupabasePersistence()) {
+          throw Object.assign(
+            new Error('Relational AI identities require Minglora Supabase persistence.'),
+            { status: 503 }
+          );
+        }
+        const response = await requestSupabaseState('ai_identity_command', {
+          actorUserId: user.id,
+          aiAction,
+          payload
+        });
+        return response?.result;
+      };
+
+      if (method === 'GET' && sub === 'categories') {
+        const categories = await runAIIdentityCommand('list_categories');
+        return json(res, 200, { categories: Array.isArray(categories) ? categories : [] });
+      }
+      if (method === 'GET' && sub === 'identities') {
+        const identityUrl = new URL(req.url || '/', 'http://localhost');
+        const requestedLimit = Number.parseInt(identityUrl.searchParams.get('limit') || '25', 10);
+        const requestedOffset = Number.parseInt(identityUrl.searchParams.get('offset') || '0', 10);
+        const result = await runAIIdentityCommand('list', {
+          limit: Number.isFinite(requestedLimit) ? Math.min(Math.max(requestedLimit, 1), 100) : 25,
+          offset: Number.isFinite(requestedOffset) ? Math.max(requestedOffset, 0) : 0,
+          search: String(identityUrl.searchParams.get('search') || '').slice(0, 120)
+        });
+        return json(res, 200, result || { identities: [], total: 0, limit: 25, offset: 0 });
+      }
+      if (method === 'GET' && parts[0] === 'identities' && parts.length === 2) {
+        const result = await runAIIdentityCommand('get', { identity_id: parts[1] });
+        return json(res, 200, { identity: result });
+      }
+      if (method === 'POST' && sub === 'identities') {
+        const input = await body(req, 40000);
+        const result = await runAIIdentityCommand('create', input);
+        return json(res, result?.reused ? 200 : 201, { identity: result });
+      }
+      if (method === 'POST' && sub === 'identities/bulk') {
+        const input = await body(req, 200000);
+        const result = await runAIIdentityCommand('bulk_create', input);
+        return json(res, 200, result || { created_count: 0, failed_count: 0, created: [], failed: [] });
+      }
       if (method === 'GET' && !sub) {
         const snapshot = getAICommandCenter(db, user.id, { providerStatus });
         if (!settingsExisted) await saveStore();
