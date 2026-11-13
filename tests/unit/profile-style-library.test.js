@@ -44,6 +44,16 @@ test('all ten selectable profile styles are registered on client and server',()=
   }
 });
 
+test('Profile screen layout allowlists contain exactly seven modes and exclude guest-box layouts',()=>{
+  const start=app.indexOf('const PROFILE_SCREEN_LAYOUT_OPTIONS = Object.freeze([');
+  const end=app.indexOf('const PROFILE_SCREEN_LAYOUT_IDS',start);
+  assert.ok(start>=0&&end>start,'profile layout registry exists');
+  const profileRegistry=app.slice(start,end);
+  assert.doesNotMatch(profileRegistry,/roundtable-1|roundtable-2/);
+  assert.match(server,/PROFILE_SCREEN_LAYOUT_IDS=\['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight'\]/);
+  assert.match(server,/LIVE_GUEST_LAYOUTS=\['roundtable-1','roundtable-2'\]/);
+});
+
 test('all seven screen layout modes compose with all ten profile styles',()=>{
   assert.equal(styles.length*screenLayouts.length,70,'expected 10 profile styles × 7 screen layout modes');
   for(const layout of screenLayouts){
