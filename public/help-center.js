@@ -97,7 +97,7 @@
     return '<header class="hc-page-header"><div class="hc-header-mark">'+icon('request')+'</div><div><p class="hc-eyebrow">MINGLORA KNOWLEDGE BASE</p><h1>'+esc(title)+'</h1>'+(subtitle?'<p>'+esc(subtitle)+'</p>':'')+'</div></header>';
   }
   function searchBox(value='', placeholder='Search all Minglora questions and answers') {
-    return '<form class="hc-search" id="hc-search-form" role="search"><label class="hc-search-control">'+icon('search')+'<input id="hc-search-input" type="search" autocomplete="off" value="'+esc(value)+'" placeholder="'+esc(placeholder)+'" aria-label="Search the Help Center"><button type="button" id="hc-search-clear" aria-label="Clear search">×</button></label><button class="hc-search-submit" type="submit">Search</button></form><div class="hc-search-hint">Search by question, feature, keyword or describe the problem in your own words.</div>';
+    return '<form class="hc-search" id="hc-search-form" role="search"><label class="hc-search-control">'+icon('search')+'<input id="hc-search-input" type="search" autocomplete="off" value="'+esc(value)+'" placeholder="'+esc(placeholder)+'" aria-label="Search the Help Center" aria-controls="hc-search-suggestions"><button type="button" id="hc-search-clear" aria-label="Clear search">×</button></label><button class="hc-search-submit" type="submit">Search</button></form><div id="hc-search-suggestions" class="hc-search-suggestions" hidden></div><div class="hc-search-hint">Search by question, feature, keyword or describe the problem in your own words.</div>';
   }
   function categoryCard(category) {
     const graphic=CATEGORY_ICONS[category.slug]||'request';
@@ -111,26 +111,31 @@
       '<small>'+esc(article.excerpt||'Open this answer for full instructions.')+'</small><em>'+esc(meta||article.help_categories?.name||'Help Center')+'</em></span><span class="hc-chevron" aria-hidden="true">›</span></button>';
   }
   function sectionBlock(title, desc, articles, emptyCopy='No published answers in this section yet.') {
-    if(!articles?.length)return '';
-    return '<section class="hc-content-section"><div class="hc-section-heading"><div><h2>'+esc(title)+'</h2><p>'+esc(desc)+'</p></div></div><div class="hc-article-list">'+articles.map(item=>articleCard(item)).join('')+'</div></section>';
+    const content=articles?.length?'<div class="hc-article-list">'+articles.map(item=>articleCard(item,item.realViews90d?'Viewed '+item.realViews90d+' times in 90 days':'')).join('')+'</div>':'<p class="hc-muted hc-section-empty">'+esc(emptyCopy)+'</p>';
+    return '<section class="hc-content-section"><div class="hc-section-heading"><div><h2>'+esc(title)+'</h2><p>'+esc(desc)+'</p></div></div>'+content+'</section>';
   }
   async function renderHome() {
     state.section='home';state.category=null;state.subcategory=null;state.article=null;
     set('<div class="hc-shell">'+header('How can we help you?','Find clear answers about using Minglora, managing your account and getting support.')+
       searchBox()+
+      '<div class="hc-shortcuts">'+button('Saved answers','data-hc-saved','hc-button hc-button-secondary')+button('Recently viewed','data-hc-recent','hc-button hc-button-secondary')+(state.access?.canManage||state.access?.canReview||state.access?.canApprove||state.access?.canPublish?button('Manage Help Center','data-hc-admin','hc-button hc-button-secondary'):'')+'</div>'+
       '<section class="hc-content-section"><div class="hc-section-heading"><div><h2>Browse by category</h2><p>Choose an area to find its topics and published answers.</p></div></div><div class="hc-category-grid" id="hc-category-grid"></div></section>'+
-      '<div class="hc-home-columns"><div id="hc-home-featured"></div><div id="hc-home-updated"></div></div>'+
+      '<div class="hc-home-columns"><div id="hc-home-featured"></div><div id="hc-home-popular"></div><div id="hc-home-added"></div><div id="hc-home-updated"></div></div>'+
       '<section class="hc-contact-strip"><div class="hc-contact-icon">'+icon('messages')+'</div><div><h2>Still need help?</h2><p>Contact the Minglora team or continue an existing support conversation.</p></div><div class="hc-contact-actions">'+button('Contact Support','data-hc-contact')+button('Support Inbox','data-hc-inbox','hc-button hc-button-secondary')+'</div></section>'+
-      '<p class="hc-data-note" id="hc-data-note">Only reviewed and published answers appear here. The knowledge base is being populated from verified Minglora documentation.</p></div>');
+      '<p class="hc-data-note" id="hc-data-note">Only reviewed and published answers appear here. Articles appear after verification and approval by authorized Minglora staff.</p></div>');
     const grid=root()?.querySelector('#hc-category-grid');
     if(grid)grid.innerHTML=state.categories.map(categoryCard).join('')||empty('Categories are unavailable','The Help Center categories could not be loaded.');
-    const [featured,updated]=await Promise.all([
+    const [featured,popular,added,updated]=await Promise.all([
       api('/api/help/featured?limit=4').catch(()=>({articles:[]})),
+      api('/api/help/popular?limit=4').catch(()=>({articles:[]})),
+      api('/api/help/articles?limit=4&sort=published').catch(()=>({articles:[]})),
       api('/api/help/recently-updated?limit=4').catch(()=>({articles:[]}))
     ]);
-    const f=root()?.querySelector('#hc-home-featured'),u=root()?.querySelector('#hc-home-updated');
-    if(f)f.innerHTML=sectionBlock('Featured answers','Important guidance selected by Minglora editors.',featured.articles);
-    if(u)u.innerHTML=sectionBlock('Recently updated','Published answers that have genuinely been updated.',updated.articles);
+    const f=root()?.querySelector('#hc-home-featured'),p=root()?.querySelector('#hc-home-popular'),n=root()?.querySelector('#hc-home-added'),u=root()?.querySelector('#hc-home-updated');
+    if(f)f.innerHTML=sectionBlock('Featured answers','Important guidance selected by Minglora editors.',featured.articles,'No answers have been manually featured yet.');
+    if(p)p.innerHTML=sectionBlock('Popular questions','Based on real member views recorded in the last 90 days.',popular.articles,'Popularity data will appear after published answers receive genuine member views.');
+    if(n)n.innerHTML=sectionBlock('Recently added','The newest published answers.',added.articles,'No answers have been published yet.');
+    if(u)u.innerHTML=sectionBlock('Recently updated','Published answers that have genuinely been updated.',updated.articles,'No recently updated answers are available yet.');
     bindCommon();bindSearch();
   }
   function topicMarkup(category) {
@@ -297,13 +302,38 @@
     root()?.querySelectorAll('[data-hc-home]').forEach(btn=>btn.addEventListener('click',()=>renderHome()));
     root()?.querySelectorAll('[data-hc-contact]').forEach(btn=>btn.addEventListener('click',()=>memberSupport('contact')));
     root()?.querySelectorAll('[data-hc-inbox]').forEach(btn=>btn.addEventListener('click',()=>memberSupport('inbox')));
+    root()?.querySelectorAll('[data-hc-saved]').forEach(btn=>btn.addEventListener('click',()=>renderSaved().catch(error=>showError(error.message))));
+    root()?.querySelectorAll('[data-hc-recent]').forEach(btn=>btn.addEventListener('click',()=>renderRecent().catch(error=>showError(error.message))));
+    root()?.querySelectorAll('[data-hc-admin]').forEach(btn=>btn.addEventListener('click',()=>renderAdmin().catch(error=>showError(error.message))));
+    root()?.querySelectorAll('[data-hc-category]').forEach(btn=>btn.addEventListener('click',()=>renderCategory(btn.dataset.hcCategory)));
   }
   function bindSearch() {
     const form=root()?.querySelector('#hc-search-form');
     const input=root()?.querySelector('#hc-search-input');
     form?.addEventListener('submit',event=>{event.preventDefault();const q=input?.value.trim()||'';state.query=q;if(q)renderSearch(q);else renderHome();});
     root()?.querySelector('#hc-search-clear')?.addEventListener('click',()=>{if(input)input.value='';input?.focus();state.query='';});
-    input?.addEventListener('keydown',event=>{if(event.key==='Escape'){input.value='';state.query='';}});
+    const suggestions=root()?.querySelector('#hc-search-suggestions');
+    input?.addEventListener('input',()=>{
+      if(!suggestions)return;
+      const term=input.value.trim().toLocaleLowerCase();
+      if(term.length<2){suggestions.hidden=true;suggestions.innerHTML='';return;}
+      const matches=[];
+      for(const category of state.categories){
+        if(category.name.toLocaleLowerCase().includes(term))matches.push({label:category.name,category:category.slug});
+        for(const sub of category.subcategories||[]){
+          if(sub.name.toLocaleLowerCase().includes(term))matches.push({label:sub.name,category:category.slug,subcategory:sub.slug});
+        }
+      }
+      const items=matches.slice(0,8);
+      suggestions.innerHTML=items.map(item=>'<button type="button" data-hc-suggest-category="'+esc(item.category)+'" data-hc-suggest-sub="'+esc(item.subcategory||'')+'">'+esc(item.label)+'</button>').join('');
+      suggestions.hidden=!items.length;
+      suggestions.querySelectorAll('[data-hc-suggest-category]').forEach(btn=>btn.addEventListener('click',()=>{
+        suggestions.hidden=true;
+        if(btn.dataset.hcSuggestSub)renderCategory(btn.dataset.hcSuggestCategory,btn.dataset.hcSuggestSub);
+        else renderCategory(btn.dataset.hcSuggestCategory);
+      }));
+    });
+    input?.addEventListener('keydown',event=>{if(event.key==='Escape'){input.value='';state.query='';if(suggestions)suggestions.hidden=true;}});
   }
   function bindArticleCards() { root()?.querySelectorAll('[data-hc-article]').forEach(btn=>btn.addEventListener('click',()=>renderArticle(btn.dataset.hcArticle).catch(error=>showError(error.message)))); }
   function bindSubcategories(){root()?.querySelectorAll('[data-hc-subcategory]').forEach(btn=>btn.addEventListener('click',()=>{state.query='';renderCategory(state.category.slug,btn.dataset.hcSubcategory);}));}
