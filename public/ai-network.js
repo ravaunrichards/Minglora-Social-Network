@@ -161,7 +161,7 @@
     state.identityError = '';
     try {
       const [registry, categoryResult] = await Promise.all([
-        request('/identities?limit=10'),
+        request('/identities?limit=100'),
         request('/categories')
       ]);
       state.identityRegistry = registry;
