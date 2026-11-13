@@ -16,7 +16,7 @@ const styles = [
 ];
 const layouts = [
   'full-screen', 'fluid-panel', 'fluid-grid', 'fixed-grid', 'fixed-panel',
-  'side-by-side', 'spotlight', 'roundtable-1', 'roundtable-2'
+  'side-by-side', 'spotlight'
 ];
 const viewports = [
   { name: 'compact-phone', width: 320, height: 640 },

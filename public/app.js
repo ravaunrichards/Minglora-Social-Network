@@ -1298,12 +1298,17 @@ const LIVE_SCREEN_LAYOUT_OPTIONS=Object.freeze([
   {value:'fixed-grid',label:'Fixed Grid',icon:'grid'},
   {value:'fixed-panel',label:'Fixed Panel',icon:'columns'},
   {value:'side-by-side',label:'Side by Side',icon:'columns'},
-  {value:'spotlight',label:'Spotlight',icon:'host'},
+  {value:'spotlight',label:'Spotlight',icon:'host'}
+]);
+const LIVE_GUEST_LAYOUT_OPTIONS=Object.freeze([
   {value:'roundtable-1',label:'Roundtable 1',icon:'stack'},
   {value:'roundtable-2',label:'Roundtable 2',icon:'match'}
 ]);
 let activeLiveScreenLayout='full-screen';
+let activeLiveGuestLayout='roundtable-1';
 function normalizeLiveScreenLayout(value){const candidate=String(value||'full-screen');return LIVE_SCREEN_LAYOUT_OPTIONS.some(option=>option.value===candidate)?candidate:'full-screen';}
+function normalizeLiveGuestLayout(value){const candidate=String(value||'roundtable-1');return LIVE_GUEST_LAYOUT_OPTIONS.some(option=>option.value===candidate)?candidate:'roundtable-1';}
+function applyLiveGuestLayout(value){activeLiveGuestLayout=normalizeLiveGuestLayout(value);document.querySelectorAll('.live-guest-layout').forEach(root=>{root.dataset.liveGuestLayout=activeLiveGuestLayout;root.setAttribute('aria-label','LIVE guest panel · '+(LIVE_GUEST_LAYOUT_OPTIONS.find(option=>option.value===activeLiveGuestLayout)?.label||'Roundtable 1'));});document.querySelectorAll('#live-guest-layout-options [data-live-guest-layout]').forEach(button=>{const selected=button.dataset.liveGuestLayout===activeLiveGuestLayout;button.classList.toggle('active',selected);button.setAttribute('aria-pressed',String(selected));});}
 function liveLayoutIcon(name){const paths={grid:"<rect x='3' y='3' width='8' height='8' rx='1'/><rect x='13' y='3' width='8' height='8' rx='1'/><rect x='3' y='13' width='8' height='8' rx='1'/><rect x='13' y='13' width='8' height='8' rx='1'/>",columns:"<rect x='3' y='3' width='8' height='18' rx='1'/><rect x='13' y='3' width='8' height='18' rx='1'/>",stack:"<rect x='3' y='3' width='18' height='5' rx='1'/><rect x='3' y='10' width='18' height='5' rx='1'/><rect x='3' y='17' width='18' height='4' rx='1'/>",featured:"<rect x='3' y='3' width='12' height='18' rx='1'/><rect x='17' y='3' width='4' height='5' rx='1'/><rect x='17' y='10' width='4' height='5' rx='1'/><rect x='17' y='17' width='4' height='4' rx='1'/>",host:"<rect x='3' y='3' width='18' height='12' rx='1'/><rect x='3' y='17' width='5' height='4' rx='1'/><rect x='10' y='17' width='5' height='4' rx='1'/><rect x='17' y='17' width='4' height='4' rx='1'/>",guest:"<rect x='3' y='3' width='5' height='4' rx='1'/><rect x='10' y='3' width='5' height='4' rx='1'/><rect x='17' y='3' width='4' height='4' rx='1'/><rect x='3' y='9' width='18' height='12' rx='1'/>",fullscreen:"<path d='M8 3H3v5 M16 3h5v5 M21 16v5h-5 M8 21H3v-5'/>",match:"<rect x='3' y='3' width='8' height='18' rx='1'/><rect x='13' y='3' width='8' height='18' rx='1'/><path d='m9 12 2 2 2-2'/>"};return "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'>"+(paths[name]||paths.grid)+"</svg>";}
 function applyLiveScreenLayout(value){activeLiveScreenLayout=normalizeLiveScreenLayout(value);document.querySelectorAll('.live-guest-layout').forEach(root=>{root.dataset.liveLayout=activeLiveScreenLayout;root.setAttribute('aria-label','LIVE host and guest seats');root.closest('.live-video-stage')?.classList.toggle('live-full-screen-layout',activeLiveScreenLayout==='full-screen');root.closest('.live-audio-stage')?.classList.remove('live-host-only-layout');});document.querySelectorAll('[data-live-screen-layout]').forEach(button=>{const selected=button.dataset.liveScreenLayout===activeLiveScreenLayout;button.classList.toggle('active',selected);button.setAttribute('aria-pressed',String(selected));});}
 function restoreLiveChatToStage(){
@@ -1961,6 +1966,7 @@ function renderLiveSpeakerRoster(room,role,session,activeSpeakerIds=new Set()){
 function renderLiveGuestLayout(room,role,session,activeSpeakerIds=new Set()){
   const root=$("#live-guest-layout");if(!root||!room)return;
   applyLiveScreenLayout(activeLiveScreenLayout);
+  applyLiveGuestLayout(activeLiveGuestLayout);
   const local=room.localParticipant;
   const remotes=room.remoteParticipants?.values?Array.from(room.remoteParticipants.values()):[];
   const hostParticipant=role==="host"?local:remotes.find(person=>person.identity===session?.hostId)||null;
@@ -2593,6 +2599,9 @@ async function openLiveRoom(session,role,issuedLiveKit){
     ?session.liveMode:(broadcastType==='audio_only'?'audio_only':'video_audio');
   const liveSettings=session.liveSettings&&typeof session.liveSettings==='object'?session.liveSettings:{};
   activeLiveScreenLayout=normalizeLiveScreenLayout(session.liveLayout);
+  activeLiveGuestLayout=normalizeLiveGuestLayout(session.liveGuestLayout||(['roundtable-1','roundtable-2'].includes(session.liveLayout)?session.liveLayout:'roundtable-1'));
+  session.liveGuestLayout=activeLiveGuestLayout;
+  session.liveLayout=activeLiveScreenLayout;
   const canUseCamera=broadcastType==='video_audio'&&liveMode!=='mobile_gaming'&&(role!=='guest'||liveSettings.guestCamera!==false);
   const giftsEnabled=liveSettings.liveGifts!==false&&!liveSettings.practiceMode;
   const client=window.LivekitClient;
@@ -2687,7 +2696,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
     ['voiceRings','Voice rings',true,'Play a short tone for new guest requests']
   ];
   const liveRoomPermissionPanel=role==='host'?"<section id='live-room-permission-panel' class='live-tools-card live-room-permission-panel' data-live-tools-panel='permissions'><div class='live-panel-title'><strong>Guest & host permissions</strong><small>Enable or disable each control during your LIVE.</small></div><div id='live-room-permission-controls' class='live-room-permission-grid'>"+liveRoomPermissionSettings.map(([key,label,defaultValue,description])=>"<label class='live-room-permission-toggle'><input type='checkbox' data-live-room-setting='"+key+"'"+((liveSettings[key]??defaultValue)?" checked":"")+"><span class='live-preflight-switch'></span><span><strong>"+esc(label)+"</strong><small>"+esc(description)+"</small></span></label>").join('')+"</div></section>":"";
-  const liveLayoutPanel=role==="host"?"<section id='live-layout-panel' class='live-tools-card live-layout-panel' data-live-tools-panel='layouts'><div class='live-panel-title'><strong>Screen layout</strong><small>Switch the broadcast arrangement without ending LIVE. Full Screen expands the host stage across each device; viewers follow your selection.</small></div><div id='live-layout-options' class='live-layout-options' role='group' aria-label='Choose LIVE screen layout'>"+LIVE_SCREEN_LAYOUT_OPTIONS.map(option=>"<button type='button' class='live-layout-option"+(option.value===activeLiveScreenLayout?" active":"")+"' data-live-screen-layout='"+option.value+"' aria-pressed='"+String(option.value===activeLiveScreenLayout)+"'>"+liveLayoutIcon(option.icon)+"<span>"+esc(option.label)+"</span></button>").join("")+"</div><p class='live-layout-status' id='live-layout-status' role='status' aria-live='polite'>"+esc(LIVE_SCREEN_LAYOUT_OPTIONS.find(option=>option.value===activeLiveScreenLayout)?.label||'Grid')+" layout selected.</p></section>":"";
+  const liveLayoutPanel=role==="host"?"<section id='live-layout-panel' class='live-tools-card live-layout-panel' data-live-tools-panel='layouts'><div class='live-panel-title'><strong>Screen layout</strong><small>Choose one of the seven ways to arrange the LIVE screen. The guest panel layout is controlled separately below.</small></div><div id='live-layout-options' class='live-layout-options' role='group' aria-label='Choose LIVE screen layout'>"+LIVE_SCREEN_LAYOUT_OPTIONS.map(option=>"<button type='button' class='live-layout-option"+(option.value===activeLiveScreenLayout?" active":"")+"' data-live-screen-layout='"+option.value+"' aria-pressed='"+String(option.value===activeLiveScreenLayout)+"'>"+liveLayoutIcon(option.icon)+"<span>"+esc(option.label)+"</span></button>").join("")+"</div><p class='live-layout-status' id='live-layout-status' role='status' aria-live='polite'>"+esc(LIVE_SCREEN_LAYOUT_OPTIONS.find(option=>option.value===activeLiveScreenLayout)?.label||'Full Screen')+" screen layout selected.</p><div class='live-panel-title live-guest-layout-heading'><strong>Guest panel / grid layout</strong><small>Choose how the host and guest boxes are arranged inside the LIVE guest panel.</small></div><div id='live-guest-layout-options' class='live-layout-options' role='group' aria-label='Choose LIVE guest panel layout'>"+LIVE_GUEST_LAYOUT_OPTIONS.map(option=>"<button type='button' class='live-layout-option"+(option.value===activeLiveGuestLayout?" active":"")+"' data-live-guest-layout='"+option.value+"' aria-pressed='"+String(option.value===activeLiveGuestLayout)+"'>"+liveLayoutIcon(option.icon)+"<span>"+esc(option.label)+"</span></button>").join("")+"</div><p class='live-layout-status' id='live-guest-layout-status' role='status' aria-live='polite'>"+esc(LIVE_GUEST_LAYOUT_OPTIONS.find(option=>option.value===activeLiveGuestLayout)?.label||'Roundtable 1')+" guest layout selected.</p></section>":"";
   const liveViewerTools=role==="host"?"<section id='live-viewer-panel' class='live-tools-card live-viewer-panel' data-live-tools-panel='viewers'><div class='live-panel-title'><strong>Viewers & guests</strong><small id='live-viewer-total'>Loading connected people…</small></div><div id='live-viewer-roster' class='live-viewer-roster'><p class='muted'>Loading the real-time audience…</p></div></section>":"";
   const liveTopGiftersTools="<section id='live-top-gifters-panel' class='live-tools-card live-top-gifters-panel' data-live-tools-panel='top-gifters'><div class='live-panel-title'><strong>Top Gifters</strong><small>Ranked by confirmed Coins sent in this LIVE</small></div><div id='live-top-gifters-list' class='live-top-gifters-list'><p class='muted'>Loading this room’s gifter ranking…</p></div></section>";
   const liveToolsDrawer="<div id='live-tools-backdrop' class='live-tools-backdrop hidden' aria-hidden='true'>"+
@@ -2867,6 +2876,12 @@ activeLivePinnedComment=null;
       if(!LIVE_SCREEN_LAYOUT_OPTIONS.some(option=>option.value===packet.layout))return;
       const nextLayout=normalizeLiveScreenLayout(packet.layout);
       session.liveLayout=nextLayout;activeLiveSession.liveLayout=nextLayout;applyLiveScreenLayout(nextLayout);renderLiveGuestLayout(room,role,session,activeLiveSpeakerIds);
+      return;
+    }
+    if(topic==="minglora-live-guest-layout"&&participant.identity===session.hostId&&packet?.type==="minglora.live.guest-layout"&&packet.version===1){
+      if(!LIVE_GUEST_LAYOUT_OPTIONS.some(option=>option.value===packet.layout))return;
+      const nextLayout=normalizeLiveGuestLayout(packet.layout);
+      session.liveGuestLayout=nextLayout;activeLiveSession.liveGuestLayout=nextLayout;applyLiveGuestLayout(nextLayout);renderLiveGuestLayout(room,role,session,activeLiveSpeakerIds);
       return;
     }
     if(topic==="minglora-live-reaction"){
@@ -3221,6 +3236,26 @@ activeLivePinnedComment=null;
         if(status)status.textContent='Layout could not be synchronized. '+(error.message||'Try again.');
         toast(error.message||'The LIVE layout could not be changed.');
       }finally{$("#live-layout-options")?.querySelectorAll('button').forEach(item=>item.disabled=false);}
+    });
+    $("#live-guest-layout-options")?.addEventListener("click",async event=>{
+      const button=event.target?.closest?.('[data-live-guest-layout]');
+      if(!button||role!=="host"||button.disabled)return;
+      const nextLayout=String(button.dataset.liveGuestLayout||'');
+      if(!LIVE_GUEST_LAYOUT_OPTIONS.some(option=>option.value===nextLayout))return;
+      $("#live-guest-layout-options")?.querySelectorAll('button').forEach(item=>item.disabled=true);
+      const status=$("#live-guest-layout-status");
+      try{
+        await api("/live/sessions/"+encodeURIComponent(session.id)+"/guest-layout",{method:"PATCH",body:JSON.stringify({layout:nextLayout})});
+        session.liveGuestLayout=nextLayout;activeLiveSession.liveGuestLayout=nextLayout;applyLiveGuestLayout(nextLayout);renderLiveGuestLayout(room,role,session,activeLiveSpeakerIds);
+        const packet=new TextEncoder().encode(JSON.stringify({type:"minglora.live.guest-layout",version:1,layout:nextLayout}));
+        await room.localParticipant.publishData(packet,{reliable:true,topic:"minglora-live-guest-layout"});
+        const label=LIVE_GUEST_LAYOUT_OPTIONS.find(option=>option.value===nextLayout)?.label||'Roundtable 1';
+        if(status)status.textContent=label+' guest layout is now live for everyone.';
+      }catch(error){
+        applyLiveGuestLayout(session.liveGuestLayout||'roundtable-1');renderLiveGuestLayout(room,role,session,activeLiveSpeakerIds);
+        if(status)status.textContent='Guest layout could not be synchronized. '+(error.message||'Try again.');
+        toast(error.message||'The LIVE guest layout could not be changed.');
+      }finally{$("#live-guest-layout-options")?.querySelectorAll('button').forEach(item=>item.disabled=false);}
     });
     const liveDevicePreferences={echoCancellation:true,noiseSuppression:liveSettings.noiseSuppression!==false,autoGainControl:true,videoFit:"cover",mirrorSelf:true,showNames:true};
     activeLiveDevicePreferences=liveDevicePreferences;
@@ -5578,8 +5613,6 @@ const PROFILE_SCREEN_LAYOUT_OPTIONS = Object.freeze([
   {id:'fixed-panel',name:'Fixed Panel',description:'A centered panel with a stable maximum reading width.'},
   {id:'side-by-side',name:'Side by Side',description:'Profile sections and media arranged in adjacent columns.'},
   {id:'spotlight',name:'Spotlight',description:'Centered identity presentation with a focused main content area.'},
-  {id:'roundtable-1',name:'Roundtable 1',description:'Balanced two-column profile panels with equal emphasis.'},
-  {id:'roundtable-2',name:'Roundtable 2',description:'Compact multi-panel profile layout with a featured main column.'}
 ]);
 const PROFILE_SCREEN_LAYOUT_IDS = Object.freeze(PROFILE_SCREEN_LAYOUT_OPTIONS.map(item=>item.id));
 function normalizeProfileStyle(value){return PROFILE_STYLE_IDS.includes(value)?value:'facebook';}
@@ -5645,7 +5678,7 @@ function profileStyleLibraryMarkup(data){
     '<div class="profile-style-library-heading"><div><span class="profile-style-eyebrow">PROFILE APPEARANCE</span><h2>Profile Style Library</h2><p>Choose a complete profile experience. Your Minglora account, profile information and content remain connected.</p></div><span class="profile-style-count">10 styles</span></div>'+
     '<div class="profile-style-library-workspace"><div class="profile-style-options" aria-label="Available profile styles">'+choices+'</div>'+
     '<div class="profile-style-preview-column"><div class="profile-style-preview-heading"><div><strong>Live preview</strong><small id="profile-style-preview-name">'+esc((PROFILE_STYLE_OPTIONS.find(item=>item.id===active)||PROFILE_STYLE_OPTIONS[0]).name)+'</small></div><span class="profile-style-default-note">Default: '+esc((PROFILE_STYLE_OPTIONS.find(item=>item.id===defaultStyle)||PROFILE_STYLE_OPTIONS[0]).name)+'</span></div>'+
-    '<label class="profile-screen-layout-picker" for="profile-screen-layout-choice"><span>Profile screen layout</span><select id="profile-screen-layout-choice" aria-label="Choose a profile screen layout">'+PROFILE_SCREEN_LAYOUT_OPTIONS.map(item=>'<option value="'+item.id+'" '+(item.id===screenLayout?'selected':'')+'>'+esc(item.name)+'</option>').join('')+'</select><small>All nine screen layouts work with every profile style.</small></label><div id="profile-style-live-preview">'+profileStylePreviewMarkup(data,active,screenLayout)+'</div><div class="profile-style-library-actions"><button type="button" class="primary" data-profile-style-apply>Apply</button><button type="button" class="secondary" data-profile-style-save-default>Save as default</button><button type="button" class="secondary" data-profile-style-reset>Reset to Default</button></div>'+
+    '<label class="profile-screen-layout-picker" for="profile-screen-layout-choice"><span>Profile screen layout</span><select id="profile-screen-layout-choice" aria-label="Choose a profile screen layout">'+PROFILE_SCREEN_LAYOUT_OPTIONS.map(item=>'<option value="'+item.id+'" '+(item.id===screenLayout?'selected':'')+'>'+esc(item.name)+'</option>').join('')+'</select><small>All seven screen layouts work with every profile style.</small></label><div id="profile-style-live-preview">'+profileStylePreviewMarkup(data,active,screenLayout)+'</div><div class="profile-style-library-actions"><button type="button" class="primary" data-profile-style-apply>Apply</button><button type="button" class="secondary" data-profile-style-save-default>Save as default</button><button type="button" class="secondary" data-profile-style-reset>Reset to Default</button></div>'+
     '<p class="profile-style-library-note" role="status">Preview is temporary. Apply changes the public profile style; Save as default stores your preferred style across sessions and devices.</p></div></div>'+
     '<div class="profile-style-library-footnote">One account · One profile · All your posts, photos, albums, videos, reels, followers, friends and profile details stay in place.</div></section>';
 }

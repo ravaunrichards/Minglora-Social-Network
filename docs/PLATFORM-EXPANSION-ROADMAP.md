@@ -42,7 +42,7 @@ A TV-style discovery guide; programme and channel metadata; live and on-demand s
 Original audio publishing; podcasts; episodes and seasons; playlists; creator profiles; listening history; follows; comments; audio rooms; radio-style programming; audio discovery. Commercial music requires licensing, territory restrictions, reporting and royalty accounting. User-uploaded recordings need rights confirmation and takedown handling.
 
 ### 7. MeetWave
-Keep meetings separate from Messenger calls and public LIVE: instant/scheduled/reusable rooms; invitation and access policies; host/co-host controls; participant management; screen sharing; whiteboards; chat; polls/Q&A; breakout rooms; waiting room; recording consent; attendance and meeting reports; all nine established host/guest layouts.
+Keep meetings separate from Messenger calls and public LIVE: instant/scheduled/reusable rooms; invitation and access policies; host/co-host controls; participant management; screen sharing; whiteboards; chat; polls/Q&A; breakout rooms; waiting room; recording consent; attendance and meeting reports; seven distinct screen layouts plus Roundtable 1 and Roundtable 2 as separate guest-box layouts.
 
 ### 8. Creator Studio and memberships
 Creator dashboard; profile/channel management; publishing calendar; drafts; moderation; content insights; audience and subscriber management; tiered recurring subscriptions; exclusive posts/media; paid messages and pay-per-view where permitted; tips and virtual gifts; promotions; creator statements; payout history; dispute handling; account eligibility and tax/compliance settings.
