@@ -221,14 +221,16 @@ try {
           const rootRect = root.getBoundingClientRect();
           const mainRect = main.getBoundingClientRect();
           const avatar = root.querySelector('.profile-avatar-edit-wrap .avatar');
-          const identity = root.querySelector('.profile-name-with-badges');
+          const identity = root.querySelector('.profile-name-with-badges span:first-child') || root.querySelector('.profile-name-with-badges');
+          const identityRange = document.createRange();
+          identityRange.selectNodeContents(identity);
           const actions = [...root.querySelectorAll('.profile-owner-actions button')];
           const counts = [...root.querySelectorAll('.profile-counts [data-profile-metric]')];
           const tabs = root.querySelector('.profile-tabs');
           const panel = root.querySelector('#profile-tab-panel');
           const cover = root.querySelector('.profile-cover');
           const avatarRect = avatar.getBoundingClientRect();
-          const identityRect = identity.getBoundingClientRect();
+          const identityRect = identityRange.getBoundingClientRect();
           const tabsRect = tabs.getBoundingClientRect();
           const panelRect = panel.getBoundingClientRect();
           const hiddenCover = getComputedStyle(cover).display === 'none';
