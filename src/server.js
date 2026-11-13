@@ -40,6 +40,7 @@ import { disconnectBlockedConnections } from '../backend/modules/relationships/b
 import { getActiveFollowEdges, getMutualFollowIds, isSocialAccountEligible, normalizeFriendPreferences, validateFriendPreferencePatch } from '../backend/modules/relationships/friends.js';
 import { validatePageInput, validatePageUpdate, canManagePage as canManagePagePolicy, canManagePageTeam as canManagePageTeamPolicy, canViewPageInsights as canViewPageInsightsPolicy, canAssignPageRole as canAssignPageRolePolicy, canChangePageRole as canChangePageRolePolicy, canRemovePageRole as canRemovePageRolePolicy, canDeletePagePost, canDeletePage } from '../backend/modules/pages/service.js';
 import { recordProfileView, touchProfilePresence, getProfileViewStats } from '../backend/modules/profiles/service.js';
+import { handleHelpCenterRoute } from './domain/help-center-routes.js';
 import { isFemaleMenstrualHealthAccount } from '../backend/modules/menstrual-health/service.js';
 import { getPlatformAdminBadge, getProfileVerificationBadge } from './platform-badges.js';
 import { listActiveCreatorSubscriptions } from '../backend/modules/subscriptions/service.js';
@@ -3054,6 +3055,13 @@ async function route(req, res) {
           (db.auditLog||[]).unshift({id:uid(),actorId:user.id,event:'moderation.action',targetType:report.targetType,targetId:report.targetId,createdAt:now()});
         }
         await saveStore();return json(res,200,{report});
+      }
+      if (p.startsWith('/api/help/')) {
+        const helpResult = await handleHelpCenterRoute({
+          method, path: p, url, input, user, req,
+          requestSupabaseState, isSupabasePersistence, isModerator, hasActiveReviewerSession
+        });
+        if (helpResult) return json(res, helpResult.status, helpResult.body);
       }
       if(method==='GET'&&p==='/api/support/tickets'){
         if(isModerator(user,req)&&url.searchParams.get('scope')==='all'){
