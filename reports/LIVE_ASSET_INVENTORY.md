@@ -59,3 +59,12 @@ The visual QA branch adds `public/assets/icons/live-control-icons.svg`, a 16-sym
 ## File-based gift animation and production workspace — 2026-11-13
 
 The follow-on branch adds the source animation catalogue at `assets/animations/gifts/animation-catalog.json`, 17 separate runtime keyframe files under `public/assets/animations/gifts/presets/`, and a preset index. The runtime loads those same-origin files and retains the existing inline choreography as a fallback. A controlled `assets/gift-assets/` workspace now separates artwork, models, audio and manifests. Its approved/source folders contain instructions only; they are not represented as completed premium assets. The 1,748-row canonical catalogue and generated SVG/GLTF build pipeline are preserved.
+
+
+## Verified model and per-gift motion inventory — 2026-11-13
+
+- `assets/gift-assets/manifests/asset-register.json` now lists all **45** standalone GLTF files found in `public/assets/gifts/`, with exact repository/runtime paths, file sizes and Git blob SHAs.
+- `assets/gift-assets/manifests/rights-register.json` contains matching records. All 45 are marked **UNVERIFIED** for ownership, licence, commercial use, modification and redistribution. The register is not a production approval.
+- The build-time motion generator creates **1,737** active-gift keyframe JSON assets at `public/assets/animations/gifts/per-gift/<gift-code>.json`. The runtime fetches each file lazily by its canonical gift code.
+- `tests/unit/gift-asset-register.test.js` verifies all 45 model files, byte sizes and Git blob identities, plus the corresponding unresolved rights records.
+- These 45 models are inventory records for files already in the main repository. They are not evidence that the designated separate gift-asset repository was found, or that every model is bound to a catalogue gift.
