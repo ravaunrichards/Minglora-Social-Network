@@ -2599,7 +2599,8 @@ async function openLiveRoom(session,role,issuedLiveKit){
     ?session.liveMode:(broadcastType==='audio_only'?'audio_only':'video_audio');
   const liveSettings=session.liveSettings&&typeof session.liveSettings==='object'?session.liveSettings:{};
   activeLiveScreenLayout=normalizeLiveScreenLayout(session.liveLayout);
-  activeLiveGuestLayout=normalizeLiveGuestLayout(session.liveGuestLayout);
+  activeLiveGuestLayout=normalizeLiveGuestLayout(session.liveGuestLayout||(['roundtable-1','roundtable-2'].includes(session.liveLayout)?session.liveLayout:'roundtable-1'));
+  session.liveGuestLayout=activeLiveGuestLayout;
   const canUseCamera=broadcastType==='video_audio'&&liveMode!=='mobile_gaming'&&(role!=='guest'||liveSettings.guestCamera!==false);
   const giftsEnabled=liveSettings.liveGifts!==false&&!liveSettings.practiceMode;
   const client=window.LivekitClient;
