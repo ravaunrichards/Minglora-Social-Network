@@ -8,6 +8,7 @@
   <title>Help Center — Minglora</title>
   <link rel="icon" type="image/jpeg" href="/assets/Logo/Logo.jpg">
   <link rel="stylesheet" href="/styles.css?v=20261113-screen-guest-layout-separation-2">
+  <link rel="stylesheet" href="/minglora-branding.css?v=20261112-auth-brand-stack-1">
   <link rel="stylesheet" href="/help-center.css?v=20261113-help-center-1">
 </head>
 <body class="hc-body">
@@ -142,7 +143,7 @@
               <label>Category<select name="categoryId" required></select></label>
               <label>Subcategory<select name="subcategoryId"><option value="">Choose a subcategory</option></select></label>
             </div>
-            <label>Language<select name="locale"><option value="en">English</option></select></label>
+            <label>Language code<input name="locale" value="en" maxlength="16" pattern="[a-z]{2}(-[A-Z]{2})?" placeholder="en or es-MX" required></label>
             <label>Short answer preview<textarea name="excerpt" rows="2" maxlength="600"></textarea></label>
             <label>Full answer / instructions<textarea name="answerMarkdown" rows="9" required></textarea></label>
             <p class="hc-editor-hint">You can use headings, numbered steps, bullet lists, links, and Markdown images such as ![Screenshot description](https://...). Add video demonstrations as secure HTTPS links.</p>
