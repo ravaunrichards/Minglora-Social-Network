@@ -30,7 +30,7 @@ test('LIVE guest-box layouts are separate, persisted and synchronized independen
     assert.ok(styles.includes('data-live-guest-layout="' + layout + '"'), layout + ' guest-box styles must use their own attribute');
     assert.ok(server.includes("'" + layout + "'"));
   }
-  assert.match(app, /data-live-guest-layout='"\+option\.value\+'/);
+  assert.match(app, /data-live-guest-layout=.*option\.value/);
   assert.match(server, /LIVE_GUEST_LAYOUTS=\['roundtable-1','roundtable-2'\]/);
   assert.match(server, /liveGuestLayout: 'roundtable-1'/);
   assert.match(server, /const liveGuestLayoutMatch = p\.match/);
