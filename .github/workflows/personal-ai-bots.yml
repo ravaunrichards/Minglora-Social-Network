@@ -46,6 +46,8 @@ on:
       - 'supabase/functions/minglora-runtime-state/index.ts'
       - 'backend/workers/README.md'
       - 'MINGLORA_RESUME.md'
+      - 'tests/postgres/**'
+      - 'scripts/test-ai-network-postgres.sh'
       - '.github/workflows/personal-ai-bots.yml'
   workflow_dispatch:
 
