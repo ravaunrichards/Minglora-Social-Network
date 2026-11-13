@@ -3278,7 +3278,7 @@ body.auth-mode .auth-screen{
 .gift-sort-label select{width:100%;min-height:43px;border:1px solid var(--line);border-radius:11px;background:var(--card);color:var(--text);padding:9px 12px;font:inherit}
 .gift-catalogue-grid{grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:10px}
 .gift-catalog-card{grid-template-rows:104px auto auto;overflow:hidden}
-.gift-card-image{width:100%;height:100%;object-fit:cover;border-radius:10px}
+.gift-card-image{display:block;width:100%;height:100%;object-fit:contain;object-position:center;border-radius:10px;padding:6px;box-sizing:border-box}
 .gift-load-more{display:block;margin:18px auto 0;min-width:180px}
 .gift-preview-panel{display:grid;grid-template-columns:minmax(0,1fr) minmax(230px,360px);gap:18px;align-items:center;margin:18px 0;overflow:hidden;scroll-margin-top:16px}
 .gift-preview-copy h2{margin:6px 0}
@@ -3298,7 +3298,7 @@ body.auth-mode .auth-screen{
 .live-gift-button strong,.live-gift-button small{font-size:10px;line-height:1.2}
 .minglora-gift-fx{position:fixed;inset:0;z-index:99990;display:grid;place-items:center;pointer-events:none;overflow:hidden}
 .minglora-gift-fx-card{position:relative;display:grid;justify-items:center;gap:7px;width:min(68vw,360px);filter:drop-shadow(0 18px 32px #10122b65);transform-origin:50% 55%}
-.minglora-gift-fx-model{width:100%;height:min(58vw,330px);background:transparent}
+.minglora-gift-fx-model{display:block;width:100%;height:min(58vw,330px);max-width:100%;object-fit:contain;object-position:center;background:transparent}
 .minglora-gift-fx-emoji{font-size:clamp(100px,24vw,190px);line-height:1}
 .minglora-gift-fx-caption{padding:6px 13px;border:1px solid #ffffff40;border-radius:999px;background:#15162bd9;color:#fff;font-size:14px;font-weight:800;letter-spacing:.02em;text-shadow:0 2px 8px #0008}
 .minglora-gift-fx-rays{position:absolute;inset:18% 18%;border:2px solid #fff5;border-radius:50%;box-shadow:0 0 34px #ffffff55,inset 0 0 32px #ffffff35;animation:minglora-rays 1.5s ease-out infinite}
