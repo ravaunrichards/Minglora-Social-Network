@@ -7,8 +7,8 @@ const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),"../..");
 const read=p=>fs.readFileSync(path.join(root,p),"utf8");
 test("Help Center is a standalone responsive page",()=>{
 const html=read("public/help-center.html"),css=read("public/help-center.css"),js=read("public/help-center.js");
-assert.match(html,/How can we help you\?/);assert.match(html,/hc-search-input/);assert.match(html,/hc-categories/);assert.match(html,/hc-article/);
-assert.match(css,/@media\(max-width:560px\)/);assert.match(js,/\/api\/help-center\/bootstrap/);assert.match(js,/\/api\/help-center\/search/);assert.match(js,/\/api\/help-center\/articles\//);assert.match(js,/function markdown/);assert.match(js,/function applyMemberTheme/);assert.match(js,/function highlight/);assert.match(js,/relatedArticleIds/);assert.match(js,/hc-preview-answer/);
+assert.match(html,/How can we help you\?/);assert.match(html,/hc-search-input/);assert.match(html,/hc-categories/);assert.match(html,/hc-article/);assert.match(html,/Browse by feature/);assert.match(html,/hc-feature-topics/);
+assert.match(css,/@media\(max-width:560px\)/);assert.match(js,/\/api\/help-center\/bootstrap/);assert.match(js,/\/api\/help-center\/search/);assert.match(js,/\/api\/help-center\/articles\//);assert.match(js,/function markdown/);assert.match(js,/function applyMemberTheme/);assert.match(js,/function highlight/);assert.match(js,/relatedArticleIds/);assert.match(js,/hc-preview-answer/);assert.match(js,/renderFeatureTopics/);const topicsBlock=js.match(/const FEATURE_TOPICS=(\\[[\\s\\S]*?\\]);/);assert.ok(topicsBlock);assert.equal(JSON.parse(topicsBlock[1]).length,30);
 });
 test("Help Center reuses existing support-ticket flows",()=>{
 const s=read("public/settings.js"),a=read("public/app.js"),m=read("public/minglora-menu.js"),server=read("src/server.js");
@@ -33,6 +33,6 @@ assert.match(edge,/help_related_articles/);
 assert.match(edge,/mfa_required/);
 assert.match(edge,/mfaVerified===true/);
 assert.match(edge,/help_center:approve/);
-assert.match(edge,/help_center:publish/);
+assert.match(edge,/help_center:publish/);assert.match(edge,/recentlyAdded/);
 assert.match(server,/mfaVerified:activeHelpSession\?\.mfaVerified===true/);
 });
