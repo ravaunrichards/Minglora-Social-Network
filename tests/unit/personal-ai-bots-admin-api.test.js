@@ -750,6 +750,7 @@ test('canonical AI identity synchronization includes full profile and structured
       personalAiBots:[{
         id:botId,createdBy:'owner-1',displayName:'Profile AI',firstName:'Profile',lastName:'AI',
         categoryId:'ai-support',categoryName:'AI Support',username:'ai_profile',
+        status:'enabled',enabled:true,autonomyMode:'hybrid',allowedAutonomousActions:['analytics_read','draft_content'],
         gender:'female',genderPresentation:'Feminine AI presentation',nationality:'Jamaican',
         countryOfOrigin:'Jamaica',currentCountry:'Jamaica',stateProvince:'Kingston',
         parishCounty:'Kingston',city:'Kingston',town:'Half Way Tree',originCountryCode:'JM',
@@ -777,6 +778,7 @@ test('canonical AI identity synchronization includes full profile and structured
   assert.equal(persisted.locations[0].parishCounty,'Kingston');
   assert.equal(persisted.locations[0].countryCode,'JM');
   assert.equal(persisted.capabilities[0].code,'text');
+  assert.deepEqual(persisted.permissions,['analytics_read','draft_content']);
 });
 
 
