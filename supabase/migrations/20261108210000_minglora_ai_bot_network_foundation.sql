@@ -645,6 +645,9 @@ DECLARE
   v_location_type text;
   v_capability jsonb;
   v_capability_code text;
+  v_permission jsonb;
+  v_permission_code text;
+  v_permission_scope text;
 BEGIN
   IF p_identity IS NULL OR pg_catalog.jsonb_typeof(p_identity) <> 'object' OR p_actor_user_id IS NULL THEN
     RAISE EXCEPTION 'A valid identity object and authenticated owner are required.' USING ERRCODE = '22023';
@@ -683,6 +686,12 @@ BEGIN
         CASE WHEN pg_catalog.jsonb_typeof(p_identity->'capabilities')='array'
           THEN pg_catalog.jsonb_array_length(p_identity->'capabilities') > 100 ELSE true END) THEN
     RAISE EXCEPTION 'AI profile location, education or capability collections exceed their supported format or size.' USING ERRCODE = '22023';
+  END IF;
+
+  IF p_identity ? 'permissions' AND
+     CASE WHEN pg_catalog.jsonb_typeof(p_identity->'permissions')='array'
+       THEN pg_catalog.jsonb_array_length(p_identity->'permissions') > 5 ELSE true END THEN
+    RAISE EXCEPTION 'AI identity permissions must be an array of at most five approved actions.' USING ERRCODE = '22023';
   END IF;
 
   IF v_category IS NOT NULL THEN
@@ -920,6 +929,48 @@ BEGIN
     END LOOP;
   END IF;
 
+  IF p_identity ? 'permissions' THEN
+    UPDATE public.ai_identity_permissions
+    SET allowed=false,granted_by=v_owner,updated_at=pg_catalog.now()
+    WHERE identity_id=v_id AND allowed=true;
+
+    FOR v_permission IN SELECT value FROM pg_catalog.jsonb_array_elements(p_identity->'permissions')
+    LOOP
+      IF pg_catalog.jsonb_typeof(v_permission)<>'string' THEN
+        RAISE EXCEPTION 'AI identity permissions must use approved permission codes.' USING ERRCODE = '22023';
+      END IF;
+      v_permission_code := pg_catalog.btrim(v_permission #>> '{}');
+      IF v_permission_code NOT IN (
+        'analytics_read','moderation_flag','draft_content','translate_content','prepare_faq_draft'
+      ) THEN
+        RAISE EXCEPTION 'AI identity permission is not in the low-risk allowlist.' USING ERRCODE = '42501';
+      END IF;
+      v_permission_scope := CASE v_permission_code
+        WHEN 'analytics_read' THEN 'platform_analytics'
+        WHEN 'moderation_flag' THEN 'public_content'
+        WHEN 'draft_content' THEN 'own_content'
+        WHEN 'translate_content' THEN 'own_content'
+        WHEN 'prepare_faq_draft' THEN 'support_knowledge'
+        ELSE 'self'
+      END;
+      INSERT INTO public.ai_identity_permissions (
+        identity_id,permission_code,resource_scope,allowed,granted_by,expires_at
+      ) VALUES (
+        v_id,v_permission_code,v_permission_scope,true,v_owner,NULL
+      )
+      ON CONFLICT (identity_id,permission_code,resource_scope) DO UPDATE SET
+        allowed=true,granted_by=EXCLUDED.granted_by,expires_at=NULL,updated_at=pg_catalog.now();
+    END LOOP;
+
+    INSERT INTO public.ai_identity_audit_logs (
+      identity_id,actor_user_id,action,target_type,target_id,summary,metadata
+    ) VALUES (
+      v_id,v_owner,'identity.permissions_synchronized','ai_identity_permissions',v_id::text,
+      'Synchronized the owner-approved low-risk AI action allowlist.',
+      pg_catalog.jsonb_build_object('permissions',p_identity->'permissions')
+    );
+  END IF;
+
   INSERT INTO public.ai_identity_owners (
     identity_id,owner_type,owner_user_id,is_primary
   ) VALUES (v_id,'human_admin',v_owner,true)
@@ -1053,6 +1104,18 @@ AS $function$
         'languages',COALESCE((
           SELECT pg_catalog.jsonb_agg(l.language_name ORDER BY l.language_name)
           FROM public.ai_identity_languages AS l WHERE l.identity_id=i.identity_id
+        ),'[]'::jsonb),
+        'permissions',COALESCE((
+          SELECT pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
+            'permissionCode',permission.permission_code,
+            'resourceScope',permission.resource_scope,
+            'allowed',permission.allowed,
+            'grantedBy',permission.granted_by,
+            'expiresAt',permission.expires_at,
+            'updatedAt',permission.updated_at
+          ) ORDER BY permission.permission_code,permission.resource_scope)
+          FROM public.ai_identity_permissions AS permission
+          WHERE permission.identity_id=i.identity_id
         ),'[]'::jsonb),
         'memoryEnabled',p.memory_enabled,
         'createdAt',i.created_at,
