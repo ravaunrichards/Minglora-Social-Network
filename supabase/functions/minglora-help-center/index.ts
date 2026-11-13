@@ -284,6 +284,10 @@ Deno.serve(async (req:Request) => {
       const cats=structure.categories.map((c:any)=>({...c,articleCount:categoryCounts.get(c.id)||0}));
       const recent=currentPublished.slice(0,8).map((row:any)=>({id:row.article_id,translationId:row.id,slug:row.help_articles.slug,
         title:row.title,excerpt:row.excerpt,updatedAt:row.updated_at,categorySlug:cats.find((c:any)=>c.id===row.help_articles.category_id)?.slug||""}));
+      const recentlyAdded=[...currentPublished].sort((a:any,b:any)=>
+        new Date(b.published_at||b.updated_at).getTime()-new Date(a.published_at||a.updated_at).getTime()
+      ).slice(0,8).map((row:any)=>({id:row.article_id,translationId:row.id,slug:row.help_articles.slug,
+        title:row.title,excerpt:row.excerpt,publishedAt:row.published_at||row.updated_at,categorySlug:cats.find((c:any)=>c.id===row.help_articles.category_id)?.slug||""}));
       const featured=currentPublished.filter((row:any)=>row.help_articles.is_featured).slice(0,8).map((row:any)=>({
         id:row.article_id,translationId:row.id,slug:row.help_articles.slug,title:row.title,excerpt:row.excerpt,updatedAt:row.updated_at
       }));
@@ -293,7 +297,7 @@ Deno.serve(async (req:Request) => {
         if(fallback.error) throw fallback.error;
         popularRows=fallback.data||[];
       }
-      return json(200,{categories:cats,subcategories:structure.subcategories,popular:popularRows,featured,recent,
+      return json(200,{categories:cats,subcategories:structure.subcategories,popular:popularRows,featured,recent,recentlyAdded,
         articleCount:currentPublished.length,locale,adminAccess:Boolean((await requireStaff(actor,mfaVerified)))});
     }
     if (action==="search") {
