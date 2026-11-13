@@ -1359,6 +1359,74 @@ async function route(req, res) {
         const result = await runAIIdentityCommand('bulk_create', input);
         return json(res, 200, result || { created_count: 0, failed_count: 0, created: [], failed: [] });
       }
+
+      const runAIOrganizationCommand = async (aiAction, payload = {}) => {
+        if (!isSupabasePersistence()) {
+          throw Object.assign(
+            new Error('AI corporate records require Minglora Supabase persistence.'),
+            { status: 503 }
+          );
+        }
+        try {
+          const response = await requestSupabaseState('ai_organization_command', {
+            actorUserId: user.id,
+            aiAction,
+            payload
+          });
+          if (response?.skipped) {
+            throw Object.assign(new Error('AI corporate records are unavailable in local-only persistence mode.'), { status: 503 });
+          }
+          return response?.result;
+        } catch (error) {
+          const message = String(error?.message || '');
+          if (/unsupported action|unsupported AI organization command|function .*minglora_ai_organization_command.*does not exist|could not find the function|schema cache/i.test(message)) {
+            throw Object.assign(
+              new Error('The AI corporate database migration and runtime gateway must be deployed before this operation is available. No corporate data was changed.'),
+              { status: 503 }
+            );
+          }
+          throw error;
+        }
+      };
+
+      if (method === 'GET' && sub === 'department-templates') {
+        const templates = await runAIOrganizationCommand('list_department_templates');
+        return json(res, 200, { templates: Array.isArray(templates) ? templates : [] });
+      }
+      if (method === 'GET' && sub === 'position-templates') {
+        const templates = await runAIOrganizationCommand('list_position_templates');
+        return json(res, 200, { templates: Array.isArray(templates) ? templates : [] });
+      }
+      if (method === 'GET' && sub === 'organizations') {
+        const organizations = await runAIOrganizationCommand('list_organizations');
+        return json(res, 200, { organizations: Array.isArray(organizations) ? organizations : [] });
+      }
+      if (method === 'POST' && sub === 'organizations') {
+        const input = await body(req, 12000);
+        const result = await runAIOrganizationCommand('create_organization', input);
+        return json(res, result?.reused ? 200 : 201, { organization: result });
+      }
+      if (parts[0] === 'organizations' && parts.length === 3 &&
+          ['departments', 'positions'].includes(parts[2])) {
+        const organizationId = parts[1];
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(organizationId)) {
+          throw Object.assign(new Error('A valid organization ID is required.'), { status: 400 });
+        }
+        const resource = parts[2];
+        const isDepartment = resource === 'departments';
+        if (method === 'GET') {
+          const result = await runAIOrganizationCommand(isDepartment ? 'list_departments' : 'list_positions', {
+            organization_id: organizationId
+          });
+          return json(res, 200, { [resource]: Array.isArray(result) ? result : [] });
+        }
+        if (method === 'POST') {
+          const input = await body(req, 20000);
+          input.organization_id = organizationId;
+          const result = await runAIOrganizationCommand(isDepartment ? 'create_departments' : 'create_positions', input);
+          return json(res, 200, result || {});
+        }
+      }
       if (method === 'GET' && !sub) {
         const snapshot = getAICommandCenter(db, user.id, { providerStatus });
         if (!settingsExisted) await saveStore();
