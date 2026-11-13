@@ -33,6 +33,8 @@ test("the LIVE runtime loads standalone same-origin presets and keeps inline fal
 });
 test("the service worker caches the preset index and every file; generated files are deterministic",()=>{
   assert.ok(worker.includes("preset-index.json"));
-  for(const preset of source.presets)assert.ok(worker.includes("/assets/animations/gifts/presets/"+preset.id+".json"));
+  assert.ok(worker.includes("SHELL.push('/assets/animations/gifts/presets/'+preset+'.json')"));
+  const precacheIds=source.presets.map(preset=>preset.id).sort();
+  assert.ok(worker.includes(JSON.stringify(precacheIds)));
   execFileSync(process.execPath,[generator,"--check"],{stdio:"pipe"});
 });
