@@ -36,6 +36,6 @@ test('the actual LIVE gift picker and Gift Studio use the same local category ar
 
 test('the category artwork is precached and the updated scripts receive new cache versions',()=>{
  assert.ok(worker.includes("SHELL.push('/assets/icons/live-gift-category-icons.svg')"));
- assert.ok(worker.includes("minglora-shell-v307-self-updating-1"));
- assert.ok(worker.includes("/app.js?v=20261113-live-category-icons-1"));
+ assert.ok(worker.includes("minglora-shell-v308-self-updating-1"));
+ assert.ok(worker.includes("/app.js?v=20261113-live-reward-art-icons-1"));
 });
