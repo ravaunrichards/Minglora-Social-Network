@@ -36,10 +36,12 @@ try{
             grid.dataset.liveLayout=screen;
             grid.dataset.liveGuestLayout=guest;
             const css=getComputedStyle(grid),host=getComputedStyle(grid.querySelector('.is-host'));
-            return {columns:css.gridTemplateColumns,rows:css.gridTemplateRows,host:[host.gridColumnStart,host.gridColumnEnd,host.gridRowStart,host.gridRowEnd]};
+            return {columns:css.gridTemplateColumns,stage:[document.querySelector('#live-video-stage').getBoundingClientRect().width,document.querySelector('#live-video-stage').getBoundingClientRect().height],screen:grid.dataset.liveLayout,guest:grid.dataset.liveGuestLayout,host:[host.gridColumnStart,host.gridColumnEnd,host.gridRowStart,host.gridRowEnd],seats:grid.querySelectorAll('.live-guest-seat').length};
           },{screen,guest});
-          if(baseline)assert.deepEqual([state.columns,state.rows],baseline,mode+' LIVE '+screen+' grid geometry changed when only guest layout changed at '+viewport.name);
-          else baseline=[state.columns,state.rows];
+          if(baseline){
+            assert.deepEqual([state.columns,state.stage,state.screen,state.seats],baseline,mode+' LIVE '+screen+' screen mode or stage geometry changed when only guest layout changed at '+viewport.name);
+            assert.equal(state.guest,guest,'LIVE guest selection did not apply independently');
+          }else baseline=[state.columns,state.stage,state.screen,state.seats];
           guestPositions.push(state.host);
           combinations++;
         }
@@ -65,10 +67,12 @@ try{
           const stage=document.querySelector('#mw-screen-stage'),grid=document.querySelector('#mw-grid');
           stage.dataset.screenLayout=screen;grid.dataset.layout=screen;grid.dataset.guestLayout=guest;
           const css=getComputedStyle(grid),host=getComputedStyle(grid.querySelector('.is-host'));
-          return {columns:css.gridTemplateColumns,rows:css.gridTemplateRows,host:[host.gridColumnStart,host.gridColumnEnd,host.gridRowStart,host.gridRowEnd]};
+          return {columns:css.gridTemplateColumns,stage:[stage.getBoundingClientRect().width,stage.getBoundingClientRect().height],screen:stage.dataset.screenLayout,gridScreen:grid.dataset.layout,guest:grid.dataset.guestLayout,host:[host.gridColumnStart,host.gridColumnEnd,host.gridRowStart,host.gridRowEnd],seats:grid.querySelectorAll('.live-guest-seat').length};
         },{screen,guest});
-        if(baseline)assert.deepEqual([state.columns,state.rows],baseline,'MeetWave '+screen+' grid geometry changed when only guest layout changed at '+viewport.name);
-        else baseline=[state.columns,state.rows];
+        if(baseline){
+          assert.deepEqual([state.columns,state.stage,state.screen,state.gridScreen,state.seats],baseline,'MeetWave '+screen+' screen mode or stage geometry changed when only guest layout changed at '+viewport.name);
+          assert.equal(state.guest,guest,'MeetWave guest selection did not apply independently');
+        }else baseline=[state.columns,state.stage,state.screen,state.gridScreen,state.seats];
         guestPositions.push(state.host);
         combinations++;
       }
