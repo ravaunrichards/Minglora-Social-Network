@@ -100,7 +100,7 @@ function build() {
   return {
     schema_version: 1,
     generator: GENERATOR,
-    generated_at: new Date().toISOString().slice(0, 10),
+    generated_at: String(catalog.generated_at || "unspecified"),
     source_artwork_manifest: "assets/Artwork/manifest.json",
     canonical_catalogue: "data/minglora-gift-catalog.json",
     rule: "An extracted image is never approved merely because it exists or has no machine warning. Source-edge flags block it from display; all extracted images remain blocked until a human confirms the entire gift is visible and source rights are documented.",
