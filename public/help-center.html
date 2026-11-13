@@ -153,6 +153,8 @@
             <label>Full answer / instructions<textarea name="answerMarkdown" rows="9" required></textarea></label>
             <p class="hc-editor-hint">You can use headings, numbered steps, bullet lists, links, and Markdown images such as ![Screenshot description](https://...). Add video demonstrations as secure HTTPS links.</p>
             <label>Search terms and alternative wording<input name="searchTerms" placeholder="sign in, cannot log in, account access"></label>
+            <label>Related question slugs (comma-separated, up to 10)<input name="relatedSlugs" placeholder="changing-password, account-recovery"></label>
+            <p class="hc-editor-hint">Link only existing, active Help Center articles. Leave blank to clear related links.</p>
             <label>Source reference for fact-checking<input name="sourceReference" maxlength="500" placeholder="Verified app screen, approved policy, QA reference or test record"></label>
             <label class="hc-check"><input name="isFeatured" type="checkbox"> Feature this approved article on the Help Center home page</label>
             <div class="hc-form-actions"><button type="submit">Save draft</button><button type="button" id="hc-editor-reset" class="hc-quiet-button">New article</button></div>
