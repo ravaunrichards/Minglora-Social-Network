@@ -107,6 +107,7 @@ test('Roundtable 1 and 2 are guest-box layouts, never screen layouts', () => {
   }
   assert.ok(js.includes('MEETING_GUEST_LAYOUTS'));
   assert.ok(js.includes('function applyMeetingGuestLayout(layout)'));
+  assert.ok(js.includes('if(grid)grid.dataset.guestLayout=layout;'));
   assert.ok(js.includes('grid.dataset.guestLayout=layout'));
   assert.ok(!js.includes('data-mw-layout="roundtable-1"'));
   assert.ok(!js.includes('data-mw-layout="roundtable-2"'));
