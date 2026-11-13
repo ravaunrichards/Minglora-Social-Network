@@ -242,6 +242,7 @@ import {
   createPersonalAiBotAppointment,
   updatePersonalAiBotAppointment,
   recordPersonalAiBotEmploymentEvent,
+  reassignPersonalAiBotAppointment,
   createPersonalAiBotDepartment,
   updatePersonalAiBotDepartment,
   getPersonalAiBotOverview,
@@ -704,6 +705,23 @@ export async function handlePersonalAiBotsAdminApi(context) {
       return (json(res,200,{ok:true,appointment}),true);
     }
 
+
+
+    const appointmentRoleChangeMatch=path.match(/^\/api\/admin\/personal-ai-bots\/appointments\/([a-z0-9_-]+)\/role-change$/i);
+    if(appointmentRoleChangeMatch&&method==='POST'){
+      const allowed=new Set(['changeType','vacancyId','reportingManagerAppointmentId','notes']);
+      if(!input||typeof input!=='object'||Array.isArray(input)||
+         Object.keys(input).some(key=>!allowed.has(key))||
+         !String(input.changeType||'').trim()||!String(input.vacancyId||'').trim()||
+         !String(input.notes||'').trim()){
+        return (json(res,400,{error:'Promotion or transfer requires a change type, open vacancy and explanatory notes.'}),true);
+      }
+      const appointment=await mutateAiHrState(db,persistAiHrState,()=>reassignPersonalAiBotAppointment(
+        db,appointmentRoleChangeMatch[1],input,user.id,stamp,uid
+      ));
+      await saveStore();
+      return (json(res,200,{ok:true,appointment,roleChangeType:input.changeType}),true);
+    }
 
     const appointmentEmploymentEventMatch=path.match(/^\/api\/admin\/personal-ai-bots\/appointments\/([a-z0-9_-]+)\/employment-events$/i);
     if(appointmentEmploymentEventMatch&&method==='POST'){

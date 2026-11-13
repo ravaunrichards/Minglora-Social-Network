@@ -878,6 +878,149 @@ export function createPersonalAiBotAppointment(db,input,actorId,timestamp,uid) {
   };
 }
 
+
+/**
+ * Owner-approved promotion/transfer. Updates only the appointment's workforce
+ * assignment and records a durable HR event. The AI identity stays disabled
+ * and receives no permissions, tasks, credentials, inbox, or execution rights.
+ */
+export function reassignPersonalAiBotAppointment(db, appointmentId, input, actorId, timestamp, uid) {
+  ensurePersonalAiBotCollections(db);
+  const appointment=db.personalAiBotAppointments.find(item=>item.id===appointmentId&&item.ownerId===actorId);
+  if(!appointment)throw Object.assign(new Error('Appointment not found.'),{status:404});
+  if(appointment.status!=='appointed'){
+    throw Object.assign(new Error('Only an appointed AI employee can be promoted or transferred.'),{status:409});
+  }
+  if(!Array.isArray(appointment.permissions)||appointment.permissions.length!==0||
+     (appointment.permissionGrantStatus||'not_granted')!=='not_granted'||
+     (appointment.identityActivationStatus||'unchanged_disabled')!=='unchanged_disabled'){
+    throw Object.assign(new Error('This appointment has unexpected permissions or activation state and requires a security review.'),{status:409});
+  }
+  const candidate=db.personalAiBots.find(item=>item.id===appointment.identityId&&item.population==='organizational');
+  if(!candidate||String(candidate.status||'').toLowerCase()!=='disabled'||candidate.enabled!==false){
+    throw Object.assign(new Error('The linked AI employee must remain disabled before a role change.'),{status:409});
+  }
+  const application=db.personalAiBotApplications.find(item=>item.id===appointment.applicationId&&
+    item.ownerId===actorId&&item.identityId===candidate.id&&item.status==='appointed');
+  if(!application){
+    throw Object.assign(new Error('The original owner-approved candidate application is unavailable.'),{status:409});
+  }
+  const changeType=String(input?.changeType||'').trim().toLowerCase();
+  if(!['promoted','transferred'].includes(changeType)){
+    throw Object.assign(new Error('Choose either a promotion or a department transfer.'),{status:400});
+  }
+  const vacancyId=String(input?.vacancyId||'').trim();
+  const vacancy=db.personalAiBotVacancies.find(item=>item.id===vacancyId&&item.ownerId===actorId);
+  if(!vacancy||vacancy.status!=='open'){
+    throw Object.assign(new Error('Choose an open, owner-approved vacancy for the new assignment.'),{status:409});
+  }
+  if(vacancy.id===appointment.vacancyId){
+    throw Object.assign(new Error('Choose a different vacancy for the new assignment.'),{status:409});
+  }
+  const position=PERSONAL_AI_BOT_JOB_POSITIONS.find(item=>item.code===vacancy.positionCode);
+  const department=db.personalAiBotDepartments.find(item=>item.id===vacancy.departmentId&&item.enabled!==false);
+  const currentPosition=PERSONAL_AI_BOT_JOB_POSITIONS.find(item=>item.code===appointment.positionCode);
+  if(!position||!department||!currentPosition||
+     vacancy.positionTitle!==position.title||
+     vacancy.departmentCode!==department.code||
+     vacancy.departmentName!==department.name||
+     (position.departmentScope!=='any_department'&&position.departmentScope!==department.code)){
+    throw Object.assign(new Error('The target vacancy no longer matches an enabled job position and department.'),{status:409});
+  }
+  if(changeType==='promoted'&&position.level>=currentPosition.level){
+    throw Object.assign(new Error('A promotion must move the employee to a higher-level position.'),{status:409});
+  }
+  if(changeType==='transferred'&&
+     (position.code!==appointment.positionCode||department.id===appointment.departmentId)){
+    throw Object.assign(new Error('A transfer must keep the same job position and move to a different department.'),{status:409});
+  }
+  const filledSlots=db.personalAiBotAppointments.filter(item=>
+    item.ownerId===actorId&&item.id!==appointment.id&&item.vacancyId===vacancy.id&&
+    ['appointed','suspended'].includes(item.status)
+  ).length;
+  if(filledSlots>=Number(vacancy.slots||1)){
+    throw Object.assign(new Error('The target vacancy has reached its approved appointment capacity.'),{status:409});
+  }
+  const reportingManagerId=String(input?.reportingManagerAppointmentId||'').trim();
+  let reportingManager=null;
+  if(position.reportsTo.length){
+    reportingManager=db.personalAiBotAppointments.find(item=>
+      item.id===reportingManagerId&&item.ownerId===actorId&&item.status==='appointed'
+    );
+    if(!reportingManager){
+      throw Object.assign(new Error('Choose an appointed reporting manager allowed for the target position.'),{status:409});
+    }
+    if(!position.reportsTo.includes(reportingManager.positionCode)||reportingManager.identityId===candidate.id){
+      throw Object.assign(new Error('The reporting manager must hold an allowed parent position and cannot be the employee.'),{status:409});
+    }
+    const visited=new Set();
+    let cursor=reportingManager;
+    while(cursor){
+      const cursorId=String(cursor.id);
+      if(cursorId===appointment.id||visited.has(cursorId)){
+        throw Object.assign(new Error('The selected reporting manager would create or extend a circular reporting chain.'),{status:409});
+      }
+      visited.add(cursorId);
+      const parentId=String(cursor.reportingManagerAppointmentId||'');
+      cursor=parentId?db.personalAiBotAppointments.find(item=>item.id===parentId&&item.ownerId===actorId)||null:null;
+    }
+  }else if(reportingManagerId){
+    throw Object.assign(new Error('The target position does not accept a reporting manager.'),{status:400});
+  }
+  const invalidDirectReport=db.personalAiBotAppointments.find(item=>{
+    if(item.ownerId!==actorId||item.id===appointment.id||item.reportingManagerAppointmentId!==appointment.id||
+       !['appointed','suspended'].includes(item.status))return false;
+    const subordinatePosition=PERSONAL_AI_BOT_JOB_POSITIONS.find(role=>role.code===item.positionCode);
+    return !subordinatePosition||!subordinatePosition.reportsTo.includes(position.code);
+  });
+  if(invalidDirectReport){
+    throw Object.assign(new Error('Reassign this employee’s direct reports before changing to a position they cannot report to.'),{status:409});
+  }
+  const notes=String(input?.notes||'').trim();
+  if(notes.length<3||notes.length>1400){
+    throw Object.assign(new Error('Role-change notes must be between 3 and 1,400 characters.'),{status:400});
+  }
+  const oldManager=appointment.reportingManagerName||'No reporting manager';
+  const newManager=reportingManager?.candidateDisplayName||'No reporting manager';
+  const eventNotes='Owner-approved '+changeType+': '+
+    appointment.positionTitle+' ('+appointment.departmentName+') -> '+
+    position.title+' ('+department.name+'). Reporting manager: '+oldManager+' -> '+newManager+
+    '. Target vacancy: '+vacancy.title+'. Notes: '+notes;
+  if(eventNotes.length>2000){
+    throw Object.assign(new Error('The role-change record is too long; shorten the notes and try again.'),{status:400});
+  }
+  appointment.vacancyId=vacancy.id;
+  appointment.vacancyTitle=vacancy.title;
+  appointment.positionCode=position.code;
+  appointment.positionTitle=position.title;
+  appointment.positionLevel=position.level;
+  appointment.departmentId=department.id;
+  appointment.departmentCode=department.code;
+  appointment.departmentName=department.name;
+  appointment.reportingManagerAppointmentId=reportingManager?.id||null;
+  appointment.reportingManagerIdentityId=reportingManager?.identityId||null;
+  appointment.reportingManagerName=reportingManager?.candidateDisplayName||null;
+  appointment.reportingManagerPositionTitle=reportingManager?.positionTitle||null;
+  appointment.updatedAt=timestamp;
+  appointment.employmentHistory||=[];
+  appointment.employmentHistory.push({eventType:changeType,actorId,createdAt:timestamp,notes:eventNotes});
+  const event={
+    id:'employment-'+uid(),appointmentId:appointment.id,applicationId:appointment.applicationId,
+    identityId:appointment.identityId,vacancyId:vacancy.id,eventType:changeType,actorId,
+    createdAt:timestamp,notes:eventNotes
+  };
+  db.personalAiBotEmploymentHistory.push(event);
+  audit(db,actorId,'employment.'+changeType,'appointment',appointment.id,
+    'Moved '+appointment.candidateDisplayName+' to '+position.title+' in '+department.name+
+    '. AI identity remains disabled and no permissions or execution authority were granted.',
+    timestamp,uid);
+  audit(db,actorId,'employment.'+changeType,'employment_history',event.id,eventNotes,timestamp,uid);
+  return {
+    ...appointment,
+    employmentHistory:appointment.employmentHistory.map(item=>({...item}))
+  };
+}
+
 export function updatePersonalAiBotAppointment(db,appointmentId,input,actorId,timestamp,uid) {
   ensurePersonalAiBotCollections(db);
   const appointment=db.personalAiBotAppointments.find(item=>item.id===appointmentId&&item.ownerId===actorId);

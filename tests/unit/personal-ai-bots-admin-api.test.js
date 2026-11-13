@@ -2361,3 +2361,80 @@ test('owner employment event route persists a record-only HR event without activ
   assert.equal(invalid.res.statusCode,400);
   assert.equal(db.personalAiBotEmploymentHistory.length,1);
 });
+
+
+test('owner role-change API persists an approved department transfer through normalized HR state',async()=>{
+  const identityId='00000000-0000-4000-8000-000000005101';
+  const appointmentId='appointment-role-change-5101';
+  const db={
+    personalAiBots:[{id:identityId,population:'organizational',status:'disabled',enabled:false,displayName:'Transfer Candidate'}],
+    personalAiBotDepartments:[
+      {id:'department-finance_accounting',code:'finance_accounting',name:'Finance and Accounting',enabled:true},
+      {id:'department-technology_engineering',code:'technology_engineering',name:'Technology and Engineering',enabled:true}
+    ],
+    personalAiBotVacancies:[
+      {id:'vacancy-original-5101',ownerId:'owner-1',title:'Original Executive Vacancy',positionCode:'other_executive_officer',
+       positionTitle:'Other Executive Officer',departmentId:'department-finance_accounting',departmentCode:'finance_accounting',
+       departmentName:'Finance and Accounting',slots:1,status:'open'},
+      {id:'vacancy-transfer-5101',ownerId:'owner-1',title:'Technology Executive Vacancy',positionCode:'other_executive_officer',
+       positionTitle:'Other Executive Officer',departmentId:'department-technology_engineering',departmentCode:'technology_engineering',
+       departmentName:'Technology and Engineering',slots:1,status:'open'}
+    ],
+    personalAiBotApplications:[{id:'application-role-5101',ownerId:'owner-1',identityId,status:'appointed'}],
+    personalAiBotAppointments:[{
+      id:appointmentId,ownerId:'owner-1',identityId,population:'organizational',
+      candidateDisplayName:'Transfer Candidate',applicationId:'application-role-5101',
+      vacancyId:'vacancy-original-5101',positionCode:'other_executive_officer',
+      positionTitle:'Other Executive Officer',positionLevel:2,
+      departmentId:'department-finance_accounting',departmentCode:'finance_accounting',
+      departmentName:'Finance and Accounting',reportingManagerAppointmentId:'appointment-ceo',
+      reportingManagerIdentityId:'00000000-0000-4000-8000-000000005102',
+      reportingManagerName:'Chief Executive AI',reportingManagerPositionTitle:'Chief Executive Officer (CEO)',
+      status:'appointed',permissions:[],permissionGrantStatus:'not_granted',
+      identityActivationStatus:'unchanged_disabled',employmentHistory:[]
+    },{
+      id:'appointment-ceo',ownerId:'owner-1',identityId:'00000000-0000-4000-8000-000000005102',
+      population:'organizational',candidateDisplayName:'Chief Executive AI',
+      positionCode:'ceo',positionTitle:'Chief Executive Officer (CEO)',status:'appointed',
+      reportingManagerAppointmentId:null
+    }]
+  };
+  let persisted=null,saves=0;
+  const context=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/appointments/'+appointmentId+'/role-change',
+    input:{changeType:'transferred',vacancyId:'vacancy-transfer-5101',
+      reportingManagerAppointmentId:'appointment-ceo',notes:'Owner approved the department transfer.'},
+    db,uid:sequenceUid(9700),
+    persistAiHrState:async state=>{persisted=structuredClone(state);return {ok:true};},
+    saveStore:async()=>{saves++;}
+  });
+  await handlePersonalAiBotsAdminApi(context);
+  assert.equal(context.res.statusCode,200);
+  assert.equal(context.res.payload.roleChangeType,'transferred');
+  assert.equal(context.res.payload.appointment.departmentId,'department-technology_engineering');
+  assert.equal(context.res.payload.appointment.positionCode,'other_executive_officer');
+  assert.equal(persisted.appointments.find(item=>item.id===appointmentId).departmentId,'department-technology_engineering');
+  assert.equal(persisted.employmentHistory.at(-1).eventType,'transferred');
+  assert.deepEqual(persisted.appointments.find(item=>item.id===appointmentId).permissions,[]);
+  assert.equal(db.personalAiBots[0].status,'disabled');
+  assert.equal(db.personalAiBots[0].enabled,false);
+  assert.equal(saves,1);
+
+  const nonOwner=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/appointments/'+appointmentId+'/role-change',
+    input:{changeType:'transferred',vacancyId:'vacancy-transfer-5101',notes:'Owner approved this transfer.'},
+    db,isOwnerAdmin:false
+  });
+  await handlePersonalAiBotsAdminApi(nonOwner);
+  assert.equal(nonOwner.res.statusCode,403);
+
+  const unsupported=makeContext({
+    method:'POST',path:'/api/admin/personal-ai-bots/appointments/'+appointmentId+'/role-change',
+    input:{changeType:'promoted',vacancyId:'vacancy-transfer-5101',permissions:['send_message'],notes:'Reject privilege escalation.'},
+    db
+  });
+  await handlePersonalAiBotsAdminApi(unsupported);
+  assert.equal(unsupported.res.statusCode,400);
+  assert.equal(db.personalAiBotAppointments.find(item=>item.id===appointmentId).positionCode,'other_executive_officer');
+});
+

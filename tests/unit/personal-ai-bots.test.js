@@ -47,6 +47,7 @@ import {
   getPersonalAiBotAppointments,
   getPersonalAiBotEmploymentHistory,
   createPersonalAiBotAppointment,
+  reassignPersonalAiBotAppointment,
   recordPersonalAiBotEmploymentEvent,
   previewPersonalAiBotSchedule,
   listPersonalAiBotPersonaVersions,
@@ -1474,6 +1475,93 @@ test('Creator Studio rejects unsupported formats, excessive assets, data URIs an
 });
 
  
+
+test('owner-approved AI promotions and department transfers update appointments and preserve disabled permissions',()=>{
+  const db=makeDb();
+  const category=getPersonalAiBotCategories(db)[0];
+  const departments=getPersonalAiBotDepartments(db);
+  const finance=departments.find(item=>item.code==='finance_accounting');
+  const technology=departments.find(item=>item.code==='technology_engineering');
+  const executive=departments.find(item=>item.code==='executive_management');
+  const employee=createPersonalAiBot(db,{
+    displayName:'Workforce Candidate',firstName:'Workforce',lastName:'Candidate',
+    categoryId:category.id,population:'organizational'
+  },actor,stamp,uid);
+  const originalVacancy=createPersonalAiBotVacancy(db,{
+    positionCode:'other_executive_officer',departmentId:finance.id,title:'Original Executive Assignment'
+  },actor,stamp,uid);
+  const application=createPersonalAiBotApplication(db,{
+    identityId:employee.id,vacancyId:originalVacancy.id
+  },actor,stamp,uid);
+  application.status='appointed';
+  const ceo={
+    id:'appointment-ceo',ownerId:actor,identityId:'manager-ceo',population:'organizational',
+    candidateDisplayName:'Chief Executive AI',positionCode:'ceo',
+    positionTitle:'Chief Executive Officer (CEO)',status:'appointed',
+    reportingManagerAppointmentId:null
+  };
+  const chair={
+    id:'appointment-chair',ownerId:actor,identityId:'manager-chair',population:'organizational',
+    candidateDisplayName:'Board Chair AI',positionCode:'board_chair',
+    positionTitle:'Chairperson / Board President',status:'appointed',
+    reportingManagerAppointmentId:null
+  };
+  const appointment={
+    id:'appointment-workforce',ownerId:actor,identityId:employee.id,population:'organizational',
+    candidateDisplayName:employee.displayName,applicationId:application.id,
+    vacancyId:originalVacancy.id,vacancyTitle:originalVacancy.title,
+    positionCode:'other_executive_officer',positionTitle:'Other Executive Officer',positionLevel:2,
+    departmentId:finance.id,departmentCode:finance.code,departmentName:finance.name,
+    reportingManagerAppointmentId:ceo.id,reportingManagerIdentityId:ceo.identityId,
+    reportingManagerName:ceo.candidateDisplayName,reportingManagerPositionTitle:ceo.positionTitle,
+    status:'appointed',permissions:[],permissionGrantStatus:'not_granted',
+    identityActivationStatus:'unchanged_disabled',employmentHistory:[]
+  };
+  db.personalAiBotAppointments.push(ceo,chair,appointment);
+
+  const transferVacancy=createPersonalAiBotVacancy(db,{
+    positionCode:'other_executive_officer',departmentId:technology.id,title:'Technology Executive Transfer'
+  },actor,stamp,uid);
+  const transferred=reassignPersonalAiBotAppointment(db,appointment.id,{
+    changeType:'transferred',vacancyId:transferVacancy.id,
+    reportingManagerAppointmentId:ceo.id,notes:'Owner approved the move to Technology and Engineering.'
+  },actor,stamp,uid);
+  assert.equal(transferred.positionCode,'other_executive_officer');
+  assert.equal(transferred.departmentId,technology.id);
+  assert.equal(transferred.reportingManagerAppointmentId,ceo.id);
+  assert.equal(db.personalAiBotEmploymentHistory.at(-1).eventType,'transferred');
+
+  const promotionVacancy=createPersonalAiBotVacancy(db,{
+    positionCode:'board_director',departmentId:executive.id,title:'Board Director Promotion'
+  },actor,stamp,uid);
+  const promoted=reassignPersonalAiBotAppointment(db,appointment.id,{
+    changeType:'promoted',vacancyId:promotionVacancy.id,
+    reportingManagerAppointmentId:chair.id,notes:'Owner approved promotion to Board Director.'
+  },actor,stamp,uid);
+  assert.equal(promoted.positionCode,'board_director');
+  assert.equal(promoted.positionLevel,1);
+  assert.equal(promoted.departmentId,executive.id);
+  assert.equal(promoted.reportingManagerAppointmentId,chair.id);
+  assert.deepEqual(promoted.employmentHistory.map(item=>item.eventType),['transferred','promoted']);
+  assert.deepEqual(db.personalAiBotEmploymentHistory.map(item=>item.eventType),['transferred','promoted']);
+  assert.equal(employee.status,'disabled');
+  assert.equal(employee.enabled,false);
+  assert.deepEqual(promoted.permissions,[]);
+  assert.equal(promoted.permissionGrantStatus,'not_granted');
+  assert.equal(promoted.identityActivationStatus,'unchanged_disabled');
+
+  const invalidTransfer=createPersonalAiBotVacancy(db,{
+    positionCode:'worker',departmentId:technology.id,title:'Wrong Role Transfer'
+  },actor,stamp,uid);
+  assert.throws(()=>reassignPersonalAiBotAppointment(db,appointment.id,{
+    changeType:'transferred',vacancyId:invalidTransfer.id,
+    reportingManagerAppointmentId:ceo.id,notes:'This must not change the appointment.'
+  },actor,stamp,uid),/same job position/);
+  assert.equal(appointment.positionCode,'board_director');
+  assert.equal(appointment.departmentId,executive.id);
+});
+
+
 test('employment lifecycle events are owner-scoped audit records and never activate AI employees',()=>{
   const identityId='00000000-0000-4000-8000-000000004901';
   const appointmentId='appointment-employment-event-4901';
