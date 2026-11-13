@@ -140,7 +140,7 @@ Do not report a percentage until every requirement is decomposed and weighted. A
 
 - [x] Confirmed working branch: `feat/minglora-ai-bot-network-core`; all work remains scoped to the existing Minglora repository.
 - [x] Confirmed latest feature-branch commit: `3bab198c1d6d2485890d3416957daa6629e97aa7`.
-- [x] Confirmed AI Network checks #73 and full repository CI #11219 passed against that commit.
+- [x] Confirmed AI Network checks #90 and full repository CI #11236 passed against the current task-queue commit.
 - [x] Read-only Supabase verification confirms the live project still has only the two original AI identity foundation migrations; the new identity runtime, corporate/HR and provider catalogue/assignment migrations have not been applied.
 - [x] Read-only counts: 0 AI identities, 0 AI profiles, 0 AI emails, 0 provider accounts, 0 provider models, 0 provider assignments and 15 existing categories.
 - [x] Live `minglora-runtime-state` Edge Function remains on deployed version 115; the feature-branch HR/provider gateway handlers are not deployed.
@@ -156,7 +156,7 @@ Do not report a percentage until every requirement is decomposed and weighted. A
 - [x] Added database worker lease/recovery/concurrency source with skip-locked claims and verified identity/provider health checks.
 - [x] Worker lease operations are deliberately blocked in the SQL until a separate worker identity and credential system exists; worker commands are not runtime-gateway-allowlisted.
 - [x] Added authenticated task queue API, Minglora workspace controls and focused regression tests.
-- [ ] Run CI for the task queue increment.
+- [x] Run AI Network check #90 and full Minglora CI #11236; both passed on commit `69700cbeef5d269c72000cf5837f324ef383c2bb`.
 - [ ] Task migration and updated Edge Function are source-only; no task tables or controls have been deployed to production.
 - [ ] No task/approval records, worker credentials, model calls or external operations have been created or executed.
 
