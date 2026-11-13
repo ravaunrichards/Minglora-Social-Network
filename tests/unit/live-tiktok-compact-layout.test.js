@@ -44,11 +44,15 @@ test('All existing LIVE actions, chat, guest management and role-specific behavi
   assert.match(app, /topic:"minglora-live-layout"/);
 });
 
-test('The established nine layout IDs are not replaced by responsive presentation rules', () => {
+test('The seven established screen layout IDs remain intact and guest-box layouts stay separate', () => {
   for (const layout of [
     'full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel',
-    'side-by-side','spotlight','roundtable-1','roundtable-2'
-  ]) assert.ok(app.includes("value:'" + layout + "'"), 'missing saved layout ID: ' + layout);
+    'side-by-side','spotlight'
+  ]) assert.ok(app.includes("value:'" + layout + "'"), 'missing saved screen layout ID: ' + layout);
+  assert.ok(app.includes("value:'roundtable-1'"));
+  assert.ok(app.includes("value:'roundtable-2'"));
+  assert.match(app,/const LIVE_GUEST_LAYOUT_OPTIONS=Object\.freeze/);
+  assert.match(app,/data-live-guest-layout='"\+option\.value\+"'/);
   assert.match(compact, /#live-guest-layout\.live-guest-layout/);
 });
 
