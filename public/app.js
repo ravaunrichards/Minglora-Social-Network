@@ -5643,7 +5643,7 @@ function profileMetricsMarkup(data,style){
   return '<div class="profile-counts" aria-label="Profile counts">'+entries.map(item=>item.interactive
     ?'<button type="button" class="connection-count" data-profile-metric="'+item.id+'" data-open-connections="'+item.id+'" aria-label="Open '+item.label.toLowerCase()+'"><strong>'+Number(item.value).toLocaleString()+'</strong><span>'+item.label+'</span></button>'
     :'<div class="profile-count-item" data-profile-metric="'+item.id+'"><strong>'+Number(item.value).toLocaleString()+'</strong><span>'+item.label+'</span></div>').join('')+'</div>';
-}function profileStylePreviewMarkup(data,style,screenLayout='fluid-panel'){
+}function profileStylePreviewMarkup(data,style){
   const user=data.user||{};
   const name=esc(user.name||'Minglora member');
   const username=user.username?'@'+esc(user.username):'Minglora profile';
@@ -5662,38 +5662,37 @@ function profileMetricsMarkup(data,style){
   const videoMarkup=reels.length?'<article class="profile-style-preview-video"><video controls playsinline preload="metadata" src="'+esc(reels[0].url)+'"></video>'+(reels[0].postText?'<p>'+esc(String(reels[0].postText).slice(0,120))+'</p>':'')+'</article>':'<p class="profile-style-preview-empty">No videos shared yet.</p>';
   const galleryMarkup=media.length?'<div class="profile-style-preview-gallery">'+media.map(item=>'<img src="'+esc(item.url)+'" alt="" loading="lazy">').join('')+'</div>':'<p class="profile-style-preview-empty">No photos shared yet.</p>';
   const content=['tiktok','youtube','twitch'].includes(style)?(reels.length?videoMarkup:postMarkup):['instagram','pinterest','snapchat'].includes(style)?(media.length?galleryMarkup:reels.length?videoMarkup:postMarkup):postMarkup;
-  return '<div class="profile-style-preview-frame" data-profile-style="'+style+'" data-profile-screen-layout="'+normalizeProfileScreenLayout(screenLayout)+'">'+cover+
+  return '<div class="profile-style-preview-frame" data-profile-style="'+style+'">'+cover+
     '<div class="profile-style-preview-identity"><img src="'+esc(avatar(user))+'" alt="" loading="lazy"><div><strong>'+name+'</strong><small>'+username+'</small></div></div>'+
     '<div class="profile-style-preview-metrics">'+metrics+'</div>'+
     '<div class="profile-style-preview-nav">'+nav+'</div>'+
     '<div class="profile-style-preview-content">'+content+'</div></div>';
 }
 function profileStyleLibraryMarkup(data){
-  const user=data.user||{},active=normalizeProfileStyle(user.profileStyle),defaultStyle=normalizeProfileStyle(user.defaultProfileStyle),screenLayout=normalizeProfileScreenLayout(user.profileScreenLayout),defaultScreenLayout=normalizeProfileScreenLayout(user.defaultProfileScreenLayout);
+  const user=data.user||{},active=normalizeProfileStyle(user.profileStyle),defaultStyle=normalizeProfileStyle(user.defaultProfileStyle);
   const choices=PROFILE_STYLE_OPTIONS.map(item=>'<article class="profile-style-option'+(item.id===active?' is-active':'')+'" data-profile-style-option="'+item.id+'">'+
     '<div class="profile-style-option-art" data-profile-style="'+item.id+'" aria-hidden="true"><span class="profile-style-option-avatar"></span><span class="profile-style-option-lines"></span><span class="profile-style-option-grid"><i></i><i></i><i></i></span></div>'+
     '<div class="profile-style-option-copy"><strong>'+esc(item.name)+'</strong><small>'+esc(item.description)+'</small><span class="profile-style-option-state">'+(item.id===active?'Currently applied':item.id===defaultStyle?'Saved default':'Available')+'</span></div>'+
     '<button type="button" class="secondary profile-style-preview-button" data-profile-style-preview="'+item.id+'" aria-pressed="'+(item.id===active?'true':'false')+'">Preview</button></article>').join('');
-  return '<section class="card profile-style-library" data-profile-style-library data-selected-style="'+active+'" data-default-style="'+defaultStyle+'" data-selected-screen-layout="'+screenLayout+'" data-default-screen-layout="'+defaultScreenLayout+'">'+
+  return '<section class="card profile-style-library" data-profile-style-library data-selected-style="'+active+'" data-default-style="'+defaultStyle+'">'+
     '<div class="profile-style-library-heading"><div><span class="profile-style-eyebrow">PROFILE APPEARANCE</span><h2>Profile Style Library</h2><p>Choose a complete profile experience. Your Minglora account, profile information and content remain connected.</p></div><span class="profile-style-count">10 styles</span></div>'+
     '<div class="profile-style-library-workspace"><div class="profile-style-options" aria-label="Available profile styles">'+choices+'</div>'+
     '<div class="profile-style-preview-column"><div class="profile-style-preview-heading"><div><strong>Live preview</strong><small id="profile-style-preview-name">'+esc((PROFILE_STYLE_OPTIONS.find(item=>item.id===active)||PROFILE_STYLE_OPTIONS[0]).name)+'</small></div><span class="profile-style-default-note">Default: '+esc((PROFILE_STYLE_OPTIONS.find(item=>item.id===defaultStyle)||PROFILE_STYLE_OPTIONS[0]).name)+'</span></div>'+
-    '<label class="profile-screen-layout-picker" for="profile-screen-layout-choice"><span>Profile screen layout</span><select id="profile-screen-layout-choice" aria-label="Choose a profile screen layout">'+PROFILE_SCREEN_LAYOUT_OPTIONS.map(item=>'<option value="'+item.id+'" '+(item.id===screenLayout?'selected':'')+'>'+esc(item.name)+'</option>').join('')+'</select><small>All seven screen layouts work with every profile style.</small></label><div id="profile-style-live-preview">'+profileStylePreviewMarkup(data,active,screenLayout)+'</div><div class="profile-style-library-actions"><button type="button" class="primary" data-profile-style-apply>Apply</button><button type="button" class="secondary" data-profile-style-save-default>Save as default</button><button type="button" class="secondary" data-profile-style-reset>Reset to Default</button></div>'+
+    '<div id="profile-style-live-preview">'+profileStylePreviewMarkup(data,active)+'</div><div class="profile-style-library-actions"><button type="button" class="primary" data-profile-style-apply>Apply</button><button type="button" class="secondary" data-profile-style-save-default>Save as default</button><button type="button" class="secondary" data-profile-style-reset>Reset to Default</button></div>'+
     '<p class="profile-style-library-note" role="status">Preview is temporary. Apply changes the public profile style; Save as default stores your preferred style across sessions and devices.</p></div></div>'+
     '<div class="profile-style-library-footnote">One account · One profile · All your posts, photos, albums, videos, reels, followers, friends and profile details stay in place.</div></section>';
 }
 function bindProfileStyleLibrary(panel,data){
   const root=panel.querySelector('[data-profile-style-library]');if(!root)return;
-  const previewBox=root.querySelector('#profile-style-live-preview'),previewName=root.querySelector('#profile-style-preview-name'),screenLayoutSelect=root.querySelector('#profile-screen-layout-choice');
+  const previewBox=root.querySelector('#profile-style-live-preview'),previewName=root.querySelector('#profile-style-preview-name');
   const nameFor=style=>(PROFILE_STYLE_OPTIONS.find(item=>item.id===style)||PROFILE_STYLE_OPTIONS[0]).name;
   const selectPreview=style=>{
     const selected=normalizeProfileStyle(style);root.dataset.selectedStyle=selected;
-    if(previewBox)previewBox.innerHTML=profileStylePreviewMarkup(data,selected,root.dataset.selectedScreenLayout);
+    if(previewBox)previewBox.innerHTML=profileStylePreviewMarkup(data,selected);
     if(previewName)previewName.textContent=nameFor(selected);
     root.querySelectorAll('[data-profile-style-preview]').forEach(button=>button.setAttribute('aria-pressed',button.dataset.profileStylePreview===selected?'true':'false'));
   };
   root.querySelectorAll('[data-profile-style-preview]').forEach(button=>button.addEventListener('click',()=>selectPreview(button.dataset.profileStylePreview)));
-  screenLayoutSelect?.addEventListener('change',()=>{root.dataset.selectedScreenLayout=normalizeProfileScreenLayout(screenLayoutSelect.value);if(previewBox)previewBox.innerHTML=profileStylePreviewMarkup(data,root.dataset.selectedStyle,root.dataset.selectedScreenLayout);});
   const setBusy=busy=>root.querySelectorAll('button').forEach(button=>{button.disabled=busy;});
   const persist=async(preferences,successMessage)=>{
     setBusy(true);
@@ -5701,23 +5700,19 @@ function bindProfileStyleLibrary(panel,data){
       const result=await api('/settings',{method:'PATCH',body:JSON.stringify({preferences})}),saved=result.settings?.preferences||{};
       if(Object.hasOwn(preferences,'profileStyle')&&saved.profileStyle!==preferences.profileStyle)throw new Error('Minglora did not confirm the selected profile style.');
       if(Object.hasOwn(preferences,'defaultProfileStyle')&&saved.defaultProfileStyle!==preferences.defaultProfileStyle)throw new Error('Minglora did not confirm the saved default profile style.');
-      if(Object.hasOwn(preferences,'profileScreenLayout')&&saved.profileScreenLayout!==preferences.profileScreenLayout)throw new Error('Minglora did not confirm the selected screen layout.');
-      if(Object.hasOwn(preferences,'defaultProfileScreenLayout')&&saved.defaultProfileScreenLayout!==preferences.defaultProfileScreenLayout)throw new Error('Minglora did not confirm the saved default screen layout.');
       if(Object.hasOwn(preferences,'profileStyle')){data.user.profileStyle=saved.profileStyle;state.profileTab=profileStyleNavigation(saved.profileStyle)[0]?.[0]||'posts';}
       if(Object.hasOwn(preferences,'defaultProfileStyle'))data.user.defaultProfileStyle=saved.defaultProfileStyle;
-      if(Object.hasOwn(preferences,'profileScreenLayout'))data.user.profileScreenLayout=saved.profileScreenLayout;
-      if(Object.hasOwn(preferences,'defaultProfileScreenLayout'))data.user.defaultProfileScreenLayout=saved.defaultProfileScreenLayout;
       state.profile=data;renderProfile(data);toast(successMessage);
     }catch(error){toast(error.message||'Could not save this profile style.');setBusy(false);}
   };
   root.querySelector('[data-profile-style-apply]')?.addEventListener('click',()=>{
-    const style=normalizeProfileStyle(root.dataset.selectedStyle),layout=normalizeProfileScreenLayout(root.dataset.selectedScreenLayout);persist({profileStyle:style,profileScreenLayout:layout},nameFor(style)+' applied with '+layout.replaceAll('-',' ')+' layout.');
+    const style=normalizeProfileStyle(root.dataset.selectedStyle);persist({profileStyle:style},nameFor(style)+' applied.');
   });
   root.querySelector('[data-profile-style-save-default]')?.addEventListener('click',()=>{
-    const style=normalizeProfileStyle(root.dataset.selectedStyle),layout=normalizeProfileScreenLayout(root.dataset.selectedScreenLayout);persist({defaultProfileStyle:style,defaultProfileScreenLayout:layout},nameFor(style)+' and its screen layout saved as your default.');
+    const style=normalizeProfileStyle(root.dataset.selectedStyle);persist({defaultProfileStyle:style},nameFor(style)+' saved as your default profile style.');
   });
   root.querySelector('[data-profile-style-reset]')?.addEventListener('click',()=>{
-    const style=normalizeProfileStyle(root.dataset.defaultStyle),layout=normalizeProfileScreenLayout(root.dataset.defaultScreenLayout);persist({profileStyle:style,profileScreenLayout:layout},'Your profile and screen layout were reset to the saved defaults.');
+    const style=normalizeProfileStyle(root.dataset.defaultStyle);persist({profileStyle:style},'Your profile style was reset to the saved default.');
   });
 }
 
