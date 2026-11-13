@@ -38,6 +38,13 @@ All routes are under /api/ai-network and require the signed-in Minglora session.
 - GET /api/ai-network/organizations
 - POST /api/ai-network/organizations
 - GET/POST /api/ai-network/organizations/:id/departments
+- GET /api/ai-network/provider-accounts
+- POST /api/ai-network/provider-accounts
+- GET /api/ai-network/provider-models
+- POST /api/ai-network/provider-models
+- GET /api/ai-network/provider-assignments
+- POST /api/ai-network/provider-assignments
+- PATCH /api/ai-network/provider-assignments/:assignmentId/status
 - GET/POST /api/ai-network/organizations/:id/positions
 - GET/POST /api/ai-network/organizations/:id/vacancies
 - PATCH /api/ai-network/organizations/:id/vacancies/:vacancyId/status
@@ -50,7 +57,7 @@ All routes are under /api/ai-network and require the signed-in Minglora session.
 
 ## Provider execution gate
 
-MINGLORA_AI_PROVIDER, MINGLORA_AI_MODEL and MINGLORA_AI_API_KEY are read only on the server. The current provider status reports configuration without exposing credentials. executionEnabled remains false until a provider adapter, secret handling, request validation, output moderation, timeout/retry policy, usage accounting and tests are implemented and verified. Therefore bot execution and schedules cannot yet be activated.
+MINGLORA_AI_PROVIDER, MINGLORA_AI_MODEL and MINGLORA_AI_API_KEY are read only on the server. The provider catalogue/assignment workflow stores provider account references as `unconfigured`, model metadata as catalogue entries, and each new identity assignment as `pending` with health `unknown`. It never accepts or returns credentials and does not mark a provider connected. Assignments cannot be activated through these APIs. A separate approved secrets-manager integration, real provider probe, request validation, output moderation, timeout/retry policy, usage accounting and tests are required before execution. `executionEnabled` remains false; therefore bot execution and schedules cannot yet be activated.
 
 ## Persistence note
 
