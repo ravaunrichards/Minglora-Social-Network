@@ -176,7 +176,7 @@ begin
       raise exception using errcode = '22023', message = 'Choose a supported task action class.';
     end if;
     if jsonb_typeof(v_task_payload)<>'object' or octet_length(v_task_payload::text)>65536 then
-      raise exception using errcode = '22023', message = 'Task payload must be an object no larger than 64 KB.';
+      raise exception using errcode = '22023', message = 'A safe JSON object no larger than 64 KB is required for the task payload.';
     end if;
     if v_priority<1 or v_priority>10000 or v_max_attempts<1 or v_max_attempts>10
        or v_token_budget<0 or v_token_budget>100000000

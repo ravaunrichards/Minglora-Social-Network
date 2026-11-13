@@ -3811,7 +3811,7 @@ Deno.serve(async (req: Request) => {
     if (!supportedTaskCommands.includes(aiAction)) {
       return json(400, { error: "Unsupported AI task command." });
     }
-    if (["create_task","complete_task"].includes(aiAction)) {
+    if (aiAction === "create_task") {
       const serialized = JSON.stringify(payload);
       if (/"(api[_-]?key|access[_-]?token|password|secret|authorization|cookie|credential)"\s*:/i.test(serialized)) {
         return json(400, { error: "Credentials and secrets are not allowed in AI task payloads or results." });
