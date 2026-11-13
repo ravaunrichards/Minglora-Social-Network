@@ -59,7 +59,7 @@ test("the LIVE runtime lazy-loads exact same-origin gift motions and falls back 
   assert.ok(runtime.includes("async function loadPerGiftMotionAsset(gift)"));
   assert.ok(runtime.includes("asset?.keyframes||buildPreviewFrames"));
   assert.ok(runtime.includes("function buildPreviewFrames(preset,v)"));
-  assert.ok(runtime.includes("cache:"force-cache""));
+  assert.ok(runtime.includes('cache:"force-cache"'));
 });
 test("the service worker caches the preset index and every shared preset; generators are deterministic",()=>{
   assert.ok(worker.includes("preset-index.json"));

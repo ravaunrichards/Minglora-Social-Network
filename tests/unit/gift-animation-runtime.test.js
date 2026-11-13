@@ -38,7 +38,10 @@ test("each gift receives subject-specific motion and a matching effect layer", (
   assert.ok(effects.includes('motionEffect==="waves"'));
   assert.ok(effects.includes('motionEffect==="rings"'));
   assert.ok(effects.includes('motionEffect==="bubbles"'));
-  assert.ok(effects.includes('motionElement.animate(semanticFrames'));
+  assert.ok(effects.includes("function animateGiftSubject(element,gift,values,duration)"));
+  assert.ok(effects.includes("animateGiftSubject(motionElement,gift"));
+  assert.ok(effects.includes("loadPerGiftMotionAsset(gift)"));
+  assert.ok(effects.includes("asset?.keyframes||buildPreviewFrames"));
 });
 
 test("gift motion respects reduced-motion preferences and cleans up its overlay", () => {
