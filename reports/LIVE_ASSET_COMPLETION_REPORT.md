@@ -130,3 +130,34 @@ These are automated CI and Chromium browser-render results. They do not replace 
 Validation at commit `cdf24cae8ae3f319b3bbc65dd587e7f4bdf2e719`: CI #10905 passed; **979 tests passed, 0 failed**. The four gift-copy/cache tests passed. The generated 1,737 individual per-gift motion assets passed their integrity and uniqueness checks again. Visual QA runs #40 and #67 were still running when this report entry was prepared.
 
 Copy exports preserve all metadata returned by the backend. The implementation does not manufacture missing descriptions or prices, and does not modify the canonical gift catalogue, wallet, or transaction records.
+
+
+## Current branch-head verification — 2026-11-13
+
+**Verified branch head:** `4f0bf5e354c970ef9092eb9a96d22672d0e5cba4`  
+**CI run:** #10907 — completed successfully  
+**Browser QA:** LIVE/seven-plus-two layout matrix #41 and Chromium profile layout matrix #68 — both completed successfully
+
+The current-head CI job was inspected directly. All steps passed:
+
+- Node.js 24 setup and locked dependency installation.
+- Dependency audit and zero-vulnerability gate.
+- Repository structure and JavaScript syntax checks.
+- Minglora gift asset generation: **1,748 SVG artworks and 1,748 GLTF models** verified.
+- LIVE animation generation: **17** individual shared preset files verified.
+- LIVE motion generation: **1,737** unique active-gift motion files verified.
+- Sound Studio asset generation.
+- Automated test suite: **979 passed, 0 failed**.
+
+The current-head test log explicitly verifies that every active gift has a distinct lazy-loaded motion asset, the motion index contains exactly 1,737 active gifts, the LIVE runtime uses the per-gift asset with a shared-preset fallback, and the 16-symbol LIVE control sprite contains its expected vector geometry.
+
+## Remaining release gates — reconfirmed at current head
+
+- The 1,509 extracted PNG artwork crops remain review-only. Their ownership/licence and modification/distribution rights have not been established; the empty rights register is intentional and must not be interpreted as clearance.
+- `assets/gift-assets/` is currently a controlled workspace with README instructions and empty source/approved artwork, model and audio folders. Its `asset-register.json` and `rights-register.json` contain no approved asset entries. It is not a completed, populated production asset library.
+- The generated SVG/GLTF catalogue is a procedural Minglora baseline, not the requested premium hand-authored 3D artwork for every gift. The 1,737 individual motion JSON files are distinct Web Animations API keyframes applied to existing artwork/models, not individually modelled cinematic GLTF scenes.
+- Gift audio continues to use synthesized runtime cues; no complete individually mastered per-gift sound library is verified.
+- The full per-image human review of 1,121 references, all 1,509 crop rights/review decisions, all 18 requested editorial gift collections, and physical Android/iPhone/tablet/foldable/desktop/TV device validation remain incomplete.
+- The separate gift-asset repository was not present among the 36 repositories accessible to the connected GitHub account. No unverified repository was created or modified.
+
+**Release status:** PR #274 remains open, draft, unmerged and undeployed. The code and CI results are verified on the feature branch; production release remains blocked on the rights, premium asset, repository and device-validation gates above.
