@@ -20,7 +20,7 @@ The current generator produces distinct SVG files and GLTF scenes from per-gift 
 
 ## Interface icon and effect quality
 
-The public icon folder has a shared multi-symbol SVG sheet and a push SVG. LIVE also uses CSS/SVG/DOM controls, but the repository does not contain a complete individually exported icon pack for every requested LIVE control. The animation runtime has effect layers and reduced-motion handling; a full Lottie/Rive pack, audio-synchronized video gift clips and all error/loading/selected state artwork have not been audited to completion.
+The public icon folder has a shared navigation symbol sheet, a push SVG and (added in this branch) a dedicated 16-symbol LIVE control sprite. The LIVE dock now renders its current microphone, camera, camera-switch, multi-guest, co-host, chat, screen-share, full-screen, gift, volume, settings, share and leave states from that local sprite. This covers the existing dock controls; the repository still does not contain a complete individually exported icon pack for every moderator, filter, effect, ranking, fan-club, subscription, notification and accessibility sub-control in the broader request. The animation runtime has effect layers and reduced-motion handling; a full Lottie/Rive pack, audio-synchronized video gift clips and all error/loading/selected state artwork have not been audited to completion.
 
 ## Audio quality
 
@@ -33,3 +33,8 @@ LIVE CSS includes phone compact layouts and a desktop room with a distinct stage
 ## Production gate
 
 The extracted 1,509 catalogue crops remain blocked from production until rights and visual review are documented or original replacements are supplied. No source files were changed or removed.
+
+
+## LIVE control icon sprite verification scope
+
+The sprite keeps the existing 24×24 line-art geometry and `currentColor` treatment while moving the symbol definitions into one reusable, same-origin SVG file. The application uses a strict 16-name allowlist, and the service worker precaches the sprite. The new unit test checks symbol completeness, vector geometry, renderer wiring, versioned app loading and precache wiring. Full visual contrast checks on physical OLED/LCD devices remain pending.
