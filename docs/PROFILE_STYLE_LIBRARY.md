@@ -4,7 +4,7 @@
 
 This change adds ten profile experiences and seven profile screen-layout modes to the existing Minglora Social Network. The selected style and screen layout are presentation preferences on the same Minglora member account. The change does not create extra accounts, user tables, profile content tables, media stores, or relationship graphs.
 
-Implementation is on \`feat/profile-style-library-10x9\` and PR #266. It is not a production release until review, CI and deployment verification are complete.
+The original Profile Style Library was introduced in PR #266. The seven-screen/two-guest-box separation was merged into `main` in PR #269 on 2026-11-13. Confirm the active hosting deployment separately; a merged pull request alone does not prove production deployment.
 
 ## Ten profile styles
 
