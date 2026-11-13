@@ -962,7 +962,7 @@ Deno.serve(async (req: Request) => {
       const { data, error } = await admin.from("live_gift_catalog")
         .select("code,name,category,emoji,animation_key,coin_price,image_url,model_url,animation_preset,sound_preset,animation_duration_ms,asset_version")
         .eq("active", true)
-        .eq("asset_version", "2")
+        .eq("asset_version", "3")
         .order("sort_order")
         .order("code")
         .range(offset, offset + pageSize - 1);
