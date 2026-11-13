@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "generator": "Minglora LIVE gift animation asset generator",
+  "id": "gift-reveal",
+  "label": "Gift Reveal",
+  "description": "A general-purpose reveal where no specialist motion is selected.",
+  "category_targets": [
+    "other"
+  ],
+  "duration_ms": 1900,
+  "easing": "cubic-bezier(.17,.85,.3,1)",
+  "keyframes": [
+    {
+      "offset": 0,
+      "opacity": 0,
+      "transform": "translate3d(0,22px,0) rotateZ(-8deg) scale(.68)",
+      "filter": "brightness(.78) saturate(.8)"
+    },
+    {
+      "offset": 0.2,
+      "opacity": 1,
+      "transform": "translate3d(0,-8px,0) rotateZ(6deg) scale(1.15)",
+      "filter": "brightness(1.3) saturate(1.35)"
+    },
+    {
+      "offset": 0.52,
+      "opacity": 1,
+      "transform": "translate3d(0,3px,0) rotateZ(-3deg) scale(.97)",
+      "filter": "brightness(1.12)"
+    },
+    {
+      "offset": 0.78,
+      "opacity": 1,
+      "transform": "translate3d(0,-1px,0) rotateZ(1deg) scale(1.04)",
+      "filter": "none"
+    },
+    {
+      "offset": 1,
+      "opacity": 1,
+      "transform": "translate3d(0,0,0) rotateZ(0deg) scale(1)",
+      "filter": "none"
+    }
+  ],
+  "reduced_motion": {
+    "respect_prefers_reduced_motion": true,
+    "duration_ms": 320,
+    "iterations": 1,
+    "autoplay": false
+  }
+}

@@ -1,0 +1,127 @@
+{
+  "schema_version": 1,
+  "generator": "Minglora LIVE gift animation asset generator",
+  "format": "web-animations-keyframes",
+  "preset_count": 17,
+  "presets": [
+    {
+      "id": "petal-bloom",
+      "url": "/assets/animations/gifts/presets/petal-bloom.json",
+      "label": "Petal Bloom",
+      "duration_ms": 2200,
+      "easing": "cubic-bezier(.17,.85,.3,1)"
+    },
+    {
+      "id": "heart-pulse",
+      "url": "/assets/animations/gifts/presets/heart-pulse.json",
+      "label": "Heart Pulse",
+      "duration_ms": 2000,
+      "easing": "cubic-bezier(.17,.85,.3,1)"
+    },
+    {
+      "id": "creature-entrance",
+      "url": "/assets/animations/gifts/presets/creature-entrance.json",
+      "label": "Creature Entrance",
+      "duration_ms": 2450,
+      "easing": "cubic-bezier(.17,.85,.3,1)"
+    },
+    {
+      "id": "grand-entry",
+      "url": "/assets/animations/gifts/presets/grand-entry.json",
+      "label": "Grand Entry",
+      "duration_ms": 2400,
+      "easing": "cubic-bezier(.17,.85,.3,1)"
+    },
+    {
+      "id": "soundwave-ripple",
+      "url": "/assets/animations/gifts/presets/soundwave-ripple.json",
+      "label": "Soundwave Ripple",
+      "duration_ms": 2150,
+      "easing": "cubic-bezier(.17,.85,.3,1)"
+    },
+    {
+      "id": "power-impact",
+      "url": "/assets/animations/gifts/presets/power-impact.json",
+      "label": "Power Impact",
+      "duration_ms": 2050,
+      "easing": "cubic-bezier(.17,.85,.3,1)"
+    },
+    {
+      "id": "delight-pop",
+      "url": "/assets/animations/gifts/presets/delight-pop.json",
+      "label": "Delight Pop",
+      "duration_ms": 1900,
+      "easing": "cubic-bezier(.17,.85,.3,1)"
+    },
+    {
+      "id": "cosmic-orbit",
+      "url": "/assets/animations/gifts/presets/cosmic-orbit.json",
+      "label": "Cosmic Orbit",
+      "duration_ms": 2600,
+      "easing": "cubic-bezier(.17,.85,.3,1)"
+    },
+    {
+      "id": "spark-float",
+      "url": "/assets/animations/gifts/presets/spark-float.json",
+      "label": "Spark Float",
+      "duration_ms": 2250,
+      "easing": "cubic-bezier(.17,.85,.3,1)"
+    },
+    {
+      "id": "celebration-burst",
+      "url": "/assets/animations/gifts/presets/celebration-burst.json",
+      "label": "Celebration Burst",
+      "duration_ms": 2150,
+      "easing": "cubic-bezier(.17,.85,.3,1)"
+    },
+    {
+      "id": "gift-reveal",
+      "url": "/assets/animations/gifts/presets/gift-reveal.json",
+      "label": "Gift Reveal",
+      "duration_ms": 1900,
+      "easing": "cubic-bezier(.17,.85,.3,1)"
+    },
+    {
+      "id": "glam-spin",
+      "url": "/assets/animations/gifts/presets/glam-spin.json",
+      "label": "Glam Spin",
+      "duration_ms": 2350,
+      "easing": "cubic-bezier(.17,.85,.3,1)"
+    },
+    {
+      "id": "royal-shimmer",
+      "url": "/assets/animations/gifts/presets/royal-shimmer.json",
+      "label": "Royal Shimmer",
+      "duration_ms": 2500,
+      "easing": "cubic-bezier(.17,.85,.3,1)"
+    },
+    {
+      "id": "nature-rise",
+      "url": "/assets/animations/gifts/presets/nature-rise.json",
+      "label": "Nature Rise",
+      "duration_ms": 2350,
+      "easing": "cubic-bezier(.17,.85,.3,1)"
+    },
+    {
+      "id": "horizon-sweep",
+      "url": "/assets/animations/gifts/presets/horizon-sweep.json",
+      "label": "Horizon Sweep",
+      "duration_ms": 2450,
+      "easing": "cubic-bezier(.17,.85,.3,1)"
+    },
+    {
+      "id": "pixel-burst",
+      "url": "/assets/animations/gifts/presets/pixel-burst.json",
+      "label": "Pixel Burst",
+      "duration_ms": 1850,
+      "easing": "cubic-bezier(.17,.85,.3,1)"
+    },
+    {
+      "id": "warm-wave",
+      "url": "/assets/animations/gifts/presets/warm-wave.json",
+      "label": "Warm Wave",
+      "duration_ms": 2300,
+      "easing": "cubic-bezier(.17,.85,.3,1)"
+    }
+  ]
+}

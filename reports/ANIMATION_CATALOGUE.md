@@ -1,30 +1,45 @@
-# Minglora LIVE — Animation Catalogue
+# Minglora Gift Animation Catalogue
 
-## Current animation architecture
+**Date:** 2026-11-13  
+**Format:** Native Web Animations API keyframe assets  
+**Source:** `assets/animations/gifts/animation-catalog.json`
 
-- Gift identities carry unique `animation_key` values.
-- Gifts carry a subject/category animation preset and duration in the canonical JSON catalogue.
-- `public/gift-effects.js` builds Web Animations keyframes, CSS-based motion layers, particle overlays and temporary gift cards.
-- The runtime supports reduced-motion preferences and removes completed overlay elements.
-- A selected GLTF is presented with the browser's `model-viewer` component. Automatic rotation/autoplay is suppressed when reduced motion is enabled.
-- Gift sound profiles are synthesized with the Web Audio API from Minglora-authored parameters. They are not copied TikTok recordings.
+## Individual preset files
 
-## Existing animation families in the gift runtime
+All 17 presets below have separate runtime JSON files under `public/assets/animations/gifts/presets/`, with a generated `preset-index.json`. The runtime loads them from the same origin and applies their keyframes to the selected gift's existing artwork or 3D model. Existing inline choreography remains the fallback if a file cannot load.
 
-The runtime has explicit keyframe families for celebration burst, rocket launch, sky/speed flight, winged flight, blossom/petal bloom, heart pulse, royal shimmer, gentle float/nature rise, music rhythm/soundwave ripple, ocean/island/warm wave, sweet pop/delight pop, victory/power impact and magic/cosmic orbit. Other catalogue presets receive the runtime's deterministic generic entrance animation.
+| ID | Intended motion | Target groups |
+|---|---|---|
+| `petal-bloom` | Petal-like reveal and settle | Flowers, nature |
+| `heart-pulse` | Warm pulse and rebound | Hearts, reactions |
+| `creature-entrance` | Friendly character entry | Animals |
+| `grand-entry` | Rising statement entrance | Vehicles, luxury |
+| `soundwave-ripple` | Rhythmic rise and fall | Music |
+| `power-impact` | Impact and controlled rebound | Sports, games |
+| `delight-pop` | Compact pop | Food and drinks |
+| `cosmic-orbit` | Orbit-like turn | Fantasy, symbols |
+| `spark-float` | Light floating entry | Community, other |
+| `celebration-burst` | Bright burst and settle | Celebrations |
+| `gift-reveal` | General-purpose reveal | Other |
+| `glam-spin` | Polished spin | Fashion and beauty |
+| `royal-shimmer` | Premium shimmer | Luxury, fashion |
+| `nature-rise` | Gentle upward motion | Nature, flowers |
+| `horizon-sweep` | Lateral sweep | Travel, vehicles |
+| `pixel-burst` | Stepped digital reveal | Games |
+| `warm-wave` | Friendly wave | Community, travel |
 
-The catalogue contains 17 distinct `animation_preset` families. Each gift still has an individual animation identity and deterministic motion signature, but different gifts can share a choreography family.
+## Per-gift motion mapping
 
-## Motion index integration added on this branch
+The existing `catalog-motion-index.json` links 1,737 unique active gift codes to local SVG/model paths, animation identity, motion preset, duration, one of seven effect layers and a sound preset. The effect layers are petals, waves, rings, trail, orbits, bubbles and sparkles.
 
-`scripts/generate-live-gift-motion-index.mjs` derives the exact per-gift motion profile from the canonical catalogue, without inventing prices or changing gift records. It writes:
+## Runtime and accessibility
 
-`public/assets/animations/gifts/catalog-motion-index.json`
+- The native Web Animations API is used; no new animation package is required.
+- Preset JSON is loaded from exact same-origin paths.
+- Each preset has reduced-motion metadata. The runtime still checks `prefers-reduced-motion`.
+- The service worker precaches the index and all 17 preset files.
+- Existing inline frames remain a fallback.
 
-The generated index includes only active records and carries the exact code, image/model path, animation identity/preset/duration, sound preset and a supported effect layer. The generator refuses to overwrite a file that is not marked as its own generated output. It has a non-writing `--check` mode.
+## Honest format boundary
 
-Runtime and service-worker references already use this canonical path. The updated `prestart` and CI steps generate it after the SVG/GLTF catalogue build and before the app/tests run.
-
-## Remaining animation limitations
-
-The existing 3D gift generator builds original primitive mesh scenes with basic metallic/roughness material factors. It does not emit full skeletal animation, GLTF animation channels, rigged characters, physically simulated cloth/liquid, high-resolution PBR texture sets or cinematic environment scenes. No populated Rive/Lottie library or rendered per-gift video/spritesheet fallback set was verified. These remain additional production-art requirements, not completed deliverables.
+These are separately stored and runtime-loaded animation definitions—not Lottie/Rive files, recorded animated video, or embedded GLTF skeletal clips. The current audio runtime synthesizes category-based Web Audio cues. A full mastered, synchronized per-gift sound library and cinematic custom scenes have not been produced.

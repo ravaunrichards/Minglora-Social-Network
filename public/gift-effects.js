@@ -11,6 +11,40 @@
   function hash(value){let h=2166136261;for(const ch of String(value||"")){h^=ch.charCodeAt(0);h=Math.imul(h,16777619);}return h>>>0;}
   let catalogMotionIndex=null;
   let catalogMotionLoadPromise=null;
+  let motionPresetAssets=new Map();
+  let motionPresetLoadPromise=null;
+  async function loadMotionPresetAssets(){
+    if(motionPresetAssets.size)return motionPresetAssets.size;
+    if(motionPresetLoadPromise)return motionPresetLoadPromise;
+    motionPresetLoadPromise=(async()=>{
+      try{
+        const response=await fetch("/assets/animations/gifts/preset-index.json",{credentials:"same-origin",cache:"force-cache"});
+        if(!response.ok)throw new Error("Gift animation preset index unavailable.");
+        const index=await response.json();
+        const entries=Array.isArray(index?.presets)?index.presets:[];
+        const results=await Promise.allSettled(entries.map(async entry=>{
+          const id=String(entry?.id||"");
+          if(!/^[a-z0-9-]{2,48}$/.test(id))return null;
+          const expected="/assets/animations/gifts/presets/"+id+".json";
+          if(entry.url!==expected)return null;
+          const assetResponse=await fetch(expected,{credentials:"same-origin",cache:"force-cache"});
+          if(!assetResponse.ok)return null;
+          const asset=await assetResponse.json();
+          if(asset?.id!==id||!Array.isArray(asset.keyframes)||asset.keyframes.length<3)return null;
+          if(!asset.keyframes.every(frame=>Number.isFinite(frame.offset)&&Number.isFinite(frame.opacity)&&typeof frame.transform==="string"))return null;
+          return [id,asset];
+        }));
+        const loaded=new Map();
+        for(const result of results)if(result.status==="fulfilled"&&result.value)loaded.set(result.value[0],result.value[1]);
+        motionPresetAssets=loaded;
+        return loaded.size;
+      }catch(error){
+        motionPresetLoadPromise=null;
+        return motionPresetAssets.size;
+      }
+    })();
+    return motionPresetLoadPromise;
+  }
   const semanticChoreography={
     "firework-burst":"celebration-burst",
     "rocket-launch":"grand-entry",
@@ -34,6 +68,7 @@
     if(catalogMotionLoadPromise)return catalogMotionLoadPromise;
     catalogMotionLoadPromise=(async()=>{
       try{
+        await loadMotionPresetAssets();
         const response=await fetch("/assets/animations/gifts/catalog-motion-index.json",{credentials:"same-origin",cache:"force-cache"});
         if(!response.ok)throw new Error("Gift motion index is not available yet.");
         const payload=await response.json();
@@ -65,6 +100,10 @@
   }
   function buildPreviewFrames(preset,v){
     const {dx,dy,tilt,spin,peak,rebound}=v;
+    const externalPreset=motionPresetAssets.get(String(preset||""));
+    if(externalPreset&&Array.isArray(externalPreset.keyframes)){
+      return externalPreset.keyframes.map(frame=>({offset:frame.offset,opacity:frame.opacity,transform:frame.transform,filter:frame.filter||"none"}));
+    }
     const neutral={offset:1,opacity:1,transform:"translate3d(0,0,0) rotateZ(0deg) scale(1)",filter:"none"};
     if(preset==="firework-burst"||preset==="celebration-burst")return [
       {offset:0,opacity:0,transform:"scale(.22) rotateZ(-18deg)",filter:"brightness(.7)"},

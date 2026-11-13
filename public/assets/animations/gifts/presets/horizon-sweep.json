@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "generator": "Minglora LIVE gift animation asset generator",
+  "id": "horizon-sweep",
+  "label": "Horizon Sweep",
+  "description": "A lateral travel motion for journeys and vehicle gifts.",
+  "category_targets": [
+    "travel",
+    "vehicles"
+  ],
+  "duration_ms": 2450,
+  "easing": "cubic-bezier(.17,.85,.3,1)",
+  "keyframes": [
+    {
+      "offset": 0,
+      "opacity": 0,
+      "transform": "translate3d(-56px,18px,0) rotateZ(-8deg) scale(.76)",
+      "filter": "brightness(.82)"
+    },
+    {
+      "offset": 0.3,
+      "opacity": 1,
+      "transform": "translate3d(12px,-10px,0) rotateZ(5deg) scale(1.1)",
+      "filter": "brightness(1.25)"
+    },
+    {
+      "offset": 0.7,
+      "opacity": 1,
+      "transform": "translate3d(28px,4px,0) rotateZ(-3deg) scale(.96)",
+      "filter": "brightness(1.08)"
+    },
+    {
+      "offset": 1,
+      "opacity": 1,
+      "transform": "translate3d(0,0,0) rotateZ(0deg) scale(1)",
+      "filter": "none"
+    }
+  ],
+  "reduced_motion": {
+    "respect_prefers_reduced_motion": true,
+    "duration_ms": 320,
+    "iterations": 1,
+    "autoplay": false
+  }
+}

@@ -54,3 +54,8 @@ The inspected `assets/animations/` directory had only a README before this branc
 ## Visual control asset update — 2026-11-13
 
 The visual QA branch adds `public/assets/icons/live-control-icons.svg`, a 16-symbol original Minglora SVG sprite. The existing LIVE control renderer in `public/app.js` selects symbols from a fixed allowlist; it does not accept arbitrary fragment names. The service worker precaches the sprite, and the app script/cache version is advanced together. Existing click handlers, labels, pressed states and room role checks remain in place. This is the dedicated pack for the current LIVE dock controls, not a claim that every moderator, filter, effect, ranking, fan-club and accessibility sub-control in the broader brief is finished.
+
+
+## File-based gift animation and production workspace — 2026-11-13
+
+The follow-on branch adds the source animation catalogue at `assets/animations/gifts/animation-catalog.json`, 17 separate runtime keyframe files under `public/assets/animations/gifts/presets/`, and a preset index. The runtime loads those same-origin files and retains the existing inline choreography as a fallback. A controlled `assets/gift-assets/` workspace now separates artwork, models, audio and manifests. Its approved/source folders contain instructions only; they are not represented as completed premium assets. The 1,748-row canonical catalogue and generated SVG/GLTF build pipeline are preserved.

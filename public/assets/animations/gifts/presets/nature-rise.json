@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "generator": "Minglora LIVE gift animation asset generator",
+  "id": "nature-rise",
+  "label": "Nature Rise",
+  "description": "A gentle upward reveal for botanical and nature gifts.",
+  "category_targets": [
+    "nature",
+    "flowers"
+  ],
+  "duration_ms": 2350,
+  "easing": "cubic-bezier(.17,.85,.3,1)",
+  "keyframes": [
+    {
+      "offset": 0,
+      "opacity": 0,
+      "transform": "translate3d(0,26px,0) scale(.82)",
+      "filter": "brightness(.9)"
+    },
+    {
+      "offset": 0.3,
+      "opacity": 1,
+      "transform": "translate3d(0,-12px,0) scale(1.06)",
+      "filter": "brightness(1.14)"
+    },
+    {
+      "offset": 0.7,
+      "opacity": 1,
+      "transform": "translate3d(0,-4px,0) scale(.98)",
+      "filter": "none"
+    },
+    {
+      "offset": 1,
+      "opacity": 1,
+      "transform": "translate3d(0,0,0) rotateZ(0deg) scale(1)",
+      "filter": "none"
+    }
+  ],
+  "reduced_motion": {
+    "respect_prefers_reduced_motion": true,
+    "duration_ms": 320,
+    "iterations": 1,
+    "autoplay": false
+  }
+}

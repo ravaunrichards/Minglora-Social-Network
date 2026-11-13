@@ -38,3 +38,8 @@ The extracted 1,509 catalogue crops remain blocked from production until rights 
 ## LIVE control icon sprite verification scope
 
 The sprite keeps the existing 24×24 line-art geometry and `currentColor` treatment while moving the symbol definitions into one reusable, same-origin SVG file. The application uses a strict 16-name allowlist, and the service worker precaches the sprite. The new unit test checks symbol completeness, vector geometry, renderer wiring, versioned app loading and precache wiring. Full visual contrast checks on physical OLED/LCD devices remain pending.
+
+
+## Separate animation preset quality gates
+
+The follow-on change adds 17 individual keyframe JSON files and a deterministic generator. The generator validates supported unique IDs, duration bounds, strictly increasing frame offsets spanning 0–1, bounded opacity, local transform/filter fields and explicit reduced-motion metadata. CI builds and checks the pack. The runtime only loads the expected same-origin preset paths and retains its existing inline fallback. These files are native Web Animations API definitions; they are not Lottie/Rive files, recorded video, or animated GLTF channels. Premium per-gift audio, photorealistic models and physical-device GPU/memory testing remain open.

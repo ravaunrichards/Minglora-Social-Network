@@ -77,3 +77,14 @@ GitHub Actions completed successfully on code commit `29bf8a5ed6d790b8dd334cdd65
 - **Chromium profile/layout viewport matrix #54:** passed; evidence artifact uploaded.
 
 These are GitHub-hosted automated build, test and browser-render checks. They are not physical-device tests, a full manual review of 1,121 screenshots, or proof of iOS/tablet/foldable/Smart TV performance. The report-only update that records these results does not change application source code.
+
+
+## Follow-on delivery — file-based gifts and animation structure (2026-11-13)
+
+- [x] Added `assets/animations/gifts/animation-catalog.json` as the source for 17 original motion presets.
+- [x] Added 17 standalone runtime preset JSON files and `preset-index.json`.
+- [x] Integrated same-origin preset loading into the LIVE/Gift Studio animation runtime, keeping inline choreography as fallback.
+- [x] Added a deterministic generator, build command, prestart integration, service-worker precache entries and unit coverage.
+- [x] Added a controlled gift-art/model/audio/manifests source workspace, plus separate gift catalogue, animation catalogue and recommendation reports.
+
+The **file-based animation preset library and directory structure** are delivered by this follow-on. The complete premium art mission remains **partially complete**: the extracted crops still need human review and rights clearance; high-detail individually authored premium models, per-gift mastered audio, cinematic gift-specific scenes, Lottie/Rive options and real-device GPU/memory/battery QA have not been produced or verified. The 17 presets are reusable choreography files, not 1,737 unique cinematic animations.

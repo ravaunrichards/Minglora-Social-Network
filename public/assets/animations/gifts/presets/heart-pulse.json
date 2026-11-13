@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "generator": "Minglora LIVE gift animation asset generator",
+  "id": "heart-pulse",
+  "label": "Heart Pulse",
+  "description": "A warm pulse and rebound for love and reaction gifts.",
+  "category_targets": [
+    "hearts",
+    "reactions"
+  ],
+  "duration_ms": 2000,
+  "easing": "cubic-bezier(.17,.85,.3,1)",
+  "keyframes": [
+    {
+      "offset": 0,
+      "opacity": 0,
+      "transform": "scale(.76)",
+      "filter": "brightness(.9)"
+    },
+    {
+      "offset": 0.25,
+      "opacity": 1,
+      "transform": "scale(1.17)",
+      "filter": "brightness(1.2)"
+    },
+    {
+      "offset": 0.48,
+      "opacity": 1,
+      "transform": "scale(.93)",
+      "filter": "none"
+    },
+    {
+      "offset": 0.68,
+      "opacity": 1,
+      "transform": "scale(1.08)",
+      "filter": "brightness(1.12)"
+    },
+    {
+      "offset": 1,
+      "opacity": 1,
+      "transform": "translate3d(0,0,0) rotateZ(0deg) scale(1)",
+      "filter": "none"
+    }
+  ],
+  "reduced_motion": {
+    "respect_prefers_reduced_motion": true,
+    "duration_ms": 320,
+    "iterations": 1,
+    "autoplay": false
+  }
+}

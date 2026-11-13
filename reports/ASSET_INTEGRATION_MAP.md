@@ -28,3 +28,15 @@ No prices, balances, transactions, account state, LiveKit credentials, or existi
 ## LIVE dock icon delivery
 
 The dedicated 16-symbol sprite is loaded through external SVG `<use>` references from the same-origin application asset path. The icon key is checked against a fixed allowlist before a fragment URL is constructed. `public/index.html` versions the updated application script, while `public/sw.js` uses shell cache v302 and precaches the sprite. No new runtime dependency or server endpoint is introduced.
+
+
+## Separate animation asset files
+
+| Layer | Source | Runtime location | Integration |
+|---|---|---|---|
+| Animation definitions | `assets/animations/gifts/animation-catalog.json` | `public/assets/animations/gifts/presets/*.json` | `loadMotionPresetAssets()` in `public/gift-effects.js` |
+| Preset manifest | Deterministic generator | `public/assets/animations/gifts/preset-index.json` | Runtime fetch; service-worker cache |
+| Per-gift binding | `data/minglora-gift-catalog.json` | `catalog-motion-index.json` | `withCatalogMotion()` retains exact gift-code mapping |
+| Source art/model/audio | `assets/gift-assets/` | Approved runtime export paths remain a separate release step | Rights register and asset register |
+
+The loader validates exact same-origin preset paths. Existing inline choreography remains the fallback. Build command: `npm run build:live-gift-animations`.

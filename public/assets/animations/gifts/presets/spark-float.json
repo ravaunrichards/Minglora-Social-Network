@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "generator": "Minglora LIVE gift animation asset generator",
+  "id": "spark-float",
+  "label": "Spark Float",
+  "description": "A light floating entrance for community and everyday gifts.",
+  "category_targets": [
+    "community",
+    "other"
+  ],
+  "duration_ms": 2250,
+  "easing": "cubic-bezier(.17,.85,.3,1)",
+  "keyframes": [
+    {
+      "offset": 0,
+      "opacity": 0,
+      "transform": "translate3d(-5px,28px,0) rotateZ(-7deg) scale(.72)",
+      "filter": "brightness(.82)"
+    },
+    {
+      "offset": 0.3,
+      "opacity": 1,
+      "transform": "translate3d(6px,-14px,0) rotateZ(5deg) scale(1.08)",
+      "filter": "brightness(1.2)"
+    },
+    {
+      "offset": 0.7,
+      "opacity": 1,
+      "transform": "translate3d(0,-5px,0) rotateZ(-2deg) scale(.98)",
+      "filter": "none"
+    },
+    {
+      "offset": 1,
+      "opacity": 1,
+      "transform": "translate3d(0,0,0) rotateZ(0deg) scale(1)",
+      "filter": "none"
+    }
+  ],
+  "reduced_motion": {
+    "respect_prefers_reduced_motion": true,
+    "duration_ms": 320,
+    "iterations": 1,
+    "autoplay": false
+  }
+}
