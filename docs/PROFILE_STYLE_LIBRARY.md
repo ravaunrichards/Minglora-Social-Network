@@ -70,8 +70,9 @@ In addition to the nine named screen-layout modes, CSS guardrails and responsive
 
 - \`tests/unit/profile-style-library.test.js\` covers the ten style IDs, nine screen-layout IDs, all 90 combinations at the structural level, preference validation/defaults, owner-only default exposure, preview/apply/save/reset wiring, preserved profile content hooks and asset cache versions.
 - Main CI syntax checks cover \`public/app.js\`, \`src/server.js\`, \`public/sw.js\` and \`public/settings.js\`, followed by the full \`npm test\` suite.
-- The separate \`Minglora profile visual QA\` workflow uses Chromium and the production stylesheet stack. It checks the 10 styles × 9 screen layouts at all nine viewport widths (810 browser-rendered scenarios), including overflow and key-element layout guards. The disposable fixture does not authenticate to Supabase or touch real account data.
-- Each browser run uploads 90 desktop screenshots (all style/layout pairs) plus 10 phone screenshots to the \`minglora-profile-visual-evidence\` artifact. This is browser layout QA, not pixel-perfect cloning of third-party interfaces or a test of live Supabase data.
+- The separate \`Minglora profile visual QA\` workflow runs two Chromium suites: a lightweight production-CSS fixture and an integration suite that boots the actual \`public/index.html\` app, uses the real \`app.js\` session bootstrap and profile event handlers, and renders through production \`renderProfile()\`. Only \`/api/*\` responses are stubbed with disposable test data; external requests are blocked, service workers are disabled, and no live Supabase account or data is touched.
+- Each suite checks the 10 styles × 9 layouts at all nine viewport widths (810 scenarios per suite; 1,620 total). The real-app suite verifies the active style/layout, avatar and identity, owner actions, style-specific metrics, six navigation actions, content panel, overlap and horizontal-overflow guardrails.
+- Each run uploads 90 desktop screenshots (all style/layout pairs) plus ten 360px phone screenshots per suite (200 screenshots total), alongside the matrix JSON report, to the \`minglora-profile-visual-evidence\` artifact. This is browser layout QA with inspectable screenshots, not pixel-baseline comparison or a test of live Supabase data.
 
 ## Supplied reference collection and coverage
 
