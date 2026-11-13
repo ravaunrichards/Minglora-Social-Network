@@ -370,7 +370,7 @@
 }
 
 
-/* Nine profile screen modes compose with every profile style. The default
+/* Seven profile screen modes compose with every profile style. The default
    fluid-panel mode intentionally leaves the established Facebook geometry intact. */
 .minglora-profile-page[data-profile-screen-layout="full-screen"]{
   width:100%!important;max-width:none!important;margin-inline:0!important;
