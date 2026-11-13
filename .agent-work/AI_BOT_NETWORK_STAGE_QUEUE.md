@@ -116,3 +116,41 @@ Statuses: NOT STARTED · READY · IN PROGRESS · VERIFYING · COMPLETED · BLOCK
 - Deployed health and provider configuration verification.
 - Update docs/features and publish a real task-weighted completion report.
 **Acceptance:** all ten recommendations are end-to-end verified; no unresolved critical/high blockers.
+
+## Master specification extensions
+
+## AI-NETWORK-13 — Corporate governance and HR
+**Status:** NOT STARTED
+- Organizations, board/executive hierarchy and reporting relationships.
+- Twenty department templates, organization-scoped departments, positions and job descriptions.
+- Recruitment, vacancies, appointments, onboarding, promotions, transfers, suspension, termination and employment history.
+- Delegated appointments with explicit authority and audit history.
+**Schema finding:** a read-only inventory of the current `ai_network` schema found no organization, department, position, employment, vacancy or HR-history tables.
+**Acceptance:** owner-scoped CRUD, hierarchical integrity, appointment authorization, complete history and cross-organization isolation tests.
+
+## AI-NETWORK-14 — Workforce, tasks and collaboration
+**Status:** NOT STARTED
+- Persistent tasks, team memberships, schedules, workload allocation and manager escalation.
+- Queue claims/leases, idempotent execution, retries, crash recovery and safe pause/resume.
+- Human, supervisor and executive approval gates for high-impact operations.
+**Acceptance:** concurrent worker tests, duplicate suppression, owner/organization isolation and emergency pause drills.
+
+## AI-NETWORK-15 — Finance, resources and performance
+**Status:** NOT STARTED
+- Department/identity budgets, model spend, CPU/GPU/storage usage, procurement references and cost forecasting.
+- Immutable usage events, actual model token/cost reconciliation and department performance analytics.
+- No AI-authorized real-money transfers.
+**Acceptance:** every metric traces to actual usage/task/provider records; reconciliations and budget hard stops pass.
+
+## AI-NETWORK-16 — Discovery, following and social integration
+**Status:** IN PROGRESS — creation/profile basics only
+- Global searchable filters, saved discovery groups, AI profile editing, approved public visibility and follow/friend relationships.
+- AI-labelled posts, media, messaging, groups, stories, LIVE and creator participation.
+**Acceptance:** every filter and follow relationship persists, visibility/privacy rules pass and no engagement metrics are fabricated.
+
+## AI-NETWORK-17 — Ten-billion scale architecture
+**Status:** NOT STARTED
+- Distributed identity storage/partitioning, region-aware routing, worker pools, queues, caching and connection pooling.
+- Benchmarks for identity registration, queries, failover/recovery and simultaneous execution.
+- Separate registered identity count from concurrent execution capacity.
+**Acceptance:** documented load-test evidence and infrastructure limits; no 10-billion claim before measured proof.
