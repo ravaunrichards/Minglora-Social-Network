@@ -355,12 +355,124 @@ try {
     }
   }
 
+  // Render the real app through renderProfile(); mock only its API boundary.
+  // The disposable account and all responses stay inside this local test server.
+  let productionAppCombinationsChecked = 0;
+  let productionAppScreenshotsCaptured = 0;
+  const productionContext = await browser.newContext({
+    viewport: { width: 1280, height: 900 },
+    deviceScaleFactor: 1,
+    serviceWorkers: 'block'
+  });
+  const productionPage = await productionContext.newPage();
+  productionPage.setDefaultTimeout(10000);
+  await productionPage.route('**/*', route => {
+    const requestUrl = new URL(route.request().url());
+    if (requestUrl.origin !== baseUrl) return route.abort();
+    return route.continue();
+  });
+  await productionPage.goto(baseUrl + '/', { waitUntil: 'domcontentloaded' });
+  await productionPage.waitForFunction(() =>
+    typeof window.MingloraGetCurrentView === 'function' &&
+    document.querySelector('#app') &&
+    !document.querySelector('#app').classList.contains('hidden'),
+    null,
+    { timeout: 30000 }
+  );
+  await productionPage.waitForFunction(() =>
+    Boolean(document.querySelector('#main-content .welcome')),
+    null,
+    { timeout: 30000 }
+  );
+
+  let productionSequence = 0;
+  for (const viewport of viewports) {
+    await productionPage.setViewportSize({ width: viewport.width, height: viewport.height });
+    for (const style of styles) {
+      for (const layout of layouts) {
+        productionSequence += 1;
+        activeVisualProfileCase = { style, layout, sequence: productionSequence };
+        const profileId = 'qa-profile-' + productionSequence;
+        await productionPage.evaluate(id => {
+          window.dispatchEvent(new CustomEvent('minglora:open-profile', { detail: { userId: id } }));
+        }, profileId);
+        await productionPage.waitForFunction(({ style, layout }) => {
+          const root = document.querySelector('.minglora-profile-page');
+          return root &&
+            root.dataset.profileStyle === style &&
+            root.dataset.profileScreenLayout === layout &&
+            document.querySelector('#profile-tab-panel')?.children.length > 0;
+        }, { style, layout });
+        await productionPage.evaluate(() =>
+          new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+        );
+
+        const caseFailures = await productionPage.evaluate(({ style, layout, viewportName }) => {
+          const root = document.querySelector('.minglora-profile-page');
+          const main = document.querySelector('#main-content');
+          const avatar = root?.querySelector('.profile-avatar-edit-wrap .avatar');
+          const identity = root?.querySelector('.profile-name-with-badges span:first-child') ||
+            root?.querySelector('.profile-name-with-badges');
+          const identityRange = document.createRange();
+          if (identity) identityRange.selectNodeContents(identity);
+          const identityRect = identity ? identityRange.getBoundingClientRect() : null;
+          const avatarRect = avatar?.getBoundingClientRect();
+          const rootRect = root?.getBoundingClientRect();
+          const mainRect = main?.getBoundingClientRect();
+          const tabs = root?.querySelectorAll('.profile-tabs-list [data-profile-tab]') || [];
+          const actions = [...(root?.querySelectorAll('.profile-owner-actions button') || [])]
+            .filter(node => node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0);
+          const metrics = [...(root?.querySelectorAll('.profile-counts [data-profile-metric]') || [])]
+            .filter(node => node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0);
+          const intersects = (a, b) => Boolean(a && b &&
+            a.left < b.right - 1 && a.right > b.left + 1 &&
+            a.top < b.bottom - 1 && a.bottom > b.top + 1);
+          const failures = [];
+          const add = (ok, name, detail = '') => {
+            if (!ok) failures.push({ style, layout, viewport: viewportName, name, detail });
+          };
+          add(Boolean(root && rootRect?.width > 0 && rootRect?.height > 0), 'production-profile-rendered');
+          add(Boolean(main && rootRect?.left >= mainRect.left - 2 && rootRect?.right <= mainRect.right + 2), 'production-profile-within-main-column');
+          add(Boolean(avatarRect?.width >= 48 && avatarRect?.height >= 48), 'production-avatar-visible');
+          add(Boolean(identityRect?.width > 0 && identityRect?.height > 0), 'production-identity-visible');
+          add(!intersects(avatarRect, identityRect), 'production-avatar-identity-no-overlap');
+          add(actions.length === 3, 'production-owner-actions-visible', actions.length + '/3');
+          add(metrics.length === (style === 'tiktok' ? 3 : 6), 'production-style-metrics-visible', metrics.length);
+          add(tabs.length === 6, 'production-profile-navigation-present', tabs.length + '/6');
+          add(Boolean(document.querySelector('#profile-tab-panel')?.getBoundingClientRect().height > 0), 'production-profile-content-visible');
+          add(root.scrollWidth <= root.clientWidth + 2, 'production-profile-no-horizontal-overflow', root.scrollWidth + '/' + root.clientWidth);
+          add(main.scrollWidth <= main.clientWidth + 2, 'production-main-no-horizontal-overflow', main.scrollWidth + '/' + main.clientWidth);
+          add(document.documentElement.scrollWidth <= window.innerWidth + 2, 'production-viewport-no-horizontal-overflow', document.documentElement.scrollWidth + '/' + window.innerWidth);
+          add(!actions.some(action => metrics.some(metric => intersects(action.getBoundingClientRect(), metric.getBoundingClientRect()))), 'production-actions-metrics-no-overlap');
+          return failures;
+        }, { style, layout, viewportName: viewport.name });
+        failures.push(...caseFailures);
+        productionAppCombinationsChecked += 1;
+
+        if (viewport.width === 1280) {
+          const desktopPath = path.join(artifactsDir, 'actual-app__' + style + '__' + layout + '__desktop.jpg');
+          await productionPage.screenshot({ path: desktopPath, type: 'jpeg', quality: 76, fullPage: true });
+          productionAppScreenshotsCaptured += 1;
+        } else if (viewport.width === 360 && layout === 'fluid-panel') {
+          const phonePath = path.join(artifactsDir, 'actual-app__' + style + '__fluid-panel__phone.jpg');
+          await productionPage.screenshot({ path: phonePath, type: 'jpeg', quality: 76, fullPage: true });
+          productionAppScreenshotsCaptured += 1;
+        }
+      }
+    }
+  }
+  await productionContext.close();
+
   const report = {
     styles: styles.length,
     screenLayouts: layouts.length,
     viewports: viewports.length,
-    browserCombinationsChecked: browserChecks,
-    screenshotsCaptured: screenshots,
+    syntheticFixtureCombinationsChecked: browserChecks,
+    productionAppCombinationsChecked,
+    browserCombinationsChecked: browserChecks + productionAppCombinationsChecked,
+    syntheticFixtureScreenshotsCaptured: screenshots,
+    productionAppScreenshotsCaptured,
+    screenshotsCaptured: screenshots + productionAppScreenshotsCaptured,
     failures
   };
   fs.writeFileSync(path.join(artifactsDir, 'profile-style-visual-report.json'), JSON.stringify(report, null, 2));
