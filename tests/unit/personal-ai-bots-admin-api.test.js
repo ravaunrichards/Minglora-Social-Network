@@ -849,6 +849,34 @@ test('AI profile PATCH persists demographic, career, location and preference fie
 });
 
 
+test('canonical identity permission sync clears effective grants for supervised and paused bots',async()=>{
+  const cases=[
+    {id:'00000000-0000-4000-8000-000000000702',status:'enabled',autonomyMode:'administrator_controlled'},
+    {id:'00000000-0000-4000-8000-000000000703',status:'paused',autonomyMode:'hybrid'}
+  ];
+  for(const item of cases){
+    let persisted=null;
+    const context=makeContext({
+      method:'POST',path:'/api/admin/personal-ai-bots/emails',
+      input:{identityId:item.id,emailAddress:item.id.endsWith('702')?'supervised.ai@minglora.example':'paused.ai@minglora.example',emailType:'primary'},
+      db:{
+        personalAiBotSettings:[{id:'global',enabled:false}],
+        personalAiBots:[{
+          id:item.id,createdBy:'owner-1',displayName:'Guarded AI',firstName:'Guarded',lastName:'AI',
+          categoryId:'ai-support',categoryName:'AI Support',username:'ai_guarded_'+item.id.slice(-3),
+          status:item.status,enabled:item.status==='enabled',autonomyMode:item.autonomyMode,
+          allowedAutonomousActions:['analytics_read','draft_content']
+        }]
+      },
+      persistAiIdentities:async identities=>{persisted=identities[0];},
+      persistAiEmailIdentity:async email=>({...email,verificationStatus:'not_verified',provisioningStatus:'not_provisioned'})
+    });
+    await handlePersonalAiBotsAdminApi(context);
+    assert.equal(context.res.statusCode,201);
+    assert.deepEqual(persisted.permissions,[]);
+  }
+});
+
 test('owner canonical AI identity list supports bounded page offsets',async()=>{
   const identities=Array.from({length:50},(_,index)=>({id:'identity-'+(200+index),username:'ai_member_'+(200+index)}));
   let options=null;
