@@ -1358,7 +1358,7 @@ async function route(req, res) {
           populations: list('population'),
           genders: list('gender'),
           countries: list('country').map(value => value.toUpperCase()),
-          nationalities: list('nationality'),
+          nationalities: list('nationalities'),
           languages: list('language'),
           interests: list('interest'),
           skills: list('skill'),

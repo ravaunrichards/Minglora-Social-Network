@@ -120,7 +120,7 @@
         : item.follow_requested
           ? '<span class="ai-network-note">Follow request pending</span>'
           : '<button type="button" class="primary" data-ai-action="follow-ai" data-id="' + esc(item.identity_id) + '">Follow AI</button>';
-      return '<article class="ai-network-list-row"><div class="ai-network-list-main"><div class="ai-network-avatar" aria-hidden="true">AI</div><div><strong>' +
+      return '<article class="ai-network-list-row"><label class="ai-network-discovery-select"><input type="checkbox" name="identity_ids" value="' + esc(item.identity_id) + '" aria-label="Select ' + esc(name.display_name || name.username || 'AI profile') + '"></label><div class="ai-network-list-main"><div class="ai-network-avatar" aria-hidden="true">AI</div><div><strong>' +
         esc(name.display_name || [name.first_name,name.last_name].filter(Boolean).join(' ') || 'AI member') + '</strong>' +
         '<div class="ai-network-meta">' + pill('AI PROFILE','ai') + ' ' + pill(item.category_key || 'AI') + ' ' + pill(profile.gender || 'not specified') + '</div>' +
         '<p>' + esc(profile.bio || profile.introduction || 'AI identity profile') + '</p>' +
@@ -152,12 +152,14 @@
       '<label>Interests and hobbies (comma-separated)<input name="interests" value="' + esc(list(state.discoveryFilters.interests).join(', ')) + '" placeholder="music, travel, science"></label>' +
       '<label>Skills (comma-separated)<input name="skills" value="' + esc(list(state.discoveryFilters.skills).join(', ')) + '" placeholder="education, design"></label>' +
       '<label>Capabilities (comma-separated)<input name="capabilities" value="' + esc(list(state.discoveryFilters.capabilities).join(', ')) + '" placeholder="text, voice, image"></label>' +
+      '<label>Nationality (comma-separated)<input name="nationalities" value="' + esc(list(state.discoveryFilters.nationalities).join(', ')) + '" placeholder="Jamaican, Canadian"></label>' +
       '<label>Profession contains<input name="profession" value="' + esc(state.discoveryFilters.profession || '') + '" maxlength="100"></label>' +
       '<label>Region, parish, city or district (comma-separated)<input name="regions" value="' + esc(list(state.discoveryFilters.regions).join(', ')) + '"></label></div>' +
       '<div class="ai-network-form-grid"><label>Sort<select name="sort">' + options([{value:'newest',label:'Newest'},{value:'popular',label:'Most followed'}],state.discoveryFilters.sort || 'newest') + '</select></label>' +
       '<label>Created within (days; 0 means any time)<input type="number" name="recent_days" min="0" max="3650" value="' + esc(state.discoveryFilters.recent_days || 0) + '"></label></div>' +
       '<button class="primary" type="submit">Search AI profiles</button></form>' +
-      '<div class="ai-network-discovery-results"><strong>' + number(state.discoveryResults?.total) + ' matching public AI profiles</strong>' + identityRows + '</div>' +
+      '<form class="ai-network-form ai-network-discovery-bulk" data-ai-form="bulk-follow"><div class="ai-network-discovery-results"><strong>' + number(state.discoveryResults?.total) + ' matching public AI profiles</strong>' + identityRows + '</div>' +
+      '<button type="submit" class="secondary"' + (results.length ? '' : ' disabled') + '>Follow selected AI profiles (max 100)</button></form>' +
       '<form class="ai-network-form" data-ai-form="saved-discovery-group"><div class="ai-network-form-title">Save current discovery filters</div>' +
       '<label>Group name<input name="groupName" required minlength="2" maxlength="80" placeholder="Jamaican AI educators"></label>' +
       '<button type="submit" class="secondary">Save discovery group</button></form>' +
@@ -921,7 +923,17 @@
     const value = key => String(data.get(key) ?? '').trim();
     const payload = {};
     let path = '';
-    if (kind === 'discovery') {
+    if (kind === 'bulk-follow') {
+      const identityIds = data.getAll('identity_ids').map(item => String(item).trim()).filter(Boolean);
+      if (identityIds.length < 1 || identityIds.length > 100) {
+        throw new Error('Select between one and 100 public AI profiles for bulk following.');
+      }
+      const result = await request('/bulk-follow', { method:'POST', body:{ identity_ids:identityIds } });
+      await loadAIDiscovery();
+      setNotice(number(result.created_or_reused) + ' selected AI follow relationships created or already existed.');
+      renderSnapshot(state.snapshot);
+      return;
+    } else if (kind === 'discovery') {
       const many = key => data.getAll(key).map(item => String(item).trim()).filter(Boolean);
       const csv = key => value(key).split(',').map(item => item.trim()).filter(Boolean);
       state.discoveryFilters = {
@@ -931,6 +943,7 @@
         genders: many('genders'),
         countries: many('countries'),
         languages: csv('languages'),
+        nationalities: csv('nationalities'),
         interests: csv('interests'),
         skills: csv('skills'),
         capabilities: csv('capabilities'),

@@ -58,6 +58,15 @@ test('bulk following is bounded, duplicate safe, and saved groups are owner scop
   assert.ok(migration.includes('octet_length(filters::text)<=16384'));
 });
 
+test('discovery workspace supports selected-result bulk following and nationality filtering', () => {
+  const ui = read('public/ai-network.js');
+  assert.ok(ui.includes('name="identity_ids"'));
+  assert.ok(ui.includes('data-ai-form="bulk-follow"'));
+  assert.ok(ui.includes("request('/bulk-follow'"));
+  assert.ok(ui.includes("nationalities: csv('nationalities')"));
+  assert.ok(ui.includes('Follow selected AI profiles (max 100)'));
+});
+
 test('runtime gateway exposes discovery only through the authenticated AI command handler', () => {
   const allowStart=runtime.indexOf('const supportedActions = [');
   const allowEnd=runtime.indexOf('];',allowStart);

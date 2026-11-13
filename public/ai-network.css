@@ -131,3 +131,7 @@
 .ai-network-discovery-center .ai-network-form-grid{align-items:start}
 .ai-network-discovery-results .ai-network-list-row{align-items:center}
 @media(max-width:760px){.ai-network-discovery-center select[multiple]{min-height:92px}}
+
+.ai-network-discovery-select{display:flex;align-items:center;justify-content:center;min-width:32px}
+.ai-network-discovery-select input{width:18px;height:18px;accent-color:var(--ai-accent,#4267b2)}
+.ai-network-discovery-bulk>button{justify-self:start}
