@@ -118,7 +118,7 @@ test('profile style system assets are versioned and cached by the service worker
   assert.ok(worker.includes("'"+cssAsset+"'"),'profile style system is not precached');
   assert.ok(html.includes('/app.js?v=20261113-profile-style-library-10x9-3'));
   assert.ok(worker.includes("'/app.js?v=20261113-profile-style-library-10x9-3'"));
-  assert.ok(html.includes('/settings.js?v=20261113-profile-style-library-10x9-3'));
+  assert.ok(html.includes('/settings.js?v=20261112-profile-style-library-10x9-2'));
   assert.match(worker,/minglora-shell-v301-profile-style-10x9-3/);
 });
 
