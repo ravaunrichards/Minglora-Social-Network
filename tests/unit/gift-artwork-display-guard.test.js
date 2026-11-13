@@ -27,7 +27,7 @@ test("Gift Studio hides broken/non-canonical artwork and disables sending until 
   assert.ok(giftStudio.includes("state.unavailableArtwork"));
   assert.ok(giftStudio.includes("image.complete&&image.naturalWidth>0&&image.naturalHeight>0"));
   assert.ok(giftStudio.includes("Complete gift artwork could not be loaded"));
-  assert.ok(giftStudio.includes("aria-disabled='"+String(!ready)+"'"));
+  assert.ok(giftStudio.includes(`aria-disabled='"+String(!ready)+"'`));
   assert.ok(giftStudio.includes("disabled title='Loading complete gift artwork'"));
   assert.ok(giftStudio.includes("button.disabled=false"));
   assert.ok(giftStudio.includes("state.loadedArtwork"));
