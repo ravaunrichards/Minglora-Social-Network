@@ -13,7 +13,7 @@
     return data;
   }
   function categories(){
-    const available=new Set(state.gifts.map(g=>g.category));
+    const available=new Set(state.gifts.filter(g=>hasCanonicalGiftArtwork(g)&&!state.unavailableArtwork.has(String(g.code))).map(g=>g.category));
     return ["all",...Object.keys(labels).filter(k=>k!=="all"&&available.has(k))];
   }
   function categoryMarkup(){
@@ -201,7 +201,7 @@
     main.innerHTML="<section class='card empty-state'><h3>Loading Minglora Gifts</h3><p>Connecting to the complete gift collection…</p></section>";
     const results=await Promise.allSettled([request("/coins/catalog"),request("/coins/wallet"),request("/coins/promotional-gift-wallet")]);
     if(results[0].status!=="fulfilled")throw results[0].reason;
-    state.gifts=Array.isArray(results[0].value.gifts)?results[0].value.gifts.filter(hasCanonicalGiftArtwork):[];
+    state.gifts=Array.isArray(results[0].value.gifts)?results[0].value.gifts:[];
     await window.MingloraGiftFX?.loadCatalogMotionIndex?.();
     state.balance=results[1].status==="fulfilled"?Number(results[1].value.wallet?.balance_coins??0):null;state.promoWallet=results[2].status==="fulfilled"?(results[2].value.wallet||null):null;
     if(!state.selectedCode&&state.gifts.length)state.selectedCode=state.gifts[0].code;
