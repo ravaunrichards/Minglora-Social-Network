@@ -112,3 +112,15 @@
 .ai-network-checkbox-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .ai-network-checkbox-grid label{display:flex;align-items:center;gap:7px;font-size:.86rem}
 @media(max-width:760px){.ai-network-provider-columns{grid-template-columns:1fr}.ai-network-checkbox-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ai-network-provider-row{display:grid}.ai-network-provider-row .ai-network-inline-form{display:grid}}
+
+.ai-network-task-runtime{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding:12px;border:1px solid var(--ai-border,rgba(127,127,127,.24));border-radius:14px}
+.ai-network-task-runtime>div{display:grid;gap:5px;min-width:0}
+.ai-network-task-runtime span{font-size:.78rem;opacity:.75}
+.ai-network-task-row{align-items:flex-start;flex-wrap:wrap}
+.ai-network-task-row .ai-network-list-main{min-width:220px;flex:1}
+.ai-network-task-action{width:100%;display:flex;flex-wrap:wrap;align-items:end}
+.ai-network-task-action label{display:grid;gap:4px;flex:1 1 190px}
+.ai-network-task-action label span{font-size:.78rem;opacity:.75}
+.ai-network-task-action button{align-self:end}
+.ai-network-task-form .ai-network-note{margin:0 0 6px}
+@media(max-width:760px){.ai-network-task-runtime{grid-template-columns:repeat(2,minmax(0,1fr))}.ai-network-task-row{display:grid}.ai-network-task-action{display:grid}.ai-network-task-action label{min-width:0}}
