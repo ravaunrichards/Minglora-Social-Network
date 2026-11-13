@@ -34,10 +34,22 @@
 
 ## Validation state
 
-- Repository-source checks confirm that the motion-index URL is requested by `public/gift-effects.js` and pre-cached by `public/sw.js`, but the corresponding public directory/file is absent from the audited `main` tree.
-- The branch adds the index generator and unit coverage; CI is configured to generate the index before tests.
-- A full local project build/test was not run in this workspace: the repository is not mounted locally, and the available local Node version is 22 while this repo requires Node 24. GitHub Actions Node 24 CI is the appropriate build gate for this change.
-- This report must be updated from actual Actions results before describing the branch as build-verified or production-complete.
+GitHub Actions **Node 24 CI run #10698** completed successfully on 2026-11-13:
+
+- `npm ci`: passed.
+- `npm audit`: 0 reported dependency vulnerabilities.
+- `npm run check:repo`: passed after a narrow fix to allow the existing reference-folder `.gitkeep` alongside populated child directories. No reference marker was removed.
+- JavaScript syntax checks: passed, including the new motion-index generator.
+- Gift asset build: passed; generator produced/verified 1,748 SVG artworks and 1,748 GLTF models.
+- LIVE motion-index build: passed; 1,737 active gift profiles generated.
+- Sound Studio build: passed.
+- Automated tests: **949 passed, 0 failed**.
+- Separate Supabase Auth/OAuth acceptance job: passed.
+- Separate For You functional-navigation job: passed.
+
+The branch's committed motion-index JSON was also compared directly with the canonical catalogue-derived output: 1,737 unique active records, all with the canonical local SVG/GLTF paths, and a byte-for-byte deterministic match.
+
+A local build was not run in this workspace because the repository is not mounted locally and the available local Node version is 22 while the project requires Node 24. The successful GitHub Actions Node 24 run is the available full build/test verification for this change.
 
 ## Current status
 
