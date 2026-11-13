@@ -66,4 +66,8 @@ test('AI workspace uses real relational identity results and separate name input
   assert.match(ui, /payload\.name\s*=\s*\{[\s\S]*first_name:[\s\S]*last_name:/);
   assert.match(ui, /payload\.idempotency_key\s*=\s*form\.dataset\.idempotencyKey/);
   assert.match(ui, /Registered identities/);
+  assert.match(ui, /data-ai-form="identity-bulk"/);
+  assert.match(ui, /JSON\.parse\(value\('items'\)\)/);
+  assert.match(ui, /between 1 and 100 JSON objects/);
+  assert.match(ui, /request\(path, \{ method:/);
 });
