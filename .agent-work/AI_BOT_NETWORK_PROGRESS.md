@@ -32,19 +32,21 @@
 - [x] Added a relational identity registry, individual creation form and controlled 1–100 JSON bulk-import form to the existing AI Network workspace; it reads actual database results and labels AI/email state honestly.
 - [x] Added searchable country-of-origin/current-country inputs for 249 unique ISO 3166-1 country and territory codes, plus profile location, nationality, profession, interests, hobbies, skills, gender presentation, biography, introduction and primary-language inputs.
 - [x] Verified the relational GET response returns two language records (one primary) and separate origin/current location records in a rollback-only transaction.
+- [x] Verified bulk idempotency counters in rollback-only testing: first submission reports 1 created; identical retry reports 1 reused, 0 created and 0 failed.
+- [x] Selectively reconciled the runtime Edge Function source with current `main`; removing only the added AI handler and AI collection group produces an exact match to current `main`, preserving newer video playlist/channel runtime entries.
 - [x] Added static regression tests at `tests/unit/ai-network-relational.test.js` and focused GitHub Actions workflow `.github/workflows/ai-network-checks.yml`.
 - [x] Verified migration/function behavior in a transaction that was explicitly rolled back: 15 categories, create/get/list, separated names, gender/profile, retry reuse and 1/1 bulk create with zero failures.
 - [x] Verified production remained unchanged after rollback: 0 persisted identities, 0 migration indexes and no deployed RPC function.
 - [x] Verified source-level JavaScript syntax and seven focused static regression checks.
 - [ ] Apply the additive SQL migration to production after migration review/approval; not deployed by this checkpoint.
-- [ ] Update/deploy the production runtime Edge Function after reconciling against its current deployed version; feature branch is 80 commits behind main, so the branch copy must not overwrite the newer runtime.
+- [ ] Deploy the reviewed RPC migration and the reconciled Edge Function source. Production still runs `minglora-runtime-state` version 112; deployment has not occurred.
 - [ ] Verify live authenticated HTTP create/list/get/bulk flows and database rows after the two deployment steps.
 - [ ] GitHub Actions run status is not yet confirmed; the latest combined commit status returned no checks.
 - [ ] Full profile editing/media uploads, global discovery filters and saved discovery groups, following workflows, provider assignment workflows and remaining Phase 2 capabilities are still unfinished.
 
 ## Deployment safety boundary
 
-The relational migration and Edge Function changes are committed only to `feat/minglora-ai-bot-network-core`. The production Supabase schema and deployed Edge Function were not changed. Keep provider execution disabled until provider account/model health, secret custody, budgets and the execution adapter are independently verified. Do not merge this branch wholesale: it diverges from `main` (41 commits ahead and 80 behind at this checkpoint).
+The relational migration, authenticated Node API, AI workspace and reconciled Edge Function changes are committed only to `feat/minglora-ai-bot-network-core`. The production Supabase schema and deployed Edge Function were not changed. Keep provider execution disabled until provider account/model health, secret custody, budgets and the execution adapter are independently verified. Do not merge this branch wholesale: it diverges from `main` (56 commits ahead and 80 behind at the latest checkpoint). The Edge Function source was selectively synchronized with `main`, but the rest of the feature branch remains divergent.
 
 ## Verified implementation so far
 
