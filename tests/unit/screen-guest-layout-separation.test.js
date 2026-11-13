@@ -56,7 +56,7 @@ test('MeetWave screen and guest registries are disjoint and exact',()=>{
   const screen=meetwave.match(/const MEETING_SCREEN_LAYOUTS = \{([^}]+)\}/);
   const guest=meetwave.match(/const MEETING_GUEST_LAYOUTS = \{([^}]+)\}/);
   assert.ok(screen&&guest);
-  assert.deepEqual([...screen[1].matchAll(/'([^']+)'\s*:/g)].map(match=>match[1]),seven);
+  assert.deepEqual([...screen[1].matchAll(/(?:'([^']+)'|(spotlight))\s*:/g)].map(match=>match[1]||match[2]),seven);
   assert.deepEqual([...guest[1].matchAll(/'([^']+)'\s*:/g)].map(match=>match[1]),two);
   assert.match(meetwave,/MEETWAVE_GUEST_LIMIT = 8/);
   assert.match(meetwave,/MEETWAVE_PARTICIPANT_LIMIT = MEETWAVE_GUEST_LIMIT \+ 1/);
