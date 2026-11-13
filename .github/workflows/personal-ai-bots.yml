@@ -22,6 +22,8 @@ on:
       - 'supabase/functions/minglora-runtime-state/index.ts'
       - 'backend/workers/README.md'
       - 'MINGLORA_RESUME.md'
+      - 'tests/postgres/**'
+      - 'scripts/test-ai-network-postgres.sh'
       - '.github/workflows/personal-ai-bots.yml'
   push:
     branches: [feat/personal-ai-bots-network-control-center]
@@ -84,3 +86,27 @@ jobs:
             tests/unit/personal-ai-bots-schema.test.js \
             tests/unit/personal-ai-bots-worker.test.js \
             tests/unit/personal-ai-bots-ui.test.js
+
+  ai-network-postgres:
+    name: AI Network PostgreSQL migrations
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: minglora_ai_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d minglora_ai_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - name: Checkout Minglora
+        uses: actions/checkout@v4
+      - name: Execute staged AI migrations in disposable PostgreSQL
+        env:
+          POSTGRES_CONTAINER: ${{ job.services.postgres.id }}
+        run: bash scripts/test-ai-network-postgres.sh
