@@ -54,3 +54,15 @@ assert.match(edge,/is_anonymous/);
 assert.match(migration,/as restrictive/);
 assert.match(migration,/auth\.jwt\(\)->>'is_anonymous'/);
 });
+
+test("Help Center administrators can edit, move, rename, and reorder existing subcategories",()=>{
+const js=read("public/help-center.js"),edge=read("supabase/functions/minglora-help-center/index.ts");
+assert.match(js,/data-hc-sub-edit/);
+assert.match(js,/name="subcategoryId"/);
+assert.match(js,/f\.elements\.subcategoryId\.value=x\.id/);
+assert.match(js,/f\.elements\.categoryId\.value=x\.categoryId/);
+assert.match(js,/f\.elements\.sortOrder\.value=Number\(x\.sortOrder\|\|0\)/);
+assert.match(js,/hc-sub-reset/);
+assert.match(edge,/const id=requiredText\(input\.subcategoryId,64\)/);
+assert.match(edge,/help_subcategories"\)\.update/);
+});
