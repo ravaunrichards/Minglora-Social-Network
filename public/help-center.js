@@ -119,7 +119,7 @@ async function openArticle(slug){
     $("#hc-breadcrumb").innerHTML='<button type="button" id="hc-breadcrumb-home">Help Center</button><span>›</span><button type="button" id="hc-breadcrumb-category">'+esc(a.category.title)+'</button><span>›</span><span>'+esc(a.title)+'</span>';
     $("#hc-related-wrap").hidden=!result.related.length;
     renderQuestionList("#hc-related-list",result.related,"No related questions have been published yet.");
-    $("#hc-bookmark-toggle").textContent="Save answer";
+    $("#hc-bookmark-toggle").textContent=state.bookmarks.some(row=>row.translation_id===a.translationId)?"Saved":"Save answer";
     $("#hc-feedback-message").textContent="";
     setContentMode("article");$("#hc-article-view").hidden=false;$("#hc-categories").hidden=true;
     $("#hc-directory-empty").hidden=true;$(".hc-discovery-grid").hidden=true;$("#hc-recent-section").hidden=true;
@@ -163,11 +163,11 @@ async function loadAdmin(){
   }catch(error){$("#hc-admin").hidden=true;if(error.status!==403)showError(error.message);}
 }
 function field(form,name){return form.elements.namedItem(name);}
-function resetArticleForm(){const form=$("#hc-article-form");form.reset();form.articleId.value="";$("#hc-editor-heading").textContent="Create a Help article";$("#hc-editor-status").textContent="";updateSubcategoryChoices();}
+function resetArticleForm(){const form=$("#hc-article-form");form.reset();field(form,"articleId").value="";$("#hc-editor-heading").textContent="Create a Help article";$("#hc-editor-status").textContent="";updateSubcategoryChoices();}
 function updateSubcategoryChoices(selected=""){
-  const form=$("#hc-article-form"),categoryId=form.categoryId.value;
+  const form=$("#hc-article-form"),categoryId=field(form,"categoryId").value;
   const items=state.subcategories.filter(s=>s.categoryId===categoryId);
-  const select=form.subcategoryId;select.innerHTML='<option value="">No subcategory</option>'+items.map(s=>'<option value="'+esc(s.id)+'">'+esc(s.title)+'</option>').join("");select.value=selected;
+  const select=field(form,"subcategoryId");select.innerHTML='<option value="">No subcategory</option>'+items.map(s=>'<option value="'+esc(s.id)+'">'+esc(s.title)+'</option>').join("");select.value=selected;
 }
 function editArticle(id,locale){
   const row=(state.adminOverview?.articles||[]).find(x=>x.article_id===id&&x.locale===locale);if(!row)return;
@@ -192,7 +192,7 @@ function wireEvents(){
   $("#hc-breadcrumb").addEventListener("click",event=>{if(event.target.closest("#hc-breadcrumb-home")){history.pushState({},"","/help-center.html");setContentMode("home");$("#hc-categories").hidden=false;$(".hc-discovery-grid").hidden=false;$("#hc-recent-section").hidden=!state.recent.length;}else if(event.target.closest("#hc-breadcrumb-category")&&state.currentArticle?.article?.category?.slug){renderCategoryDetail(state.currentArticle.article.category.slug).catch(error=>showError(error.message));}});
   document.body.addEventListener("click",event=>{
     const article=event.target.closest("[data-open-article]");if(article){openArticle(article.dataset.openArticle);return;}
-    const category=event.target.closest("[data-edit-category]");if(category){const c=state.categories.find(x=>x.id===category.dataset.editCategory);if(!c)return;const f=$("#hc-category-form");f.categoryId.value=c.id;f.title.value=c.title;f.slug.value=c.slug;f.description.value=c.description||"";f.icon.value=c.icon;f.sortOrder.value=c.sortOrder||0;f.scrollIntoView({behavior:"smooth",block:"center"});return;}
+    const category=event.target.closest("[data-edit-category]");if(category){const c=state.categories.find(x=>x.id===category.dataset.editCategory);if(!c)return;const f=$("#hc-category-form");field(f,"categoryId").value=c.id;field(f,"title").value=c.title;field(f,"slug").value=c.slug;field(f,"description").value=c.description||"";field(f,"icon").value=c.icon;field(f,"sortOrder").value=c.sortOrder||0;f.scrollIntoView({behavior:"smooth",block:"center"});return;}
     const edit=event.target.closest("[data-edit-article]");if(edit){editArticle(edit.dataset.editArticle,edit.dataset.locale);return;}
     const action=event.target.closest("[data-transition]");if(action){performTransition(action);return;}
     const revisions=event.target.closest("[data-revisions]");if(revisions){loadRevisions(revisions.dataset.revisions);return;}
@@ -262,6 +262,7 @@ async function boot(){
     if(state.popular.length){$("#hc-popular-section").hidden=false;renderQuestionList("#hc-popular-list",state.popular,"No popular articles have been recorded.");}
     if(state.recent.length){$("#hc-recent-section").hidden=false;renderQuestionList("#hc-recent-list",state.recent,"No recently updated answers.");}
     $("#hc-directory-empty").hidden=Boolean(bootstrap.articleCount);
+    api("/bookmarks").then(data=>{state.bookmarks=data.bookmarks||[];if(state.currentArticle?.article)$("#hc-bookmark-toggle").textContent=state.bookmarks.some(row=>row.translation_id===state.currentArticle.article.translationId)?"Saved":"Save answer";}).catch(()=>{});
     if(bootstrap.adminAccess)await loadAdmin();
     const articleSlug=new URLSearchParams(location.search).get("article");
     if(articleSlug)await openArticle(articleSlug);
