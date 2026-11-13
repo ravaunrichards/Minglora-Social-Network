@@ -137,6 +137,7 @@ async function saveArticle(input:any, actor:string) {
   const categoryId=requiredText(input.categoryId,64);
   const subcategoryId=requiredText(input.subcategoryId,64)||null;
   const locale=requiredText(input.locale,16)||"en";
+  if(!/^[a-z]{2}(?:-[A-Z]{2})?$/.test(locale)) return {error:"Use a language code such as en or es-MX.",status:400};
   const source=requiredText(input.sourceReference,500);
   const terms=Array.isArray(input.searchTerms)?input.searchTerms.map((x:any)=>requiredText(x,80)).filter(Boolean).slice(0,30):[];
   if (!SLUG.test(slug)||!title||answer.trim().length<1||answer.length>100000||!UUID.test(categoryId))
@@ -371,7 +372,7 @@ Deno.serve(async (req:Request) => {
     if (action==="admin_category_save") {
       const id=requiredText(input.categoryId,64),slug=requiredText(input.slug,120).toLowerCase();
       const title=requiredText(input.title,120),description=requiredText(input.description,500);
-      const icon=requiredText(input.icon,30);
+      const icon=requiredText(input.icon,30),locale=requiredText(input.locale,16)||"en";
       if (!title||!SLUG.test(slug)||!ICONS.has(icon)) return fail(400,"Enter a valid category title, slug and icon.");
       let category:any;
       if (id) {
@@ -390,7 +391,8 @@ Deno.serve(async (req:Request) => {
     }
     if (action==="admin_subcategory_save") {
       const id=requiredText(input.subcategoryId,64),categoryId=requiredText(input.categoryId,64),slug=requiredText(input.slug,120).toLowerCase();
-      const title=requiredText(input.title,120),description=requiredText(input.description,500);
+      const title=requiredText(input.title,120),description=requiredText(input.description,500),locale=requiredText(input.locale,16)||"en";
+      if (!/^[a-z]{2}(?:-[A-Z]{2})?$/.test(locale)) return fail(400,"Use a language code such as en or es-MX.");
       if (!UUID.test(categoryId)||!title||!SLUG.test(slug)) return fail(400,"Enter a valid category, subcategory title and slug.");
       let sub:any;
       if (id) {
