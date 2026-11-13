@@ -3581,7 +3581,7 @@ activeLivePinnedComment=null;
           const locked=role!=="host"&&teamGift&&!liveFanClubState?.isMember;
           const favorite=liveGiftFavorites.has(code);
           const selected=liveGiftSelectedCode===code;
-          return "<article class='live-gift-card-shell "+(selected?"is-selected ":"")+(teamGift?"is-team-gift ":"")+(locked?"is-locked":"")+"'><button type='button' class='live-gift-pick-button' data-live-gift-select='"+esc(code)+"' aria-pressed='"+String(selected)+"' aria-label='Preview "+esc(gift.name||"gift")+"'><span class='live-gift-model-slot'>"+art+"</span><strong>"+esc(gift.name||"Gift")+(teamGift?" ♥":"")+"</strong><small>"+Number(gift.coin_price||0).toLocaleString()+" Coins</small></button><button type='button' class='live-gift-favorite-toggle "+(favorite?"is-favorite":"")+"' data-live-gift-favorite='"+esc(code)+"' aria-pressed='"+String(favorite)+"' aria-label='"+(favorite?"Remove ":"Add ")+esc(gift.name||"gift")+" "+(favorite?"from":"to")+" favourites'>"+(favorite?"★":"☆")+"</button>"+(locked?"<span class='live-gift-lock-label'>Fan Club</span>":"")+"</article>";
+          return "<article class='live-gift-card-shell "+(selected?"is-selected ":"")+(teamGift?"is-team-gift ":"")+(locked?"is-locked":"")+"'><button type='button' class='live-gift-pick-button' disabled aria-disabled='true' data-live-gift-select='"+esc(code)+"' aria-pressed='"+String(selected)+"' aria-label='Preview "+esc(gift.name||"gift")+"'><span class='live-gift-model-slot'>"+art+"</span><strong>"+esc(gift.name||"Gift")+(teamGift?" ♥":"")+"</strong><small>"+Number(gift.coin_price||0).toLocaleString()+" Coins</small></button><button type='button' class='live-gift-favorite-toggle "+(favorite?"is-favorite":"")+"' data-live-gift-favorite='"+esc(code)+"' aria-pressed='"+String(favorite)+"' aria-label='"+(favorite?"Remove ":"Add ")+esc(gift.name||"gift")+" "+(favorite?"from":"to")+" favourites'>"+(favorite?"★":"☆")+"</button>"+(locked?"<span class='live-gift-lock-label'>Fan Club</span>":"")+"</article>";
         }).join(""):"<div class='live-gift-empty'><strong>"+(liveGiftScope==="favorites"?"No favourite gifts yet":liveGiftScope==="recent"?"No recently sent gifts yet":"No gifts match your filters")+"</strong><p>"+(liveGiftScope==="favorites"?"Tap the star on any gift to save it here.":liveGiftScope==="recent"?"Gifts you send in LIVE will appear here for quick access.":"Try another name, category, or coin amount.")+"</p></div>";
         if(liveGiftMore){liveGiftMore.hidden=shown.length>=filtered.length;liveGiftMore.textContent="Show more gifts · "+Math.max(0,filtered.length-shown.length).toLocaleString()+" remaining";}
         updateLiveGiftPreview();
@@ -3623,6 +3623,12 @@ activeLivePinnedComment=null;
         const button=event.target.closest("[data-live-gift-category]");if(!button)return;
         liveGiftCategory=button.dataset.liveGiftCategory||"all";liveGiftVisible=48;drawLiveGiftGrid();
       });
+      giftGrid?.addEventListener("load",event=>{
+        const image=event.target;
+        if(!image?.matches?.("[data-live-gift-artwork-code]"))return;
+        const button=image.closest("[data-live-gift-select]");
+        if(image.naturalWidth>0&&image.naturalHeight>0&&button){button.disabled=false;button.setAttribute("aria-disabled","false");}
+      },true);
       giftGrid?.addEventListener("error",event=>{
         const image=event.target;
         if(!image?.matches?.("[data-live-gift-artwork-code]"))return;
