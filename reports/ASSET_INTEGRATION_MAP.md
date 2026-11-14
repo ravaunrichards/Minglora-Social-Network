@@ -67,3 +67,10 @@ No prices, balances, transactions, account state, LiveKit credentials, or existi
 - `public/sw.js` uses shell cache v306 and pre-caches the manifest and all 12 SVG files for offline tools navigation.
 - `tests/unit/live-tool-shortcut-icons.test.js` validates artwork files, safe icon mapping, panel targets, accessibility state, responsive drawer styling and service-worker coverage.
 - The icons are original Minglora outline navigation graphics; design review and licensing metadata remain explicitly pending. They are not premium 3D gift artwork.
+
+## LIVE transparent gift-picker icons
+
+- The canonical gift generator emits one separate `<code>-icon.svg` subject variant per catalogue row while retaining the existing full `<code>.svg` artwork and GLTF model.
+- The LIVE gift picker renders the transparent subject variant in its compact gift grid. It uses the validated canonical gift code, lazy image loading and a delegated image-error handler that tries the existing full artwork before showing an accessible unavailable state.
+- The build stamp and generated LIVE asset manifest record icon count, path, dimensions, SHA-256, provenance, component usage and transparent-background declaration for every catalogue row.
+- These are UI-sized subject renderings derived from Minglora vectors, not a claim of bespoke premium art direction or rights approval. Human visual review and rights clearance remain open.
