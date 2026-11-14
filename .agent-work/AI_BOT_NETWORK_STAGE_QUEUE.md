@@ -5,7 +5,7 @@ This is the current source of truth; older checkpoint paragraphs below are retai
 | Stage | Current status | Evidence / remaining exit criteria |
 |---|---|---|
 | 1. Relational foundation and private runtime | **COMPLETED** | 33/33 AI tables have RLS; browser roles have no `ai_network` schema access; 15 categories and service-only RPC boundary verified. |
-| 2. AI identities and profiles | **PARTIAL — CURRENT** | Identity create/read/bulk foundation, separate names, live profile registry/edit, language/location relations, version/audit and focused CI 81/81. Signed-in UI/API, durable owner-approved create/edit and media/device tests remain. |
+| 2. AI identities and profiles | **PARTIAL — CURRENT** | Identity create/read/bulk foundation, separate names, live profile registry/edit, language/location relations, version/audit and deployed owner-scoped media routes/RPC. PR #284 Chromium workflow #1 passed: 15 categories, 249 country/territory options, 3 populations, 5 genders, create/edit, combined filters, bulk follow, saved groups and 4 viewport checks. | Signed-in owner UI/API create/get/edit/upload, actual production-row verification, Storage upload and mobile/desktop owner-session acceptance remain; browser suite used local in-memory API fixtures only. |
 | 3. Discovery and following | **PARTIAL** | Combined filters, follow/unfollow, bulk duplicate suppression, privacy approval and saved-group lifecycle passed rollback tests. UI/device acceptance remains. |
 | 4. Corporate governance and HR | **PARTIAL** | 20 departments/position templates, application review, gated appointment, employment transitions, management hierarchy, transfer/history and owner isolation passed rollback tests. Additional HR and UI/device work remains. |
 | 5. Supervision, task queue and teams | **PARTIAL — EXECUTION PAUSED** | Approval queue, observation-only mode, idempotency and cancellation tested. Worker claims are rejected; team orchestration remains. |
@@ -13,7 +13,7 @@ This is the current source of truth; older checkpoint paragraphs below are retai
 | 7. Providers, memory and finance | **PARTIAL — METADATA ONLY** | Provider account/model metadata and pending assignments tested; no real provider inference, inbox, secret-manager adapter or cost reconciliation. |
 | 8. Admin/security/analytics | **PARTIAL** | RLS, owner-scoped RPCs, version/audit and runtime pause verified; full centers and operational analytics remain. |
 | 9. Ten-billion scale | **NOT STARTED** | No 10-billion registration or concurrent-execution benchmark. |
-| 10. Release/device acceptance | **PARTIAL** | PR checks passed; Edge v117 ACTIVE; Render deployment LIVE and startup healthy. Public HTTP/browser/device acceptance remains. |
+| 10. Release/device acceptance | **PARTIAL** | PR #284 browser acceptance, full Minglora CI #11343 and layout matrix #152 passed; Edge v118 ACTIVE; latest Render deployment `dep-dbruhflbedkc73bj2tbg` is LIVE on main `bf7965d5062078a898e84e974e2f77cd51aa4b89`. | Authenticated production browser/device acceptance, public HTTP acceptance with owner session, and recovery drills remain. |
 
 ### Live evidence and hard safety gates
 - Main merge commit: `2f736e7145e62cf8c2df786d26ac48a61fb4b355`; PR #280 merged normally.
@@ -27,7 +27,7 @@ This is the current source of truth; older checkpoint paragraphs below are retai
 - No fake identities, human Auth accounts, provisioned inboxes, connected-provider claims or fabricated capacity metrics.
 - Public URL access through the external browser and signed-in UI/device tests remain unverified.
 
-**Conservative progress: 1/10 full stage gates complete = 10%.** Stage 2 is current; partial stages do not count complete.
+**Conservative progress: 1/10 full stage gates complete = 10%.** Stage 2 is current; partial stages do not count complete. PR #284 adds local-fixture browser coverage only and does not close Stage 2.
 
 ## AI-NETWORK-00 — Scope and identity recovery
 **Status:** COMPLETED
