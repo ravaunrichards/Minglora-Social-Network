@@ -243,6 +243,28 @@ test("Hibiscus uses an individually authored layered tropical-flower GLTF sculpt
   assert.ok(model.accessors?.filter(accessor => accessor.type === "VEC3").length >= 30, "Hibiscus should expose mesh position and normal accessors");
 });
 
+
+test("Djembe Master uses an individually authored, self-contained percussion-instrument GLTF", () => {
+  const djembe = gifts.find(gift => gift.code === "djembe-master-1v3jzkm");
+  assert.ok(djembe, "Djembe Master must remain in the canonical gift catalogue");
+  assert.equal(djembe.category, "music");
+  const model = JSON.parse(readFileSync(path.join(assetRoot, djembe.code + ".gltf"), "utf8"));
+  assert.equal(model.asset?.version, "2.0");
+  assert.equal(model.asset?.extras?.mingloraAssetId, "gift-djembe-3d-v1");
+  assert.equal(model.asset?.extras?.source, "assets/3d-assets/gift-models/djembe-model.mjs");
+  assert.match(model.asset?.extras?.artDirection || "", /mahogany shell.*hide drumhead.*diamond lacing/i);
+  assert.match(model.asset?.extras?.reviewStatus || "", /design-review-pending/);
+  assert.ok(model.meshes?.[0]?.primitives?.length >= 60, "Djembe should expose shell, hide, rim, rope and carved detail meshes");
+  assert.ok(model.materials?.some(material => material.name.includes("mahogany shell")));
+  assert.ok(model.materials?.some(material => material.name.includes("drumhead")));
+  assert.ok(model.materials?.some(material => material.name.includes("tension rope")));
+  assert.ok(model.materials?.some(material => material.name.includes("diamond cross-lacing")));
+  assert.ok(model.buffers?.[0]?.uri.startsWith("data:application/octet-stream;base64,"), "Djembe must be self-contained for the existing model viewer");
+  assert.ok(model.accessors?.filter(accessor => accessor.type === "VEC3").length >= 120, "Djembe must expose mesh positions and normals for its separately addressable parts");
+  const svg = readFileSync(path.join(assetRoot, djembe.code + ".svg"), "utf8");
+  assert.ok(svg.includes('data-gift-artwork="djembe-master-original-v1"'), "Djembe should use its subject-specific transparent vector artwork");
+});
+
 test("Rose uses an individually authored layered GLTF botanical sculpture", () => {
   const rose = gifts.find(gift => gift.name === "Rose");
   assert.ok(rose, "Rose must remain in the canonical catalogue");
