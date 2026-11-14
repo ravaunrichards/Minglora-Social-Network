@@ -244,3 +244,10 @@ The glyph overlay and unused emoji lookup were removed from `scripts/generate-mi
 - Added exact-code `maraca-rhythm` Web Animations choreography and locally synthesized shaker bursts/tonal accents; sound opt-out and reduced-motion handling remain.
 - Added sound manifest provenance, cache version, source inventory and regression assertions. CI/build results pending.
 - The existing music category, active state and 349-Coin value remain unchanged. No database offering, transaction, wallet, earnings or payout modified. Human design/rights acceptance and physical-device QA remain pending; audio is synthesized, not mastered.
+
+
+## Bespoke LIVE motion-index parity checkpoint — 2026-11-14
+
+- Added exact code-to-preset mapping in `scripts/generate-live-gift-motion-index.mjs` for Djembe Master, Palm Breeze, Gamer Otter, LIVE Island, Crystal Crown, Phoenix and Beach Maracas.
+- Generated motion-index and asset-manifest motion preset fields now align with the actual exact-code runtime choreography.
+- Regression tests verify each mapping in both motion index and manifest while canonical catalogue identity, source animation key and sound preset fields remain intact.
