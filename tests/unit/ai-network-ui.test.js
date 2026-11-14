@@ -169,3 +169,39 @@ test('delegated tasks are revalidated when approval or worker status changes', (
   assert.ok(guard.includes('revoke all on function ai_network.enforce_delegated_task_authority() from public,anon,authenticated'));
   assert.ok(guard.includes('grant execute on function ai_network.enforce_delegated_task_authority() to service_role'));
 });
+
+test('AI schedules use the owner-scoped relational registry and pause before any execution', () => {
+  const migration = read('supabase/migrations/20261114144000_minglora_ai_durable_schedules.sql');
+  const runtime = read('supabase/functions/minglora-runtime-state/index.ts');
+  assert.ok(migration.includes('create table if not exists ai_network.ai_task_schedules'));
+  assert.ok(migration.includes('create table if not exists ai_network.ai_task_schedule_events'));
+  assert.ok(migration.includes('first_run_at timestamptz not null'));
+  assert.ok(migration.includes('requires_human_approval boolean not null default true check (requires_human_approval=true)'));
+  assert.ok(migration.includes('ai_disclosure_required boolean not null default true check (ai_disclosure_required=true)'));
+  assert.ok(migration.includes("schedule_status text not null default 'paused'"));
+  assert.ok(migration.includes("if not found or coalesce(v_controls.global_paused,true)"));
+  assert.ok(migration.includes("status='pending_approval'"));
+  assert.ok(migration.includes("values(v_schedule.owner_user_id,v_task_id,'requested')"));
+  assert.ok(migration.includes("cron.schedule("));
+  assert.ok(migration.includes("'* * * * *'"));
+  assert.ok(migration.includes("SET ROLE service_role"));
+  assert.ok(migration.includes("grant execute on function ai_network.dispatch_due_task_schedules() to service_role"));
+  assert.ok(runtime.includes('"ai_schedule_command"'));
+  assert.ok(runtime.includes('admin.rpc("minglora_ai_schedule_command"'));
+  assert.ok(!runtime.includes('"dispatch_due_schedules"'));
+});
+
+test('AI schedule APIs and UI preserve identity linkage, idempotency and approval-only status controls', () => {
+  assert.ok(server.includes("const runAIScheduleCommand = async"));
+  assert.ok(server.includes("runAIScheduleCommand('list_schedules')"));
+  assert.ok(server.includes("runAIScheduleCommand('create_schedule'"));
+  assert.ok(server.includes("runAIScheduleCommand('set_schedule_status'"));
+  assert.ok(server.includes("bot?.identityId"));
+  assert.ok(server.includes("snapshot.schedules = [...relationalSchedules, ...legacySchedules]"));
+  assert.ok(ui.includes("kind === 'schedule'"));
+  assert.ok(ui.includes("payload.idempotencyKey = form.dataset.idempotencyKey"));
+  assert.ok(ui.includes("data.getAll('scheduleWeekdays').map(value => Number(value))"));
+  assert.ok(ui.includes("data-ai-action=\"schedule-status\""));
+  assert.ok(ui.includes("action === 'schedule-status'"));
+  assert.ok(ui.includes("draft tasks to the owner approval queue"));
+});

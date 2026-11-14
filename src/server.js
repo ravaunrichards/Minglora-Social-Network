@@ -1962,6 +1962,32 @@ async function route(req, res) {
         }
       };
 
+      const runAIScheduleCommand = async (aiAction, payload = {}) => {
+        if (!['create_schedule','list_schedules','set_schedule_status'].includes(aiAction)) {
+          throw Object.assign(new Error('Unsupported AI schedule command.'), { status: 400 });
+        }
+        if (!isSupabasePersistence()) {
+          throw Object.assign(new Error('Durable AI schedules require Minglora Supabase persistence.'), { status: 503 });
+        }
+        try {
+          const response = await requestSupabaseState('ai_schedule_command', {
+            actorUserId: user.id,
+            aiAction,
+            payload
+          });
+          if (response?.skipped) {
+            throw Object.assign(new Error('Durable AI schedules are unavailable in local-only persistence mode.'), { status: 503 });
+          }
+          return response?.result;
+        } catch (error) {
+          const message = String(error?.message || '');
+          if (/unsupported action|unsupported AI schedule command|function .*minglora_ai_schedule_command.*does not exist|could not find the function|schema cache/i.test(message)) {
+            throw Object.assign(new Error('The Minglora durable schedule migration and private runtime gateway must be deployed before this operation is available. No schedule data was changed.'), { status: 503 });
+          }
+          throw error;
+        }
+      };
+
       const runAITeamCommand = async (aiAction, payload = {}) => {
         const adminOnly = [
           'create_delegation_grant','list_delegation_grants','revoke_delegation_grant',
@@ -2322,6 +2348,14 @@ async function route(req, res) {
                 String(saved.id || saved.team_id) === String(team.id || team.team_id)))
             : [];
           snapshot.teams = [...relationalTeams, ...legacyTeams];
+          const scheduleRegistry = await runAIScheduleCommand('list_schedules');
+          const relationalSchedules = Array.isArray(scheduleRegistry?.schedules) ? scheduleRegistry.schedules : [];
+          const legacySchedules = Array.isArray(snapshot.schedules)
+            ? snapshot.schedules.filter(schedule => !relationalSchedules.some(saved =>
+                String(saved.id || saved.scheduleId || saved.schedule_id) === String(schedule.id || schedule.scheduleId || schedule.schedule_id)))
+            : [];
+          snapshot.schedules = [...relationalSchedules, ...legacySchedules];
+          if (snapshot.performance) snapshot.performance.scheduleCount = snapshot.schedules.length;
         }
         if (!settingsExisted) await saveStore();
         return json(res, 200, snapshot);
@@ -2440,8 +2474,44 @@ async function route(req, res) {
           throw error;
         }
       }
+      if (method === 'GET' && sub === 'schedules') {
+        const result = await runAIScheduleCommand('list_schedules');
+        return json(res, 200, result || { schedules: [] });
+      }
       if (method === 'POST' && sub === 'schedules') {
-        const schedule = createAIBotSchedule(db, user.id, await body(req, 12000));
+        const input = await body(req, 16000);
+        if (!input || typeof input !== 'object' || Array.isArray(input)) {
+          throw Object.assign(new Error('AI schedule details must be a JSON object.'), { status: 400 });
+        }
+        if (isSupabasePersistence()) {
+          const bot = (db.aiBots || []).find(item => item.id === String(input.botId || '') && item.ownerId === user.id);
+          if (!bot?.identityId) {
+            throw Object.assign(new Error('Choose an AI bot linked to a verified Minglora AI identity before creating a durable schedule.'), { status: 409 });
+          }
+          const runAt = new Date(String(input.runAt || ''));
+          if (!Number.isFinite(runAt.getTime())) {
+            throw Object.assign(new Error('Choose a valid schedule start date and time.'), { status: 400 });
+          }
+          const result = await runAIScheduleCommand('create_schedule', {
+            identity_id: bot.identityId,
+            bot_id: bot.id,
+            task_type: String(input.taskType || ''),
+            action_class: String(input.actionClass || 'content'),
+            task_title: String(input.taskTitle || ('Scheduled ' + String(input.taskType || 'AI task').replaceAll('_', ' '))),
+            task_payload: input.taskPayload && typeof input.taskPayload === 'object' && !Array.isArray(input.taskPayload) ? input.taskPayload : {},
+            cadence: String(input.cadence || ''),
+            time_zone: String(input.timezone || 'UTC'),
+            run_at: runAt.toISOString(),
+            weekdays: Array.isArray(input.weekdays) ? input.weekdays : [],
+            token_budget: Number.isFinite(Number(input.tokenBudget)) ? Number(input.tokenBudget) : 0,
+            cost_limit_usd: Number.isFinite(Number(input.costLimitUsd)) ? Number(input.costLimitUsd) : 0,
+            max_occurrences: input.maxOccurrences === undefined || input.maxOccurrences === null || input.maxOccurrences === ''
+              ? null : Number(input.maxOccurrences),
+            idempotency_key: String(input.idempotencyKey || '')
+          });
+          return json(res, result?.reused ? 200 : 201, result || {});
+        }
+        const schedule = createAIBotSchedule(db, user.id, input);
         await saveStore();
         return json(res, 201, { schedule });
       }
@@ -2458,6 +2528,15 @@ async function route(req, res) {
       }
       if (method === 'PATCH' && parts[0] === 'schedules' && parts[2] === 'status' && parts.length === 3) {
         const input = await body(req, 4000);
+        const legacy = (db.aiBotSchedules || []).some(item => item.id === parts[1] && item.ownerId === user.id);
+        if (!legacy && isSupabasePersistence()) {
+          const result = await runAIScheduleCommand('set_schedule_status', {
+            schedule_id: parts[1],
+            status: String(input.status || ''),
+            reason: String(input.reason || 'Updated by the signed-in Minglora account.')
+          });
+          return json(res, 200, result || {});
+        }
         const schedule = updateAIBotScheduleStatus(db, user.id, parts[1], input.status, { providerConfigured: providerReady });
         await saveStore();
         return json(res, 200, { schedule });

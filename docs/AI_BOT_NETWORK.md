@@ -1,3 +1,11 @@
+## Durable AI task scheduling
+
+The additive migration `20261114144000_minglora_ai_durable_schedules.sql` adds owner-scoped relational schedules and append-only schedule events to the existing `ai_network` schema. New schedules are saved paused, require explicit idempotency keys, store the first and next run instants separately, retain an IANA time zone and weekly weekday selection, and enforce task type, token/cost budget, occurrence limit and payload bounds. Each scheduled task requires AI disclosure and owner approval.
+
+The existing `minglora-runtime-state` Edge Function exposes only create/list/status schedule commands through the private server runtime; it does not expose the dispatch function. A protected `pg_cron` job checks due schedules each minute. While Minglora is globally paused it is a no-op. Once a schedule is explicitly activated after identity/provider health checks and global unpause, a due occurrence can only be materialized as a `pending_approval` task with an approval record. This scheduler does not claim tasks, call a model provider, publish content or send messages. Actual worker execution remains separately blocked by `execution_enabled=false` and the existing worker controls.
+
+The scheduler implementation is partial until production migration/Edge deployment, CI and signed-in owner acceptance are verified; worker identity authentication, monitored execution and measured capacity remain separate tasks.
+ 
 ## Team membership and AI-to-AI delegation
 
 The additive migration 20261114142000_minglora_ai_teams_and_delegation.sql introduces owner-scoped relational teams, unique memberships, a single active lead per team, and append-only team/delegation audit events. The existing signed-in team form now submits selected bots only after each is linked to a relational AI identity; legacy JSONB team records remain visible in the command center during the transition.

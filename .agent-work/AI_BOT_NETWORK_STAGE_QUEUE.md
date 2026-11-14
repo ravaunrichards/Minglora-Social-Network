@@ -1,3 +1,13 @@
+## Durable AI scheduling implementation checkpoint — 2026-11-14
+
+- Feature branch: feat/minglora-ai-durable-scheduler (based on main after PR #307). Adds migration 20261114144000_minglora_ai_durable_schedules.sql with owner-scoped ai_task_schedules and ai_task_schedule_events; RLS and service-role-only privileges; SECURITY INVOKER RPC with empty search_path; cron dispatcher guarded by global pause.
+- The Edge Function source now allowlists ai_schedule_command and calls minglora_ai_schedule_command only for create/list/status; dispatch is not exposed to browser clients. Main server integration resolves the selected bot to its existing owner-scoped relational AI identity, routes schedules through the durable Supabase RPC, merges legacy schedule rows for compatibility and adds GET/list/status endpoints. The schedule UI supports once/daily/weekly cadence, IANA time zone, weekly weekdays, retry-safe idempotency, pause/cancel/activate controls and owner-approval notice.
+- Rollback-only tests passed: DDL compiles; create a temporary identity and paused schedule, default budgets remain zero, owner approval and AI disclosure are required, schedule list/retry are idempotent, non-array weekday input is rejected, activation is blocked under global pause and dispatcher returns a zero-work paused result. All test writes were rolled back.
+- Live migration and Edge v123 deployment have been initiated; verify live table/RLS/grants/cron contents and deployed gateway source before treating those as complete. Do not enable schedule execution while global_paused=true. Worker execution remains execution_enabled=false and max_concurrent_workers=0. No retained schedule/test data or provider call is authorized.
+- Task 10 advances from NOT COMPLETE to PARTIAL / IMPLEMENTATION IN PROGRESS only after production verification; worker identity/authentication, provider connection, live owner browser acceptance, worker start/recovery, monitoring and measured load capacity remain outstanding. Overall accepted task count remains 2/19 (10.53%).
+
+---
+
 ## Latest verified AI team, delegation and owner-console checkpoint — 2026-11-14
 
 - PR #306 merged as edc319b85f14eccd92b19157065cc3aa748180d0. PR #307 merged as d1e5a00ce87d0a81c6a5d793babd5a5f93631094. PR #307 had nine successful checks: AI Network TypeScript transpile/syntax/regression, general tests, For You navigation, Supabase Auth acceptance, AI Network Playwright browser fixtures, and the LIVE/MeetWave layout matrix.
