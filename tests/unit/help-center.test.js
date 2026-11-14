@@ -77,3 +77,57 @@ assert.match(edge,/unansweredSubcategories:/);
 assert.match(js,/publishedArticleCount/);
 assert.match(js,/subcategories do not yet have a published answer/);
 });
+
+test("Help Center instructional media upload is restricted and validated",()=>{
+const edge=read("supabase/functions/minglora-help-center/index.ts");
+const server=read("src/server.js");
+const migration=read("supabase/migrations/20261114000100_minglora_help_center_media_storage.sql");
+const js=read("public/help-center.js");
+assert.match(edge,/action==="admin_media_upload"/);
+assert.match(edge,/managementActions\.add\("admin_media_upload"|admin_media_upload/);
+assert.match(edge,/help-center-media/);
+assert.match(edge,/bytes\.length>5\*1024\*1024/);
+assert.match(edge,/isJpeg|isPng|isWebp|isAvif/);
+assert.match(server,/\/api\/help-center\/admin\/media/);
+assert.match(server,/help-center\/admin\/media'\?8_000_000/);
+assert.match(migration,/file_size_limit/);
+assert.match(migration,/image\/jpeg/);
+assert.match(js,/accept="image\/jpeg,image\/png,image\/webp,image\/avif"/);
+assert.match(js,/Watch video demonstration/);
+});
+
+test("Help Center article keywords, ordering, translations, unpublishing and review coverage are managed",()=>{
+const edge=read("supabase/functions/minglora-help-center/index.ts");
+const js=read("public/help-center.js");
+const html=read("public/help-center.html");
+const orderMigration=read("supabase/migrations/20261114000200_minglora_help_center_article_order.sql");
+assert.match(edge,/from\("help_keywords"\)\.delete\(\)/);
+assert.match(edge,/from\("help_keywords"\)\.insert/);
+assert.match(edge,/sort_order:Math\.trunc\(Number\(input\.sortOrder\)/);
+assert.match(edge,/unpublish:"approved"/);
+assert.match(edge,/transition==="unpublish"/);
+assert.match(js,/createAdminTranslation/);
+assert.match(js,/\["unpublish","Unpublish"\]/);
+assert.match(js,/renderAdminQuality/);
+assert.match(html,/Content quality &amp; translations|Content quality & translations/);
+assert.match(orderMigration,/case when qi\.q is null then a\.sort_order/);
+});
+
+test("Help Center duplicate merge keeps history and is limited to authorized editors",()=>{
+const edge=read("supabase/functions/minglora-help-center/index.ts");
+const server=read("src/server.js");
+const js=read("public/help-center.js");
+const migration=read("supabase/migrations/20261114000300_minglora_help_center_safe_article_merge.sql");
+assert.match(edge,/admin_merge_articles/);
+assert.match(edge,/admin\.rpc\("help_center_merge_articles"/);
+assert.match(edge,/admin_merge_articles/);
+assert.match(server,/\/api\/help-center\/admin\/merge/);
+assert.match(js,/Merge duplicate questions/);
+assert.match(js,/Merge duplicate safely/);
+assert.match(js,/This operation cannot be automatically undone/);
+assert.match(migration,/set article_id = p_target_article_id/);
+assert.match(migration,/update public\.help_articles[\s\S]*is_active = false/);
+assert.doesNotMatch(migration,/delete from public\.help_articles/i);
+assert.match(migration,/revoke all on function public\.help_center_merge_articles/);
+assert.match(migration,/to service_role/);
+});
