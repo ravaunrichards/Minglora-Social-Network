@@ -26,6 +26,7 @@ test('category administration uses private service-role-only RPC and audit table
 test('category keys stay stable and categories are deactivated rather than deleted', () => {
   assert.match(migration, /category_key text not null references ai_network\.ai_categories\(category_key\).*on delete restrict/i);
   assert.match(migration, /At least one AI category must remain active/i);
+  assert.match(migration, /lock table ai_network\.ai_categories in share row exclusive mode/i);
   assert.doesNotMatch(migration, /delete\s+from\s+ai_network\.ai_categories/i);
   assert.match(ui, /Category keys remain stable because existing AI identities reference them/i);
 });
