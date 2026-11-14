@@ -1393,6 +1393,17 @@
       path = '/provider-assignments/' + encodeURIComponent(assignmentId) + '/status';
       payload.status = value('status');
       payload.reason = value('reason');
+    } else if (kind === 'team') {
+      const botIds = data.getAll('teamBotIds').map(item => String(item).trim()).filter(Boolean);
+      if (botIds.length < 1 || botIds.length > 20) {
+        throw new Error('Choose between 1 and 20 AI bots for the team.');
+      }
+      path = '/teams';
+      form.dataset.idempotencyKey = form.dataset.idempotencyKey || window.crypto.randomUUID();
+      payload.name = value('name');
+      payload.description = value('description');
+      payload.botIds = botIds;
+      payload.idempotencyKey = form.dataset.idempotencyKey;
     } else if (kind === 'organization') {
       path = '/organizations';
       form.dataset.idempotencyKey = form.dataset.idempotencyKey || window.crypto.randomUUID();
@@ -1556,7 +1567,7 @@
       const categoryKeyInput = form.querySelector('[name="categoryKey"]');
       if (categoryKeyInput) categoryKeyInput.readOnly = false;
     }
-    if (['identity','bot','organization','vacancy','application','appointment','employment-transfer','task-create'].includes(kind)) form.dataset.idempotencyKey = window.crypto.randomUUID();
+    if (['identity','bot','team','organization','vacancy','application','appointment','employment-transfer','task-create'].includes(kind)) form.dataset.idempotencyKey = window.crypto.randomUUID();
     const categoryActionLabels = { created:'created', updated:'updated', activated:'reactivated', deactivated:'deactivated' };
     const message = kind === 'memory-edit'
       ? 'AI memory entry updated; its retention expiry was refreshed.'
@@ -1568,6 +1579,8 @@
       ? 'AI category ' + (categoryActionLabels[result.action] || 'changes saved') + ' and an audit event recorded.'
       : kind === 'bot'
         ? 'AI bot saved and linked to relational identity ' + String(result.identity?.identity?.identity_id || '') + '. The identity is private and execution remains paused.'
+      : kind === 'team'
+        ? 'AI team saved to the private relational registry. Memberships are owner-scoped and coordination remains human-reviewed.'
       : kind === 'identity-edit' ? 'AI identity profile and name details updated with a new version and audit record.' + (uploadedMediaCount ? ' ' + uploadedMediaCount + ' AI profile image(s) uploaded, verified and attached.' : '')
       : kind === 'task-create'
       ? 'Task saved to the durable queue; approval policy comes from the selected AI identity.'

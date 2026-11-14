@@ -1962,6 +1962,45 @@ async function route(req, res) {
         }
       };
 
+      const runAITeamCommand = async (aiAction, payload = {}) => {
+        const adminOnly = [
+          'create_delegation_grant','list_delegation_grants','revoke_delegation_grant',
+          'pause_delegation_grant','reactivate_delegation_grant','delegate_task'
+        ];
+        if (adminOnly.includes(aiAction) && !isModerator(user, req)) {
+          throw Object.assign(
+            new Error('Only an authorized Minglora platform administrator with the required active session can manage AI delegation.'),
+            { status: 403 }
+          );
+        }
+        if (aiAction === 'create_team' && payload.population_scope === 'organizational' && !isModerator(user, req)) {
+          throw Object.assign(new Error('Only an authorized Minglora platform administrator can create organizational AI teams.'), { status: 403 });
+        }
+        if (!isSupabasePersistence()) {
+          throw Object.assign(new Error('AI teams and delegation require Minglora Supabase persistence.'), { status: 503 });
+        }
+        try {
+          const response = await requestSupabaseState('ai_team_command', {
+            actorUserId: user.id,
+            aiAction,
+            payload
+          });
+          if (response?.skipped) {
+            throw Object.assign(new Error('AI team records are unavailable in local-only persistence mode.'), { status: 503 });
+          }
+          return response?.result;
+        } catch (error) {
+          const message = String(error?.message || '');
+          if (/unsupported action|unsupported AI team command|function .*minglora_ai_team_command.*does not exist|could not find the function|schema cache/i.test(message)) {
+            throw Object.assign(
+              new Error('The Minglora AI team and delegation migration and private runtime gateway must be deployed before this operation is available. No team data was changed.'),
+              { status: 503 }
+            );
+          }
+          throw error;
+        }
+      };
+
       const runAIOrganizationCommand = async (aiAction, payload = {}) => {
         if (!isModerator(user, req)) {
           throw Object.assign(
@@ -1996,6 +2035,86 @@ async function route(req, res) {
           throw error;
         }
       };
+
+      if (method === 'GET' && sub === 'teams') {
+        const result = await runAITeamCommand('list_teams');
+        return json(res, 200, { teams: Array.isArray(result?.teams) ? result.teams : [] });
+      }
+      if (method === 'GET' && sub === 'delegations') {
+        const result = await runAITeamCommand('list_delegation_grants');
+        return json(res, 200, result || { delegation_grants: [] });
+      }
+      if (method === 'POST' && sub === 'teams') {
+        const input = await body(req, 16000);
+        if (!input || typeof input !== 'object' || Array.isArray(input)) {
+          throw Object.assign(new Error('AI team details must be a JSON object.'), { status: 400 });
+        }
+        const botIds = Array.isArray(input.botIds) ? [...new Set(input.botIds.map(value => String(value).trim()).filter(Boolean))] : [];
+        const directIdentityIds = Array.isArray(input.memberIdentityIds)
+          ? [...new Set(input.memberIdentityIds.map(value => String(value).trim()).filter(Boolean))]
+          : [];
+        const memberIds = [...directIdentityIds];
+        for (const botId of botIds) {
+          const ownedBot = (db.aiBots || []).find(item => item.ownerId === user.id && item.id === botId);
+          if (!ownedBot?.identityId) {
+            throw Object.assign(new Error('Every selected bot must have a verified relational Minglora AI identity before it can join a team.'), { status: 409 });
+          }
+          if (!memberIds.includes(String(ownedBot.identityId))) memberIds.push(String(ownedBot.identityId));
+        }
+        if (memberIds.length < 1 || memberIds.length > 20) {
+          throw Object.assign(new Error('Choose between 1 and 20 verified AI team members.'), { status: 400 });
+        }
+        const scope = String(input.populationScope || (input.organizationId ? 'organizational' : 'independent')).trim();
+        if (scope === 'organizational' && !isModerator(user, req)) {
+          throw Object.assign(new Error('Only an authorized Minglora platform administrator can create organizational AI teams.'), { status: 403 });
+        }
+        const idempotencyKey = String(input.idempotencyKey || '').trim();
+        if (idempotencyKey.length < 8 || idempotencyKey.length > 160) {
+          throw Object.assign(new Error('A retry-safe team idempotency key is required.'), { status: 400 });
+        }
+        const result = await runAITeamCommand('create_team', {
+          team_name: String(input.name || input.teamName || '').trim(),
+          description: String(input.description || ''),
+          population_scope: scope,
+          organization_id: input.organizationId || null,
+          member_ids: memberIds,
+          idempotency_key: idempotencyKey
+        });
+        return json(res, 201, result || {});
+      }
+      if (parts[0] === 'teams' && parts.length === 3 && parts[2] === 'members' && method === 'POST') {
+        const input = await body(req, 6000);
+        const identityId = String(input.identity_id || '').trim();
+        if (!identityId) throw Object.assign(new Error('A relational AI identity ID is required.'), { status: 400 });
+        const result = await runAITeamCommand('add_member', {
+          team_id: parts[1], identity_id: identityId, member_role: input.member_role || 'member'
+        });
+        return json(res, 200, result || {});
+      }
+      if (parts[0] === 'teams' && parts.length === 4 && parts[2] === 'members' && method === 'DELETE') {
+        const result = await runAITeamCommand('remove_member', {
+          team_id: parts[1], identity_id: parts[3]
+        });
+        return json(res, 200, result || {});
+      }
+      if (method === 'POST' && sub === 'delegations') {
+        const input = await body(req, 12000);
+        const result = await runAITeamCommand('create_delegation_grant', input || {});
+        return json(res, 201, result || {});
+      }
+      if (parts[0] === 'delegations' && parts.length === 2 && method === 'PATCH') {
+        const input = await body(req, 6000);
+        const actions = { revoked: 'revoke_delegation_grant', paused: 'pause_delegation_grant', active: 'reactivate_delegation_grant' };
+        const command = actions[String(input.status || '').toLowerCase()];
+        if (!command) throw Object.assign(new Error('Choose active, paused or revoked for the delegation grant.'), { status: 400 });
+        const result = await runAITeamCommand(command, { delegation_grant_id: parts[1], reason: input.reason || '' });
+        return json(res, 200, result || {});
+      }
+      if (parts[0] === 'delegations' && parts.length === 3 && parts[2] === 'tasks' && method === 'POST') {
+        const input = await body(req, 72000);
+        const result = await runAITeamCommand('delegate_task', { ...(input || {}), delegation_grant_id: parts[1] });
+        return json(res, result?.reused ? 200 : 201, result || {});
+      }
 
       if (method === 'GET' && sub === 'tasks') {
         const result = await runAITaskCommand('list_tasks');
@@ -2195,6 +2314,15 @@ async function route(req, res) {
       }
       if (method === 'GET' && !sub) {
         const snapshot = getAICommandCenter(db, user.id, { providerStatus });
+        if (isSupabasePersistence()) {
+          const teamRegistry = await runAITeamCommand('list_teams');
+          const relationalTeams = Array.isArray(teamRegistry?.teams) ? teamRegistry.teams : [];
+          const legacyTeams = Array.isArray(snapshot.teams)
+            ? snapshot.teams.filter(team => !relationalTeams.some(saved =>
+                String(saved.id || saved.team_id) === String(team.id || team.team_id)))
+            : [];
+          snapshot.teams = [...relationalTeams, ...legacyTeams];
+        }
         if (!settingsExisted) await saveStore();
         return json(res, 200, snapshot);
       }
@@ -2311,11 +2439,6 @@ async function route(req, res) {
           }
           throw error;
         }
-      }
-      if (method === 'POST' && sub === 'teams') {
-        const team = createAIBotTeam(db, user.id, await body(req, 12000));
-        await saveStore();
-        return json(res, 201, { team });
       }
       if (method === 'POST' && sub === 'schedules') {
         const schedule = createAIBotSchedule(db, user.id, await body(req, 12000));

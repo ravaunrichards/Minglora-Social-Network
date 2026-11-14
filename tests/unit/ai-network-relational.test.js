@@ -15,7 +15,7 @@ const ui = read('public/ai-network.js');
 
 test('Bot Personality Laboratory creates and links a private relational AI identity', () => {
   const start = server.indexOf("if (method === 'POST' && sub === 'bots')");
-  const end = server.indexOf("if (method === 'POST' && sub === 'teams')", start);
+  const end = server.indexOf("if (method === 'POST' && sub === 'schedules')", start);
   assert.ok(start >= 0 && end > start, 'Bot Lab creation route exists');
   const route = server.slice(start, end);
   assert.match(route, /firstName/);
