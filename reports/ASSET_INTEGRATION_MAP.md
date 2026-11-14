@@ -176,3 +176,17 @@ This adds no catalogue row, database offering, price edit, wallet/ledger event o
 | Cache | HTML and service worker now use `gift-effects.js?v=20261114-phoenix-rise-1`; service-worker shell cache advances to v311. |
 
 No new catalogue row, database gift offering, Coin-price change, wallet/ledger event, payout or AI runtime change is introduced. Art/rights review and physical-device QA remain open.
+
+
+## Beach Maracas bespoke art/effect integration — 2026-11-14
+
+| Integration point | Implementation |
+|---|---|
+| Canonical catalogue | Existing `beach-maracas-1exxoag` record (music, 349 Coins, active), unchanged. |
+| 3D source | `assets/3d-assets/gift-models/beach-maracas-model.mjs`, imported and routed by exact gift code in `scripts/generate-minglora-gifts.mjs`. |
+| Vector art | `beach-maracas-original-v1` subject SVG and transparent icon emitted by existing generation pipeline. |
+| Animation | `maraca-rhythm` exact-code override, triggered by the existing LIVE gift mount. |
+| Sound | `playBeachMaracas` locally synthesized shaker pulses and tonal accents; manifest ID `beach-maracas-caribbean-shaker-rhythm-v1`. |
+| Cache | HTML and service worker use `gift-effects.js?v=20261114-beach-maracas-rhythm-1`; shell cache advances to v312. |
+
+No catalogue record, Coin value, wallet, transaction, payout or database offer is changed. Rights/art approval and physical-device QA remain open.
