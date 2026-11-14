@@ -166,3 +166,12 @@ The glyph overlay and unused emoji lookup were removed from `scripts/generate-mi
 - The LIVE asset manifest now records a dedicated sound-design ID, scope, synthesized layers and explicit non-mastered status for these two gifts. `audio_file` remains null and `dedicated_mastered_gift_sound_file_count` remains zero.
 - Regression tests cover exact code routing, synthesized layer signatures, the existing sound opt-out and generic fallback. PR #341 merged as `81764826f74975ac17bd9f9e1c67c0fc72527216`; pre-merge full CI and LIVE/MeetWave layout QA passed.
 - **Acceptance:** two synchronized gift-specific synthesized sound treatments are implemented and test-covered. Recorded/mastered WAV files, dedicated audio assets, mastering, cross-device audio latency/mix QA and human audio review remain outstanding.
+
+
+## Bespoke Gamer Otter model and LIVE effect checkpoint — 2026-11-14
+
+- Added `assets/3d-assets/gift-models/gamer-otter-model.mjs` for the existing canonical gift `gamer-otter-100-mgl`. It generates a self-contained glTF 2.0 character sculpture with separately named otter, fur, facial, whisker, tail, paw, headset, microphone and controller mesh parts and PBR material factors.
+- Routed the exact catalogue code through `scripts/generate-minglora-gifts.mjs`; `premiumSvgShape` also emits a subject-specific `gamer-otter-original-v1` SVG. The existing output process creates primary artwork, transparent icon and GLTF from the canonical catalogue, without a new gift row.
+- Added the `gamer-otter-cheer` motion profile and an exact-code visual override to the existing LIVE gift effect runtime. Added a local synthesized four-note arcade cue and short low-frequency thump; existing reduced-motion and sound opt-out handling remain.
+- Added canonical catalogue/model/artwork regression assertions and runtime sound/motion assertions. CI/build results are still pending at this checkpoint.
+- No Coin price, gift active flag, production catalogue row, transaction, wallet, earning, payout or runtime activation state was changed. The model remains design-review-pending; no rights clearance, premium-production approval, mastered sound file, physical-device or production-host result is claimed.
