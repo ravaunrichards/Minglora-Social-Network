@@ -169,7 +169,10 @@ declare
   v_action_class text;
   v_token_budget integer;
   v_cost_limit numeric(14,6);
+  v_grant_max_token_budget integer;
+  v_grant_max_cost_limit numeric(14,6);
   v_expiry timestamptz;
+  v_grant_reused boolean := false;
   v_allowed_task_types text[];
   v_allowed_action_classes text[];
   v_org_id_for_grant uuid;
@@ -384,8 +387,12 @@ begin
     v_from_identity_id:=(v_payload->>'grantor_identity_id')::uuid;
     v_to_identity_id:=(v_payload->>'grantee_identity_id')::uuid;
     v_key:=nullif(trim(v_payload->>'idempotency_key'),'');
-    v_allowed_task_types:=array(select lower(trim(x)) from jsonb_array_elements_text(coalesce(v_payload->'allowed_task_types','[]'::jsonb)) x);
-    v_allowed_action_classes:=array(select lower(trim(x)) from jsonb_array_elements_text(coalesce(v_payload->'allowed_action_classes','[]'::jsonb)) x);
+    if jsonb_typeof(coalesce(v_payload->'allowed_task_types','[]'::jsonb))<>'array'
+       or jsonb_typeof(coalesce(v_payload->'allowed_action_classes','[]'::jsonb))<>'array' then
+      raise exception using errcode='22023',message='Delegation task types and action classes must be arrays.';
+    end if;
+    v_allowed_task_types:=array(select lower(trim(q.value)) from jsonb_array_elements_text(coalesce(v_payload->'allowed_task_types','[]'::jsonb)) as q(value));
+    v_allowed_action_classes:=array(select lower(trim(q.value)) from jsonb_array_elements_text(coalesce(v_payload->'allowed_action_classes','[]'::jsonb)) as q(value));
     v_token_budget:=coalesce(nullif(v_payload->>'max_token_budget','')::integer,0);
     v_cost_limit:=coalesce(nullif(v_payload->>'max_cost_limit_usd','')::numeric,0);
     v_expiry:=coalesce(nullif(v_payload->>'expires_at','')::timestamptz,now()+interval '30 days');
@@ -432,6 +439,7 @@ begin
     end if;
     select g.delegation_grant_id into v_existing_id from ai_network.ai_delegation_grants g
       where g.owner_user_id=v_owner and g.idempotency_key=v_key;
+    v_grant_reused := v_existing_id is not null;
     if v_existing_id is null then
       insert into ai_network.ai_delegation_grants(
         owner_user_id,team_id,grantor_identity_id,grantee_identity_id,
@@ -447,6 +455,7 @@ begin
     if v_existing_id is null then
       select g.delegation_grant_id into v_existing_id from ai_network.ai_delegation_grants g
         where g.owner_user_id=v_owner and g.idempotency_key=v_key;
+      v_grant_reused := true;
     end if;
     if not exists(select 1 from ai_network.ai_delegation_grants g where g.delegation_grant_id=v_existing_id
       and g.owner_user_id=v_owner and g.team_id=v_team_id and g.grantor_identity_id=v_from_identity_id
@@ -455,17 +464,19 @@ begin
       and g.max_cost_limit_usd=v_cost_limit and g.expires_at=v_expiry) then
       raise exception using errcode='23505',message='Delegation idempotency key was already used for a different grant.';
     end if;
-    insert into ai_network.ai_delegation_events(
-      owner_user_id,delegation_grant_id,actor_user_id,actor_identity_id,event_type,reason,metadata
-    ) values (
-      v_owner,v_existing_id,v_owner,v_from_identity_id,'grant_created','Owner-authorized, human-reviewed delegation grant.',
-      jsonb_build_object('team_id',v_team_id,'grantee_identity_id',v_to_identity_id,
-        'allowed_task_types',to_jsonb(v_allowed_task_types),'allowed_action_classes',to_jsonb(v_allowed_action_classes),
-        'requires_human_approval',true)
-    ) on conflict do nothing;
+    if not v_grant_reused then
+      insert into ai_network.ai_delegation_events(
+        owner_user_id,delegation_grant_id,actor_user_id,actor_identity_id,event_type,reason,metadata
+      ) values (
+        v_owner,v_existing_id,v_owner,v_from_identity_id,'grant_created','Owner-authorized, human-reviewed delegation grant.',
+        jsonb_build_object('team_id',v_team_id,'grantee_identity_id',v_to_identity_id,
+          'allowed_task_types',to_jsonb(v_allowed_task_types),'allowed_action_classes',to_jsonb(v_allowed_action_classes),
+          'requires_human_approval',true)
+      );
+    end if;
     select to_jsonb(g) into v_result from ai_network.ai_delegation_grants g
       where g.delegation_grant_id=v_existing_id and g.owner_user_id=v_owner;
-    return jsonb_build_object('delegation_grant',v_result,'reused',v_existing_id is not null);
+    return jsonb_build_object('delegation_grant',v_result,'reused',v_grant_reused);
   end if;
 
   if v_action in ('revoke_delegation_grant','pause_delegation_grant','reactivate_delegation_grant') then
@@ -474,9 +485,6 @@ begin
     end if;
     v_grant_id:=(v_payload->>'delegation_grant_id')::uuid;
     v_reason:=left(trim(coalesce(v_payload->>'reason','Delegation authority changed by the owner.')),1000);
-    select g.* into v_task_row from ai_network.ai_task_queue q
-      join ai_network.ai_delegation_grants g on g.delegation_grant_id=q.delegation_grant_id
-      where false;
     if v_action='revoke_delegation_grant' then
       update ai_network.ai_delegation_grants g set grant_status='revoked',updated_at=now()
         where g.delegation_grant_id=v_grant_id and g.owner_user_id=v_owner
@@ -528,6 +536,8 @@ begin
     v_task_title:=left(trim(coalesce(v_payload->>'task_title','')),180);
     v_task_type:=lower(trim(coalesce(v_payload->>'task_type','')));
     v_action_class:=lower(trim(coalesce(v_payload->>'action_class','')));
+    v_grant_max_token_budget:=0;
+    v_grant_max_cost_limit:=0;
     v_token_budget:=coalesce(nullif(v_payload->>'token_budget','')::integer,0);
     v_cost_limit:=coalesce(nullif(v_payload->>'cost_limit_usd','')::numeric,0);
     v_key:=nullif(trim(coalesce(v_payload->>'idempotency_key','')),'');
@@ -538,7 +548,7 @@ begin
       g.allowed_action_classes,g.max_token_budget,g.max_cost_limit_usd,g.expires_at,
       t.organization_id
       into v_team_id,v_from_identity_id,v_to_identity_id,v_allowed_task_types,
-        v_allowed_action_classes,v_token_budget /* placeholder overwritten below */,
+        v_allowed_action_classes,v_grant_max_token_budget,v_grant_max_cost_limit,v_expiry,
         v_org_id
     from ai_network.ai_delegation_grants g
     join ai_network.ai_teams t on t.team_id=g.team_id and t.owner_user_id=g.owner_user_id
@@ -546,9 +556,6 @@ begin
       and g.grant_status='active' and g.expires_at>now()
       and t.status='active';
     if not found then raise exception using errcode='42501',message='An active, unexpired delegation grant is required.'; end if;
-    select g.max_token_budget,g.max_cost_limit_usd,g.allowed_task_types,g.allowed_action_classes
-      into v_token_budget,v_cost_limit,v_allowed_task_types,v_allowed_action_classes
-      from ai_network.ai_delegation_grants g where g.delegation_grant_id=v_grant_id and g.owner_user_id=v_owner;
     if v_task_type !~ '^[a-z][a-z0-9_.-]{1,79}$'
        or not (v_task_type=any(v_allowed_task_types))
        or not (v_action_class=any(v_allowed_action_classes))
@@ -556,8 +563,8 @@ begin
       raise exception using errcode='42501',message='Delegated task type or action class is outside the explicit grant scope.';
     end if;
     if v_token_budget<0 or v_cost_limit<0 then raise exception using errcode='22023',message='Delegated task budget must be non-negative.'; end if;
-    if v_token_budget > (select g.max_token_budget from ai_network.ai_delegation_grants g where g.delegation_grant_id=v_grant_id)
-       or v_cost_limit > (select g.max_cost_limit_usd from ai_network.ai_delegation_grants g where g.delegation_grant_id=v_grant_id) then
+    if v_token_budget > v_grant_max_token_budget
+       or v_cost_limit > v_grant_max_cost_limit then
       raise exception using errcode='42501',message='Delegated task exceeds its grant budget.';
     end if;
     if not exists(select 1 from ai_network.ai_team_memberships m where m.team_id=v_team_id
