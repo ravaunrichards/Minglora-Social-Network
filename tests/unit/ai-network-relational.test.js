@@ -12,6 +12,38 @@ const runtime = read('supabase/functions/minglora-runtime-state/index.ts');
 const server = read('src/server.js');
 const ui = read('public/ai-network.js');
 
+test('Bot Personality Laboratory creates and links a private relational AI identity', () => {
+  const start = server.indexOf("if (method === 'POST' && sub === 'bots')");
+  const end = server.indexOf("if (method === 'POST' && sub === 'teams')", start);
+  assert.ok(start >= 0 && end > start, 'Bot Lab creation route exists');
+  const route = server.slice(start, end);
+  assert.match(route, /firstName/);
+  assert.match(route, /lastName/);
+  assert.match(route, /runAIIdentityCommand\('create'/);
+  assert.match(route, /population:\s*'independent'/);
+  assert.match(route, /category_key:\s*categoryKey/);
+  assert.match(route, /idempotency_key:\s*identityIdempotencyKey/);
+  assert.match(route, /profile_visibility:\s*'private'/);
+  assert.match(route, /source:\s*'bot_personality_laboratory'/);
+  assert.match(route, /bot_id:\s*bot\.id/);
+  assert.match(route, /bot\.identityId\s*=\s*identityId/);
+  assert.match(route, /await saveStore\(\)/);
+  assert.match(route, /identityIdempotencyKey/);
+});
+
+test('Bot Personality Laboratory requires distinct names and a canonical category in its UI', () => {
+  assert.match(ui, /data-ai-form="bot"/);
+  assert.match(ui, /name="firstName"/);
+  assert.match(ui, /name="lastName"/);
+  assert.match(ui, /name="middleName"/);
+  assert.match(ui, /name="categoryKey"/);
+  assert.match(ui, /payload\.identityIdempotencyKey\s*=\s*form\.dataset\.idempotencyKey/);
+  assert.match(ui, /payload\.firstName\s*=\s*value\('firstName'\)/);
+  assert.match(ui, /payload\.lastName\s*=\s*value\('lastName'\)/);
+  assert.match(ui, /Create AI bot and relational identity/);
+  assert.match(ui, /linked to relational identity/);
+});
+
 test('AI identity RPC remains private to the service-role runtime', () => {
   assert.match(migration, /security invoker/i);
   assert.match(migration, /set search_path\s*=\s*''/i);
