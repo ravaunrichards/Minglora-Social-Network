@@ -28,6 +28,10 @@ test('AI category administration is private, audited and preserves categories re
   assert.match(migration, /category_key is immutable|Category keys are immutable|category_key = v_category_key/);
   assert.doesNotMatch(migration, /delete from ai_network\.ai_categories/i);
   assert.match(migration, /is_active = v_is_active/);
+  assert.match(migration, /lock table ai_network\.ai_categories in share row exclusive mode/);
+  assert.match(migration, /At least one AI category must remain active/);
+  assert.match(migration, /revoke all on table ai_network\.ai_categories from public, anon, authenticated/);
+  assert.match(migration, /on update cascade on delete restrict/);
 });
 
 test('AI category command is allowlisted in the private Supabase runtime', () => {
