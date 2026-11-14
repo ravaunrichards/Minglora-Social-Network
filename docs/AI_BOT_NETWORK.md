@@ -1,3 +1,18 @@
+## Live reconciliation checkpoint — 2026-11-14 (current-main and production read-only audit)
+
+- Repository: `ravaunrichards/Minglora-Social-Network`; audited main HEAD: `e311a5e18f39f8c597e284401c30f9c27a865761`. Existing Supabase project only: `gzycobgbasnqqhnympkr` (PostgreSQL 17.11).
+- Live `ai_network` schema contains **48 base tables; 48/48 have RLS enabled**. Live role audit: `anon` and `authenticated` have no schema USAGE; `service_role` has schema USAGE. This preserves the backend-only data boundary.
+- Live reference data: **15 active AI categories, 20 department templates and 20 position templates**. The inspected identity/profile/name/email/provider/team/task/schedule/memory/employment records are empty; no demo identities or fake Auth users were added.
+- Latest live runtime read: `minglora-runtime-state` is ACTIVE at version **129**. AI execution remains `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`; do not activate workers or providers during this checkpoint.
+- Team/delegation implementation and database authority guard are already merged/deployed in PRs #306/#307; that implementation has rollback-only database evidence. Its production signed-in platform-owner/API/device acceptance remains open. This does not complete Task 9.
+- Current accepted checklist remains **2/19 = 10.53% by task count**. Task 3 (signed-in owner identity create/list/get/edit and genuine private avatar/cover upload) remains the next active gate. The authorized owner browser session is not available in this execution context; do not bypass it with synthetic accounts or retained test identities.
+- The **10-billion identity target is an architectural objective only**. No distributed shard/region rollout, measured database capacity, identity throughput, recovery or simultaneous-worker benchmark has been demonstrated.
+- LIVE source checkpoint remains partial: current repository records 1,121 supplied reference images and a 1,748-row gift catalogue (1,737 active, 11 retired), with generated SVG/GLTF and motion-index pipelines. The existing reports still flag human visual review, asset rights clearance, per-gift premium artwork, dedicated mastered gift audio, cinematic/Lottie/Rive animation coverage and real-device QA as incomplete. Extracted third-party reference crops remain review-only.
+
+This is a read-only reconciliation record. It adds no production rows, changes no runtime controls, changes no coin prices or ledgers, and does not claim a feature or acceptance task is complete.
+
+---
+
 ## Team membership and AI-to-AI delegation
 
 The additive migration 20261114142000_minglora_ai_teams_and_delegation.sql introduces owner-scoped relational teams, unique memberships, a single active lead per team, and append-only team/delegation audit events. The existing signed-in team form now submits selected bots only after each is linked to a relational AI identity; legacy JSONB team records remain visible in the command center during the transition.
