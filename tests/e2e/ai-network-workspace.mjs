@@ -356,16 +356,28 @@ try {
   assert.equal(categoryManagementRequests[0].category_key, 'ai_science');
   assert.equal(categories.length, 16, 'The in-memory category catalogue should add one distinct category.');
 
-  const newCategoryForm = page.locator('form[data-ai-form="category-update"]').filter({
+  let newCategoryForm = page.locator('form[data-ai-form="category-update"]').filter({
+    has: page.locator('input[name="categoryKey"][value="ai_science"]')
+  });
+  await newCategoryForm.locator('[name="displayName"]').fill('AI Science & Research');
+  await newCategoryForm.locator('[name="description"]').fill('AI science, research and technology explainers.');
+  await newCategoryForm.locator('[name="sortOrder"]').fill('17');
+  await newCategoryForm.locator('button[type="submit"]').click();
+  await page.getByText('AI category details and active state updated and audited.').waitFor({ state: 'visible' });
+  assert.equal(categoryManagementRequests.length, 2, 'Category rename and reordering must submit one update request.');
+  assert.equal(categoryManagementRequests[1].display_name, 'AI Science & Research');
+  assert.equal(categoryManagementRequests[1].sort_order, 17);
+  assert.equal(categories.find(category => category.category_key === 'ai_science').display_name, 'AI Science & Research');
+
+  newCategoryForm = page.locator('form[data-ai-form="category-update"]').filter({
     has: page.locator('input[name="categoryKey"][value="ai_science"]')
   });
   await newCategoryForm.locator('[name="isActive"]').selectOption('false');
   await newCategoryForm.locator('button[type="submit"]').click();
   await page.getByText('AI category details and active state updated and audited.').waitFor({ state: 'visible' });
-  assert.equal(categoryManagementRequests.length, 2, 'Category deactivation must submit an update request.');
-  assert.equal(categoryManagementRequests[1].action, 'update');
-  assert.equal(categoryManagementRequests[1].category_key, 'ai_science');
-  assert.equal(categoryManagementRequests[1].is_active, false);
+  assert.equal(categoryManagementRequests.length, 3, 'Category deactivation must submit an update request.');
+  assert.equal(categoryManagementRequests[2].category_key, 'ai_science');
+  assert.equal(categoryManagementRequests[2].is_active, false);
   assert.equal(categories.filter(category => category.is_active).length, 15, 'All 15 original categories remain active after the added category is deactivated.');
   assert.ok(categories.some(category => category.category_key === 'ai_science' && !category.is_active), 'Deactivation must preserve the category row instead of deleting it.');
 
@@ -428,6 +440,17 @@ try {
   assert.ok(!Object.hasOwn(patch, 'email'), 'Profile editing must not silently mutate email identities.');
   assert.ok(!Object.hasOwn(patch, 'provider_assignments'), 'Profile editing must not mutate provider assignments.');
   assert.equal(identities[0].name.first_name, 'Arianna', 'Updated name must be rendered from refreshed registry data.');
+
+  const categoryReactivationForm = page.locator('form[data-ai-form="category-update"]').filter({
+    has: page.locator('input[name="categoryKey"][value="ai_science"]')
+  });
+  await categoryReactivationForm.locator('[name="isActive"]').selectOption('true');
+  await categoryReactivationForm.locator('button[type="submit"]').click();
+  await page.getByText('AI category details and active state updated and audited.').waitFor({ state: 'visible' });
+  assert.equal(categoryManagementRequests.length, 4, 'Category reactivation must submit an update request.');
+  assert.equal(categoryManagementRequests[3].is_active, true);
+  assert.equal(categories.find(category => category.category_key === 'ai_science').is_active, true);
+  assert.equal(categories.filter(category => category.is_active).length, 16, 'The added category should become available after reactivation.');
 
   const discoveryForm = page.locator('form[data-ai-form="discovery"]');
   await discoveryForm.locator('[name="search"]').fill('educator');
@@ -507,7 +530,9 @@ try {
     genderOptions: initialCounts.genders,
     categoryCreates: categoryManagementRequests.filter(item => item.action === 'create').length,
     categoryUpdates: categoryManagementRequests.filter(item => item.action === 'update').length,
-    originalCategoriesPreserved: categories.filter(category => category.is_active).length,
+    categoryReactivations: categoryManagementRequests.filter(item => item.action === 'update' && item.is_active === true).length,
+    originalCategoriesPreserved: categoryKeys.filter(key => categories.some(category => category.category_key === key && category.is_active)).length,
+    activeCategoriesAfterReactivation: categories.filter(category => category.is_active).length,
     identityCreates: identityCreateRequests.length,
     identityProfileUpdates: identityPatchRequests.length,
     combinedDiscoveryQueries: discoveryQueries.length,
