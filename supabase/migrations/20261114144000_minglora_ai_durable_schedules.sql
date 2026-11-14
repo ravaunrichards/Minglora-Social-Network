@@ -337,6 +337,7 @@ declare
   v_next_at timestamptz;
   v_days integer;
   v_task_payload jsonb;
+  v_status text;
 begin
   if current_user <> 'service_role' then
     raise exception using errcode='42501',message='Schedule dispatch is restricted to the internal Minglora scheduler.';
