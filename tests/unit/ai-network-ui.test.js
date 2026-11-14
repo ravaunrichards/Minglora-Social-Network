@@ -153,3 +153,19 @@ test('non-admin users do not receive owner delegation controls', () => {
   assert.ok(server.includes("isModerator(user, req)"));
   assert.ok(server.includes("Only an authorized Minglora platform administrator"));
 });
+
+test('delegated tasks are revalidated when approval or worker status changes', () => {
+  const guard = read('supabase/migrations/20261114142500_minglora_ai_delegation_runtime_guard.sql');
+  assert.ok(guard.includes('create or replace function ai_network.enforce_delegated_task_authority()'));
+  assert.ok(guard.includes("new.status not in ('queued','running')"));
+  assert.ok(guard.includes("v_grant_status <> 'active'"));
+  assert.ok(guard.includes('v_grant_expiry <= now()'));
+  assert.ok(guard.includes("v_team_status <> 'active'"));
+  assert.ok(guard.includes('new.approved_by_user_id is null'));
+  assert.ok(guard.includes('ai_network.ai_team_memberships'));
+  assert.ok(guard.includes('ai_network.ai_identities'));
+  assert.ok(guard.includes('ai_network.ai_employment_records'));
+  assert.ok(guard.includes('before update of status on ai_network.ai_task_queue'));
+  assert.ok(guard.includes('revoke all on function ai_network.enforce_delegated_task_authority() from public,anon,authenticated'));
+  assert.ok(guard.includes('grant execute on function ai_network.enforce_delegated_task_authority() to service_role'));
+});
