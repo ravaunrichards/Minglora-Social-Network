@@ -54,3 +54,7 @@ The generator and tests validate unique codes and animation keys, safe local pat
 ## Rights and review
 
 The 1,509 extracted screenshot crops in `assets/Artwork/` are explicitly marked review-only. Their extraction did not establish commercial use permission. They must not be activated as production gifts until each asset's rights/provenance is established or it is replaced by original Minglora artwork.
+
+## LIVE picker asset variant
+
+Alongside each canonical full SVG artwork (`/assets/gifts/catalog/<code>.svg`) and GLTF model (`/assets/gifts/catalog/<code>.gltf`), the build emits a transparent subject-only SVG at `/assets/gifts/catalog/<code>-icon.svg`. The compact LIVE picker uses the variant; the full SVG remains the fallback and preview poster. The icon variant does not change the catalogue row, coin price, category, animation key or model path.
