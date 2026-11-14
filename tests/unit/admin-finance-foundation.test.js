@@ -77,3 +77,26 @@ test('Admin Centre mounts the finance module only after the owner-only panel is 
   assert.doesNotMatch(financeUi, /select\('Approval status','approval_status',\[\['draft','Draft'\],\['pending','Pending'\],\['approved','Approved'\]/);
   assert.match(financeCss, /@media\(max-width:520px\)/);
 });
+
+test('finance registers can update existing records without unlocking protected states', () => {
+  assert.match(financeUi, /data-finance-edit/);
+  assert.match(financeUi, /function beginEdit\(kind,id\)/);
+  for (const kind of ['provider','subscription','budget','invoice','expense']) {
+    assert.match(financeUi, new RegExp("editAction\\('" + kind + "'"));
+  }
+  assert.match(financeUi, /data-finance-cancel-edit/);
+  assert.match(financeUi, /id:form\.dataset\.editId/);
+  assert.match(financeUi, /record\.approval_status === 'approved'/);
+  assert.match(financeUi, /'paid','paid_pending_verification','payment_initiated','payment_scheduled'/);
+  assert.match(financeUi, /Managed by verified provider connection/);
+});
+
+test('budget actuals use matching department, currency and the approved date period', () => {
+  assert.match(financeUi, /const budgetActual = budget => records\.expenses\.reduce/);
+  assert.match(financeUi, /item\.department_key !== budget\.department_key/);
+  assert.match(financeUi, /String\(item\.currency_code \|\| ''\)\.toUpperCase\(\)/);
+  assert.match(financeUi, /item\.expense_status !== 'actual'/);
+  assert.match(financeUi, /Approved budget vs actual expenses/);
+  assert.match(financeUi, /Renewal notice windows are calculated from saved dates/);
+  assert.match(financeUi, /Related subscription/);
+});
