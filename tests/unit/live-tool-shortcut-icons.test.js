@@ -31,9 +31,33 @@ test('the app renders the existing role-gated LIVE panels through the new shortc
   assert.ok(app.includes('const LIVE_TOOLS_SHORTCUT_ICON_NAMES=Object.freeze('));
   assert.ok(app.includes('function liveToolsShortcutIcon(name)'));
   assert.ok(app.includes('function liveToolsShortcutButton(target,label,icon,pressed=false,panelTarget)'));
-  for (const id of expected) assert.ok(app.includes('liveToolsShortcutButton("' + id + '"'), id + ' must map to an actual tools panel');
-  assert.ok(app.includes('data-live-tools-panel-target='));
-  assert.ok(app.includes('data-live-tools-target='));
+  const panelCalls = [
+    'liveToolsShortcutButton("layouts","Layout","layout",true)',
+    'liveToolsShortcutButton("permissions","Permissions","permissions")',
+    'liveToolsShortcutButton("guests","Guests","guests")',
+    'liveToolsShortcutButton("viewers","Viewers","viewers")',
+    'liveToolsShortcutButton("fanclub","Fan Club","fanclub")',
+    'liveToolsShortcutButton("matches","Match","matches")',
+    'liveToolsShortcutButton("top-gifters","Top Gifters","top-gifters")',
+    'liveToolsShortcutButton("gifts","Gifts","gifts")',
+    'liveToolsShortcutButton("rewards","Rewards","rewards")',
+    'liveToolsShortcutButton("moderators","Moderators","moderators")',
+    'liveToolsShortcutButton("appearance","Appearance","appearance")',
+    'liveToolsShortcutButton("devices","Devices","devices")'
+  ];
+  for (const call of panelCalls) assert.ok(app.includes(call), call + ' must map to a panel and its icon');
+  for (const attribute of [
+    "data-live-tools-panel-target='layouts'","data-live-tools-panel-target='permissions'",
+    "data-live-tools-panel-target='guests'","data-live-tools-panel-target='viewers'",
+    "data-live-tools-panel-target='fanclub'","data-live-tools-panel-target='matches'",
+    "data-live-tools-panel-target='top-gifters'","data-live-tools-panel-target='gifts'",
+    "data-live-tools-panel-target='rewards'","data-live-tools-panel-target='moderators'",
+    "data-live-tools-panel-target='appearance'","data-live-tools-panel-target='devices'",
+    "data-live-tools-target='#live-speaker-request-panel'","data-live-tools-target='#live-fan-club-panel'",
+    "data-live-tools-target='#live-match-panel'","data-live-tools-target='#live-gift-panel'",
+    "data-live-tools-target='#live-reward-panel'","data-live-tools-target='#live-moderator-panel'",
+    "data-live-tools-target='.live-room-appearance'"
+  ]) assert.ok(app.includes(attribute), attribute + ' mapping must remain explicit');
   assert.ok(app.includes('liveSettings.manageModerators!==false'));
   assert.ok(app.includes('giftsEnabled?liveToolsShortcutButton("rewards"'));
   assert.ok(app.includes('button.setAttribute("aria-pressed",String(active))'));

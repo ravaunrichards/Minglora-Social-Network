@@ -59,7 +59,7 @@ No prices, balances, transactions, account state, LiveKit credentials, or existi
 ## LIVE tools drawer shortcut icons
 
 - The LIVE tools drawer now uses a dedicated 12-icon SVG pack under `public/assets/icons/live-tools/` for Layout, Permissions, Guests, Viewers, Fan Club, Match, Top Gifters, Gifts, Rewards, Moderators, Appearance and Devices.
-- `manifest.json` records canonical IDs, labels and file paths with a shared 24×24 viewBox. The SVGs inherit `currentColor`; active and focus states remain controlled by the existing drawer buttons and `aria-pressed` state.
+- `public/assets/icons/live-tools/manifest.json` records canonical IDs, labels and file paths with a shared 24×24 viewBox. The SVGs inherit `currentColor`; active and focus states remain controlled by the existing drawer buttons and `aria-pressed` state.
 - `public/app.js` maps each icon through an immutable allow-list and preserves the current role and gift-availability conditions plus the existing `data-live-tools-panel-target` / `data-live-tools-target` panel routing.
 - `public/sw.js` uses shell cache v306 and pre-caches the manifest and all 12 SVG files for offline tools navigation.
 - `tests/unit/live-tool-shortcut-icons.test.js` validates artwork files, safe icon mapping, panel targets, accessibility state, responsive drawer styling and service-worker coverage.
