@@ -98,3 +98,10 @@ The glyph overlay and unused emoji lookup were removed from `scripts/generate-mi
 - Added offline shell pre-caching and bumped the service worker shell to v306.
 - Added SVG, integration, accessibility-state, responsive drawer and cache regression tests; added the icon pack to the machine-readable LIVE asset manifest generator and report maps.
 - The pack is original Minglora outline UI artwork, not bespoke 3D gift artwork. Human visual/design review and production approval remain pending. CI verification is required before this checkpoint is reported as complete.
+
+## 2026-11-14 continuation — transparent LIVE picker icons
+
+- The gift generator creates an additional transparent subject-only SVG variant per canonical gift record, without replacing the existing full artwork or GLTF path.
+- The LIVE picker references the dedicated icon path and falls back to full artwork if the icon request fails; if both are unavailable, it reports an accessible unavailable state rather than substituting an emoji.
+- The generated manifest records each icon's actual file size, SHA-256, dimensions, component, source and review state. Automated checks assert that icon generation covers the whole catalogue.
+- The variants remain generated vector art. Individual human review, commercial rights review, bespoke premium 3D modelling, mastered per-gift sound and physical device QA are not certified by this change. CI verification is pending for this branch.

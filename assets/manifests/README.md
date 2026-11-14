@@ -25,3 +25,5 @@ Track asset identifier, relative path, source, license, content type, dimensions
 - Each standalone SVG record includes path, SHA-256, 24×24 viewBox, component usage, visual-review state and rights-review state.
 - CI validates all 16 room-control icons and all 22 gift-category icons before publishing the generated manifest.
 - The packs are individually addressable UI vector assets; this does not certify premium 3D gift art or human design approval.
+
+- Each gift record additionally inventories its generated transparent subject-only icon variant (`<code>-icon.svg`), including file size, SHA-256, dimensions, source, component use and outstanding visual/rights review state. The icon is distinct from the full artwork and GLTF model.
