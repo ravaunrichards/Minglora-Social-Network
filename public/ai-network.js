@@ -229,7 +229,7 @@
     if (!Array.isArray(state.managedCategories)) return '';
     const rows = state.managedCategories.length
       ? state.managedCategories.map(category =>
-        '<form class="ai-network-form" data-ai-form="category-update">' +
+        '<form class="ai-network-form" data-ai-form="category-update" aria-label="Update AI category">' +
         '<input type="hidden" name="categoryKey" value="' + esc(category.category_key) + '">' +
         '<div class="ai-network-form-title">' + esc(category.category_key) + '</div>' +
         '<div class="ai-network-form-grid">' +
@@ -243,7 +243,7 @@
         '<button class="secondary" type="submit">Save category</button></form>'
       ).join('')
       : empty('No categories are available yet.');
-    const createForm = '<form class="ai-network-form" data-ai-form="category-create">' +
+    const createForm = '<form class="ai-network-form" data-ai-form="category-create" aria-label="Create AI category">' +
       '<div class="ai-network-form-title">Create an AI category</div>' +
       '<div class="ai-network-form-grid">' +
       '<label>Permanent category key<input name="categoryKey" required minlength="2" maxlength="64" pattern="[a-z][a-z0-9_]+" placeholder="ai_science" autocomplete="off"></label>' +
