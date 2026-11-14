@@ -3695,6 +3695,45 @@ async function route(req, res) {
         currentSession.pendingEmail=email;await saveStore();
         return json(res,200,{ok:true,verificationRequired:true,message:result?.message||'Check your new email address for a verification link. Your login email changes after confirmation.'});
       }
+      if(p.startsWith('/api/admin/finance/attachments/')){
+        if(!isDesignatedCreatorHubAdmin(user)||!isModerator(user,req)||!hasActiveReviewerSession(user)){
+          return json(res,403,{error:'Only the MFA-verified Minglora owner can access company finance attachments.'});
+        }
+        if(!isSupabasePersistence()){
+          return json(res,503,{error:'Company finance attachments require the connected Minglora Supabase project.'});
+        }
+        if(method==='GET'&&p==='/api/admin/finance/attachments/download'){
+          const requestUrl=new URL(req.url,'http://minglora.local');
+          const kind=String(requestUrl.searchParams.get('kind')||'');
+          const recordId=String(requestUrl.searchParams.get('id')||'');
+          if(!['invoice_attachment','invoice_receipt','expense_receipt'].includes(kind)||! /^[0-9a-f-]{36}$/i.test(recordId)){
+            return json(res,400,{error:'Choose a valid finance attachment.'});
+          }
+          const result=await mediaGateway('admin_finance_attachment_download',{actorUserId:user.id,kind,recordId});
+          if(!result.url||!String(result.url).startsWith('https://'))return json(res,404,{error:'The finance attachment is unavailable.'});
+          res.writeHead(302,{'Location':result.url,'Cache-Control':'no-store','Pragma':'no-cache'});
+          res.end();
+          return;
+        }
+        if(method==='POST'&&(p==='/api/admin/finance/attachments/prepare'||p==='/api/admin/finance/attachments/complete')){
+          if(!isSameOriginApiWrite(req))return json(res,403,{error:'This finance attachment request must come from Minglora.'});
+          const payload=input&&typeof input==='object'&&!Array.isArray(input)?input:{};
+          if(p.endsWith('/prepare')){
+            const result=await mediaGateway('admin_finance_attachment_prepare',{
+              actorUserId:user.id,kind:String(payload.kind||''),mimeType:String(payload.mimeType||'').toLowerCase(),
+              byteSize:Number(payload.byteSize||0),fileName:String(payload.fileName||'').slice(0,255)
+            });
+            return json(res,201,result);
+          }
+          const result=await mediaGateway('admin_finance_attachment_complete',{
+            actorUserId:user.id,kind:String(payload.kind||''),bucket:String(payload.bucket||''),
+            path:String(payload.path||''),mimeType:String(payload.mimeType||'').toLowerCase(),
+            byteSize:Number(payload.byteSize||0)
+          });
+          return json(res,200,result);
+        }
+        return json(res,404,{error:'Finance attachment route not found.'});
+      }
       if((method==='GET'||method==='POST')&&p==='/api/admin/finance'){
         if(!isDesignatedCreatorHubAdmin(user)||!isModerator(user,req)||!hasActiveReviewerSession(user)){
           return json(res,403,{error:'Only the MFA-verified Minglora owner can access company finance records.'});
