@@ -74,7 +74,7 @@ No prices, balances, transactions, account state, LiveKit credentials, or existi
 - The model is tagged gift-hibiscus-3d-v1 and design-review-pending. No gift catalogue price, animation, transaction or server event behavior is changed.
 
 ## Named glTF provenance in the generated LIVE asset manifest
-- The asset manifest reads named source metadata from each generated glTF asset's extras. Rose, Hibiscus and Djembe Master are now recorded as gift-specific repository mesh sources with their asset ID, source file, art direction and review status.
+- The asset manifest reads named source metadata from each generated glTF asset's extras. Rose, Hibiscus, Djembe Master and Palm Breeze are now recorded as gift-specific repository mesh sources with their asset ID, source file, art direction and review status.
 - Generic gift models remain identified as generated procedural meshes. The manifest records the presence of named mesh sources separately from premium/high-detail approval; both remain false until human visual review and rights review pass.
 - Regression tests cover both named models and ensure their design-review-pending status is not misreported as production approval.
 
@@ -94,3 +94,12 @@ No prices, balances, transactions, account state, LiveKit credentials, or existi
 - Model provenance is `gift-djembe-3d-v1`; the runtime model viewer/fallback path is unchanged.
 - PR #339 merged at `6daf3cf23867b229168819aa0adae146cae23fc2`. The source branch passed repository CI (including asset generation, manifest validation and tests) and LIVE/MeetWave layout QA before merge.
 - No production offering, gift price, active flag, transaction or payout was modified. Art review, rights clearance, physical device QA and production-host verification remain outstanding.
+
+
+## Bespoke Palm Breeze gift model integration — 2026-11-14
+
+- Canonical gift code `palm-breeze-gknyt0` selects `assets/3d-assets/gift-models/palm-breeze-model.mjs` in `scripts/generate-minglora-gifts.mjs`.
+- The build emits a self-contained glTF 2.0 model and subject-specific transparent SVG artwork at the canonical gift paths. The source contains grouped pinnate leaf meshes, curved trunk, coconuts and an island plinth; the existing LIVE model viewer and fallback remain unchanged.
+- Repeated leaves/veins are batched by material to reduce primitive count. Source provenance is `gift-palm-breeze-3d-v1` and its review state remains `design-review-pending`.
+- PR #340 merged as `976e4293d2bbe68b7ad4006dea41d21107097e23` after CI asset generation, automated tests and LIVE/MeetWave layout QA passed.
+- No production offering, gift price, active flag, transaction or payout was modified. Art/rights review, physical-device QA and production-host verification remain outstanding.
