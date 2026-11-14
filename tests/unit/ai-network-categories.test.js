@@ -15,6 +15,7 @@ test('category administration uses private service-role-only RPC and audit table
   assert.match(migration, /create table if not exists ai_network\.ai_category_audit_logs/i);
   assert.match(migration, /enable row level security/i);
   assert.match(migration, /revoke all on table ai_network\.ai_category_audit_logs from public, anon, authenticated/i);
+  assert.match(migration, /revoke all on table ai_network\.ai_category_audit_logs from public, anon, authenticated, service_role/i);
   assert.match(migration, /grant select, insert on table ai_network\.ai_category_audit_logs to service_role/i);
   assert.match(migration, /security invoker/i);
   assert.match(migration, /set search_path = ''/i);
@@ -26,6 +27,9 @@ test('category administration uses private service-role-only RPC and audit table
 test('category keys stay stable and categories are deactivated rather than deleted', () => {
   assert.match(migration, /category_key text not null references ai_network\.ai_categories\(category_key\).*on delete restrict/i);
   assert.match(migration, /At least one AI category must remain active/i);
+  const categoryKeyRule = "if v_category_key !~ '^[a-z][a-z0-9_]{1,63}" + String.fromCharCode(36) + "' then";
+  assert.ok(migration.includes(categoryKeyRule), 'Category key regex and validation terminator must be complete.');
+  assert.match(migration, /revoke all on table ai_network\.ai_categories from public, anon, authenticated, service_role/i);
   assert.match(migration, /lock table ai_network\.ai_categories in share row exclusive mode/i);
   assert.doesNotMatch(migration, /delete\s+from\s+ai_network\.ai_categories/i);
   assert.match(ui, /Category keys remain stable because existing AI identities reference them/i);
@@ -61,5 +65,5 @@ test('administrator UI can create, rename, order, reactivate and deactivate cate
   assert.match(ui, /data-ai-action="edit-category"/);
   assert.match(ui, /payload\.category_key = value\('categoryKey'\)\.toLowerCase\(\)/);
   assert.match(ui, /payload\.is_active = form\.querySelector\('\[name="isActive"\]'\)\.checked/);
-  assert.match(ui, /request\('\/categories\/admin'\)/);
+  assert.ok(ui.includes("path = '/categories/admin';"), 'Category management POST route must be wired.');
 });
