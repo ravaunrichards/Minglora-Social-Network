@@ -127,3 +127,45 @@ test('AI-to-AI delegation is scoped, audited and held for human approval', () =>
   assert.ok(server.includes("runAITeamCommand('create_delegation_grant'"));
   assert.ok(!migration.includes("v_action_class in ('financial','security','moderation','external','social')"));
 });
+
+test('delegation controls are loaded only for authorized admins and use bounded scopes', () => {
+  assert.ok(ui.includes("async function loadAIDelegations()"));
+  assert.ok(ui.includes("error.status !== 403"));
+  assert.ok(ui.includes("state.delegationAccess = true"));
+  assert.ok(ui.includes("data-ai-form=\"delegation-create\""));
+  assert.ok(ui.includes("data-ai-form=\"delegation-task\""));
+  assert.ok(ui.includes("allowedActionClasses"));
+  assert.ok(ui.includes("maxTokenBudget"));
+  assert.ok(ui.includes("maxCostLimitUsd"));
+  assert.ok(ui.includes("path = '/delegations'"));
+  assert.ok(ui.includes("'/delegations/' + encodeURIComponent(grantId) + '/tasks'"));
+  assert.ok(ui.includes("data-ai-action=\"delegation-status\""));
+  assert.ok(ui.includes("action === 'delegation-status'"));
+  assert.ok(ui.includes("It has not been executed."));
+  assert.ok(server.includes("const adminOnly = ["));
+  assert.ok(server.includes("'create_delegation_grant'"));
+  assert.ok(server.includes("runAITeamCommand('delegate_task'"));
+});
+
+test('non-admin users do not receive owner delegation controls', () => {
+  assert.ok(ui.includes("if (!state.delegationAccess) return"));
+  assert.ok(ui.includes("error.status !== 403"));
+  assert.ok(server.includes("isModerator(user, req)"));
+  assert.ok(server.includes("Only an authorized Minglora platform administrator"));
+});
+
+test('delegated tasks are revalidated when approval or worker status changes', () => {
+  const guard = read('supabase/migrations/20261114142500_minglora_ai_delegation_runtime_guard.sql');
+  assert.ok(guard.includes('create or replace function ai_network.enforce_delegated_task_authority()'));
+  assert.ok(guard.includes("new.status not in ('queued','running')"));
+  assert.ok(guard.includes("v_grant_status <> 'active'"));
+  assert.ok(guard.includes('v_grant_expiry <= now()'));
+  assert.ok(guard.includes("v_team_status <> 'active'"));
+  assert.ok(guard.includes('new.approved_by_user_id is null'));
+  assert.ok(guard.includes('ai_network.ai_team_memberships'));
+  assert.ok(guard.includes('ai_network.ai_identities'));
+  assert.ok(guard.includes('ai_network.ai_employment_records'));
+  assert.ok(guard.includes('before update of status on ai_network.ai_task_queue'));
+  assert.ok(guard.includes('revoke all on function ai_network.enforce_delegated_task_authority() from public,anon,authenticated'));
+  assert.ok(guard.includes('grant execute on function ai_network.enforce_delegated_task_authority() to service_role'));
+});

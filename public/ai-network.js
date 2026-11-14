@@ -3,7 +3,7 @@
 
   const API = '/api/ai-network';
   const root = () => document.getElementById('main-content');
-  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, organizationError: '', memoryIdentityId: '', memorySettings: null, memoryEntries: [], memoryError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', aiTasks: [], taskRuntime: null, taskError: '', categoryAdmin: null };
+  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, organizationError: '', memoryIdentityId: '', memorySettings: null, memoryEntries: [], memoryError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', aiTasks: [], taskRuntime: null, taskError: '', categoryAdmin: null, delegationGrants: [], delegationAccess: false, delegationError: '' };
   const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[character]));
@@ -45,7 +45,11 @@
       body: options.body ? JSON.stringify(options.body) : undefined
     });
     const result = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(result.error || 'The AI Network request could not be completed.');
+    if (!response.ok) {
+      const error = new Error(result.error || 'The AI Network request could not be completed.');
+      error.status = response.status;
+      throw error;
+    }
     return result;
   }
 
@@ -478,6 +482,19 @@
     }
   }
 
+  async function loadAIDelegations() {
+    state.delegationGrants = [];
+    state.delegationAccess = false;
+    state.delegationError = '';
+    try {
+      const result = await request('/delegations');
+      state.delegationGrants = list(result.delegation_grants);
+      state.delegationAccess = true;
+    } catch (error) {
+      if (error.status !== 403) state.delegationError = error.message || 'AI delegation controls are not available.';
+    }
+  }
+
   async function loadAIOrganizationRegistry() {
     state.organizationError = '';
     try {
@@ -870,10 +887,92 @@
       '<p class="ai-network-note">Current scope: organization, 20 department templates and position templates. Recruitment, employee appointments, reporting-chain changes, payroll and employment lifecycle actions are not yet connected. Department and position creation does not imply that AI staff have been hired.</p>', 'ai-network-span-2');
   }
 
+  function renderDelegationCenter(teams) {
+    if (!state.delegationAccess) return state.delegationError
+      ? '<p class="ai-network-note">' + esc(state.delegationError) + '</p>'
+      : '';
+    const grantForms = teams.filter(team => team.team_id || team.id).map(team => {
+      const members = list(team.members).filter(member => member.membership_status !== 'removed');
+      const lead = members.find(member => member.member_role === 'lead' && member.membership_status === 'active');
+      const recipients = members.filter(member =>
+        ['member','observer'].includes(member.member_role) && member.membership_status === 'active'
+      );
+      if (!lead || !recipients.length) return '';
+      const recipientOptions = recipients.map(member => ({
+        value:member.identity_id,
+        label:(member.display_name || [member.first_name,member.last_name].filter(Boolean).join(' ') || 'AI team member') +
+          (member.username ? ' · @' + member.username : '')
+      }));
+      const taskTypes = [
+        {value:'content_outline',label:'Content outline'},
+        {value:'caption_draft',label:'Caption draft'},
+        {value:'title_ideas',label:'Title ideas'},
+        {value:'translation_draft',label:'Translation draft'},
+        {value:'creator_calendar',label:'Creator calendar'}
+      ];
+      const taskTypeChecks = taskTypes.map((item,index) =>
+        '<label class="ai-network-check"><input type="checkbox" name="allowedTaskTypes" value="' + item.value + '"' +
+        (index === 0 ? ' checked' : '') + '><span>' + item.label + '</span></label>'
+      ).join('');
+      return '<form class="ai-network-form" data-ai-form="delegation-create" data-team-id="' + esc(team.team_id || team.id) +
+        '" data-grantor-id="' + esc(lead.identity_id) + '"><div class="ai-network-form-title">Create a supervised delegation grant · ' + esc(team.name) + '</div>' +
+        '<p class="ai-network-note">Lead: ' + esc(lead.display_name || 'AI team lead') + '. Select one active member to receive scoped work.</p>' +
+        '<label>Team member<select name="recipientIdentityId" required>' + options(recipientOptions, recipientOptions[0]?.value || '') + '</select></label>' +
+        '<fieldset><legend>Allowed task types</legend><div class="ai-network-check-grid">' + taskTypeChecks + '</div></fieldset>' +
+        '<fieldset><legend>Allowed task classes</legend><div class="ai-network-check-grid">' +
+        '<label class="ai-network-check"><input type="checkbox" name="allowedActionClasses" value="read_only" checked><span>Read-only research</span></label>' +
+        '<label class="ai-network-check"><input type="checkbox" name="allowedActionClasses" value="content" checked><span>Content drafts</span></label>' +
+        '</div></fieldset>' +
+        '<div class="ai-network-form-grid"><label>Maximum tokens<input name="maxTokenBudget" type="number" min="0" max="10000000" value="10000" required></label>' +
+        '<label>Maximum cost (USD)<input name="maxCostLimitUsd" type="number" min="0" max="1000" step="0.01" value="1.00" required></label></div>' +
+        '<label>Grant expiry<select name="expiryDays">' + options([{value:'7',label:'7 days'},{value:'14',label:'14 days'},{value:'30',label:'30 days'},{value:'60',label:'60 days'},{value:'90',label:'90 days'}],'30') + '</select></label>' +
+        '<button class="primary" type="submit">Create human-reviewed grant</button></form>';
+    }).join('');
+
+    const grantRows = state.delegationGrants.length
+      ? '<div class="ai-network-list">' + state.delegationGrants.map(item => {
+          const grant = item.grant || {};
+          const active = grant.grant_status === 'active' && Date.parse(grant.expires_at || '') > Date.now();
+          const status = grant.expires_at && Date.parse(grant.expires_at) <= Date.now() ? 'expired' : grant.grant_status || 'unknown';
+          const allowed = list(grant.allowed_task_types);
+          const classes = list(grant.allowed_action_classes);
+          const grantId = grant.delegation_grant_id || '';
+          const taskForm = active
+            ? '<form class="ai-network-form" data-ai-form="delegation-task" data-grant-id="' + esc(grantId) + '">' +
+              '<div class="ai-network-form-title">Submit a task for owner approval</div>' +
+              '<label>Task title<input name="taskTitle" required minlength="3" maxlength="180" placeholder="Prepare a content outline"></label>' +
+              '<label>Task type<select name="taskType" required>' + options(allowed.map(value => ({value,label:value.replaceAll('_',' ')})), allowed[0] || '') + '</select></label>' +
+              '<label>Task class<select name="actionClass" required>' + options(classes.map(value => ({value,label:value.replaceAll('_',' ')})), classes[0] || '') + '</select></label>' +
+              '<label>Task brief<textarea name="brief" required minlength="3" maxlength="8000" rows="2" placeholder="Describe the requested research or draft."></textarea></label>' +
+              '<div class="ai-network-form-grid"><label>Token budget<input name="tokenBudget" type="number" min="0" max="' + String(Number(grant.max_token_budget || 0)) + '" value="' + Math.min(1000,Number(grant.max_token_budget || 0)) + '" required></label>' +
+              '<label>Cost limit (USD)<input name="costLimitUsd" type="number" min="0" max="' + esc(grant.max_cost_limit_usd || 0) + '" step="0.01" value="' + Math.min(0.1,Number(grant.max_cost_limit_usd || 0)) + '" required></label></div>' +
+              '<button class="primary" type="submit">Submit to approval queue</button></form>'
+            : '';
+          return '<article class="ai-network-list-row"><div class="ai-network-list-main"><div class="ai-network-avatar ai-network-avatar--team" aria-hidden="true">GRANT</div><div><strong>' +
+            esc(item.team_name || 'AI team') + ': ' + esc(item.grantor_name || 'Team lead') + ' → ' + esc(item.grantee_name || 'Team member') +
+            '</strong><p>' + esc(allowed.join(', ')) + ' · ' + esc(classes.join(', ')) + '</p><small>Tokens: ' + number(grant.max_token_budget) +
+            ' · USD limit: ' + esc(grant.max_cost_limit_usd || 0) + ' · Expires: ' + esc(date(grant.expires_at)) + '</small></div></div>' +
+            '<div class="ai-network-row-actions">' + pill(status, active ? 'success' : 'neutral') +
+            (grant.grant_status === 'active' ? '<button type="button" class="secondary" data-ai-action="delegation-status" data-id="' + esc(grantId) + '" data-status="paused">Pause</button>' : '') +
+            (grant.grant_status === 'paused' && status !== 'expired' ? '<button type="button" class="secondary" data-ai-action="delegation-status" data-id="' + esc(grantId) + '" data-status="active">Reactivate</button>' : '') +
+            (['active','paused'].includes(grant.grant_status) ? '<button type="button" class="secondary" data-ai-action="delegation-status" data-id="' + esc(grantId) + '" data-status="revoked">Revoke</button>' : '') +
+            '</div></article>' + taskForm;
+        }).join('') + '</div>'
+      : empty('No AI delegation grants have been issued.');
+    return card('Owner delegation controls', 'ADMIN · AI AUTHORITY', grantForms + grantRows +
+      '<p class="ai-network-note">Delegated tasks are always held for human approval and are not executed. Only read-only research and content drafts are permitted. Financial, social, external, security and moderation operations are blocked.</p>',
+      'ai-network-span-2');
+  }
+
   function renderTeams(teams, bots) {
     const rows = teams.length
       ? '<div class="ai-network-list">' + teams.map(team => {
-          const names = list(team.botIds).map(id => bots.find(bot => bot.id === id)?.name || 'Unavailable bot');
+          const memberNames = list(team.members).map(member =>
+            member.display_name || [member.first_name,member.last_name].filter(Boolean).join(' ') || 'AI team member'
+          );
+          const names = memberNames.length ? memberNames : list(team.botIds).map(id =>
+            bots.find(bot => bot.id === id)?.name || 'Unavailable bot'
+          );
           return '<article class="ai-network-list-row"><div class="ai-network-list-main"><div class="ai-network-avatar ai-network-avatar--team" aria-hidden="true">TEAM</div><div><strong>' +
             esc(team.name) + '</strong><p>' + esc(team.description || 'No team description.') + '</p><small>' + esc(names.join(' · ')) + '</small></div></div>' +
             pill(team.coordinationMode || 'human_reviewed') + '</article>';
@@ -886,7 +985,8 @@
       '<label>Team name<input name="name" required minlength="2" maxlength="60" placeholder="Community Support Team"></label>' +
       '<label>Description<textarea name="description" maxlength="240" rows="2" placeholder="What should this team coordinate?"></textarea></label>' +
       '<fieldset><legend>Select team members</legend><div class="ai-network-check-grid">' + choices + '</div></fieldset>' +
-      '<button class="primary" type="submit"' + (!bots.some(bot => bot.status !== 'archived') ? ' disabled' : '') + '>Create team</button></form>';
+      '<button class="primary" type="submit"' + (!bots.some(bot => bot.status !== 'archived') ? ' disabled' : '') + '>Create team</button></form>' +
+      renderDelegationCenter(teams);
   }
 
   function renderSchedules(schedules, bots) {
@@ -1086,6 +1186,7 @@
       await loadAIProviderRegistry();
       await loadAITaskQueue();
       await loadAIOrganizationRegistry();
+      await loadAIDelegations();
       paintSnapshot();
     } catch (error) {
       state.error = error.message;
@@ -1103,6 +1204,7 @@
     await loadAIProviderRegistry();
     await loadAITaskQueue();
     await loadAIOrganizationRegistry();
+    await loadAIDelegations();
     paintSnapshot();
   }
 
@@ -1404,6 +1506,36 @@
       payload.description = value('description');
       payload.botIds = botIds;
       payload.idempotencyKey = form.dataset.idempotencyKey;
+    } else if (kind === 'delegation-create') {
+      const teamId = form.dataset.teamId || '';
+      const grantorId = form.dataset.grantorId || '';
+      const taskTypes = data.getAll('allowedTaskTypes').map(item => String(item).trim()).filter(Boolean);
+      const actionClasses = data.getAll('allowedActionClasses').map(item => String(item).trim()).filter(Boolean);
+      if (!teamId || !grantorId || !value('recipientIdentityId')) throw new Error('Choose a valid team lead and recipient.');
+      if (!taskTypes.length || !actionClasses.length) throw new Error('Select at least one task type and one allowed task class.');
+      path = '/delegations';
+      form.dataset.idempotencyKey = form.dataset.idempotencyKey || window.crypto.randomUUID();
+      payload.team_id = teamId;
+      payload.grantor_identity_id = grantorId;
+      payload.grantee_identity_id = value('recipientIdentityId');
+      payload.allowed_task_types = taskTypes;
+      payload.allowed_action_classes = actionClasses;
+      payload.max_token_budget = Number(value('maxTokenBudget'));
+      payload.max_cost_limit_usd = Number(value('maxCostLimitUsd'));
+      payload.expires_at = new Date(Date.now() + Number(value('expiryDays')) * 86400000).toISOString();
+      payload.idempotency_key = form.dataset.idempotencyKey;
+    } else if (kind === 'delegation-task') {
+      const grantId = form.dataset.grantId || '';
+      if (!grantId) throw new Error('A valid delegation grant is required.');
+      path = '/delegations/' + encodeURIComponent(grantId) + '/tasks';
+      form.dataset.idempotencyKey = form.dataset.idempotencyKey || window.crypto.randomUUID();
+      payload.task_title = value('taskTitle');
+      payload.task_type = value('taskType');
+      payload.action_class = value('actionClass');
+      payload.task_payload = { brief:value('brief') };
+      payload.token_budget = Number(value('tokenBudget'));
+      payload.cost_limit_usd = Number(value('costLimitUsd'));
+      payload.idempotency_key = form.dataset.idempotencyKey;
     } else if (kind === 'organization') {
       path = '/organizations';
       form.dataset.idempotencyKey = form.dataset.idempotencyKey || window.crypto.randomUUID();
@@ -1567,7 +1699,7 @@
       const categoryKeyInput = form.querySelector('[name="categoryKey"]');
       if (categoryKeyInput) categoryKeyInput.readOnly = false;
     }
-    if (['identity','bot','team','organization','vacancy','application','appointment','employment-transfer','task-create'].includes(kind)) form.dataset.idempotencyKey = window.crypto.randomUUID();
+    if (['identity','bot','team','delegation-create','delegation-task','organization','vacancy','application','appointment','employment-transfer','task-create'].includes(kind)) form.dataset.idempotencyKey = window.crypto.randomUUID();
     const categoryActionLabels = { created:'created', updated:'updated', activated:'reactivated', deactivated:'deactivated' };
     const message = kind === 'memory-edit'
       ? 'AI memory entry updated; its retention expiry was refreshed.'
@@ -1581,6 +1713,10 @@
         ? 'AI bot saved and linked to relational identity ' + String(result.identity?.identity?.identity_id || '') + '. The identity is private and execution remains paused.'
       : kind === 'team'
         ? 'AI team saved to the private relational registry. Memberships are owner-scoped and coordination remains human-reviewed.'
+      : kind === 'delegation-create'
+        ? 'Delegation grant saved with explicit scope, budgets and expiry. All delegated tasks still require owner approval.'
+      : kind === 'delegation-task'
+        ? 'Delegated task submitted to the pending-approval queue. It has not been executed.'
       : kind === 'identity-edit' ? 'AI identity profile and name details updated with a new version and audit record.' + (uploadedMediaCount ? ' ' + uploadedMediaCount + ' AI profile image(s) uploaded, verified and attached.' : '')
       : kind === 'task-create'
       ? 'Task saved to the durable queue; approval policy comes from the selected AI identity.'
@@ -1672,6 +1808,7 @@
       else if (action === 'delete-discovery-group') await request('/saved-groups/' + encodeURIComponent(id), { method:'DELETE' });
       else if (action === 'bot-status') await request('/bots/' + encodeURIComponent(id) + '/status', { method:'PATCH', body:{ status:button.dataset.status } });
       else if (action === 'approval') await request('/approvals/' + encodeURIComponent(id), { method:'PATCH', body:{ decision:button.dataset.decision } });
+      else if (action === 'delegation-status') await request('/delegations/' + encodeURIComponent(id), { method:'PATCH', body:{ status:button.dataset.status, reason:'Updated by authorized Minglora platform administrator.' } });
       else if (action === 'emergency-pause') await request('/emergency-pause', { method:'POST', body:{ reason:'Owner initiated emergency pause from the AI Network command center.' } });
       else if (action === 'emergency-resume') await request('/emergency-resume', { method:'POST', body:{} });
       await refresh(action === 'emergency-pause' ? 'Emergency pause confirmed. AI work remains stopped.' : 'AI Network updated.');
