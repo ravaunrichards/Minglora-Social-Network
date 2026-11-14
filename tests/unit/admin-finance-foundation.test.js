@@ -71,5 +71,6 @@ test('Admin Centre mounts the finance module only after the owner-only panel is 
   assert.match(financeUi, /MANUAL PROVIDER ACTION REQUIRED/);
   assert.match(financeUi, /payment_status/);
   assert.match(financeUi, /paid_pending_verification/);
+  assert.doesNotMatch(financeUi, /select\('Approval status','approval_status',\[\['draft','Draft'\],\['pending','Pending'\],\['approved','Approved'\]/);
   assert.match(financeCss, /@media\(max-width:520px\)/);
 });
