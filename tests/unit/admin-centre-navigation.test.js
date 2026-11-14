@@ -17,13 +17,14 @@ test('Admin Centre exposes seven clearly named navigation departments', () => {
     'Creator Finance',
     'Live Pro Access',
     'Trust & Support',
+    'Finance & Operations',
     'Administration'
   ]);
 });
 
 test('existing administrative workspaces receive independent page routes', () => {
   for (const key of [
-    'overview','internal-operations','platform-overview','profile-verification',
+    'overview','company-finance','internal-operations','platform-overview','profile-verification',
     'users','audit-log','gift-earnings','campaign-wallet','member-promotions',
     'marketing-budget','platform-payouts','creator-withdrawals',
     'promotional-tracking','live-pro','moderation','support','security'
