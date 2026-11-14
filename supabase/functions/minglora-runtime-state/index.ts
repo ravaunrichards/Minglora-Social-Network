@@ -74,7 +74,7 @@ Deno.serve(async (req: Request) => {
   const supportedActions = [
     "internal_activity_feed",
     "admin_users_list", "admin_user_set_ban", "admin_audit_log", "admin_audit_log",
-    "streambay_cleanup", "ai_identity_command", "ai_memory_command", "ai_category_command", "ai_identity_profile_list", "ai_identity_profile_update", "ai_discovery_command", "ai_organization_command", "ai_hr_command", "ai_hr_talent_command", "ai_team_command", "ai_provider_command", "ai_task_command", "ai_schedule_command", "load", "save", "health", "media_sign", "media_upload_prepare", "media_upload_complete", "media_delete",
+    "streambay_cleanup", "ai_identity_command", "ai_identity_status_command", "ai_memory_command", "ai_category_command", "ai_identity_profile_list", "ai_identity_profile_update", "ai_discovery_command", "ai_organization_command", "ai_hr_command", "ai_hr_talent_command", "ai_team_command", "ai_provider_command", "ai_task_command", "ai_schedule_command", "load", "save", "health", "media_sign", "media_upload_prepare", "media_upload_complete", "media_delete",
     "live_broadcast_create", "live_broadcast_end", "live_chat_list", "live_chat_send", "live_chat_delete",
     "live_participant_mark_connected", "live_participant_mark_left", "live_speaker_request", "live_speaker_requests_list", "live_speaker_request_status",
     "live_speaker_request_review", "live_speaker_mark_connected", "live_speaker_mark_left",
@@ -3820,6 +3820,78 @@ Deno.serve(async (req: Request) => {
       });
     }
     return json(200, { result: data });
+  }
+
+  if (action === "ai_identity_status_command") {
+    const actorUserId = String(input.actorUserId || "");
+    const aiAction = String(input.aiAction || "");
+    const payload = input.payload && typeof input.payload === "object" && !Array.isArray(input.payload)
+      ? input.payload
+      : {};
+    const allowedStatuses = ["proposed","created","under_review","approved","active","restricted","suspended","archived","retired"];
+    if (!validUuid(actorUserId)) {
+      return json(400, { error: "A valid signed-in Minglora user is required for AI identity lifecycle access." });
+    }
+    if (!["set_status","bulk_set_status"].includes(aiAction)) {
+      return json(400, { error: "Unsupported AI identity lifecycle command." });
+    }
+    const status = String(payload.status || "").trim().toLowerCase();
+    const reason = String(payload.reason || "").trim().slice(0, 500);
+    if (!allowedStatuses.includes(status)) {
+      return json(400, { error: "Choose a valid AI identity lifecycle status." });
+    }
+    const transition = async (identityId: string) => {
+      const { data, error } = await admin.rpc("minglora_ai_network_set_identity_status", {
+        p_owner_user_id: actorUserId,
+        p_identity_id: identityId,
+        p_new_status: status,
+        p_reason: reason
+      });
+      if (error) {
+        const code = String(error.code || "");
+        return {
+          ok: false,
+          identity_id: identityId,
+          code,
+          error: String(error.message || "AI identity lifecycle update failed.").slice(0, 240)
+        };
+      }
+      return { ok: true, identity_id: identityId, result: data };
+    };
+    if (aiAction === "set_status") {
+      const identityId = String(payload.identity_id || "");
+      if (!validUuid(identityId)) {
+        return json(400, { error: "A valid AI identity ID is required." });
+      }
+      const outcome = await transition(identityId);
+      if (!outcome.ok) {
+        const statusCode = outcome.code === "42501" ? 403 : outcome.code === "P0002" ? 404
+          : outcome.code === "23505" ? 409 : 400;
+        return json(statusCode, { error: outcome.error });
+      }
+      return json(200, { result: outcome.result });
+    }
+    const rawIds = Array.isArray(payload.identity_ids) ? payload.identity_ids : [];
+    const identityIds = [...new Set(rawIds.map((value: unknown) => String(value || "").trim()))];
+    if (identityIds.length < 1 || identityIds.length > 100 || identityIds.some((id: string) => !validUuid(id))) {
+      return json(400, { error: "A bulk lifecycle request must contain between 1 and 100 unique valid AI identity IDs." });
+    }
+    const results: any[] = [];
+    const failed: any[] = [];
+    for (const identityId of identityIds) {
+      const outcome = await transition(identityId);
+      if (outcome.ok) results.push(outcome.result);
+      else failed.push({ identity_id: identityId, code: outcome.code, error: outcome.error });
+    }
+    return json(200, {
+      result: {
+        requested_count: identityIds.length,
+        succeeded_count: results.length,
+        failed_count: failed.length,
+        results,
+        failed
+      }
+    });
   }
 
   if (action === "ai_memory_command") {
