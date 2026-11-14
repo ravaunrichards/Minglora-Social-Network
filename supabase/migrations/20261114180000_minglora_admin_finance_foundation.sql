@@ -393,6 +393,12 @@ BEGIN
     v_entity_type := 'subscription';
 
   ELSIF v_action = 'save_budget' THEN
+    IF coalesce(p_payload->>'approval_status','draft')='approved' THEN
+      RAISE EXCEPTION 'Budget approval must use the separate authorized approval workflow' USING ERRCODE = '42501';
+    END IF;
+    IF v_id IS NOT NULL AND EXISTS (SELECT 1 FROM public.minglora_admin_operating_budgets WHERE id=v_id AND approval_status='approved') THEN
+      RAISE EXCEPTION 'An approved budget cannot be edited; create a new period or approval request' USING ERRCODE = '42501';
+    END IF;
     INSERT INTO public.minglora_admin_operating_budgets (
       id,department_key,department_name,period_type,period_start,period_end,
       currency_code,allocated_amount_minor,approval_status,manager_user_id,
@@ -431,6 +437,9 @@ BEGIN
     v_entity_type := 'budget';
 
   ELSIF v_action = 'save_invoice' THEN
+    IF v_id IS NOT NULL AND EXISTS (SELECT 1 FROM public.minglora_admin_operating_invoices WHERE id=v_id AND payment_status='paid') THEN
+      RAISE EXCEPTION 'A provider-confirmed paid invoice is immutable' USING ERRCODE = '42501';
+    END IF;
     IF lower(coalesce(p_payload->>'payment_status','received'))='paid' THEN
       RAISE EXCEPTION 'An invoice can only be marked paid after verified provider confirmation'
         USING ERRCODE = '42501';
