@@ -4,14 +4,26 @@
 
 **Canonical release**
 - Product/repository: Minglora Social Network only — `ravaunrichards/Minglora-Social-Network`.
-- Main merge commit: `678ea82bd3460e0558e2199bec210ae141a8f152`; PR #282 merged through the normal squash-merge workflow.
+- AI identity profile-media implementation merge: `678ea82bd3460e0558e2199bec210ae141a8f152` (PR #282). Latest main merge: `bf7965d5062078a898e84e974e2f77cd51aa4b89` (PR #284, squash merge).
 - Existing Supabase project: `gzycobgbasnqqhnympkr`. No new repository, Supabase project, Render service or paid infrastructure was created.
 - Additive migration `20261114033000_minglora_ai_identity_profile_media.sql` is applied. Supabase migration ledger records `minglora_ai_identity_profile_media` as version `20261114041952`.
 - Existing `minglora-runtime-state` Edge Function is ACTIVE at v118; custom runtime authentication remains enabled inside the function (`verify_jwt=false` is intentionally preserved from v117).
-- Existing Render service `minglora-social-network-temp` is LIVE on merge commit `678ea82bd3460e0558e2199bec210ae141a8f152`; deployment `dep-dbru22e7bikc73ef3ldg`. Build and deploy events succeeded; startup logs report Minglora listening, Supabase durable persistence ready and LiveKit connected.
+- Existing Render service `minglora-social-network-temp` is LIVE on latest main commit `bf7965d5062078a898e84e974e2f77cd51aa4b89`; deployment `dep-dbruhflbedkc73bj2tbg`. Build and deploy events succeeded; startup logs confirm asset generation completed and Render reported the service live. The prior application-readiness checkpoint also confirmed Supabase durable persistence ready and LiveKit connected.
 - PR #282 added owner-scoped AI avatar/cover upload and signed-read routes, workspace rendering fixes, a service-role-only audited media-reference RPC and regression coverage. Media stays in existing avatar/cover buckets under owner/AI-identity paths; no old media objects are deleted.
 - PR #282 checks passed on the reviewed head: AI Network syntax/regression workflow, full Minglora CI (including Auth/OAuth and For You navigation), Chromium profile visual matrix, and LIVE/MeetWave layout independence matrix.
 - Supabase logs after release show requests from Render to Edge Function v118 returning HTTP 200. The direct public Render URL could not be independently opened by the available external browser/network verifier; signed-in user upload/API and mobile/device acceptance are still outstanding.
+
+
+## Browser acceptance checkpoint — 2026-11-14
+
+- PR #284, **Add browser acceptance coverage for Minglora AI Network**, merged normally by squash as `bf7965d5062078a898e84e974e2f77cd51aa4b89`.
+- Added `tests/e2e/ai-network-workspace.mjs` and `.github/workflows/ai-network-browser-qa.yml`.
+- Chromium workflow #1 passed on reviewed head `126af02310db6993f000260fbed03a9c78f768fa`; full Minglora CI #11343 and LIVE/MeetWave layout independence matrix #152 also passed.
+- Browser report verified: 15 AI categories; 249 unique country/territory options; 3 populations; 5 gender choices; one create request; one profile-edit request; six combined discovery requests; one bulk-follow request; one saved discovery group; four viewport sizes; four screenshots; zero external API requests.
+- Evidence artifact: [minglora-ai-network-browser-evidence](https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/43558528592/artifacts/14098404618) (2,788,695 bytes, five files).
+- **Test boundary:** the browser suite runs the real Minglora app shell and AI Network UI against disposable local HTTP fixtures kept in memory. It does not call production Supabase, authenticate a real owner, upload media to Storage, create a production identity, or verify provider/email execution. It is browser contract/visual evidence, not live authenticated acceptance.
+- Stage 2 remains **PARTIAL**. Production AI identity/profile/email/provider tables still have no registered identity records; real owner create/edit/upload acceptance and device verification remain outstanding.
+- Runtime safety remains unchanged: `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`.
 
 **Security and database**
 - Existing `ai_network` schema: 33/33 tables have RLS enabled. `anon` and `authenticated` have no schema access; privileged operations stay behind the existing server runtime.
@@ -35,7 +47,7 @@
 | Stage | Status | Verified work | Remaining |
 |---|---|---|---|
 | 1. Foundation and private runtime | **COMPLETED** | Private AI schema, RLS/security boundary, existing RPC gateway and categories verified. | Preserve isolation during future integration. |
-| 2. AI identities and profiles | **PARTIAL — CURRENT** | Identity create/read/bulk foundation, separate names, email metadata, profile registry/edit, language/location, version/audit, owner-scoped avatar/cover media routes and RPC deployed; PR #282 CI and visual QA passed; Edge v118 and Render merge deploy live. | Signed-in browser/API create/get/edit/upload acceptance, actual per-owner record verification, and Android/desktop/mobile device acceptance. |
+| 2. AI identities and profiles | **PARTIAL — CURRENT** | Identity create/read/bulk foundation, separate names, email metadata, profile registry/edit, language/location, version/audit, owner-scoped avatar/cover media routes/RPC deployed; Edge v118 active; PR #284 Chromium UI contract tests passed with all 15 categories, 249 countries/territories, all identity choices, create/edit/discovery/bulk-follow/saved-group flows and 4 responsive viewports. | Signed-in owner browser/API create/get/edit/upload acceptance, actual per-owner record verification, true Storage upload and Android/desktop/mobile owner-session acceptance. |
 | 3. Discovery and following | **PARTIAL** | Combined filters, follow/unfollow, bulk duplicate suppression, privacy approval and saved-group lifecycle passed live rollback tests. | Authenticated UI, complete device and real-user acceptance. |
 | 4. Corporate governance and HR | **PARTIAL** | Organization/departments/positions, application review, gated appointment, employment transitions, hierarchy, transfer/history and owner isolation passed rollback tests. | Delegated authority, training, attendance, performance, discipline, succession and UI/device tests. |
 | 5. Supervision, teams and workers | **PARTIAL — EXECUTION PAUSED** | Task approval, observation-only mode, idempotency and cancellation passed. | Worker credentials, real scheduler/worker pool, team orchestration, recovery and load tests. |
@@ -43,7 +55,7 @@
 | 7. Providers, memory and finance | **PARTIAL — METADATA ONLY** | Unconfigured provider/model metadata, pending assignment and health-gated activation passed. | Secret-manager adapter, real provider health/inference, email service, memory runtime, cost/budget metering and reconciliation. |
 | 8. Admin, security operations and analytics | **PARTIAL** | RLS, owner-scoped RPCs, audit/version records and pause controls verified. | Full admin/security centers, alerts, live operational analytics and reports. |
 | 9. Distributed architecture / 10-billion target | **NOT STARTED** | No capacity claim made. | Distributed partitioning, storage/query/write/recovery and concurrent-execution benchmarks. |
-| 10. Production/device acceptance | **PARTIAL** | CI/visual QA passed; Edge v118 ACTIVE; Render deployment LIVE with successful startup/readiness logs; Render-to-Edge requests returned HTTP 200. | Direct public HTTP, signed-in browser, Android/desktop/mobile and disaster-recovery acceptance. |
+| 10. Production/device acceptance | **PARTIAL** | Full CI #11343, AI browser workflow #1 and LIVE/MeetWave layout matrix #152 passed; latest Render main deployment `dep-dbruhflbedkc73bj2tbg` is LIVE; Edge v118 ACTIVE. | Signed-in production owner acceptance, actual public route verification from an authenticated browser, Android/desktop/mobile owner-session tests and disaster-recovery acceptance. |
 
 **Conservative progress: 1/10 fully completed stage gates = 10%.** Stage 2 remains current. Partial stages do not count as complete. The 10-billion identity target, external model inference, email inbox provisioning and simultaneous execution capacity have not been achieved or measured.
 
