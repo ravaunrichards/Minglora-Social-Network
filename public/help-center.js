@@ -284,7 +284,7 @@ const field=$("#hc-video-url"),status=$("#hc-editor-status");
 try{
 const url=new URL(field.value.trim());
 if(url.protocol!=="https:")throw new Error("Use a secure HTTPS video link.");
-form.elements.answerMarkdown.value=form.elements.answerMarkdown.value.trimEnd()+"\\n\\n[Watch video demonstration]("+url.href+")\\n";
+form.elements.answerMarkdown.value=form.elements.answerMarkdown.value.trimEnd()+"\n\n[Watch video demonstration]("+url.href+")\n";
 field.value="";
 status.textContent="Video link inserted. Save the draft to keep it.";
 }catch(error){status.textContent=error.message||"Enter a valid HTTPS video URL.";}
