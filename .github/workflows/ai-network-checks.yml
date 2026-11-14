@@ -40,7 +40,7 @@ jobs:
           deno-version: '2.9.8'
           cache: true
       - name: Type-check Supabase runtime Edge Function
-        run: deno check --no-lock supabase/functions/minglora-runtime-state/index.ts
+        run: deno check --node-modules-dir=auto --no-lock supabase/functions/minglora-runtime-state/index.ts
       - name: Check backend JavaScript syntax
         run: node --check src/server.js
       - name: Check AI workspace JavaScript syntax
