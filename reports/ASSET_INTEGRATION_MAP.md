@@ -49,3 +49,9 @@ No prices, balances, transactions, account state, LiveKit credentials, or existi
 - `public/live-gift-access.css` sizes the category marks consistently with the existing chips.
 - The service worker uses shell cache v305 and pre-caches the category manifest and all 22 SVG files.
 - `tests/unit/live-gift-category-icons.test.js` verifies manifest coverage, physical files, vector-only artwork, accessible chip markup and offline cache inclusion.
+
+## Shared asset manifest coverage
+
+- The generated LIVE asset manifest now indexes the 16 standalone control SVGs and the 22 gift-category SVGs, including each file path and SHA-256 checksum.
+- The asset-manifest build validates canonical URLs, unique IDs, 24×24 SVG symbols, `currentColor` vector geometry and absence of emoji glyph artwork.
+- Design review and rights review remain pending for these new vector packs; the manifest records this rather than inferring approval.

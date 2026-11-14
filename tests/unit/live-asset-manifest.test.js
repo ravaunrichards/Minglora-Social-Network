@@ -135,6 +135,34 @@ test("shared SVG icon sprite metadata matches the repository's actual symbol IDs
   assert.equal(record.completeness, "shared_application_sprite_not_a_complete_live_control_state_pack");
 });
 
+test("shared LIVE control and gift-category SVG packs are inventoried with file hashes", () => {
+  const packs = manifest.shared_assets.icons;
+  const controlPack = packs.find(item => item.pack_id === "minglora-live-controls");
+  const categoryPack = packs.find(item => item.pack_id === "minglora-live-gift-categories");
+  assert.ok(controlPack);
+  assert.ok(categoryPack);
+  assert.equal(controlPack.icon_count, 16);
+  assert.equal(categoryPack.icon_count, 22);
+  assert.equal(manifest.summary.live_control_icon_count, 16);
+  assert.equal(manifest.summary.live_gift_category_icon_count, 22);
+  for (const pack of [controlPack, categoryPack]) {
+    assert.equal(pack.completeness, "standalone_svg_icon_pack");
+    assert.equal(pack.assets.length, pack.icon_count);
+    assert.equal(new Set(pack.icon_ids).size, pack.icon_ids.length);
+    for (const asset of pack.assets) {
+      const file = path.join(root, asset.path);
+      assert.ok(fs.existsSync(file), asset.asset_id + " standalone icon must exist");
+      assert.equal(asset.sha256, sha256(file), asset.asset_id + " SHA-256 must match the actual SVG");
+      assert.equal(asset.format, "svg-symbol");
+      assert.deepEqual(asset.dimensions.view_box, [0, 0, 24, 24]);
+      assert.equal(asset.quality.approved_for_premium_production, false);
+      assert.equal(asset.licensing.status, "review_required");
+    }
+  }
+  assert.ok(controlPack.component_usage.includes("public/app.js"));
+  assert.ok(categoryPack.component_usage.includes("public/live-gift-access.css"));
+});
+
 test("manifest generation is part of startup, CI and documentation", () => {
   const packageData = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
   const workflow = fs.readFileSync(path.join(root, ".github/workflows/ci.yml"), "utf8");
