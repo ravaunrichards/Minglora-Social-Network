@@ -1,3 +1,56 @@
+# Minglora AI Network — Active Ordered Execution Tracker
+
+## Current verified checkpoint — 2026-11-14
+
+This section supersedes older status statements retained below for historical traceability. Work remains exclusively in the existing Minglora Social Network repository and existing Minglora Supabase project.
+
+- Repository: `ravaunrichards/Minglora-Social-Network`
+- Working branch: `feat/minglora-ai-bot-network-core`
+- Branch head before this tracker commit: `01b98163f5ae952cf176098a0cd73532b7bf0068`
+- Released `main` at inspection: `c945e1de458b734a66021a01387f353136201765`
+- The feature branch contains the released `main` tree plus its execution checkpoint; no unrelated projects or infrastructure are in scope.
+- Supabase project: `gzycobgbasnqqhnympkr` (ACTIVE_HEALTHY, PostgreSQL 17).
+- Applied AI migration ledger through `20261114070550` (`minglora_ai_network_foreign_key_indexes`).
+- Live `ai_network` inventory: 34 base tables; all 34 have RLS enabled; schema access remains server-only; 14 public AI RPCs are SECURITY INVOKER with an empty locked search path and execution denied to `anon`/`authenticated`, granted to `service_role`.
+- Current live data: 15 original active categories, 20 department templates, 20 position templates, one runtime-control row; zero AI identities, names, profiles, emails, provider accounts/models/assignments, organizations, employees, follows, tasks or approvals. Empty identity/workforce tables are intentional; no demo records were inserted.
+- The live runtime-control row remains `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`. Worker execution must remain disabled until independent worker identity/authentication and authorization boundaries are implemented and tested.
+- Existing `minglora-runtime-state` Edge Function is ACTIVE at version 119. Provider catalogue/assignment records are metadata only; there is no verified provider secret-manager adapter, provider health connection, model inference, or email inbox provisioning.
+- Latest observed repository CI for the immediately preceding branch checkpoint: run #11459 completed successfully. The earlier AI Network and browser workflow evidence is documented below; browser acceptance used disposable local fixtures, not a signed-in production owner.
+- Render deployment status and logs are not a substitute for a successful authenticated public HTTP/API check. Signed-in owner acceptance and actual Android/desktop/mobile device acceptance remain open.
+- No production database mutation, AI registration, human Auth account creation, credential change, worker activation, provider activation, or email provisioning was performed during this inspection.
+
+## Ordered checklist and real task accounting
+
+One task is active at a time. A task is complete only when its own acceptance evidence is verified. Parent phases that remain partial are not counted as completed tasks.
+
+| # | Dependency-ordered task | Status | Acceptance boundary |
+|---:|---|---|---|
+| 1 | Reconcile the execution tracker with the current branch, migration ledger, live schema, runtime safety controls and test evidence | **COMPLETED** | This checkpoint was committed to the existing AI feature branch; older conflicting status notes are explicitly historical. |
+| 2 | Relational foundation and private runtime boundary | **COMPLETED** | 34/34 AI tables RLS-enabled; private schema privileges, 14 service-only RPC grants and AI foreign-key index coverage verified; existing 15 categories and templates retained. |
+| 3 | Individual AI identity creation, names, profile and safe bulk lifecycle | **PARTIAL** | Source and database RPC/UI exist; separate first/last names and idempotent 1–100 batch path are implemented. Signed-in owner create/list/get/edit/bulk and real profile persistence acceptance remains. |
+| 4 | AI email identity records and genuine mailbox provisioning | **PARTIAL — METADATA ONLY** | Email metadata schema exists. Records must remain unverified/not-requested until a connected email provider confirms a real mailbox; no inbox is currently claimed. |
+| 5 | Provider accounts, model catalogues, assignments, secret custody, health and routing | **PARTIAL — METADATA ONLY** | Catalogues/assignments and activation guards exist. Secret-manager integration, provider health probes, inference, fallback routing and actual usage reconciliation remain unverified. |
+| 6 | Worldwide AI discovery, saved groups, following and privacy approval | **PARTIAL** | Combined discovery and follow workflows have rollback-only test evidence; authenticated production-owner and device acceptance remains. |
+| 7 | Corporate governance, departments, positions, recruitment and employment lifecycle | **PARTIAL** | Live schema/migrations and templates are present; actual organization/workforce tables are empty. Complete owner-authenticated operational acceptance and missing lifecycle coverage remain. |
+| 8 | Supervision levels, task approvals, delegation boundaries and durable task queue | **PARTIAL — SAFE/PAUSED** | Task/approval schema and APIs exist; human approval and observation-only guards were tested. Worker claims and execution remain blocked. |
+| 9 | AI teams, cross-department collaboration and authorized AI-to-AI delegation | **NOT COMPLETE** | Team records/coordination UI and enforced membership/delegation, isolation and escalation need end-to-end implementation and tests. |
+| 10 | Smart scheduling, worker identity, leases, retries and crash recovery | **NOT COMPLETE — EXECUTION DISABLED** | Scheduling/worker infrastructure must not run jobs until independently authenticated worker principals, per-worker authorization, budgets, pause and recovery tests pass. |
+| 11 | AI social participation: posts, comments, reactions, groups, messaging, stories and LIVE | **NOT COMPLETE** | Must integrate with existing Minglora social systems, keep AI disclosures visible and enforce member privacy; no human engagement may be fabricated. |
+| 12 | AI Creator Studio and community events with human review | **PARTIAL** | Draft records/contracts exist; provider-backed generation, edit/version workflows, publish handoff, RSVP and event moderation are not verified end-to-end. |
+| 13 | Individual memory, knowledge retrieval, multilingual intelligence and model capabilities | **NOT COMPLETE** | Implement consent-aware memory update/export/deletion, source-grounded retrieval, language preferences and provider-backed translation/voice/vision only where configured. |
+| 14 | Security, trust, lifecycle, moderation and emergency governance | **PARTIAL** | Core private RPC, owner isolation, audit/version and pause guards exist; credential isolation, prompt-injection/abuse testing, retention and full administrative operations remain. |
+| 15 | Finance, budgets, compute/storage metering and resource management | **NOT COMPLETE** | Implement traceable budgets and actual usage events; AI agents must never independently authorize real-money transfers. |
+| 16 | Twelve administration centers, real analytics, alerts and downloadable reports | **PARTIAL** | Some command-center and governance primitives exist; operational metrics must come from real identity/task/provider/resource events, never placeholders. |
+| 17 | Distributed capacity architecture for the 10-billion registered-identity design target | **NOT STARTED** | Design partitioning/sharding, region routing, indexing, queue/worker pools, caching, recovery and measured storage/query/write/concurrency limits. No capacity claim before load testing. |
+| 18 | Cross-device accessibility, security, regression and production acceptance | **PARTIAL** | Existing automated tests passed at recorded checkpoints; signed-in owner, real Storage upload, API, Android, desktop and mobile acceptance remains. |
+| 19 | Final integration, operational runbooks, release and evidence-based completion report | **NOT STARTED** | All prior tasks must meet their exit criteria; then run full CI, security/advisor checks, deployed E2E, recovery and capacity tests before any completion claim. |
+
+**Task accounting after this checkpoint:** 2/19 completed (**10.53%**); 0/19 currently in progress at checkpoint close; 17/19 incomplete (**89.47%**). This is task-count progress, not a claim that the overall product is 10.53% functionally complete. The broader ten-stage acceptance gate remains 1/10 fully complete where the evidence below says so.
+
+**Next task:** Task 3 — Individual AI identity creation, names, profile and safe bulk lifecycle. Work on that task only, beginning with source/API/test inspection and authenticated acceptance gaps. Do not create sample identities to make acceptance appear complete.
+
+---
+
 ## Current production verification override — 2026-11-14 (after PR #293 and PR #294)
 
 Canonical release: Minglora only; main `b60ef07bd5307239fd543099170c9fca7cd31e1b`.
