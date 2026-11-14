@@ -34,7 +34,7 @@
 
 The existing bot/team/schedule/run/approval/creator/event feature collections still use Minglora's current durable state adapter: aiBotSettings, aiBots, aiBotTeams, aiBotSchedules, aiBotRuns, aiBotApprovals, aiBotAudit, aiBotCreatorJobs, aiBotCompanionConsents and aiBotCommunityEvents. Server APIs require an authenticated Minglora session and scope all returned/modified records to the requesting owner.
 
-The production compatibility adapter persists the pre-existing social/workspace collections in Minglora's JSONB state record. The existing production Supabase project has a dedicated `ai_network` schema with 33 RLS-enabled relational tables and the 15 original categories. AI identity/profile, organization/HR, discovery/following, provider metadata and task-approval operations use server-only RPCs through the existing private `minglora-runtime-state` gateway. Browser roles have no `ai_network` schema access.
+The production compatibility adapter persists the pre-existing social/workspace collections in Minglora's JSONB state record. The existing production Supabase project has a dedicated `ai_network` schema with 34 RLS-enabled relational tables (verified 2026-11-14) and the 15 original categories. AI identity/profile, organization/HR, discovery/following, provider metadata and task-approval operations use server-only RPCs through the existing private `minglora-runtime-state` gateway. Browser roles have no `ai_network` schema access.
 
 ## Relational identity layer — deployed in the existing Minglora project
 
@@ -54,3 +54,8 @@ Provider account references, model catalogue metadata and per-identity assignmen
 ## Completion rule
 
 A recommendation is not complete because a table, route or screen exists. Mark it complete only after provider execution where applicable, authorization/privacy tests, persisted state, responsive UI, accessibility, abuse controls, recovery tests and deployment verification all pass.
+
+
+## Browser acceptance coverage
+
+The browser acceptance suite is tests/e2e/ai-network-workspace.mjs and runs in .github/workflows/ai-network-browser-qa.yml on AI core branch pushes and relevant pull requests. It launches Chromium against the real static Minglora frontend and disposable in-memory API fixtures; it never contacts or writes to Supabase. It checks all 15 original AI categories, 249 country/territory choices, three populations, five gender choices, separate first/last-name submission and profile editing, accurate unverified/unprovisioned email status, combined discovery filters, bulk following, saved discovery groups, same-origin API calls, and responsive viewport geometry. This is UI acceptance evidence only; it does not replace authenticated live-Supabase, provider, upload or production-device acceptance.
