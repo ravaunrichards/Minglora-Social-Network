@@ -143,7 +143,7 @@ async function articleResult(slug: string, locale: string) {
 async function adminOverview(locale: string) {
   const structure=await categoriesPayload(locale);
   const [{data:articles,error:articleError},{data:searches,error:searchError}] = await Promise.all([
-    admin!.from("help_article_translations").select("id,article_id,locale,title,excerpt,status,updated_at,source_reference,source_verified_at,approved_by,help_articles!inner(id,slug,category_id,subcategory_id,is_featured,is_active)")
+    admin!.from("help_article_translations").select("id,article_id,locale,title,excerpt,status,updated_at,last_reviewed_at,created_at,source_reference,source_verified_at,approved_by,help_articles!inner(id,slug,category_id,subcategory_id,is_featured,is_active,sort_order,created_at)")
       .order("updated_at",{ascending:false}).limit(500),
     admin!.from("help_search_events").select("query_normalized,result_count,search_count,last_searched_at")
       .order("search_count",{ascending:false}).limit(30)
@@ -166,10 +166,27 @@ async function adminOverview(locale: string) {
     ...subcategory,publishedArticleCount:subcategoryCounts.get(subcategory.id)||0,
     hasPublishedAnswers:(subcategoryCounts.get(subcategory.id)||0)>0
   }));
+  const localeCoverage=new Map<string,Set<string>>();
+  for(const row of articles||[]){
+    if(row.status!=="published"||!row.help_articles?.is_active) continue;
+    if(!localeCoverage.has(row.article_id)) localeCoverage.set(row.article_id,new Set<string>());
+    localeCoverage.get(row.article_id)!.add(row.locale);
+  }
+  const reviewAfterDays=180,reviewThreshold=Date.now()-reviewAfterDays*24*60*60*1000;
+  const needsReview=(articles||[]).filter((row:any)=>row.status==="published"&&row.help_articles?.is_active&&
+    (!row.last_reviewed_at||new Date(row.last_reviewed_at).getTime()<reviewThreshold))
+    .map((row:any)=>({translationId:row.id,articleId:row.article_id,title:row.title,locale:row.locale,
+      slug:row.help_articles.slug,lastReviewedAt:row.last_reviewed_at,updatedAt:row.updated_at,
+      categoryId:row.help_articles.category_id,subcategoryId:row.help_articles.subcategory_id}));
+  const publishedWithLocales=[...localeCoverage.entries()].map(([articleId,locales])=>({
+    articleId,slug:(articles||[]).find((row:any)=>row.article_id===articleId)?.help_articles?.slug||"",
+    locales:[...locales].sort(),translationCount:locales.size
+  }));
   return {
     ...structure,categories,subcategories,articles:articles||[],popularSearches:searches||[],
     coverage:{publishedArticles:publishedArticleIds.size,
-      unansweredSubcategories:subcategories.filter((item:any)=>!item.hasPublishedAnswers).length}
+      unansweredSubcategories:subcategories.filter((item:any)=>!item.hasPublishedAnswers).length},
+    quality:{reviewAfterDays,needsReview,publishedWithLocales}
   };
 }
 async function saveArticle(input:any, actor:string) {
@@ -210,7 +227,7 @@ async function saveArticle(input:any, actor:string) {
       if (inserted.error) throw inserted.error;
     }
     const {data:updatedArticle,error:articleUpdateError}=await admin!.from("help_articles").update({
-      category_id:categoryId,subcategory_id:subcategoryId,slug,is_featured:Boolean(input.isFeatured),updated_by:actor,updated_at:now()
+      category_id:categoryId,subcategory_id:subcategoryId,slug,is_featured:Boolean(input.isFeatured),sort_order:Math.trunc(Number(input.sortOrder)||0),updated_by:actor,updated_at:now()
     }).eq("id",articleId).select().single();
     if (articleUpdateError) throw articleUpdateError;
     article=updatedArticle;
@@ -225,7 +242,7 @@ async function saveArticle(input:any, actor:string) {
     }
   } else {
     const {data,error}=await admin!.from("help_articles").insert({category_id:categoryId,subcategory_id:subcategoryId,slug,
-      is_featured:Boolean(input.isFeatured),created_by:actor,updated_by:actor}).select().single();
+      is_featured:Boolean(input.isFeatured),sort_order:Math.trunc(Number(input.sortOrder)||0),created_by:actor,updated_by:actor}).select().single();
     if (error) throw error;
     article=data;
     const {data:created,error:translationError}=await admin!.from("help_article_translations").insert({
@@ -273,7 +290,7 @@ Deno.serve(async (req:Request) => {
   let input:any;
   try {
     const raw=await req.text();
-    if (new TextEncoder().encode(raw).byteLength>1_000_000) return fail(413,"Request is too large.");
+    if (new TextEncoder().encode(raw).byteLength>8_000_000) return fail(413,"Request is too large.");
     input=JSON.parse(raw);
     if (!input||typeof input!=="object"||Array.isArray(input)) return fail(400,"Invalid request.");
   } catch { return fail(400,"Invalid JSON request."); }
@@ -403,7 +420,7 @@ Deno.serve(async (req:Request) => {
     const staffPermissions=Array.isArray(staff.permissions)?staff.permissions.map(String):[];
     const isPlatformAdmin=staffPermissions.includes("platform:admin");
     const canManageContent=isPlatformAdmin||staffPermissions.includes("help_center:manage");
-    const managementActions=new Set(["admin_article_save","admin_category_save","admin_subcategory_save","admin_restore_revision"]);
+    const managementActions=new Set(["admin_article_save","admin_media_upload","admin_category_save","admin_subcategory_save","admin_restore_revision"]);
     if (managementActions.has(action)&&!canManageContent)
       return fail(403,"Help Center editor permission is required for this change.");
     if (action==="admin_overview") return json(200,await adminOverview(locale));
@@ -411,7 +428,7 @@ Deno.serve(async (req:Request) => {
       const id=requiredText(input.translationId,64);
       if(!UUID.test(id)) return fail(400,"Invalid article translation.");
       const {data,error}=await admin.from("help_article_translations")
-        .select("id,article_id,locale,title,excerpt,answer_markdown,search_terms,status,source_reference,help_articles!inner(id,slug,category_id,subcategory_id,is_featured,is_active)")
+        .select("id,article_id,locale,title,excerpt,answer_markdown,search_terms,status,source_reference,last_reviewed_at,help_articles!inner(id,slug,category_id,subcategory_id,is_featured,is_active,sort_order)")
         .eq("id",id).maybeSingle();
       if(error) throw error;
       if(!data) return fail(404,"The requested article draft was not found.");
@@ -421,8 +438,34 @@ Deno.serve(async (req:Request) => {
       if(relationError) throw relationError;
       return json(200,{articleId:data.article_id,translationId:data.id,locale:data.locale,title:data.title,
         excerpt:data.excerpt,answerMarkdown:data.answer_markdown,searchTerms:data.search_terms||[],status:data.status,
-        sourceReference:data.source_reference,slug:a.slug,categoryId:a.category_id,subcategoryId:a.subcategory_id,
-        isFeatured:a.is_featured,isActive:a.is_active,relatedArticleIds:(relations||[]).map((row:any)=>row.related_article_id)});
+        sourceReference:data.source_reference,lastReviewedAt:data.last_reviewed_at,slug:a.slug,categoryId:a.category_id,subcategoryId:a.subcategory_id,
+        isFeatured:a.is_featured,isActive:a.is_active,sortOrder:a.sort_order,relatedArticleIds:(relations||[]).map((row:any)=>row.related_article_id)});
+    }
+    if (action==="admin_media_upload") {
+      const articleId=requiredText(input.articleId,64),contentType=requiredText(input.mimeType,80).toLowerCase();
+      const base64=String(input.contentBase64||"").replace(/^data:[^;]+;base64,/i,"").replace(/\\s/g,"");
+      const allowedTypes:Record<string,string>={"image/jpeg":"jpg","image/png":"png","image/webp":"webp","image/avif":"avif"};
+      if(!UUID.test(articleId)||!allowedTypes[contentType]||!base64||base64.length>7_000_000||!/^[A-Za-z0-9+/]*={0,2}$/.test(base64))
+        return fail(400,"Choose a supported instructional image smaller than 5 MB.");
+      const {data:article,error:articleError}=await admin.from("help_articles").select("id").eq("id",articleId).eq("is_active",true).maybeSingle();
+      if(articleError||!article) return fail(404,"Save the article draft before uploading its instructional image.");
+      let binary:string;
+      try{binary=atob(base64);}catch{return fail(400,"The selected image could not be decoded.");}
+      const bytes=Uint8Array.from(binary,(character)=>character.charCodeAt(0));
+      if(!bytes.length||bytes.length>5*1024*1024) return fail(413,"Instructional images must be 5 MB or smaller.");
+      const signature=Array.from(bytes.slice(0,12));
+      const isJpeg=contentType==="image/jpeg"&&signature[0]===0xff&&signature[1]===0xd8&&signature[2]===0xff;
+      const isPng=contentType==="image/png"&&signature.slice(0,8).join(",")==="137,80,78,71,13,10,26,10";
+      const isWebp=contentType==="image/webp"&&String.fromCharCode(...signature.slice(0,4))==="RIFF"&&String.fromCharCode(...signature.slice(8,12))==="WEBP";
+      const isAvif=contentType==="image/avif"&&String.fromCharCode(...signature.slice(4,12)).startsWith("ftypavif");
+      if(!(isJpeg||isPng||isWebp||isAvif)) return fail(415,"The file contents do not match a supported image type.");
+      const objectPath=articleId+"/"+crypto.randomUUID()+"."+allowedTypes[contentType];
+      const {error:uploadError}=await admin.storage.from("minglora-help-center-media").upload(objectPath,bytes,{
+        contentType,upsert:false,cacheControl:"31536000"
+      });
+      if(uploadError) throw uploadError;
+      const publicUrl=admin.storage.from("minglora-help-center-media").getPublicUrl(objectPath).data.publicUrl;
+      return json(200,{ok:true,url:publicUrl,path:objectPath,altText:requiredText(input.altText,160)||"Instructional image"});
     }
     if (action==="admin_feedback") {
       const limit=Math.max(1,Math.min(100,Number(input.limit)||50));
@@ -444,12 +487,12 @@ Deno.serve(async (req:Request) => {
       if (!UUID.test(articleId)||!UUID.test(translationId)) return fail(400,"Invalid article reference.");
       const {data:t,error}=await admin.from("help_article_translations").select("*").eq("id",translationId).eq("article_id",articleId).maybeSingle();
       if (error||!t) return fail(404,"The selected article translation was not found.");
-      const transitions:Record<string,string>={submit_review:"review",complete_fact_check:"fact_check",approve:"approved",publish:"published",archive:"archived",restore:"draft"};
+      const transitions:Record<string,string>={submit_review:"review",complete_fact_check:"fact_check",approve:"approved",publish:"published",unpublish:"approved",archive:"archived",restore:"draft"};
       const next=transitions[transition];
       if (!next) return fail(400,"Choose a supported publishing workflow action.");
       const transitionPermissions:Record<string,string>={
         submit_review:"help_center:manage",complete_fact_check:"help_center:fact_check",
-        approve:"help_center:approve",publish:"help_center:publish",
+        approve:"help_center:approve",publish:"help_center:publish",unpublish:"help_center:publish",
         archive:"help_center:manage",restore:"help_center:manage"
       };
       const requiredPermission=transitionPermissions[transition];
@@ -460,12 +503,14 @@ Deno.serve(async (req:Request) => {
       if (transition==="complete_fact_check"&&(t.status!=="review"||!t.source_reference)) return fail(409,"Add a source reference and complete review before fact-checking.");
       if (transition==="approve"&&(t.status!=="fact_check"||!t.source_verified_at)) return fail(409,"Complete the fact-check stage before approval.");
       if (transition==="publish"&&(t.status!=="approved"||!t.approved_by||!t.source_verified_at)) return fail(409,"Only approved, fact-checked articles can be published.");
+      if (transition==="unpublish"&&t.status!=="published") return fail(409,"Only a published article can be unpublished.");
       if (transition==="archive"&&t.status==="archived") return fail(409,"This article is already archived.");
       if (transition==="restore"&&t.status!=="archived") return fail(409,"Only archived articles can be restored.");
       const patch:any={status:next,updated_by:actor,updated_at:now()};
       if (transition==="complete_fact_check") { patch.source_verified_at=now();patch.last_reviewed_at=now(); }
       if (transition==="approve") patch.approved_by=actor;
       if (transition==="publish") patch.published_at=now();
+      if (transition==="unpublish") patch.published_at=null;
       if (transition==="archive"||transition==="restore") { patch.published_at=null; if(transition==="restore") {patch.approved_by=null;patch.source_verified_at=null;} }
       const {error:updateError}=await admin.from("help_article_translations").update(patch).eq("id",translationId);
       if (updateError) throw updateError;
