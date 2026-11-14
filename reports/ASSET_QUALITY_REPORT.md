@@ -113,3 +113,10 @@ A new original model source, `assets/3d-assets/gift-models/gamer-otter-model.mjs
 The LIVE effect runtime adds a short arcade-note/thump Web Audio cue and a code-specific cheer motion through its existing gift event path. The cue is synthesized at runtime, not a mastered recording. Reduced-motion and the existing sound opt-out remain in force.
 
 **Quality gate:** source/build/test integration is being added; the design review state remains `design-review-pending`, human visual approval is not completed, rights/attribution review is required, and physical renderer/device QA is outstanding. This asset does not establish high-resolution texture maps, KTX2 compression, a rigged/animated character or premium-production approval. The production gift catalogue remains subject to its separate version-3 approval gate; this change does not publish or activate a production gift.
+
+
+## LIVE Island bespoke model quality checkpoint — 2026-11-14
+
+The new source `assets/3d-assets/gift-models/live-island-model.mjs` creates a self-contained glTF 2.0 environment sculpture: turquoise lagoon and surf rims, pale sand, raised grassy landform, cascading water strips, three palm trees with separate trunk/frond/leaflet/coconut geometry, pavilion and lantern, a lateen-sail canoe, reef coral branches, shells and a live beacon. Materials are explicit PBR metallic/roughness records and mesh buffers are embedded. Matching original vector art and transparent icon carry `live-island-original-v1`.
+
+The model remains `design-review-pending`. The build does not include high-resolution texture maps, KTX2 compression or embedded animated glTF channels. The tide animation is a Web Animations runtime preset; sound is locally synthesized and is not a mastered file. Human art review, rights clearance, physical Android/iOS/tablet/desktop/TV rendering, and production deployment are not complete.

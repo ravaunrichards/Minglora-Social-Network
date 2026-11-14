@@ -184,3 +184,13 @@ The glyph overlay and unused emoji lookup were removed from `scripts/generate-mi
 - Added the `gamer-otter-cheer` motion profile and an exact-code visual override to the existing LIVE gift effect runtime. Added a local synthesized four-note arcade cue and short low-frequency thump; existing reduced-motion and sound opt-out handling remain.
 - Added canonical catalogue/model/artwork regression assertions and runtime sound/motion assertions. CI/build results are still pending at this checkpoint.
 - No Coin price, gift active flag, production catalogue row, transaction, wallet, earning, payout or runtime activation state was changed. The model remains design-review-pending; no rights clearance, premium-production approval, mastered sound file, physical-device or production-host result is claimed.
+
+
+## Bespoke LIVE Island model and tide-effect checkpoint — 2026-11-14
+
+- Added `assets/3d-assets/gift-models/live-island-model.mjs` for existing canonical gift code `live-island-rmn3mc`.
+- Model source creates an embedded-buffer glTF 2.0 cay sculpture with lagoon, white surf rims, sand and grassy headland, waterfall, three individually modelled palm clusters, pavilion, canoe, branching coral, shells and live beacon.
+- Generator emits original `live-island-original-v1` artwork plus transparent icon, and routes the same canonical gift to the bespoke model source.
+- Added `island-tide` LIVE animation, local synthesized filtered surf and four-tone chime sound; existing sound opt-out and reduced-motion handling remain active.
+- Added source inventory, manifest sound design, cache busting, and catalogue/manifest/runtime regression tests. CI results for this slice are pending.
+- Existing code, 10-Coin value, nature category and active state remain unchanged. No production DB offer, pricing, transaction, wallet, earnings or payout was modified. Design/licensing review and physical-device QA remain pending; no mastered audio, texture maps, embedded skeletal animation or production deployment is claimed.

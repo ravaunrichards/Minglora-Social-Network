@@ -42,3 +42,12 @@ The existing gift build generates the model and the subject-specific transparent
 - Integration: the canonical gift code is routed through scripts/generate-minglora-gifts.mjs; gift price, status and LIVE transaction logic remain unchanged
 
 The existing gift build generates both subject-specific transparent SVG artwork and the self-contained glTF. Regression coverage checks catalogue identity, model provenance, mesh groups, embedded buffers and SVG artwork signature.
+
+
+## LIVE Island v1
+
+- Source: `live-island-model.mjs`
+- Target: canonical catalogue item `live-island-rmn3mc` (LIVE Island)
+- Output: canonical generated catalogue GLTF plus primary SVG and transparent icon
+- Geometry: lagoon/surf rings, sand cay, headland, waterfall, three palms, pavilion, canoe, reef and beacon
+- Review: `design-review-pending`; no premium or rights approval is implied

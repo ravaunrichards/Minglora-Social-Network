@@ -102,8 +102,21 @@ test("Gamer Otter has dedicated action-triggered arcade sound and subject motion
   assert.ok(effects.includes("function playGamerOtter(c,now,seed)"));
   assert.ok(effects.includes('gift.code==="gamer-otter-100-mgl"'));
   assert.ok(effects.includes("notes=[523.25,659.25,783.99,1046.5]"));
-  assert.ok(effects.includes('?"gamer-otter-cheer":gift.motion_preset'));
+  assert.ok(effects.includes('gift.code==="gamer-otter-100-mgl"?"gamer-otter-cheer":'));
   assert.ok(effects.includes('if(preset==="gamer-otter-cheer")return'));
+  assert.ok(effects.includes("motionElement.animate(semanticFrames"));
+  assert.ok(effects.includes('if(options.sound!==false)play(gift)'));
+  assert.ok(effects.includes('window.matchMedia?.("(prefers-reduced-motion: reduce)")'));
+});
+
+
+test("LIVE Island has a dedicated tide animation and locally synthesized surf/chime sound", () => {
+  assert.ok(effects.includes("function playLiveIsland(c,now,seed)"));
+  assert.ok(effects.includes('gift.code==="live-island-rmn3mc"'));
+  assert.ok(effects.includes("surf.buffer=createGiftNoise(c,seed,1.08)"));
+  assert.ok(effects.includes("notes=[392,493.88,587.33,783.99]"));
+  assert.ok(effects.includes('?"island-tide":gift.motion_preset'));
+  assert.ok(effects.includes('if(preset==="island-tide")return'));
   assert.ok(effects.includes("motionElement.animate(semanticFrames"));
   assert.ok(effects.includes('if(options.sound!==false)play(gift)'));
   assert.ok(effects.includes('window.matchMedia?.("(prefers-reduced-motion: reduce)")'));

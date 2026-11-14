@@ -326,3 +326,31 @@ test("Gamer Otter uses original subject-specific SVG artwork and a self-containe
   assert.ok(svg.includes('data-gift-artwork="gamer-otter-original-v1"'), "the primary SVG must be subject-specific");
   assert.ok(icon.includes('data-gift-artwork="gamer-otter-original-v1"'), "the transparent icon must preserve the subject-specific artwork");
 });
+
+
+test("LIVE Island uses an original lagoon, palms, pavilion, canoe and coral reef GLTF sculpture", () => {
+  const island = gifts.find(gift => gift.code === "live-island-rmn3mc");
+  assert.ok(island, "LIVE Island must remain in the canonical gift catalogue");
+  assert.equal(island.name, "LIVE Island");
+  assert.equal(island.category, "nature");
+  assert.equal(island.coin_price, 10, "the canonical Coin value must remain unchanged");
+  assert.equal(island.active, true, "the existing publication state must remain unchanged");
+  const model = JSON.parse(readFileSync(path.join(assetRoot, island.code + ".gltf"), "utf8"));
+  assert.equal(model.asset?.version, "2.0");
+  assert.equal(model.asset?.extras?.mingloraAssetId, "gift-live-island-3d-v1");
+  assert.equal(model.asset?.extras?.source, "assets/3d-assets/gift-models/live-island-model.mjs");
+  assert.match(model.asset?.extras?.artDirection || "", /turquoise lagoon.*cascading waterfall.*three individually detailed palms.*branching coral reef/i);
+  assert.match(model.asset?.extras?.reviewStatus || "", /design-review-pending/);
+  assert.ok(model.meshes?.[0]?.primitives?.length >= 28, "LIVE Island should expose separate environment, pavilion, palms, boat and reef mesh parts");
+  assert.ok(model.materials?.some(material => material.name.includes("LIVE Island deep lagoon plinth")));
+  assert.ok(model.materials?.some(material => material.name.includes("LIVE Island cascading waterfall")));
+  assert.ok(model.materials?.some(material => material.name.includes("LIVE Island west palm")));
+  assert.ok(model.materials?.some(material => material.name.includes("LIVE Island pavilion coral roof")));
+  assert.ok(model.materials?.some(material => material.name.includes("LIVE Island reef coral branch")));
+  assert.ok(model.buffers?.[0]?.uri.startsWith("data:application/octet-stream;base64,"), "LIVE Island must be self-contained for the existing model viewer");
+  assert.ok(model.accessors?.filter(accessor => accessor.type === "VEC3").length >= 56, "LIVE Island must expose position and normal accessors");
+  const svg = readFileSync(path.join(assetRoot, island.code + ".svg"), "utf8");
+  const icon = readFileSync(path.join(assetRoot, island.code + "-icon.svg"), "utf8");
+  assert.ok(svg.includes('data-gift-artwork="live-island-original-v1"'), "the primary SVG must preserve subject-specific original artwork");
+  assert.ok(icon.includes('data-gift-artwork="live-island-original-v1"'), "the transparent icon must preserve subject-specific original artwork");
+});
