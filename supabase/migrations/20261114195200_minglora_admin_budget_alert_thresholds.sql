@@ -366,7 +366,6 @@ BEGIN
 
   RETURN pg_catalog.jsonb_build_object('ok',true,'action',v_action,'record',v_record);
 END;
-$function$
-
+$function$;
 
 COMMIT;

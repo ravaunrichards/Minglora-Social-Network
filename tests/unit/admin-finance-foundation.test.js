@@ -210,4 +210,5 @@ test('budget alert thresholds validate, persist, display and preserve assigned m
   assert.ok(budgetThresholdMigration.includes('Budget alert thresholds cannot contain duplicates'));
   assert.ok(budgetThresholdMigration.includes('100::smallint >= ALL (alert_thresholds)'));
   assert.ok(budgetThresholdMigration.includes('CREATE OR REPLACE FUNCTION public.minglora_admin_finance_command'));
+  assert.ok(budgetThresholdMigration.includes('$function$;'));
 });
