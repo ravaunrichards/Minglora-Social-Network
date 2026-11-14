@@ -130,3 +130,21 @@ test('private company finance uploads validate owner, file type, signature and a
   assert.ok(financeUi.includes('kind=invoice_attachment'));
   assert.ok(financeUi.includes('kind=expense_receipt'));
 });
+
+
+test('subscription register captures contract, metered usage, dates and cancellation details', () => {
+  for (const field of ['usage_charge','usage_unit','started_on','included_usage','measured_usage',
+    'cancellation_notice_days','cancellation_terms','contract_status','invoice_location']) {
+    assert.ok(financeUi.includes("name=\\"" + field + "\\"") || financeUi.includes("'" + field + "'"), 'missing subscription control: ' + field);
+  }
+  assert.ok(financeUi.includes('usage_charge_minor:usageChargeRaw'));
+  assert.ok(financeUi.includes('included_usage:parseUsageObject'));
+  assert.ok(financeUi.includes('measured_usage:parseUsageObject'));
+  assert.ok(financeUi.includes('cancellation_notice_days:cancellationNotice'));
+  assert.ok(financeUi.includes('contract_status:String(values.get'));
+  assert.ok(financeUi.includes('invoice_location:String(values.get'));
+  assert.ok(financeUi.includes("key === 'included_usage' || key === 'measured_usage'"));
+  assert.ok(financeUi.includes('cancellationNotice>365'));
+  assert.ok(runtime.includes('included_usage'));
+  assert.ok(runtime.includes('cancellation_notice_days'));
+});

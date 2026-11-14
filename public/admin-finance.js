@@ -23,6 +23,24 @@
     return Number.isNaN(date.getTime()) ? 'Not recorded' : date.toLocaleDateString();
   };
   const today = () => { const date=new Date(); return [date.getFullYear(),String(date.getMonth()+1).padStart(2,'0'),String(date.getDate()).padStart(2,'0')].join('-'); };
+  const parseUsageObject = (value,label) => {
+    const source=String(value||'').trim();
+    if(!source)return {};
+    let parsed;
+    try { parsed=JSON.parse(source); }
+    catch { throw new Error(label+' must be a valid JSON object.'); }
+    if(!parsed||typeof parsed!=='object'||Array.isArray(parsed)) {
+      throw new Error(label+' must be a JSON object, not an array or scalar.');
+    }
+    return parsed;
+  };
+  const summarizeUsageObject = value => {
+    if(!value||typeof value!=='object'||Array.isArray(value))return 'Not recorded';
+    const entries=Object.entries(value);
+    if(!entries.length)return 'Not recorded';
+    return entries.slice(0,3).map(([key,item])=>key+': '+(item&&typeof item==='object'?JSON.stringify(item):String(item))).join(', ')+
+      (entries.length>3?' …':'');
+  };
   const empty = text => '<p class="admin-finance-empty">' + esc(text) + '</p>';
   const field = (label,name,type='text',attrs='') =>
     '<label class="admin-finance-field"><span>' + esc(label) + '</span><input name="' + esc(name) +
@@ -289,14 +307,26 @@
           ? money(item.monthly_fee_minor,item.currency_code) + ' / month'
           : item.annual_fee_minor !== null && item.annual_fee_minor !== undefined
             ? money(item.annual_fee_minor,item.currency_code) + ' / year' : 'Price not recorded';
+        const usageCharge=item.usage_charge_minor!==null&&item.usage_charge_minor!==undefined
+          ? money(item.usage_charge_minor,item.currency_code)+(item.usage_unit?' / '+item.usage_unit:' / usage unit')
+          : 'No metered fee';
+        const usageSummary='Included: '+summarizeUsageObject(item.included_usage)+' · Measured: '+summarizeUsageObject(item.measured_usage);
+        const contractSummary='Contract: '+String(item.contract_status||'unknown').replace(/_/g,' ')+
+          ' · Cancellation notice: '+(item.cancellation_notice_days===null||item.cancellation_notice_days===undefined?'Not recorded':item.cancellation_notice_days+' day(s)');
+        const renewalSummary=item.renewal_date
+          ? dateLabel(item.renewal_date)+' · '+reminderLabel(item.renewal_date)
+          : 'No renewal date recorded';
         return '<tr><td><strong>' + esc(item.service_name) + '</strong><small>' + esc(provider?.provider_name || 'Provider unavailable') +
-          '</small></td><td>' + esc(item.package_name || item.plan_type) + '</td><td>' + esc(fee) +
-          '</td><td>' + esc(dateLabel(item.next_payment_date)) + '</td><td>' + statusPill(item.subscription_status) +
+          '</small><small>Started: ' + esc(dateLabel(item.started_on)) + '</small></td><td>' + esc(item.package_name || item.plan_type) +
+          '</td><td>' + esc(fee) + '</td><td><small>' + esc(usageCharge) + '</small><small>' + esc(usageSummary) +
+          '</small></td><td>' + esc(dateLabel(item.next_payment_date)) + '</td><td><small>' + esc(contractSummary) +
+          '</small><small>' + esc(item.cancellation_terms || 'No cancellation terms recorded') + '</small></td><td>' +
+          esc(renewalSummary) + '</td><td>' + statusPill(item.subscription_status) +
           '</td><td>' + billingLink + '</td><td>' + editAction('subscription',item.id) + '</td></tr>';
       });
       content.innerHTML =
         '<div class="admin-finance-section-heading"><div><h4>Subscription register</h4><p>Record only packages, prices and dates you have verified. Auto-renewal is disabled until a supported approval workflow exists.</p></div></div>' +
-        table(['Service','Package','Recorded price','Next payment','Status','Billing action','Record'],rows,'No subscriptions have been recorded.') +
+        table(['Service','Package','Recorded price','Usage / allowance','Next payment','Contract / cancellation','Renewal','Status','Billing action','Record'],rows,'No subscriptions have been recorded.') +
         '<details class="admin-finance-form-details"><summary>Add a subscription record</summary><form id="admin-finance-subscription-form" class="admin-finance-form">' +
         select('Provider','provider_id',providerOptions(),'required') +
         field('Service name','service_name','text','required maxlength="160"') +
@@ -308,17 +338,33 @@
         field('Annual fee','annual_fee','number','min="0" step="0.01" inputmode="decimal"') +
         field('Setup fee','setup_fee','number','min="0" step="0.01" inputmode="decimal"') +
         field('Renewal fee','renewal_fee','number','min="0" step="0.01" inputmode="decimal"') +
+        field('Usage charge per unit','usage_charge','number','min="0" step="0.01" inputmode="decimal"') +
+        field('Usage unit (for example GB, minute or transaction)','usage_unit','text','maxlength="80"') +
         select('Billing frequency','billing_frequency',[['unknown','Unknown'],['monthly','Monthly'],['quarterly','Quarterly'],['annually','Annually'],['weekly','Weekly'],['one_time','One time'],['usage_based','Usage based']]) +
+        field('Subscription start date','started_on','date','') +
         field('Next payment date','next_payment_date','date','') +
         field('Renewal date','renewal_date','date','') +
+        textarea('Included usage allowances (JSON object)','included_usage',3) +
+        textarea('Measured / current usage (JSON object)','measured_usage',3) +
+        '<p class="admin-finance-form-note">Usage values must be JSON objects, for example {"storage_gb":10,"minutes":100}. Leave blank when usage is not measured.</p>' +
+        field('Cancellation notice period (days)','cancellation_notice_days','number','min="0" max="365" step="1"') +
+        textarea('Cancellation terms','cancellation_terms') +
+        select('Contract status','contract_status',[['unknown','Unknown'],['not_required','Not required'],['pending','Pending'],['active','Active'],['expired','Expired'],['terminated','Terminated']]) +
+        field('Invoice location / folder','invoice_location','text','maxlength="500"') +
         field('Billing portal HTTPS URL','billing_portal_url','url','placeholder="Only paste a verified provider billing portal URL"') +
-        textarea('Cancellation terms / notes','notes') +
+        textarea('Internal notes','notes') +
         '<p class="admin-finance-form-note">Auto-renewal remains off. This form does not activate a vendor account, change a provider plan or initiate payment.</p>' +
         button('Save subscription') + '</form></details>';
       section.querySelector('#admin-finance-subscription-form')?.addEventListener('submit',async event => {
         event.preventDefault();
         const form=event.currentTarget, values=new FormData(form);
         try {
+          const usageChargeRaw=String(values.get('usage_charge')||'').trim();
+          const noticeRaw=String(values.get('cancellation_notice_days')||'').trim();
+          const cancellationNotice=noticeRaw===''?null:Number(noticeRaw);
+          if(cancellationNotice!==null&&(!Number.isInteger(cancellationNotice)||cancellationNotice<0||cancellationNotice>365)) {
+            throw new Error('Cancellation notice must be a whole number from 0 to 365 days.');
+          }
           await save('save_subscription',{
             id:form.dataset.editId || undefined,
             provider_id:String(values.get('provider_id')||''),
@@ -331,9 +377,18 @@
             annual_fee_minor:minor(values.get('annual_fee')||0),
             setup_fee_minor:minor(values.get('setup_fee')||0),
             renewal_fee_minor:minor(values.get('renewal_fee')||0),
+            usage_charge_minor:usageChargeRaw===''?null:minor(usageChargeRaw),
+            usage_unit:String(values.get('usage_unit')||'').trim()||null,
             billing_frequency:String(values.get('billing_frequency')||'unknown'),
+            started_on:String(values.get('started_on')||'')||null,
             next_payment_date:String(values.get('next_payment_date')||'')||null,
             renewal_date:String(values.get('renewal_date')||'')||null,
+            included_usage:parseUsageObject(values.get('included_usage'),'Included usage'),
+            measured_usage:parseUsageObject(values.get('measured_usage'),'Measured usage'),
+            cancellation_notice_days:cancellationNotice,
+            cancellation_terms:String(values.get('cancellation_terms')||'').trim()||null,
+            contract_status:String(values.get('contract_status')||'unknown'),
+            invoice_location:String(values.get('invoice_location')||'').trim()||null,
             billing_portal_url:String(values.get('billing_portal_url')||'').trim()||null,
             auto_renewal_enabled:false,auto_renewal_approved:false,
             notes:String(values.get('notes')||'').trim()
@@ -550,7 +605,7 @@
         subscription: {
           rows:records.subscriptions,formId:'#admin-finance-subscription-form',saveLabel:'Save subscription',
           locked:() => false,
-          aliases:{monthly_fee:'monthly_fee_minor',annual_fee:'annual_fee_minor',setup_fee:'setup_fee_minor',renewal_fee:'renewal_fee_minor'}
+          aliases:{monthly_fee:'monthly_fee_minor',annual_fee:'annual_fee_minor',setup_fee:'setup_fee_minor',renewal_fee:'renewal_fee_minor',usage_charge:'usage_charge_minor'}
         },
         budget: {
           rows:records.budgets,formId:'#admin-finance-budget-form',saveLabel:'Save budget',
@@ -591,6 +646,9 @@
         if (!(key in record)) return;
         let value=record[key];
         if (value === null || value === undefined) value='';
+        if ((key === 'included_usage' || key === 'measured_usage') && value && typeof value === 'object') {
+          value=JSON.stringify(value,null,2);
+        }
         if (control.type === 'number' && key.endsWith('_minor') && value !== '') {
           value=(Number(value)/100).toFixed(2);
         }
