@@ -63,5 +63,5 @@ test('administrator UI can create, rename, order, reactivate and deactivate cate
   assert.match(ui, /data-ai-action="edit-category"/);
   assert.match(ui, /payload\.category_key = value\('categoryKey'\)\.toLowerCase\(\)/);
   assert.match(ui, /payload\.is_active = form\.querySelector\('\[name="isActive"\]'\)\.checked/);
-  assert.match(ui, /request\('\\/categories\\/admin'\)/);
+  assert.ok(ui.includes("path = '/categories/admin';"), 'Category management POST route must be wired.');
 });
