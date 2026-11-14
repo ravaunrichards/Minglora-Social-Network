@@ -83,9 +83,10 @@ The shortcuts remain Layout, Permissions, Guests, Viewers, Fan Club, Match, Top 
 | Source | Canonical item | Model art direction | Review state |
 |---|---|---|---|
 | assets/3d-assets/gift-models/rose-model.mjs | Rose | Layered rose petals, sepals, thorned stem, sculpted leaves and dew | Design review pending |
-| assets/3d-assets/gift-models/hibiscus-model.mjs | Hibiscus (hibiscus-5-mgl) | Five cupped tropical petals, sepals, three leaves, central stamen column and pollen anthers | Design review pending; CI/build verification pending on feature branch |
+| assets/3d-assets/gift-models/hibiscus-model.mjs | Hibiscus (hibiscus-5-mgl) | Five cupped tropical petals, sepals, three leaves, central stamen column and pollen anthers | Design review pending; CI/build tests passed in merged PR #339 validation set |
+| assets/3d-assets/gift-models/djembe-model.mjs | Djembe Master (djembe-master-1v3jzkm) | Mahogany shell, hollow bowl, hide drumhead, rim bindings, 16 tension strands, diamond lacing and carved detailing | Design review pending; CI/build tests passed in merged PR #339 |
 
-These are two individually art-directed model sources. The generator still uses procedural category/name geometry for the remaining catalogue gifts; the presence of a generated GLTF file per catalogue row must not be interpreted as proof of bespoke modelling or premium approval.
+These are three individually art-directed model sources. The generator still uses procedural category/name geometry for the remaining catalogue gifts; the presence of a generated GLTF file per catalogue row must not be interpreted as proof of bespoke modelling or premium approval.
 
 ## Transparent gift-icon inventory — 2026-11-14
 
@@ -94,3 +95,8 @@ These are two individually art-directed model sources. The generator still uses 
 - Every icon record is present in the machine-readable LIVE manifest with path, SVG format, 512×512 dimensions, transparency, generator provenance, component usage, and a pending human-review/licensing state.
 - These generated files are produced by `npm run build:gifts` and the existing `prestart` script; individual generated outputs are not claimed as pre-committed source files.
 - The CI run generated and then independently verified all three per-gift file sets. Production deployment still needs a separate live-host verification.
+
+
+### Djembe Master model source — 2026-11-14
+
+The canonical Djembe Master gift (djembe-master-1v3jzkm) is now routed to the individually authored assets/3d-assets/gift-models/djembe-model.mjs source. It emits a self-contained glTF 2.0 scene and gift-specific transparent SVG artwork. The merged PR #339 passed repository CI asset-generation and gift-catalogue regression tests. The model remains design-review-pending; no premium-production or physical-device approval is inferred.
