@@ -1429,7 +1429,9 @@
       if (categoryKeyInput) categoryKeyInput.readOnly = false;
     }
     if (['identity','organization','vacancy','application','appointment','employment-transfer','task-create'].includes(kind)) form.dataset.idempotencyKey = window.crypto.randomUUID();
-    const message = kind === 'category' ? 'AI category changes saved and an audit event recorded.'
+    const categoryActionLabels = { created:'created', updated:'updated', activated:'reactivated', deactivated:'deactivated' };
+    const message = kind === 'category'
+      ? 'AI category ' + (categoryActionLabels[result.action] || 'changes saved') + ' and an audit event recorded.'
       : kind === 'identity-edit' ? 'AI identity profile and name details updated with a new version and audit record.' + (uploadedMediaCount ? ' ' + uploadedMediaCount + ' AI profile image(s) uploaded, verified and attached.' : '')
       : kind === 'task-create'
       ? 'Task saved to the durable queue; approval policy comes from the selected AI identity.'
