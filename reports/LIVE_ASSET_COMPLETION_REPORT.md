@@ -166,3 +166,12 @@ The glyph overlay and unused emoji lookup were removed from `scripts/generate-mi
 - The LIVE asset manifest now records a dedicated sound-design ID, scope, synthesized layers and explicit non-mastered status for these two gifts. `audio_file` remains null and `dedicated_mastered_gift_sound_file_count` remains zero.
 - Regression tests cover exact code routing, synthesized layer signatures, the existing sound opt-out and generic fallback. PR #341 merged as `81764826f74975ac17bd9f9e1c67c0fc72527216`; pre-merge full CI and LIVE/MeetWave layout QA passed.
 - **Acceptance:** two synchronized gift-specific synthesized sound treatments are implemented and test-covered. Recorded/mastered WAV files, dedicated audio assets, mastering, cross-device audio latency/mix QA and human audio review remain outstanding.
+
+
+## Bespoke Djembe and Palm Breeze motion choreography — 2026-11-14
+
+- Added `djembe-strike` keyframes for Djembe Master (`djembe-master-1v3jzkm`): a compact percussive entry, visual impact, recoil and settle.
+- Added `palm-canopy-sway` keyframes for Palm Breeze (`palm-breeze-gknyt0`): alternating gentle canopy sway and a soft settle.
+- The exact gift-code overrides run through the existing `motionElement.animate` path, preserving the shared event trigger, catalogue duration bounds, cleanup, and reduced-motion behavior. All other gifts retain their existing motion presets.
+- Added regression coverage for both exact-code selections and bespoke keyframe branches. PR #342 merged as `ab2939e27378d8f02a8dd1a92172105463d6dbd4` after full CI and the LIVE/MeetWave Chromium layout matrix passed.
+- **Acceptance:** two gift-specific runtime visual choreographies are merged and test-verified. These are not standalone Lottie/Rive/GLTF/video animation files; human motion review, Android/iPhone/tablet/desktop/TV visual acceptance, animation/audio latency testing and production deployment verification remain outstanding.
