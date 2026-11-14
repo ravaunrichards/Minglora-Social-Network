@@ -40,6 +40,7 @@ test("LIVE asset manifest inventories the complete canonical gift catalogue", ()
   assert.equal(manifest.summary.svg_artwork_file_count, catalogue.gifts.length);
   assert.equal(manifest.summary.gltf_model_file_count, catalogue.gifts.length);
   assert.equal(manifest.summary.required_generated_files_verified, true);
+  assert.equal(manifest.summary.emoji_font_overlay_count, 0);
   assert.equal(manifest.manifest_status, "generated_inventory_not_a_premium_quality_or_licensing_approval");
 });
 
@@ -87,7 +88,8 @@ test("every gift record has measured SVG and GLTF files, dimensions, hashes and 
   }
   assert.equal(codes.size, catalogue.gifts.length);
   assert.equal(emojiOverlayCount, manifest.summary.emoji_font_overlay_count);
-  assert.ok(emojiOverlayCount > 0, "current emoji-font artwork must remain visible as a quality blocker");
+  assert.equal(emojiOverlayCount, 0, "every generated SVG must be free of system-font emoji overlays");
+  assert.equal(manifest.summary.emoji_font_overlay_count, 0);
 });
 
 test("active gift animation profiles match the canonical motion index; retired gifts stay inactive", () => {
