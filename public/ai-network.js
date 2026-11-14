@@ -1504,6 +1504,36 @@
       payload.description = value('description');
       payload.botIds = botIds;
       payload.idempotencyKey = form.dataset.idempotencyKey;
+    } else if (kind === 'delegation-create') {
+      const teamId = form.dataset.teamId || '';
+      const grantorId = form.dataset.grantorId || '';
+      const taskTypes = data.getAll('allowedTaskTypes').map(item => String(item).trim()).filter(Boolean);
+      const actionClasses = data.getAll('allowedActionClasses').map(item => String(item).trim()).filter(Boolean);
+      if (!teamId || !grantorId || !value('recipientIdentityId')) throw new Error('Choose a valid team lead and recipient.');
+      if (!taskTypes.length || !actionClasses.length) throw new Error('Select at least one task type and one allowed task class.');
+      path = '/delegations';
+      form.dataset.idempotencyKey = form.dataset.idempotencyKey || window.crypto.randomUUID();
+      payload.team_id = teamId;
+      payload.grantor_identity_id = grantorId;
+      payload.grantee_identity_id = value('recipientIdentityId');
+      payload.allowed_task_types = taskTypes;
+      payload.allowed_action_classes = actionClasses;
+      payload.max_token_budget = Number(value('maxTokenBudget'));
+      payload.max_cost_limit_usd = Number(value('maxCostLimitUsd'));
+      payload.expires_at = new Date(Date.now() + Number(value('expiryDays')) * 86400000).toISOString();
+      payload.idempotency_key = form.dataset.idempotencyKey;
+    } else if (kind === 'delegation-task') {
+      const grantId = form.dataset.grantId || '';
+      if (!grantId) throw new Error('A valid delegation grant is required.');
+      path = '/delegations/' + encodeURIComponent(grantId) + '/tasks';
+      form.dataset.idempotencyKey = form.dataset.idempotencyKey || window.crypto.randomUUID();
+      payload.task_title = value('taskTitle');
+      payload.task_type = value('taskType');
+      payload.action_class = value('actionClass');
+      payload.task_payload = { brief:value('brief') };
+      payload.token_budget = Number(value('tokenBudget'));
+      payload.cost_limit_usd = Number(value('costLimitUsd'));
+      payload.idempotency_key = form.dataset.idempotencyKey;
     } else if (kind === 'organization') {
       path = '/organizations';
       form.dataset.idempotencyKey = form.dataset.idempotencyKey || window.crypto.randomUUID();
@@ -1667,7 +1697,7 @@
       const categoryKeyInput = form.querySelector('[name="categoryKey"]');
       if (categoryKeyInput) categoryKeyInput.readOnly = false;
     }
-    if (['identity','bot','team','organization','vacancy','application','appointment','employment-transfer','task-create'].includes(kind)) form.dataset.idempotencyKey = window.crypto.randomUUID();
+    if (['identity','bot','team','delegation-create','delegation-task','organization','vacancy','application','appointment','employment-transfer','task-create'].includes(kind)) form.dataset.idempotencyKey = window.crypto.randomUUID();
     const categoryActionLabels = { created:'created', updated:'updated', activated:'reactivated', deactivated:'deactivated' };
     const message = kind === 'memory-edit'
       ? 'AI memory entry updated; its retention expiry was refreshed.'
@@ -1681,6 +1711,10 @@
         ? 'AI bot saved and linked to relational identity ' + String(result.identity?.identity?.identity_id || '') + '. The identity is private and execution remains paused.'
       : kind === 'team'
         ? 'AI team saved to the private relational registry. Memberships are owner-scoped and coordination remains human-reviewed.'
+      : kind === 'delegation-create'
+        ? 'Delegation grant saved with explicit scope, budgets and expiry. All delegated tasks still require owner approval.'
+      : kind === 'delegation-task'
+        ? 'Delegated task submitted to the pending-approval queue. It has not been executed.'
       : kind === 'identity-edit' ? 'AI identity profile and name details updated with a new version and audit record.' + (uploadedMediaCount ? ' ' + uploadedMediaCount + ' AI profile image(s) uploaded, verified and attached.' : '')
       : kind === 'task-create'
       ? 'Task saved to the durable queue; approval policy comes from the selected AI identity.'
