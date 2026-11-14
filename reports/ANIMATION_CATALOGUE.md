@@ -63,3 +63,12 @@ The existing 3D gift generator builds original primitive mesh scenes with basic 
 - Sound design: `live-island-tide-and-chime-v1`; one filtered noise swell (high-pass/low-pass sweep) plus four soft sine chimes at 392, 493.88, 587.33 and 783.99 Hz with seeded detuning and stereo placement.
 - Audio is generated through local Web Audio on the existing gift playback path. It is not a mastered recording. Existing sound opt-out and reduced-motion preferences remain respected.
 - No standalone Lottie/Rive/WebM/MP4 animation, embedded glTF animation track or recorded audio asset is claimed. Human review and physical-device timing/mix QA remain pending.
+
+
+## Crystal Crown royal shimmer — 2026-11-14
+
+- Canonical gift: `crystal-crown-1itryeu`.
+- Motion preset: `crown-lustre`, selected by exact gift-code override in `public/gift-effects.js`; a soft lift, settle and restrained shimmer run through the existing Web Animations gift event trigger.
+- Sound design ID: `crystal-crown-royal-glass-chime-v1`; five softly enveloped sine/triangle tones at 523.25, 659.25, 783.99, 1046.5 and 1318.51 Hz, with seeded stereo placement and a filtered high-frequency noise shimmer.
+- Sound is locally synthesized through Web Audio, not a mastered recording. The existing user sound opt-out and reduced-motion preference remain respected.
+- No Lottie/Rive/video file or embedded GLTF animation track is claimed. Human timing/mix and physical-device QA remain pending.
