@@ -146,8 +146,8 @@ test('subscription register captures contract, metered usage, dates and cancella
   assert.ok(financeUi.includes("key === 'included_usage' || key === 'measured_usage'"));
   assert.ok(financeUi.includes('cancellationNotice>365'));
   assert.match(migration, /usage_charge_minor bigint/);
-  assert.match(migration, /included_usage jsonb NOT NULL DEFAULT '\\{\\}'::jsonb/);
-  assert.match(migration, /measured_usage jsonb NOT NULL DEFAULT '\\{\\}'::jsonb/);
+  assert.ok(migration.includes("included_usage jsonb NOT NULL DEFAULT '{}'::jsonb"));
+  assert.ok(migration.includes("measured_usage jsonb NOT NULL DEFAULT '{}'::jsonb"));
   assert.match(migration, /cancellation_notice_days smallint/);
   assert.match(migration, /cancellation_terms text/);
   assert.match(migration, /contract_status text NOT NULL DEFAULT 'unknown'/);
