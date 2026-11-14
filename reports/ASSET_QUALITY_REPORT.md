@@ -120,3 +120,10 @@ The LIVE effect runtime adds a short arcade-note/thump Web Audio cue and a code-
 The new source `assets/3d-assets/gift-models/live-island-model.mjs` creates a self-contained glTF 2.0 environment sculpture: turquoise lagoon and surf rims, pale sand, raised grassy landform, cascading water strips, three palm trees with separate trunk/frond/leaflet/coconut geometry, pavilion and lantern, a lateen-sail canoe, reef coral branches, shells and a live beacon. Materials are explicit PBR metallic/roughness records and mesh buffers are embedded. Matching original vector art and transparent icon carry `live-island-original-v1`.
 
 The model remains `design-review-pending`. The build does not include high-resolution texture maps, KTX2 compression or embedded animated glTF channels. The tide animation is a Web Animations runtime preset; sound is locally synthesized and is not a mastered file. Human art review, rights clearance, physical Android/iOS/tablet/desktop/TV rendering, and production deployment are not complete.
+
+
+## Crystal Crown bespoke faceted model checkpoint — 2026-11-14
+
+The new source `assets/3d-assets/gift-models/crystal-crown-model.mjs` creates an embedded-buffer glTF 2.0 royal tiara with a tapered sculpted metallic band, velvet lining, engraved chevrons and granules, five gold spires, inter-point arches, individually faceted sapphire/amethyst/emerald stones, a large front sapphire, pavé accents, pendant gems and a crown finial. Materials are explicitly assigned PBR metallic/roughness factors. The existing generator emits original matching SVG art and transparent icon.
+
+The model remains `design-review-pending`. Its gemstones are faceted geometric materials rather than high-resolution texture maps; KTX2 textures and an embedded rigged/animated GLTF are not claimed. Motion is supplied by the existing Web Animations runtime and sound is synthesized locally. Human visual review, rights clearance and physical Android/iOS/tablet/foldable/desktop/TV QA remain outstanding.
