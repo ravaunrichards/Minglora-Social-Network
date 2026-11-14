@@ -153,8 +153,7 @@ function svgArt(gift, options = {}) {
     '<path d="M205 80h102v84H205z" fill="none" stroke="#fff" stroke-width="8"/><path d="m205 80 102 84m0-84L205 164" stroke="#fff" stroke-width="7"/>'
   ];
   const sigil = sigils[seed % sigils.length];
-  const safeLabel = String(gift.name || "Minglora Gift").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").slice(0,30);
-  const safeName=String(gift.name||"Minglora Gift").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").slice(0,60);
+  const safeName=String(gift.name||"Minglora Gift").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/\x27/g,"&apos;").slice(0,60);
   const safeLabel=safeName.slice(0,30);
   const defs='<defs><linearGradient id="main" x1="0" y1="0" x2="1" y2="1"><stop stop-color="'+shine+'"/><stop offset=".55" stop-color="'+bg2+'"/><stop offset="1" stop-color="'+bg1+'"/></linearGradient><radialGradient id="shine" cx=".28" cy=".2" r=".85"><stop stop-color="#fff"/><stop offset=".35" stop-color="'+shine+'"/><stop offset="1" stop-color="'+bg1+'"/></radialGradient><filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="16"/></filter></defs>';
   const stage=iconOnly?'':'<circle cx="256" cy="257" r="'+ring+'" fill="none" stroke="#fff" stroke-opacity=".12" stroke-width="22"/><circle cx="256" cy="265" r="160" fill="#100d36" opacity=".17" filter="url(#shadow)"/><ellipse cx="256" cy="408" rx="132" ry="21" fill="#081a3b" opacity=".22"/>';
