@@ -351,13 +351,13 @@ function buildManifest() {
 function main() {
   const checkOnly = process.argv.includes("--check");
   const manifest = buildManifest();
-  const serialized = JSON.stringify(manifest, null, 2) + "\\n";
+  const serialized = JSON.stringify(manifest, null, 2) + "\n";
   if (checkOnly) {
     if (!fs.existsSync(OUTPUT_PATH)) fail("manifest is missing; run npm run build:live-asset-manifest.");
     const existing = fs.readFileSync(OUTPUT_PATH, "utf8");
     if (existing !== serialized) fail("manifest is stale; run npm run build:live-asset-manifest.");
     process.stdout.write("[Minglora LIVE asset manifest] verified " + manifest.summary.catalogue_gift_count +
-      " catalogue gifts and " + manifest.summary.active_motion_profile_count + " active motion profiles.\\n");
+      " catalogue gifts and " + manifest.summary.active_motion_profile_count + " active motion profiles.\n");
     return;
   }
   fs.mkdirSync(path.dirname(OUTPUT_PATH), { recursive: true });
@@ -367,6 +367,6 @@ function main() {
   process.stdout.write("[Minglora LIVE asset manifest] generated " + manifest.summary.catalogue_gift_count +
     " gift records; verified " + manifest.summary.svg_artwork_file_count + " SVGs, " +
     manifest.summary.gltf_model_file_count + " GLTFs and " +
-    manifest.summary.active_motion_profile_count + " active motion profiles.\\n");
+    manifest.summary.active_motion_profile_count + " active motion profiles.\n");
 }
 main();
