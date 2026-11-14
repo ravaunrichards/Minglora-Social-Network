@@ -258,7 +258,7 @@
       osc.type=index===3?"sine":"square";
       osc.frequency.setValueAtTime(frequency*(1+((seed+index*3)%9-4)*.0012),start);
       gain.gain.setValueAtTime(.0001,start);
-      gain.gain.exponentialRampToValueAtTime(index===3?.052:.034,start+.012);
+      gain.gain.exponentialRampToValueAtTime(index===3 ? .052 : .034,start+.012);
       gain.gain.exponentialRampToValueAtTime(.0001,start+(index===3?.27:.14));
       if(pan){pan.pan.setValueAtTime((index-1.5)*.16,start);osc.connect(gain);gain.connect(pan);pan.connect(c.destination);}
       else{osc.connect(gain);gain.connect(c.destination);}
