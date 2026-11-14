@@ -4,15 +4,27 @@
 
 **Canonical release**
 - Product/repository: Minglora Social Network only — `ravaunrichards/Minglora-Social-Network`.
-- AI identity profile-media implementation merge: `678ea82bd3460e0558e2199bec210ae141a8f152` (PR #282). Latest main merge: `bf7965d5062078a898e84e974e2f77cd51aa4b89` (PR #284, squash merge).
+- AI identity profile-media implementation merge: `678ea82bd3460e0558e2199bec210ae141a8f152` (PR #282); AI browser acceptance merge: `bf7965d5062078a898e84e974e2f77cd51aa4b89` (PR #284); audited category administration merge: `8297214f08da128980a4d156c0efee602751bcc4` (PR #286); corrected/least-privilege SQL migration merge and current main: `b88ac94846405e03bc4f8e3c86cd8feea41b2e83` (PR #288).
 - Existing Supabase project: `gzycobgbasnqqhnympkr`. No new repository, Supabase project, Render service or paid infrastructure was created.
-- Additive migration `20261114033000_minglora_ai_identity_profile_media.sql` is applied. Supabase migration ledger records `minglora_ai_identity_profile_media` as version `20261114041952`.
-- Existing `minglora-runtime-state` Edge Function is ACTIVE at v118; custom runtime authentication remains enabled inside the function (`verify_jwt=false` is intentionally preserved from v117).
-- Existing Render service `minglora-social-network-temp` is LIVE on latest main commit `bf7965d5062078a898e84e974e2f77cd51aa4b89`; deployment `dep-dbruhflbedkc73bj2tbg`. Build and deploy events succeeded; startup logs confirm asset generation completed and Render reported the service live. The prior application-readiness checkpoint also confirmed Supabase durable persistence ready and LiveKit connected.
+- Additive AI migrations are applied in the existing Supabase project, including profile media (version `20261114041952`) and audited AI category administration (version `20261114053137`). The category migration was source-reviewed and verified for complete key validation, serialized writes, SECURITY INVOKER, empty locked search path, RLS and least-privilege service-role grants before application.
+- Existing `minglora-runtime-state` Edge Function is ACTIVE at v119; the deployment includes the category-command gateway, and its existing custom runtime authentication setting remains unchanged (`verify_jwt=false`). Supabase logs show 8 requests served by v119 with HTTP 200.
+- Existing free Render service `minglora-social-network-temp` is LIVE on main commit `b88ac94846405e03bc4f8e3c86cd8feea41b2e83`; deployment `dep-dbrv4bh5efls73e5s1j0` completed at `2026-11-14T05:33:01Z`. No new service or paid plan was created.
 - PR #282 added owner-scoped AI avatar/cover upload and signed-read routes, workspace rendering fixes, a service-role-only audited media-reference RPC and regression coverage. Media stays in existing avatar/cover buckets under owner/AI-identity paths; no old media objects are deleted.
 - PR #282 checks passed on the reviewed head: AI Network syntax/regression workflow, full Minglora CI (including Auth/OAuth and For You navigation), Chromium profile visual matrix, and LIVE/MeetWave layout independence matrix.
 - Supabase logs after release show requests from Render to Edge Function v118 returning HTTP 200. The direct public Render URL could not be independently opened by the available external browser/network verifier; signed-in user upload/API and mobile/device acceptance are still outstanding.
 
+
+## Audited AI category administration release — 2026-11-14
+
+- PR #286 merged as `8297214f08da128980a4d156c0efee602751bcc4`; PR #288 corrected the migration and least-privilege grants, merged as `b88ac94846405e03bc4f8e3c86cd8feea41b2e83`.
+- Added moderator-only category list/create/edit/activate/deactivate API routes and controls in the existing AI Network workspace. Category keys remain immutable because identity records reference them; deactivation is reversible and categories are never deleted.
+- Migration `minglora_ai_category_management` is applied to existing project `gzycobgbasnqqhnympkr` as version `20261114053137`. It adds `ai_network.ai_category_audit_logs` and service-role-only RPC `public.minglora_ai_category_command(text,uuid,jsonb)`.
+- Verified the RPC is SECURITY INVOKER with `search_path=""`; anon/authenticated cannot execute it. The audit table has RLS; service_role can SELECT/INSERT but not UPDATE/DELETE. For the category table service_role can SELECT/INSERT/UPDATE but not DELETE; anon/authenticated cannot SELECT.
+- Rollback-only live DB integration: category create, display-name update and deactivation succeeded and wrote 3 audit events inside a transaction; rollback then verified 0 probe category rows and 0 probe audit rows. Production still has exactly 15 original categories and 0 AI identities, 0 AI profiles and 0 AI email records.
+- Browser acceptance verified category create/edit/deactivate in the real Minglora UI shell using disposable in-memory API fixtures. It is not authenticated production-owner UI acceptance.
+- CI, AI Network checks, Chromium browser acceptance and seven-plus-two layout QA passed on the reviewed heads before the PR merges.
+- Edge Function v119 ACTIVE; Render deployment `dep-dbrv4bh5efls73e5s1j0` LIVE. Render's public URL could not be independently opened by the available external browser verifier; no signed-in owner browser session was available.
+- AI runtime stays paused: `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`.
 
 ## Browser acceptance checkpoint — 2026-11-14
 
@@ -47,7 +59,7 @@
 | Stage | Status | Verified work | Remaining |
 |---|---|---|---|
 | 1. Foundation and private runtime | **COMPLETED** | Private AI schema, RLS/security boundary, existing RPC gateway and categories verified. | Preserve isolation during future integration. |
-| 2. AI identities and profiles | **PARTIAL — CURRENT** | Identity create/read/bulk foundation, separate names, email metadata, profile registry/edit, language/location, version/audit, owner-scoped avatar/cover media routes/RPC deployed; Edge v118 active; PR #284 Chromium UI contract tests passed with all 15 categories, 249 countries/territories, all identity choices, create/edit/discovery/bulk-follow/saved-group flows and 4 responsive viewports. | Signed-in owner browser/API create/get/edit/upload acceptance, actual per-owner record verification, true Storage upload and Android/desktop/mobile owner-session acceptance. |
+| 2. AI identities and profiles | **PARTIAL — CURRENT** | Identity create/read/bulk foundation, separate names, email metadata, profile registry/edit, language/location, version/audit, owner-scoped avatar/cover media routes/RPC, audited category admin CRUD/status and service-only RPC deployed; Edge v119 active; PR #284 Chromium UI contract and PR #286 category-management browser checks passed. | Signed-in owner browser/API create/get/edit/upload/category-management acceptance, actual per-owner record verification, true Storage upload and Android/desktop/mobile owner-session acceptance. |
 | 3. Discovery and following | **PARTIAL** | Combined filters, follow/unfollow, bulk duplicate suppression, privacy approval and saved-group lifecycle passed live rollback tests. | Authenticated UI, complete device and real-user acceptance. |
 | 4. Corporate governance and HR | **PARTIAL** | Organization/departments/positions, application review, gated appointment, employment transitions, hierarchy, transfer/history and owner isolation passed rollback tests. | Delegated authority, training, attendance, performance, discipline, succession and UI/device tests. |
 | 5. Supervision, teams and workers | **PARTIAL — EXECUTION PAUSED** | Task approval, observation-only mode, idempotency and cancellation passed. | Worker credentials, real scheduler/worker pool, team orchestration, recovery and load tests. |
@@ -55,9 +67,9 @@
 | 7. Providers, memory and finance | **PARTIAL — METADATA ONLY** | Unconfigured provider/model metadata, pending assignment and health-gated activation passed. | Secret-manager adapter, real provider health/inference, email service, memory runtime, cost/budget metering and reconciliation. |
 | 8. Admin, security operations and analytics | **PARTIAL** | RLS, owner-scoped RPCs, audit/version records and pause controls verified. | Full admin/security centers, alerts, live operational analytics and reports. |
 | 9. Distributed architecture / 10-billion target | **NOT STARTED** | No capacity claim made. | Distributed partitioning, storage/query/write/recovery and concurrent-execution benchmarks. |
-| 10. Production/device acceptance | **PARTIAL** | Full CI #11343, AI browser workflow #1 and LIVE/MeetWave layout matrix #152 passed; latest Render main deployment `dep-dbruhflbedkc73bj2tbg` is LIVE; Edge v118 ACTIVE. | Signed-in production owner acceptance, actual public route verification from an authenticated browser, Android/desktop/mobile owner-session tests and disaster-recovery acceptance. |
+| 10. Production/device acceptance | **PARTIAL** | PR #286/#288 checks passed; Supabase migration version `20261114053137`, Edge v119 ACTIVE, Render deployment `dep-dbrv4bh5efls73e5s1j0` LIVE; rollback-only create/update/deactivate/audit integration test passed with no retained test rows. | Signed-in production owner acceptance, independently verified public route, Android/desktop/mobile owner-session tests and disaster-recovery acceptance. |
 
-**Conservative progress: 1/10 fully completed stage gates = 10%.** Stage 2 remains current. Partial stages do not count as complete. The 10-billion identity target, external model inference, email inbox provisioning and simultaneous execution capacity have not been achieved or measured.
+**Conservative progress: 1/10 fully completed stage gates = 10%.** Stage 2 remains current; category administration is a completed subtask, not completion of the full identity/profile/discovery stage. Partial stages do not count as complete. The 10-billion identity target, external model inference, email inbox provisioning and simultaneous execution capacity have not been achieved or measured.
 
 **Deployment limitation:** Render and Supabase report healthy deployment/runtime behavior, but the available external browser/network verifier could not directly open the public Render URL. No authenticated owner session was available for real create/edit/upload E2E tests.
 
