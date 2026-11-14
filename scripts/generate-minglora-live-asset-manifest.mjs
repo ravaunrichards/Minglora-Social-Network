@@ -48,6 +48,13 @@ const GIFT_SPECIFIC_WEB_AUDIO_DESIGNS = Object.freeze({
     format: "Web Audio API synthesized filtered surf swell with four soft tonal chimes",
     layers: ["filtered_surf_noise_swell", "lowpass_tide_sweep", "four_note_island_chime_392_494_587_784hz"],
     status: "gift_specific_synthesized_sound_not_mastered_recording"
+  }),
+  "crystal-crown-1itryeu": Object.freeze({
+    sound_design_id: "crystal-crown-royal-glass-chime-v1",
+    sound_profile_scope: "gift_specific_web_audio_synthesis",
+    format: "Web Audio API synthesized five-note pure-tone chime with filtered high-frequency shimmer",
+    layers: ["five_note_royal_chime_523_659_784_1047_1319hz", "seeded_stereo_note_placement", "highpass_shimmer_noise"],
+    status: "gift_specific_synthesized_sound_not_mastered_recording"
   })
 });
 

@@ -81,6 +81,14 @@
       {offset:.84,opacity:1,transform:"translate3d(2px,0,0) rotateZ(-.7deg) scale(1.015)",filter:"none"},
       neutral
     ];
+    if(preset==="crown-lustre")return [
+      {offset:0,opacity:0,transform:"translate3d(0,18px,0) rotateZ(-8deg) scale(.78)",filter:"brightness(.72) saturate(.72)"},
+      {offset:.22,opacity:1,transform:"translate3d(0,-8px,0) rotateZ(4deg) scale(1.12)",filter:"brightness(1.48) saturate(1.34)"},
+      {offset:.44,opacity:1,transform:"translate3d(0,2px,0) rotateZ(-2.5deg) scale(.96)",filter:"brightness(1.2) saturate(1.16)"},
+      {offset:.68,opacity:1,transform:"translate3d(0,-3px,0) rotateZ(1.6deg) scale(1.04)",filter:"brightness(1.28) saturate(1.2)"},
+      {offset:.86,opacity:1,transform:"translate3d(0,0,0) rotateZ(0deg) scale(1)",filter:"brightness(1.08)"},
+      neutral
+    ];
     if(preset==="palm-canopy-sway")return [
       {offset:0,opacity:0,transform:"translate3d(0,18px,0) rotateZ(-4deg) scale(.86)",filter:"brightness(.86)"},
       {offset:.24,opacity:1,transform:"translate3d(-5px,-4px,0) rotateZ(2.8deg) scale(1.045)",filter:"brightness(1.16)"},
@@ -298,6 +306,25 @@
     });
     return true;
   }
+  function playCrystalCrown(c,now,seed){
+    const notes=[523.25,659.25,783.99,1046.5,1318.51],delays=[0,.12,.25,.4,.58];
+    notes.forEach((frequency,index)=>{
+      const start=now+delays[index],tone=c.createOscillator(),gain=c.createGain(),pan=c.createStereoPanner?.();
+      tone.type=index===4?"triangle":"sine";
+      tone.frequency.setValueAtTime(frequency*(1+((seed+index*7)%11-5)*.0007),start);
+      gain.gain.setValueAtTime(.0001,start);
+      gain.gain.exponentialRampToValueAtTime(.026/(1+index*.22),start+.026);
+      gain.gain.exponentialRampToValueAtTime(.0001,start+.66);
+      if(pan){pan.pan.setValueAtTime((index-2)*.15,start);tone.connect(gain);gain.connect(pan);pan.connect(c.destination);}
+      else{tone.connect(gain);gain.connect(c.destination);}
+      tone.start(start);tone.stop(start+.69);
+    });
+    const shimmer=c.createBufferSource(),filter=c.createBiquadFilter(),shimmerGain=c.createGain();
+    shimmer.buffer=createGiftNoise(c,seed,0.62);filter.type="highpass";filter.frequency.setValueAtTime(3400,now);
+    shimmerGain.gain.setValueAtTime(.0001,now);shimmerGain.gain.exponentialRampToValueAtTime(.009,now+.09);shimmerGain.gain.exponentialRampToValueAtTime(.0001,now+.62);
+    shimmer.connect(filter);filter.connect(shimmerGain);shimmerGain.connect(c.destination);shimmer.start(now);shimmer.stop(now+.64);
+    return true;
+  }
   function play(gift){
     if(!gift)return false;
     const c=audio();if(!c)return false;
@@ -308,6 +335,7 @@
       if(gift.code==="palm-breeze-gknyt0")return playPalmBreeze(c,now,seed);
       if(gift.code==="gamer-otter-100-mgl")return playGamerOtter(c,now,seed);
       if(gift.code==="live-island-rmn3mc")return playLiveIsland(c,now,seed);
+      if(gift.code==="crystal-crown-1itryeu")return playCrystalCrown(c,now,seed);
       const p=profiles[gift.category]||profiles.other,variation=(seed%9)-4;
       const base=p.base*(.92+(seed%17)/100);
       p.notes.forEach((step,i)=>{
@@ -431,7 +459,7 @@
     const motionElement=card.querySelector(".minglora-gift-fx-model");
     if(motionElement&&gift.motion_preset&&typeof motionElement.animate==="function"){
       const reduced=Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);
-      const visualPreset=gift.code==="djembe-master-1v3jzkm"?"djembe-strike":gift.code==="palm-breeze-gknyt0"?"palm-canopy-sway":gift.code==="gamer-otter-100-mgl"?"gamer-otter-cheer":gift.code==="live-island-rmn3mc"?"island-tide":gift.motion_preset;
+      const visualPreset=gift.code==="djembe-master-1v3jzkm"?"djembe-strike":gift.code==="palm-breeze-gknyt0"?"palm-canopy-sway":gift.code==="gamer-otter-100-mgl"?"gamer-otter-cheer":gift.code==="live-island-rmn3mc"?"island-tide":gift.code==="crystal-crown-1itryeu"?"crown-lustre":gift.motion_preset;
       const semanticFrames=buildPreviewFrames(visualPreset,{dx,dy,tilt,spin,peak,rebound});
       motionElement.animate(semanticFrames,{
         duration:reduced?320:Math.max(950,Math.min(4200,Number(gift.motion_duration_ms)||duration)),

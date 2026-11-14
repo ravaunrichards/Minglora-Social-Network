@@ -194,3 +194,23 @@ The glyph overlay and unused emoji lookup were removed from `scripts/generate-mi
 - Added `island-tide` LIVE animation, local synthesized filtered surf and four-tone chime sound; existing sound opt-out and reduced-motion handling remain active.
 - Added source inventory, manifest sound design, cache busting, and catalogue/manifest/runtime regression tests. CI results for this slice are pending.
 - Existing code, 10-Coin value, nature category and active state remain unchanged. No production DB offer, pricing, transaction, wallet, earnings or payout was modified. Design/licensing review and physical-device QA remain pending; no mastered audio, texture maps, embedded skeletal animation or production deployment is claimed.
+
+
+## Bespoke Crystal Crown gift and royal shimmer checkpoint — 2026-11-14
+
+- Added `assets/3d-assets/gift-models/crystal-crown-model.mjs` for existing gift `crystal-crown-1itryeu`.
+- The source produces a self-contained glTF 2.0 five-point tiara with individually faceted gemstone geometry, gold filigree/engraving, velvet lining, pavé and hanging crystal details.
+- Added original `crystal-crown-original-v1` SVG art and transparent icon through the existing generator; exact-code model route preserves the canonical item.
+- Added `crown-lustre` motion and a dedicated Web Audio chime/shimmer cue; existing sound opt-out and reduced-motion behavior remain.
+- Updated the sound inventory, source docs, cache version and regression tests. CI and generated-model verification are pending.
+- Existing luxury category, 2,000-Coin value and active state remain unchanged. No DB offer, transaction, wallet, earning or payout was modified. Human design review, rights approval and device QA remain pending; no mastered audio, texture maps or embedded skeletal animation is claimed.
+
+
+## Verified Crystal Crown production-pipeline checkpoint — 2026-11-14
+
+- CI run **11999** on PR #345 passed Node 24 syntax, gift generation, LIVE motion-index generation, LIVE asset manifest generation, raster metadata audit and the full automated test suite. Supabase Auth acceptance and For You navigation passed.
+- Cross-feature browser checks passed: LIVE/MeetWave responsive-layout independence matrix, AI Network browser acceptance and Chromium profile visual matrix. These are repository automation checks, not physical-device or production deployment certification.
+- Generated manifest evidence for canonical active item \`crystal-crown-1itryeu\`: luxury category and 2,000 Coins preserved; original SVG is **3,464 bytes**; bespoke GLTF is **783,396 bytes**, **227 primitives/materials**, **13,144 vertices**, **20,220 triangles**, embedded geometry buffer, no texture map and no embedded animation track.
+- Source provenance is \`gift-crystal-crown-3d-v1\` / \`assets/3d-assets/gift-models/crystal-crown-model.mjs\`; review remains \`design-review-pending\`. Dedicated sound design \`crystal-crown-royal-glass-chime-v1\` is locally synthesized, not a mastered audio file.
+- Generated catalogue audit at this checkpoint: **1,748** gift records (**1,737 active, 11 inactive**), **1,748/1,748** primary SVGs, transparent SVG icons and GLTF models generated, **5** gift-specific synthesized sound designs, **0** dedicated mastered gift sound files, **0** physical-device QA approvals. These are build outputs, not counts of production-approved gifts.
+- Human art review, rights/licensing clearance, premium-quality acceptance, high-resolution texture/KTX2 work where appropriate, physical Android/iOS/tablet/foldable/desktop/TV rendering and audio QA, and production deployment remain unverified. No production gift activation, Coin pricing, wallet, transaction, payout or AI runtime state changed.
