@@ -356,6 +356,7 @@ try {
   await categoryForm.locator('[name="isActive"]').check();
   await categoryForm.locator('button[type="submit"]').click();
   await page.getByText('AI category created and an audit event recorded.').waitFor({ state: 'visible' });
+  await page.waitForTimeout(250); // Allow the global submit guard to clear before the next user action.
   assert.equal(categorySaveRequests.length, 1, 'Category creation must submit one administrator request.');
   assert.equal(categorySaveRequests[0].category_key, 'ai_science');
   assert.equal(categorySaveRequests[0].display_name, 'AI Science');
@@ -368,10 +369,22 @@ try {
   await categoryForm.locator('[name="isActive"]').uncheck();
   await categoryForm.locator('button[type="submit"]').click();
   await page.getByText('AI category deactivated and an audit event recorded.').waitFor({ state: 'visible' });
+  await page.waitForTimeout(250); // Allow the global submit guard to clear before the next user action.
   assert.equal(categorySaveRequests.length, 2, 'Category updates must be persisted through the admin route.');
   assert.equal(categorySaveRequests[1].display_name, 'AI Science & Research');
   assert.equal(categorySaveRequests[1].is_active, false);
   assert.equal(categories.find(item => item.category_key === 'ai_science').is_active, false, 'Deactivation must preserve the category row.');
+
+  await page.locator('[data-ai-action="edit-category"][data-category-key="ai_science"]').click();
+  await page.waitForTimeout(250);
+  assert.equal(await categoryForm.locator('[name="isActive"]').isChecked(), false, 'The edit form must show the current inactive state.');
+  await categoryForm.locator('[name="isActive"]').check();
+  await categoryForm.locator('button[type="submit"]').click();
+  await page.getByText('AI category reactivated and an audit event recorded.').waitFor({ state: 'visible' });
+  await page.waitForTimeout(250);
+  assert.equal(categorySaveRequests.length, 3, 'Reactivation must be saved through the same audited API.');
+  assert.equal(categorySaveRequests[2].is_active, true);
+  assert.equal(categories.find(item => item.category_key === 'ai_science').is_active, true, 'The category must be available again after reactivation.');
 
   const createForm = page.locator('form[data-ai-form="identity"]');
   await createForm.locator('[name="firstName"]').fill('Nia');

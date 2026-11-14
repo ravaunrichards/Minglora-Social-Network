@@ -31,6 +31,12 @@ test('category keys stay stable and categories are deactivated rather than delet
   assert.ok(migration.includes(categoryKeyRule), 'Category key regex and validation terminator must be complete.');
   assert.match(migration, /revoke all on table ai_network\.ai_categories from public, anon, authenticated, service_role/i);
   assert.match(migration, /lock table ai_network\.ai_categories in share row exclusive mode/i);
+  assert.equal(migration.toLowerCase().split('commit;').length, 2, 'The migration must contain exactly one transaction commit.');
+  assert.ok(migration.startsWith('begin;') && migration.trimEnd().endsWith('commit;'), 'No SQL may be appended after the migration commit.');
+  const writeLockIndex = migration.indexOf('lock table ai_network.ai_categories in share row exclusive mode');
+  const rowReadLockIndex = migration.indexOf('for update;', writeLockIndex);
+  assert.ok(writeLockIndex > 0 && rowReadLockIndex > writeLockIndex, 'The write lock must be acquired before the row-locked category read.');
+
   assert.doesNotMatch(migration, /delete\s+from\s+ai_network\.ai_categories/i);
   assert.match(ui, /Category keys remain stable because existing AI identities reference them/i);
 });
