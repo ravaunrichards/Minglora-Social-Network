@@ -84,7 +84,7 @@ test('authenticated server routes expose only owner-scoped AI identity media and
   assert.match(route, /ai_identity:/);
   assert.match(route, /minglora-ai-profile-media/);
   assert.match(route, /asset\.url = asset\.aiIdentityId \? null : completed\.url/);
-  assert.match(route, /if\(asset\.url&&!asset\.aiIdentityId\)return asset\.url/);
+  assert.match(server, /if\(asset\.url&&!asset\.aiIdentityId\)return asset\.url/);
 });
 
 test('shared uploader preserves regular media behavior and routes AI images through AI endpoints', () => {
