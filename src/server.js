@@ -2167,8 +2167,6 @@ async function route(req, res) {
         const rawBotId = botHash.slice(0, 32);
         const canonicalBotId = rawBotId.slice(0, 8) + '-' + rawBotId.slice(8, 12) +
           '-5' + rawBotId.slice(13, 16) + '-a' + rawBotId.slice(17, 20) + '-' + rawBotId.slice(20, 32);
-        const usernameStem = (firstName + '_' + lastName).toLowerCase()
-          .replace(/[^a-z0-9_]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 14) || 'bot';
         const identityUsername = 'ai_' + botHash.slice(0, 27);
 
         const priorBot = (db.aiBots || []).find(item => item.ownerId === user.id && item.identityIdempotencyKey === identityIdempotencyKey);
