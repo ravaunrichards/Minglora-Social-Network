@@ -140,7 +140,7 @@ test('profile style system assets are versioned and cached by the service worker
   assert.ok(html.includes('/app.js?v=20261114-ai-network-integration-1'));
   assert.ok(worker.includes("'/app.js?v=20261114-ai-network-integration-1'"));
   assert.ok(html.includes('/settings.js?v=20261112-profile-style-library-10x9-2'));
-  assert.match(worker,/minglora-shell-v301-self-updating-1/);
+  assert.match(worker,/minglora-shell-v302-self-updating-1/);
 });
 
 test('profile styles route to distinct native content sections and order live metrics by style',()=>{
