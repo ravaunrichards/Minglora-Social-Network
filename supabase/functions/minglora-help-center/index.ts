@@ -149,7 +149,28 @@ async function adminOverview(locale: string) {
       .order("search_count",{ascending:false}).limit(30)
   ]);
   if (articleError || searchError) throw articleError || searchError;
-  return {...structure,articles:articles||[],popularSearches:searches||[]};
+  const publishedArticleIds=new Set<string>();
+  const categoryCounts=new Map<string,number>();
+  const subcategoryCounts=new Map<string,number>();
+  for(const row of articles||[]){
+    const article=(row as any).help_articles;
+    if(row.status!=="published"||!article?.is_active||publishedArticleIds.has(row.article_id)) continue;
+    publishedArticleIds.add(row.article_id);
+    categoryCounts.set(article.category_id,(categoryCounts.get(article.category_id)||0)+1);
+    if(article.subcategory_id) subcategoryCounts.set(article.subcategory_id,(subcategoryCounts.get(article.subcategory_id)||0)+1);
+  }
+  const categories=structure.categories.map((category:any)=>({
+    ...category,articleCount:categoryCounts.get(category.id)||0
+  }));
+  const subcategories=structure.subcategories.map((subcategory:any)=>({
+    ...subcategory,publishedArticleCount:subcategoryCounts.get(subcategory.id)||0,
+    hasPublishedAnswers:(subcategoryCounts.get(subcategory.id)||0)>0
+  }));
+  return {
+    ...structure,categories,subcategories,articles:articles||[],popularSearches:searches||[],
+    coverage:{publishedArticles:publishedArticleIds.size,
+      unansweredSubcategories:subcategories.filter((item:any)=>!item.hasPublishedAnswers).length}
+  };
 }
 async function saveArticle(input:any, actor:string) {
   const articleId=requiredText(input.articleId,64);
