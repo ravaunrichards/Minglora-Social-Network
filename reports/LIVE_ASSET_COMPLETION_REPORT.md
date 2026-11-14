@@ -60,3 +60,11 @@ This is a continuation checkpoint against the current `main` repository. The old
 ## Current status
 
 **Minglora LIVE asset mission: PARTIALLY COMPLETE — NOT PRODUCTION COMPLETE.** The existing app has a substantial gift catalogue, build-time SVG/GLTF generation, LIVE effects runtime, layouts, assets and test coverage. Source inspection also confirmed that the generated SVGs are emoji-overlay/category-template artwork and the GLTFs are procedural category meshes with limited bespoke overrides; they are not premium-production-ready. This continuation corrected the reference evidence and updated the inventory. The full premium asset production, rights clearance, detailed animation/audio work, category curation, cross-device QA and actual hardware validation remain open.
+
+## Added source-image metadata checkpoint
+
+- Added `scripts/audit-minglora-live-image-metadata.mjs` and `npm run audit:live-image-metadata`. It parses PNG/JPEG/GIF/WebP headers from the six supplied source-artwork roots without changing the originals.
+- A successful Node 24 workflow run parsed **2,862 of 2,862** supplied raster images across the six folders; it recorded **0 parse failures** and **0 unsupported files**. The scan found 1,743 PNGs and 1,119 JPEGs, with 1,741 encoded alpha-channel declarations. This is header metadata, not a pixel-level transparency check.
+- The generated `reports/live-image-metadata-audit.json` and `.md` files are published by CI as `minglora-live-image-metadata-audit-<run>`.
+- Added parser regression fixtures for dimensions, alpha declarations, transparency chunks, GIF animation metadata, WebP feature flags and malformed input.
+- Per-pixel alpha, EXIF-normalized display dimensions and per-image human visual/rights review remain separate tasks.

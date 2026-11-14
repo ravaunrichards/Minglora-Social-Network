@@ -65,3 +65,14 @@ The path/size/hash inventory is complete for the 1,121 images under `assets/refe
 ## Follow-up inspection required
 
 A complete screenshot-by-screenshot human review, original-dimension inventory, transparency check for every art file, and device-specific measurement matrix remain open. Desktop screenshots establish a desktop comparison viewport, but do not establish tablet, foldable, iPhone or Smart TV support by themselves.
+
+## Raster metadata audit automation
+
+A separate read-only metadata scanner is part of the LIVE asset workflow:
+
+- Command: `npm run audit:live-image-metadata`.
+- Scans raster images under `assets/reference/`, `assets/Gifts/`, `assets/Guests Layout/`, `assets/Gifters Badge Levels/`, `assets/League/` and `assets/Artwork/`.
+- Reads PNG, JPEG, GIF and WebP headers for encoded dimensions, format, orientation, alpha-channel declarations, transparency metadata and animation flags; records per-file byte sizes and SHA-256 values.
+- Writes `reports/live-image-metadata-audit.json` and `reports/live-image-metadata-audit.md`; CI uploads both as a named artifact.
+- It does not apply EXIF orientation or scan decoded pixels. An alpha channel/transparency flag is not proof that an image has transparent pixels, and this audit does not certify visual quality, licensing or production approval.
+- Source images and extracted artwork remain read-only. Unsupported formats or malformed headers are reported and fail the audit rather than being silently skipped.
