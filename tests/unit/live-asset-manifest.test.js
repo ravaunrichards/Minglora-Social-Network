@@ -132,7 +132,8 @@ test("named gift models retain gift-specific source provenance in the LIVE manif
     ["Gamer Otter", "gift-gamer-otter-3d-v1", "assets/3d-assets/gift-models/gamer-otter-model.mjs"],
     ["LIVE Island", "gift-live-island-3d-v1", "assets/3d-assets/gift-models/live-island-model.mjs"],
     ["Crystal Crown", "gift-crystal-crown-3d-v1", "assets/3d-assets/gift-models/crystal-crown-model.mjs"],
-    ["Phoenix", "gift-phoenix-3d-v1", "assets/3d-assets/gift-models/phoenix-model.mjs"]
+    ["Phoenix", "gift-phoenix-3d-v1", "assets/3d-assets/gift-models/phoenix-model.mjs"],
+    ["Beach Maracas", "gift-beach-maracas-3d-v1", "assets/3d-assets/gift-models/beach-maracas-model.mjs"]
   ];
   for (const [name, assetId, sourceFile] of expected) {
     const gift = manifest.gifts.find(entry => entry.name === name);
@@ -149,7 +150,7 @@ test("named gift models retain gift-specific source provenance in the LIVE manif
 
 test("gift-specific synthesized sound designs are inventoried without claiming mastered recordings", () => {
   assert.equal(manifest.summary.dedicated_mastered_gift_sound_file_count, 0);
-  assert.equal(manifest.summary.gift_specific_synthesized_sound_design_count, 6);
+  assert.equal(manifest.summary.gift_specific_synthesized_sound_design_count, 7);
   assert.equal(manifest.summary.physical_device_qa_verified_count, 0);
   const expected = [
     ["djembe-master-1v3jzkm","djembe-hand-drum-impact-v1","gift_specific_synthesized_sound_not_mastered_recording"],
@@ -157,7 +158,8 @@ test("gift-specific synthesized sound designs are inventoried without claiming m
     ["gamer-otter-100-mgl","gamer-otter-arcade-cheer-v1","gift_specific_synthesized_sound_not_mastered_recording"],
     ["live-island-rmn3mc","live-island-tide-and-chime-v1","gift_specific_synthesized_sound_not_mastered_recording"],
     ["crystal-crown-1itryeu","crystal-crown-royal-glass-chime-v1","gift_specific_synthesized_sound_not_mastered_recording"],
-    ["phoenix-wep6uk","phoenix-flame-rise-and-ember-choir-v1","gift_specific_synthesized_sound_not_mastered_recording"]
+    ["phoenix-wep6uk","phoenix-flame-rise-and-ember-choir-v1","gift_specific_synthesized_sound_not_mastered_recording"],
+    ["beach-maracas-1exxoag","beach-maracas-caribbean-shaker-rhythm-v1","gift_specific_synthesized_sound_not_mastered_recording"]
   ];
   for (const [code,designId,status] of expected) {
     const entry = manifest.gifts.find(item => item.code === code);
