@@ -71,3 +71,11 @@ The shortcuts remain Layout, Permissions, Guests, Viewers, Fan Club, Match, Top 
 | assets/3d-assets/gift-models/hibiscus-model.mjs | Hibiscus (hibiscus-5-mgl) | Five cupped tropical petals, sepals, three leaves, central stamen column and pollen anthers | Design review pending; CI/build verification pending on feature branch |
 
 These are two individually art-directed model sources. The generator still uses procedural category/name geometry for the remaining catalogue gifts; the presence of a generated GLTF file per catalogue row must not be interpreted as proof of bespoke modelling or premium approval.
+
+## Transparent gift-icon inventory — 2026-11-14
+
+- The canonical catalogue contains 1,748 distinct gift records. The generator now produces three separate per-record files: primary SVG artwork (`<code>.svg`), subject-only transparent SVG icon (`<code>-icon.svg`), and glTF 2.0 model (`<code>.gltf`).
+- The build stamp is version 3 and reports 1,748 primary SVGs, 1,748 transparent SVG icons, and 1,748 glTF models.
+- Every icon record is present in the machine-readable LIVE manifest with path, SVG format, 512×512 dimensions, transparency, generator provenance, component usage, and a pending human-review/licensing state.
+- These generated files are produced by `npm run build:gifts` and the existing `prestart` script; individual generated outputs are not claimed as pre-committed source files.
+- The CI run generated and then independently verified all three per-gift file sets. Production deployment still needs a separate live-host verification.

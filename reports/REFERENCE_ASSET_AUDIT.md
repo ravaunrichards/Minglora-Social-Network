@@ -76,3 +76,10 @@ A separate read-only metadata scanner is part of the LIVE asset workflow:
 - Writes `reports/live-image-metadata-audit.json` and `reports/live-image-metadata-audit.md`; CI uploads both as a named artifact.
 - It does not apply EXIF orientation or scan decoded pixels. An alpha channel/transparency flag is not proof that an image has transparent pixels, and this audit does not certify visual quality, licensing or production approval.
 - Source images and extracted artwork remain read-only. Unsupported formats or malformed headers are reported and fail the audit rather than being silently skipped.
+
+## Generated per-gift icon follow-up — 2026-11-14
+
+- Supplied reference material remains unchanged. The existing inventory records 1,121 reference raster images, 131 gift-capture PNGs plus the capture sheet, 1,509 extracted artwork crops, and 9 guest-layout references.
+- The new gift icon pipeline generates original subject-only SVG variants from the canonical repository gift catalogue. It does not overwrite, re-label, or silently approve supplied captures or extracted artwork.
+- Generated icons are stored at build/runtime under `public/assets/gifts/catalog/<gift-code>-icon.svg`; source references remain preserved and separate.
+- The generated icon provenance is recorded per gift in the LIVE asset manifest. Visual approval and licensing clearance remain outstanding for generated catalogue artwork; extracted reference artwork remains quarantined pending its own review.
