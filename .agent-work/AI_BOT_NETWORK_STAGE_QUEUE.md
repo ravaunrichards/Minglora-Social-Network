@@ -416,3 +416,22 @@ This checkpoint supersedes earlier HR talent notes in this document.
 - No sample AI identities, employees, appointments, reviews, promotions, succession plans, human Auth accounts or fake engagement metrics were created. Current talent-table row counts remain zero. The single worker-control row remains `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`.
 - **Still pending:** Render workspace selection by the user, inspection of the correct Minglora Render service, deployment/verification of the updated `src/server.js` backend, signed-in owner HTTP/browser/device acceptance, and representative functional tests using real owner-created organization and employee records. Render currently lists only `Creator Hub Creator Network's workspace`; no workspace has been selected because the user must explicitly confirm it before service operations.
 - **Scope status:** this is a delivered HR talent-management slice, not completion of the complete AI Bot Network specification. Delegated AI executive appointment authority, training/attendance, disciplinary and succession execution safeguards, workforce budgets, live provider inference and monitoring, bulk generation limits, worker principals/execution, global AI social publishing, distributed storage/partitioning and measured 10-billion-scale benchmarks remain incomplete. The 10-billion figure is a design target, not a measured capacity claim.
+
+
+
+## Current live AI Network reconciliation — 2026-11-14
+
+This section supersedes older live-count and runtime-version snapshots above; historical checkpoint entries are retained as history.
+
+- Repository inspected: `ravaunrichards/Minglora-Social-Network`; main HEAD at audit time: `6de92a83e16a664a2e3124476de682bd96c65d79`.
+- Supabase target is the existing Minglora project `gzycobgbasnqqhnympkr`; no project or infrastructure was duplicated.
+- Current `ai_network` base-table inventory: **48 total; 48/48 have PostgreSQL RLS enabled**. The AI schema remains a backend-only data boundary.
+- Current reference templates: **15 active AI categories, 20 active department templates and 20 active position templates**.
+- Live record counts are **zero** for identities, profiles, emails, provider accounts, provider models, provider assignments, organizations, departments, employment records, teams, task queue and durable schedules. No fake identities, employees, provider accounts, mailbox or test Auth users were created.
+- The single AI task-runtime control remains `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`. The private `minglora-runtime-state` Edge Function is ACTIVE at v129 with its existing custom authentication gateway unchanged.
+- The private `minglora-ai-profile-media` Storage bucket is still absent (not lazily provisioned until the first real owner-authenticated upload). Owner-only avatar/cover code exists, but signed-in owner upload and non-owner visibility/follower media reads are not accepted.
+- **Task 3 remains PARTIAL / ACTIVE / external acceptance blocker**: a real signed-in Minglora owner session is needed for create/list/get/edit, real private upload and device acceptance. Do not create sample users or test identities to bypass this.
+- Email addresses remain metadata only without a connected mailbox provider. Provider/model records are unconfigured metadata without a secret-manager integration, verified health checks, inference or fallback execution.
+- Organizational templates and HR/teams/delegation schema exist, but the actual organization, department, employee and team tables have no live records; owner-authenticated management remains to be accepted.
+- **10-billion identities remain a design objective only**. Distributed partitioning/sharding, region routing, throughput/storage/write benchmarks, recovery and simultaneous execution capacity are not implemented or measured.
+- Current accepted checklist remains **2/19 = 10.53% by task count**; this is not a percent-complete claim for the entire product.
