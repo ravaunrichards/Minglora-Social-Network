@@ -1,6 +1,15 @@
 name: Minglora AI Network browser acceptance
 
 on:
+  push:
+    branches: [feat/minglora-ai-bot-network-core]
+    paths:
+      - 'public/ai-network.js'
+      - 'public/ai-network.css'
+      - 'public/app.js'
+      - 'public/index.html'
+      - 'tests/e2e/ai-network-workspace.mjs'
+      - '.github/workflows/ai-network-browser-qa.yml'
   pull_request:
     branches: [main]
     paths:
