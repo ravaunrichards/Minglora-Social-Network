@@ -1186,6 +1186,7 @@
       await loadAIProviderRegistry();
       await loadAITaskQueue();
       await loadAIOrganizationRegistry();
+      await loadAIDelegations();
       paintSnapshot();
     } catch (error) {
       state.error = error.message;
@@ -1203,6 +1204,7 @@
     await loadAIProviderRegistry();
     await loadAITaskQueue();
     await loadAIOrganizationRegistry();
+    await loadAIDelegations();
     paintSnapshot();
   }
 
@@ -1806,6 +1808,7 @@
       else if (action === 'delete-discovery-group') await request('/saved-groups/' + encodeURIComponent(id), { method:'DELETE' });
       else if (action === 'bot-status') await request('/bots/' + encodeURIComponent(id) + '/status', { method:'PATCH', body:{ status:button.dataset.status } });
       else if (action === 'approval') await request('/approvals/' + encodeURIComponent(id), { method:'PATCH', body:{ decision:button.dataset.decision } });
+      else if (action === 'delegation-status') await request('/delegations/' + encodeURIComponent(id), { method:'PATCH', body:{ status:button.dataset.status, reason:'Updated by authorized Minglora platform administrator.' } });
       else if (action === 'emergency-pause') await request('/emergency-pause', { method:'POST', body:{ reason:'Owner initiated emergency pause from the AI Network command center.' } });
       else if (action === 'emergency-resume') await request('/emergency-resume', { method:'POST', body:{} });
       await refresh(action === 'emergency-pause' ? 'Emergency pause confirmed. AI work remains stopped.' : 'AI Network updated.');
