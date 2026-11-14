@@ -26,6 +26,44 @@ test('category administration uses private service-role-only RPC and audit table
 test('category keys stay stable and categories are deactivated rather than deleted', () => {
   assert.match(migration, /category_key text not null references ai_network\.ai_categories\(category_key\).*on delete restrict/i);
   assert.match(migration, /At least one AI category must remain active/i);
+  assert.match(migration, /category_key !~ '\^\[a-z\]\[a-z0-9_\]\{1,63\}\
+  assert.doesNotMatch(migration, /delete\s+from\s+ai_network\.ai_categories/i);
+  assert.match(ui, /Category keys remain stable because existing AI identities reference them/i);
+});
+
+test('category changes are audited and audit records are append-only for the runtime role', () => {
+  assert.match(migration, /before_data jsonb/i);
+  assert.match(migration, /after_data jsonb/i);
+  assert.match(migration, /'created'[\s\S]*'updated'[\s\S]*'activated'[\s\S]*'deactivated'/i);
+  assert.match(migration, /insert into ai_network\.ai_category_audit_logs/i);
+  assert.doesNotMatch(migration, /grant\s+.*update.*ai_category_audit_logs/i);
+  assert.doesNotMatch(migration, /grant\s+.*delete.*ai_category_audit_logs/i);
+});
+
+test('runtime gateway explicitly allowlists category list and save commands', () => {
+  assert.match(runtime, /"ai_category_command"/);
+  assert.match(runtime, /supportedCategoryCommands = \["list", "save"\]/);
+  assert.match(runtime, /admin\.rpc\("minglora_ai_category_command"/);
+});
+
+test('authenticated API restricts category management to moderators and uses durable Supabase', () => {
+  const start = server.indexOf("if (p === '/api/ai-network'");
+  const end = server.indexOf("if (method === 'POST' && p === '/api/webhooks/paypal')", start);
+  const route = server.slice(start, end);
+  assert.match(route, /runAICategoryCommand/);
+  assert.match(route, /isModerator\(user, req\)/);
+  assert.match(route, /requestSupabaseState\('ai_category_command'/);
+  assert.match(route, /sub === 'categories\/admin'/);
+});
+
+test('administrator UI can create, rename, order, reactivate and deactivate categories', () => {
+  assert.match(ui, /data-ai-form="category"/);
+  assert.match(ui, /data-ai-action="edit-category"/);
+  assert.match(ui, /payload\.category_key = value\('categoryKey'\)\.toLowerCase\(\)/);
+  assert.match(ui, /payload\.is_active = form\.querySelector\('\[name="isActive"\]'\)\.checked/);
+  assert.match(ui, /request\('\/categories\/admin'\)/);
+});
+ then/i);
   assert.match(migration, /lock table ai_network\.ai_categories in share row exclusive mode/i);
   assert.doesNotMatch(migration, /delete\s+from\s+ai_network\.ai_categories/i);
   assert.match(ui, /Category keys remain stable because existing AI identities reference them/i);
