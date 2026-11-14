@@ -45,7 +45,7 @@ The production compatibility adapter persists the pre-existing social/workspace 
 - AI identities are not human Supabase Auth accounts. Email metadata is not an inbox and is not marked provisioned without a real email provider confirmation.
 - The migration is applied to the existing project; `minglora-runtime-state` is ACTIVE at v117. New registry/update RPCs are SECURITY INVOKER, have an empty locked search path and grant execute only to `service_role`.
 - Live rollback-only integration test exercised registry and update RPCs with actual temporary writes, language/location rows, version and audit entries. Transaction rolled back; no test identity remains.
-- Signed-in browser/API create/list/edit and device acceptance remain outstanding. Profile image/media is not included in the new edit form.
+- Signed-in browser/API create/list/edit/upload and device acceptance remain outstanding. Owner-scoped avatar/cover media is now deployed through PR #282 and the existing Minglora storage buckets; the actual user upload flow still needs authenticated acceptance.
 
 ## Provider status
 
