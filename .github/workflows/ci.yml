@@ -167,6 +167,11 @@ jobs:
             reports/live-image-metadata-audit.md
           if-no-files-found: error
           retention-days: 30
+      - name: Check Admin Finance and server syntax
+        run: |
+          node --check public/admin-finance.js
+          node --check src/server.js
+          node --check tests/unit/admin-finance-foundation.test.js
       - name: Run automated tests
         run: npm test
 

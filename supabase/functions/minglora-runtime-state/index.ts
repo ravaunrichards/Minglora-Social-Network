@@ -3,6 +3,8 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const AI_PROFILE_MEDIA_BUCKET = "minglora-ai-profile-media";
+const COMPANY_FINANCE_BUCKET = "minglora-company-finance";
+const COMPANY_FINANCE_MAX_ATTACHMENT_BYTES = 15 * 1024 * 1024;
 const secretKeys = JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS") || "{}");
 const adminKey = secretKeys.default || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const admin = SUPABASE_URL && adminKey
@@ -73,6 +75,7 @@ Deno.serve(async (req: Request) => {
   const action = input.action;
   const supportedActions = [
     "internal_activity_feed", "admin_finance_command",
+    "admin_finance_attachment_prepare", "admin_finance_attachment_complete", "admin_finance_attachment_download",
     "admin_users_list", "admin_user_set_ban", "admin_audit_log", "admin_audit_log",
     "streambay_cleanup", "ai_identity_command", "ai_identity_status_command", "ai_memory_command", "ai_category_command", "ai_identity_profile_list", "ai_identity_profile_update", "ai_discovery_command", "ai_organization_command", "ai_hr_command", "ai_hr_talent_command", "ai_team_command", "ai_provider_command", "ai_task_command", "ai_schedule_command", "load", "save", "health", "media_sign", "media_upload_prepare", "media_upload_complete", "media_delete",
     "live_broadcast_create", "live_broadcast_end", "live_chat_list", "live_chat_send", "live_chat_delete",
@@ -267,6 +270,173 @@ Deno.serve(async (req: Request) => {
     });
   }
 
+
+
+  if ([
+    "admin_finance_attachment_prepare",
+    "admin_finance_attachment_complete",
+    "admin_finance_attachment_download"
+  ].includes(String(action))) {
+    const actorUserId = String(input.actorUserId || "");
+    const ownerId = "5b998c21-86b5-4621-ab37-e0808a2657b1";
+    const kind = String(input.kind || "");
+    const allowedKinds = ["invoice_attachment","invoice_receipt","expense_receipt"];
+    const extensions: Record<string,string> = {
+      "application/pdf":"pdf",
+      "image/jpeg":"jpg",
+      "image/png":"png",
+      "image/webp":"webp"
+    };
+    const maxBytes = COMPANY_FINANCE_MAX_ATTACHMENT_BYTES;
+    if (actorUserId !== ownerId) {
+      return json(403, { error: "Only the designated Minglora owner can manage company finance attachments." });
+    }
+    if (!allowedKinds.includes(kind)) {
+      return json(400, { error: "Choose a valid company invoice or receipt attachment type." });
+    }
+
+    if (action === "admin_finance_attachment_prepare") {
+      const mimeType = String(input.mimeType || "").toLowerCase();
+      const byteSize = Number(input.byteSize || 0);
+      if (!extensions[mimeType] || !Number.isSafeInteger(byteSize) || byteSize < 1 || byteSize > maxBytes) {
+        return json(400, { error: "Choose a PDF, JPEG, PNG or WEBP attachment up to 15 MB." });
+      }
+      const { data: currentBucket } = await admin.storage.getBucket(COMPANY_FINANCE_BUCKET);
+      if (currentBucket && currentBucket.public !== false) {
+        return json(409, { error: "The Minglora finance archive exists but is not private. No upload was started." });
+      }
+      if (!currentBucket) {
+        const { error: createError } = await admin.storage.createBucket(COMPANY_FINANCE_BUCKET, {
+          public: false,
+          fileSizeLimit: maxBytes,
+          allowedMimeTypes: Object.keys(extensions)
+        });
+        if (createError) {
+          const { data: afterCreate, error: verifyError } = await admin.storage.getBucket(COMPANY_FINANCE_BUCKET);
+          if (verifyError || !afterCreate || afterCreate.public !== false) {
+            return json(503, { error: "The private Minglora finance archive could not be prepared safely." });
+          }
+        }
+      }
+      const { data: verifiedBucket, error: bucketError } = await admin.storage.getBucket(COMPANY_FINANCE_BUCKET);
+      if (bucketError || !verifiedBucket || verifiedBucket.public !== false ||
+          Number(verifiedBucket.file_size_limit || maxBytes) > maxBytes) {
+        return json(503, { error: "The Minglora finance archive is not configured as a private, size-limited bucket." });
+      }
+      const path = actorUserId + "/finance/" + crypto.randomUUID() + "." + extensions[mimeType];
+      const { data: signed, error: signedError } = await admin.storage
+        .from(COMPANY_FINANCE_BUCKET).createSignedUploadUrl(path, { upsert: false });
+      if (signedError || !signed?.signedUrl) {
+        return json(502, { error: "Minglora could not create a secure finance upload authorization." });
+      }
+      let signedUrl = "";
+      let token = "";
+      let endpoint = "";
+      try {
+        const parsed = new URL(signed.signedUrl, new URL("/storage/v1", SUPABASE_URL));
+        signedUrl = parsed.toString();
+        token = String(parsed.searchParams.get("token") || "").trim();
+        const projectRef = new URL(SUPABASE_URL).hostname.split(".")[0];
+        endpoint = "https://" + projectRef + ".storage.supabase.co/storage/v1/upload/resumable";
+      } catch {
+        return json(502, { error: "Minglora received an invalid signed finance upload URL." });
+      }
+      if (!token || token.split(".").length !== 3) {
+        return json(502, { error: "Minglora received an invalid finance upload token." });
+      }
+      return json(201, {
+        upload: { bucket: COMPANY_FINANCE_BUCKET, path, mimeType, byteSize, signedUrl, token, endpoint }
+      });
+    }
+
+    if (action === "admin_finance_attachment_complete") {
+      const bucket = String(input.bucket || "");
+      const path = String(input.path || "");
+      const mimeType = String(input.mimeType || "").toLowerCase();
+      const byteSize = Number(input.byteSize || 0);
+      const folder = path.slice(0, path.lastIndexOf("/"));
+      const objectName = path.slice(path.lastIndexOf("/") + 1);
+      const objectMatch = objectName.match(/^([0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})\.([a-z0-9]+)$/i);
+      if (bucket !== COMPANY_FINANCE_BUCKET || !extensions[mimeType] ||
+          !Number.isSafeInteger(byteSize) || byteSize < 1 || byteSize > maxBytes ||
+          folder !== actorUserId + "/finance" || !objectMatch || objectMatch[2].toLowerCase() !== extensions[mimeType]) {
+        return json(400, { error: "Invalid private finance attachment completion reference." });
+      }
+      const { data: objects, error: listError } = await admin.storage
+        .from(COMPANY_FINANCE_BUCKET).list(folder, { search: objectName, limit: 10 });
+      const object = (objects || []).find((item: any) => item.name === objectName);
+      if (listError || !object) {
+        return json(409, { error: "The finance attachment upload is not complete. Please retry." });
+      }
+      const metadata = object.metadata || {};
+      const storedSize = Number(metadata.size ?? metadata.contentLength ?? byteSize);
+      const storedType = String(metadata.mimetype || metadata.contentType || mimeType).toLowerCase();
+      if (storedSize !== byteSize || storedType !== mimeType) {
+        return json(409, { error: "The uploaded finance attachment did not match its declared size or type." });
+      }
+      const { data: probe, error: probeError } = await admin.storage
+        .from(COMPANY_FINANCE_BUCKET).createSignedUrl(path, 60);
+      if (probeError || !probe?.signedUrl) {
+        return json(502, { error: "Minglora could not verify the private finance attachment." });
+      }
+      let response: Response;
+      try { response = await fetch(probe.signedUrl, { headers: { Range: "bytes=0-31" } }); }
+      catch { return json(502, { error: "Minglora could not inspect the finance attachment." }); }
+      if (response.status !== 206) {
+        await response.body?.cancel();
+        return json(502, { error: "Storage did not return the bounded finance document signature check." });
+      }
+      const prefix = new Uint8Array(await response.arrayBuffer());
+      const starts = (values: number[]) => values.every((value,index) => prefix[index] === value);
+      const ascii = (start: number,end: number) => String.fromCharCode(...prefix.slice(start,end));
+      const validSignature =
+        (mimeType === "application/pdf" && ascii(0,4) === "%PDF") ||
+        (mimeType === "image/jpeg" && starts([0xff,0xd8,0xff])) ||
+        (mimeType === "image/png" && starts([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a])) ||
+        (mimeType === "image/webp" && ascii(0,4) === "RIFF" && ascii(8,12) === "WEBP");
+      if (!validSignature) {
+        await admin.storage.from(COMPANY_FINANCE_BUCKET).remove([path]);
+        return json(400, { error: "The document contents do not match the selected PDF or image type." });
+      }
+      return json(200, {
+        ok: true, kind, bucket: COMPANY_FINANCE_BUCKET, path, mimeType, byteSize
+      });
+    }
+
+    const recordId = String(input.recordId || "");
+    if (!validUuid(recordId)) {
+      return json(400, { error: "A valid company invoice or expense record is required." });
+    }
+    const table = kind === "expense_receipt"
+      ? "minglora_admin_operating_expenses"
+      : "minglora_admin_operating_invoices";
+    const column = kind === "invoice_attachment" ? "attachment_storage_path" : "receipt_storage_path";
+    const { data: record, error: recordError } = await admin.from(table)
+      .select(column).eq("id", recordId).maybeSingle();
+    if (recordError) return json(503, { error: "Minglora could not load the finance attachment record." });
+    const storedPath = String(record?.[column] || "");
+    if (!storedPath) return json(404, { error: "No file is attached to this finance record." });
+    if (!storedPath.startsWith(actorUserId + "/finance/") || storedPath.includes("..") ||
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(pdf|jpg|png|webp)$/i.test(storedPath.slice(storedPath.lastIndexOf("/") + 1))) {
+      return json(403, { error: "The saved finance file reference is outside the private company archive." });
+    }
+    const { data: signedDownload, error: downloadError } = await admin.storage
+      .from(COMPANY_FINANCE_BUCKET).createSignedUrl(storedPath, 60, { download: true });
+    if (downloadError || !signedDownload?.signedUrl) {
+      return json(404, { error: "The private finance document could not be opened." });
+    }
+    const { error: auditError } = await admin.from("minglora_admin_finance_audit_events").insert({
+      actor_user_id: actorUserId,
+      entity_type: kind === "expense_receipt" ? "expense" : "invoice",
+      entity_id: recordId,
+      action: "attachment_downloaded",
+      metadata: { kind, bucket: COMPANY_FINANCE_BUCKET }
+    });
+    if (auditError) {
+      return json(503, { error: "The finance document was not opened because its access audit could not be recorded." });
+    }
+    return json(200, { url: signedDownload.signedUrl, expiresIn: 60 });
+  }
 
   if (action === "admin_finance_command") {
     const actorUserId = String(input.actorUserId || "");

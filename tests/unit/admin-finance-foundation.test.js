@@ -100,3 +100,30 @@ test('budget actuals use matching department, currency and the approved date per
   assert.match(financeUi, /Renewal notice windows are calculated from saved dates/);
   assert.match(financeUi, /Related subscription/);
 });
+
+
+test('private company finance uploads validate owner, file type, signature and audited download access', () => {
+  assert.ok(runtime.includes('COMPANY_FINANCE_BUCKET = "minglora-company-finance"'));
+  assert.ok(runtime.includes('admin_finance_attachment_prepare'));
+  assert.ok(runtime.includes('admin_finance_attachment_complete'));
+  assert.ok(runtime.includes('admin_finance_attachment_download'));
+  assert.ok(runtime.includes('createBucket(COMPANY_FINANCE_BUCKET'));
+  assert.ok(runtime.includes('public: false'));
+  assert.ok(runtime.includes('createSignedUploadUrl(path, { upsert: false })'));
+  assert.ok(runtime.includes('const validSignature ='));
+  assert.ok(runtime.includes('attachment_downloaded'));
+  assert.ok(runtime.includes('createSignedUrl(storedPath, 60, { download: true })'));
+  assert.ok(server.includes("p.startsWith('/api/admin/finance/attachments/')"));
+  assert.ok(server.includes('hasActiveReviewerSession(user)'));
+  assert.ok(server.includes('admin_finance_attachment_prepare'));
+  assert.ok(server.includes('admin_finance_attachment_complete'));
+  assert.ok(server.includes('admin_finance_attachment_download'));
+  assert.ok(financeUi.includes('uploadFinanceAttachment'));
+  assert.ok(financeUi.includes("uploadFinanceAttachment('invoice_attachment'"));
+  assert.ok(financeUi.includes("uploadFinanceAttachment('invoice_receipt'"));
+  assert.ok(financeUi.includes("uploadFinanceAttachment('expense_receipt'"));
+  assert.ok(financeUi.includes('attachment_storage_path:attachmentPath'));
+  assert.ok(financeUi.includes('receipt_storage_path:receiptPath'));
+  assert.ok(financeUi.includes('kind=invoice_attachment'));
+  assert.ok(financeUi.includes('kind=expense_receipt'));
+});

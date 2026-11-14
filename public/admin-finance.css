@@ -49,3 +49,6 @@
  .admin-finance-form-note,.admin-finance-field-wide{grid-column:auto}
  .admin-finance-heading>#admin-finance-refresh{width:100%}
 }
+.admin-finance-field input[type="file"]{min-height:44px;padding:8px;border-style:dashed;background:var(--surface-soft,var(--card));font-size:11px}
+.admin-finance-form-note{margin:0;color:var(--muted,#687487);font-size:11px;line-height:1.45}
+.admin-finance-table a{overflow-wrap:anywhere}

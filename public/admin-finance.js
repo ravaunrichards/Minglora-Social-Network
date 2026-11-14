@@ -77,6 +77,74 @@
       status.textContent = message;
       status.dataset.state = error ? 'error' : 'normal';
     };
+    async function uploadFinanceAttachment(kind,file) {
+      const extension=String(file?.name||'').toLowerCase().split('.').pop();
+      const extensions={pdf:'application/pdf',jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp'};
+      const mimeType=String(file?.type||extensions[extension]||'').toLowerCase();
+      if(!file||!Number.isSafeInteger(file.size)||file.size<1||file.size>15*1024*1024||
+         !['application/pdf','image/jpeg','image/png','image/webp'].includes(mimeType)) {
+        throw new Error('Choose a PDF, JPEG, PNG or WEBP attachment up to 15 MB.');
+      }
+      const prepared=await api('/admin/finance/attachments/prepare',{
+        method:'POST',body:JSON.stringify({kind,mimeType,byteSize:file.size,fileName:file.name||'finance-document'})
+      });
+      const upload=prepared.upload||{};
+      if(upload.bucket!=='minglora-company-finance'||!upload.path||!upload.signedUrl) {
+        throw new Error('Minglora could not prepare the private company finance upload.');
+      }
+      const standardUpload=async()=>{
+        const formData=new FormData();
+        formData.append('cacheControl','3600');
+        formData.append('',file,file.name||'finance-document');
+        const response=await fetch(upload.signedUrl,{method:'PUT',headers:{'x-upsert':'false'},body:formData});
+        if(!response.ok) {
+          const result=await response.json().catch(()=>({}));
+          throw new Error(result.message||result.error||'The private finance document upload failed.');
+        }
+      };
+      if(file.size<=6*1024*1024) {
+        setStatus('Uploading the document to private finance storage…');
+        await standardUpload();
+      } else {
+        if(!window.tus?.Upload||!upload.endpoint||!upload.token) {
+          throw new Error('Secure resumable uploads are unavailable. Try a document under 6 MB.');
+        }
+        try {
+          await new Promise((resolve,reject)=>{
+            try {
+              const transfer=new window.tus.Upload(file,{
+                endpoint:upload.endpoint,
+                retryDelays:[0,3000,5000,10000,20000],
+                headers:{'x-signature':upload.token},
+                uploadDataDuringCreation:true,
+                removeFingerprintOnSuccess:true,
+                storeFingerprintForResuming:false,
+                chunkSize:4*1024*1024,
+                metadata:{bucketName:upload.bucket,objectName:upload.path,contentType:mimeType,cacheControl:'3600'},
+                onProgress:(uploaded,total)=>{
+                  const percent=total?Math.min(100,Math.round(uploaded/total*100)):0;
+                  setStatus('Uploading private finance document… '+percent+'%');
+                },
+                onError:error=>reject(new Error(error?.message||'Secure document upload failed.')),
+                onSuccess:()=>resolve()
+              });
+              transfer.start();
+            } catch(error) { reject(error); }
+          });
+        } catch(error) {
+          if(!/(invalid compact jws|accessdenied|unauthorized|403)/i.test(String(error?.message||error))) throw error;
+          await standardUpload();
+        }
+      }
+      const completed=await api('/admin/finance/attachments/complete',{
+        method:'POST',
+        body:JSON.stringify({kind,bucket:upload.bucket,path:upload.path,mimeType,byteSize:file.size})
+      });
+      if(!completed.path||completed.bucket!=='minglora-company-finance') {
+        throw new Error('The file uploaded but Minglora could not verify its private finance record.');
+      }
+      return completed.path;
+    }
     const providerById = id => records.providers.find(item => item.id === id) || null;
     const subscriptionById = id => records.subscriptions.find(item => item.id === id) || null;
     const providerOptions = () => records.providers.map(item => [item.id,item.provider_name + ' · ' + item.connection_status.replace(/_/g,' ')]);
@@ -332,15 +400,21 @@
           : '<span class="admin-finance-manual">MANUAL PROVIDER ACTION REQUIRED</span>' +
             '<a href="' + esc(provider?.website_url || '#') + '" target="_blank" rel="noopener noreferrer">Provider website</a>';
         const locked=['paid','paid_pending_verification','payment_initiated','payment_scheduled'].includes(item.payment_status);
+        const attachmentLinks=[
+          item.attachment_storage_path ? '<a href="/api/admin/finance/attachments/download?kind=invoice_attachment&id=' + encodeURIComponent(item.id) + '">Invoice document</a>' : '',
+          item.receipt_storage_path ? '<a href="/api/admin/finance/attachments/download?kind=invoice_receipt&id=' + encodeURIComponent(item.id) + '">Payment receipt</a>' : ''
+        ].filter(Boolean).join(' · ') || 'No documents attached';
         return '<tr><td><strong>' + esc(item.invoice_number) + '</strong><small>' + esc(provider?.provider_name || 'Provider unavailable') +
           '</small></td><td>' + esc(money(item.total_minor,item.currency_code)) + '</td><td>' +
           esc(dateLabel(item.due_date)) + '</td><td>' + statusPill(item.payment_status) + '</td><td>' + action +
-          '</td><td>' + (locked ? '<span class="admin-finance-manual">Locked</span>' : editAction('invoice',item.id)) + '</td></tr>';
+          '</td><td>' + attachmentLinks + '</td><td>' +
+          (locked ? '<span class="admin-finance-manual">Locked</span>' : editAction('invoice',item.id)) + '</td></tr>';
       });
       content.innerHTML =
-        '<div class="admin-finance-section-heading"><div><h4>Invoice center</h4><p>Paid or payment-in-progress invoices are locked against editing. Upload storage and provider import are not configured yet.</p></div></div>' +
-        table(['Invoice / provider','Total','Due date','Payment status','Next action','Record'],rows,'No invoices have been recorded.') +
+        '<div class="admin-finance-section-heading"><div><h4>Invoice center</h4><p>Invoice documents and payment receipts are stored in a dedicated private Minglora archive. Provider payment verification remains separate.</p></div></div>' +
+        table(['Invoice / provider','Total','Due date','Payment status','Next action','Attachments','Record'],rows,'No invoices have been recorded.') +
         '<details class="admin-finance-form-details"><summary>Record an invoice</summary><form id="admin-finance-invoice-form" class="admin-finance-form">' +
+        '<input type="hidden" name="attachment_storage_path"><input type="hidden" name="receipt_storage_path">' +
         select('Provider','provider_id',providerOptions(),'required') +
         select('Related subscription','subscription_id',[['','No subscription'],...subscriptionOptions()]) +
         field('Invoice number','invoice_number','text','required maxlength="120"') +
@@ -354,6 +428,9 @@
         select('Payment status','payment_status',[['received','Received'],['under_review','Under review'],['awaiting_approval','Awaiting approval'],['approved','Approved'],['payment_scheduled','Payment scheduled'],['payment_initiated','Payment initiated'],['paid_pending_verification','Paid — awaiting provider verification'],['partially_paid','Partially paid'],['failed','Failed'],['disputed','Disputed'],['overdue','Overdue'],['cancelled','Cancelled']]) +
         select('Approval status','approval_status',[['pending','Pending'],['approved','Approved'],['rejected','Rejected'],['not_required','Not required']]) +
         field('External payment reference (not a card number)','payment_reference','text','maxlength="160"') +
+        field('Invoice document (PDF or image)','attachment_file','file','accept="application/pdf,image/jpeg,image/png,image/webp"') +
+        field('Payment receipt (PDF or image)','receipt_file','file','accept="application/pdf,image/jpeg,image/png,image/webp"') +
+        '<p class="admin-finance-form-note">Private files are only available through the MFA-verified owner finance workspace. Never upload card details or banking passwords.</p>' +
         textarea('Notes','notes') +
         '<p class="admin-finance-form-note">Do not enter card numbers, CVV codes, bank credentials or API secrets. Marking an invoice Paid is not available until provider verification is implemented.</p>' +
         button('Save invoice') + '</form></details>';
@@ -361,8 +438,24 @@
       form?.addEventListener('submit',async event => {
         event.preventDefault();
         const values=new FormData(form);
+        const submit=form.querySelector('button[type="submit"]');
+        if(submit)submit.disabled=true;
         try {
           const amount=minor(values.get('amount')), tax=minor(values.get('tax')||0);
+          let attachmentPath=String(values.get('attachment_storage_path')||'').trim()||null;
+          let receiptPath=String(values.get('receipt_storage_path')||'').trim()||null;
+          const attachmentFile=form.elements.namedItem('attachment_file')?.files?.[0];
+          const receiptFile=form.elements.namedItem('receipt_file')?.files?.[0];
+          if(attachmentFile) {
+            attachmentPath=await uploadFinanceAttachment('invoice_attachment',attachmentFile);
+            form.elements.namedItem('attachment_storage_path').value=attachmentPath;
+            form.elements.namedItem('attachment_file').value='';
+          }
+          if(receiptFile) {
+            receiptPath=await uploadFinanceAttachment('invoice_receipt',receiptFile);
+            form.elements.namedItem('receipt_storage_path').value=receiptPath;
+            form.elements.namedItem('receipt_file').value='';
+          }
           await save('save_invoice',{
             id:form.dataset.editId || undefined,
             provider_id:String(values.get('provider_id')||''),
@@ -377,26 +470,33 @@
             payment_status:String(values.get('payment_status')||'received'),
             approval_status:String(values.get('approval_status')||'pending'),
             payment_reference:String(values.get('payment_reference')||'').trim()||null,
+            attachment_storage_path:attachmentPath,
+            receipt_storage_path:receiptPath,
             notes:String(values.get('notes')||'').trim()
           },form);
         } catch(error) { setStatus(error.message || 'Enter a valid invoice.',true); }
+        finally { if(submit)submit.disabled=false; }
       });
     }
 
         function renderExpenses() {
       const rows=records.expenses.map(item => {
         const provider=providerById(item.provider_id);
+        const receiptLink=item.receipt_storage_path
+          ? '<a href="/api/admin/finance/attachments/download?kind=expense_receipt&id=' + encodeURIComponent(item.id) + '">Download receipt</a>'
+          : 'No receipt attached';
         return '<tr><td><strong>' + esc(item.description) + '</strong><small>' + esc(provider?.provider_name || 'Provider unavailable') +
           '</small></td><td>' + esc(item.expense_category.replace(/_/g,' ')) + '</td><td>' +
           esc(dateLabel(item.expense_date)) + '</td><td>' + esc(money(item.amount_minor,item.currency_code)) +
-          '</td><td>' + statusPill(item.expense_status) + '</td><td>' +
+          '</td><td>' + statusPill(item.expense_status) + '</td><td>' + receiptLink + '</td><td>' +
           (item.expense_status === 'reversed' ? '<span class="admin-finance-manual">Reversed</span>' : editAction('expense',item.id)) +
           '</td></tr>';
       });
       content.innerHTML =
         '<div class="admin-finance-section-heading"><div><h4>Operating expense register</h4><p>Record real company expenses only. Unpaid invoices and creator/seller liabilities are not counted as expenses.</p></div></div>' +
-        table(['Expense','Category','Date','Amount','Status','Record'],rows,'No operating expenses have been recorded.') +
+        table(['Expense','Category','Date','Amount','Status','Receipt','Record'],rows,'No operating expenses have been recorded.') +
         '<details class="admin-finance-form-details"><summary>Record an actual expense</summary><form id="admin-finance-expense-form" class="admin-finance-form">' +
+        '<input type="hidden" name="receipt_storage_path">' +
         select('Provider / vendor','provider_id',providerOptions(),'required') +
         select('Category','expense_category',[['domain','Domain'],['hosting','Hosting'],['database','Database'],['storage','Storage'],['media','Media'],['communications','Communications'],['software','Software'],['security','Security'],['legal','Legal'],['accounting','Accounting'],['marketing','Marketing'],['support','Support'],['tax','Tax'],['fee','Fee'],['other','Other']]) +
         field('Department key','department_key','text','required maxlength="80" value="infrastructure"') +
@@ -405,11 +505,22 @@
         select('Currency','currency_code',[['USD','USD'],['JMD','JMD']]) +
         field('Amount','amount','number','required min="0" step="0.01" inputmode="decimal"') +
         field('Invoice ID (optional UUID)','invoice_id','text','maxlength="36"') +
+        field('Receipt document (PDF or image)','receipt_file','file','accept="application/pdf,image/jpeg,image/png,image/webp"') +
+        '<p class="admin-finance-form-note">Receipt files are stored in the private company finance archive.</p>' +
         textarea('Notes','notes') + button('Save expense') + '</form></details>';
       section.querySelector('#admin-finance-expense-form')?.addEventListener('submit',async event => {
         event.preventDefault();
         const form=event.currentTarget, values=new FormData(form);
+        const submit=form.querySelector('button[type="submit"]');
+        if(submit)submit.disabled=true;
         try {
+          let receiptPath=String(values.get('receipt_storage_path')||'').trim()||null;
+          const receiptFile=form.elements.namedItem('receipt_file')?.files?.[0];
+          if(receiptFile) {
+            receiptPath=await uploadFinanceAttachment('expense_receipt',receiptFile);
+            form.elements.namedItem('receipt_storage_path').value=receiptPath;
+            form.elements.namedItem('receipt_file').value='';
+          }
           await save('save_expense',{
             id:form.dataset.editId || undefined,
             provider_id:String(values.get('provider_id')||''),
@@ -421,9 +532,11 @@
             amount_minor:minor(values.get('amount')),
             invoice_id:String(values.get('invoice_id')||'').trim()||null,
             expense_status:'actual',
+            receipt_storage_path:receiptPath,
             notes:String(values.get('notes')||'').trim()
           },form);
         } catch(error) { setStatus(error.message || 'Enter a valid expense.',true); }
+        finally { if(submit)submit.disabled=false; }
       });
     }
 
