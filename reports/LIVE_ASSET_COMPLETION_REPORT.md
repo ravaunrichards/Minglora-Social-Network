@@ -194,3 +194,13 @@ The glyph overlay and unused emoji lookup were removed from `scripts/generate-mi
 - Added `island-tide` LIVE animation, local synthesized filtered surf and four-tone chime sound; existing sound opt-out and reduced-motion handling remain active.
 - Added source inventory, manifest sound design, cache busting, and catalogue/manifest/runtime regression tests. CI results for this slice are pending.
 - Existing code, 10-Coin value, nature category and active state remain unchanged. No production DB offer, pricing, transaction, wallet, earnings or payout was modified. Design/licensing review and physical-device QA remain pending; no mastered audio, texture maps, embedded skeletal animation or production deployment is claimed.
+
+
+## Bespoke Crystal Crown gift and royal shimmer checkpoint — 2026-11-14
+
+- Added `assets/3d-assets/gift-models/crystal-crown-model.mjs` for existing gift `crystal-crown-1itryeu`.
+- The source produces a self-contained glTF 2.0 five-point tiara with individually faceted gemstone geometry, gold filigree/engraving, velvet lining, pavé and hanging crystal details.
+- Added original `crystal-crown-original-v1` SVG art and transparent icon through the existing generator; exact-code model route preserves the canonical item.
+- Added `crown-lustre` motion and a dedicated Web Audio chime/shimmer cue; existing sound opt-out and reduced-motion behavior remain.
+- Updated the sound inventory, source docs, cache version and regression tests. CI and generated-model verification are pending.
+- Existing luxury category, 2,000-Coin value and active state remain unchanged. No DB offer, transaction, wallet, earning or payout was modified. Human design review, rights approval and device QA remain pending; no mastered audio, texture maps or embedded skeletal animation is claimed.
