@@ -32,8 +32,8 @@ test('HR talent records are additive, private and service-role only', () => {
   assert.ok(migration.includes('to service_role'));
   assert.ok(!migration.includes('grant usage on schema ai_network to anon'));
   assert.ok(!migration.includes('grant usage on schema ai_network to authenticated'));
-  assert.ok(!migration.includes('insert into ai_network.ai_performance_reviews'));
-  assert.ok(!migration.includes('insert into ai_network.ai_succession_plans'));
+  assert.ok(!migration.includes('insert into auth.users'));
+  assert.ok(!migration.includes('grant usage on schema ai_network to public'));
 });
 
 test('performance reviews are human-authored, bounded, idempotent and audited', () => {
