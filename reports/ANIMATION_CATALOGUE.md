@@ -95,3 +95,6 @@ The existing 3D gift generator builds original primitive mesh scenes with basic 
 ## Generated motion-index alignment — 2026-11-14
 
 The generated catalogue motion index now publishes the exact runtime presets for each gift-specific model/effect route: Djembe Master (`djembe-strike`), Palm Breeze (`palm-canopy-sway`), Gamer Otter (`gamer-otter-cheer`), LIVE Island (`island-tide`), Crystal Crown (`crown-lustre`), Phoenix (`phoenix-rise`) and Beach Maracas (`maraca-rhythm`). This mapping is generated from gift codes; it does not rewrite canonical `animation_preset` values in `data/minglora-gift-catalog.json`. Motion-index and asset-manifest regression tests verify the published preset IDs.
+
+
+The generated motion-index record retains both `catalog_motion_preset` (unchanged source-catalogue value) and `motion_preset` (effective runtime preset). The manifest records `gift_specific_motion_override` explicitly. This avoids overwriting catalogue defaults and makes a bespoke motion choice auditable.
