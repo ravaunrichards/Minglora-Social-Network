@@ -1,6 +1,29 @@
+## Latest verified live checkpoint — 2026-11-14 07:08 UTC
+
+**Canonical Minglora release**
+- Repository: `ravaunrichards/Minglora-Social-Network`; latest main commit: `b60ef07bd5307239fd543099170c9fca7cd31e1b`.
+- PR #293 merged as `74bd9aadff2a692723ebeeab9443c555ad735deb`: Bot Personality Laboratory now creates and links each bot to its own private relational AI identity using the existing service-role-only identity RPC. Separate first/middle/last names, a persisted category, personality, traits, skills and language records are supplied. Owner-scoped idempotency and deterministic bot IDs allow retries to reuse the same identity. Bots remain drafts; no provider is called and no human Supabase Auth account is created.
+- PR #294 merged as `b60ef07bd5307239fd543099170c9fca7cd31e1b`: 31 audited AI Network foreign-key indexes were added with an additive, retry-safe migration.
+- Existing Supabase project only: `gzycobgbasnqqhnympkr`. Index migration ledger version: `20261114070550`, name `minglora_ai_network_foreign_key_indexes`. No new Supabase project, billable development branch, Render service or paid infrastructure was created.
+- Live database catalog verifies 0 uncovered foreign keys in `ai_network` (31/31 added), 34/34 AI tables still RLS-enabled, and all 31 index definitions valid. The Supabase performance advisor now has 0 findings in `ai_network`; 38 unindexed foreign-key findings remain in other existing Minglora schemas and were left untouched.
+- AI schema still has the 15 original active categories and 20 department plus 20 position templates. Identity, profile, name, email, provider, organization, workforce and task row counts are not being inflated with fixtures or fake registrations.
+- Profile schema audit confirms separate first/middle/last name fields; gender and gender presentation; nationality, origin/current country; state/province, parish/county, district, city, town and time zone; personality, interests, hobbies, education, qualifications, profession, skills, voice preferences, avatar/cover storage references and visibility. Email records distinguish unverified/not-requested from provisioned mailboxes. Provider accounts/models/assignments are metadata until a protected credential reference and live health check exist.
+- Existing Render free service `minglora-social-network-temp` is LIVE at `https://minglora-social-network-temp.onrender.com` on main commit `b60ef07`. Deployment `dep-dbs0gh68bjmc73e0e680` completed successfully at `2026-11-14T07:07:14Z`; logs show the app listening on port 10000, Supabase persistence ready and LiveKit connected. Build audit reported 0 dependency vulnerabilities.
+- Latest PR #294 release verification: full suite 1,087 passed / 0 failed / 0 skipped; focused AI Network tests 102 passed / 0 failed / 0 skipped; Supabase Auth acceptance, For You navigation, and seven-plus-two layout QA passed. PR #293 full suite had 1,084 passed; focused AI tests 99 passed.
+- **Test boundary:** AI Network browser acceptance still uses disposable in-memory fixtures, not a signed-in production owner or live AI/provider account. The external browser verifier could not independently open the public Render URL. Render deployment status and runtime logs are evidence of platform deployment/startup, not authenticated end-user acceptance.
+- Worker claims/heartbeat/complete/fail remain deliberately disabled until independent worker authentication and per-worker authorization exist. No provider adapter/credential connection is confirmed. Do not activate provider or workers. Production controls remain `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`.
+- No email inbox provisioning, real external model inference, 10-billion identity capacity or concurrent execution benchmark is claimed.
+
+**Current execution position**
+- Stage 1 foundation/private runtime: COMPLETED; 31 missing AI foreign-key indexes now hardened.
+- Stage 2 identity/profile: PARTIAL; subtask 2.A Bot Lab-to-relational-identity integration merged and deployed. Signed-in owner create/get/edit/upload verification and device acceptance remain.
+- Stages 3–10 remain partial or not complete as recorded in the queue below. Continue from verified outstanding work; do not rebuild completed migrations.
+- Conservative whole-program progress remains 1/10 fully completed stage gates = 10%; the partial Stage 2 work does not count as a completed stage.
+
+
 # Minglora AI Bot Network — Recovery & Progress
 
-## Latest verified live checkpoint — 2026-11-14 (supersedes earlier checkpoints below)
+## Historical live checkpoint — before PR #293 and PR #294 (superseded by the current checkpoint above)
 
 **Canonical release**
 - Product/repository: Minglora Social Network only — `ravaunrichards/Minglora-Social-Network`.
