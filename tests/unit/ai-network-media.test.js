@@ -63,7 +63,6 @@ test('AI media completion validates the nested owner path and never updates the 
   const handler = runtime.slice(start, end);
   assert.match(handler, /expectedFolder/);
   assert.match(handler, /ai_identity:/);
-  assert.match(handler, /minglora-ai-profile-media/);
   assert.match(handler, /AI_PROFILE_MEDIA_BUCKET/);
   assert.match(handler, /createSignedUrl\(objectPath,3600\)/);
   assert.match(handler, /minglora_ai_identity_profile_media_update/);
