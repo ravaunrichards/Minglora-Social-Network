@@ -112,3 +112,16 @@ No prices, balances, transactions, account state, LiveKit credentials, or existi
 - Unrecognized gifts continue through the prior category/seed-based oscillator synthesis, with no remote audio request or new third-party dependency.
 - `scripts/generate-minglora-live-asset-manifest.mjs` adds design IDs and synthesized-layer provenance for those two records. The manifest explicitly does not claim a mastered audio file: `audio_file` is null and the mastered file count is zero.
 - PR #341 (`81764826f74975ac17bd9f9e1c67c0fc72527216`) merged after full CI and LIVE/MeetWave visual QA passed. Cross-device audio latency/mixing and human audio review are still not complete.
+
+
+## Gamer Otter bespoke gift integration — 2026-11-14
+
+| Integration point | Implementation |
+|---|---|
+| Catalogue identity | Existing canonical record `gamer-otter-100-mgl`; its category, activity state and 100-Coin catalogue value are unchanged. |
+| 3D model source | `assets/3d-assets/gift-models/gamer-otter-model.mjs`, routed in `scripts/generate-minglora-gifts.mjs` by exact gift code; prestart gift generation emits the canonical GLTF path. |
+| Primary artwork and icon | A subject-specific `gamer-otter-original-v1` SVG branch is used by the same catalogue generator for the primary artwork and transparent icon. |
+| Animation | `gamer-otter-cheer` is selected from the existing effect runtime's exact-code override and runs on the existing gift mount event. |
+| Sound | `playGamerOtter` synthesizes an arcade arpeggio and low thump locally through Web Audio; the existing sound opt-out remains active. |
+
+The asset is wired into the existing generated catalogue/preview/sent-gift pipeline; no new endpoint, catalogue price, wallet event or database offering is introduced. Design/right clearance and renderer/device QA are not approved by source integration alone.
