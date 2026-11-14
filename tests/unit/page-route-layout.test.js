@@ -55,7 +55,7 @@ test('Home navigation and global navigation remain present',()=>{
 
 test('Settings is a real restorable page and uses the shared standalone layout',()=>{
   const settings=fs.readFileSync(path.join(root,'public/settings.js'),'utf8');
-  assert.ok(app.includes("const RESTORABLE_VIEWS=new Set(")&&app.includes("'settings']);"),
+  assert.ok(app.includes("const RESTORABLE_VIEWS=new Set(")&&app.includes("'settings','ai-network']);"),
     'Settings can be restored after a page reload');
   assert.ok(app.includes("window.MingloraActivateSilentView=view=>activateSilent(view);"),
     'Dedicated pages can update shared navigation state without rendering twice');
