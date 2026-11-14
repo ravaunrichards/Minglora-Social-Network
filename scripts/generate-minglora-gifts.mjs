@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRoseModel } from "../assets/3d-assets/gift-models/rose-model.mjs";
+import { createHibiscusModel } from "../assets/3d-assets/gift-models/hibiscus-model.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const MANIFEST = path.join(ROOT, "data", "minglora-gift-catalog.json");
@@ -167,7 +168,9 @@ function svgArt(gift) {
 
 // The GLB-ready scene geometry is authored as simple original meshes, not imported models.
 function modelDocument(gift) {
-  if (String(gift.name || "").trim().toLowerCase() === "rose") return createRoseModel();
+  const giftName = String(gift.name || "").trim().toLowerCase();
+  if (giftName === "rose") return createRoseModel();
+  if (giftName === "hibiscus") return createHibiscusModel();
   const seed = hash32(gift.code);
   const hue = seed % 360;
   const colors = palette(gift);
