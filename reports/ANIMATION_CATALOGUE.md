@@ -35,3 +35,12 @@ The existing 3D gift generator builds original primitive mesh scenes with basic 
 - CI verified 1,748 catalogue records and 1,737 active motion profiles. The current motion implementation remains a procedural JSON profile plus the Web Animations runtime; this change does not create standalone Lottie, Rive, WebM or MP4 gift-preview files.
 - The current gift sound path remains synthesized Web Audio category profiles rather than mastered per-gift audio files. Dedicated mastered sound count remains zero.
 - Reduced-motion and existing server-confirmed event triggers remain under the existing runtime. Physical-device animation/audio synchronization tests have not been performed.
+
+
+## Gamer Otter action choreography — 2026-11-14
+
+- Canonical gift code: `gamer-otter-100-mgl`.
+- Motion preset: `gamer-otter-cheer`, selected by an exact gift-code override in `public/gift-effects.js`; the existing LIVE gift effect trigger runs the Web Animations keyframes.
+- Sound design: local synthesized arcade arpeggio (523.25, 659.25, 783.99 and 1046.5 Hz notes with seeded detuning/stereo placement) plus a short low-frequency thump; it runs from the existing gift playback hook.
+- Playback remains subject to the existing user sound opt-out and reduced-motion preference. Overlay cleanup remains owned by the shared runtime.
+- No standalone Lottie/Rive/WebM/MP4 file or mastered audio file is claimed. Cross-device timing, mix/latency and human animation review remain pending.
