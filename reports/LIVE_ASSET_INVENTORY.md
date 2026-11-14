@@ -116,3 +116,13 @@ The canonical Palm Breeze gift (palm-breeze-gknyt0) is now routed to the individ
 | Palm Breeze (`palm-breeze-gknyt0`) | `palm-breeze-wind-and-chimes-v1` | Filtered breeze sweep plus three soft chime partials | Synthesized locally in `public/gift-effects.js`; no dedicated WAV file/mastering |
 
 Both routines run from the existing gift-effect trigger and honour `options.sound === false`. The asset manifest records the exact sound design/layers and deliberately keeps `audio_file: null`, `dedicated_mastered_gift_sound: false` and the total mastered-file count at zero. Other gifts retain the existing category-level synthesized sound fallback.
+
+
+## Bespoke gift motion presets — 2026-11-14
+
+| Gift | Runtime preset | Visual sequence | Integration |
+|---|---|---|---|
+| Djembe Master (`djembe-master-1v3jzkm`) | `djembe-strike` | Percussive entry, hit, recoil and settle | Existing `motionElement.animate` path in `public/gift-effects.js` |
+| Palm Breeze (`palm-breeze-gknyt0`) | `palm-canopy-sway` | Gentle alternating canopy sway and settle | Existing `motionElement.animate` path in `public/gift-effects.js` |
+
+Both sequences run with the existing gift FX mount that triggers their individual Web Audio sound designs. Duration limits, cleanup and `prefers-reduced-motion` remain in force. These are code-driven Web Animations, not Lottie/Rive, GLTF animation channels or standalone video/spritesheet files. No physical-device QA is claimed.
