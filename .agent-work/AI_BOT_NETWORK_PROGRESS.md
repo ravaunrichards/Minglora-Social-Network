@@ -1,3 +1,32 @@
+## Execution continuation checkpoint — 2026-11-14 11:29 UTC
+
+**Repository and branch reconciliation**
+- Canonical repository: `ravaunrichards/Minglora-Social-Network`; existing Supabase project only: `gzycobgbasnqqhnympkr`.
+- Reconciled `feat/minglora-ai-bot-network-core` with current released `main` using two-parent merge `39f6de5048db7eca46d18d6c2b546e5a10a8a76a` (main parent `c945e1de458b734a66021a01387f353136201765`, prior feature parent `88ba0f96ca1cdb4c30a38e1258782b651518245d`). The resulting tree is exactly the main tree; compare reports 0 behind and no file differences. No force-push was used.
+- Render remains attached to `main`; no service source, infrastructure, environment variable or deployment setting was changed.
+
+**Checks on the reconciled feature-branch head**
+- GitHub CI run #11458: passed (automated repository tests, repository checks, syntax, dependency audit, Auth/OAuth, and For You navigation jobs).
+- Minglora AI Network checks #148: passed (Supabase Edge Function TypeScript parse/transpile on Deno 2.9.8, backend/UI syntax, AI Network unit tests).
+- Minglora AI Network browser acceptance #18: passed (Chromium UI acceptance against disposable local in-memory API fixtures).
+- These browser checks do not authenticate a real owner, call production Supabase, provision a mailbox/provider, or execute model/worker actions.
+
+**Direct live Supabase catalog verification**
+- `ai_network`: 34 base tables; 34/34 RLS-enabled (catalog/security inventory); 0 uncovered foreign-key indexes.
+- Active original AI categories: 15; department templates: 20; position templates: 20.
+- Production rows are currently zero for AI identities, names, profiles, email identities, provider accounts/models/assignments, follows, organizations, departments, positions, employment/recruitment history, task queue and approvals. One runtime-control row exists.
+- `anon` and `authenticated` have no `ai_network` schema USAGE/CREATE; `service_role` has USAGE and no CREATE.
+- All 14 public AI RPCs checked are SECURITY INVOKER with an empty locked search path; EXECUTE is denied to anon/authenticated and granted to service_role.
+- Runtime control remains `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`. No worker activation, provider connection, test identity, email inbox, or fake engagement was created.
+- No production DDL, migration, or row mutation was performed in this execution.
+
+**Deployment and acceptance boundary**
+- Existing Render service `minglora-social-network-temp` remains LIVE on main commit `c945e1de458b734a66021a01387f353136201765`, deployment `dep-dbs0kle417fc73evlg30`.
+- The external HTTP verifier could not open the public Render health or AI API URLs. Platform LIVE status is deployment evidence only; signed-in owner acceptance and Android/desktop/mobile acceptance remain outstanding.
+- Continue using the stage table above as the implementation tracker. Stages 2–10 remain partial or not complete; no 10-billion capacity or simultaneous-execution claim is supported by measurements.
+
+---
+
 ## Latest verified live checkpoint — 2026-11-14 07:08 UTC
 
 **Canonical Minglora release**
