@@ -39,3 +39,7 @@ The extracted 1,509 catalogue crops remain blocked from production until rights 
 ## Machine-readable per-gift inventory
 
 `assets/manifests/live-asset-manifest.json` is generated during startup and CI after the canonical gift SVG/GLTF files and active motion index are built. It records actual file sizes and SHA-256 hashes, artwork dimensions, aggregate GLTF bounds and mesh counts, exact active animation-profile mappings, synthesized sound status, licensing/visual-review gates, component use and device QA state. It is an inventory and validation artifact, not a production-approval certificate. The output is uploaded as a named GitHub Actions artifact for inspection.
+
+## GLTF load-error fallback
+
+`public/gift-effects.js` now listens for the supported `<model-viewer>` `error` event. When a model fails to load/parse or the WebGL context is lost, the failed model element is replaced with that gift's canonical SVG artwork. If the SVG also fails, or no image URL exists, the card displays an accessible text status instead of an emoji or a broken image. This is a rendering fallback; it does not restore a lost WebGL context or replace physical-device QA.

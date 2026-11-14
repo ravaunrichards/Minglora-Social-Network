@@ -234,11 +234,33 @@
     outer.style.setProperty("--minglora-gift-rays-angle",(motionSeed%360)+"deg");
     const rotationSpeed=24+((motionSeed>>>15)%90);
     const card=document.createElement("div");card.className="minglora-gift-fx-card";
+    const createUnavailableNotice=(message)=>{
+      const notice=document.createElement("span");notice.className="minglora-gift-fx-unavailable";notice.setAttribute("role","status");notice.textContent=message;
+      notice.style.cssText="display:grid;place-items:center;min-height:120px;max-width:100%;padding:12px;color:#fff;background:rgba(17,24,39,.72);border-radius:14px;font:600 13px/1.4 system-ui,sans-serif;text-align:center;";
+      return notice;
+    };
+    const createArtworkFallback=()=>{
+      const image=document.createElement("img");image.className="minglora-gift-fx-model";image.alt=gift.name||"Minglora gift";
+      image.addEventListener("error",()=>{if(image.isConnected)image.replaceWith(createUnavailableNotice("Gift artwork unavailable"));},{once:true});
+      return image;
+    };
     if(gift.model_url){
-      const model=document.createElement("model-viewer");model.className="minglora-gift-fx-model";model.src=gift.model_url;model.alt=gift.name+" original Minglora gift";
-      const reducedMotion=Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);if(!reducedMotion){model.setAttribute("auto-rotate","");model.setAttribute("autoplay","");}model.setAttribute("rotation-per-second",rotationSpeed+"deg");model.setAttribute("interaction-prompt","none");model.setAttribute("shadow-intensity",".8");model.setAttribute("exposure","1.18");card.append(model);
+      const model=document.createElement("model-viewer");model.className="minglora-gift-fx-model";model.alt=gift.name+" original Minglora gift";
+      const reducedMotion=Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);if(!reducedMotion){model.setAttribute("auto-rotate","");model.setAttribute("autoplay","");}model.setAttribute("rotation-per-second",rotationSpeed+"deg");model.setAttribute("interaction-prompt","none");model.setAttribute("shadow-intensity",".8");model.setAttribute("exposure","1.18");
+      model.addEventListener("error",(event)=>{
+        if(!model.isConnected)return;
+        if(gift.image_url){
+          const fallbackImage=createArtworkFallback();model.replaceWith(fallbackImage);fallbackImage.src=gift.image_url;
+        }else{
+          const message=event?.detail?.type==="webglcontextlost"?"3D preview unavailable on this device":"3D gift unavailable";
+          model.replaceWith(createUnavailableNotice(message));
+        }
+      },{once:true});
+      card.append(model);model.src=gift.model_url;
     }else if(gift.image_url){
-      const img=document.createElement("img");img.className="minglora-gift-fx-model";img.src=gift.image_url;img.alt=gift.name;card.append(img);
+      const fallbackImage=createArtworkFallback();card.append(fallbackImage);fallbackImage.src=gift.image_url;
+    }else{
+      card.append(createUnavailableNotice("Gift artwork unavailable"));
     }
     const caption=document.createElement("strong");caption.className="minglora-gift-fx-caption";caption.textContent=gift.name||"Minglora Gift";card.append(caption);
     const rays=document.createElement("span");rays.className="minglora-gift-fx-rays";

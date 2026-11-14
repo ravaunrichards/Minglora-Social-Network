@@ -31,6 +31,17 @@ test("gift animations preserve and play original artwork, 3D models, Coin values
   assert.ok(!effects.includes("minglora-gift-fx-emoji"), "shared LIVE effects must not render emoji gift substitutes");
 });
 
+test("GLTF load failures fall back to the matching SVG and failed SVGs show an accessible error state", () => {
+  const modelErrorListener = effects.indexOf('model.addEventListener("error"');
+  const modelSource = effects.indexOf("model.src=gift.model_url");
+  assert.ok(modelErrorListener >= 0 && modelErrorListener < modelSource, "attach model error recovery before starting the model request");
+  assert.ok(effects.includes("const fallbackImage=createArtworkFallback();model.replaceWith(fallbackImage);fallbackImage.src=gift.image_url;"));
+  assert.ok(effects.includes('image.addEventListener("error"'));
+  assert.ok(effects.includes('createUnavailableNotice("Gift artwork unavailable")'));
+  assert.ok(effects.includes('notice.setAttribute("role","status")'));
+  assert.ok(effects.includes('event?.detail?.type==="webglcontextlost"'));
+});
+
 test("each gift receives subject-specific motion and a matching effect layer", () => {
   assert.ok(effects.includes("function buildPreviewFrames(preset,v)"));
   for (const preset of ["firework-burst","rocket-launch","sky-flight","speed-drift","butterfly-flutter","winged-flight","blossom-bloom","heart-pulse","music-rhythm","ocean-drift","sweet-pop","victory-impact","magic-orbit"]) {
