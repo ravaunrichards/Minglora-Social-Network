@@ -203,7 +203,7 @@ test('budget alert thresholds validate, persist, display and preserve assigned m
   assert.ok(financeUi.includes('manager_user_id:String(values.get'));
   assert.ok(financeUi.includes('budgetThresholdState'));
   assert.ok(financeUi.includes('thresholds.join'));
-  assert.ok(financeUi.includes('name="alert_thresholds"'));
+  assert.ok(financeUi.includes("alert_thresholds','text'"));
   assert.ok(budgetThresholdMigration.includes('alert_thresholds=EXCLUDED.alert_thresholds'));
   assert.ok(budgetThresholdMigration.includes('manager_user_id=EXCLUDED.manager_user_id'));
   assert.ok(budgetThresholdMigration.includes('jsonb_array_elements_text'));
