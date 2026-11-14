@@ -33,10 +33,11 @@ test('AI memory command is available only through the allowlisted authenticated 
   const end = runtime.indexOf('];', start);
   const allowlist = runtime.slice(start, end);
   assert.ok(allowlist.includes('"ai_memory_command"'));
-  assert.match(runtime, /supportedMemoryCommands = \["get_settings", "configure", "list", "create", "delete"\]/);
+  assert.match(runtime, /supportedMemoryCommands = \["get_settings", "configure", "list", "create", "update", "delete"\]/);
   assert.match(runtime, /validUuid\(actorUserId\)/);
   assert.match(runtime, /admin\.rpc\("minglora_ai_memory_command"/);
   assert.match(server, /runAIMemoryCommand\('create'/);
+  assert.match(server, /runAIMemoryCommand\('update'/);
   assert.match(server, /runAIMemoryCommand\('delete'/);
 });
 
