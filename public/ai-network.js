@@ -381,7 +381,14 @@
       '<article class="ai-network-list-row"><div class="ai-network-list-main"><div class="ai-network-avatar ai-network-avatar--team" aria-hidden="true">MEM</div><div>' +
       '<strong>' + esc(entry.summary || 'Memory entry') + '</strong><div class="ai-network-meta">' +
       pill(entry.memory_type === 'long_term' ? 'Long-term' : 'Short-term', entry.memory_type === 'long_term' ? 'ai' : 'neutral') +
-      ' ' + pill('Owner-managed') + '</div><small>Expires: ' + esc(date(entry.expires_at)) + '</small></div></div>' +
+      ' ' + pill('Owner-managed') + '</div><small>Expires: ' + esc(date(entry.expires_at)) + '</small>' +
+      '<details class="ai-network-profile-editor"><summary>Edit memory entry</summary>' +
+      '<form class="ai-network-form" data-ai-form="memory-edit" data-identity-id="' + esc(identityId) +
+      '" data-memory-id="' + esc(entry.memory_id || '') + '">' +
+      '<label>Memory type<select name="memoryType">' + options([{value:'short_term',label:'Short-term'},{value:'long_term',label:'Long-term'}],entry.memory_type || 'short_term') + '</select></label>' +
+      '<label>Summary<textarea name="summary" required maxlength="1000" rows="2">' + esc(entry.summary || '') + '</textarea></label>' +
+      '<label>Additional context<textarea name="note" maxlength="8000" rows="2">' + esc(entry.content?.note || '') + '</textarea></label>' +
+      '<button class="primary" type="submit">Update memory</button></form></details></div></div>' +
       '<button type="button" class="secondary" data-ai-action="delete-memory" data-id="' + esc(entry.memory_id || '') +
       '" data-identity-id="' + esc(identityId) + '">Delete memory</button></article>'
     ).join('') + '</div>' : empty('No memory entries are stored for this identity.');
@@ -1115,6 +1122,14 @@
       payload.short_term_retention_days = Number(value('shortTermRetentionDays'));
       payload.long_term_retention_days = Number(value('longTermRetentionDays'));
       payload.max_entries = Number(value('maxEntries'));
+    } else if (kind === 'memory-edit') {
+      const identityId = form.dataset.identityId || '';
+      const memoryId = form.dataset.memoryId || '';
+      if (!identityId || !memoryId) throw new Error('The AI memory entry details are missing.');
+      path = '/identities/' + encodeURIComponent(identityId) + '/memory/' + encodeURIComponent(memoryId);
+      payload.memory_type = value('memoryType');
+      payload.summary = value('summary');
+      payload.content = { source:'owner_managed_entry', note:value('note') };
     } else if (kind === 'memory-entry') {
       const identityId = form.dataset.identityId || '';
       if (!identityId) throw new Error('Choose an AI identity before saving memory.');
@@ -1517,7 +1532,7 @@
       payload.companionOptIn = form.querySelector('[name="companionOptIn"]').checked;
       payload.companionAcknowledged = form.querySelector('[name="companionAcknowledgedAIIdentity"]').checked;
     } else return;
-    const patchKinds = ['settings','languages','memory-settings','vacancy-status','application-review','employment-status','employment-manager','provider-assignment-status','task-approval','identity-edit'];
+    const patchKinds = ['settings','languages','memory-settings','memory-edit','vacancy-status','application-review','employment-status','employment-manager','provider-assignment-status','task-approval','identity-edit'];
     const result = await request(path, { method: patchKinds.includes(kind) ? 'PATCH' : 'POST', body: payload });
     let uploadedMediaCount = 0;
     if (kind === 'identity-edit' && identityIdForMedia) {
@@ -1543,7 +1558,9 @@
     }
     if (['identity','bot','organization','vacancy','application','appointment','employment-transfer','task-create'].includes(kind)) form.dataset.idempotencyKey = window.crypto.randomUUID();
     const categoryActionLabels = { created:'created', updated:'updated', activated:'reactivated', deactivated:'deactivated' };
-    const message = kind === 'memory-settings'
+    const message = kind === 'memory-edit'
+      ? 'AI memory entry updated; its retention expiry was refreshed.'
+      : kind === 'memory-settings'
       ? 'AI memory consent and retention settings saved for this identity. Existing entries were cleared when memory was disabled.'
       : kind === 'memory-entry'
         ? 'Owner-managed AI memory entry saved with its retention expiry.'
