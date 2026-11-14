@@ -260,6 +260,7 @@ begin
       )
       on conflict(owner_user_id,idempotency_key) do nothing
       returning team_id into v_team_id;
+      v_new_team := v_team_id is not null;
     end if;
     if v_team_id is null then
       select t.team_id into v_team_id from ai_network.ai_teams t
@@ -278,10 +279,10 @@ begin
       v_identity_id:=(v_member #>> '{}')::uuid;
       if not exists(select 1 from ai_network.ai_identities i
         where i.identity_id=v_identity_id and i.owner_user_id=v_owner
-          and i.population=v_scope and i.status not in ('suspended','archived','retired')) then
+          and i.population=v_scope and (v_action='remove_member' or i.status not in ('suspended','archived','retired'))) then
         raise exception using errcode='42501',message='Every team member must be an available, owner-controlled AI identity in the team population.';
       end if;
-      if v_scope='organizational' and not exists(select 1 from ai_network.ai_employment_records e
+      if v_scope='organizational' and v_action<>'remove_member' and not exists(select 1 from ai_network.ai_employment_records e
         where e.organization_id=v_org_id and e.identity_id=v_identity_id
           and e.employment_status in ('onboarding','active','restricted')) then
         raise exception using errcode='42501',message='Organizational team members must have a current employment record in this organization.';
@@ -377,10 +378,15 @@ begin
       update ai_network.ai_delegation_grants g set grant_status='revoked',updated_at=now()
         where g.team_id=v_team_id and g.owner_user_id=v_owner
           and (g.grantor_identity_id=v_identity_id or g.grantee_identity_id=v_identity_id)
-          and g.grant_status='active';
+          and g.grant_status in ('active','paused');
+      insert into ai_network.ai_team_events(owner_user_id,team_id,actor_user_id,identity_id,event_type,reason)
+        values(v_owner,v_team_id,v_owner,v_identity_id,'member_removed','Owner removed this identity from its team.');
       return jsonb_build_object('removed',true,'identity_id',v_identity_id);
     end if;
     v_role:=lower(coalesce(nullif(v_payload->>'member_role',''),'member'));
+    select m.member_role,m.membership_status into v_existing_role,v_existing_status
+      from ai_network.ai_team_memberships m where m.team_id=v_team_id
+        and m.identity_id=v_identity_id and m.owner_user_id=v_owner;
     if v_role not in ('lead','member','observer') then raise exception using errcode='22023',message='Choose lead, member or observer for a team role.'; end if;
     if v_role='lead' and exists(select 1 from ai_network.ai_team_memberships m
       where m.team_id=v_team_id and m.owner_user_id=v_owner and m.membership_status='active'
@@ -395,10 +401,20 @@ begin
     where ai_network.ai_team_memberships.owner_user_id=v_owner;
     update ai_network.ai_teams set status='active',updated_at=now()
       where team_id=v_team_id and owner_user_id=v_owner and status='draft';
+    if v_existing_status is distinct from 'active' or v_existing_role is distinct from v_role then
+      insert into ai_network.ai_team_events(owner_user_id,team_id,actor_user_id,identity_id,event_type,reason,metadata)
+      values(v_owner,v_team_id,v_owner,v_identity_id,
+        case when v_existing_status='active' then 'member_role_changed' else 'member_added' end,
+        'Owner added or changed an AI team membership.',jsonb_build_object('previous_role',v_existing_role,'member_role',v_role));
+    end if;
     return jsonb_build_object('added',true,'identity_id',v_identity_id,'member_role',v_role);
   end if;
 
   if v_action='create_delegation_grant' then
+    if not exists(select 1 from public.minglora_platform_staff s
+      where s.user_id=v_owner and s.active=true and s.role in ('owner','admin','moderator')) then
+      raise exception using errcode='42501',message='Only an authorized Minglora platform administrator can create delegation grants.';
+    end if;
     if coalesce(v_payload->>'team_id','') !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
        or coalesce(v_payload->>'grantor_identity_id','') !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
        or coalesce(v_payload->>'grantee_identity_id','') !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$' then
@@ -501,6 +517,10 @@ begin
   end if;
 
   if v_action in ('revoke_delegation_grant','pause_delegation_grant','reactivate_delegation_grant') then
+    if not exists(select 1 from public.minglora_platform_staff s
+      where s.user_id=v_owner and s.active=true and s.role in ('owner','admin','moderator')) then
+      raise exception using errcode='42501',message='Only an authorized Minglora platform administrator can change delegation grants.';
+    end if;
     if coalesce(v_payload->>'delegation_grant_id','') !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$' then
       raise exception using errcode='22023',message='A valid delegation grant ID is required.';
     end if;
@@ -535,6 +555,10 @@ begin
   end if;
 
   if v_action='list_delegation_grants' then
+    if not exists(select 1 from public.minglora_platform_staff s
+      where s.user_id=v_owner and s.active=true and s.role in ('owner','admin','moderator')) then
+      raise exception using errcode='42501',message='Only an authorized Minglora platform administrator can view delegation grants.';
+    end if;
     select coalesce(jsonb_agg(jsonb_build_object(
       'grant',to_jsonb(g),
       'team_name',t.team_name,
@@ -550,6 +574,10 @@ begin
   end if;
 
   if v_action='delegate_task' then
+    if not exists(select 1 from public.minglora_platform_staff s
+      where s.user_id=v_owner and s.active=true and s.role in ('owner','admin','moderator')) then
+      raise exception using errcode='42501',message='Only an authorized Minglora platform administrator can submit delegated tasks.';
+    end if;
     if coalesce(v_payload->>'delegation_grant_id','') !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$' then
       raise exception using errcode='22023',message='A valid delegation grant ID is required.';
     end if;
