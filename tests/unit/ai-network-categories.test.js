@@ -27,11 +27,10 @@ test('category keys stay stable and categories are deactivated rather than delet
   assert.match(migration, /category_key text not null references ai_network\.ai_categories\(category_key\).*on delete restrict/i);
   assert.match(migration, /At least one AI category must remain active/i);
   assert.match(migration, /lock table ai_network\.ai_categories in share row exclusive mode/i);
-  assert.equal((migration.match(/\\bcommit;/gi) || []).length, 1, 'The migration must contain one transaction commit.');
-  assert.ok(migration.trimEnd().endsWith('commit;'), 'No SQL may be appended after the migration commit.');
-  assert.match(migration, /begin;[\\s\\S]*commit;/i);
+  assert.equal(migration.toLowerCase().split('commit;').length, 2, 'The migration must contain exactly one transaction commit.');
+  assert.ok(migration.startsWith('begin;') && migration.trimEnd().endsWith('commit;'), 'No SQL may be appended after the migration commit.');
   const writeLockIndex = migration.indexOf('lock table ai_network.ai_categories in share row exclusive mode');
-  const categoryReadLockIndex = migration.indexOf('select c.*\\n  into v_existing');
+  const categoryReadLockIndex = migration.indexOf("select c.*\\n  into v_existing");
   assert.ok(writeLockIndex > 0 && categoryReadLockIndex > writeLockIndex, 'The write lock must be acquired before category state is read.');
 
   assert.doesNotMatch(migration, /delete\s+from\s+ai_network\.ai_categories/i);
