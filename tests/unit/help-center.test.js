@@ -66,3 +66,14 @@ assert.match(js,/hc-sub-reset/);
 assert.match(edge,/const id=requiredText\(input\.subcategoryId,64\)/);
 assert.match(edge,/help_subcategories"\)\.update/);
 });
+
+test("Help Center admin coverage counts published articles once and flags unanswered subcategories",()=>{
+const edge=read("supabase/functions/minglora-help-center/index.ts"),js=read("public/help-center.js");
+assert.match(edge,/const publishedArticleIds=new Set<string>\(\)/);
+assert.match(edge,/row\.status!==\"published\"/);
+assert.match(edge,/publishedArticleIds\.has\(row\.article_id\)/);
+assert.match(edge,/publishedArticleCount:/);
+assert.match(edge,/unansweredSubcategories:/);
+assert.match(js,/publishedArticleCount/);
+assert.match(js,/subcategories do not yet have a published answer/);
+});
