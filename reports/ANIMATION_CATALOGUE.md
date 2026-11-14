@@ -54,3 +54,12 @@ The existing 3D gift generator builds original primitive mesh scenes with basic 
 - Sound design: local synthesized arcade arpeggio (523.25, 659.25, 783.99 and 1046.5 Hz notes with seeded detuning/stereo placement) plus a short low-frequency thump; it runs from the existing gift playback hook.
 - Playback remains subject to the existing user sound opt-out and reduced-motion preference. Overlay cleanup remains owned by the shared runtime.
 - No standalone Lottie/Rive/WebM/MP4 file or mastered audio file is claimed. Cross-device timing, mix/latency and human animation review remain pending.
+
+
+## LIVE Island tide choreography — 2026-11-14
+
+- Canonical gift: `live-island-rmn3mc`.
+- Motion preset: `island-tide`, selected by exact catalogue code in `public/gift-effects.js`; gentle lateral tide drift and settle use the existing Web Animations trigger.
+- Sound design: `live-island-tide-and-chime-v1`; one filtered noise swell (high-pass/low-pass sweep) plus four soft sine chimes at 392, 493.88, 587.33 and 783.99 Hz with seeded detuning and stereo placement.
+- Audio is generated through local Web Audio on the existing gift playback path. It is not a mastered recording. Existing sound opt-out and reduced-motion preferences remain respected.
+- No standalone Lottie/Rive/WebM/MP4 animation, embedded glTF animation track or recorded audio asset is claimed. Human review and physical-device timing/mix QA remain pending.
