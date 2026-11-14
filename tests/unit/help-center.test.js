@@ -93,7 +93,7 @@ assert.match(server,/help-center\/admin\/media'\?8_000_000/);
 assert.match(migration,/file_size_limit/);
 assert.match(migration,/image\/jpeg/);
 assert.match(js,/accept="image\/jpeg,image\/png,image\/webp,image\/avif"/);
-assert.match(js,/Watch video demonstration/);assert.match(js,/url\\.protocol!==\\"https:\\"/);
+assert.match(js,/Watch video demonstration/);assert.match(js,/url\.protocol!=="https:"/);
 });
 
 test("Help Center article keywords, ordering, translations, unpublishing and review coverage are managed",()=>{
