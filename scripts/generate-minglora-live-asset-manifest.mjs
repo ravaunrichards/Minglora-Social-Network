@@ -55,6 +55,13 @@ const GIFT_SPECIFIC_WEB_AUDIO_DESIGNS = Object.freeze({
     format: "Web Audio API synthesized five-note pure-tone chime with filtered high-frequency shimmer",
     layers: ["five_note_royal_chime_523_659_784_1047_1319hz", "seeded_stereo_note_placement", "highpass_shimmer_noise"],
     status: "gift_specific_synthesized_sound_not_mastered_recording"
+  }),
+  "phoenix-wep6uk": Object.freeze({
+    sound_design_id: "phoenix-flame-rise-and-ember-choir-v1",
+    sound_profile_scope: "gift_specific_web_audio_synthesis",
+    format: "Web Audio API synthesized filtered flame swell and five ascending firebird tones",
+    layers: ["filtered_bandpass_flame_noise_rise", "lowpass_ember_sweep", "five_note_ascending_firebird_chime_220_294_392_523_659hz"],
+    status: "gift_specific_synthesized_sound_not_mastered_recording"
   })
 });
 
