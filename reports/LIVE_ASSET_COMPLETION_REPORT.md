@@ -175,3 +175,12 @@ The glyph overlay and unused emoji lookup were removed from `scripts/generate-mi
 - The exact gift-code overrides run through the existing `motionElement.animate` path, preserving the shared event trigger, catalogue duration bounds, cleanup, and reduced-motion behavior. All other gifts retain their existing motion presets.
 - Added regression coverage for both exact-code selections and bespoke keyframe branches. PR #342 merged as `ab2939e27378d8f02a8dd1a92172105463d6dbd4` after full CI and the LIVE/MeetWave Chromium layout matrix passed.
 - **Acceptance:** two gift-specific runtime visual choreographies are merged and test-verified. These are not standalone Lottie/Rive/GLTF/video animation files; human motion review, Android/iPhone/tablet/desktop/TV visual acceptance, animation/audio latency testing and production deployment verification remain outstanding.
+
+
+## Bespoke Gamer Otter model and LIVE effect checkpoint — 2026-11-14
+
+- Added `assets/3d-assets/gift-models/gamer-otter-model.mjs` for the existing canonical gift `gamer-otter-100-mgl`. It generates a self-contained glTF 2.0 character sculpture with separately named otter, fur, facial, whisker, tail, paw, headset, microphone and controller mesh parts and PBR material factors.
+- Routed the exact catalogue code through `scripts/generate-minglora-gifts.mjs`; `premiumSvgShape` also emits a subject-specific `gamer-otter-original-v1` SVG. The existing output process creates primary artwork, transparent icon and GLTF from the canonical catalogue, without a new gift row.
+- Added the `gamer-otter-cheer` motion profile and an exact-code visual override to the existing LIVE gift effect runtime. Added a local synthesized four-note arcade cue and short low-frequency thump; existing reduced-motion and sound opt-out handling remain.
+- Added canonical catalogue/model/artwork regression assertions and runtime sound/motion assertions. CI/build results are still pending at this checkpoint.
+- No Coin price, gift active flag, production catalogue row, transaction, wallet, earning, payout or runtime activation state was changed. The model remains design-review-pending; no rights clearance, premium-production approval, mastered sound file, physical-device or production-host result is claimed.

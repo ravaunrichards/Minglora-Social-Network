@@ -126,3 +126,12 @@ Both routines run from the existing gift-effect trigger and honour `options.soun
 | Palm Breeze (`palm-breeze-gknyt0`) | `palm-canopy-sway` | Gentle alternating canopy sway and settle | Existing `motionElement.animate` path in `public/gift-effects.js` |
 
 Both sequences run with the existing gift FX mount that triggers their individual Web Audio sound designs. Duration limits, cleanup and `prefers-reduced-motion` remain in force. These are code-driven Web Animations, not Lottie/Rive, GLTF animation channels or standalone video/spritesheet files. No physical-device QA is claimed.
+
+
+## Gamer Otter bespoke LIVE gift source — 2026-11-14
+
+| Source | Canonical item | Model and artwork | Integration / acceptance |
+|---|---|---|---|
+| `assets/3d-assets/gift-models/gamer-otter-model.mjs` | Gamer Otter (`gamer-otter-100-mgl`, animals, 100 Coins) | Original seated otter character with individually addressable body/facial meshes, headset, microphone, paws, curled tail and controller; embedded glTF 2.0 mesh buffers and PBR material factors. Matching subject-specific primary SVG and transparent icon are emitted by the existing generator. | Generator routes the exact canonical gift code; LIVE runtime adds code-specific arcade sound synthesis and a subject-specific cheer animation. Design and rights review remain pending. |
+
+The model is authored separately from the generic animals-category geometry. The canonical catalogue code, category, active state and 100-Coin value are reused without changing catalogue pricing or production gift publication. The source carries `gift-gamer-otter-3d-v1` provenance and `design-review-pending`; it is not labelled premium-approved. The GLTF source contains no skeletal animation channels or external texture dependency. Audio is synthesized through the existing local Web Audio runtime; no mastered audio file is claimed.

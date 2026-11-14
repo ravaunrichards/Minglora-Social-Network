@@ -300,3 +300,29 @@ test("Rose uses an individually authored layered GLTF botanical sculpture", () =
   assert.ok(model.buffers?.[0]?.uri.startsWith("data:application/octet-stream;base64,"), "Rose must be self-contained for the existing model viewer");
   assert.ok(model.accessors?.filter(accessor => accessor.type === "VEC3").length >= 20, "Rose should expose mesh position and normal accessors");
 });
+
+
+test("Gamer Otter uses original subject-specific SVG artwork and a self-contained 3D character sculpture", () => {
+  const otter = gifts.find(gift => gift.code === "gamer-otter-100-mgl");
+  assert.ok(otter, "Gamer Otter must remain in the canonical catalogue");
+  assert.equal(otter.name, "Gamer Otter");
+  assert.equal(otter.category, "animals");
+  assert.equal(otter.coin_price, 100, "the canonical Coin price must remain unchanged");
+  assert.equal(otter.active, true);
+  const model = JSON.parse(readFileSync(path.join(assetRoot, otter.code + ".gltf"), "utf8"));
+  assert.equal(model.asset?.version, "2.0");
+  assert.equal(model.asset?.extras?.mingloraAssetId, "gift-gamer-otter-3d-v1");
+  assert.equal(model.asset?.extras?.source, "assets/3d-assets/gift-models/gamer-otter-model.mjs");
+  assert.match(model.asset?.extras?.artDirection || "", /seated otter character.*gaming headset.*custom four-button controller/i);
+  assert.match(model.asset?.extras?.reviewStatus || "", /design-review-pending/);
+  assert.ok(model.meshes?.[0]?.primitives?.length >= 45, "the character, headset, controller and details must remain individually addressable");
+  assert.ok(model.materials?.some(material => material.name.includes("Otter rounded head")));
+  assert.ok(model.materials?.some(material => material.name.includes("Gaming headset padded arch")));
+  assert.ok(model.materials?.some(material => material.name.includes("Gamer controller shell")));
+  assert.ok(model.buffers?.[0]?.uri.startsWith("data:application/octet-stream;base64,"), "Gamer Otter must be self-contained for the existing model viewer");
+  assert.ok(model.accessors?.filter(accessor => accessor.type === "VEC3").length >= 90, "the model must expose mesh positions and normals");
+  const svg = readFileSync(path.join(assetRoot, otter.code + ".svg"), "utf8");
+  const icon = readFileSync(path.join(assetRoot, otter.code + "-icon.svg"), "utf8");
+  assert.ok(svg.includes('data-gift-artwork="gamer-otter-original-v1"'), "the primary SVG must be subject-specific");
+  assert.ok(icon.includes('data-gift-artwork="gamer-otter-original-v1"'), "the transparent icon must preserve the subject-specific artwork");
+});

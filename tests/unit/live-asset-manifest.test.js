@@ -125,10 +125,11 @@ test("active gift animation profiles match the canonical motion index; retired g
 });
 
 
-test("named Rose and Hibiscus models retain gift-specific source provenance in the LIVE manifest", () => {
+test("named gift models retain gift-specific source provenance in the LIVE manifest", () => {
   const expected = [
     ["Rose", "gift-rose-3d-v1", "assets/3d-assets/gift-models/rose-model.mjs"],
-    ["Hibiscus", "gift-hibiscus-3d-v1", "assets/3d-assets/gift-models/hibiscus-model.mjs"]
+    ["Hibiscus", "gift-hibiscus-3d-v1", "assets/3d-assets/gift-models/hibiscus-model.mjs"],
+    ["Gamer Otter", "gift-gamer-otter-3d-v1", "assets/3d-assets/gift-models/gamer-otter-model.mjs"]
   ];
   for (const [name, assetId, sourceFile] of expected) {
     const gift = manifest.gifts.find(entry => entry.name === name);
@@ -143,13 +144,14 @@ test("named Rose and Hibiscus models retain gift-specific source provenance in t
   }
 });
 
-test("gift-specific Djembe and Palm Breeze sound designs are inventoried without claiming mastered recordings", () => {
+test("gift-specific synthesized sound designs are inventoried without claiming mastered recordings", () => {
   assert.equal(manifest.summary.dedicated_mastered_gift_sound_file_count, 0);
-  assert.equal(manifest.summary.gift_specific_synthesized_sound_design_count, 2);
+  assert.equal(manifest.summary.gift_specific_synthesized_sound_design_count, 3);
   assert.equal(manifest.summary.physical_device_qa_verified_count, 0);
   const expected = [
     ["djembe-master-1v3jzkm","djembe-hand-drum-impact-v1","gift_specific_synthesized_sound_not_mastered_recording"],
-    ["palm-breeze-gknyt0","palm-breeze-wind-and-chimes-v1","gift_specific_synthesized_sound_not_mastered_recording"]
+    ["palm-breeze-gknyt0","palm-breeze-wind-and-chimes-v1","gift_specific_synthesized_sound_not_mastered_recording"],
+    ["gamer-otter-100-mgl","gamer-otter-arcade-cheer-v1","gift_specific_synthesized_sound_not_mastered_recording"]
   ];
   for (const [code,designId,status] of expected) {
     const entry = manifest.gifts.find(item => item.code === code);
