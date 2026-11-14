@@ -395,7 +395,20 @@ try {
   await createForm.locator('[name="languages"]').fill('en-JM, ht');
   await createForm.locator('[name="emailAddress"]').fill('nia@example.test');
   await createForm.locator('button[type="submit"]').click();
-  await page.getByText('AI identity record saved in Minglora Supabase.').waitFor({ state: 'visible' });
+  try {
+    await page.getByText('AI identity record saved in Minglora Supabase.').waitFor({ state: 'visible', timeout: 15000 });
+  } catch (error) {
+    const debug = await page.locator('#main-content').innerText().catch(() => 'No main content.');
+    console.log('AI identity create diagnostic:', JSON.stringify({
+      categoryRequests: categoryManagementRequests,
+      identityCreateRequests,
+      alerts: await page.locator('[role="alert"]').allInnerTexts().catch(() => []),
+      notices: await page.locator('[role="status"]').allInnerTexts().catch(() => []),
+      forms: await page.locator('form[data-ai-form]').evaluateAll(forms => forms.map(form => form.dataset.aiForm)),
+      mainContent: debug.slice(0, 5000)
+    }));
+    throw error;
+  }
   assert.equal(identityCreateRequests.length, 1, 'The identity form must submit exactly one create request.');
   assert.equal(identityCreateRequests[0].name.first_name, 'Nia');
   assert.equal(identityCreateRequests[0].name.last_name, 'Campbell');
