@@ -456,6 +456,67 @@ Deno.serve(async (req: Request) => {
     const financePayload = input.payload && typeof input.payload === "object" && !Array.isArray(input.payload)
       ? input.payload as Record<string, unknown>
       : {};
+    if (financeAction === "test_provider_connection") {
+      const providerId = String(financePayload.provider_id || "").trim();
+      if (!validUuid(providerId)) {
+        return json(400, { error: "Choose a valid Minglora provider record to test." });
+      }
+      const { data: provider, error: providerError } = await admin
+        .from("minglora_admin_service_providers")
+        .select("id,provider_key")
+        .eq("id", providerId)
+        .maybeSingle();
+      if (providerError) return json(503, { error: "The provider record could not be checked." });
+      if (!provider) return json(404, { error: "The provider record no longer exists." });
+      if (provider.provider_key !== "supabase") {
+        return json(409, { error: "Only the configured Minglora Supabase project has an automatic connection test. Use the provider portal for other vendors." });
+      }
+
+      let projectRef = "";
+      try { projectRef = new URL(SUPABASE_URL).hostname.split(".")[0]; }
+      catch { return json(503, { error: "The configured Supabase project URL is unavailable." }); }
+      if (!/^[a-z0-9]{20}$/.test(projectRef)) {
+        return json(503, { error: "The configured Supabase project reference could not be verified." });
+      }
+
+      let databaseProbe: any;
+      let storageProbe: any;
+      try {
+        [databaseProbe, storageProbe] = await Promise.all([
+          admin.from("profiles").select("id", { count: "exact", head: true }).limit(1),
+          admin.storage.listBuckets()
+        ]);
+      } catch {
+        return json(503, { error: "The Supabase database and Storage connection test could not complete." });
+      }
+      if (databaseProbe?.error) {
+        return json(503, { error: "The Supabase Postgres connectivity check failed. No provider status was changed." });
+      }
+      if (storageProbe?.error || !Array.isArray(storageProbe?.data)) {
+        return json(503, { error: "The Supabase Storage connectivity check failed. No provider status was changed." });
+      }
+
+      const { data: verification, error: verificationError } = await admin.rpc(
+        "minglora_admin_verify_supabase_provider_connection",
+        {
+          p_actor_user_id: actorUserId,
+          p_provider_id: providerId,
+          p_project_ref: projectRef
+        }
+      );
+      if (verificationError) {
+        const code = String(verificationError.code || "");
+        const status = code === "42501" ? 403 : code === "P0002" ? 404 : 503;
+        return json(status, { error: "Supabase was reachable, but its verified connection result could not be recorded." });
+      }
+      return json(200, {
+        ok: true,
+        record: verification?.record || null,
+        checks: { database: "passed", storage: "passed" },
+        verifiedAt: new Date().toISOString()
+      });
+    }
+
     if (financeAction === "list") {
       const [providersResult, subscriptionsResult, budgetsResult, invoicesResult, expensesResult, auditResult] = await Promise.all([
         admin.from("minglora_admin_service_providers").select("*").order("provider_name", { ascending: true }).limit(500),
