@@ -134,3 +134,14 @@ The glyph overlay and unused emoji lookup were removed from `scripts/generate-mi
 - CI run: [43641935041](https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/43641935041). All three checks passed: full test/build job, For You navigation, and Supabase Auth acceptance. The test job generated and verified 1,748 primary SVG artworks, 1,748 transparent SVG icons, 1,748 glTF models, 1,748 manifest gift records, and 1,737 active motion profiles.
 - The application `prestart` script runs the gift, sound, motion-index and LIVE manifest generators. The generated icon outputs are therefore created at startup; they are not represented as individually committed generated files.
 - **Scope/approval limits:** this is an icon-generation and integration milestone, not completion of the full premium-artwork brief. Human design review, rights/licensing clearance, bespoke high-detail models for the remaining catalogue, mastered per-gift sounds, standalone animation files, physical-device testing, and live deployment verification remain outstanding. No gift was activated in the production database.
+
+
+## Bespoke Djembe Master LIVE gift implementation — 2026-11-14
+
+- Added the original source `assets/3d-assets/gift-models/djembe-model.mjs` for canonical gift code `djembe-master-1v3jzkm`.
+- The model contains a sculpted mahogany shell and hollow inner wall, taut hide drumhead, rim and binding rings, 16 separate tension strands, five continuous diamond cross-lacing runs, 24 carved diamond accents and individual PBR material records. Mesh geometry is embedded in a self-contained glTF 2.0 document.
+- The exact canonical gift code is routed through `scripts/generate-minglora-gifts.mjs`; the source also produces subject-specific transparent SVG artwork marked `djembe-master-original-v1`.
+- Added regression assertions for the catalogue record/category, asset ID, source provenance, design-review state, mesh/material parts, embedded buffers and SVG art signature.
+- PR #339 was squash-merged into `main` as `6daf3cf23867b229168819aa0adae146cae23fc2`. Before merge, CI run #11874 and LIVE/MeetWave layout QA run #246 both completed successfully; the full test job, asset generation, manifest generation, image-metadata audit, navigation tests and Supabase Auth tests passed.
+- No gift catalogue values, prices, active flags, production gift rows, balances, payouts or LIVE event behavior were changed. The existing production database still has 97 retired/inactive gift rows and zero active version-3 offerings; no item was activated.
+- **Acceptance:** source integration, generated asset pipeline and regression tests are merged and CI-verified. Human visual/design review, rights/licensing approval, physical-device rendering QA and live-host deployment verification remain pending. This is a third bespoke model source, not completion of the 1,748-gift catalogue.
