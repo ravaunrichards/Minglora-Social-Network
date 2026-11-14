@@ -38,12 +38,18 @@
 - Runtime safety remains unchanged: `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`.
 
 **Security and database**
-- Existing `ai_network` schema: 33/33 tables have RLS enabled. `anon` and `authenticated` have no schema access; privileged operations stay behind the existing server runtime.
+- Existing `ai_network` schema: 34/34 tables have RLS enabled. `anon` and `authenticated` have no schema access; privileged operations stay behind the existing server runtime.
 - AI profile media RPC `public.minglora_ai_identity_profile_media_update(uuid,uuid,text,text)` exists, uses `SECURITY INVOKER` and an empty locked search path, and grants execute only to `service_role`. Verified: anon=false, authenticated=false, service_role=true.
 - Existing media assets table still has RLS enabled. Existing `minglora-avatars` and `minglora-covers` buckets and owner-folder policies are reused; no new buckets or credentials were created.
 - Existing 15 AI categories remain intact. No sample identities, human Auth accounts, email inboxes, credentials, provider connections or fake engagement were created.
 - Production checks found zero AI identities, zero AI media assets, zero identity versions and zero AI identity audit rows after deployment. No test identity or media record was retained.
 - All rollback-only integration tests from the previous checkpoint remain valid; all test transactions were rolled back.
+
+**Fresh live schema / performance audit — 2026-11-14**
+- Live inventory confirms 34 AI Network base tables; 34/34 have RLS enabled. Schema USAGE is denied to anon/authenticated and allowed to service_role. The Supabase advisor's RLS-enabled/no-policy INFO findings are expected for this private schema and are not a reason to grant browser access.
+- Current estimated row counts: 15 AI categories, 20 department templates, 20 position templates and one runtime-control row. Identity, profile, name, email, provider, organization, workforce, recruitment, follow and task records are currently estimated empty. These are database statistics snapshots, not a measured capacity benchmark.
+- Performance advisor reports 69 unindexed foreign keys across the full database, including 31 in the AI Network schema across departments, employment, follows, organizations, positions, provider history, recruitment and task records. These are a performance backlog; no index DDL was executed during this audit. Prepare a reviewed additive migration and validate it on a safe database branch before production application.
+- AI email rows do not establish an inbox; provider/model metadata does not establish a connected model or operational inference. Runtime remains globally paused, execution disabled and worker count zero.
 
 **Verified rollback-only integration tests**
 - Identity profile: created/read/edited a temporary identity; separate first/last names, profile fields, languages and locations persisted; version and audit records were written.
