@@ -1,8 +1,10 @@
 (() => {
   "use strict";
   const state={gifts:[],balance:null,promoWallet:null,selectedCode:"",category:"all",search:"",recipient:"",page:0,pageSize:72,sort:"high"};
-  const labels={all:"All gifts",flowers:"Flowers",hearts:"Love & hearts",animals:"Animals & creatures",vehicles:"Vehicles",music:"Music",sports:"Sports",food_drink:"Food & drinks",fashion_beauty:"Fashion & beauty",luxury:"Luxury",celebrations:"Celebrations",fantasy:"Fantasy & cosmic",nature:"Nature",travel:"Travel",games:"Games",community:"Community",symbols:"Symbols",other:"More gifts"};
-  const emojis={all:"✦",flowers:"🌹",hearts:"💖",animals:"🦁",vehicles:"🚀",music:"🎵",sports:"🏆",food_drink:"🍰",fashion_beauty:"👑",luxury:"💎",celebrations:"🎉",fantasy:"✨",nature:"🌴",travel:"🌍",games:"🎮",community:"🤝",symbols:"🔆",other:"🎁"};
+  const labels={all:"All gifts",flowers:"Flowers",hearts:"Love & hearts",animals:"Animals & creatures",vehicles:"Vehicles",music:"Music",sports:"Sports",food_drink:"Food & drinks",fashion_beauty:"Fashion & beauty",luxury:"Luxury",celebrations:"Celebrations",fantasy:"Fantasy & cosmic",nature:"Nature",travel:"Travel",games:"Games",community:"Community",symbols:"Symbols",everyday:"Everyday",reactions:"Reactions",seasonal:"Seasonal",jamaican_culture:"Jamaican culture",other:"More gifts"};
+  const categoryIconFiles=Object.freeze({all:"all",flowers:"flowers",hearts:"hearts",animals:"animals",vehicles:"vehicles",music:"music",sports:"sports",food_drink:"food_drink",fashion_beauty:"fashion_beauty",luxury:"luxury",celebrations:"celebrations",fantasy:"fantasy",nature:"nature",travel:"travel",games:"games",community:"community",symbols:"symbols",everyday:"everyday",reactions:"reactions",seasonal:"seasonal",jamaican_culture:"jamaican_culture",other:"other"});
+  const categoryIconUrl=k=>"/assets/icons/live-gift-categories/"+(categoryIconFiles[k]||"other")+".svg";
+  const giftIconUrl=g=>g?.code?"/assets/gifts/catalog/"+encodeURIComponent(g.code)+"-icon.svg":"";
   const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   async function request(path,options={}) {
     let response;
@@ -17,7 +19,7 @@
     return ["all",...Object.keys(labels).filter(k=>k!=="all"&&available.has(k))];
   }
   function categoryMarkup(){
-    return categories().map(k=>"<button type='button' class='gift-category-chip "+(state.category===k?"active":"")+"' data-gift-category='"+k+"'><span>"+emojis[k]+"</span> "+labels[k]+"</button>").join("");
+    return categories().map(k=>"<button type='button' class='gift-category-chip "+(state.category===k?"active":"")+"' data-gift-category='"+k+"'><img class='gift-category-icon' data-category-icon loading='lazy' decoding='async' src='"+esc(categoryIconUrl(k))+"' alt='' aria-hidden='true'> "+labels[k]+"</button>").join("");
   }
   function filtered(){
     const q=state.search.trim().toLowerCase();
@@ -29,7 +31,8 @@
   }
   function selected(){return state.gifts.find(g=>g.code===state.selectedCode)||null;}
   function card(g){
-    const image=g.image_url?"<img class='gift-card-image' loading='lazy' decoding='async' src='"+esc(g.image_url)+"' alt='Approved Minglora 3D gift artwork: "+esc(g.name)+"'>":"<span class='gift-art-unavailable'>3D model unavailable</span>";
+    const iconUrl=giftIconUrl(g);
+    const image=iconUrl?"<img class='gift-card-image' data-gift-icon loading='lazy' decoding='async' src='"+esc(iconUrl)+"' alt='Transparent Minglora gift icon: "+esc(g.name)+"'>":"<span class='gift-art-unavailable' role='status'>Gift icon unavailable</span>";
     return "<button type='button' class='gift-catalog-card "+(state.selectedCode===g.code?"selected":"")+"' data-gift-select='"+esc(g.code)+"' aria-pressed='"+(state.selectedCode===g.code)+"'><span class='gift-catalog-art'>"+image+"</span><strong>"+esc(g.name)+"</strong><small>◈ "+Number(g.coin_price).toLocaleString()+" Coins</small></button>";
   }
   function updateSelected(){
@@ -110,9 +113,24 @@
       if(previewStatus)previewStatus.textContent="The gift artwork could not load. No cartoon icon will be substituted.";
     });
   }
+  function bindGiftIconErrors(root){
+    if(!root||root.dataset.giftIconErrorsBound)return;
+    root.addEventListener("error",event=>{
+      const image=event.target;
+      if(!image||image.tagName!=="IMG"||!image.matches("[data-gift-icon], [data-category-icon]"))return;
+      const fallback=document.createElement("span");
+      fallback.className="gift-art-unavailable";
+      fallback.setAttribute("role","status");
+      fallback.textContent="Artwork unavailable";
+      image.replaceWith(fallback);
+    },true);
+    root.dataset.giftIconErrorsBound="true";
+  }
   function drawGrid(){
     const grid=document.getElementById("minglora-gift-grid"),count=document.getElementById("minglora-gift-count"),more=document.getElementById("minglora-gift-more");
     if(!grid)return;
+    bindGiftIconErrors(grid);
+    bindGiftIconErrors(document.getElementById("minglora-gift-categories"));
     const rows=filtered(),shown=rows.slice(0,(state.page+1)*state.pageSize);
     if(count)count.textContent=rows.length.toLocaleString()+" gifts";
     grid.innerHTML=shown.length?shown.map(card).join(""):"<div class='gift-empty-state'>No gifts match your search.</div>";
@@ -132,7 +150,7 @@
     const balance=state.balance===null?"Balance unavailable":state.balance.toLocaleString()+" Coins available";
     main.innerHTML=
       "<section class='gift-level-up-banner' aria-labelledby='minglora-gifter-rewards-title'><img src='/assets/gifters-rewards.png' alt='Gifters Rewards' loading='eager' decoding='async'><div class='gift-level-up-copy'><span class='eyebrow'>MINGLORA GIFTER REWARDS</span><h2 id='minglora-gifter-rewards-title'>Gifters Rewards</h2><p>Explore Minglora’s gifter rewards, then open your level journey to track badges and all 50 levels.</p><button type='button' class='primary' id='minglora-gifter-level-up-open'>View all 50 levels</button></div></section>"+
-      "<section class='page-heading gift-page-heading'><div><span class='eyebrow'>Minglora Gift Studio</span><h1>Every moment deserves a gift 🎁</h1><p class='muted'>Explore the complete Minglora collection. Each gift has original Minglora artwork, a rotatable 3D preview, animated presentation and its own sound effect.</p><button type='button' class='secondary' id='minglora-gifter-progress'>View Gifter LV &amp; Badges</button></div><div class='gift-balance-pill'><small>Your balance</small><strong>"+esc(balance)+"</strong><button type='button' class='secondary' id='minglora-gift-recharge'>Recharge Coins</button></div></section>"+
+      "<section class='page-heading gift-page-heading'><div><span class='eyebrow'>Minglora Gift Studio</span><h1>Every moment deserves a gift</h1><p class='muted'>Explore the complete Minglora collection. Each gift has Minglora artwork, a rotatable 3D preview, animated presentation and a sound profile.</p><button type='button' class='secondary' id='minglora-gifter-progress'>View Gifter LV &amp; Badges</button></div><div class='gift-balance-pill'><small>Your balance</small><strong>"+esc(balance)+"</strong><button type='button' class='secondary' id='minglora-gift-recharge'>Recharge Coins</button></div></section>"+
       "<section class='card gift-preview-panel'><div class='gift-preview-copy'><span class='eyebrow'>Live 3D gift preview</span><h2 id='minglora-gift-selected'>Choose a gift below</h2><p class='muted' id='minglora-gift-selected-price'>Select a gift to preview it</p><p class='gift-preview-status' id='minglora-gift-preview-status' role='status' aria-live='polite'>Your selected gift preview will appear here.</p><div class='gift-preview-actions'><button type='button' class='secondary' id='minglora-gift-sound' disabled>♫ Preview sound</button></div></div><div class='gift-preview-stage' aria-label='Selected gift artwork and 3D preview'><img id='minglora-gift-selected-image' alt='' hidden><span id='minglora-gift-selected-fallback' class='gift-preview-fallback' hidden>3D model unavailable</span><model-viewer id='minglora-gift-selected-model' camera-controls auto-rotate rotation-per-second='22deg' interaction-prompt='none' shadow-intensity='.7' exposure='1.12' loading='eager' reveal='auto' hidden></model-viewer></div></section>"+
       "<section class='card gift-catalogue-panel'><div class='gift-catalogue-toolbar'><div><h2>The complete gift collection</h2><p class='muted'>"+state.gifts.length.toLocaleString()+" individual Minglora gifts · original artwork and 3D previews</p></div><span class='gift-count' id='minglora-gift-count'>"+state.gifts.length+" gifts</span></div>"+
       "<div class='gift-browse-controls'><label class='gift-search-label'><span>Find a gift</span><input id='minglora-gift-search' type='search' placeholder='Search every gift by name…' value='"+esc(state.search)+"'></label><label class='gift-sort-label'><span>Sort</span><select id='minglora-gift-sort'><option value='high'>Price: high to low · Premium first</option><option value='price'>Price: low to high</option><option value='name'>Name A–Z</option></select></label></div>"+

@@ -7514,3 +7514,13 @@ dialog#minglora-profile-editor .modal-actions #save-profile-button{
 .profile-name-with-badges>span:first-child{display:inline;min-width:0;max-width:100%;white-space:normal;overflow-wrap:anywhere;word-break:normal;overflow:visible;text-overflow:clip}
 .profile-username-line{min-width:0;max-width:100%;white-space:normal;overflow-wrap:anywhere;word-break:normal;overflow:visible;text-overflow:clip}
 
+/* Production transparent LIVE gift/category vector icons. */
+.gift-category-chip{display:inline-flex;align-items:center;gap:7px}
+.gift-category-icon{display:block;width:20px;height:20px;flex:0 0 20px;object-fit:contain}
+.gift-catalog-art{background:var(--soft);background-image:none}
+.gift-card-image{display:block;width:100%;height:100%;max-width:100%;max-height:100%;object-fit:contain;padding:9px;box-sizing:border-box;border-radius:10px;background:transparent}
+.gift-art-unavailable,.live-gift-card-unavailable,.live-gift-preview-unavailable{display:grid;place-items:center;min-width:0;min-height:56px;padding:8px;color:var(--muted);font-size:11px;line-height:1.35;text-align:center;overflow-wrap:anywhere}
+.live-gift-image{display:block;width:100%;height:100%;max-width:100%;max-height:100%;object-fit:contain;padding:5px;box-sizing:border-box;border-radius:8px;background:transparent}
+.live-gift-preview-image{object-fit:contain;max-width:100%;max-height:100%;background:transparent}
+.live-reward-vector-icon{display:block;width:42px;height:42px;max-width:100%;max-height:100%;color:currentColor}
+.live-reward-empty>.live-reward-vector-icon{margin:0 auto 10px}

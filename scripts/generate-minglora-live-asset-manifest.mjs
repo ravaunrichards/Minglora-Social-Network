@@ -258,6 +258,21 @@ function buildManifest() {
       }
     });
     if (artworkDimensions.emoji_font_overlay_present) emojiOverlayCount++;
+    const iconFile = path.join(GIFT_DIR, gift.code + "-icon.svg");
+    const iconDimensions = svgInfo(iconFile);
+    if (!iconDimensions.transparent_background) fail("gift icon has an opaque background: " + relative(iconFile));
+    if (iconDimensions.emoji_font_overlay_present) fail("gift icon contains a system emoji font overlay: " + relative(iconFile));
+    const icon = fileRecord(iconFile, "svg", {
+      public_url: "/assets/gifts/catalog/" + gift.code + "-icon.svg",
+      dimensions: { width_px: iconDimensions.width_px, height_px: iconDimensions.height_px, view_box: iconDimensions.view_box },
+      transparent_background: true,
+      vector_only: true,
+      component_usage: ["public/app.js", "public/gifts.js"],
+      alt_text: String(gift.name) + " transparent Minglora LIVE gift icon",
+      source: { type: "generated_from_canonical_gift_subject_vector", catalogue_record: "data/minglora-gift-catalog.json#" + gift.code, generator: "scripts/generate-minglora-gifts.mjs", generator_identity: "Minglora Gift Studio" },
+      quality: { status: "transparent_subject_icon_requires_human_review", emoji_font_overlay_present: false, human_visual_review: "not_completed", approved_for_premium_production: false },
+      licensing: { status: "review_required", provenance: "repository_generated_subject_vector", notes: "Generated subject-only vector variant; individual visual and rights approval remain required." }
+    });
 
     const model = fileRecord(gltfFile, "gltf-json", {
       public_url: gift.model_url,
@@ -339,12 +354,9 @@ function buildManifest() {
       rarity: typeof gift.rarity === "string" ? gift.rarity : null,
       asset_version: String(packageData.version || "unspecified"),
       artwork,
-      thumbnail: {
-        path: artwork.path,
-        format: artwork.format,
-        dimensions: artwork.dimensions,
-        reuse_of_primary_artwork: true
-      },
+      icon_url: icon.public_url,
+      icon,
+      thumbnail: { path: icon.path, format: icon.format, dimensions: icon.dimensions, transparent_background: true, reuse_of_primary_artwork: false },
       animated_preview: {
         uses_motion_profile: Boolean(profile),
         profile_id: animation.profile_id,
@@ -415,6 +427,7 @@ function buildManifest() {
       active_gift_count: activeCount,
       inactive_gift_count: inactiveCount,
       svg_artwork_file_count: gifts.length,
+      svg_gift_icon_file_count: gifts.length,
       gltf_model_file_count: gifts.length,
       active_motion_profile_count: activeCount,
       transparent_background_artwork_count: gifts.filter(gift => gift.artwork.transparent_background).length,
