@@ -1,8 +1,10 @@
+begin;
+
 -- Safe, auditable administrator management for AI identity categories.
 -- Existing category keys remain immutable so identity foreign keys never break.
 create table if not exists ai_network.ai_category_audit_logs (
   audit_id uuid primary key default gen_random_uuid(),
-  category_key text not null references ai_network.ai_categories(category_key) on delete restrict,
+  category_key text not null references ai_network.ai_categories(category_key) on update cascade on delete restrict,
   actor_user_id uuid not null references public.profiles(id) on delete restrict,
   action text not null check (action in ('created', 'updated', 'activated', 'deactivated')),
   before_snapshot jsonb not null default '{}'::jsonb check (jsonb_typeof(before_snapshot) = 'object'),
@@ -18,6 +20,7 @@ create index if not exists ai_category_audit_logs_actor_created_idx
 alter table ai_network.ai_category_audit_logs enable row level security;
 revoke all on table ai_network.ai_category_audit_logs from public, anon, authenticated;
 grant usage on schema ai_network to service_role;
+revoke all on table ai_network.ai_categories from public, anon, authenticated;
 grant select, insert, update on ai_network.ai_categories to service_role;
 grant select, insert on ai_network.ai_category_audit_logs to service_role;
 
@@ -43,6 +46,7 @@ declare
   v_before jsonb := '{}'::jsonb;
   v_after jsonb := '{}'::jsonb;
   v_audit_action text;
+  v_active_count integer;
   v_categories jsonb;
 begin
   if current_user <> 'service_role' then
@@ -70,6 +74,9 @@ begin
   end if;
 
   if v_action = 'create' then
+    -- Serialize writes so two administrators cannot concurrently deactivate
+    -- the final active categories after both observe the same count.
+    lock table ai_network.ai_categories in share row exclusive mode;
     v_display_name := left(trim(coalesce(v_payload->>'display_name', '')), 80);
     v_description := left(trim(coalesce(v_payload->>'description', '')), 1000);
     if length(v_display_name) < 2 then
@@ -104,6 +111,10 @@ begin
   if v_action not in ('update', 'activate', 'deactivate') then
     raise exception using errcode = '22023', message = 'Unsupported AI category command.';
   end if;
+
+  -- Take the write lock before the row lock and active-count check. This
+  -- makes the last-active-category invariant safe under concurrent admins.
+  lock table ai_network.ai_categories in share row exclusive mode;
 
   select c.* into v_row
   from ai_network.ai_categories c
@@ -143,6 +154,15 @@ begin
   else
     v_description := v_row.description;
   end if;
+  if v_row.is_active and not v_is_active then
+    select count(*)::integer into v_active_count
+    from ai_network.ai_categories c
+    where c.is_active = true;
+    if v_active_count <= 1 then
+      raise exception using errcode = '23514', message = 'At least one AI category must remain active.';
+    end if;
+  end if;
+
   if v_action = 'update' and v_payload ? 'sort_order' then
     if coalesce(v_payload->>'sort_order', '') !~ '^-?[0-9]{1,6}$' then
       raise exception using errcode = '22023', message = 'AI category sort order must be a whole number.';
@@ -182,3 +202,5 @@ comment on function public.minglora_ai_category_command(text, uuid, jsonb)
 
 revoke all on function public.minglora_ai_category_command(text, uuid, jsonb) from public, anon, authenticated;
 grant execute on function public.minglora_ai_category_command(text, uuid, jsonb) to service_role;
+
+commit;
