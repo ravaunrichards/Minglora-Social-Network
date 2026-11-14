@@ -1,0 +1,107 @@
+{
+  "schema_version": 1,
+  "name": "Minglora LIVE Control Icons",
+  "style": "original Minglora outline vector assets",
+  "view_box": "0 0 24 24",
+  "rendering": "same-origin external SVG symbol references via SVG use",
+  "color": "currentColor inherited from the existing LIVE control button",
+  "state_handling": "Existing button aria-pressed, disabled and danger styles remain authoritative; icon artwork does not hard-code status colors.",
+  "icons": [
+    {
+      "id": "mic",
+      "file": "/assets/icons/live-controls/mic.svg",
+      "label": "mic",
+      "stateful": true
+    },
+    {
+      "id": "mic-off",
+      "file": "/assets/icons/live-controls/mic-off.svg",
+      "label": "mic off",
+      "stateful": true
+    },
+    {
+      "id": "camera",
+      "file": "/assets/icons/live-controls/camera.svg",
+      "label": "camera",
+      "stateful": true
+    },
+    {
+      "id": "camera-off",
+      "file": "/assets/icons/live-controls/camera-off.svg",
+      "label": "camera off",
+      "stateful": true
+    },
+    {
+      "id": "flip",
+      "file": "/assets/icons/live-controls/flip.svg",
+      "label": "flip",
+      "stateful": true
+    },
+    {
+      "id": "multi-guest",
+      "file": "/assets/icons/live-controls/multi-guest.svg",
+      "label": "multi guest",
+      "stateful": true
+    },
+    {
+      "id": "cohost",
+      "file": "/assets/icons/live-controls/cohost.svg",
+      "label": "cohost",
+      "stateful": true
+    },
+    {
+      "id": "message",
+      "file": "/assets/icons/live-controls/message.svg",
+      "label": "message",
+      "stateful": true
+    },
+    {
+      "id": "screen",
+      "file": "/assets/icons/live-controls/screen.svg",
+      "label": "screen",
+      "stateful": true
+    },
+    {
+      "id": "fullscreen",
+      "file": "/assets/icons/live-controls/fullscreen.svg",
+      "label": "fullscreen",
+      "stateful": true
+    },
+    {
+      "id": "gift",
+      "file": "/assets/icons/live-controls/gift.svg",
+      "label": "gift",
+      "stateful": true
+    },
+    {
+      "id": "volume",
+      "file": "/assets/icons/live-controls/volume.svg",
+      "label": "volume",
+      "stateful": true
+    },
+    {
+      "id": "volume-off",
+      "file": "/assets/icons/live-controls/volume-off.svg",
+      "label": "volume off",
+      "stateful": true
+    },
+    {
+      "id": "settings",
+      "file": "/assets/icons/live-controls/settings.svg",
+      "label": "settings",
+      "stateful": true
+    },
+    {
+      "id": "share",
+      "file": "/assets/icons/live-controls/share.svg",
+      "label": "share",
+      "stateful": true
+    },
+    {
+      "id": "end",
+      "file": "/assets/icons/live-controls/end.svg",
+      "label": "end",
+      "stateful": true
+    }
+  ]
+}
