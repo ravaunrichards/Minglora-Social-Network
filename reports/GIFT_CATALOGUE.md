@@ -75,3 +75,11 @@ The canonical Djembe Master music gift is now linked to its own 3D source module
 ## Palm Breeze bespoke source — 2026-11-14
 
 The canonical Palm Breeze nature gift now uses its own palm-tree/island glTF source and subject-specific original vector artwork. CI validated the catalogue identity, self-contained GLTF geometry, named mesh/material groups and SVG art signature. Catalogue price/status and LIVE economy logic were not changed. Human design/licensing review and device QA remain required.
+
+
+## Gift-specific sound-design exceptions — 2026-11-14
+
+- Djembe Master (`djembe-master-1v3jzkm`) uses a dedicated Web Audio design `djembe-hand-drum-impact-v1`.
+- Palm Breeze (`palm-breeze-gknyt0`) uses a dedicated Web Audio design `palm-breeze-wind-and-chimes-v1`.
+- Both are local synth designs triggered from the existing gift effect mount; all other gifts retain category-level sound synthesis.
+- These additions do not create audio files: `audio_file` remains null and the dedicated mastered-gift-audio file count remains zero. No price, active state or economy record is modified.
