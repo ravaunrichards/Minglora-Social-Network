@@ -1595,6 +1595,119 @@ async function route(req, res) {
         return response?.result;
       };
 
+      const aiIdentityIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      const aiMediaBucketForSlot = slot => slot === 'avatar' ? 'minglora-avatars' : slot === 'cover' ? 'minglora-covers' : '';
+      const aiMediaLimitForSlot = slot => slot === 'avatar' ? 10 * 1024 * 1024 : slot === 'cover' ? 20 * 1024 * 1024 : 0;
+      const aiMediaMimeTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/avif'];
+
+      if (method === 'GET' && parts[0] === 'identities' && parts.length === 4 && parts[2] === 'media') {
+        const identityId = parts[1], slot = parts[3];
+        if (!aiIdentityIdPattern.test(identityId) || !aiMediaBucketForSlot(slot)) {
+          throw Object.assign(new Error('Choose a valid AI identity image.'), { status: 400 });
+        }
+        const identity = await runAIIdentityCommand('get', { identity_id: identityId });
+        const storageRef = identity?.profile?.[slot === 'avatar' ? 'avatar_storage_ref' : 'cover_storage_ref'];
+        const expectedPrefix = user.id + '/ai-identities/' + identityId + '/';
+        if (typeof storageRef !== 'string' || !storageRef.startsWith(expectedPrefix) || storageRef.includes('..')) {
+          throw Object.assign(new Error('This AI identity does not have that image yet.'), { status: 404 });
+        }
+        const signed = await mediaGateway('media_sign', {
+          ownerId: user.id, bucket: aiMediaBucketForSlot(slot), path: storageRef
+        });
+        if (typeof signed?.url !== 'string' || !signed.url.startsWith('https://')) {
+          throw Object.assign(new Error('Minglora could not open this AI profile image.'), { status: 502 });
+        }
+        res.writeHead(302, {
+          Location: signed.url,
+          'Cache-Control': 'private, no-store',
+          'Referrer-Policy': 'no-referrer'
+        });
+        return res.end();
+      }
+
+      if (method === 'POST' && parts[0] === 'identities' && parts.length === 5 && parts[2] === 'media' && parts[4] === 'prepare') {
+        const identityId = parts[1], slot = parts[3];
+        if (!aiIdentityIdPattern.test(identityId) || !aiMediaBucketForSlot(slot)) {
+          throw Object.assign(new Error('Choose a valid AI identity and image type.'), { status: 400 });
+        }
+        const input = await body(req, 8000);
+        const mimeType = String(input.mimeType || '').toLowerCase();
+        const byteSize = Number(input.byteSize || 0);
+        const fileName = String(input.fileName || 'AI profile image').trim().slice(0, 255);
+        if (!aiMediaMimeTypes.includes(mimeType) || !Number.isSafeInteger(byteSize) || byteSize < 1 || byteSize > aiMediaLimitForSlot(slot)) {
+          throw Object.assign(new Error('The selected AI profile image type or size is not allowed.'), { status: 400 });
+        }
+        const identity = await runAIIdentityCommand('get', { identity_id: identityId });
+        if (!identity?.identity?.identity_id) {
+          throw Object.assign(new Error('AI identity was not found for this Minglora owner.'), { status: 404 });
+        }
+        const prepared = await mediaGateway('media_upload_prepare', {
+          ownerId: user.id, slot, mimeType, byteSize, aiIdentityId: identityId
+        });
+        if (prepared.bucket !== aiMediaBucketForSlot(slot) || !String(prepared.path || '').startsWith(user.id + '/ai-identities/' + identityId + '/')) {
+          throw Object.assign(new Error('Minglora returned an invalid AI profile upload location.'), { status: 502 });
+        }
+        const asset = {
+          id: uid(), ownerId: user.id, aiIdentityId: identityId, slot,
+          bucket: prepared.bucket, path: prepared.path, mimeType, mediaType: 'image',
+          byteSize, originalName: fileName || 'AI profile image',
+          status: 'uploading', createdAt: now()
+        };
+        db.mediaAssets.push(asset);
+        await saveStore();
+        return json(res, 201, {
+          assetId: asset.id,
+          upload: {
+            endpoint: prepared.endpoint, token: prepared.token, signedUrl: prepared.signedUrl || null,
+            bucket: prepared.bucket, path: prepared.path
+          },
+          mimeType, mediaType: 'image', byteSize
+        });
+      }
+
+      if (method === 'POST' && parts[0] === 'identities' && parts.length === 5 && parts[2] === 'media' && parts[4] === 'complete') {
+        const identityId = parts[1], slot = parts[3];
+        if (!aiIdentityIdPattern.test(identityId) || !aiMediaBucketForSlot(slot)) {
+          throw Object.assign(new Error('Choose a valid AI identity and image type.'), { status: 400 });
+        }
+        const input = await body(req, 8000);
+        const asset = (db.mediaAssets || []).find(item =>
+          item.id === String(input.assetId || '') && item.ownerId === user.id &&
+          item.aiIdentityId === identityId && item.slot === slot
+        );
+        if (!asset) {
+          throw Object.assign(new Error('The AI profile upload record was not found.'), { status: 404 });
+        }
+        if (asset.status === 'attached') {
+          const url = await resolveAssetUrl(asset);
+          return json(res, 200, { asset: { id: asset.id, slot, url, status: asset.status } });
+        }
+        if (asset.status !== 'uploading') {
+          throw Object.assign(new Error('This AI profile upload is no longer available.'), { status: 409 });
+        }
+        const completed = await mediaGateway('media_upload_complete', {
+          ownerId: user.id, aiIdentityId: identityId, assetId: asset.id, slot,
+          originalName: asset.originalName, bucket: asset.bucket, path: asset.path,
+          mimeType: asset.mimeType, byteSize: asset.byteSize
+        });
+        if (completed.bucket !== asset.bucket || completed.path !== asset.path ||
+            typeof completed.url !== 'string' || !completed.url.startsWith('https://')) {
+          throw Object.assign(new Error('Minglora could not verify the completed AI profile image.'), { status: 502 });
+        }
+        asset.status = 'attached';
+        asset.attachedTo = 'ai_identity:' + identityId + ':' + slot;
+        asset.completedAt = now();
+        asset.url = completed.url;
+        await saveStore();
+        return json(res, 200, {
+          asset: {
+            id: asset.id, slot, bucket: asset.bucket, path: asset.path,
+            mimeType: asset.mimeType, mediaType: asset.mediaType,
+            byteSize: asset.byteSize, status: asset.status, url: asset.url
+          }
+        });
+      }
+
       if (method === 'GET' && sub === 'categories') {
         const categories = await runAIIdentityCommand('list_categories');
         return json(res, 200, { categories: Array.isArray(categories) ? categories : [] });

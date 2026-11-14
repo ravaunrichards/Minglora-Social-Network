@@ -103,6 +103,13 @@
       const editor = '<details class="ai-network-profile-editor"><summary>Edit AI profile</summary>' +
         '<form class="ai-network-form" data-ai-form="identity-edit" data-identity-id="' + esc(identity.identity_id || '') + '">' +
         '<input type="hidden" name="existingLocations" value="' + esc(JSON.stringify(retainedLocations)) + '">' +
+        '<div class="ai-network-profile-media">' +
+        '<div class="ai-network-cover-preview">' +
+        (profile.cover_storage_ref ? '<img src="/api/ai-network/identities/' + encodeURIComponent(identity.identity_id || '') + '/media/cover" alt="" loading="lazy">' : '<span>No AI cover photo selected</span>') +
+        '</div><div class="ai-network-form-grid">' +
+        '<label>AI profile picture · max 10 MB<input type="file" name="avatarFile" accept="image/jpeg,image/png,image/webp,image/avif"></label>' +
+        '<label>AI cover photo · max 20 MB<input type="file" name="coverFile" accept="image/jpeg,image/png,image/webp,image/avif"></label>' +
+        '</div><p class="ai-network-note" data-ai-media-status>Images are stored for this AI identity only. They do not change your human profile picture or cover.</p></div>' +
         '<div class="ai-network-form-grid">' +
         '<label>First name<input name="firstName" value="' + esc(name.first_name || '') + '" required maxlength="80"></label>' +
         '<label>Middle name<input name="middleName" value="' + esc(name.middle_name || '') + '" maxlength="80"></label>' +
@@ -133,10 +140,12 @@
         '<label>Education records (JSON array)<textarea name="education" rows="3" spellcheck="false">' + esc(JSON.stringify(Array.isArray(profile.education) ? profile.education : [])) + '</textarea></label>' +
         '<label>Personality settings (JSON object)<textarea name="personality" rows="3" spellcheck="false">' + esc(JSON.stringify(profile.personality || {})) + '</textarea></label>' +
         '<label>Voice preferences (JSON object)<textarea name="voicePreferences" rows="3" spellcheck="false">' + esc(JSON.stringify(profile.voice_preferences || {})) + '</textarea></label>' +
-        '</div><p class="ai-network-note">Email identity records, provider assignments, AI status and permissions are not changed by profile editing. Profile images use separately verified media workflows.</p>' +
+        '</div><p class="ai-network-note">Email identity records, provider assignments, AI status and permissions are not changed by profile editing. Uploaded AI images are independently verified and versioned.</p>' +
         '<button class="primary" type="submit">Save profile changes</button></form></details>';
       return '<article class="ai-network-list-row"><div class="ai-network-list-main">' +
-        '<div class="ai-network-avatar" aria-hidden="true">AI</div><div><strong>' + esc(display || 'AI identity') + '</strong>' +
+        '<div class="ai-network-avatar" aria-hidden="true">' +
+        (profile.avatar_storage_ref ? '<img src="/api/ai-network/identities/' + encodeURIComponent(identity.identity_id || '') + '/media/avatar" alt="" loading="lazy">' : 'AI') +
+        '</div><div><strong>' + esc(display || 'AI identity') + '</strong>' +
         '<div class="ai-network-meta">' + pill('AI IDENTITY', 'ai') + ' ' + pill(identity.status || 'created') + ' ' + pill(identity.population || 'independent') + '</div>' +
         '<small>@' + esc(name.username || 'username unavailable') + ' · ' + esc(identity.category_key || 'uncategorized') + ' · ' + esc(profile.gender || 'not specified') + '</small>' +
         '<p>' + emailStatus + '</p><small>' + esc(identity.identity_id || '') + '</small>' + editor + '</div></div></article>';
@@ -932,6 +941,11 @@
       '</div><footer class="ai-network-footer">Minglora AI Network · Owner-controlled · AI identities disclosed · Human approval required</footer></section>';
   }
 
+  function paintSnapshot() {
+    const host = root();
+    if (host) host.innerHTML = renderSnapshot(state.snapshot);
+  }
+
   async function load() {
     state.error = '';
     const host = root();
@@ -940,12 +954,11 @@
     try {
       state.snapshot = await request();
       await loadAIIdentityRegistry();
-    await loadAIDiscovery();
       await loadAIDiscovery();
       await loadAIProviderRegistry();
       await loadAITaskQueue();
       await loadAIOrganizationRegistry();
-      renderSnapshot(state.snapshot);
+      paintSnapshot();
     } catch (error) {
       state.error = error.message;
       host.innerHTML = '<section class="ai-network-page"><div class="ai-network-alert ai-network-alert--error" role="alert">' + esc(error.message) + '</div>' +
@@ -961,7 +974,7 @@
     await loadAIProviderRegistry();
     await loadAITaskQueue();
     await loadAIOrganizationRegistry();
-    renderSnapshot(state.snapshot);
+    paintSnapshot();
   }
 
   async function submit(form) {
@@ -970,6 +983,7 @@
     const value = key => String(data.get(key) ?? '').trim();
     const payload = {};
     let path = '';
+    let identityIdForMedia = null;
     if (kind === 'bulk-follow') {
       const identityIds = data.getAll('identity_ids').map(item => String(item).trim()).filter(Boolean);
       if (identityIds.length < 1 || identityIds.length > 100) {
@@ -978,7 +992,7 @@
       const result = await request('/bulk-follow', { method:'POST', body:{ identity_ids:identityIds } });
       await loadAIDiscovery();
       setNotice(number(result.created_or_reused) + ' selected AI follow relationships created or already existed.');
-      renderSnapshot(state.snapshot);
+      paintSnapshot();
       return;
     } else if (kind === 'discovery') {
       const many = key => data.getAll(key).map(item => String(item).trim()).filter(Boolean);
@@ -1001,7 +1015,7 @@
       };
       await loadAIDiscovery(state.discoveryFilters);
       setNotice('AI discovery filters applied.');
-      renderSnapshot(state.snapshot);
+      paintSnapshot();
       return;
     } else if (kind === 'saved-discovery-group') {
       const result = await request('/saved-groups', {
@@ -1010,7 +1024,7 @@
       });
       await loadAIDiscovery();
       setNotice('Discovery group saved.');
-      renderSnapshot(state.snapshot);
+      paintSnapshot();
       return;
     } else if (kind === 'identity-edit') {
       const identityId = form.dataset.identityId || '';
@@ -1056,6 +1070,14 @@
       };
       payload.languages = languages;
       payload.locations = parseJson('existingLocations','[]','array').filter(item => !['origin','current'].includes(item.location_type));
+      const avatarFile = form.querySelector('[name="avatarFile"]')?.files?.[0] || null;
+      const coverFile = form.querySelector('[name="coverFile"]')?.files?.[0] || null;
+      if (avatarFile && avatarFile.size > 10 * 1024 * 1024) throw new Error('The AI profile picture must be 10 MB or smaller.');
+      if (coverFile && coverFile.size > 20 * 1024 * 1024) throw new Error('The AI cover photo must be 20 MB or smaller.');
+      if ((avatarFile || coverFile) && typeof window.uploadMediaFile !== 'function') {
+        throw new Error('Minglora secure media uploads are not available in this session. No image was uploaded.');
+      }
+      identityIdForMedia = identityId;
       if (countryOfOrigin) payload.locations.push({
         location_type:'origin', country_code:countryOfOrigin, country_name:countryLabel(countryOfOrigin), is_public:false
       });
@@ -1344,9 +1366,26 @@
     } else return;
     const patchKinds = ['settings','languages','vacancy-status','application-review','employment-status','employment-manager','provider-assignment-status','task-approval','identity-edit'];
     const result = await request(path, { method: patchKinds.includes(kind) ? 'PATCH' : 'POST', body: payload });
+    let uploadedMediaCount = 0;
+    if (kind === 'identity-edit' && identityIdForMedia) {
+      const selectedMedia = [
+        ['avatar', form.querySelector('[name="avatarFile"]')?.files?.[0] || null],
+        ['cover', form.querySelector('[name="coverFile"]')?.files?.[0] || null]
+      ];
+      for (const [slot, file] of selectedMedia) {
+        if (!file) continue;
+        const status = form.querySelector('[data-ai-media-status]');
+        await window.uploadMediaFile(slot, file, 1, 0, progress => {
+          if (status) status.textContent = 'Uploading AI ' + slot + ': ' + Number(progress?.percentage || 0) + '%';
+        }, { aiIdentityId: identityIdForMedia });
+        const input = form.querySelector('[name="' + slot + 'File"]');
+        if (input) input.value = '';
+        uploadedMediaCount += 1;
+      }
+    }
     form.reset();
     if (['identity','organization','vacancy','application','appointment','employment-transfer','task-create'].includes(kind)) form.dataset.idempotencyKey = window.crypto.randomUUID();
-    const message = kind === 'identity-edit' ? 'AI identity profile and name details updated with a new version and audit record.'
+    const message = kind === 'identity-edit' ? 'AI identity profile and name details updated with a new version and audit record.' + (uploadedMediaCount ? ' ' + uploadedMediaCount + ' AI profile image(s) uploaded, verified and attached.' : '')
       : kind === 'task-create'
       ? 'Task saved to the durable queue; approval policy comes from the selected AI identity.'
       : kind === 'task-approval'
@@ -1393,7 +1432,7 @@
       await submit(form);
     } catch (error) {
       state.error = error.message;
-      renderSnapshot(state.snapshot);
+      paintSnapshot();
     } finally {
       state.busy = false;
     }
@@ -1423,7 +1462,7 @@
       await refresh(action === 'emergency-pause' ? 'Emergency pause confirmed. AI work remains stopped.' : 'AI Network updated.');
     } catch (error) {
       state.error = error.message;
-      renderSnapshot(state.snapshot);
+      paintSnapshot();
     } finally {
       state.busy = false;
     }

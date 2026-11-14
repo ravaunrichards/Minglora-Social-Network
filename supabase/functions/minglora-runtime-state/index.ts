@@ -3091,6 +3091,16 @@ Deno.serve(async (req: Request) => {
   if (action === "media_upload_prepare") {
     const ownerId=String(input.ownerId||"");
     const slot=String(input.slot||"");
+    const aiIdentityId=String(input.aiIdentityId||"");
+    const aiIdentityRequested=Boolean(aiIdentityId);
+    const uuidPattern=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if(aiIdentityRequested){
+      if(!uuidPattern.test(aiIdentityId)||!["avatar","cover"].includes(slot))return json(400,{error:"Invalid AI identity image request."});
+      const {data:identity,error:identityError}=await admin.rpc("minglora_ai_identity_command",{
+        p_action:"get",p_actor_user_id:ownerId,p_payload:{identity_id:aiIdentityId}
+      });
+      if(identityError||!identity?.identity?.identity_id)return json(identityError?.code==="P0002"?404:503,{error:"AI identity could not be verified for this Minglora owner."});
+    }
     const mimeType=String(input.mimeType||"").toLowerCase();
     const byteSize=Number(input.byteSize||0);
     const uuidPattern=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -3108,7 +3118,9 @@ Deno.serve(async (req: Request) => {
       return json(400,{error:"The selected file type or size is not allowed for this media area."});
     }
     const mediaType=mimeType.startsWith("image/")?"image":mimeType.startsWith("video/")?"video":mimeType.startsWith("audio/")?"audio":mimeType==="model/gltf-binary"?"model3d":"document";
-    const objectPath=`${ownerId}/${crypto.randomUUID()}.${allowed[mimeType]}`;
+    const objectPath=aiIdentityRequested
+      ?`${ownerId}/ai-identities/${aiIdentityId}/${crypto.randomUUID()}.${allowed[mimeType]}`
+      :`${ownerId}/${crypto.randomUUID()}.${allowed[mimeType]}`;
     const {data,error}=await admin.storage.from(bucket).createSignedUploadUrl(objectPath,{upsert:false});
     if(error||!data?.signedUrl)return json(502,{error:"Minglora could not prepare a secure upload."});
     const supabaseHost=new URL(SUPABASE_URL);
@@ -3135,7 +3147,21 @@ Deno.serve(async (req: Request) => {
     const objectPath=String(input.path||"");
     const mimeType=String(input.mimeType||"").toLowerCase();
     const byteSize=Number(input.byteSize||0);
+    const aiIdentityId=String(input.aiIdentityId||"");
+    const aiIdentityRequested=Boolean(aiIdentityId);
+    const slot=String(input.slot||"");
     const uuidPattern=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    let expectedFolder=ownerId;
+    let aiIdentityRecord:any=null;
+    if(aiIdentityRequested){
+      if(!uuidPattern.test(aiIdentityId)||!["avatar","cover"].includes(slot))return json(400,{error:"Invalid AI identity image completion."});
+      const {data:identity,error:identityError}=await admin.rpc("minglora_ai_identity_command",{
+        p_action:"get",p_actor_user_id:ownerId,p_payload:{identity_id:aiIdentityId}
+      });
+      if(identityError||!identity?.identity?.identity_id)return json(identityError?.code==="P0002"?404:503,{error:"AI identity could not be verified for this Minglora owner."});
+      aiIdentityRecord=identity;
+      expectedFolder=`${ownerId}/ai-identities/${aiIdentityId}`;
+    }
     const bucketSlots:Record<string,string[]>={
       "minglora-avatars":["image/jpeg","image/png","image/webp","image/avif"],
       "minglora-covers":["image/jpeg","image/png","image/webp","image/avif"],
@@ -3150,7 +3176,7 @@ Deno.serve(async (req: Request) => {
     };
     const folder=objectPath.slice(0,objectPath.lastIndexOf("/"));
     const objectName=objectPath.slice(objectPath.lastIndexOf("/")+1);
-    if(!uuidPattern.test(ownerId)||!bucketSlots[bucket]?.includes(mimeType)||folder!==ownerId||!objectName||objectName.includes("..")||!Number.isSafeInteger(byteSize)||byteSize<1){
+    if(!uuidPattern.test(ownerId)||!bucketSlots[bucket]?.includes(mimeType)||folder!==expectedFolder||!objectName||objectName.includes("..")||!Number.isSafeInteger(byteSize)||byteSize<1){
       return json(400,{error:"Invalid media completion reference."});
     }
     const {data:objects,error:listError}=await admin.storage.from(bucket).list(folder,{search:objectName,limit:10});
@@ -3199,7 +3225,6 @@ Deno.serve(async (req: Request) => {
       result.signedUrl=data.signedUrl;
     }
     const assetId=String(input.assetId||"");
-    const slot=String(input.slot||"");
     const originalName=String(input.originalName||"").trim().slice(0,255);
     if(!uuidPattern.test(assetId)||!["avatar","cover","post","sound","story","group","page","message","ringtone"].includes(slot)){
       return json(400,{error:"A valid upload asset ID and media slot are required."});
@@ -3209,10 +3234,20 @@ Deno.serve(async (req: Request) => {
       id:assetId,owner_id:ownerId,storage_key:objectPath,storage_bucket:bucket,
       media_type:mediaType,mime_type:mimeType,byte_size:byteSize,
       processing_status:"ready",slot,asset_status:assetStatus,original_name:originalName,
-      attached_to:assetStatus==="attached"?"profile:"+slot:null,completed_at:new Date().toISOString()
+      attached_to:assetStatus==="attached"
+        ?(aiIdentityRequested?"ai_identity:"+aiIdentityId+":"+slot:"profile:"+slot)
+        :null,completed_at:new Date().toISOString()
     },{onConflict:"id"});
     if(assetError)return json(503,{error:"Upload completed in Storage but media metadata could not be registered. Retry completion."});
-    if(slot==="avatar"||slot==="cover"){
+    if(aiIdentityRequested){
+      const currentRef=aiIdentityRecord?.profile?.[slot==="avatar"?"avatar_storage_ref":"cover_storage_ref"];
+      if(currentRef!==objectPath){
+        const {error:identityMediaError}=await admin.rpc("minglora_ai_identity_profile_media_update",{
+          p_actor_user_id:ownerId,p_identity_id:aiIdentityId,p_slot:slot,p_storage_ref:objectPath
+        });
+        if(identityMediaError)return json(503,{error:"The image is uploaded, but Minglora could not attach it to the AI profile. Retry completion."});
+      }
+    }else if(slot==="avatar"||slot==="cover"){
       const profilePatch:Record<string,unknown>=slot==="avatar"
         ?{avatar_url:String(result.url||""),avatar_asset_id:assetId,updated_at:new Date().toISOString()}
         :{cover_url:String(result.url||""),cover_asset_id:assetId,updated_at:new Date().toISOString()};

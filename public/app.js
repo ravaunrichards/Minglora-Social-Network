@@ -6471,7 +6471,12 @@ function mediaMaxBytes(slot){
 function mediaMaxLabel(slot){
   return slot==='avatar'?'10 MB':slot==='cover'?'20 MB':slot==='sound'?'50 MB':slot==='story'?'200 MB':slot==='group'||slot==='page'?'250 MB':slot==='message'?'100 MB':slot==='ringtone'?'20 MB':'500 MB';
 }
-async function uploadMediaFile(slot,file,zoom=1,rotation=0,onProgress=()=>{}){
+async function uploadMediaFile(slot,file,zoom=1,rotation=0,onProgress=()=>{},uploadOptions={}){
+  const aiIdentityId=String(uploadOptions?.aiIdentityId||'').trim();
+  if(aiIdentityId&&!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(aiIdentityId))throw new Error('A valid AI identity is required for this image upload.');
+  const aiMediaBase=aiIdentityId?'/ai-network/identities/'+encodeURIComponent(aiIdentityId)+'/media/'+encodeURIComponent(slot):'';
+  const preparePath=aiIdentityId?aiMediaBase+'/prepare':'/media/upload/prepare';
+  const completePath=aiIdentityId?aiMediaBase+'/complete':'/media/upload/complete';
   if(file.size>mediaMaxBytes(slot))throw new Error('This file is larger than the '+mediaMaxLabel(slot)+' limit for this media area.');
   let prepared=file;
   if(imageMime(file))prepared=await transformMediaImage(file,zoom,rotation);
@@ -6486,7 +6491,7 @@ async function uploadMediaFile(slot,file,zoom=1,rotation=0,onProgress=()=>{}){
   if(slot==='ringtone'&&mimeType==='audio/mp3')mimeType='audio/mpeg';
   if(!mimeType)throw new Error('Minglora could not detect the selected file type. Choose a supported photo, video, audio or GLB file.');
   if(prepared.size>mediaMaxBytes(slot))throw new Error('This file is larger than the '+mediaMaxLabel(slot)+' limit for this media area.');
-  const preparedUpload=await api('/media/upload/prepare',{method:'POST',body:JSON.stringify({slot,mimeType,byteSize:prepared.size,fileName:prepared.name||'Attachment'})});
+  const preparedUpload=await api(preparePath,{method:'POST',body:JSON.stringify({slot,mimeType,byteSize:prepared.size,fileName:prepared.name||'Attachment'})});
   const uploadInfo=preparedUpload.upload||{};
   if(!preparedUpload.assetId||!uploadInfo.bucket||!uploadInfo.path)throw new Error('Minglora could not prepare this secure upload.');
   const canUseSignedStandard=Boolean(uploadInfo.signedUrl)&&prepared.size<=6*1024*1024;
@@ -6539,7 +6544,7 @@ async function uploadMediaFile(slot,file,zoom=1,rotation=0,onProgress=()=>{}){
     }
   }
   onProgress({bytesUploaded:prepared.size,bytesTotal:prepared.size,percentage:100,finalizing:true});
-  const completed=await api('/media/upload/complete',{method:'POST',body:JSON.stringify({assetId:preparedUpload.assetId})});
+  const completed=await api(completePath,{method:'POST',body:JSON.stringify({assetId:preparedUpload.assetId})});
   if(!completed.asset?.id)throw new Error('The file uploaded but Minglora could not register it.');
   return {...completed.asset,user:completed.user||null};
 }
