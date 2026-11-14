@@ -195,3 +195,6 @@ No catalogue record, Coin value, wallet, transaction, payout or database offer i
 ## Bespoke gift motion-index routing — 2026-11-14
 
 `scripts/generate-live-gift-motion-index.mjs` now includes an exact gift-code-to-runtime-preset map for Djembe Master, Palm Breeze, Gamer Otter, LIVE Island, Crystal Crown, Phoenix and Beach Maracas. This makes the generated `catalog-motion-index.json` and asset manifest carry the same preset IDs as the runtime's exact-code overrides. The catalogue's canonical animation and sound identifiers remain unchanged. Unit tests assert generated index and manifest parity.
+
+
+The motion-index schema keeps the original `catalog_motion_preset` and the effective `motion_preset` as separate fields. The asset manifest carries `gift_specific_motion_override` so consumers and reviewers can distinguish catalog defaults from exact-code choreography. Strict validation now compares the canonical field to the source gift row while allowing an explicit runtime override.
