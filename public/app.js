@@ -1,4 +1,8 @@
 const $ = s => document.querySelector(s);
+function liveGiftIconUrl(gift){
+  const code=String(gift && gift.code || "");
+  return /^[a-z0-9_-]{1,59}$/.test(code)?"/assets/gifts/catalog/"+encodeURIComponent(code)+"-icon.svg":"";
+}
 const state = { user:null, view:'feed', feed:[], feedScope:'all', videoFeed:[], videoScope:'for-you', videoSearch:'', videoMode:'videos', videoNextCursor:null, videoHasMore:false, videoLoading:false, videoRequestSequence:0, forYouScope:'for-you', forYouNextCursor:null, forYouHasMore:false, forYouLoading:false, forYouSearch:'', savedPosts:[], savedPostCollections:[], savedFilter:'all', savedCollection:'all', savedType:'all', savedSort:'saved-newest', savedSearch:'', stories:[], people:[], discoveryLiveSessions:[], groups:[], notifications:[], conversations:[], activeConversation:null, messageWindows:[], activeGroup:null, pages:[], activePage:null, profile:null, searchResults:null, settings:null, activeConnections:null, liveStartFormat:'video_audio', messengerFilter:'all', messengerSearch:'', messengerPanelOpen:false, messengerOptionsOpen:false, messengerPanelSection:'chats', messengerComposeMode:false, messengerComposeUsers:null, messengerComposeLoading:false, messengerPresence:{}, messengerTyping:{}, messengerRealtimeConnected:false, rechargeTab:'recharge', rechargeCurrencyMode:'two-way' };
 const LAST_VIEW_SESSION_PREFIX='minglora:last-view:v1:';
 const RESTORABLE_VIEWS=new Set(['feed','for-you','more','videos','gifts','gifter-progression','live','live-pro','leagues','coins','creator','friends','groups','messages','saved','pages','meetwave','connections','page','group','profile','search','notifications','calendar','clock-centre','menstrual-health','settings','ai-network']);
@@ -3534,6 +3538,25 @@ activeLivePinnedComment=null;
       };
       const drawLiveGiftGrid=()=>{
         if(!giftGrid)return;
+        if(!giftGrid.dataset.liveGiftIconErrorsBound){
+          giftGrid.addEventListener("error",event=>{
+            const image=event.target;
+            if(!image||image.tagName!=="IMG"||!image.matches("[data-live-gift-icon]"))return;
+            const code=String(image.dataset.giftCode||"");
+            if(!image.dataset.fullArtworkFallbackAttempted&&/^[a-z0-9_-]{1,59}$/.test(code)){
+              image.dataset.fullArtworkFallbackAttempted="true";
+              image.src="/assets/gifts/catalog/"+encodeURIComponent(code)+".svg";
+              image.alt="Minglora gift artwork: "+String(image.alt||"Gift");
+              return;
+            }
+            const unavailable=document.createElement("span");
+            unavailable.className="live-gift-card-unavailable";
+            unavailable.setAttribute("role","status");
+            unavailable.textContent="Artwork unavailable";
+            image.replaceWith(unavailable);
+          },true);
+          giftGrid.dataset.liveGiftIconErrorsBound="true";
+        }
         if(liveGiftCatalogueError){
           giftGrid.innerHTML="<div class='live-gift-empty'><strong>Gifts could not be loaded</strong><p>"+esc(liveGiftCatalogueError)+"</p><button type='button' class='secondary' id='live-gift-retry'>Retry gift catalogue</button></div>";
           liveGiftMore&&(liveGiftMore.hidden=true);
@@ -3569,7 +3592,8 @@ activeLivePinnedComment=null;
         if(liveGiftCount)liveGiftCount.textContent=filtered.length.toLocaleString()+" gifts"+(liveGiftScope==="favorites"?" · Favorites":liveGiftScope==="recent"?" · Recently sent":liveGiftScope==="team"?" · Team Gifts":"");
         giftGrid.innerHTML=shown.length?shown.map(gift=>{
           const code=String(gift.code||"");
-          const art=gift.image_url?"<img class='live-gift-image' loading='lazy' decoding='async' src='"+esc(gift.image_url)+"' alt='Original Minglora artwork: "+esc(gift.name||"Gift")+"'>":"<span class='live-gift-card-emoji'>"+esc(gift.emoji||"🎁")+"</span>";
+          const iconUrl=liveGiftIconUrl(gift);
+          const art=iconUrl?"<img class='live-gift-image' data-live-gift-icon data-gift-code='"+esc(code)+"' loading='lazy' decoding='async' src='"+esc(iconUrl)+"' alt='Transparent Minglora gift icon: "+esc(gift.name||"Gift")+"'>":"<span class='live-gift-card-unavailable' role='status'>Artwork unavailable</span>";
           const teamGift=MINGLORA_FAN_CLUB_GIFT_CODES.includes(code);
           const locked=role!=="host"&&teamGift&&!liveFanClubState?.isMember;
           const favorite=liveGiftFavorites.has(code);
