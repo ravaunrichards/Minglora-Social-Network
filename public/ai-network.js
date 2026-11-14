@@ -2028,7 +2028,14 @@
         const failed = Number(result.failed_count || 0);
         const message = succeeded + ' AI identity lifecycle change(s) succeeded; ' + failed + ' failed.';
         await refresh(message);
-        if (failed) setNotice(message + ' Review the failed-record details before retrying.', 'warning');
+        if (failed) {
+          const failures = list(result.failed).slice(0, 5).map(item =>
+            String(item.identity_id || 'Identity') + ': ' + String(item.error || 'Transition failed.')
+          );
+          const more = failed > failures.length ? ' · ' + (failed - failures.length) + ' more failure(s).' : '';
+          setNotice(message + ' ' + failures.join(' · ') + more, 'warning');
+          paintSnapshot();
+        }
         return;
       }
       else if (action === 'follow-ai') await request('/follow', { method:'POST', body:{ identity_id:id } });
