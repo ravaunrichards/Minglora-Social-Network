@@ -1,3 +1,12 @@
+## Supplemental verified HR lifecycle contract — 2026-11-14
+
+- A rollback-only Supabase transaction passed against the existing deployed `minglora_ai_hr_command` using the existing active platform-owner record as the actor. The contract created two temporary organizational AI identities, one temporary organization, the 20 department templates and 20 position templates, two vacancies and candidate applications, approved and appointed an executive and specialist, transitioned onboarding/active/restricted/active states, assigned and validated a higher-level manager, transferred the specialist to a different department and position, retained the old employment row/history, created the replacement in onboarding, and verified idempotent transfer retry.
+- The full transaction ended with `ROLLBACK`. A subsequent live count check confirmed zero rows in the identity, name, profile, email, organization, department, position, vacancy, application, recruitment-history, employment-record and employment-history tables.
+- This is database-contract evidence only. It does not close Task 7 or establish signed-in owner HTTP/API, real retained employee, provider execution, browser or device acceptance. Existing task accounting remains 2/19 complete (10.53%); this is additional verification inside a partial task, not a new completed acceptance task.
+- No schema, production configuration, worker control or application code was changed by this test. Worker execution remains paused/disabled.
+
+---
+
 ## Latest AI profile-media deployment checkpoint — 2026-11-14
 
 This section supersedes the older media and branch checkpoint details retained below.
