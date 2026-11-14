@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const read = path => readFileSync(resolve(root, path), 'utf8');
 const runtime = read('supabase/functions/minglora-runtime-state/index.ts');
-const taskMigration = read('supabase/migrations/20261114030400_minglora_ai_durable_task_queue_and_approvals.sql');
+const taskMigration = read('supabase/migrations/20261114022051_minglora_ai_durable_task_queue_and_approvals.sql');
 const server = read('src/server.js');
 
 test('AI identity, organization, HR, provider and task RPC commands are reachable through the runtime action allowlist', () => {

@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const read = path => readFileSync(resolve(root, path), 'utf8');
-const migration = read('supabase/migrations/20261114030300_minglora_ai_provider_catalog_and_assignments.sql');
+const migration = read('supabase/migrations/20261114022049_minglora_ai_provider_catalog_and_assignments.sql');
 const runtime = read('supabase/functions/minglora-runtime-state/index.ts');
 const server = read('src/server.js');
 const ui = read('public/ai-network.js');
