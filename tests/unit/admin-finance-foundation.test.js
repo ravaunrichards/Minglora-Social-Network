@@ -212,3 +212,12 @@ test('budget alert thresholds validate, persist, display and preserve assigned m
   assert.ok(budgetThresholdMigration.includes('CREATE OR REPLACE FUNCTION public.minglora_admin_finance_command'));
   assert.ok(budgetThresholdMigration.includes('$function$;'));
 });
+
+test('company finance audit history is visible, read-only and included in CSV exports', () => {
+  assert.match(financeUi, /data-finance-tab="audit"[^>]*>Audit history/);
+  assert.match(financeUi, /function renderAuditEvents\(\)/);
+  assert.match(financeUi, /else if \(activeTab==='audit'\) renderAuditEvents\(\)/);
+  assert.match(financeUi, /\['audit_events',records\.auditEvents\]/);
+  assert.match(financeUi, /Up to 100 of the most recent finance events are shown/);
+  assert.match(runtime, /auditResult\.data \|\| \[\]/);
+});

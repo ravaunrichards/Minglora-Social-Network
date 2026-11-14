@@ -96,7 +96,8 @@
       '<button type="button" data-finance-tab="subscriptions" aria-selected="false">Subscriptions</button>' +
       '<button type="button" data-finance-tab="budgets" aria-selected="false">Budgets</button>' +
       '<button type="button" data-finance-tab="invoices" aria-selected="false">Invoices</button>' +
-      '<button type="button" data-finance-tab="expenses" aria-selected="false">Expenses</button></nav>' +
+      '<button type="button" data-finance-tab="expenses" aria-selected="false">Expenses</button>' +
+      '<button type="button" data-finance-tab="audit" aria-selected="false">Audit history</button></nav>' +
       '<div id="admin-finance-tab-panel" class="admin-finance-tab-panel" aria-live="polite"></div>' +
       '<footer class="admin-finance-footer"><span>Amounts are stored in integer minor units with the original invoice currency preserved.</span>' +
       '<button type="button" id="admin-finance-export" class="secondary">Export finance records (CSV)</button></footer>';
@@ -649,6 +650,25 @@
       });
     }
 
+    function renderAuditEvents() {
+      const rows=records.auditEvents.map(item => {
+        const occurredAt=item.created_at ? new Date(item.created_at) : null;
+        const occurred=occurredAt && !Number.isNaN(occurredAt.getTime()) ? occurredAt.toLocaleString() : 'Date unavailable';
+        const actor=String(item.actor_user_id||'');
+        const actorLabel=actor ? actor.slice(0,8)+'…' : 'System';
+        const entityId=String(item.entity_id||'');
+        const entityLabel=[String(item.entity_type||'record'),entityId ? entityId.slice(0,8)+'…' : ''].filter(Boolean).join(' · ');
+        const rawMetadata=item.metadata && typeof item.metadata==='object' ? JSON.stringify(item.metadata) : String(item.metadata||'');
+        const details=rawMetadata ? (rawMetadata.length>360 ? rawMetadata.slice(0,357)+'…' : rawMetadata) : 'No additional detail';
+        return '<tr><td><strong>'+esc(occurred)+'</strong></td><td>'+statusPill(item.action)+'</td>'+
+          '<td>'+esc(entityLabel)+'</td><td>'+esc(actorLabel)+'</td><td><small>'+esc(details)+'</small></td></tr>';
+      });
+      content.innerHTML=
+        '<div class="admin-finance-section-heading"><div><h4>Finance audit history</h4>'+
+        '<p>Read-only, append-only records of company finance changes and protected document access. Up to 100 of the most recent finance events are shown.</p></div></div>'+
+        table(['Time','Action','Record','Actor ID','Recorded details'],rows,'No company finance audit events have been recorded yet.');
+    }
+
     function beginEdit(kind,id) {
       const definitions = {
         provider: {
@@ -743,6 +763,7 @@
       else if (activeTab==='budgets') renderBudgets();
       else if (activeTab==='invoices') renderInvoices();
       else if (activeTab==='expenses') renderExpenses();
+      else if (activeTab==='audit') renderAuditEvents();
     }
 
     async function refresh() {
@@ -802,7 +823,8 @@
         ['subscriptions',records.subscriptions],
         ['budgets',records.budgets],
         ['invoices',records.invoices],
-        ['expenses',records.expenses]
+        ['expenses',records.expenses],
+        ['audit_events',records.auditEvents]
       ];
       const lines=[];
       sections.forEach(([name,rows])=>{
