@@ -1,52 +1,52 @@
 # Minglora AI Bot Network — Recovery & Progress
 
-## Latest verified live checkpoint — 2026-11-14 (supersedes earlier deployment statements below)
+## Latest verified live checkpoint — 2026-11-14 (supersedes earlier checkpoints below)
 
-**Canonical release state**
-- Repository: `ravaunrichards/Minglora-Social-Network`; current main before this documentation checkpoint: `702928faf0458176030589566940366d2f1aafa5`.
-- Existing Minglora Supabase project: `gzycobgbasnqqhnympkr`. No additional repository or Supabase project was created.
-- Current main contains the AI Network Node routes, workspace/navigation, backend module, store collections, six server-only RPC migrations, runtime gateway handlers, regression tests and focused CI workflow.
-- Six newer migrations are recorded as applied: identity runtime API (`20261114022043`), corporate workforce (`20261114022045`), HR recruitment/employment (`20261114022047`), provider catalogue/assignments (`20261114022049`), task queue/approvals (`20261114022051`) and discovery/following (`20261114022055`). Together with the two original identity migrations, eight AI-network migrations are in the ledger.
-- Production `minglora-runtime-state` Edge Function is ACTIVE at version 116; deployed source matches current main's AI handlers and AI collection inventory.
-- All 33 tables in `ai_network` have RLS enabled. `anon` and `authenticated` have no schema usage or table grants. All six public RPCs are SECURITY INVOKER, use an empty locked search path, and grant execution only to `service_role`.
-- Live category RPC successfully returned all 15 seeded categories.
+**Canonical release**
+- Product/repository: Minglora Social Network only — `ravaunrichards/Minglora-Social-Network`.
+- Main merge commit: `2f736e7145e62cf8c2df786d26ac48a61fb4b355`; PR #280 merged through the normal PR workflow.
+- Existing Supabase project: `gzycobgbasnqqhnympkr`. No new repository, Supabase project, Render service or paid infrastructure was created.
+- New migration `20261114030000_minglora_ai_identity_profile_edit.sql` is applied to the existing project.
+- Existing `minglora-runtime-state` Edge Function is ACTIVE at v117, with owner-scoped AI profile registry and update handlers.
+- Existing Render service `minglora-social-network-temp` is LIVE on merge commit `2f736e7145e62cf8c2df786d26ac48a61fb4b355`; deployment `dep-dbrt2qm7bikc73ee6q8g`. Startup logs report Minglora listening, Supabase durable persistence ready and LiveKit connected.
+- PR head `d0e818c34cfc42b69ed63940469186dc8b58ef97`: focused AI Network tests 81/81 passed; full Minglora CI, Auth/OAuth, navigation acceptance, dependency audit and visual QA passed.
 
-**Verified rollback-only live workflow tests**
-- Single AI identity create/get: separate first/last names, gender/profile, country, language and location rows were written and read inside a transaction.
-- Email metadata remained `unverified` and `not_requested`; no inbox or Supabase Auth user was created.
-- Repeated identity create with the same idempotency key reused the original identity.
-- Bounded bulk creation accepted one valid item and isolated one invalid item in its failure report.
-- Organization creation, two department templates, two position templates, draft vacancy creation and vacancy listing succeeded.
-- Combined discovery filters returned zero because the live registry is intentionally empty.
-- Provider model catalogue read returned zero configured models.
-- Task runtime read confirmed `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`; a worker claim was rejected.
-- All write tests were explicitly rolled back. A subsequent live count query confirmed zero identities, profiles, emails, organizations, departments, positions, vacancies, tasks, provider accounts, models and assignments. No demonstration records were kept.
+**Security and database**
+- Existing `ai_network` schema: 33/33 tables have RLS enabled. `anon` and `authenticated` have no schema access; privileged operations stay behind the existing server runtime.
+- New profile registry/edit functions are SECURITY INVOKER, use an empty locked search path and grant execution only to `service_role`.
+- Existing 15 AI categories remain intact. No sample identities, human Auth accounts, email inboxes, credentials, provider connections or fake engagement were created.
+- All rollback-only integration tests left zero test rows behind.
 
-**CI and production deployment**
-- Current main commit `702928faf0458176030589566940366d2f1aafa5`: GitHub Actions CI run `43546583461` completed successfully.
-- Integrated candidate commit `ecd6a5cc2d257611a486c6e0b8bf655300d35931` passed full Minglora CI run `43546453272` and focused AI Network checks run `43546453311`.
-- Existing Render service `minglora-social-network-temp` deployed current main commit `702928f`; build and deploy events both succeeded, final deploy `dep-dbrsf1kr5hns73aoe64g` is `live`.
-- Runtime logs confirm `Minglora listening on port 10000`, Supabase durable persistence ready, and LiveKit connected. No app error/fatal logs were returned for the checked startup window.
-- Public HTTP/browser verification could not be completed from the tool runtime because external DNS/network access to the Render URL was unavailable. Device/browser end-to-end testing is still required.
+**Verified rollback-only integration tests**
+- Identity profile: created/read/edited a temporary identity; separate first/last names, profile fields, languages and locations persisted; version and audit records were written.
+- Discovery/following: combined filters, individual and bulk follow, duplicate suppression, private-profile follow request/approval, unfollow and saved discovery-group create/list/delete passed.
+- Corporate/HR: all 20 department templates and position templates provisioned; candidate applications, review approvals, gated appointments, onboarding/active transitions, manager hierarchy, transfers/history, suspension/termination and cross-owner isolation passed.
+- Tasks: fully supervised financial task required approval, idempotent retry reused it, approval queued it, cancellation worked, restricted-observation task stayed observation-only, and worker claim was rejected. Runtime remained paused/disabled with zero workers.
+- Provider metadata: account remained unconfigured/unknown, model metadata and pending assignment persisted, unverified activation was rejected and assignment history was written.
+- Each test was executed inside an explicit transaction and rolled back. Post-rollback counts for identities/profiles/emails, follows/groups, organizations/workforce, tasks/approvals/events and provider accounts/models/assignments/history were all zero.
 
-**Ten-stage status (gate-based; a stage is complete only when all its exit criteria pass)**
-1. Foundation, private schema, RLS and runtime RPC gateway — **COMPLETED**.
-2. Identity registry/profile and bulk creation — **PARTIAL / CURRENT STAGE**. Rollback create/get, separate names, profile relations, email metadata, idempotency and batch recovery passed; authenticated browser/API list flow and lasting user-approved registration still need verification.
-3. Worldwide discovery and following — **PARTIAL**. Combined filters execute; saved searches, follow/unfollow lifecycle and populated discovery remain to be verified.
-4. Corporate governance and HR — **PARTIAL**. Organization, template provisioning and draft vacancy workflows passed rollback tests; appointments, employees, approvals and full lifecycle still need end-to-end validation.
-5. Supervision, approvals, task queue, teams and workers — **PARTIAL / EXECUTION PAUSED**. Approval/task foundation exists; worker claims are intentionally disabled and no worker pool runs.
-6. Social, messaging, creator, LIVE and community integration — **NOT COMPLETE**. AI draft capabilities are not yet verified as full end-to-end social actions.
-7. Providers, memory, budgets, resource metering and inference — **NOT COMPLETE**. Zero live provider accounts/models/assignments; no model inference, email provider, secrets manager adapter or cost reconciliation verified.
-8. Administration, security operations and analytics — **PARTIAL**. Private service-role boundary, audit foundations and inventory exist; all administration centers and real operational analytics are not complete.
-9. Distributed architecture and 10-billion identity/concurrency benchmarks — **NOT STARTED**. No 10-billion registration or execution capacity claim is made.
-10. Production release and device verification — **PARTIAL**. Edge Function and Render deployment are live and build/boot checks pass; public HTTP, browser, desktop and mobile end-to-end acceptance are outstanding.
+**Ten-stage status (partial stages are not counted complete)**
 
-**Conservative progress measure:** 1 of 10 major stage gates fully complete (10%). Stage 2 is current; partial stages are not counted as complete. Do not infer 10-billion capacity or provider/email connectivity from schema or metadata.
+| Stage | Status | Verified work | Remaining |
+|---|---|---|---|
+| 1. Foundation and private runtime | **COMPLETED** | Private AI schema, RLS/security boundary, existing RPC gateway and categories verified. | Preserve isolation during future integration. |
+| 2. AI identities and profiles | **PARTIAL — CURRENT** | Identity create/read/bulk foundation, separate names, email metadata, live profile registry/edit, language/location, version/audit and 81 focused tests. | Signed-in browser/API flow, real owner-approved persistent registration, media editing and device acceptance. |
+| 3. Discovery and following | **PARTIAL** | Combined filters, follow/unfollow, bulk duplicate suppression, privacy approval and saved-group lifecycle passed live rollback tests. | Authenticated UI, complete device and real-user acceptance. |
+| 4. Corporate governance and HR | **PARTIAL** | Organization/departments/positions, application review, gated appointment, employment transitions, hierarchy, transfer/history and owner isolation passed rollback tests. | Delegated authority, training, attendance, performance, discipline, succession and UI/device tests. |
+| 5. Supervision, teams and workers | **PARTIAL — EXECUTION PAUSED** | Task approval, observation-only mode, idempotency and cancellation passed. | Worker credentials, real scheduler/worker pool, team orchestration, recovery and load tests. |
+| 6. Social, creator and community | **NOT COMPLETE** | Existing draft surfaces only. | Real AI-labelled posts, messaging, groups, stories, LIVE, Creator Studio publishing and events integration. |
+| 7. Providers, memory and finance | **PARTIAL — METADATA ONLY** | Unconfigured provider/model metadata, pending assignment and health-gated activation passed. | Secret-manager adapter, real provider health/inference, email service, memory runtime, cost/budget metering and reconciliation. |
+| 8. Admin, security operations and analytics | **PARTIAL** | RLS, owner-scoped RPCs, audit/version records and pause controls verified. | Full admin/security centers, alerts, live operational analytics and reports. |
+| 9. Distributed architecture / 10-billion target | **NOT STARTED** | No capacity claim made. | Distributed partitioning, storage/query/write/recovery and concurrent-execution benchmarks. |
+| 10. Production/device acceptance | **PARTIAL** | CI/visual QA passed; Edge v117 ACTIVE; Render deployment LIVE and startup healthy. | Direct public HTTP, signed-in browser, Android/desktop/mobile and disaster-recovery acceptance. |
 
-**Git/PR safety**
-- The divergent original draft PR #278 and branch `feat/minglora-ai-bot-network-core` were left untouched.
-- Supplemental draft PR #279 was closed without merge because current main independently integrated the same AI Network implementation. Its branch and four commits remain retained for audit; no force-push or branch deletion occurred.
-- Keep AI execution globally paused until a real provider adapter, protected secrets, per-owner budgets, worker identity/authorization, safety checks and recovery tests are verified.
+**Conservative progress: 1/10 fully completed stage gates = 10%.** Stage 2 is the current stage. Do not count partially tested stages as complete. The 10-billion identity target, external model inference, email inbox provisioning and simultaneous execution capacity have not been achieved or measured.
+
+**Deployment limitation:** the available external browser could not open the public Render URL. Render reports a successful live deployment and healthy startup, but public HTTP and real signed-in browser/device behavior remain unverified.
+
+**Safety gate:** keep `global_paused=true`, `execution_enabled=false`, and `max_concurrent_workers=0` until independent worker authentication, provider health, protected secrets, per-owner budgets, human approvals, audits, monitoring and recovery are verified.
+
+## Historical checkpoints (retained for audit; superseded by the current checkpoint above)
 
 ## Project identity
 

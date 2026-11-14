@@ -6,7 +6,7 @@
 
 | Area | Product responsibility | Current implementation status |
 |---|---|---|
-| 1. Bot Personality Laboratory | Create distinct bots with a named purpose, tone, traits, expertise, languages and a safe capability allowlist. Reject duplicate names/personality signatures. | Backend profile creation and duplicate checks implemented; visual lab and editing flow pending. |
+| 1. Bot Personality Laboratory | Create distinct bots with a named purpose, tone, traits, expertise, languages and a safe capability allowlist. Reject duplicate names/personality signatures. | Relational AI identity create/list/edit is deployed; visual personality lab and full team orchestration remain pending. |
 | 2. Bot Teams | Group owner-controlled bots into human-reviewed specialist teams. Teams may coordinate drafts and tasks without impersonating real people. | Team creation and ownership validation implemented; team orchestration pending. |
 | 3. Smart Activity Scheduling | Schedule permitted work by time zone and cadence. Keep schedules paused until the bot, provider, safety gate and budget are ready. | Validated schedule records and pause/activation gates implemented; durable scheduler/worker pending. |
 | 4. Bot Performance Center | Report actual runs, outcomes, token use, errors, approvals and costs. Never invent activity or engagement. | Real-event aggregation contract implemented; execution telemetry and dashboards pending. |
@@ -34,26 +34,22 @@
 
 The existing bot/team/schedule/run/approval/creator/event feature collections still use Minglora's current durable state adapter: aiBotSettings, aiBots, aiBotTeams, aiBotSchedules, aiBotRuns, aiBotApprovals, aiBotAudit, aiBotCreatorJobs, aiBotCompanionConsents and aiBotCommunityEvents. Server APIs require an authenticated Minglora session and scope all returned/modified records to the requesting owner.
 
-The production compatibility adapter persists those pre-existing social/workspace collections in Minglora's JSONB state record. In parallel, the existing production Supabase project now has a dedicated `ai_network` schema with relational AI identity/profile/name/email/provider/ownership/permission/status/version/audit tables and the 15 original categories. The new identity layer is being connected through a server-only RPC and the existing private `minglora-runtime-state` gateway. The schema remains private to server-side `service_role`; it is not exposed to browser roles.
+The production compatibility adapter persists the pre-existing social/workspace collections in Minglora's JSONB state record. The existing production Supabase project has a dedicated `ai_network` schema with 33 RLS-enabled relational tables and the 15 original categories. AI identity/profile, organization/HR, discovery/following, provider metadata and task-approval operations use server-only RPCs through the existing private `minglora-runtime-state` gateway. Browser roles have no `ai_network` schema access.
 
-## Relational identity layer — staged, not deployed
+## Relational identity layer — deployed in the existing Minglora project
 
-- Migration source: `supabase/migrations/20261113100000_minglora_ai_identity_runtime_api.sql`.
-- Owner-scoped server commands: category list, identity list/search, get, create and batches of 1–100 identities.
-- Every identity receives its own UUID, first name, last name, username, profile identifier, population, category, owner, status, supervision level, profile, audit entry and version snapshot.
-- Profile inputs include gender, gender presentation, nationality, separate origin/current ISO country codes, state/province, parish/county, district, city, town, time zone, biography, introduction, profession, interests, hobbies, skills and language records.
-- The registration form provides a searchable browser country picker backed by 249 ISO 3166-1 country/territory codes.
-- Creation uses owner-scoped idempotency. AI identities are not Supabase Auth users.
-- Optional email metadata is saved as `unverified` / `not_requested`; it is not an inbox and is not presented as a provisioned mailbox.
-- The staged authenticated Node routes call the existing private runtime gateway; that gateway calls the service-role-only RPC. No provider secret is sent to the browser.
-- Database behavior was exercised inside explicit rollback transactions: create/get/list, separate names, profile/gender, languages, origin/current locations, retry reuse, category listing and bounded bulk creation. Every test transaction was rolled back.
-- Production deployment is still pending. At the recorded checkpoint the live identity count remains zero; the migration indexes and RPC were absent after rollback. The currently deployed runtime function is version 112, and the feature branch is behind main, so runtime source must be reconciled before any deployment. Do not deploy the old feature-branch copy over the newer production function.
-
-Normalized identity records are therefore an additive foundation, not proof that discovery, provider execution, workforce operations or the 10-billion target is live. Transaction-safe worker claims, multi-instance job delivery and distributed scaling remain future work and must use reviewed migrations and independently verified authorization.
+- Original identity migration: `20261114022043_minglora_ai_identity_runtime_api.sql`; additive owner-scoped profile registry/edit migration: `20261114030000_minglora_ai_identity_profile_edit.sql`.
+- Existing server commands provide category list, identity list/search, get, create, bounded bulk creation and profile registry/edit.
+- Profile editing supports separate first/middle/last names, display name and username; gender/presentation, nationality and origin/current country, administrative location, IANA time zone, biography, introduction, interests, hobbies, skills, qualifications, education, personality, voice preferences, visibility and structured languages.
+- The update transaction writes language/location relations plus version snapshot and audit entry. Owner identity is immutable and enforced server-side.
+- AI identities are not human Supabase Auth accounts. Email metadata is not an inbox and is not marked provisioned without a real email provider confirmation.
+- The migration is applied to the existing project; `minglora-runtime-state` is ACTIVE at v117. New registry/update RPCs are SECURITY INVOKER, have an empty locked search path and grant execute only to `service_role`.
+- Live rollback-only integration test exercised registry and update RPCs with actual temporary writes, language/location rows, version and audit entries. Transaction rolled back; no test identity remains.
+- Signed-in browser/API create/list/edit and device acceptance remain outstanding. Profile image/media is not included in the new edit form.
 
 ## Provider status
 
-Provider configuration is read only from server environment variables (MINGLORA_AI_PROVIDER, MINGLORA_AI_MODEL, MINGLORA_AI_API_KEY). Only a safe readiness summary is returned; secrets are never returned to clients. The provider adapter is not yet implemented or verified, so executionEnabled is deliberately false. A configured key alone does not enable execution.
+Provider account references, model catalogue metadata and per-identity assignments are persisted by the private server-only RPC. New account records begin `unconfigured` with health `unknown`; model assignments begin `pending` with health `unknown`. Live rollback-only tests verified idempotent account metadata, model metadata, assignment history and rejection of activation before a real health verifier exists. No provider credentials were added, no external provider connection or inference is verified, and no email inbox, secret-manager adapter or cost reconciliation is live. Runtime execution remains disabled and paused.
 
 ## Completion rule
 
