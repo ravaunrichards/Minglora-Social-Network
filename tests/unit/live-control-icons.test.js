@@ -31,7 +31,7 @@ test('LIVE controls use individually addressable original SVG icon assets', () =
 });
 
 test('all LIVE control SVG assets are included in the versioned offline shell cache', () => {
-  assert.match(worker, /const CACHE_NAME='minglora-shell-v\d+-self-updating-1';/);
+  assert.ok(worker.includes("minglora-shell-v306-self-updating-1"));
   for (const icon of manifest.icons) {
     assert.ok(worker.includes("'/assets/icons/live-controls/" + icon.id + ".svg'"), icon.id + ' must be pre-cached');
   }

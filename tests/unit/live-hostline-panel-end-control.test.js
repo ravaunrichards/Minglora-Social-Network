@@ -70,6 +70,7 @@ test('Final stylesheet and offline service-worker shell use matching cache-buste
   assert.ok(html.includes(styleUrl));
   assert.ok(html.lastIndexOf(styleUrl) > html.lastIndexOf('/minglora-branding.css'));
   assert.ok(sw.includes(styleUrl));
-  assert.ok(sw.includes("const CACHE_NAME='minglora-shell-v306-self-updating-1'"));
-  assert.ok(html.includes('/app.js?v=20261114-ai-network-integration-2'));
+  assert.match(sw, /const CACHE_NAME='minglora-shell-v\d+-self-updating-1';/);
+  const appAsset = html.match(/src=["'](\/app\.js\?v=[^"']+)["']/)?.[1] || '';
+  assert.ok(appAsset && sw.includes("'" + appAsset + "'"), 'current app bundle must be cached');
 });

@@ -38,6 +38,8 @@ test("LIVE asset manifest inventories the complete canonical gift catalogue", ()
   assert.equal(manifest.gifts.length, catalogue.gifts.length);
   assert.equal(manifest.summary.active_motion_profile_count, motionIndex.gifts.length);
   assert.equal(manifest.summary.svg_artwork_file_count, catalogue.gifts.length);
+  assert.equal(manifest.summary.svg_gift_icon_file_count, catalogue.gifts.length);
+  assert.equal(manifest.summary.transparent_background_gift_icon_count, catalogue.gifts.length);
   assert.equal(manifest.summary.transparent_background_artwork_count, catalogue.gifts.length);
   assert.equal(manifest.summary.gltf_model_file_count, catalogue.gifts.length);
   assert.equal(manifest.summary.required_generated_files_verified, true);
@@ -63,8 +65,16 @@ test("every gift record has measured SVG and GLTF files, dimensions, hashes and 
     assert.equal(entry.active, source.active);
     assert.equal(entry.coin_price, source.coin_price);
     assert.equal(entry.artwork.transparent_background, true, "gift artwork must have a transparent canvas: " + entry.code);
+    assert.equal(entry.icon_url, "/assets/gifts/catalog/" + entry.code + "-icon.svg");
+    assert.equal(entry.icon.transparent_background, true, "gift icon must have a transparent canvas: " + entry.code);
+    assert.equal(entry.icon.vector_only, true);
+    assert.equal(entry.icon.format, "svg");
+    assert.equal(entry.icon.dimensions.width_px, 512);
+    assert.equal(entry.icon.dimensions.height_px, 512);
+    assert.equal(entry.icon.quality.human_visual_review, "not_completed");
+    assert.equal(entry.icon.licensing.status, "review_required");
 
-    for (const asset of [entry.artwork, entry.model]) {
+    for (const asset of [entry.artwork, entry.icon, entry.model]) {
       const file = path.join(root, asset.path);
       assert.ok(fs.existsSync(file), asset.path);
       assert.ok(fs.statSync(file).size > 0, "empty asset " + asset.path);
