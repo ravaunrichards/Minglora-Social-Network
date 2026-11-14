@@ -66,3 +66,24 @@ test("the current gift animation bundle and canonical motion index are precached
   assert.ok(worker.includes("'/assets/animations/gifts/catalog-motion-index.json'"));
   assert.match(worker, /const CACHE_NAME='minglora-shell-v\d+-self-updating-1';/);
 });
+
+test("Djembe Master uses a dedicated synchronized hand-drum sound treatment", () => {
+  assert.ok(effects.includes("function playDjembe(c,now,seed)"));
+  assert.ok(effects.includes('gift.code==="djembe-master-1v3jzkm"'));
+  assert.ok(effects.includes("noise.buffer=createGiftNoise(c,seed,0.23)"));
+  assert.ok(effects.includes("body.frequency.exponentialRampToValueAtTime(61,now+.17)"));
+});
+
+test("Palm Breeze uses a dedicated synchronized breeze-and-chime sound treatment", () => {
+  assert.ok(effects.includes("function playPalmBreeze(c,now,seed)"));
+  assert.ok(effects.includes('gift.code==="palm-breeze-gknyt0"'));
+  assert.ok(effects.includes("wind.buffer=createGiftNoise(c,seed,0.82)"));
+  assert.ok(effects.includes("notes=[659.25,880,1174.66]"));
+});
+
+test("Djembe and Palm Breeze sound design stays local, action-triggered and fallback-safe", () => {
+  assert.ok(effects.includes("function createGiftNoise(c,seed,durationSeconds)"));
+  assert.ok(effects.includes("if(options.sound!==false)play(gift)"));
+  assert.ok(effects.includes("const p=profiles[gift.category]||profiles.other"));
+  assert.ok(!effects.includes("new Audio("), "gift audio must not fetch unreviewed remote recordings");
+});
