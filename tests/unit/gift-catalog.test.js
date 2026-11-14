@@ -381,3 +381,31 @@ test("Crystal Crown uses a bespoke faceted royal tiara with separately named cry
   assert.ok(svg.includes('data-gift-artwork="crystal-crown-original-v1"'), "the primary SVG must use subject-specific royal artwork");
   assert.ok(icon.includes('data-gift-artwork="crystal-crown-original-v1"'), "the transparent icon must preserve the royal artwork");
 });
+
+
+test("Phoenix uses an original layered firebird sculpture with distinct wing and tail feathers", () => {
+  const phoenix = gifts.find(gift => gift.code === "phoenix-wep6uk");
+  assert.ok(phoenix, "Phoenix must remain in the canonical gift catalogue");
+  assert.equal(phoenix.name, "Phoenix");
+  assert.equal(phoenix.category, "animals");
+  assert.equal(phoenix.coin_price, 25999, "the existing Coin value must remain unchanged");
+  assert.equal(phoenix.active, true, "the existing publication state must remain unchanged");
+  const model = JSON.parse(readFileSync(path.join(assetRoot, phoenix.code + ".gltf"), "utf8"));
+  assert.equal(model.asset?.version, "2.0");
+  assert.equal(model.asset?.extras?.mingloraAssetId, "gift-phoenix-3d-v1");
+  assert.equal(model.asset?.extras?.source, "assets/3d-assets/gift-models/phoenix-model.mjs");
+  assert.match(model.asset?.extras?.artDirection || "", /rising firebird.*layered crimson and amber wings.*comet-tail fan.*ember motes/i);
+  assert.match(model.asset?.extras?.reviewStatus || "", /design-review-pending/);
+  assert.ok(model.meshes?.[0]?.primitives?.length >= 150, "the model must expose distinct body, wing, covert, flight-feather and tail parts");
+  assert.ok(model.materials?.some(material => material.name.includes("Phoenix sculpted torso")));
+  assert.ok(model.materials?.some(material => material.name.includes("Phoenix left wing primary flight feather")));
+  assert.ok(model.materials?.some(material => material.name.includes("Phoenix right wing covert row")));
+  assert.ok(model.materials?.some(material => material.name.includes("Phoenix tail fan feather")));
+  assert.ok(model.materials?.some(material => material.name.includes("Phoenix crown flame plume")));
+  assert.ok(model.buffers?.[0]?.uri.startsWith("data:application/octet-stream;base64,"), "Phoenix must be self-contained for the existing model viewer");
+  assert.ok(model.accessors?.filter(accessor => accessor.type === "VEC3").length >= 300, "Phoenix must expose mesh positions and normals");
+  const svg = readFileSync(path.join(assetRoot, phoenix.code + ".svg"), "utf8");
+  const icon = readFileSync(path.join(assetRoot, phoenix.code + "-icon.svg"), "utf8");
+  assert.ok(svg.includes('data-gift-artwork="phoenix-original-v1"'), "the primary SVG must use original firebird artwork");
+  assert.ok(icon.includes('data-gift-artwork="phoenix-original-v1"'), "the transparent icon must preserve the firebird artwork");
+});
