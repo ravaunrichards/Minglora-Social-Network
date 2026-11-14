@@ -3802,7 +3802,7 @@ Deno.serve(async (req: Request) => {
     const payload = input.payload && typeof input.payload === "object" && !Array.isArray(input.payload)
       ? input.payload
       : {};
-    const supportedMemoryCommands = ["get_settings", "configure", "list", "create", "delete"];
+    const supportedMemoryCommands = ["get_settings", "configure", "list", "create", "update", "delete"];
 
     if (!validUuid(actorUserId)) {
       return json(400, { error: "A valid signed-in Minglora user is required for AI memory access." });
