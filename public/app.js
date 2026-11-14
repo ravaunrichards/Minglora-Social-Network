@@ -1,4 +1,8 @@
 const $ = s => document.querySelector(s);
+function liveGiftIconUrl(gift){
+  const code=String(gift?.code||"");
+  return /^[a-z0-9_-]{1,59}$/.test(code)?"/assets/gifts/catalog/"+encodeURIComponent(code)+"-icon.svg":"";
+}
 const state = { user:null, view:'feed', feed:[], feedScope:'all', videoFeed:[], videoScope:'for-you', videoSearch:'', videoMode:'videos', videoNextCursor:null, videoHasMore:false, videoLoading:false, videoRequestSequence:0, forYouScope:'for-you', forYouNextCursor:null, forYouHasMore:false, forYouLoading:false, forYouSearch:'', savedPosts:[], savedPostCollections:[], savedFilter:'all', savedCollection:'all', savedType:'all', savedSort:'saved-newest', savedSearch:'', stories:[], people:[], discoveryLiveSessions:[], groups:[], notifications:[], conversations:[], activeConversation:null, messageWindows:[], activeGroup:null, pages:[], activePage:null, profile:null, searchResults:null, settings:null, activeConnections:null, liveStartFormat:'video_audio', messengerFilter:'all', messengerSearch:'', messengerPanelOpen:false, messengerOptionsOpen:false, messengerPanelSection:'chats', messengerComposeMode:false, messengerComposeUsers:null, messengerComposeLoading:false, messengerPresence:{}, messengerTyping:{}, messengerRealtimeConnected:false, rechargeTab:'recharge', rechargeCurrencyMode:'two-way' };
 const LAST_VIEW_SESSION_PREFIX='minglora:last-view:v1:';
 const RESTORABLE_VIEWS=new Set(['feed','for-you','more','videos','gifts','gifter-progression','live','live-pro','leagues','coins','creator','friends','groups','messages','saved','pages','meetwave','connections','page','group','profile','search','notifications','calendar','clock-centre','menstrual-health','settings','ai-network']);
@@ -677,7 +681,7 @@ function postCard(post,options={}){
       ${watchLaterControl}
       <button data-toggle-save="${esc(post.id)}" data-saved="${post.isSaved?'true':'false'}">${post.isSaved?'▣ Saved':'▢ Save'}</button>
       <button data-share="${esc(post.id)}">↗ &nbsp; Share</button>
-      <button type="button" data-gift-content="post" data-gift-id="${esc(post.id)}" data-gift-username="${esc(author.username||'')}">🎁 Gift</button>
+      <button type="button" data-gift-content="post" data-gift-id="${esc(post.id)}" data-gift-username="${esc(author.username||'')}"><svg class="nav-3d-icon" viewBox="0 0 64 64" aria-hidden="true"><path d="M8 25h48v31H8zM5 15h54v12H5zM32 15v41M32 15C15 15 13 4 21 4c6 0 11 6 11 11zm0 0c17 0 19-11 11-11-6 0-11 6-11 11z" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round"/></svg> Gift</button>
     </div>
     ${savedControls}
     ${comments.length?`<div class="comments">${comments.slice(-3).map(c=>`<div class="comment">${thoughtAvatarMarkup(c.author,'avatar',true)}<div class="comment-bubble"><small class="comment-author-username" data-profile="${esc(c.author?.id||'')}" role="link" tabindex="0">@${esc(c.author?.username||'')}</small><strong data-profile="${esc(c.author?.id||'')}" role="link" tabindex="0">${esc(c.author?.name||'Member')}${memberGifterBadgeMarkup(c.author)}</strong><span class="comment-text">${esc(c.text)}</span>${c.userId===state.user.id||post.userId===state.user.id?`<button class="comment-delete" data-delete-comment-post="${esc(post.id)}" data-delete-comment-id="${esc(c.id)}">Delete</button>`:''}</div>${c.userId!==state.user.id?`<button class="comment-delete" data-report-comment="${esc(c.id)}">Report</button>`:''}</div>`).join('')}</div>`:''}
@@ -2452,7 +2456,7 @@ function renderLiveRewardDrops(drops,role){
   const root=$('#live-reward-list');if(!root)return;
   const items=Array.isArray(drops)?drops:[];
   if(!items.length){
-    root.innerHTML="<div class='live-reward-empty'><span aria-hidden='true'>🎁</span><strong>No reward drops yet</strong><small>The host can launch a Goody Bag or Treasure Box during this LIVE.</small></div>";
+    root.innerHTML="<div class='live-reward-empty'><svg class='live-reward-vector-icon' viewBox='0 0 64 64' aria-hidden='true'><path d='M8 25h48v31H8zM5 15h54v12H5zM32 15v41M32 15C15 15 13 4 21 4c6 0 11 6 11 11zm0 0c17 0 19-11 11-11-6 0-11 6-11 11z' fill='none' stroke='currentColor' stroke-width='4' stroke-linejoin='round' stroke-linecap='round'/></svg><strong>No reward drops yet</strong><small>The host can launch a Goody Bag or Treasure Box during this LIVE.</small></div>";
     return;
   }
   root.innerHTML=items.map(drop=>{
@@ -2492,7 +2496,7 @@ function renderLiveRewardDrops(drops,role){
       ?"<small class='live-reward-condition'>Comment <strong>"+esc(drop.keyword||'the keyword')+"</strong> in LIVE chat to participate.</small>"
       :"<small class='live-reward-condition'>"+(goody?'Tap to enter the random draw.':'First eligible viewers to claim receive Coins.')+"</small>";
     return "<article class='live-reward-card "+(goody?'goody':'treasure')+"' data-live-reward-card='"+esc(drop.id)+"'>"+
-      "<div class='live-reward-art' aria-hidden='true'><span>"+(goody?'🎁':'💎')+"</span></div>"+
+      "<div class='live-reward-art' aria-hidden='true'>"+(goody?"<svg class='live-reward-vector-icon' viewBox='0 0 64 64'><path d='M8 25h48v31H8zM5 15h54v12H5zM32 15v41M32 15C15 15 13 4 21 4c6 0 11 6 11 11zm0 0c17 0 19-11 11-11-6 0-11 6-11 11z' fill='none' stroke='currentColor' stroke-width='4' stroke-linejoin='round' stroke-linecap='round'/></svg>":"<svg class='live-reward-vector-icon' viewBox='0 0 64 64'><path d='m32 5 21 16-21 38L11 21zM11 21h42M32 5v54M20 21l12 38 12-38' fill='none' stroke='currentColor' stroke-width='4' stroke-linejoin='round' stroke-linecap='round'/></svg>")+"</div>"+
       "<div class='live-reward-main'><div class='live-reward-title-row'><strong>"+(goody?'Goody Bag':'Treasure Box')+"</strong><span class='live-reward-state "+(active?'active':drop.status==='refunded'?'refunded':'complete')+"'>"+(active?'LIVE':drop.status==='refunded'?'REFUNDED':'COMPLETE')+"</span></div>"+
       "<div class='live-reward-pot'>"+Number(drop.totalCoins||0).toLocaleString()+" <span>Coins</span></div>"+
       "<small class='live-reward-meta'>"+Number(drop.participantCount||0).toLocaleString()+" joined · "+Number(drop.winnerCount||0).toLocaleString()+" winner"+(Number(drop.winnerCount||0)===1?'':'s')+"</small>"+
@@ -3476,7 +3480,7 @@ activeLivePinnedComment=null;
         if(!liveGiftPreview)return;
         liveGiftPreview.hidden=!gift;
         if(!gift){
-          if(liveGiftPreviewArt)liveGiftPreviewArt.innerHTML="<span aria-hidden='true'>🎁</span>";
+          if(liveGiftPreviewArt)liveGiftPreviewArt.innerHTML="<span class='live-gift-preview-unavailable' role='status'>Choose a gift to preview it</span>";
           if(liveGiftPreviewName)liveGiftPreviewName.textContent="Choose a gift";
           if(liveGiftPreviewPrice)liveGiftPreviewPrice.textContent="";
           if(liveGiftPreviewNote)liveGiftPreviewNote.textContent="Preview the animation and sound before sending.";
@@ -3484,6 +3488,7 @@ activeLivePinnedComment=null;
           if(liveGiftSendSelected)liveGiftSendSelected.disabled=true;
           return;
         }
+        const iconUrl=liveGiftIconUrl(gift);
         if(liveGiftPreviewName)liveGiftPreviewName.textContent=gift.name||"Minglora Gift";
         if(liveGiftPreviewPrice)liveGiftPreviewPrice.textContent=Number(gift.coin_price||0).toLocaleString()+" Coins · "+liveGiftCategoryName(gift.category);
         if(liveGiftPreviewNote){
@@ -3494,7 +3499,9 @@ activeLivePinnedComment=null;
           const fallback=gift.image_url?"<img class='live-gift-preview-fallback' src='"+esc(gift.image_url)+"' alt='"+esc(gift.name||"Gift")+"' hidden>":"";
           const art=gift.model_url
             ?"<model-viewer id='live-gift-preview-model' class='live-gift-preview-model' src='"+esc(gift.model_url)+"' "+(gift.image_url?"poster='"+esc(gift.image_url)+"' ":"")+"camera-controls auto-rotate rotation-per-second='22deg' interaction-prompt='none' shadow-intensity='.65' exposure='1.1' alt='"+esc(gift.name||"Minglora gift")+"'></model-viewer>"+fallback
-            :gift.image_url?"<img id='live-gift-preview-image' class='live-gift-preview-image' src='"+esc(gift.image_url)+"' alt='"+esc(gift.name||"Gift")+"'>":"<span class='live-gift-preview-emoji' aria-label='"+esc(gift.name||"Gift")+"'>"+esc(gift.emoji||"🎁")+"</span>";
+            :gift.image_url?"<img id='live-gift-preview-image' class='live-gift-preview-image' src='"+esc(gift.image_url)+"' alt='"+esc(gift.name||"Gift")+"'>"
+            :iconUrl?"<img id='live-gift-preview-image' class='live-gift-preview-image' src='"+esc(iconUrl)+"' alt='Transparent Minglora gift icon: "+esc(gift.name||"Gift")+"'>"
+            :"<span class='live-gift-preview-unavailable' role='status'>Gift artwork unavailable</span>";
           liveGiftPreviewArt.innerHTML=art;
           const model=liveGiftPreviewArt.querySelector("model-viewer");
           const fallbackImage=liveGiftPreviewArt.querySelector(".live-gift-preview-fallback");
@@ -3543,9 +3550,22 @@ activeLivePinnedComment=null;
             :Number(b.asset_version==="2")-Number(a.asset_version==="2")||Number(b.coin_price)-Number(a.coin_price)||String(a.name||"").localeCompare(String(b.name||"")));
         const shown=filtered.slice(0,liveGiftVisible);
         if(liveGiftCount)liveGiftCount.textContent=filtered.length.toLocaleString()+" gifts"+(liveGiftScope==="favorites"?" · Favorites":liveGiftScope==="recent"?" · Recently sent":liveGiftScope==="team"?" · Team Gifts":"");
+        if(!giftGrid.dataset.giftIconErrorsBound){
+          giftGrid.addEventListener("error",event=>{
+            const image=event.target;
+            if(!image||image.tagName!=="IMG"||!image.matches("[data-live-gift-icon]"))return;
+            const fallback=document.createElement("span");
+            fallback.className="live-gift-card-unavailable";
+            fallback.setAttribute("role","status");
+            fallback.textContent="Gift artwork unavailable";
+            image.replaceWith(fallback);
+          },true);
+          giftGrid.dataset.giftIconErrorsBound="true";
+        }
         giftGrid.innerHTML=shown.length?shown.map(gift=>{
           const code=String(gift.code||"");
-          const art=gift.image_url?"<img class='live-gift-image' loading='lazy' decoding='async' src='"+esc(gift.image_url)+"' alt='Original Minglora artwork: "+esc(gift.name||"Gift")+"'>":"<span class='live-gift-card-emoji'>"+esc(gift.emoji||"🎁")+"</span>";
+          const iconUrl=liveGiftIconUrl(gift);
+          const art=iconUrl?"<img class='live-gift-image' data-live-gift-icon loading='lazy' decoding='async' src='"+esc(iconUrl)+"' alt='Transparent Minglora gift icon: "+esc(gift.name||"Gift")+"'>":"<span class='live-gift-card-unavailable' role='status'>Gift icon unavailable</span>";
           const teamGift=MINGLORA_FAN_CLUB_GIFT_CODES.includes(code);
           const locked=role!=="host"&&teamGift&&!liveFanClubState?.isMember;
           const favorite=liveGiftFavorites.has(code);
@@ -3638,7 +3658,7 @@ activeLivePinnedComment=null;
           });
           liveGiftRecent=[gift.code,...liveGiftRecent.filter(code=>code!==gift.code)].slice(0,40);saveLiveGiftPreferences();
           const giftFundingNotice=resultGift.fundingSource==="promo"?" · ordinary promotional Coins (no cash earnings)":resultGift.fundingSource==="admin_promotional"?" · cash-reserved Admin Promotional gift":"";
-          toast((resultGift.emoji||"🎁")+" "+(resultGift.giftName||gift.name)+" sent · "+Number(resultGift.coinAmount||gift.coin_price||0).toLocaleString()+" Minglora Coins"+giftFundingNotice);
+          toast((resultGift.giftName||gift.name)+" sent · "+Number(resultGift.coinAmount||gift.coin_price||0).toLocaleString()+" Minglora Coins"+giftFundingNotice);
           const [walletResult,promoResult]=await Promise.allSettled([api("/coins/wallet"),api("/coins/promotional-gift-wallet")]);
           const balanceElement=$("#live-wallet-balance");
           if(balanceElement)balanceElement.textContent=walletResult.status==="fulfilled"&&walletResult.value.wallet?.balance_coins!=null?Number(walletResult.value.wallet.balance_coins).toLocaleString()+" Coins":"Balance unavailable";
@@ -10147,7 +10167,7 @@ function forYouCard(post,index){
     '<form class="comment-form fyp-comment-form" data-comment-form="'+esc(post.id)+'" hidden><input name="text" maxlength="2000" placeholder="Add a comment…" aria-label="Add a comment" required><button type="submit">Send</button></form></div>'+
     '<aside class="fyp-action-rail" aria-label="Post actions"><button type="button" class="fyp-action '+liked+'" data-react="'+esc(post.id)+'" data-current-reaction="'+esc(post.myReaction||'like')+'" aria-label="Like post"><span>♥</span><small>'+Number(post.reactionCount||0).toLocaleString()+'</small></button>'+
     '<button type="button" class="fyp-action" data-focus-comment="'+esc(post.id)+'" aria-label="Comment"><span>▢</span><small>'+Number((post.comments||[]).length).toLocaleString()+'</small></button><button type="button" class="fyp-action" data-toggle-save="'+esc(post.id)+'" data-saved="'+(post.isSaved?'true':'false')+'" aria-label="Save post"><span>'+(post.isSaved?'▣':'♧')+'</span><small>Save</small></button>'+
-    '<button type="button" class="fyp-action" data-share="'+esc(post.id)+'" aria-label="Share post"><span>↗</span><small>Share</small></button><button type="button" class="fyp-action" data-gift-content="post" data-gift-id="'+esc(post.id)+'" data-gift-username="'+esc(author.username||'')+'" aria-label="Send gift"><span>🎁</span><small>Gift</small></button>'+
+    '<button type="button" class="fyp-action" data-share="'+esc(post.id)+'" aria-label="Share post"><span>↗</span><small>Share</small></button><button type="button" class="fyp-action" data-gift-content="post" data-gift-id="'+esc(post.id)+'" data-gift-username="'+esc(author.username||'')+'" aria-label="Send gift"><span><svg class="nav-3d-icon" viewBox="0 0 64 64" aria-hidden="true"><path d="M8 25h48v31H8zM5 15h54v12H5zM32 15v41M32 15C15 15 13 4 21 4c6 0 11 6 11 11zm0 0c17 0 19-11 11-11-6 0-11-6-11 0z" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/></svg></span><small>Gift</small></button>'+
     (isVideo?'<button type="button" class="fyp-action fyp-more-action" data-fyp-feedback-menu="'+esc(post.id)+'" aria-label="Video recommendations" aria-controls="fyp-feedback-menu-'+esc(post.id)+'" aria-expanded="false"><span>⋯</span><small>More</small></button>':'<button type="button" class="fyp-action fyp-more-action" data-post-menu="'+esc(post.id)+'" aria-label="Post options"><span>⋯</span><small>More</small></button>')+(isVideo?'<button type="button" class="fyp-disc" data-fyp-sound="'+esc(post.id)+'" aria-label="Toggle sound">♫</button>':'')+'</aside>'+(isVideo?'<div class="fyp-feedback-menu" id="fyp-feedback-menu-'+esc(post.id)+'" hidden role="group" aria-label="Video recommendations"><button type="button" data-fyp-interested="'+esc(post.id)+'">Show me more like this</button><button type="button" data-fyp-not-interested="'+esc(post.id)+'">Not interested</button></div><button type="button" class="fyp-play-toggle" data-fyp-play="'+esc(post.id)+'" aria-label="Pause or play video">Ⅱ</button>':'')+'</article>';
 }
 function teardownForYouPlayback(){
