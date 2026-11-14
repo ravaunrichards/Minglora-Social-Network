@@ -409,3 +409,30 @@ test("Phoenix uses an original layered firebird sculpture with distinct wing and
   assert.ok(svg.includes('data-gift-artwork="phoenix-original-v1"'), "the primary SVG must use original firebird artwork");
   assert.ok(icon.includes('data-gift-artwork="phoenix-original-v1"'), "the transparent icon must preserve the firebird artwork");
 });
+
+
+test("Beach Maracas uses an original crossed Caribbean maraca pair with painted gourd detail", () => {
+  const maracas = gifts.find(gift => gift.code === "beach-maracas-1exxoag");
+  assert.ok(maracas, "Beach Maracas must remain in the canonical gift catalogue");
+  assert.equal(maracas.name, "Beach Maracas");
+  assert.equal(maracas.category, "music");
+  assert.equal(maracas.coin_price, 349, "the canonical Coin value must remain unchanged");
+  assert.equal(maracas.active, true, "the existing publication state must remain unchanged");
+  const model = JSON.parse(readFileSync(path.join(assetRoot, maracas.code + ".gltf"), "utf8"));
+  assert.equal(model.asset?.version, "2.0");
+  assert.equal(model.asset?.extras?.mingloraAssetId, "gift-beach-maracas-3d-v1");
+  assert.equal(model.asset?.extras?.source, "assets/3d-assets/gift-models/beach-maracas-model.mjs");
+  assert.match(model.asset?.extras?.artDirection || "", /crossed pair.*Caribbean calabash maracas.*hand-painted seed motifs.*conch charm/i);
+  assert.match(model.asset?.extras?.reviewStatus || "", /design-review-pending/);
+  assert.ok(model.meshes?.[0]?.primitives?.length >= 80, "both maracas must expose their own gourds, handles, bands and painted details");
+  assert.ok(model.materials?.some(material => material.name.includes("Beach Maracas coral carved gourd shell")));
+  assert.ok(model.materials?.some(material => material.name.includes("Beach Maracas lagoon carved gourd shell")));
+  assert.ok(model.materials?.some(material => material.name.includes("woven grip band")));
+  assert.ok(model.materials?.some(material => material.name.includes("gourd sunburst ray")));
+  assert.ok(model.buffers?.[0]?.uri.startsWith("data:application/octet-stream;base64,"), "Beach Maracas must be self-contained for the existing model viewer");
+  assert.ok(model.accessors?.filter(accessor => accessor.type === "VEC3").length >= 160, "the model must expose mesh positions and normals");
+  const svg = readFileSync(path.join(assetRoot, maracas.code + ".svg"), "utf8");
+  const icon = readFileSync(path.join(assetRoot, maracas.code + "-icon.svg"), "utf8");
+  assert.ok(svg.includes('data-gift-artwork="beach-maracas-original-v1"'), "the primary SVG must use the original pair artwork");
+  assert.ok(icon.includes('data-gift-artwork="beach-maracas-original-v1"'), "the transparent icon must preserve the original pair");
+});
