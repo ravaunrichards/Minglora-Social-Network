@@ -30,3 +30,12 @@ No prices, balances, transactions, account state, LiveKit credentials, or existi
 - `npm run build:live-asset-manifest -- --check` verifies the output is current and deterministic. The generated manifest is ignored as a build artifact and uploaded by CI as `minglora-live-asset-manifest-<run-number>`.
 - The manifest marks generated category-vector SVGs as awaiting human review, procedural GLTFs, synthesized category sound and unverified physical-device support as limitations. The model-load error fallback is implemented; the generator records it as available. It does not grant production approval or rights clearance.
 - The SVG generator no longer includes system-font emoji glyph overlays; the per-gift manifest and catalogue tests enforce a zero-overlay count. Existing vector forms and gift labels are preserved.
+
+
+## Individually addressable LIVE control icons
+
+- The LIVE room control buttons now use a dedicated SVG asset pack under `public/assets/icons/live-controls/`.
+- `manifest.json` records all 16 original control symbols and their canonical paths. SVG files share a `0 0 24 24` viewBox and inherit `currentColor`, preserving existing responsive sizing and button-state styling.
+- `public/app.js` references only the immutable icon allow-list; user input is never interpolated into an asset path.
+- `public/sw.js` increments the shell cache version and pre-caches the manifest plus all 16 SVG files for offline LIVE controls.
+- `tests/unit/live-control-icons.test.js` validates the inventory, SVG structure, safe reference logic, state inheritance and offline cache coverage.
