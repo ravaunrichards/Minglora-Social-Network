@@ -1,94 +1,89 @@
-# Master Progress
+# Minglora Master Progress
 
-## Overall status
+## Current checkpoint
 
-- **Repository-wide completion percentage:** Not yet measurable. The documented backlog spans many partially implemented feature areas; a complete task-level inventory and weighting has not yet been established. No percentage is invented.
-- **Current stage:** `MS-PROFILE-01 — Original unique Gifter badges on member identity surfaces`
-- **Current stage status:** VERIFYING — implementation and CI passed; final merge and post-merge verification are the remaining acceptance steps at this checkpoint.
-- **Current repository:** `ravaunrichards/Minglora-Social-Network`
-- **Working branch:** `fix/profile-unique-gifter-badge-display`
-- **Pull request:** #224 — https://github.com/ravaunrichards/Minglora-Social-Network/pull/224
-- **Last verified branch commit:** `b9c1bc6bae92f0a239ecae1b9693e09e5e7a4365`
-- **Latest full CI run:** https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/42943613615
+- Repository: ravaunrichards/Minglora-Social-Network
+- Scope: Minglora Social Network only
+- Main branch checkpoint: 4bb3a9360a6e4b5b620560c0b3e65cea37a145fd
+- Main tree: b6a894cebb66d08d5f25c577b921cb7ebaf2743d
+- Latest post-merge CI: https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/43638100531 — completed successfully.
+- Admin Finance audit-history PR: #333, merged 2026-11-14 at 20:33:14 UTC; merge commit 4bb3a9360a6e4b5b620560c0b3e65cea37a145fd.
+- PR #333 CI: all three jobs passed; separate repository layout QA run 43637977566 also passed. That layout QA was not a finance-specific visual test.
+- Profile badge PR: #224, merged 2026-11-11; merge commit 8a496d54df8daca5f543e9571c494e9d4354a158.
 
-## Completed and verified at this checkpoint
+## Overall completion
 
-- Repository identity verified against GitHub repository metadata and branch/tree refs.
-- Package configuration and top-level documented architecture/roadmap inspected.
-- Confirmed 50 existing individual Level PNGs are the canonical per-level image collection from the preceding gifter-level task.
-- Replaced generated/text-only gifter identity art with the matching original Level PNG, selected from the member's earned Level number (01–50).
-- Added badge next to the username in the main profile header, public "View as" preview, LIVE profile preview, and Friends cards.
-- Used the same Level-specific artwork in the profile Badges recognition panel, feed/comment identity, and LIVE gifter identity surfaces.
-- Added responsive sizing with `object-fit: contain`; original badge images remain unchanged.
-- Preserved verification, LIVE Pro, admin-awarded, LIVE-entry, New Gifter and Creator League markers.
-- Corrected the Gifters Rewards image route to the actual committed artwork path: `assets/Gifters Badge Levels/Gifters Rewards.png`.
-- Updated app/stylesheet/service-worker cache versions together.
-- Updated existing identity/layout test expectations and added a focused profile Gifter badge placement test.
-- Latest full CI: **3/3 jobs passed** (automated test suite, For You functional navigation, Supabase Auth provider acceptance).
+- Repository-wide completion percentage: NOT MEASURABLE. The full product backlog has not been decomposed into weighted, independently testable acceptance items.
+- Minglora Admin Center completion: IN PROGRESS.
+- Company Finance implementation slice: implementation merged and CI-verified; live operational acceptance remains pending.
+- No repository-wide or Admin Center completion percentage is claimed.
 
-## Current task
+## Completed and verified
 
-Complete PR #224 by verifying the latest head, mergeability and green CI; merge; then verify the merged `main` tree contains the profile renderer, styles, original per-Level source mapping and progress records.
+### Repository and identity
+- Confirmed the selected repository and current main branch.
+- Preserved repository-local recovery, progress, blocker, decision and stage-queue records.
+- Verified the post-merge main commit and successful main CI.
 
-## Files changed in the profile-badge stage
+### Profile identity
+- MS-PROFILE-01 — unique original Gifter Level artwork on profile and identity surfaces — merged in PR #224.
+- Original Level artwork and prior recognition markers were preserved.
+- The current main branch contains the merged implementation; the original stage record reported passing focused tests and CI.
 
-- `public/app.js`
-- `public/profile-badges.css`
-- `public/index.html`
-- `public/sw.js`
-- `src/server.js` (correct existing Rewards artwork path)
-- `tests/unit/gifter-badge-level-panels.test.js`
-- `tests/unit/gifter-rewards-placement.test.js`
-- `tests/unit/live-pro-profile-badge.test.js`
-- `tests/unit/minglora-menu.test.js`
-- `tests/unit/page-route-layout.test.js`
-- `tests/unit/profile-cross-layout-safety.test.js`
-- `tests/unit/profile-gifter-badge-placement.test.js`
-- `tests/unit/profile-verified-name-badge.test.js`
-- `.agent-work/PROJECT_IDENTITY.md`
-- `.agent-work/MASTER_PROGRESS.md`
-- `.agent-work/STAGE_QUEUE.md`
-- `.agent-work/DECISIONS.md`
-- `.agent-work/BLOCKERS.md`
+### Company Finance implementation
+The following implementation slices are merged and the latest CI run passed:
+1. Six additive company-finance PostgreSQL tables with RLS and browser-role denial.
+2. Server-side owner/MFA-protected finance API and service-role-only database RPC access.
+3. Finance registers and responsive Admin Centre screens for provider candidates, subscriptions, budgets, invoices and operating expenses.
+4. Forty-two provider-candidate records. They are directory entries only; all were recorded as not registered and not connected at the time of the live inspection.
+5. Private invoice/receipt attachment workflow in runtime source, including private bucket creation on first attachment preparation. No real attachment upload was performed in this checkpoint.
+6. Supabase-specific database and Storage connection probe in runtime source. The owner/MFA UI action was not exercised in this checkpoint.
+7. Configurable department budget alert thresholds, validated and persisted by the existing finance workflow.
+8. Read-only finance audit-history tab and CSV export in PR #333, using the existing latest-100-event response.
 
-No files were intentionally deleted. No badge source image was edited or replaced.
+### Finance security verification
+- All six finance tables were verified with RLS enabled.
+- anon and authenticated roles were verified not to have SELECT or INSERT privileges on these finance tables.
+- service_role has only the required SELECT/INSERT/UPDATE rights on mutable finance registers; the audit table is SELECT/INSERT only for service_role.
+- Finance RPC execution is granted to service_role, not anon or authenticated.
+- The finance API checks the designated owner, moderator identity, active reviewer session and same-origin write request.
+- Direct payment execution is not implemented. The API does not allow an invoice to be marked paid without verified provider confirmation.
+- No payment, transfer, renewal, provider subscription or financial record was created during this checkpoint.
 
-## Test results
+## Live environment observations
 
-| Check | Result |
-|---|---|
-| Main automated test job | PASS |
-| For You functional navigation | PASS |
-| Supabase Auth provider acceptance | PASS |
-| Profile Gifter badge placement assertions | PASS in latest full test job |
-| Rewards original asset path and route assertions | PASS in latest full test job |
+- Minglora Supabase project gzycobgbasnqqhnympkr is ACTIVE_HEALTHY in us-east-1, PostgreSQL 17.11.
+- The minglora-runtime-state Edge Function is ACTIVE, version 129.
+- Finance record counts at inspection: 42 provider candidates; 0 subscriptions; 0 budgets; 0 invoices; 0 operating expenses; 0 finance audit events. No demonstration records were inserted.
+- Every provider directory candidate inspected was marked not_registered and not_connected. The Supabase provider record has not been updated by the owner/MFA connection-test action.
+- The private minglora-company-finance Storage bucket was absent at inspection. Runtime source creates it privately during first attachment preparation; no upload or attachment retrieval was tested.
+- The connected Creator Hub Render workspace tea-dbphlfk9v7es73bu7amg returned no services. No Render service, deployment, URL or production Admin Centre health was verified.
+- No ownership or DNS configuration for minglora.com was verified.
+- No company bank account, payment vault, card, provider billing API or universal bill-payment capability is connected.
+- Creator and seller ledgers remain separate from company operating funds.
 
-Earlier failures were resolved: test-string quoting, stale `app.js` version assertions, and the Rewards route pointing to a nonexistent root-level path. See `BLOCKERS.md` for remaining deployment-verification limitations.
+## Current active stage
 
-## Completed stages
+MS-ADMIN-RBAC-02 — Admin Centre role-based access control and delegated roles.
 
-- `MS-IDENTITY-00` — repository identity and working-branch verification.
-- `MS-QUEUE-00` — initial roadmap-derived stage queue established.
-- `MS-PROFILE-01` — implementation and automated verification complete; awaiting final merge/post-merge check.
+Status: READY FOR SAFE DESIGN AND IMPLEMENTATION.
 
-## Remaining stages
+The current Admin Centre remains designated-owner/MFA restricted. The staff table has only legacy owner/admin/moderator/reviewer role values; live data showed one active owner and one inactive reviewer. The nine distinct business roles in the master specification have not been implemented or assigned. Preserve existing owner-only controls until a complete server-side permission model, migration, MFA policy and route-level tests are in place.
 
-See `STAGE_QUEUE.md`. Repository-wide work is not complete; future stages remain NOT STARTED or BLOCKED as listed there.
+## Next required work
 
-## Dependencies and blockers
+1. Design and implement granular role permissions and explicit server-side authorization without weakening owner/MFA controls.
+2. Build audited administrator assignment/revocation and second-person approval for configurable sensitive financial actions.
+3. Validate the Finance workspace in a real owner/MFA browser session, including its Supabase connection probe.
+4. Exercise a first private invoice/receipt upload and verified download.
+5. Connect only actual existing provider accounts and show each true status; otherwise leave them not connected and route the owner to the provider portal.
+6. Establish the actual Render service/workspace and deployment pipeline before claiming deployment or production health.
+7. Continue business, subscription, invoice, payment, budget, domain, infrastructure, revenue, application publishing, security, backup, notification and reporting phases in the stage queue.
+8. Complete Admin Center-specific desktop/mobile and end-to-end acceptance before calling the master specification complete.
 
-- Production browser/Render visual verification has not been performed by this GitHub-only workflow.
-- Absolute local filesystem checkout path is unavailable from repository metadata; only repository root `.` is verified.
-- Hosted LiveKit provider configuration is documented as not configured in the current runtime audit; unrelated to this profile-badge change.
-- Whole-repository completion percentage is intentionally unquantified until the feature backlog is fully decomposed and weighted.
+## Checkpoint files and changes
 
-## Error history
-
-- Broken JS test literals caused syntax failures; corrected using safely escaped literal assertions.
-- Existing tests had hard-coded the prior app bundle query string; updated to the current app bundle version.
-- Gifters Rewards route referenced `assets/Gifters Rewards.png`, while the committed file is under `assets/Gifters Badge Levels/`; route and test now use the existing original file.
-- The final CI run for the checkpoint commit passed all three workflow jobs.
-
-## Exact next action
-
-Verify PR #224 is still mergeable at the recorded head SHA, merge it using the expected-head guard, then inspect `main` and run/check post-merge CI before marking `MS-PROFILE-01` COMPLETED.
+- PR #333 added the read-only Finance audit history view and CSV export.
+- Commit 4bb3a9360a6e4b5b620560c0b3e65cea37a145fd is the current verified main checkpoint.
+- No working platform features were intentionally removed or replaced.
+- No production secrets, card data, bank passwords or API credentials were written to repository files.
