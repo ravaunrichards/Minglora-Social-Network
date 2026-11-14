@@ -145,3 +145,14 @@ The glyph overlay and unused emoji lookup were removed from `scripts/generate-mi
 - PR #339 was squash-merged into `main` as `6daf3cf23867b229168819aa0adae146cae23fc2`. Before merge, CI run #11874 and LIVE/MeetWave layout QA run #246 both completed successfully; the full test job, asset generation, manifest generation, image-metadata audit, navigation tests and Supabase Auth tests passed.
 - No gift catalogue values, prices, active flags, production gift rows, balances, payouts or LIVE event behavior were changed. The existing production database still has 97 retired/inactive gift rows and zero active version-3 offerings; no item was activated.
 - **Acceptance:** source integration, generated asset pipeline and regression tests are merged and CI-verified. Human visual/design review, rights/licensing approval, physical-device rendering QA and live-host deployment verification remain pending. This is a third bespoke model source, not completion of the 1,748-gift catalogue.
+
+
+## Bespoke Palm Breeze LIVE gift implementation — 2026-11-14
+
+- Added `assets/3d-assets/gift-models/palm-breeze-model.mjs` for canonical catalogue gift code `palm-breeze-gknyt0`.
+- The original glTF scene contains a curved fibrous trunk, eight radial pinnate fronds, individually authored leaflets and veins, three coconuts, root flares, carved trunk details and a compact island sand/water plinth. Repeated leaf meshes are batched by material to limit draw calls.
+- The canonical gift code is routed through `scripts/generate-minglora-gifts.mjs`; matching transparent SVG artwork carries the signature `palm-breeze-original-v1`.
+- Added regression tests for the canonical category/code, glTF source metadata, model mesh/material groups, embedded buffers and SVG art signature.
+- PR #340 merged into `main` as `976e4293d2bbe68b7ad4006dea41d21107097e23`. Before merge, CI run #43646945809 and layout QA run #43646945801 both completed successfully; the full asset build/manifest, audit, automated tests, navigation, Auth and layout jobs passed.
+- No source catalogue price, active flag, production gift row, transaction, wallet, creator balance or payout changed.
+- **Acceptance:** original source, generator integration, test coverage and documentation are merged and CI-verified. Human visual/design review, rights/licensing review, physical-device rendering and production-host deployment verification remain outstanding. This brings the explicitly bespoke source count to four, not all 1,748 catalogue entries.
