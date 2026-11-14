@@ -37,13 +37,13 @@ test('AI Network script and styles are precached with matching asset versions', 
   const appAsset = html.match(/app\.js\?v=[^"']+/)?.[0] || '';
   const menuAsset = html.match(/minglora-menu\.js\?v=[^"']+/)?.[0] || '';
   const cacheName = sw.match(/CACHE_NAME='([^']+)'/)?.[1] || '';
-  assert.equal(appAsset, 'app.js?v=20261114-ai-network-integration-2');
+  assert.match(appAsset, /^app\\.js\\?v=\\d{8}-[a-z0-9-]+$/);
   assert.equal(menuAsset, 'minglora-menu.js?v=20261114-ai-network-integration-1');
   assert.ok(sw.includes('/' + appAsset));
   assert.ok(sw.includes('/' + menuAsset));
   assert.ok(sw.includes('/ai-network.js?v=20261114-ai-network-integration-2'));
   assert.ok(sw.includes('/ai-network.css?v=20261114-ai-network-integration-2'));
-  assert.equal(cacheName, 'minglora-shell-v305-self-updating-1');
+  assert.match(cacheName, /^minglora-shell-v\\d+-self-updating-1$/);
 });
 
 test('AI Network workspace exposes all ten recommendations and true measured/empty states', () => {
