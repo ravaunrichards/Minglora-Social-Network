@@ -67,3 +67,8 @@ No prices, balances, transactions, account state, LiveKit credentials, or existi
 - `public/sw.js` uses shell cache v306 and pre-caches the manifest and all 12 SVG files for offline tools navigation.
 - `tests/unit/live-tool-shortcut-icons.test.js` validates artwork files, safe icon mapping, panel targets, accessibility state, responsive drawer styling and service-worker coverage.
 - The icons are original Minglora outline navigation graphics; design review and licensing metadata remain explicitly pending. They are not premium 3D gift artwork.
+
+## Bespoke Hibiscus gift model
+- Canonical gift hibiscus-5-mgl selects assets/3d-assets/gift-models/hibiscus-model.mjs from scripts/generate-minglora-gifts.mjs.
+- The source produces the standard self-contained glTF 2.0 asset at public/assets/gifts/catalog/hibiscus-5-mgl.gltf; the existing LIVE/model-viewer loader and SVG fallback remain in use.
+- The model is tagged gift-hibiscus-3d-v1 and design-review-pending. No gift catalogue price, animation, transaction or server event behavior is changed.
