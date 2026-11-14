@@ -3,7 +3,7 @@
 
   const API = '/api/ai-network';
   const root = () => document.getElementById('main-content');
-  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, organizationError: '', memoryIdentityId: '', memorySettings: null, memoryEntries: [], memoryError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', aiTasks: [], taskRuntime: null, taskError: '', categoryAdmin: null, delegationGrants: [], delegationAccess: false, delegationError: '' };
+  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, performanceReviews: [], successionPlans: [], promotions: [], organizationError: '', memoryIdentityId: '', memorySettings: null, memoryEntries: [], memoryError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', aiTasks: [], taskRuntime: null, taskError: '', categoryAdmin: null, delegationGrants: [], delegationAccess: false, delegationError: '' };
   const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[character]));
@@ -511,19 +511,17 @@
         const organizationId = record.organization?.organization_id;
         if (!organizationId) return null;
         const base = '/organizations/' + encodeURIComponent(organizationId);
-        const [departmentResult, positionResult, vacancyResult, applicationResult, employeeResult] = await Promise.all([
-          request(base + '/departments'),
-          request(base + '/positions'),
-          request(base + '/vacancies'),
-          request(base + '/applications'),
-          request(base + '/employees')
+        const [departmentResult, positionResult, vacancyResult, applicationResult, employeeResult,
+          reviewResult, successionResult, promotionResult] = await Promise.all([
+          request(base + '/departments'), request(base + '/positions'), request(base + '/vacancies'),
+          request(base + '/applications'), request(base + '/employees'),
+          request(base + '/performance-reviews'), request(base + '/succession-plans'), request(base + '/promotions')
         ]);
         return [organizationId, {
-          departments: list(departmentResult.departments),
-          positions: list(positionResult.positions),
-          vacancies: list(vacancyResult.vacancies),
-          applications: list(applicationResult.applications),
-          employees: list(employeeResult.employees)
+          departments: list(departmentResult.departments), positions: list(positionResult.positions),
+          vacancies: list(vacancyResult.vacancies), applications: list(applicationResult.applications),
+          employees: list(employeeResult.employees), performanceReviews: list(reviewResult.performance_reviews),
+          successionPlans: list(successionResult.succession_plans), promotions: list(promotionResult.promotions)
         }];
       }));
       state.organizationHR = Object.fromEntries(details.filter(Boolean));
@@ -543,6 +541,9 @@
     const vacancies = list(hr.vacancies).map(row => row.vacancy).filter(Boolean);
     const applications = list(hr.applications);
     const employees = list(hr.employees);
+    const reviews = list(hr.performanceReviews);
+    const successionPlans = list(hr.successionPlans);
+    const promotions = list(hr.promotions);
     const identityRecords = list(state.identityRegistry?.identities);
     const identityOptions = identityRecords.map(row => ({
       value: row.identity?.identity_id || '',
@@ -631,6 +632,14 @@
               : status === 'restricted' ? ['active','suspended','terminated']
                 : status === 'suspended' ? ['active','terminated'] : [];
           const statusOptions = currentStatus.map(value => ({ value, label:value.replaceAll('_',' ') }));
+          const currentPosition = positions.find(position => position.position_id === employment.position_id);
+          const promotionPositions = positions.filter(position =>
+            Number(position.hierarchy_level) > Number(currentPosition?.hierarchy_level || 0) &&
+            ['active','proposed','restricted'].includes(position.status)
+          );
+          const employeeReviews = reviews.filter(item => item.review?.employment_id === employment.employment_id);
+          const promotionReviews = employeeReviews.filter(item => item.review?.review_status === 'finalized' &&
+            ['promotion_consideration','role_change'].includes(item.review?.outcome));
           const managerForm = ['onboarding','active','restricted','suspended'].includes(status)
             ? '<form class="ai-network-inline-form" data-ai-form="employment-manager" data-organization-id="' + esc(organizationId) + '" data-employment-id="' + esc(employment.employment_id) + '">' +
               '<label><span>Reporting manager</span><select name="managerEmploymentId">' +
@@ -651,12 +660,88 @@
               '<label><span>Transfer reason</span><input name="reason" required minlength="3" maxlength="1000"></label>' +
               '<button class="secondary" type="submit">Transfer employee</button></form>'
             : '';
+          const promotionForm = status === 'active' && promotionPositions.length
+            ? '<form class="ai-network-inline-form" data-ai-form="employee-promotion" data-organization-id="' + esc(organizationId) + '" data-employment-id="' + esc(employment.employment_id) + '">' +
+              '<label><span>Promotion destination</span><select name="positionId" required>' +
+              options(promotionPositions.map(position => ({value:position.position_id,label:position.display_name + ' · level ' + position.hierarchy_level})), promotionPositions[0].position_id) +
+              '</select></label><label><span>Department</span><select name="departmentId" required>' + options(departmentOptions, employment.department_id || departmentOptions[0]?.value) + '</select></label>' +
+              '<label><span>New reporting manager</span><select name="managerEmploymentId">' + options(managerOptions.filter(option => option.value !== employment.employment_id), '') + '</select></label>' +
+              '<label><span>Supporting finalized review (optional)</span><select name="supportingReviewId">' +
+              options([{value:'',label:'No supporting review'}].concat(promotionReviews.map(item=>({value:item.review.review_id,label:'Rating ' + item.review.rating + ' · ' + date(item.review.review_period_end)}))), '') +
+              '</select></label><label><span>Promotion reason</span><input name="reason" required minlength="10" maxlength="1000"></label>' +
+              '<button class="secondary" type="submit">Promote employee</button></form>'
+            : '';
+          const performanceReviewForm = status === 'active'
+            ? '<form class="ai-network-inline-form" data-ai-form="performance-review" data-organization-id="' + esc(organizationId) + '" data-employment-id="' + esc(employment.employment_id) + '">' +
+              '<label><span>Review period starts</span><input type="date" name="reviewPeriodStart" required></label>' +
+              '<label><span>Review period ends</span><input type="date" name="reviewPeriodEnd" required></label>' +
+              '<label><span>Human review rating (1–5)</span><select name="rating" required>' + options([1,2,3,4,5].map(value=>({value:String(value),label:String(value)+' / 5'})),'3') + '</select></label>' +
+              '<label><span>Outcome</span><select name="outcome">' + options([{value:'continue',label:'Continue in role'},{value:'promotion_consideration',label:'Consider for promotion'},{value:'improvement_plan',label:'Improvement plan'},{value:'role_change',label:'Role change'}],'continue') + '</select></label>' +
+              '<label><span>Review summary</span><textarea name="summary" required minlength="10" maxlength="4000" rows="2"></textarea></label>' +
+              '<label><span>Strengths (one per line)</span><textarea name="strengths" maxlength="3000" rows="2"></textarea></label>' +
+              '<label><span>Improvement areas (one per line)</span><textarea name="improvementAreas" maxlength="3000" rows="2"></textarea></label>' +
+              '<label><span>Development goals (one per line)</span><textarea name="goals" maxlength="3000" rows="2"></textarea></label>' +
+              '<button class="secondary" type="submit">Submit human performance review</button></form>'
+            : '';
           return '<article class="ai-network-list-row ai-network-hr-row"><div class="ai-network-list-main"><div><strong>' +
             esc(row.identity?.display_name || row.identity?.username || 'AI employee') + '</strong><div class="ai-network-meta">' +
             pill(status) + ' ' + esc(row.department_name || '') + ' · ' + esc(row.position_name || '') +
-            '</div></div></div>' + statusForm + managerForm + transferForm + '</article>';
+            '</div></div></div>' + statusForm + managerForm + transferForm + promotionForm + performanceReviewForm + '</article>';
         }).join('') + '</div>'
       : empty('No AI employees have been appointed.');
+    const performanceReviewRows = reviews.length
+      ? '<div class="ai-network-list">' + reviews.map(item => {
+          const review = item.review || {};
+          const finalizeForm = review.review_status === 'submitted'
+            ? '<form class="ai-network-inline-form" data-ai-form="performance-review-finalize" data-organization-id="' + esc(organizationId) + '" data-review-id="' + esc(review.review_id) + '">' +
+              '<label><span>Finalization reason</span><input name="reason" required minlength="3" maxlength="1000"></label>' +
+              '<button class="secondary" type="submit">Finalize review</button></form>' : '';
+          return '<article class="ai-network-list-row"><div class="ai-network-list-main"><div><strong>' +
+            esc(item.identity?.display_name || 'AI employee') + '</strong><div class="ai-network-meta">' +
+            pill(review.review_status || 'submitted') + ' ' + pill('rating ' + review.rating + '/5') + ' ' + pill(review.outcome || 'no outcome') +
+            '</div><p>' + esc(review.summary || '') + '</p><small>' + date(review.review_period_start) + ' – ' + date(review.review_period_end) +
+            ' · ' + esc(item.position_name || '') + '</small></div></div>' + finalizeForm + '</article>';
+        }).join('') + '</div>' : empty('No performance reviews have been submitted.');
+    const promotionRows = promotions.length
+      ? '<div class="ai-network-list">' + promotions.map(item => {
+          const promotion = item.promotion || {};
+          return '<article class="ai-network-list-row"><div class="ai-network-list-main"><div><strong>' +
+            esc(item.identity?.display_name || 'AI employee') + '</strong><div class="ai-network-meta">' +
+            pill('PROMOTED','success') + ' ' + esc(item.previous_position_name || 'Previous role') + ' → ' + esc(item.new_position_name || 'New role') +
+            '</div><p>' + esc(promotion.reason || '') + '</p><small>' + date(promotion.created_at) + '</small></div></div></article>';
+        }).join('') + '</div>' : empty('No employee promotions have been recorded.');
+    const successorOptions = activeEmployees.map(row => ({
+      value:row.employment?.employment_id || '',
+      label:(row.identity?.display_name || 'AI employee') + ' · ' + (row.position_name || 'Current role')
+    })).filter(option=>option.value);
+    const successionForm = positions.length && successorOptions.length
+      ? '<form class="ai-network-form ai-network-hr-form" data-ai-form="succession-plan" data-organization-id="' + esc(organizationId) + '">' +
+        '<div class="ai-network-form-title">Create succession plan</div><div class="ai-network-form-grid">' +
+        '<label>Critical role<select name="rolePositionId" required>' + options(positionOptions, positionOptions[0]?.value || '') + '</select></label>' +
+        '<label>Current incumbent (optional)<select name="incumbentEmploymentId">' + options([{value:'',label:'Vacant / no incumbent'}].concat(successorOptions),'') + '</select></label>' +
+        '<label>Proposed successor<select name="successorEmploymentId" required>' + options(successorOptions, successorOptions[0]?.value || '') + '</select></label>' +
+        '<label>Readiness<select name="readinessLevel">' + options([{value:'ready_now',label:'Ready now'},{value:'within_6_months',label:'Within 6 months'},{value:'within_1_year',label:'Within 1 year'},{value:'development_required',label:'Development required'}],'development_required') + '</select></label>' +
+        '<label>Next review date<input type="date" name="reviewDueOn"></label></div>' +
+        '<label>Succession rationale<textarea name="rationale" required minlength="10" maxlength="2000" rows="2"></textarea></label>' +
+        '<label>Development actions (one per line)<textarea name="developmentActions" maxlength="4000" rows="2"></textarea></label>' +
+        '<button class="primary" type="submit">Save draft succession plan</button></form>'
+      : '<p class="ai-network-note">An active employee and a role position are required before a succession plan can be created.</p>';
+    const successionRows = successionPlans.length
+      ? '<div class="ai-network-list">' + successionPlans.map(item => {
+          const plan = item.plan || {};
+          const statusChoices = plan.plan_status === 'draft'
+            ? [{value:'active',label:'Activate'},{value:'cancelled',label:'Cancel'}]
+            : plan.plan_status === 'active' ? [{value:'completed',label:'Complete'},{value:'cancelled',label:'Cancel'}] : [];
+          return '<article class="ai-network-list-row"><div class="ai-network-list-main"><div><strong>' +
+            esc(item.role_name || 'Key role') + '</strong><div class="ai-network-meta">' +
+            pill(plan.plan_status || 'draft') + ' ' + pill(plan.readiness_level || 'readiness unspecified') +
+            '</div><p>Successor: ' + esc(item.successor_name || 'Not available') + '</p><small>Incumbent: ' +
+            esc(item.incumbent_name || 'Vacant / not assigned') + ' · ' + esc(plan.rationale || '') + '</small></div></div>' +
+            (statusChoices.length ? '<form class="ai-network-inline-form" data-ai-form="succession-status" data-organization-id="' + esc(organizationId) + '" data-plan-id="' + esc(plan.plan_id) + '">' +
+              '<label><span>Plan status</span><select name="status">' + options(statusChoices,statusChoices[0].value) + '</select></label>' +
+              '<label><span>Reason</span><input name="reason" required minlength="3" maxlength="1000"></label>' +
+              '<button class="secondary" type="submit">Update plan</button></form>' : '') + '</article>';
+        }).join('') + '</div>' : empty('No succession plans have been created.');
     const candidateOptions = identityOptions.length
       ? '<p class="ai-network-note">' + identityOptions.length + ' owner-managed AI identities available for recruitment.</p>'
       : '<p class="ai-network-note">No eligible owner-managed AI identities are currently listed. Register an identity first.</p>';
@@ -664,7 +749,10 @@
       '<p class="ai-network-note">Vacancies begin as drafts. Candidates must be owner-managed AI identities and approved before appointment. Employee status, manager and transfer changes are recorded in persistent history.</p></div>' +
       vacancyForm + '<div><h5>Vacancies</h5>' + vacancyRows + '</div>' +
       '<div><h5>Candidate applications</h5>' + candidateOptions + applicationRows + '</div>' +
-      '<div><h5>AI employees</h5>' + employeeRows + '</div></section>';
+      '<div><h5>AI employees</h5>' + employeeRows + '</div>' +
+      '<div><h5>Performance reviews · human-authored</h5>' + performanceReviewRows + '</div>' +
+      '<div><h5>Recorded promotions</h5>' + promotionRows + '</div>' +
+      '<div><h5>Succession planning · no automatic appointments</h5>' + successionForm + successionRows + '</div></section>';
   }
 
   function renderAIProviderCenter() {
@@ -1615,11 +1703,49 @@
       if (!organizationId || !employmentId) throw new Error('Employment details are missing.');
       path = '/organizations/' + encodeURIComponent(organizationId) + '/employees/' + encodeURIComponent(employmentId) + '/transfer';
       form.dataset.idempotencyKey = form.dataset.idempotencyKey || window.crypto.randomUUID();
-      payload.department_id = value('departmentId');
-      payload.position_id = value('positionId');
+      payload.department_id = value('departmentId'); payload.position_id = value('positionId');
       payload.manager_employment_id = value('managerEmploymentId') || null;
+      payload.reason = value('reason'); payload.idempotency_key = form.dataset.idempotencyKey;
+    } else if (kind === 'employee-promotion') {
+      const organizationId = form.dataset.organizationId, employmentId = form.dataset.employmentId;
+      if (!organizationId || !employmentId) throw new Error('Employee promotion details are missing.');
+      path = '/organizations/' + encodeURIComponent(organizationId) + '/employees/' + encodeURIComponent(employmentId) + '/promote';
+      form.dataset.idempotencyKey = form.dataset.idempotencyKey || window.crypto.randomUUID();
+      payload.department_id = value('departmentId'); payload.position_id = value('positionId');
+      payload.manager_employment_id = value('managerEmploymentId') || null;
+      payload.supporting_review_id = value('supportingReviewId') || null;
+      payload.reason = value('reason'); payload.idempotency_key = form.dataset.idempotencyKey;
+    } else if (kind === 'performance-review') {
+      const organizationId = form.dataset.organizationId, employmentId = form.dataset.employmentId;
+      if (!organizationId || !employmentId) throw new Error('Performance review details are missing.');
+      path = '/organizations/' + encodeURIComponent(organizationId) + '/performance-reviews';
+      form.dataset.idempotencyKey = form.dataset.idempotencyKey || window.crypto.randomUUID();
+      payload.employment_id = employmentId; payload.review_period_start = value('reviewPeriodStart');
+      payload.review_period_end = value('reviewPeriodEnd'); payload.rating = Number(value('rating'));
+      payload.outcome = value('outcome'); payload.summary = value('summary');
+      const asLines = name => value(name).split(/\\r?\\n/).map(item=>item.trim()).filter(Boolean);
+      payload.strengths = asLines('strengths'); payload.improvement_areas = asLines('improvementAreas');
+      payload.goals = asLines('goals'); payload.idempotency_key = form.dataset.idempotencyKey;
+    } else if (kind === 'performance-review-finalize') {
+      const organizationId = form.dataset.organizationId, reviewId = form.dataset.reviewId;
+      if (!organizationId || !reviewId) throw new Error('Performance review details are missing.');
+      path = '/organizations/' + encodeURIComponent(organizationId) + '/performance-reviews/' + encodeURIComponent(reviewId) + '/finalize';
       payload.reason = value('reason');
+    } else if (kind === 'succession-plan') {
+      const organizationId = form.dataset.organizationId;
+      if (!organizationId) throw new Error('Succession plan organization is missing.');
+      path = '/organizations/' + encodeURIComponent(organizationId) + '/succession-plans';
+      form.dataset.idempotencyKey = form.dataset.idempotencyKey || window.crypto.randomUUID();
+      payload.role_position_id = value('rolePositionId'); payload.incumbent_employment_id = value('incumbentEmploymentId') || null;
+      payload.successor_employment_id = value('successorEmploymentId'); payload.readiness_level = value('readinessLevel');
+      payload.review_due_on = value('reviewDueOn') || null; payload.rationale = value('rationale');
+      payload.development_actions = value('developmentActions').split(/\\r?\\n/).map(item=>item.trim()).filter(Boolean);
       payload.idempotency_key = form.dataset.idempotencyKey;
+    } else if (kind === 'succession-status') {
+      const organizationId = form.dataset.organizationId, planId = form.dataset.planId;
+      if (!organizationId || !planId) throw new Error('Succession plan details are missing.');
+      path = '/organizations/' + encodeURIComponent(organizationId) + '/succession-plans/' + encodeURIComponent(planId) + '/status';
+      payload.status = value('status'); payload.reason = value('reason');
     } else if (kind === 'bot') {
       path = '/bots';
       form.dataset.idempotencyKey = form.dataset.idempotencyKey || window.crypto.randomUUID();
@@ -1675,7 +1801,7 @@
       payload.companionOptIn = form.querySelector('[name="companionOptIn"]').checked;
       payload.companionAcknowledged = form.querySelector('[name="companionAcknowledgedAIIdentity"]').checked;
     } else return;
-    const patchKinds = ['settings','languages','memory-settings','memory-edit','vacancy-status','application-review','employment-status','employment-manager','provider-assignment-status','task-approval','identity-edit'];
+    const patchKinds = ['settings','languages','memory-settings','memory-edit','vacancy-status','application-review','employment-status','employment-manager','provider-assignment-status','task-approval','identity-edit','performance-review-finalize','succession-status'];
     const result = await request(path, { method: patchKinds.includes(kind) ? 'PATCH' : 'POST', body: payload });
     let uploadedMediaCount = 0;
     if (kind === 'identity-edit' && identityIdForMedia) {
@@ -1699,7 +1825,7 @@
       const categoryKeyInput = form.querySelector('[name="categoryKey"]');
       if (categoryKeyInput) categoryKeyInput.readOnly = false;
     }
-    if (['identity','bot','team','delegation-create','delegation-task','organization','vacancy','application','appointment','employment-transfer','task-create'].includes(kind)) form.dataset.idempotencyKey = window.crypto.randomUUID();
+    if (['identity','bot','team','delegation-create','delegation-task','organization','vacancy','application','appointment','employment-transfer','employee-promotion','performance-review','succession-plan','task-create'].includes(kind)) form.dataset.idempotencyKey = window.crypto.randomUUID();
     const categoryActionLabels = { created:'created', updated:'updated', activated:'reactivated', deactivated:'deactivated' };
     const message = kind === 'memory-edit'
       ? 'AI memory entry updated; its retention expiry was refreshed.'
@@ -1750,7 +1876,12 @@
                         : kind === 'employment-status' ? 'Employment status updated.'
                           : kind === 'employment-manager' ? 'Reporting manager updated.'
                             : kind === 'employment-transfer' ? 'Employee transfer recorded; new role begins onboarding.'
-                              : 'Saved successfully.';
+                            : kind === 'employee-promotion' ? 'Promotion recorded with linked employment history; the new role starts in onboarding.'
+                              : kind === 'performance-review' ? 'Human-authored performance review submitted and recorded.'
+                                : kind === 'performance-review-finalize' ? 'Performance review finalized and audit history updated.'
+                                  : kind === 'succession-plan' ? 'Succession plan saved as a draft; no employee was appointed or promoted.'
+                                    : kind === 'succession-status' ? 'Succession plan status and audit history updated.'
+                                      : 'Saved successfully.';
     await refresh(message);
   }
 
