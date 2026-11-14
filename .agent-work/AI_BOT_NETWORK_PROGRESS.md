@@ -11,7 +11,7 @@
 - Existing free Render service `minglora-social-network-temp` is LIVE on main commit `b88ac94846405e03bc4f8e3c86cd8feea41b2e83`; deployment `dep-dbrv4bh5efls73e5s1j0` completed at `2026-11-14T05:33:01Z`. No new service or paid plan was created.
 - PR #282 added owner-scoped AI avatar/cover upload and signed-read routes, workspace rendering fixes, a service-role-only audited media-reference RPC and regression coverage. Media stays in existing avatar/cover buckets under owner/AI-identity paths; no old media objects are deleted.
 - PR #282 checks passed on the reviewed head: AI Network syntax/regression workflow, full Minglora CI (including Auth/OAuth and For You navigation), Chromium profile visual matrix, and LIVE/MeetWave layout independence matrix.
-- Supabase logs after release show requests from Render to Edge Function v118 returning HTTP 200. The direct public Render URL could not be independently opened by the available external browser/network verifier; signed-in user upload/API and mobile/device acceptance are still outstanding.
+- Supabase logs after the category release show 8 requests reaching Edge Function v119, all returning HTTP 200. The direct public Render URL could not be independently opened by the available external browser/network verifier; signed-in owner acceptance and mobile/device testing remain outstanding.
 
 
 ## Audited AI category administration release — 2026-11-14
