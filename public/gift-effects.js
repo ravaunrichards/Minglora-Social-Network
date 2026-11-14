@@ -73,6 +73,14 @@
       {offset:.58,opacity:1,transform:"translate3d(0,-2px,0) rotateZ(1deg) scale(1.035)",filter:"none"},
       neutral
     ];
+    if(preset==="island-tide")return [
+      {offset:0,opacity:0,transform:"translate3d(0,20px,0) rotateZ(-3deg) scale(.84)",filter:"brightness(.82) saturate(.86)"},
+      {offset:.2,opacity:1,transform:"translate3d(-6px,-8px,0) rotateZ(2.3deg) scale(1.08)",filter:"brightness(1.24) saturate(1.14)"},
+      {offset:.42,opacity:1,transform:"translate3d(5px,-2px,0) rotateZ(-2deg) scale(1.025)",filter:"brightness(1.1)"},
+      {offset:.64,opacity:1,transform:"translate3d(-4px,2px,0) rotateZ(1.4deg) scale(1.045)",filter:"none"},
+      {offset:.84,opacity:1,transform:"translate3d(2px,0,0) rotateZ(-.7deg) scale(1.015)",filter:"none"},
+      neutral
+    ];
     if(preset==="palm-canopy-sway")return [
       {offset:0,opacity:0,transform:"translate3d(0,18px,0) rotateZ(-4deg) scale(.86)",filter:"brightness(.86)"},
       {offset:.24,opacity:1,transform:"translate3d(-5px,-4px,0) rotateZ(2.8deg) scale(1.045)",filter:"brightness(1.16)"},
@@ -270,6 +278,26 @@
     thump.connect(thumpGain);thumpGain.connect(c.destination);thump.start(now);thump.stop(now+.16);
     return true;
   }
+  function playLiveIsland(c,now,seed){
+    const surf=c.createBufferSource(),highpass=c.createBiquadFilter(),lowpass=c.createBiquadFilter(),envelope=c.createGain();
+    surf.buffer=createGiftNoise(c,seed,1.08);
+    highpass.type="highpass";highpass.frequency.setValueAtTime(105,now);
+    lowpass.type="lowpass";lowpass.frequency.setValueAtTime(420,now);lowpass.frequency.exponentialRampToValueAtTime(1650,now+.42);lowpass.frequency.exponentialRampToValueAtTime(610,now+.98);
+    envelope.gain.setValueAtTime(.0001,now);envelope.gain.exponentialRampToValueAtTime(.065,now+.22);envelope.gain.exponentialRampToValueAtTime(.0001,now+1.08);
+    surf.connect(highpass);highpass.connect(lowpass);lowpass.connect(envelope);envelope.connect(c.destination);
+    surf.start(now);surf.stop(now+1.1);
+    const notes=[392,493.88,587.33,783.99],delays=[.12,.34,.58,.78];
+    notes.forEach((frequency,index)=>{
+      const start=now+delays[index],tone=c.createOscillator(),gain=c.createGain(),pan=c.createStereoPanner?.();
+      tone.type="sine";tone.frequency.setValueAtTime(frequency*(1+((seed+index*5)%9-4)*.0008),start);
+      gain.gain.setValueAtTime(.0001,start);gain.gain.exponentialRampToValueAtTime(.027/(1+index*.18),start+.028);
+      gain.gain.exponentialRampToValueAtTime(.0001,start+.52);
+      if(pan){pan.pan.setValueAtTime((index-1.5)*.18,start);tone.connect(gain);gain.connect(pan);pan.connect(c.destination);}
+      else{tone.connect(gain);gain.connect(c.destination);}
+      tone.start(start);tone.stop(start+.55);
+    });
+    return true;
+  }
   function play(gift){
     if(!gift)return false;
     const c=audio();if(!c)return false;
@@ -279,6 +307,7 @@
       if(gift.code==="djembe-master-1v3jzkm")return playDjembe(c,now,seed);
       if(gift.code==="palm-breeze-gknyt0")return playPalmBreeze(c,now,seed);
       if(gift.code==="gamer-otter-100-mgl")return playGamerOtter(c,now,seed);
+      if(gift.code==="live-island-rmn3mc")return playLiveIsland(c,now,seed);
       const p=profiles[gift.category]||profiles.other,variation=(seed%9)-4;
       const base=p.base*(.92+(seed%17)/100);
       p.notes.forEach((step,i)=>{
@@ -402,7 +431,7 @@
     const motionElement=card.querySelector(".minglora-gift-fx-model");
     if(motionElement&&gift.motion_preset&&typeof motionElement.animate==="function"){
       const reduced=Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);
-      const visualPreset=gift.code==="djembe-master-1v3jzkm"?"djembe-strike":gift.code==="palm-breeze-gknyt0"?"palm-canopy-sway":gift.code==="gamer-otter-100-mgl"?"gamer-otter-cheer":gift.motion_preset;
+      const visualPreset=gift.code==="djembe-master-1v3jzkm"?"djembe-strike":gift.code==="palm-breeze-gknyt0"?"palm-canopy-sway":gift.code==="gamer-otter-100-mgl"?"gamer-otter-cheer":gift.code==="live-island-rmn3mc"?"island-tide":gift.motion_preset;
       const semanticFrames=buildPreviewFrames(visualPreset,{dx,dy,tilt,spin,peak,rebound});
       motionElement.animate(semanticFrames,{
         duration:reduced?320:Math.max(950,Math.min(4200,Number(gift.motion_duration_ms)||duration)),
