@@ -120,7 +120,11 @@ test("the build produces one original SVG and one 3D GLTF for every active gift"
   assert.equal(stamp.svgAssets, gifts.length);
   assert.equal(stamp.gltfAssets, gifts.length);
   const generated = readdirSync(assetRoot);
-  assert.equal(generated.filter(name => name.endsWith(".svg")).length, gifts.length);
+  const fullArtworkNames = new Set(gifts.map(gift => gift.code + ".svg"));
+  const transparentIconNames = new Set(gifts.map(gift => gift.code + "-icon.svg"));
+  assert.equal(generated.filter(name => fullArtworkNames.has(name)).length, gifts.length);
+  assert.equal(generated.filter(name => transparentIconNames.has(name)).length, gifts.length);
+  assert.equal(generated.filter(name => name.endsWith(".svg")).length, gifts.length * 2);
   assert.equal(generated.filter(name => name.endsWith(".gltf")).length, gifts.length);
   const svgPayloads = new Set();
   const modelPayloads = new Set();
