@@ -97,3 +97,10 @@ The model remains design-review-pending. PR #340 passed CI asset generation and 
 Two code-addressed Web Audio sound designs now accompany the bespoke Djembe Master and Palm Breeze gift visuals. Djembe uses a filtered percussive noise transient, falling low-frequency oscillator body and a short rim accent. Palm Breeze uses a filtered wind-noise envelope and three soft chime partials. Both are synthesized on the existing local AudioContext path, trigger with the matching gift FX mount and respect the existing `sound:false` opt-out; generic category fallback remains for other gifts.
 
 The manifest records sound design IDs, sound scope and layer descriptions, but intentionally keeps the audio file null and dedicated mastered gift file count at zero. No recorded/mastered WAV, sound mastering, physical-device latency/mix validation or human audio approval is claimed. This is a real gift-specific synthesis implementation, not a production sound-library completion claim.
+
+
+## Bespoke Djembe/Palm Breeze animation QA checkpoint — 2026-11-14
+
+The Djembe Master and Palm Breeze gift sources now have individual Web Animations choreography in addition to their bespoke models, transparent vector art and synthesized sounds. Djembe's `djembe-strike` sequence uses a percussive strike/recoil/settle; Palm Breeze's `palm-canopy-sway` sequence creates a restrained lateral canopy sway. They run inside the existing animation trigger, preserve the existing duration cap/cleanup and obey reduced-motion preference. Both mappings and keyframe branches are covered by automated tests, and PR #342 passed full CI plus the LIVE/MeetWave Chromium visual QA matrix before merge.
+
+These effects are JavaScript Web Animations keyframes, not skeletal GLTF clips, standalone Rive/Lottie files or rendered videos. Human art review, cross-device physical rendering, sound/motion latency tests and production deployment remain unverified.
