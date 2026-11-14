@@ -143,6 +143,14 @@
       {offset:.65,opacity:1,transform:"translate3d(-8px,3px,0) rotateZ(-3deg) scale(.98)",filter:"none"},
       neutral
     ];
+    if(preset==="gamer-otter-cheer")return [
+      {offset:0,opacity:0,transform:"translate3d(0,26px,0) rotateZ(-12deg) scale(.72)",filter:"brightness(.78) saturate(.8)"},
+      {offset:.26,opacity:1,transform:"translate3d(0,-9px,0) rotateZ(7deg) scale(1.13)",filter:"brightness(1.32) saturate(1.35)"},
+      {offset:.46,opacity:1,transform:"translate3d(0,2px,0) rotateZ(-5deg) scale(.98)",filter:"brightness(1.12)"},
+      {offset:.66,opacity:1,transform:"translate3d(0,-4px,0) rotateZ(4deg) scale(1.045)",filter:"brightness(1.16) saturate(1.1)"},
+      {offset:.82,opacity:1,transform:"translate3d(0,0,0) rotateZ(0deg) scale(1)",filter:"none"},
+      neutral
+    ];
     if(preset==="sweet-pop"||preset==="delight-pop")return [
       {offset:0,opacity:0,transform:"scale(.18) translateY(18px)",filter:"brightness(.8)"},
       {offset:.38,opacity:1,transform:"scale(1.2) translateY(-7px)",filter:"brightness(1.25)"},
@@ -243,6 +251,25 @@
     });
     return true;
   }
+  function playGamerOtter(c,now,seed){
+    const notes=[523.25,659.25,783.99,1046.5],delays=[0,.085,.17,.29];
+    notes.forEach((frequency,index)=>{
+      const start=now+delays[index],osc=c.createOscillator(),gain=c.createGain(),pan=c.createStereoPanner?.();
+      osc.type=index===3?"sine":"square";
+      osc.frequency.setValueAtTime(frequency*(1+((seed+index*3)%9-4)*.0012),start);
+      gain.gain.setValueAtTime(.0001,start);
+      gain.gain.exponentialRampToValueAtTime(index===3?.052:.034,start+.012);
+      gain.gain.exponentialRampToValueAtTime(.0001,start+(index===3?.27:.14));
+      if(pan){pan.pan.setValueAtTime((index-1.5)*.16,start);osc.connect(gain);gain.connect(pan);pan.connect(c.destination);}
+      else{osc.connect(gain);gain.connect(c.destination);}
+      osc.start(start);osc.stop(start+(index===3?.29:.16));
+    });
+    const thump=c.createOscillator(),thumpGain=c.createGain();
+    thump.type="sine";thump.frequency.setValueAtTime(132,now);thump.frequency.exponentialRampToValueAtTime(74,now+.12);
+    thumpGain.gain.setValueAtTime(.0001,now);thumpGain.gain.exponentialRampToValueAtTime(.09,now+.009);thumpGain.gain.exponentialRampToValueAtTime(.0001,now+.15);
+    thump.connect(thumpGain);thumpGain.connect(c.destination);thump.start(now);thump.stop(now+.16);
+    return true;
+  }
   function play(gift){
     if(!gift)return false;
     const c=audio();if(!c)return false;
@@ -251,6 +278,7 @@
       const seed=hash([gift.sound_preset,gift.code,gift.name].join("|")),now=c.currentTime;
       if(gift.code==="djembe-master-1v3jzkm")return playDjembe(c,now,seed);
       if(gift.code==="palm-breeze-gknyt0")return playPalmBreeze(c,now,seed);
+      if(gift.code==="gamer-otter-100-mgl")return playGamerOtter(c,now,seed);
       const p=profiles[gift.category]||profiles.other,variation=(seed%9)-4;
       const base=p.base*(.92+(seed%17)/100);
       p.notes.forEach((step,i)=>{
@@ -374,7 +402,7 @@
     const motionElement=card.querySelector(".minglora-gift-fx-model");
     if(motionElement&&gift.motion_preset&&typeof motionElement.animate==="function"){
       const reduced=Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);
-      const visualPreset=gift.code==="djembe-master-1v3jzkm"?"djembe-strike":gift.code==="palm-breeze-gknyt0"?"palm-canopy-sway":gift.motion_preset;
+      const visualPreset=gift.code==="djembe-master-1v3jzkm"?"djembe-strike":gift.code==="palm-breeze-gknyt0"?"palm-canopy-sway":gift.code==="gamer-otter-100-mgl"?"gamer-otter-cheer":gift.motion_preset;
       const semanticFrames=buildPreviewFrames(visualPreset,{dx,dy,tilt,spin,peak,rebound});
       motionElement.animate(semanticFrames,{
         duration:reduced?320:Math.max(950,Math.min(4200,Number(gift.motion_duration_ms)||duration)),
