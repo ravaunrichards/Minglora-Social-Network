@@ -993,9 +993,20 @@
     const rows = schedules.length
       ? '<div class="ai-network-list">' + schedules.map(schedule => {
           const bot = bots.find(item => item.id === schedule.botId);
-          return '<article class="ai-network-list-row"><div><strong>' + esc(schedule.taskType.replaceAll('_', ' ')) + '</strong><p>' +
-            esc(bot?.name || 'Assigned bot') + ' · ' + esc(schedule.cadence) + ' · ' + esc(schedule.timezone) + '</p><small>Next planned time: ' + esc(date(schedule.runAt)) + '</small></div>' +
-            pill(schedule.status, schedule.status === 'active' ? 'success' : 'neutral') + '</article>';
+          const scheduleId = schedule.scheduleId || schedule.schedule_id || schedule.id;
+          const status = String(schedule.status || 'paused');
+          const actions = ['active','paused','error'].includes(status)
+            ? '<div class="ai-network-row-actions">' +
+              (status === 'active'
+                ? '<button type="button" class="secondary" data-ai-action="schedule-status" data-id="' + esc(scheduleId) + '" data-status="paused">Pause</button>'
+                : '<button type="button" class="secondary" data-ai-action="schedule-status" data-id="' + esc(scheduleId) + '" data-status="active">Activate</button>') +
+              '<button type="button" class="secondary" data-ai-action="schedule-status" data-id="' + esc(scheduleId) + '" data-status="cancelled">Cancel</button></div>'
+            : '';
+          return '<article class="ai-network-list-row"><div><strong>' + esc(String(schedule.taskType || 'scheduled task').replaceAll('_', ' ')) + '</strong><p>' +
+            esc(bot?.name || 'Assigned bot') + ' · ' + esc(schedule.cadence) + ' · ' + esc(schedule.timezone) + '</p><small>Next planned time: ' + esc(date(schedule.runAt)) +
+            (schedule.runCount ? ' · Runs: ' + number(schedule.runCount) : '') +
+            (schedule.requiresHumanApproval ? ' · Requires owner approval' : '') + '</small></div>' +
+            '<div class="ai-network-row-actions">' + pill(status, status === 'active' ? 'success' : 'neutral') + actions + '</div></article>';
         }).join('') + '</div>'
       : empty('No schedules yet. New schedules start paused and require provider verification before activation.');
     const botOptions = bots.filter(bot => bot.status !== 'archived').map(bot => ({ value: bot.id, label: bot.name }));
@@ -1012,6 +1023,16 @@
       '<div class="ai-network-form-grid"><label>Cadence<select name="cadence">' + options([{value:'once',label:'Once'},{value:'daily',label:'Daily'},{value:'weekly',label:'Weekly'}],'once') + '</select></label>' +
       '<label>Time zone<input name="timezone" required value="' + esc(Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC') + '"></label></div>' +
       '<label>Start date and time<input name="runAt" type="datetime-local" required></label>' +
+      '<fieldset><legend>Weekly days (used only for weekly schedules)</legend><div class="ai-network-check-grid">' +
+      '<label class="ai-network-check"><input type="checkbox" name="scheduleWeekdays" value="1" checked><span>Monday</span></label>' +
+      '<label class="ai-network-check"><input type="checkbox" name="scheduleWeekdays" value="2" checked><span>Tuesday</span></label>' +
+      '<label class="ai-network-check"><input type="checkbox" name="scheduleWeekdays" value="3" checked><span>Wednesday</span></label>' +
+      '<label class="ai-network-check"><input type="checkbox" name="scheduleWeekdays" value="4" checked><span>Thursday</span></label>' +
+      '<label class="ai-network-check"><input type="checkbox" name="scheduleWeekdays" value="5" checked><span>Friday</span></label>' +
+      '<label class="ai-network-check"><input type="checkbox" name="scheduleWeekdays" value="6"><span>Saturday</span></label>' +
+      '<label class="ai-network-check"><input type="checkbox" name="scheduleWeekdays" value="0"><span>Sunday</span></label>' +
+      '</div></fieldset>' +
+      '<p class="ai-network-note">Schedules are saved paused. When enabled, they add draft tasks to the owner approval queue; they do not execute AI workers or publish/send content.</p>' +
       '<button class="primary" type="submit"' + (!bots.some(bot => bot.status !== 'archived') ? ' disabled' : '') + '>Save paused schedule</button></form>';
   }
 
@@ -1645,11 +1666,21 @@
       path = '/schedules';
       payload.botId = value('botId');
       payload.taskType = value('taskType');
+      payload.actionClass = 'content';
+      payload.taskTitle = 'Scheduled ' + String(payload.taskType || 'AI task').replaceAll('_', ' ');
+      payload.taskPayload = {};
       payload.cadence = value('cadence');
       payload.timezone = value('timezone');
       const runAt = value('runAt');
       payload.runAt = runAt ? new Date(runAt).toISOString() : '';
-      if (payload.cadence === 'weekly') payload.weekdays = [1,2,3,4,5];
+      payload.weekdays = payload.cadence === 'weekly' ? selectedValues(form, 'scheduleWeekdays').map(Number) : [];
+      if (payload.cadence === 'weekly' && !payload.weekdays.length) {
+        throw new Error('Choose at least one weekday for a weekly schedule.');
+      }
+      payload.tokenBudget = 0;
+      payload.costLimitUsd = 0;
+      form.dataset.idempotencyKey = form.dataset.idempotencyKey || window.crypto.randomUUID();
+      payload.idempotencyKey = form.dataset.idempotencyKey;
     } else if (kind === 'creator') {
       path = '/creator-jobs';
       payload.taskType = value('taskType');
@@ -1809,6 +1840,7 @@
       else if (action === 'bot-status') await request('/bots/' + encodeURIComponent(id) + '/status', { method:'PATCH', body:{ status:button.dataset.status } });
       else if (action === 'approval') await request('/approvals/' + encodeURIComponent(id), { method:'PATCH', body:{ decision:button.dataset.decision } });
       else if (action === 'delegation-status') await request('/delegations/' + encodeURIComponent(id), { method:'PATCH', body:{ status:button.dataset.status, reason:'Updated by authorized Minglora platform administrator.' } });
+      else if (action === 'schedule-status') await request('/schedules/' + encodeURIComponent(id) + '/status', { method:'PATCH', body:{ status:button.dataset.status, reason:'Updated by the signed-in Minglora account.' } });
       else if (action === 'emergency-pause') await request('/emergency-pause', { method:'POST', body:{ reason:'Owner initiated emergency pause from the AI Network command center.' } });
       else if (action === 'emergency-resume') await request('/emergency-resume', { method:'POST', body:{} });
       await refresh(action === 'emergency-pause' ? 'Emergency pause confirmed. AI work remains stopped.' : 'AI Network updated.');
