@@ -19,10 +19,10 @@ test('company finance schema is additive and keeps company expenses separate fro
     'minglora_admin_operating_expenses',
     'minglora_admin_finance_audit_events'
   ]) assert.match(migration, new RegExp('CREATE TABLE IF NOT EXISTS public\\.' + table));
-  assert.match(migration, /UNIQUE \\(provider_id, invoice_number\\)/);
+  assert.match(migration, /UNIQUE \(provider_id, invoice_number\)/);
   assert.match(migration, /invoice_id uuid UNIQUE/);
   assert.match(migration, /creator and seller ledgers remain separate/i);
-  assert.match(migration, /total_minor = amount_minor \\+ tax_minor/);
+  assert.match(migration, /total_minor = amount_minor \+ tax_minor/);
 });
 
 test('finance tables deny browser roles and audit history is append-only', () => {
