@@ -8,6 +8,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const read = path => readFileSync(resolve(root, path), 'utf8');
 
 const migration = read('supabase/migrations/20261114022043_minglora_ai_identity_runtime_api.sql');
+const memoryMigration = read('supabase/migrations/20261114120000_minglora_ai_identity_memory.sql');
 const runtime = read('supabase/functions/minglora-runtime-state/index.ts');
 const server = read('src/server.js');
 const ui = read('public/ai-network.js');
@@ -117,4 +118,51 @@ test('AI workspace uses real relational identity results and separate name input
   assert.match(ui, /JSON\.parse\(value\('items'\)\)/);
   assert.match(ui, /between 1 and 100 JSON objects/);
   assert.match(ui, /request\(path, \{ method:/);
+});
+
+
+test('AI identity memory is private, owner-scoped, opt-in and time-bounded', () => {
+  assert.match(memoryMigration, /create table if not exists ai_network\.ai_memory_settings/i);
+  assert.match(memoryMigration, /create table if not exists ai_network\.ai_memory_entries/i);
+  assert.match(memoryMigration, /memory_enabled boolean not null default false/i);
+  assert.match(memoryMigration, /long_term_enabled boolean not null default false/i);
+  assert.match(memoryMigration, /short_term_retention_days integer not null default 7/i);
+  assert.match(memoryMigration, /long_term_retention_days integer not null default 365/i);
+  assert.match(memoryMigration, /max_entries integer not null default 500/i);
+  assert.match(memoryMigration, /alter table ai_network\.ai_memory_settings enable row level security/i);
+  assert.match(memoryMigration, /alter table ai_network\.ai_memory_entries enable row level security/i);
+  assert.match(memoryMigration, /revoke all on table ai_network\.ai_memory_settings from public, anon, authenticated/i);
+  assert.match(memoryMigration, /revoke all on table ai_network\.ai_memory_entries from public, anon, authenticated/i);
+  assert.match(memoryMigration, /security invoker/i);
+  assert.match(memoryMigration, /set search_path\s*=\s*''/i);
+  assert.match(memoryMigration, /current_user <> 'service_role'/i);
+  assert.match(memoryMigration, /i\.owner_user_id = p_actor_user_id/i);
+  assert.match(memoryMigration, /v_memory_enabled := coalesce\(v_settings\.memory_enabled, false\)/i);
+  assert.match(memoryMigration, /v_long_term_enabled := coalesce\(v_settings\.long_term_enabled, false\)/i);
+  assert.match(memoryMigration, /long-term memory requires separate owner consent/i);
+  assert.match(memoryMigration, /between 1 and 90/i);
+  assert.match(memoryMigration, /between 30 and 3650/i);
+  assert.match(memoryMigration, /between 1 and 5000/i);
+  assert.match(memoryMigration, /expires_at <= now\(\)/i);
+  assert.match(memoryMigration, /on conflict \(identity_id, idempotency_key\) where idempotency_key is not null\s+do nothing/i);
+  assert.match(memoryMigration, /credentials and secrets cannot be stored in AI memory/i);
+  assert.match(memoryMigration, /revoke all on function public\.minglora_ai_memory_command[\s\S]*from public, anon, authenticated/i);
+  assert.match(memoryMigration, /grant execute on function public\.minglora_ai_memory_command[\s\S]*to service_role/i);
+});
+
+test('AI memory API and UI remain owner-authenticated and explain that model recall is not connected', () => {
+  assert.match(server, /runAIMemoryCommand\('list'/);
+  assert.match(server, /runAIMemoryCommand\('configure'/);
+  assert.match(server, /runAIMemoryCommand\('create'/);
+  assert.match(server, /runAIMemoryCommand\('delete'/);
+  assert.match(server, /requireAuth\(user\)/);
+  assert.match(runtime, /"ai_memory_command"/);
+  assert.match(runtime, /supportedMemoryCommands = \["get_settings", "configure", "list", "create", "delete"\]/);
+  assert.match(runtime, /minglora_ai_memory_command/);
+  assert.match(ui, /data-ai-form="memory-settings"/);
+  assert.match(ui, /data-ai-form="memory-entry"/);
+  assert.match(ui, /data-ai-action="delete-memory"/);
+  assert.match(ui, /loadAIMemory/);
+  assert.match(ui, /long_term_enabled/);
+  assert.match(ui, /does not yet connect to live model recall or automatic conversation capture/i);
 });
