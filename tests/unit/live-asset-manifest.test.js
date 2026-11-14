@@ -38,6 +38,8 @@ test("LIVE asset manifest inventories the complete canonical gift catalogue", ()
   assert.equal(manifest.gifts.length, catalogue.gifts.length);
   assert.equal(manifest.summary.active_motion_profile_count, motionIndex.gifts.length);
   assert.equal(manifest.summary.svg_artwork_file_count, catalogue.gifts.length);
+  assert.equal(manifest.summary.svg_gift_icon_file_count, catalogue.gifts.length);
+  assert.equal(manifest.summary.transparent_gift_icon_file_count, catalogue.gifts.length);
   assert.equal(manifest.summary.transparent_background_artwork_count, catalogue.gifts.length);
   assert.equal(manifest.summary.gltf_model_file_count, catalogue.gifts.length);
   assert.equal(manifest.summary.required_generated_files_verified, true);
@@ -64,7 +66,7 @@ test("every gift record has measured SVG and GLTF files, dimensions, hashes and 
     assert.equal(entry.coin_price, source.coin_price);
     assert.equal(entry.artwork.transparent_background, true, "gift artwork must have a transparent canvas: " + entry.code);
 
-    for (const asset of [entry.artwork, entry.model]) {
+    for (const asset of [entry.artwork, entry.icon, entry.model]) {
       const file = path.join(root, asset.path);
       assert.ok(fs.existsSync(file), asset.path);
       assert.ok(fs.statSync(file).size > 0, "empty asset " + asset.path);
@@ -74,6 +76,18 @@ test("every gift record has measured SVG and GLTF files, dimensions, hashes and 
       assert.ok(asset.licensing?.status, "missing licence review state " + asset.path);
     }
     assert.equal(entry.artwork.format, "svg");
+    assert.equal(entry.icon.format, "svg");
+    assert.equal(entry.icon.public_url, "/assets/gifts/catalog/" + source.code + "-icon.svg");
+    assert.equal(entry.icon.transparent_background, true);
+    assert.equal(entry.icon.vector_only, true);
+    assert.equal(entry.icon.dimensions.width_px, 512);
+    assert.equal(entry.icon.dimensions.height_px, 512);
+    assert.equal(entry.icon.quality.human_visual_review, "not_completed");
+    assert.equal(entry.icon.quality.approved_for_premium_production, false);
+    assert.equal(entry.icon.licensing.status, "review_required");
+    assert.equal(entry.thumbnail.path, entry.icon.path);
+    assert.equal(entry.thumbnail.reuse_of_primary_artwork, false);
+    assert.equal(entry.loading_and_fallback.gift_icon_error_fallback_to_full_artwork, true);
     assert.equal(entry.artwork.dimensions.width_px, 512);
     assert.equal(entry.artwork.dimensions.height_px, 512);
     assert.ok(entry.artwork.dimensions.view_box.length === 4);

@@ -31,6 +31,21 @@ test("Minglora gift manifest count matches all catalogue entries", () => {
   assert.equal(manifest.gift_count, gifts.length);
 });
 
+test("each canonical gift has a generated transparent subject-only icon", () => {
+  const stamp = JSON.parse(readFileSync(generatedStamp, "utf8"));
+  assert.equal(stamp.version, 3);
+  assert.equal(stamp.svgIconAssets, gifts.length);
+  for (const gift of gifts) {
+    const iconFile = path.join(assetRoot, gift.code + "-icon.svg");
+    assert.ok(existsSync(iconFile), "missing subject-only icon: " + gift.code);
+    const svg = readFileSync(iconFile, "utf8");
+    assert.match(svg, /<svg\\b[^>]*width=["']512["'][^>]*height=["']512["']/i, gift.name);
+    assert.ok(svg.includes('<g transform="rotate(0 256 256)">'), gift.name + " has a centred icon subject");
+    assert.ok(!svg.includes('<filter id="shadow"'), gift.name + " icon must omit the full-art stage");
+    assert.ok(!svg.includes('font-family="Arial,sans-serif"'), gift.name + " icon must omit the full-art nameplate");
+  }
+});
+
 test("2026 catalogue retires non-gift placeholders and standalone month labels", () => {
   const retiredCodes = ["10-10-12wkkb4","community-gift-uxpqgw","audience-laughter-1500-mgl","pop-don-299-mgl","cnc-coin-1-mgl","raya-gift-card-kog86i","december-6dpx8e","march-1u6p1bk","november-juz9r3","october-1g8qjc7","s-flowers-nyemjm"];
   for (const code of retiredCodes) {
