@@ -46,6 +46,7 @@ test("each LIVE motion entry resolves the exact unique artwork, model, animation
       "beach-maracas-1exxoag": "maraca-rhythm"
     };
     assert.equal(entry.motion_preset, giftSpecificMotionPreset[entry.code] || gift.animation_preset);
+    assert.equal(entry.catalog_motion_preset, gift.animation_preset);
     assert.equal(entry.motion_duration_ms, gift.animation_duration_ms);
     assert.equal(entry.sound_preset, gift.sound_preset);
     assert.match(entry.image_url, /^\/assets\/gifts\/catalog\/[a-z0-9_-]+\.svg$/);
@@ -83,6 +84,7 @@ test("bespoke gift runtime presets are reflected in the generated motion index w
     assert.ok(entry, "missing generated motion record for " + code);
     assert.ok(sourceGift, "missing canonical source gift " + code);
     assert.equal(entry.motion_preset, preset);
+    assert.equal(entry.catalog_motion_preset, sourceGift.animation_preset);
     assert.notEqual(entry.motion_preset, undefined);
     assert.equal(entry.animation_key, sourceGift.animation_key, "canonical animation identity remains unchanged");
     assert.equal(entry.sound_preset, sourceGift.sound_preset, "canonical sound identity remains unchanged");
