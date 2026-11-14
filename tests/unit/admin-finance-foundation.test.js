@@ -9,6 +9,7 @@ const admin = fs.readFileSync(new URL('../../public/admin-centre.js', import.met
 const html = fs.readFileSync(new URL('../../public/admin-centre.html', import.meta.url), 'utf8');
 const financeUi = fs.readFileSync(new URL('../../public/admin-finance.js', import.meta.url), 'utf8');
 const financeCss = fs.readFileSync(new URL('../../public/admin-finance.css', import.meta.url), 'utf8');
+const financeAttachmentAuditMigration = fs.readFileSync(new URL('../../supabase/migrations/20261114191800_minglora_admin_finance_attachment_audit.sql', import.meta.url), 'utf8');
 
 test('company finance schema is additive and keeps company expenses separate from creator liabilities', () => {
   for (const table of [
@@ -113,6 +114,8 @@ test('private company finance uploads validate owner, file type, signature and a
   assert.ok(runtime.includes('const validSignature ='));
   assert.ok(runtime.includes('attachment_downloaded'));
   assert.ok(runtime.includes('createSignedUrl(storedPath, 60, { download: true })'));
+  assert.ok(financeAttachmentAuditMigration.includes("'attachment_downloaded'::text"));
+  assert.ok(financeAttachmentAuditMigration.includes('minglora_admin_finance_audit_events_action_check'));
   assert.ok(server.includes("p.startsWith('/api/admin/finance/attachments/')"));
   assert.ok(server.includes('hasActiveReviewerSession(user)'));
   assert.ok(server.includes('admin_finance_attachment_prepare'));

@@ -319,9 +319,12 @@ Deno.serve(async (req: Request) => {
         }
       }
       const { data: verifiedBucket, error: bucketError } = await admin.storage.getBucket(COMPANY_FINANCE_BUCKET);
+      const bucketLimit = Number(verifiedBucket?.file_size_limit);
+      const bucketMimes = Array.isArray(verifiedBucket?.allowed_mime_types) ? verifiedBucket.allowed_mime_types : [];
       if (bucketError || !verifiedBucket || verifiedBucket.public !== false ||
-          Number(verifiedBucket.file_size_limit || maxBytes) > maxBytes) {
-        return json(503, { error: "The Minglora finance archive is not configured as a private, size-limited bucket." });
+          !Number.isSafeInteger(bucketLimit) || bucketLimit < 1 || bucketLimit > maxBytes ||
+          Object.keys(extensions).some(type => !bucketMimes.includes(type))) {
+        return json(503, { error: "The Minglora finance archive is not configured as a private, MIME-restricted, size-limited bucket." });
       }
       const path = actorUserId + "/finance/" + crypto.randomUUID() + "." + extensions[mimeType];
       const { data: signed, error: signedError } = await admin.storage
@@ -369,9 +372,10 @@ Deno.serve(async (req: Request) => {
         return json(409, { error: "The finance attachment upload is not complete. Please retry." });
       }
       const metadata = object.metadata || {};
-      const storedSize = Number(metadata.size ?? metadata.contentLength ?? byteSize);
-      const storedType = String(metadata.mimetype || metadata.contentType || mimeType).toLowerCase();
-      if (storedSize !== byteSize || storedType !== mimeType) {
+      const storedSize = Number(metadata.size ?? metadata.contentLength);
+      const storedType = String(metadata.mimetype || metadata.contentType || "").toLowerCase();
+      if (!Number.isSafeInteger(storedSize) || storedSize !== byteSize || (storedType && storedType !== mimeType)) {
+        await admin.storage.from(COMPANY_FINANCE_BUCKET).remove([path]);
         return json(409, { error: "The uploaded finance attachment did not match its declared size or type." });
       }
       const { data: probe, error: probeError } = await admin.storage
@@ -385,6 +389,11 @@ Deno.serve(async (req: Request) => {
       if (response.status !== 206) {
         await response.body?.cancel();
         return json(502, { error: "Storage did not return the bounded finance document signature check." });
+      }
+      const responseType = String(response.headers.get("content-type") || "").toLowerCase().split(";")[0].trim();
+      if (responseType && responseType !== mimeType) {
+        await admin.storage.from(COMPANY_FINANCE_BUCKET).remove([path]);
+        return json(409, { error: "The finance attachment content type did not match the selected document type." });
       }
       const prefix = new Uint8Array(await response.arrayBuffer());
       const starts = (values: number[]) => values.every((value,index) => prefix[index] === value);
