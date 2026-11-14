@@ -138,6 +138,8 @@ function aiApiResponse(req, url, body) {
   if (method === 'POST' && pathname === '/categories/admin') {
     categorySaveRequests.push(structuredClone(body));
     let category = categories.find(item => item.category_key === body.category_key);
+    const created = !category;
+    const wasActive = Boolean(category?.is_active);
     if (!category) {
       category = { category_key: body.category_key };
       categories.push(category);
@@ -148,7 +150,9 @@ function aiApiResponse(req, url, body) {
       sort_order: body.sort_order,
       is_active: Boolean(body.is_active)
     });
-    return { category: structuredClone(category), audit_recorded: true };
+    const action = created ? 'created' : wasActive && !category.is_active ? 'deactivated'
+      : !wasActive && category.is_active ? 'activated' : 'updated';
+    return { category: structuredClone(category), action, audit_recorded: true };
   }
   if (method === 'GET' && pathname === '/discover') {
     discoveryQueries.push(Object.fromEntries(url.searchParams.entries()));
@@ -351,7 +355,7 @@ try {
   await categoryForm.locator('[name="sortOrder"]').fill('16');
   await categoryForm.locator('[name="isActive"]').check();
   await categoryForm.locator('button[type="submit"]').click();
-  await page.getByText('AI category changes saved and an audit event recorded.').waitFor({ state: 'visible' });
+  await page.getByText('AI category created and an audit event recorded.').waitFor({ state: 'visible' });
   assert.equal(categorySaveRequests.length, 1, 'Category creation must submit one administrator request.');
   assert.equal(categorySaveRequests[0].category_key, 'ai_science');
   assert.equal(categorySaveRequests[0].display_name, 'AI Science');
@@ -363,7 +367,7 @@ try {
   await categoryForm.locator('[name="displayName"]').fill('AI Science & Research');
   await categoryForm.locator('[name="isActive"]').uncheck();
   await categoryForm.locator('button[type="submit"]').click();
-  await page.getByText('AI category changes saved and an audit event recorded.').waitFor({ state: 'visible' });
+  await page.getByText('AI category deactivated and an audit event recorded.').waitFor({ state: 'visible' });
   assert.equal(categorySaveRequests.length, 2, 'Category updates must be persisted through the admin route.');
   assert.equal(categorySaveRequests[1].display_name, 'AI Science & Research');
   assert.equal(categorySaveRequests[1].is_active, false);
@@ -382,6 +386,9 @@ try {
   await createForm.locator('[name="timeZone"]').fill('America/Jamaica');
   await createForm.locator('[name="languages"]').fill('en-JM, ht');
   await createForm.locator('[name="emailAddress"]').fill('nia@example.test');
+  assert.equal(await createForm.locator('[name="firstName"]').inputValue(), 'Nia', 'Identity name inputs must remain filled after category refresh.');
+  assert.equal(await createForm.locator('[name="lastName"]').inputValue(), 'Campbell', 'Identity surname input must remain filled after category refresh.');
+  assert.equal(await createForm.locator('[name="username"]').inputValue(), 'nia_campbell', 'Identity username must remain filled after category refresh.');
   await createForm.locator('button[type="submit"]').click();
   try {
     await page.getByText('AI identity record saved in Minglora Supabase.').waitFor({ state: 'visible', timeout: 8000 });
