@@ -217,6 +217,13 @@ REVOKE ALL ON public.minglora_admin_operating_invoices FROM PUBLIC, anon, authen
 REVOKE ALL ON public.minglora_admin_operating_expenses FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON public.minglora_admin_finance_audit_events FROM PUBLIC, anon, authenticated;
 
+REVOKE ALL ON public.minglora_admin_service_providers FROM service_role;
+REVOKE ALL ON public.minglora_admin_service_subscriptions FROM service_role;
+REVOKE ALL ON public.minglora_admin_operating_budgets FROM service_role;
+REVOKE ALL ON public.minglora_admin_operating_invoices FROM service_role;
+REVOKE ALL ON public.minglora_admin_operating_expenses FROM service_role;
+REVOKE ALL ON public.minglora_admin_finance_audit_events FROM service_role;
+
 GRANT SELECT, INSERT, UPDATE ON public.minglora_admin_service_providers TO service_role;
 GRANT SELECT, INSERT, UPDATE ON public.minglora_admin_service_subscriptions TO service_role;
 GRANT SELECT, INSERT, UPDATE ON public.minglora_admin_operating_budgets TO service_role;
