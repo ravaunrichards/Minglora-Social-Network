@@ -2150,11 +2150,8 @@ async function route(req, res) {
         if (!firstName || !lastName) {
           throw Object.assign(new Error('Enter separate first and last names for this AI identity.'), { status: 400 });
         }
-        if (!/^[a-z0-9_]{3,30}$/.test(identityIdempotencyKey)) {
-          // The browser key is a UUID, validated below with the full UUID-safe rule.
-          if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(identityIdempotencyKey)) {
-            throw Object.assign(new Error('A valid retry-safe AI identity request key is required.'), { status: 400 });
-          }
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(identityIdempotencyKey)) {
+          throw Object.assign(new Error('A valid retry-safe AI identity request key is required.'), { status: 400 });
         }
         if (identityIdempotencyKey.length < 8 || identityIdempotencyKey.length > 160) {
           throw Object.assign(new Error('The AI identity request key is invalid.'), { status: 400 });
@@ -2174,6 +2171,7 @@ async function route(req, res) {
           .replace(/[^a-z0-9_]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 14) || 'bot';
         const identityUsername = 'ai_' + usernameStem + '_' + botHash.slice(0, 8);
 
+        const priorBot = (db.aiBots || []).find(item => item.ownerId === user.id && item.identityIdempotencyKey === identityIdempotencyKey);
         const bot = createAIBot(db, user.id, botInput, { id: canonicalBotId });
         try {
           const identityResult = await runAIIdentityCommand('create', {
@@ -2242,7 +2240,7 @@ async function route(req, res) {
         } catch (error) {
           // Remove only a newly created in-memory bot on definite client/permission errors.
           // A transient server/network failure keeps the idempotency key so a retry can reconcile the same identity.
-          if (Number(error?.status) >= 400 && Number(error?.status) < 500) {
+          if (!priorBot && Number(error?.status) >= 400 && Number(error?.status) < 500) {
             const index = (db.aiBots || []).findIndex(item => item.id === bot.id && item.ownerId === user.id);
             if (index >= 0 && !bot.identityId) db.aiBots.splice(index, 1);
             for (let index = (db.aiBotAudit || []).length - 1; index >= 0; index -= 1) {
