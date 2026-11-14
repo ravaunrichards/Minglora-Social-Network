@@ -141,6 +141,9 @@ begin
     v_long_retention := coalesce(nullif(v_payload->>'long_term_retention_days','')::integer, v_long_retention);
     v_max_entries := coalesce(nullif(v_payload->>'max_entries','')::integer, v_max_entries);
 
+    if not v_memory_enabled then
+      v_long_term_enabled := false;
+    end if;
     if v_short_retention not between 1 and 90
       or v_long_retention not between 30 and 3650
       or v_max_entries not between 1 and 5000 then
@@ -175,6 +178,11 @@ begin
           end,
           updated_at = now()
       where ai_network.ai_memory_settings.owner_user_id = p_actor_user_id;
+
+    if not found then
+      raise exception using errcode = '42501',
+        message = 'AI memory settings are not owned by the signed-in Minglora user.';
+    end if;
 
     if not v_memory_enabled then
       delete from ai_network.ai_memory_entries
