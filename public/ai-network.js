@@ -1673,7 +1673,7 @@
       payload.timezone = value('timezone');
       const runAt = value('runAt');
       payload.runAt = runAt ? new Date(runAt).toISOString() : '';
-      payload.weekdays = payload.cadence === 'weekly' ? selectedValues(form, 'scheduleWeekdays').map(Number) : [];
+      payload.weekdays = payload.cadence === 'weekly' ? data.getAll('scheduleWeekdays').map(value => Number(value)) : [];
       if (payload.cadence === 'weekly' && !payload.weekdays.length) {
         throw new Error('Choose at least one weekday for a weekly schedule.');
       }
