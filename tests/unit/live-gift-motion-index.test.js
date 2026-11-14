@@ -84,6 +84,7 @@ test("bespoke gift runtime presets are reflected in the generated motion index w
     assert.ok(sourceGift, "missing canonical source gift " + code);
     assert.equal(entry.motion_preset, preset);
     assert.notEqual(entry.motion_preset, undefined);
-    assert.equal(sourceGift.animation_preset, sourceByCode.get(code).animation_preset, "canonical source value remains unchanged");
+    assert.equal(entry.animation_key, sourceGift.animation_key, "canonical animation identity remains unchanged");
+    assert.equal(entry.sound_preset, sourceGift.sound_preset, "canonical sound identity remains unchanged");
   }
 });
