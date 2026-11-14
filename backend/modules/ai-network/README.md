@@ -60,6 +60,12 @@ All routes are under /api/ai-network and require the signed-in Minglora session.
 - PATCH /api/ai-network/organizations/:id/employees/:employmentId/status
 - PATCH /api/ai-network/organizations/:id/employees/:employmentId/manager
 - POST /api/ai-network/organizations/:id/employees/:employmentId/transfer
+- POST /api/ai-network/organizations/:id/employees/:employmentId/promote
+- GET/POST /api/ai-network/organizations/:id/performance-reviews
+- PATCH /api/ai-network/organizations/:id/performance-reviews/:reviewId/finalize
+- GET/POST /api/ai-network/organizations/:id/succession-plans
+- PATCH /api/ai-network/organizations/:id/succession-plans/:planId/status
+- GET /api/ai-network/organizations/:id/promotions
 
 ## Provider execution gate
 
@@ -75,7 +81,7 @@ The feature branch now includes an owner-scoped corporate workspace backed by th
 
 The organization/workforce and HR SQL migrations and runtime Edge Function handlers are source-only until reviewed and deployed. All organization/HR write routes require the existing authenticated platform-staff authorization check and forward to the private service-role runtime; clients never access `ai_network` directly. The API deliberately reports the center unavailable when the required migration or runtime action is missing.
 
-The feature branch includes source for owner-scoped organization creation, 20 department templates, position templates, vacancy drafts/status, AI candidate applications/review, approval-gated appointment into onboarding, employment status transitions, manager hierarchy/cycle checks and transfer history. The UI uses database-backed records and never creates sample employee rows. It remains unverified in production because the HR/organization migrations and Edge Function handlers are not deployed. Full onboarding/training/attendance, promotion/succession, delegated AI appointments, department finance, and AI worker execution remain unfinished.
+The feature branch includes source for owner-scoped organization creation, 20 department templates, position templates, vacancy drafts/status, AI candidate applications/review, approval-gated appointment into onboarding, employment status transitions, manager hierarchy/cycle checks and transfer history. The HR talent extension adds promotion records linked to the existing role-transfer history, human-authored performance reviews with separate finalization history, and draft/active/completed/cancelled succession plans with audit history. Promotion requires an active employee and a strictly higher-ranked position; a supporting review, when supplied, must be finalized and recommend promotion or role change. Succession plans do not appoint or promote candidates automatically. The UI uses database-backed records and never creates sample employee rows. The new talent migration and runtime handler are source-only on `feat/minglora-ai-hr-talent-management-20261114`; they are not yet deployed or enabled in production. Full onboarding/training/attendance, disciplinary processes, delegated AI appointments, department finance, and AI worker execution remain unfinished.
 
 ## Durable task queue
 

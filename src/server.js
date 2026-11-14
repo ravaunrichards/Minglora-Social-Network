@@ -1962,6 +1962,38 @@ async function route(req, res) {
         }
       };
 
+      const runAIHRTalentCommand = async (aiAction, payload = {}) => {
+        if (!isModerator(user, req)) {
+          throw Object.assign(
+            new Error('Only an authorized Minglora platform administrator with the required active session can manage AI HR talent records.'),
+            { status: 403 }
+          );
+        }
+        if (!isSupabasePersistence()) {
+          throw Object.assign(new Error('AI HR talent records require Minglora Supabase persistence.'), { status: 503 });
+        }
+        try {
+          const response = await requestSupabaseState('ai_hr_talent_command', {
+            actorUserId: user.id,
+            aiAction,
+            payload
+          });
+          if (response?.skipped) {
+            throw Object.assign(new Error('AI HR talent records are unavailable in local-only persistence mode.'), { status: 503 });
+          }
+          return response?.result;
+        } catch (error) {
+          const message = String(error?.message || '');
+          if (/unsupported action|unsupported AI HR talent command|function .*minglora_ai_hr_talent_command.*does not exist|could not find the function|schema cache/i.test(message)) {
+            throw Object.assign(
+              new Error('The AI HR talent migration and private runtime gateway must be deployed before this operation is available. No HR talent data was changed.'),
+              { status: 503 }
+            );
+          }
+          throw error;
+        }
+      };
+
       const runAITeamCommand = async (aiAction, payload = {}) => {
         const adminOnly = [
           'create_delegation_grant','list_delegation_grants','revoke_delegation_grant',
@@ -2305,13 +2337,72 @@ async function route(req, res) {
           } else if (resource === 'employees' && action === 'transfer' && method === 'POST') {
             command = 'transfer_employee';
             input.employment_id = recordId;
+          } else if (resource === 'employees' && action === 'promote' && method === 'POST') {
+            command = 'promote_employee';
+            input.employment_id = recordId;
           }
           if (command) {
-            const result = await runAIHRCommand(command, input);
+            const result = command === 'promote_employee'
+              ? await runAIHRTalentCommand(command, input)
+              : await runAIHRCommand(command, input);
             return json(res, 200, result || {});
           }
         }
       }
+      if (parts[0] === 'organizations' && parts.length >= 3 &&
+          ['performance-reviews', 'succession-plans', 'promotions'].includes(parts[2])) {
+        const organizationId = parts[1];
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(organizationId)) {
+          throw Object.assign(new Error('A valid organization ID is required.'), { status: 400 });
+        }
+        const resource = parts[2];
+        const basePayload = { organization_id: organizationId };
+        const readTalentBody = async () => {
+          const input = await body(req, 24000);
+          if (!input || typeof input !== 'object' || Array.isArray(input)) {
+            throw Object.assign(new Error('AI HR talent input must be a JSON object.'), { status: 400 });
+          }
+          return { ...basePayload, ...input, organization_id: organizationId };
+        };
+        if (parts.length === 3 && method === 'GET') {
+          const command = resource === 'performance-reviews' ? 'list_performance_reviews'
+            : resource === 'succession-plans' ? 'list_succession_plans' : 'list_promotions';
+          const result = await runAIHRTalentCommand(command, basePayload);
+          const key = resource === 'performance-reviews' ? 'performance_reviews'
+            : resource === 'succession-plans' ? 'succession_plans' : 'promotions';
+          return json(res, 200, { [key]: Array.isArray(result) ? result : [] });
+        }
+        if (parts.length === 3 && method === 'POST' &&
+            ['performance-reviews', 'succession-plans'].includes(resource)) {
+          const input = await readTalentBody();
+          const command = resource === 'performance-reviews' ? 'create_performance_review' : 'create_succession_plan';
+          const result = await runAIHRTalentCommand(command, input);
+          return json(res, result?.reused ? 200 : 201, result || {});
+        }
+        if (parts.length === 5 && parts[4] === 'finalize' &&
+            resource === 'performance-reviews' && method === 'PATCH') {
+          const reviewId = parts[3];
+          if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(reviewId)) {
+            throw Object.assign(new Error('A valid performance review ID is required.'), { status: 400 });
+          }
+          const input = await readTalentBody();
+          input.review_id = reviewId;
+          const result = await runAIHRTalentCommand('finalize_performance_review', input);
+          return json(res, 200, result || {});
+        }
+        if (parts.length === 5 && parts[4] === 'status' &&
+            resource === 'succession-plans' && method === 'PATCH') {
+          const planId = parts[3];
+          if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(planId)) {
+            throw Object.assign(new Error('A valid succession plan ID is required.'), { status: 400 });
+          }
+          const input = await readTalentBody();
+          input.plan_id = planId;
+          const result = await runAIHRTalentCommand('update_succession_plan', input);
+          return json(res, 200, result || {});
+        }
+      }
+
       if (method === 'GET' && !sub) {
         const snapshot = getAICommandCenter(db, user.id, { providerStatus });
         if (isSupabasePersistence()) {

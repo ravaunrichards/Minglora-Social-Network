@@ -377,3 +377,14 @@ Canonical release: Minglora only; main `b60ef07bd5307239fd543099170c9fca7cd31e1b
 - Benchmarks for identity registration, queries, failover/recovery and simultaneous execution.
 - Separate registered identity count from concurrent execution capacity.
 **Acceptance:** documented load-test evidence and infrastructure limits; no 10-billion claim before measured proof.
+
+
+## HR talent management extension checkpoint — 2026-11-14
+
+- Work continues only in `feat/minglora-ai-hr-talent-management-20261114`, branched from the then-current `main`; existing production tables and runtime controls were not changed.
+- Added the additive migration `supabase/migrations/20261114150000_minglora_ai_hr_talent_management.sql` defining private/RLS-enabled performance review, review history, succession plan, succession history and promotion tables plus the service-role-only `minglora_ai_hr_talent_command` RPC.
+- Added the private Edge Function allowlist/handler, admin-only server API routes and Minglora HR UI reads/forms for performance reviews, promotion, succession planning and audit-backed status changes.
+- Promotion reuses the existing transfer transaction/history and requires an active employee moving to a strictly higher hierarchy level. Optional supporting reviews must be finalized and explicitly recommend promotion/role change. Performance reviews are human-authored, scored 1–5 and finalized through a separate audited transition. Succession plans are planning records only; they never appoint or promote anyone automatically.
+- Added `tests/unit/ai-network-hr-talent.test.js` for schema/RLS/RPC, actor/organization scope, promotion invariants, succession behavior, runtime allowlisting, server routing and UI wiring. Automated CI has not yet been run for this branch; these checks are pending workflow verification.
+- This is source completion only. The branch has not been merged, the new migration has not been applied to Supabase, the updated `minglora-runtime-state` Edge Function has not been deployed, and no Render deployment has been verified. No AI identity, employee, review, promotion, succession or human Auth rows were inserted.
+- Task 7 remains **PARTIAL** pending successful CI, production migration/function deployment, and signed-in owner HTTP/browser/device acceptance. Existing worker execution remains paused (`global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0)); no worker activation or delegated AI appointment authority is introduced by this extension.
