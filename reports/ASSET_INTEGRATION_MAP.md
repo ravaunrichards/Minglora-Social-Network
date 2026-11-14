@@ -190,3 +190,8 @@ No new catalogue row, database gift offering, Coin-price change, wallet/ledger e
 | Cache | HTML and service worker use `gift-effects.js?v=20261114-beach-maracas-rhythm-1`; shell cache advances to v312. |
 
 No catalogue record, Coin value, wallet, transaction, payout or database offer is changed. Rights/art approval and physical-device QA remain open.
+
+
+## Bespoke gift motion-index routing — 2026-11-14
+
+`scripts/generate-live-gift-motion-index.mjs` now includes an exact gift-code-to-runtime-preset map for Djembe Master, Palm Breeze, Gamer Otter, LIVE Island, Crystal Crown, Phoenix and Beach Maracas. This makes the generated `catalog-motion-index.json` and asset manifest carry the same preset IDs as the runtime's exact-code overrides. The catalogue's canonical animation and sound identifiers remain unchanged. Unit tests assert generated index and manifest parity.
