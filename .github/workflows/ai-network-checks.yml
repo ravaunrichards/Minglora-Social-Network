@@ -34,6 +34,27 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '24'
+      - name: Set up Deno 2.9.8
+        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
+        with:
+          deno-version: '2.9.8'
+          cache: true
+      - name: Parse and transpile Supabase runtime Edge Function TypeScript
+        run: |
+          deno eval --no-check --node-modules-dir=auto '
+          import ts from "npm:typescript@5.9.3";
+          const source = await Deno.readTextFile("supabase/functions/minglora-runtime-state/index.ts");
+          const result = ts.transpileModule(source, {
+            reportDiagnostics: true,
+            compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 }
+          });
+          const errors = (result.diagnostics ?? []).filter(d => d.category === ts.DiagnosticCategory.Error);
+          if (errors.length) {
+            for (const error of errors) console.error(ts.flattenDiagnosticMessageText(error.messageText, "\\n"));
+            Deno.exit(1);
+          }
+          console.log("Supabase runtime Edge Function TypeScript parse/transpile passed.");
+          '
       - name: Check backend JavaScript syntax
         run: node --check src/server.js
       - name: Check AI workspace JavaScript syntax

@@ -23,8 +23,8 @@ test('Minglora AI Network is a restorable first-party destination, separate from
   assert.ok(html.includes('data-view="ai-network"'));
   assert.ok(html.includes('Minglora AI Network'));
   assert.ok(html.includes('href="https://www.meta.ai/"'));
-  assert.ok(html.includes('/ai-network.css?v=20261114-ai-network-integration-1'));
-  assert.ok(html.includes('/ai-network.js?v=20261114-ai-network-integration-1'));
+  assert.ok(html.includes('/ai-network.css?v=20261114-ai-network-integration-2'));
+  assert.ok(html.includes('/ai-network.js?v=20261114-ai-network-integration-2'));
 });
 
 test('Minglora main menu includes a separate AI Network route', () => {
@@ -37,13 +37,13 @@ test('AI Network script and styles are precached with matching asset versions', 
   const appAsset = html.match(/app\.js\?v=[^"']+/)?.[0] || '';
   const menuAsset = html.match(/minglora-menu\.js\?v=[^"']+/)?.[0] || '';
   const cacheName = sw.match(/CACHE_NAME='([^']+)'/)?.[1] || '';
-  assert.equal(appAsset, 'app.js?v=20261114-ai-network-integration-1');
+  assert.equal(appAsset, 'app.js?v=20261114-ai-network-integration-2');
   assert.equal(menuAsset, 'minglora-menu.js?v=20261114-ai-network-integration-1');
   assert.ok(sw.includes('/' + appAsset));
   assert.ok(sw.includes('/' + menuAsset));
-  assert.ok(sw.includes('/ai-network.js?v=20261114-ai-network-integration-1'));
-  assert.ok(sw.includes('/ai-network.css?v=20261114-ai-network-integration-1'));
-  assert.equal(cacheName, 'minglora-shell-v302-self-updating-1');
+  assert.ok(sw.includes('/ai-network.js?v=20261114-ai-network-integration-2'));
+  assert.ok(sw.includes('/ai-network.css?v=20261114-ai-network-integration-2'));
+  assert.equal(cacheName, 'minglora-shell-v303-self-updating-1');
 });
 
 test('AI Network workspace exposes all ten recommendations and true measured/empty states', () => {
