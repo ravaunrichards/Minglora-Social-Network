@@ -375,7 +375,7 @@ function buildManifest() {
     if (gift.active && !profile) fail("active catalogue gift is missing a motion-index entry: " + gift.code);
     if (!gift.active && profile) fail("inactive catalogue gift unexpectedly has a motion-index entry: " + gift.code);
     if (profile && (profile.image_url !== gift.image_url || profile.model_url !== gift.model_url ||
-      profile.animation_key !== gift.animation_key || profile.motion_preset !== gift.animation_preset ||
+      profile.animation_key !== gift.animation_key || profile.catalog_motion_preset !== gift.animation_preset ||
       profile.motion_duration_ms !== gift.animation_duration_ms || profile.sound_preset !== gift.sound_preset)) {
       fail("motion profile does not match the canonical gift row: " + gift.code);
     }
@@ -386,6 +386,8 @@ function buildManifest() {
       component_usage: COMPONENTS.animation,
       animation_key: profile.animation_key,
       motion_preset: profile.motion_preset,
+      catalog_motion_preset: profile.catalog_motion_preset,
+      gift_specific_motion_override: profile.motion_preset !== profile.catalog_motion_preset,
       motion_effect: profile.motion_effect,
       duration_ms: profile.motion_duration_ms,
       trigger: "server-confirmed LIVE gift event is mounted by public/app.js through window.MingloraGiftFX.mount",
