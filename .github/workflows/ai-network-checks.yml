@@ -1,0 +1,41 @@
+name: Minglora AI Network checks
+
+on:
+  push:
+    branches:
+      - feat/minglora-ai-bot-network-current-main
+  pull_request:
+    paths:
+      - 'backend/modules/ai-network/**'
+      - 'public/ai-network.*'
+      - 'src/server.js'
+      - 'supabase/functions/minglora-runtime-state/**'
+      - 'supabase/migrations/*ai_identity*'
+      - 'supabase/migrations/*ai_corporate*'
+      - 'supabase/migrations/*ai_hr*'
+      - 'supabase/migrations/*ai_provider*'
+      - 'supabase/migrations/*ai_task*'
+      - 'tests/unit/ai-network*.test.js'
+      - '.github/workflows/ai-network-checks.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  ai-network:
+    name: AI Network syntax and regression tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out Minglora
+        uses: actions/checkout@v4
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Check backend JavaScript syntax
+        run: node --check src/server.js
+      - name: Check AI workspace JavaScript syntax
+        run: node --check public/ai-network.js
+      - name: Run AI Network unit tests
+        run: node --test tests/unit/ai-network*.test.js
