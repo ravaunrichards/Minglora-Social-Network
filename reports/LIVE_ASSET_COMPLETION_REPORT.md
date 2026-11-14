@@ -74,3 +74,15 @@ This is a continuation checkpoint against the current `main` repository. The old
 ## SVG artwork checkpoint — 2026-11-14
 
 The glyph overlay and unused emoji lookup were removed from `scripts/generate-minglora-gifts.mjs`. Existing vector forms, decorative backgrounds, gift labels and catalogue identifiers are preserved. Three additional named vector branches were added for Hibiscus, DJ Headphone and Four Leaf Clover. The remaining category-level artwork still needs per-gift art direction, human review and rights review; this checkpoint is not a premium-production completion claim.
+
+## Transparent gift-icon implementation checkpoint — 2026-11-14
+
+- [x] Added generator output for one separate transparent-background SVG icon per catalogue gift and 18 category SVG icons.
+- [x] Preserved the full labelled poster SVG and 3D GLTF path for large gift previews.
+- [x] Wired Gift Studio category chips and cards to generated SVG icons with accessible text error fallback.
+- [x] Wired LIVE gift-grid cards to generated per-gift SVG icons; selected preview still supports the full poster/3D model.
+- [x] Added versioned service-worker cache references for updated JS/CSS and pre-cached the 18 category icons; per-gift icons remain lazy-loaded.
+- [x] Added manifest fields for actual icon file size, SHA-256, dimensions, structural transparency and review/licensing state.
+- [x] Added regression tests for gift icon generation, category icon generation, manifest checksums and frontend references.
+
+**Validation status:** implementation and test changes are committed on the feature branch. CI is still required to verify all 1,748 generated gift icons and 18 category icons on the repository's Node 24 environment. Do not count the generated files as production-verified until that run passes.

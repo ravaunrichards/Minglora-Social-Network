@@ -18,3 +18,7 @@ Track asset identifier, relative path, source, license, content type, dimensions
 - Scanned roots: reference screenshots, gift captures, guest layouts, gifter badges, League captures and extracted artwork.
 - The audit is read-only and records raster-header dimensions, format, orientation, size and SHA-256 plus encoded alpha/transparency/animation declarations.
 - It does not decode pixel alpha, apply EXIF orientation, establish image quality, or grant production/licensing approval. CI uploads the outputs for inspection.
+
+## Transparent vector icons
+
+The generator also emits `<code>-icon.svg` for every catalogue gift and 18 files under `public/assets/gifts/categories/`. Each gift record includes `icon`, `icon_url` and a thumbnail record pointing to the icon. The `shared_assets.category_icons` array inventories category icons. The manifest validates file sizes, SHA-256 hashes, SVG dimensions and the structural absence of the poster's full-canvas background. The icons are vector presentation assets and are not a certification of premium 3D artwork, licensing clearance or physical-device compatibility.

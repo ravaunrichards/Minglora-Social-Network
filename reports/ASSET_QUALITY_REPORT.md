@@ -51,3 +51,7 @@ The gift generator no longer emits a system-font emoji overlay or uses the unuse
 ## Per-source raster metadata
 
 The LIVE workflow includes a built-in read-only metadata scanner for supplied Android/desktop screenshots, gift captures, guest-layout diagrams, badge and League references, and extracted artwork crops. It emits per-file dimensions, detected format, orientation, size and SHA-256 plus encoded alpha/transparency/animation declarations. It does not scan decoded pixel alpha, apply EXIF orientation, or perform visual, rights or production approval. CI publishes the generated JSON and Markdown audit as an artifact; inspect that artifact before treating any source image's dimensions or transparency as verified.
+
+## Transparent vector gift icon pack
+
+A separate SVG icon is generated for every catalogue gift, along with 18 category icons. The vector icon output removes the poster's full-canvas backplate and label while preserving the subject geometry. These icons replace emoji-based category labels and full poster images inside the compact gift grids. They remain generated category/name vector art, not photorealistic 3D models. Human visual review, rights clearance and individualized premium art direction remain required; physical-device QA is still pending.

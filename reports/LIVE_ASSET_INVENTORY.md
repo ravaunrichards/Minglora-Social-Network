@@ -55,3 +55,13 @@ The nine files in `assets/Guests Layout/` map to seven host-selectable screen la
 ## Asset types not found as complete production libraries
 
 The inspected `assets/animations/` directory had only a README before this branch. The existing app animation implementation is JavaScript/CSS/Web Animations; no populated Lottie or Rive collection was found there. No gift GLTF animation channels, KTX2 texture pack or per-gift recorded audio pack were verified. Do not imply these formats or packs are complete.
+
+## Generated transparent vector icon pack — 2026-11-14
+
+The build-time gift generator now creates the following files in addition to the original labelled poster and GLTF assets:
+
+- 1,748 per-gift SVG icons at `public/assets/gifts/catalog/<code>-icon.svg`.
+- 18 category SVG icons at `public/assets/gifts/categories/<category>.svg`.
+- A version-3 catalogue build stamp that records separate poster, gift-icon, category-icon and GLTF counts.
+
+The separate icon SVGs omit the poster's full-canvas background rectangle and poster label. This is a structural SVG transparency check; it does not claim pixel-alpha auditing of raster artwork, premium 3D quality, or human licensing approval. CI is responsible for producing and verifying the generated files before they are called complete.

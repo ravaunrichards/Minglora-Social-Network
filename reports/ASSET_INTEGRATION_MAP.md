@@ -30,3 +30,12 @@ No prices, balances, transactions, account state, LiveKit credentials, or existi
 - `npm run build:live-asset-manifest -- --check` verifies the output is current and deterministic. The generated manifest is ignored as a build artifact and uploaded by CI as `minglora-live-asset-manifest-<run-number>`.
 - The manifest marks generated category-vector SVGs as awaiting human review, procedural GLTFs, synthesized category sound and unverified physical-device support as limitations. The model-load error fallback is implemented; the generator records it as available. It does not grant production approval or rights clearance.
 - The SVG generator no longer includes system-font emoji glyph overlays; the per-gift manifest and catalogue tests enforce a zero-overlay count. Existing vector forms and gift labels are preserved.
+
+## Transparent gift and category icon integration
+
+- `scripts/generate-minglora-gifts.mjs` creates a `<code>-icon.svg` vector icon for each catalogue item and 18 category icons under `public/assets/gifts/categories/`.
+- Gift Studio category chips load their SVG category icons; gift cards load each gift's icon. The full labelled artwork remains available for selected-gift previews.
+- The LIVE gift picker uses the per-gift transparent vector icon in the grid and retains the original large poster/3D model in the selected preview.
+- Broken icon requests are replaced with readable text status rather than an emoji placeholder.
+- Service-worker shell precaches only the 18 small category icons. Per-gift icons are loaded lazily and cached on demand.
+- The machine-readable manifest records per-gift icon metadata and category icon file sizes, SHA-256 hashes, dimensions, structural transparency, component use and review status.
