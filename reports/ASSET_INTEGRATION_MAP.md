@@ -112,3 +112,12 @@ No prices, balances, transactions, account state, LiveKit credentials, or existi
 - Unrecognized gifts continue through the prior category/seed-based oscillator synthesis, with no remote audio request or new third-party dependency.
 - `scripts/generate-minglora-live-asset-manifest.mjs` adds design IDs and synthesized-layer provenance for those two records. The manifest explicitly does not claim a mastered audio file: `audio_file` is null and the mastered file count is zero.
 - PR #341 (`81764826f74975ac17bd9f9e1c67c0fc72527216`) merged after full CI and LIVE/MeetWave visual QA passed. Cross-device audio latency/mixing and human audio review are still not complete.
+
+
+## Djembe and Palm Breeze visual choreography integration — 2026-11-14
+
+- `public/gift-effects.js` now selects `djembe-strike` for `djembe-master-1v3jzkm` and `palm-canopy-sway` for `palm-breeze-gknyt0` at the visual model/image animation trigger.
+- Djembe keyframes create a compact strike/recoil/settle sequence. Palm Breeze keyframes create a gentle alternating canopy sway. Other gifts continue through the pre-existing category/gift motion presets.
+- Visual choreography, corresponding synthesized Web Audio, existing duration clamping, `sound:false` opt-out and reduced-motion handling share the original LIVE gift effect lifecycle; no second animation runtime was introduced.
+- PR #342 merged as `ab2939e27378d8f02a8dd1a92172105463d6dbd4`; full tests and Chromium layout QA passed before merge.
+- These are runtime Web Animations only. GLTF animation channels, Rive/Lottie libraries, recorded video/sprite fallback assets and physical-device validation remain outstanding.
