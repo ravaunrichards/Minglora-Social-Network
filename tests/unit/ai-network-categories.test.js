@@ -26,7 +26,7 @@ test('category administration uses private service-role-only RPC and audit table
 test('category keys stay stable and categories are deactivated rather than deleted', () => {
   assert.match(migration, /category_key text not null references ai_network\.ai_categories\(category_key\).*on delete restrict/i);
   assert.match(migration, /At least one AI category must remain active/i);
-  assert.match(migration, /category_key !~ '\^\[a-z\]\[a-z0-9_\]\{1,63\}\
+  assert.ok(migration.includes("if v_category_key !~ '^[a-z][a-z0-9_]{1,63}" + String.fromCharCode(36) + "' then"), 'Category key regex and validation terminator must be complete.');
   assert.doesNotMatch(migration, /delete\s+from\s+ai_network\.ai_categories/i);
   assert.match(ui, /Category keys remain stable because existing AI identities reference them/i);
 });
