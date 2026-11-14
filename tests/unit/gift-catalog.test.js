@@ -244,6 +244,27 @@ test("Hibiscus uses an individually authored layered tropical-flower GLTF sculpt
 });
 
 
+test("Palm Breeze uses a bespoke tropical tree and island GLTF sculpture", () => {
+  const palm = gifts.find(gift => gift.code === "palm-breeze-gknyt0");
+  assert.ok(palm, "Palm Breeze must remain in the canonical gift catalogue");
+  assert.equal(palm.category, "nature");
+  const model = JSON.parse(readFileSync(path.join(assetRoot, palm.code + ".gltf"), "utf8"));
+  assert.equal(model.asset?.version, "2.0");
+  assert.equal(model.asset?.extras?.mingloraAssetId, "gift-palm-breeze-3d-v1");
+  assert.equal(model.asset?.extras?.source, "assets/3d-assets/gift-models/palm-breeze-model.mjs");
+  assert.match(model.asset?.extras?.artDirection || "", /eight radial pinnate fronds.*three young coconuts/i);
+  assert.match(model.asset?.extras?.reviewStatus || "", /design-review-pending/);
+  assert.ok(model.meshes?.[0]?.primitives?.length >= 40, "Palm Breeze should expose trunk, root, grouped frond, coconut and island meshes");
+  assert.ok(model.materials?.some(material => material.name.includes("Palm curved fibrous trunk")));
+  assert.ok(model.materials?.some(material => material.name.includes("Palm frond leaflets")));
+  assert.ok(model.materials?.some(material => material.name.includes("Palm coconut husk")));
+  assert.ok(model.materials?.some(material => material.name.includes("Palm island turquoise waterline")));
+  assert.ok(model.buffers?.[0]?.uri.startsWith("data:application/octet-stream;base64,"), "Palm Breeze must be self-contained for the existing model viewer");
+  assert.ok(model.accessors?.filter(accessor => accessor.type === "VEC3").length >= 80, "Palm Breeze must expose mesh positions and normals");
+  const svg = readFileSync(path.join(assetRoot, palm.code + ".svg"), "utf8");
+  assert.ok(svg.includes('data-gift-artwork="palm-breeze-original-v1"'), "Palm Breeze should use subject-specific transparent vector artwork");
+});
+
 test("Djembe Master uses an individually authored, self-contained percussion-instrument GLTF", () => {
   const djembe = gifts.find(gift => gift.code === "djembe-master-1v3jzkm");
   assert.ok(djembe, "Djembe Master must remain in the canonical gift catalogue");
