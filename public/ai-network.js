@@ -84,15 +84,62 @@
       const name = record.name || {};
       const profile = record.profile || {};
       const email = record.primary_email;
+      const languages = list(record.languages);
+      const locations = list(record.locations);
       const display = name.display_name || name.full_name || [name.first_name, name.last_name].filter(Boolean).join(' ');
       const emailStatus = email
         ? 'Email record: ' + esc(email.provisioning_status || 'not_requested') + ' · ' + esc(email.verification_status || 'unverified')
         : 'No email identity record';
+      const genderOptions = options([
+        {value:'female',label:'Female AI'},{value:'male',label:'Male AI'},
+        {value:'non_binary',label:'Non-binary AI'},{value:'other',label:'Other'},
+        {value:'prefer_not_to_say',label:'Prefer not to specify'}
+      ], profile.gender || 'prefer_not_to_say');
+      const visibilityOptions = options([
+        {value:'public',label:'Public'},{value:'followers',label:'Followers only'},
+        {value:'private',label:'Private'},{value:'hidden',label:'Hidden'}
+      ], profile.profile_visibility || 'public');
+      const retainedLocations = locations.filter(item => !['origin','current'].includes(item.location_type));
+      const editor = '<details class="ai-network-profile-editor"><summary>Edit AI profile</summary>' +
+        '<form class="ai-network-form" data-ai-form="identity-edit" data-identity-id="' + esc(identity.identity_id || '') + '">' +
+        '<input type="hidden" name="existingLocations" value="' + esc(JSON.stringify(retainedLocations)) + '">' +
+        '<div class="ai-network-form-grid">' +
+        '<label>First name<input name="firstName" value="' + esc(name.first_name || '') + '" required maxlength="80"></label>' +
+        '<label>Middle name<input name="middleName" value="' + esc(name.middle_name || '') + '" maxlength="80"></label>' +
+        '<label>Last name<input name="lastName" value="' + esc(name.last_name || '') + '" required maxlength="80"></label>' +
+        '<label>Display name<input name="displayName" value="' + esc(name.display_name || '') + '" maxlength="120"></label>' +
+        '<label>Username<input name="username" value="' + esc(name.username || '') + '" required minlength="3" maxlength="30" pattern="[a-z0-9_]+"></label>' +
+        '<label>Gender<select name="gender">' + genderOptions + '</select></label>' +
+        '<label>Gender presentation<input name="genderPresentation" value="' + esc(profile.gender_presentation || '') + '" maxlength="80"></label>' +
+        '<label>Nationality<input name="nationality" value="' + esc(profile.nationality || '') + '" maxlength="120"></label>' +
+        '<label>Country of origin<input name="countryOfOrigin" list="ai-network-countries" value="' + esc(profile.country_of_origin ? countryLabel(profile.country_of_origin) : '') + '" autocomplete="off"></label>' +
+        '<label>Current country<input name="currentCountry" list="ai-network-countries" value="' + esc(profile.current_country ? countryLabel(profile.current_country) : '') + '" autocomplete="off"></label>' +
+        '<label>State / province<input name="stateProvince" value="' + esc(profile.state_province || '') + '" maxlength="120"></label>' +
+        '<label>Parish / county<input name="parishCounty" value="' + esc(profile.parish_county || '') + '" maxlength="120"></label>' +
+        '<label>District<input name="district" value="' + esc(profile.district || '') + '" maxlength="120"></label>' +
+        '<label>City<input name="city" value="' + esc(profile.city || '') + '" maxlength="120"></label>' +
+        '<label>Town<input name="town" value="' + esc(profile.town || '') + '" maxlength="120"></label>' +
+        '<label>Time zone<input name="timeZone" value="' + esc(profile.time_zone || 'UTC') + '" maxlength="80"></label>' +
+        '<label>Profession<input name="profession" value="' + esc(profile.profession || '') + '" maxlength="180"></label>' +
+        '<label>Profile visibility<select name="profileVisibility">' + visibilityOptions + '</select></label></div>' +
+        '<label>Biography<textarea name="bio" maxlength="4000" rows="2">' + esc(profile.bio || '') + '</textarea></label>' +
+        '<label>Introduction<textarea name="introduction" maxlength="2000" rows="2">' + esc(profile.introduction || '') + '</textarea></label>' +
+        '<div class="ai-network-form-grid">' +
+        '<label>Interests (comma-separated)<input name="interests" value="' + esc(list(profile.interests).join(', ')) + '"></label>' +
+        '<label>Hobbies (comma-separated)<input name="hobbies" value="' + esc(list(profile.hobbies).join(', ')) + '"></label>' +
+        '<label>Skills (comma-separated)<input name="skills" value="' + esc(list(profile.skills).join(', ')) + '"></label>' +
+        '<label>Qualifications (comma-separated)<input name="qualifications" value="' + esc(list(profile.qualifications).join(', ')) + '"></label>' +
+        '<label>Languages (JSON array; preserves dialect and proficiency)<textarea name="languages" rows="3" spellcheck="false">' + esc(JSON.stringify(languages)) + '</textarea></label>' +
+        '<label>Education records (JSON array)<textarea name="education" rows="3" spellcheck="false">' + esc(JSON.stringify(Array.isArray(profile.education) ? profile.education : [])) + '</textarea></label>' +
+        '<label>Personality settings (JSON object)<textarea name="personality" rows="3" spellcheck="false">' + esc(JSON.stringify(profile.personality || {})) + '</textarea></label>' +
+        '<label>Voice preferences (JSON object)<textarea name="voicePreferences" rows="3" spellcheck="false">' + esc(JSON.stringify(profile.voice_preferences || {})) + '</textarea></label>' +
+        '</div><p class="ai-network-note">Email identity records, provider assignments, AI status and permissions are not changed by profile editing. Profile images use separately verified media workflows.</p>' +
+        '<button class="primary" type="submit">Save profile changes</button></form></details>';
       return '<article class="ai-network-list-row"><div class="ai-network-list-main">' +
         '<div class="ai-network-avatar" aria-hidden="true">AI</div><div><strong>' + esc(display || 'AI identity') + '</strong>' +
         '<div class="ai-network-meta">' + pill('AI IDENTITY', 'ai') + ' ' + pill(identity.status || 'created') + ' ' + pill(identity.population || 'independent') + '</div>' +
         '<small>@' + esc(name.username || 'username unavailable') + ' · ' + esc(identity.category_key || 'uncategorized') + ' · ' + esc(profile.gender || 'not specified') + '</small>' +
-        '<p>' + emailStatus + '</p><small>' + esc(identity.identity_id || '') + '</small></div></div></article>';
+        '<p>' + emailStatus + '</p><small>' + esc(identity.identity_id || '') + '</small>' + editor + '</div></div></article>';
     }).join('') + '</div>';
   }
 
@@ -965,6 +1012,60 @@
       setNotice('Discovery group saved.');
       renderSnapshot(state.snapshot);
       return;
+    } else if (kind === 'identity-edit') {
+      const identityId = form.dataset.identityId || '';
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(identityId)) {
+        throw new Error('A valid AI identity is required for profile editing.');
+      }
+      const rawCountryOfOrigin = value('countryOfOrigin');
+      const rawCurrentCountry = value('currentCountry');
+      const countryOfOrigin = countryCode(rawCountryOfOrigin);
+      const currentCountry = countryCode(rawCurrentCountry);
+      if (rawCountryOfOrigin && !countryOfOrigin) throw new Error('Select a valid country of origin from the country suggestions or enter its ISO two-letter code.');
+      if (rawCurrentCountry && !currentCountry) throw new Error('Select a valid current country from the country suggestions or enter its ISO two-letter code.');
+      const parseJson = (field, fallback, expected) => {
+        let parsed;
+        try { parsed = JSON.parse(value(field) || fallback); }
+        catch { throw new Error(field + ' must contain valid JSON.'); }
+        if (expected === 'array' && !Array.isArray(parsed)) throw new Error(field + ' must be a JSON array.');
+        if (expected === 'object' && (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))) throw new Error(field + ' must be a JSON object.');
+        return parsed;
+      };
+      const languages = parseJson('languages','[]','array');
+      if (languages.length > 50) throw new Error('An AI profile may have at most 50 language entries.');
+      payload.name = {
+        first_name:value('firstName'), middle_name:value('middleName'),
+        last_name:value('lastName'), display_name:value('displayName'),
+        username:value('username').toLowerCase()
+      };
+      payload.profile = {
+        gender:value('gender'), gender_presentation:value('genderPresentation'),
+        nationality:value('nationality'), country_of_origin:countryOfOrigin,
+        current_country:currentCountry, state_province:value('stateProvince'),
+        parish_county:value('parishCounty'), district:value('district'),
+        city:value('city'), town:value('town'), time_zone:value('timeZone') || 'UTC',
+        profession:value('profession'), profile_visibility:value('profileVisibility'),
+        bio:value('bio'), introduction:value('introduction'),
+        interests:value('interests').split(',').map(item => item.trim()).filter(Boolean),
+        hobbies:value('hobbies').split(',').map(item => item.trim()).filter(Boolean),
+        skills:value('skills').split(',').map(item => item.trim()).filter(Boolean),
+        qualifications:value('qualifications').split(',').map(item => item.trim()).filter(Boolean),
+        education:parseJson('education','[]','array'),
+        personality:parseJson('personality','{}','object'),
+        voice_preferences:parseJson('voicePreferences','{}','object')
+      };
+      payload.languages = languages;
+      payload.locations = parseJson('existingLocations','[]','array').filter(item => !['origin','current'].includes(item.location_type));
+      if (countryOfOrigin) payload.locations.push({
+        location_type:'origin', country_code:countryOfOrigin, country_name:countryLabel(countryOfOrigin), is_public:false
+      });
+      if (currentCountry) payload.locations.push({
+        location_type:'current', country_code:currentCountry, country_name:countryLabel(currentCountry),
+        state_province:value('stateProvince'), parish_county:value('parishCounty'),
+        district:value('district'), city:value('city'), town:value('town'),
+        time_zone:value('timeZone') || 'UTC', is_public:false
+      });
+      path = '/identities/' + encodeURIComponent(identityId);
     } else if (kind === 'identity-bulk') {
       path = '/identities/bulk';
       let items;
@@ -1241,11 +1342,12 @@
       payload.companionOptIn = form.querySelector('[name="companionOptIn"]').checked;
       payload.companionAcknowledged = form.querySelector('[name="companionAcknowledgedAIIdentity"]').checked;
     } else return;
-    const patchKinds = ['settings','languages','vacancy-status','application-review','employment-status','employment-manager','provider-assignment-status','task-approval'];
+    const patchKinds = ['settings','languages','vacancy-status','application-review','employment-status','employment-manager','provider-assignment-status','task-approval','identity-edit'];
     const result = await request(path, { method: patchKinds.includes(kind) ? 'PATCH' : 'POST', body: payload });
     form.reset();
     if (['identity','organization','vacancy','application','appointment','employment-transfer','task-create'].includes(kind)) form.dataset.idempotencyKey = window.crypto.randomUUID();
-    const message = kind === 'task-create'
+    const message = kind === 'identity-edit' ? 'AI identity profile and name details updated with a new version and audit record.'
+      : kind === 'task-create'
       ? 'Task saved to the durable queue; approval policy comes from the selected AI identity.'
       : kind === 'task-approval'
         ? 'Task approval decision recorded.'
