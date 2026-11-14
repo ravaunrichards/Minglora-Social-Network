@@ -143,7 +143,7 @@
       content.innerHTML =
         '<div class="admin-finance-section-heading"><div><h4>Service provider directory</h4><p>Listed vendors are candidates supplied in the specification. Their status remains not registered until independently verified.</p></div></div>' +
         table(['Provider','Connection status','Department','Website'],rows,'No providers are registered yet.') +
-        '<details class="admin-finance-form-details"><summary>Add or update a provider record</summary><form id="admin-finance-provider-form" class="admin-finance-form">' +
+        '<details class="admin-finance-form-details"><summary>Add a provider record</summary><form id="admin-finance-provider-form" class="admin-finance-form">' +
         field('Provider key (lowercase)','provider_key','text','required pattern="[a-z0-9][a-z0-9_-]{1,63}" maxlength="64"') +
         field('Provider name','provider_name','text','required maxlength="160"') +
         field('Official HTTPS website','website_url','url','required placeholder="https://example.com"') +
@@ -186,7 +186,7 @@
       content.innerHTML =
         '<div class="admin-finance-section-heading"><div><h4>Subscription register</h4><p>Record only packages, prices and dates you have verified. Auto-renewal is disabled until a supported approval workflow exists.</p></div></div>' +
         table(['Service','Package','Recorded price','Next payment','Status','Billing action'],rows,'No subscriptions have been recorded.') +
-        '<details class="admin-finance-form-details"><summary>Add or update a subscription record</summary><form id="admin-finance-subscription-form" class="admin-finance-form">' +
+        '<details class="admin-finance-form-details"><summary>Add a subscription record</summary><form id="admin-finance-subscription-form" class="admin-finance-form">' +
         select('Provider','provider_id',providerOptions(),'required') +
         field('Service name','service_name','text','required maxlength="160"') +
         field('Package / plan','package_name','text','maxlength="120"') +
@@ -238,7 +238,7 @@
       content.innerHTML =
         '<div class="admin-finance-section-heading"><div><h4>Operating budgets</h4><p>Budgets are proposed or approved allocations; they do not authorize a provider purchase by themselves.</p></div></div>' +
         table(['Department','Period','Dates','Allocation','Approval'],rows,'No operating budgets have been recorded.') +
-        '<details class="admin-finance-form-details"><summary>Create or update a budget allocation</summary><form id="admin-finance-budget-form" class="admin-finance-form">' +
+        '<details class="admin-finance-form-details"><summary>Create a budget allocation</summary><form id="admin-finance-budget-form" class="admin-finance-form">' +
         field('Department key','department_key','text','required maxlength="80" pattern="[a-z0-9][a-z0-9_-]{1,79}"') +
         field('Department name','department_name','text','required maxlength="120"') +
         select('Period','period_type',[['monthly','Monthly'],['quarterly','Quarterly'],['annual','Annual']]) +
@@ -292,7 +292,7 @@
         select('Currency','currency_code',[['USD','USD'],['JMD','JMD']]) +
         field('Amount before tax','amount','number','required min="0" step="0.01" inputmode="decimal"') +
         field('Tax amount','tax','number','min="0" step="0.01" inputmode="decimal"') +
-        select('Payment status',[['received','Received'],['under_review','Under review'],['awaiting_approval','Awaiting approval'],['approved','Approved'],['payment_scheduled','Payment scheduled'],['payment_initiated','Payment initiated'],['paid_pending_verification','Paid — awaiting provider verification'],['partially_paid','Partially paid'],['failed','Failed'],['disputed','Disputed'],['overdue','Overdue'],['cancelled','Cancelled']].map(x=>x),'') +
+        select('Payment status','payment_status',[['received','Received'],['under_review','Under review'],['awaiting_approval','Awaiting approval'],['approved','Approved'],['payment_scheduled','Payment scheduled'],['payment_initiated','Payment initiated'],['paid_pending_verification','Paid — awaiting provider verification'],['partially_paid','Partially paid'],['failed','Failed'],['disputed','Disputed'],['overdue','Overdue'],['cancelled','Cancelled']]) +
         select('Approval status','approval_status',[['pending','Pending'],['approved','Approved'],['rejected','Rejected'],['not_required','Not required']]) +
         field('External payment reference (not a card number)','payment_reference','text','maxlength="160"') +
         textarea('Notes','notes') +
