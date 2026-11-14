@@ -148,3 +148,17 @@ The asset is wired into the existing generated catalogue/preview/sent-gift pipel
 | Cache | `public/index.html` references `gift-effects.js?v=20261114-live-island-tide-1`; `public/sw.js` shell cache advances to v309 and precaches the matching bundle. |
 
 No new API, DB row, wallet transaction, payout or catalogue record is introduced. Artwork/rights acceptance and physical device QA remain unverified.
+
+
+## Crystal Crown bespoke artwork and effect integration — 2026-11-14
+
+| Integration point | Implementation |
+|---|---|
+| Canonical catalogue | Existing `crystal-crown-1itryeu` record (luxury, 2,000 Coins, active); unchanged. |
+| 3D source | `assets/3d-assets/gift-models/crystal-crown-model.mjs`, exact-code route in `scripts/generate-minglora-gifts.mjs`; existing generator emits the canonical GLTF. |
+| Vector artwork | Exact-name SVG branch emits `crystal-crown-original-v1` primary art and transparent icon. |
+| Animation | `crown-lustre` exact-code override runs on the existing LIVE gift mount. |
+| Sound | `playCrystalCrown` local five-tone chime and filtered shimmer; manifest ID `crystal-crown-royal-glass-chime-v1`. |
+| Cache | `public/index.html` and `public/sw.js` reference `gift-effects.js?v=20261114-crystal-crown-royal-chime-1`; service-worker shell cache advances to v310. |
+
+This adds no catalogue row, database offering, price edit, wallet/ledger event or payout. Art and rights acceptance and physical-device QA remain open.
