@@ -1809,8 +1809,9 @@
       payload.companionOptIn = form.querySelector('[name="companionOptIn"]').checked;
       payload.companionAcknowledged = form.querySelector('[name="companionAcknowledgedAIIdentity"]').checked;
     } else return;
-    const patchKinds = ['settings','languages','memory-settings','memory-edit','vacancy-status','application-review','employment-status','employment-manager','provider-assignment-status','task-approval','identity-edit','performance-review-finalize','succession-status'];
-    const result = await request(path, { method: patchKinds.includes(kind) ? 'PATCH' : 'POST', body: payload });
+    const patchKinds = ['settings','languages','memory-settings','memory-edit','vacancy-status','application-review','employment-status','employment-manager','provider-assignment-status','task-approval','identity-edit'];
+    const talentPatchKinds = ['performance-review-finalize','succession-status'];
+    const result = await request(path, { method: patchKinds.concat(talentPatchKinds).includes(kind) ? 'PATCH' : 'POST', body: payload });
     let uploadedMediaCount = 0;
     if (kind === 'identity-edit' && identityIdForMedia) {
       const selectedMedia = [
