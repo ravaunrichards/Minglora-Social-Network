@@ -135,3 +135,12 @@ Both sequences run with the existing gift FX mount that triggers their individua
 | `assets/3d-assets/gift-models/gamer-otter-model.mjs` | Gamer Otter (`gamer-otter-100-mgl`, animals, 100 Coins) | Original seated otter character with individually addressable body/facial meshes, headset, microphone, paws, curled tail and controller; embedded glTF 2.0 mesh buffers and PBR material factors. Matching subject-specific primary SVG and transparent icon are emitted by the existing generator. | Generator routes the exact canonical gift code; LIVE runtime adds code-specific arcade sound synthesis and a subject-specific cheer animation. Design and rights review remain pending. |
 
 The model is authored separately from the generic animals-category geometry. The canonical catalogue code, category, active state and 100-Coin value are reused without changing catalogue pricing or production gift publication. The source carries `gift-gamer-otter-3d-v1` provenance and `design-review-pending`; it is not labelled premium-approved. The GLTF source contains no skeletal animation channels or external texture dependency. Audio is synthesized through the existing local Web Audio runtime; no mastered audio file is claimed.
+
+
+## LIVE Island bespoke Caribbean-cay asset — 2026-11-14
+
+| Source | Canonical item | Generated output | Integration / acceptance |
+|---|---|---|---|
+| `assets/3d-assets/gift-models/live-island-model.mjs` | LIVE Island (`live-island-rmn3mc`, nature; existing value 10 Coins) | Self-contained glTF 2.0 sculpture with lagoon/surf rings, sand cay, raised grassy headland, waterfall, three palm clusters, pavilion, canoe, branching coral, shells and beacon. Subject-specific SVG and transparent icon use `live-island-original-v1`. | Exact-code generator route and exact-code LIVE tide/surf sound route. Design and rights review remain pending. |
+
+The catalogue name, code, nature category, 10-Coin value and active state are asserted in regression tests and left unchanged. The GLTF uses embedded geometry and PBR metallic/roughness factors; it does not include texture maps or embedded skeletal animation. Its review status is `design-review-pending`, not premium-approved.
