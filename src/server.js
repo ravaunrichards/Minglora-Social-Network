@@ -1025,7 +1025,7 @@ function enqueueAttachedVideoTranscode(asset,post) {
 }
 async function resolveAssetUrl(asset) {
   if(!asset)return null;
-  if(asset.url)return asset.url;
+  if(asset.url&&!asset.aiIdentityId)return asset.url;
   const result=await mediaGateway('media_sign',{ownerId:asset.ownerId,bucket:asset.bucket,path:asset.path});
   return result.url||null;
 }
@@ -1637,7 +1637,7 @@ async function route(req, res) {
       };
 
       const aiIdentityIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-      const aiMediaBucketForSlot = slot => slot === 'avatar' ? 'minglora-avatars' : slot === 'cover' ? 'minglora-covers' : '';
+      const aiMediaBucketForSlot = slot => slot === 'avatar' || slot === 'cover' ? 'minglora-ai-profile-media' : '';
       const aiMediaLimitForSlot = slot => slot === 'avatar' ? 10 * 1024 * 1024 : slot === 'cover' ? 20 * 1024 * 1024 : 0;
       const aiMediaMimeTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/avif'];
 
@@ -1738,13 +1738,13 @@ async function route(req, res) {
         asset.status = 'attached';
         asset.attachedTo = 'ai_identity:' + identityId + ':' + slot;
         asset.completedAt = now();
-        asset.url = completed.url;
+        asset.url = asset.aiIdentityId ? null : completed.url;
         await saveStore();
         return json(res, 200, {
           asset: {
             id: asset.id, slot, bucket: asset.bucket, path: asset.path,
             mimeType: asset.mimeType, mediaType: asset.mediaType,
-            byteSize: asset.byteSize, status: asset.status, url: asset.url
+            byteSize: asset.byteSize, status: asset.status, url: completed.url
           }
         });
       }
