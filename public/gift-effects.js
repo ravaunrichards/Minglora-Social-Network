@@ -178,12 +178,66 @@
     jamaican_culture:{wave:"triangle",notes:[0,3,7,10,12],base:390,length:.13,pan:0},
     other:{wave:"triangle",notes:[0,5,12],base:460,length:.15,pan:0}
   };
+  function createGiftNoise(c,seed,durationSeconds){
+    const frameCount=Math.max(1,Math.floor(c.sampleRate*durationSeconds));
+    const buffer=c.createBuffer(1,frameCount,c.sampleRate),data=buffer.getChannelData(0);
+    let state=seed>>>0;
+    for(let i=0;i<frameCount;i++){
+      state=(Math.imul(state,1664525)+1013904223)>>>0;
+      const random=(state/4294967296)*2-1;
+      const fade=Math.pow(Math.max(0,1-i/frameCount),2.2);
+      data[i]=random*fade;
+    }
+    return buffer;
+  }
+  function playDjembe(c,now,seed){
+    const noise=c.createBufferSource(),filter=c.createBiquadFilter(),envelope=c.createGain();
+    noise.buffer=createGiftNoise(c,seed,0.23);
+    filter.type="lowpass";filter.frequency.setValueAtTime(1450,now);filter.Q.setValueAtTime(.72,now);
+    envelope.gain.setValueAtTime(.0001,now);envelope.gain.exponentialRampToValueAtTime(.23,now+.006);
+    envelope.gain.exponentialRampToValueAtTime(.0001,now+.22);
+    noise.connect(filter);filter.connect(envelope);envelope.connect(c.destination);
+    noise.start(now);noise.stop(now+.24);
+    const body=c.createOscillator(),bodyGain=c.createGain();
+    body.type="sine";body.frequency.setValueAtTime(118,now);body.frequency.exponentialRampToValueAtTime(61,now+.17);
+    bodyGain.gain.setValueAtTime(.0001,now);bodyGain.gain.exponentialRampToValueAtTime(.28,now+.008);
+    bodyGain.gain.exponentialRampToValueAtTime(.0001,now+.21);
+    body.connect(bodyGain);bodyGain.connect(c.destination);body.start(now);body.stop(now+.23);
+    const rim=c.createOscillator(),rimGain=c.createGain();
+    rim.type="triangle";rim.frequency.setValueAtTime(245+(seed%31),now+.018);
+    rimGain.gain.setValueAtTime(.0001,now+.018);rimGain.gain.exponentialRampToValueAtTime(.045,now+.025);
+    rimGain.gain.exponentialRampToValueAtTime(.0001,now+.12);
+    rim.connect(rimGain);rimGain.connect(c.destination);rim.start(now+.018);rim.stop(now+.14);
+    return true;
+  }
+  function playPalmBreeze(c,now,seed){
+    const wind=c.createBufferSource(),highpass=c.createBiquadFilter(),lowpass=c.createBiquadFilter(),windGain=c.createGain();
+    wind.buffer=createGiftNoise(c,seed,0.82);
+    highpass.type="highpass";highpass.frequency.setValueAtTime(190,now);
+    lowpass.type="lowpass";lowpass.frequency.setValueAtTime(720,now);lowpass.frequency.exponentialRampToValueAtTime(2050,now+.62);
+    windGain.gain.setValueAtTime(.0001,now);windGain.gain.exponentialRampToValueAtTime(.052,now+.14);
+    windGain.gain.exponentialRampToValueAtTime(.0001,now+.82);
+    wind.connect(highpass);highpass.connect(lowpass);lowpass.connect(windGain);windGain.connect(c.destination);
+    wind.start(now);wind.stop(now+.84);
+    const notes=[659.25,880,1174.66],delays=[.1,.31,.53];
+    notes.forEach((frequency,index)=>{
+      const chime=c.createOscillator(),gain=c.createGain(),start=now+delays[index];
+      chime.type="sine";chime.frequency.setValueAtTime(frequency*(1+((seed+index)%7-3)*.0015),start);
+      gain.gain.setValueAtTime(.0001,start);gain.gain.exponentialRampToValueAtTime(.024/(index+1),start+.018);
+      gain.gain.exponentialRampToValueAtTime(.0001,start+.56);
+      chime.connect(gain);gain.connect(c.destination);chime.start(start);chime.stop(start+.58);
+    });
+    return true;
+  }
   function play(gift){
     if(!gift)return false;
     const c=audio();if(!c)return false;
     try{
       if(c.state==="suspended")void c.resume();
-      const p=profiles[gift.category]||profiles.other,seed=hash([gift.sound_preset,gift.code,gift.name].join("|")),variation=(seed%9)-4,now=c.currentTime;
+      const seed=hash([gift.sound_preset,gift.code,gift.name].join("|")),now=c.currentTime;
+      if(gift.code==="djembe-master-1v3jzkm")return playDjembe(c,now,seed);
+      if(gift.code==="palm-breeze-gknyt0")return playPalmBreeze(c,now,seed);
+      const p=profiles[gift.category]||profiles.other,variation=(seed%9)-4;
       const base=p.base*(.92+(seed%17)/100);
       p.notes.forEach((step,i)=>{
         const osc=c.createOscillator(),gain=c.createGain(),pan=c.createStereoPanner?.();

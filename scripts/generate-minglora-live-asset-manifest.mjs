@@ -20,6 +20,23 @@ const COMPONENTS = Object.freeze({
   sound: ["public/gift-effects.js"]
 });
 
+const GIFT_SPECIFIC_WEB_AUDIO_DESIGNS = Object.freeze({
+  "djembe-master-1v3jzkm": Object.freeze({
+    sound_design_id: "djembe-hand-drum-impact-v1",
+    sound_profile_scope: "gift_specific_web_audio_synthesis",
+    format: "Web Audio API synthesized hand-drum noise, falling low drum tone and rim accent",
+    layers: ["filtered_noise_attack", "low_frequency_pitch_drop", "short_rim_tap"],
+    status: "gift_specific_synthesized_sound_not_mastered_recording"
+  }),
+  "palm-breeze-gknyt0": Object.freeze({
+    sound_design_id: "palm-breeze-wind-and-chimes-v1",
+    sound_profile_scope: "gift_specific_web_audio_synthesis",
+    format: "Web Audio API synthesized filtered breeze noise and three soft chime partials",
+    layers: ["filtered_wind_sweep", "soft_chime_659hz", "soft_chime_880hz", "soft_chime_1175hz"],
+    status: "gift_specific_synthesized_sound_not_mastered_recording"
+  })
+});
+
 function fail(message) {
   throw new Error("[Minglora LIVE asset manifest] " + message);
 }
@@ -345,15 +362,20 @@ function buildManifest() {
       profile_id: null,
       status: "inactive_catalogue_item_no_runtime_motion_profile"
     };
+    const specificSound = GIFT_SPECIFIC_WEB_AUDIO_DESIGNS[gift.code] || null;
     const sound = {
       sound_preset: String(gift.sound_preset || ""),
-      format: "Web Audio API synthesized oscillator tones",
+      sound_design_id: specificSound?.sound_design_id || null,
+      format: specificSound?.format || "Web Audio API synthesized oscillator tones",
       audio_file: null,
       component_usage: COMPONENTS.sound,
-      sound_profile_scope: "category_based_synthesis_with_gift_seed_variation",
+      sound_profile_scope: specificSound?.sound_profile_scope || "category_based_synthesis_with_gift_seed_variation",
+      synthesized_layers: specificSound?.layers || null,
       dedicated_mastered_gift_sound: false,
-      status: "synthetic_category_profile_not_mastered_gift_audio",
-      note: "The separate Sound Studio ringtone/notification WAV pack is not a per-gift sound library."
+      status: specificSound?.status || "synthetic_category_profile_not_mastered_gift_audio",
+      note: specificSound
+        ? "Original gift-specific Web Audio sound design triggered with the matching LIVE gift effect; this is synthesis, not a mastered audio recording."
+        : "The separate Sound Studio ringtone/notification WAV pack is not a per-gift sound library."
     };
 
     gifts.push({
@@ -460,6 +482,7 @@ function buildManifest() {
       transparent_background_artwork_count: gifts.filter(gift => gift.artwork.transparent_background).length,
       emoji_font_overlay_count: emojiOverlayCount,
       dedicated_mastered_gift_sound_file_count: 0,
+      gift_specific_synthesized_sound_design_count: gifts.filter(gift => gift.sound.sound_design_id).length,
       synthetic_sound_profile_count: gifts.length,
       physical_device_qa_verified_count: 0,
       live_control_icon_count: liveControlIconPack.icon_count,

@@ -143,13 +143,30 @@ test("named Rose and Hibiscus models retain gift-specific source provenance in t
   }
 });
 
-test("sound, device and fallback limitations are explicit rather than claimed complete", () => {
+test("gift-specific Djembe and Palm Breeze sound designs are inventoried without claiming mastered recordings", () => {
   assert.equal(manifest.summary.dedicated_mastered_gift_sound_file_count, 0);
+  assert.equal(manifest.summary.gift_specific_synthesized_sound_design_count, 2);
   assert.equal(manifest.summary.physical_device_qa_verified_count, 0);
+  const expected = [
+    ["djembe-master-1v3jzkm","djembe-hand-drum-impact-v1","gift_specific_synthesized_sound_not_mastered_recording"],
+    ["palm-breeze-gknyt0","palm-breeze-wind-and-chimes-v1","gift_specific_synthesized_sound_not_mastered_recording"]
+  ];
+  for (const [code,designId,status] of expected) {
+    const entry = manifest.gifts.find(item => item.code === code);
+    assert.ok(entry, code + " must exist in the LIVE manifest");
+    assert.equal(entry.sound.sound_design_id, designId);
+    assert.equal(entry.sound.sound_profile_scope, "gift_specific_web_audio_synthesis");
+    assert.equal(entry.sound.status, status);
+    assert.ok(Array.isArray(entry.sound.synthesized_layers) && entry.sound.synthesized_layers.length >= 3);
+    assert.equal(entry.sound.audio_file, null);
+    assert.equal(entry.sound.dedicated_mastered_gift_sound, false);
+  }
   for (const entry of manifest.gifts) {
     assert.equal(entry.sound.audio_file, null);
     assert.equal(entry.sound.dedicated_mastered_gift_sound, false);
-    assert.equal(entry.sound.status, "synthetic_category_profile_not_mastered_gift_audio");
+    if (!expected.some(([code]) => code === entry.code)) {
+      assert.equal(entry.sound.status, "synthetic_category_profile_not_mastered_gift_audio");
+    }
     assert.equal(entry.device_support.device_qa_status, "not_verified_on_physical_devices");
     assert.equal(entry.loading_and_fallback.model_error_fallback_to_svg, true);
     assert.equal(entry.model.loading.model_load_error_image_fallback_implemented, true);
