@@ -148,6 +148,26 @@ test("named gift models retain gift-specific source provenance in the LIVE manif
   }
 });
 
+test("LIVE asset manifest exposes the same bespoke motion presets as the runtime", () => {
+  const expected = {
+    "djembe-master-1v3jzkm": "djembe-strike",
+    "palm-breeze-gknyt0": "palm-canopy-sway",
+    "gamer-otter-100-mgl": "gamer-otter-cheer",
+    "live-island-rmn3mc": "island-tide",
+    "crystal-crown-1itryeu": "crown-lustre",
+    "phoenix-wep6uk": "phoenix-rise",
+    "beach-maracas-1exxoag": "maraca-rhythm"
+  };
+  for (const [code,preset] of Object.entries(expected)) {
+    const gift = manifest.gifts.find(item => item.code === code);
+    const motion = motionIndex.gifts.find(item => item.code === code);
+    assert.ok(gift, "missing LIVE manifest gift " + code);
+    assert.ok(motion, "missing generated motion-index gift " + code);
+    assert.equal(gift.animation.motion_preset, preset);
+    assert.equal(motion.motion_preset, preset);
+  }
+});
+
 test("gift-specific synthesized sound designs are inventoried without claiming mastered recordings", () => {
   assert.equal(manifest.summary.dedicated_mastered_gift_sound_file_count, 0);
   assert.equal(manifest.summary.gift_specific_synthesized_sound_design_count, 7);
