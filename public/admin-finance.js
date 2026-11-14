@@ -22,7 +22,7 @@
     const date = new Date(String(value) + (String(value).length === 10 ? 'T12:00:00' : ''));
     return Number.isNaN(date.getTime()) ? 'Not recorded' : date.toLocaleDateString();
   };
-  const today = () => new Date().toISOString().slice(0,10);
+  const today = () => { const date=new Date(); return [date.getFullYear(),String(date.getMonth()+1).padStart(2,'0'),String(date.getDate()).padStart(2,'0')].join('-'); };
   const empty = text => '<p class="admin-finance-empty">' + esc(text) + '</p>';
   const field = (label,name,type='text',attrs='') =>
     '<label class="admin-finance-field"><span>' + esc(label) + '</span><input name="' + esc(name) +
@@ -246,7 +246,7 @@
         field('Period end','period_end','date','required') +
         select('Currency','currency_code',[['USD','USD'],['JMD','JMD']]) +
         field('Approved allocation amount','allocated_amount','number','required min="0" step="0.01" inputmode="decimal"') +
-        select('Approval status','approval_status',[['draft','Draft'],['pending','Pending'],['approved','Approved'],['rejected','Rejected']]) +
+        select('Approval status','approval_status',[['draft','Draft'],['pending','Pending'],['rejected','Rejected']]) +
         textarea('Notes','notes') + button('Save budget') + '</form></details>';
       section.querySelector('#admin-finance-budget-form')?.addEventListener('submit',async event => {
         event.preventDefault();
