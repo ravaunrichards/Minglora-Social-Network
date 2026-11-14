@@ -38,6 +38,8 @@ test('AI media upload preparation verifies owner ownership and stores images bel
   assert.match(handler, /p_actor_user_id:ownerId/);
   assert.match(handler, /ai-identities/);
   assert.match(handler, /createSignedUploadUrl/);
+  assert.match(handler, /const aiUuidPattern=/);
+  assert.equal((handler.match(/const uuidPattern=/g) || []).length, 1, "upload preparation must declare its shared UUID validator only once");
 });
 
 test('AI media completion validates the nested owner path and never updates the human profile', () => {
