@@ -30,7 +30,9 @@ test('the LIVE tools shortcut manifest maps each existing panel to one original 
 test('the app renders the existing role-gated LIVE panels through the new shortcut icon allow-list', () => {
   assert.ok(app.includes('const LIVE_TOOLS_SHORTCUT_ICON_NAMES=Object.freeze('));
   assert.ok(app.includes('function liveToolsShortcutIcon(name)'));
-  assert.ok(app.includes('function liveToolsShortcutButton(target,label,icon,pressed=false,panelTarget)'));
+  assert.ok(app.includes('function liveToolsShortcutButton(target,label,icon,pressed=false)'));
+  assert.ok(app.includes('const LIVE_TOOLS_PANEL_TARGET_ATTRIBUTES=Object.freeze('));
+  assert.ok(app.includes('const LIVE_TOOLS_PANEL_SELECTOR_ATTRIBUTES=Object.freeze('));
   const panelCalls = [
     'liveToolsShortcutButton("layouts","Layout","layout",true)',
     'liveToolsShortcutButton("permissions","Permissions","permissions")',
