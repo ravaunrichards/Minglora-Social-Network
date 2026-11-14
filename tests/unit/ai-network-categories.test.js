@@ -33,7 +33,7 @@ test('category keys stay stable and categories are deactivated rather than delet
 test('category changes are audited and audit records are append-only for the runtime role', () => {
   assert.match(migration, /before_data jsonb/i);
   assert.match(migration, /after_data jsonb/i);
-  assert.match(migration, /created, updated, activated, deactivated/i);
+  assert.match(migration, /'created'[\s\S]*'updated'[\s\S]*'activated'[\s\S]*'deactivated'/i);
   assert.match(migration, /insert into ai_network\.ai_category_audit_logs/i);
   assert.doesNotMatch(migration, /grant\s+.*update.*ai_category_audit_logs/i);
   assert.doesNotMatch(migration, /grant\s+.*delete.*ai_category_audit_logs/i);
