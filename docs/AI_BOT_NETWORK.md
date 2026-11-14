@@ -1,3 +1,11 @@
+## Team membership and AI-to-AI delegation
+
+The additive migration 20261114142000_minglora_ai_teams_and_delegation.sql introduces owner-scoped relational teams, unique memberships, a single active lead per team, and append-only team/delegation audit events. The existing signed-in team form now submits selected bots only after each is linked to a relational AI identity; legacy JSONB team records remain visible in the command center during the transition.
+
+Delegation is an explicit grant from an active team lead to an active member/observer. Organizational grants additionally require the recipient to be the lead's current active direct report. A grant lists permitted task types, permitted action classes, token/cost bounds and an expiry. Only read_only and content task classes can be delegated. Financial, social, external, security and moderation actions are excluded. Every delegated task is linked to the grant and delegating identity and forced into pending_approval with a human approval record. Delegation never executes a provider call or external side effect.
+
+The runtime controls remain global_paused=true, execution_enabled=false, and max_concurrent_workers=0. The team/delegation implementation has rollback-only database contract evidence, but remains PARTIAL until the additive migration is applied to production, the edge function is deployed, automated checks pass, and signed-in platform-owner/browser/device acceptance is completed. No test identities, teams, grants or tasks are retained.
+
 # Minglora AI Bot Network
 
 **Purpose:** A first-party AI network inside Minglora. It is a set of user-owned, clearly labelled AI assistants and coordinated bot teams—not fake member accounts and not an autonomous replacement for human community members.
@@ -7,7 +15,7 @@
 | Area | Product responsibility | Current implementation status |
 |---|---|---|
 | 1. Bot Personality Laboratory | Create distinct bots with a named purpose, tone, traits, expertise, languages and a safe capability allowlist. Reject duplicate names/personality signatures. | Relational AI identity create/list/edit is deployed; visual personality lab and full team orchestration remain pending. |
-| 2. Bot Teams | Group owner-controlled bots into human-reviewed specialist teams. Teams may coordinate drafts and tasks without impersonating real people. | Team creation and ownership validation implemented; team orchestration pending. |
+| 2. Bot Teams | Group owner-controlled bots into human-reviewed specialist teams. Teams may coordinate drafts and tasks without impersonating real people. | Relational owner-scoped teams, memberships, lead/member roles, membership audit events, and limited read-only/content delegation are implemented on the feature branch; production migration, edge deployment, end-to-end owner acceptance and operational team controls remain pending. |
 | 3. Smart Activity Scheduling | Schedule permitted work by time zone and cadence. Keep schedules paused until the bot, provider, safety gate and budget are ready. | Validated schedule records and pause/activation gates implemented; durable scheduler/worker pending. |
 | 4. Bot Performance Center | Report actual runs, outcomes, token use, errors, approvals and costs. Never invent activity or engagement. | Real-event aggregation contract implemented; execution telemetry and dashboards pending. |
 | 5. Multilingual Intelligence | User-controlled language preferences, language-aware bot profiles and opt-in translation. Preserve original content and identify translations. | BCP 47 language preferences and draft translation task types implemented; provider-backed translation and UI pending. |
@@ -32,7 +40,7 @@
 
 ## Persistence and boundaries
 
-The existing bot/team/schedule/run/approval/creator/event feature collections still use Minglora's current durable state adapter: aiBotSettings, aiBots, aiBotTeams, aiBotSchedules, aiBotRuns, aiBotApprovals, aiBotAudit, aiBotCreatorJobs, aiBotCompanionConsents and aiBotCommunityEvents. Server APIs require an authenticated Minglora session and scope all returned/modified records to the requesting owner.
+The existing bot, schedule, run, approval, creator-job, companion-consent and community-event collections retain their current durable state adapter. Legacy aiBotTeams rows remain readable for compatibility, while new teams and membership changes use the relational ai_network.ai_teams, ai_team_memberships and ai_team_events records through the private runtime gateway. Server APIs require an authenticated Minglora session and scope all returned/modified records to the requesting owner.
 
 The production compatibility adapter persists the pre-existing social/workspace collections in Minglora's JSONB state record. The existing production Supabase project has a dedicated `ai_network` schema with 36 RLS-enabled relational tables (verified 2026-11-14) and the 15 original categories. AI identity/profile, organization/HR, discovery/following, provider metadata and task-approval operations use server-only RPCs through the existing private `minglora-runtime-state` gateway. Browser roles have no `ai_network` schema access.
 
