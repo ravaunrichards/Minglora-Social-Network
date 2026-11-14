@@ -74,7 +74,7 @@ No prices, balances, transactions, account state, LiveKit credentials, or existi
 - The model is tagged gift-hibiscus-3d-v1 and design-review-pending. No gift catalogue price, animation, transaction or server event behavior is changed.
 
 ## Named glTF provenance in the generated LIVE asset manifest
-- The asset manifest reads named source metadata from each generated glTF asset's extras. Rose and Hibiscus are now recorded as gift-specific repository mesh sources with their asset ID, source file, art direction and review status.
+- The asset manifest reads named source metadata from each generated glTF asset's extras. Rose, Hibiscus and Djembe Master are now recorded as gift-specific repository mesh sources with their asset ID, source file, art direction and review status.
 - Generic gift models remain identified as generated procedural meshes. The manifest records the presence of named mesh sources separately from premium/high-detail approval; both remain false until human visual review and rights review pass.
 - Regression tests cover both named models and ensure their design-review-pending status is not misreported as production approval.
 
@@ -85,3 +85,12 @@ No prices, balances, transactions, account state, LiveKit credentials, or existi
 - `public/gifts.js` uses the icon in Gift Center catalogue cards while retaining the full primary artwork/model in the selected preview. `public/app.js` uses the same icon in the LIVE gift grid and renders an accessible status fallback if the image fails to load.
 - The existing image-request caching strategy handles SVG image requests. `public/index.html` versions the changed bundles; `public/sw.js` advances the shell to v307 and precaches the current app/gifts scripts.
 - The existing `prestart` generator chain creates the assets and manifest on application startup. This branch has not been deployed to a live Render service.
+
+
+## Bespoke Djembe Master gift model integration — 2026-11-14
+
+- Canonical gift code `djembe-master-1v3jzkm` selects `assets/3d-assets/gift-models/djembe-model.mjs` in `scripts/generate-minglora-gifts.mjs`.
+- The build emits `public/assets/gifts/catalog/djembe-master-1v3jzkm.gltf` as a self-contained glTF 2.0 model and `djembe-master-1v3jzkm.svg` as bespoke original subject artwork. Existing Gift Center and LIVE gift picker components continue to consume the canonical generated asset URLs.
+- Model provenance is `gift-djembe-3d-v1`; the runtime model viewer/fallback path is unchanged.
+- PR #339 merged at `6daf3cf23867b229168819aa0adae146cae23fc2`. The source branch passed repository CI (including asset generation, manifest validation and tests) and LIVE/MeetWave layout QA before merge.
+- No production offering, gift price, active flag, transaction or payout was modified. Art review, rights clearance, physical device QA and production-host verification remain outstanding.
