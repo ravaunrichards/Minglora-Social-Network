@@ -141,6 +141,69 @@ function iconSheetRecord() {
     completeness: "shared_application_sprite_not_a_complete_live_control_state_pack"
   });
 }
+function svgIconPackRecord(manifestRelativePath, itemsKey, packId, assetDirectory, componentUsage) {
+  const manifestPath = path.join(ROOT, manifestRelativePath);
+  let document;
+  try {
+    document = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  } catch {
+    fail("icon pack manifest is not valid JSON: " + manifestRelativePath);
+  }
+  if (document.view_box !== "0 0 24 24") fail("icon pack must use the shared 24x24 viewBox: " + manifestRelativePath);
+  const items = document[itemsKey];
+  if (!Array.isArray(items) || !items.length) fail("icon pack contains no " + itemsKey + ": " + manifestRelativePath);
+  const ids = new Set();
+  const files = new Set();
+  const assets = [];
+  for (const item of items) {
+    const id = String(item?.id || "");
+    if (!/^[a-z0-9_-]{1,64}$/.test(id)) fail("icon pack contains an invalid asset ID: " + manifestRelativePath);
+    if (ids.has(id)) fail("icon pack contains duplicate ID " + id + ": " + manifestRelativePath);
+    ids.add(id);
+    const expectedUrl = "/assets/icons/" + assetDirectory + "/" + id + ".svg";
+    if (item.file !== expectedUrl || files.has(item.file)) fail("icon pack has a non-canonical or duplicate SVG URL: " + String(item.file));
+    files.add(item.file);
+    const assetPath = path.join(ROOT, "public", item.file.replace(/^\/+/, ""));
+    let source;
+    try {
+      source = fs.readFileSync(assetPath, "utf8");
+    } catch {
+      fail("icon pack SVG is missing: " + relative(assetPath));
+    }
+    const openingTag = source.match(/<svg\b[^>]*>/i)?.[0] || "";
+    if (!openingTag || !/\bviewBox=["']0 0 24 24["']/.test(openingTag)) {
+      fail("icon pack SVG has an invalid root or viewBox: " + relative(assetPath));
+    }
+    if (!/<symbol\b[^>]*\bid=["']icon["'][^>]*\bviewBox=["']0 0 24 24["']/i.test(source)) {
+      fail("icon pack SVG is missing its canonical icon symbol: " + relative(assetPath));
+    }
+    if (!/\bstroke=["']currentColor["']/i.test(source) ||
+        !/<(?:path|rect|circle|ellipse|line|polyline|polygon)\b/i.test(source)) {
+      fail("icon pack SVG is missing currentColor vector geometry: " + relative(assetPath));
+    }
+    if (/\p{Extended_Pictographic}/u.test(source)) fail("icon pack SVG must not use emoji glyph artwork: " + relative(assetPath));
+    assets.push(fileRecord(assetPath, "svg-symbol", {
+      asset_id: id,
+      public_url: item.file,
+      label: String(item.label || id),
+      dimensions: { width_px: 24, height_px: 24, view_box: [0, 0, 24, 24] },
+      component_usage: componentUsage,
+      source: { type: "original_minglora_svg_icon", generator: null },
+      quality: { status: "vector_navigation_asset_design_review_pending", human_visual_review: "not_completed", approved_for_premium_production: false },
+      licensing: { status: "review_required", provenance: "original_minglora_svg_icon" }
+    }));
+  }
+  return fileRecord(manifestPath, "json-svg-icon-pack-manifest", {
+    pack_id: packId,
+    icon_count: assets.length,
+    icon_ids: [...ids],
+    component_usage: componentUsage,
+    completeness: "standalone_svg_icon_pack",
+    view_box: document.view_box,
+    assets
+  });
+}
+
 function buildManifest() {
   const catalogue = JSON.parse(fs.readFileSync(CATALOG_PATH, "utf8"));
   const motion = JSON.parse(fs.readFileSync(MOTION_PATH, "utf8"));
@@ -315,6 +378,20 @@ function buildManifest() {
     source: { type: "repository_asset", generator: null },
     licensing: { status: "review_required", provenance: "repository_asset" }
   });
+  const liveControlIconPack = svgIconPackRecord(
+    "public/assets/icons/live-controls/manifest.json",
+    "icons",
+    "minglora-live-controls",
+    "live-controls",
+    ["public/app.js"]
+  );
+  const liveGiftCategoryIconPack = svgIconPackRecord(
+    "public/assets/icons/live-gift-categories/manifest.json",
+    "categories",
+    "minglora-live-gift-categories",
+    "live-gift-categories",
+    ["public/app.js", "public/live-gift-access.css"]
+  );
   const activeCount = gifts.filter(gift => gift.active).length;
   const inactiveCount = gifts.length - activeCount;
   return {
@@ -329,7 +406,9 @@ function buildManifest() {
       "scripts/generate-live-gift-motion-index.mjs",
       "public/gift-effects.js",
       "public/gifts.js",
-      "public/app.js"
+      "public/app.js",
+      "public/assets/icons/live-controls/manifest.json",
+      "public/assets/icons/live-gift-categories/manifest.json"
     ],
     summary: {
       catalogue_gift_count: gifts.length,
@@ -342,9 +421,11 @@ function buildManifest() {
       dedicated_mastered_gift_sound_file_count: 0,
       synthetic_sound_profile_count: gifts.length,
       physical_device_qa_verified_count: 0,
+      live_control_icon_count: liveControlIconPack.icon_count,
+      live_gift_category_icon_count: liveGiftCategoryIconPack.icon_count,
       required_generated_files_verified: true
     },
-    shared_assets: { icons: [iconSheet, pushIcon] },
+    shared_assets: { icons: [iconSheet, pushIcon, liveControlIconPack, liveGiftCategoryIconPack] },
     gifts
   };
 }
