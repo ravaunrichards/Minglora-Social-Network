@@ -134,3 +134,16 @@ test("Crystal Crown has dedicated royal shimmer choreography and local faceted-g
   assert.ok(effects.includes('if(options.sound!==false)play(gift)'));
   assert.ok(effects.includes('window.matchMedia?.("(prefers-reduced-motion: reduce)")'));
 });
+
+
+test("Phoenix has a dedicated rising-flame choreography and locally synthesized firebird sound", () => {
+  assert.ok(effects.includes("function playPhoenix(c,now,seed)"));
+  assert.ok(effects.includes('gift.code==="phoenix-wep6uk"'));
+  assert.ok(effects.includes("notes=[220,293.66,392,523.25,659.25]"));
+  assert.ok(effects.includes("flame.buffer=createGiftNoise(c,seed,1.12)"));
+  assert.ok(effects.includes('gift.code==="phoenix-wep6uk"?"phoenix-rise":'));
+  assert.ok(effects.includes('if(preset==="phoenix-rise")return'));
+  assert.ok(effects.includes("motionElement.animate(semanticFrames"));
+  assert.ok(effects.includes('if(options.sound!==false)play(gift)'));
+  assert.ok(effects.includes('window.matchMedia?.("(prefers-reduced-motion: reduce)")'));
+});
