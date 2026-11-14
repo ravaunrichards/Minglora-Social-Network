@@ -83,6 +83,206 @@ begin
 
   v_category_key := lower(trim(coalesce(v_payload->>'category_key', '')));
   if v_category_key !~ '^[a-z][a-z0-9_]{1,63}
+  from ai_network.ai_categories c
+  where c.category_key = v_category_key
+  for update;
+  v_exists := found;
+
+  v_display_name := left(trim(coalesce(nullif(v_payload->>'display_name', ''), case when v_exists then v_existing.display_name else '' end)), 80);
+  if length(v_display_name) < 2 then
+    raise exception using errcode = '22023', message = 'Category display name must contain between 2 and 80 characters.';
+  end if;
+
+  if v_payload ? 'description' then
+    v_description := left(trim(coalesce(v_payload->>'description', '')), 400);
+  else
+    v_description := case when v_exists then v_existing.description else '' end;
+  end if;
+
+  if v_payload ? 'sort_order' then
+    if coalesce(v_payload->>'sort_order', '') !~ '^[0-9]{1,6}$' then
+      raise exception using errcode = '22023', message = 'Category sort order must be a non-negative integer.';
+    end if;
+    v_sort_order := (v_payload->>'sort_order')::integer;
+  else
+    v_sort_order := case when v_exists then v_existing.sort_order else 1000 end;
+  end if;
+
+  if v_payload ? 'is_active' then
+    if jsonb_typeof(v_payload->'is_active') <> 'boolean' then
+      raise exception using errcode = '22023', message = 'Category active status must be a boolean.';
+    end if;
+    v_is_active := (v_payload->>'is_active')::boolean;
+  elsif v_exists then
+    v_is_active := v_existing.is_active;
+  end if;
+
+  if v_exists then
+    v_before := to_jsonb(v_existing);
+    if v_existing.is_active and not v_is_active then
+      select count(*)::integer into v_active_count
+      from ai_network.ai_categories c
+      where c.is_active = true;
+      if v_active_count <= 1 then
+        raise exception using errcode = '23514', message = 'At least one AI category must remain active.';
+      end if;
+    end if;
+
+    update ai_network.ai_categories c
+    set display_name = v_display_name,
+        description = v_description,
+        sort_order = v_sort_order,
+        is_active = v_is_active,
+        updated_at = now()
+    where c.category_key = v_category_key
+    returning c.* into v_saved;
+
+    v_audit_action := case
+      when v_existing.is_active and not v_saved.is_active then 'deactivated'
+      when not v_existing.is_active and v_saved.is_active then 'activated'
+      else 'updated'
+    end;
+  else
+    insert into ai_network.ai_categories (
+      category_key, display_name, description, sort_order, is_active
+    )
+    values (
+      v_category_key, v_display_name, v_description, v_sort_order, v_is_active
+    )
+    returning * into v_saved;
+    v_audit_action := 'created';
+  end if;
+
+  insert into ai_network.ai_category_audit_logs (
+    category_key, actor_user_id, action, before_data, after_data
+  )
+  values (
+    v_category_key, p_actor_user_id, v_audit_action, v_before, to_jsonb(v_saved)
+  )
+  returning audit_id into v_audit_id;
+
+  return jsonb_build_object(
+    'category', to_jsonb(v_saved),
+    'action', v_audit_action,
+    'audit_id', v_audit_id,
+    'created', v_audit_action = 'created'
+  );
+end;
+$function$;
+
+revoke all on function public.minglora_ai_category_command(text, uuid, jsonb) from public, anon, authenticated;
+grant execute on function public.minglora_ai_category_command(text, uuid, jsonb) to service_role;
+
+commit;
+ then
+    raise exception using errcode = '22023', message = 'Category key must start with a letter and contain 2 to 64 lowercase letters, numbers or underscores.';
+  end if;
+
+  -- Serialize category writes so two administrators cannot concurrently deactivate
+  -- the final active categories after both observe the same pre-update count.
+  lock table ai_network.ai_categories in share row exclusive mode;
+
+  select c.*
+  into v_existing
+  from ai_network.ai_categories c
+  where c.category_key = v_category_key
+  for update;
+  v_exists := found;
+
+  v_display_name := left(trim(coalesce(nullif(v_payload->>'display_name', ''), case when v_exists then v_existing.display_name else '' end)), 80);
+  if length(v_display_name) < 2 then
+    raise exception using errcode = '22023', message = 'Category display name must contain between 2 and 80 characters.';
+  end if;
+
+  if v_payload ? 'description' then
+    v_description := left(trim(coalesce(v_payload->>'description', '')), 400);
+  else
+    v_description := case when v_exists then v_existing.description else '' end;
+  end if;
+
+  if v_payload ? 'sort_order' then
+    if coalesce(v_payload->>'sort_order', '') !~ '^[0-9]{1,6}$' then
+      raise exception using errcode = '22023', message = 'Category sort order must be a non-negative integer.';
+    end if;
+    v_sort_order := (v_payload->>'sort_order')::integer;
+  else
+    v_sort_order := case when v_exists then v_existing.sort_order else 1000 end;
+  end if;
+
+  if v_payload ? 'is_active' then
+    if jsonb_typeof(v_payload->'is_active') <> 'boolean' then
+      raise exception using errcode = '22023', message = 'Category active status must be a boolean.';
+    end if;
+    v_is_active := (v_payload->>'is_active')::boolean;
+  elsif v_exists then
+    v_is_active := v_existing.is_active;
+  end if;
+
+  if v_exists then
+    v_before := to_jsonb(v_existing);
+    if v_existing.is_active and not v_is_active then
+      select count(*)::integer into v_active_count
+      from ai_network.ai_categories c
+      where c.is_active = true;
+      if v_active_count <= 1 then
+        raise exception using errcode = '23514', message = 'At least one AI category must remain active.';
+      end if;
+    end if;
+
+    update ai_network.ai_categories c
+    set display_name = v_display_name,
+        description = v_description,
+        sort_order = v_sort_order,
+        is_active = v_is_active,
+        updated_at = now()
+    where c.category_key = v_category_key
+    returning c.* into v_saved;
+
+    v_audit_action := case
+      when v_existing.is_active and not v_saved.is_active then 'deactivated'
+      when not v_existing.is_active and v_saved.is_active then 'activated'
+      else 'updated'
+    end;
+  else
+    insert into ai_network.ai_categories (
+      category_key, display_name, description, sort_order, is_active
+    )
+    values (
+      v_category_key, v_display_name, v_description, v_sort_order, v_is_active
+    )
+    returning * into v_saved;
+    v_audit_action := 'created';
+  end if;
+
+  insert into ai_network.ai_category_audit_logs (
+    category_key, actor_user_id, action, before_data, after_data
+  )
+  values (
+    v_category_key, p_actor_user_id, v_audit_action, v_before, to_jsonb(v_saved)
+  )
+  returning audit_id into v_audit_id;
+
+  return jsonb_build_object(
+    'category', to_jsonb(v_saved),
+    'action', v_audit_action,
+    'audit_id', v_audit_id,
+    'created', v_audit_action = 'created'
+  );
+end;
+$function$;
+
+revoke all on function public.minglora_ai_category_command(text, uuid, jsonb) from public, anon, authenticated;
+grant execute on function public.minglora_ai_category_command(text, uuid, jsonb) to service_role;
+
+commit;
+ then
+    raise exception using errcode = '22023', message = 'Category key must start with a letter and contain 2 to 64 lowercase letters, numbers or underscores.';
+  end if;
+
+  -- Serialize writes so concurrent administrators cannot deactivate the final active category.
+  lock table ai_network.ai_categories in share row exclusive mode;
+
+  select c.*
   into v_existing
   from ai_network.ai_categories c
   where c.category_key = v_category_key
