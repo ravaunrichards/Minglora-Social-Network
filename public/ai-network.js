@@ -3,7 +3,7 @@
 
   const API = '/api/ai-network';
   const root = () => document.getElementById('main-content');
-  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, organizationError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', aiTasks: [], taskRuntime: null, taskError: '' };
+  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, organizationError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', aiTasks: [], taskRuntime: null, taskError: '', categoryAdmin: null };
   const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[character]));
@@ -225,6 +225,32 @@
       'ai-network-span-2 ai-network-discovery-center');
   }
 
+  function renderAICategoryAdmin() {
+    if (!Array.isArray(state.categoryAdmin)) return '';
+    const categories = state.categoryAdmin;
+    const rows = categories.length
+      ? '<div class="ai-network-list">' + categories.map(category =>
+          '<article class="ai-network-list-row"><div class="ai-network-list-main"><div><strong>' + esc(category.display_name) + '</strong>' +
+          '<div class="ai-network-meta">' + pill(category.is_active ? 'Active' : 'Inactive', category.is_active ? 'success' : 'warning') + '</div>' +
+          '<small>' + esc(category.category_key) + ' · Order ' + number(category.sort_order) + '</small>' +
+          '<p>' + esc(category.description || 'No description') + '</p></div></div>' +
+          '<div class="ai-network-row-actions"><button type="button" class="secondary" data-ai-action="edit-category" data-category-key="' + esc(category.category_key) + '">Edit</button></div></article>'
+        ).join('') + '</div>'
+      : empty('No AI categories are registered.');
+    const form = '<form class="ai-network-form" data-ai-form="category">' +
+      '<div class="ai-network-form-title">Create or edit a category</div>' +
+      '<label>Stable category key<input name="categoryKey" required minlength="2" maxlength="64" pattern="[a-z][a-z0-9_]+" autocomplete="off" placeholder="ai_science"></label>' +
+      '<p class="ai-network-note">Category keys remain stable because existing AI identities reference them. Rename the display name instead; deactivate rather than delete.</p>' +
+      '<div class="ai-network-form-grid"><label>Display name<input name="displayName" required minlength="2" maxlength="80"></label>' +
+      '<label>Sort order<input name="sortOrder" type="number" min="0" max="100000" step="1" value="1000" required></label></div>' +
+      '<label>Description<textarea name="description" maxlength="400" rows="2"></textarea></label>' +
+      '<label class="ai-network-check"><input type="checkbox" name="isActive" checked><span>Available for new AI identities</span></label>' +
+      '<button class="primary" type="submit">Save category</button></form>';
+    return card('AI Category Management', 'ADMIN · CREATE · RENAME · ACTIVATE · DEACTIVATE',
+      '<p>Manage the discoverable AI categories. Every change is recorded in the category audit log; existing identities are preserved.</p>' +
+      rows + form, 'ai-network-span-2');
+  }
+
   function renderAIIdentityRegistry() {
     const registry = state.identityRegistry;
     const categories = list(state.identityCategories);
@@ -295,6 +321,12 @@
       ]);
       state.identityRegistry = registry;
       state.identityCategories = list(categoryResult.categories);
+      try {
+        const adminCategoryResult = await request('/categories/admin');
+        state.categoryAdmin = list(adminCategoryResult.categories);
+      } catch {
+        state.categoryAdmin = null;
+      }
     } catch (error) {
       state.identityRegistry = null;
       state.identityCategories = [];
@@ -880,6 +912,7 @@
       '<div class="ai-network-quick-stats"><div><span>My bots</span><strong>' + number(performance.botCount) + '</strong></div><div><span>Teams</span><strong>' + number(performance.teamCount) + '</strong></div><div><span>Pending reviews</span><strong>' + number(performance.pendingApprovals) + '</strong></div><div><span>Recorded runs</span><strong>' + number(performance.measuredRunCount) + '</strong></div></div>' +
       '<div class="ai-network-grid">' +
       renderAIIdentityRegistry() +
+      renderAICategoryAdmin() +
       renderAIDiscoveryCenter() +
       renderAIProviderCenter() +
       renderAITaskQueueCenter() +
@@ -1026,6 +1059,13 @@
       setNotice('Discovery group saved.');
       paintSnapshot();
       return;
+    } else if (kind === 'category') {
+      path = '/categories/admin';
+      payload.category_key = value('categoryKey').toLowerCase();
+      payload.display_name = value('displayName');
+      payload.description = value('description');
+      payload.sort_order = Number(value('sortOrder'));
+      payload.is_active = form.querySelector('[name="isActive"]').checked;
     } else if (kind === 'identity-edit') {
       const identityId = form.dataset.identityId || '';
       if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(identityId)) {
@@ -1384,8 +1424,13 @@
       }
     }
     form.reset();
+    if (kind === 'category') {
+      const categoryKeyInput = form.querySelector('[name="categoryKey"]');
+      if (categoryKeyInput) categoryKeyInput.readOnly = false;
+    }
     if (['identity','organization','vacancy','application','appointment','employment-transfer','task-create'].includes(kind)) form.dataset.idempotencyKey = window.crypto.randomUUID();
-    const message = kind === 'identity-edit' ? 'AI identity profile and name details updated with a new version and audit record.' + (uploadedMediaCount ? ' ' + uploadedMediaCount + ' AI profile image(s) uploaded, verified and attached.' : '')
+    const message = kind === 'category' ? 'AI category changes saved and an audit event recorded.'
+      : kind === 'identity-edit' ? 'AI identity profile and name details updated with a new version and audit record.' + (uploadedMediaCount ? ' ' + uploadedMediaCount + ' AI profile image(s) uploaded, verified and attached.' : '')
       : kind === 'task-create'
       ? 'Task saved to the durable queue; approval policy comes from the selected AI identity.'
       : kind === 'task-approval'
@@ -1445,6 +1490,19 @@
     state.busy = true;
     try {
       if (action === 'reload') return await load();
+      if (action === 'edit-category') {
+        const category = state.categoryAdmin?.find(item => item.category_key === button.dataset.categoryKey);
+        const form = document.querySelector('form[data-ai-form="category"]');
+        if (!category || !form) throw new Error('The selected AI category could not be loaded.');
+        form.querySelector('[name="categoryKey"]').value = category.category_key;
+        form.querySelector('[name="categoryKey"]').readOnly = true;
+        form.querySelector('[name="displayName"]').value = category.display_name || '';
+        form.querySelector('[name="description"]').value = category.description || '';
+        form.querySelector('[name="sortOrder"]').value = String(category.sort_order ?? 1000);
+        form.querySelector('[name="isActive"]').checked = Boolean(category.is_active);
+        form.querySelector('[name="displayName"]').focus();
+        return;
+      }
       if (action === 'follow-ai') await request('/follow', { method:'POST', body:{ identity_id:id } });
       else if (action === 'unfollow-ai') await request('/following/' + encodeURIComponent(id), { method:'DELETE' });
       else if (action === 'review-follow') await request('/follow-requests/' + encodeURIComponent(id), { method:'PATCH', body:{ decision:button.dataset.decision } });

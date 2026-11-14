@@ -56,8 +56,11 @@ const categories = categoryKeys.map((category_key, index) => ({
     'AI Entertainers', 'AI Gamers', 'AI Community Hosts', 'AI Live Hosts',
     'AI Moderators', 'AI Support', 'AI Educators', 'AI Sports', 'AI Travel', 'AI Business'
   ][index],
+  description: '',
+  sort_order: index + 1,
   is_active: true
 }));
+const categorySaveRequests = [];
 const discoveryProfiles = [
   {
     identity_id: '22222222-2222-4222-8222-222222222222',
@@ -128,7 +131,25 @@ function aiApiResponse(req, url, body) {
 
   if (method === 'GET' && pathname === '/') return snapshot;
   if (method === 'GET' && pathname === '/identities') return identityRegistry();
-  if (method === 'GET' && pathname === '/categories') return { categories };
+  if (method === 'GET' && pathname === '/categories') return { categories: categories.filter(item => item.is_active) };
+  if (method === 'GET' && pathname === '/categories/admin') return {
+    categories: categories.map(item => structuredClone(item)).sort((a, b) => a.sort_order - b.sort_order)
+  };
+  if (method === 'POST' && pathname === '/categories/admin') {
+    categorySaveRequests.push(structuredClone(body));
+    let category = categories.find(item => item.category_key === body.category_key);
+    if (!category) {
+      category = { category_key: body.category_key };
+      categories.push(category);
+    }
+    Object.assign(category, {
+      display_name: body.display_name,
+      description: body.description || '',
+      sort_order: body.sort_order,
+      is_active: Boolean(body.is_active)
+    });
+    return { category: structuredClone(category), audit_recorded: true };
+  }
   if (method === 'GET' && pathname === '/discover') {
     discoveryQueries.push(Object.fromEntries(url.searchParams.entries()));
     return { identities: discoveryProfiles, total: discoveryProfiles.length, nextOffset: null, hasMore: false };
@@ -227,7 +248,7 @@ const member = {
   avatar: '/assets/default-profile-avatar-3d.svg',
   cover: '/assets/default-profile-cover.svg',
   bio: 'Disposable browser-test session. No production account or record is created.',
-  platformRole: 'member'
+  platformRole: 'platform_owner'
 };
 
 const server = http.createServer(async (req, res) => {
@@ -317,6 +338,32 @@ try {
   assert.equal(initialCounts.categories, 15, 'All 15 original AI categories must render.');
   assert.equal(initialCounts.populations, 3, 'All three AI populations must render.');
   assert.equal(initialCounts.genders, 5, 'All five supported gender choices must render.');
+
+  await page.getByText('AI Category Management').waitFor({ state: 'visible' });
+  const categoryForm = page.locator('form[data-ai-form="category"]');
+  await categoryForm.locator('[name="categoryKey"]').fill('ai_science');
+  await categoryForm.locator('[name="displayName"]').fill('AI Science');
+  await categoryForm.locator('[name="description"]').fill('Research and science education');
+  await categoryForm.locator('[name="sortOrder"]').fill('16');
+  await categoryForm.locator('[name="isActive"]').check();
+  await categoryForm.locator('button[type="submit"]').click();
+  await page.getByText('AI category changes saved and an audit event recorded.').waitFor({ state: 'visible' });
+  assert.equal(categorySaveRequests.length, 1, 'Category creation must submit one administrator request.');
+  assert.equal(categorySaveRequests[0].category_key, 'ai_science');
+  assert.equal(categorySaveRequests[0].display_name, 'AI Science');
+  assert.equal(categories.length, 16, 'The original 15 categories must remain when a new category is added.');
+
+  await page.locator('[data-ai-action="edit-category"][data-category-key="ai_science"]').click();
+  assert.equal(await categoryForm.locator('[name="categoryKey"]').inputValue(), 'ai_science');
+  assert.equal(await categoryForm.locator('[name="categoryKey"]').getAttribute('readonly'), '');
+  await categoryForm.locator('[name="displayName"]').fill('AI Science & Research');
+  await categoryForm.locator('[name="isActive"]').uncheck();
+  await categoryForm.locator('button[type="submit"]').click();
+  await page.getByText('AI category changes saved and an audit event recorded.').waitFor({ state: 'visible' });
+  assert.equal(categorySaveRequests.length, 2, 'Category updates must be persisted through the admin route.');
+  assert.equal(categorySaveRequests[1].display_name, 'AI Science & Research');
+  assert.equal(categorySaveRequests[1].is_active, false);
+  assert.equal(categories.find(item => item.category_key === 'ai_science').is_active, false, 'Deactivation must preserve the category row.');
 
   const createForm = page.locator('form[data-ai-form="identity"]');
   await createForm.locator('[name="firstName"]').fill('Nia');

@@ -1595,6 +1595,32 @@ async function route(req, res) {
         return response?.result;
       };
 
+      const runAICategoryCommand = async (categoryAction, payload = {}) => {
+        if (!isModerator(user, req)) {
+          throw Object.assign(new Error('Only an authorized Minglora administrator can manage AI categories.'), { status: 403 });
+        }
+        if (!isSupabasePersistence()) {
+          throw Object.assign(new Error('AI category management requires Minglora Supabase persistence.'), { status: 503 });
+        }
+        try {
+          const response = await requestSupabaseState('ai_category_command', {
+            actorUserId: user.id,
+            categoryAction,
+            payload
+          });
+          if (response?.skipped) {
+            throw Object.assign(new Error('AI category management is unavailable in local-only persistence mode.'), { status: 503 });
+          }
+          return response?.result;
+        } catch (error) {
+          const message = String(error?.message || '');
+          if (/unsupported action|unsupported AI category command|function .*minglora_ai_category_command.*does not exist|could not find the function|schema cache/i.test(message)) {
+            throw Object.assign(new Error('The AI category management migration and runtime gateway must be deployed before this operation is available. No category data was changed.'), { status: 503 });
+          }
+          throw error;
+        }
+      };
+
       const aiIdentityIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
       const aiMediaBucketForSlot = slot => slot === 'avatar' ? 'minglora-avatars' : slot === 'cover' ? 'minglora-covers' : '';
       const aiMediaLimitForSlot = slot => slot === 'avatar' ? 10 * 1024 * 1024 : slot === 'cover' ? 20 * 1024 * 1024 : 0;
@@ -1708,6 +1734,15 @@ async function route(req, res) {
         });
       }
 
+      if (method === 'GET' && sub === 'categories/admin') {
+        const result = await runAICategoryCommand('list');
+        return json(res, 200, result || { categories: [], count: 0 });
+      }
+      if (method === 'POST' && sub === 'categories/admin') {
+        const input = await body(req, 8000);
+        const result = await runAICategoryCommand('save', input);
+        return json(res, 200, result || {});
+      }
       if (method === 'GET' && sub === 'categories') {
         const categories = await runAIIdentityCommand('list_categories');
         return json(res, 200, { categories: Array.isArray(categories) ? categories : [] });
