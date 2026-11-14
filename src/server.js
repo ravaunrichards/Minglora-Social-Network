@@ -3695,6 +3695,52 @@ async function route(req, res) {
         currentSession.pendingEmail=email;await saveStore();
         return json(res,200,{ok:true,verificationRequired:true,message:result?.message||'Check your new email address for a verification link. Your login email changes after confirmation.'});
       }
+      if((method==='GET'||method==='POST')&&p==='/api/admin/finance'){
+        if(!isDesignatedCreatorHubAdmin(user)||!isModerator(user,req)||!hasActiveReviewerSession(user)){
+          return json(res,403,{error:'Only the MFA-verified Minglora owner can access company finance records.'});
+        }
+        if(!isSupabasePersistence()){
+          return json(res,503,{error:'Company finance records require the connected Minglora Supabase project.'});
+        }
+        if(method==='GET'){
+          const result=await requestSupabaseState('admin_finance_command',{
+            actorUserId:user.id,financeAction:'list'
+          });
+          return json(res,200,result);
+        }
+        if(!isSameOriginApiWrite(req))return json(res,403,{error:'This finance request must come from Minglora.'});
+        const financeAction=String(input?.financeAction||'').trim().toLowerCase();
+        const allowedFinanceActions=new Set(['save_provider','save_subscription','save_budget','save_invoice','save_expense']);
+        if(!allowedFinanceActions.has(financeAction)){
+          return json(res,400,{error:'Choose a supported company finance record action.'});
+        }
+        const financePayload=input?.payload&&typeof input.payload==='object'&&!Array.isArray(input.payload)?input.payload:null;
+        if(!financePayload)return json(res,400,{error:'A valid finance record is required.'});
+        const serializedFinancePayload=JSON.stringify(financePayload);
+        if(/"(?:api[_-]?key|access[_-]?token|refresh[_-]?token|password|secret|authorization|cookie|credential|cvv|card[_-]?number|bank[_-]?password)"\s*:/i.test(serializedFinancePayload)){
+          return json(res,400,{error:'Credentials and raw payment details cannot be stored in company finance records.'});
+        }
+        if(financeAction==='save_provider'&&(
+          ['active','free_plan','paid_plan'].includes(String(financePayload.connection_status||''))||
+          String(financePayload.api_connection_status||'')==='connected'
+        )){
+          return json(res,409,{error:'A provider cannot be marked connected until its official connection test is implemented and verified.'});
+        }
+        if(financeAction==='save_subscription'&&financePayload.auto_renewal_enabled===true){
+          return json(res,409,{error:'Automatic renewal is disabled until an approved provider integration and budget authorization are available.'});
+        }
+        if(financeAction==='save_budget'&&String(financePayload.approval_status||'')==='approved'){
+          return json(res,409,{error:'Budget approval must be completed by the authorized approval workflow; saving a record cannot self-approve spending.'});
+        }
+        if(financeAction==='save_invoice'&&String(financePayload.payment_status||'')==='paid'){
+          return json(res,409,{error:'An invoice can only be marked paid after a verified provider confirmation event.'});
+        }
+        const result=await requestSupabaseState('admin_finance_command',{
+          actorUserId:user.id,financeAction,payload:financePayload
+        });
+        return json(res,200,result);
+      }
+
       if(method==='GET'&&p==='/api/admin/access'){
         const designatedCreatorHubAdmin = isDesignatedCreatorHubAdmin(user);
         const canAccess = designatedCreatorHubAdmin && isModerator(user,req) && hasActiveReviewerSession(user);
