@@ -254,6 +254,7 @@ test('AI profile and provider bulk operations use existing owner-scoped and mode
   assert.ok(server.includes('for (let offset = 0; offset < input.items.length; offset += 10)'));
   assert.ok(server.includes("sub === 'provider-assignments/bulk'"));
   assert.ok(server.includes("runAIProviderCommand('assign_provider_model', item)"));
+  assert.ok(server.includes("if (!isModerator(user, req))"));
   assert.ok(server.includes('Only an authorized Minglora platform administrator'));
   assert.ok(ui.includes('data-ai-form="identity-profile-bulk"'));
   assert.ok(ui.includes("path = '/identities/bulk-profile'"));
