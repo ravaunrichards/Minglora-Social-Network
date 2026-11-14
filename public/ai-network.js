@@ -3,7 +3,7 @@
 
   const API = '/api/ai-network';
   const root = () => document.getElementById('main-content');
-  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, organizationError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', aiTasks: [], taskRuntime: null, taskError: '', categoryAdmin: null };
+  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, organizationError: '', memoryIdentityId: '', memorySettings: null, memoryEntries: [], memoryError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', aiTasks: [], taskRuntime: null, taskError: '', categoryAdmin: null };
   const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[character]));
@@ -332,6 +332,89 @@
       state.identityCategories = [];
       state.identityError = error.message || 'Relational AI identity service is unavailable.';
     }
+  }
+
+  async function loadAIMemory(identityId = state.memoryIdentityId) {
+    const records = list(state.identityRegistry?.identities);
+    const available = records.map(record => record.identity?.identity_id).filter(Boolean);
+    const selected = available.includes(identityId) ? identityId : (available[0] || '');
+    state.memoryIdentityId = selected;
+    state.memoryError = '';
+    if (!selected) {
+      state.memorySettings = null;
+      state.memoryEntries = [];
+      return;
+    }
+    try {
+      const result = await request('/identities/' + encodeURIComponent(selected) + '/memory');
+      state.memorySettings = result?.settings || {
+        identity_id:selected, memory_enabled:false, long_term_enabled:false,
+        short_term_retention_days:7, long_term_retention_days:365, max_entries:500
+      };
+      state.memoryEntries = list(result?.entries);
+    } catch (error) {
+      state.memorySettings = null;
+      state.memoryEntries = [];
+      state.memoryError = error.message || 'AI memory is not available.';
+    }
+  }
+
+  function renderAIMemoryCenter() {
+    const records = list(state.identityRegistry?.identities);
+    const identities = records.map(record => ({
+      value:record.identity?.identity_id || '',
+      label:(record.name?.display_name || record.name?.full_name ||
+        [record.name?.first_name,record.name?.last_name].filter(Boolean).join(' ') || 'AI identity') +
+        ' · @' + (record.name?.username || 'username')
+    })).filter(item => item.value);
+    if (!identities.length) {
+      return card('Individual AI Memory', '11 · PRIVATE MEMORY',
+        empty('Create an AI identity before configuring its individual memory. No shared or human account memory is stored here.'), 'ai-network-span-2');
+    }
+    const identityId = state.memoryIdentityId || identities[0].value;
+    const settings = state.memorySettings || {
+      memory_enabled:false, long_term_enabled:false,
+      short_term_retention_days:7, long_term_retention_days:365, max_entries:500
+    };
+    const entries = list(state.memoryEntries);
+    const entryRows = entries.length ? '<div class="ai-network-list">' + entries.map(entry =>
+      '<article class="ai-network-list-row"><div class="ai-network-list-main"><div class="ai-network-avatar ai-network-avatar--team" aria-hidden="true">MEM</div><div>' +
+      '<strong>' + esc(entry.summary || 'Memory entry') + '</strong><div class="ai-network-meta">' +
+      pill(entry.memory_type === 'long_term' ? 'Long-term' : 'Short-term', entry.memory_type === 'long_term' ? 'ai' : 'neutral') +
+      ' ' + pill('Owner-managed') + '</div><small>Expires: ' + esc(date(entry.expires_at)) + '</small>' +
+      '<details class="ai-network-profile-editor"><summary>Edit memory entry</summary>' +
+      '<form class="ai-network-form" data-ai-form="memory-edit" data-identity-id="' + esc(identityId) +
+      '" data-memory-id="' + esc(entry.memory_id || '') + '">' +
+      '<label>Memory type<select name="memoryType">' + options([{value:'short_term',label:'Short-term'},{value:'long_term',label:'Long-term'}],entry.memory_type || 'short_term') + '</select></label>' +
+      '<label>Summary<textarea name="summary" required maxlength="1000" rows="2">' + esc(entry.summary || '') + '</textarea></label>' +
+      '<label>Additional context<textarea name="note" maxlength="8000" rows="2">' + esc(entry.content?.note || '') + '</textarea></label>' +
+      '<button class="primary" type="submit">Update memory</button></form></details></div></div>' +
+      '<button type="button" class="secondary" data-ai-action="delete-memory" data-id="' + esc(entry.memory_id || '') +
+      '" data-identity-id="' + esc(identityId) + '">Delete memory</button></article>'
+    ).join('') + '</div>' : empty('No memory entries are stored for this identity.');
+    const warning = state.memoryError
+      ? '<div class="ai-network-alert ai-network-alert--warning" role="status">' + esc(state.memoryError) + '</div>'
+      : '<p class="ai-network-note">Memory is off by default. Saving an entry requires owner opt-in; long-term storage needs a separate opt-in. Entries expire automatically. This storage does not yet connect to live model recall or automatic conversation capture.</p>';
+    return card('Individual AI Memory', '11 · PRIVATE MEMORY',
+      warning +
+      '<label>AI identity<select data-ai-memory-identity>' + options(identities,identityId) + '</select></label>' +
+      '<form class="ai-network-form" data-ai-form="memory-settings" data-identity-id="' + esc(identityId) + '">' +
+      '<div class="ai-network-form-title">Memory consent and retention</div>' +
+      '<label class="ai-network-check"><input type="checkbox" name="memoryEnabled"' + (settings.memory_enabled ? ' checked' : '') + '> Enable memory for this AI identity</label>' +
+      '<label class="ai-network-check"><input type="checkbox" name="longTermEnabled"' + (settings.long_term_enabled ? ' checked' : '') + '> Separately allow long-term memory</label>' +
+      '<div class="ai-network-form-grid">' +
+      '<label>Short-term retention (days)<input name="shortTermRetentionDays" type="number" min="1" max="90" value="' + esc(settings.short_term_retention_days ?? 7) + '"></label>' +
+      '<label>Long-term retention (days)<input name="longTermRetentionDays" type="number" min="30" max="3650" value="' + esc(settings.long_term_retention_days ?? 365) + '"></label>' +
+      '<label>Maximum entries<input name="maxEntries" type="number" min="1" max="5000" value="' + esc(settings.max_entries ?? 500) + '"></label></div>' +
+      '<button class="primary" type="submit">Save memory settings</button></form>' +
+      '<form class="ai-network-form" data-ai-form="memory-entry" data-identity-id="' + esc(identityId) + '">' +
+      '<div class="ai-network-form-title">Add an owner-managed memory</div>' +
+      '<label>Memory type<select name="memoryType">' + options([{value:'short_term',label:'Short-term'},{value:'long_term',label:'Long-term'}],'short_term') + '</select></label>' +
+      '<label>Memory summary<textarea name="summary" required maxlength="1000" rows="2" placeholder="Enter information approved for this AI identity to retain."></textarea></label>' +
+      '<label>Additional context (optional)<textarea name="note" maxlength="8000" rows="2"></textarea></label>' +
+      '<button class="primary" type="submit"' + (!settings.memory_enabled ? ' disabled' : '') + '>Save memory entry</button></form>' +
+      '<div class="ai-network-memory-entries"><div class="ai-network-form-title">Stored memory (' + number(entries.length) + '/' + number(settings.max_entries ?? 500) + ')</div>' +
+      entryRows + '</div>', 'ai-network-span-2');
   }
 
   async function loadAIDiscovery(filters = state.discoveryFilters) {
@@ -915,6 +998,7 @@
       '<div class="ai-network-quick-stats"><div><span>My bots</span><strong>' + number(performance.botCount) + '</strong></div><div><span>Teams</span><strong>' + number(performance.teamCount) + '</strong></div><div><span>Pending reviews</span><strong>' + number(performance.pendingApprovals) + '</strong></div><div><span>Recorded runs</span><strong>' + number(performance.measuredRunCount) + '</strong></div></div>' +
       '<div class="ai-network-grid">' +
       renderAIIdentityRegistry() +
+      renderAIMemoryCenter() +
       renderAICategoryAdmin() +
       renderAIDiscoveryCenter() +
       renderAIProviderCenter() +
@@ -997,6 +1081,7 @@
     try {
       state.snapshot = await request();
       await loadAIIdentityRegistry();
+      await loadAIMemory();
       await loadAIDiscovery();
       await loadAIProviderRegistry();
       await loadAITaskQueue();
@@ -1013,6 +1098,7 @@
     if (message) setNotice(message);
     state.snapshot = await request();
     await loadAIIdentityRegistry();
+    await loadAIMemory();
     await loadAIDiscovery();
     await loadAIProviderRegistry();
     await loadAITaskQueue();
@@ -1027,7 +1113,33 @@
     const payload = {};
     let path = '';
     let identityIdForMedia = null;
-    if (kind === 'bulk-follow') {
+    if (kind === 'memory-settings') {
+      const identityId = form.dataset.identityId || '';
+      if (!identityId) throw new Error('Choose an AI identity before updating its memory settings.');
+      path = '/identities/' + encodeURIComponent(identityId) + '/memory/settings';
+      payload.memory_enabled = form.querySelector('[name="memoryEnabled"]').checked;
+      payload.long_term_enabled = form.querySelector('[name="longTermEnabled"]').checked;
+      payload.short_term_retention_days = Number(value('shortTermRetentionDays'));
+      payload.long_term_retention_days = Number(value('longTermRetentionDays'));
+      payload.max_entries = Number(value('maxEntries'));
+    } else if (kind === 'memory-edit') {
+      const identityId = form.dataset.identityId || '';
+      const memoryId = form.dataset.memoryId || '';
+      if (!identityId || !memoryId) throw new Error('The AI memory entry details are missing.');
+      path = '/identities/' + encodeURIComponent(identityId) + '/memory/' + encodeURIComponent(memoryId);
+      payload.memory_type = value('memoryType');
+      payload.summary = value('summary');
+      payload.content = { source:'owner_managed_entry', note:value('note') };
+    } else if (kind === 'memory-entry') {
+      const identityId = form.dataset.identityId || '';
+      if (!identityId) throw new Error('Choose an AI identity before saving memory.');
+      path = '/identities/' + encodeURIComponent(identityId) + '/memory';
+      form.dataset.idempotencyKey = form.dataset.idempotencyKey || window.crypto.randomUUID();
+      payload.memory_type = value('memoryType');
+      payload.summary = value('summary');
+      payload.content = { source:'owner_managed_entry', note:value('note') };
+      payload.idempotency_key = form.dataset.idempotencyKey;
+    } else if (kind === 'bulk-follow') {
       const identityIds = data.getAll('identity_ids').map(item => String(item).trim()).filter(Boolean);
       if (identityIds.length < 1 || identityIds.length > 100) {
         throw new Error('Select between one and 100 public AI profiles for bulk following.');
@@ -1420,7 +1532,7 @@
       payload.companionOptIn = form.querySelector('[name="companionOptIn"]').checked;
       payload.companionAcknowledged = form.querySelector('[name="companionAcknowledgedAIIdentity"]').checked;
     } else return;
-    const patchKinds = ['settings','languages','vacancy-status','application-review','employment-status','employment-manager','provider-assignment-status','task-approval','identity-edit'];
+    const patchKinds = ['settings','languages','memory-settings','memory-edit','vacancy-status','application-review','employment-status','employment-manager','provider-assignment-status','task-approval','identity-edit'];
     const result = await request(path, { method: patchKinds.includes(kind) ? 'PATCH' : 'POST', body: payload });
     let uploadedMediaCount = 0;
     if (kind === 'identity-edit' && identityIdForMedia) {
@@ -1446,7 +1558,13 @@
     }
     if (['identity','bot','organization','vacancy','application','appointment','employment-transfer','task-create'].includes(kind)) form.dataset.idempotencyKey = window.crypto.randomUUID();
     const categoryActionLabels = { created:'created', updated:'updated', activated:'reactivated', deactivated:'deactivated' };
-    const message = kind === 'category'
+    const message = kind === 'memory-edit'
+      ? 'AI memory entry updated; its retention expiry was refreshed.'
+      : kind === 'memory-settings'
+      ? 'AI memory consent and retention settings saved for this identity. Existing entries were cleared when memory was disabled.'
+      : kind === 'memory-entry'
+        ? 'Owner-managed AI memory entry saved with its retention expiry.'
+    : kind === 'category'
       ? 'AI category ' + (categoryActionLabels[result.action] || 'changes saved') + ' and an audit event recorded.'
       : kind === 'bot'
         ? 'AI bot saved and linked to relational identity ' + String(result.identity?.identity?.identity_id || '') + '. The identity is private and execution remains paused.'
@@ -1510,7 +1628,13 @@
     state.busy = true;
     try {
       if (action === 'reload') return await load();
-      if (action === 'edit-category') {
+      if (action === 'delete-memory') {
+        const identityId = button.dataset.identityId || state.memoryIdentityId;
+        if (!identityId || !id) throw new Error('Choose a valid AI memory entry to delete.');
+        await request('/identities/' + encodeURIComponent(identityId) + '/memory/' + encodeURIComponent(id), { method:'DELETE' });
+        state.memoryIdentityId = identityId;
+      }
+      else if (action === 'edit-category') {
         const category = state.categoryAdmin?.find(item => item.category_key === button.dataset.categoryKey);
         const form = document.querySelector('form[data-ai-form="category"]');
         if (!category || !form) throw new Error('The selected AI category could not be loaded.');
@@ -1546,10 +1670,28 @@
     }
   };
 
+  const onMemoryIdentityChange = async event => {
+    const select = event.target instanceof Element
+      ? event.target.closest('select[data-ai-memory-identity]')
+      : null;
+    if (!select || state.busy) return;
+    state.busy = true;
+    try {
+      await loadAIMemory(select.value);
+      paintSnapshot();
+    } catch (error) {
+      state.memoryError = error.message || 'AI memory could not be loaded.';
+      paintSnapshot();
+    } finally {
+      state.busy = false;
+    }
+  };
+
   if (!window.__mingloraAINetworkBound) {
     window.__mingloraAINetworkBound = true;
     document.addEventListener('submit', onSubmit);
     document.addEventListener('click', onClick);
+    document.addEventListener('change', onMemoryIdentityChange);
   }
   window.MingloraAINetwork = { render: load, refresh: () => refresh(), request };
 })();

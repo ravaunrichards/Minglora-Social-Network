@@ -1621,6 +1621,21 @@ async function route(req, res) {
         }
       };
 
+      const runAIMemoryCommand = async (aiAction, payload = {}) => {
+        if (!isSupabasePersistence()) {
+          throw Object.assign(new Error('AI memory requires Minglora Supabase persistence.'), { status: 503 });
+        }
+        const response = await requestSupabaseState('ai_memory_command', {
+          actorUserId: user.id,
+          aiAction,
+          payload
+        });
+        if (response?.skipped) {
+          throw Object.assign(new Error('AI memory is unavailable in local-only persistence mode.'), { status: 503 });
+        }
+        return response?.result;
+      };
+
       const aiIdentityIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
       const aiMediaBucketForSlot = slot => slot === 'avatar' ? 'minglora-avatars' : slot === 'cover' ? 'minglora-covers' : '';
       const aiMediaLimitForSlot = slot => slot === 'avatar' ? 10 * 1024 * 1024 : slot === 'cover' ? 20 * 1024 * 1024 : 0;
@@ -1803,6 +1818,52 @@ async function route(req, res) {
         const input = await body(req, 200000);
         const result = await runAIIdentityCommand('bulk_create', input);
         return json(res, 200, result || { created_count: 0, failed_count: 0, created: [], failed: [] });
+      }
+
+      if (parts[0] === 'identities' && parts.length >= 3 && parts[2] === 'memory') {
+        const identityId = parts[1];
+        if (!aiIdentityIdPattern.test(identityId)) {
+          throw Object.assign(new Error('A valid AI identity is required for memory access.'), { status: 400 });
+        }
+        if (method === 'GET' && parts.length === 3) {
+          const result = await runAIMemoryCommand('list', { identity_id: identityId });
+          return json(res, 200, result || { settings: { memory_enabled: false, long_term_enabled: false }, entries: [], count: 0 });
+        }
+        if (method === 'PATCH' && parts.length === 4 && parts[3] === 'settings') {
+          const input = await body(req, 8000);
+          if (!input || typeof input !== 'object' || Array.isArray(input)) {
+            throw Object.assign(new Error('AI memory settings must be a JSON object.'), { status: 400 });
+          }
+          const result = await runAIMemoryCommand('configure', { ...input, identity_id: identityId });
+          return json(res, 200, { settings: result });
+        }
+        if (method === 'POST' && parts.length === 3) {
+          const input = await body(req, 20000);
+          if (!input || typeof input !== 'object' || Array.isArray(input)) {
+            throw Object.assign(new Error('AI memory entry must be a JSON object.'), { status: 400 });
+          }
+          const result = await runAIMemoryCommand('create', { ...input, identity_id: identityId });
+          return json(res, result?.created ? 201 : 200, { memory: result });
+        }
+        if (method === 'PATCH' && parts.length === 4) {
+          const input = await body(req, 20000);
+          if (!input || typeof input !== 'object' || Array.isArray(input)) {
+            throw Object.assign(new Error('AI memory update must be a JSON object.'), { status: 400 });
+          }
+          const result = await runAIMemoryCommand('update', {
+            ...input,
+            identity_id: identityId,
+            memory_id: parts[3]
+          });
+          return json(res, 200, { memory: result });
+        }
+        if (method === 'DELETE' && parts.length === 4) {
+          const result = await runAIMemoryCommand('delete', {
+            identity_id: identityId,
+            memory_id: parts[3]
+          });
+          return json(res, 200, result || { deleted: false });
+        }
       }
 
       const runAITaskCommand = async (aiAction, payload = {}) => {
