@@ -3,7 +3,7 @@
 
   const API = '/api/ai-network';
   const root = () => document.getElementById('main-content');
-  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, organizationError: '', memoryIdentityId: '', memorySettings: null, memoryEntries: [], memoryError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', aiTasks: [], taskRuntime: null, taskError: '', categoryAdmin: null };
+  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, organizationError: '', memoryIdentityId: '', memorySettings: null, memoryEntries: [], memoryError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', aiTasks: [], taskRuntime: null, taskError: '', categoryAdmin: null, delegationGrants: [], delegationAccess: false, delegationError: '' };
   const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[character]));
@@ -45,7 +45,11 @@
       body: options.body ? JSON.stringify(options.body) : undefined
     });
     const result = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(result.error || 'The AI Network request could not be completed.');
+    if (!response.ok) {
+      const error = new Error(result.error || 'The AI Network request could not be completed.');
+      error.status = response.status;
+      throw error;
+    }
     return result;
   }
 
@@ -475,6 +479,19 @@
       state.providerModels = [];
       state.providerAssignments = [];
       state.providerError = error.message || 'AI provider catalogue is unavailable.';
+    }
+  }
+
+  async function loadAIDelegations() {
+    state.delegationGrants = [];
+    state.delegationAccess = false;
+    state.delegationError = '';
+    try {
+      const result = await request('/delegations');
+      state.delegationGrants = list(result.delegation_grants);
+      state.delegationAccess = true;
+    } catch (error) {
+      if (error.status !== 403) state.delegationError = error.message || 'AI delegation controls are not available.';
     }
   }
 
