@@ -60,3 +60,12 @@ The existing gift build generates both subject-specific transparent SVG artwork 
 - Output: generated gift GLTF, primary SVG and transparent icon
 - Geometry: gold band, velvet lining, five arches and points, faceted centre/side gems, pavé and pendants
 - Review: `design-review-pending`; no premium or licensing approval is implied
+
+
+## Phoenix v1
+
+- Source: `phoenix-model.mjs`
+- Target: canonical catalogue item `phoenix-wep6uk`
+- Output: generated GLTF, primary SVG and transparent icon
+- Geometry: layered firebird body, flame crest, coverts, primary feathers, comet-tail fan, talons and embers
+- Review: `design-review-pending`; no premium or licensing approval is implied
