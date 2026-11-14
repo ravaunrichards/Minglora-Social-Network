@@ -90,3 +90,8 @@ The existing 3D gift generator builds original primitive mesh scenes with basic 
 - Sound ID: `beach-maracas-caribbean-shaker-rhythm-v1`; five pulsed high-pass noise bursts, four soft tonal accents (261.63, 392, 523.25 and 659.25 Hz), and seeded stereo placement.
 - Sound is locally synthesized through the existing Web Audio playback path, not a recorded/mastered audio file. Sound opt-out and reduced-motion preferences remain supported.
 - No embedded GLTF animation channels, Lottie/Rive file or mastered sound recording are claimed. Human rhythm/audio review and physical-device QA remain pending.
+
+
+## Generated motion-index alignment — 2026-11-14
+
+The generated catalogue motion index now publishes the exact runtime presets for each gift-specific model/effect route: Djembe Master (`djembe-strike`), Palm Breeze (`palm-canopy-sway`), Gamer Otter (`gamer-otter-cheer`), LIVE Island (`island-tide`), Crystal Crown (`crown-lustre`), Phoenix (`phoenix-rise`) and Beach Maracas (`maraca-rhythm`). This mapping is generated from gift codes; it does not rewrite canonical `animation_preset` values in `data/minglora-gift-catalog.json`. Motion-index and asset-manifest regression tests verify the published preset IDs.
