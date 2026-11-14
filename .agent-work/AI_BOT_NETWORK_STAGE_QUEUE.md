@@ -1,18 +1,18 @@
-## Latest media and owner-acceptance verification — 2026-11-14
+## Latest AI profile-media deployment checkpoint — 2026-11-14
 
-This checkpoint supersedes earlier assumptions about AI avatar/cover privacy and records the current Task 3 blocker.
+This section supersedes the older media and branch checkpoint details retained below.
 
-- Canonical repository `main` and `feat/minglora-ai-bot-network-core` were last verified identical at `5caa023d47ae65d515d10cc5417dac756c953179`. PR #299's documentation checkpoint is merged.
-- The existing Supabase project `gzycobgbasnqqhnympkr` still has 36/36 `ai_network` tables with RLS enabled. Identity/profile/media RPCs are `SECURITY INVOKER`; direct EXECUTE is denied to `anon` and `authenticated`, granted to `service_role`.
-- `minglora-avatars` and `minglora-covers` exist in the existing project. Both are configured `public=true`; avatar limit is 10 MiB and cover limit is 20 MiB; allowed MIME types are JPEG, PNG, WebP and AVIF. Existing Storage object policies scope upload/update/delete/list operations to authenticated users' first owner-ID folder.
-- **Important privacy boundary:** the AI upload completion and media signing gateway use `getPublicUrl` for these two shared buckets. Supabase documents that public-bucket downloads bypass Storage RLS and anyone possessing the object URL can retrieve the file. Therefore owner-scoped upload policies do not make AI avatars/covers private. The existing shared buckets must not be switched to private because they also serve existing human profile media. A private AI-profile visibility guarantee requires a separately reviewed private AI media path (or equivalent access-controlled serving) before it can be claimed.
-- A live Storage catalog check found **zero** objects under AI identity media paths in these buckets. No new AI identity, Auth account, test media object, or other production row was created.
-- The identity, profile-edit and media-update RPCs remain server-only. The profile-media RPC verifies owner identity, slot-specific bucket/path, a verified `media_assets` row, and writes version/audit history. The code-level unit tests pass; they do not prove a real upload through an authenticated member session.
-- **Task 3 remains PARTIAL / BLOCKED:** no signed-in Minglora owner browser session is available to exercise the deployed create/list/get/edit path and complete real Storage avatar/cover upload. The public Render API endpoint could not be reached by the available external verifier (DNS resolution failed in the current execution environment). Do not create an artificial Auth user, impersonate an arbitrary profile, fabricate media, or bypass owner authorization to close this gate.
-- The live AI Network runtime remains paused with zero workers. No provider, email inbox, or autonomous execution was enabled.
-- Overall accounting remains **2/19 acceptance tasks completed (10.53% by task count)**; Task 3 remains the active partial task. The 10-billion target remains unbenchmarked. No capacity claim is made.
+- PR #301, **Secure AI identity profile images with private Storage**, merged into `main` as commit `e26cb622c6f59878006f85ff80c7da8085919472`. The PR's CI, AI Network syntax/regression tests, Auth/OAuth acceptance, For You navigation, and LIVE/MeetWave layout matrix all passed.
+- `main` and `feat/minglora-ai-bot-network-core` are synchronized and compare identical at `e26cb622c6f59878006f85ff80c7da8085919472`.
+- The existing Supabase project `gzycobgbasnqqhnympkr` has migration `minglora_ai_private_profile_media_20261114125814` applied in its ledger as version `20261114130752`. The repository migration filename is aligned to `20261114130752_minglora_ai_private_profile_media.sql`.
+- `minglora-runtime-state` is ACTIVE at **v121** with the existing custom gateway authentication setting unchanged (`verify_jwt=false`). The AI profile-media RPC now accepts only `minglora-ai-profile-media`.
+- AI avatar/cover upload preparation provisions `minglora-ai-profile-media` through Supabase Storage API as `public=false`, with image MIME restrictions and a 20 MiB bucket ceiling. If an existing bucket is not private or provisioning cannot be verified, the upload fails closed. Completion, deletion and signing allowlists include the private bucket; AI profile media URLs are short-lived signed URLs and are not persisted as canonical references.
+- The private bucket is **not yet created** in Storage because creation is lazy and no signed-in owner upload has been performed. `minglora-avatars` and `minglora-covers` remain `public=true` and unchanged for human profile photos. No direct writes to Storage metadata tables were made.
+- Live verification after deployment: 36/36 AI tables have RLS; 15 categories, 20 department templates and 20 position templates remain active; AI identity count is zero; private AI media object count is zero; global pause remains true, execution disabled, and max workers zero. No Auth users, providers, workers, identities or test media were created.
+- **Task 3 remains PARTIAL / ACTIVE:** authenticated owner create/list/get/edit, actual private avatar/cover upload, and device acceptance still need a real signed-in Minglora owner session. The current private media GET path is owner-scoped; public/follower media serving governed by `profile_visibility` is not claimed complete. Render HTTP acceptance is still unverified because the service workspace/browser session is unavailable and the prior endpoint probe failed DNS resolution.
+- Overall task accounting remains **2/19 acceptance tasks complete (10.53% by task count)**. This is checklist progress, not feature-completion or 10-billion capacity evidence.
 
-**Next safe action:** obtain an authorized signed-in Minglora owner session for Task 3 acceptance, and address the private AI-media path before claiming private-profile image confidentiality. Continue in the existing Minglora repository/project only.
+**Next action:** obtain an authorized signed-in platform-owner browser session for Task 3 acceptance. Do not ask for, store, or expose passwords, access tokens or provider credentials.
 
 ---
 
