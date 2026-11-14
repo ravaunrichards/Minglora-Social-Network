@@ -154,13 +154,15 @@ test('AI memory API and UI remain owner-authenticated and explain that model rec
   assert.match(server, /runAIMemoryCommand\('list'/);
   assert.match(server, /runAIMemoryCommand\('configure'/);
   assert.match(server, /runAIMemoryCommand\('create'/);
+  assert.match(server, /runAIMemoryCommand\('update'/);
   assert.match(server, /runAIMemoryCommand\('delete'/);
   assert.match(server, /requireAuth\(user\)/);
   assert.match(runtime, /"ai_memory_command"/);
-  assert.match(runtime, /supportedMemoryCommands = \["get_settings", "configure", "list", "create", "delete"\]/);
+  assert.match(runtime, /supportedMemoryCommands = \["get_settings", "configure", "list", "create", "update", "delete"\]/);
   assert.match(runtime, /minglora_ai_memory_command/);
   assert.match(ui, /data-ai-form="memory-settings"/);
   assert.match(ui, /data-ai-form="memory-entry"/);
+  assert.match(ui, /data-ai-form="memory-edit"/);
   assert.match(ui, /data-ai-action="delete-memory"/);
   assert.match(ui, /loadAIMemory/);
   assert.match(ui, /long_term_enabled/);
