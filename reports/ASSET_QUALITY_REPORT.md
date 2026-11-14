@@ -104,3 +104,12 @@ The manifest records sound design IDs, sound scope and layer descriptions, but i
 The Djembe Master and Palm Breeze gift sources now have individual Web Animations choreography in addition to their bespoke models, transparent vector art and synthesized sounds. Djembe's `djembe-strike` sequence uses a percussive strike/recoil/settle; Palm Breeze's `palm-canopy-sway` sequence creates a restrained lateral canopy sway. They run inside the existing animation trigger, preserve the existing duration cap/cleanup and obey reduced-motion preference. Both mappings and keyframe branches are covered by automated tests, and PR #342 passed full CI plus the LIVE/MeetWave Chromium visual QA matrix before merge.
 
 These effects are JavaScript Web Animations keyframes, not skeletal GLTF clips, standalone Rive/Lottie files or rendered videos. Human art review, cross-device physical rendering, sound/motion latency tests and production deployment remain unverified.
+
+
+## Gamer Otter bespoke model and effect checkpoint — 2026-11-14
+
+A new original model source, `assets/3d-assets/gift-models/gamer-otter-model.mjs`, is integrated by exact catalogue code `gamer-otter-100-mgl`. The self-contained glTF 2.0 scene separates the otter's body, muzzle, facial details, ears, whiskers, tail, paws, headset, microphone and controller into named mesh primitives with per-part PBR metallic/roughness material factors. The generator also emits an original matching transparent SVG and subject-only icon.
+
+The LIVE effect runtime adds a short arcade-note/thump Web Audio cue and a code-specific cheer motion through its existing gift event path. The cue is synthesized at runtime, not a mastered recording. Reduced-motion and the existing sound opt-out remain in force.
+
+**Quality gate:** source/build/test integration is being added; the design review state remains `design-review-pending`, human visual approval is not completed, rights/attribution review is required, and physical renderer/device QA is outstanding. This asset does not establish high-resolution texture maps, KTX2 compression, a rigged/animated character or premium-production approval. The production gift catalogue remains subject to its separate version-3 approval gate; this change does not publish or activate a production gift.
