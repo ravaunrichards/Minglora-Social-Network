@@ -62,6 +62,13 @@ const GIFT_SPECIFIC_WEB_AUDIO_DESIGNS = Object.freeze({
     format: "Web Audio API synthesized filtered flame swell and five ascending firebird tones",
     layers: ["filtered_bandpass_flame_noise_rise", "lowpass_ember_sweep", "five_note_ascending_firebird_chime_220_294_392_523_659hz"],
     status: "gift_specific_synthesized_sound_not_mastered_recording"
+  }),
+  "beach-maracas-1exxoag": Object.freeze({
+    sound_design_id: "beach-maracas-caribbean-shaker-rhythm-v1",
+    sound_profile_scope: "gift_specific_web_audio_synthesis",
+    format: "Web Audio API synthesized pulsed shaker noise with four bright steelpan-like tones",
+    layers: ["five_pulsed_highpass_shaker_bursts", "four_note_island_tonal_accent_262_392_523_659hz", "seeded_stereo_rhythm_placement"],
+    status: "gift_specific_synthesized_sound_not_mastered_recording"
   })
 });
 
