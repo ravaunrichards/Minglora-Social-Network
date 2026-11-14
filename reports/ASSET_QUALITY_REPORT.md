@@ -35,3 +35,7 @@ LIVE CSS includes phone compact layouts and a desktop room with a distinct stage
 ## Production gate
 
 The extracted 1,509 catalogue crops remain blocked from production until rights and visual review are documented or original replacements are supplied. The current generated SVG catalogue also remains below the requested quality gate while its system-rendered emoji overlay and shared category-template artwork remain in place. No source files were changed or removed during this documentation-only continuation.
+
+## Machine-readable per-gift inventory
+
+`assets/manifests/live-asset-manifest.json` is generated during startup and CI after the canonical gift SVG/GLTF files and active motion index are built. It records actual file sizes and SHA-256 hashes, artwork dimensions, aggregate GLTF bounds and mesh counts, exact active animation-profile mappings, synthesized sound status, licensing/visual-review gates, component use and device QA state. It is an inventory and validation artifact, not a production-approval certificate. The output is uploaded as a named GitHub Actions artifact for inspection.

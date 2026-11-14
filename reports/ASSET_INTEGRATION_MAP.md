@@ -22,3 +22,10 @@
 - The new unit test verifies every active catalogue row resolves to the exact canonical image/model path and animation/sound profile.
 
 No prices, balances, transactions, account state, LiveKit credentials, or existing gift records were modified by this branch.
+
+## Per-gift machine-readable manifest
+
+- `npm run build:live-asset-manifest` reads the canonical gift catalogue, generated SVG/GLTF files and active motion index.
+- `assets/manifests/live-asset-manifest.json` records every active and inactive catalogue row, exact generated file bytes and SHA-256 hashes, SVG dimensions, GLTF mesh bounds, source/generator references, coin price from the canonical catalogue, runtime animation profile, synthesized sound implementation, licensing/visual-review status, component usage, fallback state and unverified device QA.
+- `npm run build:live-asset-manifest -- --check` verifies the output is current and deterministic. The generated manifest is ignored as a build artifact and uploaded by CI as `minglora-live-asset-manifest-<run-number>`.
+- The manifest deliberately marks the current emoji-overlaid SVGs, procedural GLTFs, synthesized category sound, missing model-load error fallback and unverified physical-device support as limitations. It does not grant production approval or rights clearance.
