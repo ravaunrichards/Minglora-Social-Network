@@ -233,6 +233,12 @@ begin
     if jsonb_typeof(v_member_ids)<>'array' or jsonb_array_length(v_member_ids)<1 or jsonb_array_length(v_member_ids)>20 then
       raise exception using errcode='22023',message='Choose between 1 and 20 AI team members.';
     end if;
+    if jsonb_array_length(v_member_ids) <> (
+      select count(distinct q.identity_id)
+      from jsonb_array_elements_text(v_member_ids) as q(identity_id)
+    ) then
+      raise exception using errcode='22023',message='An AI identity can appear only once in a team membership request.';
+    end if;
     if v_key is null or length(v_key)<8 or length(v_key)>160 then
       raise exception using errcode='22023',message='A stable team idempotency key is required.';
     end if;
@@ -301,6 +307,22 @@ begin
       where ai_network.ai_team_memberships.owner_user_id=v_owner;
       v_created_count:=v_created_count+1;
     end loop;
+    if not v_new_team and (
+      (select count(*) from ai_network.ai_team_memberships m
+        where m.team_id=v_team_id and m.owner_user_id=v_owner
+          and m.membership_status='active') <> jsonb_array_length(v_member_ids)
+      or exists(
+        select 1
+        from jsonb_array_elements_text(v_member_ids) with ordinality expected(identity_id,ordinality)
+        left join ai_network.ai_team_memberships m
+          on m.team_id=v_team_id and m.owner_user_id=v_owner
+          and m.identity_id=expected.identity_id::uuid and m.membership_status='active'
+        where m.membership_id is null
+          or m.member_role <> case when expected.ordinality=1 then 'lead' else 'member' end
+      )
+    ) then
+      raise exception using errcode='23505',message='Team idempotency key was already used with a different membership request.';
+    end if;
     update ai_network.ai_teams t set status='active',updated_at=now()
       where t.team_id=v_team_id and t.owner_user_id=v_owner and t.status='draft';
     if v_new_team then
