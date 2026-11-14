@@ -3878,10 +3878,13 @@ Deno.serve(async (req: Request) => {
     }
     const results: any[] = [];
     const failed: any[] = [];
-    for (const identityId of identityIds) {
-      const outcome = await transition(identityId);
-      if (outcome.ok) results.push(outcome.result);
-      else failed.push({ identity_id: identityId, code: outcome.code, error: outcome.error });
+    for (let offset = 0; offset < identityIds.length; offset += 10) {
+      const batch = identityIds.slice(offset, offset + 10);
+      const outcomes = await Promise.all(batch.map(identityId => transition(identityId)));
+      for (const outcome of outcomes) {
+        if (outcome.ok) results.push(outcome.result);
+        else failed.push({ identity_id: outcome.identity_id, code: outcome.code, error: outcome.error });
+      }
     }
     return json(200, {
       result: {
