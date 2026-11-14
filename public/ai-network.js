@@ -944,7 +944,7 @@
               '<label>Task type<select name="taskType" required>' + options(allowed.map(value => ({value,label:value.replaceAll('_',' ')})), allowed[0] || '') + '</select></label>' +
               '<label>Task class<select name="actionClass" required>' + options(classes.map(value => ({value,label:value.replaceAll('_',' ')})), classes[0] || '') + '</select></label>' +
               '<label>Task brief<textarea name="brief" required minlength="3" maxlength="8000" rows="2" placeholder="Describe the requested research or draft."></textarea></label>' +
-              '<div class="ai-network-form-grid"><label>Token budget<input name="tokenBudget" type="number" min="0" max="' + number(grant.max_token_budget || 0) + '" value="' + Math.min(1000,Number(grant.max_token_budget || 0)) + '" required></label>' +
+              '<div class="ai-network-form-grid"><label>Token budget<input name="tokenBudget" type="number" min="0" max="' + String(Number(grant.max_token_budget || 0)) + '" value="' + Math.min(1000,Number(grant.max_token_budget || 0)) + '" required></label>' +
               '<label>Cost limit (USD)<input name="costLimitUsd" type="number" min="0" max="' + esc(grant.max_cost_limit_usd || 0) + '" step="0.01" value="' + Math.min(0.1,Number(grant.max_cost_limit_usd || 0)) + '" required></label></div>' +
               '<button class="primary" type="submit">Submit to approval queue</button></form>'
             : '';
