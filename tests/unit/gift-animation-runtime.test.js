@@ -115,7 +115,7 @@ test("LIVE Island has a dedicated tide animation and locally synthesized surf/ch
   assert.ok(effects.includes('gift.code==="live-island-rmn3mc"'));
   assert.ok(effects.includes("surf.buffer=createGiftNoise(c,seed,1.08)"));
   assert.ok(effects.includes("notes=[392,493.88,587.33,783.99]"));
-  assert.ok(effects.includes('?"island-tide":gift.motion_preset'));
+  assert.ok(effects.includes('gift.code==="live-island-rmn3mc"?"island-tide":'));
   assert.ok(effects.includes('if(preset==="island-tide")return'));
   assert.ok(effects.includes("motionElement.animate(semanticFrames"));
   assert.ok(effects.includes('if(options.sound!==false)play(gift)'));
@@ -128,7 +128,7 @@ test("Crystal Crown has dedicated royal shimmer choreography and local faceted-g
   assert.ok(effects.includes('gift.code==="crystal-crown-1itryeu"'));
   assert.ok(effects.includes("notes=[523.25,659.25,783.99,1046.5,1318.51]"));
   assert.ok(effects.includes("shimmer.buffer=createGiftNoise(c,seed,0.62)"));
-  assert.ok(effects.includes('?"crown-lustre":gift.motion_preset'));
+  assert.ok(effects.includes('gift.code==="crystal-crown-1itryeu"?"crown-lustre":'));
   assert.ok(effects.includes('if(preset==="crown-lustre")return'));
   assert.ok(effects.includes("motionElement.animate(semanticFrames"));
   assert.ok(effects.includes('if(options.sound!==false)play(gift)'));
