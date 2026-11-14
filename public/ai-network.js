@@ -3,7 +3,7 @@
 
   const API = '/api/ai-network';
   const root = () => document.getElementById('main-content');
-  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, performanceReviews: [], successionPlans: [], promotions: [], organizationError: '', memoryIdentityId: '', memorySettings: null, memoryEntries: [], memoryError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', aiTasks: [], taskRuntime: null, taskError: '', categoryAdmin: null, delegationGrants: [], delegationAccess: false, delegationError: '' };
+  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', adminAccess: false, discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, performanceReviews: [], successionPlans: [], promotions: [], organizationError: '', memoryIdentityId: '', memorySettings: null, memoryEntries: [], memoryError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', aiTasks: [], taskRuntime: null, taskError: '', categoryAdmin: null, delegationGrants: [], delegationAccess: false, delegationError: '' };
   const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[character]));
@@ -308,11 +308,13 @@
       '<label>Username<input name="username" required minlength="3" maxlength="30" pattern="[a-z0-9_]+" autocomplete="off" placeholder="lowercase_username"></label>' +
       '<label>AI category<select name="categoryKey" required ' + (!categories.length ? 'disabled' : '') + '>' +
       (categoryOptions.length ? options(categoryOptions, categoryOptions[0].value) : '<option value="">Categories unavailable</option>') + '</select></label>' +
-      '<label>AI population<select name="population">' + options([
-        {value:'independent',label:'Independent AI'},
-        {value:'organizational',label:'Organizational AI'},
-        {value:'specialized_service',label:'Specialized AI service'}
-      ], 'independent') + '</select></label>' +
+      (state.adminAccess
+        ? '<label>AI population<select name="population">' + options([
+            {value:'independent',label:'Independent AI'},
+            {value:'organizational',label:'Organizational AI'},
+            {value:'specialized_service',label:'Specialized AI service'}
+          ], 'independent') + '</select></label>'
+        : '<input type="hidden" name="population" value="independent"><p class="ai-network-note">Member-created identities belong to the independent AI population. Organizational employees and specialized platform services are managed by authorized administrators.</p>') +
       '<label>Gender<select name="gender">' + options([
         {value:'female',label:'Female AI'},{value:'male',label:'Male AI'},
         {value:'non_binary',label:'Non-binary AI'},{value:'other',label:'Other'},
@@ -342,7 +344,8 @@
       '</form>';
     const bulkForm = '<form class="ai-network-form" data-ai-form="identity-bulk">' +
       '<div class="ai-network-form-title">Bulk import AI identities (1–100 per batch)</div>' +
-      '<p class="ai-network-note">Paste a JSON array. Each item uses the same name, category, population and profile fields as the single-identity form. Every item gets its own record; failed rows are reported and can be retried with the same idempotency key.</p>' +
+      '<p class="ai-network-note">Paste a JSON array. Each item uses the same name, category, population and profile fields as the single-identity form. Every item gets its own record; failed rows are reported and can be retried with the same idempotency key. ' +
+      (state.adminAccess ? 'Authorized administrators may create independent, organizational or specialized-service identities.' : 'Member batches may contain independent AI identities only.') + '</p>' +
       '<label>Identity batch JSON<textarea name="items" required rows="8" maxlength="180000" spellcheck="false" placeholder=\'[{"population":"independent","category_key":"ai_friends","idempotency_key":"import-row-000001","name":{"first_name":"Ava","last_name":"Morgan","username":"ava_morgan_01"},"profile":{"gender":"female"}}]\'></textarea></label>' +
       '<button class="primary" type="submit" ' + (!categories.length ? 'disabled' : '') + '>Import identity batch</button>' +
       '</form>';
@@ -365,12 +368,16 @@
       try {
         const adminCategoryResult = await request('/categories/admin');
         state.categoryAdmin = list(adminCategoryResult.categories);
+        state.adminAccess = true;
       } catch {
         state.categoryAdmin = null;
+        state.adminAccess = false;
       }
     } catch (error) {
       state.identityRegistry = null;
       state.identityCategories = [];
+      state.categoryAdmin = null;
+      state.adminAccess = false;
       state.identityError = error.message || 'Relational AI identity service is unavailable.';
     }
   }
@@ -1220,13 +1227,21 @@
       '<p class="ai-network-note">Original content is preserved. Translation remains a draft and must be labelled and reviewed. Automatic translation is off unless you enable it.</p>';
   }
 
-  function renderSettings(settings, provider) {
-    return '<form class="ai-network-form" data-ai-form="settings"><div class="ai-network-form-title">Usage and safety limits</div>' +
+  function renderSettings(settings) {
+    return '<form class="ai-network-form" data-ai-form="settings"><div class="ai-network-form-title">My usage and companion preferences</div>' +
       '<div class="ai-network-form-grid"><label>Daily token budget<input name="dailyTokenBudget" type="number" min="500" max="500000" step="100" value="' + esc(settings.dailyTokenBudget) + '" required></label>' +
       '<label>Monthly spend limit (USD)<input name="monthlySpendLimitUsd" type="number" min="0.5" max="500" step="0.5" value="' + esc(settings.monthlySpendLimitUsd) + '" required></label></div>' +
       '<label class="ai-network-switch"><input type="checkbox" name="companionOptIn" ' + (settings.companionOptIn ? 'checked' : '') + '><span>Opt in to an AI companion (off by default)</span></label>' +
       '<label class="ai-network-switch"><input type="checkbox" name="companionAcknowledgedAIIdentity"' + (settings.companionOptIn ? ' checked' : '') + '><span>I understand this companion is AI, not a human</span></label>' +
-      '<button class="primary" type="submit">Save safety settings</button></form>' +
+      '<button class="primary" type="submit">Save my preferences</button></form>' +
+      '<p class="ai-network-note">These settings apply to your own Minglora AI experience. Platform-wide execution controls are available only in the administrative workspace.</p>';
+  }
+
+  function renderAdminGlobalControls(settings, provider) {
+    return '<div class="ai-network-command-grid"><div><span>Provider</span><strong>' + esc(provider.provider || 'Not configured') + '</strong></div>' +
+      '<div><span>Model</span><strong>' + esc(provider.model || '—') + '</strong></div>' +
+      '<div><span>Global state</span><strong>' + esc(settings.globalPaused ? 'Paused' : 'Enabled') + '</strong></div>' +
+      '<div><span>Execution</span><strong>Disabled until provider adapter is verified</strong></div></div>' +
       '<div class="ai-network-provider"><div><strong>Provider readiness</strong><p>' + esc(provider.note) + '</p></div>' +
       pill(provider.configured ? 'Configured · execution disabled' : 'Not configured', provider.configured ? 'warning' : 'neutral') + '</div>' +
       '<div class="ai-network-safety-actions"><button type="button" class="danger" data-ai-action="emergency-pause">Emergency pause all AI work</button>' +
@@ -1246,18 +1261,22 @@
     return '<section class="ai-network-page">' +
       '<header class="ai-network-hero"><div><span class="ai-network-eyebrow">MINGLORA INTELLIGENCE</span><h1>AI Bot Network</h1>' +
       '<p>Build distinct AI assistants, coordinate approved work and manage every bot from one secure workspace.</p></div>' +
-      '<div class="ai-network-hero-status">' + pill('AI identity required', 'ai') + pill(safeguards.globalPaused ? 'Network paused' : 'Network enabled', safeguards.globalPaused ? 'warning' : 'success') + '</div></header>' +
+      '<div class="ai-network-hero-status">' + pill('AI identity required', 'ai') +
+      (state.adminAccess ? pill(safeguards.globalPaused ? 'Network paused' : 'Network enabled', safeguards.globalPaused ? 'warning' : 'success') : '') +
+      '</div></header>' +
       (state.notice ? '<div class="ai-network-alert ai-network-alert--' + esc(state.noticeType || 'success') + '" role="status">' + esc(state.notice) + '</div>' : '') +
       (state.error ? '<div class="ai-network-alert ai-network-alert--error" role="alert">' + esc(state.error) + '</div>' : '') +
-      '<div class="ai-network-quick-stats"><div><span>My bots</span><strong>' + number(performance.botCount) + '</strong></div><div><span>Teams</span><strong>' + number(performance.teamCount) + '</strong></div><div><span>Pending reviews</span><strong>' + number(performance.pendingApprovals) + '</strong></div><div><span>Recorded runs</span><strong>' + number(performance.measuredRunCount) + '</strong></div></div>' +
+      '<div class="ai-network-quick-stats"><div><span>My bots</span><strong>' + number(performance.botCount) + '</strong></div><div><span>Teams</span><strong>' + number(performance.teamCount) + '</strong></div>' +
+      (state.adminAccess ? '<div><span>Pending reviews</span><strong>' + number(performance.pendingApprovals) + '</strong></div>' : '') +
+      '<div><span>Recorded runs</span><strong>' + number(performance.measuredRunCount) + '</strong></div></div>' +
       '<div class="ai-network-grid">' +
       renderAIIdentityRegistry() +
       renderAIMemoryCenter() +
-      renderAICategoryAdmin() +
+      (state.adminAccess ? renderAICategoryAdmin() : '') +
       renderAIDiscoveryCenter() +
-      renderAIProviderCenter() +
-      renderAITaskQueueCenter() +
-      renderAIOrganizationCenter() +
+      (state.adminAccess ? renderAIProviderCenter() : '') +
+      (state.adminAccess ? renderAITaskQueueCenter() : '') +
+      (state.adminAccess ? renderAIOrganizationCenter() : '') +
       card('Bot Personality Laboratory', '01 · PERSONALITY', '<p>Build unique AI helpers with a clear purpose, tone, traits, expertise and permitted tasks. Every Bot Lab creation is also registered as an individually addressable, private AI identity in Minglora.</p>' +
         renderBotRows(bots) + '<form class="ai-network-form" data-ai-form="bot"><div class="ai-network-form-title">Create a new AI bot and identity</div>' +
         '<div class="ai-network-form-grid"><label>AI first name<input name="firstName" required maxlength="80" autocomplete="off"></label>' +
@@ -1315,10 +1334,10 @@
         '<label>Audience<select name="visibility">' + options([{value:'public',label:'Public'},{value:'followers',label:'Followers'},{value:'friends',label:'Friends'},{value:'private',label:'Private'}],'public') + '</select></label></div>' +
         '<label>Starts at<input name="startsAt" type="datetime-local" required></label><button class="primary" type="submit"' +
         (!bots.some(bot=>bot.status!=='archived')?' disabled':'') + '>Save event draft</button></form>') +
-      card('Central Bot Command Center', '10 · COMMAND CENTER', '<p>All of your AI tools, approval decisions, provider status and global safety controls.</p>' +
-        '<div class="ai-network-command-grid"><div><span>Provider</span><strong>' + esc(provider.provider || 'Not configured') + '</strong></div><div><span>Model</span><strong>' + esc(provider.model || '—') + '</strong></div>' +
-        '<div><span>Global state</span><strong>' + esc(settings.globalPaused ? 'Paused' : 'Enabled') + '</strong></div><div><span>Execution</span><strong>Disabled until provider adapter is verified</strong></div></div>' +
-        renderApprovals(approvals) + renderSettings(settings,provider), 'ai-network-span-2') +
+      card('My AI Safety Preferences', 'PERSONAL SETTINGS', renderSettings(settings), 'ai-network-span-2') +
+      (state.adminAccess ? card('Central Bot Command Center', 'ADMIN · COMMAND CENTER',
+        '<p>Platform-wide AI operations, owner approval decisions, provider readiness and global safety controls.</p>' +
+        renderApprovals(approvals) + renderAdminGlobalControls(settings,provider), 'ai-network-span-2') : '') +
       '</div><footer class="ai-network-footer">Minglora AI Network · Owner-controlled · AI identities disclosed · Human approval required</footer></section>';
   }
 
@@ -1517,11 +1536,17 @@
       if (items.some(item => !item || typeof item !== 'object' || Array.isArray(item))) {
         throw new Error('Every bulk identity row must be a JSON object.');
       }
+      if (!state.adminAccess && items.some(item => String(item.population || 'independent').trim().toLowerCase() !== 'independent')) {
+        throw new Error('Only authorized Minglora administrators may create organizational or specialized-service AI identities.');
+      }
       payload.items = items;
     } else if (kind === 'identity') {
       path = '/identities';
       form.dataset.idempotencyKey = form.dataset.idempotencyKey || window.crypto.randomUUID();
-      payload.population = value('population');
+      payload.population = value('population') || 'independent';
+      if (!state.adminAccess && payload.population !== 'independent') {
+        throw new Error('Only authorized Minglora administrators may create organizational or specialized-service AI identities.');
+      }
       payload.category_key = value('categoryKey');
       payload.idempotency_key = form.dataset.idempotencyKey;
       payload.purpose = value('purpose');
