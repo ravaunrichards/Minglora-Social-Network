@@ -8,8 +8,9 @@ const OUTPUT = path.join(ROOT, "public", "assets", "animations", "gifts", "catal
 const GENERATOR = "Minglora LIVE gift motion index generator";
 const checkOnly = process.argv.includes("--check");
 
-// These are the effect layers supported by public/gift-effects.js.  The
-// subject-specific motion remains the catalog's existing animation_preset.
+// These are the effect layers supported by public/gift-effects.js. Subject-specific
+// motion overrides are kept here so the generated index and runtime stay aligned;
+// canonical catalogue animation_preset values are never rewritten.
 const EFFECT_BY_CATEGORY = Object.freeze({
   flowers: "petals",
   hearts: "rings",
@@ -31,6 +32,16 @@ const EFFECT_BY_CATEGORY = Object.freeze({
   other: "sparkles"
 });
 const VALID_EFFECTS = new Set(["petals", "waves", "rings", "trail", "orbits", "bubbles", "sparkles"]);
+const GIFT_SPECIFIC_MOTION_PRESET = Object.freeze({
+  "djembe-master-1v3jzkm": "djembe-strike",
+  "palm-breeze-gknyt0": "palm-canopy-sway",
+  "gamer-otter-100-mgl": "gamer-otter-cheer",
+  "live-island-rmn3mc": "island-tide",
+  "crystal-crown-1itryeu": "crown-lustre",
+  "phoenix-wep6uk": "phoenix-rise",
+  "beach-maracas-1exxoag": "maraca-rhythm"
+});
+
 
 function fail(message) {
   throw new Error("[Minglora LIVE motion index] " + message);
@@ -68,7 +79,8 @@ function readSource() {
       active: true,
       category: gift.category,
       animation_key: gift.animation_key,
-      motion_preset: gift.animation_preset,
+      motion_preset: GIFT_SPECIFIC_MOTION_PRESET[gift.code] || gift.animation_preset,
+      catalog_motion_preset: gift.animation_preset,
       motion_effect: motionEffect,
       motion_duration_ms: gift.animation_duration_ms,
       image_url: imageUrl,

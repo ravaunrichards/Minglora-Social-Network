@@ -147,3 +147,16 @@ test("Phoenix has a dedicated rising-flame choreography and locally synthesized 
   assert.ok(effects.includes('if(options.sound!==false)play(gift)'));
   assert.ok(effects.includes('window.matchMedia?.("(prefers-reduced-motion: reduce)")'));
 });
+
+
+test("Beach Maracas uses dedicated Caribbean shaker rhythm and tonal accent playback", () => {
+  assert.ok(effects.includes("function playBeachMaracas(c,now,seed)"));
+  assert.ok(effects.includes('gift.code==="beach-maracas-1exxoag"'));
+  assert.ok(effects.includes("rattle.buffer=createGiftNoise(c,seed,.92)"));
+  assert.ok(effects.includes("notes=[261.63,392,523.25,659.25]"));
+  assert.ok(effects.includes('gift.code==="beach-maracas-1exxoag"?"maraca-rhythm":'));
+  assert.ok(effects.includes('if(preset==="maraca-rhythm")return'));
+  assert.ok(effects.includes("motionElement.animate(semanticFrames"));
+  assert.ok(effects.includes('if(options.sound!==false)play(gift)'));
+  assert.ok(effects.includes('window.matchMedia?.("(prefers-reduced-motion: reduce)")'));
+});

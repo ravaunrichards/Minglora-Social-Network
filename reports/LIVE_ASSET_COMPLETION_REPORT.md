@@ -234,3 +234,35 @@ The glyph overlay and unused emoji lookup were removed from `scripts/generate-mi
 - Source provenance is \`gift-phoenix-3d-v1\` / \`assets/3d-assets/gift-models/phoenix-model.mjs\`; review remains \`design-review-pending\`. Dedicated sound design \`phoenix-flame-rise-and-ember-choir-v1\` is locally synthesized, not a mastered audio file.
 - Full generated catalogue audit: **1,748** gift records (**1,737 active, 11 inactive**); **1,748/1,748** primary SVGs, transparent icons and GLTF models generated; **6** gift-specific synthesized sound designs; **0** mastered gift sound files; **0** physical-device QA approvals. Asset generation counts are not production-art approval counts.
 - Human artwork review, rights/licensing clearance, premium quality approval, physical Android/iOS/tablet/foldable/desktop/laptop/TV rendering and audio QA, and production deployment remain unverified. No canonical gift activation, Coin price, database offering, wallet, transaction, payout or AI runtime state changed.
+
+
+## Bespoke Beach Maracas model and Caribbean rhythm checkpoint — 2026-11-14
+
+- Added `assets/3d-assets/gift-models/beach-maracas-model.mjs` for existing canonical gift `beach-maracas-1exxoag`.
+- Source generates a crossed coral/lagoon gourd-shaker pair with hardwood handles, woven grip bands, individual seed motifs, sunburst paint details and a conch charm as embedded-buffer glTF 2.0 geometry.
+- Existing generator emits original `beach-maracas-original-v1` primary SVG/transparent icon and routes the canonical gift to its bespoke model source.
+- Added exact-code `maraca-rhythm` Web Animations choreography and locally synthesized shaker bursts/tonal accents; sound opt-out and reduced-motion handling remain.
+- Added sound manifest provenance, cache version, source inventory and regression assertions. CI/build results pending.
+- The existing music category, active state and 349-Coin value remain unchanged. No database offering, transaction, wallet, earnings or payout modified. Human design/rights acceptance and physical-device QA remain pending; audio is synthesized, not mastered.
+
+
+## Bespoke LIVE motion-index parity checkpoint — 2026-11-14
+
+- Added exact code-to-preset mapping in `scripts/generate-live-gift-motion-index.mjs` for Djembe Master, Palm Breeze, Gamer Otter, LIVE Island, Crystal Crown, Phoenix and Beach Maracas.
+- Generated motion-index and asset-manifest motion preset fields now align with the actual exact-code runtime choreography.
+- Regression tests verify each mapping in both motion index and manifest while canonical catalogue identity, source animation key and sound preset fields remain intact.
+
+
+- Motion-index records preserve `catalog_motion_preset` separately from the effective bespoke `motion_preset`; the asset manifest exposes `gift_specific_motion_override`.
+- Manifest validation continues to enforce canonical source gift values and no longer conflates approved code-level choreography with catalogue metadata. Regression tests cover both fields.
+
+
+## Verified Beach Maracas and motion-index parity checkpoint — 2026-11-14
+
+- Latest full CI run **12070** passed Node 24 syntax, 1,748-gift generation, LIVE motion-index generation, sound-pack generation, LIVE asset-manifest generation, raster metadata audit and all automated tests. **1,171 tests passed; 0 failed.** Supabase Auth provider acceptance and For You functional navigation passed.
+- Latest separate browser workflows passed: LIVE/MeetWave responsive-layout independence, AI identity/discovery browser acceptance, and profile visual matrix. Profile Chromium QA rendered **1,260 combinations across 9 viewports**, captured **80 synthetic-fixture screenshots + 80 production-app screenshots = 160 total**, and reported **zero failures**. These are automated browser checks, not physical-device certification.
+- Generated manifest verifies canonical active item \`beach-maracas-1exxoag\`: music category and **349 Coins** preserved; primary SVG **3,480 bytes**, transparent icon **2,438 bytes**, bespoke glTF **559,592 bytes**, **93 primitives/materials**, **10,550 vertices**, **17,328 triangles**, zero texture maps and zero embedded animation channels. Bounds are finite and geometry buffers are embedded.
+- Source provenance is \`gift-beach-maracas-3d-v1\` / \`assets/3d-assets/gift-models/beach-maracas-model.mjs\`; review state is \`design-review-pending\`. Dedicated sound design \`beach-maracas-caribbean-shaker-rhythm-v1\` is locally synthesized, not a mastered recording.
+- The generated motion index and LIVE asset manifest now agree with all seven gift-specific runtime presets. Each entry retains its unmodified \`catalog_motion_preset\` separately from effective \`motion_preset\`, and the manifest identifies \`gift_specific_motion_override\`; strict canonical catalogue validation remains enabled.
+- Generated catalogue summary: **1,748** gift records (**1,737 active, 11 inactive**); **1,748/1,748** primary SVGs, transparent icons and GLTF files verified; **7** gift-specific synthesized sound designs; **0** dedicated mastered gift-sound files; **0** physical-device QA approvals. These outputs are catalogue-generation evidence, not 1,748 human-approved premium artworks.
+- Human artwork/rights approval, premium acceptance, texture/KTX2 work where applicable, physical Android/iOS/tablet/foldable/desktop/laptop/TV rendering/audio QA, and production deployment remain outstanding. Existing gift code, active state, 349-Coin value, wallet, transaction, earnings, payout and AI runtime state were not modified.
