@@ -1,3 +1,24 @@
+## Continuation checkpoint — Task 3 live evidence refresh — 2026-11-14 22:23 UTC
+
+This is a read-only audit checkpoint. It supersedes the earlier main-head, Storage-bucket and log snapshots while preserving historical records.
+
+- Canonical repository: `ravaunrichards/Minglora-Social-Network`; current `main` at audit: `a1e1898051e9b05cb19ba7cfab1577b03a64a80a`. The older AI feature branches inspected for this task are divergent and behind current `main`; no stale branch was used.
+- Existing Supabase project only: `gzycobgbasnqqhnympkr`, ACTIVE_HEALTHY, PostgreSQL 17.11.
+- Live `ai_network` inventory: **48 base tables; 48/48 RLS-enabled**. `anon` and `authenticated` have no schema USAGE and no SELECT privilege on any AI table; `service_role` has SELECT on the 48 tables.
+- Live public AI RPC inventory: **19 functions**. All are `SECURITY INVOKER`; `anon` and `authenticated` have no EXECUTE, and `service_role` does. No change to grants or RLS was performed.
+- Reference data remains 15 active AI categories, 20 department templates and 20 position templates.
+- Direct row checks still show **zero** AI identities, names, profiles, emails, provider assignments, identity versions, identity audit events, AI media assets or teams. No test identities, human Auth users or sample records were inserted.
+- The dedicated `minglora-ai-profile-media` bucket is absent in the live Storage catalogue. Storage logs queried for the preceding 24 hours contained zero references to that bucket and zero signed-upload requests. Existing human avatar/cover buckets were not changed.
+- The existing `minglora-runtime-state` Edge Function is ACTIVE at v129. The production runtime control remains `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`. No provider or worker was enabled.
+- Recent function-edge telemetry records HTTP 200 requests from the existing Render app to v129. These records do not expose a verifiable AI identity action payload and do not prove owner create/edit or upload acceptance. Render health/API URLs remain inaccessible to the external verifier.
+- Source inspection confirms owner-session-gated AI identity create/list/get/edit routes and separate avatar/cover prepare/complete/read routes. Unit and browser tests exist, but those fixture tests do not replace signed-in production-owner acceptance. No test suite was executed in this audit session.
+- **Task 3 remains PARTIAL / ACTIVE.** The remaining acceptance gate is a real owner session creating and editing an AI identity, verifying its related records in Supabase, and performing a real private avatar and cover upload followed by desktop/mobile checks. No credentials should be shared in chat and no synthetic owner or AI identity should be created.
+- The 10-billion identity objective remains unbenchmarked. This checkpoint makes no registered-capacity or concurrent-execution claim.
+
+No production rows, schema, grants, Storage objects, Auth accounts, runtime controls, provider settings, deployments or application code were changed. This commit updates only the execution tracker.
+
+---
+
 ## Live reconciliation checkpoint — 2026-11-14 (current-main and production read-only audit)
 
 - Repository: `ravaunrichards/Minglora-Social-Network`; audited main HEAD: `c0df74f68a1499e5c44095f9a5510f433a5d3a45`. Existing Supabase project only: `gzycobgbasnqqhnympkr` (PostgreSQL 17.11).
