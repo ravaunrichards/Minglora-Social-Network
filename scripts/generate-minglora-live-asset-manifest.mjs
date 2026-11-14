@@ -259,6 +259,35 @@ function buildManifest() {
     });
     if (artworkDimensions.emoji_font_overlay_present) emojiOverlayCount++;
 
+    const iconFile = path.join(GIFT_DIR, gift.code + "-icon.svg");
+    const iconDimensions = svgInfo(iconFile);
+    if (!iconDimensions.transparent_background) fail("gift icon has an opaque background: " + relative(iconFile));
+    if (iconDimensions.emoji_font_overlay_present) fail("gift icon contains a system-font emoji overlay: " + relative(iconFile));
+    const icon = fileRecord(iconFile, "svg", {
+      public_url: "/assets/gifts/catalog/" + gift.code + "-icon.svg",
+      dimensions: { width_px: iconDimensions.width_px, height_px: iconDimensions.height_px, view_box: iconDimensions.view_box },
+      transparent_background: true,
+      vector_only: true,
+      component_usage: ["public/app.js"],
+      alt_text: String(gift.name) + " transparent Minglora LIVE gift icon",
+      source: {
+        type: "generated_from_canonical_gift_subject_vector",
+        catalogue_record: "data/minglora-gift-catalog.json#" + gift.code,
+        generator: "scripts/generate-minglora-gifts.mjs",
+        generator_identity: "Minglora Gift Studio"
+      },
+      quality: {
+        status: "transparent_subject_vector_requires_human_review",
+        human_visual_review: "not_completed",
+        approved_for_premium_production: false
+      },
+      licensing: {
+        status: "review_required",
+        provenance: "repository_generated_svg_subject_variant",
+        notes: "Transparent subject-only variant of the canonical Minglora SVG. Human visual and rights review are still required."
+      }
+    });
+
     const model = fileRecord(gltfFile, "gltf-json", {
       public_url: gift.model_url,
       dimensions: modelDimensions,
@@ -339,11 +368,14 @@ function buildManifest() {
       rarity: typeof gift.rarity === "string" ? gift.rarity : null,
       asset_version: String(packageData.version || "unspecified"),
       artwork,
+      icon_url: icon.public_url,
+      icon,
       thumbnail: {
-        path: artwork.path,
-        format: artwork.format,
-        dimensions: artwork.dimensions,
-        reuse_of_primary_artwork: true
+        path: icon.path,
+        format: icon.format,
+        dimensions: icon.dimensions,
+        transparent_background: true,
+        reuse_of_primary_artwork: false
       },
       animated_preview: {
         uses_motion_profile: Boolean(profile),
@@ -362,6 +394,8 @@ function buildManifest() {
       },
       loading_and_fallback: {
         artwork_url: gift.image_url,
+        gift_icon_url: icon.public_url,
+        gift_icon_error_fallback_to_full_artwork: true,
         model_url: gift.model_url,
         model_error_fallback_to_svg: true,
         retry_and_error_state: "not_verified_by_this_manifest_generator"
@@ -423,6 +457,8 @@ function buildManifest() {
       active_gift_count: activeCount,
       inactive_gift_count: inactiveCount,
       svg_artwork_file_count: gifts.length,
+      svg_gift_icon_file_count: gifts.length,
+      transparent_gift_icon_file_count: gifts.length,
       gltf_model_file_count: gifts.length,
       active_motion_profile_count: activeCount,
       transparent_background_artwork_count: gifts.filter(gift => gift.artwork.transparent_background).length,

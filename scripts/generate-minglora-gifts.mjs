@@ -69,11 +69,12 @@ function premiumSvgShape(gift) {
   return "";
 }
 
-function svgArt(gift) {
+function svgArt(gift, options = {}) {
   const colors = palette(gift);
   const seed = hash32(gift.code);
   const name = String(gift.name || "").toLowerCase();
-  const rot = (seed % 31) - 15;
+  const iconOnly = options.iconOnly === true;
+  const rot = iconOnly ? 0 : (seed % 31) - 15;
   const star1 = 45 + (seed % 50);
   const star2 = 370 + (seed % 60);
   const ring = 185 + (seed % 35);
@@ -154,6 +155,14 @@ function svgArt(gift) {
   ];
   const sigil = sigils[seed % sigils.length];
   const safeLabel = String(gift.name || "Minglora Gift").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").slice(0,30);
+  if (iconOnly) {
+    const safeName = String(gift.name || "Minglora Gift")
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").slice(0, 60);
+    return '<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="' + safeName + '">' +
+      '<defs><linearGradient id="main" x1="0" y1="0" x2="1" y2="1"><stop stop-color="' + shine + '"/><stop offset=".55" stop-color="' + bg2 + '"/><stop offset="1" stop-color="' + bg1 + '"/></linearGradient>' +
+      '<radialGradient id="shine" cx=".28" cy=".2" r=".85"><stop stop-color="#fff"/><stop offset=".35" stop-color="' + shine + '"/><stop offset="1" stop-color="' + bg1 + '"/></radialGradient></defs>' +
+      '<g transform="rotate(0 256 256)">' + shape + '</g></svg>';
+  }
   return '<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="'+String(gift.name).replace(/&/g,"&amp;").replace(/</g,"&lt;")+'">'+
     '<defs><linearGradient id="main" x1="0" y1="0" x2="1" y2="1"><stop stop-color="'+shine+'"/><stop offset=".55" stop-color="'+bg2+'"/><stop offset="1" stop-color="'+bg1+'"/></linearGradient><radialGradient id="shine" cx=".28" cy=".2" r=".85"><stop stop-color="#fff"/><stop offset=".35" stop-color="'+shine+'"/><stop offset="1" stop-color="'+bg1+'"/></radialGradient><filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="16"/></filter></defs>'+
     '<circle cx="256" cy="257" r="'+ring+'" fill="none" stroke="#fff" stroke-opacity=".12" stroke-width="22"/><circle cx="256" cy="265" r="160" fill="#100d36" opacity=".17" filter="url(#shadow)"/>'+
@@ -548,18 +557,20 @@ function main(){
   let count=0;
   for(const gift of data.gifts){
     const svg=svgArt(gift);
+    const iconSvg=svgArt(gift,{iconOnly:true});
     const gltf=JSON.stringify(modelDocument(gift));
     writeAsset(path.join(ASSET_DIR,gift.code+".svg"),svg,checkOnly);
+    writeAsset(path.join(ASSET_DIR,gift.code+"-icon.svg"),iconSvg,checkOnly);
     writeAsset(path.join(ASSET_DIR,gift.code+".gltf"),gltf,checkOnly);
     count++;
   }
-  const expectedFiles=new Set(data.gifts.flatMap(gift=>[gift.code+".svg",gift.code+".gltf"]));
+  const expectedFiles=new Set(data.gifts.flatMap(gift=>[gift.code+".svg",gift.code+"-icon.svg",gift.code+".gltf"]));
   const staleFiles=fs.readdirSync(ASSET_DIR).filter(name=>/\.(?:svg|gltf)$/i.test(name)&&!expectedFiles.has(name));
   if(checkOnly&&staleFiles.length)throw new Error("Stale generated gift assets found: "+staleFiles.slice(0,10).join(", "));
   if(!checkOnly)for(const name of staleFiles)fs.unlinkSync(path.join(ASSET_DIR,name));
-  const stamp={version:2,giftCount:count,svgAssets:count,gltfAssets:count,generatedAt:String(data.generated_at||"unspecified")};
+  const stamp={version:3,giftCount:count,svgAssets:count,svgIconAssets:count,gltfAssets:count,generatedAt:String(data.generated_at||"unspecified")};
   const stampText=JSON.stringify(stamp,null,2);
   writeAsset(path.join(ASSET_DIR,"catalog-build.json"),stampText,checkOnly);
-  process.stdout.write("[Minglora Gift Studio] "+(checkOnly?"verified ":"generated ")+count+" individual SVG artworks and "+count+" 3D GLTF gift models.\n");
+  process.stdout.write("[Minglora Gift Studio] "+(checkOnly?"verified ":"generated ")+count+" full SVG artworks, "+count+" transparent gift SVG icons and "+count+" 3D GLTF gift models.\n");
 }
 main();
