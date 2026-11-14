@@ -1,57 +1,59 @@
 # Minglora LIVE — Asset Completion Report
 
-**Date:** 2026-11-13  
-**Working branch:** `feat/minglora-live-assets-audit-motion-index-20261113`  
-**Base:** `main` at `0135432109fdfe334ea28f9af54b39b9d71c08cc`
+**Audit date:** 2026-11-14  
+**Audited repository:** `ravaunrichards/Minglora-Social-Network`  
+**Audited base:** `main` at `ab4795df5bf7d21ebb6fd5ad6f085ddd25f18ba9`  
+**Continuation branch:** `docs/minglora-live-visual-audit-correction-20261114`
 
-## Completed in this branch
+## Scope and checkpoint
 
-- [x] Read-only traversal of the reference Git tree; 1,121 reference images identified across Android and desktop comparison folders.
-- [x] Machine-readable 1,121-image reference manifest added at `reports/minglora-live-reference-assets.json` with file paths, formats, byte sizes and Git blob IDs; pixel dimensions/transparency are explicitly pending.
-- [x] Representative Android fan-club and desktop multi-guest LIVE screenshots visually inspected.
-- [x] Existing 131 gift screenshot captures and 1,509 extracted crop records identified; preservation/rights restrictions documented.
-- [x] Canonical 1,748-row gift catalogue inspected: 1,737 active and 11 inactive.
-- [x] Existing 45 standalone Minglora GLTF models and gift generation/runtime code identified.
-- [x] Missing LIVE gift motion-index integration identified and addressed with a deterministic generator, active-gift-only output and regression tests.
-- [x] Seven requested asset audit/catalogue/integration/quality/completion documents added under `reports/`.
-- [x] No original reference screenshots, extracted art, gift prices, balances, user records, LiveKit configuration or existing production assets were changed.
+This is a continuation checkpoint against the current `main` repository. The older branch `feat/minglora-live-assets-audit-motion-index-20261113` is 244 commits behind `main` and has diverged (19 commits ahead, 244 behind at comparison time); it was not merged or replayed. The current `main` tree is the source of truth.
 
-## Existing capabilities confirmed
+## Completed in this continuation
 
-- The existing build pipeline generates one SVG and one GLTF model for each of the 1,748 catalogue rows.
-- The runtime has gift selection/playback, unique animation identities, multiple choreography families, effect particles, synthesized sound profiles and reduced-motion handling.
-- LIVE room styling, the gift browser and the multi-guest/video/chat structure are already connected through existing application files.
+- [x] Re-traversed the current main Git tree: 5,499 entries; traversal was not truncated.
+- [x] Confirmed the reference inventory of 1,121 images under `assets/reference/`: 1,071 Android JPEGs, 29 desktop TikTok PNGs and 21 desktop Facebook PNGs.
+- [x] Confirmed 131 gift-catalogue capture PNGs plus one reference-sheet JPEG under `assets/Gifts/`; preserved as reference-only source material.
+- [x] Individually visually inspected all 9 supplied guest-layout diagrams in `assets/Guests Layout/`.
+- [x] Visually checked the two Android Fan Club/SuperFan captures, one Android League FAQ capture, and three desktop captures.
+- [x] Corrected two misleading screenshot attributions: `capture-20261112-072050.png` is a For You video/comments page, and `capture-20261112-074126.png` is a creator scheduler. Neither is a LIVE-room reference.
+- [x] Identified the correct desktop LIVE multi-guest reference: `capture-20261112-074648.png`, 1366×638, showing a 2×2 participant stage, viewer roster and separate chat/reaction panel.
+- [x] Confirmed the nine guest layouts map to the existing seven host-selectable layouts plus the two independently persisted roundtable guest-box layouts.
+- [x] Inventoried 71 Gifters Badge Levels images (53 PNG, 18 JPEG) and 20 League JPEG captures; their complete visual/rights review remains open.
+- [x] Counted 53 named symbols in `public/assets/icons/navigation-3d.svg`; confirmed this does not constitute the complete requested LIVE-specific icon/state pack.
+- [x] Reconfirmed the existing canonical catalogue (1,748 rows; 1,737 active; 11 inactive), 45 standalone GLTF gift models, and generated asset pipeline/motion index.
+- [x] Updated existing audit, inventory and quality reports to correct screenshot evidence and record the new verified counts.
+
+## Existing implementation verified by source inspection
+
+- The gift catalogue is `data/minglora-gift-catalog.json` with 1,748 rows, 1,737 active and 11 inactive. Prices remain in that canonical catalogue; this continuation did not change any catalogue value.
+- `scripts/generate-minglora-gifts.mjs` generates SVG and GLTF catalogue assets under `public/assets/gifts/catalog/`; the outputs are generated at build/prestart time and are not committed individually in the audited main tree.
+- `scripts/generate-live-gift-motion-index.mjs` creates the active-only motion index at `public/assets/animations/gifts/catalog-motion-index.json` (1,737 active profiles).
+- `public/gift-effects.js`, `public/gifts.js` and `public/app.js` contain the existing gift preview/playback and LIVE integration.
+- Existing source tests cover catalogue-to-motion-index correspondence, reduced-motion handling, layout persistence, guest stage behaviour and server-confirmed gift events. These test files were inspected; they were **not executed by this documentation-only continuation**.
+- The supplied guest-layout images map to seven screen layouts plus two separate roundtable guest-box layouts. The implementation tests are `tests/unit/live-layout-panels.test.js` and `tests/unit/live-guest-layout.test.js`.
 
 ## Partial / not completed
 
-- Full human visual review of 1,121 reference screenshots and 1,509 extracted gift crops.
-- Per-file dimension/transparency audit of all image files.
-- Rights/licence clearance for the extracted catalogue crops.
-- Dedicated original high-detail 3D models for every gift; existing generated GLTFs are procedural primitive-mesh artwork.
-- Full gift-specific mastered audio, Lottie/Rive libraries, animated GLTF channels, cinematic full-screen scenes and interactive custom creator gift authoring.
-- Complete separate catalogue taxonomy/collections for all 18 requested gift themes; several requested themes currently map to shared catalogue categories.
-- Dedicated iOS, tablet, foldable, desktop/laptop and Smart TV real-device QA matrices.
-- Runtime visual comparison and asset-loading tests on actual Android/iOS/TV hardware.
+- Human visual review of every one of the 1,121 reference screenshots.
+- Pixel dimensions, transparency and quality metadata for every reference and every extracted artwork file.
+- Human review of all 1,509 extracted gift crops and all 71 badge files.
+- Rights/licence clearance and provenance for extracted TikTok catalogue crops. These remain quarantined; do not publish, activate, monetize or represent them as original Minglora gifts.
+- Premium high-detail, individually art-directed 3D models for the full catalogue. Existing generated GLTF assets are procedural geometry/material baselines, not verified photorealistic/cinematic models.
+- Full 18-theme gift taxonomy and curated category assignment. The current catalogue has 18 stored categories, but they are not the same as the 18 conceptual themes in the brief.
+- Complete individually exported LIVE icon set, with host/guest/viewer tools and normal/active/selected/disabled/loading/success/warning/error states.
+- Dedicated gift-specific mastered sound effects and synchronization. Existing Web Audio synthesis and the separate notification/ringtone sound pack do not satisfy this requirement.
+- Full Lottie/Rive libraries, animated GLTF channels, rigged characters, KTX2 texture compression, per-gift video/sprite fallbacks and cinematic full-screen scenes.
+- Device QA matrices and real-device performance tests for iOS, tablets, foldables, desktop/laptops and supported Smart TVs. Current source includes compact phone and desktop layouts; that is not equivalent to hardware QA.
+- Full browser-level visual comparison of Minglora LIVE against every supplied reference.
 
-## Validation state
+## Validation and safety
 
-GitHub Actions **Node 24 CI run #10698** completed successfully on 2026-11-13:
-
-- `npm ci`: passed.
-- `npm audit`: 0 reported dependency vulnerabilities.
-- `npm run check:repo`: passed after a narrow fix to allow the existing reference-folder `.gitkeep` alongside populated child directories. No reference marker was removed.
-- JavaScript syntax checks: passed, including the new motion-index generator.
-- Gift asset build: passed; generator produced/verified 1,748 SVG artworks and 1,748 GLTF models.
-- LIVE motion-index build: passed; 1,737 active gift profiles generated.
-- Sound Studio build: passed.
-- Automated tests: **949 passed, 0 failed**.
-- Separate Supabase Auth/OAuth acceptance job: passed.
-- Separate For You functional-navigation job: passed.
-
-The branch's committed motion-index JSON was also compared directly with the canonical catalogue-derived output: 1,737 unique active records, all with the canonical local SVG/GLTF paths, and a byte-for-byte deterministic match.
-
-A local build was not run in this workspace because the repository is not mounted locally and the available local Node version is 22 while the project requires Node 24. The successful GitHub Actions Node 24 run is the available full build/test verification for this change.
+- Current main commit: `ab4795df5bf7d21ebb6fd5ad6f085ddd25f18ba9`. The GitHub combined-status lookup returned no status entries for this commit; this is **not** evidence of a passing or failing build.
+- Recent GitHub Actions results visible during this check belonged to other feature-branch commits, not this main commit; they are not presented as validation for this continuation.
+- This continuation is documentation-only. No local `npm test`, `npm run build:gifts`, `npm run build:live-gift-motion` or browser/device test was run because the repository is not mounted in the execution workspace and the available local Node runtime does not meet the repository's Node 24 engine requirement.
+- No source screenshots, extracted crops, artwork, gift prices, balances, user records, LiveKit credentials, sessions or production application code were changed.
 
 ## Current status
 
-**Asset system: PARTIALLY COMPLETE.** The existing catalogue and presentation pipeline is substantial, and the missing motion-index build step is repaired in this branch. The user's full premium visual asset mission remains open until the human review, rights, high-detail art, sound and device validation items above are completed.
+**Minglora LIVE asset mission: PARTIALLY COMPLETE — NOT PRODUCTION COMPLETE.** The existing app has a substantial gift catalogue, build-time SVG/GLTF generation, LIVE effects runtime, layouts, assets and test coverage. This continuation corrected the reference evidence and updated the inventory. The full premium asset production, rights clearance, detailed animation/audio work, category curation, cross-device QA and actual hardware validation remain open.
