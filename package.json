@@ -13,7 +13,8 @@
     "build:gifts": "node scripts/generate-minglora-gifts.mjs",
     "build:sounds": "node scripts/generate-minglora-sound-library.mjs",
     "build:live-gift-motion": "node scripts/generate-live-gift-motion-index.mjs",
-    "build:live-asset-manifest": "node scripts/generate-minglora-live-asset-manifest.mjs"
+    "build:live-asset-manifest": "node scripts/generate-minglora-live-asset-manifest.mjs",
+    "audit:live-image-metadata": "node scripts/audit-minglora-live-image-metadata.mjs"
   },
   "engines": {
     "node": "24.x"

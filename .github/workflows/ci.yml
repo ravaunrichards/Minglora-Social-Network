@@ -93,6 +93,7 @@ jobs:
           node --check scripts/generate-minglora-sound-library.mjs
           node --check scripts/generate-live-gift-motion-index.mjs
           node --check scripts/generate-minglora-live-asset-manifest.mjs
+          node --check scripts/audit-minglora-live-image-metadata.mjs
           node --check public/sound-studio-settings.js
           node --check backend/modules/sounds/notification-studio.js
           node --check public/auth-login.js
@@ -151,6 +152,17 @@ jobs:
         with:
           name: minglora-live-asset-manifest-${{ github.run_number }}
           path: assets/manifests/live-asset-manifest.json
+          if-no-files-found: error
+          retention-days: 30
+      - name: Audit supplied Minglora LIVE raster image metadata
+        run: npm run audit:live-image-metadata
+      - name: Upload Minglora LIVE image metadata audit
+        uses: actions/upload-artifact@v4
+        with:
+          name: minglora-live-image-metadata-audit-${{ github.run_number }}
+          path: |
+            reports/live-image-metadata-audit.json
+            reports/live-image-metadata-audit.md
           if-no-files-found: error
           retention-days: 30
       - name: Run automated tests

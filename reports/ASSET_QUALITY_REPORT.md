@@ -43,3 +43,7 @@ The extracted 1,509 catalogue crops remain blocked from production until rights 
 ## GLTF load-error fallback
 
 `public/gift-effects.js` now listens for the supported `<model-viewer>` `error` event. When a model fails to load/parse or the WebGL context is lost, the failed model element is replaced with that gift's canonical SVG artwork. If the SVG also fails, or no image URL exists, the card displays an accessible text status instead of an emoji or a broken image. This is a rendering fallback; it does not restore a lost WebGL context or replace physical-device QA.
+
+## Per-source raster metadata
+
+The LIVE workflow includes a built-in read-only metadata scanner for supplied Android/desktop screenshots, gift captures, guest-layout diagrams, badge and League references, and extracted artwork crops. It emits per-file dimensions, detected format, orientation, size and SHA-256 plus encoded alpha/transparency/animation declarations. It does not scan decoded pixel alpha, apply EXIF orientation, or perform visual, rights or production approval. CI publishes the generated JSON and Markdown audit as an artifact; inspect that artifact before treating any source image's dimensions or transparency as verified.
