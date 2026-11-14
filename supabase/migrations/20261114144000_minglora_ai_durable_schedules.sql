@@ -411,14 +411,6 @@ begin
       insert into ai_network.ai_task_approvals(owner_user_id,task_id,approval_status)
         values(v_schedule.owner_user_id,v_task_id,'requested')
         on conflict(task_id) do nothing;
-      insert into ai_network.ai_task_events(
-        owner_user_id,task_id,actor_type,event_type,previous_status,new_status,reason,metadata
-      ) values(
-        v_schedule.owner_user_id,v_task_id,'system','scheduled_task_enqueued','queued','pending_approval',
-        'Scheduled task was materialized into the human approval queue; no worker execution was requested.',
-        jsonb_build_object('schedule_id',v_schedule.schedule_id,'run_count',v_schedule.run_count+1)
-      );
-
       if v_schedule.cadence='once'
         or (v_schedule.max_occurrences is not null and v_schedule.run_count+1>=v_schedule.max_occurrences) then
         v_next_at:=null;
