@@ -110,3 +110,12 @@ The canonical Palm Breeze nature gift now uses its own palm-tree/island glTF sou
 - Matching primary SVG and transparent icon use the `crystal-crown-original-v1` art signature and are produced by the existing generator.
 - LIVE exact-code runtime uses `crown-lustre` choreography and the local synthesized `crystal-crown-royal-glass-chime-v1` sound.
 - Human visual approval, rights review and physical-device rendering/audio QA remain pending. Sound is synthesized; it is not a mastered recording. No production gift price or status change was made.
+
+
+## Phoenix bespoke artwork — 2026-11-14
+
+- Existing canonical item: `phoenix-wep6uk`, Phoenix, animals category, active, 25,999 Coins. Its identity, publication state and Coin value are unchanged.
+- Original 3D source: `assets/3d-assets/gift-models/phoenix-model.mjs`; generated GLTF includes an ember plinth, sculpted firebird, long neck/head, flame crest, layered red/amber coverts and flight feathers, comet tail, talons and ember motes.
+- Matching subject-specific primary SVG and transparent icon use `phoenix-original-v1` and are emitted by the existing gift generator.
+- The LIVE exact-code effect path uses `phoenix-rise` choreography and `phoenix-flame-rise-and-ember-choir-v1` local sound synthesis.
+- Design and licensing review, visual acceptance and physical-device rendering/audio QA remain pending. Sound is synthesized, not mastered. No price, active flag or database gift record was changed.
