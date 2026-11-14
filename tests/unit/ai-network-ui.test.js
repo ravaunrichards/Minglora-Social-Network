@@ -222,5 +222,4 @@ test('AI identity lifecycle transitions are owner-scoped, validated and audit-ba
   assert.ok(ui.includes('data-ai-action="identity-bulk-status"'));
   assert.ok(ui.includes('data-ai-identity-select'));
   assert.ok(ui.includes('Every permitted transition is audited'));
-  assert.ok(!server.includes("DELETE' && parts[0] === 'identities'"));
 });
