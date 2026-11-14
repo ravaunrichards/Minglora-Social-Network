@@ -206,7 +206,7 @@ async function adminApi(path,options={}){return api(path,{...options,headers:{..
 async function refreshAdmin(){state.adminOverview=await adminApi("/api/help-center/admin/overview");}
 function adminTab(tab){
 state.currentAdminTab=tab;$$(".hc-admin-tabs button").forEach(b=>b.setAttribute("aria-selected",String(b.dataset.hcAdminTab===tab)));
-if(tab==="articles")renderAdminArticles();else if(tab==="categories")renderAdminCategories();else if(tab==="feedback")renderAdminFeedback();else renderAdminSearches();
+if(tab==="articles")renderAdminArticles();else if(tab==="categories")renderAdminCategories();else if(tab==="feedback")renderAdminFeedback();else if(tab==="quality")renderAdminQuality();else renderAdminSearches();
 }
 async function openAdmin(){
 if(!state.bootstrap?.adminAccess){announcement("You do not have Help Center content-management permission.");return;}
@@ -215,8 +215,17 @@ try{await refreshAdmin();adminStatus("");adminTab("articles");setUrl({manage:"1"
 }
 function renderAdminArticles(){
 const rows=state.adminOverview?.articles||[];
-$("#hc-admin-panel").innerHTML='<div class="hc-admin-panel"><div class="hc-section-heading"><div><h2>Knowledge-base articles</h2><p>Only approved, fact-checked answers can be published.</p></div><span>'+rows.length+' translations</span></div><div class="hc-admin-list">'+(rows.length?rows.map(r=>'<div class="hc-admin-row"><div><strong>'+esc(r.title)+'<span class="hc-status-pill">'+esc(r.status)+'</span></strong><small>'+esc(r.help_articles?.slug||"")+' · '+esc(r.locale)+' · '+esc(date(r.updated_at))+'</small></div><button type="button" class="hc-secondary-button" data-hc-edit="'+esc(r.id)+'">Edit</button></div>').join(""):empty("No articles yet","Create a draft from approved Minglora material. No sample articles are inserted."))+'</div></div><div id="hc-admin-editor"></div>';
-$$("[data-hc-edit]").forEach(b=>b.onclick=()=>editAdminArticle(b.dataset.hcEdit));
+$("#hc-admin-panel").innerHTML='<div class="hc-admin-panel"><div class="hc-section-heading"><div><h2>Knowledge-base articles</h2><p>Only approved, fact-checked answers can be published. Use Add translation to create a reviewed language version.</p></div><span>'+rows.length+' translations</span></div><div class="hc-admin-list">'+(rows.length?rows.map(r=>'<div class="hc-admin-row"><div><strong>'+esc(r.title)+'<span class="hc-status-pill">'+esc(r.status)+'</span></strong><small>'+esc(r.help_articles?.slug||"")+' · '+esc(r.locale)+' · Order '+Number(r.help_articles?.sort_order||0)+' · '+esc(date(r.updated_at))+'</small></div><div class="hc-admin-actions"><button type="button" class="hc-secondary-button" data-hc-edit="'+esc(r.id)+'">Edit</button><button type="button" class="hc-secondary-button" data-hc-add-translation="'+esc(r.id)+'">Add translation</button></div></div>').join(""):empty("No articles yet","Create a draft from approved Minglora material. No sample articles are inserted."))+'</div></div><div id="hc-admin-editor"></div>';
+$("[data-hc-edit]").forEach(b=>b.onclick=()=>editAdminArticle(b.dataset.hcEdit));
+$("[data-hc-add-translation]").forEach(b=>b.onclick=()=>createAdminTranslation(b.dataset.hcAddTranslation));
+}
+async function createAdminTranslation(id){
+adminStatus("Preparing a new translation…");
+try{
+const d=await adminApi("/api/help-center/admin/article?translationId="+encodeURIComponent(id));
+d.translationId="";d.locale="";d.title="";d.excerpt="";d.answerMarkdown="";d.searchTerms=[];d.sourceReference="";d.status="draft";
+renderAdminEditor(d);adminStatus("Enter the new language code and translated answer, then save it as a draft.");
+}catch(e){adminStatus(e.message);}
 }
 async function editAdminArticle(id){
 adminStatus("Loading article…");
@@ -227,7 +236,7 @@ function renderAdminEditor(d={}){
 const categories=state.adminOverview?.categories||state.categories,categoryId=d.categoryId||categories[0]?.id||"";
 const subs=(state.adminOverview?.subcategories||state.subcategories).filter(x=>x.category_id===categoryId||x.categoryId===categoryId);
 const host=$("#hc-admin-editor");if(!host)return;
-host.innerHTML='<div class="hc-admin-panel"><h2>'+(d.articleId?"Edit article":"Create article")+'</h2><form id="hc-article-form" class="hc-admin-form"><div class="hc-inline-fields"><label>Question / title<input name="title" required maxlength="180" value="'+esc(d.title||"")+'"></label><label>URL slug<input name="slug" required pattern="[a-z0-9]+(-[a-z0-9]+)*" maxlength="120" value="'+esc(d.slug||"")+'"></label></div><div class="hc-inline-fields"><label>Category<select name="categoryId" required>'+categories.map(x=>'<option value="'+esc(x.id)+'"'+(x.id===categoryId?" selected":"")+'>'+esc(x.title)+'</option>').join("")+'</select></label><label>Subcategory<select name="subcategoryId"><option value="">Choose subcategory</option>'+subs.map(x=>'<option value="'+esc(x.id)+'"'+(x.id===(d.subcategoryId||"")?" selected":"")+'>'+esc(x.title)+'</option>').join("")+'</select></label></div><div class="hc-inline-fields"><label>Language / locale<input name="locale" value="'+esc(d.locale||"en")+'" pattern="[a-z]{2}(-[A-Z]{2})?"></label><label>Short answer preview<input name="excerpt" maxlength="400" value="'+esc(d.excerpt||"")+'"></label></div><label>Full answer (Markdown)<textarea name="answerMarkdown" maxlength="100000" required>'+esc(d.answerMarkdown||"")+'</textarea></label><div class="hc-inline-fields"><label>Search keywords, comma separated<input name="searchTerms" value="'+esc((d.searchTerms||[]).join(", "))+'"></label><label>Related questions (select one or more)<select name="relatedArticleIds" multiple size="5">'+(state.adminOverview?.articles||[]).filter(x=>x.help_articles?.id&&x.help_articles.id!==d.articleId).map(x=>'<option value="'+esc(x.help_articles.id)+'"'+((d.relatedArticleIds||[]).includes(x.help_articles.id)?" selected":"")+'>'+esc(x.title)+' · '+esc(x.status)+'</option>').join("")+'</select></label><label>Approved source / reference<input name="sourceReference" maxlength="500" required value="'+esc(d.sourceReference||"")+'" placeholder="Reference document, verified app route, or evidence"></label></div><label><input type="checkbox" name="isFeatured"'+(d.isFeatured?" checked":"")+'> Feature after approval</label><div class="hc-admin-actions"><button type="submit" class="hc-primary-button">Save draft</button><button type="button" id="hc-preview-answer" class="hc-secondary-button">Preview answer</button><button type="button" id="hc-editor-close" class="hc-secondary-button">Close</button></div><div id="hc-answer-preview" class="hc-prose hc-admin-panel" hidden></div><p id="hc-editor-status" class="hc-admin-status" role="status"></p></form><div id="hc-workflow" class="hc-admin-actions"></div><div id="hc-revisions"></div></div>';
+host.innerHTML='<div class="hc-admin-panel"><h2>'+(d.articleId?"Edit article":"Create article")+'</h2><form id="hc-article-form" class="hc-admin-form"><div class="hc-inline-fields"><label>Question / title<input name="title" required maxlength="180" value="'+esc(d.title||"")+'"></label><label>URL slug<input name="slug" required pattern="[a-z0-9]+(-[a-z0-9]+)*" maxlength="120" value="'+esc(d.slug||"")+'"></label></div><div class="hc-inline-fields"><label>Category<select name="categoryId" required>'+categories.map(x=>'<option value="'+esc(x.id)+'"'+(x.id===categoryId?" selected":"")+'>'+esc(x.title)+'</option>').join("")+'</select></label><label>Subcategory<select name="subcategoryId"><option value="">Choose subcategory</option>'+subs.map(x=>'<option value="'+esc(x.id)+'"'+(x.id===(d.subcategoryId||"")?" selected":"")+'>'+esc(x.title)+'</option>').join("")+'</select></label></div><div class="hc-inline-fields"><label>Language / locale<input name="locale" value="'+esc(d.locale||"en")+'" pattern="[a-z]{2}(-[A-Z]{2})?" required></label><label>Short answer preview<input name="excerpt" maxlength="400" value="'+esc(d.excerpt||"")+'"></label></div><div class="hc-inline-fields"><label>Question order<input name="sortOrder" type="number" min="0" step="1" value="'+Number(d.sortOrder||0)+'"></label><label>Instructional image (JPEG, PNG, WebP or AVIF; max 5 MB)<input id="hc-media-file" type="file" accept="image/jpeg,image/png,image/webp,image/avif"></label><label>Image description<input id="hc-image-alt" maxlength="160" placeholder="Describe the instructional image"></label></div><div class="hc-admin-actions"><button type="button" id="hc-upload-media" class="hc-secondary-button">Upload image into answer</button><span id="hc-media-status" class="hc-admin-status"></span></div><div class="hc-inline-fields"><label>Instructional video URL (HTTPS)<input id="hc-video-url" type="url" placeholder="https://…"></label><button type="button" id="hc-insert-video" class="hc-secondary-button">Insert video link</button></div><p class="hc-admin-status">Save the draft first, then upload instructional images. Video demonstrations are added as secure HTTPS links.</p><label>Full answer (Markdown)<textarea name="answerMarkdown" maxlength="100000" required>'+esc(d.answerMarkdown||"")+'</textarea></label><div class="hc-inline-fields"><label>Search keywords, comma separated<input name="searchTerms" value="'+esc((d.searchTerms||[]).join(", "))+'"></label><label>Related questions (select one or more)<select name="relatedArticleIds" multiple size="5">'+(state.adminOverview?.articles||[]).filter(x=>x.help_articles?.id&&x.help_articles.id!==d.articleId).map(x=>'<option value="'+esc(x.help_articles.id)+'"'+((d.relatedArticleIds||[]).includes(x.help_articles.id)?" selected":"")+'>'+esc(x.title)+' · '+esc(x.status)+'</option>').join("")+'</select></label><label>Approved source / reference<input name="sourceReference" maxlength="500" required value="'+esc(d.sourceReference||"")+'" placeholder="Reference document, verified app route, or evidence"></label></div><label><input type="checkbox" name="isFeatured"'+(d.isFeatured?" checked":"")+'> Feature after approval</label><div class="hc-admin-actions"><button type="submit" class="hc-primary-button">Save draft</button><button type="button" id="hc-preview-answer" class="hc-secondary-button">Preview answer</button><button type="button" id="hc-editor-close" class="hc-secondary-button">Close</button></div><div id="hc-answer-preview" class="hc-prose hc-admin-panel" hidden></div><p id="hc-editor-status" class="hc-admin-status" role="status"></p></form><div id="hc-workflow" class="hc-admin-actions"></div><div id="hc-revisions"></div></div>';
 $("#hc-editor-close").onclick=()=>$("#hc-admin-editor").innerHTML="";
 $("#hc-preview-answer").onclick=()=>{
   const preview=$("#hc-answer-preview");
@@ -235,6 +244,34 @@ $("#hc-preview-answer").onclick=()=>{
   if(!preview.hidden)preview.innerHTML=markdown(form.elements.answerMarkdown.value);
 };
 const form=$("#hc-article-form");
+$("#hc-upload-media").onclick=async()=>{
+const status=$("#hc-media-status"),button=$("#hc-upload-media"),file=$("#hc-media-file").files?.[0];
+if(!d.articleId){status.textContent="Save the article draft first, then upload its images.";return;}
+if(!file){status.textContent="Choose an image first.";return;}
+if(file.size>5*1024*1024){status.textContent="Images must be 5 MB or smaller.";return;}
+if(!["image/jpeg","image/png","image/webp","image/avif"].includes(file.type)){status.textContent="Choose JPEG, PNG, WebP or AVIF.";return;}
+button.disabled=true;status.textContent="Uploading instructional image…";
+try{
+const dataUrl=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result||""));reader.onerror=()=>reject(new Error("The selected image could not be read."));reader.readAsDataURL(file);});
+const contentBase64=String(dataUrl).split(",")[1]||"";
+const altText=$("#hc-image-alt").value.trim()||file.name.replace(/\\.[^.]+$/,"");
+const result=await adminApi("/api/help-center/admin/media",{method:"POST",body:JSON.stringify({articleId:d.articleId,fileName:file.name,mimeType:file.type,contentBase64,altText})});
+form.elements.answerMarkdown.value=form.elements.answerMarkdown.value.trimEnd()+"\\n\\n!["+altText.replace(/[\\[\\]]/g,"")+"]("+result.url+")\\n";
+status.textContent="Image uploaded. Save the draft to attach it to the article.";
+$("#hc-preview-answer").click();
+}catch(error){status.textContent=error.message||"Image upload failed.";}
+finally{button.disabled=false;}
+};
+$("#hc-insert-video").onclick=()=>{
+const field=$("#hc-video-url"),status=$("#hc-editor-status");
+try{
+const url=new URL(field.value.trim());
+if(url.protocol!=="https:")throw new Error("Use a secure HTTPS video link.");
+form.elements.answerMarkdown.value=form.elements.answerMarkdown.value.trimEnd()+"\\n\\n[Watch video demonstration]("+url.href+")\\n";
+field.value="";
+status.textContent="Video link inserted. Save the draft to keep it.";
+}catch(error){status.textContent=error.message||"Enter a valid HTTPS video URL.";}
+};
 form.elements.categoryId.onchange=()=>{const list=(state.adminOverview?.subcategories||state.subcategories).filter(x=>(x.category_id||x.categoryId)===form.elements.categoryId.value);form.elements.subcategoryId.innerHTML='<option value="">Choose subcategory</option>'+list.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.title)+'</option>').join("");};
 form.onsubmit=async event=>{
 event.preventDefault();const values=Object.fromEntries(new FormData(form));values.articleId=d.articleId||"";values.searchTerms=String(values.searchTerms||"").split(",").map(x=>x.trim()).filter(Boolean);values.relatedArticleIds=[...form.elements.relatedArticleIds.selectedOptions].map(x=>x.value);values.isFeatured=form.elements.isFeatured.checked;
@@ -243,7 +280,7 @@ try{const saved=await adminApi("/api/help-center/admin/articles",{method:"POST",
 catch(e){status.textContent=e.message;}finally{btn.disabled=false;}
 };
 if(d.translationId){
-const transitions={draft:[["submit_review","Submit for review"]],review:[["complete_fact_check","Complete fact-check"]],fact_check:[["approve","Approve"]],approved:[["publish","Publish"]],published:[["archive","Archive"]],archived:[["restore","Restore as draft"]]};
+const transitions={draft:[["submit_review","Submit for review"]],review:[["complete_fact_check","Complete fact-check"]],fact_check:[["approve","Approve"]],approved:[["publish","Publish"]],published:[["unpublish","Unpublish"],["archive","Archive"]],archived:[["restore","Restore as draft"]]};
 (transitions[d.status]||[]).forEach(pair=>{
 const b=document.createElement("button");b.type="button";b.className="hc-secondary-button";b.textContent=pair[1];b.onclick=async()=>{b.disabled=true;try{await adminApi("/api/help-center/admin/transitions",{method:"POST",body:JSON.stringify({articleId:d.articleId,translationId:d.translationId,transition:pair[0]})});await refreshAdmin();await editAdminArticle(d.translationId);adminStatus(pair[1]+" completed.");}catch(e){adminStatus(e.message);b.disabled=false;}};$("#hc-workflow").append(b);
 });
@@ -263,6 +300,12 @@ $("[data-hc-sub-edit]").forEach(b=>b.onclick=()=>{const x=subs.find(item=>item.i
 $("#hc-sub-reset").onclick=()=>{$("#hc-sub-form").reset();$("#hc-sub-form").elements.subcategoryId.value="";$("#hc-sub-form-title").textContent="Create subcategory";};
 $("#hc-cat-form").onsubmit=async e=>{e.preventDefault();const v=Object.fromEntries(new FormData(e.currentTarget));v.locale=String(v.locale||"en").trim();v.isActive=true;try{await adminApi("/api/help-center/admin/categories",{method:"POST",body:JSON.stringify(v)});await refreshAdmin();adminTab("categories");adminStatus("Category saved.");}catch(x){adminStatus(x.message);}};
 $("#hc-sub-form").onsubmit=async e=>{e.preventDefault();const v=Object.fromEntries(new FormData(e.currentTarget));v.locale=String(v.locale||"en").trim();v.isActive=true;try{await adminApi("/api/help-center/admin/subcategories",{method:"POST",body:JSON.stringify(v)});await refreshAdmin();adminTab("categories");adminStatus("Subcategory saved.");}catch(x){adminStatus(x.message);}};
+}
+function renderAdminQuality(){
+const quality=state.adminOverview?.quality||{reviewAfterDays:180,needsReview:[],publishedWithLocales:[]};
+const stale=quality.needsReview||[],locales=quality.publishedWithLocales||[];
+$("#hc-admin-panel").innerHTML='<div class="hc-admin-panel"><h2>Periodic content review</h2><p>Published answers without a review in the last '+Number(quality.reviewAfterDays||180)+' days are listed here. Fact-checking records the review date.</p><div class="hc-admin-list">'+(stale.length?stale.map(x=>'<div class="hc-admin-row"><div><strong>'+esc(x.title)+'</strong><small>'+esc(x.locale)+' · '+esc(x.slug)+' · Last reviewed '+esc(date(x.lastReviewedAt))+'</small></div><button type="button" class="hc-secondary-button" data-hc-quality-edit="'+esc(x.translationId)+'">Review article</button></div>').join(""):empty("No published answers require review","Outdated published answers will appear here after content is added."))+'</div></div><div class="hc-admin-panel"><h2>Published language coverage</h2><p>Available reviewed language versions for each published question.</p><div class="hc-admin-list">'+(locales.length?locales.map(x=>'<div class="hc-admin-row"><div><strong>'+esc(x.slug)+'</strong><small>'+esc((x.locales||[]).join(", "))+' · '+Number(x.translationCount||0)+' language version(s)</small></div></div>').join(""):empty("No published translations yet","Language coverage appears here when verified answers are published."))+'</div></div>';
+$("[data-hc-quality-edit]").forEach(b=>b.onclick=()=>editAdminArticle(b.dataset.hcQualityEdit));
 }
 async function renderAdminFeedback(){
 $("#hc-admin-panel").innerHTML='<div class="hc-loading">Loading member feedback…</div>';
