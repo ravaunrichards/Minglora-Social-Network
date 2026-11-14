@@ -195,6 +195,17 @@ test("recognisable gifts use their subject-specific vector artwork without emoji
 });
 
 
+test("all generated gift SVGs use a transparent canvas while retaining the foreground artwork and nameplate", () => {
+  assert.equal(gifts.length, 1748);
+  for (const gift of gifts) {
+    const svg = readFileSync(path.join(assetRoot, gift.code + ".svg"), "utf8");
+    assert.doesNotMatch(svg, /<rect\b[^>]*\bwidth=["']512["'][^>]*\bheight=["']512["'][^>]*\bfill=["']url\(#bg\)["']/i, gift.name + " must not have an opaque full-canvas background");
+    assert.match(svg, /<svg\b[^>]*\bwidth=["']512["'][^>]*\bheight=["']512["']/i, gift.name + " must preserve its 512px canvas");
+    assert.match(svg, /<g transform=/, gift.name + " must retain its rendered gift geometry");
+    assert.match(svg, /<rect x="86" y="438" width="340" height="43"/, gift.name + " must preserve its local nameplate");
+  }
+});
+
 test("the active 2026 catalogue excludes obsolete 2025-dated gifts", () => {
   const retiredNames = ["2025","2025 Love","GG 2025","2025 Glasses","2025 JoyLens","Gamer 2025","Celebrate 2025","Extravaganza 2025","Prime Power 2025"];
   for (const name of retiredNames) {
