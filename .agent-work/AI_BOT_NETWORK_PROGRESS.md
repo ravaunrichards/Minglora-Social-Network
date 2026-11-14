@@ -4,33 +4,38 @@
 
 **Canonical release**
 - Product/repository: Minglora Social Network only — `ravaunrichards/Minglora-Social-Network`.
-- Main merge commit: `2f736e7145e62cf8c2df786d26ac48a61fb4b355`; PR #280 merged through the normal PR workflow.
+- Main merge commit: `678ea82bd3460e0558e2199bec210ae141a8f152`; PR #282 merged through the normal squash-merge workflow.
 - Existing Supabase project: `gzycobgbasnqqhnympkr`. No new repository, Supabase project, Render service or paid infrastructure was created.
-- New migration `20261114030000_minglora_ai_identity_profile_edit.sql` is applied to the existing project.
-- Existing `minglora-runtime-state` Edge Function is ACTIVE at v117, with owner-scoped AI profile registry and update handlers.
-- Existing Render service `minglora-social-network-temp` is LIVE on merge commit `2f736e7145e62cf8c2df786d26ac48a61fb4b355`; deployment `dep-dbrt2qm7bikc73ee6q8g`. Startup logs report Minglora listening, Supabase durable persistence ready and LiveKit connected.
-- PR head `d0e818c34cfc42b69ed63940469186dc8b58ef97`: focused AI Network tests 81/81 passed; full Minglora CI, Auth/OAuth, navigation acceptance, dependency audit and visual QA passed.
+- Additive migration `20261114033000_minglora_ai_identity_profile_media.sql` is applied. Supabase migration ledger records `minglora_ai_identity_profile_media` as version `20261114041952`.
+- Existing `minglora-runtime-state` Edge Function is ACTIVE at v118; custom runtime authentication remains enabled inside the function (`verify_jwt=false` is intentionally preserved from v117).
+- Existing Render service `minglora-social-network-temp` is LIVE on merge commit `678ea82bd3460e0558e2199bec210ae141a8f152`; deployment `dep-dbru22e7bikc73ef3ldg`. Build and deploy events succeeded; startup logs report Minglora listening, Supabase durable persistence ready and LiveKit connected.
+- PR #282 added owner-scoped AI avatar/cover upload and signed-read routes, workspace rendering fixes, a service-role-only audited media-reference RPC and regression coverage. Media stays in existing avatar/cover buckets under owner/AI-identity paths; no old media objects are deleted.
+- PR #282 checks passed on the reviewed head: AI Network syntax/regression workflow, full Minglora CI (including Auth/OAuth and For You navigation), Chromium profile visual matrix, and LIVE/MeetWave layout independence matrix.
+- Supabase logs after release show requests from Render to Edge Function v118 returning HTTP 200. The direct public Render URL could not be independently opened by the available external browser/network verifier; signed-in user upload/API and mobile/device acceptance are still outstanding.
 
 **Security and database**
 - Existing `ai_network` schema: 33/33 tables have RLS enabled. `anon` and `authenticated` have no schema access; privileged operations stay behind the existing server runtime.
-- New profile registry/edit functions are SECURITY INVOKER, use an empty locked search path and grant execution only to `service_role`.
+- AI profile media RPC `public.minglora_ai_identity_profile_media_update(uuid,uuid,text,text)` exists, uses `SECURITY INVOKER` and an empty locked search path, and grants execute only to `service_role`. Verified: anon=false, authenticated=false, service_role=true.
+- Existing media assets table still has RLS enabled. Existing `minglora-avatars` and `minglora-covers` buckets and owner-folder policies are reused; no new buckets or credentials were created.
 - Existing 15 AI categories remain intact. No sample identities, human Auth accounts, email inboxes, credentials, provider connections or fake engagement were created.
-- All rollback-only integration tests left zero test rows behind.
+- Production checks found zero AI identities, zero AI media assets, zero identity versions and zero AI identity audit rows after deployment. No test identity or media record was retained.
+- All rollback-only integration tests from the previous checkpoint remain valid; all test transactions were rolled back.
 
 **Verified rollback-only integration tests**
 - Identity profile: created/read/edited a temporary identity; separate first/last names, profile fields, languages and locations persisted; version and audit records were written.
-- Discovery/following: combined filters, individual and bulk follow, duplicate suppression, private-profile follow request/approval, unfollow and saved discovery-group create/list/delete passed.
-- Corporate/HR: all 20 department templates and position templates provisioned; candidate applications, review approvals, gated appointments, onboarding/active transitions, manager hierarchy, transfers/history, suspension/termination and cross-owner isolation passed.
+- Discovery/following: combined filters, individual and bulk follow, duplicate suppression, private-account follow request/approval, unfollow and saved discovery-group create/list/delete passed.
+- Corporate/HR: department and position templates, candidate applications, review approvals, gated appointments, onboarding/active transitions, manager hierarchy, transfers/history, suspension/termination and cross-owner isolation passed.
 - Tasks: fully supervised financial task required approval, idempotent retry reused it, approval queued it, cancellation worked, restricted-observation task stayed observation-only, and worker claim was rejected. Runtime remained paused/disabled with zero workers.
 - Provider metadata: account remained unconfigured/unknown, model metadata and pending assignment persisted, unverified activation was rejected and assignment history was written.
-- Each test was executed inside an explicit transaction and rolled back. Post-rollback counts for identities/profiles/emails, follows/groups, organizations/workforce, tasks/approvals/events and provider accounts/models/assignments/history were all zero.
+- Each prior integration test ran inside an explicit transaction and rolled back; no production test records remain.
+- New PR #282 media tests and repository/browser CI passed. Strict full-file `deno check` on the shared Edge Function remains blocked by 37 pre-existing TypeScript diagnostics outside the new media handler; its TypeScript syntax/transpile check passes. The duplicate `minglora-sounds` object key is present in the old main baseline too, not introduced by PR #282.
 
 **Ten-stage status (partial stages are not counted complete)**
 
 | Stage | Status | Verified work | Remaining |
 |---|---|---|---|
 | 1. Foundation and private runtime | **COMPLETED** | Private AI schema, RLS/security boundary, existing RPC gateway and categories verified. | Preserve isolation during future integration. |
-| 2. AI identities and profiles | **PARTIAL — CURRENT** | Identity create/read/bulk foundation, separate names, email metadata, live profile registry/edit, language/location, version/audit and 81 focused tests. | Signed-in browser/API flow, real owner-approved persistent registration, media editing and device acceptance. |
+| 2. AI identities and profiles | **PARTIAL — CURRENT** | Identity create/read/bulk foundation, separate names, email metadata, profile registry/edit, language/location, version/audit, owner-scoped avatar/cover media routes and RPC deployed; PR #282 CI and visual QA passed; Edge v118 and Render merge deploy live. | Signed-in browser/API create/get/edit/upload acceptance, actual per-owner record verification, and Android/desktop/mobile device acceptance. |
 | 3. Discovery and following | **PARTIAL** | Combined filters, follow/unfollow, bulk duplicate suppression, privacy approval and saved-group lifecycle passed live rollback tests. | Authenticated UI, complete device and real-user acceptance. |
 | 4. Corporate governance and HR | **PARTIAL** | Organization/departments/positions, application review, gated appointment, employment transitions, hierarchy, transfer/history and owner isolation passed rollback tests. | Delegated authority, training, attendance, performance, discipline, succession and UI/device tests. |
 | 5. Supervision, teams and workers | **PARTIAL — EXECUTION PAUSED** | Task approval, observation-only mode, idempotency and cancellation passed. | Worker credentials, real scheduler/worker pool, team orchestration, recovery and load tests. |
@@ -38,13 +43,14 @@
 | 7. Providers, memory and finance | **PARTIAL — METADATA ONLY** | Unconfigured provider/model metadata, pending assignment and health-gated activation passed. | Secret-manager adapter, real provider health/inference, email service, memory runtime, cost/budget metering and reconciliation. |
 | 8. Admin, security operations and analytics | **PARTIAL** | RLS, owner-scoped RPCs, audit/version records and pause controls verified. | Full admin/security centers, alerts, live operational analytics and reports. |
 | 9. Distributed architecture / 10-billion target | **NOT STARTED** | No capacity claim made. | Distributed partitioning, storage/query/write/recovery and concurrent-execution benchmarks. |
-| 10. Production/device acceptance | **PARTIAL** | CI/visual QA passed; Edge v117 ACTIVE; Render deployment LIVE and startup healthy. | Direct public HTTP, signed-in browser, Android/desktop/mobile and disaster-recovery acceptance. |
+| 10. Production/device acceptance | **PARTIAL** | CI/visual QA passed; Edge v118 ACTIVE; Render deployment LIVE with successful startup/readiness logs; Render-to-Edge requests returned HTTP 200. | Direct public HTTP, signed-in browser, Android/desktop/mobile and disaster-recovery acceptance. |
 
-**Conservative progress: 1/10 fully completed stage gates = 10%.** Stage 2 is the current stage. Do not count partially tested stages as complete. The 10-billion identity target, external model inference, email inbox provisioning and simultaneous execution capacity have not been achieved or measured.
+**Conservative progress: 1/10 fully completed stage gates = 10%.** Stage 2 remains current. Partial stages do not count as complete. The 10-billion identity target, external model inference, email inbox provisioning and simultaneous execution capacity have not been achieved or measured.
 
-**Deployment limitation:** the available external browser could not open the public Render URL. Render reports a successful live deployment and healthy startup, but public HTTP and real signed-in browser/device behavior remain unverified.
+**Deployment limitation:** Render and Supabase report healthy deployment/runtime behavior, but the available external browser/network verifier could not directly open the public Render URL. No authenticated owner session was available for real create/edit/upload E2E tests.
 
 **Safety gate:** keep `global_paused=true`, `execution_enabled=false`, and `max_concurrent_workers=0` until independent worker authentication, provider health, protected secrets, per-owner budgets, human approvals, audits, monitoring and recovery are verified.
+
 
 ## Historical checkpoints (retained for audit; superseded by the current checkpoint above)
 
