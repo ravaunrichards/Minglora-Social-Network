@@ -13,7 +13,7 @@ const ui = read('public/ai-network.js');
 
 test('AI category administration is private, audited and preserves categories referenced by identities', () => {
   assert.match(migration, /create table if not exists ai_network\.ai_category_audit_logs/);
-  assert.match(migration, /category_key text not null references ai_network\.ai_categories\(category_key\) on delete restrict/);
+  assert.match(migration, /category_key text not null references ai_network\.ai_categories\(category_key\) on update cascade on delete restrict/);
   assert.match(migration, /alter table ai_network\.ai_category_audit_logs enable row level security/);
   assert.match(migration, /revoke all on table ai_network\.ai_category_audit_logs from public, anon, authenticated/);
   assert.match(migration, /grant select, insert on ai_network\.ai_category_audit_logs to service_role/);
