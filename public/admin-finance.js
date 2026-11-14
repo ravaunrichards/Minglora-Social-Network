@@ -270,12 +270,16 @@
           item.account_identifier ? 'Account: '+maskProviderReference(item.account_identifier) : '',
           item.support_contact ? 'Support: '+item.support_contact : ''
         ].filter(Boolean).join(' · ') || 'Account details not recorded';
+        const testConnectionAction = item.provider_key === 'supabase'
+          ? '<button type="button" class="secondary admin-finance-test-provider" data-finance-test-provider data-id="' + esc(item.id) + '">Test database + Storage</button>'
+          : '';
+        const lastTest = item.last_synced_at ? ' · Last tested: ' + dateLabel(item.last_synced_at) : '';
         return '<tr><td><strong>' + esc(item.provider_name) + '</strong><small>' +
           esc(item.service_category.replace(/_/g,' ')) + (item.is_candidate ? ' · Candidate' : '') + '</small></td><td>' +
           statusPill(item.connection_status) + '<small>API: ' + esc(item.api_connection_status.replace(/_/g,' ')) +
-          '</small></td><td>' + esc(item.department.replace(/_/g,' ')) + '</td><td>' + esc(accountSummary) +
+          esc(lastTest) + '</small></td><td>' + esc(item.department.replace(/_/g,' ')) + '</td><td>' + esc(accountSummary) +
           '</td><td><a href="' + esc(item.website_url) + '" target="_blank" rel="noopener noreferrer">Official website</a></td><td>' +
-          (canEdit ? editAction('provider',item.id) : '<span class="admin-finance-manual">Managed by verified provider connection</span>') +
+          testConnectionAction + (canEdit ? editAction('provider',item.id) : '<span class="admin-finance-manual">Managed by verified provider connection</span>') +
           '</td></tr>';
       });
       content.innerHTML =
@@ -796,7 +800,30 @@
       setStatus('Finance records exported as CSV.');
     }
 
-    content.addEventListener('click',event => {
+    content.addEventListener('click',async event => {
+      const testButton=event.target?.closest?.('[data-finance-test-provider]');
+      if(testButton) {
+        const providerId=String(testButton.dataset.id||'');
+        const originalLabel=testButton.textContent;
+        testButton.disabled=true;
+        testButton.textContent='Testing…';
+        setStatus('Testing the configured Minglora Supabase database and Storage APIs…');
+        try {
+          const result=await api('/admin/finance',{
+            method:'POST',
+            body:JSON.stringify({financeAction:'test_provider_connection',payload:{provider_id:providerId}})
+          });
+          await refresh();
+          const verifiedAt=result.verifiedAt ? new Date(result.verifiedAt).toLocaleString() : 'just now';
+          setStatus('Supabase connection verified: Postgres and Storage passed at '+verifiedAt+'. Billing plan and charges remain unverified.');
+        } catch(error) {
+          setStatus(error.message || 'Supabase connection test failed. The provider record was not marked connected.',true);
+        } finally {
+          testButton.disabled=false;
+          testButton.textContent=originalLabel;
+        }
+        return;
+      }
       const button=event.target?.closest?.('[data-finance-edit]');
       if (!button) return;
       beginEdit(button.dataset.financeEdit,button.dataset.id);

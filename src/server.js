@@ -3749,7 +3749,7 @@ async function route(req, res) {
         }
         if(!isSameOriginApiWrite(req))return json(res,403,{error:'This finance request must come from Minglora.'});
         const financeAction=String(input?.financeAction||'').trim().toLowerCase();
-        const allowedFinanceActions=new Set(['save_provider','save_subscription','save_budget','save_invoice','save_expense']);
+        const allowedFinanceActions=new Set(['save_provider','save_subscription','save_budget','save_invoice','save_expense','test_provider_connection']);
         if(!allowedFinanceActions.has(financeAction)){
           return json(res,400,{error:'Choose a supported company finance record action.'});
         }

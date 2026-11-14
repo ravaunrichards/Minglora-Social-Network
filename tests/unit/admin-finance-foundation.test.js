@@ -10,6 +10,7 @@ const html = fs.readFileSync(new URL('../../public/admin-centre.html', import.me
 const financeUi = fs.readFileSync(new URL('../../public/admin-finance.js', import.meta.url), 'utf8');
 const financeCss = fs.readFileSync(new URL('../../public/admin-finance.css', import.meta.url), 'utf8');
 const financeAttachmentAuditMigration = fs.readFileSync(new URL('../../supabase/migrations/20261114191800_minglora_admin_finance_attachment_audit.sql', import.meta.url), 'utf8');
+const providerConnectionMigration = fs.readFileSync(new URL('../../supabase/migrations/20261114193000_minglora_admin_supabase_provider_connection_test.sql', import.meta.url), 'utf8');
 
 test('company finance schema is additive and keeps company expenses separate from creator liabilities', () => {
   for (const table of [
@@ -171,4 +172,25 @@ test('provider directory records masked account ownership and integration metada
   assert.ok(migration.includes('account_owner text'));
   assert.ok(migration.includes('account_identifier text'));
   assert.ok(migration.includes('support_contact text'));
+});
+
+
+test('Supabase provider test checks Postgres and Storage before an audited connection update', () => {
+  assert.match(providerConnectionMigration, /SECURITY INVOKER/);
+  assert.match(providerConnectionMigration, /SET search_path = ''/);
+  assert.match(providerConnectionMigration, /p_actor_user_id IS DISTINCT FROM/);
+  assert.match(providerConnectionMigration, /v_provider_key <> 'supabase'/);
+  assert.match(providerConnectionMigration, /api_connection_status = 'connected'/);
+  assert.match(providerConnectionMigration, /last_synced_at = pg_catalog\.now\(\)/);
+  assert.match(providerConnectionMigration, /INSERT INTO public\.minglora_admin_finance_audit_events/);
+  assert.match(providerConnectionMigration, /probes/);
+  assert.match(providerConnectionMigration, /REVOKE ALL ON FUNCTION .* FROM PUBLIC, anon, authenticated/s);
+  assert.match(providerConnectionMigration, /GRANT EXECUTE ON FUNCTION .* TO service_role/s);
+  assert.match(runtime, /admin\.storage\.listBuckets\(\)/);
+  assert.match(runtime, /from\("profiles"\)\.select\("id", \{ count: "exact", head: true \}\)/);
+  assert.match(runtime, /minglora_admin_verify_supabase_provider_connection/);
+  assert.match(server, /test_provider_connection/);
+  assert.match(financeUi, /data-finance-test-provider/);
+  assert.match(financeUi, /Test database \+ Storage/);
+  assert.match(financeUi, /provider record was not marked connected/);
 });
