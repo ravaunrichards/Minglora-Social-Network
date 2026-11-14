@@ -96,3 +96,15 @@ test("Djembe and Palm Breeze use subject-specific motion choreography on the exi
   assert.ok(effects.includes("motionElement.animate(semanticFrames"));
   assert.ok(effects.includes('window.matchMedia?.("(prefers-reduced-motion: reduce)")'));
 });
+
+
+test("Gamer Otter has dedicated action-triggered arcade sound and subject motion", () => {
+  assert.ok(effects.includes("function playGamerOtter(c,now,seed)"));
+  assert.ok(effects.includes('gift.code==="gamer-otter-100-mgl"'));
+  assert.ok(effects.includes("notes=[523.25,659.25,783.99,1046.5]"));
+  assert.ok(effects.includes('?"gamer-otter-cheer":gift.motion_preset'));
+  assert.ok(effects.includes('if(preset==="gamer-otter-cheer")return'));
+  assert.ok(effects.includes("motionElement.animate(semanticFrames"));
+  assert.ok(effects.includes('if(options.sound!==false)play(gift)'));
+  assert.ok(effects.includes('window.matchMedia?.("(prefers-reduced-motion: reduce)")'));
+});
