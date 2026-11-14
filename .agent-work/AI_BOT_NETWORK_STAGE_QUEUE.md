@@ -1,19 +1,27 @@
-## Current production verification override — 2026-11-14
+## Current production verification override — 2026-11-14 (after PR #293 and PR #294)
 
-This is the current source of truth; older checkpoint paragraphs below are retained as historical records.
+Canonical release: Minglora only; main `b60ef07bd5307239fd543099170c9fca7cd31e1b`.
 
-| Stage | Current status | Evidence / remaining exit criteria |
+| Stage | Current status | Latest evidence / remaining exit criteria |
 |---|---|---|
-| 1. Relational foundation and private runtime | **COMPLETED** | 34/34 AI tables have RLS; browser roles have no `ai_network` schema access; 15 categories and service-only RPC boundary verified. |
-| 2. AI identities and profiles | **PARTIAL — CURRENT** | Identity create/read/bulk foundation, separate names, live profile registry/edit, language/location relations, version/audit, owner-scoped media and audited moderator category CRUD deployed. PR #284 identity UI and PR #286 category browser checks passed. | Signed-in owner UI/API create/get/edit/upload/category-management acceptance, actual production-row verification, Storage upload and mobile/desktop owner-session acceptance remain; browser suite used local in-memory fixtures. |
-| 3. Discovery and following | **PARTIAL** | Combined filters, follow/unfollow, bulk duplicate suppression, privacy approval and saved-group lifecycle passed rollback tests. UI/device acceptance remains. |
-| 4. Corporate governance and HR | **PARTIAL** | 20 departments/position templates, application review, gated appointment, employment transitions, management hierarchy, transfer/history and owner isolation passed rollback tests. Additional HR and UI/device work remains. |
-| 5. Supervision, task queue and teams | **PARTIAL — EXECUTION PAUSED** | Approval queue, observation-only mode, idempotency and cancellation tested. Worker claims are rejected; team orchestration remains. |
-| 6. Social/creator/community | **NOT COMPLETE** | Draft records exist; real posts/media/messages/groups/stories/LIVE/Creator Studio/event publishing is not verified end-to-end. |
-| 7. Providers, memory and finance | **PARTIAL — METADATA ONLY** | Provider account/model metadata and pending assignments tested; no real provider inference, inbox, secret-manager adapter or cost reconciliation. |
-| 8. Admin/security/analytics | **PARTIAL** | RLS, owner-scoped RPCs, version/audit and runtime pause verified; full centers and operational analytics remain. |
-| 9. Ten-billion scale | **NOT STARTED** | No 10-billion registration or concurrent-execution benchmark. |
-| 10. Release/device acceptance | **PARTIAL** | PR #286 and #288 CI, AI Network tests and layout QA passed; migration version `20261114053137` applied, Edge v119 ACTIVE, Render deployment `dep-dbrv4bh5efls73e5s1j0` LIVE on main `b88ac94846405e03bc4f8e3c86cd8feea41b2e83`; category RPC create/update/deactivate/audit verified in a rolled-back DB transaction. | Authenticated production browser/device acceptance, public HTTP acceptance with owner session, and recovery drills remain. |
+| 1. Relational foundation and private runtime | **COMPLETED** | 34/34 AI tables have RLS; anon/authenticated have no `ai_network` schema access; service-only RPCs and 15 active categories verified. PR #294 added the 31 audited missing FK indexes; live catalog now reports 0 uncovered AI foreign keys. |
+| 2. AI identities and profiles | **PARTIAL — CURRENT** | PR #293 merged and Render-deployed: Bot Personality Lab creates a private relational AI identity with separate names, category, profile/personality and idempotent bot link. Name/profile/email/provider schema exists. Signed-in owner create/get/edit/upload acceptance, actual production identity records and device acceptance remain. |
+| 3. Discovery and following | **PARTIAL** | Combined filters, follow/unfollow, bulk duplicate suppression, privacy approval and saved-group lifecycle passed rollback tests. Authenticated UI/device acceptance remains. |
+| 4. Corporate governance and HR | **PARTIAL** | 20 department and 20 position templates; application review, gated appointment, employment transitions, management hierarchy, transfer/history and owner isolation passed rollback tests. Additional HR/UI/device tests remain. |
+| 5. Supervision, task queue and teams | **PARTIAL — EXECUTION PAUSED** | Approval queue, observation-only mode, idempotency and cancellation tested. Worker execution is intentionally unavailable until worker identities/credentials and per-worker authorization are implemented and verified; team orchestration remains. |
+| 6. Social/creator/community | **NOT COMPLETE** | Real AI-labelled posts, messages, groups, stories, LIVE, Creator Studio publishing and events integration are not verified end-to-end. |
+| 7. Providers, memory and finance | **PARTIAL — METADATA ONLY** | Provider account/model metadata and pending assignments exist; no live provider inference, protected provider secret reference, inbox provisioning, memory runtime or cost reconciliation is verified. |
+| 8. Admin/security/analytics | **PARTIAL** | RLS, owner-scoped RPCs, version/audit and emergency pause controls verified; full admin centers, alerts and operational analytics remain. |
+| 9. Distributed architecture / ten-billion target | **NOT STARTED** | No distributed-shard, storage/query/write/recovery or simultaneous-execution benchmark supports a 10-billion capacity claim. |
+| 10. Production/device acceptance | **PARTIAL** | PR #293 and #294 checks passed; Supabase migration version `20261114070550` applied; Render deployment `dep-dbs0gh68bjmc73e0e680` LIVE on `b60ef07`; Render logs show server startup, Supabase persistence ready and LiveKit connected. Signed-in owner acceptance and Android/desktop/mobile tests remain. |
+
+### Latest merged changes — 2026-11-14
+- PR #293 merged as `74bd9aadff2a692723ebeeab9443c555ad735deb`: Bot Personality Laboratory now creates a canonical private relational AI identity and links it to the owner-scoped bot record. It does not create a human Auth user, provision an email inbox or enable model execution.
+- PR #294 merged as `b60ef07bd5307239fd543099170c9fca7cd31e1b`: added 31 missing AI Network foreign-key indexes. Full suite 1,087/1,087 passed; focused AI Network 102/102 passed; Auth, For You navigation and layout QA passed.
+- Supabase migration name `minglora_ai_network_foreign_key_indexes`, ledger version `20261114070550`; exact live catalog check returns 0 missing AI Network FK indexes. 34/34 AI tables retain RLS. Advisor has 0 `ai_network` unindexed-FK findings; 38 remaining findings are outside the AI schema and were not changed.
+- Existing project/service only: Supabase `gzycobgbasnqqhnympkr`; Render `minglora-social-network-temp`. No new paid infrastructure or development database branch created.
+- Worker queue claim/heartbeat/complete/fail remain blocked by an explicit authentication guard. Provider layer is metadata-only with no verified provider adapter or configured credentials. Keep `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`.
+- Browser acceptance uses local in-memory fixtures; it is not proof of signed-in owner production acceptance. External public URL access and mobile/desktop owner-session testing remain outstanding.
 
 ### AI category administration — deployed 2026-11-14
 - PR #286 merged as `8297214f08da128980a4d156c0efee602751bcc4`; PR #288 SQL repair/privilege hardening merged as `b88ac94846405e03bc4f8e3c86cd8feea41b2e83`.
@@ -24,10 +32,12 @@ This is the current source of truth; older checkpoint paragraphs below are retai
 - Edge v119 ACTIVE; Render deployment `dep-dbrv4bh5efls73e5s1j0` LIVE. Runtime stays globally paused/disabled with zero workers.
 - Overall 1/10 fully completed stage gates = 10%; Stage 2 remains partial because the owner-authenticated identity/profile/device acceptance criteria are outstanding.
 
-### AI Network performance-advisor backlog — audited 2026-11-14
-- Supabase reports 69 unindexed foreign keys across the project; 31 are in the AI Network schema (departments, employment, follows, organizations, positions, provider history, recruitment and task records).
-- This is a performance hardening backlog, not a reason to weaken RLS. The 34 private AI tables remain RLS-enabled and browser roles have no schema USAGE.
-- No production index changes were applied. Generate a reviewed additive migration, test it on a safe database branch, then seek approval for production application.
+### AI Network foreign-key indexing — deployed 2026-11-14
+- Before the migration, live catalog audit identified 31 AI Network foreign keys without a covering child-side index.
+- PR #294 merged the additive, retry-safe index migration as `b60ef07bd5307239fd543099170c9fca7cd31e1b`; Supabase ledger version `20261114070550`.
+- Rollback-only preflight temporarily created all 31 indexes, verified zero missing FK indexes inside the transaction, and rolled back; a second query confirmed the original 31 were still absent before permanent application.
+- After migration application, live catalog reports 0 missing AI Network FK indexes; all 31 new indexes are present and valid; 34/34 AI tables remain RLS-enabled.
+- Supabase performance advisor now reports zero unindexed foreign-key findings in `ai_network`. 38 remaining project-wide findings are in other Minglora schemas and were not changed.
 
 ### Live evidence and hard safety gates
 - Earlier implementation merge: PR #280 `2f736e7145e62cf8c2df786d26ac48a61fb4b355`; latest release main: PR #288 `b88ac94846405e03bc4f8e3c86cd8feea41b2e83` (following category feature PR #286 `8297214f08da128980a4d156c0efee602751bcc4`).
@@ -61,20 +71,20 @@ This is the current source of truth; older checkpoint paragraphs below are retai
 **Acceptance:** all tests pass; cross-owner access is rejected; no live actions or generated responses are fabricated.
 
 ## AI-NETWORK-01A — Relational AI identity persistence
-**Status:** VERIFYING — source committed; production deployment not applied
+**Status:** PARTIAL — identity persistence deployed; signed-in owner acceptance remains outstanding
 - Existing `ai_network` schema and 15 categories verified in the existing Minglora Supabase project.
 - Server-only RPC source supports owner-scoped category listing, paged list/search, get, one-at-a-time create, and batches up to 100.
 - Separate first/last names, unique username/profile identifier, idempotency, identity ownership, profile/gender, language/location, audit/version/status records and optional email identity metadata.
 - No Supabase Auth user is created for an AI identity.
 - Email metadata is recorded as unverified / not requested until a connected email provider confirms provisioning.
 - Service-role-only grants; browser roles retain no access to the private `ai_network` schema.
-- AI-specific foreign-key indexes added to migration source.
+- PR #294 applied 31 audited child-side indexes; live AI Network FK coverage now has 0 missing relationships. See the latest checkpoint at the top.
 - Authenticated Node API and private runtime-gateway source added; actual UI identity registry reads live API results.
 - Rollback-only database tests passed create/get/list/search/idempotent retry, bounded bulk create, two primary/non-primary language records and separate origin/current location records; transactions rolled back and production row count remains zero.
-- Source-level syntax and static regression checks passed; GitHub Actions result is still unconfirmed.
-**Acceptance before COMPLETED:** apply reviewed migration, deploy the reconciled runtime Edge Function, run authenticated create/get/list/bulk tests, verify row-level records and RLS from Supabase, then verify desktop/mobile UI. Discovery filters/saved groups, profile editing/media, following and provider assignments remain separate Phase 2 work.
+- PR #293 full repository CI: 1,084 tests passed; PR #294 full repository CI: 1,087 tests passed and focused AI Network tests: 102 passed; Auth, navigation and layout workflows passed.
+**Acceptance before COMPLETED:** signed-in owner create/get/list/bulk/edit/upload tests, verify the individual row relationships through Supabase, then verify desktop/mobile UI and real Storage upload. Discovery filters/saved groups, following and provider assignments remain separate Phase 2 work.
 **Runtime reconciliation:** the feature-branch Edge Function is now current `main` plus the AI gateway handler and AI collection group; an exact normalized comparison confirmed all other runtime source is preserved, including newer video playlist/channel entries.
-**Safety boundary:** no production migration or Edge Function deployment has occurred yet. Production still runs runtime function version 112.
+**Safety boundary:** identity/profile/category/media foundation is deployed. Worker/provider execution remains closed; no inbox or provider is claimed connected. Runtime controls stay globally paused, execution disabled and worker count zero.
 
 ## AI-NETWORK-02 — Central AI Bot Command Center
 **Status:** READY
