@@ -73,7 +73,7 @@ Deno.serve(async (req: Request) => {
   const supportedActions = [
     "internal_activity_feed",
     "admin_users_list", "admin_user_set_ban", "admin_audit_log", "admin_audit_log",
-    "streambay_cleanup", "ai_identity_command", "ai_discovery_command", "ai_organization_command", "ai_hr_command", "ai_provider_command", "ai_task_command", "load", "save", "health", "media_sign", "media_upload_prepare", "media_upload_complete", "media_delete",
+    "streambay_cleanup", "ai_identity_command", "ai_identity_profile_list", "ai_identity_profile_update", "ai_discovery_command", "ai_organization_command", "ai_hr_command", "ai_provider_command", "ai_task_command", "load", "save", "health", "media_sign", "media_upload_prepare", "media_upload_complete", "media_delete",
     "live_broadcast_create", "live_broadcast_end", "live_chat_list", "live_chat_send", "live_chat_delete",
     "live_participant_mark_connected", "live_participant_mark_left", "live_speaker_request", "live_speaker_requests_list", "live_speaker_request_status",
     "live_speaker_request_review", "live_speaker_mark_connected", "live_speaker_mark_left",
@@ -3757,6 +3757,59 @@ Deno.serve(async (req: Request) => {
       return json(status, {
         error: String(error.message || "Minglora AI identity request failed.").slice(0, 240)
       });
+    }
+    return json(200, { result: data });
+  }
+
+  if (action === "ai_identity_profile_list") {
+    const actorUserId = String(input.actorUserId || "");
+    const payload = input.payload && typeof input.payload === "object" && !Array.isArray(input.payload)
+      ? input.payload
+      : {};
+    if (!validUuid(actorUserId)) {
+      return json(400, { error: "A valid signed-in Minglora user is required for AI identity registry access." });
+    }
+    const requestedLimit = Number.parseInt(String(payload.limit ?? "25"), 10);
+    const requestedOffset = Number.parseInt(String(payload.offset ?? "0"), 10);
+    const { data, error } = await admin.rpc("minglora_ai_identity_profile_registry", {
+      p_actor_user_id: actorUserId,
+      p_limit: Number.isFinite(requestedLimit) ? Math.min(Math.max(requestedLimit, 1), 100) : 25,
+      p_offset: Number.isFinite(requestedOffset) ? Math.max(requestedOffset, 0) : 0,
+      p_search: String(payload.search || "").slice(0, 120)
+    });
+    if (error) {
+      const code = String(error.code || "");
+      const status = code === "42501" ? 403 : code === "P0002" ? 404 : code === "23505" ? 409 : 400;
+      return json(status, { error: String(error.message || "Minglora AI identity registry read failed.").slice(0, 240) });
+    }
+    return json(200, { result: data });
+  }
+
+  if (action === "ai_identity_profile_update") {
+    const actorUserId = String(input.actorUserId || "");
+    const payload = input.payload && typeof input.payload === "object" && !Array.isArray(input.payload)
+      ? input.payload
+      : {};
+    const identityId = String(payload.identity_id || "");
+    if (!validUuid(actorUserId) || !validUuid(identityId)) {
+      return json(400, { error: "A valid signed-in Minglora user and AI identity are required for profile updates." });
+    }
+    const serialized = JSON.stringify(payload);
+    if (/"(api[_-]?key|access[_-]?token|password|secret|authorization|cookie|credential)"\s*:/i.test(serialized)) {
+      return json(400, { error: "Credentials and secrets are not allowed in AI identity profile requests." });
+    }
+    const { data, error } = await admin.rpc("minglora_ai_identity_profile_update", {
+      p_actor_user_id: actorUserId,
+      p_identity_id: identityId,
+      p_name: payload.name,
+      p_profile: payload.profile,
+      p_languages: payload.languages,
+      p_locations: payload.locations
+    });
+    if (error) {
+      const code = String(error.code || "");
+      const status = code === "42501" ? 403 : code === "P0002" ? 404 : code === "23505" ? 409 : 400;
+      return json(status, { error: String(error.message || "Minglora AI identity profile update failed.").slice(0, 240) });
     }
     return json(200, { result: data });
   }

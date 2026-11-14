@@ -1603,16 +1603,48 @@ async function route(req, res) {
         const identityUrl = new URL(req.url || '/', 'http://localhost');
         const requestedLimit = Number.parseInt(identityUrl.searchParams.get('limit') || '25', 10);
         const requestedOffset = Number.parseInt(identityUrl.searchParams.get('offset') || '0', 10);
-        const result = await runAIIdentityCommand('list', {
-          limit: Number.isFinite(requestedLimit) ? Math.min(Math.max(requestedLimit, 1), 100) : 25,
-          offset: Number.isFinite(requestedOffset) ? Math.max(requestedOffset, 0) : 0,
-          search: String(identityUrl.searchParams.get('search') || '').slice(0, 120)
+        const response = await requestSupabaseState('ai_identity_profile_list', {
+          actorUserId: user.id,
+          payload: {
+            limit: Number.isFinite(requestedLimit) ? Math.min(Math.max(requestedLimit, 1), 100) : 25,
+            offset: Number.isFinite(requestedOffset) ? Math.max(requestedOffset, 0) : 0,
+            search: String(identityUrl.searchParams.get('search') || '').slice(0, 120)
+          }
         });
-        return json(res, 200, result || { identities: [], total: 0, limit: 25, offset: 0 });
+        if (response?.skipped) {
+          throw Object.assign(new Error('AI identity registry details require Minglora Supabase persistence.'), { status: 503 });
+        }
+        return json(res, 200, response?.result || { identities: [], total: 0, limit: 25, offset: 0 });
       }
       if (method === 'GET' && parts[0] === 'identities' && parts.length === 2) {
         const result = await runAIIdentityCommand('get', { identity_id: parts[1] });
         return json(res, 200, { identity: result });
+      }
+      if (method === 'PATCH' && parts[0] === 'identities' && parts.length === 2) {
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(parts[1])) {
+          throw Object.assign(new Error('A valid AI identity ID is required.'), { status: 400 });
+        }
+        if (!isSupabasePersistence()) {
+          throw Object.assign(new Error('AI identity profile edits require Minglora Supabase persistence.'), { status: 503 });
+        }
+        const input = await body(req, 40000);
+        if (!input || typeof input !== 'object' || Array.isArray(input)) {
+          throw Object.assign(new Error('AI identity profile input must be a JSON object.'), { status: 400 });
+        }
+        const response = await requestSupabaseState('ai_identity_profile_update', {
+          actorUserId: user.id,
+          payload: {
+            identity_id: parts[1],
+            name: input.name,
+            profile: input.profile,
+            languages: input.languages,
+            locations: input.locations
+          }
+        });
+        if (response?.skipped) {
+          throw Object.assign(new Error('AI identity profile updates are unavailable in local-only persistence mode.'), { status: 503 });
+        }
+        return json(res, 200, { identity: response?.result });
       }
       if (method === 'POST' && sub === 'identities') {
         const input = await body(req, 40000);
