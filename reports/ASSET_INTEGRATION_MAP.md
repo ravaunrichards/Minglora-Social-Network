@@ -103,3 +103,12 @@ No prices, balances, transactions, account state, LiveKit credentials, or existi
 - Repeated leaves/veins are batched by material to reduce primitive count. Source provenance is `gift-palm-breeze-3d-v1` and its review state remains `design-review-pending`.
 - PR #340 merged as `976e4293d2bbe68b7ad4006dea41d21107097e23` after CI asset generation, automated tests and LIVE/MeetWave layout QA passed.
 - No production offering, gift price, active flag, transaction or payout was modified. Art/rights review, physical-device QA and production-host verification remain outstanding.
+
+
+## Djembe and Palm Breeze sound integration — 2026-11-14
+
+- `public/gift-effects.js` now recognizes the exact canonical gift codes `djembe-master-1v3jzkm` and `palm-breeze-gknyt0` inside the existing `play(gift)` function.
+- Djembe uses a seeded local noise buffer with a low drum pitch-drop envelope and a rim accent. Palm Breeze uses a seeded filtered-noise breeze and three sine chime tones. Sound starts when the existing `MingloraGiftFX.mount` creates the associated visual gift effect; `options.sound === false` remains authoritative.
+- Unrecognized gifts continue through the prior category/seed-based oscillator synthesis, with no remote audio request or new third-party dependency.
+- `scripts/generate-minglora-live-asset-manifest.mjs` adds design IDs and synthesized-layer provenance for those two records. The manifest explicitly does not claim a mastered audio file: `audio_file` is null and the mastered file count is zero.
+- PR #341 (`81764826f74975ac17bd9f9e1c67c0fc72527216`) merged after full CI and LIVE/MeetWave visual QA passed. Cross-device audio latency/mixing and human audio review are still not complete.
