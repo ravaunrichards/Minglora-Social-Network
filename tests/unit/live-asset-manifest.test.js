@@ -87,7 +87,7 @@ test("every gift record has measured SVG and GLTF files, dimensions, hashes and 
   }
   assert.equal(codes.size, catalogue.gifts.length);
   assert.equal(emojiOverlayCount, manifest.summary.emoji_font_overlay_count);
-  assert.ok(emojiOverlayCount > 0, "current emoji-font artwork must remain visible as a quality blocker");
+  assert.equal(emojiOverlayCount, 0, "generated SVG artwork must not depend on system emoji fonts");
 });
 
 test("active gift animation profiles match the canonical motion index; retired gifts stay inactive", () => {

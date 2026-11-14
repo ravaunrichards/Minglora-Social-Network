@@ -132,6 +132,8 @@ test("the build produces one original SVG and one 3D GLTF for every active gift"
     const svg = readFileSync(svgPath, "utf8");
     assert.ok(svg.startsWith("<svg"), gift.name + " SVG should be a valid SVG document");
     assert.ok(svg.includes("Minglora") || svg.includes("aria-label"), gift.name);
+    assert.doesNotMatch(svg, /font-family=["'][^"']*(?:Apple Color Emoji|Segoe UI Emoji|Noto Color Emoji)/i, gift.name + " SVG must not use system emoji fonts");
+    assert.doesNotMatch(svg, /\p{Extended_Pictographic}/u, gift.name + " SVG must not embed emoji glyphs");
     svgPayloads.add(svg);
     const modelText = readFileSync(modelPath, "utf8");
     const model = JSON.parse(modelText);

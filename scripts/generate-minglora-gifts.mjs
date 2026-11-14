@@ -45,48 +45,6 @@ function palette(gift) {
     return "#" + [r,g,b].map(v => v.toString(16).padStart(2,"0")).join("");
   });
 }
-function symbolFor(gift) {
-  const name = gift.name.toLowerCase();
-  const rules = [
-    [/hibiscus/,"🌺"], [/rose|flower|tulip|bouquet|blossom|sakura|orchid|lotus/,"🌹"],
-    [/cnc coin/,"🪙"], [/easter heart/,"💖"], [/fighting|boxing glove|boxing/,"🥊"],
-    [/kitty pillow/,"🐱"], [/otter/,"🦦"], [/four leaf clover|clover/,"🍀"],
-    [/dj headphone|headphone/,"🎧"], [/yalla sahel/,"👋"], [/merdeka|festival/,"🎊"],
-    [/pop, don/,"🎈"], [/house hat/,"🎩"], [/let.?s be friends/,"🤝"],
-    [/audience laughter/,"😂"], [/star hero stage/,"🌟"], [/picture perfect/,"📸"],
-    [/championship hall/,"🏆"], [/klcc|jakarta roundabout/,"🏙️"],
-    [/alpha wolves/,"🐺"], [/golden falcons|falcon/,"🦅"], [/keeper of atlantis/,"🔱"],
-    [/noble stallions|stallion/,"🐎"], [/royal lions|lion/,"🦁"],
-    [/ultimate match/,"⚔️"], [/goal of glory/,"🏆"], [/flamenco dancers/,"💃"],
-    [/baseball/,"⚾"], [/basketball/,"🏀"], [/football|soccer/,"⚽"], [/volleyball/,"🏐"],
-    [/tennis/,"🎾"], [/cricket/,"🏏"], [/boxing glove|boxing/,"🥊"], [/golf/,"⛳"],
-    [/cat|kitten/,"🐱"], [/dog|puppy|shiba|corgi/,"🐶"], [/bear|panda/,"🐻"],
-    [/lion/,"🦁"], [/tiger/,"🐯"], [/fox/,"🦊"], [/rabbit|bunny/,"🐰"],
-    [/horse|unicorn|pegasus/,"🦄"], [/dragon/,"🐉"], [/dinosaur|t.rex|trex/,"🦖"],
-    [/whale/,"🐳"], [/dolphin/,"🐬"], [/shark/,"🦈"], [/fish/,"🐠"],
-    [/eagle|falcon/,"🦅"], [/parrot/,"🦜"], [/swan|dove/,"🕊️"], [/penguin/,"🐧"],
-    [/butterfly/,"🦋"], [/bee/,"🐝"], [/frog/,"🐸"], [/turtle/,"🐢"],
-    [/car|vehicle|sports car|truck|bus/,"🏎️"], [/motorcycle|motorbike/,"🏍️"],
-    [/bicycle|bike|cycling/,"🚲"], [/helicopter/,"🚁"], [/train/,"🚂"],
-    [/plane|jet|aircraft|shuttle/,"✈️"], [/boat|ship|yacht/,"🛥️"], [/rocket/,"🚀"],
-    [/guitar/,"🎸"], [/drum/,"🥁"], [/piano|keyboard/,"🎹"], [/mic|microphone/,"🎤"],
-    [/music|headphone|speaker|melody|beat/,"🎵"], [/trophy|medal|champion|award/,"🏆"],
-    [/ice cream|gelato|popsicle/,"🍦"], [/cake|cupcake|birthday/,"🎂"], [/pizza/,"🍕"],
-    [/coffee/,"☕"], [/tea/,"🫖"], [/juice|smoothie/,"🧃"], [/watermelon/,"🍉"],
-    [/mango/,"🥭"], [/cherry/,"🍒"], [/corn/,"🌽"], [/chili|chilli|pepper/,"🌶️"],
-    [/perfume/,"🧴"], [/diamond|crystal|gem/,"💎"], [/crown|tiara/,"👑"],
-    [/ring|necklace|jewelry/,"💍"], [/money|cash|coin|gold mine/,"💰"],
-    [/firework|confetti|balloon|party|celebration/,"🎉"], [/tree|forest|garden|island/,"🌳"],
-    [/star|moon|sun|galaxy|universe|space|nebula/,"🌌"], [/alien/,"👽"],
-    [/game|gaming|controller|arcade/,"🎮"], [/camera|photo/,"📸"],
-    [/clapperboard|movie|film/,"🎬"], [/book|study|school/,"📚"],
-    [/castle|palace|kingdom/,"🏰"], [/house|home/,"🏠"], [/flag|jamaica|parish/,"🇯🇲"],
-    [/umbrella/,"☂️"], [/clock|watch|time/,"⌚"], [/phone|mobile/,"📱"]
-  ];
-  for (const pair of rules) if (pair[0].test(name)) return pair[1];
-  return gift.emoji || "🎁";
-}
-
 function premiumSvgShape(gift) {
   const n = String(gift.name || "").toLowerCase();
   if (/you are wanted/.test(n)) return '<circle cx="256" cy="250" r="150" fill="none" stroke="url(#shine)" stroke-width="27"/><circle cx="256" cy="250" r="94" fill="none" stroke="#fff" stroke-width="18"/><circle cx="256" cy="250" r="38" fill="url(#main)"/><path d="M256 95v-40m0 390v-40M101 250H61m390 0h-40" stroke="#fff" stroke-width="15" stroke-linecap="round"/>';
@@ -113,7 +71,6 @@ function premiumSvgShape(gift) {
 function svgArt(gift) {
   const colors = palette(gift);
   const seed = hash32(gift.code);
-  const symbol = symbolFor(gift);
   const name = String(gift.name || "").toLowerCase();
   const rot = (seed % 31) - 15;
   const star1 = 45 + (seed % 50);
@@ -196,7 +153,6 @@ function svgArt(gift) {
     '<ellipse cx="256" cy="408" rx="132" ry="21" fill="#081a3b" opacity=".22"/>'+
     '<g transform="rotate('+rot+' 256 256)">'+shape+'</g>'+spark+'<g transform="translate('+(seed%5)*5+' 0)" opacity=".8">'+sigil+'</g>'+premiumAccent+
     '<circle cx="392" cy="108" r="7" fill="#fff" opacity=".9"/><circle cx="115" cy="390" r="6" fill="#fff" opacity=".75"/>'+
-    '<text x="256" y="286" font-family="Apple Color Emoji,Segoe UI Emoji,Noto Color Emoji,sans-serif" font-size="118" text-anchor="middle" dominant-baseline="middle" paint-order="stroke" stroke="#fff" stroke-opacity=".2" stroke-width="4">'+symbol+'</text>'+
     '<path d="M90 72q90-48 174-26" fill="none" stroke="#fff" stroke-opacity=".22" stroke-width="10" stroke-linecap="round"/>'+
     '<rect x="86" y="438" width="340" height="43" rx="21" fill="#10162d" fill-opacity=".48"/><text x="256" y="467" font-family="Arial,sans-serif" font-size="21" font-weight="800" text-anchor="middle" fill="#fff">'+safeLabel+'</text>'+
     '</svg>';
