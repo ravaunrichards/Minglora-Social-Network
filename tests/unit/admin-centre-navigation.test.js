@@ -6,7 +6,7 @@ const js = fs.readFileSync(new URL('../../public/admin-centre.js', import.meta.u
 const css = fs.readFileSync(new URL('../../public/admin-centre.css', import.meta.url), 'utf8');
 const html = fs.readFileSync(new URL('../../public/admin-centre.html', import.meta.url), 'utf8');
 
-test('Admin Centre exposes seven clearly named navigation departments', () => {
+test('Admin Centre exposes eight clearly named navigation departments', () => {
   const groupOrder = js.match(/const groupOrder = \[([^\]]+)\]/);
   assert.ok(groupOrder, 'navigation department list must exist');
   const groups = [...groupOrder[1].matchAll(/'([^']+)'/g)].map(match => match[1]);
@@ -17,13 +17,14 @@ test('Admin Centre exposes seven clearly named navigation departments', () => {
     'Creator Finance',
     'Live Pro Access',
     'Trust & Support',
+    'Finance & Operations',
     'Administration'
   ]);
 });
 
 test('existing administrative workspaces receive independent page routes', () => {
   for (const key of [
-    'overview','internal-operations','platform-overview','profile-verification',
+    'overview','company-finance','internal-operations','platform-overview','profile-verification',
     'users','audit-log','gift-earnings','campaign-wallet','member-promotions',
     'marketing-budget','platform-payouts','creator-withdrawals',
     'promotional-tracking','live-pro','moderation','support','security'

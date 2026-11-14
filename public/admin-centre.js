@@ -188,6 +188,7 @@
 
     const pageDefinitions = [
       {key:'overview',title:'Overview',group:'Dashboard',description:'A clear starting point with shortcuts to every available administration workspace.'},
+      {key:'company-finance',title:'Company finance & service management',group:'Finance & Operations',description:'Manage operating providers, subscriptions, budgets, invoices and expenses without mixing creator or seller balances.',selector:'#admin-finance-control'},
       {key:'internal-operations',title:'Platform operations',group:'Dashboard',description:'Review metadata-only activity across accounts, social features, calls, meetings, LIVE and finance.',selector:'#admin-internal-operations'},
       {key:'platform-overview',title:'Platform inventory',group:'Dashboard',description:'Review live inventory counts for active Minglora runtime collections.',selector:'#admin-platform-overview'},
       {key:'profile-verification',title:'Profile verification & gifter badges',group:'Profile & Community',description:'Review member profile verification and manage the established gifter badge progression.',selector:'#admin-badge-controls'},
@@ -218,7 +219,7 @@
       return Boolean(resolveTarget(definition));
     });
     const pageByKey = new Map(availablePages.map(definition => [definition.key, definition]));
-    const groupOrder = ['Dashboard','Profile & Community','User Management','Creator Finance','Live Pro Access','Trust & Support','Administration'];
+    const groupOrder = ['Dashboard','Profile & Community','User Management','Creator Finance','Live Pro Access','Trust & Support','Finance & Operations','Administration'];
 
     const workspace = document.createElement('div');
     workspace.className = 'admin-centre-workspace';
@@ -1039,6 +1040,7 @@
 
     panel.append(adminSettings);
     root.replaceChildren(panel);
+    if (unlocked) window.MingloraAdminFinance?.mount(panel, adminCentreApi);
     root.dataset.adminCentreReady = 'true';
     if (unlocked) initializeInternalActivityFeed(panel);
 

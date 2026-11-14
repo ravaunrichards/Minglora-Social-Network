@@ -72,7 +72,7 @@ Deno.serve(async (req: Request) => {
 
   const action = input.action;
   const supportedActions = [
-    "internal_activity_feed",
+    "internal_activity_feed", "admin_finance_command",
     "admin_users_list", "admin_user_set_ban", "admin_audit_log", "admin_audit_log",
     "streambay_cleanup", "ai_identity_command", "ai_identity_status_command", "ai_memory_command", "ai_category_command", "ai_identity_profile_list", "ai_identity_profile_update", "ai_discovery_command", "ai_organization_command", "ai_hr_command", "ai_hr_talent_command", "ai_team_command", "ai_provider_command", "ai_task_command", "ai_schedule_command", "load", "save", "health", "media_sign", "media_upload_prepare", "media_upload_complete", "media_delete",
     "live_broadcast_create", "live_broadcast_end", "live_chat_list", "live_chat_send", "live_chat_delete",
@@ -267,6 +267,100 @@ Deno.serve(async (req: Request) => {
     });
   }
 
+
+  if (action === "admin_finance_command") {
+    const actorUserId = String(input.actorUserId || "");
+    if (actorUserId !== "5b998c21-86b5-4621-ab37-e0808a2657b1") {
+      return json(403, { error: "Only the designated Minglora owner can access company finance records." });
+    }
+    const financeAction = String(input.financeAction || "list").trim().toLowerCase();
+    const financePayload = input.payload && typeof input.payload === "object" && !Array.isArray(input.payload)
+      ? input.payload as Record<string, unknown>
+      : {};
+    if (financeAction === "list") {
+      const [providersResult, subscriptionsResult, budgetsResult, invoicesResult, expensesResult, auditResult] = await Promise.all([
+        admin.from("minglora_admin_service_providers").select("*").order("provider_name", { ascending: true }).limit(500),
+        admin.from("minglora_admin_service_subscriptions").select("*").order("updated_at", { ascending: false }).limit(500),
+        admin.from("minglora_admin_operating_budgets").select("*").order("period_start", { ascending: false }).limit(500),
+        admin.from("minglora_admin_operating_invoices").select("*").order("created_at", { ascending: false }).limit(500),
+        admin.from("minglora_admin_operating_expenses").select("*").order("expense_date", { ascending: false }).limit(500),
+        admin.from("minglora_admin_finance_audit_events").select("id,actor_user_id,entity_type,entity_id,action,metadata,created_at").order("created_at", { ascending: false }).limit(100)
+      ]);
+      const failed = [providersResult,subscriptionsResult,budgetsResult,invoicesResult,expensesResult,auditResult]
+        .find((item:any) => item.error);
+      if (failed) return json(503, { error: "Minglora company finance records could not be loaded." });
+      const providers = providersResult.data || [];
+      const subscriptions = subscriptionsResult.data || [];
+      const budgets = budgetsResult.data || [];
+      const invoices = invoicesResult.data || [];
+      const expenses = expensesResult.data || [];
+      const actualExpensesByCurrency: Record<string, number> = {};
+      for (const expense of expenses) {
+        if (String(expense.expense_status || "") !== "actual") continue;
+        const currency = String(expense.currency_code || "USD");
+        actualExpensesByCurrency[currency] = (actualExpensesByCurrency[currency] || 0) + Number(expense.amount_minor || 0);
+      }
+      return json(200, {
+        ok: true,
+        providers,
+        subscriptions,
+        budgets,
+        invoices,
+        expenses,
+        auditEvents: auditResult.data || [],
+        summary: {
+          providerCount: providers.length,
+          connectedProviderCount: providers.filter((item:any) => item.api_connection_status === "connected").length,
+          activeSubscriptionCount: subscriptions.filter((item:any) => ["active","free_plan","paid_plan"].includes(String(item.subscription_status))).length,
+          outstandingInvoiceCount: invoices.filter((item:any) => !["paid","cancelled"].includes(String(item.payment_status))).length,
+          actualExpensesByCurrency,
+          companyCashBalanceStatus: "not_connected",
+          paymentExecutionStatus: "manual_provider_action_required"
+        },
+        syncedAt: new Date().toISOString()
+      });
+    }
+
+    const supportedFinanceActions = new Set([
+      "save_provider","save_subscription","save_budget","save_invoice","save_expense"
+    ]);
+    if (!supportedFinanceActions.has(financeAction)) {
+      return json(400, { error: "Unsupported Minglora company finance operation." });
+    }
+    const serialized = JSON.stringify(financePayload);
+    if (/"(?:api[_-]?key|access[_-]?token|refresh[_-]?token|password|secret|authorization|cookie|credential|cvv|card[_-]?number|bank[_-]?password)"\s*:/i.test(serialized)) {
+      return json(400, { error: "Credentials and raw payment details cannot be stored in finance records." });
+    }
+    // Payment execution, transfers, card storage and automatic renewals are not implemented here.
+    if (financeAction === "save_provider" &&
+        (["active","free_plan","paid_plan"].includes(String(financePayload.connection_status || "")) ||
+         String(financePayload.api_connection_status || "") === "connected")) {
+      return json(409, { error: "A provider cannot be marked connected until an official connection test succeeds." });
+    }
+    if (financeAction === "save_subscription" && financePayload.auto_renewal_enabled === true) {
+      return json(409, { error: "Automatic renewal is not available until an approved provider integration exists." });
+    }
+    if (financeAction === "save_budget" && String(financePayload.approval_status || "") === "approved") {
+      return json(409, { error: "Budget approvals must use the authorized approval workflow." });
+    }
+    if (financeAction === "save_invoice" && String(financePayload.payment_status || "") === "paid") {
+      return json(409, { error: "An invoice can only be marked paid after verified provider confirmation." });
+    }
+    const { data, error } = await admin.rpc("minglora_admin_finance_command", {
+      p_action: financeAction,
+      p_actor_user_id: actorUserId,
+      p_payload: financePayload
+    });
+    if (error) {
+      const code = String(error.code || "");
+      const status = code === "42501" ? 403 : code === "23505" ? 409 :
+        ["22023","22P02","22003","22007","23514","23503"].includes(code) ? 400 : 503;
+      return json(status, {
+        error: String(error.message || "Minglora company finance update failed.").slice(0, 240)
+      });
+    }
+    return json(200, data && typeof data === "object" ? data : { ok: true, record: data });
+  }
 
   if (action === "admin_audit_log") {
     const actorUserId = String(input.actorUserId || "");
