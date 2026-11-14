@@ -1106,7 +1106,25 @@
     const payload = {};
     let path = '';
     let identityIdForMedia = null;
-    if (kind === 'bulk-follow') {
+    if (kind === 'memory-settings') {
+      const identityId = form.dataset.identityId || '';
+      if (!identityId) throw new Error('Choose an AI identity before updating its memory settings.');
+      path = '/identities/' + encodeURIComponent(identityId) + '/memory/settings';
+      payload.memory_enabled = form.querySelector('[name="memoryEnabled"]').checked;
+      payload.long_term_enabled = form.querySelector('[name="longTermEnabled"]').checked;
+      payload.short_term_retention_days = Number(value('shortTermRetentionDays'));
+      payload.long_term_retention_days = Number(value('longTermRetentionDays'));
+      payload.max_entries = Number(value('maxEntries'));
+    } else if (kind === 'memory-entry') {
+      const identityId = form.dataset.identityId || '';
+      if (!identityId) throw new Error('Choose an AI identity before saving memory.');
+      path = '/identities/' + encodeURIComponent(identityId) + '/memory';
+      form.dataset.idempotencyKey = form.dataset.idempotencyKey || window.crypto.randomUUID();
+      payload.memory_type = value('memoryType');
+      payload.summary = value('summary');
+      payload.content = { source:'owner_managed_entry', note:value('note') };
+      payload.idempotency_key = form.dataset.idempotencyKey;
+    } else if (kind === 'bulk-follow') {
       const identityIds = data.getAll('identity_ids').map(item => String(item).trim()).filter(Boolean);
       if (identityIds.length < 1 || identityIds.length > 100) {
         throw new Error('Select between one and 100 public AI profiles for bulk following.');
@@ -1499,7 +1517,7 @@
       payload.companionOptIn = form.querySelector('[name="companionOptIn"]').checked;
       payload.companionAcknowledged = form.querySelector('[name="companionAcknowledgedAIIdentity"]').checked;
     } else return;
-    const patchKinds = ['settings','languages','vacancy-status','application-review','employment-status','employment-manager','provider-assignment-status','task-approval','identity-edit'];
+    const patchKinds = ['settings','languages','memory-settings','vacancy-status','application-review','employment-status','employment-manager','provider-assignment-status','task-approval','identity-edit'];
     const result = await request(path, { method: patchKinds.includes(kind) ? 'PATCH' : 'POST', body: payload });
     let uploadedMediaCount = 0;
     if (kind === 'identity-edit' && identityIdForMedia) {
@@ -1525,7 +1543,11 @@
     }
     if (['identity','bot','organization','vacancy','application','appointment','employment-transfer','task-create'].includes(kind)) form.dataset.idempotencyKey = window.crypto.randomUUID();
     const categoryActionLabels = { created:'created', updated:'updated', activated:'reactivated', deactivated:'deactivated' };
-    const message = kind === 'category'
+    const message = kind === 'memory-settings'
+      ? 'AI memory consent and retention settings saved for this identity. Existing entries were cleared when memory was disabled.'
+      : kind === 'memory-entry'
+        ? 'Owner-managed AI memory entry saved with its retention expiry.'
+    : kind === 'category'
       ? 'AI category ' + (categoryActionLabels[result.action] || 'changes saved') + ' and an audit event recorded.'
       : kind === 'bot'
         ? 'AI bot saved and linked to relational identity ' + String(result.identity?.identity?.identity_id || '') + '. The identity is private and execution remains paused.'
@@ -1589,7 +1611,13 @@
     state.busy = true;
     try {
       if (action === 'reload') return await load();
-      if (action === 'edit-category') {
+      if (action === 'delete-memory') {
+        const identityId = button.dataset.identityId || state.memoryIdentityId;
+        if (!identityId || !id) throw new Error('Choose a valid AI memory entry to delete.');
+        await request('/identities/' + encodeURIComponent(identityId) + '/memory/' + encodeURIComponent(id), { method:'DELETE' });
+        state.memoryIdentityId = identityId;
+      }
+      else if (action === 'edit-category') {
         const category = state.categoryAdmin?.find(item => item.category_key === button.dataset.categoryKey);
         const form = document.querySelector('form[data-ai-form="category"]');
         if (!category || !form) throw new Error('The selected AI category could not be loaded.');
@@ -1625,10 +1653,28 @@
     }
   };
 
+  const onMemoryIdentityChange = async event => {
+    const select = event.target instanceof Element
+      ? event.target.closest('select[data-ai-memory-identity]')
+      : null;
+    if (!select || state.busy) return;
+    state.busy = true;
+    try {
+      await loadAIMemory(select.value);
+      paintSnapshot();
+    } catch (error) {
+      state.memoryError = error.message || 'AI memory could not be loaded.';
+      paintSnapshot();
+    } finally {
+      state.busy = false;
+    }
+  };
+
   if (!window.__mingloraAINetworkBound) {
     window.__mingloraAINetworkBound = true;
     document.addEventListener('submit', onSubmit);
     document.addEventListener('click', onClick);
+    document.addEventListener('change', onMemoryIdentityChange);
   }
   window.MingloraAINetwork = { render: load, refresh: () => refresh(), request };
 })();
