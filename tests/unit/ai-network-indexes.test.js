@@ -167,11 +167,11 @@ const expected = [
 
 test('AI Network migration covers all 31 audited missing foreign-key indexes', () => {
   for (const index of expected) {
-    const statement = 'create index if not exists ' + index.name + '\\n' +
+    const statement = 'create index if not exists ' + index.name + String.fromCharCode(10) +
       '  on ai_network.' + index.table + ' (' + index.columns + ');';
     assert.ok(migration.includes(statement), 'Missing or incorrectly ordered index: ' + index.name);
   }
-  const statements = migration.split('\\n').filter(line => line.trim().toLowerCase().startsWith('create index if not exists '));
+  const statements = migration.split(String.fromCharCode(10)).filter(line => line.trim().toLowerCase().startsWith('create index if not exists '));
   assert.equal(statements.length, expected.length);
 });
 
