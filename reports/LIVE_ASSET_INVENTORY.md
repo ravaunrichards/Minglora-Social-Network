@@ -1,3 +1,18 @@
+## Live production catalogue reconciliation — 2026-11-14
+
+**Read-only production verification (existing Minglora Supabase project):**
+- `public.live_gift_catalog`: **97 rows total; 0 active; 97 inactive**.
+- Asset versions: **87 version-1 rows and 10 version-2 rows; zero version-3 rows**.
+- All 97 retained rows have image/model paths and animation key/preset/sound preset metadata, but they are retired versions and must not be re-enabled.
+- The database constraint `live_gift_catalog_only_approved_assets_active_ck` permits activation only when `asset_version='3'` and both image/model paths are present.
+- The deployed `minglora-runtime-state` function (ACTIVE v129) loads the production catalogue using `active=true` and `asset_version='3'`. The LIVE room and Gift Studio call `/api/coins/catalog`; the UI intentionally displays the empty-state message and does not permit sending when no published gifts are returned.
+- The repository source catalogue remains separate: `data/minglora-gift-catalog.json` contains **1,748 records (1,737 marked active, 11 retired)** and its generator creates catalog SVG/GLTF outputs. Those source records are **not evidence of 1,748 live database offerings**.
+- No production gift was activated, no version-1/2 row was revived, no coin price or transaction was changed, and no test gift was inserted.
+
+**Release gate:** A version-3 publication migration must be prepared only after each candidate gift's original Minglora artwork, image/model paths, rights/attribution, coin price, animation/sound mapping and transaction compatibility have been validated. Do not bulk-copy the source catalogue or activate records solely to make the count nonzero. Until this gate is met, the empty production gift catalogue is the safe and correct runtime result.
+
+---
+
 # Minglora LIVE — Asset Inventory
 
 **Audit date:** 2026-11-14
