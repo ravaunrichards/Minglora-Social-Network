@@ -127,3 +127,29 @@ test('AI-to-AI delegation is scoped, audited and held for human approval', () =>
   assert.ok(server.includes("runAITeamCommand('create_delegation_grant'"));
   assert.ok(!migration.includes("v_action_class in ('financial','security','moderation','external','social')"));
 });
+
+test('delegation controls are loaded only for authorized admins and use bounded scopes', () => {
+  assert.ok(ui.includes("async function loadAIDelegations()"));
+  assert.ok(ui.includes("error.status !== 403"));
+  assert.ok(ui.includes("state.delegationAccess = true"));
+  assert.ok(ui.includes("data-ai-form=\"delegation-create\""));
+  assert.ok(ui.includes("data-ai-form=\"delegation-task\""));
+  assert.ok(ui.includes("allowedActionClasses"));
+  assert.ok(ui.includes("maxTokenBudget"));
+  assert.ok(ui.includes("maxCostLimitUsd"));
+  assert.ok(ui.includes("path = '/delegations'"));
+  assert.ok(ui.includes("'/delegations/' + encodeURIComponent(grantId) + '/tasks'"));
+  assert.ok(ui.includes("data-ai-action=\"delegation-status\""));
+  assert.ok(ui.includes("action === 'delegation-status'"));
+  assert.ok(ui.includes("It has not been executed."));
+  assert.ok(server.includes("const adminOnly = ["));
+  assert.ok(server.includes("'create_delegation_grant'"));
+  assert.ok(server.includes("runAITeamCommand('delegate_task'"));
+});
+
+test('non-admin users do not receive owner delegation controls', () => {
+  assert.ok(ui.includes("if (!state.delegationAccess) return"));
+  assert.ok(ui.includes("error.status !== 403"));
+  assert.ok(server.includes("isModerator(user, req)"));
+  assert.ok(server.includes("Only an authorized Minglora platform administrator"));
+});
