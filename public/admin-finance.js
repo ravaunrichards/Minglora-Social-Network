@@ -41,6 +41,11 @@
     return entries.slice(0,3).map(([key,item])=>key+': '+(item&&typeof item==='object'?JSON.stringify(item):String(item))).join(', ')+
       (entries.length>3?' …':'');
   };
+  const maskProviderReference = value => {
+    const reference=String(value||'').trim();
+    if(!reference)return 'Not recorded';
+    return '••••'+reference.slice(-4);
+  };
   const empty = text => '<p class="admin-finance-empty">' + esc(text) + '</p>';
   const field = (label,name,type='text',attrs='') =>
     '<label class="admin-finance-field"><span>' + esc(label) + '</span><input name="' + esc(name) +
@@ -260,26 +265,39 @@
         function renderProviders() {
       const rows = records.providers.map(item => {
         const canEdit = ['not_registered','planned','registration_pending','disconnected','requires_attention'].includes(item.connection_status);
+        const accountSummary=[
+          item.account_owner ? 'Owner: '+item.account_owner : '',
+          item.account_identifier ? 'Account: '+maskProviderReference(item.account_identifier) : '',
+          item.support_contact ? 'Support: '+item.support_contact : ''
+        ].filter(Boolean).join(' · ') || 'Account details not recorded';
         return '<tr><td><strong>' + esc(item.provider_name) + '</strong><small>' +
           esc(item.service_category.replace(/_/g,' ')) + (item.is_candidate ? ' · Candidate' : '') + '</small></td><td>' +
           statusPill(item.connection_status) + '<small>API: ' + esc(item.api_connection_status.replace(/_/g,' ')) +
-          '</small></td><td>' + esc(item.department.replace(/_/g,' ')) + '</td><td><a href="' + esc(item.website_url) +
-          '" target="_blank" rel="noopener noreferrer">Official website</a></td><td>' +
+          '</small></td><td>' + esc(item.department.replace(/_/g,' ')) + '</td><td>' + esc(accountSummary) +
+          '</td><td><a href="' + esc(item.website_url) + '" target="_blank" rel="noopener noreferrer">Official website</a></td><td>' +
           (canEdit ? editAction('provider',item.id) : '<span class="admin-finance-manual">Managed by verified provider connection</span>') +
           '</td></tr>';
       });
       content.innerHTML =
         '<div class="admin-finance-section-heading"><div><h4>Service provider directory</h4><p>Listed vendors are candidates supplied in the specification. Their status remains not registered until independently verified.</p></div></div>' +
-        table(['Provider','Connection status','Department','Website','Record'],rows,'No providers are registered yet.') +
+        table(['Provider','Connection status','Department','Account details','Website','Record'],rows,'No providers are registered yet.') +
         '<details class="admin-finance-form-details"><summary>Add a provider record</summary><form id="admin-finance-provider-form" class="admin-finance-form">' +
+        '<input type="hidden" name="api_connection_status" value="not_connected"><input type="hidden" name="is_candidate" value="true">' +
         field('Provider key (lowercase)','provider_key','text','required pattern="[a-z0-9][a-z0-9_-]{1,63}" maxlength="64"') +
         field('Provider name','provider_name','text','required maxlength="160"') +
         field('Official HTTPS website','website_url','url','required placeholder="https://example.com"') +
         field('Service category','service_category','text','required maxlength="80"') +
         field('Department','department','text','required value="infrastructure" maxlength="80"') +
+        field('Account owner / company identity','account_owner','text','maxlength="160"') +
+        field('Provider account reference (non-secret ID only)','account_identifier','text','maxlength="160" autocomplete="off"') +
+        field('Provider support contact (email, phone or HTTPS URL)','support_contact','text','maxlength="180"') +
+        select('Integration method recorded',[['manual','Manual / provider portal'],['oauth','OAuth (not connected)'],['api','API (not connected)'],['webhook','Webhook (not connected)'],['none','None / unknown']]) +
+        select('API available (mark Yes only after checking provider documentation)','api_available',[['false','Not verified / not confirmed'],['true','Yes — verified as available']]) +
         select('Directory status','connection_status',[['not_registered','Not registered'],['planned','Planned'],['registration_pending','Registration pending'],['disconnected','Disconnected'],['requires_attention','Requires attention']]) +
         select('Importance','service_importance',[['normal','Normal'],['low','Low'],['high','High'],['critical','Critical']]) +
-        textarea('Notes (no passwords, API keys or credentials)','notes') + button('Save provider') + '</form></details>';
+        textarea('Notes (never store passwords, API keys, tokens or payment credentials)','notes') +
+        '<p class="admin-finance-form-note">Account references are masked in the directory. Recording an integration method or API availability does not connect a provider; connection status stays independently verified.</p>' +
+        button('Save provider') + '</form></details>';
       section.querySelector('#admin-finance-provider-form')?.addEventListener('submit',async event => {
         event.preventDefault();
         const form = event.currentTarget, values = new FormData(form);
@@ -292,7 +310,14 @@
           department:String(values.get('department')||'infrastructure').trim().toLowerCase().replace(/\s+/g,'_'),
           connection_status:String(values.get('connection_status')||'not_registered'),
           service_importance:String(values.get('service_importance')||'normal'),
-          integration_method:'manual',api_available:false,api_connection_status:'not_connected',notes:String(values.get('notes')||'').trim()
+          account_owner:String(values.get('account_owner')||'').trim()||null,
+          account_identifier:String(values.get('account_identifier')||'').trim()||null,
+          support_contact:String(values.get('support_contact')||'').trim()||null,
+          integration_method:String(values.get('integration_method')||'manual'),
+          api_available:String(values.get('api_available')||'false')==='true',
+          api_connection_status:String(values.get('api_connection_status')||'not_connected'),
+          is_candidate:String(values.get('is_candidate')||'true')==='true',
+          notes:String(values.get('notes')||'').trim()
         },form);
       });
     }

@@ -153,3 +153,22 @@ test('subscription register captures contract, metered usage, dates and cancella
   assert.match(migration, /contract_status text NOT NULL DEFAULT 'unknown'/);
   assert.match(migration, /invoice_location text/);
 });
+
+
+test('provider directory records masked account ownership and integration metadata without fabricating connections', () => {
+  for (const field of ['account_owner','account_identifier','support_contact','integration_method','api_available','api_connection_status','is_candidate']) {
+    assert.ok(financeUi.includes('name="' + field + '"') || financeUi.includes("'" + field + "'"), 'missing provider control: ' + field);
+  }
+  assert.ok(financeUi.includes('account_owner:String(values.get'));
+  assert.ok(financeUi.includes('account_identifier:String(values.get'));
+  assert.ok(financeUi.includes('support_contact:String(values.get'));
+  assert.ok(financeUi.includes('integration_method:String(values.get'));
+  assert.ok(financeUi.includes("api_available:String(values.get('api_available')||'false')==='true'"));
+  assert.ok(financeUi.includes('api_connection_status:String(values.get'));
+  assert.ok(financeUi.includes('maskProviderReference'));
+  assert.ok(financeUi.includes("API: ' + esc(item.api_connection_status.replace"));
+  assert.ok(financeUi.includes('not_connected'));
+  assert.ok(migration.includes('account_owner text'));
+  assert.ok(migration.includes('account_identifier text'));
+  assert.ok(migration.includes('support_contact text'));
+});
