@@ -174,6 +174,8 @@ declare
   v_organization_id uuid;
   v_employment_id uuid;
   v_new_employment_id uuid;
+  v_identity_id uuid;
+  v_manager_employment_id uuid;
   v_review_id uuid;
   v_plan_id uuid;
   v_idempotency_key text;
@@ -471,9 +473,12 @@ begin
     v_reason := left(trim(coalesce(v_payload->>'reason','')),1000);
     v_idempotency_key := nullif(trim(v_payload->>'idempotency_key'),'');
     if length(v_reason)<10 then raise exception using errcode = '22023', message = 'A promotion reason of at least 10 characters is required.'; end if;
-    if v_idempotency_key is null or length(v_idempotency_key)<8 or length(v_idempotency_key)>160 then
+    if v_idempotency_key is null or length(v_idempotency_key)<8 or length(v_idempotency_key)>150 then
       raise exception using errcode = '22023', message = 'A stable promotion idempotency key is required.';
     end if;
+    select to_jsonb(p) into v_result from ai_network.ai_employee_promotions p
+    where p.organization_id=v_organization_id and p.idempotency_key=v_idempotency_key;
+    if v_result is not null then return jsonb_build_object('promotion',v_result,'reused',true); end if;
     select e.identity_id,e.department_id,e.position_id,e.employment_status
       into v_identity_id,v_previous_department_id,v_previous_position_id,v_previous_status
     from ai_network.ai_employment_records e
@@ -501,9 +506,6 @@ begin
     ) then
       raise exception using errcode = '22023', message = 'A supporting review must be finalized and recommend promotion or role change.';
     end if;
-    select to_jsonb(p) into v_result from ai_network.ai_employee_promotions p
-    where p.organization_id=v_organization_id and p.idempotency_key=v_idempotency_key;
-    if v_result is not null then return jsonb_build_object('promotion',v_result,'reused',true); end if;
     v_transfer_result := public.minglora_ai_hr_command(
       'transfer_employee',
       p_actor_user_id,
@@ -521,7 +523,7 @@ begin
     if v_new_employment_id is null then
       raise exception using errcode = 'P0001', message = 'Promotion did not return a replacement employment record.';
     end if;
-    insert into ai_network.ai_employee_promotions (
+    insert into ai_network.ai_employee_promotions as promotion (
       organization_id,identity_id,previous_employment_id,new_employment_id,
       previous_department_id,previous_position_id,new_department_id,new_position_id,
       supporting_review_id,promoted_by_user_id,reason,idempotency_key
@@ -529,7 +531,7 @@ begin
       v_organization_id,v_identity_id,v_employment_id,v_new_employment_id,
       v_previous_department_id,v_previous_position_id,v_new_department_id,v_new_position_id,
       v_supporting_review_id,p_actor_user_id,v_reason,v_idempotency_key
-    ) returning to_jsonb(ai_employee_promotions) into v_result;
+    ) returning to_jsonb(promotion) into v_result;
     insert into ai_network.ai_employment_history (
       organization_id,employment_id,action,reason,actor_type,actor_user_id,metadata
     ) values (
