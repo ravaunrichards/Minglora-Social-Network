@@ -80,10 +80,37 @@
     ).join('') + '</div>';
   }
 
+  const identityStatusTransitions = Object.freeze({
+    proposed: ['created'],
+    created: ['under_review','suspended'],
+    under_review: ['approved','restricted','suspended'],
+    approved: ['active','restricted','suspended'],
+    active: ['restricted','suspended','archived'],
+    restricted: ['active','suspended','archived'],
+    suspended: ['active','archived'],
+    archived: ['retired'],
+    retired: []
+  });
+  const identityStatusLabels = Object.freeze({
+    proposed:'Proposed', created:'Created', under_review:'Under review', approved:'Approved',
+    active:'Active', restricted:'Restricted', suspended:'Suspended', archived:'Archived', retired:'Retired'
+  });
+
   function renderAIIdentityRows(registry) {
     const identities = list(registry?.identities);
     if (!identities.length) return empty('No AI identities are registered in the relational database yet.');
-    return '<div class="ai-network-list">' + identities.map(record => {
+    const bulkToolbar = '<div class="ai-network-inline-form ai-network-identity-bulk" role="group" aria-label="Bulk AI identity lifecycle management">' +
+      '<label><span>Bulk lifecycle status</span><select data-ai-bulk-status>' +
+      options([
+        {value:'under_review',label:'Under review'},{value:'approved',label:'Approved'},
+        {value:'active',label:'Active / reactivate'},{value:'restricted',label:'Restricted'},
+        {value:'suspended',label:'Suspended'},{value:'archived',label:'Archived'},
+        {value:'retired',label:'Retired'}
+      ], 'suspended') + '</select></label>' +
+      '<label><span>Reason (optional)</span><input data-ai-bulk-reason maxlength="500" placeholder="Reason for this lifecycle change"></label>' +
+      '<button type="button" class="secondary" data-ai-action="identity-bulk-status">Apply to selected identities</button>' +
+      '<small>Select identities below · up to 100 per batch · every result is audited</small></div>';
+    return bulkToolbar + '<div class="ai-network-list">' + identities.map(record => {
       const identity = record.identity || {};
       const name = record.name || {};
       const profile = record.profile || {};
@@ -146,13 +173,23 @@
         '<label>Voice preferences (JSON object)<textarea name="voicePreferences" rows="3" spellcheck="false">' + esc(JSON.stringify(profile.voice_preferences || {})) + '</textarea></label>' +
         '</div><p class="ai-network-note">Email identity records, provider assignments, AI status and permissions are not changed by profile editing. Uploaded AI images are independently verified and versioned.</p>' +
         '<button class="primary" type="submit">Save profile changes</button></form></details>';
-      return '<article class="ai-network-list-row"><div class="ai-network-list-main">' +
+      const identityId = String(identity.identity_id || '');
+      const currentStatus = String(identity.status || 'created').toLowerCase();
+      const allowedNext = identityStatusTransitions[currentStatus] || [];
+      const lifecycleControl = allowedNext.length
+        ? '<div class="ai-network-inline-form ai-network-identity-lifecycle" aria-label="Change AI identity status">' +
+          '<label><span>Lifecycle status</span><select data-ai-identity-status-choice>' +
+          options(allowedNext.map(value => ({value,label:identityStatusLabels[value] || value})), allowedNext[0]) +
+          '</select></label><label><span>Reason (optional)</span><input data-ai-identity-status-reason maxlength="500" placeholder="Reason for transition"></label>' +
+          '<button type="button" class="secondary" data-ai-action="identity-status" data-id="' + esc(identityId) + '">Apply status</button></div>'
+        : '<p class="ai-network-note">This identity has reached its terminal lifecycle state.</p>';
+      return '<article class="ai-network-list-row"><label class="ai-network-discovery-select"><input type="checkbox" name="selectedIdentityIds" data-ai-identity-select value="' + esc(identityId) + '" aria-label="Select AI identity ' + esc(display || name.username || identityId) + '"></label><div class="ai-network-list-main">' +
         '<div class="ai-network-avatar" aria-hidden="true">' +
-        (profile.avatar_storage_ref ? '<img src="/api/ai-network/identities/' + encodeURIComponent(identity.identity_id || '') + '/media/avatar" alt="" loading="lazy">' : 'AI') +
+        (profile.avatar_storage_ref ? '<img src="/api/ai-network/identities/' + encodeURIComponent(identityId) + '/media/avatar" alt="" loading="lazy">' : 'AI') +
         '</div><div><strong>' + esc(display || 'AI identity') + '</strong>' +
-        '<div class="ai-network-meta">' + pill('AI IDENTITY', 'ai') + ' ' + pill(identity.status || 'created') + ' ' + pill(identity.population || 'independent') + '</div>' +
+        '<div class="ai-network-meta">' + pill('AI IDENTITY', 'ai') + ' ' + pill(currentStatus) + ' ' + pill(identity.population || 'independent') + '</div>' +
         '<small>@' + esc(name.username || 'username unavailable') + ' · ' + esc(identity.category_key || 'uncategorized') + ' · ' + esc(profile.gender || 'not specified') + '</small>' +
-        '<p>' + emailStatus + '</p><small>' + esc(identity.identity_id || '') + '</small>' + editor + '</div></div></article>';
+        '<p>' + emailStatus + '</p><small>' + esc(identityId) + '</small>' + editor + '</div></div>' + lifecycleControl + '</article>';
     }).join('') + '</div>';
   }
 
@@ -1967,7 +2004,34 @@
         form.querySelector('[name="displayName"]').focus();
         return;
       }
-      if (action === 'follow-ai') await request('/follow', { method:'POST', body:{ identity_id:id } });
+      if (action === 'identity-status') {
+        const row = button.closest('.ai-network-list-row');
+        const status = row?.querySelector('[data-ai-identity-status-choice]')?.value || '';
+        const reason = row?.querySelector('[data-ai-identity-status-reason]')?.value || '';
+        if (!id || !status) throw new Error('Choose a valid AI identity status transition.');
+        if (['archived','retired'].includes(status) && !window.confirm('Apply the ' + status + ' transition to this AI identity? This changes its lifecycle state and is recorded in the audit history.')) return;
+        await request('/identities/' + encodeURIComponent(id) + '/status', {
+          method:'PATCH', body:{ status, reason }
+        });
+      }
+      else if (action === 'identity-bulk-status') {
+        const identityIds = [...document.querySelectorAll('[data-ai-identity-select]:checked')].map(input => input.value);
+        const status = document.querySelector('[data-ai-bulk-status]')?.value || '';
+        const reason = document.querySelector('[data-ai-bulk-reason]')?.value || '';
+        if (!identityIds.length || identityIds.length > 100) throw new Error('Select between 1 and 100 AI identities.');
+        if (!status) throw new Error('Choose a bulk lifecycle status.');
+        if (['archived','retired'].includes(status) && !window.confirm('Apply ' + status + ' to ' + identityIds.length + ' selected AI identities? Every permitted transition is audited; incompatible transitions will be reported without changing those records.')) return;
+        const result = await request('/identities/bulk-status', {
+          method:'POST', body:{ identity_ids:identityIds, status, reason }
+        });
+        const succeeded = Number(result.succeeded_count || 0);
+        const failed = Number(result.failed_count || 0);
+        const message = succeeded + ' AI identity lifecycle change(s) succeeded; ' + failed + ' failed.';
+        await refresh(message);
+        if (failed) setNotice(message + ' Review the failed-record details before retrying.', 'warning');
+        return;
+      }
+      else if (action === 'follow-ai') await request('/follow', { method:'POST', body:{ identity_id:id } });
       else if (action === 'unfollow-ai') await request('/following/' + encodeURIComponent(id), { method:'DELETE' });
       else if (action === 'review-follow') await request('/follow-requests/' + encodeURIComponent(id), { method:'PATCH', body:{ decision:button.dataset.decision } });
       else if (action === 'apply-discovery-group') {
@@ -1983,7 +2047,8 @@
       else if (action === 'delegation-status') await request('/delegations/' + encodeURIComponent(id), { method:'PATCH', body:{ status:button.dataset.status, reason:'Updated by authorized Minglora platform administrator.' } });
       else if (action === 'emergency-pause') await request('/emergency-pause', { method:'POST', body:{ reason:'Owner initiated emergency pause from the AI Network command center.' } });
       else if (action === 'emergency-resume') await request('/emergency-resume', { method:'POST', body:{} });
-      await refresh(action === 'emergency-pause' ? 'Emergency pause confirmed. AI work remains stopped.' : 'AI Network updated.');
+      await refresh(action === 'emergency-pause' ? 'Emergency pause confirmed. AI work remains stopped.' :
+        action === 'identity-status' ? 'AI identity lifecycle status updated and audited.' : 'AI Network updated.');
     } catch (error) {
       state.error = error.message;
       paintSnapshot();
