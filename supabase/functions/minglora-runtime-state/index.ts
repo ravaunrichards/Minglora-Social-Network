@@ -3093,9 +3093,9 @@ Deno.serve(async (req: Request) => {
     const slot=String(input.slot||"");
     const aiIdentityId=String(input.aiIdentityId||"");
     const aiIdentityRequested=Boolean(aiIdentityId);
-    const uuidPattern=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    const aiUuidPattern=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     if(aiIdentityRequested){
-      if(!uuidPattern.test(aiIdentityId)||!["avatar","cover"].includes(slot))return json(400,{error:"Invalid AI identity image request."});
+      if(!aiUuidPattern.test(aiIdentityId)||!["avatar","cover"].includes(slot))return json(400,{error:"Invalid AI identity image request."});
       const {data:identity,error:identityError}=await admin.rpc("minglora_ai_identity_command",{
         p_action:"get",p_actor_user_id:ownerId,p_payload:{identity_id:aiIdentityId}
       });
