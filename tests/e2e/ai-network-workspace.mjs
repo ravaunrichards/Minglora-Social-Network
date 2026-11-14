@@ -310,6 +310,10 @@ try {
   });
   const page = await context.newPage();
   page.setDefaultTimeout(15000);
+  page.on('pageerror', error => console.error('[AI Network browser page error]', error.stack || error.message));
+  page.on('console', message => {
+    if (message.type() === 'error') console.error('[AI Network browser console error]', message.text());
+  });
   const externalApiRequests = [];
   page.on('request', request => {
     if (['fetch', 'xhr'].includes(request.resourceType()) && new URL(request.url()).origin !== baseUrl) {
@@ -379,7 +383,20 @@ try {
   await createForm.locator('[name="languages"]').fill('en-JM, ht');
   await createForm.locator('[name="emailAddress"]').fill('nia@example.test');
   await createForm.locator('button[type="submit"]').click();
-  await page.getByText('AI identity record saved in Minglora Supabase.').waitFor({ state: 'visible' });
+  try {
+    await page.getByText('AI identity record saved in Minglora Supabase.').waitFor({ state: 'visible', timeout: 8000 });
+  } catch (error) {
+    const diagnostics = {
+      identityCreateRequestCount: identityCreateRequests.length,
+      categorySaveRequestCount: categorySaveRequests.length,
+      activeCategoryKeys: categories.filter(item => item.is_active).map(item => item.category_key),
+      alerts: await page.locator('.ai-network-alert').allTextContents(),
+      formValues: await createForm.evaluate(form => Array.from(new FormData(form).entries()).map(([key, value]) => [key, typeof value === 'string' ? value : value.name]))
+    };
+    console.error('[AI Network identity create diagnostic]', JSON.stringify(diagnostics));
+    await page.screenshot({ path: path.join(artifactsDir, 'ai-network-category-debug.png'), fullPage: true });
+    throw error;
+  }
   assert.equal(identityCreateRequests.length, 1, 'The identity form must submit exactly one create request.');
   assert.equal(identityCreateRequests[0].name.first_name, 'Nia');
   assert.equal(identityCreateRequests[0].name.last_name, 'Campbell');
