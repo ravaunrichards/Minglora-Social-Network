@@ -69,3 +69,12 @@ The existing gift build generates both subject-specific transparent SVG artwork 
 - Output: generated GLTF, primary SVG and transparent icon
 - Geometry: layered firebird body, flame crest, coverts, primary feathers, comet-tail fan, talons and embers
 - Review: `design-review-pending`; no premium or licensing approval is implied
+
+
+## Beach Maracas v1
+
+- Source: `beach-maracas-model.mjs`
+- Target: canonical gift `beach-maracas-1exxoag`
+- Output: generated bespoke GLTF, primary SVG and transparent icon
+- Geometry: crossed coral/lagoon gourd shakers, handles, grip rings, painted motifs and conch charm
+- Review: `design-review-pending`; no premium or licensing approval is implied
