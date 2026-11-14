@@ -431,6 +431,9 @@ test("Beach Maracas uses an original crossed Caribbean maraca pair with painted 
   assert.ok(model.materials?.some(material => material.name.includes("gourd sunburst ray")));
   assert.ok(model.buffers?.[0]?.uri.startsWith("data:application/octet-stream;base64,"), "Beach Maracas must be self-contained for the existing model viewer");
   assert.ok(model.accessors?.filter(accessor => accessor.type === "VEC3").length >= 160, "the model must expose mesh positions and normals");
+  for (const accessor of model.accessors.filter(value => value.type === "VEC3" && value.min && value.max)) {
+    assert.ok(accessor.min.every(Number.isFinite) && accessor.max.every(Number.isFinite), "all generated mesh bounds must contain finite coordinates");
+  }
   const svg = readFileSync(path.join(assetRoot, maracas.code + ".svg"), "utf8");
   const icon = readFileSync(path.join(assetRoot, maracas.code + "-icon.svg"), "utf8");
   assert.ok(svg.includes('data-gift-artwork="beach-maracas-original-v1"'), "the primary SVG must use the original pair artwork");
