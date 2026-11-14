@@ -116,6 +116,18 @@
   function drawGrid(){
     const grid=document.getElementById("minglora-gift-grid"),count=document.getElementById("minglora-gift-count"),more=document.getElementById("minglora-gift-more");
     if(!grid)return;
+    if(!grid.dataset.giftIconErrorsBound){
+      grid.addEventListener("error",event=>{
+        const image=event.target;
+        if(!image||image.tagName!=="IMG"||!image.matches("[data-gift-icon]"))return;
+        const fallback=document.createElement("span");
+        fallback.className="gift-art-unavailable";
+        fallback.setAttribute("role","status");
+        fallback.textContent="Gift icon unavailable";
+        image.replaceWith(fallback);
+      },true);
+      grid.dataset.giftIconErrorsBound="true";
+    }
     const rows=filtered(),shown=rows.slice(0,(state.page+1)*state.pageSize);
     if(count)count.textContent=rows.length.toLocaleString()+" gifts";
     grid.innerHTML=shown.length?shown.map(card).join(""):"<div class='gift-empty-state'>No gifts match your search.</div>";
