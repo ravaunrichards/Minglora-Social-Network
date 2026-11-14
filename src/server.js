@@ -1864,6 +1864,69 @@ async function route(req, res) {
         }
         return json(res, 200, { identity: response?.result });
       }
+      if (method === 'POST' && sub === 'identities/bulk-profile') {
+        const input = await body(req, 300000);
+        if (!input || typeof input !== 'object' || Array.isArray(input) || !Array.isArray(input.items) ||
+            input.items.length < 1 || input.items.length > 100) {
+          throw Object.assign(new Error('A bulk profile update must contain between 1 and 100 identity records.'), { status: 400 });
+        }
+        if (!isSupabasePersistence()) {
+          throw Object.assign(new Error('Bulk AI profile updates require Minglora Supabase persistence.'), { status: 503 });
+        }
+        const identityIds = input.items.map(item => String(item?.identity_id || '').trim());
+        if (identityIds.some(id => !aiIdentityIdPattern.test(id)) || new Set(identityIds).size !== identityIds.length) {
+          throw Object.assign(new Error('Each bulk profile record needs a unique, valid AI identity ID.'), { status: 400 });
+        }
+        const results = [];
+        const failed = [];
+        for (let offset = 0; offset < input.items.length; offset += 10) {
+          const batch = input.items.slice(offset, offset + 10);
+          const outcomes = await Promise.all(batch.map(async item => {
+            try {
+              if (!item.name || typeof item.name !== 'object' || Array.isArray(item.name) ||
+                  !item.profile || typeof item.profile !== 'object' || Array.isArray(item.profile) ||
+                  !Array.isArray(item.languages) || !Array.isArray(item.locations)) {
+                throw Object.assign(new Error('Each profile row requires name and profile objects plus languages and locations arrays.'), { status: 400 });
+              }
+              if (item.languages.length > 50 || item.locations.length > 10) {
+                throw Object.assign(new Error('Profile rows support up to 50 languages and 10 location records.'), { status: 400 });
+              }
+              const response = await requestSupabaseState('ai_identity_profile_update', {
+                actorUserId: user.id,
+                payload: {
+                  identity_id: item.identity_id,
+                  name: item.name,
+                  profile: item.profile,
+                  languages: item.languages,
+                  locations: item.locations
+                }
+              });
+              if (response?.skipped) {
+                throw Object.assign(new Error('AI profile updates are unavailable in local-only persistence mode.'), { status: 503 });
+              }
+              return { ok: true, identity_id: item.identity_id, result: response?.result };
+            } catch (error) {
+              return {
+                ok: false,
+                identity_id: item.identity_id,
+                code: String(error?.code || ''),
+                error: String(error?.message || 'AI profile update failed.').slice(0, 240)
+              };
+            }
+          }));
+          for (const outcome of outcomes) {
+            if (outcome.ok) results.push(outcome.result);
+            else failed.push({ identity_id: outcome.identity_id, code: outcome.code, error: outcome.error });
+          }
+        }
+        return json(res, 200, {
+          requested_count: input.items.length,
+          succeeded_count: results.length,
+          failed_count: failed.length,
+          results,
+          failed
+        });
+      }
       if (method === 'POST' && sub === 'identities') {
         const input = await body(req, 40000);
         if (!input || typeof input !== 'object' || Array.isArray(input)) {
@@ -2322,6 +2385,60 @@ async function route(req, res) {
         const result = await runAIProviderCommand('assign_provider_model', input);
         return json(res, result?.reused ? 200 : 201, result || {});
       }
+      if (method === 'POST' && sub === 'provider-assignments/bulk') {
+        const input = await body(req, 160000);
+        if (!input || typeof input !== 'object' || Array.isArray(input) || !Array.isArray(input.items) ||
+            input.items.length < 1 || input.items.length > 100) {
+          throw Object.assign(new Error('A bulk provider assignment must contain between 1 and 100 assignment records.'), { status: 400 });
+        }
+        if (!isModerator(user, req)) {
+          throw Object.assign(new Error('Only an authorized Minglora platform administrator with the required active session can manage AI provider assignments.'), { status: 403 });
+        }
+        const results = [];
+        const failed = [];
+        for (let offset = 0; offset < input.items.length; offset += 10) {
+          const batch = input.items.slice(offset, offset + 10);
+          const outcomes = await Promise.all(batch.map(async item => {
+            try {
+              if (!item || typeof item !== 'object' || Array.isArray(item) ||
+                  !aiIdentityIdPattern.test(String(item.identity_id || '')) ||
+                  !aiIdentityIdPattern.test(String(item.model_id || ''))) {
+                throw Object.assign(new Error('Each provider assignment requires a valid identity ID and model ID.'), { status: 400 });
+              }
+              if (item.assigned_capabilities !== undefined && !Array.isArray(item.assigned_capabilities)) {
+                throw Object.assign(new Error('Assigned capabilities must be an array.'), { status: 400 });
+              }
+              if (item.supported_languages !== undefined && !Array.isArray(item.supported_languages)) {
+                throw Object.assign(new Error('Supported languages must be an array.'), { status: 400 });
+              }
+              const result = await runAIProviderCommand('assign_provider_model', item);
+              return { ok: true, identity_id: item.identity_id, result };
+            } catch (error) {
+              return {
+                ok: false,
+                identity_id: String(item?.identity_id || ''),
+                code: String(error?.code || ''),
+                error: String(error?.message || 'Provider assignment failed.').slice(0, 240)
+              };
+            }
+          }));
+          for (const outcome of outcomes) {
+            if (outcome.ok) results.push(outcome.result);
+            else failed.push({ identity_id: outcome.identity_id, code: outcome.code, error: outcome.error });
+          }
+        }
+        const reusedCount = results.filter(result => result?.reused === true).length;
+        return json(res, 200, {
+          requested_count: input.items.length,
+          succeeded_count: results.length,
+          created_count: results.length - reusedCount,
+          reused_count: reusedCount,
+          failed_count: failed.length,
+          results,
+          failed
+        });
+      }
+
       if (parts[0] === 'provider-assignments' && parts.length === 3 &&
           parts[2] === 'status' && method === 'PATCH') {
         const assignmentId = parts[1];

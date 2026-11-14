@@ -342,6 +342,11 @@
       '<label>Email address (optional; record only)<input name="emailAddress" type="email" maxlength="320" placeholder="No inbox is created or claimed"></label>' +
       '<button class="primary" type="submit" ' + (!categories.length || !window.crypto?.randomUUID ? 'disabled' : '') + '>Create relational AI identity</button>' +
       '</form>';
+    const bulkProfileForm = '<form class="ai-network-form" data-ai-form="identity-profile-bulk">' +
+      '<div class="ai-network-form-title">Bulk update AI profiles (1–100 per batch)</div>' +
+      '<p class="ai-network-note">Paste a JSON array of full owner-managed profile snapshots. Each item requires identity_id, name, profile, languages and locations. A full snapshot replaces the listed profile fields; omitted profile text fields may be cleared. Records are updated only when they belong to your signed-in Minglora account. Failed rows are reported separately.</p>' +
+      '<label>Profile update batch JSON<textarea name="items" required rows="8" maxlength="300000" spellcheck="false" placeholder=\'[{"identity_id":"existing-ai-identity-uuid","name":{"first_name":"Ava","middle_name":"","last_name":"Morgan","display_name":"Ava Morgan","username":"ava_morgan"},"profile":{"gender":"female","profile_visibility":"public","bio":"Updated biography","introduction":"","time_zone":"America/Jamaica"},"languages":[{"language_tag":"en","language_name":"English","proficiency":"fluent","is_primary":true}],"locations":[]}]\'></textarea></label>' +
+      '<button class="secondary" type="submit">Update selected AI profiles</button></form>';
     const bulkForm = '<form class="ai-network-form" data-ai-form="identity-bulk">' +
       '<div class="ai-network-form-title">Bulk import AI identities (1–100 per batch)</div>' +
       '<p class="ai-network-note">Paste a JSON array. Each item uses the same name, category, population and profile fields as the single-identity form. Every item gets its own record; failed rows are reported and can be retried with the same idempotency key. ' +
@@ -353,7 +358,7 @@
       '<p>Registered identities are stored individually in Minglora Supabase. Human authentication accounts are kept separate.</p>' +
       warning + '<div class="ai-network-quick-stats"><div><span>Registered identities</span><strong>' +
       (registry ? number(registry.total) : 'Unavailable') + '</strong></div><div><span>Categories available</span><strong>' + number(categories.length) +
-      '</strong></div></div>' + renderAIIdentityRows(registry) + form + bulkForm, 'ai-network-span-2');
+      '</strong></div></div>' + renderAIIdentityRows(registry) + form + bulkForm + bulkProfileForm, 'ai-network-span-2');
   }
 
   async function loadAIIdentityRegistry() {
@@ -899,13 +904,18 @@
         '<label>Supported language tags (comma separated)<input name="assignmentLanguages" maxlength="1200" placeholder="Optional language restrictions"></label>' +
         '<button class="primary" type="submit">Save pending model assignment</button></form>'
       : '<p class="ai-network-note">Register or load at least one AI identity and one provider model before assigning a model.</p>';
+    const bulkAssignmentForm = '<form class="ai-network-form" data-ai-form="provider-assignment-bulk">' +
+      '<div class="ai-network-form-title">Bulk assign provider models (1–100 per batch)</div>' +
+      '<p class="ai-network-note">Paste assignment records with identity_id, model_id and optional provider_account_id, fallback_model_id, routing_priority, assigned_capabilities and supported_languages. Every assignment remains pending with unknown health; this does not activate provider execution. Raw credentials and secrets are rejected.</p>' +
+      '<label>Provider assignment batch JSON<textarea name="items" required rows="8" maxlength="160000" spellcheck="false" placeholder=\'[{"identity_id":"existing-ai-identity-uuid","model_id":"catalogue-model-uuid","provider_account_id":null,"fallback_model_id":null,"routing_priority":100,"assigned_capabilities":["text"],"supported_languages":["en"]}]\'></textarea></label>' +
+      '<button class="secondary" type="submit">Save pending provider assignments</button></form>';
     return card('Provider & Model Assignment Center', '02 · PROVIDERS', warning +
       '<div class="ai-network-command-grid"><div><span>Account references</span><strong>' + number(accounts.length) + '</strong></div>' +
       '<div><span>Catalogue models</span><strong>' + number(models.length) + '</strong></div>' +
       '<div><span>Identity assignments</span><strong>' + number(assignments.length) + '</strong></div></div>' +
       '<div class="ai-network-provider-columns"><div><h4>Provider accounts</h4>' + accountRows + accountForm + '</div>' +
       '<div><h4>Model catalogue</h4>' + modelRows + modelForm + '</div></div>' +
-      assignmentForm + '<div><h4>Identity assignments</h4>' + assignmentRows + '</div>' +
+      assignmentForm + bulkAssignmentForm + '<div><h4>Identity assignments</h4>' + assignmentRows + '</div>' +
       '<p class="ai-network-note">Security boundary: no API key, password, token or secret reference is accepted or displayed. Account status remains unconfigured and assignment status remains pending until a separate approved secret-management integration and live provider health verification are completed. Model catalogue metadata is not proof of model access.</p>',
       'ai-network-span-2');
   }
@@ -1525,6 +1535,27 @@
         time_zone:value('timeZone') || 'UTC', is_public:false
       });
       path = '/identities/' + encodeURIComponent(identityId);
+    } else if (kind === 'identity-profile-bulk') {
+      path = '/identities/bulk-profile';
+      let items;
+      try { items = JSON.parse(value('items')); }
+      catch { throw new Error('Bulk profile update input must be valid JSON.'); }
+      if (!Array.isArray(items) || items.length < 1 || items.length > 100) {
+        throw new Error('A bulk profile update must contain between 1 and 100 records.');
+      }
+      const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (items.some(item => !item || typeof item !== 'object' || Array.isArray(item) ||
+          !uuid.test(String(item.identity_id || '')) ||
+          !item.name || typeof item.name !== 'object' || Array.isArray(item.name) ||
+          !item.profile || typeof item.profile !== 'object' || Array.isArray(item.profile) ||
+          !Array.isArray(item.languages) || !Array.isArray(item.locations) ||
+          item.languages.length > 50 || item.locations.length > 10)) {
+        throw new Error('Each profile update needs a valid unique identity ID, name/profile objects, and valid language/location arrays.');
+      }
+      if (new Set(items.map(item => item.identity_id)).size !== items.length) {
+        throw new Error('A batch cannot update the same AI identity more than once.');
+      }
+      payload.items = items;
     } else if (kind === 'identity-bulk') {
       path = '/identities/bulk';
       let items;
@@ -1668,6 +1699,22 @@
       payload.routing_priority = Number(value('routingPriority'));
       payload.assigned_capabilities = value('assignedCapabilities').split(',').map(item => item.trim().toLowerCase()).filter(Boolean);
       payload.supported_languages = value('assignmentLanguages').split(',').map(item => item.trim()).filter(Boolean);
+    } else if (kind === 'provider-assignment-bulk') {
+      path = '/provider-assignments/bulk';
+      let items;
+      try { items = JSON.parse(value('items')); }
+      catch { throw new Error('Bulk provider assignment input must be valid JSON.'); }
+      if (!Array.isArray(items) || items.length < 1 || items.length > 100) {
+        throw new Error('A bulk provider assignment must contain between 1 and 100 records.');
+      }
+      const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (items.some(item => !item || typeof item !== 'object' || Array.isArray(item) ||
+          !uuid.test(String(item.identity_id || '')) || !uuid.test(String(item.model_id || '')) ||
+          (item.assigned_capabilities !== undefined && !Array.isArray(item.assigned_capabilities)) ||
+          (item.supported_languages !== undefined && !Array.isArray(item.supported_languages)))) {
+        throw new Error('Each assignment needs valid AI identity and model IDs plus optional capability/language arrays.');
+      }
+      payload.items = items;
     } else if (kind === 'provider-assignment-status') {
       const assignmentId = form.dataset.assignmentId;
       if (!assignmentId) throw new Error('Provider assignment details are missing.');
@@ -1964,6 +2011,10 @@
       ? 'AI identity record saved in Minglora Supabase.'
       : kind === 'identity-bulk'
         ? 'Bulk identity batch: ' + number(result.created_count) + ' created; ' + number(result.reused_count) + ' reused; ' + number(result.failed_count) + ' failed.'
+        : kind === 'identity-profile-bulk'
+          ? 'Bulk AI profile update: ' + number(result.succeeded_count) + ' succeeded; ' + number(result.failed_count) + ' failed.'
+          : kind === 'provider-assignment-bulk'
+            ? 'Bulk provider assignment: ' + number(result.created_count) + ' created; ' + number(result.reused_count) + ' reused; ' + number(result.failed_count) + ' failed. All new assignments remain pending.'
         : kind === 'organization'
           ? 'AI organization record saved. Its initial status is proposed.'
           : kind === 'organization-departments'
@@ -1984,7 +2035,19 @@
                                   : kind === 'succession-plan' ? 'Succession plan saved as a draft; no employee was appointed or promoted.'
                                     : kind === 'succession-status' ? 'Succession plan status and audit history updated.'
                                       : 'Saved successfully.';
+    const batchFailures = ['identity-profile-bulk','provider-assignment-bulk'].includes(kind) ? list(result.failed) : [];
+    if (batchFailures.length) {
+      const summaries = batchFailures.slice(0, 5).map(item =>
+        String(item.identity_id || 'Record') + ': ' + String(item.error || 'Update failed.')
+      );
+      const remaining = batchFailures.length > summaries.length ? ' · ' + (batchFailures.length - summaries.length) + ' more failure(s).' : '';
+      message += ' ' + summaries.join(' · ') + remaining;
+    }
     await refresh(message);
+    if (batchFailures.length) {
+      setNotice(message, 'warning');
+      paintSnapshot();
+    }
   }
 
   const onSubmit = async event => {

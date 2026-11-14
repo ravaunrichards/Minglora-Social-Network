@@ -244,3 +244,24 @@ test('AI administrative controls are capability-gated and member identity creati
   assert.ok(bulkRoute.includes('requestsElevatedPopulation && !isModerator(user, req)'));
   assert.ok(server.includes('Only an authorized Minglora platform administrator may create organizational'));
 });
+
+
+test('AI profile and provider bulk operations use existing owner-scoped and moderator-only database commands', () => {
+  const runtime = read('supabase/functions/minglora-runtime-state/index.ts');
+  assert.ok(server.includes("sub === 'identities/bulk-profile'"));
+  assert.ok(server.includes("requestSupabaseState('ai_identity_profile_update'"));
+  assert.ok(server.includes('Each bulk profile record needs a unique, valid AI identity ID'));
+  assert.ok(server.includes('for (let offset = 0; offset < input.items.length; offset += 10)'));
+  assert.ok(server.includes("sub === 'provider-assignments/bulk'"));
+  assert.ok(server.includes("runAIProviderCommand('assign_provider_model', item)"));
+  assert.ok(server.includes("if (!isModerator(user, req))"));
+  assert.ok(server.includes('Only an authorized Minglora platform administrator'));
+  assert.ok(ui.includes('data-ai-form="identity-profile-bulk"'));
+  assert.ok(ui.includes("path = '/identities/bulk-profile'"));
+  assert.ok(ui.includes('data-ai-form="provider-assignment-bulk"'));
+  assert.ok(ui.includes("path = '/provider-assignments/bulk'"));
+  assert.ok(ui.includes('All new assignments remain pending.'));
+  assert.ok(runtime.includes('ai_identity_profile_update'));
+  assert.ok(runtime.includes('ai_provider_command'));
+  assert.ok(!/name=['"](?:apiKey|providerApiKey|MINGLORA_AI_API_KEY)['"]/.test(ui));
+});
