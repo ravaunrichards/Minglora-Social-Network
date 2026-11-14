@@ -51,3 +51,12 @@ The existing gift build generates both subject-specific transparent SVG artwork 
 - Output: canonical generated catalogue GLTF plus primary SVG and transparent icon
 - Geometry: lagoon/surf rings, sand cay, headland, waterfall, three palms, pavilion, canoe, reef and beacon
 - Review: `design-review-pending`; no premium or rights approval is implied
+
+
+## Crystal Crown v1
+
+- Source: `crystal-crown-model.mjs`
+- Target: canonical catalogue item `crystal-crown-1itryeu`
+- Output: generated gift GLTF, primary SVG and transparent icon
+- Geometry: gold band, velvet lining, five arches and points, faceted centre/side gems, pavé and pendants
+- Review: `design-review-pending`; no premium or licensing approval is implied
