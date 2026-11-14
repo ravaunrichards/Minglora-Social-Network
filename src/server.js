@@ -987,6 +987,24 @@ async function pruneExpiredStories() {
   db.storyViews = cleaned.views;
   await saveStore();
 }
+async function helpCenterGateway(action,payload={}) {
+  const runtimeUrl=String(process.env.SUPABASE_STATE_API_URL||'').trim().replace(/\/+$/,'');
+  const stateApiKey=String(process.env.SUPABASE_STATE_API_KEY||'').trim();
+  const publishableKey=String(process.env.SUPABASE_PUBLISHABLE_KEY||process.env.SUPABASE_ANON_KEY||'').trim();
+  if(!runtimeUrl||!stateApiKey||!publishableKey)throw Object.assign(new Error('Minglora Help Center is not connected to its secure Supabase gateway.'),{status:503});
+  const endpoint=runtimeUrl.replace(/\/minglora-runtime-state(?:\?.*)?$/,'/minglora-help-center');
+  if(endpoint===runtimeUrl)throw Object.assign(new Error('Minglora Help Center gateway URL is not configured.'),{status:503});
+  let response;
+  try{
+    response=await fetch(endpoint,{method:'POST',headers:{apikey:publishableKey,'x-minglora-api-key':stateApiKey,'Content-Type':'application/json'},
+      body:JSON.stringify({action,...payload}),signal:AbortSignal.timeout(15000)});
+  }catch{
+    throw Object.assign(new Error('Minglora Help Center is temporarily unavailable. Please retry.'),{status:503});
+  }
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok)throw Object.assign(new Error(data.error||'Minglora Help Center request failed.'),{status:response.status});
+  return data;
+}
 async function mediaGateway(action,payload) {
   const stateApiUrl=String(process.env.SUPABASE_STATE_API_URL||'').trim();
   const stateApiKey=String(process.env.SUPABASE_STATE_API_KEY||'').trim();
@@ -1661,7 +1679,7 @@ async function route(req, res) {
     }
   }
   if (p.startsWith('/api/')) {
-    let input; try { if (!['GET','HEAD'].includes(method)) input=await body(req,1_000_000); } catch(e) { return json(res,e.status||400,{error:e.message}); }
+    let input; try { if (!['GET','HEAD'].includes(method)) input=await body(req,p==='/api/help-center/admin/media'?8_000_000:1_000_000); } catch(e) { return json(res,e.status||400,{error:e.message}); }
     if(p.startsWith('/api/internal/video-transcode/')){
       if(method!=='POST')return json(res,405,{error:'Method not allowed.'});
       const expectedToken=String(process.env.VIDEO_TRANSCODE_WORKER_TOKEN||'');
@@ -1759,6 +1777,54 @@ async function route(req, res) {
       return json(res,404,{error:'Video processing endpoint not found.'});
     }
     const user = sessionUser(req);
+    const activeHelpSession=user?sessionFromRequest(req):null;
+    const helpActor={
+      actorUserId:user?.id||'',
+      mfaVerified:activeHelpSession?.mfaVerified===true
+    };
+    const helpRespond=async(action,payload={})=>{
+      try{return json(res,200,await helpCenterGateway(action,{...payload,...helpActor}));}
+      catch(error){return json(res,error.status||503,{error:error.message||'Minglora Help Center is unavailable.'});}
+    };
+    if(method==='GET'&&p==='/api/help-center/bootstrap'){
+      return helpRespond('bootstrap',{locale:String(url.searchParams.get('locale')||'en').slice(0,16)});
+    }
+    if(method==='GET'&&p==='/api/help-center/search'){
+      return helpRespond('search',{locale:String(url.searchParams.get('locale')||'en').slice(0,16),
+        query:String(url.searchParams.get('query')||'').slice(0,120),
+        categorySlug:String(url.searchParams.get('category')||'').slice(0,120),
+        subcategorySlug:String(url.searchParams.get('subcategory')||'').slice(0,120),
+        limit:Math.max(1,Math.min(50,Number(url.searchParams.get('limit')||20))),
+        offset:Math.max(0,Math.min(10000,Number(url.searchParams.get('offset')||0)))});
+    }
+    const helpArticleMatch=p.match(/^\/api\/help-center\/articles\/([a-z0-9-]+)$/);
+    if(method==='GET'&&helpArticleMatch)return helpRespond('article',{slug:helpArticleMatch[1],locale:String(url.searchParams.get('locale')||'en').slice(0,16)});
+    if(p.startsWith('/api/help-center/')&&['POST','PATCH','DELETE'].includes(method)&&!user){
+      return json(res,401,{error:'Sign in to use this Help Center feature.'});
+    }
+    if(method==='POST'&&p==='/api/help-center/record-view')return helpRespond('record_view',{translationId:String(input.translationId||'')});
+    if(method==='POST'&&p==='/api/help-center/feedback')return helpRespond('feedback',{translationId:String(input.translationId||''),helpful:input.helpful,note:String(input.note||'').slice(0,1000)});
+    if(method==='GET'&&p==='/api/help-center/bookmarks')return user?helpRespond('bookmarks'):json(res,401,{error:'Sign in to view saved answers.'});
+    if(method==='GET'&&p==='/api/help-center/view-history')return user?helpRespond('view_history'):json(res,401,{error:'Sign in to view recently accessed answers.'});
+    if(method==='POST'&&p==='/api/help-center/bookmarks')return helpRespond('bookmark_add',{translationId:String(input.translationId||'')});
+    const helpBookmarkMatch=p.match(/^\/api\/help-center\/bookmarks\/([0-9a-f-]{36})$/i);
+    if(method==='DELETE'&&helpBookmarkMatch)return helpRespond('bookmark_remove',{translationId:helpBookmarkMatch[1]});
+    if(method==='GET'&&p==='/api/help-center/admin/access'){
+      return helpRespond('bootstrap',{locale:'en'});
+    }
+    if(method==='GET'&&p==='/api/help-center/admin/overview')return helpRespond('admin_overview',{locale:String(url.searchParams.get('locale')||'en').slice(0,16)});
+    if(method==='GET'&&p==='/api/help-center/admin/revisions')return helpRespond('admin_revisions',{translationId:String(url.searchParams.get('translationId')||'')});
+    if(method==='GET'&&p==='/api/help-center/admin/article')return helpRespond('admin_article_get',{translationId:String(url.searchParams.get('translationId')||'')});
+    if(method==='GET'&&p==='/api/help-center/admin/feedback')return helpRespond('admin_feedback',{limit:Math.max(1,Math.min(100,Number(url.searchParams.get('limit')||50)))});
+    if(method==='POST'&&p==='/api/help-center/admin/articles')return helpRespond('admin_article_save',input||{});
+    if(method==='POST'&&p==='/api/help-center/admin/merge')return helpRespond('admin_merge_articles',{
+      sourceArticleId:String(input.sourceArticleId||''),targetArticleId:String(input.targetArticleId||'')
+    });
+    if(method==='POST'&&p==='/api/help-center/admin/media')return helpRespond('admin_media_upload',input||{});
+    if(method==='POST'&&p==='/api/help-center/admin/transitions')return helpRespond('admin_transition',input||{});
+    if(method==='POST'&&p==='/api/help-center/admin/restore-revision')return helpRespond('admin_restore_revision',input||{});
+    if(method==='POST'&&p==='/api/help-center/admin/categories')return helpRespond('admin_category_save',input||{});
+    if(method==='POST'&&p==='/api/help-center/admin/subcategories')return helpRespond('admin_subcategory_save',input||{});
     if(method==='GET'&&p==='/api/auth/providers'){
       if(AUTH_PROVIDER!=='supabase')return json(res,503,{error:'Social sign-in requires Minglora Supabase Auth.',providers:[]});
       try{
