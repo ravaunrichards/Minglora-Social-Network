@@ -42,7 +42,6 @@ const GIFT_SPECIFIC_WEB_AUDIO_DESIGNS = Object.freeze({
     layers: ["seeded_arcade_arpeggio_523_659_784_1047hz", "stereo_note_placement", "low_frequency_thump"],
     status: "gift_specific_synthesized_sound_not_mastered_recording"
   })
-  })
 });
 
 function fail(message) {
