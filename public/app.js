@@ -3439,6 +3439,12 @@ activeLivePinnedComment=null;
         try{localStorage.setItem(liveGiftPreferenceKey,JSON.stringify({favorites:Array.from(liveGiftFavorites),recent:liveGiftRecent.slice(0,40)}));}catch{}
       };
       const liveGiftCategoryNames={flowers:"Flowers",hearts:"Love & hearts",animals:"Animals & creatures",vehicles:"Vehicles",music:"Music",sports:"Sports",food_drink:"Food & drinks",fashion_beauty:"Fashion & beauty",luxury:"Luxury",celebrations:"Celebrations",fantasy:"Fantasy & cosmic",nature:"Nature",travel:"Travel",games:"Games",community:"Community",symbols:"Symbols",everyday:"Everyday",reactions:"Reactions",seasonal:"Seasonal",jamaican_culture:"Jamaican culture",other:"More gifts"};
+      const liveGiftCategoryIconFiles=Object.freeze({flowers:"flowers.svg",hearts:"hearts.svg",animals:"animals.svg",vehicles:"vehicles.svg",music:"music.svg",sports:"sports.svg",food_drink:"food_drink.svg",fashion_beauty:"fashion_beauty.svg",luxury:"luxury.svg",celebrations:"celebrations.svg",fantasy:"fantasy.svg",nature:"nature.svg",travel:"travel.svg",games:"games.svg",community:"community.svg",symbols:"symbols.svg",everyday:"everyday.svg",reactions:"reactions.svg",seasonal:"seasonal.svg",jamaican_culture:"jamaican_culture.svg",other:"other.svg"});
+      const liveGiftCategoryIcon=key=>{
+        const normalized=String(key||"").toLowerCase();
+        const file=normalized==="all"?"all.svg":liveGiftCategoryIconFiles[normalized]||"other.svg";
+        return "<svg class='live-gift-category-icon' viewBox='0 0 24 24' aria-hidden='true' focusable='false'><use href='/assets/icons/live-gift-categories/"+file+"#icon'></use></svg>";
+      };
       const liveGiftCategoryName=key=>liveGiftCategoryNames[String(key||"").toLowerCase()]||String(key||"More gifts").replace(/[_-]+/g," ").replace(/\b\w/g,char=>char.toUpperCase());
       const liveGiftByCode=code=>liveGiftCatalogue.find(item=>String(item.code)===String(code))||null;
       const drawLiveGiftCategories=()=>{
@@ -3453,7 +3459,7 @@ activeLivePinnedComment=null;
         const names=[...new Set(base.map(item=>String(item.category||"other")))].sort((a,b)=>liveGiftCategoryName(a).localeCompare(liveGiftCategoryName(b)));
         if(liveGiftCategory!=="all"&&!names.includes(liveGiftCategory))liveGiftCategory="all";
         const chips=[{key:"all",label:"All categories"},...names.map(key=>({key,label:liveGiftCategoryName(key)}))];
-        liveGiftCategories.innerHTML=chips.map(item=>"<button type='button' data-live-gift-category='"+esc(item.key)+"' class='"+(liveGiftCategory===item.key?"active":"")+"' aria-pressed='"+String(liveGiftCategory===item.key)+"'>"+esc(item.label)+"</button>").join("");
+        liveGiftCategories.innerHTML=chips.map(item=>"<button type='button' data-live-gift-category='"+esc(item.key)+"' class='"+(liveGiftCategory===item.key?"active":"")+"' aria-pressed='"+String(liveGiftCategory===item.key)+"'>"+liveGiftCategoryIcon(item.key)+"<span>"+esc(item.label)+"</span></button>").join("");
       };
       const updateLiveGiftPreview=()=>{
         const gift=liveGiftByCode(liveGiftSelectedCode);
