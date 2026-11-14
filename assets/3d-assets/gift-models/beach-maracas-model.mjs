@@ -24,8 +24,8 @@ export function createBeachMaracasModel(){
   for(let i=0;i<points.length;i++){
    const prev=points[Math.max(0,i-1)],next=points[Math.min(points.length-1,i+1)];
    const t=unit(next[0]-prev[0],next[1]-prev[1],next[2]-prev[2]),ref=Math.abs(t[1])>.9?[1,0,0]:[0,1,0];
-   const u=unit(...cross(t,ref)),v=unit(...cross(t,u));
-   for(let j=0;j<=sides;j++){const a=TAU*j/sides,nx=u[0]*Math.cos(a)+v[0]*Math.sin(a),ny=u[1]*Math.cos(a)+v[1]*Math.sin(a),nz=u[2]*Math.cos(a)+v[2]*Math.sin(a);p.push(points[i][0]+nx*radius,points[i][1]+ny*radius,points[i][2]+nz*radius);n.push(nx,ny,nz);}
+   const u=unit(...cross(t,ref)),v=unit(...cross(t,u)),r=Array.isArray(radius)?radius[i]:radius;
+   for(let j=0;j<=sides;j++){const a=TAU*j/sides,nx=u[0]*Math.cos(a)+v[0]*Math.sin(a),ny=u[1]*Math.cos(a)+v[1]*Math.sin(a),nz=u[2]*Math.cos(a)+v[2]*Math.sin(a);p.push(points[i][0]+nx*r,points[i][1]+ny*r,points[i][2]+nz*r);n.push(nx,ny,nz);}
   }
   for(let i=0;i<points.length-1;i++)for(let j=0;j<sides;j++){const a=i*(sides+1)+j,b=a+sides+1;ix.push(a,b,a+1,a+1,b,b+1);}
   add(name,p,n,ix,color,metallic,roughness);
