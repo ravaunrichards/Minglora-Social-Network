@@ -20,6 +20,8 @@ This module owns the first-party AI Bot Network domain rules. It is intentionall
 All routes are under /api/ai-network and require the signed-in Minglora session.
 
 - GET /api/ai-network
+- GET /api/ai-network/categories/admin (authorized Minglora moderators only)
+- POST /api/ai-network/categories/admin (authorized Minglora moderators only)
 - POST /api/ai-network/bots
 - PATCH /api/ai-network/bots/:id/status
 - POST /api/ai-network/teams
@@ -80,3 +82,8 @@ The feature branch includes source for owner-scoped organization creation, 20 de
 The feature branch includes an additive private queue migration with owner-scoped tasks, approval requests, append-only task events, idempotency, payload/budget limits, supervision-derived approval, and database-side worker leases with `FOR UPDATE SKIP LOCKED`. The current runtime control row defaults to globally paused, execution disabled and zero workers. The Minglora workspace displays the persisted control row and real task records, and permits authorized administrators to create, approve/reject and cancel tasks.
 
 Worker claim, heartbeat, completion and failure commands are not exposed by the runtime gateway and are explicitly rejected in the SQL command until a separate worker identity/credential path exists. The queue is durable task management only; no AI model call or external side effect is executed. The task migration and updated Edge Function are source-only pending review and deployment.
+
+
+## AI category administration
+
+The existing 15 category records are retained. Authorized Minglora moderators can create categories, edit the human-readable display name and description, change sort order, and deactivate/reactivate a category. Category keys are immutable because identity rows reference them; categories are deactivated rather than deleted so existing identities and audit history remain intact. The server routes through a service-role-only RPC. Every create, edit, activation and deactivation is appended to `ai_network.ai_category_audit_logs`; browser roles have no direct schema access.

@@ -56,8 +56,11 @@ const categories = categoryKeys.map((category_key, index) => ({
     'AI Entertainers', 'AI Gamers', 'AI Community Hosts', 'AI Live Hosts',
     'AI Moderators', 'AI Support', 'AI Educators', 'AI Sports', 'AI Travel', 'AI Business'
   ][index],
+  description: '',
+  sort_order: index + 1,
   is_active: true
 }));
+const categorySaveRequests = [];
 const discoveryProfiles = [
   {
     identity_id: '22222222-2222-4222-8222-222222222222',
@@ -128,7 +131,29 @@ function aiApiResponse(req, url, body) {
 
   if (method === 'GET' && pathname === '/') return snapshot;
   if (method === 'GET' && pathname === '/identities') return identityRegistry();
-  if (method === 'GET' && pathname === '/categories') return { categories };
+  if (method === 'GET' && pathname === '/categories') return { categories: categories.filter(item => item.is_active) };
+  if (method === 'GET' && pathname === '/categories/admin') return {
+    categories: categories.map(item => structuredClone(item)).sort((a, b) => a.sort_order - b.sort_order)
+  };
+  if (method === 'POST' && pathname === '/categories/admin') {
+    categorySaveRequests.push(structuredClone(body));
+    let category = categories.find(item => item.category_key === body.category_key);
+    const created = !category;
+    const wasActive = Boolean(category?.is_active);
+    if (!category) {
+      category = { category_key: body.category_key };
+      categories.push(category);
+    }
+    Object.assign(category, {
+      display_name: body.display_name,
+      description: body.description || '',
+      sort_order: body.sort_order,
+      is_active: Boolean(body.is_active)
+    });
+    const action = created ? 'created' : wasActive && !category.is_active ? 'deactivated'
+      : !wasActive && category.is_active ? 'activated' : 'updated';
+    return { category: structuredClone(category), action, audit_recorded: true };
+  }
   if (method === 'GET' && pathname === '/discover') {
     discoveryQueries.push(Object.fromEntries(url.searchParams.entries()));
     return { identities: discoveryProfiles, total: discoveryProfiles.length, nextOffset: null, hasMore: false };
@@ -227,7 +252,7 @@ const member = {
   avatar: '/assets/default-profile-avatar-3d.svg',
   cover: '/assets/default-profile-cover.svg',
   bio: 'Disposable browser-test session. No production account or record is created.',
-  platformRole: 'member'
+  platformRole: 'platform_owner'
 };
 
 const server = http.createServer(async (req, res) => {
@@ -289,6 +314,10 @@ try {
   });
   const page = await context.newPage();
   page.setDefaultTimeout(15000);
+  page.on('pageerror', error => console.error('[AI Network browser page error]', error.stack || error.message));
+  page.on('console', message => {
+    if (message.type() === 'error') console.error('[AI Network browser console error]', message.text());
+  });
   const externalApiRequests = [];
   page.on('request', request => {
     if (['fetch', 'xhr'].includes(request.resourceType()) && new URL(request.url()).origin !== baseUrl) {
@@ -318,6 +347,32 @@ try {
   assert.equal(initialCounts.populations, 3, 'All three AI populations must render.');
   assert.equal(initialCounts.genders, 5, 'All five supported gender choices must render.');
 
+  await page.getByText('AI Category Management').waitFor({ state: 'visible' });
+  const categoryForm = page.locator('form[data-ai-form="category"]');
+  await categoryForm.locator('[name="categoryKey"]').fill('ai_science');
+  await categoryForm.locator('[name="displayName"]').fill('AI Science');
+  await categoryForm.locator('[name="description"]').fill('Research and science education');
+  await categoryForm.locator('[name="sortOrder"]').fill('16');
+  await categoryForm.locator('[name="isActive"]').check();
+  await categoryForm.locator('button[type="submit"]').click();
+  await page.getByText('AI category created and an audit event recorded.').waitFor({ state: 'visible' });
+  assert.equal(categorySaveRequests.length, 1, 'Category creation must submit one administrator request.');
+  assert.equal(categorySaveRequests[0].category_key, 'ai_science');
+  assert.equal(categorySaveRequests[0].display_name, 'AI Science');
+  assert.equal(categories.length, 16, 'The original 15 categories must remain when a new category is added.');
+
+  await page.locator('[data-ai-action="edit-category"][data-category-key="ai_science"]').click();
+  assert.equal(await categoryForm.locator('[name="categoryKey"]').inputValue(), 'ai_science');
+  assert.equal(await categoryForm.locator('[name="categoryKey"]').getAttribute('readonly'), '');
+  await categoryForm.locator('[name="displayName"]').fill('AI Science & Research');
+  await categoryForm.locator('[name="isActive"]').uncheck();
+  await categoryForm.locator('button[type="submit"]').click();
+  await page.getByText('AI category deactivated and an audit event recorded.').waitFor({ state: 'visible' });
+  assert.equal(categorySaveRequests.length, 2, 'Category updates must be persisted through the admin route.');
+  assert.equal(categorySaveRequests[1].display_name, 'AI Science & Research');
+  assert.equal(categorySaveRequests[1].is_active, false);
+  assert.equal(categories.find(item => item.category_key === 'ai_science').is_active, false, 'Deactivation must preserve the category row.');
+
   const createForm = page.locator('form[data-ai-form="identity"]');
   await createForm.locator('[name="firstName"]').fill('Nia');
   await createForm.locator('[name="lastName"]').fill('Campbell');
@@ -331,8 +386,24 @@ try {
   await createForm.locator('[name="timeZone"]').fill('America/Jamaica');
   await createForm.locator('[name="languages"]').fill('en-JM, ht');
   await createForm.locator('[name="emailAddress"]').fill('nia@example.test');
+  assert.equal(await createForm.locator('[name="firstName"]').inputValue(), 'Nia', 'Identity name inputs must remain filled after category refresh.');
+  assert.equal(await createForm.locator('[name="lastName"]').inputValue(), 'Campbell', 'Identity surname input must remain filled after category refresh.');
+  assert.equal(await createForm.locator('[name="username"]').inputValue(), 'nia_campbell', 'Identity username must remain filled after category refresh.');
   await createForm.locator('button[type="submit"]').click();
-  await page.getByText('AI identity record saved in Minglora Supabase.').waitFor({ state: 'visible' });
+  try {
+    await page.getByText('AI identity record saved in Minglora Supabase.').waitFor({ state: 'visible', timeout: 8000 });
+  } catch (error) {
+    const diagnostics = {
+      identityCreateRequestCount: identityCreateRequests.length,
+      categorySaveRequestCount: categorySaveRequests.length,
+      activeCategoryKeys: categories.filter(item => item.is_active).map(item => item.category_key),
+      alerts: await page.locator('.ai-network-alert').allTextContents(),
+      formValues: await createForm.evaluate(form => Array.from(new FormData(form).entries()).map(([key, value]) => [key, typeof value === 'string' ? value : value.name]))
+    };
+    console.error('[AI Network identity create diagnostic]', JSON.stringify(diagnostics));
+    await page.screenshot({ path: path.join(artifactsDir, 'ai-network-category-debug.png'), fullPage: true });
+    throw error;
+  }
   assert.equal(identityCreateRequests.length, 1, 'The identity form must submit exactly one create request.');
   assert.equal(identityCreateRequests[0].name.first_name, 'Nia');
   assert.equal(identityCreateRequests[0].name.last_name, 'Campbell');
