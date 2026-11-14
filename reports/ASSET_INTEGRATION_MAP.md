@@ -72,3 +72,8 @@ No prices, balances, transactions, account state, LiveKit credentials, or existi
 - Canonical gift hibiscus-5-mgl selects assets/3d-assets/gift-models/hibiscus-model.mjs from scripts/generate-minglora-gifts.mjs.
 - The source produces the standard self-contained glTF 2.0 asset at public/assets/gifts/catalog/hibiscus-5-mgl.gltf; the existing LIVE/model-viewer loader and SVG fallback remain in use.
 - The model is tagged gift-hibiscus-3d-v1 and design-review-pending. No gift catalogue price, animation, transaction or server event behavior is changed.
+
+## Named glTF provenance in the generated LIVE asset manifest
+- The asset manifest reads named source metadata from each generated glTF asset's extras. Rose and Hibiscus are now recorded as gift-specific repository mesh sources with their asset ID, source file, art direction and review status.
+- Generic gift models remain identified as generated procedural meshes. The manifest records the presence of named mesh sources separately from premium/high-detail approval; both remain false until human visual review and rights review pass.
+- Regression tests cover both named models and ensure their design-review-pending status is not misreported as production approval.
