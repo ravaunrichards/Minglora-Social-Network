@@ -92,3 +92,38 @@ test('no provider execution or hidden high-impact execution is exposed by the cu
   assert.ok(moduleSource.includes('highImpactActionsExecutedAutomatically: false'));
   assert.ok(!ui.includes('fetch(' + "'" + 'https://'));
 });
+
+test('AI team creation uses the signed-in relational registry instead of JSONB-only team writes', () => {
+  const runtime = read('supabase/functions/minglora-runtime-state/index.ts');
+  const migration = read('supabase/migrations/20261114142000_minglora_ai_teams_and_delegation.sql');
+  assert.ok(ui.includes("kind === 'team'"));
+  assert.ok(ui.includes("path = '/teams'"));
+  assert.ok(ui.includes("payload.botIds = botIds"));
+  assert.ok(server.includes("runAITeamCommand('create_team'"));
+  assert.ok(server.includes("method === 'GET' && sub === 'teams'"));
+  assert.ok(server.includes("snapshot.teams = [...relationalTeams, ...legacyTeams]"));
+  assert.ok(runtime.includes('"ai_team_command"'));
+  assert.ok(runtime.includes('admin.rpc("minglora_ai_team_command"'));
+  assert.ok(migration.includes('create table if not exists ai_network.ai_teams'));
+  assert.ok(migration.includes('create table if not exists ai_network.ai_team_memberships'));
+  assert.ok(migration.includes('create table if not exists ai_network.ai_team_events'));
+});
+
+test('AI-to-AI delegation is scoped, audited and held for human approval', () => {
+  const runtime = read('supabase/functions/minglora-runtime-state/index.ts');
+  const migration = read('supabase/migrations/20261114142000_minglora_ai_teams_and_delegation.sql');
+  for (const table of ['ai_delegation_grants','ai_delegation_events']) {
+    assert.ok(migration.includes('create table if not exists ai_network.' + table));
+  }
+  assert.ok(migration.includes("requires_human_approval boolean not null default true check (requires_human_approval=true)"));
+  assert.ok(migration.includes("v_action_class not in ('read_only','content')"));
+  assert.ok(migration.includes("status='pending_approval'"));
+  assert.ok(migration.includes('delegation_grant_id=v_grant_id'));
+  assert.ok(migration.includes('delegated_from_identity_id=v_from_identity_id'));
+  assert.ok(migration.includes("ai_delegation_events"));
+  assert.ok(migration.includes('grant execute on function public.minglora_ai_team_command(text,uuid,jsonb) to service_role'));
+  assert.ok(runtime.includes('"ai_team_command"'));
+  assert.ok(server.includes("runAITeamCommand('delegate_task'"));
+  assert.ok(server.includes("runAITeamCommand('create_delegation_grant'"));
+  assert.ok(!migration.includes("v_action_class in ('financial','security','moderation','external','social')"));
+});
