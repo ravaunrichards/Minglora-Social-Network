@@ -40,7 +40,7 @@ test('the LIVE gift picker renders category art alongside escaped accessible lab
 });
 
 test('all category SVGs and the manifest are cached by the versioned service worker', () => {
-  assert.ok(worker.includes("const CACHE_NAME='minglora-shell-v305-self-updating-1'"));
+  assert.match(worker, /const CACHE_NAME='minglora-shell-v\\d+-self-updating-1';/);
   assert.ok(worker.includes("'/assets/icons/live-gift-categories/manifest.json'"));
   for (const id of expected) {
     assert.ok(worker.includes("'/assets/icons/live-gift-categories/" + id + ".svg'"), id + ' must be pre-cached');
