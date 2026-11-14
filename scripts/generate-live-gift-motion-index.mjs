@@ -8,8 +8,9 @@ const OUTPUT = path.join(ROOT, "public", "assets", "animations", "gifts", "catal
 const GENERATOR = "Minglora LIVE gift motion index generator";
 const checkOnly = process.argv.includes("--check");
 
-// These are the effect layers supported by public/gift-effects.js.  The
-// subject-specific motion remains the catalog's existing animation_preset.
+// These are the effect layers supported by public/gift-effects.js. Subject-specific
+// motion overrides are kept here so the generated index and runtime stay aligned;
+// canonical catalogue animation_preset values are never rewritten.
 const EFFECT_BY_CATEGORY = Object.freeze({
   flowers: "petals",
   hearts: "rings",
