@@ -26,7 +26,7 @@ test("owner platform overview inventories every active runtime collection exactl
   assert.ok(collectionBlock, "active runtime collection list exists");
   const active = [...collectionBlock[1].matchAll(/'([^']+)'/g)].map(match => match[1]).sort();
   const mapped = [...runtime.matchAll(/"key":\s*"([^"]+)"/g)].map(match => match[1]);
-  assert.equal(active.length, 81);
+  assert.equal(active.length, 91);
   assert.equal(mapped.length, active.length);
   assert.equal(new Set(mapped).size, mapped.length);
   assert.deepEqual(mapped.sort(), active);
@@ -52,6 +52,8 @@ test("Admin Centre is a standalone left-rail feature immediately below Profile",
   const adminIndex = index.indexOf('id="admin-centre-sidebar-link"');
   const metaAiIndex = index.indexOf('href="https://www.meta.ai/"');
   assert.ok(profileIndex >= 0 && adminIndex > profileIndex && metaAiIndex > adminIndex);
+  const aiNetworkIndex = index.indexOf('data-view="ai-network"');
+  assert.ok(aiNetworkIndex > metaAiIndex, 'AI Network is available as a distinct navigation destination after Meta AI');
   assert.match(index, /id="admin-centre-sidebar-link"[^>]*href="\/admin-centre\.html"/);
   assert.match(index, /rail-link-admin-centre hidden/);
   assert.match(index, /#admin/);

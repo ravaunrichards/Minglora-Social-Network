@@ -73,7 +73,7 @@ Deno.serve(async (req: Request) => {
   const supportedActions = [
     "internal_activity_feed",
     "admin_users_list", "admin_user_set_ban", "admin_audit_log", "admin_audit_log",
-    "streambay_cleanup", "load", "save", "health", "media_sign", "media_upload_prepare", "media_upload_complete", "media_delete",
+    "streambay_cleanup", "ai_identity_command", "ai_discovery_command", "ai_organization_command", "ai_hr_command", "ai_provider_command", "ai_task_command", "load", "save", "health", "media_sign", "media_upload_prepare", "media_upload_complete", "media_delete",
     "live_broadcast_create", "live_broadcast_end", "live_chat_list", "live_chat_send", "live_chat_delete",
     "live_participant_mark_connected", "live_participant_mark_left", "live_speaker_request", "live_speaker_requests_list", "live_speaker_request_status",
     "live_speaker_request_review", "live_speaker_mark_connected", "live_speaker_mark_left",
@@ -718,6 +718,22 @@ Deno.serve(async (req: Request) => {
             "label": "Administrator audit records",
             "key": "auditLog"
           }
+        ]
+      },
+      {
+        "id": "ai-network",
+        "label": "AI Bot Network",
+        "collections": [
+          { "label": "AI network settings", "key": "aiBotSettings" },
+          { "label": "AI bots", "key": "aiBots" },
+          { "label": "AI bot teams", "key": "aiBotTeams" },
+          { "label": "AI schedules", "key": "aiBotSchedules" },
+          { "label": "AI execution records", "key": "aiBotRuns" },
+          { "label": "AI human approvals", "key": "aiBotApprovals" },
+          { "label": "AI audit events", "key": "aiBotAudit" },
+          { "label": "AI Creator Studio drafts", "key": "aiBotCreatorJobs" },
+          { "label": "AI companion consent", "key": "aiBotCompanionConsents" },
+          { "label": "AI community event drafts", "key": "aiBotCommunityEvents" }
         ]
       },
       {
@@ -3713,6 +3729,226 @@ Deno.serve(async (req: Request) => {
       removedRuntimeAssets,
       revision
     });
+  }
+
+  if (action === "ai_identity_command") {
+    const actorUserId = String(input.actorUserId || "");
+    const aiAction = String(input.aiAction || "");
+    const payload = input.payload && typeof input.payload === "object" && !Array.isArray(input.payload)
+      ? input.payload
+      : {};
+    const supportedAICommands = ["list_categories", "list", "get", "create", "bulk_create"];
+
+    if (!validUuid(actorUserId)) {
+      return json(400, { error: "A valid signed-in Minglora user is required for AI identity access." });
+    }
+    if (!supportedAICommands.includes(aiAction)) {
+      return json(400, { error: "Unsupported AI identity command." });
+    }
+
+    const { data, error } = await admin.rpc("minglora_ai_identity_command", {
+      p_action: aiAction,
+      p_actor_user_id: actorUserId,
+      p_payload: payload
+    });
+    if (error) {
+      const code = String(error.code || "");
+      const status = code === "42501" ? 403 : code === "P0002" ? 404 : code === "23505" ? 409 : 400;
+      return json(status, {
+        error: String(error.message || "Minglora AI identity request failed.").slice(0, 240)
+      });
+    }
+    return json(200, { result: data });
+  }
+
+  if (action === "ai_discovery_command") {
+    const actorUserId = String(input.actorUserId || "");
+    const aiAction = String(input.aiAction || "");
+    const payload = input.payload && typeof input.payload === "object" && !Array.isArray(input.payload)
+      ? input.payload
+      : {};
+    const supportedDiscoveryCommands = [
+      "discover", "follow", "bulk_follow", "unfollow", "list_following",
+      "list_follow_requests", "review_follow_request", "list_saved_groups",
+      "save_discovery_group", "delete_saved_group"
+    ];
+
+    if (!validUuid(actorUserId)) {
+      return json(400, { error: "A valid signed-in Minglora user is required for AI discovery." });
+    }
+    if (!supportedDiscoveryCommands.includes(aiAction)) {
+      return json(400, { error: "Unsupported AI discovery command." });
+    }
+    const serialized = JSON.stringify(payload);
+    if (/"(api[_-]?key|access[_-]?token|password|secret|authorization|cookie|credential)"\s*:/i.test(serialized)) {
+      return json(400, { error: "Credentials and secrets are not allowed in discovery requests." });
+    }
+
+    const { data, error } = await admin.rpc("minglora_ai_discovery_command", {
+      p_action: aiAction,
+      p_actor_user_id: actorUserId,
+      p_payload: payload
+    });
+    if (error) {
+      const code = String(error.code || "");
+      const status = code === "42501" ? 403 : code === "P0002" ? 404 : code === "23505" ? 409 : 400;
+      return json(status, {
+        error: String(error.message || "Minglora AI discovery request failed.").slice(0, 240)
+      });
+    }
+    return json(200, { result: data });
+  }
+
+  if (action === "ai_organization_command") {
+    const actorUserId = String(input.actorUserId || "");
+    const aiAction = String(input.aiAction || "");
+    const payload = input.payload && typeof input.payload === "object" && !Array.isArray(input.payload)
+      ? input.payload
+      : {};
+    const supportedOrganizationCommands = [
+      "list_department_templates", "list_position_templates",
+      "create_organization", "list_organizations",
+      "create_departments", "list_departments",
+      "create_positions", "list_positions"
+    ];
+
+    if (!validUuid(actorUserId)) {
+      return json(400, { error: "A valid signed-in Minglora user is required for AI organization access." });
+    }
+    if (!supportedOrganizationCommands.includes(aiAction)) {
+      return json(400, { error: "Unsupported AI organization command." });
+    }
+
+    const { data, error } = await admin.rpc("minglora_ai_organization_command", {
+      p_action: aiAction,
+      p_actor_user_id: actorUserId,
+      p_payload: payload
+    });
+    if (error) {
+      const code = String(error.code || "");
+      const status = code === "42501" ? 403 : code === "P0002" ? 404 : code === "23505" ? 409 : 400;
+      return json(status, {
+        error: String(error.message || "Minglora AI organization request failed.").slice(0, 240)
+      });
+    }
+    return json(200, { result: data });
+  }
+
+
+  if (action === "ai_task_command") {
+    const actorUserId = String(input.actorUserId || "");
+    const aiAction = String(input.aiAction || "");
+    const payload = input.payload && typeof input.payload === "object" && !Array.isArray(input.payload)
+      ? input.payload
+      : {};
+    const supportedTaskCommands = [
+      "create_task", "list_tasks", "approve_task", "reject_task", "cancel_task"
+    ];
+
+    if (!validUuid(actorUserId)) {
+      return json(400, { error: "A valid signed-in Minglora user is required for AI task access." });
+    }
+    if (!supportedTaskCommands.includes(aiAction)) {
+      return json(400, { error: "Unsupported AI task command." });
+    }
+    if (aiAction === "create_task") {
+      const serialized = JSON.stringify(payload);
+      if (/"(api[_-]?key|access[_-]?token|password|secret|authorization|cookie|credential)"\s*:/i.test(serialized)) {
+        return json(400, { error: "Credentials and secrets are not allowed in AI task payloads or results." });
+      }
+    }
+
+    const { data, error } = await admin.rpc("minglora_ai_task_command", {
+      p_action: aiAction,
+      p_actor_user_id: actorUserId,
+      p_payload: payload
+    });
+    if (error) {
+      const code = String(error.code || "");
+      const status = code === "42501" ? 403 : code === "P0002" ? 404 : code === "23505" ? 409 : 400;
+      return json(status, {
+        error: String(error.message || "Minglora AI task request failed.").slice(0, 240)
+      });
+    }
+    return json(200, { result: data });
+  }
+
+  if (action === "ai_provider_command") {
+    const actorUserId = String(input.actorUserId || "");
+    const aiAction = String(input.aiAction || "");
+    const payload = input.payload && typeof input.payload === "object" && !Array.isArray(input.payload)
+      ? input.payload
+      : {};
+    const supportedProviderCommands = [
+      "list_provider_accounts", "list_provider_models", "list_provider_assignments",
+      "create_provider_account", "create_provider_model", "assign_provider_model",
+      "set_provider_assignment_status"
+    ];
+
+    if (!validUuid(actorUserId)) {
+      return json(400, { error: "A valid signed-in Minglora user is required for AI provider access." });
+    }
+    if (!supportedProviderCommands.includes(aiAction)) {
+      return json(400, { error: "Unsupported AI provider command." });
+    }
+    if (["create_provider_account","create_provider_model","assign_provider_model","set_provider_assignment_status"].includes(aiAction)) {
+      const secretFields = ["api_key","apiKey","access_token","accessToken","password","credential","credentials","secret","provider_secret","credential_secret_ref"];
+      if (secretFields.some(field => Object.prototype.hasOwnProperty.call(payload, field))) {
+        return json(400, { error: "Provider credentials must be added through an approved secrets manager, not this API." });
+      }
+    }
+
+    const { data, error } = await admin.rpc("minglora_ai_provider_command", {
+      p_action: aiAction,
+      p_actor_user_id: actorUserId,
+      p_payload: payload
+    });
+    if (error) {
+      const code = String(error.code || "");
+      const status = code === "42501" ? 403 : code === "P0002" ? 404 : code === "23505" ? 409 : 400;
+      return json(status, {
+        error: String(error.message || "Minglora AI provider request failed.").slice(0, 240)
+      });
+    }
+    return json(200, { result: data });
+  }
+
+  if (action === "ai_hr_command") {
+    const actorUserId = String(input.actorUserId || "");
+    const aiAction = String(input.aiAction || "");
+    const payload = input.payload && typeof input.payload === "object" && !Array.isArray(input.payload)
+      ? input.payload
+      : {};
+    const supportedHRCommands = [
+      "create_vacancy", "list_vacancies", "set_vacancy_status",
+      "create_application", "list_applications", "review_application",
+      "appoint_employee", "list_employees", "transition_employment",
+      "set_employment_manager", "transfer_employee"
+    ];
+
+    if (!validUuid(actorUserId)) {
+      return json(400, { error: "A valid signed-in Minglora user is required for AI HR access." });
+    }
+    if (!supportedHRCommands.includes(aiAction)) {
+      return json(400, { error: "Unsupported AI HR command." });
+    }
+    if (!validUuid(String(payload.organization_id || ""))) {
+      return json(400, { error: "A valid organization ID is required for AI HR access." });
+    }
+
+    const { data, error } = await admin.rpc("minglora_ai_hr_command", {
+      p_action: aiAction,
+      p_actor_user_id: actorUserId,
+      p_payload: payload
+    });
+    if (error) {
+      const code = String(error.code || "");
+      const status = code === "42501" ? 403 : code === "P0002" ? 404 : code === "23505" ? 409 : 400;
+      return json(status, {
+        error: String(error.message || "Minglora AI HR request failed.").slice(0, 240)
+      });
+    }
+    return json(200, { result: data });
   }
 
   if (action === "load" || action === "health") {

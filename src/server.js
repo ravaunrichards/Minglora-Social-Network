@@ -48,6 +48,7 @@ import { getGiftGallery, giftGalleryTimeZone, recordGiftGalleryEvent, updateGift
 import { CREATOR_LEAGUE_CLASSES, recordLiveGiftForLeagues, refundCreatorLeagueGift, getCreatorLeagueOverview, createCreatorLeagueMatch, acceptCreatorLeagueMatch, supportCreatorLeagueMatch, useCreatorLeaguePowerup, listCreatorLeagueMatches, settleExpiredLeagueMatches, settleScheduledCreatorLeagueDays } from '../backend/modules/leagues/service.js';
 import { recordGifterGift, refundGifterGift, getGifterProgressionOverview, getGifterBadgeSummary, getNewGifterIdentity, getLiveGifterLeaderboard } from '../backend/modules/gifter-progression/service.js';
 import { LIVE_FAN_CLUB_GIFT_CODES, LIVE_FAN_CLUB_JOIN_GIFT_CODE, LIVE_FAN_CLUB_JOIN_COIN_COST, ensureLiveFanClubCollections, getLiveFanClubMembership, countActiveLiveFanClubMembers, joinLiveFanClub, awardLiveFanClubPoints, publicLiveFanClubMembership } from '../backend/modules/live/fan-club.js';
+import { ensureAICollections, getAICommandCenter, getAIProviderStatus, createAIBot, updateAIBotStatus, createAIBotTeam, createAIBotSchedule, updateAIBotScheduleStatus, updateAISettings, createAICreatorJob, createAIApprovalRequest, decideAIApproval, setAICompanionConsent, createAICommunityEvent, emergencyPauseAI } from '../backend/modules/ai-network/service.js';
 import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseExchangeOAuthCode, supabaseGetAuthSettings, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseRequestMagicLink, supabaseCompletePasswordReset, supabaseGetUser, supabaseUpdateEmail, supabaseRequestPhoneChange, supabaseVerifyPhoneChange, supabaseUpdateUserMetadata, supabaseUpdateProfile } from './supabase-auth.js';
 const scrypt = promisify(crypto.scrypt);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -1467,6 +1468,571 @@ async function route(req, res) {
   if (p.startsWith('/api/') && p !== '/api/webhooks/paypal' && !p.startsWith('/api/internal/video-transcode/') && !['GET', 'HEAD', 'OPTIONS'].includes(method) && !isSameOriginApiWrite(req)) {
     return json(res, 403, { error: 'Cross-origin API writes are not allowed.' });
   }
+  if (p === '/api/ai-network' || p.startsWith('/api/ai-network/')) {
+    const user = sessionUser(req);
+    try {
+      requireAuth(user);
+      ensureAICollections(db);
+      const providerStatus = getAIProviderStatus();
+      const providerReady = providerStatus.configured && providerStatus.executionEnabled;
+      const settingsExisted = (db.aiBotSettings || []).some(item => item.ownerId === user.id);
+      const sub = p.slice('/api/ai-network'.length).replace(/^\/+/, '');
+      const parts = sub.split('/').filter(Boolean).map(decodeURIComponent);
+
+      const runAIDiscoveryCommand = async (aiAction, payload = {}) => {
+        if (!isSupabasePersistence()) {
+          throw Object.assign(new Error('AI discovery requires Minglora Supabase persistence.'), { status: 503 });
+        }
+        try {
+          const response = await requestSupabaseState('ai_discovery_command', {
+            actorUserId: user.id,
+            aiAction,
+            payload
+          });
+          if (response?.skipped) {
+            throw Object.assign(new Error('AI discovery is unavailable in local-only persistence mode.'), { status: 503 });
+          }
+          return response?.result;
+        } catch (error) {
+          const message = String(error?.message || '');
+          if (/unsupported action|unsupported AI discovery command|function .*minglora_ai_discovery_command.*does not exist|could not find the function|schema cache/i.test(message)) {
+            throw Object.assign(
+              new Error('The AI discovery migration and runtime gateway must be deployed before this operation is available. No follow or discovery data was changed.'),
+              { status: 503 }
+            );
+          }
+          throw error;
+        }
+      };
+
+      if (method === 'GET' && sub === 'discover') {
+        const discoveryUrl = new URL(req.url || '/', 'http://localhost');
+        const list = key => discoveryUrl.searchParams.getAll(key)
+          .flatMap(value => value.split(','))
+          .map(value => value.trim())
+          .filter(Boolean)
+          .slice(0, 260);
+        const numeric = (key, fallback, max) => {
+          const parsed = Number.parseInt(discoveryUrl.searchParams.get(key) || String(fallback), 10);
+          return Number.isFinite(parsed) ? Math.min(Math.max(parsed, 0), max) : fallback;
+        };
+        const filters = {
+          search: String(discoveryUrl.searchParams.get('search') || '').slice(0, 120),
+          category_keys: list('category'),
+          populations: list('population'),
+          genders: list('gender'),
+          countries: list('country').map(value => value.toUpperCase()),
+          nationalities: list('nationalities'),
+          languages: list('language'),
+          interests: list('interest'),
+          skills: list('skill'),
+          capabilities: list('capability'),
+          regions: list('region'),
+          profession: String(discoveryUrl.searchParams.get('profession') || '').slice(0, 100),
+          recent_days: numeric('recent_days', 0, 3650),
+          sort: discoveryUrl.searchParams.get('sort') === 'popular' ? 'popular' : 'newest'
+        };
+        const result = await runAIDiscoveryCommand('discover', {
+          filters,
+          limit: numeric('limit', 24, 100) || 24,
+          offset: numeric('offset', 0, 1000000)
+        });
+        return json(res, 200, result || { identities: [], total: 0, limit: 24, offset: 0 });
+      }
+      if (method === 'GET' && sub === 'following') {
+        const result = await runAIDiscoveryCommand('list_following');
+        return json(res, 200, result || { following: [] });
+      }
+      if (method === 'GET' && sub === 'follow-requests') {
+        const result = await runAIDiscoveryCommand('list_follow_requests');
+        return json(res, 200, result || { requests: [] });
+      }
+      if (method === 'POST' && sub === 'follow') {
+        const input = await body(req, 8000);
+        const result = await runAIDiscoveryCommand('follow', input);
+        return json(res, 200, result || {});
+      }
+      if (method === 'POST' && sub === 'bulk-follow') {
+        const input = await body(req, 12000);
+        const result = await runAIDiscoveryCommand('bulk_follow', input);
+        return json(res, 200, result || { created_or_reused: 0 });
+      }
+      if (method === 'DELETE' && parts[0] === 'following' && parts.length === 2) {
+        const result = await runAIDiscoveryCommand('unfollow', { identity_id: parts[1] });
+        return json(res, 200, result || { unfollowed: false });
+      }
+      if (method === 'PATCH' && parts[0] === 'follow-requests' && parts.length === 2) {
+        const input = await body(req, 8000);
+        const result = await runAIDiscoveryCommand('review_follow_request', { ...input, follow_id: parts[1] });
+        return json(res, 200, result || {});
+      }
+      if (method === 'GET' && sub === 'saved-groups') {
+        const result = await runAIDiscoveryCommand('list_saved_groups');
+        return json(res, 200, result || { groups: [] });
+      }
+      if (method === 'POST' && sub === 'saved-groups') {
+        const input = await body(req, 20000);
+        const result = await runAIDiscoveryCommand('save_discovery_group', input);
+        return json(res, 201, result || {});
+      }
+      if (method === 'DELETE' && parts[0] === 'saved-groups' && parts.length === 2) {
+        const result = await runAIDiscoveryCommand('delete_saved_group', { group_id: parts[1] });
+        return json(res, 200, result || { deleted: false });
+      }
+
+      const runAIIdentityCommand = async (aiAction, payload = {}) => {
+        if (!isSupabasePersistence()) {
+          throw Object.assign(
+            new Error('Relational AI identities require Minglora Supabase persistence.'),
+            { status: 503 }
+          );
+        }
+        const response = await requestSupabaseState('ai_identity_command', {
+          actorUserId: user.id,
+          aiAction,
+          payload
+        });
+        return response?.result;
+      };
+
+      if (method === 'GET' && sub === 'categories') {
+        const categories = await runAIIdentityCommand('list_categories');
+        return json(res, 200, { categories: Array.isArray(categories) ? categories : [] });
+      }
+      if (method === 'GET' && sub === 'identities') {
+        const identityUrl = new URL(req.url || '/', 'http://localhost');
+        const requestedLimit = Number.parseInt(identityUrl.searchParams.get('limit') || '25', 10);
+        const requestedOffset = Number.parseInt(identityUrl.searchParams.get('offset') || '0', 10);
+        const result = await runAIIdentityCommand('list', {
+          limit: Number.isFinite(requestedLimit) ? Math.min(Math.max(requestedLimit, 1), 100) : 25,
+          offset: Number.isFinite(requestedOffset) ? Math.max(requestedOffset, 0) : 0,
+          search: String(identityUrl.searchParams.get('search') || '').slice(0, 120)
+        });
+        return json(res, 200, result || { identities: [], total: 0, limit: 25, offset: 0 });
+      }
+      if (method === 'GET' && parts[0] === 'identities' && parts.length === 2) {
+        const result = await runAIIdentityCommand('get', { identity_id: parts[1] });
+        return json(res, 200, { identity: result });
+      }
+      if (method === 'POST' && sub === 'identities') {
+        const input = await body(req, 40000);
+        const result = await runAIIdentityCommand('create', input);
+        return json(res, result?.reused ? 200 : 201, { identity: result });
+      }
+      if (method === 'POST' && sub === 'identities/bulk') {
+        const input = await body(req, 200000);
+        const result = await runAIIdentityCommand('bulk_create', input);
+        return json(res, 200, result || { created_count: 0, failed_count: 0, created: [], failed: [] });
+      }
+
+      const runAITaskCommand = async (aiAction, payload = {}) => {
+        if (!isModerator(user, req)) {
+          throw Object.assign(
+            new Error('Only an authorized Minglora platform administrator with the required active session can manage the AI task queue.'),
+            { status: 403 }
+          );
+        }
+        if (!isSupabasePersistence()) {
+          throw Object.assign(new Error('AI task records require Minglora Supabase persistence.'), { status: 503 });
+        }
+        try {
+          const response = await requestSupabaseState('ai_task_command', {
+            actorUserId: user.id,
+            aiAction,
+            payload
+          });
+          if (response?.skipped) {
+            throw Object.assign(new Error('AI task records are unavailable in local-only persistence mode.'), { status: 503 });
+          }
+          return response?.result;
+        } catch (error) {
+          const message = String(error?.message || '');
+          if (/unsupported action|unsupported AI task command|function .*minglora_ai_task_command.*does not exist|could not find the function|schema cache/i.test(message)) {
+            throw Object.assign(
+              new Error('The AI task queue migration and runtime gateway must be deployed before this operation is available. No task data was changed.'),
+              { status: 503 }
+            );
+          }
+          throw error;
+        }
+      };
+
+      const runAIProviderCommand = async (aiAction, payload = {}) => {
+        if (!isModerator(user, req)) {
+          throw Object.assign(
+            new Error('Only an authorized Minglora platform administrator with the required active session can manage AI provider assignments.'),
+            { status: 403 }
+          );
+        }
+        if (!isSupabasePersistence()) {
+          throw Object.assign(new Error('AI provider records require Minglora Supabase persistence.'), { status: 503 });
+        }
+        try {
+          const response = await requestSupabaseState('ai_provider_command', {
+            actorUserId: user.id,
+            aiAction,
+            payload
+          });
+          if (response?.skipped) {
+            throw Object.assign(new Error('AI provider records are unavailable in local-only persistence mode.'), { status: 503 });
+          }
+          return response?.result;
+        } catch (error) {
+          const message = String(error?.message || '');
+          if (/unsupported action|unsupported AI provider command|function .*minglora_ai_provider_command.*does not exist|could not find the function|schema cache/i.test(message)) {
+            throw Object.assign(
+              new Error('The AI provider catalogue migration and runtime gateway must be deployed before this operation is available. No provider data was changed.'),
+              { status: 503 }
+            );
+          }
+          throw error;
+        }
+      };
+
+      const runAIHRCommand = async (aiAction, payload = {}) => {
+        if (!isModerator(user, req)) {
+          throw Object.assign(
+            new Error('Only an authorized Minglora platform administrator with the required active session can manage AI recruitment and workforce records.'),
+            { status: 403 }
+          );
+        }
+        if (!isSupabasePersistence()) {
+          throw Object.assign(new Error('AI HR records require Minglora Supabase persistence.'), { status: 503 });
+        }
+        try {
+          const response = await requestSupabaseState('ai_hr_command', {
+            actorUserId: user.id,
+            aiAction,
+            payload
+          });
+          if (response?.skipped) {
+            throw Object.assign(new Error('AI HR records are unavailable in local-only persistence mode.'), { status: 503 });
+          }
+          return response?.result;
+        } catch (error) {
+          const message = String(error?.message || '');
+          if (/unsupported action|unsupported AI HR command|function .*minglora_ai_hr_command.*does not exist|could not find the function|schema cache/i.test(message)) {
+            throw Object.assign(
+              new Error('The AI recruitment and workforce migration and runtime gateway must be deployed before this operation is available. No HR data was changed.'),
+              { status: 503 }
+            );
+          }
+          throw error;
+        }
+      };
+
+      const runAIOrganizationCommand = async (aiAction, payload = {}) => {
+        if (!isModerator(user, req)) {
+          throw Object.assign(
+            new Error('Only an authorized Minglora platform administrator with the required active session can manage AI corporate records.'),
+            { status: 403 }
+          );
+        }
+        if (!isSupabasePersistence()) {
+          throw Object.assign(
+            new Error('AI corporate records require Minglora Supabase persistence.'),
+            { status: 503 }
+          );
+        }
+        try {
+          const response = await requestSupabaseState('ai_organization_command', {
+            actorUserId: user.id,
+            aiAction,
+            payload
+          });
+          if (response?.skipped) {
+            throw Object.assign(new Error('AI corporate records are unavailable in local-only persistence mode.'), { status: 503 });
+          }
+          return response?.result;
+        } catch (error) {
+          const message = String(error?.message || '');
+          if (/unsupported action|unsupported AI organization command|function .*minglora_ai_organization_command.*does not exist|could not find the function|schema cache/i.test(message)) {
+            throw Object.assign(
+              new Error('The AI corporate database migration and runtime gateway must be deployed before this operation is available. No corporate data was changed.'),
+              { status: 503 }
+            );
+          }
+          throw error;
+        }
+      };
+
+      if (method === 'GET' && sub === 'tasks') {
+        const result = await runAITaskCommand('list_tasks');
+        return json(res, 200, result || { tasks: [], runtime: null });
+      }
+      if (method === 'POST' && sub === 'tasks') {
+        const input = await body(req, 72000);
+        if (!input || typeof input !== 'object' || Array.isArray(input)) {
+          throw Object.assign(new Error('AI task input must be a JSON object.'), { status: 400 });
+        }
+        const result = await runAITaskCommand('create_task', input);
+        return json(res, result?.reused ? 200 : 201, result || {});
+      }
+      if (parts[0] === 'tasks' && parts.length === 3 && method === 'PATCH' && parts[2] === 'approval') {
+        const taskId = parts[1];
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(taskId)) {
+          throw Object.assign(new Error('A valid AI task ID is required.'), { status: 400 });
+        }
+        const input = await body(req, 8000);
+        if (!input || typeof input !== 'object' || Array.isArray(input) || !['approved','rejected'].includes(input.status)) {
+          throw Object.assign(new Error('Choose approved or rejected for this task review.'), { status: 400 });
+        }
+        input.task_id = taskId;
+        input.reason = String(input.reason || '');
+        const result = await runAITaskCommand(input.status === 'approved' ? 'approve_task' : 'reject_task', input);
+        return json(res, 200, result || {});
+      }
+      if (parts[0] === 'tasks' && parts.length === 3 && method === 'POST' && parts[2] === 'cancel') {
+        const taskId = parts[1];
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(taskId)) {
+          throw Object.assign(new Error('A valid AI task ID is required.'), { status: 400 });
+        }
+        const input = await body(req, 8000);
+        if (!input || typeof input !== 'object' || Array.isArray(input)) {
+          throw Object.assign(new Error('Task cancellation input must be a JSON object.'), { status: 400 });
+        }
+        input.task_id = taskId;
+        const result = await runAITaskCommand('cancel_task', input);
+        return json(res, 200, result || {});
+      }
+
+      if (method === 'GET' && sub === 'provider-accounts') {
+        const result = await runAIProviderCommand('list_provider_accounts');
+        return json(res, 200, { provider_accounts: Array.isArray(result) ? result : [] });
+      }
+      if (method === 'POST' && sub === 'provider-accounts') {
+        const input = await body(req, 12000);
+        if (!input || typeof input !== 'object' || Array.isArray(input)) {
+          throw Object.assign(new Error('Provider account input must be a JSON object.'), { status: 400 });
+        }
+        const result = await runAIProviderCommand('create_provider_account', input);
+        return json(res, result?.reused ? 200 : 201, result || {});
+      }
+      if (method === 'GET' && sub === 'provider-models') {
+        const result = await runAIProviderCommand('list_provider_models');
+        return json(res, 200, { provider_models: Array.isArray(result) ? result : [] });
+      }
+      if (method === 'POST' && sub === 'provider-models') {
+        const input = await body(req, 16000);
+        if (!input || typeof input !== 'object' || Array.isArray(input)) {
+          throw Object.assign(new Error('Provider model input must be a JSON object.'), { status: 400 });
+        }
+        const result = await runAIProviderCommand('create_provider_model', input);
+        return json(res, result?.reused ? 200 : 201, result || {});
+      }
+      if (method === 'GET' && sub === 'provider-assignments') {
+        const result = await runAIProviderCommand('list_provider_assignments');
+        return json(res, 200, { assignments: Array.isArray(result) ? result : [] });
+      }
+      if (method === 'POST' && sub === 'provider-assignments') {
+        const input = await body(req, 16000);
+        if (!input || typeof input !== 'object' || Array.isArray(input)) {
+          throw Object.assign(new Error('Provider assignment input must be a JSON object.'), { status: 400 });
+        }
+        const result = await runAIProviderCommand('assign_provider_model', input);
+        return json(res, result?.reused ? 200 : 201, result || {});
+      }
+      if (parts[0] === 'provider-assignments' && parts.length === 3 &&
+          parts[2] === 'status' && method === 'PATCH') {
+        const assignmentId = parts[1];
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(assignmentId)) {
+          throw Object.assign(new Error('A valid provider assignment ID is required.'), { status: 400 });
+        }
+        const input = await body(req, 8000);
+        if (!input || typeof input !== 'object' || Array.isArray(input)) {
+          throw Object.assign(new Error('Provider assignment status input must be a JSON object.'), { status: 400 });
+        }
+        input.assignment_id = assignmentId;
+        const result = await runAIProviderCommand('set_provider_assignment_status', input);
+        return json(res, 200, result || {});
+      }
+
+      if (method === 'GET' && sub === 'department-templates') {
+        const templates = await runAIOrganizationCommand('list_department_templates');
+        return json(res, 200, { templates: Array.isArray(templates) ? templates : [] });
+      }
+      if (method === 'GET' && sub === 'position-templates') {
+        const templates = await runAIOrganizationCommand('list_position_templates');
+        return json(res, 200, { templates: Array.isArray(templates) ? templates : [] });
+      }
+      if (method === 'GET' && sub === 'organizations') {
+        const organizations = await runAIOrganizationCommand('list_organizations');
+        return json(res, 200, { organizations: Array.isArray(organizations) ? organizations : [] });
+      }
+      if (method === 'POST' && sub === 'organizations') {
+        const input = await body(req, 12000);
+        if (!input || typeof input !== 'object' || Array.isArray(input)) {
+          throw Object.assign(new Error('Organization input must be a JSON object.'), { status: 400 });
+        }
+        const result = await runAIOrganizationCommand('create_organization', input);
+        return json(res, result?.reused ? 200 : 201, { organization: result });
+      }
+      if (parts[0] === 'organizations' && parts.length === 3 &&
+          ['departments', 'positions'].includes(parts[2])) {
+        const organizationId = parts[1];
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(organizationId)) {
+          throw Object.assign(new Error('A valid organization ID is required.'), { status: 400 });
+        }
+        const resource = parts[2];
+        const isDepartment = resource === 'departments';
+        if (method === 'GET') {
+          const result = await runAIOrganizationCommand(isDepartment ? 'list_departments' : 'list_positions', {
+            organization_id: organizationId
+          });
+          return json(res, 200, { [resource]: Array.isArray(result) ? result : [] });
+        }
+        if (method === 'POST') {
+          const input = await body(req, 20000);
+          if (!input || typeof input !== 'object' || Array.isArray(input)) {
+            throw Object.assign(new Error('Organization template input must be a JSON object.'), { status: 400 });
+          }
+          input.organization_id = organizationId;
+          const result = await runAIOrganizationCommand(isDepartment ? 'create_departments' : 'create_positions', input);
+          return json(res, 200, result || {});
+        }
+      }
+
+      if (parts[0] === 'organizations' && parts.length >= 3 &&
+          ['vacancies', 'applications', 'employees'].includes(parts[2])) {
+        const organizationId = parts[1];
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(organizationId)) {
+          throw Object.assign(new Error('A valid organization ID is required.'), { status: 400 });
+        }
+        const resource = parts[2];
+        const basePayload = { organization_id: organizationId };
+        const readBody = async () => {
+          const input = await body(req, 24000);
+          if (!input || typeof input !== 'object' || Array.isArray(input)) {
+            throw Object.assign(new Error('AI HR input must be a JSON object.'), { status: 400 });
+          }
+          return { ...basePayload, ...input, organization_id: organizationId };
+        };
+
+        if (parts.length === 3 && method === 'GET') {
+          const command = resource === 'vacancies' ? 'list_vacancies'
+            : resource === 'applications' ? 'list_applications' : 'list_employees';
+          const result = await runAIHRCommand(command, basePayload);
+          return json(res, 200, { [resource]: Array.isArray(result) ? result : [] });
+        }
+        if (parts.length === 3 && method === 'POST') {
+          const input = await readBody();
+          const command = resource === 'vacancies' ? 'create_vacancy'
+            : resource === 'applications' ? 'create_application' : 'appoint_employee';
+          const result = await runAIHRCommand(command, input);
+          const reused = Boolean(result?.reused);
+          return json(res, reused ? 200 : 201, result || {});
+        }
+        if (parts.length === 5) {
+          const recordId = parts[3];
+          if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(recordId)) {
+            throw Object.assign(new Error('A valid AI HR record ID is required.'), { status: 400 });
+          }
+          const action = parts[4];
+          const input = method === 'PATCH' || method === 'POST' ? await readBody() : basePayload;
+          let command = '';
+          if (resource === 'vacancies' && action === 'status' && method === 'PATCH') {
+            command = 'set_vacancy_status';
+            input.vacancy_id = recordId;
+          } else if (resource === 'applications' && action === 'review' && method === 'PATCH') {
+            command = 'review_application';
+            input.application_id = recordId;
+          } else if (resource === 'employees' && action === 'status' && method === 'PATCH') {
+            command = 'transition_employment';
+            input.employment_id = recordId;
+          } else if (resource === 'employees' && action === 'manager' && method === 'PATCH') {
+            command = 'set_employment_manager';
+            input.employment_id = recordId;
+          } else if (resource === 'employees' && action === 'transfer' && method === 'POST') {
+            command = 'transfer_employee';
+            input.employment_id = recordId;
+          }
+          if (command) {
+            const result = await runAIHRCommand(command, input);
+            return json(res, 200, result || {});
+          }
+        }
+      }
+      if (method === 'GET' && !sub) {
+        const snapshot = getAICommandCenter(db, user.id, { providerStatus });
+        if (!settingsExisted) await saveStore();
+        return json(res, 200, snapshot);
+      }
+      if (method === 'POST' && sub === 'bots') {
+        const bot = createAIBot(db, user.id, await body(req, 20000));
+        await saveStore();
+        return json(res, 201, { bot });
+      }
+      if (method === 'POST' && sub === 'teams') {
+        const team = createAIBotTeam(db, user.id, await body(req, 12000));
+        await saveStore();
+        return json(res, 201, { team });
+      }
+      if (method === 'POST' && sub === 'schedules') {
+        const schedule = createAIBotSchedule(db, user.id, await body(req, 12000));
+        await saveStore();
+        return json(res, 201, { schedule });
+      }
+      if (method === 'PATCH' && sub === 'settings') {
+        const settings = updateAISettings(db, user.id, await body(req, 12000), { providerConfigured: providerReady });
+        await saveStore();
+        return json(res, 200, { settings });
+      }
+      if (method === 'PATCH' && parts[0] === 'bots' && parts[2] === 'status' && parts.length === 3) {
+        const input = await body(req, 4000);
+        const bot = updateAIBotStatus(db, user.id, parts[1], input.status, { providerConfigured: providerReady });
+        await saveStore();
+        return json(res, 200, { bot });
+      }
+      if (method === 'PATCH' && parts[0] === 'schedules' && parts[2] === 'status' && parts.length === 3) {
+        const input = await body(req, 4000);
+        const schedule = updateAIBotScheduleStatus(db, user.id, parts[1], input.status, { providerConfigured: providerReady });
+        await saveStore();
+        return json(res, 200, { schedule });
+      }
+      if (method === 'POST' && sub === 'creator-jobs') {
+        const job = createAICreatorJob(db, user.id, await body(req, 16000));
+        await saveStore();
+        return json(res, 201, { job });
+      }
+      if (method === 'POST' && sub === 'approvals') {
+        const approval = createAIApprovalRequest(db, user.id, await body(req, 8000));
+        await saveStore();
+        return json(res, 201, { approval });
+      }
+      if (method === 'PATCH' && parts[0] === 'approvals' && parts.length === 2) {
+        const input = await body(req, 4000);
+        const approval = decideAIApproval(db, user.id, parts[1], input.decision);
+        await saveStore();
+        return json(res, 200, { approval });
+      }
+      if (method === 'POST' && sub === 'companion/consent') {
+        const input = await body(req, 4000);
+        const consent = setAICompanionConsent(db, user.id, input.enabled, input.acknowledgedAIIdentity);
+        await saveStore();
+        return json(res, 200, { consent });
+      }
+      if (method === 'POST' && sub === 'community-events') {
+        const event = createAICommunityEvent(db, user.id, await body(req, 12000));
+        await saveStore();
+        return json(res, 201, { event });
+      }
+      if (method === 'POST' && sub === 'emergency-pause') {
+        const input = await body(req, 4000);
+        const result = emergencyPauseAI(db, user.id, input.reason || 'Owner emergency pause');
+        await saveStore();
+        return json(res, 200, result);
+      }
+      if (method === 'POST' && sub === 'emergency-resume') {
+        const settings = updateAISettings(db, user.id, { globalPaused: false }, { providerConfigured: providerReady });
+        await saveStore();
+        return json(res, 200, { resumed: true, settings, botsRemainPaused: true, schedulesRemainPaused: true });
+      }
+      return json(res, 404, { error: 'Minglora AI Network route not found.' });
+    } catch (error) {
+      return json(res, Number(error?.status) || 400, { error: String(error?.message || 'Minglora AI Network request failed.') });
+    }
+  }
+
   if (method === 'POST' && p === '/api/webhooks/paypal') {
     let event;
     try { event = await body(req, 1_000_000); }
