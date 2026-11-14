@@ -255,6 +255,13 @@ async function saveArticle(input:any, actor:string) {
     }
     translation=created;
   }
+  const keywordTerms=[...new Set(terms.map((term:string)=>term.trim().toLocaleLowerCase()).filter(Boolean))].slice(0,30);
+  const {error:clearKeywordsError}=await admin!.from("help_keywords").delete().eq("translation_id",translation.id);
+  if(clearKeywordsError) throw clearKeywordsError;
+  if(keywordTerms.length){
+    const {error:keywordError}=await admin!.from("help_keywords").insert(keywordTerms.map((keyword:string)=>({translation_id:translation.id,keyword})));
+    if(keywordError) throw keywordError;
+  }
   const relatedIds=[...new Set((Array.isArray(input.relatedArticleIds)?input.relatedArticleIds:[])
     .map((id:any)=>requiredText(id,64)).filter((id:string)=>UUID.test(id)&&id!==article.id))].slice(0,20);
   if(relatedIds.length){
@@ -420,7 +427,7 @@ Deno.serve(async (req:Request) => {
     const staffPermissions=Array.isArray(staff.permissions)?staff.permissions.map(String):[];
     const isPlatformAdmin=staffPermissions.includes("platform:admin");
     const canManageContent=isPlatformAdmin||staffPermissions.includes("help_center:manage");
-    const managementActions=new Set(["admin_article_save","admin_media_upload","admin_category_save","admin_subcategory_save","admin_restore_revision"]);
+    const managementActions=new Set(["admin_article_save","admin_media_upload","admin_merge_articles","admin_category_save","admin_subcategory_save","admin_restore_revision"]);
     if (managementActions.has(action)&&!canManageContent)
       return fail(403,"Help Center editor permission is required for this change.");
     if (action==="admin_overview") return json(200,await adminOverview(locale));
@@ -476,6 +483,19 @@ Deno.serve(async (req:Request) => {
       return json(200,{feedback:(data||[]).map((row:any)=>({id:row.id,translationId:row.translation_id,
         helpful:row.helpful,note:row.note,created_at:row.created_at,title:row.help_article_translations.title,
         locale:row.help_article_translations.locale,slug:row.help_article_translations.help_articles.slug}))});
+    }
+    if (action==="admin_merge_articles") {
+      const sourceArticleId=requiredText(input.sourceArticleId,64),targetArticleId=requiredText(input.targetArticleId,64);
+      if(!UUID.test(sourceArticleId)||!UUID.test(targetArticleId)||sourceArticleId===targetArticleId)
+        return fail(400,"Choose two different valid Help Center articles.");
+      const {data,error}=await admin.rpc("help_center_merge_articles",{
+        p_source_article_id:sourceArticleId,p_target_article_id:targetArticleId,p_actor_id:actor
+      });
+      if(error){
+        if(["22023","23505","P0002"].includes(String(error.code||""))) return fail(409,error.message||"The articles cannot be safely merged.");
+        throw error;
+      }
+      return json(200,{ok:true,...(data||{})});
     }
     if (action==="admin_article_save") {
       const saved=await saveArticle(input,actor);
