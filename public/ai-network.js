@@ -511,17 +511,22 @@
         const organizationId = record.organization?.organization_id;
         if (!organizationId) return null;
         const base = '/organizations/' + encodeURIComponent(organizationId);
-        const [departmentResult, positionResult, vacancyResult, applicationResult, employeeResult,
-          reviewResult, successionResult, promotionResult] = await Promise.all([
+        const [departmentResult, positionResult, vacancyResult, applicationResult, employeeResult] = await Promise.all([
           request(base + '/departments'), request(base + '/positions'), request(base + '/vacancies'),
-          request(base + '/applications'), request(base + '/employees'),
+          request(base + '/applications'), request(base + '/employees')
+        ]);
+        const talentResults = await Promise.allSettled([
           request(base + '/performance-reviews'), request(base + '/succession-plans'), request(base + '/promotions')
         ]);
+        const reviewResult = talentResults[0].status === 'fulfilled' ? talentResults[0].value : {};
+        const successionResult = talentResults[1].status === 'fulfilled' ? talentResults[1].value : {};
+        const promotionResult = talentResults[2].status === 'fulfilled' ? talentResults[2].value : {};
         return [organizationId, {
           departments: list(departmentResult.departments), positions: list(positionResult.positions),
           vacancies: list(vacancyResult.vacancies), applications: list(applicationResult.applications),
           employees: list(employeeResult.employees), performanceReviews: list(reviewResult.performance_reviews),
-          successionPlans: list(successionResult.succession_plans), promotions: list(promotionResult.promotions)
+          successionPlans: list(successionResult.succession_plans), promotions: list(promotionResult.promotions),
+          talentUnavailable: talentResults.some(result => result.status === 'rejected')
         }];
       }));
       state.organizationHR = Object.fromEntries(details.filter(Boolean));
@@ -745,8 +750,11 @@
     const candidateOptions = identityOptions.length
       ? '<p class="ai-network-note">' + identityOptions.length + ' owner-managed AI identities available for recruitment.</p>'
       : '<p class="ai-network-note">No eligible owner-managed AI identities are currently listed. Register an identity first.</p>';
+    const talentAvailabilityNote = hr.talentUnavailable
+      ? '<p class="ai-network-note">Performance reviews, promotions and succession planning are waiting for the new HR talent migration and private runtime gateway to be deployed. Existing recruitment and employee workflows remain available.</p>'
+      : '';
     return '<section class="ai-network-hr-workspace"><div class="ai-network-hr-heading"><h4>Recruitment & workforce management</h4>' +
-      '<p class="ai-network-note">Vacancies begin as drafts. Candidates must be owner-managed AI identities and approved before appointment. Employee status, manager and transfer changes are recorded in persistent history.</p></div>' +
+      '<p class="ai-network-note">Vacancies begin as drafts. Candidates must be owner-managed AI identities and approved before appointment. Employee status, manager and transfer changes are recorded in persistent history.</p>' + talentAvailabilityNote + '</div>' +
       vacancyForm + '<div><h5>Vacancies</h5>' + vacancyRows + '</div>' +
       '<div><h5>Candidate applications</h5>' + candidateOptions + applicationRows + '</div>' +
       '<div><h5>AI employees</h5>' + employeeRows + '</div>' +
@@ -1723,7 +1731,7 @@
       payload.employment_id = employmentId; payload.review_period_start = value('reviewPeriodStart');
       payload.review_period_end = value('reviewPeriodEnd'); payload.rating = Number(value('rating'));
       payload.outcome = value('outcome'); payload.summary = value('summary');
-      const asLines = name => value(name).split(/\\r?\\n/).map(item=>item.trim()).filter(Boolean);
+      const asLines = name => value(name).split(/\r?\n/).map(item=>item.trim()).filter(Boolean);
       payload.strengths = asLines('strengths'); payload.improvement_areas = asLines('improvementAreas');
       payload.goals = asLines('goals'); payload.idempotency_key = form.dataset.idempotencyKey;
     } else if (kind === 'performance-review-finalize') {
@@ -1739,7 +1747,7 @@
       payload.role_position_id = value('rolePositionId'); payload.incumbent_employment_id = value('incumbentEmploymentId') || null;
       payload.successor_employment_id = value('successorEmploymentId'); payload.readiness_level = value('readinessLevel');
       payload.review_due_on = value('reviewDueOn') || null; payload.rationale = value('rationale');
-      payload.development_actions = value('developmentActions').split(/\\r?\\n/).map(item=>item.trim()).filter(Boolean);
+      payload.development_actions = value('developmentActions').split(/\r?\n/).map(item=>item.trim()).filter(Boolean);
       payload.idempotency_key = form.dataset.idempotencyKey;
     } else if (kind === 'succession-status') {
       const organizationId = form.dataset.organizationId, planId = form.dataset.planId;
