@@ -121,3 +121,16 @@ No prices, balances, transactions, account state, LiveKit credentials, or existi
 - Visual choreography, corresponding synthesized Web Audio, existing duration clamping, `sound:false` opt-out and reduced-motion handling share the original LIVE gift effect lifecycle; no second animation runtime was introduced.
 - PR #342 merged as `ab2939e27378d8f02a8dd1a92172105463d6dbd4`; full tests and Chromium layout QA passed before merge.
 - These are runtime Web Animations only. GLTF animation channels, Rive/Lottie libraries, recorded video/sprite fallback assets and physical-device validation remain outstanding.
+
+
+## Gamer Otter bespoke gift integration — 2026-11-14
+
+| Integration point | Implementation |
+|---|---|
+| Catalogue identity | Existing canonical record `gamer-otter-100-mgl`; its category, activity state and 100-Coin catalogue value are unchanged. |
+| 3D model source | `assets/3d-assets/gift-models/gamer-otter-model.mjs`, routed in `scripts/generate-minglora-gifts.mjs` by exact gift code; prestart gift generation emits the canonical GLTF path. |
+| Primary artwork and icon | A subject-specific `gamer-otter-original-v1` SVG branch is used by the same catalogue generator for the primary artwork and transparent icon. |
+| Animation | `gamer-otter-cheer` is selected from the existing effect runtime's exact-code override and runs on the existing gift mount event. |
+| Sound | `playGamerOtter` synthesizes an arcade arpeggio and low thump locally through Web Audio; the existing sound opt-out remains active. |
+
+The asset is wired into the existing generated catalogue/preview/sent-gift pipeline; no new endpoint, catalogue price, wallet event or database offering is introduced. Design/right clearance and renderer/device QA are not approved by source integration alone.
