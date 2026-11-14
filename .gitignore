@@ -9,3 +9,4 @@ coverage/
 /public/assets/sound-studio/*.wav
 /public/assets/sound-studio/manifest.json
 /public/assets/sound-studio/README.txt
+/assets/manifests/live-asset-manifest.json

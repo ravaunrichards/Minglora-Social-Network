@@ -1,0 +1,372 @@
+import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const CATALOG_PATH = path.join(ROOT, "data", "minglora-gift-catalog.json");
+const MOTION_PATH = path.join(ROOT, "public", "assets", "animations", "gifts", "catalog-motion-index.json");
+const GIFT_DIR = path.join(ROOT, "public", "assets", "gifts", "catalog");
+const ICON_SPRITE_PATH = path.join(ROOT, "public", "assets", "icons", "navigation-3d.svg");
+const PUSH_ICON_PATH = path.join(ROOT, "public", "assets", "icons", "minglora-push.svg");
+const PACKAGE_PATH = path.join(ROOT, "package.json");
+const OUTPUT_PATH = path.join(ROOT, "assets", "manifests", "live-asset-manifest.json");
+const GENERATOR = "Minglora LIVE asset manifest generator";
+const SCHEMA_VERSION = 1;
+const COMPONENTS = Object.freeze({
+  artwork: ["public/gifts.js", "public/app.js", "public/gift-effects.js"],
+  model: ["public/gift-effects.js"],
+  animation: ["public/gift-effects.js", "public/app.js"],
+  sound: ["public/gift-effects.js"]
+});
+
+function fail(message) {
+  throw new Error("[Minglora LIVE asset manifest] " + message);
+}
+function relative(file) {
+  return path.relative(ROOT, file).split(path.sep).join("/");
+}
+function sha256(file) {
+  return crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex");
+}
+function fileRecord(file, format, extra = {}) {
+  if (!fs.existsSync(file)) fail("required generated asset is missing: " + relative(file));
+  const stat = fs.statSync(file);
+  if (!stat.isFile() || stat.size <= 0) fail("asset is empty or is not a file: " + relative(file));
+  return {
+    path: relative(file),
+    format,
+    file_size_bytes: stat.size,
+    sha256: sha256(file),
+    ...extra
+  };
+}
+function svgInfo(file) {
+  const source = fs.readFileSync(file, "utf8");
+  const openingTag = source.match(/<svg\b[^>]*>/i)?.[0] || "";
+  if (!openingTag) fail("generated artwork is not a valid SVG: " + relative(file));
+  const widthMatch = openingTag.match(/\bwidth=["']([0-9.]+)(?:px)?["']/i);
+  const heightMatch = openingTag.match(/\bheight=["']([0-9.]+)(?:px)?["']/i);
+  const width = widthMatch ? Number(widthMatch[1]) : null;
+  const height = heightMatch ? Number(heightMatch[1]) : null;
+  const viewBoxMatch = openingTag.match(/\bviewBox=["']([^"']+)["']/i);
+  const viewBox = viewBoxMatch ? viewBoxMatch[1].trim().split(/[ ,]+/).map(Number) : null;
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+    fail("SVG is missing valid pixel dimensions: " + relative(file));
+  }
+  if (!viewBox || viewBox.length !== 4 || !viewBox.every(Number.isFinite)) {
+    fail("SVG is missing a valid viewBox: " + relative(file));
+  }
+  const emojiFontOverlay = /font-family=["'][^"']*(?:Apple Color Emoji|Segoe UI Emoji|Noto Color Emoji)/i.test(source);
+  const fullCanvasBackground = /<rect\b[^>]*\bwidth=["']512["'][^>]*\bheight=["']512["'][^>]*\bfill=["']url\(#bg\)["']/i.test(source);
+  return {
+    width_px: width,
+    height_px: height,
+    view_box: viewBox,
+    transparent_background: !fullCanvasBackground,
+    emoji_font_overlay_present: emojiFontOverlay
+  };
+}
+function gltfInfo(file) {
+  let document;
+  try {
+    document = JSON.parse(fs.readFileSync(file, "utf8"));
+  } catch {
+    fail("GLTF is not valid JSON: " + relative(file));
+  }
+  if (document?.asset?.version !== "2.0") fail("expected glTF 2.0 asset: " + relative(file));
+  if (!Array.isArray(document.meshes) || !document.meshes.length) fail("GLTF has no meshes: " + relative(file));
+  const accessors = Array.isArray(document.accessors) ? document.accessors : [];
+  let min = [Infinity, Infinity, Infinity];
+  let max = [-Infinity, -Infinity, -Infinity];
+  let vertexCount = 0;
+  let triangleCount = 0;
+  let primitiveCount = 0;
+  for (const mesh of document.meshes) {
+    for (const primitive of mesh.primitives || []) {
+      const positionIndex = primitive.attributes?.POSITION;
+      const position = Number.isInteger(positionIndex) ? accessors[positionIndex] : null;
+      if (!position || position.type !== "VEC3" || !Array.isArray(position.min) || !Array.isArray(position.max)) {
+        fail("GLTF primitive has no auditable POSITION bounds: " + relative(file));
+      }
+      for (let axis = 0; axis < 3; axis++) {
+        const low = Number(position.min[axis]);
+        const high = Number(position.max[axis]);
+        if (!Number.isFinite(low) || !Number.isFinite(high) || high < low) {
+          fail("GLTF has invalid POSITION bounds: " + relative(file));
+        }
+        min[axis] = Math.min(min[axis], low);
+        max[axis] = Math.max(max[axis], high);
+      }
+      vertexCount += Number(position.count) || 0;
+      const index = Number.isInteger(primitive.indices) ? accessors[primitive.indices] : null;
+      if ((primitive.mode ?? 4) === 4) {
+        triangleCount += index ? Math.floor(index.count / 3) : Math.floor((Number(position.count) || 0) / 3);
+      }
+      primitiveCount++;
+    }
+  }
+  if (!primitiveCount || !min.every(Number.isFinite) || !max.every(Number.isFinite)) {
+    fail("GLTF model has no measurable geometry: " + relative(file));
+  }
+  const dimensions = max.map((value, axis) => Number((value - min[axis]).toFixed(6)));
+  const externalBufferUris = (document.buffers || [])
+    .map(buffer => String(buffer.uri || ""))
+    .filter(uri => uri && !uri.startsWith("data:"));
+  return {
+    gltf_version: "2.0",
+    coordinate_unit: "glTF scene units (generator does not declare a real-world scale)",
+    bounds: {
+      min: min.map(value => Number(value.toFixed(6))),
+      max: max.map(value => Number(value.toFixed(6))),
+      dimensions
+    },
+    mesh_count: document.meshes.length,
+    primitive_count: primitiveCount,
+    vertex_count: vertexCount,
+    triangle_count: triangleCount,
+    material_count: Array.isArray(document.materials) ? document.materials.length : 0,
+    texture_count: Array.isArray(document.textures) ? document.textures.length : 0,
+    embedded_animation_count: Array.isArray(document.animations) ? document.animations.length : 0,
+    external_buffer_uris: externalBufferUris
+  };
+}
+function iconSheetRecord() {
+  const source = fs.readFileSync(ICON_SPRITE_PATH, "utf8");
+  const symbolIds = [...source.matchAll(/<symbol\b[^>]*\bid=["']([^"']+)["']/g)].map(match => match[1]);
+  return fileRecord(ICON_SPRITE_PATH, "svg-symbol-sprite", {
+    symbol_count: symbolIds.length,
+    symbol_ids: symbolIds,
+    component_usage: ["public/app.js", "public/index.html"],
+    completeness: "shared_application_sprite_not_a_complete_live_control_state_pack"
+  });
+}
+function buildManifest() {
+  const catalogue = JSON.parse(fs.readFileSync(CATALOG_PATH, "utf8"));
+  const motion = JSON.parse(fs.readFileSync(MOTION_PATH, "utf8"));
+  const packageData = JSON.parse(fs.readFileSync(PACKAGE_PATH, "utf8"));
+  if (!Array.isArray(catalogue.gifts) || catalogue.gifts.length !== catalogue.gift_count) {
+    fail("canonical catalogue count does not match its rows.");
+  }
+  if (!Array.isArray(motion.gifts) || motion.catalogue_count !== catalogue.gifts.length) {
+    fail("motion index does not match the canonical catalogue.");
+  }
+  const motionByCode = new Map(motion.gifts.map(profile => [profile.code, profile]));
+  if (motionByCode.size !== motion.gifts.length) fail("motion index contains duplicate gift codes.");
+  const seenCodes = new Set();
+  const gifts = [];
+  let emojiOverlayCount = 0;
+  for (const gift of catalogue.gifts) {
+    if (!gift || typeof gift !== "object") fail("catalogue contains a non-object gift record.");
+    if (typeof gift.active !== "boolean") fail("catalogue record is missing its boolean active state: " + String(gift.code));
+    if (!/^[a-z0-9_-]{1,59}$/.test(String(gift.code || ""))) fail("invalid gift code: " + String(gift.code));
+    if (seenCodes.has(gift.code)) fail("duplicate gift code: " + gift.code);
+    seenCodes.add(gift.code);
+    if (!Number.isSafeInteger(gift.coin_price) || gift.coin_price < 1) fail("invalid canonical coin price for " + gift.code);
+    if (gift.image_url !== "/assets/gifts/catalog/" + gift.code + ".svg") fail("non-canonical SVG URL for " + gift.code);
+    if (gift.model_url !== "/assets/gifts/catalog/" + gift.code + ".gltf") fail("non-canonical GLTF URL for " + gift.code);
+
+    const svgFile = path.join(GIFT_DIR, gift.code + ".svg");
+    const gltfFile = path.join(GIFT_DIR, gift.code + ".gltf");
+    const artworkDimensions = svgInfo(svgFile);
+    const modelDimensions = gltfInfo(gltfFile);
+    const artwork = fileRecord(svgFile, "svg", {
+      public_url: gift.image_url,
+      dimensions: { width_px: artworkDimensions.width_px, height_px: artworkDimensions.height_px, view_box: artworkDimensions.view_box },
+      transparent_background: artworkDimensions.transparent_background,
+      component_usage: COMPONENTS.artwork,
+      alt_text: String(gift.name) + " Minglora LIVE gift artwork",
+      source: {
+        type: "generated_from_repository_catalogue",
+        catalogue_record: "data/minglora-gift-catalog.json#" + gift.code,
+        generator: "scripts/generate-minglora-gifts.mjs",
+        generator_identity: "Minglora Gift Studio"
+      },
+      quality: {
+        status: artworkDimensions.emoji_font_overlay_present ? "prototype_emoji_overlay_requires_original_art_replacement" : "generated_visual_requires_human_review",
+        emoji_font_overlay_present: artworkDimensions.emoji_font_overlay_present,
+        human_visual_review: "not_completed",
+        approved_for_premium_production: false
+      },
+      licensing: {
+        status: "review_required",
+        provenance: "repository_generated_svg",
+        notes: "Generated by repository tooling; current SVG includes a system emoji-font overlay. Do not treat this as cleared premium artwork."
+      }
+    });
+    if (artworkDimensions.emoji_font_overlay_present) emojiOverlayCount++;
+
+    const model = fileRecord(gltfFile, "gltf-json", {
+      public_url: gift.model_url,
+      dimensions: modelDimensions,
+      renderer: "model-viewer",
+      component_usage: COMPONENTS.model,
+      source: {
+        type: "generated_procedural_meshes",
+        catalogue_record: "data/minglora-gift-catalog.json#" + gift.code,
+        generator: "scripts/generate-minglora-gifts.mjs",
+        generator_identity: "Minglora Gift Studio"
+      },
+      quality: {
+        status: "procedural_category_geometry_requires_individual_art_direction",
+        bespoke_high_detail_model_verified: false,
+        high_resolution_texture_maps_verified: false,
+        embedded_skeletal_animation_verified: false,
+        human_visual_review: "not_completed",
+        approved_for_premium_production: false
+      },
+      licensing: {
+        status: "review_required",
+        provenance: "repository_generated_glTF",
+        notes: "Generated procedural meshes and materials; not individually rights-cleared or approved as premium production artwork."
+      },
+      loading: {
+        runtime: "model-viewer",
+        external_buffers: modelDimensions.external_buffer_uris,
+        image_fallback_when_model_url_missing: true,
+        model_load_error_image_fallback_implemented: false,
+        loading_policy: "not_explicitly_configured_in_gift_effects_runtime"
+      }
+    });
+
+    const profile = motionByCode.get(gift.code) || null;
+    if (gift.active && !profile) fail("active catalogue gift is missing a motion-index entry: " + gift.code);
+    if (!gift.active && profile) fail("inactive catalogue gift unexpectedly has a motion-index entry: " + gift.code);
+    if (profile && (profile.image_url !== gift.image_url || profile.model_url !== gift.model_url ||
+      profile.animation_key !== gift.animation_key || profile.motion_preset !== gift.animation_preset ||
+      profile.motion_duration_ms !== gift.animation_duration_ms || profile.sound_preset !== gift.sound_preset)) {
+      fail("motion profile does not match the canonical gift row: " + gift.code);
+    }
+    const animation = profile ? {
+      profile_id: "minglora-live-motion:" + gift.code,
+      format: "generated-json-profile-plus-web-animations-runtime",
+      index_path: relative(MOTION_PATH),
+      component_usage: COMPONENTS.animation,
+      animation_key: profile.animation_key,
+      motion_preset: profile.motion_preset,
+      motion_effect: profile.motion_effect,
+      duration_ms: profile.motion_duration_ms,
+      trigger: "server-confirmed LIVE gift event is mounted by public/app.js through window.MingloraGiftFX.mount",
+      standalone_animation_file: null,
+      embedded_gltf_animation: false,
+      status: "procedural_runtime_animation_profile_not_a_mastered_animation_file",
+      reduced_motion_support: "runtime_checks_prefers_reduced_motion"
+    } : {
+      profile_id: null,
+      status: "inactive_catalogue_item_no_runtime_motion_profile"
+    };
+    const sound = {
+      sound_preset: String(gift.sound_preset || ""),
+      format: "Web Audio API synthesized oscillator tones",
+      audio_file: null,
+      component_usage: COMPONENTS.sound,
+      sound_profile_scope: "category_based_synthesis_with_gift_seed_variation",
+      dedicated_mastered_gift_sound: false,
+      status: "synthetic_category_profile_not_mastered_gift_audio",
+      note: "The separate Sound Studio ringtone/notification WAV pack is not a per-gift sound library."
+    };
+
+    gifts.push({
+      gift_id: "minglora-live-gift:" + gift.code,
+      code: gift.code,
+      name: String(gift.name),
+      category: String(gift.category),
+      active: gift.active,
+      coin_price: gift.coin_price,
+      rarity: typeof gift.rarity === "string" ? gift.rarity : null,
+      asset_version: String(packageData.version || "unspecified"),
+      artwork,
+      thumbnail: {
+        path: artwork.path,
+        format: artwork.format,
+        dimensions: artwork.dimensions,
+        reuse_of_primary_artwork: true
+      },
+      animated_preview: {
+        uses_motion_profile: Boolean(profile),
+        profile_id: animation.profile_id,
+        preview_file: null,
+        renderer: "public/gift-effects.js"
+      },
+      model,
+      animation,
+      sound,
+      device_support: {
+        renderer: "model-viewer with SVG artwork fallback when model URL is absent",
+        verified_device_classes: [],
+        device_qa_status: "not_verified_on_physical_devices",
+        target_classes_pending: ["Android phones", "iPhones", "tablets", "foldables", "desktop/laptops", "supported Smart TVs"]
+      },
+      loading_and_fallback: {
+        artwork_url: gift.image_url,
+        model_url: gift.model_url,
+        model_error_fallback_to_svg: false,
+        retry_and_error_state: "not_verified_by_this_manifest_generator"
+      },
+      production_status: "catalogue_asset_inventory_only_premium_artwork_and_rights_review_required"
+    });
+  }
+  if (motionByCode.size !== gifts.filter(gift => gift.active).length) {
+    fail("motion index contains a count different from active catalogue rows.");
+  }
+  const iconSheet = iconSheetRecord();
+  const pushIcon = fileRecord(PUSH_ICON_PATH, "svg", {
+    component_usage: ["public/app.js"],
+    source: { type: "repository_asset", generator: null },
+    licensing: { status: "review_required", provenance: "repository_asset" }
+  });
+  const activeCount = gifts.filter(gift => gift.active).length;
+  const inactiveCount = gifts.length - activeCount;
+  return {
+    schema_version: SCHEMA_VERSION,
+    generator: GENERATOR,
+    manifest_status: "generated_inventory_not_a_premium_quality_or_licensing_approval",
+    source_catalog_generated_at: String(catalogue.generated_at || "unspecified"),
+    asset_version: String(packageData.version || "unspecified"),
+    generated_from: [
+      "data/minglora-gift-catalog.json",
+      "scripts/generate-minglora-gifts.mjs",
+      "scripts/generate-live-gift-motion-index.mjs",
+      "public/gift-effects.js",
+      "public/gifts.js",
+      "public/app.js"
+    ],
+    summary: {
+      catalogue_gift_count: gifts.length,
+      active_gift_count: activeCount,
+      inactive_gift_count: inactiveCount,
+      svg_artwork_file_count: gifts.length,
+      gltf_model_file_count: gifts.length,
+      active_motion_profile_count: activeCount,
+      emoji_font_overlay_count: emojiOverlayCount,
+      dedicated_mastered_gift_sound_file_count: 0,
+      synthetic_sound_profile_count: gifts.length,
+      physical_device_qa_verified_count: 0,
+      required_generated_files_verified: true
+    },
+    shared_assets: { icons: [iconSheet, pushIcon] },
+    gifts
+  };
+}
+function main() {
+  const checkOnly = process.argv.includes("--check");
+  const manifest = buildManifest();
+  const serialized = JSON.stringify(manifest, null, 2) + "\n";
+  if (checkOnly) {
+    if (!fs.existsSync(OUTPUT_PATH)) fail("manifest is missing; run npm run build:live-asset-manifest.");
+    const existing = fs.readFileSync(OUTPUT_PATH, "utf8");
+    if (existing !== serialized) fail("manifest is stale; run npm run build:live-asset-manifest.");
+    process.stdout.write("[Minglora LIVE asset manifest] verified " + manifest.summary.catalogue_gift_count +
+      " catalogue gifts and " + manifest.summary.active_motion_profile_count + " active motion profiles.\n");
+    return;
+  }
+  fs.mkdirSync(path.dirname(OUTPUT_PATH), { recursive: true });
+  const temporary = OUTPUT_PATH + ".tmp-" + process.pid;
+  fs.writeFileSync(temporary, serialized, { encoding: "utf8", flag: "wx" });
+  fs.renameSync(temporary, OUTPUT_PATH);
+  process.stdout.write("[Minglora LIVE asset manifest] generated " + manifest.summary.catalogue_gift_count +
+    " gift records; verified " + manifest.summary.svg_artwork_file_count + " SVGs, " +
+    manifest.summary.gltf_model_file_count + " GLTFs and " +
+    manifest.summary.active_motion_profile_count + " active motion profiles.\n");
+}
+main();
