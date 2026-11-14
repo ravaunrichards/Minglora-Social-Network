@@ -38,6 +38,9 @@ test("LIVE asset manifest inventories the complete canonical gift catalogue", ()
   assert.equal(manifest.gifts.length, catalogue.gifts.length);
   assert.equal(manifest.summary.active_motion_profile_count, motionIndex.gifts.length);
   assert.equal(manifest.summary.svg_artwork_file_count, catalogue.gifts.length);
+  assert.equal(manifest.summary.svg_gift_icon_file_count, catalogue.gifts.length);
+  assert.equal(manifest.summary.svg_category_icon_file_count, 18);
+  assert.equal(manifest.summary.transparent_svg_icon_file_count, catalogue.gifts.length + 18);
   assert.equal(manifest.summary.gltf_model_file_count, catalogue.gifts.length);
   assert.equal(manifest.summary.required_generated_files_verified, true);
   assert.equal(manifest.summary.emoji_font_overlay_count, 0);
@@ -62,7 +65,7 @@ test("every gift record has measured SVG and GLTF files, dimensions, hashes and 
     assert.equal(entry.active, source.active);
     assert.equal(entry.coin_price, source.coin_price);
 
-    for (const asset of [entry.artwork, entry.model]) {
+    for (const asset of [entry.artwork, entry.icon, entry.model]) {
       const file = path.join(root, asset.path);
       assert.ok(fs.existsSync(file), asset.path);
       assert.ok(fs.statSync(file).size > 0, "empty asset " + asset.path);
@@ -75,6 +78,16 @@ test("every gift record has measured SVG and GLTF files, dimensions, hashes and 
     assert.equal(entry.artwork.dimensions.width_px, 512);
     assert.equal(entry.artwork.dimensions.height_px, 512);
     assert.ok(entry.artwork.dimensions.view_box.length === 4);
+    assert.equal(entry.icon.format, "svg");
+    assert.equal(entry.icon.path, "public/assets/gifts/catalog/" + entry.code + "-icon.svg");
+    assert.equal(entry.icon.public_url, entry.icon_url);
+    assert.equal(entry.icon.transparent_background, true);
+    assert.equal(entry.icon.quality.emoji_font_overlay_present, false);
+    assert.equal(entry.icon.quality.approved_for_premium_production, false);
+    assert.equal(entry.icon.licensing.status, "review_required");
+    assert.equal(entry.thumbnail.path, entry.icon.path);
+    assert.equal(entry.thumbnail.transparent_background, true);
+    assert.equal(entry.thumbnail.reuse_of_primary_artwork, false);
     assert.equal(entry.model.format, "gltf-json");
     assert.ok(entry.model.dimensions.bounds.dimensions.every(value => Number.isFinite(value) && value > 0));
     assert.ok(entry.model.dimensions.vertex_count > 0);
@@ -84,7 +97,6 @@ test("every gift record has measured SVG and GLTF files, dimensions, hashes and 
     assert.equal(entry.artwork.quality.human_visual_review, "not_completed");
     assert.equal(entry.artwork.licensing.status, "review_required");
     if (entry.artwork.quality.emoji_font_overlay_present) emojiOverlayCount++;
-    assert.equal(entry.thumbnail.reuse_of_primary_artwork, true);
   }
   assert.equal(codes.size, catalogue.gifts.length);
   assert.equal(emojiOverlayCount, manifest.summary.emoji_font_overlay_count);
@@ -123,6 +135,25 @@ test("sound, device and fallback limitations are explicit rather than claimed co
     assert.equal(entry.loading_and_fallback.model_error_fallback_to_svg, true);
     assert.equal(entry.model.loading.model_load_error_image_fallback_implemented, true);
   }
+});
+
+test("all per-gift and category SVG icons are measured, transparent and hashed", () => {
+  const categoryIds = ["all","flowers","hearts","animals","vehicles","music","sports","food_drink","fashion_beauty","luxury","celebrations","fantasy","nature","travel","games","community","symbols","other"];
+  assert.equal(manifest.shared_assets.category_icons.length, categoryIds.length);
+  const seenCategoryIds = new Set();
+  for (const record of manifest.shared_assets.category_icons) {
+    assert.ok(categoryIds.includes(record.category_id));
+    assert.ok(!seenCategoryIds.has(record.category_id));
+    seenCategoryIds.add(record.category_id);
+    const file = path.join(root, record.path);
+    assert.ok(fs.existsSync(file), record.path);
+    assert.equal(record.file_size_bytes, fs.statSync(file).size);
+    assert.equal(record.sha256, sha256(file));
+    assert.equal(record.transparent_background, true);
+    assert.equal(record.format, "svg");
+    assert.equal(record.quality.approved_for_premium_production, false);
+  }
+  assert.deepEqual([...seenCategoryIds].sort(), [...categoryIds].sort());
 });
 
 test("shared SVG icon sprite metadata matches the repository's actual symbol IDs", () => {

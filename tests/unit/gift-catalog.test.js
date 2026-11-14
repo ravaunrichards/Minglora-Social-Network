@@ -9,6 +9,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..")
 const manifest = JSON.parse(readFileSync(path.join(root, "data/minglora-gift-catalog.json"), "utf8"));
 const gifts = manifest.gifts;
 const assetRoot = path.join(root, "public/assets/gifts/catalog");
+const categoryIconRoot = path.join(root, "public/assets/gifts/categories");
 const generatedStamp = path.join(assetRoot, "catalog-build.json");
 const giftEffectsSource = readFileSync(path.join(root, "public/gift-effects.js"), "utf8");
 function giftAnimationMotionSignature(gift) {
@@ -114,26 +115,52 @@ test("Minglora gift identities and generated asset paths are platform-neutral", 
 });;
 
 
-test("the build produces one original SVG and one 3D GLTF for every active gift", () => {
+test("the build produces labelled posters, transparent SVG icons and 3D GLTFs for every catalogue gift", () => {
   const stamp = JSON.parse(readFileSync(generatedStamp, "utf8"));
+  assert.equal(stamp.version, 3);
   assert.equal(stamp.giftCount, gifts.length);
   assert.equal(stamp.svgAssets, gifts.length);
+  assert.equal(stamp.svgIconAssets, gifts.length);
+  assert.equal(stamp.categoryIconAssets, 18);
   assert.equal(stamp.gltfAssets, gifts.length);
   const generated = readdirSync(assetRoot);
-  assert.equal(generated.filter(name => name.endsWith(".svg")).length, gifts.length);
+  assert.equal(generated.filter(name => name.endsWith(".svg") && !name.endsWith("-icon.svg")).length, gifts.length);
+  assert.equal(generated.filter(name => name.endsWith("-icon.svg")).length, gifts.length);
   assert.equal(generated.filter(name => name.endsWith(".gltf")).length, gifts.length);
+  const categories = ["all","flowers","hearts","animals","vehicles","music","sports","food_drink","fashion_beauty","luxury","celebrations","fantasy","nature","travel","games","community","symbols","other"];
+  assert.ok(existsSync(categoryIconRoot));
+  const categoryFiles = readdirSync(categoryIconRoot).filter(name => name.endsWith(".svg"));
+  assert.equal(categoryFiles.length, categories.length);
+  for (const category of categories) {
+    const file = path.join(categoryIconRoot, category + ".svg");
+    assert.ok(statSync(file).size > 100, category + " category icon should contain vector art");
+    const svg = readFileSync(file, "utf8");
+    assert.ok(svg.startsWith("<svg"));
+    assert.ok(svg.includes('aria-label="'), category + " category icon should have an accessible label");
+    assert.ok(!svg.includes('<rect width="512" height="512" rx="82" fill="url(#bg)"/>'), category + " category icon should not have the poster background");
+    assert.ok(!svg.includes("<text "), category + " category icon should not have a poster label");
+  }
   const svgPayloads = new Set();
+  const iconPayloads = new Set();
   const modelPayloads = new Set();
   for (const gift of gifts) {
     const svgPath = path.join(assetRoot, gift.code + ".svg");
+    const iconPath = path.join(assetRoot, gift.code + "-icon.svg");
     const modelPath = path.join(assetRoot, gift.code + ".gltf");
-    assert.ok(statSync(svgPath).size > 1000, gift.name + " SVG should contain real artwork");
+    assert.ok(statSync(svgPath).size > 1000, gift.name + " poster SVG should contain labelled artwork");
+    assert.ok(statSync(iconPath).size > 100, gift.name + " transparent SVG icon should contain vector art");
     assert.ok(statSync(modelPath).size > 1000, gift.name + " GLTF should contain real mesh geometry");
     const svg = readFileSync(svgPath, "utf8");
-    assert.ok(svg.startsWith("<svg"), gift.name + " SVG should be a valid SVG document");
-    assert.doesNotMatch(svg,/font-family=["'](?:Apple Color Emoji|Segoe UI Emoji|Noto Color Emoji)/i,gift.name + " SVG must not use system emoji fonts");
-    assert.ok(svg.includes("Minglora") || svg.includes("aria-label"), gift.name);
+    const icon = readFileSync(iconPath, "utf8");
+    assert.ok(svg.startsWith("<svg"), gift.name + " poster should be a valid SVG document");
+    assert.ok(icon.startsWith("<svg"), gift.name + " icon should be a valid SVG document");
+    assert.ok(icon.includes('aria-label="'), gift.name + " icon should have an accessible label");
+    assert.doesNotMatch(svg,/font-family=["'](?:Apple Color Emoji|Segoe UI Emoji|Noto Color Emoji)/i,gift.name + " poster must not use system emoji fonts");
+    assert.doesNotMatch(icon,/font-family=["'](?:Apple Color Emoji|Segoe UI Emoji|Noto Color Emoji)/i,gift.name + " icon must not use system emoji fonts");
+    assert.ok(!icon.includes('<rect width="512" height="512" rx="82" fill="url(#bg)"/>'), gift.name + " icon must not have the poster background");
+    assert.ok(!icon.includes("<text "), gift.name + " icon must not have the poster label");
     svgPayloads.add(svg);
+    iconPayloads.add(icon);
     const modelText = readFileSync(modelPath, "utf8");
     const model = JSON.parse(modelText);
     assert.equal(model.asset?.version, "2.0", gift.name);
@@ -141,7 +168,8 @@ test("the build produces one original SVG and one 3D GLTF for every active gift"
     assert.ok((model.buffers?.[0]?.uri || "").startsWith("data:application/octet-stream;base64,"), gift.name + " GLTF must include embedded mesh data");
     modelPayloads.add(modelText);
   }
-  assert.equal(svgPayloads.size, gifts.length, "Every gift must have different generated SVG artwork");
+  assert.equal(svgPayloads.size, gifts.length, "Every gift must have different generated poster artwork");
+  assert.equal(iconPayloads.size, gifts.length, "Every gift must have a distinct icon SVG file");
   assert.equal(modelPayloads.size, gifts.length, "Every gift must have a different generated 3D model payload");
 });
 
