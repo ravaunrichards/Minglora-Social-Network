@@ -134,3 +134,10 @@ The model remains `design-review-pending`. Its gemstones are faceted geometric m
 The new `assets/3d-assets/gift-models/phoenix-model.mjs` creates a self-contained glTF 2.0 firebird with separate body, breast, neck/head, eye/beak, flame crest, wing frames, layered coverts, primary flight feathers, comet-tail feathers, talons and ember motes. Meshes use PBR metallic/roughness material factors and embedded geometry buffers. Matching original vector art and transparent icon use `phoenix-original-v1`.
 
 The model remains `design-review-pending`. No high-resolution texture maps/KTX2 or embedded skeletal animation are claimed. Motion is driven by the existing Web Animations runtime; sound is synthesized locally. Human art/rights review and Android, iOS, tablet, foldable, desktop, laptop and TV rendering/audio QA remain outstanding.
+
+
+## Beach Maracas bespoke model checkpoint — 2026-11-14
+
+The new source `assets/3d-assets/gift-models/beach-maracas-model.mjs` creates a self-contained glTF 2.0 crossed pair of gourd shakers, distinct coral and lagoon shells, hardwood handles, woven grip rings, individually positioned seed motifs, sunburst rays, gold ferrules and conch detail. All geometry is embedded and materials specify PBR metallic/roughness factors. Original subject-specific SVG and transparent icon are generated.
+
+Source remains `design-review-pending`. High-resolution texture maps/KTX2, embedded animation channels, mastered audio and human visual/rights clearance are not claimed. Physical Android/iOS/tablet/foldable/desktop/TV rendering and sound QA remain outstanding.
