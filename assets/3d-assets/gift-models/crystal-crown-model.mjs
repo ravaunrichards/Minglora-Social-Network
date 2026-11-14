@@ -118,8 +118,8 @@ export function createCrystalCrownModel() {
     const top=[center[0],center[1]+radii[1],center[2]],bottom=[center[0],center[1]-radii[1]*0.72,center[2]];
     for(let i=0;i<sides;i++){
       const next=(i+1)%sides,color=palette[i%palette.length];
-      triangle(name+" upper cut facet "+(i+1),top,ring[i],ring[next],color,0.16);
-      triangle(name+" pavilion cut facet "+(i+1),bottom,ring[next],ring[i],palette[(i+1)%palette.length],0.2);
+      triangle(name+" upper cut facet",top,ring[i],ring[next],color,0.16);
+      triangle(name+" pavilion cut facet",bottom,ring[next],ring[i],palette[(i+1)%palette.length],0.2);
     }
     torus(name+" gold setting",[center[0],ringY,center[2]],Math.max(radii[0],radii[2])*0.88,0.009,"#e5bf71",0.86,0.2,28,6);
   }
