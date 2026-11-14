@@ -11,12 +11,12 @@ create table if not exists ai_network.ai_category_audit_logs (
 );
 
 alter table ai_network.ai_category_audit_logs enable row level security;
-revoke all on table ai_network.ai_category_audit_logs from public, anon, authenticated;
+revoke all on table ai_network.ai_category_audit_logs from public, anon, authenticated, service_role;
 grant select, insert on table ai_network.ai_category_audit_logs to service_role;
 grant usage on schema ai_network to service_role;
 
 -- Keep category rows private to the server runtime and never grant delete access.
-revoke all on table ai_network.ai_categories from public, anon, authenticated;
+revoke all on table ai_network.ai_categories from public, anon, authenticated, service_role;
 grant select, insert, update on table ai_network.ai_categories to service_role;
 
 create index if not exists ai_category_audit_logs_category_created_idx
