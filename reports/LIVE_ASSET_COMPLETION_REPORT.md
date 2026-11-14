@@ -156,3 +156,13 @@ The glyph overlay and unused emoji lookup were removed from `scripts/generate-mi
 - PR #340 merged into `main` as `976e4293d2bbe68b7ad4006dea41d21107097e23`. Before merge, CI run #43646945809 and layout QA run #43646945801 both completed successfully; the full asset build/manifest, audit, automated tests, navigation, Auth and layout jobs passed.
 - No source catalogue price, active flag, production gift row, transaction, wallet, creator balance or payout changed.
 - **Acceptance:** original source, generator integration, test coverage and documentation are merged and CI-verified. Human visual/design review, rights/licensing review, physical-device rendering and production-host deployment verification remain outstanding. This brings the explicitly bespoke source count to four, not all 1,748 catalogue entries.
+
+
+## Gift-specific Djembe and Palm Breeze audio design — 2026-11-14
+
+- Extended `public/gift-effects.js` with two exact-code sound branches called from the existing `MingloraGiftFX.mount` path alongside the animation effect. `options.sound === false` continues to suppress playback.
+- Djembe Master (`djembe-master-1v3jzkm`) now uses a deterministic filtered-noise hand-drum attack, a falling low-frequency body tone and a short triangle-wave rim accent.
+- Palm Breeze (`palm-breeze-gknyt0`) now uses a deterministic filtered wind sweep and three soft chime partials. Both effects synthesize local Web Audio buffers/envelopes and retain generic category-sound fallback for every other gift.
+- The LIVE asset manifest now records a dedicated sound-design ID, scope, synthesized layers and explicit non-mastered status for these two gifts. `audio_file` remains null and `dedicated_mastered_gift_sound_file_count` remains zero.
+- Regression tests cover exact code routing, synthesized layer signatures, the existing sound opt-out and generic fallback. PR #341 merged as `81764826f74975ac17bd9f9e1c67c0fc72527216`; pre-merge full CI and LIVE/MeetWave layout QA passed.
+- **Acceptance:** two synchronized gift-specific synthesized sound treatments are implemented and test-covered. Recorded/mastered WAV files, dedicated audio assets, mastering, cross-device audio latency/mix QA and human audio review remain outstanding.
