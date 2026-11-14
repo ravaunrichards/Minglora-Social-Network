@@ -223,3 +223,24 @@ test('AI identity lifecycle transitions are owner-scoped, validated and audit-ba
   assert.ok(ui.includes('data-ai-identity-select'));
   assert.ok(ui.includes('Every permitted transition is audited'));
 });
+
+
+test('AI administrative controls are capability-gated and member identity creation is independent-only', () => {
+  assert.ok(ui.includes('adminAccess: false'));
+  assert.ok(ui.includes("request('/categories/admin')"));
+  assert.ok(ui.includes('state.adminAccess = true'));
+  assert.ok(ui.includes('state.adminAccess = false'));
+  assert.ok(ui.includes("state.adminAccess ? renderAIProviderCenter() : ''"));
+  assert.ok(ui.includes("state.adminAccess ? renderAITaskQueueCenter() : ''"));
+  assert.ok(ui.includes("state.adminAccess ? renderAIOrganizationCenter() : ''"));
+  assert.ok(ui.includes("state.adminAccess ? renderAICategoryAdmin() : ''"));
+  assert.ok(ui.includes("card('My AI Safety Preferences'"));
+  assert.ok(ui.includes('function renderAdminGlobalControls'));
+  assert.ok(ui.includes("state.adminAccess ? card('Central Bot Command Center'"));
+  assert.ok(ui.includes('value:"independent"') || ui.includes("value:'independent'"));
+  const identityRoute = server.slice(server.indexOf("if (method === 'POST' && sub === 'identities')"));
+  assert.ok(identityRoute.includes("population !== 'independent' && !isModerator(user, req)"));
+  const bulkRoute = server.slice(server.indexOf("if (method === 'POST' && sub === 'identities/bulk')"));
+  assert.ok(bulkRoute.includes('requestsElevatedPopulation && !isModerator(user, req)'));
+  assert.ok(server.includes('Only an authorized Minglora platform administrator may create organizational'));
+});
