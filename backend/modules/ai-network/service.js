@@ -179,6 +179,11 @@ export function createAIBot(db, ownerId, input = {}, { now = new Date() } = {}) 
   const purpose = text(input.purpose, 280);
   const tone = text(input.tone, 24).toLowerCase();
   const expertise = text(input.expertise, 180);
+  const identityIdempotencyKey = text(input.identityIdempotencyKey, 160);
+  if (identityIdempotencyKey) {
+    const repeated = ownerRows(db.aiBots, ownerId).find(bot => bot.identityIdempotencyKey === identityIdempotencyKey);
+    if (repeated) return repeated;
+  }
   if (name.length < 2) throw fail(400, 'Give this AI bot a name with at least two characters.');
   if (purpose.length < 20) throw fail(400, 'Describe this bot’s purpose in at least 20 characters.');
   if (!BOT_TONES.has(tone)) throw fail(400, 'Choose a supported personality tone.');
@@ -196,7 +201,9 @@ export function createAIBot(db, ownerId, input = {}, { now = new Date() } = {}) 
   if (existing.some(bot => bot.personalitySignature === botSignature(candidate))) throw fail(409, 'This bot would duplicate an existing personality. Give it a distinct purpose, tone or trait combination.');
   const bot = {
     id: makeId(), ownerId, name, purpose, tone, traits, expertise,
-    languages, primaryLanguage, capabilities, identityType: 'ai_bot',
+    languages, primaryLanguage, capabilities,
+    ...(identityIdempotencyKey ? { identityIdempotencyKey } : {}),
+    identityType: 'ai_bot',
     identityLabel: 'AI BOT', aiDisclosureRequired: true,
     humanApprovalRequired: true, status: 'draft',
     createdAt: nowIso(now), updatedAt: nowIso(now)
