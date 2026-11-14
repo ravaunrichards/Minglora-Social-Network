@@ -1817,6 +1817,9 @@ async function route(req, res) {
     if(method==='GET'&&p==='/api/help-center/admin/article')return helpRespond('admin_article_get',{translationId:String(url.searchParams.get('translationId')||'')});
     if(method==='GET'&&p==='/api/help-center/admin/feedback')return helpRespond('admin_feedback',{limit:Math.max(1,Math.min(100,Number(url.searchParams.get('limit')||50)))});
     if(method==='POST'&&p==='/api/help-center/admin/articles')return helpRespond('admin_article_save',input||{});
+    if(method==='POST'&&p==='/api/help-center/admin/merge')return helpRespond('admin_merge_articles',{
+      sourceArticleId:String(input.sourceArticleId||''),targetArticleId:String(input.targetArticleId||'')
+    });
     if(method==='POST'&&p==='/api/help-center/admin/media')return helpRespond('admin_media_upload',input||{});
     if(method==='POST'&&p==='/api/help-center/admin/transitions')return helpRespond('admin_transition',input||{});
     if(method==='POST'&&p==='/api/help-center/admin/restore-revision')return helpRespond('admin_restore_revision',input||{});
