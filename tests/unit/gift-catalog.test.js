@@ -118,17 +118,26 @@ test("the build produces one original SVG and one 3D GLTF for every active gift"
   const stamp = JSON.parse(readFileSync(generatedStamp, "utf8"));
   assert.equal(stamp.giftCount, gifts.length);
   assert.equal(stamp.svgAssets, gifts.length);
+  assert.equal(stamp.svgIconAssets, gifts.length);
   assert.equal(stamp.gltfAssets, gifts.length);
   const generated = readdirSync(assetRoot);
-  assert.equal(generated.filter(name => name.endsWith(".svg")).length, gifts.length);
+  assert.equal(generated.filter(name => name.endsWith(".svg")).length, gifts.length * 2);
   assert.equal(generated.filter(name => name.endsWith(".gltf")).length, gifts.length);
   const svgPayloads = new Set();
   const modelPayloads = new Set();
   for (const gift of gifts) {
     const svgPath = path.join(assetRoot, gift.code + ".svg");
+    const iconPath = path.join(assetRoot, gift.code + "-icon.svg");
     const modelPath = path.join(assetRoot, gift.code + ".gltf");
     assert.ok(statSync(svgPath).size > 1000, gift.name + " SVG should contain real artwork");
+    assert.ok(statSync(iconPath).size > 400, gift.name + " transparent icon should contain subject artwork");
     assert.ok(statSync(modelPath).size > 1000, gift.name + " GLTF should contain real mesh geometry");
+    const icon = readFileSync(iconPath, "utf8");
+    assert.ok(icon.startsWith("<svg"), gift.name + " icon should be valid SVG");
+    assert.ok(icon.includes('data-gift-code="' + gift.code + '"'), gift.name + " icon must identify its catalogue source");
+    assert.ok(icon.includes("aria-label="), gift.name + " icon must be accessible");
+    assert.doesNotMatch(icon,/font-family=["'](?:Apple Color Emoji|Segoe UI Emoji|Noto Color Emoji)/i,gift.name + " icon must not use system emoji fonts");
+    assert.ok(!/<rect[^>]*(?:width=["']512["']|height=["']512["'])[^>]*>/i.test(icon), gift.name + " icon must not paint an opaque full-canvas background");
     const svg = readFileSync(svgPath, "utf8");
     assert.ok(svg.startsWith("<svg"), gift.name + " SVG should be a valid SVG document");
     assert.doesNotMatch(svg,/font-family=["'](?:Apple Color Emoji|Segoe UI Emoji|Noto Color Emoji)/i,gift.name + " SVG must not use system emoji fonts");

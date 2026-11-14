@@ -77,3 +77,11 @@ No prices, balances, transactions, account state, LiveKit credentials, or existi
 - The asset manifest reads named source metadata from each generated glTF asset's extras. Rose and Hibiscus are now recorded as gift-specific repository mesh sources with their asset ID, source file, art direction and review status.
 - Generic gift models remain identified as generated procedural meshes. The manifest records the presence of named mesh sources separately from premium/high-detail approval; both remain false until human visual review and rights review pass.
 - Regression tests cover both named models and ensure their design-review-pending status is not misreported as production approval.
+
+## Transparent per-gift icon integration — 2026-11-14
+
+- `scripts/generate-minglora-gifts.mjs` now emits a primary SVG, a subject-only transparent SVG icon, and the existing glTF model for each canonical gift record. The icon path is `public/assets/gifts/catalog/<code>-icon.svg`.
+- `scripts/generate-minglora-live-asset-manifest.mjs` records icon path, format, dimensions, transparency, SHA-256, provenance, component usage and review/licensing status.
+- `public/gifts.js` uses the icon in Gift Center catalogue cards while retaining the full primary artwork/model in the selected preview. `public/app.js` uses the same icon in the LIVE gift grid and renders an accessible status fallback if the image fails to load.
+- The existing image-request caching strategy handles SVG image requests. `public/index.html` versions the changed bundles; `public/sw.js` advances the shell to v307 and precaches the current app/gifts scripts.
+- The existing `prestart` generator chain creates the assets and manifest on application startup. This branch has not been deployed to a live Render service.

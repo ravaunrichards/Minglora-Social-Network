@@ -68,3 +68,11 @@ This is a second gift-specific 3D art-direction exception alongside Rose; it doe
 
 ## Named source provenance in the machine-readable manifest
 The LIVE manifest now distinguishes the Rose and Hibiscus gift-specific mesh modules from the shared procedural model generator, carrying each source file, asset ID, art-direction string and review status through from glTF asset extras. This is provenance and source-specific identification, not visual quality certification: the manifest continues to set premium approval and verified high-detail-model status to false until human review and rights clearance are complete.
+
+## Per-gift transparent icon generation — 2026-11-14
+
+- CI generated and verified 1,748 subject-only transparent SVG icons, each paired with the canonical primary artwork and glTF model.
+- The manifest checks that each icon has a transparent background, 512×512 SVG dimensions, a catalogue-specific identity, source generator, file size and SHA-256.
+- Icon artwork is vector-generated from the repository catalogue's category/name geometry. It removes the full-canvas presentation stage, decorative ring/nameplate and system-font emoji dependency from the icon variant.
+- These checks establish file integrity and declared transparency, not premium-level visual quality, decoded pixel inspection, individualized art-direction approval or licensing clearance.
+- Human visual review remains not completed, licensing remains review required, high-detail model verification remains false, mastered gift-audio count remains zero, and physical-device QA remains unverified.

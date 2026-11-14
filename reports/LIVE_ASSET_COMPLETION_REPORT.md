@@ -110,3 +110,12 @@ The glyph overlay and unused emoji lookup were removed from `scripts/generate-mi
 - Updated the LIVE asset-manifest generator to preserve named glTF source metadata for Rose and Hibiscus, while retaining a distinct source type for category/name-based procedural models.
 - Added regression coverage for both source file paths, unique asset IDs, pending design-review state and non-approved high-detail status.
 - This corrects inventory provenance; it does not claim premium production approval, completed human review or physical-device verification.
+
+## Transparent gift icon production and LIVE integration milestone — 2026-11-14
+
+- Added a build-time subject-only transparent SVG icon beside every canonical gift's primary SVG and glTF model; the existing bespoke Rose and Hibiscus model-source branches were preserved.
+- Integrated the new icon URL into Gift Center cards and LIVE gift-picker cards. Full primary artwork and 3D model remain in the selected preview.
+- Added category SVG usage in Gifts Center, accessible error fallbacks for broken gift icons, per-gift icon manifest records, build stamp v3, and service-worker shell v307.
+- CI run: [43641935041](https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/43641935041). All three checks passed: full test/build job, For You navigation, and Supabase Auth acceptance. The test job generated and verified 1,748 primary SVG artworks, 1,748 transparent SVG icons, 1,748 glTF models, 1,748 manifest gift records, and 1,737 active motion profiles.
+- The application `prestart` script runs the gift, sound, motion-index and LIVE manifest generators. The generated icon outputs are therefore created at startup; they are not represented as individually committed generated files.
+- **Scope/approval limits:** this is an icon-generation and integration milestone, not completion of the full premium-artwork brief. Human design review, rights/licensing clearance, bespoke high-detail models for the remaining catalogue, mastered per-gift sounds, standalone animation files, physical-device testing, and live deployment verification remain outstanding. No gift was activated in the production database.

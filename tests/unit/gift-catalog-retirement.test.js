@@ -37,7 +37,7 @@ test("all catalogue handlers and Gifts Center only expose the next approved 3D a
 });
 
 test("Gifts Center script cache is invalidated on reload", () => {
-  const versionedPath = "/gifts.js?v=20261113-legacy-cartoon-gift-retirement-2";
-  assert.ok(html.includes(versionedPath));
-  assert.ok(sw.includes(versionedPath));
+  const versionedPath = html.match(/src=["'](\/gifts\.js\?v=[^"']+)["']/)?.[1] || "";
+  assert.ok(versionedPath, "Gifts Center must load a cache-busted script");
+  assert.ok(sw.includes(versionedPath), "service worker must cache the exact Gifts Center script URL");
 });

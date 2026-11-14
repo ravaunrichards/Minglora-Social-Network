@@ -75,7 +75,7 @@ test('LIVE shortcut SVGs preserve the compact drawer layout, selected state and 
 });
 
 test('LIVE shortcut artwork and manifest are cached by the v306 service-worker shell', () => {
-  assert.ok(worker.includes("const CACHE_NAME='minglora-shell-v306-self-updating-1'"));
+  assert.match(worker, /const CACHE_NAME='minglora-shell-v\d+-self-updating-1';/);
   assert.ok(worker.includes("'/assets/icons/live-tools/manifest.json'"));
   for (const id of expected) assert.ok(worker.includes("'/assets/icons/live-tools/" + id + ".svg'"), id + ' must be pre-cached');
 });
