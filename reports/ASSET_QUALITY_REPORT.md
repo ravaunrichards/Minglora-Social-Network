@@ -76,3 +76,10 @@ The LIVE manifest now distinguishes the Rose and Hibiscus gift-specific mesh mod
 - Icon artwork is vector-generated from the repository catalogue's category/name geometry. It removes the full-canvas presentation stage, decorative ring/nameplate and system-font emoji dependency from the icon variant.
 - These checks establish file integrity and declared transparency, not premium-level visual quality, decoded pixel inspection, individualized art-direction approval or licensing clearance.
 - Human visual review remains not completed, licensing remains review required, high-detail model verification remains false, mastered gift-audio count remains zero, and physical-device QA remains unverified.
+
+
+## Bespoke Djembe Master 3D source — 2026-11-14
+
+The canonical music gift djembe-master-1v3jzkm now uses assets/3d-assets/gift-models/djembe-model.mjs. The generated glTF 2.0 has separately addressable shell, hollow-wall, skin-head, rim, rope, woven-lacing and carved-detail meshes, each with its own PBR material. The SVG generator also emits subject-specific transparent Djembe artwork.
+
+The model remains explicitly design-review-pending. The source and regression suite were merged through PR #339 after full CI asset build/tests and LIVE/MeetWave layout QA passed. This verifies source/build/test integration, not human visual review, rights clearance, a photorealism claim, a mastered animation or sound file, physical-device rendering or production deployment. Rose, Hibiscus and Djembe Master are the three named bespoke-model sources; all remaining catalogue models continue to use the shared procedural generator unless individually documented.
