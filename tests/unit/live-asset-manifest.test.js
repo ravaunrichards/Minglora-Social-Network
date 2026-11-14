@@ -164,6 +164,8 @@ test("LIVE asset manifest exposes the same bespoke motion presets as the runtime
     assert.ok(gift, "missing LIVE manifest gift " + code);
     assert.ok(motion, "missing generated motion-index gift " + code);
     assert.equal(gift.animation.motion_preset, preset);
+    assert.equal(gift.animation.gift_specific_motion_override, true);
+    assert.equal(gift.animation.catalog_motion_preset, motion.catalog_motion_preset);
     assert.equal(motion.motion_preset, preset);
   }
 });
