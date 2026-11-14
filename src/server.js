@@ -1595,6 +1595,38 @@ async function route(req, res) {
         return response?.result;
       };
 
+      const runAICategoryCommand = async (aiAction, payload = {}) => {
+        if (!isModerator(user, req)) {
+          throw Object.assign(
+            new Error('Only an authorized Minglora platform administrator with the required active session can manage AI categories.'),
+            { status: 403 }
+          );
+        }
+        if (!isSupabasePersistence()) {
+          throw Object.assign(new Error('AI category administration requires Minglora Supabase persistence.'), { status: 503 });
+        }
+        try {
+          const response = await requestSupabaseState('ai_category_command', {
+            actorUserId: user.id,
+            aiAction,
+            payload
+          });
+          if (response?.skipped) {
+            throw Object.assign(new Error('AI category administration is unavailable in local-only persistence mode.'), { status: 503 });
+          }
+          return response?.result;
+        } catch (error) {
+          const message = String(error?.message || '');
+          if (/unsupported action|unsupported AI category command|function .*minglora_ai_category_command.*does not exist|could not find the function|schema cache/i.test(message)) {
+            throw Object.assign(
+              new Error('The AI category administration migration and runtime gateway must be deployed before this operation is available.'),
+              { status: 503 }
+            );
+          }
+          throw error;
+        }
+      };
+
       const aiIdentityIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
       const aiMediaBucketForSlot = slot => slot === 'avatar' ? 'minglora-avatars' : slot === 'cover' ? 'minglora-covers' : '';
       const aiMediaLimitForSlot = slot => slot === 'avatar' ? 10 * 1024 * 1024 : slot === 'cover' ? 20 * 1024 * 1024 : 0;
@@ -1711,6 +1743,23 @@ async function route(req, res) {
       if (method === 'GET' && sub === 'categories') {
         const categories = await runAIIdentityCommand('list_categories');
         return json(res, 200, { categories: Array.isArray(categories) ? categories : [] });
+      }
+      if (method === 'GET' && sub === 'categories/manage') {
+        const result = await runAICategoryCommand('list_all');
+        return json(res, 200, result || { categories: [] });
+      }
+      if (method === 'POST' && sub === 'categories/manage') {
+        const input = await body(req, 8000);
+        if (!input || typeof input !== 'object' || Array.isArray(input)) {
+          throw Object.assign(new Error('AI category input must be a JSON object.'), { status: 400 });
+        }
+        const { action, ...payload } = input;
+        const aiAction = String(action || '');
+        if (!['create', 'update', 'activate', 'deactivate'].includes(aiAction)) {
+          throw Object.assign(new Error('Choose a supported AI category management action.'), { status: 400 });
+        }
+        const result = await runAICategoryCommand(aiAction, payload);
+        return json(res, aiAction === 'create' ? 201 : 200, result || {});
       }
       if (method === 'GET' && sub === 'identities') {
         const identityUrl = new URL(req.url || '/', 'http://localhost');
