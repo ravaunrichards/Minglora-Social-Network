@@ -7,6 +7,27 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const CATALOG_PATH = path.join(ROOT, "data", "minglora-gift-catalog.json");
 const MOTION_PATH = path.join(ROOT, "public", "assets", "animations", "gifts", "catalog-motion-index.json");
 const GIFT_DIR = path.join(ROOT, "public", "assets", "gifts", "catalog");
+const CATEGORY_ICON_DIR = path.join(ROOT, "public", "assets", "gifts", "categories");
+const CATEGORY_ICON_DEFS = Object.freeze([
+  { id: "all", label: "All gifts" },
+  { id: "flowers", label: "Flowers" },
+  { id: "hearts", label: "Love & hearts" },
+  { id: "animals", label: "Animals & creatures" },
+  { id: "vehicles", label: "Vehicles" },
+  { id: "music", label: "Music" },
+  { id: "sports", label: "Sports" },
+  { id: "food_drink", label: "Food & drinks" },
+  { id: "fashion_beauty", label: "Fashion & beauty" },
+  { id: "luxury", label: "Luxury" },
+  { id: "celebrations", label: "Celebrations" },
+  { id: "fantasy", label: "Fantasy & cosmic" },
+  { id: "nature", label: "Nature" },
+  { id: "travel", label: "Travel" },
+  { id: "games", label: "Games" },
+  { id: "community", label: "Community" },
+  { id: "symbols", label: "Symbols" },
+  { id: "other", label: "More gifts" }
+]);
 const ICON_SPRITE_PATH = path.join(ROOT, "public", "assets", "icons", "navigation-3d.svg");
 const PUSH_ICON_PATH = path.join(ROOT, "public", "assets", "icons", "minglora-push.svg");
 const PACKAGE_PATH = path.join(ROOT, "package.json");
@@ -196,6 +217,36 @@ function buildManifest() {
     });
     if (artworkDimensions.emoji_font_overlay_present) emojiOverlayCount++;
 
+    const iconFile = path.join(GIFT_DIR, gift.code + "-icon.svg");
+    const iconDimensions = svgInfo(iconFile);
+    if (!iconDimensions.transparent_background) fail("gift icon is not transparent: " + relative(iconFile));
+    if (iconDimensions.emoji_font_overlay_present) fail("gift icon contains an emoji-font overlay: " + relative(iconFile));
+    const icon = fileRecord(iconFile, "svg", {
+      public_url: "/assets/gifts/catalog/" + gift.code + "-icon.svg",
+      dimensions: { width_px: iconDimensions.width_px, height_px: iconDimensions.height_px, view_box: iconDimensions.view_box },
+      transparent_background: iconDimensions.transparent_background,
+      vector_only: true,
+      component_usage: ["public/gifts.js", "public/app.js"],
+      alt_text: String(gift.name) + " transparent Minglora LIVE gift icon",
+      source: {
+        type: "generated_from_catalogue_gift_subject_vector",
+        catalogue_record: "data/minglora-gift-catalog.json#" + gift.code,
+        generator: "scripts/generate-minglora-gifts.mjs",
+        generator_identity: "Minglora Gift Studio"
+      },
+      quality: {
+        status: "transparent_generated_vector_icon_requires_human_review",
+        emoji_font_overlay_present: false,
+        human_visual_review: "not_completed",
+        approved_for_premium_production: false
+      },
+      licensing: {
+        status: "review_required",
+        provenance: "repository_generated_vector_svg",
+        notes: "Original repository-generated vector output; requires per-item human review and rights approval before premium production use."
+      }
+    });
+
     const model = fileRecord(gltfFile, "gltf-json", {
       public_url: gift.model_url,
       dimensions: modelDimensions,
@@ -276,11 +327,15 @@ function buildManifest() {
       rarity: typeof gift.rarity === "string" ? gift.rarity : null,
       asset_version: String(packageData.version || "unspecified"),
       artwork,
+      icon_url: icon.public_url,
+      icon,
       thumbnail: {
-        path: artwork.path,
-        format: artwork.format,
-        dimensions: artwork.dimensions,
-        reuse_of_primary_artwork: true
+        path: icon.path,
+        format: icon.format,
+        dimensions: icon.dimensions,
+        transparent_background: icon.transparent_background,
+        source: "per_gift_transparent_vector_icon",
+        reuse_of_primary_artwork: false
       },
       animated_preview: {
         uses_motion_profile: Boolean(profile),
@@ -315,6 +370,23 @@ function buildManifest() {
     source: { type: "repository_asset", generator: null },
     licensing: { status: "review_required", provenance: "repository_asset" }
   });
+  const categoryIcons = CATEGORY_ICON_DEFS.map(category => {
+    const file = path.join(CATEGORY_ICON_DIR, category.id + ".svg");
+    const dimensions = svgInfo(file);
+    if (!dimensions.transparent_background) fail("category icon is not transparent: " + relative(file));
+    if (dimensions.emoji_font_overlay_present) fail("category icon contains an emoji-font overlay: " + relative(file));
+    return fileRecord(file, "svg", {
+      public_url: "/assets/gifts/categories/" + category.id + ".svg",
+      category_id: category.id,
+      label: category.label,
+      dimensions: { width_px: dimensions.width_px, height_px: dimensions.height_px, view_box: dimensions.view_box },
+      transparent_background: dimensions.transparent_background,
+      vector_only: true,
+      component_usage: ["public/gifts.js"],
+      quality: { status: "transparent_generated_category_vector_icon_requires_human_review", human_visual_review: "not_completed", approved_for_premium_production: false },
+      licensing: { status: "review_required", provenance: "repository_generated_vector_svg" }
+    });
+  });
   const activeCount = gifts.filter(gift => gift.active).length;
   const inactiveCount = gifts.length - activeCount;
   return {
@@ -336,6 +408,9 @@ function buildManifest() {
       active_gift_count: activeCount,
       inactive_gift_count: inactiveCount,
       svg_artwork_file_count: gifts.length,
+      svg_gift_icon_file_count: gifts.length,
+      svg_category_icon_file_count: categoryIcons.length,
+      transparent_svg_icon_file_count: gifts.length + categoryIcons.length,
       gltf_model_file_count: gifts.length,
       active_motion_profile_count: activeCount,
       emoji_font_overlay_count: emojiOverlayCount,
@@ -344,7 +419,7 @@ function buildManifest() {
       physical_device_qa_verified_count: 0,
       required_generated_files_verified: true
     },
-    shared_assets: { icons: [iconSheet, pushIcon] },
+    shared_assets: { icons: [iconSheet, pushIcon], category_icons: categoryIcons },
     gifts
   };
 }
