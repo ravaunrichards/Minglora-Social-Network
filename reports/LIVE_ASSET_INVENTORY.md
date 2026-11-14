@@ -69,7 +69,7 @@ The nine files in `assets/Guests Layout/` map to seven host-selectable screen la
 
 ## Asset types not found as complete production libraries
 
-The inspected `assets/animations/` directory had only a README before this branch. The existing app animation implementation is JavaScript/CSS/Web Animations; no populated Lottie or Rive collection was found there. No gift GLTF animation channels, KTX2 texture pack or per-gift recorded audio pack were verified. Do not imply these formats or packs are complete.
+The inspected `assets/animations/` directory had only a README before this branch. The existing app animation implementation is JavaScript/CSS/Web Animations; no populated Lottie or Rive collection was found there. No gift GLTF animation channels or KTX2 texture pack were verified. Dedicated mastered/per-gift audio files are still not present; however, Djembe Master and Palm Breeze now have individual local Web Audio synthesis designs triggered with their gift effects. Do not describe those synthesized effects as recorded/mastered audio files.
 
 ## LIVE tools shortcut icon pack — 2026-11-14
 
@@ -106,3 +106,13 @@ The canonical Djembe Master gift (djembe-master-1v3jzkm) is now routed to the in
 ### Palm Breeze model source — 2026-11-14
 
 The canonical Palm Breeze gift (palm-breeze-gknyt0) is now routed to the individually authored assets/3d-assets/gift-models/palm-breeze-model.mjs source. It emits a self-contained glTF 2.0 scene and subject-specific transparent SVG artwork. PR #340 passed the full repository CI asset build and gift-catalogue regression tests before merge. The model remains design-review-pending; no premium-production or physical-device approval is inferred.
+
+
+## Gift-specific synthesized Web Audio designs — 2026-11-14
+
+| Gift | Sound design ID | Implementation | Recording/file status |
+|---|---|---|---|
+| Djembe Master (`djembe-master-1v3jzkm`) | `djembe-hand-drum-impact-v1` | Filtered noise attack, falling low drum tone and short rim accent | Synthesized locally in `public/gift-effects.js`; no dedicated WAV file/mastering |
+| Palm Breeze (`palm-breeze-gknyt0`) | `palm-breeze-wind-and-chimes-v1` | Filtered breeze sweep plus three soft chime partials | Synthesized locally in `public/gift-effects.js`; no dedicated WAV file/mastering |
+
+Both routines run from the existing gift-effect trigger and honour `options.sound === false`. The asset manifest records the exact sound design/layers and deliberately keeps `audio_file: null`, `dedicated_mastered_gift_sound: false` and the total mastered-file count at zero. Other gifts retain the existing category-level synthesized sound fallback.
