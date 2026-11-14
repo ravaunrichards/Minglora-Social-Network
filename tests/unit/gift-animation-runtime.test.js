@@ -22,13 +22,24 @@ test("LIVE and Gift Studio load the canonical per-gift motion index by exact gif
 
 test("gift animations preserve and play original artwork, 3D models, Coin values and sounds", () => {
   assert.ok(effects.includes("model.src=gift.model_url"));
-  assert.ok(effects.includes('img.src=gift.image_url'));
+  assert.ok(effects.includes('fallbackImage.src=gift.image_url'));
   assert.ok(effects.includes('if(!reducedMotion){model.setAttribute("auto-rotate","");model.setAttribute("autoplay","");}'));
   assert.ok(effects.includes('if(options.sound!==false)play(gift)'));
   assert.ok(effects.includes('caption.textContent=gift.name'));
   assert.ok(!effects.includes('gift.coin_price='));
   assert.ok(!effects.includes('gift.emoji||"🎁"'), "missing artwork must never become a cartoon emoji");
   assert.ok(!effects.includes("minglora-gift-fx-emoji"), "shared LIVE effects must not render emoji gift substitutes");
+});
+
+test("GLTF load failures fall back to the matching SVG and failed SVGs show an accessible error state", () => {
+  const modelErrorListener = effects.indexOf('model.addEventListener("error"');
+  const modelSource = effects.indexOf("model.src=gift.model_url");
+  assert.ok(modelErrorListener >= 0 && modelErrorListener < modelSource, "attach model error recovery before starting the model request");
+  assert.ok(effects.includes("const fallbackImage=createArtworkFallback();model.replaceWith(fallbackImage);fallbackImage.src=gift.image_url;"));
+  assert.ok(effects.includes('image.addEventListener("error"'));
+  assert.ok(effects.includes('createUnavailableNotice("Gift artwork unavailable")'));
+  assert.ok(effects.includes('notice.setAttribute("role","status")'));
+  assert.ok(effects.includes('event?.detail?.type==="webglcontextlost"'));
 });
 
 test("each gift receives subject-specific motion and a matching effect layer", () => {

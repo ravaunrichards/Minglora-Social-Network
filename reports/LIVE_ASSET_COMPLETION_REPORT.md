@@ -25,6 +25,7 @@ This is a continuation checkpoint against the current `main` repository. The old
 - [x] Updated existing audit, inventory and quality reports to correct screenshot evidence and record the new verified counts.
 
 ## Existing implementation verified by source inspection
+- [x] Added a model-viewer error handler that switches failed GLTF previews to the matching SVG artwork; a second failure renders an accessible text state. This is not real-device QA or WebGL context restoration.
 
 - The gift catalogue is `data/minglora-gift-catalog.json` with 1,748 rows, 1,737 active and 11 inactive. Prices remain in that canonical catalogue; this continuation did not change any catalogue value.
 - `scripts/generate-minglora-gifts.mjs` generates SVG and GLTF catalogue assets under `public/assets/gifts/catalog/`; the outputs are generated at build/prestart time and are not committed individually in the audited main tree.

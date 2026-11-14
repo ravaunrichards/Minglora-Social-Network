@@ -118,8 +118,8 @@ test("sound, device and fallback limitations are explicit rather than claimed co
     assert.equal(entry.sound.dedicated_mastered_gift_sound, false);
     assert.equal(entry.sound.status, "synthetic_category_profile_not_mastered_gift_audio");
     assert.equal(entry.device_support.device_qa_status, "not_verified_on_physical_devices");
-    assert.equal(entry.loading_and_fallback.model_error_fallback_to_svg, false);
-    assert.equal(entry.model.loading.model_load_error_image_fallback_implemented, false);
+    assert.equal(entry.loading_and_fallback.model_error_fallback_to_svg, true);
+    assert.equal(entry.model.loading.model_load_error_image_fallback_implemented, true);
   }
 });
 

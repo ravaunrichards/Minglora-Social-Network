@@ -224,7 +224,7 @@ function buildManifest() {
         runtime: "model-viewer",
         external_buffers: modelDimensions.external_buffer_uris,
         image_fallback_when_model_url_missing: true,
-        model_load_error_image_fallback_implemented: false,
+        model_load_error_image_fallback_implemented: true,
         loading_policy: "not_explicitly_configured_in_gift_effects_runtime"
       }
     });
@@ -300,7 +300,7 @@ function buildManifest() {
       loading_and_fallback: {
         artwork_url: gift.image_url,
         model_url: gift.model_url,
-        model_error_fallback_to_svg: false,
+        model_error_fallback_to_svg: true,
         retry_and_error_state: "not_verified_by_this_manifest_generator"
       },
       production_status: "catalogue_asset_inventory_only_premium_artwork_and_rights_review_required"
