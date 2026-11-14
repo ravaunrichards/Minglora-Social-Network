@@ -1,3 +1,13 @@
+## Follow-up owner delegation console checkpoint — 2026-11-14
+
+- PR #306 merged to main as edc319b85f14eccd92b19157065cc3aa748180d0. The additive AI team/delegation migration is applied to the existing Supabase project; live verification confirmed RLS enabled on all five new tables, no anon/authenticated schema/table/function grants, service_role-only RPC execution, SECURITY INVOKER with an empty search_path, and zero retained test/team/delegation rows.
+- Existing minglora-runtime-state Edge Function deployed and read back as ACTIVE version 122. The deployed source contains the allowlisted ai_team_command handler/RPC call and preserves existing x-minglora-api-key authentication with verify_jwt=false.
+- Render auto-deploy for main commit edc319b85f14eccd92b19157065cc3aa748180d0 completed successfully as dep-dbs6qg95efls73edb4d0. Logs confirmed port 10000, Supabase durable persistence readiness and successful LiveKit connection. Public HTTP/API acceptance is still unverified because the endpoint could not be opened with the available inspection path.
+- New follow-up branch feat/minglora-ai-delegation-controls adds owner-only UI for scoped grant creation, task submission, grant pause/reactivation/revocation and hides the registry/control panel on 403. UI controls allow only backend-approved read-only/content types, budgets and expiry; every delegated task remains pending human approval. Tests for admin-only rendering/control wiring have been added but this branch has not yet passed CI or been merged/deployed.
+- Task 9 remains PARTIAL / IMPLEMENTATION IN PROGRESS pending this owner-console integration plus signed-in platform-owner browser/device acceptance. Overall accepted task count remains 2/19 (10.53%). Task 8 worker execution stays paused: global_paused=true, execution_enabled=false, max_concurrent_workers=0. Do not register fake identities, run providers, or activate workers.
+
+---
+
 ## Supplemental AI team and delegation implementation checkpoint — 2026-11-14
 
 - New feature branch: feat/minglora-ai-team-delegation, created from main after PR #305 merged.
