@@ -46,7 +46,7 @@ test('performance reviews are human-authored, bounded, idempotent and audited', 
     'ai_performance_reviews_idempotency_uq',
     "'Human-authored review submitted.'",
     "'review_finalized'",
-    "r.review_status='submitted'",
+    "v_previous_status<>'submitted'",
     "e.employment_status='active'",
     'strengths,improvement_areas,goals'
   ]) assert.ok(migration.includes(token), 'Missing performance review rule: ' + token);
