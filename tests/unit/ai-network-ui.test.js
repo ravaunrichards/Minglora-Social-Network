@@ -205,3 +205,21 @@ test('AI schedule APIs and UI preserve identity linkage, idempotency and approva
   assert.ok(ui.includes("action === 'schedule-status'"));
   assert.ok(ui.includes("draft tasks to the owner approval queue"));
 });
+
+
+test('AI identity lifecycle transitions are owner-scoped, validated and audit-backed', () => {
+  const runtime = read('supabase/functions/minglora-runtime-state/index.ts');
+  assert.ok(server.includes("parts[2] === 'status'"));
+  assert.ok(server.includes("sub === 'identities/bulk-status'"));
+  assert.ok(server.includes("ai_identity_status_command"));
+  assert.ok(runtime.includes('"ai_identity_status_command"'));
+  assert.ok(runtime.includes('admin.rpc("minglora_ai_network_set_identity_status"'));
+  assert.ok(runtime.includes('"set_status","bulk_set_status"'));
+  assert.ok(runtime.includes('identity_ids'));
+  assert.ok(runtime.includes('between 1 and 100 unique valid AI identity IDs'));
+  assert.ok(ui.includes('identityStatusTransitions'));
+  assert.ok(ui.includes('data-ai-action="identity-status"'));
+  assert.ok(ui.includes('data-ai-action="identity-bulk-status"'));
+  assert.ok(ui.includes('data-ai-identity-select'));
+  assert.ok(ui.includes('Every permitted transition is audited'));
+});
