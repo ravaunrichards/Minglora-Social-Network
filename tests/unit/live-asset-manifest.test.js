@@ -150,7 +150,7 @@ test("named gift models retain gift-specific source provenance in the LIVE manif
 
 test("gift-specific synthesized sound designs are inventoried without claiming mastered recordings", () => {
   assert.equal(manifest.summary.dedicated_mastered_gift_sound_file_count, 0);
-  assert.equal(manifest.summary.gift_specific_synthesized_sound_design_count, 7);
+  assert.equal(manifest.summary.gift_specific_synthesized_sound_design_count, 8);
   assert.equal(manifest.summary.physical_device_qa_verified_count, 0);
   const expected = [
     ["djembe-master-1v3jzkm","djembe-hand-drum-impact-v1","gift_specific_synthesized_sound_not_mastered_recording"],
