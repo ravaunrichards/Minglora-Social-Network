@@ -44,6 +44,12 @@ let identityCreateRequests = [];
 let identityPatchRequests = [];
 let discoveryQueries = [];
 let bulkFollowRequests = [];
+let memorySettings = {
+  identity_id: ownerIdentityId, memory_enabled:false, long_term_enabled:false,
+  short_term_retention_days:7, long_term_retention_days:365, max_entries:500
+};
+let memoryEntries = [];
+const memoryRequests = { settings:[], creates:[], updates:[], deletes:[] };
 const categoryKeys = [
   'ai_friends', 'ai_creators', 'ai_influencers', 'ai_news', 'ai_musicians',
   'ai_entertainers', 'ai_gamers', 'ai_community_hosts', 'ai_live_hosts',
@@ -130,6 +136,55 @@ function aiApiResponse(req, url, body) {
   const method = req.method || 'GET';
 
   if (method === 'GET' && pathname === '/') return snapshot;
+  const memoryPath = pathname.match(/^\/identities\/([0-9a-f-]+)\/memory(?:\/([0-9a-f-]+|settings))?$/i);
+  if (memoryPath) {
+    const identityId = memoryPath[1];
+    const memoryId = memoryPath[2] || '';
+    if (method === 'GET' && !memoryId) {
+      return {
+        settings: structuredClone(memorySettings),
+        entries: memoryEntries.filter(entry => entry.identity_id === identityId).map(entry => structuredClone(entry)),
+        count: memoryEntries.filter(entry => entry.identity_id === identityId).length
+      };
+    }
+    if (method === 'PATCH' && memoryId === 'settings') {
+      memoryRequests.settings.push(structuredClone(body));
+      memorySettings = { ...memorySettings, ...body, identity_id:identityId };
+      if (!memorySettings.memory_enabled) {
+        memorySettings.long_term_enabled = false;
+        memoryEntries = memoryEntries.filter(entry => entry.identity_id !== identityId);
+      }
+      return { settings:structuredClone(memorySettings) };
+    }
+    if (method === 'POST' && !memoryId) {
+      memoryRequests.creates.push(structuredClone(body));
+      if (!memorySettings.memory_enabled) return { error:'Memory is disabled.' };
+      const existing = memoryEntries.find(entry => entry.identity_id === identityId && entry.idempotency_key === body.idempotency_key);
+      if (existing) return { memory:{ memory_id:existing.memory_id, created:false } };
+      const entry = {
+        memory_id:randomUUID(), identity_id:identityId, memory_type:body.memory_type,
+        summary:body.summary, content:body.content || {},
+        expires_at:new Date(Date.now() + (body.memory_type === 'long_term'
+          ? memorySettings.long_term_retention_days : memorySettings.short_term_retention_days) * 86400000).toISOString(),
+        idempotency_key:body.idempotency_key
+      };
+      memoryEntries.push(entry);
+      return { memory:{ memory_id:entry.memory_id, created:true } };
+    }
+    if (method === 'PATCH' && memoryId && memoryId !== 'settings') {
+      memoryRequests.updates.push(structuredClone(body));
+      const entry = memoryEntries.find(item => item.identity_id === identityId && item.memory_id === memoryId);
+      if (!entry) return { error:'Memory not found.' };
+      Object.assign(entry, { memory_type:body.memory_type, summary:body.summary, content:body.content || {} });
+      return { memory:{ updated:true, memory_id:memoryId } };
+    }
+    if (method === 'DELETE' && memoryId && memoryId !== 'settings') {
+      memoryRequests.deletes.push(memoryId);
+      memoryEntries = memoryEntries.filter(item => !(item.identity_id === identityId && item.memory_id === memoryId));
+      return { deleted:true, memory_id:memoryId };
+    }
+  }
+
   if (method === 'GET' && pathname === '/identities') return identityRegistry();
   if (method === 'GET' && pathname === '/categories') return { categories: categories.filter(item => item.is_active) };
   if (method === 'GET' && pathname === '/categories/admin') return {
@@ -462,6 +517,54 @@ try {
   assert.ok(!Object.hasOwn(patch, 'provider_assignments'), 'Profile editing must not mutate provider assignments.');
   assert.equal(identities[0].name.first_name, 'Arianna', 'Updated name must be rendered from refreshed registry data.');
 
+  await page.getByText('Individual AI Memory').waitFor({ state:'visible' });
+  const memorySettingsForm = page.locator('form[data-ai-form="memory-settings"]').first();
+  assert.equal(await memorySettingsForm.locator('[name="memoryEnabled"]').isChecked(), false,
+    'Per-identity AI memory must be disabled by default.');
+  await memorySettingsForm.locator('[name="memoryEnabled"]').check();
+  await memorySettingsForm.locator('[name="longTermEnabled"]').check();
+  await memorySettingsForm.locator('[name="shortTermRetentionDays"]').fill('5');
+  await memorySettingsForm.locator('[name="longTermRetentionDays"]').fill('180');
+  await memorySettingsForm.locator('[name="maxEntries"]').fill('40');
+  await memorySettingsForm.locator('button[type="submit"]').click();
+  await page.getByText(/AI memory consent and retention settings saved/).waitFor({ state:'visible' });
+  assert.equal(memoryRequests.settings.length, 1, 'Memory consent must be saved through the private settings route.');
+  assert.equal(memoryRequests.settings[0].memory_enabled, true);
+  assert.equal(memoryRequests.settings[0].long_term_enabled, true);
+  assert.equal(memorySettings.long_term_retention_days, 180);
+
+  const memoryEntryForm = page.locator('form[data-ai-form="memory-entry"]').first();
+  await memoryEntryForm.locator('[name="memoryType"]').selectOption('long_term');
+  await memoryEntryForm.locator('[name="summary"]').fill('Owner-approved preference: prefers English (Jamaica).');
+  await memoryEntryForm.locator('[name="note"]').fill('Manually entered for the isolated browser test.');
+  await memoryEntryForm.locator('button[type="submit"]').click();
+  await page.getByText(/Owner-managed AI memory entry saved/).waitFor({ state:'visible' });
+  assert.equal(memoryRequests.creates.length, 1, 'Memory entry creation must make one API request.');
+  assert.equal(memoryRequests.creates[0].memory_type, 'long_term');
+  assert.equal(memoryEntries.length, 1);
+  assert.equal(memoryEntries[0].summary, 'Owner-approved preference: prefers English (Jamaica).');
+
+  await page.getByText('Edit memory entry', { exact:true }).click();
+  const memoryEditForm = page.locator('form[data-ai-form="memory-edit"]').first();
+  await memoryEditForm.locator('[name="summary"]').fill('Updated owner-approved language preference.');
+  await memoryEditForm.locator('[name="note"]').fill('Updated by the test owner.');
+  await memoryEditForm.locator('button[type="submit"]').click();
+  await page.getByText(/AI memory entry updated/).waitFor({ state:'visible' });
+  assert.equal(memoryRequests.updates.length, 1, 'Memory entry editing must make one API request.');
+  assert.equal(memoryEntries[0].summary, 'Updated owner-approved language preference.');
+
+  await page.locator('[data-ai-action="delete-memory"]').first().click();
+  await page.getByText('No memory entries are stored for this identity.').waitFor({ state:'visible' });
+  assert.equal(memoryRequests.deletes.length, 1, 'Memory entry deletion must make one API request.');
+  assert.equal(memoryEntries.length, 0);
+
+  const memorySettingsAfterDelete = page.locator('form[data-ai-form="memory-settings"]').first();
+  await memorySettingsAfterDelete.locator('[name="memoryEnabled"]').uncheck();
+  await memorySettingsAfterDelete.locator('button[type="submit"]').click();
+  await page.getByText(/AI memory consent and retention settings saved/).waitFor({ state:'visible' });
+  assert.equal(memorySettings.memory_enabled, false, 'Disabling memory must revoke the stored consent.');
+  assert.equal(memorySettings.long_term_enabled, false, 'Disabling memory must also disable long-term memory.');
+
   const discoveryForm = page.locator('form[data-ai-form="discovery"]');
   await discoveryForm.locator('[name="search"]').fill('educator');
   await discoveryForm.locator('[name="category_keys"]').selectOption(['ai_educators']);
@@ -540,6 +643,10 @@ try {
     identityProfileUpdates: identityPatchRequests.length,
     combinedDiscoveryQueries: discoveryQueries.length,
     bulkFollowRequests: bulkFollowRequests.length,
+    memorySettingsUpdates: memoryRequests.settings.length,
+    memoryEntryCreates: memoryRequests.creates.length,
+    memoryEntryUpdates: memoryRequests.updates.length,
+    memoryEntryDeletes: memoryRequests.deletes.length,
     savedDiscoveryGroups: savedGroups.length,
     viewportsChecked: viewports.length,
     screenshotsCaptured: screenshots,

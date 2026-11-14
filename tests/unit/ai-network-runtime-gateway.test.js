@@ -17,6 +17,7 @@ test('AI identity, organization, HR, provider and task RPC commands are reachabl
   const allowlist = runtime.slice(start, end);
   for (const action of [
     'ai_identity_command',
+    'ai_memory_command',
     'ai_organization_command',
     'ai_hr_command',
     'ai_provider_command',
@@ -25,6 +26,19 @@ test('AI identity, organization, HR, provider and task RPC commands are reachabl
     assert.ok(allowlist.includes('"' + action + '"'), action + ' is accepted by the global action allowlist');
     assert.ok(runtime.includes('if (action === "' + action + '")'), action + ' has a runtime handler');
   }
+});
+
+test('AI memory command is available only through the allowlisted authenticated runtime', () => {
+  const start = runtime.indexOf('const supportedActions = [');
+  const end = runtime.indexOf('];', start);
+  const allowlist = runtime.slice(start, end);
+  assert.ok(allowlist.includes('"ai_memory_command"'));
+  assert.match(runtime, /supportedMemoryCommands = \["get_settings", "configure", "list", "create", "update", "delete"\]/);
+  assert.match(runtime, /validUuid\(actorUserId\)/);
+  assert.match(runtime, /admin\.rpc\("minglora_ai_memory_command"/);
+  assert.match(server, /runAIMemoryCommand\('create'/);
+  assert.match(server, /runAIMemoryCommand\('update'/);
+  assert.match(server, /runAIMemoryCommand\('delete'/);
 });
 
 test('durable AI task processing remains paused and non-executing by default', () => {

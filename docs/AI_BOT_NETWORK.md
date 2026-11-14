@@ -59,3 +59,18 @@ A recommendation is not complete because a table, route or screen exists. Mark i
 ## Browser acceptance coverage
 
 The browser acceptance suite is tests/e2e/ai-network-workspace.mjs and runs in .github/workflows/ai-network-browser-qa.yml on AI core branch pushes and relevant pull requests. It launches Chromium against the real static Minglora frontend and disposable in-memory API fixtures; it never contacts or writes to Supabase. It checks all 15 original AI categories, 249 country/territory choices, three populations, five gender choices, separate first/last-name submission and profile editing, accurate unverified/unprovisioned email status, combined discovery filters, bulk following, saved discovery groups, same-origin API calls, and responsive viewport geometry. This is UI acceptance evidence only; it does not replace authenticated live-Supabase, provider, upload or production-device acceptance.
+
+## Owner-managed per-identity memory (limited release)
+
+Each existing AI identity may have one `ai_memory_settings` row and zero or more `ai_memory_entries` in the private `ai_network` schema. Memory is off by default. Enabling memory requires an owner-authenticated action; long-term memory requires a separate opt-in. Short-term retention is constrained to 1–90 days, long-term retention to 30–3650 days, and the per-identity entry cap is constrained to 1–5000. Expired rows are purged during memory list/create/configure operations. Disabling memory clears its entries and resets long-term consent.
+
+The service-only RPC `public.minglora_ai_memory_command(text, uuid, jsonb)` supports settings, listing, creation, editing and deletion. It verifies that the actor is an existing Minglora profile and the AI identity belongs to that actor, rejects credential-like keys, enforces idempotency, serializes writes by locking the identity row, and writes metadata-only audit events. Both memory tables have RLS enabled; direct anon/authenticated access and RPC execution are denied. The existing Edge Function gateway exposes the command using the same custom hashed API-key authentication as other private runtime actions.
+
+Owner API routes:
+- `GET /api/ai-network/identities/:identityId/memory`
+- `PATCH /api/ai-network/identities/:identityId/memory/settings`
+- `POST /api/ai-network/identities/:identityId/memory`
+- `PATCH /api/ai-network/identities/:identityId/memory/:memoryId`
+- `DELETE /api/ai-network/identities/:identityId/memory/:memoryId`
+
+The AI Network owner UI exposes per-identity consent, retention, entry creation, editing, listing and deletion. Stored entries are owner-entered/managed. This release does **not** implement automatic conversation capture, provider-side inference, memory retrieval/injection into model prompts, embeddings/vector search or autonomous AI memory writes. Do not describe those behaviors as available until separately implemented and verified.
