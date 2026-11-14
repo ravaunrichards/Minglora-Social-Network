@@ -2,8 +2,8 @@
 
 **Audit date:** 2026-11-14  
 **Audited repository:** `ravaunrichards/Minglora-Social-Network`  
-**Audited base:** `main` at `ab4795df5bf7d21ebb6fd5ad6f085ddd25f18ba9`  
-**Continuation branch:** `docs/minglora-live-visual-audit-correction-20261114`
+**Audited base:** `main` at `84c724346e94e04e3cc0a9ff14a42b11b3a593ca`  
+**Continuation branch:** `fix/minglora-live-svg-vector-artwork-20261114-v2`
 
 ## Scope and checkpoint
 
@@ -22,6 +22,8 @@ This is a continuation checkpoint against the current `main` repository. The old
 - [x] Inventoried 71 Gifters Badge Levels images (53 PNG, 18 JPEG) and 20 League JPEG captures; their complete visual/rights review remains open.
 - [x] Counted 53 named symbols in `public/assets/icons/navigation-3d.svg`; confirmed this does not constitute the complete requested LIVE-specific icon/state pack.
 - [x] Reconfirmed the existing canonical catalogue (1,748 rows; 1,737 active; 11 inactive), 45 standalone GLTF gift models, and generated asset pipeline/motion index.
+- [x] Removed the system-font emoji overlay and unused lookup from the SVG gift generator; added subject-specific vector branches for Hibiscus, DJ Headphone and Four Leaf Clover while preserving CNC Coin, Fighting, Rose and Baseball vector artwork.
+- [x] Added regression gates requiring zero emoji-font overlays across every generated SVG and the per-gift manifest.
 - [x] Updated existing audit, inventory and quality reports to correct screenshot evidence and record the new verified counts.
 
 ## Existing implementation verified by source inspection
@@ -31,7 +33,7 @@ This is a continuation checkpoint against the current `main` repository. The old
 - `scripts/generate-minglora-gifts.mjs` generates SVG and GLTF catalogue assets under `public/assets/gifts/catalog/`; the outputs are generated at build/prestart time and are not committed individually in the audited main tree.
 - `scripts/generate-live-gift-motion-index.mjs` creates the active-only motion index at `public/assets/animations/gifts/catalog-motion-index.json` (1,737 active profiles).
 - `public/gift-effects.js`, `public/gifts.js` and `public/app.js` contain the existing gift preview/playback and LIVE integration.
-- Existing source tests cover catalogue-to-motion-index correspondence, reduced-motion handling, layout persistence, guest stage behaviour and server-confirmed gift events. These test files were inspected; they were **not executed by this documentation-only continuation**.
+- Existing source tests cover catalogue-to-motion-index correspondence, reduced-motion handling, layout persistence, guest stage behaviour and server-confirmed gift events. The SVG continuation adds vector-shape assertions and a full-catalogue zero-emoji-overlay gate; its Node 24 CI results are authoritative for branch validation, not a substitute for physical-device QA.
 - The supplied guest-layout images map to seven screen layouts plus two separate roundtable guest-box layouts. The implementation tests are `tests/unit/live-layout-panels.test.js` and `tests/unit/live-guest-layout.test.js`.
 
 ## Partial / not completed
@@ -41,7 +43,7 @@ This is a continuation checkpoint against the current `main` repository. The old
 - Human review of all 1,509 extracted gift crops and all 71 badge files.
 - Rights/licence clearance and provenance for extracted TikTok catalogue crops. These remain quarantined; do not publish, activate, monetize or represent them as original Minglora gifts.
 - Premium high-detail, individually art-directed 3D models for the full catalogue. Existing generated GLTF assets are procedural geometry/material baselines, not verified photorealistic/cinematic models.
-- Replace the generated SVG catalogue's system-font emoji overlay with self-contained, gift-specific original illustrations. The inspected generator places a large Unicode emoji glyph over category-template vector shapes, so its current output does not meet the no-emoji or premium-art requirement.
+- Replace category-template vector artwork with individually art-directed, high-detail gift illustrations and have a human review every item. The system-font emoji overlay is removed, but the remaining vector artwork is not yet premium-complete.
 - Replace shared category-template 3D geometry and limited name-specific overrides with individually art-directed models where a gift needs a distinct object. A unique file path alone is not proof of unique geometry.
 - Full 18-theme gift taxonomy and curated category assignment. The current catalogue has 18 stored categories, but they are not the same as the 18 conceptual themes in the brief.
 - Complete individually exported LIVE icon set, with host/guest/viewer tools and normal/active/selected/disabled/loading/success/warning/error states.
@@ -52,14 +54,14 @@ This is a continuation checkpoint against the current `main` repository. The old
 
 ## Validation and safety
 
-- Current main commit: `ab4795df5bf7d21ebb6fd5ad6f085ddd25f18ba9`. The GitHub combined-status lookup returned no status entries for this commit; this is **not** evidence of a passing or failing build.
-- Recent GitHub Actions results visible during this check belonged to other feature-branch commits, not this main commit; they are not presented as validation for this continuation.
-- This continuation is documentation-only. No local `npm test`, `npm run build:gifts`, `npm run build:live-gift-motion` or browser/device test was run because the repository is not mounted in the execution workspace and the available local Node runtime does not meet the repository's Node 24 engine requirement.
-- No source screenshots, extracted crops, artwork, gift prices, balances, user records, LiveKit credentials, sessions or production application code were changed.
+- Audited base commit: `84c724346e94e04e3cc0a9ff14a42b11b3a593ca`. The SVG continuation requires the full repository Node 24 workflow, including gift generation, manifest verification, automated tests and the LIVE/MeetWave layout matrix, before merge.
+- The repository is not mounted in the local execution workspace; no local Node build or physical-device test is claimed. GitHub Actions supplies the reproducible Node 24 validation.
+- This continuation modifies the SVG generator, catalogue tests, manifest quality metadata and reports. It does not alter source reference files, extracted crops, catalogue rows or gift pricing.
+- No balances, transactions, account data, user data, LiveKit credentials or call sessions are modified.
 
 ## Current status
 
-**Minglora LIVE asset mission: PARTIALLY COMPLETE — NOT PRODUCTION COMPLETE.** The existing app has a substantial gift catalogue, build-time SVG/GLTF generation, LIVE effects runtime, layouts, assets and test coverage. Source inspection also confirmed that the generated SVGs are emoji-overlay/category-template artwork and the GLTFs are procedural category meshes with limited bespoke overrides; they are not premium-production-ready. This continuation corrected the reference evidence and updated the inventory. The full premium asset production, rights clearance, detailed animation/audio work, category curation, cross-device QA and actual hardware validation remain open.
+**Minglora LIVE asset mission: PARTIALLY COMPLETE — NOT PRODUCTION COMPLETE.** The existing app has a substantial gift catalogue, build-time SVG/GLTF generation, LIVE effects runtime, layouts, assets and test coverage. Source inspection confirmed that the generated SVGs are category-template/project-vector artwork and the GLTFs are procedural category meshes with limited bespoke overrides; they are not premium-production-ready. The system-font emoji overlay has been removed and is guarded by a zero-count manifest test. This continuation corrected the reference evidence and updated the inventory. The full premium asset production, rights clearance, detailed animation/audio work, category curation, cross-device QA and actual hardware validation remain open.
 
 ## Added source-image metadata checkpoint
 
@@ -68,3 +70,7 @@ This is a continuation checkpoint against the current `main` repository. The old
 - The generated `reports/live-image-metadata-audit.json` and `.md` files are published by CI as `minglora-live-image-metadata-audit-<run>`.
 - Added parser regression fixtures for dimensions, alpha declarations, transparency chunks, GIF animation metadata, WebP feature flags and malformed input.
 - Per-pixel alpha, EXIF-normalized display dimensions and per-image human visual/rights review remain separate tasks.
+
+## SVG artwork checkpoint — 2026-11-14
+
+The glyph overlay and unused emoji lookup were removed from `scripts/generate-minglora-gifts.mjs`. Existing vector forms, decorative backgrounds, gift labels and catalogue identifiers are preserved. Three additional named vector branches were added for Hibiscus, DJ Headphone and Four Leaf Clover. The remaining category-level artwork still needs per-gift art direction, human review and rights review; this checkpoint is not a premium-production completion claim.

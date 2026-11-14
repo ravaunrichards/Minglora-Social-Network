@@ -45,48 +45,6 @@ function palette(gift) {
     return "#" + [r,g,b].map(v => v.toString(16).padStart(2,"0")).join("");
   });
 }
-function symbolFor(gift) {
-  const name = gift.name.toLowerCase();
-  const rules = [
-    [/hibiscus/,"🌺"], [/rose|flower|tulip|bouquet|blossom|sakura|orchid|lotus/,"🌹"],
-    [/cnc coin/,"🪙"], [/easter heart/,"💖"], [/fighting|boxing glove|boxing/,"🥊"],
-    [/kitty pillow/,"🐱"], [/otter/,"🦦"], [/four leaf clover|clover/,"🍀"],
-    [/dj headphone|headphone/,"🎧"], [/yalla sahel/,"👋"], [/merdeka|festival/,"🎊"],
-    [/pop, don/,"🎈"], [/house hat/,"🎩"], [/let.?s be friends/,"🤝"],
-    [/audience laughter/,"😂"], [/star hero stage/,"🌟"], [/picture perfect/,"📸"],
-    [/championship hall/,"🏆"], [/klcc|jakarta roundabout/,"🏙️"],
-    [/alpha wolves/,"🐺"], [/golden falcons|falcon/,"🦅"], [/keeper of atlantis/,"🔱"],
-    [/noble stallions|stallion/,"🐎"], [/royal lions|lion/,"🦁"],
-    [/ultimate match/,"⚔️"], [/goal of glory/,"🏆"], [/flamenco dancers/,"💃"],
-    [/baseball/,"⚾"], [/basketball/,"🏀"], [/football|soccer/,"⚽"], [/volleyball/,"🏐"],
-    [/tennis/,"🎾"], [/cricket/,"🏏"], [/boxing glove|boxing/,"🥊"], [/golf/,"⛳"],
-    [/cat|kitten/,"🐱"], [/dog|puppy|shiba|corgi/,"🐶"], [/bear|panda/,"🐻"],
-    [/lion/,"🦁"], [/tiger/,"🐯"], [/fox/,"🦊"], [/rabbit|bunny/,"🐰"],
-    [/horse|unicorn|pegasus/,"🦄"], [/dragon/,"🐉"], [/dinosaur|t.rex|trex/,"🦖"],
-    [/whale/,"🐳"], [/dolphin/,"🐬"], [/shark/,"🦈"], [/fish/,"🐠"],
-    [/eagle|falcon/,"🦅"], [/parrot/,"🦜"], [/swan|dove/,"🕊️"], [/penguin/,"🐧"],
-    [/butterfly/,"🦋"], [/bee/,"🐝"], [/frog/,"🐸"], [/turtle/,"🐢"],
-    [/car|vehicle|sports car|truck|bus/,"🏎️"], [/motorcycle|motorbike/,"🏍️"],
-    [/bicycle|bike|cycling/,"🚲"], [/helicopter/,"🚁"], [/train/,"🚂"],
-    [/plane|jet|aircraft|shuttle/,"✈️"], [/boat|ship|yacht/,"🛥️"], [/rocket/,"🚀"],
-    [/guitar/,"🎸"], [/drum/,"🥁"], [/piano|keyboard/,"🎹"], [/mic|microphone/,"🎤"],
-    [/music|headphone|speaker|melody|beat/,"🎵"], [/trophy|medal|champion|award/,"🏆"],
-    [/ice cream|gelato|popsicle/,"🍦"], [/cake|cupcake|birthday/,"🎂"], [/pizza/,"🍕"],
-    [/coffee/,"☕"], [/tea/,"🫖"], [/juice|smoothie/,"🧃"], [/watermelon/,"🍉"],
-    [/mango/,"🥭"], [/cherry/,"🍒"], [/corn/,"🌽"], [/chili|chilli|pepper/,"🌶️"],
-    [/perfume/,"🧴"], [/diamond|crystal|gem/,"💎"], [/crown|tiara/,"👑"],
-    [/ring|necklace|jewelry/,"💍"], [/money|cash|coin|gold mine/,"💰"],
-    [/firework|confetti|balloon|party|celebration/,"🎉"], [/tree|forest|garden|island/,"🌳"],
-    [/star|moon|sun|galaxy|universe|space|nebula/,"🌌"], [/alien/,"👽"],
-    [/game|gaming|controller|arcade/,"🎮"], [/camera|photo/,"📸"],
-    [/clapperboard|movie|film/,"🎬"], [/book|study|school/,"📚"],
-    [/castle|palace|kingdom/,"🏰"], [/house|home/,"🏠"], [/flag|jamaica|parish/,"🇯🇲"],
-    [/umbrella/,"☂️"], [/clock|watch|time/,"⌚"], [/phone|mobile/,"📱"]
-  ];
-  for (const pair of rules) if (pair[0].test(name)) return pair[1];
-  return gift.emoji || "🎁";
-}
-
 function premiumSvgShape(gift) {
   const n = String(gift.name || "").toLowerCase();
   if (/you are wanted/.test(n)) return '<circle cx="256" cy="250" r="150" fill="none" stroke="url(#shine)" stroke-width="27"/><circle cx="256" cy="250" r="94" fill="none" stroke="#fff" stroke-width="18"/><circle cx="256" cy="250" r="38" fill="url(#main)"/><path d="M256 95v-40m0 390v-40M101 250H61m390 0h-40" stroke="#fff" stroke-width="15" stroke-linecap="round"/>';
@@ -113,7 +71,6 @@ function premiumSvgShape(gift) {
 function svgArt(gift) {
   const colors = palette(gift);
   const seed = hash32(gift.code);
-  const symbol = symbolFor(gift);
   const name = String(gift.name || "").toLowerCase();
   const rot = (seed % 31) - 15;
   const star1 = 45 + (seed % 50);
@@ -138,12 +95,18 @@ function svgArt(gift) {
   if (shape) { /* gift-specific premium illustration */
   } else if (/^rose$|^white rose$|^crystal rose$|^my first rose$/.test(name)) {
     shape = '<path d="M256 304v122m0-78c-58-39-81 8-81 8 40 37 62 12 81-8zm0 31c57-42 81 7 81 7-41 37-62 12-81-7z" fill="none" stroke="#58c27b" stroke-width="17" stroke-linecap="round"/><path d="M246 325q-52-39-43-82m65 82q52-39 43-82" fill="none" stroke="#429c68" stroke-width="7"/><g fill="url(#main)" stroke="#fff" stroke-opacity=".7" stroke-width="5"><ellipse cx="256" cy="208" rx="37" ry="79"/><ellipse cx="256" cy="208" rx="37" ry="79" transform="rotate(55 256 256)"/><ellipse cx="256" cy="208" rx="37" ry="79" transform="rotate(110 256 256)"/><ellipse cx="256" cy="208" rx="37" ry="79" transform="rotate(165 256 256)"/></g><circle cx="256" cy="256" r="39" fill="url(#shine)"/>';
+  } else if (/hibiscus/.test(name)) {
+    shape = '<g fill="url(#main)" stroke="#fff" stroke-opacity=".75" stroke-width="7"><ellipse cx="256" cy="178" rx="43" ry="83"/><ellipse cx="256" cy="178" rx="43" ry="83" transform="rotate(72 256 256)"/><ellipse cx="256" cy="178" rx="43" ry="83" transform="rotate(144 256 256)"/><ellipse cx="256" cy="178" rx="43" ry="83" transform="rotate(216 256 256)"/><ellipse cx="256" cy="178" rx="43" ry="83" transform="rotate(288 256 256)"/></g><circle cx="256" cy="256" r="42" fill="url(#shine)" stroke="#fff" stroke-width="7"/><path d="M256 256q44-34 79-7m-79 7 52-65m-52 65 10-79" fill="none" stroke="#ffe7a8" stroke-width="9" stroke-linecap="round"/><circle cx="337" cy="248" r="10" fill="#ffe7a8"/><path d="M256 298v112m0-67q-42-35-72-4m72 25q42-35 72-4" fill="none" stroke="#55bc78" stroke-width="14" stroke-linecap="round"/>';
+  } else if (/four leaf clover/.test(name)) {
+    shape = '<path d="M256 249c-49-92-145-77-145-5 0 46 40 70 145 115 105-45 145-69 145-115 0-72-96-87-145 5zm0 0c-92-49-77-145-5-145 46 0 70 40 5 145zm0 0c92-49 77-145 5-145-46 0-70 40-5 145z" fill="url(#main)" fill-opacity=".01"/><path d="M256 252c-48-75-125-71-125-16 0 44 52 63 125 99 73-36 125-55 125-99 0-55-77-59-125 16z" fill="url(#main)" stroke="#fff" stroke-width="7"/><path d="M256 252c-75-48-71-125-16-125 44 0 63 52 16 125zm0 0c75-48 71-125 16-125-44 0-63 52-16 125z" fill="url(#shine)" stroke="#fff" stroke-width="7"/><path d="M256 335q-10 49-56 82m56-82q10 49 56 82" fill="none" stroke="#59c77d" stroke-width="17" stroke-linecap="round"/>';
   } else if (/cnc coin/.test(name)) {
     shape = '<circle cx="256" cy="256" r="145" fill="url(#main)" stroke="#fff" stroke-width="13"/><circle cx="256" cy="256" r="115" fill="none" stroke="url(#shine)" stroke-width="12"/><path d="M256 166v180m-43-143h58q38 0 38 33t-38 33h-46q-37 0-37 32t38 32h59" fill="none" stroke="#fff" stroke-width="18" stroke-linecap="round"/><path d="M256 126v-24m0 308v-24" stroke="#fff" stroke-width="8" stroke-linecap="round"/>';
   } else if (/fighting/.test(name)) {
     shape = '<path d="M163 311q-13-22 5-43l39-49q14-16 31-5l20 13 23-43q15-24 34-9 13 10 5 29l-19 45 24-33q17-20 34-5 13 12 1 31l-26 42q25-19 40-1 12 15-3 33l-48 61q-23 30-62 28l-59-7q-40-7-50-43z" fill="url(#main)" stroke="#fff" stroke-width="10" stroke-linejoin="round"/><path d="M162 346l-34 28 41 59 37-30" fill="#f3b2c9" stroke="#fff" stroke-width="8" stroke-linejoin="round"/><path d="M225 253l25 20m21-47 24 19m21-17 22 18" fill="none" stroke="url(#shine)" stroke-width="13" stroke-linecap="round"/>';
   } else if (/baseball/.test(name)) {
     shape = '<circle cx="256" cy="252" r="132" fill="#fff" stroke="#d6e2ef" stroke-width="12"/><path d="M158 154q98 98 0 196m196-196q-98 98 0 196" fill="none" stroke="#d84854" stroke-width="12" stroke-linecap="round"/><path d="M165 173l-15 15m34 14-15 15m34 14-15 15m34 14-15 15m34 14-15 15m34 14-15 15m34-173 15 15m-34 14 15 15m-34 14 15 15m-34 14 15 15m-34 14 15 15m-34 14 15 15" stroke="#d84854" stroke-width="7" stroke-linecap="round"/>';
+  } else if (/dj headphone|headphone/.test(name)) {
+    shape = '<path d="M112 268v-36q0-144 144-144t144 144v36" fill="none" stroke="url(#main)" stroke-width="31" stroke-linecap="round"/><path d="M112 245q0-23 23-23h27q23 0 23 23v112q0 23-23 23h-27q-23 0-23-23zm215 0q0-23 23-23h27q23 0 23 23v112q0 23-23 23h-27q-23 0-23-23z" fill="url(#main)" stroke="#fff" stroke-width="9"/><path d="M145 258v86m223-86v86" stroke="#fff" stroke-opacity=".75" stroke-width="8" stroke-linecap="round"/><circle cx="256" cy="94" r="16" fill="url(#shine)"/>';
   } else if (/ice cream|gelato|popsicle/.test(name)) {
     shape = '<path d="M186 252h140l-65 174q-5 13-12 0z" fill="#b87b48" stroke="#fff" stroke-width="8" stroke-linejoin="round"/><path d="M186 256q-28-18-28-56 0-75 98-75t98 75q0 38-28 56z" fill="url(#main)" stroke="#fff" stroke-width="9"/><circle cx="224" cy="193" r="14" fill="#fff" fill-opacity=".6"/><circle cx="277" cy="174" r="10" fill="#fff" fill-opacity=".7"/>';
   } else if (/coffee/.test(name)) {
@@ -196,7 +159,6 @@ function svgArt(gift) {
     '<ellipse cx="256" cy="408" rx="132" ry="21" fill="#081a3b" opacity=".22"/>'+
     '<g transform="rotate('+rot+' 256 256)">'+shape+'</g>'+spark+'<g transform="translate('+(seed%5)*5+' 0)" opacity=".8">'+sigil+'</g>'+premiumAccent+
     '<circle cx="392" cy="108" r="7" fill="#fff" opacity=".9"/><circle cx="115" cy="390" r="6" fill="#fff" opacity=".75"/>'+
-    '<text x="256" y="286" font-family="Apple Color Emoji,Segoe UI Emoji,Noto Color Emoji,sans-serif" font-size="118" text-anchor="middle" dominant-baseline="middle" paint-order="stroke" stroke="#fff" stroke-opacity=".2" stroke-width="4">'+symbol+'</text>'+
     '<path d="M90 72q90-48 174-26" fill="none" stroke="#fff" stroke-opacity=".22" stroke-width="10" stroke-linecap="round"/>'+
     '<rect x="86" y="438" width="340" height="43" rx="21" fill="#10162d" fill-opacity=".48"/><text x="256" y="467" font-family="Arial,sans-serif" font-size="21" font-weight="800" text-anchor="middle" fill="#fff">'+safeLabel+'</text>'+
     '</svg>';
