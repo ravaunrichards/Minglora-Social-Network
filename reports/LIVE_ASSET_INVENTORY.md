@@ -144,3 +144,12 @@ The model is authored separately from the generic animals-category geometry. The
 | `assets/3d-assets/gift-models/live-island-model.mjs` | LIVE Island (`live-island-rmn3mc`, nature; existing value 10 Coins) | Self-contained glTF 2.0 sculpture with lagoon/surf rings, sand cay, raised grassy headland, waterfall, three palm clusters, pavilion, canoe, branching coral, shells and beacon. Subject-specific SVG and transparent icon use `live-island-original-v1`. | Exact-code generator route and exact-code LIVE tide/surf sound route. Design and rights review remain pending. |
 
 The catalogue name, code, nature category, 10-Coin value and active state are asserted in regression tests and left unchanged. The GLTF uses embedded geometry and PBR metallic/roughness factors; it does not include texture maps or embedded skeletal animation. Its review status is `design-review-pending`, not premium-approved.
+
+
+## Crystal Crown bespoke royal gift — 2026-11-14
+
+| Source | Canonical item | Generated output | Integration / acceptance |
+|---|---|---|---|
+| `assets/3d-assets/gift-models/crystal-crown-model.mjs` | Crystal Crown (`crystal-crown-1itryeu`, luxury; existing value 2,000 Coins) | Self-contained glTF 2.0 gold tiara sculpture with velvet lining, engraved band, five arched points, faceted centre/side stones, pavé accents and suspended crystal drops. Matching subject-specific SVG and transparent icon carry `crystal-crown-original-v1`. | Exact-code generator, royal shimmer animation and dedicated synthesized chime cue. Design and rights review remain pending. |
+
+The existing canonical code, luxury category, active flag and 2,000-Coin value are reused without mutation. The source carries `gift-crystal-crown-3d-v1` provenance and `design-review-pending`; no premium-production approval is implied.
