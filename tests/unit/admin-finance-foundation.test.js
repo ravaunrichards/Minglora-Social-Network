@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
 
-const migration = fs.readFileSync(new URL('../../supabase/migrations/20261114180000_minglora_admin_finance_foundation.sql', import.meta.url), 'utf8');
+const migration = fs.readFileSync(new URL('../../supabase/migrations/20261114182543_minglora_admin_finance_foundation_20261114.sql', import.meta.url), 'utf8');
 const runtime = fs.readFileSync(new URL('../../supabase/functions/minglora-runtime-state/index.ts', import.meta.url), 'utf8');
 const server = fs.readFileSync(new URL('../../src/server.js', import.meta.url), 'utf8');
 const admin = fs.readFileSync(new URL('../../public/admin-centre.js', import.meta.url), 'utf8');
@@ -29,6 +29,7 @@ test('finance tables deny browser roles and audit history is append-only', () =>
   assert.equal((migration.match(/ENABLE ROW LEVEL SECURITY/g) || []).length, 6);
   assert.match(migration, /REVOKE ALL ON public\.minglora_admin_operating_invoices FROM PUBLIC, anon, authenticated/);
   assert.match(migration, /REVOKE ALL ON public\.minglora_admin_finance_audit_events FROM service_role/);
+  assert.match(migration, /REVOKE ALL ON public\.minglora_admin_service_providers FROM service_role/);
   assert.match(migration, /GRANT SELECT, INSERT ON public\.minglora_admin_finance_audit_events TO service_role/);
   assert.match(migration, /GRANT SELECT, INSERT ON public\.minglora_admin_finance_audit_events TO service_role/);
   assert.match(migration, /BEFORE UPDATE OR DELETE ON public\.minglora_admin_finance_audit_events/);
