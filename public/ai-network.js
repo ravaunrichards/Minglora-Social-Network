@@ -3,7 +3,7 @@
 
   const API = '/api/ai-network';
   const root = () => document.getElementById('main-content');
-  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, organizationError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', aiTasks: [], taskRuntime: null, taskError: '' };
+  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', managedCategories: null, discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, organizationError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', aiTasks: [], taskRuntime: null, taskError: '' };
   const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[character]));
@@ -225,6 +225,37 @@
       'ai-network-span-2 ai-network-discovery-center');
   }
 
+  function renderAICategoryManagement() {
+    if (!Array.isArray(state.managedCategories)) return '';
+    const rows = state.managedCategories.length
+      ? state.managedCategories.map(category =>
+        '<form class="ai-network-form" data-ai-form="category-update">' +
+        '<input type="hidden" name="categoryKey" value="' + esc(category.category_key) + '">' +
+        '<div class="ai-network-form-title">' + esc(category.category_key) + '</div>' +
+        '<div class="ai-network-form-grid">' +
+        '<label>Display name<input name="displayName" required minlength="2" maxlength="80" value="' + esc(category.display_name || '') + '"></label>' +
+        '<label>Sort order<input name="sortOrder" type="number" min="-100000" max="100000" step="1" value="' + esc(category.sort_order ?? 0) + '"></label>' +
+        '<label>Status<select name="isActive">' +
+        options([{value:'true',label:'Active'},{value:'false',label:'Inactive'}], category.is_active ? 'true' : 'false') +
+        '</select></label></div>' +
+        '<label>Description<textarea name="description" rows="2" maxlength="1000">' + esc(category.description || '') + '</textarea></label>' +
+        '<p class="ai-network-note">The permanent category key cannot be renamed because existing AI identity records reference it. Deactivation keeps historical identities intact.</p>' +
+        '<button class="secondary" type="submit">Save category</button></form>'
+      ).join('')
+      : empty('No categories are available yet.');
+    const createForm = '<form class="ai-network-form" data-ai-form="category-create">' +
+      '<div class="ai-network-form-title">Create an AI category</div>' +
+      '<div class="ai-network-form-grid">' +
+      '<label>Permanent category key<input name="categoryKey" required minlength="2" maxlength="64" pattern="[a-z][a-z0-9_]+" placeholder="ai_science" autocomplete="off"></label>' +
+      '<label>Display name<input name="displayName" required minlength="2" maxlength="80"></label>' +
+      '<label>Sort order<input name="sortOrder" type="number" min="-100000" max="100000" step="1" value="100"></label>' +
+      '</div><label>Description<textarea name="description" rows="2" maxlength="1000"></textarea></label>' +
+      '<button class="primary" type="submit">Create category</button></form>';
+    return card('AI Category Management', 'PLATFORM ADMINISTRATION',
+      '<p>Only authorized platform administrators can change this catalogue. Existing categories are preserved; category keys are never deleted or rewritten.</p>' +
+      createForm + '<div class="ai-network-list">' + rows + '</div>', 'ai-network-span-2');
+  }
+
   function renderAIIdentityRegistry() {
     const registry = state.identityRegistry;
     const categories = list(state.identityCategories);
@@ -283,18 +314,22 @@
       '<p>Registered identities are stored individually in Minglora Supabase. Human authentication accounts are kept separate.</p>' +
       warning + '<div class="ai-network-quick-stats"><div><span>Registered identities</span><strong>' +
       (registry ? number(registry.total) : 'Unavailable') + '</strong></div><div><span>Categories available</span><strong>' + number(categories.length) +
-      '</strong></div></div>' + renderAIIdentityRows(registry) + form + bulkForm, 'ai-network-span-2');
+      '</strong></div></div>' + renderAICategoryManagement() + renderAIIdentityRows(registry) + form + bulkForm, 'ai-network-span-2');
   }
 
   async function loadAIIdentityRegistry() {
     state.identityError = '';
     try {
-      const [registry, categoryResult] = await Promise.all([
+      const [registry, categoryResult, managedCategoryResult] = await Promise.all([
         request('/identities?limit=100'),
-        request('/categories')
+        request('/categories'),
+        request('/categories/manage').catch(() => null)
       ]);
       state.identityRegistry = registry;
       state.identityCategories = list(categoryResult.categories);
+      state.managedCategories = Array.isArray(managedCategoryResult?.categories)
+        ? managedCategoryResult.categories
+        : null;
     } catch (error) {
       state.identityRegistry = null;
       state.identityCategories = [];
@@ -1169,6 +1204,21 @@
         is_public: false
       });
       if (value('emailAddress')) payload.email = { email_address: value('emailAddress') };
+    } else if (kind === 'category-create') {
+      path = '/categories/manage';
+      payload.action = 'create';
+      payload.category_key = value('categoryKey').toLowerCase();
+      payload.display_name = value('displayName');
+      payload.description = value('description');
+      payload.sort_order = Number(value('sortOrder') || 0);
+    } else if (kind === 'category-update') {
+      path = '/categories/manage';
+      payload.action = 'update';
+      payload.category_key = value('categoryKey');
+      payload.display_name = value('displayName');
+      payload.description = value('description');
+      payload.sort_order = Number(value('sortOrder') || 0);
+      payload.is_active = value('isActive') === 'true';
     } else if (kind === 'task-create') {
       path = '/tasks';
       form.dataset.idempotencyKey = form.dataset.idempotencyKey || window.crypto.randomUUID();
@@ -1385,7 +1435,9 @@
     }
     form.reset();
     if (['identity','organization','vacancy','application','appointment','employment-transfer','task-create'].includes(kind)) form.dataset.idempotencyKey = window.crypto.randomUUID();
-    const message = kind === 'identity-edit' ? 'AI identity profile and name details updated with a new version and audit record.' + (uploadedMediaCount ? ' ' + uploadedMediaCount + ' AI profile image(s) uploaded, verified and attached.' : '')
+    const message = kind === 'category-create' ? 'AI category created and recorded in the administrator audit log.'
+      : kind === 'category-update' ? 'AI category details and active state updated and audited.'
+      : kind === 'identity-edit' ? 'AI identity profile and name details updated with a new version and audit record.' + (uploadedMediaCount ? ' ' + uploadedMediaCount + ' AI profile image(s) uploaded, verified and attached.' : '')
       : kind === 'task-create'
       ? 'Task saved to the durable queue; approval policy comes from the selected AI identity.'
       : kind === 'task-approval'
