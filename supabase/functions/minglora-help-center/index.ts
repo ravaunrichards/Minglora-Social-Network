@@ -443,7 +443,7 @@ Deno.serve(async (req:Request) => {
     }
     if (action==="admin_media_upload") {
       const articleId=requiredText(input.articleId,64),contentType=requiredText(input.mimeType,80).toLowerCase();
-      const base64=String(input.contentBase64||"").replace(/^data:[^;]+;base64,/i,"").replace(/\\s/g,"");
+      const base64=String(input.contentBase64||"").replace(/^data:[^;]+;base64,/i,"").replace(/\s/g,"");
       const allowedTypes:Record<string,string>={"image/jpeg":"jpg","image/png":"png","image/webp":"webp","image/avif":"avif"};
       if(!UUID.test(articleId)||!allowedTypes[contentType]||!base64||base64.length>7_000_000||!/^[A-Za-z0-9+/]*={0,2}$/.test(base64))
         return fail(400,"Choose a supported instructional image smaller than 5 MB.");
