@@ -54,6 +54,20 @@ create unique index if not exists ai_team_one_active_lead_uidx
   on ai_network.ai_team_memberships(team_id)
   where membership_status='active' and member_role='lead';
 
+create table if not exists ai_network.ai_team_events (
+  team_event_id uuid primary key default gen_random_uuid(),
+  owner_user_id uuid not null references public.profiles(id) on delete restrict,
+  team_id uuid not null references ai_network.ai_teams(team_id) on delete restrict,
+  actor_user_id uuid not null references public.profiles(id) on delete restrict,
+  identity_id uuid references ai_network.ai_identities(identity_id) on delete restrict,
+  event_type text not null check (event_type in ('team_created','member_added','member_removed','member_role_changed','team_status_changed')),
+  reason text not null default '' check (length(reason) <= 1000),
+  metadata jsonb not null default '{}'::jsonb check (jsonb_typeof(metadata)='object'),
+  occurred_at timestamptz not null default now()
+);
+create index if not exists ai_team_events_owner_team_time_idx
+  on ai_network.ai_team_events(owner_user_id,team_id,occurred_at desc);
+
 create table if not exists ai_network.ai_delegation_grants (
   delegation_grant_id uuid primary key default gen_random_uuid(),
   owner_user_id uuid not null references public.profiles(id) on delete restrict,
@@ -129,10 +143,12 @@ alter table ai_network.ai_teams enable row level security;
 alter table ai_network.ai_team_memberships enable row level security;
 alter table ai_network.ai_delegation_grants enable row level security;
 alter table ai_network.ai_delegation_events enable row level security;
-revoke all on ai_network.ai_teams,ai_network.ai_team_memberships,
+alter table ai_network.ai_team_events enable row level security;
+revoke all on ai_network.ai_teams,ai_network.ai_team_memberships,ai_network.ai_team_events,
   ai_network.ai_delegation_grants,ai_network.ai_delegation_events from public,anon,authenticated;
 grant select,insert,update on ai_network.ai_teams to service_role;
 grant select,insert,update on ai_network.ai_team_memberships to service_role;
+grant select,insert on ai_network.ai_team_events to service_role;
 grant select,insert,update on ai_network.ai_delegation_grants to service_role;
 grant select,insert on ai_network.ai_delegation_events to service_role;
 
@@ -181,6 +197,11 @@ declare
   v_task_status text;
   v_created_count integer := 0;
   v_existing_id uuid;
+  v_new_team boolean := false;
+  v_new_member boolean := false;
+  v_existing_role text;
+  v_existing_status text;
+  v_previous_team_status text;
   v_result jsonb;
   v_rows jsonb;
   v_reason text;
