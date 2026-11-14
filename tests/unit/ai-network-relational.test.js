@@ -136,7 +136,7 @@ test('AI identity memory is private, owner-scoped, opt-in and time-bounded', () 
   assert.match(memoryMigration, /security invoker/i);
   assert.match(memoryMigration, /set search_path\s*=\s*''/i);
   assert.match(memoryMigration, /current_user <> 'service_role'/i);
-  assert.match(memoryMigration, /i\.owner_user_id = p_actor_user_id/i);
+  assert.match(memoryMigration, /v_owner <> p_actor_user_id/i);
   assert.match(memoryMigration, /v_memory_enabled := coalesce\(v_settings\.memory_enabled, false\)/i);
   assert.match(memoryMigration, /v_long_term_enabled := coalesce\(v_settings\.long_term_enabled, false\)/i);
   assert.match(memoryMigration, /long-term memory requires separate owner consent/i);
