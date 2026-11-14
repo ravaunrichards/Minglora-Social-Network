@@ -173,7 +173,7 @@ function botSignature(bot) {
   return [String(bot.purpose || '').toLowerCase(), bot.tone, traits.join(','), String(bot.expertise || '').toLowerCase()].join('|');
 }
 
-export function createAIBot(db, ownerId, input = {}, { now = new Date() } = {}) {
+export function createAIBot(db, ownerId, input = {}, { now = new Date(), id: requestedId } = {}) {
   ensureAICollections(db);
   const name = text(input.name, 40);
   const purpose = text(input.purpose, 280);
@@ -200,7 +200,7 @@ export function createAIBot(db, ownerId, input = {}, { now = new Date() } = {}) 
   const candidate = { purpose, tone, traits, expertise };
   if (existing.some(bot => bot.personalitySignature === botSignature(candidate))) throw fail(409, 'This bot would duplicate an existing personality. Give it a distinct purpose, tone or trait combination.');
   const bot = {
-    id: makeId(), ownerId, name, purpose, tone, traits, expertise,
+    id: text(requestedId, 80) || makeId(), ownerId, name, purpose, tone, traits, expertise,
     languages, primaryLanguage, capabilities,
     ...(identityIdempotencyKey ? { identityIdempotencyKey } : {}),
     identityType: 'ai_bot',
