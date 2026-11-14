@@ -2391,6 +2391,9 @@ async function route(req, res) {
             input.items.length < 1 || input.items.length > 100) {
           throw Object.assign(new Error('A bulk provider assignment must contain between 1 and 100 assignment records.'), { status: 400 });
         }
+        if (!isModerator(user, req)) {
+          throw Object.assign(new Error('Only an authorized Minglora platform administrator with the required active session can manage AI provider assignments.'), { status: 403 });
+        }
         const results = [];
         const failed = [];
         for (let offset = 0; offset < input.items.length; offset += 10) {
