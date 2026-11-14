@@ -215,7 +215,24 @@ try{await refreshAdmin();adminStatus("");adminTab("articles");setUrl({manage:"1"
 }
 function renderAdminArticles(){
 const rows=state.adminOverview?.articles||[];
-$("#hc-admin-panel").innerHTML='<div class="hc-admin-panel"><div class="hc-section-heading"><div><h2>Knowledge-base articles</h2><p>Only approved, fact-checked answers can be published. Use Add translation to create a reviewed language version.</p></div><span>'+rows.length+' translations</span></div><div class="hc-admin-list">'+(rows.length?rows.map(r=>'<div class="hc-admin-row"><div><strong>'+esc(r.title)+'<span class="hc-status-pill">'+esc(r.status)+'</span></strong><small>'+esc(r.help_articles?.slug||"")+' · '+esc(r.locale)+' · Order '+Number(r.help_articles?.sort_order||0)+' · '+esc(date(r.updated_at))+'</small></div><div class="hc-admin-actions"><button type="button" class="hc-secondary-button" data-hc-edit="'+esc(r.id)+'">Edit</button><button type="button" class="hc-secondary-button" data-hc-add-translation="'+esc(r.id)+'">Add translation</button></div></div>').join(""):empty("No articles yet","Create a draft from approved Minglora material. No sample articles are inserted."))+'</div></div><div id="hc-admin-editor"></div>';
+const mergeCandidates=[...new Map(rows.filter(r=>r.help_articles?.is_active!==false).map(r=>[r.article_id,{id:r.article_id,slug:r.help_articles?.slug||"",title:r.title||r.help_articles?.slug||"Untitled article"}])).values()];
+const mergeOptions=mergeCandidates.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.title)+' · '+esc(x.slug)+'</option>').join("");
+const mergePanel='<div class="hc-admin-panel"><h2>Merge duplicate questions</h2><p>Move all language versions from a duplicate article to one canonical question. Existing translation IDs, feedback, bookmarks, views and revisions are preserved. The duplicate record is retained inactive.</p>'+(mergeCandidates.length>1?'<form id="hc-merge-form" class="hc-admin-form"><div class="hc-inline-fields"><label>Duplicate article<select name="sourceArticleId">'+mergeOptions+'</select></label><label>Keep this article<select name="targetArticleId">'+mergeOptions+'</select></label></div><button type="submit" class="hc-secondary-button">Merge duplicate safely</button><p id="hc-merge-status" class="hc-admin-status" role="status"></p></form>':'<p class="hc-empty">Two active articles are required before duplicates can be merged.</p>')+'</div>';
+$("#hc-admin-panel").innerHTML=mergePanel+'<div class="hc-admin-panel"><div class="hc-section-heading"><div><h2>Knowledge-base articles</h2><p>Only approved, fact-checked answers can be published. Use Add translation to create a reviewed language version.</p></div><span>'+rows.length+' translations</span></div><div class="hc-admin-list">'+(rows.length?rows.map(r=>'<div class="hc-admin-row"><div><strong>'+esc(r.title)+'<span class="hc-status-pill">'+esc(r.status)+'</span></strong><small>'+esc(r.help_articles?.slug||"")+' · '+esc(r.locale)+' · Order '+Number(r.help_articles?.sort_order||0)+' · '+esc(date(r.updated_at))+'</small></div><div class="hc-admin-actions"><button type="button" class="hc-secondary-button" data-hc-edit="'+esc(r.id)+'">Edit</button><button type="button" class="hc-secondary-button" data-hc-add-translation="'+esc(r.id)+'">Add translation</button></div></div>').join(""):empty("No articles yet","Create a draft from approved Minglora material. No sample articles are inserted."))+'</div></div><div id="hc-admin-editor"></div>';
+const mergeForm=$("#hc-merge-form");
+if(mergeForm)mergeForm.onsubmit=async event=>{
+event.preventDefault();
+const values=Object.fromEntries(new FormData(mergeForm)),status=$("#hc-merge-status"),button=mergeForm.querySelector('button[type="submit"]');
+if(!values.sourceArticleId||!values.targetArticleId||values.sourceArticleId===values.targetArticleId){status.textContent="Choose two different articles.";return;}
+if(!confirm("Merge this duplicate into the selected canonical article? Its language versions and member history will be preserved; the duplicate article will be retained inactive. This operation cannot be automatically undone."))return;
+button.disabled=true;status.textContent="Checking duplicate compatibility and merging…";
+try{
+const result=await adminApi("/api/help-center/admin/merge",{method:"POST",body:JSON.stringify(values)});
+await refreshAdmin();adminTab("articles");
+adminStatus("Duplicate merged. "+Number(result.movedTranslations||0)+" translation(s) moved; original member history was retained.");
+}catch(error){status.textContent=error.message||"The duplicate articles could not be merged.";}
+finally{button.disabled=false;}
+};
 $("[data-hc-edit]").forEach(b=>b.onclick=()=>editAdminArticle(b.dataset.hcEdit));
 $("[data-hc-add-translation]").forEach(b=>b.onclick=()=>createAdminTranslation(b.dataset.hcAddTranslation));
 }
