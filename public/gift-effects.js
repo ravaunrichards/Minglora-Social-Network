@@ -81,6 +81,15 @@
       {offset:.84,opacity:1,transform:"translate3d(2px,0,0) rotateZ(-.7deg) scale(1.015)",filter:"none"},
       neutral
     ];
+    if(preset==="maraca-rhythm")return [
+      {offset:0,opacity:0,transform:"translate3d(0,18px,0) rotateZ(-7deg) scale(.82)",filter:"brightness(.82)"},
+      {offset:.16,opacity:1,transform:"translate3d(-6px,-3px,0) rotateZ(8deg) scale(1.08)",filter:"brightness(1.25) saturate(1.2)"},
+      {offset:.3,opacity:1,transform:"translate3d(7px,2px,0) rotateZ(-9deg) scale(1.04)",filter:"brightness(1.12)"},
+      {offset:.46,opacity:1,transform:"translate3d(-5px,-2px,0) rotateZ(7deg) scale(1.06)",filter:"brightness(1.2)"},
+      {offset:.62,opacity:1,transform:"translate3d(5px,2px,0) rotateZ(-7deg) scale(1.03)",filter:"brightness(1.14)"},
+      {offset:.8,opacity:1,transform:"translate3d(-2px,0,0) rotateZ(2deg) scale(1.02)",filter:"brightness(1.08)"},
+      neutral
+    ];
     if(preset==="phoenix-rise")return [
       {offset:0,opacity:0,transform:"translate3d(0,32px,0) rotateZ(-10deg) scale(.68)",filter:"brightness(.62) saturate(.72)"},
       {offset:.18,opacity:1,transform:"translate3d(0,-13px,0) rotateZ(5deg) scale(1.16)",filter:"brightness(1.62) saturate(1.55)"},
@@ -350,6 +359,29 @@
     });
     return true;
   }
+  function playBeachMaracas(c,now,seed){
+    const rattle=c.createBufferSource(),filter=c.createBiquadFilter(),gain=c.createGain();
+    rattle.buffer=createGiftNoise(c,seed,.92);
+    filter.type="highpass";filter.frequency.setValueAtTime(900,now);filter.Q.setValueAtTime(.45,now);
+    const pulses=[0,.16,.34,.5,.68];
+    gain.gain.setValueAtTime(.0001,now);
+    pulses.forEach((delay,index)=>{
+      const start=now+delay,peak=.046-(index%2)*.008;
+      gain.gain.setValueAtTime(.0001,start);
+      gain.gain.linearRampToValueAtTime(peak,start+.018);
+      gain.gain.exponentialRampToValueAtTime(.0001,start+.105);
+    });
+    rattle.connect(filter);filter.connect(gain);gain.connect(c.destination);rattle.start(now);rattle.stop(now+.94);
+    const notes=[261.63,392,523.25,659.25],delays=[.08,.29,.51,.7];
+    notes.forEach((frequency,index)=>{
+      const start=now+delays[index],tone=c.createOscillator(),toneGain=c.createGain(),pan=c.createStereoPanner?.();
+      tone.type=index===3?"triangle":"sine";tone.frequency.setValueAtTime(frequency*(1+((seed+index*5)%9-4)*.001),start);
+      toneGain.gain.setValueAtTime(.0001,start);toneGain.gain.exponentialRampToValueAtTime(.022,start+.02);toneGain.gain.exponentialRampToValueAtTime(.0001,start+.28);
+      if(pan){pan.pan.setValueAtTime((index-1.5)*.2,start);tone.connect(toneGain);toneGain.connect(pan);pan.connect(c.destination);}else{tone.connect(toneGain);toneGain.connect(c.destination);}
+      tone.start(start);tone.stop(start+.3);
+    });
+    return true;
+  }
   function play(gift){
     if(!gift)return false;
     const c=audio();if(!c)return false;
@@ -362,6 +394,7 @@
       if(gift.code==="live-island-rmn3mc")return playLiveIsland(c,now,seed);
       if(gift.code==="crystal-crown-1itryeu")return playCrystalCrown(c,now,seed);
       if(gift.code==="phoenix-wep6uk")return playPhoenix(c,now,seed);
+      if(gift.code==="beach-maracas-1exxoag")return playBeachMaracas(c,now,seed);
       const p=profiles[gift.category]||profiles.other,variation=(seed%9)-4;
       const base=p.base*(.92+(seed%17)/100);
       p.notes.forEach((step,i)=>{
@@ -485,7 +518,7 @@
     const motionElement=card.querySelector(".minglora-gift-fx-model");
     if(motionElement&&gift.motion_preset&&typeof motionElement.animate==="function"){
       const reduced=Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);
-      const visualPreset=gift.code==="djembe-master-1v3jzkm"?"djembe-strike":gift.code==="palm-breeze-gknyt0"?"palm-canopy-sway":gift.code==="gamer-otter-100-mgl"?"gamer-otter-cheer":gift.code==="live-island-rmn3mc"?"island-tide":gift.code==="crystal-crown-1itryeu"?"crown-lustre":gift.code==="phoenix-wep6uk"?"phoenix-rise":gift.motion_preset;
+      const visualPreset=gift.code==="djembe-master-1v3jzkm"?"djembe-strike":gift.code==="palm-breeze-gknyt0"?"palm-canopy-sway":gift.code==="gamer-otter-100-mgl"?"gamer-otter-cheer":gift.code==="live-island-rmn3mc"?"island-tide":gift.code==="crystal-crown-1itryeu"?"crown-lustre":gift.code==="phoenix-wep6uk"?"phoenix-rise":gift.code==="beach-maracas-1exxoag"?"maraca-rhythm":gift.motion_preset;
       const semanticFrames=buildPreviewFrames(visualPreset,{dx,dy,tilt,spin,peak,rebound});
       motionElement.animate(semanticFrames,{
         duration:reduced?320:Math.max(950,Math.min(4200,Number(gift.motion_duration_ms)||duration)),
