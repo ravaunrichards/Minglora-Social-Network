@@ -131,3 +131,10 @@ assert.doesNotMatch(migration,/delete from public\.help_articles/i);
 assert.match(migration,/revoke all on function public\.help_center_merge_articles/);
 assert.match(migration,/to service_role/);
 });
+
+test("Help Center image and HTTPS video Markdown insertions keep actual line breaks",()=>{
+const js=read("public/help-center.js");
+assert.ok(js.includes("form.elements.answerMarkdown.value=form.elements.answerMarkdown.value.trimEnd()+\"\\n\\n[Watch video demonstration]("));
+assert.ok(js.includes("form.elements.answerMarkdown.value=form.elements.answerMarkdown.value.trimEnd()+\"\\n\\n!["));
+assert.match(js,/if\(url\.protocol!=="https:"\)/);
+});
