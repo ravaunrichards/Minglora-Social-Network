@@ -63,6 +63,38 @@ test('bot creation labels bots as AI and starts them as drafts', () => {
   assert.equal(db.aiBots.length, 1);
 });
 
+test('bot creation accepts a server-assigned canonical identifier', () => {
+  const db = state();
+  const bot = createAIBot(db, 'owner-1', {
+    name: 'Canonical Guide',
+    purpose: 'Helps members organize approved educational community activities.',
+    tone: 'friendly',
+    traits: ['helpful', 'curious'],
+    expertise: 'Community education',
+    languages: ['en'],
+    primaryLanguage: 'en',
+    capabilities: ['draft_content']
+  }, { now, id: 'canonical-bot-identity-123' });
+  assert.equal(bot.id, 'canonical-bot-identity-123');
+});
+
+test('bot creation reuses the same owner bot for a repeated identity idempotency key', () => {
+  const db = state();
+  const first = makeBot(db, 'owner-1', { identityIdempotencyKey: 'bot-request-12345678' });
+  const retry = makeBot(db, 'owner-1', { identityIdempotencyKey: 'bot-request-12345678' });
+  assert.equal(retry.id, first.id);
+  assert.equal(db.aiBots.length, 1);
+  assert.equal(db.aiBotAudit.filter(entry => entry.action === 'bot_created').length, 1);
+});
+
+test('bot identity idempotency keys are scoped to the authenticated owner', () => {
+  const db = state();
+  const first = makeBot(db, 'owner-1', { identityIdempotencyKey: 'bot-request-12345678' });
+  const otherOwner = makeBot(db, 'owner-2', { identityIdempotencyKey: 'bot-request-12345678' });
+  assert.notEqual(otherOwner.id, first.id);
+  assert.equal(db.aiBots.length, 2);
+});
+
 test('bot creation rejects duplicate names and duplicate personality signatures', () => {
   const db = state();
   makeBot(db);
