@@ -14,3 +14,16 @@ This directory contains original, version-controlled 3D gift authoring sources. 
 - Integration: scripts/generate-minglora-gifts.mjs routes only the exact Rose record to this source. Catalogue data, configured coin price and LIVE event handling remain unchanged.
 
 Run npm run build:gifts to generate the model and SVG. Catalogue tests verify the Rose model ID, GLTF structure and artwork signature.
+
+## Djembe Master v1
+
+- Source: `djembe-model.mjs`
+- Target: canonical catalogue item `djembe-master-1v3jzkm` (Djembe Master)
+- Generated output: `public/assets/gifts/catalog/djembe-master-1v3jzkm.gltf`
+- Format: self-contained glTF 2.0 JSON with embedded binary mesh buffers
+- Geometry: sculpted mahogany body, hollow inner bowl, taut hide drumhead, separate rim bindings, 16 tension strands, woven diamond lacing and carved lower-shell detailing
+- Materials: separate PBR surfaces for wood, hide and rope
+- Review state: design-review-pending; original geometry, with no copied logos or screenshot-derived artwork
+- Integration: the canonical gift code is routed to this source by `scripts/generate-minglora-gifts.mjs`; catalogue pricing, status and LIVE transaction logic remain unchanged
+
+The existing gift build generates the model and the subject-specific transparent SVG artwork. Regression coverage verifies generated mesh metadata, components, embedded geometry and the artwork signature.

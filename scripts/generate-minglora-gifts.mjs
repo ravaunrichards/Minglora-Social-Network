@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRoseModel } from "../assets/3d-assets/gift-models/rose-model.mjs";
 import { createHibiscusModel } from "../assets/3d-assets/gift-models/hibiscus-model.mjs";
+import { createDjembeModel } from "../assets/3d-assets/gift-models/djembe-model.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const MANIFEST = path.join(ROOT, "data", "minglora-gift-catalog.json");
@@ -49,6 +50,7 @@ function palette(gift) {
 }
 function premiumSvgShape(gift) {
   const n = String(gift.name || "").toLowerCase();
+  if (/djembe master/.test(n)) return '<g data-gift-artwork="djembe-master-original-v1"><path d="M169 163Q256 126 343 163L319 218Q306 251 291 296L278 380Q256 402 234 380L221 296Q206 251 193 218Z" fill="url(#main)" stroke="#fff" stroke-width="10" stroke-linejoin="round"/><ellipse cx="256" cy="164" rx="87" ry="25" fill="#d8c19a" stroke="#fff" stroke-width="10"/><ellipse cx="256" cy="164" rx="68" ry="17" fill="#9b7758" stroke="#f7e5c4" stroke-width="7"/><path d="M194 190Q256 211 318 190M205 228Q256 249 307 228M218 274Q256 291 294 274M231 325Q256 339 281 325" fill="none" stroke="#e8d2a9" stroke-width="7" stroke-linecap="round"/><path d="M194 190 231 325m-24-97 87 97m-72-135 58 103m49-103-58 103m34-103-87 135m63-135 24 135" fill="none" stroke="#f0dcb7" stroke-width="6" stroke-linecap="round"/><path d="M221 380Q256 398 291 380L299 413Q256 436 213 413Z" fill="#532b25" stroke="#fff" stroke-width="9"/><ellipse cx="256" cy="164" rx="78" ry="19" fill="none" stroke="#f4ddb6" stroke-width="7"/></g>';
   if (/you are wanted/.test(n)) return '<circle cx="256" cy="250" r="150" fill="none" stroke="url(#shine)" stroke-width="27"/><circle cx="256" cy="250" r="94" fill="none" stroke="#fff" stroke-width="18"/><circle cx="256" cy="250" r="38" fill="url(#main)"/><path d="M256 95v-40m0 390v-40M101 250H61m390 0h-40" stroke="#fff" stroke-width="15" stroke-linecap="round"/>';
   if (/hot rods/.test(n)) return '<path d="M91 305l35-91q12-27 48-31l38-62h104l54 61q38 5 51 38l20 85-24 28H111z" fill="url(#main)" stroke="#fff" stroke-width="10" stroke-linejoin="round"/><path d="M215 151h91l42 60H176z" fill="#b8f5ff" stroke="#fff" stroke-width="7"/><circle cx="165" cy="329" r="47" fill="#1c2541" stroke="#fff" stroke-width="11"/><circle cx="357" cy="329" r="47" fill="#1c2541" stroke="#fff" stroke-width="11"/><path d="M83 242l-38-18m37 51-52-3m411-42 38-18m-38 51 52-3" stroke="url(#shine)" stroke-width="15" stroke-linecap="round"/>';
   if (/red lightning/.test(n)) return '<path d="M292 67 139 274h99l-21 171 158-234h-99z" fill="url(#main)" stroke="#fff" stroke-width="13" stroke-linejoin="round"/><path d="M106 156l23 27m254 164 27 23" stroke="url(#shine)" stroke-width="17" stroke-linecap="round"/>';
@@ -171,6 +173,7 @@ function modelDocument(gift) {
   const giftName = String(gift.name || "").trim().toLowerCase();
   if (giftName === "rose") return createRoseModel();
   if (giftName === "hibiscus") return createHibiscusModel();
+  if (gift.code === "djembe-master-1v3jzkm") return createDjembeModel();
   const seed = hash32(gift.code);
   const hue = seed % 360;
   const colors = palette(gift);
