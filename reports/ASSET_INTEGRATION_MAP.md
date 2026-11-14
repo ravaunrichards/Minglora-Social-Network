@@ -39,3 +39,13 @@ No prices, balances, transactions, account state, LiveKit credentials, or existi
 - `public/app.js` references only the immutable icon allow-list; user input is never interpolated into an asset path.
 - `public/sw.js` increments the shell cache version and pre-caches the manifest plus all 16 SVG files for offline LIVE controls.
 - `tests/unit/live-control-icons.test.js` validates the inventory, SVG structure, safe reference logic, state inheritance and offline cache coverage.
+
+
+## LIVE gift category artwork
+
+- The dynamic gift-category chips use individually addressable SVG artwork under `public/assets/icons/live-gift-categories/` for All and all 21 current catalogue category keys.
+- `manifest.json` records labels, canonical file paths, shared 24×24 viewBox, `currentColor` treatment and design-review status.
+- `public/app.js` maps category keys through an immutable allow-list; unknown keys use the neutral More Gifts artwork. Existing category filtering, search, selection, favorites and price sorting remain unchanged.
+- `public/live-gift-access.css` sizes the category marks consistently with the existing chips.
+- The service worker uses shell cache v305 and pre-caches the category manifest and all 22 SVG files.
+- `tests/unit/live-gift-category-icons.test.js` verifies manifest coverage, physical files, vector-only artwork, accessible chip markup and offline cache inclusion.

@@ -5,6 +5,8 @@
 .live-gift-search-wrap .live-gift-search{margin:0;min-height:42px}
 .live-gift-category-row{display:flex;gap:7px;overflow-x:auto;overscroll-behavior-inline:contain;padding:2px 1px 8px;scrollbar-width:thin;min-width:0}
 .live-gift-category-row button{flex:0 0 auto;min-height:34px;padding:7px 11px;border:1px solid #3a4558;border-radius:999px;background:#202b3c;color:#dce5f3;font-size:11px;font-weight:750;white-space:nowrap}
+.live-gift-category-row button{display:inline-flex;align-items:center;gap:7px}
+.live-gift-category-icon{display:block;flex:0 0 16px;width:16px;height:16px;stroke:currentColor;color:currentColor}
 .live-gift-category-row button.active{border-color:#ff6687;background:rgba(221,31,77,.2);color:#fff}
 .live-gift-results-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
 .live-gift-results-heading strong{font-size:12px;color:#f5f7fb}
