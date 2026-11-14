@@ -66,6 +66,20 @@
   function buildPreviewFrames(preset,v){
     const {dx,dy,tilt,spin,peak,rebound}=v;
     const neutral={offset:1,opacity:1,transform:"translate3d(0,0,0) rotateZ(0deg) scale(1)",filter:"none"};
+    if(preset==="djembe-strike")return [
+      {offset:0,opacity:0,transform:"translate3d(0,15px,0) rotateZ(-5deg) scale(.84)",filter:"brightness(.78)"},
+      {offset:.16,opacity:1,transform:"translate3d(0,-5px,0) rotateZ(4deg) scale(1.14)",filter:"brightness(1.42) saturate(1.24)"},
+      {offset:.34,opacity:1,transform:"translate3d(0,3px,0) rotateZ(-2deg) scale(.94)",filter:"brightness(1.12)"},
+      {offset:.58,opacity:1,transform:"translate3d(0,-2px,0) rotateZ(1deg) scale(1.035)",filter:"none"},
+      neutral
+    ];
+    if(preset==="palm-canopy-sway")return [
+      {offset:0,opacity:0,transform:"translate3d(0,18px,0) rotateZ(-4deg) scale(.86)",filter:"brightness(.86)"},
+      {offset:.24,opacity:1,transform:"translate3d(-5px,-4px,0) rotateZ(2.8deg) scale(1.045)",filter:"brightness(1.16)"},
+      {offset:.49,opacity:1,transform:"translate3d(5px,-1px,0) rotateZ(-3.2deg) scale(1.015)",filter:"none"},
+      {offset:.74,opacity:1,transform:"translate3d(-2px,1px,0) rotateZ(1.8deg) scale(1.025)",filter:"none"},
+      neutral
+    ];
     if(preset==="firework-burst"||preset==="celebration-burst")return [
       {offset:0,opacity:0,transform:"scale(.22) rotateZ(-18deg)",filter:"brightness(.7)"},
       {offset:.28,opacity:1,transform:"scale(1.24) rotateZ(9deg)",filter:"brightness(1.55) saturate(1.4)"},
@@ -360,7 +374,8 @@
     const motionElement=card.querySelector(".minglora-gift-fx-model");
     if(motionElement&&gift.motion_preset&&typeof motionElement.animate==="function"){
       const reduced=Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);
-      const semanticFrames=buildPreviewFrames(gift.motion_preset,{dx,dy,tilt,spin,peak,rebound});
+      const visualPreset=gift.code==="djembe-master-1v3jzkm"?"djembe-strike":gift.code==="palm-breeze-gknyt0"?"palm-canopy-sway":gift.motion_preset;
+      const semanticFrames=buildPreviewFrames(visualPreset,{dx,dy,tilt,spin,peak,rebound});
       motionElement.animate(semanticFrames,{
         duration:reduced?320:Math.max(950,Math.min(4200,Number(gift.motion_duration_ms)||duration)),
         easing:"cubic-bezier(.17,.85,.3,1)",

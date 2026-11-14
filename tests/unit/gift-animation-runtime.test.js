@@ -87,3 +87,12 @@ test("Djembe and Palm Breeze sound design stays local, action-triggered and fall
   assert.ok(effects.includes("const p=profiles[gift.category]||profiles.other"));
   assert.ok(!effects.includes("new Audio("), "gift audio must not fetch unreviewed remote recordings");
 });
+
+test("Djembe and Palm Breeze use subject-specific motion choreography on the existing visual trigger", () => {
+  assert.ok(effects.includes('gift.code==="djembe-master-1v3jzkm"?"djembe-strike"'));
+  assert.ok(effects.includes('gift.code==="palm-breeze-gknyt0"?"palm-canopy-sway"'));
+  assert.ok(effects.includes('if(preset==="djembe-strike")return'));
+  assert.ok(effects.includes('if(preset==="palm-canopy-sway")return'));
+  assert.ok(effects.includes("motionElement.animate(semanticFrames"));
+  assert.ok(effects.includes('window.matchMedia?.("(prefers-reduced-motion: reduce)")'));
+});
