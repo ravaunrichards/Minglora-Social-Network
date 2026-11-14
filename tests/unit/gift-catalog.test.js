@@ -188,7 +188,7 @@ test("recognisable gifts use their subject-specific vector artwork without emoji
   assert.ok(rose && baseball);
   const roseSvg = readFileSync(path.join(assetRoot, rose.code + ".svg"), "utf8");
   const baseballSvg = readFileSync(path.join(assetRoot, baseball.code + ".svg"), "utf8");
-  assert.ok(roseSvg.includes('<ellipse cx="256" cy="208" rx="37" ry="79"'), "Rose must contain its petal geometry");
+  assert.ok(roseSvg.includes('data-gift-artwork="rose-bloom-original-v1"'), "Rose must contain individually authored flower artwork");
   assert.ok(baseballSvg.includes('stroke="#d84854" stroke-width="12"'), "Baseball must contain its red seam geometry");
   assert.doesNotMatch(roseSvg,/font-family=["'](?:Apple Color Emoji|Segoe UI Emoji|Noto Color Emoji)/i);
   assert.doesNotMatch(baseballSvg,/font-family=["'](?:Apple Color Emoji|Segoe UI Emoji|Noto Color Emoji)/i);
@@ -212,4 +212,19 @@ test("the active 2026 catalogue excludes obsolete 2025-dated gifts", () => {
     assert.equal(gifts.some(gift => gift.name === name), false, name + " must not be active in the 2026 catalogue");
   }
   assert.equal(gifts.length, 1748);
+});
+
+test("Rose uses an individually authored layered GLTF botanical sculpture", () => {
+  const rose = gifts.find(gift => gift.name === "Rose");
+  assert.ok(rose, "Rose must remain in the canonical catalogue");
+  const model = JSON.parse(readFileSync(path.join(assetRoot, rose.code + ".gltf"), "utf8"));
+  assert.equal(model.asset?.version, "2.0");
+  assert.equal(model.asset?.extras?.mingloraAssetId, "gift-rose-3d-v1");
+  assert.equal(model.asset?.extras?.source, "assets/3d-assets/gift-models/rose-model.mjs");
+  assert.ok(model.meshes?.[0]?.primitives?.length >= 25, "Rose should include individually addressable botanical mesh parts");
+  assert.ok(model.materials?.some(material => material.name.includes("Velvet outer petal")), "Rose should include a dedicated outer-petal material");
+  assert.ok(model.materials?.some(material => material.name.includes("Rose sepal")), "Rose should include dedicated calyx materials");
+  assert.ok(model.materials?.some(material => material.name.toLowerCase().includes("leaf")), "Rose should include dedicated foliage materials");
+  assert.ok(model.buffers?.[0]?.uri.startsWith("data:application/octet-stream;base64,"), "Rose must be self-contained for the existing model viewer");
+  assert.ok(model.accessors?.filter(accessor => accessor.type === "VEC3").length >= 20, "Rose should expose mesh position and normal accessors");
 });
