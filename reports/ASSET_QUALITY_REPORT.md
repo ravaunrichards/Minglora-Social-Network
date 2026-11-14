@@ -16,7 +16,7 @@ Flag reasons recorded by the existing audit: 1,058 foregrounds close to crop bou
 
 ## Generated 3D and vector quality
 
-The current generator emits one SVG and one GLTF file for each catalogue row, but a file per gift does not mean a fully bespoke illustration/model per gift. The SVG renderer uses a small set of category-level vector templates plus limited name-specific overrides, then overlays a large Unicode emoji glyph using system emoji fonts. That makes the output font/device dependent and explicitly fails the no-emoji, self-contained premium-art requirement. The GLTF generator likewise uses generated primitive meshes, common category geometry and limited name-specific model branches, with basic metallic/roughness materials. The source does not evidence a bespoke high-detail model for every gift, high-resolution PBR texture maps, GLB/KTX2 compression, embedded skeletal animation or cinematic scene rigs. These outputs are a procedural prototype/placeholder baseline, not approved premium production artwork.
+The current generator emits one SVG and one GLTF file for each catalogue row, but a file per gift does not mean a fully bespoke illustration/model per gift. The SVG renderer uses category-level vector templates plus a limited set of name-specific vector branches. The previous system-font emoji glyph overlay has been removed from the SVG output; gift artwork no longer depends on Apple/Segoe/Noto emoji font availability. The existing vector forms remain a prototype baseline rather than individually art-directed, reviewed premium illustrations. The GLTF generator likewise uses generated primitive meshes, common category geometry and limited name-specific model branches, with basic metallic/roughness materials. The source does not evidence a bespoke high-detail model for every gift, high-resolution PBR texture maps, GLB/KTX2 compression, embedded skeletal animation or cinematic scene rigs. These outputs are not approved premium production artwork.
 
 ## Interface icon and effect quality
 
@@ -34,7 +34,7 @@ LIVE CSS includes phone compact layouts and a desktop room with a distinct stage
 
 ## Production gate
 
-The extracted 1,509 catalogue crops remain blocked from production until rights and visual review are documented or original replacements are supplied. The current generated SVG catalogue also remains below the requested quality gate while its system-rendered emoji overlay and shared category-template artwork remain in place. No source files were changed or removed during this documentation-only continuation.
+The extracted 1,509 catalogue crops remain blocked from production until rights and visual review are documented or original replacements are supplied. The generated SVG catalogue now has zero system-font emoji overlays, but remains below the premium quality gate while category-template art direction, individual visual review, rights review and high-detail 3D production remain incomplete. This continuation changes the generator and automated checks, not the source reference files or catalogue pricing.
 
 ## Machine-readable per-gift inventory
 
@@ -43,3 +43,7 @@ The extracted 1,509 catalogue crops remain blocked from production until rights 
 ## GLTF load-error fallback
 
 `public/gift-effects.js` now listens for the supported `<model-viewer>` `error` event. When a model fails to load/parse or the WebGL context is lost, the failed model element is replaced with that gift's canonical SVG artwork. If the SVG also fails, or no image URL exists, the card displays an accessible text status instead of an emoji or a broken image. This is a rendering fallback; it does not restore a lost WebGL context or replace physical-device QA.
+
+## SVG emoji-overlay removal
+
+The generator no longer emits a system-font emoji overlay or uses the unused emoji lookup function. The CNC Coin, Fighting, Hibiscus, DJ Headphone, Four Leaf Clover, Rose and Baseball examples are checked against their vector geometry; all 1,748 generated SVG records are checked for zero emoji-font overlays. This removes one device-dependent rendering dependency, but does not replace the pending per-gift creative art direction and human review.

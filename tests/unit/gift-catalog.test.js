@@ -131,6 +131,7 @@ test("the build produces one original SVG and one 3D GLTF for every active gift"
     assert.ok(statSync(modelPath).size > 1000, gift.name + " GLTF should contain real mesh geometry");
     const svg = readFileSync(svgPath, "utf8");
     assert.ok(svg.startsWith("<svg"), gift.name + " SVG should be a valid SVG document");
+    assert.doesNotMatch(svg,/font-family=["'](?:Apple Color Emoji|Segoe UI Emoji|Noto Color Emoji)/i,gift.name + " SVG must not use system emoji fonts");
     assert.ok(svg.includes("Minglora") || svg.includes("aria-label"), gift.name);
     svgPayloads.add(svg);
     const modelText = readFileSync(modelPath, "utf8");
@@ -164,24 +165,33 @@ test("Livecade source gaps and coin-price variants remain in the Minglora manife
   }
 });
 
-test("newly audited object gifts render their matching Minglora icons", () => {
-  const expected = [["CNC Coin","🪙"],["Fighting","🥊"],["Hibiscus","🌺"],["DJ Headphone","🎧"],["Four Leaf Clover","🍀"]];
-  for (const [name,symbol] of expected) {
+test("newly audited object gifts render self-contained Minglora vector artwork", () => {
+  const expected = [
+    ["CNC Coin","M256 166v180"],
+    ["Fighting","M163 311q-13-22"],
+    ["Hibiscus","<ellipse cx=\"256\" cy=\"178\""],
+    ["DJ Headphone","M112 268v-36q0-144 144-144"],
+    ["Four Leaf Clover","M256 252c-48-75-125-71"]
+  ];
+  for (const [name,shapeSignature] of expected) {
     const gift = gifts.find(item => item.name === name);
     assert.ok(gift, name + " should exist in the manifest");
     const svg = readFileSync(path.join(assetRoot,gift.code + ".svg"),"utf8");
-    assert.ok(svg.includes(symbol), name + " should render the matching icon");
+    assert.ok(svg.includes(shapeSignature), name + " should render its subject-specific vector shape");
+    assert.doesNotMatch(svg,/font-family=["'](?:Apple Color Emoji|Segoe UI Emoji|Noto Color Emoji)/i,name + " must not depend on system emoji fonts");
   }
 });
 
-test("recognisable gifts use their matching object artwork instead of an unrelated category symbol", () => {
+test("recognisable gifts use their subject-specific vector artwork without emoji overlays", () => {
   const rose = gifts.find(gift => gift.name === "Rose");
   const baseball = gifts.find(gift => gift.name === "Baseball");
   assert.ok(rose && baseball);
   const roseSvg = readFileSync(path.join(assetRoot, rose.code + ".svg"), "utf8");
   const baseballSvg = readFileSync(path.join(assetRoot, baseball.code + ".svg"), "utf8");
-  assert.ok(roseSvg.includes("🌹"), "Rose must visibly render as a rose");
-  assert.ok(baseballSvg.includes("⚾"), "Baseball must visibly render as a baseball");
+  assert.ok(roseSvg.includes('<ellipse cx="256" cy="208" rx="37" ry="79"'), "Rose must contain its petal geometry");
+  assert.ok(baseballSvg.includes('stroke="#d84854" stroke-width="12"'), "Baseball must contain its red seam geometry");
+  assert.doesNotMatch(roseSvg,/font-family=["'](?:Apple Color Emoji|Segoe UI Emoji|Noto Color Emoji)/i);
+  assert.doesNotMatch(baseballSvg,/font-family=["'](?:Apple Color Emoji|Segoe UI Emoji|Noto Color Emoji)/i);
 });
 
 
