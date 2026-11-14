@@ -1,5 +1,53 @@
 # Minglora AI Bot Network — Recovery & Progress
 
+## Latest verified live checkpoint — 2026-11-14 (supersedes earlier deployment statements below)
+
+**Canonical release state**
+- Repository: `ravaunrichards/Minglora-Social-Network`; current main before this documentation checkpoint: `702928faf0458176030589566940366d2f1aafa5`.
+- Existing Minglora Supabase project: `gzycobgbasnqqhnympkr`. No additional repository or Supabase project was created.
+- Current main contains the AI Network Node routes, workspace/navigation, backend module, store collections, six server-only RPC migrations, runtime gateway handlers, regression tests and focused CI workflow.
+- Six newer migrations are recorded as applied: identity runtime API (`20261114022043`), corporate workforce (`20261114022045`), HR recruitment/employment (`20261114022047`), provider catalogue/assignments (`20261114022049`), task queue/approvals (`20261114022051`) and discovery/following (`20261114022055`). Together with the two original identity migrations, eight AI-network migrations are in the ledger.
+- Production `minglora-runtime-state` Edge Function is ACTIVE at version 116; deployed source matches current main's AI handlers and AI collection inventory.
+- All 33 tables in `ai_network` have RLS enabled. `anon` and `authenticated` have no schema usage or table grants. All six public RPCs are SECURITY INVOKER, use an empty locked search path, and grant execution only to `service_role`.
+- Live category RPC successfully returned all 15 seeded categories.
+
+**Verified rollback-only live workflow tests**
+- Single AI identity create/get: separate first/last names, gender/profile, country, language and location rows were written and read inside a transaction.
+- Email metadata remained `unverified` and `not_requested`; no inbox or Supabase Auth user was created.
+- Repeated identity create with the same idempotency key reused the original identity.
+- Bounded bulk creation accepted one valid item and isolated one invalid item in its failure report.
+- Organization creation, two department templates, two position templates, draft vacancy creation and vacancy listing succeeded.
+- Combined discovery filters returned zero because the live registry is intentionally empty.
+- Provider model catalogue read returned zero configured models.
+- Task runtime read confirmed `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`; a worker claim was rejected.
+- All write tests were explicitly rolled back. A subsequent live count query confirmed zero identities, profiles, emails, organizations, departments, positions, vacancies, tasks, provider accounts, models and assignments. No demonstration records were kept.
+
+**CI and production deployment**
+- Current main commit `702928faf0458176030589566940366d2f1aafa5`: GitHub Actions CI run `43546583461` completed successfully.
+- Integrated candidate commit `ecd6a5cc2d257611a486c6e0b8bf655300d35931` passed full Minglora CI run `43546453272` and focused AI Network checks run `43546453311`.
+- Existing Render service `minglora-social-network-temp` deployed current main commit `702928f`; build and deploy events both succeeded, final deploy `dep-dbrsf1kr5hns73aoe64g` is `live`.
+- Runtime logs confirm `Minglora listening on port 10000`, Supabase durable persistence ready, and LiveKit connected. No app error/fatal logs were returned for the checked startup window.
+- Public HTTP/browser verification could not be completed from the tool runtime because external DNS/network access to the Render URL was unavailable. Device/browser end-to-end testing is still required.
+
+**Ten-stage status (gate-based; a stage is complete only when all its exit criteria pass)**
+1. Foundation, private schema, RLS and runtime RPC gateway — **COMPLETED**.
+2. Identity registry/profile and bulk creation — **PARTIAL / CURRENT STAGE**. Rollback create/get, separate names, profile relations, email metadata, idempotency and batch recovery passed; authenticated browser/API list flow and lasting user-approved registration still need verification.
+3. Worldwide discovery and following — **PARTIAL**. Combined filters execute; saved searches, follow/unfollow lifecycle and populated discovery remain to be verified.
+4. Corporate governance and HR — **PARTIAL**. Organization, template provisioning and draft vacancy workflows passed rollback tests; appointments, employees, approvals and full lifecycle still need end-to-end validation.
+5. Supervision, approvals, task queue, teams and workers — **PARTIAL / EXECUTION PAUSED**. Approval/task foundation exists; worker claims are intentionally disabled and no worker pool runs.
+6. Social, messaging, creator, LIVE and community integration — **NOT COMPLETE**. AI draft capabilities are not yet verified as full end-to-end social actions.
+7. Providers, memory, budgets, resource metering and inference — **NOT COMPLETE**. Zero live provider accounts/models/assignments; no model inference, email provider, secrets manager adapter or cost reconciliation verified.
+8. Administration, security operations and analytics — **PARTIAL**. Private service-role boundary, audit foundations and inventory exist; all administration centers and real operational analytics are not complete.
+9. Distributed architecture and 10-billion identity/concurrency benchmarks — **NOT STARTED**. No 10-billion registration or execution capacity claim is made.
+10. Production release and device verification — **PARTIAL**. Edge Function and Render deployment are live and build/boot checks pass; public HTTP, browser, desktop and mobile end-to-end acceptance are outstanding.
+
+**Conservative progress measure:** 1 of 10 major stage gates fully complete (10%). Stage 2 is current; partial stages are not counted as complete. Do not infer 10-billion capacity or provider/email connectivity from schema or metadata.
+
+**Git/PR safety**
+- The divergent original draft PR #278 and branch `feat/minglora-ai-bot-network-core` were left untouched.
+- Supplemental draft PR #279 was closed without merge because current main independently integrated the same AI Network implementation. Its branch and four commits remain retained for audit; no force-push or branch deletion occurred.
+- Keep AI execution globally paused until a real provider adapter, protected secrets, per-owner budgets, worker identity/authorization, safety checks and recovery tests are verified.
+
 ## Project identity
 
 - Canonical product: Minglora Social Network.

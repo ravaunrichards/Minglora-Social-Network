@@ -1,5 +1,32 @@
 # Minglora AI Bot Network — Stage Queue
 
+## Current production verification override — 2026-11-14
+
+This section supersedes older statements below that say the identity, corporate/HR, provider, task or discovery migrations are not deployed. Those earlier entries remain as historical checkpoints.
+
+| Stage | Current status | Verified evidence / remaining exit criteria |
+|---|---|---|
+| 1. Relational foundation and private runtime | **COMPLETED** | Eight AI migrations in the live ledger; 33/33 AI tables RLS-enabled; browser roles have no `ai_network` access; six service-role-only RPCs; live category RPC returns 15. |
+| 2. AI identities and profiles | **PARTIAL — CURRENT** | Rollback test passed create/get, separate names, profile, language/location, email metadata, idempotent retry and bounded bulk partial-failure handling. UI exposes separate names and 249 country/territory codes. Still need authenticated browser/API list flow, lasting user-approved registration and complete profile editing/media. |
+| 3. Discovery and following | **PARTIAL** | Combined gender/country/category/population/language filters execute and return the expected empty registry. Follow/unfollow, privacy approvals and saved search groups need full end-to-end validation. |
+| 4. Corporate governance and HR | **PARTIAL** | Rollback test passed organization create, two department templates, two position templates, draft vacancy create/list. Employee recruitment/application review, appointment, employment transitions, manager chains and succession remain incomplete. |
+| 5. Supervision, teamwork and task runtime | **PARTIAL — SAFELY PAUSED** | Approval/queue schema and APIs exist. Live controls are paused, execution disabled and worker limit zero; direct worker claim is rejected. Do not enable workers yet. |
+| 6. Social, creator and community integration | **NOT COMPLETE** | Draft records/feature surface exist; posts, messages, groups, stories, LIVE, Creator Studio publishing and event/RSVP integration are not all verified end-to-end. |
+| 7. Provider, model, memory and finance | **NOT COMPLETE** | Zero provider accounts, active models or assignments. No real inference, email inbox provisioning, secret-manager integration, cost metering, departmental budgets or memory runtime is verified. |
+| 8. Admin, security and analytics | **PARTIAL** | Role/RLS boundary and inventory are verified. Full governance/security centers, live performance dashboards and reconciled analytics remain outstanding. |
+| 9. 10-billion scale architecture | **NOT STARTED** | No distributed 10-billion registration or concurrent execution benchmark. Architecture capacity must remain an objective, not a claimed result. |
+| 10. Release and device acceptance | **PARTIAL** | Current main CI passed at `702928f`; existing Render service deploy for that commit is LIVE; Edge Function version 116 is ACTIVE; startup confirms Supabase persistence and LiveKit connection. Direct public HTTP/device tests were not completed from this environment. |
+
+### Live evidence and hard safety gates
+- Current main commit: `702928faf0458176030589566940366d2f1aafa5`; CI run `43546583461` passed.
+- Render: `https://minglora-social-network-temp.onrender.com`; deploy `dep-dbrsf1kr5hns73aoe64g` completed successfully from current main.
+- Supabase: project `gzycobgbasnqqhnympkr`; runtime Edge Function version 116 ACTIVE.
+- After all rollback-only tests: 0 AI identities/profiles/emails, organizations/departments/positions, vacancies/tasks, provider accounts/models/assignments.
+- Runtime safety: `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`; no worker is executing AI actions.
+- Never create placeholder identities, human Auth accounts, email inboxes, connected-provider claims, synthetic engagement or fabricated capacity metrics.
+- Do not enable execution until provider adapter + secret custody + budget enforcement + worker authentication + approval gates + audit + rollback/recovery tests are independently complete.
+- PR #279 was closed as a redundant stale integration; PR #278 and its feature branch were not changed.
+
 **Goal:** Complete the ten AI Bot Network recommendations as one secure, coherent Minglora feature. Keep the AI Network separate from existing social/LIVE/gift workflows while reusing Minglora authentication, state, privacy, UI and deployment infrastructure.
 
 Statuses: NOT STARTED · READY · IN PROGRESS · VERIFYING · COMPLETED · BLOCKED.
