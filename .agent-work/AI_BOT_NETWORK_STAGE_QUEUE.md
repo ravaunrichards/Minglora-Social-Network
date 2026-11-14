@@ -1,3 +1,14 @@
+## Latest verified AI team, delegation and owner-console checkpoint — 2026-11-14
+
+- PR #306 merged as edc319b85f14eccd92b19157065cc3aa748180d0. PR #307 merged as d1e5a00ce87d0a81c6a5d793babd5a5f93631094. PR #307 had nine successful checks: AI Network TypeScript transpile/syntax/regression, general tests, For You navigation, Supabase Auth acceptance, AI Network Playwright browser fixtures, and the LIVE/MeetWave layout matrix.
+- Applied production migrations 20261114142000_minglora_ai_teams_and_delegation.sql and 20261114142500_minglora_ai_delegation_runtime_guard.sql to the existing Minglora Supabase project. The first adds owner-scoped relational teams, memberships, audit history, grants/events and delegated-task provenance; the second prevents approval/claim status transitions when a grant is paused, revoked, expired, the team is inactive, membership or identity is no longer valid, approval is missing, or organizational reporting authority has changed.
+- Live permissions verification confirms all five new relational tables have RLS, anon/authenticated have no schema/table/function access, the team RPC and trigger function are SECURITY INVOKER with locked empty search paths, and only service_role can execute them. Live trigger is enabled. Zero retained teams, memberships, events, grants or delegated task rows; zero synthetic test identities. Workers remain global_paused=true, execution_enabled=false, max_concurrent_workers=0.
+- minglora-runtime-state is ACTIVE at version 122; the allowlisted ai_team_command handler is present and its existing custom x-minglora-api-key authentication mode is preserved (verify_jwt=false as before).
+- Render deployment dep-dbs6uteq1p3s73efe0rg for main commit d1e5a00ce87d0a81c6a5d793babd5a5f93631094 is LIVE. Startup logs verified port 10000, Supabase durable persistence ready, LiveKit connected and service live. This deploy includes the owner-facing grant registry and controls, bounded task submission, and grant pause/reactivation/revocation.
+- The Playwright run used disposable API fixtures; it is not signed-in production-owner acceptance. Public API HTTP inspection and the real platform-owner browser/device walkthrough remain unverified. Task 9 remains PARTIAL pending that real owner acceptance and operational validation. Total acceptance remains 2/19 (10.53%); this increment is implementation progress inside an existing task, not a new fully accepted stage.
+
+---
+
 ## Delegation authority revalidation checkpoint — 2026-11-14
 
 - Added migration 20261114142500_minglora_ai_delegation_runtime_guard.sql on this UI branch and applied it to the existing Minglora Supabase database after a successful rollback-only end-to-end contract: paused grant blocks approval; active grant allows approval; revoked grant blocks a simulated worker claim. All contract records were rolled back.
