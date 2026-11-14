@@ -303,6 +303,15 @@ begin
     end loop;
     update ai_network.ai_teams t set status='active',updated_at=now()
       where t.team_id=v_team_id and t.owner_user_id=v_owner and t.status='draft';
+    if v_new_team then
+      insert into ai_network.ai_team_events(
+        owner_user_id,team_id,actor_user_id,event_type,reason,metadata
+      ) values (
+        v_owner,v_team_id,v_owner,'team_created','Owner created an AI team with explicit member identities.',
+        jsonb_build_object('population_scope',v_scope,'organization_id',v_org_id,
+          'member_count',jsonb_array_length(v_member_ids))
+      );
+    end if;
     select to_jsonb(t) into v_result from ai_network.ai_teams t
       where t.team_id=v_team_id and t.owner_user_id=v_owner;
     return jsonb_build_object('team',v_result,'created_memberships',v_created_count);
