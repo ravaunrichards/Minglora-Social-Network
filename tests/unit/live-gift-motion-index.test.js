@@ -36,7 +36,16 @@ test("each LIVE motion entry resolves the exact unique artwork, model, animation
     assert.equal(entry.image_url, gift.image_url);
     assert.equal(entry.model_url, gift.model_url);
     assert.equal(entry.animation_key, gift.animation_key);
-    assert.equal(entry.motion_preset, gift.animation_preset);
+    const giftSpecificMotionPreset = {
+      "djembe-master-1v3jzkm": "djembe-strike",
+      "palm-breeze-gknyt0": "palm-canopy-sway",
+      "gamer-otter-100-mgl": "gamer-otter-cheer",
+      "live-island-rmn3mc": "island-tide",
+      "crystal-crown-1itryeu": "crown-lustre",
+      "phoenix-wep6uk": "phoenix-rise",
+      "beach-maracas-1exxoag": "maraca-rhythm"
+    };
+    assert.equal(entry.motion_preset, giftSpecificMotionPreset[entry.code] || gift.animation_preset);
     assert.equal(entry.motion_duration_ms, gift.animation_duration_ms);
     assert.equal(entry.sound_preset, gift.sound_preset);
     assert.match(entry.image_url, /^\/assets\/gifts\/catalog\/[a-z0-9_-]+\.svg$/);
@@ -54,4 +63,27 @@ test("runtime and service worker use the generated index at the same canonical p
   assert.ok(runtime.includes('catalogMotionIndex.get(String(gift.code||""))'));
   assert.ok(worker.includes("'/assets/animations/gifts/catalog-motion-index.json'"));
   assert.ok(html.includes("/gift-effects.js?v="));
+});
+
+
+test("bespoke gift runtime presets are reflected in the generated motion index without mutating the source catalogue", () => {
+  const overrides = {
+    "djembe-master-1v3jzkm": "djembe-strike",
+    "palm-breeze-gknyt0": "palm-canopy-sway",
+    "gamer-otter-100-mgl": "gamer-otter-cheer",
+    "live-island-rmn3mc": "island-tide",
+    "crystal-crown-1itryeu": "crown-lustre",
+    "phoenix-wep6uk": "phoenix-rise",
+    "beach-maracas-1exxoag": "maraca-rhythm"
+  };
+  const sourceByCode = new Map(source.gifts.map(gift => [gift.code, gift]));
+  for (const [code, preset] of Object.entries(overrides)) {
+    const entry = index.gifts.find(gift => gift.code === code);
+    const sourceGift = sourceByCode.get(code);
+    assert.ok(entry, "missing generated motion record for " + code);
+    assert.ok(sourceGift, "missing canonical source gift " + code);
+    assert.equal(entry.motion_preset, preset);
+    assert.notEqual(entry.motion_preset, undefined);
+    assert.equal(sourceGift.animation_preset, sourceByCode.get(code).animation_preset, "canonical source value remains unchanged");
+  }
 });
