@@ -10,6 +10,7 @@ const html = fs.readFileSync(new URL('../../public/admin-centre.html', import.me
 const financeUi = fs.readFileSync(new URL('../../public/admin-finance.js', import.meta.url), 'utf8');
 const financeCss = fs.readFileSync(new URL('../../public/admin-finance.css', import.meta.url), 'utf8');
 const financeAttachmentAuditMigration = fs.readFileSync(new URL('../../supabase/migrations/20261114191800_minglora_admin_finance_attachment_audit.sql', import.meta.url), 'utf8');
+const budgetThresholdMigration = fs.readFileSync(new URL('../../supabase/migrations/20261114195200_minglora_admin_budget_alert_thresholds.sql', import.meta.url), 'utf8');
 const providerConnectionMigration = fs.readFileSync(new URL('../../supabase/migrations/20261114193000_minglora_admin_supabase_provider_connection_test.sql', import.meta.url), 'utf8');
 
 test('company finance schema is additive and keeps company expenses separate from creator liabilities', () => {
@@ -193,4 +194,20 @@ test('Supabase provider test checks Postgres and Storage before an audited conne
   assert.match(financeUi, /data-finance-test-provider/);
   assert.match(financeUi, /Test database \+ Storage/);
   assert.match(financeUi, /provider record was not marked connected/);
+});
+
+
+test('budget alert thresholds validate, persist, display and preserve assigned managers', () => {
+  assert.ok(financeUi.includes('parseBudgetThresholds'));
+  assert.ok(financeUi.includes('alert_thresholds:parseBudgetThresholds(values.get'));
+  assert.ok(financeUi.includes('manager_user_id:String(values.get'));
+  assert.ok(financeUi.includes('budgetThresholdState'));
+  assert.ok(financeUi.includes('thresholds.join'));
+  assert.ok(financeUi.includes('name="alert_thresholds"'));
+  assert.ok(budgetThresholdMigration.includes('alert_thresholds=EXCLUDED.alert_thresholds'));
+  assert.ok(budgetThresholdMigration.includes('manager_user_id=EXCLUDED.manager_user_id'));
+  assert.ok(budgetThresholdMigration.includes('jsonb_array_elements_text'));
+  assert.ok(budgetThresholdMigration.includes('Budget alert thresholds cannot contain duplicates'));
+  assert.ok(budgetThresholdMigration.includes('100::smallint >= ALL (alert_thresholds)'));
+  assert.ok(budgetThresholdMigration.includes('CREATE OR REPLACE FUNCTION public.minglora_admin_finance_command'));
 });

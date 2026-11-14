@@ -46,6 +46,19 @@
     if(!reference)return 'Not recorded';
     return '••••'+reference.slice(-4);
   };
+  const parseBudgetThresholds = value => {
+    const values=String(value||'').trim().split(',').map(item=>item.trim()).filter(Boolean).map(Number);
+    if(!values.length||values.length>10||values.some(value=>!Number.isInteger(value)||value<1||value>100)||new Set(values).size!==values.length) {
+      throw new Error('Enter 1 to 10 unique budget alert percentages from 1 to 100, separated by commas.');
+    }
+    return values.sort((a,b)=>a-b);
+  };
+  const budgetThresholdState = (actual,allocation,thresholds) => {
+    if(allocation<=0)return 'No allocation';
+    if(actual>allocation)return 'Over budget';
+    const reached=(Array.isArray(thresholds)?thresholds:[50,75,90,100]).map(Number).filter(value=>actual/allocation*100>=value);
+    return reached.length?'Threshold '+Math.max(...reached)+'% reached':'Below thresholds';
+  };
   const empty = text => '<p class="admin-finance-empty">' + esc(text) + '</p>';
   const field = (label,name,type='text',attrs='') =>
     '<label class="admin-finance-field"><span>' + esc(label) + '</span><input name="' + esc(name) +
@@ -230,14 +243,17 @@
         .sort((a,b) => String(a.due_date || '9999').localeCompare(String(b.due_date || '9999'))).slice(0,8);
       const budgetRows = records.budgets.filter(item => item.approval_status === 'approved').slice(0,8).map(item => {
         const actual = budgetActual(item);
-        const remaining = Number(item.allocated_amount_minor || 0) - actual;
-        const utilization = Number(item.allocated_amount_minor || 0) > 0
-          ? Math.round(actual / Number(item.allocated_amount_minor) * 100) + '%'
-          : 'No allocation';
+        const allocation=Number(item.allocated_amount_minor||0);
+        const remaining=allocation-actual;
+        const utilization=allocation>0?Math.round(actual/allocation*100)+'%':'No allocation';
+        const thresholds=Array.isArray(item.alert_thresholds)?item.alert_thresholds:[50,75,90,100];
+        const alertState=budgetThresholdState(actual,allocation,thresholds);
         return '<tr><td>' + esc(item.department_name) + '</td><td>' +
-          esc(money(item.allocated_amount_minor,item.currency_code)) + '</td><td>' +
+          esc(money(allocation,item.currency_code)) + '</td><td>' +
           esc(money(actual,item.currency_code)) + '</td><td>' +
-          esc(money(remaining,item.currency_code)) + '</td><td>' + esc(utilization) + '</td></tr>';
+          esc(money(remaining,item.currency_code)) + '</td><td>' + esc(utilization) +
+          '</td><td>' + esc(thresholds.join('%, ')+'%') + '</td><td>' +
+          statusPill(alertState.replace(/ /g,'_')) + '</td></tr>';
       });
       content.innerHTML =
         '<div class="admin-finance-overview-grid"><article><h4>Upcoming subscription dates</h4>' +
@@ -253,7 +269,7 @@
           '</td><td>' + statusPill(item.payment_status) + '</td></tr>'),'No invoices have been recorded.') :
           empty('No invoices have been recorded.')) +
         '</article></div><article class="admin-finance-budget-summary"><h4>Approved budget vs actual expenses</h4>' +
-        (budgetRows.length ? table(['Department','Budget','Actual','Remaining','Used'],budgetRows,'No approved budgets are recorded.') :
+        (budgetRows.length ? table(['Department','Budget','Actual','Remaining','Used','Alerts at','Alert state'],budgetRows,'No approved budgets are recorded.') :
           empty('No approved budgets are recorded. Actual expenses are kept separate from creator and seller balances.')) +
         '<p class="admin-finance-form-note">Renewal notice windows are calculated from saved dates; this screen does not send email or push notifications. Budget comparisons use only actual expenses in the same department, currency and date range.</p></article>' +
         '<div class="admin-finance-provider-note"><strong>Provider integrations:</strong> ' +
@@ -432,18 +448,22 @@
         const allocation=Number(item.allocated_amount_minor || 0);
         const remaining=allocation-actual;
         const utilization=allocation>0 ? Math.round(actual/allocation*100)+'%' : 'No allocation';
+        const thresholds=Array.isArray(item.alert_thresholds)?item.alert_thresholds:[50,75,90,100];
+        const manager=item.manager_user_id?maskProviderReference(item.manager_user_id):'Not assigned';
+        const alertState=budgetThresholdState(actual,allocation,thresholds);
         return '<tr><td><strong>' + esc(item.department_name) + '</strong><small>' +
           esc(item.department_key) + '</small></td><td>' + esc(item.period_type) + '</td><td>' +
           esc(dateLabel(item.period_start)) + ' – ' + esc(dateLabel(item.period_end)) + '</td><td>' +
           esc(money(allocation,item.currency_code)) + '</td><td>' + esc(money(actual,item.currency_code)) +
           '</td><td>' + esc(money(remaining,item.currency_code)) + '</td><td>' + esc(utilization) +
-          '</td><td>' + statusPill(item.approval_status) + '</td><td>' +
+          '</td><td>' + esc(manager) + '</td><td>' + esc(thresholds.join('%, ')+'%') +
+          '</td><td>' + statusPill(alertState.replace(/ /g,'_')) + '</td><td>' + statusPill(item.approval_status) + '</td><td>' +
           (item.approval_status === 'approved' ? '<span class="admin-finance-manual">Locked</span>' : editAction('budget',item.id)) +
           '</td></tr>';
       });
       content.innerHTML =
         '<div class="admin-finance-section-heading"><div><h4>Operating budgets</h4><p>Actuals include only recorded expenses matching the budget department, currency and date period. They do not include creator or seller liabilities.</p></div></div>' +
-        table(['Department','Period','Dates','Budget','Actual expenses','Remaining','Used','Approval','Record'],rows,'No operating budgets have been recorded.') +
+        table(['Department','Period','Dates','Budget','Actual expenses','Remaining','Used','Manager','Alerts at','Alert state','Approval','Record'],rows,'No operating budgets have been recorded.') +
         '<details class="admin-finance-form-details"><summary>Create a budget allocation</summary><form id="admin-finance-budget-form" class="admin-finance-form">' +
         field('Department key','department_key','text','required maxlength="80" pattern="[a-z0-9][a-z0-9_-]{1,79}"') +
         field('Department name','department_name','text','required maxlength="120"') +
@@ -452,6 +472,9 @@
         field('Period end','period_end','date','required') +
         select('Currency','currency_code',[['USD','USD'],['JMD','JMD']]) +
         field('Approved allocation amount','allocated_amount','number','required min="0" step="0.01" inputmode="decimal"') +
+        field('Department manager user ID (optional UUID)','manager_user_id','text','maxlength="36" pattern="[0-9a-fA-F-]{36}" autocomplete="off"') +
+        field('Budget alert thresholds (comma-separated percentages)','alert_thresholds','text','required value="50,75,90,100" maxlength="39" pattern="[0-9, ]+"') +
+        '<p class="admin-finance-form-note">Budget threshold states appear in these dashboards when actual expenses cross a saved percentage. Manager IDs must match an existing Minglora auth account UUID. Email and push notifications are not enabled by this setting.</p>' +
         select('Approval status','approval_status',[['draft','Draft'],['pending','Pending'],['rejected','Rejected']]) +
         textarea('Notes','notes') + button('Save budget') + '</form></details>';
       section.querySelector('#admin-finance-budget-form')?.addEventListener('submit',async event => {
@@ -467,6 +490,8 @@
             period_end:String(values.get('period_end')||''),
             currency_code:String(values.get('currency_code')||'USD'),
             allocated_amount_minor:minor(values.get('allocated_amount')),
+            alert_thresholds:parseBudgetThresholds(values.get('alert_thresholds')),
+            manager_user_id:String(values.get('manager_user_id')||'').trim()||null,
             approval_status:String(values.get('approval_status')||'draft'),
             notes:String(values.get('notes')||'').trim()
           },form);
