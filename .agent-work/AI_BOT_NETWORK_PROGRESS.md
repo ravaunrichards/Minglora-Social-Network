@@ -1,3 +1,32 @@
+## AI identity memory implementation and release checkpoint — 2026-11-14 12:05 UTC
+
+**Memory feature branch**
+- Feature branch: `feat/minglora-ai-bot-network-core`; code revision under verification: `5ce03fda5ad36d7228b2090da18e33e7a847c93a`.
+- Added an owner-scoped memory API, UI and gateway to the existing identity registry: per-identity opt-in settings, separate long-term opt-in, configurable short/long retention, maximum-entry limit, entry create/edit/delete, idempotency, expiry cleanup, owner checks, row locking, secret-key rejection and audit events.
+- Browser QA covers disabled-by-default consent, long-term consent, create/edit/delete, disabling memory and phone/tablet/desktop layouts using disposable local fixtures. This does not create production test identities.
+- Memory is explicitly owner-entered storage. Automatic conversation capture, model recall/injection, embeddings/vector search, provider inference, or autonomous memory writing are NOT implemented.
+
+**Production Supabase and Edge Function**
+- Applied migration `20261114120000_minglora_ai_identity_memory.sql`; Supabase recorded migration version `20261114115906` under name `minglora_ai_identity_memory`.
+- Verified in the existing project: `ai_memory_settings` (10 columns), `ai_memory_entries` (12 columns), RLS enabled on both, no SELECT for anon/authenticated, service_role CRUD privileges, unique identity/idempotency index, owner/type index and expiry index.
+- `public.minglora_ai_memory_command(text,uuid,jsonb)` is SECURITY INVOKER, uses an empty locked search_path, denies anonymous/authenticated EXECUTE and grants EXECUTE only to service_role. The identity owner and signed-in profile are validated by the RPC.
+- Deployed the existing `minglora-runtime-state` function as ACTIVE v120 with the prior custom hashed API-key verification intact (`verify_jwt=false` preserved because the function performs its own authentication). No key or credential value was read or exposed.
+- No AI identity, memory entry, Auth user, email inbox, provider account or model credential was created. The task runtime remains globally paused with execution disabled and zero workers.
+
+**Checks on the memory implementation**
+- Full repository CI #11478: passed.
+- Minglora AI Network checks #166: passed (Edge TypeScript parse/transpile, backend/UI syntax and unit/regression tests).
+- Chromium browser acceptance #22: passed (memory lifecycle plus existing AI registry/discovery flows).
+- These tests use isolated fixtures; they do not substitute for signed-in owner acceptance against production or real model/provider inference.
+
+**Release boundary and remaining work**
+- Render `minglora-social-network-temp` remains attached to `main`; the AI Network application changes are still on the feature branch pending PR/release checks and have not been deployed by Render.
+- The 10-billion target has not been benchmarked. No measured identity write throughput, distributed partitioning, regional failover or simultaneous execution capacity is claimed.
+- Provider inference, secret-manager references, actual email provisioning, worker identities/authentication, autonomous execution, social/creator publishing, full workforce/finance/admin integrations and production device acceptance remain incomplete or blocked by missing provider/runtime/user acceptance evidence.
+- This checkpoint supersedes the earlier 11:29 UTC note's statement that no production migration had been applied. No existing production AI data was deleted or overwritten.
+
+---
+
 ## Execution continuation checkpoint — 2026-11-14 11:29 UTC
 
 **Repository and branch reconciliation**
@@ -16,7 +45,7 @@
 - Active original AI categories: 15; department templates: 20; position templates: 20.
 - Production rows are currently zero for AI identities, names, profiles, email identities, provider accounts/models/assignments, follows, organizations, departments, positions, employment/recruitment history, task queue and approvals. One runtime-control row exists.
 - `anon` and `authenticated` have no `ai_network` schema USAGE/CREATE; `service_role` has USAGE and no CREATE.
-- All 14 public AI RPCs checked are SECURITY INVOKER with an empty locked search path; EXECUTE is denied to anon/authenticated and granted to service_role.
+- All 15 public AI RPCs checked are SECURITY INVOKER with an empty locked search path; EXECUTE is denied to anon/authenticated and granted to service_role.
 - Runtime control remains `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`. No worker activation, provider connection, test identity, email inbox, or fake engagement was created.
 - No production DDL, migration, or row mutation was performed in this execution.
 
