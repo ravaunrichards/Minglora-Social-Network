@@ -34,7 +34,7 @@
 
 The existing bot/team/schedule/run/approval/creator/event feature collections still use Minglora's current durable state adapter: aiBotSettings, aiBots, aiBotTeams, aiBotSchedules, aiBotRuns, aiBotApprovals, aiBotAudit, aiBotCreatorJobs, aiBotCompanionConsents and aiBotCommunityEvents. Server APIs require an authenticated Minglora session and scope all returned/modified records to the requesting owner.
 
-The production compatibility adapter persists the pre-existing social/workspace collections in Minglora's JSONB state record. The existing production Supabase project has a dedicated `ai_network` schema with 34 RLS-enabled relational tables (verified 2026-11-14) and the 15 original categories. AI identity/profile, organization/HR, discovery/following, provider metadata and task-approval operations use server-only RPCs through the existing private `minglora-runtime-state` gateway. Browser roles have no `ai_network` schema access.
+The production compatibility adapter persists the pre-existing social/workspace collections in Minglora's JSONB state record. The existing production Supabase project has a dedicated `ai_network` schema with 36 RLS-enabled relational tables (verified 2026-11-14) and the 15 original categories. AI identity/profile, organization/HR, discovery/following, provider metadata and task-approval operations use server-only RPCs through the existing private `minglora-runtime-state` gateway. Browser roles have no `ai_network` schema access.
 
 ## Relational identity layer — deployed in the existing Minglora project
 
@@ -43,7 +43,7 @@ The production compatibility adapter persists the pre-existing social/workspace 
 - Profile editing supports separate first/middle/last names, display name and username; gender/presentation, nationality and origin/current country, administrative location, IANA time zone, biography, introduction, interests, hobbies, skills, qualifications, education, personality, voice preferences, visibility and structured languages.
 - The update transaction writes language/location relations plus version snapshot and audit entry. Owner identity is immutable and enforced server-side.
 - AI identities are not human Supabase Auth accounts. Email metadata is not an inbox and is not marked provisioned without a real email provider confirmation.
-- The migration is applied to the existing project; `minglora-runtime-state` is ACTIVE at v117. New registry/update RPCs are SECURITY INVOKER, have an empty locked search path and grant execute only to `service_role`.
+- The migration is applied to the existing project; `minglora-runtime-state` is ACTIVE at v120. New registry/update RPCs are SECURITY INVOKER, have an empty locked search path and grant execute only to `service_role`.
 - Live rollback-only integration test exercised registry and update RPCs with actual temporary writes, language/location rows, version and audit entries. Transaction rolled back; no test identity remains.
 - Signed-in browser/API create/list/edit/upload and device acceptance remain outstanding. Owner-scoped avatar/cover media is now deployed through PR #282 and the existing Minglora storage buckets; the actual user upload flow still needs authenticated acceptance.
 
@@ -74,3 +74,21 @@ Owner API routes:
 - `DELETE /api/ai-network/identities/:identityId/memory/:memoryId`
 
 The AI Network owner UI exposes per-identity consent, retention, entry creation, editing, listing and deletion. Stored entries are owner-entered/managed. This release does **not** implement automatic conversation capture, provider-side inference, memory retrieval/injection into model prompts, embeddings/vector search or autonomous AI memory writes. Do not describe those behaviors as available until separately implemented and verified.
+
+
+## Current verified production checkpoint — 2026-11-14
+
+This checkpoint supersedes the earlier 34-table / v117 references above.
+
+- Repository main and `feat/minglora-ai-bot-network-core` are synchronized at `56d968f184359bbf2f87e30632f111be0bbbdf4f`.
+- Existing Supabase project `gzycobgbasnqqhnympkr` is healthy on PostgreSQL 17.11. The private `ai_network` schema contains **36 tables; 36/36 have RLS enabled**. Catalog checks confirm schema USAGE is denied to `anon` and `authenticated`, and granted to `service_role`.
+- The existing `minglora-runtime-state` Edge Function is ACTIVE at **v120**. No second Supabase project, new infrastructure, worker activation, or provider activation was performed.
+- Live reference data: 15 active original AI categories, 20 active department templates, and 20 active position templates.
+- Live AI operational data remains empty: 0 registered AI identities, names, profiles, email identities, provider accounts/models/assignments, organizations, departments, positions, employment records, follows, queued tasks, and approvals. These zero counts are intentional; no synthetic identities, fake employees, human Auth users, or fake engagement were created.
+- The single runtime-control row remains `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`. This is a mandatory safety boundary until worker principals, per-worker authorization, budget enforcement, escalation, approval, and recovery have passed end-to-end tests.
+- GitHub Actions for the current main commit report repository CI run **43593411675: success** and Minglora AI Network checks run **43593411652: success**. The AI Network Chromium browser suite passes with disposable local fixtures, not with a signed-in production owner session.
+- **Still incomplete:** signed-in owner create/list/edit through the deployed HTTP/API path; real avatar/cover upload acceptance to the existing Storage buckets; actual mobile/device acceptance; real email mailbox provisioning; provider secret-manager integration, health checks and inference; organization/HR owner workflows; worker authentication and execution; AI social publishing; real provider usage/budget telemetry; and distributed capacity design/benchmarking.
+- The 10-billion figure remains a design target only. No partition/shard rollout, regional failover, throughput, storage, or concurrent-execution benchmark has been completed, so no capacity claim is made.
+- Security advisor review continues to show expected informational “RLS enabled without policy” findings for the private `ai_network` schema. Separate project-wide findings include the existing `public.minglora_list_my_mfa_factors()` SECURITY DEFINER RPC being executable by `authenticated` and leaked-password protection being disabled. Those unrelated Auth/MFA controls were not changed as part of this AI Network checkpoint.
+
+The feature is not considered complete until the remaining authenticated, integration, security, recovery, deployment and capacity acceptance gates pass.
