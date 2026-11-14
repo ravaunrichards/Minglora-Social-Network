@@ -11,9 +11,9 @@ const styles = fs.readFileSync(path.join(root, 'public/styles.css'), 'utf8');
 const compact = fs.readFileSync(path.join(root, 'public/live-room-compact.css'), 'utf8');
 const liveSettings = fs.readFileSync(path.join(root, 'backend/modules/live/settings.js'), 'utf8');
 
-test('LIVE has nine host-selectable screen layouts with a safe default', () => {
+test('LIVE has seven host-selectable screen layouts with a safe default', () => {
   assert.ok(app.includes('const LIVE_SCREEN_LAYOUT_OPTIONS=Object.freeze'), 'missing layout preset registry');
-  for (const layout of ['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight','roundtable-1','roundtable-2']) {
+  for (const layout of ['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight']) {
     assert.ok(app.includes("value:'" + layout + "'"), 'missing ' + layout + ' layout');
     assert.ok(styles.includes('data-live-layout="' + layout + '"'), 'missing responsive layout rules for ' + layout);
   }
@@ -21,6 +21,24 @@ test('LIVE has nine host-selectable screen layouts with a safe default', () => {
   assert.ok(server.includes("liveLayout: 'full-screen'"), 'new sessions must start in Full Screen with guest seats visible');
   assert.ok(app.includes("let activeLiveScreenLayout='full-screen'"), 'client must default to Full Screen');
   assert.ok(app.includes("String(value||'full-screen')"), 'missing saved layout must fall back to Full Screen');
+});
+
+test('LIVE guest-box layouts are separate, persisted and synchronized independently', () => {
+  for (const layout of ['roundtable-1','roundtable-2']) {
+    assert.ok(app.includes("value:'" + layout + "'"), layout + ' must be available as a guest-box layout');
+
+    assert.ok(styles.includes('data-live-guest-layout="' + layout + '"'), layout + ' guest-box styles must use their own attribute');
+    assert.ok(server.includes("'" + layout + "'"));
+  }
+  assert.match(app, /data-live-guest-layout=.*option\.value/);
+  assert.match(server, /LIVE_GUEST_LAYOUTS=\['roundtable-1','roundtable-2'\]/);
+  assert.match(server, /liveGuestLayout: 'roundtable-1'/);
+  assert.match(server, /const liveGuestLayoutMatch = p\.match/);
+  assert.match(server, /Only the LIVE host can change the guest-box layout/);
+  assert.match(server, /LIVE_GUEST_LAYOUTS\.includes\(layout\)/);
+  assert.match(server, /session\.liveGuestLayout = layout/);
+  assert.match(app, /topic:"minglora-live-guest-layout"/);
+  assert.match(app, /applyLiveGuestLayout\(nextLayout\)/);
 });
 
 test('Only the signed-in LIVE host can persist a valid layout choice', () => {

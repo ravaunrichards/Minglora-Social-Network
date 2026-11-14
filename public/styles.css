@@ -4753,18 +4753,18 @@ body.lite-mode *,body.lite-mode *::before,body.lite-mode *::after{animation-dura
 }
 #live-guest-layout[data-live-layout="spotlight"]>.live-guest-seat.is-host{grid-column:1/4;grid-row:2/5}
 #live-guest-layout[data-live-layout="spotlight"]>.live-guest-seat.is-guest{grid-column:4;min-height:0}
-#live-guest-layout[data-live-layout="roundtable-1"]{
+#live-guest-layout[data-live-guest-layout="roundtable-1"]{
   grid-template-columns:repeat(3,minmax(0,1fr));
   grid-template-rows:auto repeat(3,minmax(78px,1fr));
   grid-auto-rows:minmax(78px,1fr)
 }
-#live-guest-layout[data-live-layout="roundtable-1"]>.live-guest-seat.is-host{grid-column:2;grid-row:2}
-#live-guest-layout[data-live-layout="roundtable-2"]{
+#live-guest-layout[data-live-guest-layout="roundtable-1"]>.live-guest-seat.is-host{grid-column:2;grid-row:2}
+#live-guest-layout[data-live-guest-layout="roundtable-2"]{
   grid-template-columns:repeat(4,minmax(0,1fr));
   grid-template-rows:auto repeat(3,minmax(74px,1fr));
   grid-auto-rows:minmax(74px,1fr)
 }
-#live-guest-layout[data-live-layout="roundtable-2"]>.live-guest-seat.is-host{grid-column:2/4;grid-row:2/4}
+#live-guest-layout[data-live-guest-layout="roundtable-2"]>.live-guest-seat.is-host{grid-column:2/4;grid-row:2/4}
 #live-guest-layout[data-live-layout="full-screen"],
 #live-guest-layout[data-live-layout="fluid-panel"],
 #live-guest-layout[data-live-layout="fluid-grid"],
@@ -4772,8 +4772,8 @@ body.lite-mode *,body.lite-mode *::before,body.lite-mode *::after{animation-dura
 #live-guest-layout[data-live-layout="fixed-panel"],
 #live-guest-layout[data-live-layout="side-by-side"],
 #live-guest-layout[data-live-layout="spotlight"],
-#live-guest-layout[data-live-layout="roundtable-1"],
-#live-guest-layout[data-live-layout="roundtable-2"]{align-content:stretch;min-width:0}
+#live-guest-layout[data-live-guest-layout="roundtable-1"],
+#live-guest-layout[data-live-guest-layout="roundtable-2"]{align-content:stretch;min-width:0}
 .live-room-permission-panel{display:grid;gap:11px}
 .live-room-permission-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
 .live-room-permission-toggle{
@@ -4791,10 +4791,10 @@ body.lite-mode *,body.lite-mode *::before,body.lite-mode *::after{animation-dura
   #live-guest-layout[data-live-layout="full-screen"]{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:auto minmax(170px,2fr) repeat(3,minmax(62px,.6fr))}
   #live-guest-layout[data-live-layout="full-screen"]>.live-guest-seat.is-host{grid-column:1/-1;grid-row:2}
   #live-guest-layout[data-live-layout="fixed-grid"],
-  #live-guest-layout[data-live-layout="roundtable-1"]{grid-template-columns:repeat(2,minmax(0,1fr))}
-  #live-guest-layout[data-live-layout="roundtable-1"]>.live-guest-seat.is-host{grid-column:1/-1;grid-row:auto;min-height:92px}
-  #live-guest-layout[data-live-layout="roundtable-2"]{grid-template-columns:repeat(3,minmax(0,1fr))}
-  #live-guest-layout[data-live-layout="roundtable-2"]>.live-guest-seat.is-host{grid-column:2;grid-row:auto}
+  #live-guest-layout[data-live-guest-layout="roundtable-1"]{grid-template-columns:repeat(2,minmax(0,1fr))}
+  #live-guest-layout[data-live-guest-layout="roundtable-1"]>.live-guest-seat.is-host{grid-column:1/-1;grid-row:auto;min-height:92px}
+  #live-guest-layout[data-live-guest-layout="roundtable-2"]{grid-template-columns:repeat(3,minmax(0,1fr))}
+  #live-guest-layout[data-live-guest-layout="roundtable-2"]>.live-guest-seat.is-host{grid-column:2;grid-row:auto}
   #live-guest-layout[data-live-layout="fluid-panel"]{grid-template-columns:minmax(0,1.25fr) minmax(80px,.75fr);grid-template-rows:auto repeat(4,minmax(64px,1fr))}
   #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-host{grid-row:2/6}
   #live-guest-layout[data-live-layout="spotlight"]{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:auto repeat(3,minmax(68px,1fr))}
@@ -7513,3 +7513,4 @@ dialog#minglora-profile-editor .modal-actions #save-profile-button{
 .profile-name-with-badges{display:flex;align-items:flex-start;flex-wrap:wrap;gap:4px 6px;min-width:0;max-width:100%;white-space:normal;overflow:visible;text-overflow:clip}
 .profile-name-with-badges>span:first-child{display:inline;min-width:0;max-width:100%;white-space:normal;overflow-wrap:anywhere;word-break:normal;overflow:visible;text-overflow:clip}
 .profile-username-line{min-width:0;max-width:100%;white-space:normal;overflow-wrap:anywhere;word-break:normal;overflow:visible;text-overflow:clip}
+

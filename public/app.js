@@ -644,12 +644,17 @@ function postCard(post,options={}){
   const author=post.author||{}, comments=post.comments||[];
   const savedControls=options.saved?renderSavedControls(post):'';
   const watchLaterControl=options.videoWatchLater?`<button type="button" data-watch-later="${esc(post.id)}" data-watch-later-saved="${post.isWatchLater?'true':'false'}">${post.isWatchLater?'✓ Watch Later':'＋ Watch Later'}</button>`:'';
+  const isVideoPost=(post.media||[]).some(media=>media.mediaType==='video');
+  const remixControls=isVideoPost?(post.userId===state.user.id?`<button type="button" data-video-remix-settings="${esc(post.id)}">Remix access</button><button type="button" data-video-collaborator-invite="${esc(post.id)}">Invite collaborator</button>`:(post.canRemix?`<button type="button" data-video-remix="${esc(post.id)}">Remix video</button>`:'')):'';
+  const remixAttribution=post.remixSource?.author?`<div class="video-remix-attribution">Remix of <strong>@${esc(post.remixSource.author.username||'creator')}</strong></div>`:'';
+  const collaborationAttribution=(post.collaborators||[]).length?`<div class="video-collaborator-attribution">With ${(post.collaborators||[]).map(member=>'@'+esc(member.username||'member')).join(', ')}</div>`:'';
   return `<article class="card post" data-post="${esc(post.id)}">
     <div class="post-head">${thoughtAvatarMarkup(author,'avatar',true)}
       <div class="post-author"><small class="post-author-username">@${esc(author.username||'')}</small><strong data-profile="${esc(author.id||'')}">${esc(author.name||'Unknown account')}${memberGifterBadgeMarkup(author)}</strong><small class="post-author-meta">${timeAgo(post.createdAt)} · ◉</small></div>
       <button class="post-menu" aria-label="Post options" data-post-menu="${esc(post.id)}">···</button>
     </div>
     ${post.text?`<div class="post-text">${esc(post.text)}</div>`:''}
+    ${remixAttribution}${collaborationAttribution}
     ${renderPostMedia(post)}
     ${renderPostSoundtrack(post)}
     <div class="post-stats"><span>👍 ${post.reactionCount||0} ${post.reactionCount===1?'reaction':'reactions'}</span><span>${comments.length} comments</span></div>
@@ -668,6 +673,7 @@ function postCard(post,options={}){
         </div>
       </div>
       <button data-focus-comment="${esc(post.id)}">▢ &nbsp; Comment</button>
+      ${remixControls}
       ${watchLaterControl}
       <button data-toggle-save="${esc(post.id)}" data-saved="${post.isSaved?'true':'false'}">${post.isSaved?'▣ Saved':'▢ Save'}</button>
       <button data-share="${esc(post.id)}">↗ &nbsp; Share</button>
@@ -1031,8 +1037,9 @@ function openComposer(options={}){
 
 function openVideoComposer(options={}){
   const modal=document.createElement('div');modal.className='modal-backdrop';
-  modal.innerHTML='<section class="modal composer-modal" role="dialog" aria-modal="true" aria-labelledby="create-video-title"><div class="modal-head"><div><span class="eyebrow">MINGLORA VIDEO</span><h2 id="create-video-title">Create a video post</h2></div><button class="modal-close" type="button" aria-label="Close">'+messenger3dIcon('close','modal-close-icon')+'</button></div><form class="modal-body" id="create-video-form"><div class="post-head"><img class="avatar" src="'+avatar(state.user)+'" alt=""><div class="post-author"><strong>'+esc(state.user.name)+'</strong><small>Share one video with your Minglora audience</small></div></div><div class="field"><label for="video-post-audience">Who can see this video?</label><select id="video-post-audience" name="audience"><option value="public">Public</option><option value="friends">Friends</option><option value="close_friends">Close Friends</option><option value="followers">Followers</option><option value="private">Only me</option></select></div><div class="field"><label for="video-post-caption">Caption</label><textarea id="video-post-caption" name="text" maxlength="5000" placeholder="Write a caption for your video…" aria-label="Video caption"></textarea></div><div class="field"><label>Choose one video file</label><div id="create-video-media-picker"></div><small>MP4, WebM or QuickTime video. Photos and audio files are not accepted in this video-only composer.</small></div><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button type="submit" class="primary">Publish video</button></div></form></section>';
+  modal.innerHTML='<section class="modal composer-modal" role="dialog" aria-modal="true" aria-labelledby="create-video-title"><div class="modal-head"><div><span class="eyebrow">MINGLORA VIDEO</span><h2 id="create-video-title">Create a video post</h2></div><button class="modal-close" type="button" aria-label="Close">'+messenger3dIcon('close','modal-close-icon')+'</button></div><form class="modal-body" id="create-video-form"><div class="post-head"><img class="avatar" src="'+avatar(state.user)+'" alt=""><div class="post-author"><strong>'+esc(state.user.name)+'</strong><small>Share one video with your Minglora audience</small></div></div><div class="field"><label for="video-post-audience">Who can see this video?</label><select id="video-post-audience" name="audience"><option value="public">Public</option><option value="friends">Friends</option><option value="close_friends">Close Friends</option><option value="followers">Followers</option><option value="private">Only me</option></select></div><div class="field"><label for="video-remix-policy">Who can remix this video?</label><select id="video-remix-policy" name="remixPolicy"><option value="off">Nobody — off</option><option value="everyone">Everyone</option><option value="followers">My followers</option><option value="friends">My friends</option></select><small>You can change this permission later. Original uploads are never reused as another member’s upload.</small></div><div class="field"><label for="video-post-caption">Caption</label><textarea id="video-post-caption" name="text" maxlength="5000" placeholder="Write a caption for your video…" aria-label="Video caption"></textarea></div><div class="field"><label>Choose one video file</label><div id="create-video-media-picker"></div><small>MP4, WebM or QuickTime video. Photos and audio files are not accepted in this video-only composer.</small></div><div class="modal-actions"><button type="button" class="secondary modal-cancel">Cancel</button><button type="submit" class="primary">Publish video</button></div></form></section>';
   document.body.append(modal);
+  if(options.remixOfPostId){modal.querySelector('#create-video-title').textContent='Remix this video';modal.querySelector('.post-author small').textContent='Create your own upload, with clear credit to @'+String(options.remixSourceUsername||'the original creator').replace(/^@/,'');}
   const picker=createMediaPicker(modal.querySelector('#create-video-media-picker'),{slot:'post',maxFiles:1,accept:'video/mp4,video/webm,video/quicktime'});
   const close=()=>{picker.destroy();modal.remove();};
   modal.querySelectorAll('.modal-close,.modal-cancel').forEach(button=>button.onclick=close);
@@ -1048,11 +1055,11 @@ function openVideoComposer(options={}){
       const mediaIds=await picker.upload();
       if(mediaIds.length!==1)throw new Error('Upload one video file to publish a video post.');
       const values=new FormData(event.currentTarget);
-      await api('/posts',{method:'POST',body:JSON.stringify({text:values.get('text'),audience:values.get('audience'),mediaIds,videoFormat:options.videoFormat==='reel'?'reel':'video'})});
+      await api('/posts',{method:'POST',body:JSON.stringify({text:values.get('text'),audience:values.get('audience'),mediaIds,videoFormat:options.videoFormat==='reel'?'reel':'video',remixPolicy:values.get('remixPolicy')||'off',...(options.remixOfPostId?{remixOfPostId:options.remixOfPostId}:{})})});
       close();
       if(typeof options.onPublished==='function')await options.onPublished();
       else{state.videoMode='videos';await renderVideoCentre();}
-      toast('Your video post is published.');
+      toast(options.remixOfPostId?'Your attributed remix is published.':'Your video post is published.');
     }catch(error){
       toast(error.message);
       button.disabled=false;
@@ -1291,12 +1298,17 @@ const LIVE_SCREEN_LAYOUT_OPTIONS=Object.freeze([
   {value:'fixed-grid',label:'Fixed Grid',icon:'grid'},
   {value:'fixed-panel',label:'Fixed Panel',icon:'columns'},
   {value:'side-by-side',label:'Side by Side',icon:'columns'},
-  {value:'spotlight',label:'Spotlight',icon:'host'},
+  {value:'spotlight',label:'Spotlight',icon:'host'}
+]);
+const LIVE_GUEST_LAYOUT_OPTIONS=Object.freeze([
   {value:'roundtable-1',label:'Roundtable 1',icon:'stack'},
   {value:'roundtable-2',label:'Roundtable 2',icon:'match'}
 ]);
 let activeLiveScreenLayout='full-screen';
+let activeLiveGuestLayout='roundtable-1';
 function normalizeLiveScreenLayout(value){const candidate=String(value||'full-screen');return LIVE_SCREEN_LAYOUT_OPTIONS.some(option=>option.value===candidate)?candidate:'full-screen';}
+function normalizeLiveGuestLayout(value){const candidate=String(value||'roundtable-1');return LIVE_GUEST_LAYOUT_OPTIONS.some(option=>option.value===candidate)?candidate:'roundtable-1';}
+function applyLiveGuestLayout(value){activeLiveGuestLayout=normalizeLiveGuestLayout(value);document.querySelectorAll('.live-guest-layout').forEach(root=>{root.dataset.liveGuestLayout=activeLiveGuestLayout;root.setAttribute('aria-label','LIVE guest panel · '+(LIVE_GUEST_LAYOUT_OPTIONS.find(option=>option.value===activeLiveGuestLayout)?.label||'Roundtable 1'));});document.querySelectorAll('#live-guest-layout-options [data-live-guest-layout]').forEach(button=>{const selected=button.dataset.liveGuestLayout===activeLiveGuestLayout;button.classList.toggle('active',selected);button.setAttribute('aria-pressed',String(selected));});}
 function liveLayoutIcon(name){const paths={grid:"<rect x='3' y='3' width='8' height='8' rx='1'/><rect x='13' y='3' width='8' height='8' rx='1'/><rect x='3' y='13' width='8' height='8' rx='1'/><rect x='13' y='13' width='8' height='8' rx='1'/>",columns:"<rect x='3' y='3' width='8' height='18' rx='1'/><rect x='13' y='3' width='8' height='18' rx='1'/>",stack:"<rect x='3' y='3' width='18' height='5' rx='1'/><rect x='3' y='10' width='18' height='5' rx='1'/><rect x='3' y='17' width='18' height='4' rx='1'/>",featured:"<rect x='3' y='3' width='12' height='18' rx='1'/><rect x='17' y='3' width='4' height='5' rx='1'/><rect x='17' y='10' width='4' height='5' rx='1'/><rect x='17' y='17' width='4' height='4' rx='1'/>",host:"<rect x='3' y='3' width='18' height='12' rx='1'/><rect x='3' y='17' width='5' height='4' rx='1'/><rect x='10' y='17' width='5' height='4' rx='1'/><rect x='17' y='17' width='4' height='4' rx='1'/>",guest:"<rect x='3' y='3' width='5' height='4' rx='1'/><rect x='10' y='3' width='5' height='4' rx='1'/><rect x='17' y='3' width='4' height='4' rx='1'/><rect x='3' y='9' width='18' height='12' rx='1'/>",fullscreen:"<path d='M8 3H3v5 M16 3h5v5 M21 16v5h-5 M8 21H3v-5'/>",match:"<rect x='3' y='3' width='8' height='18' rx='1'/><rect x='13' y='3' width='8' height='18' rx='1'/><path d='m9 12 2 2 2-2'/>"};return "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'>"+(paths[name]||paths.grid)+"</svg>";}
 function applyLiveScreenLayout(value){activeLiveScreenLayout=normalizeLiveScreenLayout(value);document.querySelectorAll('.live-guest-layout').forEach(root=>{root.dataset.liveLayout=activeLiveScreenLayout;root.setAttribute('aria-label','LIVE host and guest seats');root.closest('.live-video-stage')?.classList.toggle('live-full-screen-layout',activeLiveScreenLayout==='full-screen');root.closest('.live-audio-stage')?.classList.remove('live-host-only-layout');});document.querySelectorAll('[data-live-screen-layout]').forEach(button=>{const selected=button.dataset.liveScreenLayout===activeLiveScreenLayout;button.classList.toggle('active',selected);button.setAttribute('aria-pressed',String(selected));});}
 function restoreLiveChatToStage(){
@@ -1383,7 +1395,7 @@ function renderLiveDirectory(sessions,status,catalog,wallet,livePro={}){
     "<section class='card live-start-card'><div class='live-preflight-heading'><div><h2>LIVE setup</h2><p class='muted'>Your settings are applied before Minglora opens the LIVE room.</p></div><span class='live-preflight-step'>1 · SET UP</span></div>"+
     "<form id='live-create-form' class='live-create-form'><fieldset class='live-mode-picker'><legend>Choose LIVE mode</legend>"+modeCards+"</fieldset>"+
     "<div class='live-preflight-fields'>"+
-      "<label class='live-preflight-field'><span>LIVE title</span><input name='title' maxlength='120' required placeholder='What are you going LIVE about?'></label>"+
+      "<label class='live-preflight-field'><span>LIVE title (optional)</span><input name='title' maxlength='120' placeholder='Add a title, or leave blank to go LIVE'></label>"+
       "<label class='live-preflight-field'><span>LIVE board</span><select name='board'>"+boardOptions.map(([value,label])=>"<option value='"+value+"'>"+label+"</option>").join("")+"</select></label>"+
       "<label class='live-preflight-field' id='live-audience-field'><span>Who can watch?</span><select name='visibility' id='live-audience-select'><option value='public'>Everyone · Public</option><option value='friends'>Friends</option><option value='subscribers'>Subscribers only</option><option value='private'>Private room</option></select></label>"+
       "<label class='live-preflight-field' id='live-quality-field'><span>Live quality</span><select name='liveQuality'><option value='auto'>Auto · Recommended</option><option value='720p'>720p · Balanced</option><option value='1080p'>1080p · High bandwidth</option></select></label>"+
@@ -1954,6 +1966,7 @@ function renderLiveSpeakerRoster(room,role,session,activeSpeakerIds=new Set()){
 function renderLiveGuestLayout(room,role,session,activeSpeakerIds=new Set()){
   const root=$("#live-guest-layout");if(!root||!room)return;
   applyLiveScreenLayout(activeLiveScreenLayout);
+  applyLiveGuestLayout(activeLiveGuestLayout);
   const local=room.localParticipant;
   const remotes=room.remoteParticipants?.values?Array.from(room.remoteParticipants.values()):[];
   const hostParticipant=role==="host"?local:remotes.find(person=>person.identity===session?.hostId)||null;
@@ -2586,6 +2599,9 @@ async function openLiveRoom(session,role,issuedLiveKit){
     ?session.liveMode:(broadcastType==='audio_only'?'audio_only':'video_audio');
   const liveSettings=session.liveSettings&&typeof session.liveSettings==='object'?session.liveSettings:{};
   activeLiveScreenLayout=normalizeLiveScreenLayout(session.liveLayout);
+  activeLiveGuestLayout=normalizeLiveGuestLayout(session.liveGuestLayout||(['roundtable-1','roundtable-2'].includes(session.liveLayout)?session.liveLayout:'roundtable-1'));
+  session.liveGuestLayout=activeLiveGuestLayout;
+  session.liveLayout=activeLiveScreenLayout;
   const canUseCamera=broadcastType==='video_audio'&&liveMode!=='mobile_gaming'&&(role!=='guest'||liveSettings.guestCamera!==false);
   const giftsEnabled=liveSettings.liveGifts!==false&&!liveSettings.practiceMode;
   const client=window.LivekitClient;
@@ -2680,7 +2696,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
     ['voiceRings','Voice rings',true,'Play a short tone for new guest requests']
   ];
   const liveRoomPermissionPanel=role==='host'?"<section id='live-room-permission-panel' class='live-tools-card live-room-permission-panel' data-live-tools-panel='permissions'><div class='live-panel-title'><strong>Guest & host permissions</strong><small>Enable or disable each control during your LIVE.</small></div><div id='live-room-permission-controls' class='live-room-permission-grid'>"+liveRoomPermissionSettings.map(([key,label,defaultValue,description])=>"<label class='live-room-permission-toggle'><input type='checkbox' data-live-room-setting='"+key+"'"+((liveSettings[key]??defaultValue)?" checked":"")+"><span class='live-preflight-switch'></span><span><strong>"+esc(label)+"</strong><small>"+esc(description)+"</small></span></label>").join('')+"</div></section>":"";
-  const liveLayoutPanel=role==="host"?"<section id='live-layout-panel' class='live-tools-card live-layout-panel' data-live-tools-panel='layouts'><div class='live-panel-title'><strong>Screen layout</strong><small>Switch the broadcast arrangement without ending LIVE. Full Screen expands the host stage across each device; viewers follow your selection.</small></div><div id='live-layout-options' class='live-layout-options' role='group' aria-label='Choose LIVE screen layout'>"+LIVE_SCREEN_LAYOUT_OPTIONS.map(option=>"<button type='button' class='live-layout-option"+(option.value===activeLiveScreenLayout?" active":"")+"' data-live-screen-layout='"+option.value+"' aria-pressed='"+String(option.value===activeLiveScreenLayout)+"'>"+liveLayoutIcon(option.icon)+"<span>"+esc(option.label)+"</span></button>").join("")+"</div><p class='live-layout-status' id='live-layout-status' role='status' aria-live='polite'>"+esc(LIVE_SCREEN_LAYOUT_OPTIONS.find(option=>option.value===activeLiveScreenLayout)?.label||'Grid')+" layout selected.</p></section>":"";
+  const liveLayoutPanel=role==="host"?"<section id='live-layout-panel' class='live-tools-card live-layout-panel' data-live-tools-panel='layouts'><div class='live-panel-title'><strong>Screen layout</strong><small>Choose one of the seven ways to arrange the LIVE screen. The guest panel layout is controlled separately below.</small></div><div id='live-layout-options' class='live-layout-options' role='group' aria-label='Choose LIVE screen layout'>"+LIVE_SCREEN_LAYOUT_OPTIONS.map(option=>"<button type='button' class='live-layout-option"+(option.value===activeLiveScreenLayout?" active":"")+"' data-live-screen-layout='"+option.value+"' aria-pressed='"+String(option.value===activeLiveScreenLayout)+"'>"+liveLayoutIcon(option.icon)+"<span>"+esc(option.label)+"</span></button>").join("")+"</div><p class='live-layout-status' id='live-layout-status' role='status' aria-live='polite'>"+esc(LIVE_SCREEN_LAYOUT_OPTIONS.find(option=>option.value===activeLiveScreenLayout)?.label||'Full Screen')+" screen layout selected.</p><div class='live-panel-title live-guest-layout-heading'><strong>Guest panel / grid layout</strong><small>Choose how the host and guest boxes are arranged inside the LIVE guest panel.</small></div><div id='live-guest-layout-options' class='live-layout-options' role='group' aria-label='Choose LIVE guest panel layout'>"+LIVE_GUEST_LAYOUT_OPTIONS.map(option=>"<button type='button' class='live-layout-option"+(option.value===activeLiveGuestLayout?" active":"")+"' data-live-guest-layout='"+option.value+"' aria-pressed='"+String(option.value===activeLiveGuestLayout)+"'>"+liveLayoutIcon(option.icon)+"<span>"+esc(option.label)+"</span></button>").join("")+"</div><p class='live-layout-status' id='live-guest-layout-status' role='status' aria-live='polite'>"+esc(LIVE_GUEST_LAYOUT_OPTIONS.find(option=>option.value===activeLiveGuestLayout)?.label||'Roundtable 1')+" guest layout selected.</p></section>":"";
   const liveViewerTools=role==="host"?"<section id='live-viewer-panel' class='live-tools-card live-viewer-panel' data-live-tools-panel='viewers'><div class='live-panel-title'><strong>Viewers & guests</strong><small id='live-viewer-total'>Loading connected people…</small></div><div id='live-viewer-roster' class='live-viewer-roster'><p class='muted'>Loading the real-time audience…</p></div></section>":"";
   const liveTopGiftersTools="<section id='live-top-gifters-panel' class='live-tools-card live-top-gifters-panel' data-live-tools-panel='top-gifters'><div class='live-panel-title'><strong>Top Gifters</strong><small>Ranked by confirmed Coins sent in this LIVE</small></div><div id='live-top-gifters-list' class='live-top-gifters-list'><p class='muted'>Loading this room’s gifter ranking…</p></div></section>";
   const liveToolsDrawer="<div id='live-tools-backdrop' class='live-tools-backdrop hidden' aria-hidden='true'>"+
@@ -2691,21 +2707,19 @@ async function openLiveRoom(session,role,issuedLiveKit){
   const liveHostName=String(session.host?.name||session.host?.username||"Minglora host");
   const liveHostId=String(session.hostId||session.host?.id||'');
   const liveLikeCount=Math.max(0,Number(session.likeCount)||0);
-  // Stable layout contract: class='live-stage-topbar' remains present for the stage HUD.
+  // Keep host name and heart/count on the first line; LIVE NOW sits directly below the name.
   const liveStageHud=
     "<div class='live-stage-topbar "+(role==="host"?"is-host":"")+"'>"+
       "<div class='live-stage-top-left'>"+
-        "<div class='live-host-profile-wrap'><button type='button' class='live-host-profile' data-live-profile-preview='"+esc(liveHostId)+"' aria-label='Open "+esc(liveHostName)+" profile in LIVE'>"+
-          "<img src='"+avatar(session.host||state.user)+"' alt='' loading='eager'>"+
-          "<span><strong>"+esc(liveHostName)+"</strong><small><i class='live-host-live-dot'></i> LIVE NOW</small></span>"+
-        "</button>"+
-        (role==='viewer'?"<button type='button' id='live-follow-host' class='live-follow-button' aria-pressed='"+(session.host?.following?'true':'false')+"'>"+(session.host?.following?'Following':'Follow')+"</button>":"")+
+        "<div class='live-host-profile-wrap'>"+
+          "<button type='button' class='live-host-profile' data-live-profile-preview='"+esc(liveHostId)+"' aria-label='Open "+esc(liveHostName)+" profile in LIVE'>"+
+            "<img src='"+avatar(session.host||state.user)+"' alt='' loading='eager'>"+
+            "<span class='live-host-identity-copy'><strong>"+esc(liveHostName)+"</strong><small class='live-host-live-status'><i class='live-host-live-dot'></i> LIVE NOW</small></span>"+
+          "</button>"+
+          "<div class='live-like-control live-like-count' aria-label='LIVE heart reactions'><button type='button' id='live-heart-like' class='live-heart-like' aria-label='Like this LIVE' aria-pressed='false'><span aria-hidden='true'>♥</span></button><strong id='live-reaction-count' data-count='"+liveLikeCount+"'>"+liveCompactCount(liveLikeCount)+"</strong></div>"+
+          (role==='viewer'?"<button type='button' id='live-follow-host' class='live-follow-button' aria-pressed='"+(session.host?.following?'true':'false')+"'>"+(session.host?.following?'Following':'Follow')+"</button>":"")+
         "</div>"+
-        "<div class='live-like-control live-like-count'><button type='button' id='live-heart-like' class='live-heart-like' aria-label='Like this LIVE' aria-pressed='false'><span aria-hidden='true'>♥</span></button><strong id='live-reaction-count' data-count='"+liveLikeCount+"'>"+liveCompactCount(liveLikeCount)+"</strong><small>likes</small></div>"+
         (role==='viewer'?"<button type='button' id='live-fan-club-join' class='live-fan-club-join' aria-label='Join host Fan Club for one Coin'>♥ Join · 1 Coin</button>":"")+
-      "</div>"+
-      "<div class='live-stage-top-actions'>"+
-      (role==="host"?"<button type='button' id='live-leave' class='live-host-power-button' aria-label='Power off LIVE for everyone' title='Power off LIVE'><svg viewBox='0 0 24 24' aria-hidden='true' focusable='false'><path d='M12 2v10' stroke='currentColor' stroke-width='2.2' stroke-linecap='round' fill='none'></path><path d='M7.05 4.95a8 8 0 1 0 9.9 0' stroke='currentColor' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round' fill='none'></path></svg></button>":"")+
       "</div>"+
     "</div>";
   const liveChatOverlay=liveSettings.groupChatEnabled!==false
@@ -2713,7 +2727,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
     : "<p id='live-chat-disabled-note' class='live-chat-disabled-note'>The host has turned off Group LIVE chat for this broadcast.</p>";
   setContent("<section id='live-player-shell' class='live-player-shell live-theme-"+liveTheme+" live-mode-"+liveMode+" "+(broadcastType==="audio_only"?"live-player-audio-only":"live-player-video-audio")+"'><div class='live-player-header'>"+(role==='viewer'?"<button class='live-exit-button' id='live-back' aria-label='Exit LIVE' title='Exit LIVE'>×</button>":"<button class='text-button' id='live-back'>← Live now</button>")+"<div><span class='live-indicator'>LIVE</span><span class='live-broadcast-type'>"+liveModeLabels[liveMode]+"</span><strong>"+esc(session.title)+"</strong></div><span id='live-viewer-count' class='live-viewer-count'"+(liveSettings.markViewers===false?" hidden":"")+">◉ Connecting…</span></div>"+liveEntryBanner+livePreflightBanner+
     "<div class='live-player-layout'><div class='live-video-column'>"+stageMarkup+"<div id='live-audio-root' class='live-audio-root'></div>"+
-    "<div class='live-player-controls live-icon-controls' role='group' aria-label='LIVE controls'>"+liveControls+"</div></div><aside id='live-fullscreen-chat-slot' class='live-fullscreen-chat-slot' aria-label='LIVE side panel'><div class='live-fullscreen-side-head'><strong>LIVE PANEL</strong><nav class='live-fullscreen-side-tabs' aria-label='Switch LIVE side panel'><button id='live-fullscreen-chat-tab' type='button' data-live-fullscreen-panel='chat' class='active' aria-pressed='true'>Chat</button><button id='live-fullscreen-tools-tab' type='button' data-live-fullscreen-panel='tools' aria-pressed='false'>Tools</button></nav></div></aside></div>"+liveToolsDrawer+"<div id='live-profile-preview' class='live-profile-preview hidden' aria-hidden='true'></div></section>");
+    "<div class='live-player-controls live-icon-controls' role='group' aria-label='LIVE controls'>"+liveControls+"</div></div><aside id='live-fullscreen-chat-slot' class='live-fullscreen-chat-slot' aria-label='LIVE side panel'><div class='live-fullscreen-side-head'><strong>LIVE PANEL</strong><nav class='live-fullscreen-side-tabs' aria-label='Switch LIVE side panel'><button id='live-fullscreen-chat-tab' type='button' data-live-fullscreen-panel='chat' class='active' aria-pressed='true'>Chat</button><button id='live-fullscreen-tools-tab' type='button' data-live-fullscreen-panel='tools' aria-pressed='false'>Tools</button></nav>"+(role==="host"?"<button type='button' id='live-leave' class='live-panel-end-button' aria-label='End LIVE for everyone' title='End LIVE for everyone'><svg viewBox='0 0 24 24' aria-hidden='true' focusable='false'><path d='M12 2v10' stroke='currentColor' stroke-width='2.2' stroke-linecap='round' fill='none'></path><path d='M7.05 4.95a8 8 0 1 0 9.9 0' stroke='currentColor' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round' fill='none'></path></svg><span>End LIVE</span></button>":"")+"</div></aside></div>"+liveToolsDrawer+"<div id='live-profile-preview' class='live-profile-preview hidden' aria-hidden='true'></div></section>");
     if(role==="host"){
     const cohostInviteForm=$("#live-cohost-invite-form");
     cohostInviteForm?.addEventListener("submit",async event=>{
@@ -2862,6 +2876,12 @@ activeLivePinnedComment=null;
       if(!LIVE_SCREEN_LAYOUT_OPTIONS.some(option=>option.value===packet.layout))return;
       const nextLayout=normalizeLiveScreenLayout(packet.layout);
       session.liveLayout=nextLayout;activeLiveSession.liveLayout=nextLayout;applyLiveScreenLayout(nextLayout);renderLiveGuestLayout(room,role,session,activeLiveSpeakerIds);
+      return;
+    }
+    if(topic==="minglora-live-guest-layout"&&participant.identity===session.hostId&&packet?.type==="minglora.live.guest-layout"&&packet.version===1){
+      if(!LIVE_GUEST_LAYOUT_OPTIONS.some(option=>option.value===packet.layout))return;
+      const nextLayout=normalizeLiveGuestLayout(packet.layout);
+      session.liveGuestLayout=nextLayout;activeLiveSession.liveGuestLayout=nextLayout;applyLiveGuestLayout(nextLayout);renderLiveGuestLayout(room,role,session,activeLiveSpeakerIds);
       return;
     }
     if(topic==="minglora-live-reaction"){
@@ -3217,6 +3237,26 @@ activeLivePinnedComment=null;
         toast(error.message||'The LIVE layout could not be changed.');
       }finally{$("#live-layout-options")?.querySelectorAll('button').forEach(item=>item.disabled=false);}
     });
+    $("#live-guest-layout-options")?.addEventListener("click",async event=>{
+      const button=event.target?.closest?.('[data-live-guest-layout]');
+      if(!button||role!=="host"||button.disabled)return;
+      const nextLayout=String(button.dataset.liveGuestLayout||'');
+      if(!LIVE_GUEST_LAYOUT_OPTIONS.some(option=>option.value===nextLayout))return;
+      $("#live-guest-layout-options")?.querySelectorAll('button').forEach(item=>item.disabled=true);
+      const status=$("#live-guest-layout-status");
+      try{
+        await api("/live/sessions/"+encodeURIComponent(session.id)+"/guest-layout",{method:"PATCH",body:JSON.stringify({layout:nextLayout})});
+        session.liveGuestLayout=nextLayout;activeLiveSession.liveGuestLayout=nextLayout;applyLiveGuestLayout(nextLayout);renderLiveGuestLayout(room,role,session,activeLiveSpeakerIds);
+        const packet=new TextEncoder().encode(JSON.stringify({type:"minglora.live.guest-layout",version:1,layout:nextLayout}));
+        await room.localParticipant.publishData(packet,{reliable:true,topic:"minglora-live-guest-layout"});
+        const label=LIVE_GUEST_LAYOUT_OPTIONS.find(option=>option.value===nextLayout)?.label||'Roundtable 1';
+        if(status)status.textContent=label+' guest layout is now live for everyone.';
+      }catch(error){
+        applyLiveGuestLayout(session.liveGuestLayout||'roundtable-1');renderLiveGuestLayout(room,role,session,activeLiveSpeakerIds);
+        if(status)status.textContent='Guest layout could not be synchronized. '+(error.message||'Try again.');
+        toast(error.message||'The LIVE guest layout could not be changed.');
+      }finally{$("#live-guest-layout-options")?.querySelectorAll('button').forEach(item=>item.disabled=false);}
+    });
     const liveDevicePreferences={echoCancellation:true,noiseSuppression:liveSettings.noiseSuppression!==false,autoGainControl:true,videoFit:"cover",mirrorSelf:true,showNames:true};
     activeLiveDevicePreferences=liveDevicePreferences;
     const noiseSuppressionControl=$("#live-noise-suppression");
@@ -3536,6 +3576,7 @@ activeLivePinnedComment=null;
         if(promotionalNote)promotionalNote.textContent="Promotional wallet: "+Number(promotionalWallet.promotionalCoins||0).toLocaleString()+" Coins · cash reserve available: USD "+(Number(promotionalWallet.availableMinor||0)/100).toFixed(2)+". Gifts are rejected when the reserve is insufficient.";
         const walletBalance=$("#live-wallet-balance");
         if(walletBalance&&role!=="host")walletBalance.textContent=wallet.wallet&&wallet.wallet.balance_coins!=null?Number(wallet.wallet.balance_coins).toLocaleString()+" Coins":"Balance unavailable";
+        await window.MingloraGiftFX?.loadCatalogMotionIndex?.();
         drawLiveGiftGrid();
       };
       refreshLiveGiftGrid=drawLiveGiftGrid;
@@ -3967,6 +4008,9 @@ async function renderCreator(){
       followers:[],
       following:[],
       settings:null,
+      videoAnalytics:null,
+      videoAnalyticsError:null,
+      analyticsPeriodDays:30,
       contentTab:"posts",
       section:"overview",
       pagePickers:[]
@@ -4187,12 +4231,59 @@ function creatorAudienceMarkup(){
     "<div class='creator-audience-columns'><section class='creator-studio-panel'><div class='creator-panel-heading'><div><span class='creator-eyebrow'>YOUR COMMUNITY</span><h3>Followers</h3></div><span class='creator-panel-count'>"+creatorNumber(p.followersCount)+"</span></div><div class='creator-audience-list'>"+rows(followers,s.audienceError)+"</div></section><section class='creator-studio-panel'><div class='creator-panel-heading'><div><span class='creator-eyebrow'>YOUR NETWORK</span><h3>Following</h3></div><span class='creator-panel-count'>"+creatorNumber(p.followingCount)+"</span></div><div class='creator-audience-list'>"+rows(following,s.followingError)+"</div></section></div>";
 }
 function creatorAnalyticsMarkup(){
-  const s=state.creatorStudio,p=s.profile||{};
-  const posts=Array.isArray(p.posts)?p.posts:[];
-  return "<div class='creator-subpage-heading'><div><span class='creator-eyebrow'>MEASURE WHAT MATTERS</span><h2>Creator analytics</h2><p>Only metrics returned by Minglora’s existing profile insights API are displayed here.</p></div></div>"+
-    "<div class='creator-analytics-source'><span>✓</span><div><strong>Account-backed profile insights</strong><small>Counts below are returned by Minglora. Profile viewer history lives in Notification Settings; no estimated or sample view metrics are shown here.</small></div></div>"+
-    "<div class='creator-analytics-grid'>"+creatorMetric("Followers",creatorNumber(p.followersCount),"Current follower relationship count","friends")+creatorMetric("Following",creatorNumber(p.followingCount),"Current following relationship count","profile")+creatorMetric("Published posts",creatorNumber(posts.length),"Personal posts visible on your profile","saved")+"</div>"+
-    "<section class='creator-studio-panel creator-analytics-limits'><span class='creator-eyebrow'>METRIC COVERAGE</span><h3>What Minglora can measure today</h3><div class='creator-coverage-list'><p><b>Available</b><span>Follower count, following count and published posts.</span></p><p><b>Not yet available</b><span>Per-post impressions, watch time, retention, completion, audience demographics, conversion funnels and time-series charts.</span></p></div></section>";
+  const s=state.creatorStudio,p=s.profile||{},analytics=s.videoAnalytics;
+  const formatDuration=seconds=>{
+    const value=Math.max(0,Number(seconds)||0);
+    if(value>=3600)return Math.floor(value/3600)+'h '+Math.floor(value%3600/60)+'m';
+    if(value>=60)return Math.floor(value/60)+'m '+Math.round(value%60)+'s';
+    return Math.round(value)+'s';
+  };
+  const percentage=value=>Math.round(Math.max(0,Math.min(1,Number(value)||0))*100)+'%';
+  const summary=analytics?.summary||{};
+  const periodDays=[7,30,90].includes(Number(analytics?.periodDays))?Number(analytics.periodDays):([7,30,90].includes(Number(s.analyticsPeriodDays))?Number(s.analyticsPeriodDays):30);
+  const demographics=analytics?.demographics||{};
+  const countryGroups=Array.isArray(demographics.countries)?demographics.countries:[];
+  const maxCountryViewers=Math.max(1,...countryGroups.map(item=>Math.max(0,Number(item.viewers)||0)));
+  const demographicsMarkup=demographics.available&&countryGroups.length
+    ?"<section class='creator-studio-panel creator-video-analytics creator-audience-demographics'><div class='creator-video-analytics-heading'><h3>Anonymous audience countries</h3><small>Only opted-in members · each shown group has at least "+creatorNumber(demographics.minSampleSize||5)+" members</small></div><ol class='creator-video-retention'>"+countryGroups.map(item=>{
+      const viewers=Math.max(0,Number(item.viewers)||0);
+      const width=Math.round(viewers/maxCountryViewers*100);
+      return "<li><span>"+esc(item.country||'Country')+"</span><span class='creator-video-retention-track'><span style='width:"+width+"%'></span></span><strong>"+creatorNumber(viewers)+"</strong></li>";
+    }).join('')+"</ol>"+(demographics.suppressedGroups?"<p class='creator-video-analytics-footnote'>Smaller country groups are hidden to protect member privacy.</p>":"")+"</section>"
+    :"<section class='creator-studio-panel creator-audience-demographics'><div class='creator-video-analytics-heading'><h3>Anonymous audience countries</h3></div><p class='creator-video-analytics-footnote' role='status'>No country group currently meets the minimum of five members who have opted in to anonymous audience demographics. Member identities and individual profile details are never shared.</p></section>";
+  const videoRows=Array.isArray(analytics?.videos)?analytics.videos:[];
+  const rows=videoRows.length?videoRows.map(video=>{
+    const date=video.createdAt?new Date(video.createdAt):null;
+    const dateLabel=date&&!Number.isNaN(date.getTime())?date.toLocaleDateString():'Date unavailable';
+    const retention=video.retention||{};
+    const retentionMarkup=retention.available&&Array.isArray(retention.points)
+      ?"<div class='creator-video-retention'><div class='creator-video-retention-heading'><strong>Audience retention</strong><small>Measured progress from "+creatorNumber(retention.sampleSize)+" unique viewers</small></div><ol>"+retention.points.map(point=>{
+        const position=Math.max(0,Math.min(100,Number(point.positionPercent)||0));
+        const rate=Math.max(0,Math.min(1,Number(point.retentionRate)||0));
+        const percent=Math.round(rate*100);
+        return "<li><span>"+position+"%</span><span class='creator-video-retention-track'><span style='width:"+percent+"%'></span></span><strong>"+percent+"%</strong></li>";
+      }).join('')+"</ol></div>"
+      :"<div class='creator-video-retention is-pending' role='status'><strong>Audience retention</strong><span>Available after at least 5 unique viewers provide playback-position data. Older playback without position samples is not estimated.</span></div>";
+    return "<div class='creator-video-analytics-item'><article class='creator-video-analytics-row'><div class='creator-video-analytics-title'><strong>"+esc(video.caption||'Untitled video')+"</strong><small>"+esc(dateLabel)+"</small></div><div class='creator-video-analytics-value'><strong>"+creatorNumber(video.uniqueViewers)+"</strong><small>Unique viewers</small></div><div class='creator-video-analytics-value'><strong>"+formatDuration(video.totalWatchSeconds)+"</strong><small>Watch time</small></div><div class='creator-video-analytics-value'><strong>"+formatDuration(video.averageWatchSecondsPerViewer)+"</strong><small>Avg / viewer</small></div><div class='creator-video-analytics-value'><strong>"+percentage(video.completionRate)+"</strong><small>Completion</small></div></article>"+retentionMarkup+"</div>";
+  }).join(''):"<div class='creator-empty-state'><span>"+creatorIcon('video')+"</span><h3>No video watch data yet</h3><p>"+(videoRows.length===0?'Publish a video and let members watch it. Real viewer activity will appear here.':'No watch events were recorded during this period.')+"</p></div>";
+  const profileMetrics=s.profile
+    ?creatorMetric("Followers",creatorNumber(p.followersCount),"Current follower relationship count","friends")+creatorMetric("Following",creatorNumber(p.followingCount),"Current following relationship count","profile")
+    :"<p class='creator-analytics-footnote' role='status'>Profile metrics are unavailable.</p>";
+  const videoMetrics=analytics
+    ?creatorMetric("Published videos",creatorNumber(summary.publishedVideos),"Published videos with attached video media","video")+
+      creatorMetric("Unique viewers",creatorNumber(summary.uniqueViewers),"Distinct member accounts across your videos","friends")+
+      creatorMetric("Video watch time",formatDuration(summary.totalWatchSeconds),"Recorded watch time in the reporting period","clock")+
+      creatorMetric("Average watch",formatDuration(summary.averageWatchSecondsPerViewer),"Per unique viewer-video pair","clock")+
+      creatorMetric("Completion rate",percentage(summary.completionRate),"Viewer-video pairs reaching at least 85%","analytics")
+    :"<p class='creator-analytics-footnote' role='status'>Video analytics unavailable: "+esc(s.videoAnalyticsError||'Minglora could not load video watch analytics.')+"</p>";
+  return "<div class='creator-subpage-heading'><div><span class='creator-eyebrow'>MEASURE WHAT MATTERS</span><h2>Creator analytics</h2><p>Account-backed profile insights and real video watch activity.</p></div><label class='creator-video-analytics-period-label'>Reporting period<select id='creator-video-analytics-period' aria-label='Video analytics reporting period'><option value='7' "+(periodDays===7?'selected':'')+">Last 7 days</option><option value='30' "+(periodDays===30?'selected':'')+">Last 30 days</option><option value='90' "+(periodDays===90?'selected':'')+">Last 90 days</option></select></label></div>"+
+    "<div class='creator-analytics-source'><span>✓</span><div><strong>Verified Minglora activity</strong><small>Viewer totals and watch time are aggregated from real video playback events. No estimated impressions, invented views or individual viewer identities are shown.</small></div></div>"+
+    "<div class='creator-analytics-grid'>"+profileMetrics+videoMetrics+"</div>"+
+    demographicsMarkup+
+    "<section class='creator-studio-panel creator-video-analytics'><div class='creator-video-analytics-heading'><h3>Video performance</h3><small>Last "+periodDays+" days · up to 30 recent videos</small></div>"+
+      (analytics?"<div class='creator-video-analytics-list'>"+rows+"</div>":"<div class='creator-empty-state'><span>"+creatorIcon('analytics')+"</span><h3>Video analytics unavailable</h3><p>"+esc(s.videoAnalyticsError||'Minglora could not load video watch analytics.')+"</p></div>")+
+      "<p class='creator-video-analytics-footnote'>Unique viewers are distinct signed-in accounts with recorded playback. Completion is based on the viewer reaching at least 85% of the video. These are not ad impressions or reach estimates.</p></section>"+
+    "<section class='creator-studio-panel creator-analytics-limits'><span class='creator-eyebrow'>METRIC COVERAGE</span><h3>What Minglora can measure today</h3><div class='creator-coverage-list'><p><b>Available</b><span>Followers, following, published videos, unique video viewers, watch time, completion rate and opt-in country groups where at least five members share the same country.</span></p><p><b>Still being built</b><span>Impressions/reach, traffic sources, follower conversion and time-series comparisons.</span></p></div></section>";
 }
 function creatorPageCard(page,details){
   const posts=details?.posts||[],canDelete=page.myRole==="owner";
@@ -4334,8 +4425,14 @@ async function renderCreatorSection(section){
     s.followingError=following.status==="rejected"?following.reason?.message:null;
     content=creatorAudienceMarkup();
   }else if(section==="analytics"){
-    try{s.profile=await api("/users/"+encodeURIComponent(state.user.id));}
-    catch(error){s.analyticsError=error.message;}
+    const [profileResult,videoResult]=await Promise.allSettled([
+      api("/users/"+encodeURIComponent(state.user.id)),
+      api("/creator/video-analytics?days="+( [7,30,90].includes(Number(s.analyticsPeriodDays))?Number(s.analyticsPeriodDays):30))
+    ]);
+    if(profileResult.status==="fulfilled"){s.profile=profileResult.value;s.analyticsError=null;}
+    else s.analyticsError=profileResult.reason?.message||"Profile insights are unavailable.";
+    if(videoResult.status==="fulfilled"){s.videoAnalytics=videoResult.value;s.videoAnalyticsError=null;}
+    else{s.videoAnalytics=null;s.videoAnalyticsError=videoResult.reason?.message||"Video watch analytics are unavailable.";}
     content=creatorAnalyticsMarkup();
   }else if(section==="pages"){
     content=await creatorPagesMarkup();
@@ -4355,6 +4452,14 @@ async function renderCreatorSection(section){
   setContent(creatorStudioChrome(section,content));
   syncCreatorStudioNavigationLayout();
   window.scrollTo({top:0,behavior:"auto"});
+  if(section==="analytics"){
+    const periodSelect=document.getElementById("creator-video-analytics-period");
+    periodSelect?.addEventListener("change",()=>{
+      const value=Number(periodSelect.value);
+      s.analyticsPeriodDays=[7,30,90].includes(value)?value:30;
+      renderCreatorSection("analytics").catch(error=>toast(error.message||"Video analytics could not be refreshed."));
+    });
+  }
   document.querySelectorAll("[data-creator-section]").forEach(button=>button.addEventListener("click",()=>renderCreatorSection(button.dataset.creatorSection).catch(error=>toast(error.message))));
   document.querySelectorAll("[data-creator-open-live]").forEach(button=>button.addEventListener("click",()=>activateNav("live")));
   document.querySelectorAll('[data-creator-start-live]').forEach(button=>button.addEventListener('click',()=>{state.liveStartFormat=button.dataset.creatorStartLive==='audio_only'?'audio_only':'video_audio';activateNav('live');}));
@@ -4951,7 +5056,7 @@ async function openProfile(id,openEditor=false){
   if(!profileId)return;
   const generation=++profileLoadGeneration;
   stopProfilePresence();
-  if(state.profileTargetId!==profileId)state.profileTab='posts';
+  if(state.profileTargetId!==profileId)state.profileTab=null;
   state.profileTargetId=profileId;
   activateSilent('profile');
   persistCurrentView();
@@ -5487,9 +5592,134 @@ function profileBadgesMarkup(data,isMe){
     content+"</section>";
 }
 
+const PROFILE_STYLE_OPTIONS = Object.freeze([
+  {id:'facebook',name:'Facebook-style',description:'Cover-led profile, familiar identity header, social connections and full profile sections.'},
+  {id:'tiktok',name:'TikTok-style',description:'Creator-first identity, visible follower metrics and media-led video presentation.'},
+  {id:'instagram',name:'Instagram-style',description:'Compact visual identity, photo-first gallery, highlights-inspired navigation and reels.'},
+  {id:'youtube',name:'YouTube-style',description:'Channel banner, creator identity, channel-focused sections and video discovery.'},
+  {id:'x',name:'X (Twitter)-style',description:'Compact banner and identity, conversation-led timeline and media sections.'},
+  {id:'linkedin',name:'LinkedIn-style',description:'Professional introduction, work and education emphasis, network and activity sections.'},
+  {id:'pinterest',name:'Pinterest-style',description:'Creator identity with a visual-first pin and album presentation.'},
+  {id:'twitch',name:'Twitch-style',description:'Creator channel presentation with media, community and video-focused navigation.'},
+  {id:'snapchat',name:'Snapchat-style',description:'Avatar-led social identity with stories and short-form media emphasis.'},
+  {id:'custom-minglora',name:'Custom Minglora-style',description:'Original Minglora profile presentation with flexible identity, community and content sections.'}
+]);
+const PROFILE_STYLE_IDS = Object.freeze(PROFILE_STYLE_OPTIONS.map(item=>item.id));
+const PROFILE_SCREEN_LAYOUT_OPTIONS = Object.freeze([
+  {id:'full-screen',name:'Full Screen',description:'Edge-to-edge profile canvas with full-width content.'},
+  {id:'fluid-panel',name:'Fluid Panel',description:'Flexible centered panels that adapt to available width.'},
+  {id:'fluid-grid',name:'Fluid Grid',description:'Adaptive grids that grow and wrap with available space.'},
+  {id:'fixed-grid',name:'Fixed Grid',description:'Consistent multi-column content grid with bounded card widths.'},
+  {id:'fixed-panel',name:'Fixed Panel',description:'A centered panel with a stable maximum reading width.'},
+  {id:'side-by-side',name:'Side by Side',description:'Profile sections and media arranged in adjacent columns.'},
+  {id:'spotlight',name:'Spotlight',description:'Centered identity presentation with a focused main content area.'},
+]);
+const PROFILE_SCREEN_LAYOUT_IDS = Object.freeze(PROFILE_SCREEN_LAYOUT_OPTIONS.map(item=>item.id));
+function normalizeProfileStyle(value){return PROFILE_STYLE_IDS.includes(value)?value:'facebook';}
+function normalizeProfileScreenLayout(value){return PROFILE_SCREEN_LAYOUT_IDS.includes(value)?value:'fluid-panel';}
+function profileStyleNavigation(style){
+  const labels={
+    facebook:[['posts','All'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Reels'],['more','More']],
+    tiktok:[['videos','Videos'],['posts','Posts'],['friends','Friends'],['photos','Photos'],['about','About'],['more','More']],
+    instagram:[['posts','Posts'],['reels','Reels'],['photos','Photos'],['friends','Friends'],['about','About'],['more','More']],
+    youtube:[['posts','Home'],['videos','Videos'],['reels','Shorts'],['friends','Community'],['about','About'],['more','More']],
+    x:[['posts','Posts'],['about','About'],['friends','Friends'],['photos','Media'],['reels','Videos'],['more','More']],
+    linkedin:[['posts','Activity'],['about','About'],['friends','Connections'],['photos','Media'],['reels','Videos'],['more','More']],
+    pinterest:[['photos','Pins'],['posts','Created'],['friends','Friends'],['about','About'],['reels','Videos'],['more','More']],
+    twitch:[['posts','Home'],['videos','Videos'],['reels','Clips'],['about','About'],['friends','Community'],['more','More']],
+    snapchat:[['highlights','Stories'],['reels','Spotlight'],['posts','Posts'],['friends','Friends'],['photos','Photos'],['more','More']],
+    'custom-minglora':[['posts','All'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Reels'],['more','More']]
+  };
+  return labels[normalizeProfileStyle(style)]||labels.facebook;
+}
+function profileMetricEntries(data,style){
+  const values={followers:Number(data.followersCount||0),following:Number(data.followingCount||0),friends:Number(data.friendsCount||0),subscribers:Number(data.subscribersCount||0),posts:Array.isArray(data.posts)?data.posts.length:0,likes:Number(data.likesCount||0)};
+  const labels={followers:'Followers',following:'Following',friends:'Friends',subscribers:'Subscribers',posts:'Posts',likes:'Likes'};
+  const orders={facebook:['followers','following','friends','subscribers','posts','likes'],tiktok:['following','followers','likes'],instagram:['posts','followers','following','likes','friends','subscribers'],youtube:['subscribers','posts','followers','likes','following','friends'],x:['posts','followers','following','likes','friends','subscribers'],linkedin:['followers','friends','posts','following','subscribers','likes'],pinterest:['followers','following','posts','likes','friends','subscribers'],twitch:['followers','subscribers','posts','likes','following','friends'],snapchat:['friends','followers','following','posts','likes','subscribers'],'custom-minglora':['followers','following','friends','subscribers','posts','likes']};
+  return (orders[normalizeProfileStyle(style)]||orders.facebook).map(id=>({id,label:labels[id],value:values[id],interactive:['followers','following','friends','subscribers'].includes(id)}));
+}
+function profileMetricsMarkup(data,style){
+  const entries=profileMetricEntries(data,style);
+  return '<div class="profile-counts" aria-label="Profile counts">'+entries.map(item=>item.interactive
+    ?'<button type="button" class="connection-count" data-profile-metric="'+item.id+'" data-open-connections="'+item.id+'" aria-label="Open '+item.label.toLowerCase()+'"><strong>'+Number(item.value).toLocaleString()+'</strong><span>'+item.label+'</span></button>'
+    :'<div class="profile-count-item" data-profile-metric="'+item.id+'"><strong>'+Number(item.value).toLocaleString()+'</strong><span>'+item.label+'</span></div>').join('')+'</div>';
+}function profileStylePreviewMarkup(data,style){
+  const user=data.user||{};
+  const name=esc(user.name||'Minglora member');
+  const username=user.username?'@'+esc(user.username):'Minglora profile';
+  const photos=Array.isArray(data.photos)?data.photos:[];
+  const albums=Array.isArray(data.albums)?data.albums:[];
+  const media=[...photos,...albums.flatMap(album=>Array.isArray(album.photos)?album.photos:[])].filter(item=>item&&item.url).filter((item,index,all)=>all.findIndex(other=>item.id&&other.id?other.id===item.id:other.url===item.url)===index).slice(0,6);
+  const reels=Array.isArray(data.reels)?data.reels.filter(item=>item&&item.url):[];
+  const posts=Array.isArray(data.posts)?data.posts:[];
+  const latest=posts[0]||null;
+  const text=String(latest&&(latest.text||latest.caption||latest.content)||'').trim();
+  const coverVisible=!['tiktok','instagram','pinterest','snapchat'].includes(style);
+  const cover=coverVisible?'<div class="profile-style-preview-cover">'+(user.cover?'<img src="'+esc(user.cover)+'" alt="" loading="lazy">':'<span class="profile-style-preview-cover-empty">No cover photo</span>')+'</div>':'';
+  const metrics=profileMetricEntries(data,style).map(item=>'<span data-preview-metric="'+item.id+'"><b>'+Number(item.value).toLocaleString()+'</b> '+item.label+'</span>').join('');
+  const nav=profileStyleNavigation(style).map(item=>'<span data-preview-tab="'+item[0]+'">'+esc(item[1])+'</span>').join('');
+  const postMarkup=latest?'<article class="profile-style-preview-post"><small>Latest post'+(latest.createdAt?' · '+esc(timeAgo(latest.createdAt)):'')+'</small><p>'+esc((text||'Post shared on this profile.').slice(0,180))+'</p></article>':'<p class="profile-style-preview-empty">No posts shared yet.</p>';
+  const videoMarkup=reels.length?'<article class="profile-style-preview-video"><video controls playsinline preload="metadata" src="'+esc(reels[0].url)+'"></video>'+(reels[0].postText?'<p>'+esc(String(reels[0].postText).slice(0,120))+'</p>':'')+'</article>':'<p class="profile-style-preview-empty">No videos shared yet.</p>';
+  const galleryMarkup=media.length?'<div class="profile-style-preview-gallery">'+media.map(item=>'<img src="'+esc(item.url)+'" alt="" loading="lazy">').join('')+'</div>':'<p class="profile-style-preview-empty">No photos shared yet.</p>';
+  const content=['tiktok','youtube','twitch'].includes(style)?(reels.length?videoMarkup:postMarkup):['instagram','pinterest','snapchat'].includes(style)?(media.length?galleryMarkup:reels.length?videoMarkup:postMarkup):postMarkup;
+  return '<div class="profile-style-preview-frame" data-profile-style="'+style+'">'+cover+
+    '<div class="profile-style-preview-identity"><img src="'+esc(avatar(user))+'" alt="" loading="lazy"><div><strong>'+name+'</strong><small>'+username+'</small></div></div>'+
+    '<div class="profile-style-preview-metrics">'+metrics+'</div>'+
+    '<div class="profile-style-preview-nav">'+nav+'</div>'+
+    '<div class="profile-style-preview-content">'+content+'</div></div>';
+}
+function profileStyleLibraryMarkup(data){
+  const user=data.user||{},active=normalizeProfileStyle(user.profileStyle),defaultStyle=normalizeProfileStyle(user.defaultProfileStyle);
+  const choices=PROFILE_STYLE_OPTIONS.map(item=>'<article class="profile-style-option'+(item.id===active?' is-active':'')+'" data-profile-style-option="'+item.id+'">'+
+    '<div class="profile-style-option-art" data-profile-style="'+item.id+'" aria-hidden="true"><span class="profile-style-option-avatar"></span><span class="profile-style-option-lines"></span><span class="profile-style-option-grid"><i></i><i></i><i></i></span></div>'+
+    '<div class="profile-style-option-copy"><strong>'+esc(item.name)+'</strong><small>'+esc(item.description)+'</small><span class="profile-style-option-state">'+(item.id===active?'Currently applied':item.id===defaultStyle?'Saved default':'Available')+'</span></div>'+
+    '<button type="button" class="secondary profile-style-preview-button" data-profile-style-preview="'+item.id+'" aria-pressed="'+(item.id===active?'true':'false')+'">Preview</button></article>').join('');
+  return '<section class="card profile-style-library" data-profile-style-library data-selected-style="'+active+'" data-default-style="'+defaultStyle+'">'+
+    '<div class="profile-style-library-heading"><div><span class="profile-style-eyebrow">PROFILE APPEARANCE</span><h2>Profile Style Library</h2><p>Choose a complete profile experience. Your Minglora account, profile information and content remain connected.</p></div><span class="profile-style-count">10 styles</span></div>'+
+    '<div class="profile-style-library-workspace"><div class="profile-style-options" aria-label="Available profile styles">'+choices+'</div>'+
+    '<div class="profile-style-preview-column"><div class="profile-style-preview-heading"><div><strong>Live preview</strong><small id="profile-style-preview-name">'+esc((PROFILE_STYLE_OPTIONS.find(item=>item.id===active)||PROFILE_STYLE_OPTIONS[0]).name)+'</small></div><span class="profile-style-default-note">Default: '+esc((PROFILE_STYLE_OPTIONS.find(item=>item.id===defaultStyle)||PROFILE_STYLE_OPTIONS[0]).name)+'</span></div>'+
+    '<div id="profile-style-live-preview">'+profileStylePreviewMarkup(data,active)+'</div><div class="profile-style-library-actions"><button type="button" class="primary" data-profile-style-apply>Apply</button><button type="button" class="secondary" data-profile-style-save-default>Save as default</button><button type="button" class="secondary" data-profile-style-reset>Reset to Default</button></div>'+
+    '<p class="profile-style-library-note" role="status">Preview is temporary. Apply changes the public profile style; Save as default stores your preferred style across sessions and devices.</p></div></div>'+
+    '<div class="profile-style-library-footnote">One account · One profile · All your posts, photos, albums, videos, reels, followers, friends and profile details stay in place.</div></section>';
+}
+function bindProfileStyleLibrary(panel,data){
+  const root=panel.querySelector('[data-profile-style-library]');if(!root)return;
+  const previewBox=root.querySelector('#profile-style-live-preview'),previewName=root.querySelector('#profile-style-preview-name');
+  const nameFor=style=>(PROFILE_STYLE_OPTIONS.find(item=>item.id===style)||PROFILE_STYLE_OPTIONS[0]).name;
+  const selectPreview=style=>{
+    const selected=normalizeProfileStyle(style);root.dataset.selectedStyle=selected;
+    if(previewBox)previewBox.innerHTML=profileStylePreviewMarkup(data,selected);
+    if(previewName)previewName.textContent=nameFor(selected);
+    root.querySelectorAll('[data-profile-style-preview]').forEach(button=>button.setAttribute('aria-pressed',button.dataset.profileStylePreview===selected?'true':'false'));
+  };
+  root.querySelectorAll('[data-profile-style-preview]').forEach(button=>button.addEventListener('click',()=>selectPreview(button.dataset.profileStylePreview)));
+  const setBusy=busy=>root.querySelectorAll('button').forEach(button=>{button.disabled=busy;});
+  const persist=async(preferences,successMessage)=>{
+    setBusy(true);
+    try{
+      const result=await api('/settings',{method:'PATCH',body:JSON.stringify({preferences})}),saved=result.settings?.preferences||{};
+      if(Object.hasOwn(preferences,'profileStyle')&&saved.profileStyle!==preferences.profileStyle)throw new Error('Minglora did not confirm the selected profile style.');
+      if(Object.hasOwn(preferences,'defaultProfileStyle')&&saved.defaultProfileStyle!==preferences.defaultProfileStyle)throw new Error('Minglora did not confirm the saved default profile style.');
+      if(Object.hasOwn(preferences,'profileStyle')){data.user.profileStyle=saved.profileStyle;state.profileTab=profileStyleNavigation(saved.profileStyle)[0]?.[0]||'posts';}
+      if(Object.hasOwn(preferences,'defaultProfileStyle'))data.user.defaultProfileStyle=saved.defaultProfileStyle;
+      state.profile=data;renderProfile(data);toast(successMessage);
+    }catch(error){toast(error.message||'Could not save this profile style.');setBusy(false);}
+  };
+  root.querySelector('[data-profile-style-apply]')?.addEventListener('click',()=>{
+    const style=normalizeProfileStyle(root.dataset.selectedStyle);persist({profileStyle:style},nameFor(style)+' applied.');
+  });
+  root.querySelector('[data-profile-style-save-default]')?.addEventListener('click',()=>{
+    const style=normalizeProfileStyle(root.dataset.selectedStyle);persist({defaultProfileStyle:style},nameFor(style)+' saved as your default profile style.');
+  });
+  root.querySelector('[data-profile-style-reset]')?.addEventListener('click',()=>{
+    const style=normalizeProfileStyle(root.dataset.defaultStyle);persist({profileStyle:style},'Your profile style was reset to the saved default.');
+  });
+}
+
 function profileTabMarkup(data,tab,aboutHtml,isMe){
   const posts=data.posts||[],albums=data.albums||[],photos=data.photos||[],reels=data.reels||[],friends=data.friends||[];
   if(tab==='badges')return profileBadgesMarkup(data,isMe);
+  if(tab==='style-library')return isMe?profileStyleLibraryMarkup(data):'<section class="card empty-state"><h3>Profile Style Library</h3><p>Only the account owner can change profile appearance.</p></section>';
   if(tab==='about')return '<section class="card profile-about"><div class="about-heading"><div><h3>About you</h3><p class="muted">Your details, story, work, education and the things you enjoy.</p></div></div><div class="profile-about-sections">'+(aboutHtml||'<p class="muted">No About details have been added yet.</p>')+'</div></section>';
   if(tab==='friends')return '<section class="card"><div class="page-heading"><h2>Friends</h2><span class="muted">'+friends.length+' friends</span></div>'+(friends.length?'<div class="profile-friends-grid">'+friends.map(member=>'<button type="button" class="profile-friend-card" data-profile="'+esc(member.id)+'"><img class="avatar" src="'+avatar(member)+'" alt=""><strong>'+esc(member.name)+'</strong><small>@'+esc(member.username)+' '+verifiedProfileBadge(member)+'</small></button>').join('')+'</div>':'<div class="empty-state"><h3>No friends to show</h3><p>Friends appear here when both members follow each other.</p></div>')+'</section>';
   if(tab==='photos'){
@@ -5504,7 +5734,13 @@ function profileTabMarkup(data,tab,aboutHtml,isMe){
       '<h3 class="profile-subheading">All photos</h3>'+(unique.length?'<div class="profile-media-grid">'+unique.map(item=>profilePhotoTile(item,false)).join('')+'</div>':'<p class="muted">No individual photos have been shared yet.</p>')+'</section>';
   }
   if(tab==='reels')return '<section class="card profile-media-section"><div class="page-heading"><div><h2>Reels</h2><p class="muted">Short videos shared on this profile</p></div>'+(isMe?'<button type="button" class="primary" id="profile-create-reel">Create reel</button>':'')+'</div>'+(reels.length?'<div class="profile-reels-grid">'+reels.map(item=>'<article class="profile-reel-tile"><video controls playsinline preload="metadata" src="'+esc(item.url)+'"></video><small>'+esc(item.postText||'Video')+'</small></article>').join('')+'</div>':'<div class="empty-state"><h3>No reels yet</h3><p>Videos shared by this member will appear here.</p></div>')+'</section>';
-  if(tab==='videos')return '<section class="card profile-media-section"><div class="page-heading"><div><h2>Videos</h2><p class="muted">All video posts on this profile</p></div>'+(isMe?'<button type="button" class="primary" id="profile-upload-video">Upload video</button>':'')+'</div>'+(reels.length?'<div class="profile-video-list">'+reels.map(item=>'<article class="profile-video-row"><video controls playsinline preload="metadata" src="'+esc(item.url)+'"></video><div><strong>'+esc(item.postText||'Video shared')+'</strong><small>'+esc(timeAgo(item.createdAt))+'</small></div></article>').join('')+'</div>':'<div class="empty-state"><h3>No videos yet</h3><p>Videos shared by this member will appear here.</p></div>')+'</section>';
+  if(tab==='videos'){
+    if(normalizeProfileStyle(data.user?.profileStyle)==='tiktok'){
+      const tiktokVideos=reels.filter(item=>item&&item.url);
+      return '<section class="card profile-media-section profile-tiktok-videos"><div class="page-heading"><div><h2>Videos</h2><p class="muted">Short videos shared on this profile</p></div>'+(isMe?'<button type="button" class="primary" id="profile-upload-video">Upload video</button>':'')+'</div>'+(tiktokVideos.length?'<div class="profile-reels-grid profile-tiktok-video-grid" data-profile-tiktok-video-grid>'+tiktokVideos.map(item=>'<article class="profile-reel-tile profile-tiktok-video-tile"><video controls playsinline preload="metadata" src="'+esc(item.url)+'"></video><small>'+esc(item.postText||'Video')+'</small></article>').join('')+'</div>':'<div class="empty-state"><h3>No videos yet</h3><p>'+(isMe?'Upload your first video to start your creator gallery.':'Videos shared by this member will appear here.')+'</p></div>')+'</section>';
+    }
+    return '<section class="card profile-media-section"><div class="page-heading"><div><h2>Videos</h2><p class="muted">All video posts on this profile</p></div>'+(isMe?'<button type="button" class="primary" id="profile-upload-video">Upload video</button>':'')+'</div>'+(reels.length?'<div class="profile-video-list">'+reels.map(item=>'<article class="profile-video-row"><video controls playsinline preload="metadata" src="'+esc(item.url)+'"></video><div><strong>'+esc(item.postText||'Video shared')+'</strong><small>'+esc(timeAgo(item.createdAt))+'</small></div></article>').join('')+'</div>':'<div class="empty-state"><h3>No videos yet</h3><p>Videos shared by this member will appear here.</p></div>')+'</section>';;
+  }
   if(tab==='checkins'){const checkIns=data.checkIns||[];return '<section class="card profile-media-section"><div class="page-heading"><div><h2>Check-ins</h2><p class="muted">Places shared by this member</p></div>'+(isMe?'<button type="button" class="primary" id="profile-create-checkin">Create check-in</button>':'')+'</div>'+(checkIns.length?'<div class="profile-checkin-list">'+checkIns.map(item=>'<article class="profile-checkin-card"><strong>⌖ '+esc(item.place)+'</strong>'+(item.note?'<p>'+esc(item.note)+'</p>':'')+'<small>'+esc(timeAgo(item.createdAt))+' · '+esc(item.visibility||'public')+'</small></article>').join('')+'</div>':'<div class="empty-state"><h3>No check-ins yet</h3><p>'+(isMe?'Share a place with the audience you choose.':'This member has not shared any check-ins.')+'</p></div>')+'</section>';}
   if(tab==='events'){const events=data.events||[];return '<section class="card profile-media-section"><div class="page-heading"><div><h2>Events</h2><p class="muted">Events hosted or attended by this member</p></div>'+(isMe?'<button type="button" class="primary" id="profile-create-event">Create event</button>':'')+'</div>'+(events.length?'<div class="profile-event-list">'+events.map(item=>'<article class="profile-event-card"><div class="profile-event-date"><strong>'+esc(new Date(item.startAt).toLocaleDateString(undefined,{day:"2-digit"}))+'</strong><small>'+esc(new Date(item.startAt).toLocaleDateString(undefined,{month:"short"}))+'</small></div><div class="profile-event-main"><strong>'+esc(item.title)+'</strong><p>'+esc(item.description||'')+'</p><small>'+esc(new Date(item.startAt).toLocaleString())+(item.location?' · '+esc(item.location):'')+'</small><small>'+Number(item.rsvpCount||0)+' going · Hosted by '+esc(item.host?.name||'Minglora member')+'</small><div class="profile-event-rsvp"><button type="button" class="'+(item.myRsvp==='going'?'primary':'secondary')+'" data-event-id="'+esc(item.id)+'" data-event-rsvp="going">Going</button><button type="button" class="'+(item.myRsvp==='interested'?'primary':'secondary')+'" data-event-id="'+esc(item.id)+'" data-event-rsvp="interested">Interested</button>'+(item.myRsvp?'<button type="button" class="text-button" data-event-id="'+esc(item.id)+'" data-event-rsvp-remove>Remove RSVP</button>':'')+'</div></div></article>').join('')+'</div>':'<div class="empty-state"><h3>No events yet</h3><p>'+(isMe?'Create an event and let people choose whether they are going or interested.':'This member has no visible events.')+'</p></div>')+'</section>';}
   if(tab==='highlights'){const highlights=data.highlights||[];return '<section class="card profile-media-section"><div class="page-heading"><div><h2>Highlights</h2><p class="muted">Stories saved on this profile</p></div>'+(isMe?'<button type="button" class="primary" id="profile-manage-highlights">Manage Highlights</button>':'')+'</div>'+(highlights.length?'<div class="profile-highlights-grid">'+highlights.map(item=>'<article class="profile-highlight-card">'+(item.coverUrl?'<img src="'+esc(item.coverUrl)+'" alt="">':'<span>✧</span>')+'<strong>'+esc(item.title)+'</strong><small>'+Number(item.storyCount||0)+' stories</small></article>').join('')+'</div>':'<div class="empty-state"><h3>No Highlights yet</h3><p>'+(isMe?'Save active or archived Stories as Highlights to keep them on your profile.':'This member has not added Highlights.')+'</p></div>')+'</section>';}
@@ -5851,20 +6087,27 @@ function renderProfile(data){
     : (isMe?'<button type="button" class="ml-profile-thought-add" data-edit-profile-thought aria-label="Share a thought">Share a thought…</button>':'');
   const isAdminProfile=Boolean(isMe&&(u.platformBadge==='admin'||['platform_owner','admin','moderator'].includes(u.platformRole)));
   const profileActionMarkup=relationshipActions;
-  const requestedTab=state.profileTab||'posts';
+  const tiktokProfileHighlights=Array.isArray(data.highlights)?data.highlights:[];
+  const profileStyleExtrasMarkup=normalizeProfileStyle(u.profileStyle)==='tiktok'&&(tiktokProfileHighlights.length>0||isMe)
+    ? '<section class="profile-tiktok-highlights" aria-label="Profile highlights"><div class="profile-tiktok-highlights-list">'+tiktokProfileHighlights.map(item=>'<button type="button" class="profile-tiktok-highlight" data-profile-tiktok-highlight-open aria-label="Open '+esc(item.title||'Profile highlight')+'"><span class="profile-tiktok-highlight-art">'+(item.coverUrl?'<img src="'+esc(item.coverUrl)+'" alt="" loading="lazy">':'<span aria-hidden="true">✧</span>')+'</span><small>'+esc(item.title||'Highlight')+'</small></button>').join('')+(isMe?'<button type="button" class="profile-tiktok-highlight profile-tiktok-highlight--add" data-profile-tiktok-highlight-add aria-label="Manage profile highlights"><span class="profile-tiktok-highlight-art" aria-hidden="true">+</span><small>Add Highlight</small></button>':'')+'</div></section>'
+    : '';
+  const requestedTab=state.profileTab||profileStyleNavigation(u.profileStyle)[0]?.[0]||'posts';
   const tab=requestedTab;
-  setContent('<div class="minglora-profile-page"><section class="card profile-header-card profile-layout-'+(['standard','advanced','creator'].includes(u.profileLayout)?u.profileLayout:'advanced')+(isMe?' profile-header-card--owner':' profile-header-card--viewer')+'" style="padding:0"><div class="profile-cover">'+(u.cover?'<img class="profile-cover-image" data-view-image="'+esc(u.cover)+'" data-image-label="'+esc(u.name)+' cover photo" src="'+esc(u.cover)+'" alt="">':'<img class="profile-cover-image profile-cover-image--default" src="'+DEFAULT_PROFILE_COVER+'" alt="Minglora default cover">')+'</div>'+''+'<div class="profile-info'+(profileThoughtMarkup?' profile-info--with-thought':'')+'">'+(profileThoughtMarkup?'<div class="profile-thought-slot">'+profileThoughtMarkup+'</div>':'')+'<div class="profile-avatar-edit-wrap"><img class="avatar"'+(u.avatar?' data-view-image="'+esc(u.avatar)+'" data-image-label="'+esc(u.name)+' profile picture"':'')+' src="'+avatar(u)+'" alt="">'+'</div><div class="profile-info-main"><h1 class="profile-name-with-badges"><span>'+esc(u.name)+'</span></h1><p class="profile-username-line">@'+esc(u.username)+' '+verifiedProfileBadge(u)+'</p>'+(isAdminProfile?'<div class="profile-admin-identity" aria-label="Administrator identity"><span class="profile-admin-identity-mark profile-admin-identity-mark--owner" title="Platform owner"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 8 4 3 5-6 5 6 4-3-2 11H5L3 8Z"></path><path d="M6 21h12"></path></svg><small>Owner</small></span><span class="profile-admin-identity-mark profile-admin-identity-mark--security" title="Protected administrator"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 4 5v6c0 5 3.2 8.5 8 11 4.8-2.5 8-6 8-11V5l-8-3Z"></path><path d="m8.5 12 2.2 2.2 4.8-5"></path></svg><small>Protected</small></span><span class="profile-admin-identity-mark profile-admin-identity-mark--control" title="Platform administration"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"></rect><path d="M8 9h8M8 13h5M8 17h3"></path></svg><small>Admin</small></span></div>':'')+(data.profileStatus?'<p class="profile-status-badge sr-only" aria-label="Profile status">'+(data.profileStatus.mood?'<strong>'+esc(data.profileStatus.mood)+'</strong> · ':'')+esc(data.profileStatus.text)+' <small>· Expires '+esc(profileDate(data.profileStatus.expiresAt))+'</small></p>':'')+'</div>'+profileActionMarkup+'<div class="profile-counts" aria-label="Profile counts"><button type="button" class="connection-count" data-open-connections="followers"><strong>'+Number(data.followersCount||0)+'</strong><span>Followers</span></button><button type="button" class="connection-count" data-open-connections="following"><strong>'+Number(data.followingCount||0)+'</strong><span>Following</span></button><button type="button" class="connection-count" data-open-connections="friends"><strong>'+Number(data.friendsCount||0)+'</strong><span>Friends</span></button><button type="button" class="connection-count" data-open-connections="subscribers" aria-label="Open subscribers"><strong>'+Number(data.subscribersCount||0).toLocaleString()+'</strong><span>Subscribers</span></button><div class="profile-count-item"><strong>'+(data.posts||[]).length+'</strong><span>Posts</span></div><div class="profile-count-item"><strong>'+Number(data.likesCount||0).toLocaleString()+'</strong><span>Likes</span></div></div>'+'</div>'+(isMe?'<section class="profile-people-panel" id="profile-people-panel" hidden aria-label="People you may know"><div class="profile-people-heading"><div><h2>People you may know</h2><p>Discover Minglora members and connect with them</p></div><button type="button" class="text-button" data-profile-people-more>View more</button></div><div class="profile-people-carousel"><button type="button" class="profile-people-scroll profile-people-scroll--left" data-profile-people-scroll="-1" aria-label="Scroll recommendations left">‹</button><div class="profile-people-track" id="profile-people-track"><p class="profile-people-placeholder">Open this panel to load recommendations.</p></div><button type="button" class="profile-people-scroll profile-people-scroll--right" data-profile-people-scroll="1" aria-label="Scroll recommendations right">›</button></div></section>':'')+'<nav class="profile-tabs" aria-label="Profile sections"><div class="profile-tabs-list">'+[['posts','Posts'],['about','About'],['friends','Friends'],['photos','Photos'],['reels','Reels'],['more','More']].map(([key,label])=>'<button type="button" data-profile-tab="'+key+'" class="'+(tab===key?'active':'')+'" aria-current="'+(tab===key?'page':'false')+'">'+label+'</button>').join('')+'</div>'+(isMe?'<div class="profile-tabs-overflow"><button type="button" id="profile-overflow-trigger" class="profile-overflow-trigger" aria-label="More profile actions" aria-haspopup="menu" aria-expanded="false"><span aria-hidden="true">···</span></button><div id="profile-overflow-menu" class="profile-overflow-menu" role="menu" aria-label="Profile actions" hidden><button type="button" role="menuitem" data-profile-overflow-action="view-as"><span aria-hidden="true">◉</span><span>View as</span></button><button type="button" role="menuitem" data-profile-overflow-action="search"><span aria-hidden="true">⌕</span><span>Search</span></button><button type="button" role="menuitem" data-profile-overflow-action="highlights"><span aria-hidden="true">✧</span><span>Add Highlights</span></button><button type="button" role="menuitem" data-profile-overflow-action="create-post" aria-label="Create a post"><span aria-hidden="true">✎</span><span>Create post</span></button><div class="profile-overflow-divider"></div><button type="button" role="menuitem" data-profile-overflow-action="archive"><span aria-hidden="true">▣</span><span>Archive</span></button><button type="button" role="menuitem" data-profile-overflow-action="story-archive"><span aria-hidden="true">◷</span><span>Story archive</span></button><button type="button" role="menuitem" data-profile-overflow-action="activity"><span aria-hidden="true">≡</span><span>Activity log</span></button><button type="button" role="menuitem" data-profile-overflow-action="privacy"><span aria-hidden="true">⚙</span><span>Profile and tagging settings</span></button><button type="button" role="menuitem" data-profile-overflow-action="lock-toggle"><span aria-hidden="true">▣</span><span>Lock profile</span></button>'+(u.platformRole&&['platform_owner','admin','moderator'].includes(u.platformRole)?'<button type="button" role="menuitem" data-profile-overflow-action="verification-review"><span aria-hidden="true">✓</span><span>Profile verification review</span></button>':'')+'<div class="profile-overflow-divider"></div><button type="button" role="menuitem" data-profile-overflow-action="verified"><span aria-hidden="true">✔</span><span>Minglora Verified ✔️</span></button></div></div>':'')+'</nav></section><div id="profile-tab-panel"></div></div>');
+  setContent('<div class="minglora-profile-page" data-profile-style="'+normalizeProfileStyle(u.profileStyle)+'" data-profile-screen-layout="'+normalizeProfileScreenLayout(u.profileScreenLayout)+'"><section class="card profile-header-card profile-layout-'+(['standard','advanced','creator'].includes(u.profileLayout)?u.profileLayout:'advanced')+(isMe?' profile-header-card--owner':' profile-header-card--viewer')+'" style="padding:0"><div class="profile-cover">'+(u.cover?'<img class="profile-cover-image" data-view-image="'+esc(u.cover)+'" data-image-label="'+esc(u.name)+' cover photo" src="'+esc(u.cover)+'" alt="">':'<img class="profile-cover-image profile-cover-image--default" src="'+DEFAULT_PROFILE_COVER+'" alt="Minglora default cover">')+'</div>'+''+'<div class="profile-info'+(profileThoughtMarkup?' profile-info--with-thought':'')+'">'+(profileThoughtMarkup?'<div class="profile-thought-slot">'+profileThoughtMarkup+'</div>':'')+'<div class="profile-avatar-edit-wrap"><img class="avatar"'+(u.avatar?' data-view-image="'+esc(u.avatar)+'" data-image-label="'+esc(u.name)+' profile picture"':'')+' src="'+avatar(u)+'" alt="">'+'</div><div class="profile-info-main"><h1 class="profile-name-with-badges"><span>'+esc(u.name)+'</span></h1><p class="profile-username-line">@'+esc(u.username)+' '+verifiedProfileBadge(u)+'</p>'+(isAdminProfile?'<div class="profile-admin-identity" aria-label="Administrator identity"><span class="profile-admin-identity-mark profile-admin-identity-mark--owner" title="Platform owner"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 8 4 3 5-6 5 6 4-3-2 11H5L3 8Z"></path><path d="M6 21h12"></path></svg><small>Owner</small></span><span class="profile-admin-identity-mark profile-admin-identity-mark--security" title="Protected administrator"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 4 5v6c0 5 3.2 8.5 8 11 4.8-2.5 8-6 8-11V5l-8-3Z"></path><path d="m8.5 12 2.2 2.2 4.8-5"></path></svg><small>Protected</small></span><span class="profile-admin-identity-mark profile-admin-identity-mark--control" title="Platform administration"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"></rect><path d="M8 9h8M8 13h5M8 17h3"></path></svg><small>Admin</small></span></div>':'')+(data.profileStatus?'<p class="profile-status-badge sr-only" aria-label="Profile status">'+(data.profileStatus.mood?'<strong>'+esc(data.profileStatus.mood)+'</strong> · ':'')+esc(data.profileStatus.text)+' <small>· Expires '+esc(profileDate(data.profileStatus.expiresAt))+'</small></p>':'')+'</div>'+profileActionMarkup+profileMetricsMarkup(data,u.profileStyle)+'</div>'+(isMe?'<section class="profile-people-panel" id="profile-people-panel" hidden aria-label="People you may know"><div class="profile-people-heading"><div><h2>People you may know</h2><p>Discover Minglora members and connect with them</p></div><button type="button" class="text-button" data-profile-people-more>View more</button></div><div class="profile-people-carousel"><button type="button" class="profile-people-scroll profile-people-scroll--left" data-profile-people-scroll="-1" aria-label="Scroll recommendations left">‹</button><div class="profile-people-track" id="profile-people-track"><p class="profile-people-placeholder">Open this panel to load recommendations.</p></div><button type="button" class="profile-people-scroll profile-people-scroll--right" data-profile-people-scroll="1" aria-label="Scroll recommendations right">›</button></div></section>':'')+profileStyleExtrasMarkup+'<nav class="profile-tabs" aria-label="Profile sections"><div class="profile-tabs-list">'+profileStyleNavigation(u.profileStyle).map(([key,label])=>'<button type="button" data-profile-tab="'+key+'" class="'+(tab===key?'active':'')+'" aria-current="'+(tab===key?'page':'false')+'">'+label+'</button>').join('')+'</div>'+(isMe?'<div class="profile-tabs-overflow"><button type="button" id="profile-overflow-trigger" class="profile-overflow-trigger" aria-label="More profile actions" aria-haspopup="menu" aria-expanded="false"><span aria-hidden="true">···</span></button><div id="profile-overflow-menu" class="profile-overflow-menu" role="menu" aria-label="Profile actions" hidden><button type="button" role="menuitem" data-profile-overflow-action="view-as"><span aria-hidden="true">◉</span><span>View as</span></button><button type="button" role="menuitem" data-profile-overflow-action="search"><span aria-hidden="true">⌕</span><span>Search</span></button><button type="button" role="menuitem" data-profile-overflow-action="highlights"><span aria-hidden="true">✧</span><span>Add Highlights</span></button><button type="button" role="menuitem" data-profile-overflow-action="create-post" aria-label="Create a post"><span aria-hidden="true">✎</span><span>Create post</span></button><div class="profile-overflow-divider"></div><button type="button" role="menuitem" data-profile-overflow-action="archive"><span aria-hidden="true">▣</span><span>Archive</span></button><button type="button" role="menuitem" data-profile-overflow-action="story-archive"><span aria-hidden="true">◷</span><span>Story archive</span></button><button type="button" role="menuitem" data-profile-overflow-action="activity"><span aria-hidden="true">≡</span><span>Activity log</span></button><button type="button" role="menuitem" data-profile-overflow-action="privacy"><span aria-hidden="true">⚙</span><span>Profile and tagging settings</span></button><button type="button" role="menuitem" data-profile-overflow-action="style-library"><span aria-hidden="true">◈</span><span>Profile Style Library</span></button><button type="button" role="menuitem" data-profile-overflow-action="lock-toggle"><span aria-hidden="true">▣</span><span>Lock profile</span></button>'+(u.platformRole&&['platform_owner','admin','moderator'].includes(u.platformRole)?'<button type="button" role="menuitem" data-profile-overflow-action="verification-review"><span aria-hidden="true">✓</span><span>Profile verification review</span></button>':'')+'<div class="profile-overflow-divider"></div><button type="button" role="menuitem" data-profile-overflow-action="verified"><span aria-hidden="true">✔</span><span>Minglora Verified ✔️</span></button></div></div>':'')+'</nav></section><div id="profile-tab-panel"></div></div>');
   const showTab=nextTab=>{
     state.profileTab=nextTab;
     persistCurrentView();
     recordBrowserNavigation();
-    document.querySelectorAll('.profile-tabs [data-profile-tab]').forEach(button=>{const selected=button.dataset.profileTab===nextTab||(button.dataset.profileTab==='more'&&['checkins','events','highlights','groups','videos','badges','gift-gallery','manage'].includes(nextTab));button.classList.toggle('active',selected);button.setAttribute('aria-current',selected?'page':'false');});
+    document.querySelectorAll('.profile-tabs [data-profile-tab]').forEach(button=>{const selected=button.dataset.profileTab===nextTab||(button.dataset.profileTab==='more'&&(nextTab==='style-library'||['checkins','events','highlights','groups','videos','badges','gift-gallery','manage'].includes(nextTab)));button.classList.toggle('active',selected);button.setAttribute('aria-current',selected?'page':'false');});
     const panel=$('#profile-tab-panel');if(!panel)return;
     panel.innerHTML=profileTabMarkup(data,nextTab,aboutHtml,isMe);
     bindFeed(panel);
     bindProfileTabActions(panel);
+    if(nextTab==='style-library')bindProfileStyleLibrary(panel,data);
   };
   document.querySelectorAll('.profile-tabs [data-profile-tab]').forEach(button=>button.addEventListener('click',()=>showTab(button.dataset.profileTab)));
+  document.querySelectorAll('[data-profile-tiktok-highlight-open]').forEach(button=>button.addEventListener('click',()=>showTab('highlights')));
+  document.querySelector('[data-profile-tiktok-highlight-add]')?.addEventListener('click',()=>void openProfileHighlightsManager(u.id));
   const overflowTrigger=$('#profile-overflow-trigger'),overflowMenu=$('#profile-overflow-menu');
   overflowTrigger?.addEventListener('click',async event=>{
     event.stopPropagation();if(!overflowMenu)return;
@@ -5877,7 +6120,7 @@ function renderProfile(data){
       }catch{}
     }
   });
-  overflowMenu?.querySelectorAll('[data-profile-overflow-action]').forEach(button=>button.addEventListener('click',()=>handleProfileOverflowAction(button.dataset.profileOverflowAction,u,data)));
+  overflowMenu?.querySelectorAll('[data-profile-overflow-action]').forEach(button=>button.addEventListener('click',()=>{if(button.dataset.profileOverflowAction==='style-library'){overflowMenu.hidden=true;overflowTrigger?.setAttribute('aria-expanded','false');showTab('style-library');return;}handleProfileOverflowAction(button.dataset.profileOverflowAction,u,data);}));
 
   $('#edit-profile')?.addEventListener('click',()=>{
     showTab('about');
@@ -9259,7 +9502,7 @@ async function pollBrowserNotifications(){
         if(webPushSubscriptionActive||state.settings?.notifications?.push===false||!('Notification' in window)||Notification.permission!=='granted')continue;
         const title=item.type==='live'?'Minglora LIVE':item.type==='live_moderator'?'LIVE moderator update':item.type==='call'?'Incoming Minglora call':item.type==='profile_view'?'Profile view':item.type==='gift'?'New gift':item.type==='fan_club'?'Fan Club update':item.type==='meetwave_invite'?'MeetWave invitation':item.type==='league_match'?'League match update':item.type==='friend'?'Friend update':item.type==='reaction'?'Post reaction':item.type==='comment'?'New comment':item.type==='follow'?'New follower':item.type==='message'?'New Minglora message':'Minglora account update';
         try{
-          const notice=new Notification(title,{body:item.text||'You have a new Minglora notification.',tag:'minglora-'+item.id,icon:'/assets/icons/minglora-push.svg',silent:true});
+          const notice=new Notification(title,{body:item.text||'You have a new Minglora notification.',tag:'minglora-'+item.id,icon:'/assets/Logo/Logo.jpg',silent:true});
           notice.onclick=()=>{window.focus();renderNotifications();notice.close();};
         }catch(error){
           console.warn('Minglora could not display a browser notification:',error?.message||error);
@@ -9337,11 +9580,12 @@ function bindReelPlayback(root){
     const postId=video.dataset.postId||video.closest('.minglora-reel')?.dataset.post;
     const watchedMs=Math.round(Number(video.dataset.watchBuffer||0));
     const durationMs=Math.round(Number(video.duration||0)*1000);
+    const positionMs=Math.max(0,Math.min(durationMs,Math.round(Number(video.dataset.furthestPlayedPositionMs||0))));
     if(!postId||watchedMs<1000||durationMs<1000||video.dataset.reelWatchSending==='true')return;
     video.dataset.watchBuffer='0';
     video.dataset.reelWatchSending='true';
     try{
-      await api('/videos/'+encodeURIComponent(postId)+'/watch',{method:'POST',body:JSON.stringify({watchedMs,durationMs})});
+      await api('/videos/'+encodeURIComponent(postId)+'/watch',{method:'POST',body:JSON.stringify({watchedMs,durationMs,positionMs})});
     }catch(error){
       video.dataset.watchBuffer=String(Math.min(600000,Number(video.dataset.watchBuffer||0)+watchedMs));
       console.warn('[Minglora] Reel watch signal not saved:',error?.message||error);
@@ -9352,10 +9596,12 @@ function bindReelPlayback(root){
       video.dataset.reelWatchBound='true';
       video.dataset.lastMediaTime='0';
       video.dataset.watchBuffer='0';
+      video.dataset.furthestPlayedPositionMs='0';
       video.addEventListener('timeupdate',()=>{
         const current=Number(video.currentTime||0),previous=Number(video.dataset.lastMediaTime||0),delta=current-previous;
         if(!video.paused&&delta>0&&delta<=2.5){
           video.dataset.watchBuffer=String(Number(video.dataset.watchBuffer||0)+delta*1000);
+          video.dataset.furthestPlayedPositionMs=String(Math.max(Number(video.dataset.furthestPlayedPositionMs||0),Math.round(current*1000)));
           if(Number(video.dataset.watchBuffer)>=7000)void sendWatch(video);
         }
         video.dataset.lastMediaTime=String(current);
@@ -9432,13 +9678,260 @@ async function fetchVideoCentrePage({reset=false,watchLater=false}={}){
     return incoming;
   }finally{if(requestId===state.videoRequestSequence)state.videoLoading=false;}
 }
+let activeVideoPlaylistId=null;
+function videoPlaylistActionMarkup(post){
+  return '<div class="video-playlist-post-action"><button type="button" data-video-add-playlist="'+esc(post.id)+'">＋ Add to playlist</button></div>';
+}
+function openVideoPlaylistEditor(playlist=null,onSaved=null){
+  const overlay=document.createElement('div');
+  overlay.className='modal-backdrop';
+  overlay.innerHTML='<section class="modal video-playlist-editor" role="dialog" aria-modal="true" aria-labelledby="video-playlist-editor-title"><div class="modal-head"><h2 id="video-playlist-editor-title">'+(playlist?'Edit playlist':'Create playlist')+'</h2><button type="button" class="modal-close" aria-label="Close">×</button></div><form class="modal-body" id="video-playlist-editor-form"><label class="field"><span>Playlist name</span><input name="title" maxlength="80" required value="'+esc(playlist?.title||'')+'" placeholder="Give your playlist a name"></label><label class="field"><span>Description</span><textarea name="description" maxlength="500" rows="3" placeholder="What is this playlist about?">'+esc(playlist?.description||'')+'</textarea></label><label class="field"><span>Who can view it?</span><select name="visibility"><option value="private" '+((playlist?.visibility||'private')==='private'?'selected':'')+'>Only me</option><option value="unlisted" '+(playlist?.visibility==='unlisted'?'selected':'')+'>Anyone with the link</option><option value="friends" '+(playlist?.visibility==='friends'?'selected':'')+'>Friends</option><option value="public" '+(playlist?.visibility==='public'?'selected':'')+'>Public</option></select></label><p class="auth-error" data-playlist-editor-error role="status"></p><button type="submit" class="primary full">'+(playlist?'Save changes':'Create playlist')+'</button></form></section>';
+  document.body.append(overlay);
+  overlay.querySelector('.modal-close')?.addEventListener('click',()=>overlay.remove());
+  overlay.addEventListener('click',event=>{if(event.target===overlay)overlay.remove();});
+  overlay.querySelector('form')?.addEventListener('submit',async event=>{
+    event.preventDefault();
+    const form=event.currentTarget,button=form.querySelector('button[type="submit"]'),error=form.querySelector('[data-playlist-editor-error]');
+    const values=Object.fromEntries(new FormData(form));
+    button.disabled=true;error.textContent='';
+    try{
+      const result=await api(playlist?'/video-playlists/'+encodeURIComponent(playlist.id):'/video-playlists',{
+        method:playlist?'PATCH':'POST',body:JSON.stringify(values)
+      });
+      overlay.remove();
+      if(typeof onSaved==='function')await onSaved(result.playlist);
+    }catch(err){error.textContent=err.message;button.disabled=false;}
+  });
+}
+async function openVideoPlaylistPicker(postId){
+  let result;
+  try{result=await api('/video-playlists');}catch(error){toast(error.message);return;}
+  const playlists=Array.isArray(result.playlists)?result.playlists:[];
+  if(!playlists.length){
+    toast('Create a playlist first, then add your video.');
+    openVideoPlaylistEditor(null,()=>{activeVideoPlaylistId=null;state.videoMode='playlists';void renderVideoCentre();});
+    return;
+  }
+  const overlay=document.createElement('div');
+  overlay.className='modal-backdrop';
+  overlay.innerHTML='<section class="modal video-playlist-editor" role="dialog" aria-modal="true" aria-labelledby="video-playlist-picker-title"><div class="modal-head"><h2 id="video-playlist-picker-title">Add to playlist</h2><button type="button" class="modal-close" aria-label="Close">×</button></div><form class="modal-body"><label class="field"><span>Choose a playlist</span><select name="playlistId" required>'+playlists.map(item=>'<option value="'+esc(item.id)+'">'+esc(item.title)+' · '+esc(item.visibility)+'</option>').join('')+'</select></label><p class="auth-error" data-playlist-picker-error role="status"></p><button type="submit" class="primary full">Add video</button><button type="button" class="secondary full" data-playlist-picker-create>Create another playlist</button></form></section>';
+  document.body.append(overlay);
+  overlay.querySelector('.modal-close')?.addEventListener('click',()=>overlay.remove());
+  overlay.querySelector('[data-playlist-picker-create]')?.addEventListener('click',()=>{
+    overlay.remove();
+    openVideoPlaylistEditor(null,async()=>{await openVideoPlaylistPicker(postId);});
+  });
+  overlay.querySelector('form')?.addEventListener('submit',async event=>{
+    event.preventDefault();
+    const form=event.currentTarget,button=form.querySelector('button[type="submit"]'),error=form.querySelector('[data-playlist-picker-error]');
+    button.disabled=true;error.textContent='';
+    try{
+      const playlistId=new FormData(form).get('playlistId');
+      await api('/video-playlists/'+encodeURIComponent(playlistId)+'/items',{method:'POST',body:JSON.stringify({postId})});
+      overlay.remove();toast('Video added to playlist.');
+    }catch(err){error.textContent=err.message;button.disabled=false;}
+  });
+}
+function bindVideoPlaylistActions(root){
+  root.querySelectorAll('[data-video-add-playlist]').forEach(button=>{
+    if(button.dataset.videoPlaylistBound==='true')return;
+    button.dataset.videoPlaylistBound='true';
+    button.addEventListener('click',()=>void openVideoPlaylistPicker(button.dataset.videoAddPlaylist));
+  });
+}
+async function renderVideoPlaylistLibrary(feed){
+  feed.innerHTML='<section class="card empty-state"><h3>Loading your playlists…</h3></section>';
+  try{
+    if(activeVideoPlaylistId){
+      const result=await api('/video-playlists/'+encodeURIComponent(activeVideoPlaylistId));
+      const playlist=result.playlist;
+      const videos=Array.isArray(playlist.videos)?playlist.videos:[];
+      feed.innerHTML='<section class="card video-playlist-detail-head"><button type="button" class="secondary" data-playlist-back>‹ All playlists</button><div><span class="eyebrow">MINGLORA WATCH · PLAYLIST</span><h2>'+esc(playlist.title)+'</h2><p>'+esc(playlist.description||'')+'</p><small>'+videos.length+' available videos · '+esc(playlist.visibility)+'</small></div>'+(playlist.isOwner?'<button type="button" class="secondary" data-playlist-edit="'+esc(playlist.id)+'">Edit playlist</button>':'')+'</section>'+(videos.length?videos.map((post,index)=>postCard(post,{videoWatchLater:true})+'<div class="video-playlist-item-actions" data-playlist-post="'+esc(post.id)+'">'+(playlist.canReorder?'<button type="button" data-playlist-move="up" '+(index===0?'disabled':'')+'>Move up</button><button type="button" data-playlist-move="down" '+(index===videos.length-1?'disabled':'')+'>Move down</button>':'')+''+(playlist.isOwner?'<button type="button" data-playlist-remove>Remove from playlist</button>':'')+'</div>').join(''):'<section class="card empty-state"><h3>No videos are available in this playlist</h3><p>Videos that are private, removed or no longer shared with you are not shown.</p></section>');
+      feed.querySelector('[data-playlist-back]')?.addEventListener('click',()=>{activeVideoPlaylistId=null;void renderVideoPlaylistLibrary(feed);});
+      feed.querySelector('[data-playlist-edit]')?.addEventListener('click',()=>openVideoPlaylistEditor(playlist,()=>void renderVideoPlaylistLibrary(feed)));
+      bindFeed(feed);
+      feed.querySelectorAll('[data-playlist-post]').forEach(row=>{
+        row.querySelectorAll('[data-playlist-move]').forEach(button=>button.addEventListener('click',async()=>{
+          const ids=videos.map(post=>post.id),from=ids.indexOf(row.dataset.playlistPost),to=from+(button.dataset.playlistMove==='up'?-1:1);
+          if(from<0||to<0||to>=ids.length)return;
+          [ids[from],ids[to]]=[ids[to],ids[from]];
+          button.disabled=true;
+          try{await api('/video-playlists/'+encodeURIComponent(playlist.id)+'/order',{method:'PUT',body:JSON.stringify({orderedPostIds:ids})});await renderVideoPlaylistLibrary(feed);}
+          catch(error){button.disabled=false;toast(error.message);}
+        }));
+        row.querySelector('[data-playlist-remove]')?.addEventListener('click',async()=>{
+          const button=row.querySelector('[data-playlist-remove]');button.disabled=true;
+          try{await api('/video-playlists/'+encodeURIComponent(playlist.id)+'/items/'+encodeURIComponent(row.dataset.playlistPost),{method:'DELETE'});await renderVideoPlaylistLibrary(feed);}
+          catch(error){button.disabled=false;toast(error.message);}
+        });
+      });
+      return;
+    }
+    const result=await api('/video-playlists');
+    const playlists=Array.isArray(result.playlists)?result.playlists:[];
+    feed.innerHTML='<section class="card video-playlist-library-head"><div><h2>Your playlists</h2><p>Keep real Minglora videos organized and synced to your account.</p></div><button type="button" class="primary" data-playlist-create>＋ Create playlist</button></section>'+(playlists.length?'<div class="video-playlist-grid">'+playlists.map(playlist=>'<article class="card video-playlist-card" data-playlist-card="'+esc(playlist.id)+'"><div class="video-playlist-card-icon" aria-hidden="true">▶</div><div class="video-playlist-card-copy"><h3>'+esc(playlist.title)+'</h3><p>'+esc(playlist.description||'No description')+'</p><small>'+Number(playlist.videoCount||0)+' videos · '+esc(playlist.visibility)+'</small></div><div class="video-playlist-card-actions"><button type="button" class="primary" data-playlist-open="'+esc(playlist.id)+'">Open</button><button type="button" class="secondary" data-playlist-edit="'+esc(playlist.id)+'">Edit</button><button type="button" class="secondary" data-playlist-delete="'+esc(playlist.id)+'">Delete</button></div></article>').join('')+'</div>':'<section class="card empty-state"><div class="empty-icon">▶</div><h3>No playlists yet</h3><p>Create a playlist to organize videos you want to watch or share.</p><button type="button" class="primary" data-playlist-create>＋ Create your first playlist</button></section>');
+    feed.querySelectorAll('[data-playlist-create]').forEach(button=>button.addEventListener('click',()=>openVideoPlaylistEditor(null,()=>void renderVideoPlaylistLibrary(feed))));
+    feed.querySelectorAll('[data-playlist-open]').forEach(button=>button.addEventListener('click',()=>{activeVideoPlaylistId=button.dataset.playlistOpen;void renderVideoPlaylistLibrary(feed);}));
+    feed.querySelectorAll('[data-playlist-edit]').forEach(button=>button.addEventListener('click',()=>{
+      const playlist=playlists.find(item=>item.id===button.dataset.playlistEdit);
+      if(playlist)openVideoPlaylistEditor(playlist,()=>void renderVideoPlaylistLibrary(feed));
+    }));
+    feed.querySelectorAll('[data-playlist-delete]').forEach(button=>button.addEventListener('click',async()=>{
+      if(!window.confirm('Delete this playlist? Its video posts will not be deleted.'))return;
+      button.disabled=true;
+      try{await api('/video-playlists/'+encodeURIComponent(button.dataset.playlistDelete),{method:'DELETE'});await renderVideoPlaylistLibrary(feed);}
+      catch(error){button.disabled=false;toast(error.message);}
+    }));
+  }catch(error){
+    feed.innerHTML='<section class="card empty-state"><h3>Playlists could not be loaded</h3><p>'+esc(error.message)+'</p><button type="button" class="secondary" data-playlist-retry>Try again</button></section>';
+    feed.querySelector('[data-playlist-retry]')?.addEventListener('click',()=>void renderVideoPlaylistLibrary(feed));
+  }
+}
+
+
+let activeVideoChannelId=null;
+let activeVideoChannelScope='discover';
+function openVideoChannelEditor(channel,onSaved=null){
+  const overlay=document.createElement('div');
+  overlay.className='modal-backdrop';
+  overlay.innerHTML='<section class="modal video-channel-editor" role="dialog" aria-modal="true" aria-labelledby="video-channel-editor-title"><div class="modal-head"><h2 id="video-channel-editor-title">Customize your channel</h2><button type="button" class="modal-close" aria-label="Close">×</button></div><form class="modal-body"><label class="field"><span>Channel name</span><input name="title" required maxlength="80" value="'+esc(channel?.title||state.user?.name||'')+'" placeholder="Name your video channel"></label><label class="field"><span>Description</span><textarea name="description" rows="4" maxlength="1000" placeholder="Tell people what your channel is about">'+esc(channel?.description||'')+'</textarea></label><label class="field"><span>Channel visibility</span><select name="visibility"><option value="public" '+((channel?.visibility||'public')==='public'?'selected':'')+'>Public · discoverable</option><option value="unlisted" '+(channel?.visibility==='unlisted'?'selected':'')+'>Unlisted · link only</option><option value="private" '+(channel?.visibility==='private'?'selected':'')+'>Private · only you</option></select></label><p class="auth-error" data-video-channel-error role="status"></p><button type="submit" class="primary full">Save channel</button></form></section>';
+  document.body.append(overlay);
+  overlay.querySelector('.modal-close')?.addEventListener('click',()=>overlay.remove());
+  overlay.addEventListener('click',event=>{if(event.target===overlay)overlay.remove();});
+  overlay.querySelector('form')?.addEventListener('submit',async event=>{
+    event.preventDefault();
+    const form=event.currentTarget,button=form.querySelector('button[type="submit"]'),error=form.querySelector('[data-video-channel-error]');
+    button.disabled=true;error.textContent='';
+    try{
+      const values=Object.fromEntries(new FormData(form));
+      const result=await api('/video-channels/me',{method:'PATCH',body:JSON.stringify(values)});
+      overlay.remove();
+      if(typeof onSaved==='function')await onSaved(result.channel);
+    }catch(err){error.textContent=err.message;button.disabled=false;}
+  });
+}
+function videoChannelPostMarkup(post) {
+  const date=post.createdAt?new Date(post.createdAt).toLocaleString():'';
+  return '<article class="card video-channel-post" data-video-channel-post="'+esc(post.id)+'"><header><strong>'+esc(post.title||'Channel update')+'</strong><time>'+esc(date)+'</time></header><p>'+esc(post.body||'')+'</p>'+(post.isOwner?'<footer><button type="button" class="secondary" data-channel-post-edit="'+esc(post.id)+'">Edit</button><button type="button" class="secondary" data-channel-post-delete="'+esc(post.id)+'">Delete</button></footer>':'')+'</article>';
+}
+function openVideoChannelPostEditor(post,onSaved=null) {
+  const overlay=document.createElement('div');
+  overlay.className='modal-backdrop';
+  overlay.innerHTML='<section class="modal video-channel-editor" role="dialog" aria-modal="true" aria-labelledby="video-channel-post-editor-title"><div class="modal-head"><h2 id="video-channel-post-editor-title">'+(post?'Edit channel update':'Publish channel update')+'</h2><button type="button" class="modal-close" aria-label="Close">×</button></div><form class="modal-body"><label class="field"><span>Title (optional)</span><input name="title" maxlength="100" value="'+esc(post?.title||'')+'" placeholder="Update headline"></label><label class="field"><span>Message</span><textarea name="body" rows="6" required maxlength="3000" placeholder="Share news with your channel subscribers">'+esc(post?.body||'')+'</textarea></label><p class="auth-error" data-video-channel-post-error role="status"></p><button type="submit" class="primary full">'+(post?'Save update':'Publish update')+'</button></form></section>';
+  document.body.append(overlay);
+  overlay.querySelector('.modal-close')?.addEventListener('click',()=>overlay.remove());
+  overlay.addEventListener('click',event=>{if(event.target===overlay)overlay.remove();});
+  overlay.querySelector('form')?.addEventListener('submit',async event=>{
+    event.preventDefault();
+    const form=event.currentTarget,button=form.querySelector('button[type="submit"]'),error=form.querySelector('[data-video-channel-post-error]');
+    button.disabled=true;error.textContent='';
+    try{
+      const values=Object.fromEntries(new FormData(form));
+      const result=await api(post?'/video-channel-posts/'+encodeURIComponent(post.id):'/video-channels/me/posts',{
+        method:post?'PATCH':'POST',body:JSON.stringify(values)
+      });
+      overlay.remove();
+      if(typeof onSaved==='function')await onSaved(result.post);
+      toast(post?'Channel update saved.':'Channel update published.');
+    }catch(err){error.textContent=err.message;button.disabled=false;}
+  });
+}
+async function setVideoChannelSubscription(channel,subscribe){
+  const result=await api('/video-channels/'+encodeURIComponent(channel.ownerId)+'/subscribe',{method:subscribe?'POST':'DELETE'});
+  toast(subscribe?(result.alreadySubscribed?'Already subscribed.':'Subscribed to channel.'):'Channel subscription removed.');
+}
+async function renderVideoChannelLibrary(feed){
+  feed.innerHTML='<section class="card empty-state"><h3>Loading Minglora channels…</h3></section>';
+  try{
+    if(activeVideoChannelId){
+      const result=await api('/video-channels/'+encodeURIComponent(activeVideoChannelId));
+      const channel=result.channel;
+      const videos=Array.isArray(channel.videos)?channel.videos:[];
+      const channelPosts=Array.isArray(channel.posts)?channel.posts:[];
+      const updatesMarkup='<section class="video-channel-updates"><div class="video-channel-updates-heading"><div><span class="eyebrow">CHANNEL COMMUNITY</span><h3>Channel updates</h3><p>News and posts published by this creator.</p></div>'+(channel.isOwner?'<button type="button" class="primary" data-channel-post-create>＋ Post an update</button>':'')+'</div>'+(channelPosts.length?channelPosts.map(videoChannelPostMarkup).join(''):'<div class="card video-channel-post-empty"><p>No channel updates have been published yet.</p></div>')+'</section>';
+      feed.innerHTML='<section class="card video-channel-detail-head"><button type="button" class="secondary" data-video-channel-back>‹ Channels</button><div class="video-channel-detail-copy"><span class="eyebrow">MINGLORA WATCH · CHANNEL</span><h2>'+esc(channel.title)+'</h2><p>'+esc(channel.description||'')+'</p><small>'+Number(channel.subscriberCount||0)+' subscribers · '+Number(channel.videoCount||0)+' videos'+(channel.visibility==='unlisted'?' · Unlisted':'')+'</small><div class="video-channel-owner-line"><span>'+esc(channel.owner?.name||channel.owner?.username||'Minglora member')+'</span></div></div>'+(channel.isOwner?'<button type="button" class="secondary" data-video-channel-edit>Edit channel</button>':'<button type="button" class="'+(channel.isSubscribed?'secondary':'primary')+'" data-video-channel-subscribe="'+(channel.isSubscribed?'off':'on')+'">'+(channel.isSubscribed?'Subscribed · Unsubscribe':'＋ Subscribe')+'</button>')+'</section>'+updatesMarkup+(videos.length?videos.map(post=>postCard(post,{videoWatchLater:true})+videoPlaylistActionMarkup(post)).join(''):'<section class="card empty-state"><div class="empty-icon">▶</div><h3>No accessible videos yet</h3><p>Videos appear here when this creator publishes posts that you are allowed to view.</p>'+(channel.isOwner?'<button type="button" class="primary" data-video-channel-publish>＋ Publish a video</button>':'')+'</section>');
+      feed.querySelector('[data-video-channel-back]')?.addEventListener('click',()=>{activeVideoChannelId=null;void renderVideoChannelLibrary(feed);});
+      feed.querySelector('[data-video-channel-edit]')?.addEventListener('click',()=>openVideoChannelEditor(channel,()=>void renderVideoChannelLibrary(feed)));
+      feed.querySelector('[data-video-channel-subscribe]')?.addEventListener('click',async event=>{
+        const button=event.currentTarget;button.disabled=true;
+        try{await setVideoChannelSubscription(channel,button.dataset.videoChannelSubscribe==='on');await renderVideoChannelLibrary(feed);}
+        catch(error){button.disabled=false;toast(error.message);}
+      });
+      feed.querySelector('[data-video-channel-publish]')?.addEventListener('click',()=>openVideoComposer({videoFormat:'video'}));
+      feed.querySelector('[data-channel-post-create]')?.addEventListener('click',()=>openVideoChannelPostEditor(null,()=>void renderVideoChannelLibrary(feed)));
+      feed.querySelectorAll('[data-channel-post-edit]').forEach(button=>button.addEventListener('click',()=>{
+        const post=channelPosts.find(item=>item.id===button.dataset.channelPostEdit);
+        if(post)openVideoChannelPostEditor(post,()=>void renderVideoChannelLibrary(feed));
+      }));
+      feed.querySelectorAll('[data-channel-post-delete]').forEach(button=>button.addEventListener('click',async()=>{
+        if(!window.confirm('Delete this channel update?'))return;
+        button.disabled=true;
+        try{await api('/video-channel-posts/'+encodeURIComponent(button.dataset.channelPostDelete),{method:'DELETE'});await renderVideoChannelLibrary(feed);}
+        catch(error){button.disabled=false;toast(error.message);}
+      }));
+      bindFeed(feed);
+      bindVideoPlaylistActions(feed);
+      return;
+    }
+    const query=String(feed.dataset.channelQuery||'').trim().slice(0,100);
+    const [discovery,subscriptions]=await Promise.all([
+      api('/video-channels'+(query?'?q='+encodeURIComponent(query):'')),
+      api('/video-channels/subscriptions')
+    ]);
+    const sourceChannels=activeVideoChannelScope==='subscriptions'?(subscriptions.channels||[]):(discovery.channels||[]);
+    const channels=query&&activeVideoChannelScope==='subscriptions'?sourceChannels.filter(channel=>[channel.title,channel.description,channel.owner?.name,channel.owner?.username].some(value=>String(value||'').toLowerCase().includes(query))):sourceChannels;
+    feed.innerHTML='<section class="card video-channel-library-head"><div><span class="eyebrow">MINGLORA WATCH</span><h2>Creator channels</h2><p>Discover creators, subscribe for free and find their latest public videos.</p></div><button type="button" class="secondary" data-video-channel-own>Manage my channel</button></section><nav class="video-channel-scope" aria-label="Channel directory"><button type="button" data-channel-scope="discover" class="'+(activeVideoChannelScope==='discover'?'active':'')+'">Discover</button><button type="button" data-channel-scope="subscriptions" class="'+(activeVideoChannelScope==='subscriptions'?'active':'')+'">My subscriptions ('+Number((subscriptions.channels||[]).length)+')</button></nav><form class="card video-channel-search"><label for="video-channel-search-input">Find a channel</label><input id="video-channel-search-input" name="q" type="search" maxlength="100" value="'+esc(query)+'" placeholder="Search channel name or creator"><button type="submit" class="primary">Search</button></form>'+(channels.length?'<div class="video-channel-grid">'+channels.map(channel=>'<article class="card video-channel-card" data-video-channel-card="'+esc(channel.ownerId)+'"><div class="video-channel-avatar" aria-hidden="true">'+esc(String(channel.owner?.name||channel.owner?.username||'M').trim().slice(0,1).toUpperCase())+'</div><div class="video-channel-card-copy"><h3>'+esc(channel.title)+'</h3><p>'+esc(channel.description||'Minglora creator channel')+'</p><small>'+esc(channel.owner?.name||channel.owner?.username||'Creator')+' · '+Number(channel.subscriberCount||0)+' subscribers · '+Number(channel.videoCount||0)+' videos</small></div><div class="video-channel-card-actions"><button type="button" class="primary" data-channel-open="'+esc(channel.ownerId)+'">View channel</button>'+(channel.isOwner?'':'<button type="button" class="secondary" data-channel-subscribe="'+esc(channel.ownerId)+'" data-subscribed="'+(channel.isSubscribed?'true':'false')+'">'+(channel.isSubscribed?'Unsubscribe':'＋ Subscribe')+'</button>')+'</div></article>').join('')+'</div>':'<section class="card empty-state"><div class="empty-icon">◎</div><h3>'+(activeVideoChannelScope==='subscriptions'?'You have no channel subscriptions yet':'No channels found')+'</h3><p>'+(activeVideoChannelScope==='subscriptions'?'Subscribe to a creator to keep their channel in your list.':'Channels appear when members publish real videos. Try another search.')+'</p></section>');
+    feed.querySelector('[data-video-channel-own]')?.addEventListener('click',()=>{activeVideoChannelId=state.user?.id||null;if(activeVideoChannelId)void renderVideoChannelLibrary(feed);});
+    feed.querySelectorAll('[data-channel-scope]').forEach(button=>button.addEventListener('click',()=>{activeVideoChannelScope=button.dataset.channelScope;void renderVideoChannelLibrary(feed);}));
+    feed.querySelector('.video-channel-search')?.addEventListener('submit',event=>{
+      event.preventDefault();feed.dataset.channelQuery=String(new FormData(event.currentTarget).get('q')||'');
+      const input=event.currentTarget.querySelector('input');
+      feed.dataset.channelQuery=input?.value||'';
+      void renderVideoChannelLibrary(feed);
+    });
+    feed.querySelectorAll('[data-channel-open]').forEach(button=>button.addEventListener('click',()=>{activeVideoChannelId=button.dataset.channelOpen;void renderVideoChannelLibrary(feed);}));
+    feed.querySelectorAll('[data-channel-subscribe]').forEach(button=>button.addEventListener('click',async()=>{
+      const channel=channels.find(item=>item.ownerId===button.dataset.channelSubscribe);if(!channel)return;
+      button.disabled=true;
+      try{await setVideoChannelSubscription(channel,button.dataset.subscribed!=='true');await renderVideoChannelLibrary(feed);}
+      catch(error){button.disabled=false;toast(error.message);}
+    }));
+    if(activeVideoChannelScope==='subscriptions'){
+      const announcements=Array.isArray(subscriptions.announcements)?subscriptions.announcements:[];
+      if(announcements.length){
+        const section=document.createElement('section');
+        section.className='video-channel-announcements';
+        section.innerHTML='<div class="video-channel-latest-heading"><span class="eyebrow">YOUR CHANNEL FEED</span><h3>Latest channel updates</h3><p>Announcements from creators you subscribe to.</p></div><div class="video-channel-announcement-list">'+announcements.map(post=>'<div class="video-channel-announcement-item"><small>From '+esc(post.channel?.title||post.owner?.name||'Subscribed channel')+'</small>'+videoChannelPostMarkup(post)+'</div>').join('')+'</div>';
+        feed.append(section);
+      }
+      const uploads=Array.isArray(subscriptions.videos)?subscriptions.videos:[];
+      if(uploads.length){
+        const section=document.createElement('section');
+        section.className='video-channel-latest-uploads';
+        section.innerHTML='<div class="video-channel-latest-heading"><span class="eyebrow">YOUR CHANNEL FEED</span><h3>Latest uploads from your subscriptions</h3><p>Recent videos from channels you chose to follow.</p></div>';
+        const list=document.createElement('div');
+        list.className='video-channel-latest-list';
+        list.innerHTML=uploads.map(video=>'<div class="video-channel-latest-item"><small>From '+esc(video.channel?.title||video.author?.name||'Subscribed channel')+'</small>'+postCard(video,{videoWatchLater:true})+videoPlaylistActionMarkup(video)+'</div>').join('');
+        section.append(list);
+        feed.append(section);
+        bindFeed(section);
+        bindVideoPlaylistActions(section);
+      }
+    }
+  }catch(error){
+    feed.innerHTML='<section class="card empty-state"><h3>Channels could not be loaded</h3><p>'+esc(error.message)+'</p><button type="button" class="secondary" data-channel-retry>Try again</button></section>';
+    feed.querySelector('[data-channel-retry]')?.addEventListener('click',()=>void renderVideoChannelLibrary(feed));
+  }
+}
+
+
 async function renderVideoCentre(){
   const scope=['for-you','all','following','friends'].includes(state.videoScope)?state.videoScope:'for-you';
-  const mode=['videos','reels','watch-later'].includes(state.videoMode)?state.videoMode:'videos';
+  const mode=['videos','reels','watch-later','playlists','channels'].includes(state.videoMode)?state.videoMode:'videos';
   state.videoScope=scope;
   state.videoMode=mode;
-  await fetchVideoCentrePage({reset:true,watchLater:mode==='watch-later'});
-  setContent('<div class="video-centre"><header class="card video-centre-heading"><div><span class="eyebrow">MINGLORA WATCH</span><h1>Minglora Video</h1><p>Discover videos shared by real Minglora members. Switch to Reels for a vertical swipe-through player.</p></div><button type="button" class="primary" id="video-create-button">＋ Create video post</button></header><nav class="video-centre-mode-switch" role="group" aria-label="Video experience"><button type="button" data-video-mode="videos" class="'+(mode==='videos'?'active':'')+'" aria-pressed="'+(mode==='videos'?'true':'false')+'">Videos</button><button type="button" data-video-mode="reels" class="'+(mode==='reels'?'active':'')+'" aria-pressed="'+(mode==='reels'?'true':'false')+'">Reels</button><button type="button" data-video-mode="watch-later" class="'+(mode==='watch-later'?'active':'')+'" aria-pressed="'+(mode==='watch-later'?'true':'false')+'">Watch Later</button></nav><section class="card video-centre-toolbar"><label for="video-scope">Discover videos<select id="video-scope"><option value="for-you" '+(scope==='for-you'?'selected':'')+'>For You</option><option value="all" '+(scope==='all'?'selected':'')+'>All videos</option><option value="following" '+(scope==='following'?'selected':'')+'>Following</option><option value="friends" '+(scope==='friends'?'selected':'')+'>Friends</option></select></label><label for="video-search">Search videos<input id="video-search" type="search" maxlength="100" value="'+esc(state.videoSearch||'')+'" placeholder="Search captions or creators"></label></section><section id="video-centre-feed" class="video-centre-feed" aria-live="polite"></section><p class="video-centre-note">Playback, reactions and comments come from existing Minglora member posts. This centre does not invent views or engagement.</p></div>');
+  if(!['playlists','channels'].includes(mode))await fetchVideoCentrePage({reset:true,watchLater:mode==='watch-later'});
+  setContent('<div class="video-centre"><header class="card video-centre-heading"><div><span class="eyebrow">MINGLORA WATCH</span><h1>Minglora Video</h1><p>Discover videos shared by real Minglora members. Switch to Reels for a vertical swipe-through player.</p></div><div class="video-centre-header-actions"><button type="button" class="secondary" data-video-collaboration-inbox>Collaboration invitations</button><button type="button" class="primary" id="video-create-button">＋ Create video post</button></div></header><nav class="video-centre-mode-switch" role="group" aria-label="Video experience"><button type="button" data-video-mode="videos" class="'+(mode==='videos'?'active':'')+'" aria-pressed="'+(mode==='videos'?'true':'false')+'">Videos</button><button type="button" data-video-mode="reels" class="'+(mode==='reels'?'active':'')+'" aria-pressed="'+(mode==='reels'?'true':'false')+'">Reels</button><button type="button" data-video-mode="watch-later" class="'+(mode==='watch-later'?'active':'')+'" aria-pressed="'+(mode==='watch-later'?'true':'false')+'">Watch Later</button><button type="button" data-video-mode="playlists" class="'+(mode==='playlists'?'active':'')+'" aria-pressed="'+(mode==='playlists'?'true':'false')+'">Playlists</button><button type="button" data-video-mode="channels" class="'+(mode==='channels'?'active':'')+'" aria-pressed="'+(mode==='channels'?'true':'false')+'">Channels</button></nav><section class="card video-centre-toolbar" style="'+(['playlists','channels'].includes(mode)?'display:none':'')+'"><label for="video-scope">Discover videos<select id="video-scope"><option value="for-you" '+(scope==='for-you'?'selected':'')+'>For You</option><option value="all" '+(scope==='all'?'selected':'')+'>All videos</option><option value="following" '+(scope==='following'?'selected':'')+'>Following</option><option value="friends" '+(scope==='friends'?'selected':'')+'>Friends</option></select></label><label for="video-search">Search videos<input id="video-search" type="search" maxlength="100" value="'+esc(state.videoSearch||'')+'" placeholder="Search captions or creators"></label></section><section id="video-centre-feed" class="video-centre-feed" aria-live="polite"></section><p class="video-centre-note">Playback, reactions and comments come from existing Minglora member posts. This centre does not invent views or engagement.</p></div>');
   const root=$('#main-content');
   const feed=root.querySelector('#video-centre-feed');
   const loadMoreVideoPage=async button=>{
@@ -9469,8 +9962,9 @@ async function renderVideoCentre(){
       }else if(matching.length){
         feed.querySelector('.empty-state')?.remove();
         const pending=document.createElement('div');
-        pending.innerHTML=matching.map(post=>postCard(post,{videoWatchLater:true})).join('');
+        pending.innerHTML=matching.map(post=>postCard(post,{videoWatchLater:true})+videoPlaylistActionMarkup(post)).join('');
         bindFeed(pending);
+        bindVideoPlaylistActions(pending);
         while(pending.firstChild)feed.insertBefore(pending.firstChild,button);
       }
       if(!matching.length&&state.videoHasMore){
@@ -9494,6 +9988,8 @@ async function renderVideoCentre(){
     }
   };
   const drawVideoPosts=()=>{
+    if(mode==='playlists'){void renderVideoPlaylistLibrary(feed);return;}
+    if(mode==='channels'){void renderVideoChannelLibrary(feed);return;}
     const query=String(state.videoSearch||'').trim().toLowerCase();
     const modePosts=mode==='watch-later'?state.videoFeed:state.videoFeed.filter(post=>mode==='reels'?post.videoFormat==='reel':post.videoFormat!=='reel');
     const visible=modePosts.filter(post=>!query||[post.text,post.author?.name,post.author?.username].some(value=>String(value||'').toLowerCase().includes(query)));
@@ -9505,8 +10001,9 @@ async function renderVideoCentre(){
     }else{
       const emptyTitle=mode==='watch-later'?'Your Watch Later list is empty':'No videos found';
       const emptyCopy=mode==='watch-later'?'Save any video or Reel here to watch it later.':(query?'Try another search or change the video audience.':'There are no videos in this feed yet. Share a real video post to start the Minglora Video library.');
-      feed.innerHTML=visible.length?visible.map(post=>postCard(post,{videoWatchLater:true})).join(''):'<section class="card empty-state"><div class="empty-icon">▶</div><h3>'+emptyTitle+'</h3><p>'+emptyCopy+'</p><button type="button" class="primary" id="video-empty-create">＋ Create a video post</button></section>';
+      feed.innerHTML=visible.length?visible.map(post=>postCard(post,{videoWatchLater:true})+videoPlaylistActionMarkup(post)).join(''):'<section class="card empty-state"><div class="empty-icon">▶</div><h3>'+emptyTitle+'</h3><p>'+emptyCopy+'</p><button type="button" class="primary" id="video-empty-create">＋ Create a video post</button></section>';
       bindFeed(feed);
+      bindVideoPlaylistActions(feed);
     }
     feed.querySelector('#video-empty-create')?.addEventListener('click',()=>openVideoComposer({videoFormat:mode==='reels'?'reel':'video'}));
     if(state.videoHasMore&&mode!=='watch-later'){
@@ -9526,6 +10023,8 @@ async function renderVideoCentre(){
   root.querySelectorAll('[data-video-mode]').forEach(button=>button.addEventListener('click',async()=>{
     if(state.videoMode===button.dataset.videoMode)return;
     state.videoMode=button.dataset.videoMode;
+    if(state.videoMode!=='playlists')activeVideoPlaylistId=null;
+    if(state.videoMode!=='channels')activeVideoChannelId=null;
     await renderVideoCentre();
   }));
   root.querySelector('#video-create-button')?.addEventListener('click',()=>openVideoComposer({videoFormat:mode==='reels'?'reel':'video'}));
@@ -9644,7 +10143,7 @@ function forYouCard(post,index){
     '<aside class="fyp-action-rail" aria-label="Post actions"><button type="button" class="fyp-action '+liked+'" data-react="'+esc(post.id)+'" data-current-reaction="'+esc(post.myReaction||'like')+'" aria-label="Like post"><span>♥</span><small>'+Number(post.reactionCount||0).toLocaleString()+'</small></button>'+
     '<button type="button" class="fyp-action" data-focus-comment="'+esc(post.id)+'" aria-label="Comment"><span>▢</span><small>'+Number((post.comments||[]).length).toLocaleString()+'</small></button><button type="button" class="fyp-action" data-toggle-save="'+esc(post.id)+'" data-saved="'+(post.isSaved?'true':'false')+'" aria-label="Save post"><span>'+(post.isSaved?'▣':'♧')+'</span><small>Save</small></button>'+
     '<button type="button" class="fyp-action" data-share="'+esc(post.id)+'" aria-label="Share post"><span>↗</span><small>Share</small></button><button type="button" class="fyp-action" data-gift-content="post" data-gift-id="'+esc(post.id)+'" data-gift-username="'+esc(author.username||'')+'" aria-label="Send gift"><span>🎁</span><small>Gift</small></button>'+
-    (isVideo?'<button type="button" class="fyp-action fyp-more-action" data-fyp-not-interested="'+esc(post.id)+'" aria-label="Not interested"><span>⋯</span><small>More</small></button>':'<button type="button" class="fyp-action fyp-more-action" data-post-menu="'+esc(post.id)+'" aria-label="Post options"><span>⋯</span><small>More</small></button>')+(isVideo?'<button type="button" class="fyp-disc" data-fyp-sound="'+esc(post.id)+'" aria-label="Toggle sound">♫</button>':'')+'</aside>'+(isVideo?'<button type="button" class="fyp-play-toggle" data-fyp-play="'+esc(post.id)+'" aria-label="Pause or play video">Ⅱ</button>':'')+'</article>';
+    (isVideo?'<button type="button" class="fyp-action fyp-more-action" data-fyp-feedback-menu="'+esc(post.id)+'" aria-label="Video recommendations" aria-controls="fyp-feedback-menu-'+esc(post.id)+'" aria-expanded="false"><span>⋯</span><small>More</small></button>':'<button type="button" class="fyp-action fyp-more-action" data-post-menu="'+esc(post.id)+'" aria-label="Post options"><span>⋯</span><small>More</small></button>')+(isVideo?'<button type="button" class="fyp-disc" data-fyp-sound="'+esc(post.id)+'" aria-label="Toggle sound">♫</button>':'')+'</aside>'+(isVideo?'<div class="fyp-feedback-menu" id="fyp-feedback-menu-'+esc(post.id)+'" hidden role="group" aria-label="Video recommendations"><button type="button" data-fyp-interested="'+esc(post.id)+'">Show me more like this</button><button type="button" data-fyp-not-interested="'+esc(post.id)+'">Not interested</button></div><button type="button" class="fyp-play-toggle" data-fyp-play="'+esc(post.id)+'" aria-label="Pause or play video">Ⅱ</button>':'')+'</article>';
 }
 function teardownForYouPlayback(){
   if(forYouPlaybackObserver){forYouPlaybackObserver.disconnect();forYouPlaybackObserver=null;}
@@ -9678,9 +10177,10 @@ function setupForYouPlayback(root){
   const sendWatch=async video=>{
     const postId=video.dataset.postId,watchedMs=Math.round(Number(video.dataset.watchBuffer||0));
     const durationMs=Math.round(Number(video.duration||0)*1000);
+    const positionMs=Math.max(0,Math.min(durationMs,Math.round(Number(video.dataset.furthestPlayedPositionMs||0))));
     video.dataset.watchBuffer='0';
     if(postId&&watchedMs>=1000&&durationMs>=1000){
-      try{await api('/videos/'+encodeURIComponent(postId)+'/watch',{method:'POST',body:JSON.stringify({watchedMs,durationMs})});}
+      try{await api('/videos/'+encodeURIComponent(postId)+'/watch',{method:'POST',body:JSON.stringify({watchedMs,durationMs,positionMs})});}
       catch(error){console.warn('[Minglora] Video watch signal not saved:',error?.message||error);}
     }
   };
@@ -9689,10 +10189,12 @@ function setupForYouPlayback(root){
     video.dataset.fypBound='true';
     video.dataset.lastMediaTime='0';
     video.dataset.watchBuffer='0';
+    video.dataset.furthestPlayedPositionMs='0';
     video.addEventListener('timeupdate',()=>{
       const current=Number(video.currentTime||0),previous=Number(video.dataset.lastMediaTime||0),delta=current-previous;
       if(!video.paused&&delta>0&&delta<=2.5){
         video.dataset.watchBuffer=String(Number(video.dataset.watchBuffer||0)+delta*1000);
+        video.dataset.furthestPlayedPositionMs=String(Math.max(Number(video.dataset.furthestPlayedPositionMs||0),Math.round(current*1000)));
         if(Number(video.dataset.watchBuffer)>=7000)void sendWatch(video);
       }
       video.dataset.lastMediaTime=String(current);
@@ -9736,6 +10238,35 @@ function setupForYouPlayback(root){
     video.muted=!video.muted;
     button.textContent=video.muted?'♫':'🔊';
     if(!video.paused)video.play().catch(()=>{});
+  });
+  bindOnce('[data-fyp-feedback-menu]',button=>{
+    const card=button.closest('.fyp-video-card');
+    const menu=card?.querySelector('.fyp-feedback-menu');
+    if(!menu)return;
+    const opening=menu.hidden;
+    root.querySelectorAll('.fyp-feedback-menu').forEach(panel=>{
+      panel.hidden=true;
+      panel.closest('.fyp-video-card')?.querySelector('[data-fyp-feedback-menu]')?.setAttribute('aria-expanded','false');
+    });
+    menu.hidden=!opening;
+    button.setAttribute('aria-expanded',String(opening));
+  });
+  bindOnce('[data-fyp-interested]',async button=>{
+    const postId=button.dataset.fypInterested;
+    if(!postId)return;
+    button.disabled=true;
+    try{
+      await api('/videos/'+encodeURIComponent(postId)+'/feedback',{method:'POST',body:JSON.stringify({action:'interested'})});
+      const card=button.closest('.fyp-video-card');
+      const menu=card?.querySelector('.fyp-feedback-menu');
+      if(menu)menu.hidden=true;
+      card?.querySelector('[data-fyp-feedback-menu]')?.setAttribute('aria-expanded','false');
+      button.disabled=false;
+      toast('We’ll show you more videos and creators like this.');
+    }catch(error){
+      toast(error.message||'Your preference could not be saved.');
+      button.disabled=false;
+    }
   });
   bindOnce('[data-fyp-not-interested]',async button=>{
     const postId=button.dataset.fypNotInterested;
@@ -10435,6 +10966,16 @@ async function enterMingloraApp(user,showWelcome=false){
       document.querySelector('#settings-security')?.scrollIntoView({behavior:'smooth',block:'start'});
     }else toast('Open Settings → Security to finish administrator authenticator setup.');
     return;
+  }
+  const supportDestination=params.get('mingloraSupport');
+  if(supportDestination){
+    params.delete('mingloraSupport');
+    const remaining=params.toString();
+    window.history.replaceState(null,'',window.location.pathname+(remaining?'?'+remaining:'')+window.location.hash);
+    if(['contact','inbox','report-problem'].includes(supportDestination)&&window.MingloraSettings?.openSupport){
+      try{await window.MingloraSettings.openSupport(supportDestination);return;}
+      catch(error){toast(error.message||'Support could not be opened.');}
+    }
   }
   await renderSidebar();await updateNotificationDot();await updateMessengerBadge();
   if(params.get('paypal')==='coins'||params.get('paypal')==='cancel'){await finishPaypalCoinReturn();if(state.view!=='coins')activateNav('feed');}

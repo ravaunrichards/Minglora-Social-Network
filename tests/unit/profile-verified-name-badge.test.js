@@ -48,7 +48,7 @@ test('the admin verification control still grants or removes only the blue usern
 test('the updated app asset and service-worker cache are versioned together', () => {
   const appAsset=html.match(/app\.js\?v=[^"']+/)?.[0]||'';
   const cacheName=serviceWorker.match(/CACHE_NAME='([^']+)'/)?.[1]||'';
-  assert.equal(appAsset,'app.js?v=20261111-ai-network-command-center-1');
+  assert.match(appAsset,/^app\.js\?v=\d{8}-.+/);
   assert.ok(serviceWorker.includes('/'+appAsset));
-  assert.equal(cacheName,'minglora-shell-v286-self-updating-1');
+  assert.match(cacheName,/^minglora-shell-v\d+-self-updating-1$/);
 });

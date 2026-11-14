@@ -28,6 +28,12 @@ import { buildSupabaseProviderCredentialPatch } from './auth-provider-credential
 import { paginateDescending } from './domain/pagination.js';
 import { rankForYouFeed } from './domain/feed-ranking.js';
 import { rankForYouVideos } from './domain/video-ranking.js';
+import { VIDEO_PLAYLIST_MAX_ITEMS, addVideoPlaylistItem, canViewVideoPlaylist, removeVideoPlaylistItem, reorderVideoPlaylistItems, validateVideoPlaylistInput } from '../backend/modules/video/playlists.js';
+import { VIDEO_CHANNEL_MAX_SUBSCRIPTIONS, canViewVideoChannel, subscribeToVideoChannel, unsubscribeFromVideoChannel, validateVideoChannelInput } from '../backend/modules/video/channels.js';
+import { summarizeCreatorVideoAnalytics } from './domain/video-analytics.js';
+import { enqueueVideoTranscodeJob, claimVideoTranscodeJob, completeVideoTranscodeJob, failVideoTranscodeJob, cancelVideoTranscodeJob, renewVideoTranscodeLease, isVideoTranscodeLeaseValid } from './domain/video-transcode-jobs.js';
+import { normalizeVideoRemixPolicy, canRemixVideo, createVideoCollaborationInvite, respondToVideoCollaborationInvite, listAcceptedVideoCollaboratorIds } from './domain/video-remix-collaboration.js';
+import { validateVideoChannelPostInput, createVideoChannelPost, updateVideoChannelPost, deleteVideoChannelPost } from './domain/video-channel-posts.js';
 import { canViewStory as canViewStoryPolicy, removeExpiredStories } from '../backend/modules/stories/service.js';
 import { canPublishGroupPost, canDeleteGroupPost, canLeaveGroup } from '../backend/modules/groups/service.js';
 import { disconnectBlockedConnections } from '../backend/modules/relationships/blocks.js';
@@ -209,7 +215,7 @@ function safeUser(u,viewerId=null){
   const visibility={...DEFAULT_ABOUT_VISIBILITY,...(u.aboutVisibility||{})};
   const sectionVisibility={...DEFAULT_ABOUT_SECTION_VISIBILITY,...(u.aboutSectionVisibility||{}),names:'public'};
   const own=viewerId===u.id;
-  const result={id:u.id,name:u.name,username:u.username,bio:'',location:'',avatar:u.avatar||'',cover:u.cover||'',createdAt:u.createdAt,verificationBadge:getProfileVerificationBadge(u),platformBadge:getPlatformAdminBadge(u,viewerId),verificationStatus:u.verificationStatus||'not_submitted',profileLayout:getUserSettings(u).preferences.profileLayout};
+  const result={id:u.id,name:u.name,username:u.username,bio:'',location:'',avatar:u.avatar||'',cover:u.cover||'',createdAt:u.createdAt,verificationBadge:getProfileVerificationBadge(u),platformBadge:getPlatformAdminBadge(u,viewerId),verificationStatus:u.verificationStatus||'not_submitted',profileLayout:getUserSettings(u).preferences.profileLayout,profileStyle:getUserSettings(u).preferences.profileStyle,profileScreenLayout:getUserSettings(u).preferences.profileScreenLayout};
   result.liveProBadge=isDesignatedCreatorHubAdmin(u)||(db.liveProGrants||[]).some(grant=>grant.userId===u.id&&grant.status==='active'&&(!grant.expiresAt||new Date(grant.expiresAt).getTime()>Date.now()));
   const profileThought=typeof viewerId==='string'?(db.profileStatuses||[]).filter(item=>item.userId===u.id&&Date.parse(item.expiresAt)>Date.now()&&canViewProfileAudience(viewerId,u.id,item.audience)).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))[0]:null;
   if(profileThought)result.profileThought={text:profileThought.text,mood:profileThought.mood||'',audience:profileThought.audience,createdAt:profileThought.createdAt,expiresAt:profileThought.expiresAt};
@@ -260,6 +266,8 @@ function safeUser(u,viewerId=null){
   if(aboutSections.contactInfo&&!Object.hasOwn(aboutSections.contactInfo,'phone')&&(own||visibility.contactPhone===true))aboutSections.contactInfo.phone=u.contactPhone||'';
   result.aboutSections=aboutSections;
   if(own){
+    result.defaultProfileStyle=getUserSettings(u).preferences.defaultProfileStyle;
+    result.defaultProfileScreenLayout=getUserSettings(u).preferences.defaultProfileScreenLayout;
     result.email=u.email||'';
     result.platformRole=u.role||null;
     result.aboutVisibility=visibility;
@@ -269,9 +277,12 @@ function safeUser(u,viewerId=null){
 }
 const APP_COLOR_THEMES=['minglora','ocean','tropical','royal','emerald','rose','golden','lavender','midnight','graphite'];
 const LIVE_ROOM_THEMES=['studio','ocean','tropical','royal','neon','sunset','garden','social'];
-const LIVE_SCREEN_LAYOUTS=['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight','roundtable-1','roundtable-2'];
-const DEFAULT_SETTINGS={privacy:{profileVisibility:'public',allowFriendRequests:true,messageAudience:'everyone',meetWaveAudience:'everyone',friendsListAudience:'public',followersListAudience:'public',followingListAudience:'public',subscribersListAudience:'public',commentAudience:'everyone'},notifications:{inApp:true,friendRequests:true,messages:true,interactions:true,push:true,profileViews:false,calls:true,live:true,gifts:true,meetWave:true,leagues:true,account:true},preferences:{theme:'system',colorTheme:'minglora',liveRoomTheme:'studio',feedSort:'recent',reducedMotion:false,liteMode:false,keyboardShortcuts:false,displayCurrency:'USD',messengerIncomingCallSounds:true,messengerMessageSounds:true,messengerAutoOpenNewMessages:false,messengerActiveStatus:true,profileLayout:'advanced',messengerArchivedConversationIds:[],messengerRestrictedUserIds:[]},experience:DEFAULT_EXPERIENCE_SETTINGS};
-function getUserSettings(user){const saved=user?.settings||{};const preferences={...DEFAULT_SETTINGS.preferences,...(saved.preferences||{})};if(!APP_COLOR_THEMES.includes(preferences.colorTheme))preferences.colorTheme=DEFAULT_SETTINGS.preferences.colorTheme;if(!['standard','advanced','creator'].includes(preferences.profileLayout))preferences.profileLayout=DEFAULT_SETTINGS.preferences.profileLayout;if(!LIVE_ROOM_THEMES.includes(preferences.liveRoomTheme))preferences.liveRoomTheme=DEFAULT_SETTINGS.preferences.liveRoomTheme;for(const key of ['messengerArchivedConversationIds','messengerRestrictedUserIds'])if(!Array.isArray(preferences[key]))preferences[key]=[];const experience=validateExperienceSettingsPatch(DEFAULT_EXPERIENCE_SETTINGS,saved.experience||{}).settings;return {privacy:{...DEFAULT_SETTINGS.privacy,...(saved.privacy||{})},notifications:{...DEFAULT_SETTINGS.notifications,...(saved.notifications||{})},preferences,experience};}
+const PROFILE_STYLE_IDS=['facebook','tiktok','instagram','youtube','x','linkedin','pinterest','twitch','snapchat','custom-minglora'];
+const PROFILE_SCREEN_LAYOUT_IDS=['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight'];
+const LIVE_SCREEN_LAYOUTS=['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight'];
+const LIVE_GUEST_LAYOUTS=['roundtable-1','roundtable-2'];
+const DEFAULT_SETTINGS={privacy:{profileVisibility:'public',allowFriendRequests:true,messageAudience:'everyone',meetWaveAudience:'everyone',shareAudienceDemographics:false,friendsListAudience:'public',followersListAudience:'public',followingListAudience:'public',subscribersListAudience:'public',commentAudience:'everyone'},notifications:{inApp:true,friendRequests:true,messages:true,interactions:true,push:true,profileViews:false,calls:true,live:true,gifts:true,meetWave:true,leagues:true,account:true},preferences:{theme:'system',colorTheme:'minglora',liveRoomTheme:'studio',feedSort:'recent',reducedMotion:false,liteMode:false,keyboardShortcuts:false,displayCurrency:'USD',messengerIncomingCallSounds:true,messengerMessageSounds:true,messengerAutoOpenNewMessages:false,messengerActiveStatus:true,profileLayout:'advanced',profileStyle:'facebook',defaultProfileStyle:'facebook',profileScreenLayout:'fluid-panel',defaultProfileScreenLayout:'fluid-panel',messengerArchivedConversationIds:[],messengerRestrictedUserIds:[]},experience:DEFAULT_EXPERIENCE_SETTINGS};
+function getUserSettings(user){const saved=user?.settings||{};const preferences={...DEFAULT_SETTINGS.preferences,...(saved.preferences||{})};if(!APP_COLOR_THEMES.includes(preferences.colorTheme))preferences.colorTheme=DEFAULT_SETTINGS.preferences.colorTheme;if(!['standard','advanced','creator'].includes(preferences.profileLayout))preferences.profileLayout=DEFAULT_SETTINGS.preferences.profileLayout;if(!PROFILE_STYLE_IDS.includes(preferences.profileStyle))preferences.profileStyle=DEFAULT_SETTINGS.preferences.profileStyle;if(!PROFILE_STYLE_IDS.includes(preferences.defaultProfileStyle))preferences.defaultProfileStyle=DEFAULT_SETTINGS.preferences.defaultProfileStyle;if(!PROFILE_SCREEN_LAYOUT_IDS.includes(preferences.profileScreenLayout))preferences.profileScreenLayout=DEFAULT_SETTINGS.preferences.profileScreenLayout;if(!PROFILE_SCREEN_LAYOUT_IDS.includes(preferences.defaultProfileScreenLayout))preferences.defaultProfileScreenLayout=DEFAULT_SETTINGS.preferences.defaultProfileScreenLayout;if(!LIVE_ROOM_THEMES.includes(preferences.liveRoomTheme))preferences.liveRoomTheme=DEFAULT_SETTINGS.preferences.liveRoomTheme;for(const key of ['messengerArchivedConversationIds','messengerRestrictedUserIds'])if(!Array.isArray(preferences[key]))preferences[key]=[];const experience=validateExperienceSettingsPatch(DEFAULT_EXPERIENCE_SETTINGS,saved.experience||{}).settings;return {privacy:{...DEFAULT_SETTINGS.privacy,...(saved.privacy||{})},notifications:{...DEFAULT_SETTINGS.notifications,...(saved.notifications||{})},preferences,experience};}
 function isFriend(firstId,secondId){const follows=activeFollows();return follows.some(item=>item.followerId===firstId&&item.followedId===secondId)&&follows.some(item=>item.followerId===secondId&&item.followedId===firstId);}
 function friendPreferenceFor(viewerId,targetId){return (db.friendPreferences||[]).find(item=>item.ownerId===viewerId&&item.targetId===targetId)||null;}
 function isFriendRestricted(viewerId,ownerId){
@@ -329,7 +340,7 @@ function recordProfileActivity(userId,action,summary,targetType='profile',target
 
 function validateSettingsPatch(input,user){
   if(!input||typeof input!=='object'||Array.isArray(input))return {valid:false,error:'Settings must be an object.'};
-  const next=getUserSettings(user);const allowed={privacy:['profileVisibility','allowFriendRequests','messageAudience','meetWaveAudience','friendsListAudience','followersListAudience','followingListAudience','subscribersListAudience','commentAudience'],notifications:['inApp','friendRequests','messages','interactions','push','profileViews','calls','live','gifts','meetWave','leagues','account'],preferences:['theme','colorTheme','liveRoomTheme','feedSort','reducedMotion','liteMode','keyboardShortcuts','displayCurrency','messengerIncomingCallSounds','messengerMessageSounds','messengerAutoOpenNewMessages','messengerActiveStatus','profileLayout','messengerArchivedConversationIds','messengerRestrictedUserIds'],experience:Object.keys(DEFAULT_EXPERIENCE_SETTINGS)};
+  const next=getUserSettings(user);const allowed={privacy:['profileVisibility','allowFriendRequests','messageAudience','meetWaveAudience','shareAudienceDemographics','friendsListAudience','followersListAudience','followingListAudience','subscribersListAudience','commentAudience'],notifications:['inApp','friendRequests','messages','interactions','push','profileViews','calls','live','gifts','meetWave','leagues','account'],preferences:['theme','colorTheme','liveRoomTheme','feedSort','reducedMotion','liteMode','keyboardShortcuts','displayCurrency','messengerIncomingCallSounds','messengerMessageSounds','messengerAutoOpenNewMessages','messengerActiveStatus','profileLayout','profileStyle','defaultProfileStyle','profileScreenLayout','defaultProfileScreenLayout','messengerArchivedConversationIds','messengerRestrictedUserIds'],experience:Object.keys(DEFAULT_EXPERIENCE_SETTINGS)};
   for(const [section,values] of Object.entries(input)){
     if(!allowed[section]||!values||typeof values!=='object'||Array.isArray(values))return {valid:false,error:'Unsupported settings section.'};
     if(section==='experience'){const result=validateExperienceSettingsPatch(next.experience,values);if(!result.valid)return result;next.experience=result.settings;continue;}
@@ -341,6 +352,7 @@ function validateSettingsPatch(input,user){
       if(section==='privacy'&&['friendsListAudience','followersListAudience','followingListAudience','subscribersListAudience'].includes(key)&&!['public','friends','followers','private'].includes(value))return {valid:false,error:'Choose a valid audience for this relationship list.'};
       if(section==='privacy'&&key==='commentAudience'&&!['everyone','friends','nobody'].includes(value))return {valid:false,error:'Comment audience must be everyone, friends or nobody.'};
       if(section==='privacy'&&key==='allowFriendRequests'&&typeof value!=='boolean')return {valid:false,error:'Allow friend requests must be true or false.'};
+      if(section==='privacy'&&key==='shareAudienceDemographics'&&typeof value!=='boolean')return {valid:false,error:'Anonymous audience demographics sharing must be true or false.'};
       if(section==='notifications'&&typeof value!=='boolean')return {valid:false,error:'Notification preferences must be true or false.'};
       if(section==='preferences'&&key==='theme'&&!['system','light','dark'].includes(value))return {valid:false,error:'Theme must be system, light or dark.'};
       if(section==='preferences'&&key==='colorTheme'&&!APP_COLOR_THEMES.includes(value))return {valid:false,error:'Choose a supported Minglora colour theme.'};
@@ -348,6 +360,8 @@ function validateSettingsPatch(input,user){
       if(section==='preferences'&&key==='feedSort'&&!['recent','oldest'].includes(value))return {valid:false,error:'Feed sort must be recent or oldest.'};
       if(section==='preferences'&&key==='displayCurrency'&&!['USD','JMD','CAD','GBP','EUR','TTD','BBD','XCD','GYD','AUD','JPY','INR','NGN','ZAR','KES'].includes(value))return {valid:false,error:'Choose a supported display currency.'};
       if(section==='preferences'&&key==='profileLayout'&&!['standard','advanced','creator'].includes(value))return {valid:false,error:'Choose a supported profile layout.'};
+      if(section==='preferences'&&['profileStyle','defaultProfileStyle'].includes(key)&&!PROFILE_STYLE_IDS.includes(value))return {valid:false,error:'Choose one of the supported Minglora profile styles.'};
+      if(section==='preferences'&&['profileScreenLayout','defaultProfileScreenLayout'].includes(key)&&!PROFILE_SCREEN_LAYOUT_IDS.includes(value))return {valid:false,error:'Choose one of the seven supported profile screen layouts.'};
       if(section==='preferences'&&['reducedMotion','liteMode','keyboardShortcuts','messengerIncomingCallSounds','messengerMessageSounds','messengerAutoOpenNewMessages','messengerActiveStatus'].includes(key)&&typeof value!=='boolean')return {valid:false,error:'Messenger and motion preferences must be true or false.'};
       if(section==='preferences'&&['messengerArchivedConversationIds','messengerRestrictedUserIds'].includes(key)&&(!Array.isArray(value)||value.length>500||value.some(id=>typeof id!=='string'||!id.trim()||id.length>128)))return {valid:false,error:'Messenger account lists must contain valid account identifiers.'};
       if(section==='preferences'&&['messengerArchivedConversationIds','messengerRestrictedUserIds'].includes(key))next[section][key]=[...new Set(value)];
@@ -914,6 +928,7 @@ function notificationPreferenceKey(type){
   if(['live','live_moderator'].includes(type))return 'live';
   if(['gift','fan_club'].includes(type))return 'gifts';
   if(type==='meetwave_invite')return 'meetWave';
+  if(['video_remix','video_collaboration_invite','video_collaboration_response'].includes(type))return 'interactions';
   if(type==='league_match')return 'leagues';
   if(['account_security','verification_application','verification_status','admin_alert'].includes(type))return 'account';
   return null;
@@ -973,6 +988,24 @@ async function pruneExpiredStories() {
   db.storyViews = cleaned.views;
   await saveStore();
 }
+async function helpCenterGateway(action,payload={}) {
+  const runtimeUrl=String(process.env.SUPABASE_STATE_API_URL||'').trim().replace(/\/+$/,'');
+  const stateApiKey=String(process.env.SUPABASE_STATE_API_KEY||'').trim();
+  const publishableKey=String(process.env.SUPABASE_PUBLISHABLE_KEY||process.env.SUPABASE_ANON_KEY||'').trim();
+  if(!runtimeUrl||!stateApiKey||!publishableKey)throw Object.assign(new Error('Minglora Help Center is not connected to its secure Supabase gateway.'),{status:503});
+  const endpoint=runtimeUrl.replace(/\/minglora-runtime-state(?:\?.*)?$/,'/minglora-help-center');
+  if(endpoint===runtimeUrl)throw Object.assign(new Error('Minglora Help Center gateway URL is not configured.'),{status:503});
+  let response;
+  try{
+    response=await fetch(endpoint,{method:'POST',headers:{apikey:publishableKey,'x-minglora-api-key':stateApiKey,'Content-Type':'application/json'},
+      body:JSON.stringify({action,...payload}),signal:AbortSignal.timeout(15000)});
+  }catch{
+    throw Object.assign(new Error('Minglora Help Center is temporarily unavailable. Please retry.'),{status:503});
+  }
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok)throw Object.assign(new Error(data.error||'Minglora Help Center request failed.'),{status:response.status});
+  return data;
+}
 async function mediaGateway(action,payload) {
   const stateApiUrl=String(process.env.SUPABASE_STATE_API_URL||'').trim();
   const stateApiKey=String(process.env.SUPABASE_STATE_API_KEY||'').trim();
@@ -982,6 +1015,13 @@ async function mediaGateway(action,payload) {
   const data=await response.json().catch(()=>({}));
   if(!response.ok)throw Object.assign(new Error(data.error||'Minglora media storage request failed.'),{status:response.status});
   return data;
+}
+function enqueueAttachedVideoTranscode(asset,post) {
+  if(!asset||asset.mediaType!=='video'||asset.slot!=='post'||asset.status!=='attached')return null;
+  const jobs=db.videoTranscodeJobs||(db.videoTranscodeJobs=[]);
+  const result=enqueueVideoTranscodeJob(jobs,{assetId:asset.id,ownerId:asset.ownerId,postId:post?.id,id:uid(),createdAt:now()});
+  if(result.status==='created'&&asset.transcodeStatus!=='ready')asset.transcodeStatus='queued';
+  return result.job||null;
 }
 async function resolveAssetUrl(asset) {
   if(!asset)return null;
@@ -1035,14 +1075,138 @@ async function publicPost(p,viewerId) {
   const media=await Promise.all((p.mediaIds||[]).map(async id=>{
     const asset=(db.mediaAssets||[]).find(item=>item.id===id&&item.ownerId===p.userId&&item.slot==='post');
     if(!asset||asset.status==='deleted')return null;
-    try{return {id:asset.id,mimeType:asset.mimeType,mediaType:asset.mediaType,url:await resolveAssetUrl(asset),byteSize:asset.byteSize};}catch{return null;}
+    const derivative=asset.mediaType==='video'&&asset.transcodedAssetId
+      ?(db.mediaAssets||[]).find(item=>item.id===asset.transcodedAssetId&&item.ownerId===p.userId&&item.status==='attached'&&item.processingRole==='transcode')
+      :null;
+    const playbackAsset=derivative||asset;
+    try{
+      const item={id:asset.id,mimeType:playbackAsset.mimeType,mediaType:asset.mediaType,url:await resolveAssetUrl(playbackAsset),byteSize:playbackAsset.byteSize};
+      if(asset.mediaType==='video'&&viewerId===p.userId)item.processingStatus=asset.transcodeStatus||'queued';
+      return item;
+    }catch{return null;}
   }));
+  const acceptedCollaboratorIds=listAcceptedVideoCollaboratorIds(db.videoCollaborationInvites||[],p.id);
+  const collaborators=acceptedCollaboratorIds
+    .map(id=>db.users.find(member=>member.id===id))
+    .filter(member=>member&&!blockedBetween(viewerId,member.id))
+    .map(member=>safeUser(member,viewerId));
+  const sourcePost=p.remixOfPostId?(db.posts||[]).find(item=>item.id===p.remixOfPostId):null;
+  const remixSource=sourcePost&&isVisibleVideoPost(viewerId,sourcePost)
+    ?{id:sourcePost.id,author:safeUser(db.users.find(member=>member.id===sourcePost.userId),viewerId)}
+    :null;
+  const visibleVideo=isVisibleVideoPost(viewerId,p);
+  const currentFollows=activeFollows();
+  const isFollowing=Boolean(currentFollows.some(edge=>edge.followerId===viewerId&&edge.followedId===p.userId));
+  const isFriend=getMutualFollowIds(currentFollows,viewerId,db.blocks||[]).includes(p.userId);
+  const canRemix=canRemixVideo(p,viewerId,{isVisible:visibleVideo,isBlocked:blockedBetween(viewerId,p.userId),isFollowing,isFriend});
   const {imageUrl,...cleanPost}=p;
-  return {...cleanPost,media:media.filter(item=>item?.url),soundtrack:await publicSoundtrack(p.soundtrack,viewerId),author:safeUser(author),taggedUsers:(p.taggedUserIds||[]).map(id=>db.users.find(member=>member.id===id)).filter(Boolean).map(member=>safeUser(member,viewerId)),reactions:p.reactions||{},reactionCount:Object.values(p.reactions||{}).length,myReaction:(p.reactions||{})[viewerId]||null,
+  return {...cleanPost,media:media.filter(item=>item?.url),soundtrack:await publicSoundtrack(p.soundtrack,viewerId),author:safeUser(author),remixSource,collaborators,canRemix,remixPolicy:normalizeVideoRemixPolicy(p.remixPolicy,'off')||'off',taggedUsers:(p.taggedUserIds||[]).map(id=>db.users.find(member=>member.id===id)).filter(Boolean).map(member=>safeUser(member,viewerId)),reactions:p.reactions||{},reactionCount:Object.values(p.reactions||{}).length,myReaction:(p.reactions||{})[viewerId]||null,
     isSaved:(db.savedPosts||[]).some(saved=>saved.userId===viewerId&&saved.postId===p.id),
     isWatchLater:(db.savedPosts||[]).some(saved=>saved.userId===viewerId&&saved.postId===p.id&&saved.readLater===true),
     comments:(p.comments||[]).map(c=>({...c,author:safeUser(db.users.find(u=>u.id===c.userId))}))};
 }
+function isVisibleVideoPost(viewerId, post) {
+  if (!post || post.status === 'hidden' || post.archivedAt || !post.userId || blockedBetween(viewerId, post.userId)) return false;
+  const author = (db.users || []).find(profile => profile.id === post.userId);
+  if (!author || !canViewProfile(viewerId, author) || !canViewProfileAudience(viewerId, post.userId, post.audience || 'public')) return false;
+  return (post.mediaIds || []).some(assetId => {
+    const asset = (db.mediaAssets || []).find(item => item.id === assetId && item.ownerId === post.userId && item.slot === 'post');
+    return asset && asset.status === 'attached' && asset.mediaType === 'video';
+  });
+}
+async function publicVideoPlaylist(playlist, viewerId, { includeVideos = false } = {}) {
+  const owner = (db.users || []).find(member => member.id === playlist.ownerId);
+  const orderedItems = (db.videoPlaylistItems || [])
+    .filter(item => item.playlistId === playlist.id)
+    .sort((a, b) => Number(a.position) - Number(b.position));
+  const visibleItems = orderedItems.filter(item => {
+    const post = (db.posts || []).find(candidate => candidate.id === item.postId);
+    return isVisibleVideoPost(viewerId, post);
+  });
+  const videos = [];
+  if (includeVideos) {
+    for (const item of visibleItems) {
+      const post = (db.posts || []).find(candidate => candidate.id === item.postId);
+      const published = await publicPost(post, viewerId);
+      if ((published.media || []).some(media => media.mediaType === 'video' && media.url)) {
+        videos.push({ ...published, playlistItemId: item.id, playlistPosition: item.position, addedAt: item.createdAt });
+      }
+    }
+  }
+  return {
+    id: playlist.id,
+    title: playlist.title,
+    description: playlist.description || '',
+    visibility: playlist.visibility,
+    createdAt: playlist.createdAt,
+    updatedAt: playlist.updatedAt || playlist.createdAt,
+    owner: safeUser(owner, viewerId),
+    isOwner: playlist.ownerId === viewerId,
+    canReorder: playlist.ownerId === viewerId && visibleItems.length === orderedItems.length,
+    videoCount: visibleItems.length,
+    ...(includeVideos ? { videos } : {})
+  };
+}
+
+
+function getVideoChannel(ownerId) {
+  const owner=(db.users||[]).find(member=>member.id===ownerId);
+  if(!owner)return null;
+  const stored=(db.videoChannels||[]).find(channel=>channel.ownerId===ownerId&&!channel.deletedAt);
+  return stored||{
+    id:'channel:'+ownerId,
+    ownerId,
+    title:String(owner.name||owner.username||'Minglora Channel').trim(),
+    description:'',
+    visibility:'public',
+    createdAt:owner.createdAt||null,
+    updatedAt:null
+  };
+}
+async function publicVideoChannelPost(post,viewerId){
+  if(!post||post.status==='deleted')return null;
+  const owner=(db.users||[]).find(member=>member.id===post.ownerId);
+  if(!owner)return null;
+  return {id:post.id,ownerId:post.ownerId,title:String(post.title||''),body:String(post.body||''),
+    status:'published',createdAt:post.createdAt||null,updatedAt:post.updatedAt||post.createdAt||null,
+    owner:safeUser(owner,viewerId),isOwner:viewerId===post.ownerId};
+}
+async function listPublicVideoChannelPosts(ownerId,viewerId,limit=30){
+  const rows=(db.videoChannelPosts||[]).filter(post=>post.ownerId===ownerId&&post.status==='published')
+    .sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0))
+    .slice(0,Math.max(1,Math.min(60,Number(limit)||30)));
+  return (await Promise.all(rows.map(post=>publicVideoChannelPost(post,viewerId)))).filter(Boolean);
+}
+async function publicVideoChannel(channel, viewerId, { includeVideos = false } = {}) {
+  const owner=(db.users||[]).find(member=>member.id===channel?.ownerId);
+  if(!owner)return null;
+  const videos=(db.posts||[])
+    .filter(post=>post.userId===owner.id&&isVisibleVideoPost(viewerId,post))
+    .sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));
+  const subscription=(db.videoChannelSubscriptions||[]).find(item=>item.ownerId===owner.id&&item.subscriberId===viewerId);
+  const card={
+    id:channel.id,
+    ownerId:owner.id,
+    title:channel.title,
+    description:channel.description||'',
+    visibility:channel.visibility||'public',
+    createdAt:channel.createdAt||owner.createdAt||null,
+    updatedAt:channel.updatedAt||null,
+    owner:safeUser(owner,viewerId),
+    isOwner:owner.id===viewerId,
+    isSubscribed:Boolean(subscription),
+    subscriberCount:(db.videoChannelSubscriptions||[]).filter(item=>item.ownerId===owner.id).length,
+    videoCount:videos.length,
+    updateCount:(db.videoChannelPosts||[]).filter(item=>item.ownerId===owner.id&&item.status==='published').length
+  };
+  if(includeVideos){
+    const items=await Promise.all(videos.slice(0,40).map(post=>publicPost(post,viewerId)));
+    card.videos=items.filter(post=>(post.media||[]).some(media=>media.mediaType==='video'&&media.url));
+  }
+  return card;
+}
+
+
 async function publicDiscoveryPost(post) {
   const media = await Promise.all((post.mediaIds || []).slice(0, 3).map(async id => {
     const asset = (db.mediaAssets || []).find(item => item.id === id && item.ownerId === post.userId && item.slot === 'post');
@@ -1301,7 +1465,7 @@ async function route(req, res) {
       });
     }
   }
-  if (p.startsWith('/api/') && p !== '/api/webhooks/paypal' && !['GET', 'HEAD', 'OPTIONS'].includes(method) && !isSameOriginApiWrite(req)) {
+  if (p.startsWith('/api/') && p !== '/api/webhooks/paypal' && !p.startsWith('/api/internal/video-transcode/') && !['GET', 'HEAD', 'OPTIONS'].includes(method) && !isSameOriginApiWrite(req)) {
     return json(res, 403, { error: 'Cross-origin API writes are not allowed.' });
   }
   if (p === '/api/ai-network' || p.startsWith('/api/ai-network/')) {
@@ -2081,8 +2245,152 @@ async function route(req, res) {
     }
   }
   if (p.startsWith('/api/')) {
-    let input; try { if (!['GET','HEAD'].includes(method)) input=await body(req,1_000_000); } catch(e) { return json(res,e.status||400,{error:e.message}); }
+    let input; try { if (!['GET','HEAD'].includes(method)) input=await body(req,p==='/api/help-center/admin/media'?8_000_000:1_000_000); } catch(e) { return json(res,e.status||400,{error:e.message}); }
+    if(p.startsWith('/api/internal/video-transcode/')){
+      if(method!=='POST')return json(res,405,{error:'Method not allowed.'});
+      const expectedToken=String(process.env.VIDEO_TRANSCODE_WORKER_TOKEN||'');
+      const authorization=String(req.headers.authorization||'');
+      const suppliedToken=authorization.startsWith('Bearer ')?authorization.slice(7).trim():'';
+      const expectedBytes=Buffer.from(expectedToken);
+      const suppliedBytes=Buffer.from(suppliedToken);
+      const authorized=expectedBytes.length>=32&&suppliedBytes.length===expectedBytes.length&&crypto.timingSafeEqual(expectedBytes,suppliedBytes);
+      if(!authorized)return json(res,expectedBytes.length>=32?401:503,{error:expectedBytes.length>=32?'Worker authentication failed.':'Video processing worker is not configured.'});
+      const jobs=db.videoTranscodeJobs||(db.videoTranscodeJobs=[]);
+      if(p==='/api/internal/video-transcode/claim'){
+        const job=claimVideoTranscodeJob(jobs,{leaseToken:crypto.randomBytes(32).toString('base64url')});
+        if(!job)return json(res,200,{job:null});
+        const sourceAsset=(db.mediaAssets||[]).find(asset=>asset.id===job.assetId&&asset.ownerId===job.ownerId&&asset.slot==='post'&&asset.mediaType==='video'&&asset.status==='attached');
+        const sourcePost=sourceAsset&&(db.posts||[]).find(post=>post.userId===job.ownerId&&(post.mediaIds||[]).includes(sourceAsset.id)&&post.status!=='hidden'&&!post.archivedAt);
+        if(!sourceAsset||!sourcePost){
+          cancelVideoTranscodeJob(jobs,{jobId:job.id,leaseToken:job.leaseToken,reason:'source_unavailable'});
+          if(sourceAsset)sourceAsset.transcodeStatus='cancelled';
+          await saveStore();
+          return json(res,200,{job:null});
+        }
+        sourceAsset.transcodeStatus='processing';
+        await saveStore();
+        try{
+          const sourceUrl=await resolveAssetUrl(sourceAsset);
+          if(!sourceUrl)throw new Error('Source video URL is unavailable.');
+          await saveStore();
+          return json(res,200,{
+            job:{id:job.id,assetId:job.assetId,ownerId:job.ownerId,attempts:job.attempts,leaseToken:job.leaseToken,leaseExpiresAt:job.leaseExpiresAt},
+            source:{url:sourceUrl,mimeType:sourceAsset.mimeType,byteSize:sourceAsset.byteSize}
+          });
+        }catch(error){
+          failVideoTranscodeJob(jobs,{jobId:job.id,leaseToken:job.leaseToken,errorCode:'SOURCE_READ_FAILED'});
+          sourceAsset.transcodeStatus='queued';
+          await saveStore();
+          return json(res,503,{error:'The source video could not be opened. The job has been returned to the retry queue.'});
+        }
+      }
+      if(p==='/api/internal/video-transcode/prepare-output'){
+        const job=jobs.find(item=>item.id===String(input.jobId||''));
+        if(!isVideoTranscodeLeaseValid(job,String(input.leaseToken||'')))return json(res,409,{error:'The video processing lease is no longer valid.'});
+        const byteSize=Number(input.byteSize);
+        if(!Number.isSafeInteger(byteSize)||byteSize<1||byteSize>500*1024*1024)return json(res,400,{error:'The processed video must be between 1 byte and 500 MB.'});
+        const previousOutput=(db.mediaAssets||[]).find(asset=>asset.id===job.outputAssetId&&asset.ownerId===job.ownerId&&asset.processingRole==='transcode');
+        if(previousOutput&&previousOutput.status!=='deleted'){
+          previousOutput.status='deleted';
+          previousOutput.deletedAt=now();
+          await mediaGateway('media_delete',{ownerId:previousOutput.ownerId,bucket:previousOutput.bucket,path:previousOutput.path}).catch(()=>{});
+        }
+        const prepared=await mediaGateway('media_upload_prepare',{ownerId:job.ownerId,slot:'post',mimeType:'video/mp4',byteSize});
+        const outputAsset={
+          id:uid(),ownerId:job.ownerId,slot:'post',bucket:prepared.bucket,path:prepared.path,
+          mimeType:'video/mp4',mediaType:'video',byteSize,originalName:'Minglora optimized video.mp4',
+          status:'uploading',processingRole:'transcode',transcodeJobId:job.id,createdAt:now()
+        };
+        db.mediaAssets.push(outputAsset);
+        job.outputAssetId=outputAsset.id;
+        job.updatedAt=now();
+        await saveStore();
+        return json(res,200,{assetId:outputAsset.id,upload:{endpoint:prepared.endpoint,token:prepared.token,signedUrl:prepared.signedUrl||null,bucket:prepared.bucket,path:prepared.path}});
+      }
+      if(p==='/api/internal/video-transcode/complete'){
+        const job=jobs.find(item=>item.id===String(input.jobId||''));
+        if(!isVideoTranscodeLeaseValid(job,String(input.leaseToken||'')))return json(res,409,{error:'The video processing lease is no longer valid.'});
+        const outputAsset=(db.mediaAssets||[]).find(asset=>asset.id===String(input.outputAssetId||'')&&asset.id===job.outputAssetId&&asset.ownerId===job.ownerId&&asset.processingRole==='transcode'&&asset.transcodeJobId===job.id&&asset.status==='uploading');
+        const sourceAsset=(db.mediaAssets||[]).find(asset=>asset.id===job.assetId&&asset.ownerId===job.ownerId&&asset.status==='attached');
+        if(!outputAsset||!sourceAsset)return json(res,409,{error:'The original or processed media record is no longer available.'});
+        const completed=await mediaGateway('media_upload_complete',{ownerId:outputAsset.ownerId,assetId:outputAsset.id,slot:'post',originalName:outputAsset.originalName,bucket:outputAsset.bucket,path:outputAsset.path,mimeType:outputAsset.mimeType,byteSize:outputAsset.byteSize});
+        outputAsset.status='attached';
+        outputAsset.attachedTo='transcode:'+sourceAsset.id;
+        outputAsset.completedAt=now();
+        sourceAsset.transcodedAssetId=outputAsset.id;
+        sourceAsset.transcodeStatus='ready';
+        completeVideoTranscodeJob(jobs,{jobId:job.id,leaseToken:job.leaseToken,outputAssetId:outputAsset.id,completedAt:now()});
+        await saveStore();
+        return json(res,200,{ok:true,status:'completed',assetId:outputAsset.id,previewUrl:completed.signedUrl||completed.url||null});
+      }
+      if(p==='/api/internal/video-transcode/heartbeat'){
+        const job=jobs.find(item=>item.id===String(input.jobId||''));
+        const renewed=renewVideoTranscodeLease(jobs,{jobId:job?.id,leaseToken:String(input.leaseToken||'')});
+        if(renewed.status!=='renewed')return json(res,409,{error:'The video processing lease is no longer valid.'});
+        await saveStore();
+        return json(res,200,{ok:true,leaseExpiresAt:renewed.leaseExpiresAt});
+      }
+      if(p==='/api/internal/video-transcode/fail'){
+        const job=jobs.find(item=>item.id===String(input.jobId||''));
+        if(!isVideoTranscodeLeaseValid(job,String(input.leaseToken||'')))return json(res,409,{error:'The video processing lease is no longer valid.'});
+        const updated=failVideoTranscodeJob(jobs,{jobId:job.id,leaseToken:job.leaseToken,errorCode:String(input.errorCode||'TRANSCODE_FAILED').replace(/[^A-Z0-9_]/gi,'').slice(0,48)||'TRANSCODE_FAILED'});
+        if(!updated||updated.status==='conflict')return json(res,409,{error:'The video processing job could not be updated.'});
+        const sourceAsset=(db.mediaAssets||[]).find(asset=>asset.id===job.assetId&&asset.ownerId===job.ownerId);
+        if(sourceAsset)sourceAsset.transcodeStatus=updated.status;
+        await saveStore();
+        return json(res,200,{ok:true,status:updated.status,availableAt:updated.availableAt||null});
+      }
+      return json(res,404,{error:'Video processing endpoint not found.'});
+    }
     const user = sessionUser(req);
+    const activeHelpSession=user?sessionFromRequest(req):null;
+    const helpActor={
+      actorUserId:user?.id||'',
+      mfaVerified:activeHelpSession?.mfaVerified===true
+    };
+    const helpRespond=async(action,payload={})=>{
+      try{return json(res,200,await helpCenterGateway(action,{...payload,...helpActor}));}
+      catch(error){return json(res,error.status||503,{error:error.message||'Minglora Help Center is unavailable.'});}
+    };
+    if(method==='GET'&&p==='/api/help-center/bootstrap'){
+      return helpRespond('bootstrap',{locale:String(url.searchParams.get('locale')||'en').slice(0,16)});
+    }
+    if(method==='GET'&&p==='/api/help-center/search'){
+      return helpRespond('search',{locale:String(url.searchParams.get('locale')||'en').slice(0,16),
+        query:String(url.searchParams.get('query')||'').slice(0,120),
+        categorySlug:String(url.searchParams.get('category')||'').slice(0,120),
+        subcategorySlug:String(url.searchParams.get('subcategory')||'').slice(0,120),
+        limit:Math.max(1,Math.min(50,Number(url.searchParams.get('limit')||20))),
+        offset:Math.max(0,Math.min(10000,Number(url.searchParams.get('offset')||0)))});
+    }
+    const helpArticleMatch=p.match(/^\/api\/help-center\/articles\/([a-z0-9-]+)$/);
+    if(method==='GET'&&helpArticleMatch)return helpRespond('article',{slug:helpArticleMatch[1],locale:String(url.searchParams.get('locale')||'en').slice(0,16)});
+    if(p.startsWith('/api/help-center/')&&['POST','PATCH','DELETE'].includes(method)&&!user){
+      return json(res,401,{error:'Sign in to use this Help Center feature.'});
+    }
+    if(method==='POST'&&p==='/api/help-center/record-view')return helpRespond('record_view',{translationId:String(input.translationId||'')});
+    if(method==='POST'&&p==='/api/help-center/feedback')return helpRespond('feedback',{translationId:String(input.translationId||''),helpful:input.helpful,note:String(input.note||'').slice(0,1000)});
+    if(method==='GET'&&p==='/api/help-center/bookmarks')return user?helpRespond('bookmarks'):json(res,401,{error:'Sign in to view saved answers.'});
+    if(method==='GET'&&p==='/api/help-center/view-history')return user?helpRespond('view_history'):json(res,401,{error:'Sign in to view recently accessed answers.'});
+    if(method==='POST'&&p==='/api/help-center/bookmarks')return helpRespond('bookmark_add',{translationId:String(input.translationId||'')});
+    const helpBookmarkMatch=p.match(/^\/api\/help-center\/bookmarks\/([0-9a-f-]{36})$/i);
+    if(method==='DELETE'&&helpBookmarkMatch)return helpRespond('bookmark_remove',{translationId:helpBookmarkMatch[1]});
+    if(method==='GET'&&p==='/api/help-center/admin/access'){
+      return helpRespond('bootstrap',{locale:'en'});
+    }
+    if(method==='GET'&&p==='/api/help-center/admin/overview')return helpRespond('admin_overview',{locale:String(url.searchParams.get('locale')||'en').slice(0,16)});
+    if(method==='GET'&&p==='/api/help-center/admin/revisions')return helpRespond('admin_revisions',{translationId:String(url.searchParams.get('translationId')||'')});
+    if(method==='GET'&&p==='/api/help-center/admin/article')return helpRespond('admin_article_get',{translationId:String(url.searchParams.get('translationId')||'')});
+    if(method==='GET'&&p==='/api/help-center/admin/feedback')return helpRespond('admin_feedback',{limit:Math.max(1,Math.min(100,Number(url.searchParams.get('limit')||50)))});
+    if(method==='POST'&&p==='/api/help-center/admin/articles')return helpRespond('admin_article_save',input||{});
+    if(method==='POST'&&p==='/api/help-center/admin/merge')return helpRespond('admin_merge_articles',{
+      sourceArticleId:String(input.sourceArticleId||''),targetArticleId:String(input.targetArticleId||'')
+    });
+    if(method==='POST'&&p==='/api/help-center/admin/media')return helpRespond('admin_media_upload',input||{});
+    if(method==='POST'&&p==='/api/help-center/admin/transitions')return helpRespond('admin_transition',input||{});
+    if(method==='POST'&&p==='/api/help-center/admin/restore-revision')return helpRespond('admin_restore_revision',input||{});
+    if(method==='POST'&&p==='/api/help-center/admin/categories')return helpRespond('admin_category_save',input||{});
+    if(method==='POST'&&p==='/api/help-center/admin/subcategories')return helpRespond('admin_subcategory_save',input||{});
     if(method==='GET'&&p==='/api/auth/providers'){
       if(AUTH_PROVIDER!=='supabase')return json(res,503,{error:'Social sign-in requires Minglora Supabase Auth.',providers:[]});
       try{
@@ -3489,14 +3797,18 @@ async function route(req, res) {
         if (!isLiveKitConfigured()) return json(res, 503, { error: 'Live video is not configured. Add Minglora LIVEKIT_URL, LIVEKIT_API_KEY and LIVEKIT_API_SECRET to the server environment.' });
         const liveHealth = await verifyLiveKitConnection();
         if (!liveHealth.connected) return json(res, 503, { error: liveHealth.error || 'Minglora could not verify its LiveKit connection.' });
-        const title = String(input.title || '').trim();
+        const providedTitle = String(input.title || '').trim();
+        const hostDisplayName = Array.from(String(user.name || user.username || 'Minglora').trim()).slice(0, 112).join('') || 'Minglora';
+        // The relational LIVE record requires a non-empty title, so an omitted
+        // user title receives a predictable display title without a schema change.
+        const title = providedTitle || hostDisplayName + "'s LIVE";
         const selectedVisibility = String(input.visibility || 'public');
         const liveMode = String(input.liveMode || (input.broadcastType === 'audio_only' ? 'audio_only' : 'video_audio'));
         const broadcastType = broadcastTypeForLiveMode(liveMode);
         const setupResult = normalizeLiveSettings(input.liveSettings || {});
-        if (!title || title.length > 120 || !['public', 'friends', 'subscribers', 'private'].includes(selectedVisibility) ||
+        if (providedTitle.length > 120 || !['public', 'friends', 'subscribers', 'private'].includes(selectedVisibility) ||
             !LIVE_MODES.includes(liveMode) || !setupResult.valid) {
-          return json(res, 400, { error: !setupResult.valid ? setupResult.error : 'Enter a LIVE title, choose an audience and select a supported LIVE mode.' });
+          return json(res, 400, { error: !setupResult.valid ? setupResult.error : providedTitle.length > 120 ? 'LIVE titles can be up to 120 characters.' : 'Choose an audience and select a supported LIVE mode.' });
         }
         const liveSettings = setupResult.settings;
         const visibility = liveSettings.practiceMode
@@ -3523,7 +3835,7 @@ async function route(req, res) {
         const liveTheme = LIVE_ROOM_THEMES.includes(requestedLiveTheme) ? requestedLiveTheme : DEFAULT_SETTINGS.preferences.liveRoomTheme;
         ensureLiveFanClubCollections(db);
         const session = {
-          id, roomName, hostId: user.id, title, visibility, broadcastType, liveMode, liveSettings, liveLayout: 'full-screen',
+          id, roomName, hostId: user.id, title, visibility, broadcastType, liveMode, liveSettings, liveLayout: 'full-screen', liveGuestLayout: 'roundtable-1',
           description: liveSettings.aboutMe, liveTheme, likeCount: 0, status: 'live', createdAt: now(), endedAt: null
         };
         await requestSupabaseState('live_broadcast_create',{
@@ -3534,7 +3846,8 @@ async function route(req, res) {
         db.liveSessions.unshift(session);
         if(visibility==='public'){
           const followerIds=[...new Set(activeFollows().filter(edge=>edge.followedId===user.id).map(edge=>edge.followerId))];
-          for(const followerId of followerIds)if(!blockedBetween(followerId,user.id))notify(followerId,user.id,'live',user.name+' is LIVE: '+title,{liveSessionId:id});
+          const liveNotice = providedTitle ? hostDisplayName+' is LIVE: '+title : hostDisplayName+' is LIVE now';
+          for(const followerId of followerIds)if(!blockedBetween(followerId,user.id))notify(followerId,user.id,'live',liveNotice,{liveSessionId:id});
         }
         await saveStore();
         return json(res, 201, { session, liveKit: { ...liveKit, role: 'host' } });
@@ -3619,6 +3932,18 @@ async function route(req, res) {
         session.liveLayout = layout;
         await saveStore();
         return json(res, 200, { ok: true, liveLayout: session.liveLayout });
+      }
+      const liveGuestLayoutMatch = p.match(/^\/api\/live\/sessions\/([^/]+)\/guest-layout$/);
+      if (liveGuestLayoutMatch) {
+        if (method !== 'PATCH') return json(res, 405, { error: 'Use PATCH to update the LIVE guest-box layout.' });
+        const session = (db.liveSessions || []).find(item => item.id === liveGuestLayoutMatch[1] && item.status === 'live');
+        if (!session || blockedBetween(user.id, session.hostId)) return json(res, 404, { error: 'LIVE session not found.' });
+        if (session.hostId !== user.id) return json(res, 403, { error: 'Only the LIVE host can change the guest-box layout.' });
+        const layout = String(input.layout || '');
+        if (!LIVE_GUEST_LAYOUTS.includes(layout)) return json(res, 400, { error: 'Choose Roundtable 1 or Roundtable 2 for the LIVE guest-box layout.' });
+        session.liveGuestLayout = layout;
+        await saveStore();
+        return json(res, 200, { ok: true, liveGuestLayout: session.liveGuestLayout });
       }
       const liveModeratorsMatch = p.match(/^\/api\/live\/sessions\/([^/]+)\/moderators(?:\/([^/]+))?$/);
       if (liveModeratorsMatch) {
@@ -5412,6 +5737,255 @@ async function route(req, res) {
           return json(res,200,{posts:page.items,nextCursor:page.nextCursor,hasMore:page.hasMore,scope});
         } catch (e) { return json(res,400,{error:e.message}); }
       }
+      if(method==='GET'&&p==='/api/creator/video-analytics'){
+        const rawDays=Number(url.searchParams.get('days')||30);
+        if(![7,30,90].includes(rawDays))return json(res,400,{error:'Analytics period must be 7, 30 or 90 days.'});
+        const creatorVideos=(db.posts||[]).filter(post=>
+          post.userId===user.id&&post.status!=='hidden'&&!post.archivedAt&&
+          (post.mediaIds||[]).some(assetId=>{
+            const asset=(db.mediaAssets||[]).find(item=>item.id===assetId);
+            return asset&&asset.status==='attached'&&asset.mediaType==='video';
+          })
+        );
+        const analytics=summarizeCreatorVideoAnalytics(creatorVideos,db.videoWatchEvents||[],user.id,Date.now(),rawDays,db.users||[]);
+        return json(res,200,analytics);
+      }
+
+      if(method==='GET'&&p==='/api/video-channels/subscriptions'){
+        const subscriptions=(db.videoChannelSubscriptions||[])
+          .filter(item=>item.subscriberId===user.id)
+          .sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));
+        const channels=[];
+        const visibleOwnerIds=new Set();
+        for(const subscription of subscriptions){
+          const owner=(db.users||[]).find(member=>member.id===subscription.ownerId);
+          const channel=getVideoChannel(subscription.ownerId);
+          if(!owner||!channel||blockedBetween(user.id,owner.id)||!canViewProfile(user.id,owner)||
+             !canViewVideoChannel(channel,user.id,{isBlocked:blockedBetween(user.id,owner.id),allowUnlisted:true}))continue;
+          visibleOwnerIds.add(owner.id);
+          channels.push(await publicVideoChannel(channel,user.id));
+        }
+        const uploadPosts=(db.posts||[])
+          .filter(post=>visibleOwnerIds.has(post.userId)&&isVisibleVideoPost(user.id,post))
+          .sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0))
+          .slice(0,60);
+        const videos=[];
+        for(const post of uploadPosts){
+          const channel=getVideoChannel(post.userId);
+          const published=await publicPost(post,user.id);
+          if((published.media||[]).some(media=>media.mediaType==='video'&&media.url)){
+            videos.push({...published,channel:{ownerId:post.userId,title:channel.title,owner:safeUser(db.users.find(member=>member.id===post.userId),user.id)}});
+          }
+        }
+        const announcements=(await Promise.all((db.videoChannelPosts||[])
+          .filter(post=>visibleOwnerIds.has(post.ownerId)&&post.status==='published')
+          .sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0)).slice(0,60)
+          .map(async post=>{
+            const channel=getVideoChannel(post.ownerId),published=await publicVideoChannelPost(post,user.id);
+            return published?{...published,channel:{ownerId:post.ownerId,title:channel?.title||'Creator channel'}}:null;
+          }))).filter(Boolean);
+        return json(res,200,{channels,videos,announcements});
+      }
+      if(method==='GET'&&p==='/api/video-channels'){
+        const query=String(url.searchParams.get('q')||'').trim().toLowerCase().slice(0,100);
+        const owners=(db.users||[]).filter(owner=>{
+          if(blockedBetween(user.id,owner.id)||!canViewProfile(user.id,owner))return false;
+          const channel=getVideoChannel(owner.id);
+          if(!channel||channel.visibility!=='public')return false;
+          if(query&&![
+            channel.title,channel.description,owner.name,owner.username
+          ].some(value=>String(value||'').toLowerCase().includes(query)))return false;
+          return (db.posts||[]).some(post=>post.userId===owner.id&&isVisibleVideoPost(user.id,post));
+        });
+        const channels=await Promise.all(owners.slice(0,60).map(owner=>publicVideoChannel(getVideoChannel(owner.id),user.id)));
+        channels.sort((a,b)=>b.subscriberCount-a.subscriberCount||b.videoCount-a.videoCount||String(b.updatedAt||b.createdAt||'').localeCompare(String(a.updatedAt||a.createdAt||'')));
+        return json(res,200,{channels});
+      }
+      if(method==='PATCH'&&p==='/api/video-channels/me'){
+        const validation=validateVideoChannelInput(input,{partial:true});
+        if(!validation.valid)return json(res,400,{error:validation.errors.join(' ')});
+        let channel=(db.videoChannels||[]).find(item=>item.ownerId===user.id&&!item.deletedAt);
+        if(!channel){
+          channel={id:uid(),ownerId:user.id,title:String(user.name||user.username||'Minglora Channel').trim(),description:'',visibility:'public',createdAt:now(),updatedAt:now()};
+          db.videoChannels.push(channel);
+        }
+        Object.assign(channel,validation.value,{updatedAt:now()});
+        await saveStore();
+        return json(res,200,{channel:await publicVideoChannel(channel,user.id)});
+      }
+      if(method==='POST'&&p==='/api/video-channels/me/posts'){
+        const validation=validateVideoChannelPostInput(input);
+        if(!validation.valid)return json(res,400,{error:validation.errors.join(' ')});
+        let channel=(db.videoChannels||[]).find(item=>item.ownerId===user.id&&!item.deletedAt);
+        if(!channel){
+          channel={id:uid(),ownerId:user.id,title:String(user.name||user.username||'Minglora Channel').trim(),description:'',visibility:'public',createdAt:now(),updatedAt:now()};
+          db.videoChannels.push(channel);
+        }
+        const posts=db.videoChannelPosts||(db.videoChannelPosts=[]);
+        const created=createVideoChannelPost(posts,{id:uid(),ownerId:user.id,...validation.value,createdAt:now()});
+        if(created.status==='limit')return json(res,429,{error:'You have reached the 500 active channel-update limit.'});
+        if(created.status!=='created')return json(res,400,{error:'The channel update could not be published.'});
+        await saveStore();
+        return json(res,201,{post:await publicVideoChannelPost(created.post,user.id)});
+      }
+      const videoChannelPostRoute=p.match(/^\/api\/video-channel-posts\/([^/]+)$/);
+      if(method==='PATCH'&&videoChannelPostRoute){
+        const updated=updateVideoChannelPost(db.videoChannelPosts||[],{postId:decodeURIComponent(videoChannelPostRoute[1]),ownerId:user.id,input,updatedAt:now()});
+        if(updated.status==='not_found')return json(res,404,{error:'Channel update not found.'});
+        if(updated.status!=='updated')return json(res,400,{error:updated.errors?.join(' ')||'The channel update could not be changed.'});
+        await saveStore();
+        return json(res,200,{post:await publicVideoChannelPost(updated.post,user.id)});
+      }
+      if(method==='DELETE'&&videoChannelPostRoute){
+        const removed=deleteVideoChannelPost(db.videoChannelPosts||[],{postId:decodeURIComponent(videoChannelPostRoute[1]),ownerId:user.id,deletedAt:now()});
+        if(removed.status!=='deleted')return json(res,404,{error:'Channel update not found.'});
+        await saveStore();
+        return json(res,200,{ok:true,id:removed.post.id});
+      }
+      const videoChannelSubscribeRoute=p.match(/^\/api\/video-channels\/([^/]+)\/subscribe$/);
+      if(videoChannelSubscribeRoute&&method==='POST'){
+        const ownerId=decodeURIComponent(videoChannelSubscribeRoute[1]);
+        const owner=(db.users||[]).find(member=>member.id===ownerId);
+        const channel=getVideoChannel(ownerId);
+        if(!owner||!channel||blockedBetween(user.id,ownerId)||!canViewProfile(user.id,owner)||
+           !canViewVideoChannel(channel,user.id,{isBlocked:blockedBetween(user.id,ownerId),allowUnlisted:true})) {
+          return json(res,404,{error:'Video channel not found.'});
+        }
+        const result=subscribeToVideoChannel(db.videoChannelSubscriptions,{
+          ownerId,subscriberId:user.id,id:uid(),createdAt:now()
+        });
+        if(result.status==='exists')return json(res,200,{ok:true,alreadySubscribed:true});
+        if(result.status==='invalid')return json(res,400,{error:'You cannot subscribe to your own channel.'});
+        if(result.status==='limit')return json(res,429,{error:'You have reached the '+VIDEO_CHANNEL_MAX_SUBSCRIPTIONS+' channel subscription limit.'});
+        if(result.status!=='created')return json(res,400,{error:'The channel subscription could not be saved.'});
+        await saveStore();
+        return json(res,201,{ok:true,subscribed:true,channel:await publicVideoChannel(channel,user.id)});
+      }
+      if(videoChannelSubscribeRoute&&method==='DELETE'){
+        const ownerId=decodeURIComponent(videoChannelSubscribeRoute[1]);
+        const result=unsubscribeFromVideoChannel(db.videoChannelSubscriptions,{ownerId,subscriberId:user.id});
+        if(result.status==='removed')await saveStore();
+        return json(res,200,{ok:true,subscribed:false});
+      }
+      const videoChannelRoute=p.match(/^\/api\/video-channels\/([^/]+)$/);
+      if(videoChannelRoute&&method==='GET'){
+        const ownerId=decodeURIComponent(videoChannelRoute[1]);
+        const owner=(db.users||[]).find(member=>member.id===ownerId);
+        const channel=getVideoChannel(ownerId);
+        if(!owner||!channel||blockedBetween(user.id,ownerId)||!canViewProfile(user.id,owner)||
+           !canViewVideoChannel(channel,user.id,{isBlocked:blockedBetween(user.id,ownerId),allowUnlisted:true})) {
+          return json(res,404,{error:'Video channel not found.'});
+        }
+        const publicChannel=await publicVideoChannel(channel,user.id,{includeVideos:true});
+        publicChannel.posts=await listPublicVideoChannelPosts(ownerId,user.id,30);
+        return json(res,200,{channel:publicChannel});
+      }
+
+      if(method==='GET'&&p==='/api/video-playlists'){
+        const requestedOwnerId=String(url.searchParams.get('ownerId')||user.id).trim();
+        const owner=(db.users||[]).find(member=>member.id===requestedOwnerId);
+        if(!owner||blockedBetween(user.id,requestedOwnerId))return json(res,200,{playlists:[]});
+        const own=requestedOwnerId===user.id;
+        const playlists=(db.videoPlaylists||[])
+          .filter(playlist=>playlist.ownerId===requestedOwnerId&&!playlist.deletedAt)
+          .filter(playlist=>canViewVideoPlaylist(playlist,user.id,{
+            isFriend:(viewerId,ownerId)=>isFriend(viewerId,ownerId),
+            isBlocked:blockedBetween(user.id,requestedOwnerId),
+            allowUnlisted:own
+          }))
+          .sort((a,b)=>new Date(b.updatedAt||b.createdAt)-new Date(a.updatedAt||a.createdAt));
+        const cards=await Promise.all(playlists.map(playlist=>publicVideoPlaylist(playlist,user.id)));
+        return json(res,200,{playlists:cards});
+      }
+      if(method==='POST'&&p==='/api/video-playlists'){
+        const validation=validateVideoPlaylistInput(input);
+        if(!validation.valid)return json(res,400,{error:validation.errors.join(' ')});
+        const owned=(db.videoPlaylists||[]).filter(playlist=>playlist.ownerId===user.id&&!playlist.deletedAt);
+        if(owned.length>=100)return json(res,429,{error:'You have reached the limit of 100 video playlists.'});
+        const timestamp=now();
+        const playlist={
+          id:uid(),ownerId:user.id,...validation.value,createdAt:timestamp,updatedAt:timestamp
+        };
+        db.videoPlaylists.push(playlist);
+        await saveStore();
+        return json(res,201,{playlist:await publicVideoPlaylist(playlist,user.id)});
+      }
+      const playlistItemsRoute=p.match(/^\/api\/video-playlists\/([^/]+)\/items(?:\/([^/]+))?$/);
+      if(playlistItemsRoute&&method==='POST'&&playlistItemsRoute[2]===undefined){
+        const playlist=(db.videoPlaylists||[]).find(item=>item.id===playlistItemsRoute[1]&&!item.deletedAt);
+        if(!playlist)return json(res,404,{error:'Video playlist not found.'});
+        if(playlist.ownerId!==user.id)return json(res,403,{error:'Only the playlist owner can add videos.'});
+        const post=(db.posts||[]).find(item=>item.id===String(input.postId||''));
+        if(!isVisibleVideoPost(user.id,post))return json(res,404,{error:'The selected video is not available to this account.'});
+        const result=addVideoPlaylistItem(db.videoPlaylistItems,{
+          playlistId:playlist.id,postId:post.id,actorId:user.id,ownerId:playlist.ownerId,id:uid(),createdAt:now()
+        });
+        if(result.status==='exists')return json(res,200,{ok:true,alreadyAdded:true,item:result.item});
+        if(result.status==='limit')return json(res,400,{error:'A playlist can contain up to '+VIDEO_PLAYLIST_MAX_ITEMS+' videos.'});
+        if(result.status!=='created')return json(res,400,{error:'The video could not be added to this playlist.'});
+        playlist.updatedAt=now();
+        await saveStore();
+        return json(res,201,{ok:true,item:result.item});
+      }
+      if(playlistItemsRoute&&method==='DELETE'&&playlistItemsRoute[2]!==undefined){
+        const playlist=(db.videoPlaylists||[]).find(item=>item.id===playlistItemsRoute[1]&&!item.deletedAt);
+        if(!playlist)return json(res,404,{error:'Video playlist not found.'});
+        if(playlist.ownerId!==user.id)return json(res,403,{error:'Only the playlist owner can remove videos.'});
+        const result=removeVideoPlaylistItem(db.videoPlaylistItems,{
+          playlistId:playlist.id,postId:decodeURIComponent(playlistItemsRoute[2]),actorId:user.id,ownerId:playlist.ownerId
+        });
+        if(result.status==='not_found')return json(res,404,{error:'The video is not in this playlist.'});
+        if(result.status!=='removed')return json(res,400,{error:'The playlist item could not be removed.'});
+        playlist.updatedAt=now();
+        await saveStore();
+        return json(res,200,{ok:true,removedPostId:result.item.postId});
+      }
+      const playlistOrderRoute=p.match(/^\/api\/video-playlists\/([^/]+)\/order$/);
+      if(method==='PUT'&&playlistOrderRoute){
+        const playlist=(db.videoPlaylists||[]).find(item=>item.id===playlistOrderRoute[1]&&!item.deletedAt);
+        if(!playlist)return json(res,404,{error:'Video playlist not found.'});
+        if(playlist.ownerId!==user.id)return json(res,403,{error:'Only the playlist owner can reorder videos.'});
+        if(!Array.isArray(input.orderedPostIds)||input.orderedPostIds.length>VIDEO_PLAYLIST_MAX_ITEMS)return json(res,400,{error:'Provide the complete ordered list of playlist video IDs.'});
+        const result=reorderVideoPlaylistItems(db.videoPlaylistItems,{
+          playlistId:playlist.id,orderedPostIds:input.orderedPostIds,actorId:user.id,ownerId:playlist.ownerId
+        });
+        if(result.status==='invalid_order')return json(res,400,{error:'Reorder must contain every playlist video exactly once.'});
+        if(result.status!=='reordered')return json(res,400,{error:'The playlist could not be reordered.'});
+        playlist.updatedAt=now();
+        await saveStore();
+        return json(res,200,{ok:true,orderedPostIds:result.items.map(item=>item.postId)});
+      }
+      const playlistRoute=p.match(/^\/api\/video-playlists\/([^/]+)$/);
+      if(playlistRoute&&method==='GET'){
+        const playlist=(db.videoPlaylists||[]).find(item=>item.id===playlistRoute[1]&&!item.deletedAt);
+        if(!playlist||!canViewVideoPlaylist(playlist,user.id,{
+          isFriend:(viewerId,ownerId)=>isFriend(viewerId,ownerId),
+          isBlocked:blockedBetween(user.id,playlist?.ownerId),
+          allowUnlisted:true
+        }))return json(res,404,{error:'Video playlist not found.'});
+        return json(res,200,{playlist:await publicVideoPlaylist(playlist,user.id,{includeVideos:true})});
+      }
+      if(playlistRoute&&method==='PATCH'){
+        const playlist=(db.videoPlaylists||[]).find(item=>item.id===playlistRoute[1]&&!item.deletedAt);
+        if(!playlist)return json(res,404,{error:'Video playlist not found.'});
+        if(playlist.ownerId!==user.id)return json(res,403,{error:'Only the playlist owner can update it.'});
+        const validation=validateVideoPlaylistInput(input,{partial:true});
+        if(!validation.valid)return json(res,400,{error:validation.errors.join(' ')});
+        Object.assign(playlist,validation.value,{updatedAt:now()});
+        await saveStore();
+        return json(res,200,{playlist:await publicVideoPlaylist(playlist,user.id)});
+      }
+      if(playlistRoute&&method==='DELETE'){
+        const playlist=(db.videoPlaylists||[]).find(item=>item.id===playlistRoute[1]&&!item.deletedAt);
+        if(!playlist)return json(res,404,{error:'Video playlist not found.'});
+        if(playlist.ownerId!==user.id)return json(res,403,{error:'Only the playlist owner can delete it.'});
+        db.videoPlaylists=db.videoPlaylists.filter(item=>item.id!==playlist.id);
+        db.videoPlaylistItems=db.videoPlaylistItems.filter(item=>item.playlistId!==playlist.id);
+        await saveStore();
+        return json(res,200,{ok:true,deleted:true});
+      }
+
+
       if(method==='GET'&&p==='/api/for-you/videos'){
         const scope=String(url.searchParams.get('scope')||'for-you');
         if(!['for-you','following'].includes(scope))return json(res,400,{error:'Video feed scope must be for-you or following.'});
@@ -5432,9 +6006,9 @@ async function route(req, res) {
             return asset&&asset.status==='attached'&&asset.mediaType==='video';
           })
         );
-        const excludedFeedback=(db.videoFeedback||[]).filter(item=>item.userId===user.id&&item.action==='not_interested');
+        const viewerFeedback=(db.videoFeedback||[]).filter(item=>item.userId===user.id);
         const orderedPosts=scope==='for-you'
-          ?rankForYouVideos(visiblePosts,user.id,activeFollows(),db.savedPosts||[],db.videoWatchEvents||[],excludedFeedback)
+          ?rankForYouVideos(visiblePosts,user.id,activeFollows(),db.savedPosts||[],db.videoWatchEvents||[],viewerFeedback)
           :visiblePosts.slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
         const page=orderedPosts.slice(offset,offset+rawLimit+1);
         const hasMore=page.length>rawLimit;
@@ -5455,6 +6029,12 @@ async function route(req, res) {
         const watchedMs=Number(input.watchedMs),durationMs=Number(input.durationMs);
         if(!Number.isFinite(watchedMs)||!Number.isFinite(durationMs)||watchedMs<0||durationMs<1000||durationMs>3600000)return json(res,400,{error:'Invalid video watch event.'});
         const safeDurationMs=Math.round(durationMs);
+        const hasPosition=input.positionMs!==undefined&&input.positionMs!==null;
+        const requestedPositionMs=hasPosition?input.positionMs:null;
+        if(hasPosition&&(!Number.isSafeInteger(requestedPositionMs)||requestedPositionMs<0||requestedPositionMs>safeDurationMs)){
+          return json(res,400,{error:'Invalid video playback position.'});
+        }
+        const safePositionMs=hasPosition?requestedPositionMs:null;
         const safeWatchedMs=Math.min(Math.round(watchedMs),Math.round(safeDurationMs*1.5),600000);
         if(safeWatchedMs<1000)return json(res,200,{tracked:false});
         const completed=safeWatchedMs>=Math.max(5000,safeDurationMs*0.85);
@@ -5464,9 +6044,14 @@ async function route(req, res) {
           recent.watchedMs=Math.min(Math.round(safeDurationMs*1.5),Number(recent.watchedMs||0)+safeWatchedMs);
           recent.durationMs=safeDurationMs;
           recent.completed=recent.completed===true||completed;
+          if(safePositionMs!==null){
+            recent.positionMs=Math.max(Number.isSafeInteger(recent.positionMs)?recent.positionMs:0,safePositionMs);
+          }
           recent.createdAt=now();
         }else{
-          events.push({id:uid(),userId:user.id,postId:post.id,authorId:post.userId,watchedMs:safeWatchedMs,durationMs:safeDurationMs,completed,createdAt:now()});
+          const event={id:uid(),userId:user.id,postId:post.id,authorId:post.userId,watchedMs:safeWatchedMs,durationMs:safeDurationMs,completed,createdAt:now()};
+          if(safePositionMs!==null)event.positionMs=safePositionMs;
+          events.push(event);
         }
         if(events.length>20000)db.videoWatchEvents=events.slice(-20000);
         await saveStore();
@@ -5486,8 +6071,8 @@ async function route(req, res) {
         if(!['not_interested','interested'].includes(action))return json(res,400,{error:'Video feedback must be not_interested or interested.'});
         const feedback=db.videoFeedback||(db.videoFeedback=[]);
         const existing=feedback.find(item=>item.userId===user.id&&item.postId===post.id);
-        if(existing){existing.action=action;existing.updatedAt=now();}
-        else feedback.push({id:uid(),userId:user.id,postId:post.id,action,createdAt:now(),updatedAt:now()});
+        if(existing){existing.action=action;existing.authorId=post.userId;existing.updatedAt=now();}
+        else feedback.push({id:uid(),userId:user.id,postId:post.id,authorId:post.userId,action,createdAt:now(),updatedAt:now()});
         await saveStore();
         return json(res,200,{ok:true,action,postId:post.id});
       }
@@ -5542,11 +6127,85 @@ async function route(req, res) {
         await saveStore();
         return json(res,200,{ok:true,id:sound.id});
       }
+      if(method==='GET'&&p==='/api/video-collaborations/invitations'){
+        const invitations=(db.videoCollaborationInvites||[])
+          .filter(invite=>invite.collaboratorId===user.id&&invite.status==='pending')
+          .map(invite=>({invite,post:(db.posts||[]).find(item=>item.id===invite.postId)}))
+          .filter(item=>item.post&&item.post.userId===item.invite.ownerId&&isVisibleVideoPost(user.id,item.post))
+          .map(({invite,post})=>({
+            id:invite.id,postId:post.id,createdAt:invite.createdAt,
+            creator:safeUser(db.users.find(member=>member.id===invite.ownerId),user.id),
+            post:{id:post.id,text:String(post.text||'').slice(0,180),videoFormat:post.videoFormat||'video'}
+          }));
+        return json(res,200,{invitations});
+      }
+      const collaborationResponsePrefix='/api/video-collaborations/invitations/';
+      if(method==='POST'&&p.startsWith(collaborationResponsePrefix)&&p.endsWith('/respond')){
+        const inviteId=decodeURIComponent(p.slice(collaborationResponsePrefix.length,-'/respond'.length));
+        const invite=(db.videoCollaborationInvites||[]).find(item=>item.id===inviteId);
+        if(!invite||invite.collaboratorId!==user.id)return json(res,404,{error:'Collaboration invitation not found.'});
+        const post=(db.posts||[]).find(item=>item.id===invite.postId&&item.userId===invite.ownerId);
+        if(!post||!isVisibleVideoPost(user.id,post))return json(res,404,{error:'The invited video is no longer available to you.'});
+        const response=respondToVideoCollaborationInvite(db.videoCollaborationInvites,{inviteId,collaboratorId:user.id,response:String(input.response||''),respondedAt:now()});
+        if(response.status==='conflict')return json(res,409,{error:'This collaboration invitation has already been answered.'});
+        if(response.status!=='accepted'&&response.status!=='declined')return json(res,400,{error:'Choose accept or decline.'});
+        if(response.status==='accepted')notify(invite.ownerId,user.id,'video_collaboration_response',(user.name||'A Minglora friend')+' accepted your video collaboration invitation.',{postId:post.id,inviteId});
+        await saveStore();
+        return json(res,200,{ok:true,status:response.status,postId:post.id});
+      }
+      const collaboratorPostPrefix='/api/posts/';
+      if(method==='POST'&&p.startsWith(collaboratorPostPrefix)&&p.endsWith('/collaborators')){
+        const postId=decodeURIComponent(p.slice(collaboratorPostPrefix.length,-'/collaborators'.length));
+        const post=(db.posts||[]).find(item=>item.id===postId);
+        if(!post)return json(res,404,{error:'Video post not found.'});
+        if(post.userId!==user.id)return json(res,403,{error:'Only the video creator can invite collaborators.'});
+        if(!isVisibleVideoPost(user.id,post))return json(res,400,{error:'Only a published video post can have collaborators.'});
+        const username=normalizeUsername(input.username).replace(/^@/,'');
+        if(!username||username.length>32)return json(res,400,{error:'Enter a valid Minglora username.'});
+        const collaborator=(db.users||[]).find(member=>normalizeUsername(member.username)===username);
+        if(!collaborator||collaborator.id===user.id||blockedBetween(user.id,collaborator.id))return json(res,404,{error:'That collaborator is not available.'});
+        const mutualFriends=new Set(getMutualFollowIds(activeFollows(),user.id,db.blocks||[]));
+        if(!mutualFriends.has(collaborator.id))return json(res,403,{error:'Video collaboration invitations are limited to your Minglora friends.'});
+        if(!isVisibleVideoPost(collaborator.id,post))return json(res,403,{error:'That friend cannot view this video with its current audience settings.'});
+        db.videoCollaborationInvites||=[];
+        const created=createVideoCollaborationInvite(db.videoCollaborationInvites,{postId:post.id,ownerId:user.id,collaboratorId:collaborator.id,id:uid(),createdAt:now()});
+        if(created.status==='limit')return json(res,409,{error:'This video has reached its five-collaborator limit.'});
+        if(created.status==='exists')return json(res,200,{ok:true,alreadyInvited:true,inviteId:created.invite.id});
+        if(created.status!=='created')return json(res,400,{error:'The collaboration invitation could not be created.'});
+        notify(collaborator.id,user.id,'video_collaboration_invite',(user.name||'A Minglora friend')+' invited you to collaborate on a video.',{postId:post.id,inviteId:created.invite.id});
+        await saveStore();
+        return json(res,201,{ok:true,inviteId:created.invite.id,collaborator:safeUser(collaborator,user.id)});
+      }
+      if(method==='PATCH'&&p.startsWith('/api/posts/')&&p.endsWith('/remix-settings')){
+        const postId=decodeURIComponent(p.slice('/api/posts/'.length,-'/remix-settings'.length));
+        const post=(db.posts||[]).find(item=>item.id===postId);
+        if(!post)return json(res,404,{error:'Video post not found.'});
+        if(post.userId!==user.id)return json(res,403,{error:'Only the video creator can change remix permissions.'});
+        if(!isVisibleVideoPost(user.id,post))return json(res,400,{error:'Remix permissions apply to published video posts.'});
+        const policy=normalizeVideoRemixPolicy(input.policy,null);
+        if(!policy)return json(res,400,{error:'Choose off, everyone, followers or friends.'});
+        post.remixPolicy=policy;
+        await saveStore();
+        return json(res,200,{ok:true,postId:post.id,remixPolicy:policy});
+      }
       if(method==='POST'&&p==='/api/posts'){
         const validation=validatePostInput(input);if(!validation.valid)return json(res,400,{error:validation.errors.join(' ')});
         const {text,mediaIds}=validation.value;const ids=[...new Set(mediaIds)];
         const requestedVideoFormat=input.videoFormat===undefined||input.videoFormat===null?null:String(input.videoFormat);
         if(requestedVideoFormat!==null&&!['video','reel'].includes(requestedVideoFormat))return json(res,400,{error:'Video format must be video or reel.'});
+        const requestedRemixSourceId=String(input.remixOfPostId||'').trim()||null;
+        const requestedRemixPolicy=requestedVideoFormat?normalizeVideoRemixPolicy(input.remixPolicy,'off'):null;
+        if(requestedVideoFormat&&!requestedRemixPolicy)return json(res,400,{error:'Remix policy must be off, everyone, followers or friends.'});
+        if(!requestedVideoFormat&&(requestedRemixSourceId||input.remixPolicy!==undefined))return json(res,400,{error:'Remix settings can only be used with a video post.'});
+        let remixSource=null;
+        if(requestedRemixSourceId){
+          remixSource=(db.posts||[]).find(item=>item.id===requestedRemixSourceId);
+          if(!remixSource||!isVisibleVideoPost(user.id,remixSource))return json(res,404,{error:'The original video is not available to remix.'});
+          const currentFollows=activeFollows();
+          const isFollowing=currentFollows.some(edge=>edge.followerId===user.id&&edge.followedId===remixSource.userId);
+          const isFriend=getMutualFollowIds(currentFollows,user.id,db.blocks||[]).includes(remixSource.userId);
+          if(!canRemixVideo(remixSource,user.id,{isVisible:true,isBlocked:blockedBetween(user.id,remixSource.userId),isFollowing,isFriend}))return json(res,403,{error:'The original creator has not allowed you to remix this video.'});
+        }
         const audience=String(input.audience||'public');
         if(!['public','friends','close_friends','followers','private'].includes(audience))return json(res,400,{error:'Unsupported post audience.'});
         const feeling=String(input.feeling||'').trim(),activity=String(input.activity||'').trim(),location=String(input.location||'').trim(),background=String(input.background||'').trim();
@@ -5560,10 +6219,12 @@ async function route(req, res) {
         const assets=ids.map(id=>(db.mediaAssets||[]).find(asset=>asset.id===id&&asset.ownerId===user.id&&asset.slot==='post'&&asset.status==='uploaded'));
         if(assets.some(asset=>!asset))return json(res,400,{error:'One or more selected media files are no longer available. Upload them again.'});
         if(requestedVideoFormat&&(assets.length!==1||assets[0]?.mediaType!=='video'))return json(res,400,{error:'A video or Reel post must contain exactly one uploaded video file.'});
-        const post={id:uid(),userId:user.id,text,mediaIds:ids,soundtrack,audience,...(feeling?{feeling}:{}),...(activity?{activity}:{}),...(location?{location}:{}),...(background&&!ids.length?{background}:{}),...(requestedTagIds.length?{taggedUserIds:requestedTagIds}:{}),...(requestedVideoFormat?{videoFormat:requestedVideoFormat}:{}),createdAt:now(),reactions:{},comments:[]};
-        assets.forEach(asset=>{asset.status='attached';asset.attachedTo=post.id;});db.posts.unshift(post);
+        const post={id:uid(),userId:user.id,text,mediaIds:ids,soundtrack,audience,...(feeling?{feeling}:{}),...(activity?{activity}:{}),...(location?{location}:{}),...(background&&!ids.length?{background}:{}),...(requestedTagIds.length?{taggedUserIds:requestedTagIds}:{}),...(requestedVideoFormat?{videoFormat:requestedVideoFormat,remixPolicy:requestedRemixPolicy}:{}),...(remixSource?{remixOfPostId:remixSource.id}:{}),createdAt:now(),reactions:{},comments:[]};
+        assets.forEach(asset=>{asset.status='attached';asset.attachedTo=post.id;enqueueAttachedVideoTranscode(asset,post);});db.posts.unshift(post);
         requestedTagIds.forEach(taggedId=>{const taggedMember=db.users.find(member=>member.id===taggedId);if(taggedMember)notify(taggedId,user.id,'post_tagged',(user.name||'A Minglora friend')+' tagged you in a post.',{postId:post.id});});
-        await saveStore();return json(res,201,{post:await publicPost(post,user.id)});
+        if(remixSource)notify(remixSource.userId,user.id,'video_remix',(user.name||'A Minglora member')+' remixed your video.',{postId:remixSource.id,remixPostId:post.id});
+        await saveStore();
+        return json(res,201,{post:await publicPost(post,user.id)});
       }
       let m=p.match(/^\/api\/posts\/([^/]+)$/);
       if(method==='PATCH'&&m){
@@ -5582,8 +6243,9 @@ async function route(req, res) {
         const ids=[...new Set(validation.value.mediaIds)],assets=ids.map(id=>(db.mediaAssets||[]).find(asset=>asset.id===id&&asset.ownerId===user.id&&asset.slot==='post'&&(asset.status==='uploaded'||asset.attachedTo===post.id)));
         if(assets.some(asset=>!asset))return json(res,400,{error:'One or more selected media files are not available to this post.'});
         (db.mediaAssets||[]).filter(asset=>asset.attachedTo===post.id&&!ids.includes(asset.id)).forEach(asset=>{asset.status='uploaded';delete asset.attachedTo;});
-        assets.forEach(asset=>{asset.status='attached';asset.attachedTo=post.id;});
-        post.text=validation.value.text;post.mediaIds=ids;post.soundtrack=nextSoundtrack;post.audience=nextAudience;post.updatedAt=now();await saveStore();return json(res,200,{post:await publicPost(post,user.id)});
+        assets.forEach(asset=>{asset.status='attached';asset.attachedTo=post.id;enqueueAttachedVideoTranscode(asset,post);});
+        post.text=validation.value.text;post.mediaIds=ids;post.soundtrack=nextSoundtrack;post.audience=nextAudience;post.updatedAt=now();await saveStore();
+        return json(res,200,{post:await publicPost(post,user.id)});
       }
       if(method==='DELETE'&&m){
         const post=db.posts.find(x=>x.id===m[1]);
@@ -6553,7 +7215,8 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
         if(assets.some(asset=>!asset))return json(res,400,{error:'One or more selected group media files are unavailable.'});
         const post={id:uid(),groupId:group.id,userId:user.id,text:validation.value.text,mediaIds:ids,createdAt:now(),updatedAt:now()};
         assets.forEach(asset=>{asset.status='attached';asset.attachedTo=post.id;});
-        db.groupPosts.push(post);await saveStore();return json(res,201,{post:await publicGroupPost(post)});
+        db.groupPosts.push(post);await saveStore();
+         return json(res,201,{post:await publicGroupPost(post)});
       }
       m=p.match(/^\/api\/groups\/([^/]+)\/posts\/([^/]+)$/);
       if(method==='DELETE'&&m){
@@ -6603,7 +7266,8 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
         const createdAt=now();
         const story={id:uid(),userId:user.id,text,mediaIds,mediaId:mediaIds[0]||null,soundtrack,audience,createdAt,expiresAt:new Date(Date.now()+24*60*60*1000).toISOString()};
         assets.forEach(asset=>{asset.status='attached';asset.attachedTo=story.id;});
-        db.stories.push(story);await saveStore();return json(res,201,{story:await publicStory(story,user.id)});
+        db.stories.push(story);await saveStore();
+         return json(res,201,{story:await publicStory(story,user.id)});
       }
       m=p.match(/^\/api\/stories\/([^/]+)\/view$/);
       if(method==='POST'&&m){
@@ -6673,7 +7337,8 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
         if(assets.some(asset=>!asset))return json(res,400,{error:'One or more selected Page media files are unavailable.'});
         const post={id:uid(),pageId:page.id,publishedBy:user.id,text:validation.value.text,mediaIds:ids,createdAt:now(),updatedAt:now(),status:'published'};
         assets.forEach(asset=>{asset.status='attached';asset.attachedTo=post.id;});
-        db.pagePosts.push(post);await saveStore();return json(res,201,{post:{...await publicPagePost(post),page:{id:page.id,title:page.title,handle:page.handle}}});
+        db.pagePosts.push(post);await saveStore();
+         return json(res,201,{post:{...await publicPagePost(post),page:{id:page.id,title:page.title,handle:page.handle}}});
       }
       m=p.match(/^\/api\/pages\/([^/]+)\/posts\/([^/]+)$/);
       if(method==='DELETE'&&m){

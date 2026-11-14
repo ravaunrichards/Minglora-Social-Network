@@ -133,6 +133,11 @@ function stripLegacyDemoData(state) {
   state.blocks = (state.blocks || []).filter(b => !demoUsers.has(b.blockerId) && !demoUsers.has(b.blockedId));
   state.savedPosts = (state.savedPosts || []).filter(s => !demoUsers.has(s.userId) && !demoPostIds.has(s.postId));
   state.savedPostCollections = (state.savedPostCollections || []).filter(collection => !demoUsers.has(collection.userId));
+  const removedVideoPlaylistIds = new Set((state.videoPlaylists || []).filter(playlist => demoUsers.has(playlist.ownerId)).map(playlist => playlist.id));
+  state.videoPlaylists = (state.videoPlaylists || []).filter(playlist => !demoUsers.has(playlist.ownerId));
+  state.videoPlaylistItems = (state.videoPlaylistItems || []).filter(item => !removedVideoPlaylistIds.has(item.playlistId) && !demoPostIds.has(item.postId));
+  state.videoChannels = (state.videoChannels || []).filter(channel => !demoUsers.has(channel.ownerId));
+  state.videoChannelSubscriptions = (state.videoChannelSubscriptions || []).filter(subscription => !demoUsers.has(subscription.ownerId) && !demoUsers.has(subscription.subscriberId));
   state.videoWatchEvents = (state.videoWatchEvents || []).filter(event => !demoUsers.has(event.userId) && !demoUsers.has(event.authorId));
   state.videoFeedback = (state.videoFeedback || []).filter(item => !demoUsers.has(item.userId));
   const removedGroupIds = new Set((state.groups || []).filter(g => g.id === 'group-creators').map(g => g.id));

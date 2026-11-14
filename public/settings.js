@@ -1,8 +1,8 @@
 (() => {
   const defaults = {
-    privacy: { profileVisibility: 'public', allowFriendRequests: true, messageAudience: 'everyone', meetWaveAudience: 'everyone' },
+    privacy: { profileVisibility: 'public', allowFriendRequests: true, messageAudience: 'everyone', meetWaveAudience: 'everyone', shareAudienceDemographics: false },
     notifications: { inApp: true, friendRequests: true, messages: true, interactions: true, push: true, profileViews: false, calls: true, live: true, gifts: true, meetWave: true, leagues: true, account: true },
-    preferences: { theme: 'system', colorTheme: 'minglora', liveRoomTheme: 'studio', feedSort: 'recent', reducedMotion: false, liteMode: false, keyboardShortcuts: false, displayCurrency: 'USD', messengerIncomingCallSounds: true, messengerMessageSounds: true, messengerAutoOpenNewMessages: false, messengerActiveStatus: true, profileLayout: 'advanced', messengerArchivedConversationIds: [], messengerRestrictedUserIds: [] }
+    preferences: { theme: 'system', colorTheme: 'minglora', liveRoomTheme: 'studio', feedSort: 'recent', reducedMotion: false, liteMode: false, keyboardShortcuts: false, displayCurrency: 'USD', messengerIncomingCallSounds: true, messengerMessageSounds: true, messengerAutoOpenNewMessages: false, messengerActiveStatus: true, profileLayout: 'advanced', profileStyle: 'facebook', defaultProfileStyle: 'facebook', profileScreenLayout: 'fluid-panel', defaultProfileScreenLayout: 'fluid-panel', messengerArchivedConversationIds: [], messengerRestrictedUserIds: [] }
   };
 
   const APP_THEMES = [
@@ -290,6 +290,7 @@
               <label class="settings-field"><span><strong>Who can invite you to MeetWave?</strong><small>This setting controls meeting invitations only. It does not change direct messages, calls or LIVE access.</small></span>
                 <select name="meetWaveAudience"><option value="everyone" ${settings.privacy.meetWaveAudience === 'everyone' ? 'selected' : ''}>Everyone</option><option value="friends" ${settings.privacy.meetWaveAudience === 'friends' ? 'selected' : ''}>Friends only</option><option value="nobody" ${settings.privacy.meetWaveAudience === 'nobody' ? 'selected' : ''}>Nobody</option></select>
               </label>
+              <label class="settings-toggle"><span><strong>Share anonymous audience demographics</strong><small>Allow your country to be included in aggregate video-audience insights for creators. Country groups appear only when at least five opted-in viewers are in the same group. Your name and account are never shown. Off by default.</small></span><input type="checkbox" name="shareAudienceDemographics" ${settings.privacy.shareAudienceDemographics === true ? 'checked' : ''}></label>
               <div class="settings-subsection-heading"><strong>Who can view your lists?</strong><small>These choices apply to the corresponding profile relationship lists.</small></div>
               ${[['friendsListAudience','Friends list'],['followersListAudience','Followers list'],['followingListAudience','Following list'],['subscribersListAudience','Subscribers list']].map(([name,label])=>`<label class="settings-field"><span><strong>${label}</strong></span><select name="${name}">${[['public','Everyone'],['friends','Friends'],['followers','Followers'],['private','Only you']].map(([value,text])=>`<option value="${value}" ${(settings.privacy[name]||'public')===value?'selected':''}>${text}</option>`).join('')}</select></label>`).join('')}
             </section>
@@ -696,6 +697,7 @@
       let currentMenuPage='home';
       let returnToMenuPage='settings';
       function showSettingsMenuPage(page){
+        if(page==='help-center'){window.location.assign('/help-center.html');return;}
         const target=settingsMenuPages.find(item=>item.dataset.settingsPage===page);
         if(!target)return;
         currentMenuPage=page;settingsNavigation.hidden=false;settingsForm.hidden=true;
@@ -925,6 +927,7 @@
             allowFriendRequests: formData.has('allowFriendRequests'),
             messageAudience: formData.get('messageAudience'),
             meetWaveAudience: formData.get('meetWaveAudience'),
+            shareAudienceDemographics: formData.has('shareAudienceDemographics'),
             friendsListAudience: formData.get('friendsListAudience'),
             followersListAudience: formData.get('followersListAudience'),
             followingListAudience: formData.get('followingListAudience'),
@@ -1029,7 +1032,29 @@
     }
   }
 
+  async function openSupport(destination='contact'){
+    await openSettings();
+    await new Promise(resolve=>window.requestAnimationFrame(()=>window.requestAnimationFrame(resolve)));
+    const click=selector=>{const button=document.querySelector(selector);if(!button)throw new Error('The requested Support option is not available.');button.click();};
+    if(destination==='inbox'){
+      click('#settings-navigation [data-settings-open-page="help-support"]');
+      await new Promise(resolve=>window.requestAnimationFrame(resolve));
+      click('#settings-navigation [data-settings-page="help-support"] [data-settings-title="Support Inbox"]');
+      return true;
+    }
+    if(destination==='report-problem'){
+      click('#settings-navigation [data-settings-open-page="help-support"]');
+      await new Promise(resolve=>window.requestAnimationFrame(resolve));
+      click('#settings-navigation [data-settings-page="help-support"] [data-settings-report-problem]');
+      return true;
+    }
+    click('#settings-navigation [data-settings-open-page="report-support"]');
+    await new Promise(resolve=>window.requestAnimationFrame(resolve));
+    click('#settings-navigation [data-settings-page="report-support"] [data-settings-title="Contact Support"]');
+    return true;
+  }
   window.MingloraSettings = { open: openSettings, render: openSettings };
+  window.MingloraSettings.openSupport = openSupport;
   document.addEventListener('DOMContentLoaded', () => {
     document.querySelector('#rail-settings')?.addEventListener('click', openSettings);
     window.addEventListener('minglora:session-ready', async () => { try { const result = await api('/settings'); applyPreferences(result.settings); window.dispatchEvent(new CustomEvent('minglora:settings-loaded', { detail: result.settings })); } catch {} });

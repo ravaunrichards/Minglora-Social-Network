@@ -150,5 +150,5 @@ test("Gifter progression uses the original ordered Level panels as its primary a
   assert.ok(styles.includes(".gp-art-panel-stack{display:grid;grid-template-columns:minmax(0,1fr);gap:14px"));
   assert.ok(html.includes("/gifter-progression.css?v=20261111-tiktok-readable-badge-size-2"));
   assert.ok(sw.includes("/gifter-progression.css?v=20261111-tiktok-readable-badge-size-2"));
-  assert.ok(sw.includes("minglora-shell-v286-self-updating-1"));
+  assert.match(sw, /const CACHE_NAME='minglora-shell-v\d+-self-updating-1';/);
 });

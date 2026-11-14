@@ -165,6 +165,59 @@ Stories expire after 24 hours; expired records and their view records are remove
 
 Moderator access is restricted to MODERATOR_USER_IDS or a trusted account with an explicit admin/moderator role. Do not add arbitrary member IDs to this list.
 
+## Short-form video and creator analytics
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/api/for-you/videos?scope=for-you` | Read the authenticated member's privacy-filtered, ranked video feed with cursor pagination |
+| POST | `/api/videos/:id/watch` | Record playback duration and watched time, plus an optional bounded `positionMs` sample, for an authorized video |
+| POST | `/api/videos/:id/feedback` | Save `interested` or `not_interested` recommendation feedback |
+| GET | `/api/creator/video-analytics?days=7|30|90` | Read authenticated creator-only aggregated video analytics for their own attached video posts |
+
+Creator analytics aggregate real playback records into distinct viewers, viewer-video pairs, recorded watch time, average watch duration and completion rate. Audience-retention curves use optional, server-bounded playback-position samples and distinct viewers only; a curve is withheld until at least five viewers have supplied valid position data. Older events without position data remain in existing watch metrics but are not backfilled or estimated. No viewer IDs are exposed, and impressions or reach are not inferred. Hidden and archived posts, owner self-views, future events and records outside the selected reporting period are excluded. The endpoint defaults to 30 days and accepts only 7, 30 or 90 days. The response also includes anonymous country-level audience groups: only viewers who enable `settings.privacy.shareAudienceDemographics` are eligible, the setting is off by default, and groups smaller than five are suppressed. No country-level output contains individual viewer identities.
+
+## Video channels
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/api/video-channels` | Discover public creator channels that have real videos visible to the signed-in member; optional `q` searches channel name, description or creator |
+| GET | `/api/video-channels/subscriptions` | List the signed-in member's free video-channel subscriptions and up to 60 newest video posts from those channels, rechecked against current post/profile/block permissions |
+| GET | `/api/video-channels/:ownerId` | Read an accessible creator channel and its latest video posts |
+| PATCH | `/api/video-channels/me` | Create or update the signed-in member's channel name, description and visibility |
+| POST | `/api/video-channels/:ownerId/subscribe` | Subscribe to a public or unlisted video channel |
+| DELETE | `/api/video-channels/:ownerId/subscribe` | Unsubscribe from a video channel |
+| POST | `/api/video-channels/me/posts` | Publish a text update to the signed-in member's channel |
+| PATCH | `/api/video-channel-posts/:id` | Edit an update owned by the signed-in member |
+| DELETE | `/api/video-channel-posts/:id` | Soft-delete an update owned by the signed-in member |
+
+Channel subscriptions are separate from profile follows and paid creator subscriptions. Every channel requires an existing Minglora member; default channel names derive from the member's real account profile until customized. Public channels are discoverable only when they contain at least one video the viewer may access. Unlisted channels are reachable by direct link but omitted from discovery; private channels are owner-only. Channel pages recheck profile, block and per-post audience permissions before returning videos. Subscriptions and channel metadata persist in the signed-in account state for use across devices. A member may subscribe to up to 5,000 channels. The subscription feed also returns a separate `announcements` collection for updates published by subscribed channel owners. Updates are not ordinary feed posts or video uploads; only the owner may publish, edit or soft-delete them, and subscriber reads are rechecked against channel visibility and block rules.
+
+## Video remix and collaboration
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| PATCH | `/api/posts/:id/remix-settings` | Creator-only control of who may remix a published video: `off`, `everyone`, `followers` or `friends` |
+| POST | `/api/posts/:id/collaborators` | Invite an eligible mutual-follow friend to collaborate on the creator's video |
+| GET | `/api/video-collaborations/invitations` | List pending video collaboration invitations addressed to the signed-in member |
+| POST | `/api/video-collaborations/invitations/:id/respond` | Accept or decline an invitation as its intended recipient |
+
+A remix is submitted through `POST /api/posts` with a new member-owned uploaded video asset and `remixOfPostId`; the server verifies that the original is still visible and that the original creator's remix policy permits the caller. The source upload is not reused, overwritten or deleted. The original creator receives an attribution notification. Collaboration invitations are limited to mutual-follow friends who may view the video, are idempotent, and allow at most five pending or accepted collaborators per video. Only the invited account can accept or decline; accepted collaborators are shown on the video attribution.
+
+## Video playlists
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/api/video-playlists` | List the signed-in member's playlists; optional `ownerId` lists playlists visible on another member's profile |
+| POST | `/api/video-playlists` | Create a playlist with a title, optional description and visibility (`private`, `unlisted`, `friends` or `public`) |
+| GET | `/api/video-playlists/:id` | Read a playlist and its currently accessible video posts |
+| PATCH | `/api/video-playlists/:id` | Update playlist metadata and visibility (owner only) |
+| DELETE | `/api/video-playlists/:id` | Delete the playlist and its item references without deleting video posts (owner only) |
+| POST | `/api/video-playlists/:id/items` | Add an existing accessible video post (owner only; duplicate additions are idempotent) |
+| DELETE | `/api/video-playlists/:id/items/:postId` | Remove a video from a playlist without deleting the post (owner only) |
+| PUT | `/api/video-playlists/:id/order` | Reorder the complete visible playlist item set (owner only) |
+
+Playlist APIs require authentication. Each video is rechecked against the current post, profile, relationship and block visibility before it is returned. Private playlists are owner-only; unlisted playlists require the direct link; friends playlists require an accepted friendship; public playlists are discoverable. Playlist metadata and item references are persisted in Minglora's account state for use across signed-in devices. Each playlist accepts up to 500 videos, and each account may create up to 100 playlists.
+
 ## Voice and video calls
 
 | Method | Endpoint | Purpose |
@@ -246,3 +299,31 @@ The designated Creator Hub administrator receives LIVE Pro automatically when th
 - Passwords are never returned in public account objects.
 - Post updates and deletions are restricted to the post author. Unavailable posts in blocked relationships return not found for read/reaction/comment/save flows. Blocking removes the existing friend and follow edges between the two accounts.
 - Current API behavior is defined by `src/server.js`; update this document and tests whenever routes or payloads change.
+
+
+## Automated video-transcoding worker (internal)
+
+The existing video worker calls authenticated server-to-server routes using `Authorization: Bearer VIDEO_TRANSCODE_WORKER_TOKEN`:
+
+| Method | Internal path | Purpose |
+|---|---|---|
+| POST | `/api/internal/video-transcode/claim` | Claim one queued job with a leased token and return a short-lived source URL |
+| POST | `/api/internal/video-transcode/heartbeat` | Renew the current lease during longer encodes |
+| POST | `/api/internal/video-transcode/prepare-output` | Prepare a separate derivative upload through existing signed TUS media upload |
+| POST | `/api/internal/video-transcode/complete` | Verify the derivative upload and switch playback to it |
+| POST | `/api/internal/video-transcode/fail` | Record bounded retry/backoff state |
+
+The worker is packaged by `Dockerfile.video-worker` and runs separately from the web process. Original media remains the fallback; the original upload is never overwritten. See `docs/VIDEO_TRANSCODING.md`.
+
+
+## Creator channel publishing
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/api/video-channels/:ownerId` | Returns channel details, accessible video uploads and recent published updates |
+| POST | `/api/video-channels/me/posts` | Publish a text update to the signed-in member's channel |
+| PATCH | `/api/video-channel-posts/:id` | Edit an update owned by the signed-in member |
+| DELETE | `/api/video-channel-posts/:id` | Soft-delete an update owned by the signed-in member |
+| GET | `/api/video-channels/subscriptions` | Also includes recent updates from the member's subscribed channels |
+
+Channel updates are separate from regular feed posts and video uploads. Titles are limited to 100 characters, messages to 3,000 characters and active updates to 500 per owner. A channel's existing visibility, profile-privacy and block rules control who can read updates; only the owner can edit or delete them.

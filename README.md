@@ -24,7 +24,7 @@ Before enabling production withdrawals, set `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_S
 - Signed HttpOnly application session cookies; Supabase Auth owns production passwords, while salted scrypt hashes remain only for legacy-account migration
 - Profile editing for display name, unique username, bio and location; independent avatar and cover picture editing; organised About sections for Personal details, Intro, Work, Education, Hobbies, Interests, Travel, Links, Contact info, Names, Details and About you, each with its own pencil editor and Public/Friends/Only me visibility; multiple workplace, education and social-media link entries
 - All/Following/Friends feeds backed by persisted relationships, with optional cursor pagination;
-- Dedicated TikTok-style full-screen For You video feed with vertical swipe/scroll snapping, automatic one-video playback, Following/For You tabs, creator actions, watch-time-based personalization, saved/reaction signals, Not interested feedback and cursor-loaded recommendations from real member videos; posts accept uploaded images, video, audio and interactive GLB 3D files (no pasted image URLs)
+- Dedicated vertical For You video feed with watch-time-based personalization, Following/For You tabs, saved/reaction signals, explicit Show me more like this and Not interested feedback that adjusts post and creator ranking and cursor-loaded recommendations from real member videos; Video Centre supports Videos, Reels, Watch Later, privacy-aware cross-device playlists, editable creator channels, separate free channel subscriptions and a latest-uploads feed for subscribed creators; posts accept uploaded images, video, audio and interactive GLB 3D files (no pasted image URLs)
 - Create, edit and delete your own posts, add reactions/comments, and save/unsave posts
 - Friend requests and friend lists, directed follows/unfollows, automatic friendship on reciprocal follow, clickable follower/following lists, block/unblock and profile counts
 - Group creation/browsing, join/leave, group detail pages and member-only text discussions
@@ -61,7 +61,7 @@ These are the capabilities in the **current runtime**, not a claim of Facebook f
 - `tests/`: current API integration tests plus unit tests and test plans for security, accessibility, performance and browser flows.
 - `docs/`: architecture map, feature catalog, roadmap, API, security and deployment guides.
 
-See [the repository map](docs/REPOSITORY_MAP.md), [platform coverage](docs/PLATFORM_COVERAGE.md), [feature implementation status](docs/FEATURES.md), [feature catalog](docs/FEATURE_CATALOG.md), [Facebook feature-parity audit](docs/FACEBOOK_PARITY_AUDIT.md), and [roadmap](docs/ROADMAP.md) for the distinction between live functionality, gaps and planned work.
+See [the repository map](docs/REPOSITORY_MAP.md), [platform coverage](docs/PLATFORM_COVERAGE.md), [global platform capability matrix](docs/GLOBAL-PLATFORM-CAPABILITY-MATRIX.md), [feature implementation status](docs/FEATURES.md), [feature catalog](docs/FEATURE_CATALOG.md), [Facebook feature-parity audit](docs/FACEBOOK_PARITY_AUDIT.md), and [roadmap](docs/ROADMAP.md) for the distinction between live functionality, gaps and planned work.
 
 ## Requirements
 

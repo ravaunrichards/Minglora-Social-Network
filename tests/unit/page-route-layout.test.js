@@ -55,10 +55,12 @@ test('Home navigation and global navigation remain present',()=>{
 
 test('Settings is a real restorable page and uses the shared standalone layout',()=>{
   const settings=fs.readFileSync(path.join(root,'public/settings.js'),'utf8');
-  assert.ok(app.includes("const RESTORABLE_VIEWS=new Set(")&&app.includes("'settings','ai-network']);"),
+  assert.ok(app.includes("const RESTORABLE_VIEWS=new Set(")&&app.includes("'ai-network']);"),
     'Settings can be restored after a page reload');
   assert.ok(app.includes("window.MingloraActivateSilentView=view=>activateSilent(view);"),
     'Dedicated pages can update shared navigation state without rendering twice');
+  assert.ok(app.includes("else if(state.view==='ai-network')await window.MingloraAINetwork?.render();"),
+    'The AI Network route renders through its feature module');
   assert.ok(app.includes("else if(state.view==='settings')await window.MingloraSettings?.render?.();"),
     'The shared route renderer can restore Settings');
   assert.ok(settings.includes("window.MingloraActivateSilentView?.('settings')"),
@@ -68,7 +70,7 @@ test('Settings is a real restorable page and uses the shared standalone layout',
   const appAsset = html.split('\"').find(value => value.startsWith('/app.js?v='));
   assert.ok(appAsset && worker.includes(appAsset),
     'The browser and service worker use the same current page-routing bundle');
-  assert.ok(html.includes('/settings.js?v=20261110-standalone-settings-page-1'),
+  assert.ok(html.includes('/settings.js?v=20261112-profile-style-library-10x9-2'),
     'The browser receives the updated Settings page bundle');
 });
 

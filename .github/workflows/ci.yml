@@ -91,16 +91,24 @@ jobs:
           node --check public/gift-effects.js
           node --check scripts/generate-minglora-gifts.mjs
           node --check scripts/generate-minglora-sound-library.mjs
+          node --check scripts/generate-live-gift-motion-index.mjs
           node --check public/sound-studio-settings.js
           node --check backend/modules/sounds/notification-studio.js
           node --check public/auth-login.js
           node --check public/sw.js
           node --check public/settings.js
+          node --check public/help-center.js
+          node --check tests/unit/help-center.test.js
           node --check public/experience-center.js
           node --check src/domain/experience-settings.js
           node --check public/admin-centre.js
           node --check public/auth-providers-admin.js
           node --check src/server.js
+          node --check src/domain/video-transcode-jobs.js
+          node --check src/domain/video-remix-collaboration.js
+          node --check src/domain/video-channel-posts.js
+          node --check public/video-remix-collaboration.js
+          node --check backend/workers/video-transcode/worker.mjs
           node --check src/oauth-flow-state.js
           node --check src/oauth-authorization.js
           node --check src/auth-redirect-routes.js
@@ -131,6 +139,8 @@ jobs:
           node --check src/domain/relationships.js
       - name: Generate original Minglora gift assets
         run: npm run build:gifts
+      - name: Generate LIVE gift motion index
+        run: npm run build:live-gift-motion
       - name: Generate Minglora Sound Studio audio pack
         run: npm run build:sounds
       - name: Run automated tests

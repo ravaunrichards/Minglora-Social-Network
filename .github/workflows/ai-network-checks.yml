@@ -15,6 +15,7 @@ on:
       - 'supabase/migrations/*ai_hr*'
       - 'supabase/migrations/*ai_provider*'
       - 'supabase/migrations/*ai_task*'
+      - 'supabase/migrations/*ai_discovery*'
       - 'tests/unit/ai-network*.test.js'
       - '.github/workflows/ai-network-checks.yml'
 

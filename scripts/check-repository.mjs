@@ -79,7 +79,14 @@ async function inspectDirectory(directory, relative = '') {
     }
     if (!entry.isFile()) continue;
     fileCount += 1;
-    if (entry.name === '.gitkeep' && !entries.some((sibling) => sibling.isFile() && sibling.name !== '.gitkeep')) {
+    // Empty reference folders are intentional upload locations for user-supplied
+    // screenshot packs; retain their .gitkeep markers without treating them as
+    // abandoned application placeholders.
+    const isReferenceFolder = relative === 'assets/reference' || relative.startsWith('assets/reference' + path.sep);
+    // Reference folders are intentional upload destinations. For every other
+    // folder, a .gitkeep is only a placeholder when it is the sole entry;
+    // populated child directories count as real content.
+    if (entry.name === '.gitkeep' && !isReferenceFolder && entries.length === 1) {
       failures.push(`Placeholder file is not allowed: ${child}`);
     }
     const body = await readFile(absolute);
