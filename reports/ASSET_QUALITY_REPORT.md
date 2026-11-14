@@ -39,3 +39,7 @@ The extracted 1,509 catalogue crops remain blocked from production until rights 
 ## Machine-readable per-gift inventory
 
 `assets/manifests/live-asset-manifest.json` is generated during startup and CI after the canonical gift SVG/GLTF files and active motion index are built. It records actual file sizes and SHA-256 hashes, artwork dimensions, aggregate GLTF bounds and mesh counts, exact active animation-profile mappings, synthesized sound status, licensing/visual-review gates, component use and device QA state. It is an inventory and validation artifact, not a production-approval certificate. The output is uploaded as a named GitHub Actions artifact for inspection.
+
+## Per-source raster metadata
+
+The LIVE workflow includes a built-in read-only metadata scanner for supplied Android/desktop screenshots, gift captures, guest-layout diagrams, badge and League references, and extracted artwork crops. It emits per-file dimensions, detected format, orientation, size and SHA-256 plus encoded alpha/transparency/animation declarations. It does not scan decoded pixel alpha, apply EXIF orientation, or perform visual, rights or production approval. CI publishes the generated JSON and Markdown audit as an artifact; inspect that artifact before treating any source image's dimensions or transparency as verified.
