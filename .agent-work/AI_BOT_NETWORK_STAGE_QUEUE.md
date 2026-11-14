@@ -5,7 +5,7 @@ This is the current source of truth; older checkpoint paragraphs below are retai
 | Stage | Current status | Evidence / remaining exit criteria |
 |---|---|---|
 | 1. Relational foundation and private runtime | **COMPLETED** | 33/33 AI tables have RLS; browser roles have no `ai_network` schema access; 15 categories and service-only RPC boundary verified. |
-| 2. AI identities and profiles | **PARTIAL — CURRENT** | Identity create/read/bulk foundation, separate names, live profile registry/edit, language/location relations, version/audit and deployed owner-scoped media routes/RPC. PR #284 Chromium workflow #1 passed: 15 categories, 249 country/territory options, 3 populations, 5 genders, create/edit, combined filters, bulk follow, saved groups and 4 viewport checks. | Signed-in owner UI/API create/get/edit/upload, actual production-row verification, Storage upload and mobile/desktop owner-session acceptance remain; browser suite used local in-memory API fixtures only. |
+| 2. AI identities and profiles | **PARTIAL — CURRENT** | Identity create/read/bulk foundation, separate names, live profile registry/edit, language/location relations, version/audit, owner-scoped media and audited moderator category CRUD deployed. PR #284 identity UI and PR #286 category browser checks passed. | Signed-in owner UI/API create/get/edit/upload/category-management acceptance, actual production-row verification, Storage upload and mobile/desktop owner-session acceptance remain; browser suite used local in-memory fixtures. |
 | 3. Discovery and following | **PARTIAL** | Combined filters, follow/unfollow, bulk duplicate suppression, privacy approval and saved-group lifecycle passed rollback tests. UI/device acceptance remains. |
 | 4. Corporate governance and HR | **PARTIAL** | 20 departments/position templates, application review, gated appointment, employment transitions, management hierarchy, transfer/history and owner isolation passed rollback tests. Additional HR and UI/device work remains. |
 | 5. Supervision, task queue and teams | **PARTIAL — EXECUTION PAUSED** | Approval queue, observation-only mode, idempotency and cancellation tested. Worker claims are rejected; team orchestration remains. |
@@ -13,13 +13,22 @@ This is the current source of truth; older checkpoint paragraphs below are retai
 | 7. Providers, memory and finance | **PARTIAL — METADATA ONLY** | Provider account/model metadata and pending assignments tested; no real provider inference, inbox, secret-manager adapter or cost reconciliation. |
 | 8. Admin/security/analytics | **PARTIAL** | RLS, owner-scoped RPCs, version/audit and runtime pause verified; full centers and operational analytics remain. |
 | 9. Ten-billion scale | **NOT STARTED** | No 10-billion registration or concurrent-execution benchmark. |
-| 10. Release/device acceptance | **PARTIAL** | PR #284 browser acceptance, full Minglora CI #11343 and layout matrix #152 passed; Edge v118 ACTIVE; latest Render deployment `dep-dbruhflbedkc73bj2tbg` is LIVE on main `bf7965d5062078a898e84e974e2f77cd51aa4b89`. | Authenticated production browser/device acceptance, public HTTP acceptance with owner session, and recovery drills remain. |
+| 10. Release/device acceptance | **PARTIAL** | PR #286 and #288 CI, AI Network tests and layout QA passed; migration version `20261114053137` applied, Edge v119 ACTIVE, Render deployment `dep-dbrv4bh5efls73e5s1j0` LIVE on main `b88ac94846405e03bc4f8e3c86cd8feea41b2e83`; category RPC create/update/deactivate/audit verified in a rolled-back DB transaction. | Authenticated production browser/device acceptance, public HTTP acceptance with owner session, and recovery drills remain. |
+
+### AI category administration — deployed 2026-11-14
+- PR #286 merged as `8297214f08da128980a4d156c0efee602751bcc4`; PR #288 SQL repair/privilege hardening merged as `b88ac94846405e03bc4f8e3c86cd8feea41b2e83`.
+- Moderator-only API/UI supports category list, create, edit display name/description/sort order, activate/deactivate. Keys are stable and categories are never deleted.
+- Applied migration `20261114053137_minglora_ai_category_management`; private SECURITY INVOKER RPC, empty search path, audit RLS and least-privilege grants verified.
+- Rollback-only database create/update/deactivate test wrote three audit events, then rollback verified no probe category/audit rows remained. Production retains 15 original categories; AI identity/email/profile records remain zero.
+- AI Network regression, repository CI, Chromium browser acceptance and layout matrix passed. Browser tests use disposable in-memory fixtures, not authenticated production owner sessions.
+- Edge v119 ACTIVE; Render deployment `dep-dbrv4bh5efls73e5s1j0` LIVE. Runtime stays globally paused/disabled with zero workers.
+- Overall 1/10 fully completed stage gates = 10%; Stage 2 remains partial because the owner-authenticated identity/profile/device acceptance criteria are outstanding.
 
 ### Live evidence and hard safety gates
-- Main merge commit: `2f736e7145e62cf8c2df786d26ac48a61fb4b355`; PR #280 merged normally.
+- Earlier implementation merge: PR #280 `2f736e7145e62cf8c2df786d26ac48a61fb4b355`; latest release main: PR #288 `b88ac94846405e03bc4f8e3c86cd8feea41b2e83` (following category feature PR #286 `8297214f08da128980a4d156c0efee602751bcc4`).
 - Tested PR head: `d0e818c34cfc42b69ed63940469186dc8b58ef97`; focused AI run 43550189796 passed (81/81); full CI run 43550189822 passed; visual QA run 43550189846 passed.
-- Existing Supabase project: `gzycobgbasnqqhnympkr`; profile registry/edit migration applied; existing runtime Edge Function ACTIVE at v117.
-- Existing Render service URL: `https://minglora-social-network-temp.onrender.com`; deployment `dep-dbrt2qm7bikc73ee6q8g` is LIVE on the merge commit. Startup logs show server listening, Supabase persistence ready and LiveKit connected.
+- Existing Supabase project: `gzycobgbasnqqhnympkr`; identity/profile/media/category migrations applied; `minglora-runtime-state` Edge Function ACTIVE at v119 with custom auth setting preserved (`verify_jwt=false`). Category migration ledger version is `20261114053137`.
+- Existing free Render service URL: `https://minglora-social-network-temp.onrender.com`; deployment `dep-dbrv4bh5efls73e5s1j0` is LIVE on main `b88ac94846405e03bc4f8e3c86cd8feea41b2e83`. The external browser verifier could not open the URL independently; treat platform status/logs as deployment evidence, not public-browser acceptance.
 - Rollback-only transactions verified identity-profile edits, discovery/following, corporate/HR, tasks/approvals and provider metadata/activation guard. Every transaction rolled back; no test rows were retained.
 - Both new RPCs are SECURITY INVOKER with locked empty search path; only service_role can execute. All 33 AI tables remain RLS-enabled.
 - Post-rollback counts are zero for all tested identity, follow, workforce, task and provider tables.
