@@ -41,6 +41,13 @@ const GIFT_SPECIFIC_WEB_AUDIO_DESIGNS = Object.freeze({
     format: "Web Audio API synthesized four-note arcade arpeggio with low-frequency impact accent",
     layers: ["seeded_arcade_arpeggio_523_659_784_1047hz", "stereo_note_placement", "low_frequency_thump"],
     status: "gift_specific_synthesized_sound_not_mastered_recording"
+  }),
+  "live-island-rmn3mc": Object.freeze({
+    sound_design_id: "live-island-tide-and-chime-v1",
+    sound_profile_scope: "gift_specific_web_audio_synthesis",
+    format: "Web Audio API synthesized filtered surf swell with four soft tonal chimes",
+    layers: ["filtered_surf_noise_swell", "lowpass_tide_sweep", "four_note_island_chime_392_494_587_784hz"],
+    status: "gift_specific_synthesized_sound_not_mastered_recording"
   })
 });
 
