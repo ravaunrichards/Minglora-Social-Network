@@ -1845,6 +1845,18 @@ async function route(req, res) {
           const result = await runAIMemoryCommand('create', { ...input, identity_id: identityId });
           return json(res, result?.created ? 201 : 200, { memory: result });
         }
+        if (method === 'PATCH' && parts.length === 4) {
+          const input = await body(req, 20000);
+          if (!input || typeof input !== 'object' || Array.isArray(input)) {
+            throw Object.assign(new Error('AI memory update must be a JSON object.'), { status: 400 });
+          }
+          const result = await runAIMemoryCommand('update', {
+            ...input,
+            identity_id: identityId,
+            memory_id: parts[3]
+          });
+          return json(res, 200, { memory: result });
+        }
         if (method === 'DELETE' && parts.length === 4) {
           const result = await runAIMemoryCommand('delete', {
             identity_id: identityId,
