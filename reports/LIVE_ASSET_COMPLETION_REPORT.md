@@ -214,3 +214,23 @@ The glyph overlay and unused emoji lookup were removed from `scripts/generate-mi
 - Source provenance is \`gift-crystal-crown-3d-v1\` / \`assets/3d-assets/gift-models/crystal-crown-model.mjs\`; review remains \`design-review-pending\`. Dedicated sound design \`crystal-crown-royal-glass-chime-v1\` is locally synthesized, not a mastered audio file.
 - Generated catalogue audit at this checkpoint: **1,748** gift records (**1,737 active, 11 inactive**), **1,748/1,748** primary SVGs, transparent SVG icons and GLTF models generated, **5** gift-specific synthesized sound designs, **0** dedicated mastered gift sound files, **0** physical-device QA approvals. These are build outputs, not counts of production-approved gifts.
 - Human art review, rights/licensing clearance, premium-quality acceptance, high-resolution texture/KTX2 work where appropriate, physical Android/iOS/tablet/foldable/desktop/TV rendering and audio QA, and production deployment remain unverified. No production gift activation, Coin pricing, wallet, transaction, payout or AI runtime state changed.
+
+
+## Bespoke Phoenix firebird model and LIVE effect checkpoint — 2026-11-14
+
+- Added `assets/3d-assets/gift-models/phoenix-model.mjs` for existing canonical gift `phoenix-wep6uk`.
+- Original embedded-buffer glTF 2.0 sculpture includes the bird body/neck/head, flame crest, layered wings, coverts and individual flight feathers, comet-tail fan, talons and ember motes.
+- Generator emits original `phoenix-original-v1` primary SVG and transparent icon and routes the canonical Phoenix item to its bespoke model source.
+- Added exact-code `phoenix-rise` Web Animations choreography and `playPhoenix` locally synthesized filtered flame swell/ascending tone effect; existing sound opt-out and reduced-motion handling remain.
+- Added sound-manifest provenance, cache-version changes and catalogue/runtime/manifest regression tests. CI and generated-output verification are pending.
+- Existing animals category, 25,999-Coin value and active status remain unchanged. No production gift row, wallet transaction, earning or payout changed. Human art review, rights clearance and physical-device QA remain pending; no mastered recording or embedded GLTF animation is claimed.
+
+
+## Verified Phoenix firebird production-pipeline checkpoint — 2026-11-14
+
+- CI run **12020** passed Node 24 syntax, full gift asset generation, LIVE motion-index generation, LIVE asset manifest, supplied-raster metadata audit and automated tests. **1,167 tests passed; 0 failed.** Supabase Auth acceptance and For You functional navigation passed.
+- Chromium checks passed for LIVE/MeetWave responsive layout and AI Network browser acceptance. Profile visual QA rendered **1,260 browser combinations** (630 synthetic fixture + 630 production app combinations) across **9 viewports**, captured **160 screenshots**, and reported **zero failures**. These are automated browser checks, not physical-device certification.
+- Generated manifest evidence for canonical active \`phoenix-wep6uk\`: animals category and **25,999 Coins** preserved; primary SVG **3,610 bytes**, transparent icon **2,577 bytes**, bespoke GLTF **1,102,105 bytes**, **266 primitives/materials**, **19,351 vertices** and **30,564 triangles**. Geometry buffer is embedded; no texture maps or embedded animation tracks are present.
+- Source provenance is \`gift-phoenix-3d-v1\` / \`assets/3d-assets/gift-models/phoenix-model.mjs\`; review remains \`design-review-pending\`. Dedicated sound design \`phoenix-flame-rise-and-ember-choir-v1\` is locally synthesized, not a mastered audio file.
+- Full generated catalogue audit: **1,748** gift records (**1,737 active, 11 inactive**); **1,748/1,748** primary SVGs, transparent icons and GLTF models generated; **6** gift-specific synthesized sound designs; **0** mastered gift sound files; **0** physical-device QA approvals. Asset generation counts are not production-art approval counts.
+- Human artwork review, rights/licensing clearance, premium quality approval, physical Android/iOS/tablet/foldable/desktop/laptop/TV rendering and audio QA, and production deployment remain unverified. No canonical gift activation, Coin price, database offering, wallet, transaction, payout or AI runtime state changed.

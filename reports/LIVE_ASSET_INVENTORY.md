@@ -153,3 +153,12 @@ The catalogue name, code, nature category, 10-Coin value and active state are as
 | `assets/3d-assets/gift-models/crystal-crown-model.mjs` | Crystal Crown (`crystal-crown-1itryeu`, luxury; existing value 2,000 Coins) | Self-contained glTF 2.0 gold tiara sculpture with velvet lining, engraved band, five arched points, faceted centre/side stones, pavé accents and suspended crystal drops. Matching subject-specific SVG and transparent icon carry `crystal-crown-original-v1`. | Exact-code generator, royal shimmer animation and dedicated synthesized chime cue. Design and rights review remain pending. |
 
 The existing canonical code, luxury category, active flag and 2,000-Coin value are reused without mutation. The source carries `gift-crystal-crown-3d-v1` provenance and `design-review-pending`; no premium-production approval is implied.
+
+
+## Phoenix bespoke firebird gift — 2026-11-14
+
+| Source | Canonical item | Generated output | Integration / acceptance |
+|---|---|---|---|
+| `assets/3d-assets/gift-models/phoenix-model.mjs` | Phoenix (`phoenix-wep6uk`, animals; existing value 25,999 Coins) | Self-contained glTF 2.0 firebird with body/neck/head, flame crest, layered coverts, separate primary flight feathers, comet-tail fan, talons and ember motes. Subject-specific SVG and transparent icon carry `phoenix-original-v1`. | Exact-code generator, Phoenix-rise motion and local synthesized flame/chime sound. Design and rights review pending. |
+
+Canonical name, code, animals category, active flag and 25,999-Coin value are reused without mutation. Source provenance is `gift-phoenix-3d-v1`; review state remains `design-review-pending`.

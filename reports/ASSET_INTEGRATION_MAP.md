@@ -162,3 +162,17 @@ No new API, DB row, wallet transaction, payout or catalogue record is introduced
 | Cache | `public/index.html` and `public/sw.js` reference `gift-effects.js?v=20261114-crystal-crown-royal-chime-1`; service-worker shell cache advances to v310. |
 
 This adds no catalogue row, database offering, price edit, wallet/ledger event or payout. Art and rights acceptance and physical-device QA remain open.
+
+
+## Phoenix bespoke firebird integration — 2026-11-14
+
+| Integration point | Implementation |
+|---|---|
+| Canonical catalogue | Existing `phoenix-wep6uk` item (animals, 25,999 Coins, active), unchanged. |
+| 3D source | `assets/3d-assets/gift-models/phoenix-model.mjs`, imported and routed by exact code in `scripts/generate-minglora-gifts.mjs`. |
+| Vector art | `phoenix-original-v1` SVG art and transparent icon emitted by the existing generator. |
+| Animation | `phoenix-rise` exact-code override on the existing LIVE gift mount. |
+| Sound | `playPhoenix` local filtered flame swell and ascending firebird tones; manifest ID `phoenix-flame-rise-and-ember-choir-v1`. |
+| Cache | HTML and service worker now use `gift-effects.js?v=20261114-phoenix-rise-1`; service-worker shell cache advances to v311. |
+
+No new catalogue row, database gift offering, Coin-price change, wallet/ledger event, payout or AI runtime change is introduced. Art/rights review and physical-device QA remain open.

@@ -72,3 +72,12 @@ The existing 3D gift generator builds original primitive mesh scenes with basic 
 - Sound design ID: `crystal-crown-royal-glass-chime-v1`; five softly enveloped sine/triangle tones at 523.25, 659.25, 783.99, 1046.5 and 1318.51 Hz, with seeded stereo placement and a filtered high-frequency noise shimmer.
 - Sound is locally synthesized through Web Audio, not a mastered recording. The existing user sound opt-out and reduced-motion preference remain respected.
 - No Lottie/Rive/video file or embedded GLTF animation track is claimed. Human timing/mix and physical-device QA remain pending.
+
+
+## Phoenix firebird rise — 2026-11-14
+
+- Canonical gift: `phoenix-wep6uk`.
+- Motion preset: `phoenix-rise`, selected by exact gift-code override; the Web Animations sequence rises from low opacity, blooms upward with restrained rotation, then settles.
+- Sound design ID: `phoenix-flame-rise-and-ember-choir-v1`; filtered band-pass noise swell with a five-note ascending tone sequence (220, 293.66, 392, 523.25 and 659.25 Hz) and seeded stereo placement.
+- Sound is locally synthesized through Web Audio, not a mastered recording. Existing sound opt-out and reduced-motion preferences remain respected.
+- No embedded GLTF skeletal animation, Lottie/Rive file or mastered audio is claimed. Human choreography/audio review and physical-device QA remain pending.

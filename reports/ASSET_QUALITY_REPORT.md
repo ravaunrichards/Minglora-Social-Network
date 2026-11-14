@@ -127,3 +127,10 @@ The model remains `design-review-pending`. The build does not include high-resol
 The new source `assets/3d-assets/gift-models/crystal-crown-model.mjs` creates an embedded-buffer glTF 2.0 royal tiara with a tapered sculpted metallic band, velvet lining, engraved chevrons and granules, five gold spires, inter-point arches, individually faceted sapphire/amethyst/emerald stones, a large front sapphire, pavé accents, pendant gems and a crown finial. Materials are explicitly assigned PBR metallic/roughness factors. The existing generator emits original matching SVG art and transparent icon.
 
 The model remains `design-review-pending`. Its gemstones are faceted geometric materials rather than high-resolution texture maps; KTX2 textures and an embedded rigged/animated GLTF are not claimed. Motion is supplied by the existing Web Animations runtime and sound is synthesized locally. Human visual review, rights clearance and physical Android/iOS/tablet/foldable/desktop/TV QA remain outstanding.
+
+
+## Phoenix bespoke firebird model checkpoint — 2026-11-14
+
+The new `assets/3d-assets/gift-models/phoenix-model.mjs` creates a self-contained glTF 2.0 firebird with separate body, breast, neck/head, eye/beak, flame crest, wing frames, layered coverts, primary flight feathers, comet-tail feathers, talons and ember motes. Meshes use PBR metallic/roughness material factors and embedded geometry buffers. Matching original vector art and transparent icon use `phoenix-original-v1`.
+
+The model remains `design-review-pending`. No high-resolution texture maps/KTX2 or embedded skeletal animation are claimed. Motion is driven by the existing Web Animations runtime; sound is synthesized locally. Human art/rights review and Android, iOS, tablet, foldable, desktop, laptop and TV rendering/audio QA remain outstanding.
