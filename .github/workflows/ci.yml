@@ -104,6 +104,8 @@ jobs:
           node --check public/experience-center.js
           node --check src/domain/experience-settings.js
           node --check public/admin-centre.js
+          node --check public/admin-finance.js
+          node --check tests/unit/admin-finance-foundation.test.js
           node --check public/auth-providers-admin.js
           node --check src/server.js
           node --check src/domain/video-transcode-jobs.js
