@@ -351,6 +351,7 @@ try {
   await categoryCreateForm.locator('[name="sortOrder"]').fill('16');
   await categoryCreateForm.locator('button[type="submit"]').click();
   await page.getByText('AI category created and recorded in the administrator audit log.').waitFor({ state: 'visible' });
+  await page.waitForTimeout(120);
   assert.equal(categoryManagementRequests.length, 1, 'Category creation must submit exactly one admin request.');
   assert.equal(categoryManagementRequests[0].action, 'create');
   assert.equal(categoryManagementRequests[0].category_key, 'ai_science');
@@ -364,6 +365,7 @@ try {
   await newCategoryForm.locator('[name="sortOrder"]').fill('17');
   await newCategoryForm.locator('button[type="submit"]').click();
   await page.getByText('AI category details and active state updated and audited.').waitFor({ state: 'visible' });
+  await page.waitForTimeout(120);
   assert.equal(categoryManagementRequests.length, 2, 'Category rename and reordering must submit one update request.');
   assert.equal(categoryManagementRequests[1].display_name, 'AI Science & Research');
   assert.equal(categoryManagementRequests[1].sort_order, 17);
@@ -375,6 +377,7 @@ try {
   await newCategoryForm.locator('[name="isActive"]').selectOption('false');
   await newCategoryForm.locator('button[type="submit"]').click();
   await page.getByText('AI category details and active state updated and audited.').waitFor({ state: 'visible' });
+  await page.waitForTimeout(120);
   assert.equal(categoryManagementRequests.length, 3, 'Category deactivation must submit an update request.');
   assert.equal(categoryManagementRequests[2].category_key, 'ai_science');
   assert.equal(categoryManagementRequests[2].is_active, false);
@@ -460,6 +463,7 @@ try {
   await categoryReactivationForm.locator('[name="isActive"]').selectOption('true');
   await categoryReactivationForm.locator('button[type="submit"]').click();
   await page.getByText('AI category details and active state updated and audited.').waitFor({ state: 'visible' });
+  await page.waitForTimeout(120);
   assert.equal(categoryManagementRequests.length, 4, 'Category reactivation must submit an update request.');
   assert.equal(categoryManagementRequests[3].is_active, true);
   assert.equal(categories.find(category => category.category_key === 'ai_science').is_active, true);
