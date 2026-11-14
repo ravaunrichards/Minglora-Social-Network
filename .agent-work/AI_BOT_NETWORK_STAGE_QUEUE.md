@@ -4,7 +4,7 @@ This is the current source of truth; older checkpoint paragraphs below are retai
 
 | Stage | Current status | Evidence / remaining exit criteria |
 |---|---|---|
-| 1. Relational foundation and private runtime | **COMPLETED** | 33/33 AI tables have RLS; browser roles have no `ai_network` schema access; 15 categories and service-only RPC boundary verified. |
+| 1. Relational foundation and private runtime | **COMPLETED** | 34/34 AI tables have RLS; browser roles have no `ai_network` schema access; 15 categories and service-only RPC boundary verified. |
 | 2. AI identities and profiles | **PARTIAL — CURRENT** | Identity create/read/bulk foundation, separate names, live profile registry/edit, language/location relations, version/audit, owner-scoped media and audited moderator category CRUD deployed. PR #284 identity UI and PR #286 category browser checks passed. | Signed-in owner UI/API create/get/edit/upload/category-management acceptance, actual production-row verification, Storage upload and mobile/desktop owner-session acceptance remain; browser suite used local in-memory fixtures. |
 | 3. Discovery and following | **PARTIAL** | Combined filters, follow/unfollow, bulk duplicate suppression, privacy approval and saved-group lifecycle passed rollback tests. UI/device acceptance remains. |
 | 4. Corporate governance and HR | **PARTIAL** | 20 departments/position templates, application review, gated appointment, employment transitions, management hierarchy, transfer/history and owner isolation passed rollback tests. Additional HR and UI/device work remains. |
@@ -24,13 +24,18 @@ This is the current source of truth; older checkpoint paragraphs below are retai
 - Edge v119 ACTIVE; Render deployment `dep-dbrv4bh5efls73e5s1j0` LIVE. Runtime stays globally paused/disabled with zero workers.
 - Overall 1/10 fully completed stage gates = 10%; Stage 2 remains partial because the owner-authenticated identity/profile/device acceptance criteria are outstanding.
 
+### AI Network performance-advisor backlog — audited 2026-11-14
+- Supabase reports 69 unindexed foreign keys across the project; 31 are in the AI Network schema (departments, employment, follows, organizations, positions, provider history, recruitment and task records).
+- This is a performance hardening backlog, not a reason to weaken RLS. The 34 private AI tables remain RLS-enabled and browser roles have no schema USAGE.
+- No production index changes were applied. Generate a reviewed additive migration, test it on a safe database branch, then seek approval for production application.
+
 ### Live evidence and hard safety gates
 - Earlier implementation merge: PR #280 `2f736e7145e62cf8c2df786d26ac48a61fb4b355`; latest release main: PR #288 `b88ac94846405e03bc4f8e3c86cd8feea41b2e83` (following category feature PR #286 `8297214f08da128980a4d156c0efee602751bcc4`).
 - Tested PR head: `d0e818c34cfc42b69ed63940469186dc8b58ef97`; focused AI run 43550189796 passed (81/81); full CI run 43550189822 passed; visual QA run 43550189846 passed.
 - Existing Supabase project: `gzycobgbasnqqhnympkr`; identity/profile/media/category migrations applied; `minglora-runtime-state` Edge Function ACTIVE at v119 with custom auth setting preserved (`verify_jwt=false`). Category migration ledger version is `20261114053137`.
 - Existing free Render service URL: `https://minglora-social-network-temp.onrender.com`; deployment `dep-dbrv4bh5efls73e5s1j0` is LIVE on main `b88ac94846405e03bc4f8e3c86cd8feea41b2e83`. The external browser verifier could not open the URL independently; treat platform status/logs as deployment evidence, not public-browser acceptance.
 - Rollback-only transactions verified identity-profile edits, discovery/following, corporate/HR, tasks/approvals and provider metadata/activation guard. Every transaction rolled back; no test rows were retained.
-- Both new RPCs are SECURITY INVOKER with locked empty search path; only service_role can execute. All 33 AI tables remain RLS-enabled.
+- Both new RPCs are SECURITY INVOKER with locked empty search path; only service_role can execute. All 34 AI tables remain RLS-enabled.
 - Post-rollback counts are zero for all tested identity, follow, workforce, task and provider tables.
 - Runtime remains `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`; worker claims are rejected.
 - No fake identities, human Auth accounts, provisioned inboxes, connected-provider claims or fabricated capacity metrics.
