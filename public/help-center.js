@@ -223,7 +223,7 @@ async function createAdminTranslation(id){
 adminStatus("Preparing a new translation…");
 try{
 const d=await adminApi("/api/help-center/admin/article?translationId="+encodeURIComponent(id));
-d.translationId="";d.locale="";d.title="";d.excerpt="";d.answerMarkdown="";d.searchTerms=[];d.sourceReference="";d.status="draft";
+d.translationId="";d.locale="es";d.title="";d.excerpt="";d.answerMarkdown="";d.searchTerms=[];d.sourceReference="";d.status="draft";
 renderAdminEditor(d);adminStatus("Enter the new language code and translated answer, then save it as a draft.");
 }catch(e){adminStatus(e.message);}
 }
@@ -254,9 +254,9 @@ button.disabled=true;status.textContent="Uploading instructional image…";
 try{
 const dataUrl=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result||""));reader.onerror=()=>reject(new Error("The selected image could not be read."));reader.readAsDataURL(file);});
 const contentBase64=String(dataUrl).split(",")[1]||"";
-const altText=$("#hc-image-alt").value.trim()||file.name.replace(/\\.[^.]+$/,"");
+const altText=$("#hc-image-alt").value.trim()||file.name.replace(/\.[^.]+$/,"");
 const result=await adminApi("/api/help-center/admin/media",{method:"POST",body:JSON.stringify({articleId:d.articleId,fileName:file.name,mimeType:file.type,contentBase64,altText})});
-form.elements.answerMarkdown.value=form.elements.answerMarkdown.value.trimEnd()+"\\n\\n!["+altText.replace(/[\\[\\]]/g,"")+"]("+result.url+")\\n";
+form.elements.answerMarkdown.value=form.elements.answerMarkdown.value.trimEnd()+"\n\n!["+altText.replaceAll("[","").replaceAll("]","")+"]("+result.url+")\n";
 status.textContent="Image uploaded. Save the draft to attach it to the article.";
 $("#hc-preview-answer").click();
 }catch(error){status.textContent=error.message||"Image upload failed.";}
@@ -267,7 +267,7 @@ const field=$("#hc-video-url"),status=$("#hc-editor-status");
 try{
 const url=new URL(field.value.trim());
 if(url.protocol!=="https:")throw new Error("Use a secure HTTPS video link.");
-form.elements.answerMarkdown.value=form.elements.answerMarkdown.value.trimEnd()+"\\n\\n[Watch video demonstration]("+url.href+")\\n";
+form.elements.answerMarkdown.value=form.elements.answerMarkdown.value.trimEnd()+"\n\n!["+altText.replaceAll("[","").replaceAll("]","")+"]("+result.url+")\n";
 field.value="";
 status.textContent="Video link inserted. Save the draft to keep it.";
 }catch(error){status.textContent=error.message||"Enter a valid HTTPS video URL.";}
