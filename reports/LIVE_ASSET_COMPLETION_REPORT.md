@@ -80,3 +80,12 @@ The glyph overlay and unused emoji lookup were removed from `scripts/generate-mi
 - Removed the full-canvas gradient rectangle from generated gift SVGs; the original gift geometry, decorative details, drop shadow and local nameplate remain.
 - All 1,748 catalogue SVGs are expected to expose transparent canvas corners, and the generated LIVE asset manifest now reports `transparent_background_artwork_count`.
 - CI verifies every generated SVG and every manifest record. This is a transparent SVG canvas change, not proof of pixel alpha in source screenshots, premium artwork quality, custom 3D models, or rights clearance.
+
+## LIVE tools shortcut icon integration checkpoint — 2026-11-14
+
+- Added 12 original, individually addressable outline SVG assets for Layout, Permissions, Guests, Viewers, Fan Club, Match, Top Gifters, Gifts, Rewards, Moderators, Appearance and Devices under `public/assets/icons/live-tools/`.
+- Added a machine-readable manifest with IDs, labels, file paths, 24×24 viewBox, state contract and pending design-review metadata.
+- Wired the icons into the existing LIVE tools drawer with an immutable allow-list. Existing host/viewer visibility rules, gift-availability conditions, panel selectors, click handling and selected `aria-pressed` state are retained.
+- Added offline shell pre-caching and bumped the service worker shell to v306.
+- Added SVG, integration, accessibility-state, responsive drawer and cache regression tests; added the icon pack to the machine-readable LIVE asset manifest generator and report maps.
+- The pack is original Minglora outline UI artwork, not bespoke 3D gift artwork. Human visual/design review and production approval remain pending. CI verification is required before this checkpoint is reported as complete.

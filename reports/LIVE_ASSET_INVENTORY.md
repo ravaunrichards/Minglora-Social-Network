@@ -55,3 +55,11 @@ The nine files in `assets/Guests Layout/` map to seven host-selectable screen la
 ## Asset types not found as complete production libraries
 
 The inspected `assets/animations/` directory had only a README before this branch. The existing app animation implementation is JavaScript/CSS/Web Animations; no populated Lottie or Rive collection was found there. No gift GLTF animation channels, KTX2 texture pack or per-gift recorded audio pack were verified. Do not imply these formats or packs are complete.
+
+## LIVE tools shortcut icon pack — 2026-11-14
+
+| Location | Observed state | Production interpretation |
+|---|---|---|
+| `public/assets/icons/live-tools/` | 12 individually addressable original SVG symbols plus `manifest.json` | Integrated icons for the existing LIVE tools drawer; 24×24 outline assets, currentColor, design review pending |
+
+The shortcuts remain Layout, Permissions, Guests, Viewers, Fan Club, Match, Top Gifters, Gifts, Rewards, Moderators, Appearance and Devices. The existing role gates, rewards visibility gate, panel selectors and active `aria-pressed` behavior remain authoritative. The service worker cache v306 includes the new manifest and every icon.

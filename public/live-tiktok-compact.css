@@ -260,6 +260,34 @@ body:has(#live-player-shell) .live-tools-shortcuts button{
   flex:0 0 auto!important;min-width:58px!important;min-height:30px!important;
   padding:5px 8px!important;font-size:9px!important;
 }
+body:has(#live-player-shell) .live-tools-shortcuts button.live-tools-shortcut{
+  display:inline-flex!important;flex:0 0 auto!important;flex-direction:column!important;
+  align-items:center!important;justify-content:center!important;gap:2px!important;
+  min-width:64px!important;min-height:42px!important;padding:5px 8px!important;
+  border:1px solid rgba(255,255,255,.12)!important;border-radius:10px!important;
+  font-size:9px!important;line-height:1.15!important;white-space:nowrap!important;
+}
+body:has(#live-player-shell) .live-tools-shortcut-icon{
+  display:grid!important;place-items:center!important;width:19px!important;height:19px!important;
+  flex:0 0 19px!important;overflow:hidden!important;
+}
+body:has(#live-player-shell) .live-tools-shortcut-icon svg{
+  display:block!important;width:18px!important;height:18px!important;max-width:100%!important;max-height:100%!important;
+}
+body:has(#live-player-shell) .live-tools-shortcut-label{
+  display:block!important;max-width:100%!important;overflow:hidden!important;
+  text-overflow:ellipsis!important;font-weight:650!important;
+}
+body:has(#live-player-shell) .live-tools-shortcuts button.live-tools-shortcut.active,
+body:has(#live-player-shell) .live-tools-shortcuts button.live-tools-shortcut[aria-pressed="true"]{
+  border-color:rgba(151,194,255,.58)!important;background:rgba(90,137,204,.2)!important;
+}
+body:has(#live-player-shell) .live-tools-shortcuts button.live-tools-shortcut:focus-visible{
+  outline:2px solid currentColor!important;outline-offset:2px!important;
+}
+body:has(#live-player-shell) .live-tools-shortcuts button.live-tools-shortcut:disabled{
+  opacity:.48!important;cursor:not-allowed!important;
+}
 body:has(#live-player-shell) .live-tools-content{
   display:block!important;flex:1 1 0!important;width:100%!important;height:0!important;
   min-width:0!important;min-height:0!important;padding:8px!important;

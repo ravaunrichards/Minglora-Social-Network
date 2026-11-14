@@ -2356,6 +2356,15 @@ function updateLiveControlButton(button,icon,label,caption,pressed){
   button.title=label;
   if(pressed!==undefined)button.setAttribute("aria-pressed",String(Boolean(pressed)));
 }
+const LIVE_TOOLS_SHORTCUT_ICON_NAMES=Object.freeze(["layout","permissions","guests","viewers","fanclub","matches","top-gifters","gifts","rewards","moderators","appearance","devices"]);
+function liveToolsShortcutIcon(name){
+  if(!LIVE_TOOLS_SHORTCUT_ICON_NAMES.includes(name))return "";
+  return "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true' focusable='false'><use href='/assets/icons/live-tools/"+name+".svg#icon'></use></svg>";
+}
+function liveToolsShortcutButton(target,label,icon,pressed=false,panelTarget){
+  const targetAttribute=panelTarget?" data-live-tools-target='"+esc(panelTarget)+"'":"";
+  return "<button type='button' class='live-tools-shortcut' data-live-tools-panel-target='"+esc(target)+"'"+targetAttribute+" aria-pressed='"+String(Boolean(pressed))+"' aria-label='"+esc(label)+"' title='"+esc(label)+"'><span class='live-tools-shortcut-icon'>"+liveToolsShortcutIcon(icon)+"</span><span class='live-tools-shortcut-label'>"+esc(label)+"</span></button>";
+}
 let activeLiveToolsTrigger=null;
 function openLiveToolsPanel(focusSelector){
   const backdrop=$("#live-tools-backdrop"),drawer=$("#live-tools-drawer"),shell=$("#live-player-shell");
@@ -2651,17 +2660,17 @@ async function openLiveRoom(session,role,issuedLiveKit){
     ? "<section id='live-moderator-panel' class='live-tools-card live-moderator-panel' data-live-tools-panel='moderators'><div><strong>LIVE moderators</strong><small>Assign up to 10 members to remove inappropriate LIVE comments.</small></div><form id='live-moderator-form' class='live-moderator-form'><label for='live-moderator-username'>Member username</label><input id='live-moderator-username' name='username' maxlength='30' autocomplete='off' placeholder='Enter Minglora username' required><button type='submit' class='secondary'>Add moderator</button></form><div id='live-moderator-list' class='live-moderator-list'><p class='muted'>Loading moderators…</p></div></section>"
     : "";
   const liveToolsNavigation="<nav class='live-tools-shortcuts' aria-label='LIVE panels'>"+
-    (role==="host"?"<button type='button' data-live-tools-panel-target='layouts' aria-pressed='true'>Layout</button><button type='button' data-live-tools-panel-target='permissions' aria-pressed='false'>Permissions</button>":"")+
-    "<button type='button' data-live-tools-panel-target='guests' data-live-tools-target='#live-speaker-request-panel' aria-pressed='false'>Guests</button>"+
-    (role==="host"?"<button type='button' data-live-tools-panel-target='viewers' aria-pressed='false'>Viewers</button>":"")+
-    "<button type='button' data-live-tools-panel-target='fanclub' data-live-tools-target='#live-fan-club-panel' aria-pressed='false'>Fan Club</button>"+
-    "<button type='button' data-live-tools-panel-target='matches' data-live-tools-target='#live-match-panel' aria-pressed='false'>Match</button>"+
-    "<button type='button' data-live-tools-panel-target='top-gifters' aria-pressed='false'>Top Gifters</button>"+
-    "<button type='button' data-live-tools-panel-target='gifts' data-live-tools-target='#live-gift-panel' aria-pressed='false'>Gifts</button>"+
-    (giftsEnabled?"<button type='button' data-live-tools-panel-target='rewards' data-live-tools-target='#live-reward-panel' aria-pressed='false'>Rewards</button>":"")+
-    (role==="host"&&liveSettings.manageModerators!==false?"<button type='button' data-live-tools-panel-target='moderators' data-live-tools-target='#live-moderator-panel' aria-pressed='false'>Moderators</button>":"")+
-    (role==="host"?"<button type='button' data-live-tools-panel-target='appearance' data-live-tools-target='.live-room-appearance' aria-pressed='false'>Appearance</button>":"")+
-    "<button type='button' data-live-tools-panel-target='devices' aria-pressed='false'>Devices</button>"+
+    (role==="host"?liveToolsShortcutButton("layouts","Layout","layout",true)+liveToolsShortcutButton("permissions","Permissions","permissions"): "")+
+    liveToolsShortcutButton("guests","Guests","guests",false,"#live-speaker-request-panel")+
+    (role==="host"?liveToolsShortcutButton("viewers","Viewers","viewers"):"")+
+    liveToolsShortcutButton("fanclub","Fan Club","fanclub",false,"#live-fan-club-panel")+
+    liveToolsShortcutButton("matches","Match","matches",false,"#live-match-panel")+
+    liveToolsShortcutButton("top-gifters","Top Gifters","top-gifters")+
+    liveToolsShortcutButton("gifts","Gifts","gifts",false,"#live-gift-panel")+
+    (giftsEnabled?liveToolsShortcutButton("rewards","Rewards","rewards",false,"#live-reward-panel"):"")+
+    (role==="host"&&liveSettings.manageModerators!==false?liveToolsShortcutButton("moderators","Moderators","moderators",false,"#live-moderator-panel"):"")+
+    (role==="host"?liveToolsShortcutButton("appearance","Appearance","appearance",false,".live-room-appearance"):"")+
+    liveToolsShortcutButton("devices","Devices","devices")+
     "</nav>";
   const liveModeLabels={video_audio:'VIDEO + AUDIO',audio_only:'AUDIO ONLY',mobile_gaming:'MOBILE GAMING',live_studio:'LIVE STUDIO'};
   const disclosureLabels={none:'',branded:'Branded content',sponsored:'Sponsored content'};
