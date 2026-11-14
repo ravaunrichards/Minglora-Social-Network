@@ -1866,11 +1866,28 @@ async function route(req, res) {
       }
       if (method === 'POST' && sub === 'identities') {
         const input = await body(req, 40000);
+        if (!input || typeof input !== 'object' || Array.isArray(input)) {
+          throw Object.assign(new Error('AI identity input must be a JSON object.'), { status: 400 });
+        }
+        const population = String(input.population || 'independent').trim().toLowerCase();
+        if (population !== 'independent' && !isModerator(user, req)) {
+          throw Object.assign(new Error('Only an authorized Minglora platform administrator may create organizational or specialized-service AI identities.'), { status: 403 });
+        }
         const result = await runAIIdentityCommand('create', input);
         return json(res, result?.reused ? 200 : 201, { identity: result });
       }
       if (method === 'POST' && sub === 'identities/bulk') {
         const input = await body(req, 200000);
+        if (!input || typeof input !== 'object' || Array.isArray(input) || !Array.isArray(input.items)) {
+          throw Object.assign(new Error('Bulk AI identity input must contain an items array.'), { status: 400 });
+        }
+        const requestsElevatedPopulation = input.items.some(item =>
+          item && typeof item === 'object' && !Array.isArray(item) &&
+          String(item.population || 'independent').trim().toLowerCase() !== 'independent'
+        );
+        if (requestsElevatedPopulation && !isModerator(user, req)) {
+          throw Object.assign(new Error('Only an authorized Minglora platform administrator may bulk-create organizational or specialized-service AI identities.'), { status: 403 });
+        }
         const result = await runAIIdentityCommand('bulk_create', input);
         return json(res, 200, result || { created_count: 0, failed_count: 0, created: [], failed: [] });
       }
