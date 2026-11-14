@@ -74,3 +74,9 @@ This is a continuation checkpoint against the current `main` repository. The old
 ## SVG artwork checkpoint — 2026-11-14
 
 The glyph overlay and unused emoji lookup were removed from `scripts/generate-minglora-gifts.mjs`. Existing vector forms, decorative backgrounds, gift labels and catalogue identifiers are preserved. Three additional named vector branches were added for Hibiscus, DJ Headphone and Four Leaf Clover. The remaining category-level artwork still needs per-gift art direction, human review and rights review; this checkpoint is not a premium-production completion claim.
+
+## Transparent gift-canvas checkpoint
+
+- Removed the full-canvas gradient rectangle from generated gift SVGs; the original gift geometry, decorative details, drop shadow and local nameplate remain.
+- All 1,748 catalogue SVGs are expected to expose transparent canvas corners, and the generated LIVE asset manifest now reports `transparent_background_artwork_count`.
+- CI verifies every generated SVG and every manifest record. This is a transparent SVG canvas change, not proof of pixel alpha in source screenshots, premium artwork quality, custom 3D models, or rights clearance.

@@ -417,6 +417,7 @@ function buildManifest() {
       svg_artwork_file_count: gifts.length,
       gltf_model_file_count: gifts.length,
       active_motion_profile_count: activeCount,
+      transparent_background_artwork_count: gifts.filter(gift => gift.artwork.transparent_background).length,
       emoji_font_overlay_count: emojiOverlayCount,
       dedicated_mastered_gift_sound_file_count: 0,
       synthetic_sound_profile_count: gifts.length,

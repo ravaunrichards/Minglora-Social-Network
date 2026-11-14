@@ -51,3 +51,7 @@ The gift generator no longer emits a system-font emoji overlay or uses the unuse
 ## Per-source raster metadata
 
 The LIVE workflow includes a built-in read-only metadata scanner for supplied Android/desktop screenshots, gift captures, guest-layout diagrams, badge and League references, and extracted artwork crops. It emits per-file dimensions, detected format, orientation, size and SHA-256 plus encoded alpha/transparency/animation declarations. It does not scan decoded pixel alpha, apply EXIF orientation, or perform visual, rights or production approval. CI publishes the generated JSON and Markdown audit as an artifact; inspect that artifact before treating any source image's dimensions or transparency as verified.
+
+## Transparent gift artwork canvases
+
+The gift SVG generator no longer paints a full-canvas gradient rectangle behind each gift. The surrounding 512×512 canvas is transparent while the generated foreground geometry, soft shadow, decorative accents and local nameplate are preserved. `svgInfo` records `transparent_background: true` only when the full-canvas backdrop is absent. CI checks all 1,748 generated SVGs and the per-gift asset manifest; this does not constitute pixel-alpha inspection of the separate screenshot-derived PNG references or premium art-direction approval.

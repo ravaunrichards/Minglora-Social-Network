@@ -38,6 +38,7 @@ test("LIVE asset manifest inventories the complete canonical gift catalogue", ()
   assert.equal(manifest.gifts.length, catalogue.gifts.length);
   assert.equal(manifest.summary.active_motion_profile_count, motionIndex.gifts.length);
   assert.equal(manifest.summary.svg_artwork_file_count, catalogue.gifts.length);
+  assert.equal(manifest.summary.transparent_background_artwork_count, catalogue.gifts.length);
   assert.equal(manifest.summary.gltf_model_file_count, catalogue.gifts.length);
   assert.equal(manifest.summary.required_generated_files_verified, true);
   assert.equal(manifest.summary.emoji_font_overlay_count, 0);
@@ -61,6 +62,7 @@ test("every gift record has measured SVG and GLTF files, dimensions, hashes and 
     assert.equal(entry.category, source.category);
     assert.equal(entry.active, source.active);
     assert.equal(entry.coin_price, source.coin_price);
+    assert.equal(entry.artwork.transparent_background, true, "gift artwork must have a transparent canvas: " + entry.code);
 
     for (const asset of [entry.artwork, entry.model]) {
       const file = path.join(root, asset.path);
