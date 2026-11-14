@@ -59,6 +59,15 @@ This is a continuation checkpoint against the current `main` repository. The old
 - This continuation modifies the SVG generator, catalogue tests, manifest quality metadata and reports. It does not alter source reference files, extracted crops, catalogue rows or gift pricing.
 - No balances, transactions, account data, user data, LiveKit credentials or call sessions are modified.
 
+
+## Bespoke Rose model checkpoint — 2026-11-14
+
+- Added the original source model assets/3d-assets/gift-models/rose-model.mjs for the exact Rose catalogue record.
+- Updated its generated transparent SVG to use individually layered Minglora flower artwork.
+- The generated GLTF includes curved petal surfaces, five sepals, tapered stem, thorns, three leaves, separate PBR materials and embedded binary mesh data.
+- Added regression checks for the Rose SVG signature, GLTF metadata, mesh parts, flower materials and self-contained buffer.
+- Catalogue rows, configured coin values, backend gift events, balances and earnings were not modified. Visual approval and physical-device QA remain pending; the wider catalogue remains partially complete.
+
 ## Current status
 
 **Minglora LIVE asset mission: PARTIALLY COMPLETE — NOT PRODUCTION COMPLETE.** The existing app has a substantial gift catalogue, build-time SVG/GLTF generation, LIVE effects runtime, layouts, assets and test coverage. Source inspection confirmed that the generated SVGs are category-template/project-vector artwork and the GLTFs are procedural category meshes with limited bespoke overrides; they are not premium-production-ready. The system-font emoji overlay has been removed and is guarded by a zero-count manifest test. This continuation corrected the reference evidence and updated the inventory. The full premium asset production, rights clearance, detailed animation/audio work, category curation, cross-device QA and actual hardware validation remain open.

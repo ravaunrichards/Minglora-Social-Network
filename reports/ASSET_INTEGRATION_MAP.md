@@ -13,6 +13,9 @@
 | Offline shell | Service worker | `public/sw.js` already pre-caches the canonical motion-index path and LIVE assets |
 | LIVE transport/media | LiveKit browser/server integration | `backend/modules/live/`, `src/server.js`, `public/app.js` |
 
+
+- The exact Rose catalogue record uses the bespoke model source at assets/3d-assets/gift-models/rose-model.mjs. The standard gift builder emits the self-contained GLTF to the catalogue's canonical path; the existing viewer, SVG error fallback and server-confirmed gift event flow remain unchanged.
+
 ## Build lifecycle changes
 
 - `npm run build:gifts` creates SVG/GLTF catalogue assets.

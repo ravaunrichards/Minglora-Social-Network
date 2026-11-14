@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { createRoseModel } from "../assets/3d-assets/gift-models/rose-model.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const MANIFEST = path.join(ROOT, "data", "minglora-gift-catalog.json");
@@ -94,7 +95,7 @@ function svgArt(gift) {
   let shape = premiumSvgShape(gift);
   if (shape) { /* gift-specific premium illustration */
   } else if (/^rose$|^white rose$|^crystal rose$|^my first rose$/.test(name)) {
-    shape = '<path d="M256 304v122m0-78c-58-39-81 8-81 8 40 37 62 12 81-8zm0 31c57-42 81 7 81 7-41 37-62 12-81-7z" fill="none" stroke="#58c27b" stroke-width="17" stroke-linecap="round"/><path d="M246 325q-52-39-43-82m65 82q52-39 43-82" fill="none" stroke="#429c68" stroke-width="7"/><g fill="url(#main)" stroke="#fff" stroke-opacity=".7" stroke-width="5"><ellipse cx="256" cy="208" rx="37" ry="79"/><ellipse cx="256" cy="208" rx="37" ry="79" transform="rotate(55 256 256)"/><ellipse cx="256" cy="208" rx="37" ry="79" transform="rotate(110 256 256)"/><ellipse cx="256" cy="208" rx="37" ry="79" transform="rotate(165 256 256)"/></g><circle cx="256" cy="256" r="39" fill="url(#shine)"/>';
+    shape = "<g data-gift-artwork=\"rose-bloom-original-v1\">\n  <path d=\"M255 297C247 344 252 387 256 431\" fill=\"none\" stroke=\"#398c55\" stroke-width=\"15\" stroke-linecap=\"round\"/>\n  <path d=\"M251 370C205 326 163 342 150 371C192 397 224 399 251 370Z\" fill=\"#399b59\" stroke=\"#e3f4e8\" stroke-opacity=\".55\" stroke-width=\"5\"/>\n  <path d=\"M257 391C297 344 345 350 362 380C326 407 286 416 257 391Z\" fill=\"#2e854f\" stroke=\"#e3f4e8\" stroke-opacity=\".55\" stroke-width=\"5\"/>\n  <path d=\"M151 371Q198 370 250 370M362 380Q312 378 258 391\" fill=\"none\" stroke=\"#a7e4b0\" stroke-width=\"4\" stroke-linecap=\"round\"/>\n  <path d=\"M241 326l-20-12 25 1M269 350l21-15-25 5\" fill=\"#398c55\"/>\n  <g fill=\"#a71645\" stroke=\"#fff0f5\" stroke-opacity=\".72\" stroke-width=\"5\" stroke-linejoin=\"round\">\n    <path d=\"M256 264C206 252 155 275 142 239C124 190 160 144 205 161C237 173 245 221 256 264Z\"/>\n    <path d=\"M256 264C306 252 357 275 370 239C388 190 352 144 307 161C275 173 267 221 256 264Z\"/>\n    <path d=\"M256 264C222 222 210 164 244 132C275 103 316 126 311 168C307 207 281 241 256 264Z\"/>\n    <path d=\"M256 264C290 222 302 164 268 132C237 103 196 126 201 168C205 207 231 241 256 264Z\"/>\n    <path d=\"M256 266C181 248 143 207 166 170C190 132 235 148 256 201C277 148 322 132 346 170C369 207 331 248 256 266Z\"/>\n  </g>\n  <g fill=\"#d92c5d\" stroke=\"#ffe1e9\" stroke-opacity=\".8\" stroke-width=\"4\" stroke-linejoin=\"round\">\n    <path d=\"M256 261C209 239 194 205 218 173C240 144 273 156 276 189C279 217 268 243 256 261Z\"/>\n    <path d=\"M256 261C303 239 318 205 294 173C272 144 239 156 236 189C233 217 244 243 256 261Z\"/>\n    <path d=\"M256 260C226 214 233 171 256 159C279 171 286 214 256 260Z\"/>\n  </g>\n  <path d=\"M246 243C218 218 235 180 258 180C280 180 292 211 269 237C261 247 247 251 240 242C231 231 241 218 251 219C260 220 259 230 253 232\" fill=\"none\" stroke=\"#8f123c\" stroke-width=\"12\" stroke-linecap=\"round\"/>\n  <path d=\"M278 182Q291 166 303 174\" fill=\"none\" stroke=\"#ffafc4\" stroke-width=\"6\" stroke-linecap=\"round\"/>\n  <g fill=\"#fff3f6\" opacity=\".92\"><circle cx=\"183\" cy=\"205\" r=\"7\"/><circle cx=\"327\" cy=\"204\" r=\"6\"/><circle cx=\"288\" cy=\"145\" r=\"6\"/></g>\n</g>";
   } else if (/hibiscus/.test(name)) {
     shape = '<g fill="url(#main)" stroke="#fff" stroke-opacity=".75" stroke-width="7"><ellipse cx="256" cy="178" rx="43" ry="83"/><ellipse cx="256" cy="178" rx="43" ry="83" transform="rotate(72 256 256)"/><ellipse cx="256" cy="178" rx="43" ry="83" transform="rotate(144 256 256)"/><ellipse cx="256" cy="178" rx="43" ry="83" transform="rotate(216 256 256)"/><ellipse cx="256" cy="178" rx="43" ry="83" transform="rotate(288 256 256)"/></g><circle cx="256" cy="256" r="42" fill="url(#shine)" stroke="#fff" stroke-width="7"/><path d="M256 256q44-34 79-7m-79 7 52-65m-52 65 10-79" fill="none" stroke="#ffe7a8" stroke-width="9" stroke-linecap="round"/><circle cx="337" cy="248" r="10" fill="#ffe7a8"/><path d="M256 298v112m0-67q-42-35-72-4m72 25q42-35 72-4" fill="none" stroke="#55bc78" stroke-width="14" stroke-linecap="round"/>';
   } else if (/four leaf clover/.test(name)) {
@@ -166,6 +167,7 @@ function svgArt(gift) {
 
 // The GLB-ready scene geometry is authored as simple original meshes, not imported models.
 function modelDocument(gift) {
+  if (String(gift.name || "").trim().toLowerCase() === "rose") return createRoseModel();
   const seed = hash32(gift.code);
   const hue = seed % 360;
   const colors = palette(gift);
