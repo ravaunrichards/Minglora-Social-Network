@@ -104,7 +104,8 @@ begin
 
   select i.owner_user_id into v_owner
   from ai_network.ai_identities i
-  where i.identity_id = v_identity_id;
+  where i.identity_id = v_identity_id
+  for update;
 
   if v_owner is null or v_owner <> p_actor_user_id then
     raise exception using errcode = '42501', message = 'This AI identity does not belong to the signed-in Minglora owner.';
@@ -183,6 +184,12 @@ begin
       where identity_id = v_identity_id
         and owner_user_id = p_actor_user_id
         and expires_at <= now();
+      if not v_long_term_enabled then
+        delete from ai_network.ai_memory_entries
+        where identity_id = v_identity_id
+          and owner_user_id = p_actor_user_id
+          and memory_type = 'long_term';
+      end if;
     end if;
 
     insert into ai_network.ai_identity_audit_logs (
@@ -282,6 +289,22 @@ begin
       and owner_user_id = p_actor_user_id
       and expires_at <= now();
 
+    if v_idempotency_key is not null then
+      select e.memory_id into v_memory_id
+      from ai_network.ai_memory_entries e
+      where e.identity_id = v_identity_id
+        and e.owner_user_id = p_actor_user_id
+        and e.idempotency_key = v_idempotency_key;
+      if v_memory_id is not null then
+        return jsonb_build_object(
+          'memory_id', v_memory_id,
+          'created', false,
+          'reused', true,
+          'memory_type', v_memory_type
+        );
+      end if;
+    end if;
+
     if (select count(*) from ai_network.ai_memory_entries e
         where e.identity_id = v_identity_id and e.owner_user_id = p_actor_user_id) >= v_max_entries then
       raise exception using errcode = '54000', message = 'AI memory entry limit reached. Remove an entry or increase the configured limit.';
@@ -326,6 +349,66 @@ begin
       'memory_type', v_memory_type,
       'summary', v_summary
     );
+  end if;
+
+  if v_action = 'update' then
+    begin
+      v_memory_id := nullif(v_payload->>'memory_id','')::uuid;
+    exception when invalid_text_representation then
+      raise exception using errcode = '22023', message = 'A valid AI memory entry ID is required.';
+    end;
+    if v_memory_id is null then
+      raise exception using errcode = '22023', message = 'A valid AI memory entry ID is required.';
+    end if;
+    if not v_memory_enabled then
+      raise exception using errcode = '42501', message = 'Enable AI memory before editing memory entries.';
+    end if;
+
+    v_memory_type := lower(coalesce(v_payload->>'memory_type', 'short_term'));
+    if v_memory_type not in ('short_term','long_term') then
+      raise exception using errcode = '22023', message = 'Choose short-term or long-term memory.';
+    end if;
+    if v_memory_type = 'long_term' and not v_long_term_enabled then
+      raise exception using errcode = '42501', message = 'Long-term memory requires separate owner consent.';
+    end if;
+    v_summary := trim(coalesce(v_payload->>'summary',''));
+    if char_length(v_summary) not between 1 and 1000 then
+      raise exception using errcode = '22023', message = 'AI memory summary must contain between 1 and 1000 characters.';
+    end if;
+    v_content := coalesce(v_payload->'content', '{}'::jsonb);
+    if jsonb_typeof(v_content) <> 'object' or pg_catalog.octet_length(v_content::text) > 16000 then
+      raise exception using errcode = '22023', message = 'AI memory content must be an object of at most 16 KB.';
+    end if;
+    if (jsonb_build_object('summary',v_summary,'content',v_content))::text ~*
+      '"(api[_-]?key|access[_-]?token|password|secret|authorization|cookie|credential|private[_-]?key)"[[:space:]]*:' then
+      raise exception using errcode = '22023', message = 'Credentials and secrets cannot be stored in AI memory.';
+    end if;
+
+    update ai_network.ai_memory_entries e
+    set memory_type = v_memory_type,
+        summary = v_summary,
+        memory_content = v_content,
+        updated_by_user_id = p_actor_user_id,
+        updated_at = now(),
+        expires_at = now() + make_interval(days => case when v_memory_type = 'long_term'
+          then v_long_retention else v_short_retention end)
+    where e.memory_id = v_memory_id
+      and e.identity_id = v_identity_id
+      and e.owner_user_id = p_actor_user_id;
+
+    if not found then
+      raise exception using errcode = 'P0002', message = 'AI memory entry was not found for this identity.';
+    end if;
+
+    insert into ai_network.ai_identity_audit_logs (
+      identity_id, actor_type, actor_user_id, action, metadata
+    )
+    values (
+      v_identity_id, 'human_user', p_actor_user_id, 'memory_entry_updated',
+      jsonb_build_object('memory_id',v_memory_id,'memory_type',v_memory_type)
+    );
+
+    return jsonb_build_object('updated', true, 'memory_id', v_memory_id);
   end if;
 
   if v_action = 'delete' then
