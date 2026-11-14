@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const read = path => readFileSync(resolve(root, path), 'utf8');
 const migration = read('supabase/migrations/20261114150000_minglora_ai_hr_talent_management.sql');
+const indexMigration = read('supabase/migrations/20261114160000_minglora_ai_hr_talent_foreign_key_indexes.sql');
 const runtime = read('supabase/functions/minglora-runtime-state/index.ts');
 const server = read('src/server.js');
 const ui = read('public/ai-network.js');
@@ -34,6 +35,30 @@ test('HR talent records are additive, private and service-role only', () => {
   assert.ok(!migration.includes('grant usage on schema ai_network to authenticated'));
   assert.ok(!migration.includes('insert into auth.users'));
   assert.ok(!migration.includes('grant usage on schema ai_network to public'));
+});
+
+test('AI HR talent foreign keys have explicit covering indexes', () => {
+  for (const index of [
+    'ai_performance_reviews_reviewer_user_idx',
+    'ai_performance_reviews_finalized_by_user_idx',
+    'ai_performance_review_history_actor_user_idx',
+    'ai_performance_review_history_review_fk_idx',
+    'ai_succession_plans_role_position_fk_idx',
+    'ai_succession_plans_incumbent_employment_fk_idx',
+    'ai_succession_plans_successor_employment_fk_idx',
+    'ai_succession_plans_owner_user_idx',
+    'ai_succession_plans_created_by_user_idx',
+    'ai_succession_plan_history_actor_user_idx',
+    'ai_succession_plan_history_plan_fk_idx',
+    'ai_employee_promotions_identity_fk_idx',
+    'ai_employee_promotions_previous_department_fk_idx',
+    'ai_employee_promotions_previous_position_fk_idx',
+    'ai_employee_promotions_new_department_fk_idx',
+    'ai_employee_promotions_new_position_fk_idx',
+    'ai_employee_promotions_supporting_review_fk_idx',
+    'ai_employee_promotions_promoted_by_user_idx'
+  ]) assert.ok(indexMigration.includes(index), 'Missing FK index: ' + index);
+  assert.ok((indexMigration.match(/create index if not exists/g) || []).length === 18);
 });
 
 test('performance reviews are human-authored, bounded, idempotent and audited', () => {
