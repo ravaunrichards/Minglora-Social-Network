@@ -251,3 +251,7 @@ The glyph overlay and unused emoji lookup were removed from `scripts/generate-mi
 - Added exact code-to-preset mapping in `scripts/generate-live-gift-motion-index.mjs` for Djembe Master, Palm Breeze, Gamer Otter, LIVE Island, Crystal Crown, Phoenix and Beach Maracas.
 - Generated motion-index and asset-manifest motion preset fields now align with the actual exact-code runtime choreography.
 - Regression tests verify each mapping in both motion index and manifest while canonical catalogue identity, source animation key and sound preset fields remain intact.
+
+
+- Motion-index records preserve `catalog_motion_preset` separately from the effective bespoke `motion_preset`; the asset manifest exposes `gift_specific_motion_override`.
+- Manifest validation continues to enforce canonical source gift values and no longer conflates approved code-level choreography with catalogue metadata. Regression tests cover both fields.
