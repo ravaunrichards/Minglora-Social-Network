@@ -39,7 +39,7 @@ jobs:
         with:
           deno-version: '2.9.8'
           cache: true
-      - name: Type-check Supabase runtime Edge Function
+      - name: Parse and transpile Supabase runtime Edge Function TypeScript
         run: |
           deno eval --no-check --node-modules-dir=auto '
           import ts from "npm:typescript@5.9.3";
