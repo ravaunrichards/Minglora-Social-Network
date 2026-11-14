@@ -1132,32 +1132,6 @@
       '<button class="primary" type="submit"' + (!bots.some(bot => bot.status !== 'archived') ? ' disabled' : '') + '>Save paused schedule</button></form>';
   }
 
-
-    const rows = schedules.length
-      ? '<div class="ai-network-list">' + schedules.map(schedule => {
-          const bot = bots.find(item => item.id === schedule.botId);
-          return '<article class="ai-network-list-row"><div><strong>' + esc(schedule.taskType.replaceAll('_', ' ')) + '</strong><p>' +
-            esc(bot?.name || 'Assigned bot') + ' · ' + esc(schedule.cadence) + ' · ' + esc(schedule.timezone) + '</p><small>Next planned time: ' + esc(date(schedule.runAt)) + '</small></div>' +
-            pill(schedule.status, schedule.status === 'active' ? 'success' : 'neutral') + '</article>';
-        }).join('') + '</div>'
-      : empty('No schedules yet. New schedules start paused and require provider verification before activation.');
-    const botOptions = bots.filter(bot => bot.status !== 'archived').map(bot => ({ value: bot.id, label: bot.name }));
-    return rows + '<form class="ai-network-form" data-ai-form="schedule"><div class="ai-network-form-title">Schedule a safe task</div>' +
-      '<label>AI bot<select name="botId" required>' + options(botOptions, '') + '</select></label>' +
-      '<label>Task<select name="taskType" required>' + options([
-        {value:'content_outline',label:'Content outline'},
-        {value:'caption_draft',label:'Caption draft'},
-        {value:'title_ideas',label:'Title ideas'},
-        {value:'translation_draft',label:'Translation draft'},
-        {value:'creator_calendar',label:'Creator calendar'},
-        {value:'public_event_support',label:'Public event support'}
-      ], 'content_outline') + '</select></label>' +
-      '<div class="ai-network-form-grid"><label>Cadence<select name="cadence">' + options([{value:'once',label:'Once'},{value:'daily',label:'Daily'},{value:'weekly',label:'Weekly'}],'once') + '</select></label>' +
-      '<label>Time zone<input name="timezone" required value="' + esc(Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC') + '"></label></div>' +
-      '<label>Start date and time<input name="runAt" type="datetime-local" required></label>' +
-      '<button class="primary" type="submit"' + (!bots.some(bot => bot.status !== 'archived') ? ' disabled' : '') + '>Save paused schedule</button></form>';
-  }
-
   function renderApprovals(approvals) {
     if (!approvals.length) return empty('No high-impact actions are awaiting your approval.');
     return '<div class="ai-network-list">' + approvals.map(item =>
