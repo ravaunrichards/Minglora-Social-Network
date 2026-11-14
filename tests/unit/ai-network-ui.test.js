@@ -43,7 +43,7 @@ test('AI Network script and styles are precached with matching asset versions', 
   assert.ok(sw.includes('/' + menuAsset));
   assert.ok(sw.includes('/ai-network.js?v=20261114-ai-network-integration-1'));
   assert.ok(sw.includes('/ai-network.css?v=20261114-ai-network-integration-1'));
-  assert.equal(cacheName, 'minglora-shell-v286-self-updating-1');
+  assert.equal(cacheName, 'minglora-shell-v302-self-updating-1');
 });
 
 test('AI Network workspace exposes all ten recommendations and true measured/empty states', () => {
