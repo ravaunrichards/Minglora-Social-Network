@@ -81,3 +81,12 @@ The existing 3D gift generator builds original primitive mesh scenes with basic 
 - Sound design ID: `phoenix-flame-rise-and-ember-choir-v1`; filtered band-pass noise swell with a five-note ascending tone sequence (220, 293.66, 392, 523.25 and 659.25 Hz) and seeded stereo placement.
 - Sound is locally synthesized through Web Audio, not a mastered recording. Existing sound opt-out and reduced-motion preferences remain respected.
 - No embedded GLTF skeletal animation, Lottie/Rive file or mastered audio is claimed. Human choreography/audio review and physical-device QA remain pending.
+
+
+## Beach Maracas Caribbean rhythm — 2026-11-14
+
+- Canonical gift: `beach-maracas-1exxoag`.
+- Motion preset: `maraca-rhythm`; alternating lateral and rotational beats run through the existing Web Animations event path.
+- Sound ID: `beach-maracas-caribbean-shaker-rhythm-v1`; five pulsed high-pass noise bursts, four soft tonal accents (261.63, 392, 523.25 and 659.25 Hz), and seeded stereo placement.
+- Sound is locally synthesized through the existing Web Audio playback path, not a recorded/mastered audio file. Sound opt-out and reduced-motion preferences remain supported.
+- No embedded GLTF animation channels, Lottie/Rive file or mastered sound recording are claimed. Human rhythm/audio review and physical-device QA remain pending.
