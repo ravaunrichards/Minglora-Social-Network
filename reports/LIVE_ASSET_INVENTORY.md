@@ -162,3 +162,12 @@ The existing canonical code, luxury category, active flag and 2,000-Coin value a
 | `assets/3d-assets/gift-models/phoenix-model.mjs` | Phoenix (`phoenix-wep6uk`, animals; existing value 25,999 Coins) | Self-contained glTF 2.0 firebird with body/neck/head, flame crest, layered coverts, separate primary flight feathers, comet-tail fan, talons and ember motes. Subject-specific SVG and transparent icon carry `phoenix-original-v1`. | Exact-code generator, Phoenix-rise motion and local synthesized flame/chime sound. Design and rights review pending. |
 
 Canonical name, code, animals category, active flag and 25,999-Coin value are reused without mutation. Source provenance is `gift-phoenix-3d-v1`; review state remains `design-review-pending`.
+
+
+## Beach Maracas bespoke Caribbean music gift — 2026-11-14
+
+| Source | Canonical item | Generated output | Integration / acceptance |
+|---|---|---|---|
+| `assets/3d-assets/gift-models/beach-maracas-model.mjs` | Beach Maracas (`beach-maracas-1exxoag`, music; existing value 349 Coins) | Self-contained glTF 2.0 crossed gourd-shaker pair in distinct coral and lagoon palettes, hardwood handles, woven grip bands, painted seed motifs, sunburst details and conch charm. Matching subject-specific SVG and transparent icon carry `beach-maracas-original-v1`. | Exact-code generator, alternating maraca-rhythm motion and dedicated synthesized shaker/tonal sound. Human visual and rights review pending. |
+
+The canonical gift name, code, music category, active flag and 349-Coin value are reused without mutation. Source ID is `gift-beach-maracas-3d-v1`; review state remains `design-review-pending`.
