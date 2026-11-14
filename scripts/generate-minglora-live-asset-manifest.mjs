@@ -34,6 +34,14 @@ const GIFT_SPECIFIC_WEB_AUDIO_DESIGNS = Object.freeze({
     format: "Web Audio API synthesized filtered breeze noise and three soft chime partials",
     layers: ["filtered_wind_sweep", "soft_chime_659hz", "soft_chime_880hz", "soft_chime_1175hz"],
     status: "gift_specific_synthesized_sound_not_mastered_recording"
+  },
+  "gamer-otter-100-mgl": Object.freeze({
+    sound_design_id: "gamer-otter-arcade-cheer-v1",
+    sound_profile_scope: "gift_specific_web_audio_synthesis",
+    format: "Web Audio API synthesized four-note arcade arpeggio with low-frequency impact accent",
+    layers: ["seeded_arcade_arpeggio_523_659_784_1047hz", "stereo_note_placement", "low_frequency_thump"],
+    status: "gift_specific_synthesized_sound_not_mastered_recording"
+  })
   })
 });
 
