@@ -35,3 +35,13 @@ The existing 3D gift generator builds original primitive mesh scenes with basic 
 - CI verified 1,748 catalogue records and 1,737 active motion profiles. The current motion implementation remains a procedural JSON profile plus the Web Animations runtime; this change does not create standalone Lottie, Rive, WebM or MP4 gift-preview files.
 - The current gift sound path remains synthesized Web Audio category profiles rather than mastered per-gift audio files. Dedicated mastered sound count remains zero.
 - Reduced-motion and existing server-confirmed event triggers remain under the existing runtime. Physical-device animation/audio synchronization tests have not been performed.
+
+
+## Djembe Master and Palm Breeze bespoke Web Animations — 2026-11-14
+
+- Djembe Master (`djembe-master-1v3jzkm`) uses the exact-code preset `djembe-strike`: a compact percussive entry, strike, recoil and settle sequence.
+- Palm Breeze (`palm-breeze-gknyt0`) uses `palm-canopy-sway`: a gentle left/right canopy sway with a soft settle.
+- `public/gift-effects.js` selects the two bespoke keyframe sequences inside the existing gift effect mount, while all other catalogue gifts continue to use their existing canonical motion preset.
+- The same gift event mount schedules the gift-specific Web Audio effect. Existing motion duration clamping, overlay cleanup and `prefers-reduced-motion` handling remain active.
+- PR #342 merged as `ab2939e27378d8f02a8dd1a92172105463d6dbd4` after the full CI test workflow and LIVE/MeetWave Chromium layout QA both passed.
+- These are runtime Web Animations keyframes. They are not standalone Lottie/Rive files, GLTF animation channels, sprite sheets, or rendered WebM/MP4 assets. Physical-device timing/rendering validation and human animation review remain pending.
