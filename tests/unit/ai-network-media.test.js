@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const read = path => readFileSync(resolve(root, path), 'utf8');
 const migration = read('supabase/migrations/20261114033000_minglora_ai_identity_profile_media.sql');
+const privateMediaMigration = read('supabase/migrations/20261114125814_minglora_ai_private_profile_media.sql');
 const runtime = read('supabase/functions/minglora-runtime-state/index.ts');
 const server = read('src/server.js');
 const app = read('public/app.js');
@@ -29,6 +30,16 @@ test('AI profile media RPC is private, owner-scoped and records version/audit hi
   assert.match(migration, /grant execute on function public\.minglora_ai_identity_profile_media_update[\s\S]*to service_role/i);
 });
 
+test('AI profile media references are constrained to the dedicated private bucket', () => {
+  assert.match(privateMediaMigration, /v_expected_bucket := 'minglora-ai-profile-media'/);
+  assert.match(privateMediaMigration, /security invoker/i);
+  assert.match(privateMediaMigration, /set search_path = ''/i);
+  assert.match(privateMediaMigration, /i\\.owner_user_id = p_actor_user_id/i);
+  assert.match(privateMediaMigration, /ai_identity_versions/);
+  assert.match(privateMediaMigration, /ai_identity_audit_logs/);
+  assert.match(privateMediaMigration, /grant execute on function public\\.minglora_ai_identity_profile_media_update[\\s\\S]*to service_role/i);
+});
+
 test('AI media upload preparation verifies owner ownership and stores images below the identity namespace', () => {
   const start = runtime.indexOf('if (action === "media_upload_prepare")');
   const end = runtime.indexOf('if (action === "media_upload_complete")', start);
@@ -38,6 +49,10 @@ test('AI media upload preparation verifies owner ownership and stores images bel
   assert.match(handler, /p_actor_user_id:ownerId/);
   assert.match(handler, /ai-identities/);
   assert.match(handler, /createSignedUploadUrl/);
+  assert.match(handler, /AI_PROFILE_MEDIA_BUCKET/);
+  assert.match(handler, /getBucket\\(AI_PROFILE_MEDIA_BUCKET\\)/);
+  assert.match(handler, /createBucket\\(AI_PROFILE_MEDIA_BUCKET,[\\s\\S]*public:false/);
+  assert.match(handler, /aiIdentityRequested\\?AI_PROFILE_MEDIA_BUCKET/);
   assert.match(handler, /const aiUuidPattern=/);
   assert.equal((handler.match(/const uuidPattern=/g) || []).length, 1, "upload preparation must declare its shared UUID validator only once");
 });
@@ -48,6 +63,9 @@ test('AI media completion validates the nested owner path and never updates the 
   const handler = runtime.slice(start, end);
   assert.match(handler, /expectedFolder/);
   assert.match(handler, /ai_identity:/);
+  assert.match(handler, /minglora-ai-profile-media/);
+  assert.match(handler, /AI_PROFILE_MEDIA_BUCKET/);
+  assert.match(handler, /createSignedUrl\\(objectPath,3600\\)/);
   assert.match(handler, /minglora_ai_identity_profile_media_update/);
   assert.match(handler, /if\(aiIdentityRequested\)[\s\S]*else if\(slot==="avatar"\|\|slot==="cover"\)/);
   assert.match(handler, /\.from\("profiles"\)/);
@@ -64,6 +82,9 @@ test('authenticated server routes expose only owner-scoped AI identity media and
   assert.match(route, /mediaGateway\('media_upload_complete'/);
   assert.match(route, /mediaGateway\('media_sign'/);
   assert.match(route, /ai_identity:/);
+  assert.match(route, /minglora-ai-profile-media/);
+  assert.match(route, /asset\\.url = asset\\.aiIdentityId \\? null : completed\\.url/);
+  assert.match(route, /if\\(asset\\.url&&!asset\\.aiIdentityId\\)return asset\\.url/);
 });
 
 test('shared uploader preserves regular media behavior and routes AI images through AI endpoints', () => {
