@@ -100,3 +100,14 @@ This checkpoint supersedes the earlier 34-table / v117 references above.
 - Security advisor review continues to show expected informational “RLS enabled without policy” findings for the private `ai_network` schema. Separate project-wide findings include the existing `public.minglora_list_my_mfa_factors()` SECURITY DEFINER RPC being executable by `authenticated` and leaked-password protection being disabled. Those unrelated Auth/MFA controls were not changed as part of this AI Network checkpoint.
 
 The feature is not considered complete until the remaining authenticated, integration, security, recovery, deployment and capacity acceptance gates pass.
+
+
+## HR talent management extension — 2026-11-14 (feature branch source only)
+
+Branch: `feat/minglora-ai-hr-talent-management-20261114`.
+
+The branch adds a private additive Supabase migration for AI employee performance reviews, review history, succession plans, succession history and promotion records. A service-role-only HR talent RPC supports owner-scoped review submission/finalization, succession plan creation/status transitions, promotion listing and audited promotions. The private Edge Function gateway, platform-admin-only server API routes, Minglora HR UI and focused unit tests are updated in the branch.
+
+Promotion requires an active employee and a higher-level destination position, records the outgoing and replacement employment relationships and uses the existing transfer workflow. Optional supporting performance reviews must be finalized and recommend promotion or role change. Performance ratings and narratives are explicitly human-authored rather than fabricated model metrics. Succession plans remain administrative planning records and never make an appointment or promotion automatically.
+
+**Not yet production-active:** this branch has not been merged; its HR talent migration has not been applied; the Edge Function has not been redeployed; automated CI and signed-in owner/device acceptance remain pending. No production identities or employees were created and the global AI worker runtime remains paused/disabled. The 10-billion identity target remains an unbenchmarked design objective, not a demonstrated storage or execution capacity.
