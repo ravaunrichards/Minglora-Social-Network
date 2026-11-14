@@ -62,7 +62,7 @@ test('the app renders the existing role-gated LIVE panels through the new shortc
   ]) assert.ok(app.includes(attribute), attribute + ' mapping must remain explicit');
   assert.ok(app.includes('liveSettings.manageModerators!==false'));
   assert.ok(app.includes('giftsEnabled?liveToolsShortcutButton("rewards"'));
-  assert.ok(app.includes('button.setAttribute("aria-pressed",String(active))'));
+  assert.ok(app.includes("button.setAttribute('aria-pressed',String(active))"));
 });
 
 test('LIVE shortcut SVGs preserve the compact drawer layout, selected state and keyboard focus', () => {
