@@ -83,3 +83,12 @@ The canonical Palm Breeze nature gift now uses its own palm-tree/island glTF sou
 - Palm Breeze (`palm-breeze-gknyt0`) uses a dedicated Web Audio design `palm-breeze-wind-and-chimes-v1`.
 - Both are local synth designs triggered from the existing gift effect mount; all other gifts retain category-level sound synthesis.
 - These additions do not create audio files: `audio_file` remains null and the dedicated mastered-gift-audio file count remains zero. No price, active state or economy record is modified.
+
+
+## Gamer Otter bespoke artwork — 2026-11-14
+
+- Existing catalogue record: `gamer-otter-100-mgl`, category `animals`, 100 Coins. No catalogue row, price, active flag or transaction rule is changed.
+- New original source: `assets/3d-assets/gift-models/gamer-otter-model.mjs`; generated GLTF contains a seated otter character with facial details, curled tail, headset, microphone and custom controller.
+- Matching transparent SVG subject artwork is emitted by `scripts/generate-minglora-gifts.mjs`; the asset is loaded using the existing canonical paths and model/SVG fallback.
+- The existing LIVE event runtime selects `gamer-otter-cheer` motion and the local synthesized arcade sound by exact gift code.
+- Human art review, rights review, premium approval, physical-device rendering and audio QA remain pending. Sound is synthesized; no mastered file is available or claimed.
