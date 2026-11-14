@@ -31,14 +31,14 @@ test('registry returns edit data for names, profile, languages, locations and em
 
 test('profile edits validate names, username, gender, visibility, country and time zone', () => {
   for (const token of [
-    /first name and last name are both required as separate fields/i,
+    'First name and last name are both required as separate fields',
     'username must contain 3 to 30',
     "v_gender not in ('female', 'male', 'non_binary', 'other', 'prefer_not_to_say')",
     "v_visibility not in ('public', 'followers', 'private', 'hidden')",
     "v_country_origin !~ '^[A-Z]{2}$'",
     "v_current_country !~ '^[A-Z]{2}$'",
     'pg_catalog.pg_timezone_names'
-  ]) assert.ok(migration.includes(token), 'Missing validation: ' + token);
+  ]) assert.ok(migration.toLowerCase().includes(token.toLowerCase()), 'Missing validation: ' + token);
 });
 
 test('profile edit writes atomically and records a new version and audit event', () => {
