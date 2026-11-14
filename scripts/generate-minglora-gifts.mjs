@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { createRoseModel } from "../assets/3d-assets/gift-models/rose-model.mjs";
 import { createHibiscusModel } from "../assets/3d-assets/gift-models/hibiscus-model.mjs";
 import { createDjembeModel } from "../assets/3d-assets/gift-models/djembe-model.mjs";
+import { createPalmBreezeModel } from "../assets/3d-assets/gift-models/palm-breeze-model.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const MANIFEST = path.join(ROOT, "data", "minglora-gift-catalog.json");
@@ -51,6 +52,7 @@ function palette(gift) {
 function premiumSvgShape(gift) {
   const n = String(gift.name || "").toLowerCase();
   if (/djembe master/.test(n)) return '<g data-gift-artwork="djembe-master-original-v1"><path d="M169 163Q256 126 343 163L319 218Q306 251 291 296L278 380Q256 402 234 380L221 296Q206 251 193 218Z" fill="url(#main)" stroke="#fff" stroke-width="10" stroke-linejoin="round"/><ellipse cx="256" cy="164" rx="87" ry="25" fill="#d8c19a" stroke="#fff" stroke-width="10"/><ellipse cx="256" cy="164" rx="68" ry="17" fill="#9b7758" stroke="#f7e5c4" stroke-width="7"/><path d="M194 190Q256 211 318 190M205 228Q256 249 307 228M218 274Q256 291 294 274M231 325Q256 339 281 325" fill="none" stroke="#e8d2a9" stroke-width="7" stroke-linecap="round"/><path d="M194 190 231 325m-24-97 87 97m-72-135 58 103m49-103-58 103m34-103-87 135m63-135 24 135" fill="none" stroke="#f0dcb7" stroke-width="6" stroke-linecap="round"/><path d="M221 380Q256 398 291 380L299 413Q256 436 213 413Z" fill="#532b25" stroke="#fff" stroke-width="9"/><ellipse cx="256" cy="164" rx="78" ry="19" fill="none" stroke="#f4ddb6" stroke-width="7"/></g>';
+  if (/palm breeze/.test(n)) return '<g data-gift-artwork="palm-breeze-original-v1"><ellipse cx="256" cy="415" rx="145" ry="25" fill="#d7bd85" opacity=".86"/><path d="M251 405C245 335 253 268 270 212C279 184 279 157 274 130" fill="none" stroke="#815038" stroke-width="24" stroke-linecap="round"/><path d="M274 132C211 83 160 82 108 115M274 132C207 119 169 143 137 184M274 132C242 73 209 52 164 48M276 132C320 71 365 64 421 89M276 132C344 116 388 135 430 177M276 132C324 156 349 189 365 223M273 132C220 150 190 185 178 225M274 132C259 81 265 52 282 30" fill="none" stroke="#477f49" stroke-width="13" stroke-linecap="round"/><path d="M108 115l49 19-25 34m5 16 49-12-8 41m-14-165 45 34-11 34m222-66-49 35 12 29m-3 42-44 11 8 33m-8 42-39-15-5 33m-187-30 42-11 3 32m91-195 11 49-13 26" fill="none" stroke="#91b96c" stroke-width="7" stroke-linecap="round"/><circle cx="257" cy="139" r="18" fill="#765638" stroke="#f2e1bc" stroke-width="5"/><circle cx="281" cy="147" r="17" fill="#80613a" stroke="#f2e1bc" stroke-width="5"/><circle cx="270" cy="115" r="16" fill="#6f5034" stroke="#f2e1bc" stroke-width="5"/><path d="M222 400q36 19 72 0" fill="none" stroke="#b77a46" stroke-width="8"/><path d="M152 416q-36-21-48-2m223 2q36-21 48-2" fill="none" stroke="#d6bd8a" stroke-width="10" stroke-linecap="round"/></g>';
   if (/you are wanted/.test(n)) return '<circle cx="256" cy="250" r="150" fill="none" stroke="url(#shine)" stroke-width="27"/><circle cx="256" cy="250" r="94" fill="none" stroke="#fff" stroke-width="18"/><circle cx="256" cy="250" r="38" fill="url(#main)"/><path d="M256 95v-40m0 390v-40M101 250H61m390 0h-40" stroke="#fff" stroke-width="15" stroke-linecap="round"/>';
   if (/hot rods/.test(n)) return '<path d="M91 305l35-91q12-27 48-31l38-62h104l54 61q38 5 51 38l20 85-24 28H111z" fill="url(#main)" stroke="#fff" stroke-width="10" stroke-linejoin="round"/><path d="M215 151h91l42 60H176z" fill="#b8f5ff" stroke="#fff" stroke-width="7"/><circle cx="165" cy="329" r="47" fill="#1c2541" stroke="#fff" stroke-width="11"/><circle cx="357" cy="329" r="47" fill="#1c2541" stroke="#fff" stroke-width="11"/><path d="M83 242l-38-18m37 51-52-3m411-42 38-18m-38 51 52-3" stroke="url(#shine)" stroke-width="15" stroke-linecap="round"/>';
   if (/red lightning/.test(n)) return '<path d="M292 67 139 274h99l-21 171 158-234h-99z" fill="url(#main)" stroke="#fff" stroke-width="13" stroke-linejoin="round"/><path d="M106 156l23 27m254 164 27 23" stroke="url(#shine)" stroke-width="17" stroke-linecap="round"/>';
@@ -174,6 +176,7 @@ function modelDocument(gift) {
   if (giftName === "rose") return createRoseModel();
   if (giftName === "hibiscus") return createHibiscusModel();
   if (gift.code === "djembe-master-1v3jzkm") return createDjembeModel();
+  if (gift.code === "palm-breeze-gknyt0") return createPalmBreezeModel();
   const seed = hash32(gift.code);
   const hue = seed % 360;
   const colors = palette(gift);

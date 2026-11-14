@@ -27,3 +27,18 @@ Run npm run build:gifts to generate the model and SVG. Catalogue tests verify th
 - Integration: the canonical gift code is routed to this source by `scripts/generate-minglora-gifts.mjs`; catalogue pricing, status and LIVE transaction logic remain unchanged
 
 The existing gift build generates the model and the subject-specific transparent SVG artwork. Regression coverage verifies generated mesh metadata, components, embedded geometry and the artwork signature.
+
+
+## Palm Breeze v1
+
+- Source: palm-breeze-model.mjs
+- Target: canonical catalogue item palm-breeze-gknyt0 (Palm Breeze)
+- Generated output: public/assets/gifts/catalog/palm-breeze-gknyt0.gltf
+- Format: self-contained glTF 2.0 JSON with embedded binary mesh buffers
+- Geometry: curved fibrous trunk, eight pinnate fronds with individually modelled leaflets and veins, young coconuts, root flares, carved trunk details and a compact sand/water plinth
+- Materials: separate PBR records for trunk, fronds, husks, shoreline and surface details
+- Performance: repeated leaflet and vein meshes are batched by material to reduce draw calls
+- Review state: design-review-pending; original Minglora geometry with no copied logos or screenshot-derived artwork
+- Integration: the canonical gift code is routed through scripts/generate-minglora-gifts.mjs; gift price, status and LIVE transaction logic remain unchanged
+
+The existing gift build generates both subject-specific transparent SVG artwork and the self-contained glTF. Regression coverage checks catalogue identity, model provenance, mesh groups, embedded buffers and SVG artwork signature.
