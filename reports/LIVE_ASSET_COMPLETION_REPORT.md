@@ -234,3 +234,13 @@ The glyph overlay and unused emoji lookup were removed from `scripts/generate-mi
 - Source provenance is \`gift-phoenix-3d-v1\` / \`assets/3d-assets/gift-models/phoenix-model.mjs\`; review remains \`design-review-pending\`. Dedicated sound design \`phoenix-flame-rise-and-ember-choir-v1\` is locally synthesized, not a mastered audio file.
 - Full generated catalogue audit: **1,748** gift records (**1,737 active, 11 inactive**); **1,748/1,748** primary SVGs, transparent icons and GLTF models generated; **6** gift-specific synthesized sound designs; **0** mastered gift sound files; **0** physical-device QA approvals. Asset generation counts are not production-art approval counts.
 - Human artwork review, rights/licensing clearance, premium quality approval, physical Android/iOS/tablet/foldable/desktop/laptop/TV rendering and audio QA, and production deployment remain unverified. No canonical gift activation, Coin price, database offering, wallet, transaction, payout or AI runtime state changed.
+
+
+## Bespoke Beach Maracas model and Caribbean rhythm checkpoint — 2026-11-14
+
+- Added `assets/3d-assets/gift-models/beach-maracas-model.mjs` for existing canonical gift `beach-maracas-1exxoag`.
+- Source generates a crossed coral/lagoon gourd-shaker pair with hardwood handles, woven grip bands, individual seed motifs, sunburst paint details and a conch charm as embedded-buffer glTF 2.0 geometry.
+- Existing generator emits original `beach-maracas-original-v1` primary SVG/transparent icon and routes the canonical gift to its bespoke model source.
+- Added exact-code `maraca-rhythm` Web Animations choreography and locally synthesized shaker bursts/tonal accents; sound opt-out and reduced-motion handling remain.
+- Added sound manifest provenance, cache version, source inventory and regression assertions. CI/build results pending.
+- The existing music category, active state and 349-Coin value remain unchanged. No database offering, transaction, wallet, earnings or payout modified. Human design/rights acceptance and physical-device QA remain pending; audio is synthesized, not mastered.
