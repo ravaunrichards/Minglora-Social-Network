@@ -1,8 +1,10 @@
 (() => {
   "use strict";
   const state={gifts:[],balance:null,promoWallet:null,selectedCode:"",category:"all",search:"",recipient:"",page:0,pageSize:72,sort:"high"};
-  const labels={all:"All gifts",flowers:"Flowers",hearts:"Love & hearts",animals:"Animals & creatures",vehicles:"Vehicles",music:"Music",sports:"Sports",food_drink:"Food & drinks",fashion_beauty:"Fashion & beauty",luxury:"Luxury",celebrations:"Celebrations",fantasy:"Fantasy & cosmic",nature:"Nature",travel:"Travel",games:"Games",community:"Community",symbols:"Symbols",other:"More gifts"};
-  const emojis={all:"✦",flowers:"🌹",hearts:"💖",animals:"🦁",vehicles:"🚀",music:"🎵",sports:"🏆",food_drink:"🍰",fashion_beauty:"👑",luxury:"💎",celebrations:"🎉",fantasy:"✨",nature:"🌴",travel:"🌍",games:"🎮",community:"🤝",symbols:"🔆",other:"🎁"};
+  const labels={all:"All gifts",flowers:"Flowers",hearts:"Love & hearts",animals:"Animals & creatures",vehicles:"Vehicles",music:"Music",sports:"Sports",food_drink:"Food & drinks",fashion_beauty:"Fashion & beauty",luxury:"Luxury",celebrations:"Celebrations",fantasy:"Fantasy & cosmic",nature:"Nature",travel:"Travel",games:"Games",community:"Community",symbols:"Symbols",everyday:"Everyday",reactions:"Reactions",seasonal:"Seasonal",jamaican_culture:"Jamaican culture",other:"More gifts"};
+  const categoryIconFiles=Object.freeze({all:"all",flowers:"flowers",hearts:"hearts",animals:"animals",vehicles:"vehicles",music:"music",sports:"sports",food_drink:"food_drink",fashion_beauty:"fashion_beauty",luxury:"luxury",celebrations:"celebrations",fantasy:"fantasy",nature:"nature",travel:"travel",games:"games",community:"community",symbols:"symbols",everyday:"everyday",reactions:"reactions",seasonal:"seasonal",jamaican_culture:"jamaican_culture",other:"other"});
+  const categoryIconUrl=k=>"/assets/icons/live-gift-categories/"+(categoryIconFiles[k]||"other")+".svg";
+  const giftIconUrl=g=>g?.code&&/^[a-z0-9_-]{1,59}$/.test(String(g.code))?"/assets/gifts/catalog/"+encodeURIComponent(g.code)+"-icon.svg":"";
   const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   async function request(path,options={}) {
     let response;
@@ -17,7 +19,7 @@
     return ["all",...Object.keys(labels).filter(k=>k!=="all"&&available.has(k))];
   }
   function categoryMarkup(){
-    return categories().map(k=>"<button type='button' class='gift-category-chip "+(state.category===k?"active":"")+"' data-gift-category='"+k+"'><span>"+emojis[k]+"</span> "+labels[k]+"</button>").join("");
+    return categories().map(k=>"<button type='button' class='gift-category-chip "+(state.category===k?"active":"")+"' data-gift-category='"+k+"'><img class='gift-category-icon' loading='lazy' decoding='async' src='"+esc(categoryIconUrl(k))+"' alt='' aria-hidden='true'> "+labels[k]+"</button>").join("");
   }
   function filtered(){
     const q=state.search.trim().toLowerCase();
@@ -29,7 +31,8 @@
   }
   function selected(){return state.gifts.find(g=>g.code===state.selectedCode)||null;}
   function card(g){
-    const image=g.image_url?"<img class='gift-card-image' loading='lazy' decoding='async' src='"+esc(g.image_url)+"' alt='Approved Minglora 3D gift artwork: "+esc(g.name)+"'>":"<span class='gift-art-unavailable'>3D model unavailable</span>";
+    const iconUrl=giftIconUrl(g);
+    const image=iconUrl?"<img class='gift-card-image' data-gift-icon loading='lazy' decoding='async' src='"+esc(iconUrl)+"' alt='Transparent Minglora gift icon: "+esc(g.name)+"'>":"<span class='gift-art-unavailable' role='status'>Gift icon unavailable</span>";
     return "<button type='button' class='gift-catalog-card "+(state.selectedCode===g.code?"selected":"")+"' data-gift-select='"+esc(g.code)+"' aria-pressed='"+(state.selectedCode===g.code)+"'><span class='gift-catalog-art'>"+image+"</span><strong>"+esc(g.name)+"</strong><small>◈ "+Number(g.coin_price).toLocaleString()+" Coins</small></button>";
   }
   function updateSelected(){
@@ -113,6 +116,18 @@
   function drawGrid(){
     const grid=document.getElementById("minglora-gift-grid"),count=document.getElementById("minglora-gift-count"),more=document.getElementById("minglora-gift-more");
     if(!grid)return;
+    if(!grid.dataset.giftIconErrorsBound){
+      grid.addEventListener("error",event=>{
+        const image=event.target;
+        if(!image||image.tagName!=="IMG"||!image.matches("[data-gift-icon]"))return;
+        const fallback=document.createElement("span");
+        fallback.className="gift-art-unavailable";
+        fallback.setAttribute("role","status");
+        fallback.textContent="Gift icon unavailable";
+        image.replaceWith(fallback);
+      },true);
+      grid.dataset.giftIconErrorsBound="true";
+    }
     const rows=filtered(),shown=rows.slice(0,(state.page+1)*state.pageSize);
     if(count)count.textContent=rows.length.toLocaleString()+" gifts";
     grid.innerHTML=shown.length?shown.map(card).join(""):"<div class='gift-empty-state'>No gifts match your search.</div>";

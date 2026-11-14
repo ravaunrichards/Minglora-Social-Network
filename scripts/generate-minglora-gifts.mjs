@@ -70,16 +70,17 @@ function premiumSvgShape(gift) {
   return "";
 }
 
-function svgArt(gift) {
+function svgArt(gift, options = {}) {
+  const iconOnly = options.iconOnly === true;
   const colors = palette(gift);
   const seed = hash32(gift.code);
   const name = String(gift.name || "").toLowerCase();
-  const rot = (seed % 31) - 15;
+  const rot = iconOnly ? 0 : (seed % 31) - 15;
   const star1 = 45 + (seed % 50);
   const star2 = 370 + (seed % 60);
   const ring = 185 + (seed % 35);
   const bg1 = colors[1], bg2 = colors[0], shine = colors[2];
-  const premiumAccent = /premium edition/i.test(name) ? '<g transform="translate(390 115)"><circle r="42" fill="#17142c" fill-opacity=".7" stroke="#ffe08a" stroke-width="5"/><path d="M-25 10l7-31 18 17 18-17 7 31z" fill="#ffcf55" stroke="#fff2bd" stroke-width="4"/><path d="M-28 13h56v10h-56z" fill="#f5a623"/><circle cy="-26" r="5" fill="#fff"/></g>' : '';
+  const premiumAccent = !iconOnly && /premium edition/i.test(name) ? '<g transform="translate(390 115)"><circle r="42" fill="#17142c" fill-opacity=".7" stroke="#ffe08a" stroke-width="5"/><path d="M-25 10l7-31 18 17 18-17 7 31z" fill="#ffcf55" stroke="#fff2bd" stroke-width="4"/><path d="M-28 13h56v10h-56z" fill="#f5a623"/><circle cy="-26" r="5" fill="#fff"/></g>' : '';
   const icon = (gift.category === "hearts" ? "heart" :
     gift.category === "flowers" ? "petal" :
     gift.category === "animals" ? "creature" :
@@ -154,16 +155,15 @@ function svgArt(gift) {
     '<path d="M205 80h102v84H205z" fill="none" stroke="#fff" stroke-width="8"/><path d="m205 80 102 84m0-84L205 164" stroke="#fff" stroke-width="7"/>'
   ];
   const sigil = sigils[seed % sigils.length];
-  const safeLabel = String(gift.name || "Minglora Gift").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").slice(0,30);
-  return '<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="'+String(gift.name).replace(/&/g,"&amp;").replace(/</g,"&lt;")+'">'+
-    '<defs><linearGradient id="main" x1="0" y1="0" x2="1" y2="1"><stop stop-color="'+shine+'"/><stop offset=".55" stop-color="'+bg2+'"/><stop offset="1" stop-color="'+bg1+'"/></linearGradient><radialGradient id="shine" cx=".28" cy=".2" r=".85"><stop stop-color="#fff"/><stop offset=".35" stop-color="'+shine+'"/><stop offset="1" stop-color="'+bg1+'"/></radialGradient><filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="16"/></filter></defs>'+
-    '<circle cx="256" cy="257" r="'+ring+'" fill="none" stroke="#fff" stroke-opacity=".12" stroke-width="22"/><circle cx="256" cy="265" r="160" fill="#100d36" opacity=".17" filter="url(#shadow)"/>'+
-    '<ellipse cx="256" cy="408" rx="132" ry="21" fill="#081a3b" opacity=".22"/>'+
-    '<g transform="rotate('+rot+' 256 256)">'+shape+'</g>'+spark+'<g transform="translate('+(seed%5)*5+' 0)" opacity=".8">'+sigil+'</g>'+premiumAccent+
-    '<circle cx="392" cy="108" r="7" fill="#fff" opacity=".9"/><circle cx="115" cy="390" r="6" fill="#fff" opacity=".75"/>'+
-    '<path d="M90 72q90-48 174-26" fill="none" stroke="#fff" stroke-opacity=".22" stroke-width="10" stroke-linecap="round"/>'+
-    '<rect x="86" y="438" width="340" height="43" rx="21" fill="#10162d" fill-opacity=".48"/><text x="256" y="467" font-family="Arial,sans-serif" font-size="21" font-weight="800" text-anchor="middle" fill="#fff">'+safeLabel+'</text>'+
-    '</svg>';
+  const safeName = String(gift.name || "Minglora Gift")
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;").replace(/\x27/g,"&apos;").slice(0,60);
+  const safeLabel = safeName.slice(0,30);
+  const defs = '<defs><linearGradient id="main" x1="0" y1="0" x2="1" y2="1"><stop stop-color="'+shine+'"/><stop offset=".55" stop-color="'+bg2+'"/><stop offset="1" stop-color="'+bg1+'"/></linearGradient><radialGradient id="shine" cx=".28" cy=".2" r=".85"><stop stop-color="#fff"/><stop offset=".35" stop-color="'+shine+'"/><stop offset="1" stop-color="'+bg1+'"/></radialGradient><filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="16"/></filter></defs>';
+  const stage = iconOnly ? '' : '<circle cx="256" cy="257" r="'+ring+'" fill="none" stroke="#fff" stroke-opacity=".12" stroke-width="22"/><circle cx="256" cy="265" r="160" fill="#100d36" opacity=".17" filter="url(#shadow)"/><ellipse cx="256" cy="408" rx="132" ry="21" fill="#081a3b" opacity=".22"/>';
+  const decorations = iconOnly ? '' : spark+'<g transform="translate('+(seed%5)*5+' 0)" opacity=".8">'+sigil+'</g>'+premiumAccent+'<circle cx="392" cy="108" r="7" fill="#fff" opacity=".9"/><circle cx="115" cy="390" r="6" fill="#fff" opacity=".75"/><path d="M90 72q90-48 174-26" fill="none" stroke="#fff" stroke-opacity=".22" stroke-width="10" stroke-linecap="round"/>';
+  const label = iconOnly ? '' : '<rect x="86" y="438" width="340" height="43" rx="21" fill="#10162d" fill-opacity=".48"/><text x="256" y="467" font-family="Arial,sans-serif" font-size="21" font-weight="800" text-anchor="middle" fill="#fff">'+safeLabel+'</text>';
+  return '<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" data-gift-code="'+String(gift.code||"")+'" aria-label="'+safeName+'">'+defs+stage+'<g transform="rotate('+rot+' 256 256)">'+shape+'</g>'+decorations+label+'</svg>';
 }
 
 // The GLB-ready scene geometry is authored as simple original meshes, not imported models.
@@ -551,18 +551,20 @@ function main(){
   let count=0;
   for(const gift of data.gifts){
     const svg=svgArt(gift);
+    const iconSvg=svgArt(gift,{iconOnly:true});
     const gltf=JSON.stringify(modelDocument(gift));
     writeAsset(path.join(ASSET_DIR,gift.code+".svg"),svg,checkOnly);
+    writeAsset(path.join(ASSET_DIR,gift.code+"-icon.svg"),iconSvg,checkOnly);
     writeAsset(path.join(ASSET_DIR,gift.code+".gltf"),gltf,checkOnly);
     count++;
   }
-  const expectedFiles=new Set(data.gifts.flatMap(gift=>[gift.code+".svg",gift.code+".gltf"]));
+  const expectedFiles=new Set(data.gifts.flatMap(gift=>[gift.code+".svg",gift.code+"-icon.svg",gift.code+".gltf"]));
   const staleFiles=fs.readdirSync(ASSET_DIR).filter(name=>/\.(?:svg|gltf)$/i.test(name)&&!expectedFiles.has(name));
   if(checkOnly&&staleFiles.length)throw new Error("Stale generated gift assets found: "+staleFiles.slice(0,10).join(", "));
   if(!checkOnly)for(const name of staleFiles)fs.unlinkSync(path.join(ASSET_DIR,name));
-  const stamp={version:2,giftCount:count,svgAssets:count,gltfAssets:count,generatedAt:String(data.generated_at||"unspecified")};
+  const stamp={version:3,giftCount:count,svgAssets:count,svgIconAssets:count,gltfAssets:count,generatedAt:String(data.generated_at||"unspecified")};
   const stampText=JSON.stringify(stamp,null,2);
   writeAsset(path.join(ASSET_DIR,"catalog-build.json"),stampText,checkOnly);
-  process.stdout.write("[Minglora Gift Studio] "+(checkOnly?"verified ":"generated ")+count+" individual SVG artworks and "+count+" 3D GLTF gift models.\n");
+  process.stdout.write("[Minglora Gift Studio] "+(checkOnly?"verified ":"generated ")+count+" primary SVG artworks, "+count+" transparent SVG icons and "+count+" 3D GLTF gift models.\n");
 }
 main();
