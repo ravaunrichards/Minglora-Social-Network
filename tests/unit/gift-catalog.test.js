@@ -354,3 +354,30 @@ test("LIVE Island uses an original lagoon, palms, pavilion, canoe and coral reef
   assert.ok(svg.includes('data-gift-artwork="live-island-original-v1"'), "the primary SVG must preserve subject-specific original artwork");
   assert.ok(icon.includes('data-gift-artwork="live-island-original-v1"'), "the transparent icon must preserve subject-specific original artwork");
 });
+
+
+test("Crystal Crown uses a bespoke faceted royal tiara with separately named crystal and filigree meshes", () => {
+  const crown = gifts.find(gift => gift.code === "crystal-crown-1itryeu");
+  assert.ok(crown, "Crystal Crown must remain in the canonical gift catalogue");
+  assert.equal(crown.name, "Crystal Crown");
+  assert.equal(crown.category, "luxury");
+  assert.equal(crown.coin_price, 2000, "the existing Coin value must remain unchanged");
+  assert.equal(crown.active, true, "the existing publication state must remain unchanged");
+  const model = JSON.parse(readFileSync(path.join(assetRoot, crown.code + ".gltf"), "utf8"));
+  assert.equal(model.asset?.version, "2.0");
+  assert.equal(model.asset?.extras?.mingloraAssetId, "gift-crystal-crown-3d-v1");
+  assert.equal(model.asset?.extras?.source, "assets/3d-assets/gift-models/crystal-crown-model.mjs");
+  assert.match(model.asset?.extras?.artDirection || "", /tapered sculpted gold band.*five arched points.*individually faceted sapphire.*pendant drops/i);
+  assert.match(model.asset?.extras?.reviewStatus || "", /design-review-pending/);
+  assert.ok(model.meshes?.[0]?.primitives?.length >= 150, "the crown must expose its own faceted gems, arches, pavé and engraved band meshes");
+  assert.ok(model.materials?.some(material => material.name.includes("Crystal Crown tapered gold band")));
+  assert.ok(model.materials?.some(material => material.name.includes("Crystal Crown great sapphire upper cut facet")));
+  assert.ok(model.materials?.some(material => material.name.includes("Crystal Crown royal point spine")));
+  assert.ok(model.materials?.some(material => material.name.includes("Crystal Crown inner velvet lining")));
+  assert.ok(model.buffers?.[0]?.uri.startsWith("data:application/octet-stream;base64,"), "Crystal Crown must be self-contained for the existing model viewer");
+  assert.ok(model.accessors?.filter(accessor => accessor.type === "VEC3").length >= 300, "the model must expose individual facet positions and normals");
+  const svg = readFileSync(path.join(assetRoot, crown.code + ".svg"), "utf8");
+  const icon = readFileSync(path.join(assetRoot, crown.code + "-icon.svg"), "utf8");
+  assert.ok(svg.includes('data-gift-artwork="crystal-crown-original-v1"'), "the primary SVG must use subject-specific royal artwork");
+  assert.ok(icon.includes('data-gift-artwork="crystal-crown-original-v1"'), "the transparent icon must preserve the royal artwork");
+});
