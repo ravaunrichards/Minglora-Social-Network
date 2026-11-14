@@ -40,6 +40,8 @@ This is a continuation checkpoint against the current `main` repository. The old
 - Human review of all 1,509 extracted gift crops and all 71 badge files.
 - Rights/licence clearance and provenance for extracted TikTok catalogue crops. These remain quarantined; do not publish, activate, monetize or represent them as original Minglora gifts.
 - Premium high-detail, individually art-directed 3D models for the full catalogue. Existing generated GLTF assets are procedural geometry/material baselines, not verified photorealistic/cinematic models.
+- Replace the generated SVG catalogue's system-font emoji overlay with self-contained, gift-specific original illustrations. The inspected generator places a large Unicode emoji glyph over category-template vector shapes, so its current output does not meet the no-emoji or premium-art requirement.
+- Replace shared category-template 3D geometry and limited name-specific overrides with individually art-directed models where a gift needs a distinct object. A unique file path alone is not proof of unique geometry.
 - Full 18-theme gift taxonomy and curated category assignment. The current catalogue has 18 stored categories, but they are not the same as the 18 conceptual themes in the brief.
 - Complete individually exported LIVE icon set, with host/guest/viewer tools and normal/active/selected/disabled/loading/success/warning/error states.
 - Dedicated gift-specific mastered sound effects and synchronization. Existing Web Audio synthesis and the separate notification/ringtone sound pack do not satisfy this requirement.
@@ -56,4 +58,4 @@ This is a continuation checkpoint against the current `main` repository. The old
 
 ## Current status
 
-**Minglora LIVE asset mission: PARTIALLY COMPLETE — NOT PRODUCTION COMPLETE.** The existing app has a substantial gift catalogue, build-time SVG/GLTF generation, LIVE effects runtime, layouts, assets and test coverage. This continuation corrected the reference evidence and updated the inventory. The full premium asset production, rights clearance, detailed animation/audio work, category curation, cross-device QA and actual hardware validation remain open.
+**Minglora LIVE asset mission: PARTIALLY COMPLETE — NOT PRODUCTION COMPLETE.** The existing app has a substantial gift catalogue, build-time SVG/GLTF generation, LIVE effects runtime, layouts, assets and test coverage. Source inspection also confirmed that the generated SVGs are emoji-overlay/category-template artwork and the GLTFs are procedural category meshes with limited bespoke overrides; they are not premium-production-ready. This continuation corrected the reference evidence and updated the inventory. The full premium asset production, rights clearance, detailed animation/audio work, category curation, cross-device QA and actual hardware validation remain open.

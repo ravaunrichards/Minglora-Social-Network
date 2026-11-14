@@ -16,7 +16,7 @@ Flag reasons recorded by the existing audit: 1,058 foregrounds close to crop bou
 
 ## Generated 3D and vector quality
 
-The current generator produces distinct SVG files and GLTF scenes from per-gift identity, category, colour palette and subject-specific original shape routines. GLTF scenes use generated meshes and PBR metallic/roughness material fields. The current implementation is a useful scalable baseline, not proof of photorealistic or cinematic 3D quality: complex mesh detail, high-resolution texture maps, GLB/KTX2 compression and embedded skeletal animation are not evidenced.
+The current generator emits one SVG and one GLTF file for each catalogue row, but a file per gift does not mean a fully bespoke illustration/model per gift. The SVG renderer uses a small set of category-level vector templates plus limited name-specific overrides, then overlays a large Unicode emoji glyph using system emoji fonts. That makes the output font/device dependent and explicitly fails the no-emoji, self-contained premium-art requirement. The GLTF generator likewise uses generated primitive meshes, common category geometry and limited name-specific model branches, with basic metallic/roughness materials. The source does not evidence a bespoke high-detail model for every gift, high-resolution PBR texture maps, GLB/KTX2 compression, embedded skeletal animation or cinematic scene rigs. These outputs are a procedural prototype/placeholder baseline, not approved premium production artwork.
 
 ## Interface icon and effect quality
 
@@ -34,4 +34,4 @@ LIVE CSS includes phone compact layouts and a desktop room with a distinct stage
 
 ## Production gate
 
-The extracted 1,509 catalogue crops remain blocked from production until rights and visual review are documented or original replacements are supplied. No source files were changed or removed during this documentation-only continuation.
+The extracted 1,509 catalogue crops remain blocked from production until rights and visual review are documented or original replacements are supplied. The current generated SVG catalogue also remains below the requested quality gate while its system-rendered emoji overlay and shared category-template artwork remain in place. No source files were changed or removed during this documentation-only continuation.
