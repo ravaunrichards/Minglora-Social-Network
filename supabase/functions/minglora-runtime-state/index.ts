@@ -2,6 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
+const AI_PROFILE_MEDIA_BUCKET = "minglora-ai-profile-media";
 const secretKeys = JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS") || "{}");
 const adminKey = secretKeys.default || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const admin = SUPABASE_URL && adminKey
@@ -3112,10 +3113,28 @@ Deno.serve(async (req: Request) => {
     const message={"image/jpeg":"jpg","image/png":"png","image/webp":"webp","video/mp4":"mp4","video/webm":"webm","audio/mpeg":"mp3","audio/mp4":"m4a","audio/ogg":"ogg","audio/webm":"webm","application/pdf":"pdf","text/plain":"txt","text/csv":"csv","application/zip":"zip","application/x-zip-compressed":"zip","application/msword":"doc","application/vnd.ms-excel":"xls","application/vnd.ms-powerpoint":"ppt","application/vnd.openxmlformats-officedocument.wordprocessingml.document":"docx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":"xlsx","application/vnd.openxmlformats-officedocument.presentationml.presentation":"pptx"};
     const ringtone={"audio/mpeg":"mp3","audio/mp4":"m4a","audio/ogg":"ogg","audio/webm":"webm","audio/wav":"wav","audio/x-wav":"wav","audio/flac":"flac","audio/aac":"aac"};
     const allowed=slot==="avatar"||slot==="cover"?image:slot==="post"?post:slot==="sound"?sound:slot==="story"?story:slot==="group"||slot==="page"?communityMedia:slot==="message"?message:slot==="ringtone"?ringtone:{};
-    const bucket=slot==="avatar"?"minglora-avatars":slot==="cover"?"minglora-covers":slot==="post"?"minglora-post-media":slot==="sound"?"minglora-sounds":slot==="story"?"minglora-stories":slot==="group"?"minglora-group-media":slot==="page"?"minglora-page-media":slot==="message"?"minglora-message-attachments":slot==="ringtone"?"minglora-ringtones":"";
+    const bucket=aiIdentityRequested?AI_PROFILE_MEDIA_BUCKET:slot==="avatar"?"minglora-avatars":slot==="cover"?"minglora-covers":slot==="post"?"minglora-post-media":slot==="sound"?"minglora-sounds":slot==="story"?"minglora-stories":slot==="group"?"minglora-group-media":slot==="page"?"minglora-page-media":slot==="message"?"minglora-message-attachments":slot==="ringtone"?"minglora-ringtones":"";
     const maxBytes=slot==="avatar"?10*1024*1024:slot==="cover"?20*1024*1024:slot==="sound"?50*1024*1024:slot==="story"?200*1024*1024:slot==="group"||slot==="page"?250*1024*1024:slot==="message"?100*1024*1024:slot==="ringtone"?20*1024*1024:slot==="post"?500*1024*1024:0;
     if(!uuidPattern.test(ownerId)||!bucket||!allowed[mimeType]||!Number.isSafeInteger(byteSize)||byteSize<1||byteSize>maxBytes){
       return json(400,{error:"The selected file type or size is not allowed for this media area."});
+    }
+    if(aiIdentityRequested){
+      const {data:existingBucket}=await admin.storage.getBucket(AI_PROFILE_MEDIA_BUCKET);
+      if(existingBucket){
+        if(existingBucket.public!==false)return json(409,{error:"The dedicated AI profile media bucket exists but is not private. No upload was started."});
+      }else{
+        const {error:createBucketError}=await admin.storage.createBucket(AI_PROFILE_MEDIA_BUCKET,{
+          public:false,
+          fileSizeLimit:20*1024*1024,
+          allowedMimeTypes:["image/jpeg","image/png","image/webp","image/avif"]
+        });
+        if(createBucketError){
+          const {data:verifiedBucket,error:verifyBucketError}=await admin.storage.getBucket(AI_PROFILE_MEDIA_BUCKET);
+          if(verifyBucketError||!verifiedBucket||verifiedBucket.public!==false){
+            return json(503,{error:"The private AI profile media bucket could not be prepared safely."});
+          }
+        }
+      }
     }
     const mediaType=mimeType.startsWith("image/")?"image":mimeType.startsWith("video/")?"video":mimeType.startsWith("audio/")?"audio":mimeType==="model/gltf-binary"?"model3d":"document";
     const objectPath=aiIdentityRequested
@@ -3162,7 +3181,10 @@ Deno.serve(async (req: Request) => {
       aiIdentityRecord=identity;
       expectedFolder=`${ownerId}/ai-identities/${aiIdentityId}`;
     }
+    if(aiIdentityRequested&&bucket!==AI_PROFILE_MEDIA_BUCKET)return json(400,{error:"AI profile media must use the dedicated private bucket."});
+    if(!aiIdentityRequested&&bucket===AI_PROFILE_MEDIA_BUCKET)return json(400,{error:"The private AI profile bucket is reserved for verified AI identities."});
     const bucketSlots:Record<string,string[]>={
+      [AI_PROFILE_MEDIA_BUCKET]:["image/jpeg","image/png","image/webp","image/avif"],
       "minglora-avatars":["image/jpeg","image/png","image/webp","image/avif"],
       "minglora-covers":["image/jpeg","image/png","image/webp","image/avif"],
       "minglora-post-media":["image/jpeg","image/png","image/webp","image/avif","video/mp4","video/webm","video/quicktime","audio/mpeg","audio/mp4","audio/ogg","audio/webm","audio/wav","audio/x-wav","audio/flac","audio/aac","model/gltf-binary"],
@@ -3217,7 +3239,11 @@ Deno.serve(async (req: Request) => {
     }
     const mediaType=mimeType.startsWith("image/")?"image":mimeType.startsWith("video/")?"video":mimeType.startsWith("audio/")?"audio":mimeType==="model/gltf-binary"?"model3d":"document";
     const result:Record<string,unknown>={bucket,path:objectPath,mimeType,mediaType,byteSize};
-    if(bucket==="minglora-avatars"||bucket==="minglora-covers"){
+    if(bucket===AI_PROFILE_MEDIA_BUCKET){
+      const {data,error}=await admin.storage.from(bucket).createSignedUrl(objectPath,3600);
+      if(error||!data?.signedUrl)return json(502,{error:"The private AI image uploaded but a preview link could not be prepared."});
+      result.url=data.signedUrl;
+    }else if(bucket==="minglora-avatars"||bucket==="minglora-covers"){
       const {data}=admin.storage.from(bucket).getPublicUrl(objectPath);result.url=data.publicUrl;
     }else{
       const {data,error}=await admin.storage.from(bucket).createSignedUrl(objectPath,3600);
@@ -3264,7 +3290,7 @@ Deno.serve(async (req: Request) => {
     const ownerId=String(input.ownerId||"");
     const bucket=String(input.bucket||"");
     const objectPath=String(input.path||"");
-    const allowedBuckets=["minglora-avatars","minglora-covers","minglora-post-media","minglora-stories","minglora-short-videos","minglora-message-attachments","minglora-group-media","minglora-page-media","minglora-live-thumbnails","minglora-data-exports","minglora-ringtones","minglora-sounds"];
+    const allowedBuckets=[AI_PROFILE_MEDIA_BUCKET,"minglora-avatars","minglora-covers","minglora-post-media","minglora-stories","minglora-short-videos","minglora-message-attachments","minglora-group-media","minglora-page-media","minglora-live-thumbnails","minglora-data-exports","minglora-ringtones","minglora-sounds"];
     if(!validUuid(ownerId)||!allowedBuckets.includes(bucket)||!objectPath.startsWith(ownerId+"/")||objectPath.includes("..")||objectPath.includes("\\\\")){
       return json(400,{error:"Invalid media deletion reference."});
     }
@@ -3280,7 +3306,7 @@ Deno.serve(async (req: Request) => {
     const bucket=String(input.bucket||"");
     const objectPath=String(input.path||"");
     const uuidPattern=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    if(!uuidPattern.test(ownerId)||!["minglora-post-media","minglora-stories","minglora-avatars","minglora-covers","minglora-message-attachments","minglora-group-media","minglora-page-media","minglora-ringtones","minglora-sounds"].includes(bucket)||!objectPath.startsWith(ownerId+"/")||objectPath.includes("..")){
+    if(!uuidPattern.test(ownerId)||!["minglora-post-media","minglora-stories",AI_PROFILE_MEDIA_BUCKET,"minglora-avatars","minglora-covers","minglora-message-attachments","minglora-group-media","minglora-page-media","minglora-ringtones","minglora-sounds"].includes(bucket)||!objectPath.startsWith(ownerId+"/")||objectPath.includes("..")){
       return json(400,{error:"Invalid media reference."});
     }
     if(bucket==="minglora-avatars"||bucket==="minglora-covers"){
