@@ -76,3 +76,7 @@ A separate read-only metadata scanner is part of the LIVE asset workflow:
 - Writes `reports/live-image-metadata-audit.json` and `reports/live-image-metadata-audit.md`; CI uploads both as a named artifact.
 - It does not apply EXIF orientation or scan decoded pixels. An alpha channel/transparency flag is not proof that an image has transparent pixels, and this audit does not certify visual quality, licensing or production approval.
 - Source images and extracted artwork remain read-only. Unsupported formats or malformed headers are reported and fail the audit rather than being silently skipped.
+
+## Gift screenshot sample crosswalk — 2026-11-14
+
+A five-screenshot sample was inspected at tile level: 102 visible items, 87 matched to canonical catalogue records and 15 pending name/identity verification. Every mapped item in this sample displays and is configured at 1 Coin. The full per-tile mapping includes original source file and Git blob SHA in `data/live-gift-reference-crosswalk.json`; see `reports/GIFT_REFERENCE_CROSSWALK.md`. The 126 remaining gift captures and 1,509 extracted crops still require review. No source reference or crop was modified or moved into production.

@@ -54,3 +54,7 @@ The generator and tests validate unique codes and animation keys, safe local pat
 ## Rights and review
 
 The 1,509 extracted screenshot crops in `assets/Artwork/` are explicitly marked review-only. Their extraction did not establish commercial use permission. They must not be activated as production gifts until each asset's rights/provenance is established or it is replaced by original Minglora artwork.
+
+## Supplied gift screenshot crosswalk — 2026-11-14
+
+Five of the 131 source capture PNGs were visually read at tile level. The crosswalk contains 102 tile records: 87 matched to existing canonical catalogue entries (all 1 Coin in this sample), 15 unresolved labels, and one matched inactive catalogue entry that remains inactive. See `reports/GIFT_REFERENCE_CROSSWALK.md` and `data/live-gift-reference-crosswalk.json`. Screenshot artwork remains reference-only; the mapping does not grant reuse rights.

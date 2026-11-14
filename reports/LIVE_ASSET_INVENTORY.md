@@ -63,3 +63,11 @@ The inspected `assets/animations/` directory had only a README before this branc
 | `public/assets/icons/live-tools/` | 12 individually addressable original SVG symbols plus `manifest.json` | Integrated icons for the existing LIVE tools drawer; 24×24 outline assets, currentColor, design review pending |
 
 The shortcuts remain Layout, Permissions, Guests, Viewers, Fan Club, Match, Top Gifters, Gifts, Rewards, Moderators, Appearance and Devices. The existing role gates, rewards visibility gate, panel selectors and active `aria-pressed` behavior remain authoritative. The service worker cache v306 includes the new manifest and every icon.
+
+## Gift reference-to-catalogue crosswalk — 2026-11-14
+
+- Five of 131 supplied gift capture screenshots visually reviewed in this checkpoint: 102 visible tiles.
+- 87 tiles map to canonical catalogue IDs and 1-Coin prices; 15 remain unresolved or require label verification.
+- One matched item (`Community Gift`) is already inactive and was not reactivated.
+- Per-tile labels, IDs, categories, coin price and active status are in `data/live-gift-reference-crosswalk.json`; the human-readable review is `reports/GIFT_REFERENCE_CROSSWALK.md`.
+- Source screenshots and all extracted artwork remain read-only; no crop was promoted to production artwork.

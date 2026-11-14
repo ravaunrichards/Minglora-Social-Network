@@ -89,3 +89,11 @@ The glyph overlay and unused emoji lookup were removed from `scripts/generate-mi
 - Added offline shell pre-caching and bumped the service worker shell to v306.
 - Added SVG, integration, accessibility-state, responsive drawer and cache regression tests; added the icon pack to the machine-readable LIVE asset manifest generator and report maps.
 - The pack is original Minglora outline UI artwork, not bespoke 3D gift artwork. Human visual/design review and production approval remain pending. CI verification is required before this checkpoint is reported as complete.
+
+## Gift screenshot crosswalk checkpoint — 2026-11-14
+
+- Visually inspected five supplied gift capture screenshots (out of 131) and recorded 102 individual tile labels and positions.
+- Cross-checked all 102 labels against the canonical `data/minglora-gift-catalog.json`: 87 tile occurrences map to canonical codes and prices; 15 remain unresolved for human label/identity review.
+- Every mapped item in this sample has a canonical configured price of 1 Coin, matching the screenshot. One mapped record is inactive and remains inactive.
+- Added `data/live-gift-reference-crosswalk.json`, `reports/GIFT_REFERENCE_CROSSWALK.md` and a regression test for source paths, codes, price parity, inactive-state preservation and unresolved brand-like labels.
+- Screenshots and extracted crops remain reference-only. This checkpoint does not establish rights, approve third-party artwork, complete all 131 captures or finish premium gift artwork.
