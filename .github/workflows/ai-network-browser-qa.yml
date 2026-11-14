@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   chromium-ai-network:
-    name: AI identity and discovery browser checks
+    name: AI identity, category management and discovery browser checks
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -36,7 +36,7 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Check browser test syntax
         run: node --check tests/e2e/ai-network-workspace.mjs
-      - name: Exercise the real AI Network UI against disposable API fixtures
+      - name: Exercise AI identity and category lifecycle against disposable API fixtures
         run: node tests/e2e/ai-network-workspace.mjs
       - name: Upload AI Network browser evidence
         if: always()
