@@ -392,6 +392,13 @@ function buildManifest() {
     "live-gift-categories",
     ["public/app.js", "public/live-gift-access.css"]
   );
+  const liveToolsShortcutIconPack = svgIconPackRecord(
+    "public/assets/icons/live-tools/manifest.json",
+    "shortcuts",
+    "minglora-live-tools-shortcuts",
+    "live-tools",
+    ["public/app.js", "public/live-tiktok-compact.css"]
+  );
   const activeCount = gifts.filter(gift => gift.active).length;
   const inactiveCount = gifts.length - activeCount;
   return {
@@ -408,7 +415,8 @@ function buildManifest() {
       "public/gifts.js",
       "public/app.js",
       "public/assets/icons/live-controls/manifest.json",
-      "public/assets/icons/live-gift-categories/manifest.json"
+      "public/assets/icons/live-gift-categories/manifest.json",
+      "public/assets/icons/live-tools/manifest.json"
     ],
     summary: {
       catalogue_gift_count: gifts.length,
@@ -424,9 +432,10 @@ function buildManifest() {
       physical_device_qa_verified_count: 0,
       live_control_icon_count: liveControlIconPack.icon_count,
       live_gift_category_icon_count: liveGiftCategoryIconPack.icon_count,
+      live_tools_shortcut_icon_count: liveToolsShortcutIconPack.icon_count,
       required_generated_files_verified: true
     },
-    shared_assets: { icons: [iconSheet, pushIcon, liveControlIconPack, liveGiftCategoryIconPack] },
+    shared_assets: { icons: [iconSheet, pushIcon, liveControlIconPack, liveGiftCategoryIconPack, liveToolsShortcutIconPack] },
     gifts
   };
 }

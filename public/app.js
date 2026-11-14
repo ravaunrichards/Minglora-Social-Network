@@ -2356,6 +2356,40 @@ function updateLiveControlButton(button,icon,label,caption,pressed){
   button.title=label;
   if(pressed!==undefined)button.setAttribute("aria-pressed",String(Boolean(pressed)));
 }
+const LIVE_TOOLS_SHORTCUT_ICON_NAMES=Object.freeze(["layout","permissions","guests","viewers","fanclub","matches","top-gifters","gifts","rewards","moderators","appearance","devices"]);
+const LIVE_TOOLS_PANEL_TARGET_ATTRIBUTES=Object.freeze({
+  layouts:"data-live-tools-panel-target='layouts'",
+  permissions:"data-live-tools-panel-target='permissions'",
+  guests:"data-live-tools-panel-target='guests'",
+  viewers:"data-live-tools-panel-target='viewers'",
+  fanclub:"data-live-tools-panel-target='fanclub'",
+  matches:"data-live-tools-panel-target='matches'",
+  "top-gifters":"data-live-tools-panel-target='top-gifters'",
+  gifts:"data-live-tools-panel-target='gifts'",
+  rewards:"data-live-tools-panel-target='rewards'",
+  moderators:"data-live-tools-panel-target='moderators'",
+  appearance:"data-live-tools-panel-target='appearance'",
+  devices:"data-live-tools-panel-target='devices'"
+});
+const LIVE_TOOLS_PANEL_SELECTOR_ATTRIBUTES=Object.freeze({
+  guests:"data-live-tools-target='#live-speaker-request-panel'",
+  fanclub:"data-live-tools-target='#live-fan-club-panel'",
+  matches:"data-live-tools-target='#live-match-panel'",
+  gifts:"data-live-tools-target='#live-gift-panel'",
+  rewards:"data-live-tools-target='#live-reward-panel'",
+  moderators:"data-live-tools-target='#live-moderator-panel'",
+  appearance:"data-live-tools-target='.live-room-appearance'"
+});
+function liveToolsShortcutIcon(name){
+  if(!LIVE_TOOLS_SHORTCUT_ICON_NAMES.includes(name))return "";
+  return "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true' focusable='false'><use href='/assets/icons/live-tools/"+name+".svg#icon'></use></svg>";
+}
+function liveToolsShortcutButton(target,label,icon,pressed=false){
+  const panelAttribute=LIVE_TOOLS_PANEL_TARGET_ATTRIBUTES[target]||"";
+  const selectorAttribute=LIVE_TOOLS_PANEL_SELECTOR_ATTRIBUTES[target]||"";
+  if(!panelAttribute||!LIVE_TOOLS_SHORTCUT_ICON_NAMES.includes(icon))return "";
+  return "<button type='button' class='live-tools-shortcut' "+panelAttribute+(selectorAttribute?" "+selectorAttribute:"")+" aria-pressed='"+String(Boolean(pressed))+"' aria-label='"+esc(label)+"' title='"+esc(label)+"'><span class='live-tools-shortcut-icon'>"+liveToolsShortcutIcon(icon)+"</span><span class='live-tools-shortcut-label'>"+esc(label)+"</span></button>";
+}
 let activeLiveToolsTrigger=null;
 function openLiveToolsPanel(focusSelector){
   const backdrop=$("#live-tools-backdrop"),drawer=$("#live-tools-drawer"),shell=$("#live-player-shell");
@@ -2651,17 +2685,17 @@ async function openLiveRoom(session,role,issuedLiveKit){
     ? "<section id='live-moderator-panel' class='live-tools-card live-moderator-panel' data-live-tools-panel='moderators'><div><strong>LIVE moderators</strong><small>Assign up to 10 members to remove inappropriate LIVE comments.</small></div><form id='live-moderator-form' class='live-moderator-form'><label for='live-moderator-username'>Member username</label><input id='live-moderator-username' name='username' maxlength='30' autocomplete='off' placeholder='Enter Minglora username' required><button type='submit' class='secondary'>Add moderator</button></form><div id='live-moderator-list' class='live-moderator-list'><p class='muted'>Loading moderators…</p></div></section>"
     : "";
   const liveToolsNavigation="<nav class='live-tools-shortcuts' aria-label='LIVE panels'>"+
-    (role==="host"?"<button type='button' data-live-tools-panel-target='layouts' aria-pressed='true'>Layout</button><button type='button' data-live-tools-panel-target='permissions' aria-pressed='false'>Permissions</button>":"")+
-    "<button type='button' data-live-tools-panel-target='guests' data-live-tools-target='#live-speaker-request-panel' aria-pressed='false'>Guests</button>"+
-    (role==="host"?"<button type='button' data-live-tools-panel-target='viewers' aria-pressed='false'>Viewers</button>":"")+
-    "<button type='button' data-live-tools-panel-target='fanclub' data-live-tools-target='#live-fan-club-panel' aria-pressed='false'>Fan Club</button>"+
-    "<button type='button' data-live-tools-panel-target='matches' data-live-tools-target='#live-match-panel' aria-pressed='false'>Match</button>"+
-    "<button type='button' data-live-tools-panel-target='top-gifters' aria-pressed='false'>Top Gifters</button>"+
-    "<button type='button' data-live-tools-panel-target='gifts' data-live-tools-target='#live-gift-panel' aria-pressed='false'>Gifts</button>"+
-    (giftsEnabled?"<button type='button' data-live-tools-panel-target='rewards' data-live-tools-target='#live-reward-panel' aria-pressed='false'>Rewards</button>":"")+
-    (role==="host"&&liveSettings.manageModerators!==false?"<button type='button' data-live-tools-panel-target='moderators' data-live-tools-target='#live-moderator-panel' aria-pressed='false'>Moderators</button>":"")+
-    (role==="host"?"<button type='button' data-live-tools-panel-target='appearance' data-live-tools-target='.live-room-appearance' aria-pressed='false'>Appearance</button>":"")+
-    "<button type='button' data-live-tools-panel-target='devices' aria-pressed='false'>Devices</button>"+
+    (role==="host"?liveToolsShortcutButton("layouts","Layout","layout",true)+liveToolsShortcutButton("permissions","Permissions","permissions"): "")+
+    liveToolsShortcutButton("guests","Guests","guests")+
+    (role==="host"?liveToolsShortcutButton("viewers","Viewers","viewers"):"")+
+    liveToolsShortcutButton("fanclub","Fan Club","fanclub")+
+    liveToolsShortcutButton("matches","Match","matches")+
+    liveToolsShortcutButton("top-gifters","Top Gifters","top-gifters")+
+    liveToolsShortcutButton("gifts","Gifts","gifts")+
+    (giftsEnabled?liveToolsShortcutButton("rewards","Rewards","rewards"):"")+
+    (role==="host"&&liveSettings.manageModerators!==false?liveToolsShortcutButton("moderators","Moderators","moderators"):"")+
+    (role==="host"?liveToolsShortcutButton("appearance","Appearance","appearance"):"")+
+    liveToolsShortcutButton("devices","Devices","devices")+
     "</nav>";
   const liveModeLabels={video_audio:'VIDEO + AUDIO',audio_only:'AUDIO ONLY',mobile_gaming:'MOBILE GAMING',live_studio:'LIVE STUDIO'};
   const disclosureLabels={none:'',branded:'Branded content',sponsored:'Sponsored content'};
