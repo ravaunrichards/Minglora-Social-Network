@@ -52,7 +52,7 @@ test('AI media upload preparation verifies owner ownership and stores images bel
   assert.match(handler, /AI_PROFILE_MEDIA_BUCKET/);
   assert.match(handler, /getBucket\(AI_PROFILE_MEDIA_BUCKET\)/);
   assert.match(handler, /createBucket\(AI_PROFILE_MEDIA_BUCKET,[\s\S]*public:false/);
-  assert.match(handler, /aiIdentityRequested\\?AI_PROFILE_MEDIA_BUCKET/);
+  assert.match(handler, /aiIdentityRequested\?AI_PROFILE_MEDIA_BUCKET/);
   assert.match(handler, /const aiUuidPattern=/);
   assert.equal((handler.match(/const uuidPattern=/g) || []).length, 1, "upload preparation must declare its shared UUID validator only once");
 });
