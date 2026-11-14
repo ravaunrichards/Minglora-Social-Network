@@ -105,3 +105,8 @@ The glyph overlay and unused emoji lookup were removed from `scripts/generate-mi
 - Added a gift-catalogue regression assertion for the asset ID, source path, review status, botanical mesh/material signatures and embedded buffer.
 - The catalogue identity, category, configured coin price, active status, animation key and canonical asset URL are unchanged. The generated file continues to be created by the existing build/startup asset pipeline.
 - **Acceptance state:** implementation added on feat/live-hibiscus-botanical-sculpture-20261114; CI/build verification is pending. Design/licensing/renderer/device approvals are not claimed. This is one additional bespoke model, not completion of all 1,748 gift models.
+
+## Gift model provenance manifest checkpoint — 2026-11-14
+- Updated the LIVE asset-manifest generator to preserve named glTF source metadata for Rose and Hibiscus, while retaining a distinct source type for category/name-based procedural models.
+- Added regression coverage for both source file paths, unique asset IDs, pending design-review state and non-approved high-detail status.
+- This corrects inventory provenance; it does not claim premium production approval, completed human review or physical-device verification.
