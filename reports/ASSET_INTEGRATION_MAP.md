@@ -134,3 +134,17 @@ No prices, balances, transactions, account state, LiveKit credentials, or existi
 | Sound | `playGamerOtter` synthesizes an arcade arpeggio and low thump locally through Web Audio; the existing sound opt-out remains active. |
 
 The asset is wired into the existing generated catalogue/preview/sent-gift pipeline; no new endpoint, catalogue price, wallet event or database offering is introduced. Design/right clearance and renderer/device QA are not approved by source integration alone.
+
+
+## LIVE Island bespoke artwork and effect integration — 2026-11-14
+
+| Integration point | Implementation |
+|---|---|
+| Canonical catalogue | Existing `live-island-rmn3mc` record (nature, 10 Coins, active); identity and economics unchanged. |
+| 3D source | `assets/3d-assets/gift-models/live-island-model.mjs`, exact-code route in `scripts/generate-minglora-gifts.mjs`; emits the canonical self-contained GLTF path. |
+| Vector assets | Exact-name SVG branch emits `live-island-original-v1` to the existing primary artwork and transparent icon paths. |
+| Animation | `island-tide` exact-code override in `public/gift-effects.js`; runs through the existing server-confirmed LIVE gift mount. |
+| Sound | `playLiveIsland` local filtered surf and soft tonal chimes; inventory ID `live-island-tide-and-chime-v1`. |
+| Cache | `public/index.html` references `gift-effects.js?v=20261114-live-island-tide-1`; `public/sw.js` shell cache advances to v309 and precaches the matching bundle. |
+
+No new API, DB row, wallet transaction, payout or catalogue record is introduced. Artwork/rights acceptance and physical device QA remain unverified.
