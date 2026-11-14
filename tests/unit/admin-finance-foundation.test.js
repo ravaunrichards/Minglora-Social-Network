@@ -40,7 +40,9 @@ test('provider directory seeds only supplied provider candidates as not register
   assert.match(migration, /'paypal','PayPal','https:\/\/www\.paypal\.com\/jm\/business'/);
   assert.match(migration, /'not_registered','not_connected'/);
   assert.match(migration, /ON CONFLICT \(provider_key\) DO NOTHING/);
-  assert.doesNotMatch(migration, /INSERT INTO public\.minglora_admin_operating_(invoices|expenses|budgets)/i);
+  const seedBlock = migration.split('-- These are directory entries only.')[1] || '';
+  assert.match(seedBlock, /INSERT INTO public\.minglora_admin_service_providers/);
+  assert.doesNotMatch(seedBlock, /INSERT INTO public\.minglora_admin_operating_/i);
 });
 
 test('private runtime finance action supports records but no money movement command', () => {
@@ -67,6 +69,7 @@ test('Admin Centre mounts the finance module only after the owner-only panel is 
   assert.match(financeUi, /NOT CONNECTED/);
   assert.match(financeUi, /OPEN PROVIDER BILLING PORTAL/);
   assert.match(financeUi, /MANUAL PROVIDER ACTION REQUIRED/);
-  assert.match(financeUi, /payment_status.*paid/);
+  assert.match(financeUi, /payment_status/);
+  assert.match(financeUi, /paid_pending_verification/);
   assert.match(financeCss, /@media\(max-width:520px\)/);
 });
