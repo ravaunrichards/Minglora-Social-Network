@@ -214,6 +214,26 @@ test("the active 2026 catalogue excludes obsolete 2025-dated gifts", () => {
   assert.equal(gifts.length, 1748);
 });
 
+
+test("Hibiscus uses an individually authored layered tropical-flower GLTF sculpture", () => {
+  const hibiscus = gifts.find(gift => gift.name === "Hibiscus");
+  assert.ok(hibiscus, "Hibiscus must remain in the canonical catalogue");
+  assert.equal(hibiscus.code, "hibiscus-5-mgl");
+  const model = JSON.parse(readFileSync(path.join(assetRoot, hibiscus.code + ".gltf"), "utf8"));
+  assert.equal(model.asset?.version, "2.0");
+  assert.equal(model.asset?.extras?.mingloraAssetId, "gift-hibiscus-3d-v1");
+  assert.equal(model.asset?.extras?.source, "assets/3d-assets/gift-models/hibiscus-model.mjs");
+  assert.match(model.asset?.extras?.artDirection || "", /five cupped coral-pink petals/i);
+  assert.match(model.asset?.extras?.reviewStatus || "", /design-review-pending/);
+  assert.ok(model.meshes?.[0]?.primitives?.length >= 30, "Hibiscus should use separately addressable flower, sepal, leaf and stamen meshes");
+  assert.ok(model.materials?.some(material => material.name.includes("Hibiscus satin petal")));
+  assert.ok(model.materials?.some(material => material.name.includes("Hibiscus sepal")));
+  assert.ok(model.materials?.some(material => material.name.includes("Pollen anther")));
+  assert.ok(model.materials?.some(material => material.name.includes("sculpted material") && material.name.toLowerCase().includes("leaf")));
+  assert.ok(model.buffers?.[0]?.uri.startsWith("data:application/octet-stream;base64,"), "Hibiscus must be self-contained for the existing model viewer");
+  assert.ok(model.accessors?.filter(accessor => accessor.type === "VEC3").length >= 30, "Hibiscus should expose mesh position and normal accessors");
+});
+
 test("Rose uses an individually authored layered GLTF botanical sculpture", () => {
   const rose = gifts.find(gift => gift.name === "Rose");
   assert.ok(rose, "Rose must remain in the canonical catalogue");

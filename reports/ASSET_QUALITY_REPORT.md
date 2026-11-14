@@ -60,3 +60,11 @@ The LIVE workflow includes a built-in read-only metadata scanner for supplied An
 ## Transparent gift artwork canvases
 
 The gift SVG generator no longer paints a full-canvas gradient rectangle behind each gift. The surrounding 512×512 canvas is transparent while the generated foreground geometry, soft shadow, decorative accents and local nameplate are preserved. `svgInfo` records `transparent_background: true` only when the full-canvas backdrop is absent. CI checks all 1,748 generated SVGs and the per-gift asset manifest; this does not constitute pixel-alpha inspection of the separate screenshot-derived PNG references or premium art-direction approval.
+
+## Bespoke Hibiscus GLTF art-direction checkpoint — 2026-11-14
+The canonical **Hibiscus** gift (hibiscus-5-mgl) now has a dedicated procedural mesh source at assets/3d-assets/gift-models/hibiscus-model.mjs, selected explicitly by scripts/generate-minglora-gifts.mjs. The original model contains five separately surfaced, cupped coral-pink petals, five sepals, three surfaced leaves, a tapered stem, a raised flower throat, a central stamen column, seven filaments/anthers and small dew highlights. Its glTF 2.0 document embeds its mesh buffer and gives individual botanical parts their own PBR material records. The generated asset retains design-review-pending.
+
+This is a second gift-specific 3D art-direction exception alongside Rose; it does not upgrade the remaining catalogue's category-level generated models. CI generation, geometry regression tests, renderer review, human visual approval, licensing review and physical-device QA must still pass before the Hibiscus asset can be called production-approved.
+
+## Named source provenance in the machine-readable manifest
+The LIVE manifest now distinguishes the Rose and Hibiscus gift-specific mesh modules from the shared procedural model generator, carrying each source file, asset ID, art-direction string and review status through from glTF asset extras. This is provenance and source-specific identification, not visual quality certification: the manifest continues to set premium approval and verified high-detail-model status to false until human review and rights clearance are complete.

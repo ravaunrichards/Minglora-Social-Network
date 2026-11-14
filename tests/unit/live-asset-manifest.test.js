@@ -114,6 +114,25 @@ test("active gift animation profiles match the canonical motion index; retired g
   }
 });
 
+
+test("named Rose and Hibiscus models retain gift-specific source provenance in the LIVE manifest", () => {
+  const expected = [
+    ["Rose", "gift-rose-3d-v1", "assets/3d-assets/gift-models/rose-model.mjs"],
+    ["Hibiscus", "gift-hibiscus-3d-v1", "assets/3d-assets/gift-models/hibiscus-model.mjs"]
+  ];
+  for (const [name, assetId, sourceFile] of expected) {
+    const gift = manifest.gifts.find(entry => entry.name === name);
+    assert.ok(gift, name + " must exist in the LIVE manifest");
+    assert.equal(gift.model.source.type, "gift_specific_repository_mesh_source");
+    assert.equal(gift.model.source.asset_id, assetId);
+    assert.equal(gift.model.source.source_file, sourceFile);
+    assert.equal(gift.model.source.review_status, "design-review-pending");
+    assert.equal(gift.model.quality.gift_specific_mesh_source_present, true);
+    assert.equal(gift.model.quality.bespoke_high_detail_model_verified, false);
+    assert.match(gift.model.licensing.notes, /human visual review and rights review remain outstanding/i);
+  }
+});
+
 test("sound, device and fallback limitations are explicit rather than claimed complete", () => {
   assert.equal(manifest.summary.dedicated_mastered_gift_sound_file_count, 0);
   assert.equal(manifest.summary.physical_device_qa_verified_count, 0);

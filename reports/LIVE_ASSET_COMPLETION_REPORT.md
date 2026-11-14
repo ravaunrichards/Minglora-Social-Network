@@ -98,3 +98,15 @@ The glyph overlay and unused emoji lookup were removed from `scripts/generate-mi
 - Added offline shell pre-caching and bumped the service worker shell to v306.
 - Added SVG, integration, accessibility-state, responsive drawer and cache regression tests; added the icon pack to the machine-readable LIVE asset manifest generator and report maps.
 - The pack is original Minglora outline UI artwork, not bespoke 3D gift artwork. Human visual/design review and production approval remain pending. CI verification is required before this checkpoint is reported as complete.
+
+## Canonical Hibiscus bespoke 3D asset implementation — 2026-11-14
+- Added assets/3d-assets/gift-models/hibiscus-model.mjs and routed the canonical Hibiscus / hibiscus-5-mgl catalogue item to it in scripts/generate-minglora-gifts.mjs.
+- The generated glTF 2.0 is an individually authored botanical scene: five cupped petals, sepals, three leaves, tapered stem, throat, central style, seven stamen filaments/anthers and dew highlights. Mesh buffers are embedded; part names and material records are retained.
+- Added a gift-catalogue regression assertion for the asset ID, source path, review status, botanical mesh/material signatures and embedded buffer.
+- The catalogue identity, category, configured coin price, active status, animation key and canonical asset URL are unchanged. The generated file continues to be created by the existing build/startup asset pipeline.
+- **Acceptance state:** implementation added on feat/live-hibiscus-botanical-sculpture-20261114; CI/build verification is pending. Design/licensing/renderer/device approvals are not claimed. This is one additional bespoke model, not completion of all 1,748 gift models.
+
+## Gift model provenance manifest checkpoint — 2026-11-14
+- Updated the LIVE asset-manifest generator to preserve named glTF source metadata for Rose and Hibiscus, while retaining a distinct source type for category/name-based procedural models.
+- Added regression coverage for both source file paths, unique asset IDs, pending design-review state and non-approved high-detail status.
+- This corrects inventory provenance; it does not claim premium production approval, completed human review or physical-device verification.

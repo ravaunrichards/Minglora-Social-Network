@@ -233,6 +233,8 @@ function buildManifest() {
     const gltfFile = path.join(GIFT_DIR, gift.code + ".gltf");
     const artworkDimensions = svgInfo(svgFile);
     const modelDimensions = gltfInfo(gltfFile);
+    const modelExtras = JSON.parse(fs.readFileSync(gltfFile, "utf8")).asset?.extras || {};
+    const hasGiftSpecificSource = Boolean(modelExtras.source && modelExtras.mingloraAssetId);
     const artwork = fileRecord(svgFile, "svg", {
       public_url: gift.image_url,
       dimensions: { width_px: artworkDimensions.width_px, height_px: artworkDimensions.height_px, view_box: artworkDimensions.view_box },
@@ -265,13 +267,20 @@ function buildManifest() {
       renderer: "model-viewer",
       component_usage: COMPONENTS.model,
       source: {
-        type: "generated_procedural_meshes",
+        type: hasGiftSpecificSource ? "gift_specific_repository_mesh_source" : "generated_procedural_meshes",
         catalogue_record: "data/minglora-gift-catalog.json#" + gift.code,
         generator: "scripts/generate-minglora-gifts.mjs",
-        generator_identity: "Minglora Gift Studio"
+        generator_identity: "Minglora Gift Studio",
+        ...(hasGiftSpecificSource ? {
+          source_file: String(modelExtras.source),
+          asset_id: String(modelExtras.mingloraAssetId),
+          art_direction: String(modelExtras.artDirection || ""),
+          review_status: String(modelExtras.reviewStatus || "design-review-pending")
+        } : {})
       },
       quality: {
-        status: "procedural_category_geometry_requires_individual_art_direction",
+        status: hasGiftSpecificSource ? "gift_specific_mesh_source_requires_human_visual_review" : "procedural_category_geometry_requires_individual_art_direction",
+        gift_specific_mesh_source_present: hasGiftSpecificSource,
         bespoke_high_detail_model_verified: false,
         high_resolution_texture_maps_verified: false,
         embedded_skeletal_animation_verified: false,
@@ -281,7 +290,9 @@ function buildManifest() {
       licensing: {
         status: "review_required",
         provenance: "repository_generated_glTF",
-        notes: "Generated procedural meshes and materials; not individually rights-cleared or approved as premium production artwork."
+        notes: hasGiftSpecificSource
+          ? "A named repository mesh source is recorded, but human visual review and rights review remain outstanding; this source is not approved as premium production artwork."
+          : "Generated procedural meshes and materials; not individually rights-cleared or approved as premium production artwork."
       },
       loading: {
         runtime: "model-viewer",
