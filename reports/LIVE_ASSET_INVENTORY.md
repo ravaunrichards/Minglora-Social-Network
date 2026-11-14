@@ -63,3 +63,11 @@ The inspected `assets/animations/` directory had only a README before this branc
 | `public/assets/icons/live-tools/` | 12 individually addressable original SVG symbols plus `manifest.json` | Integrated icons for the existing LIVE tools drawer; 24×24 outline assets, currentColor, design review pending |
 
 The shortcuts remain Layout, Permissions, Guests, Viewers, Fan Club, Match, Top Gifters, Gifts, Rewards, Moderators, Appearance and Devices. The existing role gates, rewards visibility gate, panel selectors and active `aria-pressed` behavior remain authoritative. The service worker cache v306 includes the new manifest and every icon.
+
+## Generated LIVE gift-picker icon variants
+
+| Asset | Coverage | Location | Use and status |
+|---|---:|---|---|
+| Transparent subject-only SVG | One generated icon for each of the 1,748 catalogue rows | `public/assets/gifts/catalog/<code>-icon.svg` | Compact LIVE gift grid; generated at build time and inventoried by path, dimensions and SHA-256; visual and rights review pending |
+
+The original full `<code>.svg` artwork and `<code>.gltf` model remain the canonical full-art and 3D preview assets. The new variant is not a replacement for either file.

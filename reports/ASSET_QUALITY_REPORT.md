@@ -60,3 +60,7 @@ The LIVE workflow includes a built-in read-only metadata scanner for supplied An
 ## Transparent gift artwork canvases
 
 The gift SVG generator no longer paints a full-canvas gradient rectangle behind each gift. The surrounding 512×512 canvas is transparent while the generated foreground geometry, soft shadow, decorative accents and local nameplate are preserved. `svgInfo` records `transparent_background: true` only when the full-canvas backdrop is absent. CI checks all 1,748 generated SVGs and the per-gift asset manifest; this does not constitute pixel-alpha inspection of the separate screenshot-derived PNG references or premium art-direction approval.
+
+## Transparent LIVE picker subject variants
+
+The gift build generates a separate transparent subject-only SVG beside each existing full gift artwork and GLTF. The compact LIVE grid uses this variant; failed icon loads retry the original full SVG before displaying an accessible unavailable state. Automated manifest checks cover each file and checksum. The variants still require human visual review and rights clearance and do not satisfy the premium bespoke-art gate.
