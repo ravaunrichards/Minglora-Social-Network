@@ -902,6 +902,9 @@
     const bots = list(snapshot.bots), teams = list(snapshot.teams), schedules = list(snapshot.schedules);
     const approvals = list(snapshot.approvals), creatorJobs = list(snapshot.creatorJobs);
     const events = list(snapshot.communityEvents);
+    const botCategoryOptions = list(state.identityCategories).map(category => ({ value:category.category_key, label:category.display_name }));
+    const botDefaultCategory = botCategoryOptions.some(option => option.value === 'ai_support')
+      ? 'ai_support' : (botCategoryOptions[0]?.value || '');
     const safeguards = snapshot.safeguards || {};
     return '<section class="ai-network-page">' +
       '<header class="ai-network-hero"><div><span class="ai-network-eyebrow">MINGLORA INTELLIGENCE</span><h1>AI Bot Network</h1>' +
@@ -917,9 +920,15 @@
       renderAIProviderCenter() +
       renderAITaskQueueCenter() +
       renderAIOrganizationCenter() +
-      card('Bot Personality Laboratory', '01 · PERSONALITY', '<p>Build unique AI helpers with a clear purpose, tone, traits, expertise and permitted tasks.</p>' +
-        renderBotRows(bots) + '<form class="ai-network-form" data-ai-form="bot"><div class="ai-network-form-title">Create a new AI bot</div>' +
-        '<label>Bot name<input name="name" required minlength="2" maxlength="40" placeholder="Community Guide"></label>' +
+      card('Bot Personality Laboratory', '01 · PERSONALITY', '<p>Build unique AI helpers with a clear purpose, tone, traits, expertise and permitted tasks. Every Bot Lab creation is also registered as an individually addressable, private AI identity in Minglora.</p>' +
+        renderBotRows(bots) + '<form class="ai-network-form" data-ai-form="bot"><div class="ai-network-form-title">Create a new AI bot and identity</div>' +
+        '<div class="ai-network-form-grid"><label>AI first name<input name="firstName" required maxlength="80" autocomplete="off"></label>' +
+        '<label>AI last name<input name="lastName" required maxlength="80" autocomplete="off"></label>' +
+        '<label>Middle name (optional)<input name="middleName" maxlength="80" autocomplete="off"></label>' +
+        '<label>AI category<select name="categoryKey" required ' + (!botCategoryOptions.length ? 'disabled' : '') + '>' +
+        (botCategoryOptions.length ? options(botCategoryOptions, botDefaultCategory) : '<option value="">Categories unavailable</option>') + '</select></label></div>' +
+        '<label>Display name<input name="name" required minlength="2" maxlength="40" placeholder="Community Guide"></label>' +
+        (!botCategoryOptions.length ? '<p class="ai-network-note">Load an available AI category before creating a Bot Lab identity.</p>' : '') +
         '<label>Purpose<textarea name="purpose" required minlength="20" maxlength="280" rows="3" placeholder="Describe the exact kind of help this AI bot should provide."></textarea></label>' +
         '<div class="ai-network-form-grid"><label>Personality tone<select name="tone">' + options([
           {value:'friendly',label:'Friendly'},{value:'professional',label:'Professional'},{value:'educational',label:'Educational'},
@@ -937,7 +946,8 @@
           {id:'translate_user_provided_content',label:'Translate my content'},{id:'suggest_replies',label:'Suggest replies'},
           {id:'organize_creator_tasks',label:'Organize creator tasks'},{id:'prepare_event_material',label:'Prepare event material'}].map((item,index) =>
           '<label class="ai-network-check"><input type="checkbox" name="capabilities" value="' + item.id + '"' + (index === 0 ? ' checked' : '') + '><span>' + item.label + '</span></label>'
-        ).join('') + '</div></fieldset><button class="primary" type="submit">Create AI bot draft</button></form>', 'ai-network-span-2') +
+        ).join('') + '</div></fieldset><p class="ai-network-note">The AI identity is created in the relational registry with separate first and last names. It starts private and the bot remains a draft requiring human review.</p>' +
+        '<button class="primary" type="submit" ' + (!botCategoryOptions.length || !window.crypto?.randomUUID ? 'disabled' : '') + '>Create AI bot and relational identity</button></form>', 'ai-network-span-2') +
       card('Bot Teams', '02 · TEAM WORK', '<p>Coordinate your own specialist bots with human-reviewed plans and separate identities.</p>' + renderTeams(teams,bots)) +
       card('Smart Activity Scheduling', '03 · SCHEDULING', '<p>Plan content support by time zone and cadence. Every new schedule is paused until execution is verified.</p>' + renderSchedules(schedules,bots)) +
       card('Bot Performance Center', '04 · PERFORMANCE', renderPerformance(performance)) +
@@ -1357,6 +1367,12 @@
       payload.idempotency_key = form.dataset.idempotencyKey;
     } else if (kind === 'bot') {
       path = '/bots';
+      form.dataset.idempotencyKey = form.dataset.idempotencyKey || window.crypto.randomUUID();
+      payload.identityIdempotencyKey = form.dataset.idempotencyKey;
+      payload.firstName = value('firstName');
+      payload.middleName = value('middleName');
+      payload.lastName = value('lastName');
+      payload.categoryKey = value('categoryKey');
       payload.name = value('name');
       payload.purpose = value('purpose');
       payload.tone = value('tone');
@@ -1428,10 +1444,12 @@
       const categoryKeyInput = form.querySelector('[name="categoryKey"]');
       if (categoryKeyInput) categoryKeyInput.readOnly = false;
     }
-    if (['identity','organization','vacancy','application','appointment','employment-transfer','task-create'].includes(kind)) form.dataset.idempotencyKey = window.crypto.randomUUID();
+    if (['identity','bot','organization','vacancy','application','appointment','employment-transfer','task-create'].includes(kind)) form.dataset.idempotencyKey = window.crypto.randomUUID();
     const categoryActionLabels = { created:'created', updated:'updated', activated:'reactivated', deactivated:'deactivated' };
     const message = kind === 'category'
       ? 'AI category ' + (categoryActionLabels[result.action] || 'changes saved') + ' and an audit event recorded.'
+      : kind === 'bot'
+        ? 'AI bot saved and linked to relational identity ' + String(result.identity?.identity?.identity_id || '') + '. The identity is private and execution remains paused.'
       : kind === 'identity-edit' ? 'AI identity profile and name details updated with a new version and audit record.' + (uploadedMediaCount ? ' ' + uploadedMediaCount + ' AI profile image(s) uploaded, verified and attached.' : '')
       : kind === 'task-create'
       ? 'Task saved to the durable queue; approval policy comes from the selected AI identity.'
