@@ -44,6 +44,7 @@ let identityCreateRequests = [];
 let identityPatchRequests = [];
 let discoveryQueries = [];
 let bulkFollowRequests = [];
+let categoryManagementRequests = [];
 const categoryKeys = [
   'ai_friends', 'ai_creators', 'ai_influencers', 'ai_news', 'ai_musicians',
   'ai_entertainers', 'ai_gamers', 'ai_community_hosts', 'ai_live_hosts',
@@ -56,6 +57,8 @@ const categories = categoryKeys.map((category_key, index) => ({
     'AI Entertainers', 'AI Gamers', 'AI Community Hosts', 'AI Live Hosts',
     'AI Moderators', 'AI Support', 'AI Educators', 'AI Sports', 'AI Travel', 'AI Business'
   ][index],
+  description: 'Original Minglora AI Network category.',
+  sort_order: index + 1,
   is_active: true
 }));
 const discoveryProfiles = [
@@ -128,7 +131,30 @@ function aiApiResponse(req, url, body) {
 
   if (method === 'GET' && pathname === '/') return snapshot;
   if (method === 'GET' && pathname === '/identities') return identityRegistry();
-  if (method === 'GET' && pathname === '/categories') return { categories };
+  if (method === 'GET' && pathname === '/categories') return { categories: categories.filter(category => category.is_active) };
+  if (method === 'GET' && pathname === '/categories/manage') return { categories: structuredClone(categories) };
+  if (method === 'POST' && pathname === '/categories/manage') {
+    categoryManagementRequests.push(body);
+    if (body.action === 'create') {
+      if (categories.some(category => category.category_key === body.category_key)) return { error: 'Category already exists.' };
+      const category = {
+        category_key: body.category_key, display_name: body.display_name,
+        description: body.description || '', sort_order: body.sort_order || 0, is_active: true
+      };
+      categories.push(category);
+      return { category: structuredClone(category) };
+    }
+    if (body.action === 'update') {
+      const category = categories.find(item => item.category_key === body.category_key);
+      if (!category) return { error: 'Category not found.' };
+      Object.assign(category, {
+        display_name: body.display_name, description: body.description,
+        sort_order: body.sort_order, is_active: body.is_active
+      });
+      return { category: structuredClone(category) };
+    }
+    return { error: 'Unsupported category action.' };
+  }
   if (method === 'GET' && pathname === '/discover') {
     discoveryQueries.push(Object.fromEntries(url.searchParams.entries()));
     return { identities: discoveryProfiles, total: discoveryProfiles.length, nextOffset: null, hasMore: false };
@@ -227,7 +253,7 @@ const member = {
   avatar: '/assets/default-profile-avatar-3d.svg',
   cover: '/assets/default-profile-cover.svg',
   bio: 'Disposable browser-test session. No production account or record is created.',
-  platformRole: 'member'
+  platformRole: 'platform_admin'
 };
 
 const server = http.createServer(async (req, res) => {
@@ -317,6 +343,31 @@ try {
   assert.equal(initialCounts.categories, 15, 'All 15 original AI categories must render.');
   assert.equal(initialCounts.populations, 3, 'All three AI populations must render.');
   assert.equal(initialCounts.genders, 5, 'All five supported gender choices must render.');
+
+  const categoryCreateForm = page.locator('form[data-ai-form="category-create"]');
+  await categoryCreateForm.locator('[name="categoryKey"]').fill('ai_science');
+  await categoryCreateForm.locator('[name="displayName"]').fill('AI Science');
+  await categoryCreateForm.locator('[name="description"]').fill('AI science explainers and researchers.');
+  await categoryCreateForm.locator('[name="sortOrder"]').fill('16');
+  await categoryCreateForm.locator('button[type="submit"]').click();
+  await page.getByText('AI category created and recorded in the administrator audit log.').waitFor({ state: 'visible' });
+  assert.equal(categoryManagementRequests.length, 1, 'Category creation must submit exactly one admin request.');
+  assert.equal(categoryManagementRequests[0].action, 'create');
+  assert.equal(categoryManagementRequests[0].category_key, 'ai_science');
+  assert.equal(categories.length, 16, 'The in-memory category catalogue should add one distinct category.');
+
+  const newCategoryForm = page.locator('form[data-ai-form="category-update"]').filter({
+    has: page.locator('input[name="categoryKey"][value="ai_science"]')
+  });
+  await newCategoryForm.locator('[name="isActive"]').selectOption('false');
+  await newCategoryForm.locator('button[type="submit"]').click();
+  await page.getByText('AI category details and active state updated and audited.').waitFor({ state: 'visible' });
+  assert.equal(categoryManagementRequests.length, 2, 'Category deactivation must submit an update request.');
+  assert.equal(categoryManagementRequests[1].action, 'update');
+  assert.equal(categoryManagementRequests[1].category_key, 'ai_science');
+  assert.equal(categoryManagementRequests[1].is_active, false);
+  assert.equal(categories.filter(category => category.is_active).length, 15, 'All 15 original categories remain active after the added category is deactivated.');
+  assert.ok(categories.some(category => category.category_key === 'ai_science' && !category.is_active), 'Deactivation must preserve the category row instead of deleting it.');
 
   const createForm = page.locator('form[data-ai-form="identity"]');
   await createForm.locator('[name="firstName"]').fill('Nia');
@@ -431,6 +482,7 @@ try {
         documentScrollWidth: document.documentElement.scrollWidth,
         viewportWidth: window.innerWidth,
         identityEditorVisible: Boolean(document.querySelector('form[data-ai-form="identity-edit"]')),
+        categoryAdminVisible: Boolean(document.querySelector('form[data-ai-form="category-create"]')),
         discoveryVisible: Boolean(document.querySelector('form[data-ai-form="discovery"]'))
       };
     });
@@ -439,6 +491,7 @@ try {
     assert.ok(geometry.mainScrollWidth <= geometry.mainClientWidth + 2, viewport.name + ': main content must not overflow horizontally.');
     assert.ok(geometry.documentScrollWidth <= geometry.viewportWidth + 2, viewport.name + ': viewport must not overflow horizontally.');
     assert.ok(geometry.identityEditorVisible && geometry.discoveryVisible, viewport.name + ': identity and discovery controls must remain available.');
+    assert.ok(geometry.categoryAdminVisible, viewport.name + ': authorized category-management controls must remain responsive.');
     await page.screenshot({
       path: path.join(artifactsDir, 'ai-network__' + viewport.name + '.jpg'),
       type: 'jpeg', quality: 78, fullPage: true
@@ -452,6 +505,9 @@ try {
     countryAndTerritoryOptions: initialCounts.countryOptions,
     populationOptions: initialCounts.populations,
     genderOptions: initialCounts.genders,
+    categoryCreates: categoryManagementRequests.filter(item => item.action === 'create').length,
+    categoryUpdates: categoryManagementRequests.filter(item => item.action === 'update').length,
+    originalCategoriesPreserved: categories.filter(category => category.is_active).length,
     identityCreates: identityCreateRequests.length,
     identityProfileUpdates: identityPatchRequests.length,
     combinedDiscoveryQueries: discoveryQueries.length,
