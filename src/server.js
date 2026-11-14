@@ -2138,9 +2138,122 @@ async function route(req, res) {
         return json(res, 200, snapshot);
       }
       if (method === 'POST' && sub === 'bots') {
-        const bot = createAIBot(db, user.id, await body(req, 20000));
-        await saveStore();
-        return json(res, 201, { bot });
+        const input = await body(req, 20000);
+        if (!input || typeof input !== 'object' || Array.isArray(input)) {
+          throw Object.assign(new Error('AI bot details must be a JSON object.'), { status: 400 });
+        }
+        const firstName = String(input.firstName || '').trim();
+        const middleName = String(input.middleName || '').trim();
+        const lastName = String(input.lastName || '').trim();
+        const categoryKey = String(input.categoryKey || '').trim().toLowerCase();
+        const identityIdempotencyKey = String(input.identityIdempotencyKey || '').trim();
+        if (!firstName || !lastName) {
+          throw Object.assign(new Error('Enter separate first and last names for this AI identity.'), { status: 400 });
+        }
+        if (!/^[a-z0-9_]{3,30}$/.test(identityIdempotencyKey)) {
+          // The browser key is a UUID, validated below with the full UUID-safe rule.
+          if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(identityIdempotencyKey)) {
+            throw Object.assign(new Error('A valid retry-safe AI identity request key is required.'), { status: 400 });
+          }
+        }
+        if (identityIdempotencyKey.length < 8 || identityIdempotencyKey.length > 160) {
+          throw Object.assign(new Error('The AI identity request key is invalid.'), { status: 400 });
+        }
+        if (!/^[a-z0-9_]{3,80}$/.test(categoryKey)) {
+          throw Object.assign(new Error('Choose a valid AI category.'), { status: 400 });
+        }
+
+        const botInput = { ...input, firstName, middleName, lastName, categoryKey, identityIdempotencyKey };
+        const botHash = crypto.createHash('sha256')
+          .update(user.id + ':' + identityIdempotencyKey)
+          .digest('hex');
+        const rawBotId = botHash.slice(0, 32);
+        const canonicalBotId = rawBotId.slice(0, 8) + '-' + rawBotId.slice(8, 12) +
+          '-5' + rawBotId.slice(13, 16) + '-a' + rawBotId.slice(17, 20) + '-' + rawBotId.slice(20, 32);
+        const usernameStem = (firstName + '_' + lastName).toLowerCase()
+          .replace(/[^a-z0-9_]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 14) || 'bot';
+        const identityUsername = 'ai_' + usernameStem + '_' + botHash.slice(0, 8);
+
+        const bot = createAIBot(db, user.id, botInput, { id: canonicalBotId });
+        try {
+          const identityResult = await runAIIdentityCommand('create', {
+            population: 'independent',
+            category_key: categoryKey,
+            idempotency_key: identityIdempotencyKey,
+            purpose: bot.purpose,
+            name: {
+              first_name: firstName,
+              middle_name: middleName,
+              last_name: lastName,
+              display_name: bot.name,
+              username: identityUsername
+            },
+            profile: {
+              gender: 'prefer_not_to_say',
+              bio: bot.purpose,
+              introduction: bot.purpose,
+              profile_visibility: 'private',
+              profession: bot.expertise,
+              interests: bot.traits,
+              skills: bot.capabilities,
+              personality: {
+                tone: bot.tone,
+                traits: bot.traits,
+                expertise: bot.expertise,
+                capabilities: bot.capabilities,
+                primary_language: bot.primaryLanguage
+              },
+              extra_profile_data: {
+                source: 'bot_personality_laboratory',
+                bot_id: bot.id,
+                identity_label: 'AI'
+              }
+            },
+            languages: bot.languages.map(tag => ({
+              language_tag: tag,
+              language_name: tag,
+              proficiency: 'conversational',
+              is_primary: tag === bot.primaryLanguage
+            })),
+            locations: []
+          });
+          const identityId = String(identityResult?.identity?.identity_id || '');
+          if (!identityId) {
+            throw Object.assign(new Error('Minglora did not confirm the relational AI identity. The bot was not saved.'), { status: 503 });
+          }
+          const storedBotId = String(identityResult?.profile?.extra_profile_data?.bot_id || bot.id);
+          if (storedBotId !== bot.id) {
+            const collision = (db.aiBots || []).find(item => item.ownerId === user.id && item.id === storedBotId);
+            if (collision && collision !== bot) {
+              throw Object.assign(new Error('The existing AI identity is linked to a different Bot Lab record. No duplicate bot was saved.'), { status: 409 });
+            }
+            bot.id = storedBotId;
+          }
+          bot.identityId = identityId;
+          bot.canonicalIdentityId = identityId;
+          bot.categoryKey = categoryKey;
+          bot.firstName = firstName;
+          bot.middleName = middleName;
+          bot.lastName = lastName;
+          bot.identityPopulation = 'independent';
+          bot.identityLinkStatus = 'linked';
+          await saveStore();
+          return json(res, identityResult?.reused ? 200 : 201, { bot, identity: identityResult });
+        } catch (error) {
+          // Remove only a newly created in-memory bot on definite client/permission errors.
+          // A transient server/network failure keeps the idempotency key so a retry can reconcile the same identity.
+          if (Number(error?.status) >= 400 && Number(error?.status) < 500) {
+            const index = (db.aiBots || []).findIndex(item => item.id === bot.id && item.ownerId === user.id);
+            if (index >= 0 && !bot.identityId) db.aiBots.splice(index, 1);
+            for (let index = (db.aiBotAudit || []).length - 1; index >= 0; index -= 1) {
+              const event = db.aiBotAudit[index];
+              if (event?.targetType === 'bot' && event?.targetId === bot.id && event?.action === 'bot_created') {
+                db.aiBotAudit.splice(index, 1);
+              }
+            }
+          }
+          throw error;
+        }
       }
       if (method === 'POST' && sub === 'teams') {
         const team = createAIBotTeam(db, user.id, await body(req, 12000));
