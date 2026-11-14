@@ -63,3 +63,11 @@ The inspected `assets/animations/` directory had only a README before this branc
 | `public/assets/icons/live-tools/` | 12 individually addressable original SVG symbols plus `manifest.json` | Integrated icons for the existing LIVE tools drawer; 24×24 outline assets, currentColor, design review pending |
 
 The shortcuts remain Layout, Permissions, Guests, Viewers, Fan Club, Match, Top Gifters, Gifts, Rewards, Moderators, Appearance and Devices. The existing role gates, rewards visibility gate, panel selectors and active `aria-pressed` behavior remain authoritative. The service worker cache v306 includes the new manifest and every icon.
+
+## Gift-specific botanical model sources
+| Source | Canonical item | Model art direction | Review state |
+|---|---|---|---|
+| assets/3d-assets/gift-models/rose-model.mjs | Rose | Layered rose petals, sepals, thorned stem, sculpted leaves and dew | Design review pending |
+| assets/3d-assets/gift-models/hibiscus-model.mjs | Hibiscus (hibiscus-5-mgl) | Five cupped tropical petals, sepals, three leaves, central stamen column and pollen anthers | Design review pending; CI/build verification pending on feature branch |
+
+These are two individually art-directed model sources. The generator still uses procedural category/name geometry for the remaining catalogue gifts; the presence of a generated GLTF file per catalogue row must not be interpreted as proof of bespoke modelling or premium approval.
