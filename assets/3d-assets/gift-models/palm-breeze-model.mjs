@@ -6,7 +6,15 @@ export function createPalmBreezeModel() {
   const parts=[];
   const add=(name,positions,normals,indices,color,metallic=0.01,roughness=0.58)=>{
     if(!positions.length||positions.length!==normals.length||indices.length<3) throw new Error("Invalid Palm Breeze mesh "+name);
-    parts.push({name,positions,normals,indices,color,metallic,roughness});
+    const existing=parts.find(part=>part.name===name&&part.color===color&&part.metallic===metallic&&part.roughness===roughness);
+    if(existing){
+      const offset=existing.positions.length/3;
+      existing.positions.push(...positions);
+      existing.normals.push(...normals);
+      existing.indices.push(...indices.map(index=>index+offset));
+    }else{
+      parts.push({name,positions,normals,indices,color,metallic,roughness});
+    }
   };
 
   function tube(name,points,radii,color,roughness=0.58) {
@@ -157,8 +165,8 @@ export function createPalmBreezeModel() {
         ];
         const points=[base,mid,end];
         const leafColor=(leaf+f)%3===0?"#4f9851":(leaf+f)%3===1?"#377d42":"#70a85b";
-        ribbon("Palm frond "+(f+1)+" leaflet "+leaf+" "+(sign<0?"left":"right"),points,0.033,leafColor,radial);
-        tube("Palm leaflet vein "+(f+1)+"-"+leaf+"-"+sign,[base,mid,end],0.004,"#b3cb79",0.72);
+        ribbon("Palm frond leaflets "+leafColor,points,0.033,leafColor,radial);
+        tube("Palm leaflet veins",[base,mid,end],0.004,"#b3cb79",0.72);
       }
     }
   }
