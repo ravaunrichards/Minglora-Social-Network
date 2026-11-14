@@ -1779,6 +1779,61 @@ async function route(req, res) {
         }
         return json(res, 200, response?.result || { identities: [], total: 0, limit: 25, offset: 0 });
       }
+      if (method === 'PATCH' && parts[0] === 'identities' && parts.length === 3 && parts[2] === 'status') {
+        const identityId = parts[1];
+        if (!aiIdentityIdPattern.test(identityId)) {
+          throw Object.assign(new Error('A valid AI identity ID is required.'), { status: 400 });
+        }
+        const input = await body(req, 8000);
+        const allowedStatuses = ['proposed','created','under_review','approved','active','restricted','suspended','archived','retired'];
+        const status = String(input.status || '').trim().toLowerCase();
+        const reason = String(input.reason || '').trim().slice(0, 500);
+        if (!allowedStatuses.includes(status)) {
+          throw Object.assign(new Error('Choose a valid AI identity lifecycle status.'), { status: 400 });
+        }
+        if (!isSupabasePersistence()) {
+          throw Object.assign(new Error('AI identity lifecycle changes require Minglora Supabase persistence.'), { status: 503 });
+        }
+        const response = await requestSupabaseState('ai_identity_status_command', {
+          actorUserId: user.id,
+          aiAction: 'set_status',
+          payload: { identity_id: identityId, status, reason }
+        });
+        if (response?.skipped) {
+          throw Object.assign(new Error('AI identity lifecycle changes are unavailable in local-only persistence mode.'), { status: 503 });
+        }
+        return json(res, 200, { transition: response?.result });
+      }
+      if (method === 'POST' && sub === 'identities/bulk-status') {
+        const input = await body(req, 20000);
+        const identityIds = Array.isArray(input.identity_ids)
+          ? [...new Set(input.identity_ids.map(value => String(value || '').trim()))]
+          : [];
+        const allowedStatuses = ['proposed','created','under_review','approved','active','restricted','suspended','archived','retired'];
+        const status = String(input.status || '').trim().toLowerCase();
+        if (identityIds.length < 1 || identityIds.length > 100 || identityIds.some(id => !aiIdentityIdPattern.test(id))) {
+          throw Object.assign(new Error('Select between 1 and 100 valid AI identity records for a bulk status change.'), { status: 400 });
+        }
+        if (!allowedStatuses.includes(status)) {
+          throw Object.assign(new Error('Choose a valid AI identity lifecycle status.'), { status: 400 });
+        }
+        if (!isSupabasePersistence()) {
+          throw Object.assign(new Error('Bulk AI identity lifecycle changes require Minglora Supabase persistence.'), { status: 503 });
+        }
+        const response = await requestSupabaseState('ai_identity_status_command', {
+          actorUserId: user.id,
+          aiAction: 'bulk_set_status',
+          payload: {
+            identity_ids: identityIds,
+            status,
+            reason: String(input.reason || '').trim().slice(0, 500)
+          }
+        });
+        if (response?.skipped) {
+          throw Object.assign(new Error('Bulk AI identity lifecycle changes are unavailable in local-only persistence mode.'), { status: 503 });
+        }
+        return json(res, 200, response?.result || { requested_count: identityIds.length, succeeded_count: 0, failed_count: identityIds.length, results: [], failed: [] });
+      }
       if (method === 'GET' && parts[0] === 'identities' && parts.length === 2) {
         const result = await runAIIdentityCommand('get', { identity_id: parts[1] });
         return json(res, 200, { identity: result });
