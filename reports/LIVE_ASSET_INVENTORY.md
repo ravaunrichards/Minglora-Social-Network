@@ -85,8 +85,9 @@ The shortcuts remain Layout, Permissions, Guests, Viewers, Fan Club, Match, Top 
 | assets/3d-assets/gift-models/rose-model.mjs | Rose | Layered rose petals, sepals, thorned stem, sculpted leaves and dew | Design review pending |
 | assets/3d-assets/gift-models/hibiscus-model.mjs | Hibiscus (hibiscus-5-mgl) | Five cupped tropical petals, sepals, three leaves, central stamen column and pollen anthers | Design review pending; CI/build tests passed in merged PR #339 validation set |
 | assets/3d-assets/gift-models/djembe-model.mjs | Djembe Master (djembe-master-1v3jzkm) | Mahogany shell, hollow bowl, hide drumhead, rim bindings, 16 tension strands, diamond lacing and carved detailing | Design review pending; CI/build tests passed in merged PR #339 |
+| assets/3d-assets/gift-models/palm-breeze-model.mjs | Palm Breeze (palm-breeze-gknyt0) | Curved trunk, eight pinnate fronds, grouped leaflets and veins, coconuts, roots and sand/water plinth | Design review pending; CI/build tests passed in merged PR #340 |
 
-These are three individually art-directed model sources. The generator still uses procedural category/name geometry for the remaining catalogue gifts; the presence of a generated GLTF file per catalogue row must not be interpreted as proof of bespoke modelling or premium approval.
+These are four individually art-directed model sources. The generator still uses procedural category/name geometry for the remaining catalogue gifts; the presence of a generated GLTF file per catalogue row must not be interpreted as proof of bespoke modelling or premium approval.
 
 ## Transparent gift-icon inventory — 2026-11-14
 
@@ -100,3 +101,8 @@ These are three individually art-directed model sources. The generator still use
 ### Djembe Master model source — 2026-11-14
 
 The canonical Djembe Master gift (djembe-master-1v3jzkm) is now routed to the individually authored assets/3d-assets/gift-models/djembe-model.mjs source. It emits a self-contained glTF 2.0 scene and gift-specific transparent SVG artwork. The merged PR #339 passed repository CI asset-generation and gift-catalogue regression tests. The model remains design-review-pending; no premium-production or physical-device approval is inferred.
+
+
+### Palm Breeze model source — 2026-11-14
+
+The canonical Palm Breeze gift (palm-breeze-gknyt0) is now routed to the individually authored assets/3d-assets/gift-models/palm-breeze-model.mjs source. It emits a self-contained glTF 2.0 scene and subject-specific transparent SVG artwork. PR #340 passed the full repository CI asset build and gift-catalogue regression tests before merge. The model remains design-review-pending; no premium-production or physical-device approval is inferred.
