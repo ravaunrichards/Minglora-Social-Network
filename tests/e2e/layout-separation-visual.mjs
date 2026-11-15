@@ -160,7 +160,6 @@ try{
           guestPositions.push(state.hostPlacement);
           if(mode==='video'&&!guest)assertReferenceGeometry(screen,state,viewport.name);
           if(mode==='video'){
-            assertReferenceGeometry(screen,state,viewport.name);
             await livePage.screenshot({
               path:path.join(artifacts,'live-video-'+screen+'-'+guest+'-'+viewport.name+'.png'),
               fullPage:true
