@@ -225,3 +225,7 @@ The canonical gift now has an exact-code lion-scepter-rise motion override in th
 - Unit coverage checks the presence of the named source details. Chromium model-render QA completed 27/27 model/viewport renders; report showed zero page errors, HTTP failures, request failures or cancellations.
 - Repository CI and independent LIVE/MeetWave layout QA both passed for the reviewed source revision.
 - This is an incremental asset-quality improvement, not approval of the entire gift catalogue. Human visual review, rights clearance, mastered audio, full gift-specific animation files and physical device QA remain separate release gates.
+
+## Jamaican culture icon update — 2026-11-15
+
+The existing Jamaican culture gift-category placeholder has been replaced by original Minglora full-colour flag/saltire vector artwork at `public/assets/icons/live-gift-categories/jamaican_culture.svg`. Its green/gold/black gradient geometry is covered by unit assertions; the 24×24 SVG symbol contract and currentColor outline compatibility remain intact. PR #383 merged as `aaf1182a5f6bced14685a3db2b9e1a3c95557299`. The icon remains design-review-pending; automated structure tests do not establish human visual acceptance or rights clearance.
