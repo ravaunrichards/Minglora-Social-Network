@@ -1,3 +1,16 @@
+## Execution checkpoint — 2026-11-15 (AI HR disciplinary case source verification)
+
+- Branch: \`feat/ai-hr-disciplinary-cases\`; draft PR #353 targets \`main\`: https://github.com/ravaunrichards/Minglora-Social-Network/pull/353
+- Latest corrected head before this checkpoint: \`ae6b37cc6bc7f860c07c16a4e947f0057ad6ed38\`.
+- Six feature commits add the additive disciplinary schema, moderator-gated server routes, private Supabase runtime action, HR administrator case UI, four regression tests and documentation.
+- AI Network workflow: **137 passed / 0 failed**. This includes the four new disciplinary tests, runtime TypeScript parse/transpile, and backend/UI JavaScript syntax checks.
+- Full repository CI: **1,182 passed / 0 failed**. A pre-fix run exposed one existing profile-editor assertion because the shared PATCH-kind array was extended; the implementation was corrected by isolating the new status PATCH kind, then CI passed on the corrected head.
+- AI identity/discovery browser acceptance and LIVE/MeetWave layout QA workflows both completed successfully. The browser test uses disposable fixtures; it is not live-owner or production HR case acceptance.
+- PR #353 remains **DRAFT / OPEN / NOT MERGED**. No merge or deployment was performed. The Supabase migration remains source-only and has not been applied; no Edge Function or Render deployment was performed.
+- No live organization, employee, case, note, Auth user, or other test record was created. No production data or runtime controls changed. AI execution remains \`global_paused=true\`, \`execution_enabled=false\`, \`max_concurrent_workers=0\`.
+- HR disciplinary implementation is **IMPLEMENTED — AWAITING LIVE/SQL ACCEPTANCE**. Required next evidence: SQL migration validation through approved migration workflow, signed-in owner/API acceptance with a real owner-controlled organization, and deployed browser/device acceptance.
+- Accepted AI Network task accounting remains **2/19 = 10.53% verified tasks**. This is task-count completion, not a feature-completion percentage; the partial HR task is not counted as complete.
+
 ## Execution checkpoint — 2026-11-15 (AI HR disciplinary case management)
 
 - Working branch: \`feat/ai-hr-disciplinary-cases\`, based on the checked \`main\` commit \`16fbb98a9ea11f6a53b9aee5c38965cfe7d747ec\`.
