@@ -77,6 +77,14 @@ const GIFT_SPECIFIC_WEB_AUDIO_DESIGNS = Object.freeze({
     layers: ["bandpass_growl_noise_sweep", "low_frequency_staff_impact", "five_note_regal_fanfare_196_294_392_587_784hz", "highpass_jewel_shimmer"],
     status: "gift_specific_synthesized_sound_not_mastered_recording"
   })
+  "rose-4ieccm": Object.freeze({
+    sound_design_id: "rose-petal-rustle-and-celesta-v1",
+    sound_profile_scope: "gift_specific_web_audio_synthesis",
+    format: "Web Audio API synthesized soft filtered petal-rustle sweep and five-note celesta-like arpeggio",
+    layers: ["filtered_petal_rustle_sweep", "five_note_soft_celesta_arpeggio_523_659_784_1047_1319hz", "seeded_stereo_note_placement"],
+    status: "gift_specific_synthesized_sound_not_mastered_recording"
+  }),
+
 });
 
 function fail(message) {
