@@ -14,7 +14,6 @@
     "build:sounds": "node scripts/generate-minglora-sound-library.mjs",
     "build:live-gift-motion": "node scripts/generate-live-gift-motion-index.mjs",
     "build:live-asset-manifest": "node scripts/generate-minglora-live-asset-manifest.mjs",
-    "build:gifter-badges": "node scripts/generate-gifter-badge-vectors.mjs",
     "audit:live-image-metadata": "node scripts/audit-minglora-live-image-metadata.mjs"
   },
   "engines": {
