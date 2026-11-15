@@ -281,15 +281,12 @@
     right:2px!important;bottom:2px!important;left:2px!important;padding:3px!important;
   }
   #live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout>.live-guest-seat .live-guest-seat-meta small{display:none!important}
-  #live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="full-screen"]{grid-template-columns:minmax(0,1fr)!important}
   #live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]{grid-template-columns:repeat(4,minmax(0,1fr))!important;grid-template-rows:auto repeat(4,minmax(50px,1fr))!important}
   #live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-grid"]{grid-template-columns:minmax(0,1.25fr) minmax(0,.75fr)!important;grid-template-rows:auto repeat(2,minmax(70px,1fr))!important}
   #live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fixed-grid"]{grid-template-columns:repeat(3,minmax(0,1fr))!important;grid-template-rows:repeat(3,minmax(76px,1fr))!important}
   #live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fixed-panel"]{grid-template-columns:minmax(0,1.55fr) minmax(64px,.65fr)!important;grid-template-rows:repeat(3,minmax(64px,1fr))!important}
   #live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="side-by-side"]{grid-template-columns:repeat(4,minmax(0,1fr))!important;grid-template-rows:auto minmax(92px,1.35fr) repeat(2,minmax(48px,.58fr))!important}
   #live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="spotlight"]{grid-template-columns:repeat(4,minmax(0,1fr))!important;grid-template-rows:auto minmax(92px,1.35fr) repeat(2,minmax(48px,.58fr))!important}
-  #live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-guest-layout="roundtable-1"]{grid-template-columns:repeat(4,minmax(0,1fr))!important;grid-template-rows:auto repeat(4,minmax(54px,1fr))!important}
-  #live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-guest-layout="roundtable-2"]{grid-template-columns:repeat(3,minmax(0,1fr))!important;grid-template-rows:auto repeat(4,minmax(54px,1fr))!important}
   #live-player-shell .live-video-stage.live-full-screen-layout:not(.live-audio-stage){
     width:min(100%,56.25dvh,420px)!important;
     height:min(82dvh,746px)!important;
