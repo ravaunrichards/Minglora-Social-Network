@@ -111,6 +111,15 @@
       ).join("") + "</div>";
   }
 
+  function renderProgressionStrip() {
+    return "<section class='gp-reference-section gp-progression-strip card' aria-labelledby='gp-progression-strip-title'>" +
+      "<div class='gp-section-heading'><div><span class='gp-eyebrow'>BADGE PROGRESSION</span><h2 id='gp-progression-strip-title'>Gifter badge progression</h2>" +
+      "<p>Original supplied artwork showing the visual progression of the Gifter badge designs.</p></div></div>" +
+      "<figure class='gp-reference-figure gp-progression-strip-figure'><figcaption><strong>Original progression strip</strong><span>Reference artwork only; earned levels still follow confirmed gift Coins.</span></figcaption>" +
+      "<a href='/assets/gifter-badge-progression.jpg' target='_blank' rel='noopener noreferrer' aria-label='Open the original full-size Gifter Badge Progressions artwork'>" +
+      "<img class='gp-progression-strip-art' src='/assets/gifter-badge-progression.jpg' alt='Original horizontal Minglora Gifter Badge Progressions artwork showing a sequence of geometric and gem-shaped badge icons connected by lines' loading='lazy' decoding='async'></a></figure></section>";
+  }
+
   function renderMasterBadgeReference() {
     return "<section class='gp-reference-section gp-master-reference card' aria-labelledby='gp-master-reference-title'>" +
       "<div class='gp-section-heading'><div><span class='gp-eyebrow'>MASTER COLLECTION REFERENCE</span><h2 id='gp-master-reference-title'>Complete 50-badge overview</h2>" +
@@ -228,6 +237,7 @@
       "</strong><span>" + number(current.xp) + " Coins</span></div><div class='gp-progress-track' role='progressbar' aria-valuemin='0' aria-valuemax='100' aria-valuenow='" +
       current.progressPercent + "'><span style='width:" + current.progressPercent + "%'></span></div>" +
       "<p class='gp-progress-foot'>" + esc(progressText) + "</p></div></section>" +
+      renderProgressionStrip() +
       "<section class='gp-stats-grid' aria-label='Gifter statistics'>" +
       "<article class='gp-stat-card'><span>Total Coins sent</span><strong>" + number(current.totalCoinsSent) + "</strong><small>Lifetime Coins from confirmed gifts</small></article>" +
       "<article class='gp-stat-card'><span>Coins to next LV</span><strong>" + (current.maxLevel ? "MAX" : number(current.xpRemaining)) + "</strong><small>" + (current.maxLevel ? "LV 50 reached" : "More Coins needed") + "</small></article>" +
