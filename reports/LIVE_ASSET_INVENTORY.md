@@ -249,3 +249,11 @@ The source catalogue grand-entry value, animation key and 1,900-ms duration are 
 - Unit assertions now require the source art-direction metadata and named mesh/material groups for veins, petioles and stamens.
 - Automated evidence: CI passed; separate LIVE/MeetWave layout matrix passed; Chromium WebGL passed 27 renders (nine gift models × three viewports). The saved report recorded zero page errors, HTTP failures, failed requests and model-request cancellations.
 - Limitation: the renderer test verifies glTF loading and visible pixels, not photorealism or human design approval. Rose remains design-review-pending; rights review and physical-device checks remain outstanding.
+
+## Jamaican culture gift-category icon — 2026-11-15
+
+- Updated source: `public/assets/icons/live-gift-categories/jamaican_culture.svg`; asset manifest: adjacent `manifest.json`.
+- The category now uses original full-colour Jamaican flag saltire artwork with green, gold and black gradients and a currentColor pole/outline.
+- The existing 24×24 symbol ID, `jamaican_culture` key, public asset URL, category selection flow and service-worker precache URL are unchanged.
+- Unit coverage verifies the flag saltire, all three national colours, gradient definitions and theme-inheriting outline. PR #383 merged as `aaf1182a5f6bced14685a3db2b9e1a3c95557299`.
+- Review state remains `design-review-pending`; this automated vector check is not human visual approval or a legal review.
