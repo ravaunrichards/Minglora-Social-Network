@@ -274,6 +274,19 @@ The source catalogue grand-entry value, animation key and 1,900-ms duration are 
 | Motion | `rose-4ieccm` → `rose-unfurl` | `public/gift-effects.js`; generated `public/assets/animations/gifts/catalog-motion-index.json` | Exact-code Web Animations sequence and preview; regression-tested |
 | Sound | `rose-petal-rustle-and-celesta-v1` | Local Web Audio synthesis in `public/gift-effects.js` | Filtered rustle plus five-note celesta-like cue; not a mastered file |
 | Metadata | Canonical Rose code and effective runtime override | `scripts/generate-live-gift-motion-index.mjs`; `scripts/generate-minglora-live-asset-manifest.mjs` | Generated mapping and sound provenance covered by unit tests |
-| Cache | `gift-effects.js?v=20261115-rose-unfurl-petal-chime-1` | `public/index.html` and `public/sw.js` | Matching asset URL; shell cache v324 uses the established `self-updating-1` namespace |
+| Cache | `gift-effects.js?v=20261115-rose-unfurl-atlantis-trident-2` | `public/index.html` and `public/sw.js` | Matching asset URL; shell cache v325 uses the established `self-updating-1` namespace |
 
-The existing Rose model/artwork and this event effect remain `design-review-pending`. The current generated catalogue has **11 individually authored source models** and **9 gift-specific synthesized Web Audio designs**; the remaining catalogue entries still use procedural/category geometry and generic sound profiles. Dedicated mastered per-gift audio files remain **0**. This inventory does not imply that any source catalogue row is an active production offer.
+The existing Rose and Keeper models/artwork and their event effects remain `design-review-pending`. The current generated catalogue has **12 individually authored source models** and **10 gift-specific synthesized Web Audio designs**; the remaining catalogue entries still use procedural/category geometry and generic sound profiles. Dedicated mastered per-gift audio files remain **0**. This inventory does not imply that any source catalogue row is an active production offer.
+
+
+## Keeper of Atlantis LIVE model, motion and sound inventory — 2026-11-15
+
+| Resource | Canonical mapping | File / runtime | Status |
+|---|---|---|---|
+| Original model source | `keeper-of-atlantis-15000-mgl` → `gift-keeper-of-atlantis-3d-v1` | `assets/3d-assets/gift-models/keeper-of-atlantis-model.mjs` | Imported into existing generator; review pending |
+| Generated model/artwork | Keeper of Atlantis | `public/assets/gifts/catalog/keeper-of-atlantis-15000-mgl.gltf`, matching SVG and `-icon.svg` | Exact-code model route; generated build verification pending |
+| Motion | `keeper-of-atlantis-15000-mgl` → `atlantis-trident-surge` | `public/gift-effects.js`; generated motion index | Web Animations runtime and preview |
+| Sound | `keeper-of-atlantis-deep-surge-and-trident-bells-v1` | Local Web Audio synthesis in `public/gift-effects.js` | Underwater swell, sub impact, bell sequence and bubble shimmer; not mastered audio |
+| Cache | `gift-effects.js?v=20261115-rose-unfurl-atlantis-trident-2` | `public/index.html` and `public/sw.js` | Matching reference; shell cache v325 |
+
+The source catalogue's 15,000-Coin price, active flag and `cosmic-orbit` catalogue preset remain unchanged. The exact-code runtime override is separate metadata. Model generation, test and browser-render CI on the combined PR are still pending.
