@@ -133,6 +133,140 @@ create trigger ai_finance_usage_ledger_immutable
   before update or delete on ai_network.ai_finance_usage_ledger
   for each row execute function ai_network.prevent_ai_finance_ledger_mutation();
 
+
+-- Enforce owner/org/department/identity task reservations before queue insertion.
+-- Provider usage is still recorded even when it exceeds a cap; this guard applies before work is accepted.
+create or replace function ai_network.enforce_ai_finance_task_budget()
+returns trigger
+language plpgsql
+security invoker
+set search_path=''
+as $function$
+declare
+  v_department_id uuid;
+  v_budget record;
+  v_used_tokens bigint;
+  v_reserved_tokens bigint;
+  v_used_cost numeric(18,8);
+  v_reserved_cost numeric(18,8);
+  v_active_tasks bigint;
+begin
+  if current_user<>'service_role' then
+    raise exception using errcode='42501',message='AI task budget checks are restricted to the private Minglora runtime.';
+  end if;
+  if new.organization_id is not null then
+    select e.department_id into v_department_id
+    from ai_network.ai_employment_records e
+    where e.organization_id=new.organization_id and e.identity_id=new.identity_id
+      and e.employment_status in ('active','restricted')
+    order by e.updated_at desc
+    limit 1;
+  end if;
+
+  for v_budget in
+    select b.* from ai_network.ai_finance_budget_policies b
+    where b.owner_user_id=new.owner_user_id
+      and b.scope_type='owner'
+    union all
+    select b.* from ai_network.ai_finance_budget_policies b
+    where b.owner_user_id=new.owner_user_id and b.scope_type='organization'
+      and b.organization_id=new.organization_id
+    union all
+    select b.* from ai_network.ai_finance_budget_policies b
+    where b.owner_user_id=new.owner_user_id and b.scope_type='department'
+      and b.organization_id=new.organization_id and b.department_id=v_department_id
+    union all
+    select b.* from ai_network.ai_finance_budget_policies b
+    where b.owner_user_id=new.owner_user_id and b.scope_type='identity'
+      and b.identity_id=new.identity_id
+  loop
+    if v_budget.policy_status='paused' then
+      raise exception using errcode='42501',message='An applicable AI finance budget is paused; no new task was accepted.';
+    end if;
+    if v_budget.policy_status<>'active' then continue; end if;
+
+    if v_budget.daily_token_limit is not null then
+      select coalesce(sum(l.total_tokens),0) into v_used_tokens
+      from ai_network.ai_finance_usage_ledger l
+      where l.owner_user_id=new.owner_user_id
+        and l.occurred_at>=date_trunc('day',now()) and l.occurred_at<date_trunc('day',now())+interval '1 day'
+        and (v_budget.scope_type='owner'
+          or (v_budget.scope_type='organization' and l.organization_id=v_budget.organization_id)
+          or (v_budget.scope_type='department' and l.department_id=v_budget.department_id)
+          or (v_budget.scope_type='identity' and l.identity_id=v_budget.identity_id));
+      select coalesce(sum(q.token_budget),0) into v_reserved_tokens
+      from ai_network.ai_task_queue q
+      where q.owner_user_id=new.owner_user_id and q.task_id<>new.task_id
+        and q.created_at>=date_trunc('day',now())
+        and q.status in ('pending_approval','queued','running')
+        and (v_budget.scope_type='owner'
+          or (v_budget.scope_type='organization' and q.organization_id=v_budget.organization_id)
+          or (v_budget.scope_type='identity' and q.identity_id=v_budget.identity_id)
+          or (v_budget.scope_type='department' and exists(
+            select 1 from ai_network.ai_employment_records e
+            where e.organization_id=q.organization_id and e.identity_id=q.identity_id
+              and e.department_id=v_budget.department_id and e.employment_status in ('active','restricted')
+          )));
+      if v_used_tokens+v_reserved_tokens+new.token_budget>v_budget.daily_token_limit then
+        raise exception using errcode='22023',message='The AI task would exceed an applicable daily token budget.';
+      end if;
+    end if;
+
+    if v_budget.monthly_spend_limit_usd is not null then
+      select coalesce(sum(l.actual_cost_usd),0) into v_used_cost
+      from ai_network.ai_finance_usage_ledger l
+      where l.owner_user_id=new.owner_user_id
+        and l.occurred_at>=date_trunc('month',now()) and l.occurred_at<date_trunc('month',now())+interval '1 month'
+        and (v_budget.scope_type='owner'
+          or (v_budget.scope_type='organization' and l.organization_id=v_budget.organization_id)
+          or (v_budget.scope_type='department' and l.department_id=v_budget.department_id)
+          or (v_budget.scope_type='identity' and l.identity_id=v_budget.identity_id));
+      select coalesce(sum(q.cost_limit_usd),0) into v_reserved_cost
+      from ai_network.ai_task_queue q
+      where q.owner_user_id=new.owner_user_id and q.task_id<>new.task_id
+        and q.created_at>=date_trunc('month',now())
+        and q.status in ('pending_approval','queued','running')
+        and (v_budget.scope_type='owner'
+          or (v_budget.scope_type='organization' and q.organization_id=v_budget.organization_id)
+          or (v_budget.scope_type='identity' and q.identity_id=v_budget.identity_id)
+          or (v_budget.scope_type='department' and exists(
+            select 1 from ai_network.ai_employment_records e
+            where e.organization_id=q.organization_id and e.identity_id=q.identity_id
+              and e.department_id=v_budget.department_id and e.employment_status in ('active','restricted')
+          )));
+      if v_used_cost+v_reserved_cost+new.cost_limit_usd>v_budget.monthly_spend_limit_usd then
+        raise exception using errcode='22023',message='The AI task would exceed an applicable monthly spend budget.';
+      end if;
+    end if;
+
+    if v_budget.max_concurrent_tasks is not null then
+      select count(*) into v_active_tasks
+      from ai_network.ai_task_queue q
+      where q.owner_user_id=new.owner_user_id and q.task_id<>new.task_id
+        and q.status in ('queued','running')
+        and (v_budget.scope_type='owner'
+          or (v_budget.scope_type='organization' and q.organization_id=v_budget.organization_id)
+          or (v_budget.scope_type='identity' and q.identity_id=v_budget.identity_id)
+          or (v_budget.scope_type='department' and exists(
+            select 1 from ai_network.ai_employment_records e
+            where e.organization_id=q.organization_id and e.identity_id=q.identity_id
+              and e.department_id=v_budget.department_id and e.employment_status in ('active','restricted')
+          )));
+      if v_active_tasks+1>v_budget.max_concurrent_tasks then
+        raise exception using errcode='22023',message='The AI task would exceed an applicable concurrent-task limit.';
+      end if;
+    end if;
+  end loop;
+  return new;
+end;
+$function$;
+revoke all on function ai_network.enforce_ai_finance_task_budget() from public,anon,authenticated;
+grant execute on function ai_network.enforce_ai_finance_task_budget() to service_role;
+drop trigger if exists ai_finance_task_budget_guard on ai_network.ai_task_queue;
+create trigger ai_finance_task_budget_guard
+  before insert on ai_network.ai_task_queue
+  for each row execute function ai_network.enforce_ai_finance_task_budget();
+
 create or replace function public.minglora_ai_finance_command(
   p_action text,
   p_actor_user_id uuid,
