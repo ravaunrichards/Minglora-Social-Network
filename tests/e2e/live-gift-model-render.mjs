@@ -117,7 +117,8 @@ const browserConsoleMessages = [];
 const httpFailures = [];
 const requestFailures = [];
 const expectedAbortedModelRequests = [];
-const verifiedModelPaths = new Set();
+const requestedModelPaths = new Set();
+let activeModelPath = null;
 try {
   browser = await chromium.launch({
     channel: 'chromium',
@@ -142,8 +143,8 @@ try {
     const failure = { url: request.url(), error: request.failure()?.errorText || 'unknown' };
     let pathname = '';
     try { pathname = new URL(request.url()).pathname; } catch { /* malformed URLs remain unexpected */ }
-    if (failure.error === 'net::ERR_ABORTED' && verifiedModelPaths.has(pathname)) {
-      expectedAbortedModelRequests.push(failure);
+    if (failure.error === 'net::ERR_ABORTED' && requestedModelPaths.has(pathname) && pathname !== activeModelPath) {
+      expectedAbortedModelRequests.push({ ...failure, active_model_path: activeModelPath });
     } else {
       requestFailures.push(failure);
     }
@@ -178,6 +179,9 @@ try {
       await page.evaluate(name => {
         document.querySelector('#gift-name').textContent = name;
       }, gift.name);
+
+      requestedModelPaths.add(modelPath);
+      activeModelPath = modelPath;
 
       const render = await page.evaluate(async ({ source, name }) => {
         const viewer = document.querySelector('#gift-model');
@@ -254,8 +258,6 @@ try {
       assert.ok(render.renderedImageWidth > 0 && render.renderedImageHeight > 0, gift.name + ' rendered image dimensions must be non-zero');
       assert.ok(render.visiblePixelSamples > 10, gift.name + ' rendered image must contain visible model pixels');
       assert.ok(render.distinctVisibleColors > 8, gift.name + ' rendered image must contain non-uniform model detail');
-      verifiedModelPaths.add(modelPath);
-
       const screenshot = path.join(outputDir, gift.code + '-' + viewport.name + '.png');
       await page.locator('#gift-model').screenshot({ path: screenshot, animations: 'disabled', timeout: 15000 });
       results.push({
