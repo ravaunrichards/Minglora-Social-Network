@@ -13,6 +13,37 @@
     const parsed = new Date(value);
     return Number.isNaN(parsed.getTime()) ? 'Not recorded' : parsed.toLocaleString();
   };
+  const localDateTimeInZoneToIso = (value, timeZone) => {
+    const match = /^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2})(?::(\\d{2}))?$/.exec(String(value || ''));
+    if (!match) throw new Error('Enter a valid local date and time.');
+    const expected = match.slice(1).map((part, index) => Number(part || (index === 5 ? 0 : part)));
+    const target = Date.UTC(expected[0], expected[1] - 1, expected[2], expected[3], expected[4], expected[5] || 0);
+    const zone = String(timeZone || '').trim();
+    if (!zone) throw new Error('Enter the time zone for this attendance record.');
+    let instant = target;
+    let formatter;
+    try {
+      formatter = new Intl.DateTimeFormat('en-CA', {
+        timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'
+      });
+      for (let attempt = 0; attempt < 4; attempt += 1) {
+        const parts = Object.fromEntries(formatter.formatToParts(new Date(instant)).map(part => [part.type, part.value]));
+        const observed = Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day),
+          Number(parts.hour), Number(parts.minute), Number(parts.second));
+        instant += target - observed;
+      }
+      const verify = Object.fromEntries(formatter.formatToParts(new Date(instant)).map(part => [part.type, part.value]));
+      const matches = Number(verify.year) === expected[0] && Number(verify.month) === expected[1] &&
+        Number(verify.day) === expected[2] && Number(verify.hour) === expected[3] &&
+        Number(verify.minute) === expected[4] && Number(verify.second) === (expected[5] || 0);
+      if (!matches) throw new Error('That local time does not exist in the selected time zone.');
+    } catch (error) {
+      if (error instanceof RangeError) throw new Error('Enter a valid IANA time zone, such as America/Jamaica.');
+      throw error;
+    }
+    return new Date(instant).toISOString();
+  };
   const options = (values, current) => values.map(value =>
     '<option value="' + esc(value.value) + '"' + (current === value.value ? ' selected' : '') + '>' + esc(value.label) + '</option>'
   ).join('');
@@ -1981,10 +2012,12 @@
       if (!organizationId) throw new Error('Attendance organization is missing.');
       path = '/organizations/' + encodeURIComponent(organizationId) + '/attendance';
       form.dataset.idempotencyKey = form.dataset.idempotencyKey || window.crypto.randomUUID();
-      const asIso = name => value(name) ? new Date(value(name)).toISOString() : '';
       payload.employment_id = value('employmentId'); payload.record_type = value('recordType');
-      payload.starts_at = asIso('startsAt'); payload.ends_at = asIso('endsAt');
-      payload.timezone = value('timezone'); payload.reason = value('reason');
+      payload.timezone = value('timezone');
+      payload.starts_at = localDateTimeInZoneToIso(value('startsAt'), payload.timezone);
+      payload.ends_at = localDateTimeInZoneToIso(value('endsAt'), payload.timezone);
+      if (new Date(payload.ends_at) <= new Date(payload.starts_at)) throw new Error('Attendance end time must be after its start time.');
+      payload.reason = value('reason');
       payload.idempotency_key = form.dataset.idempotencyKey;
     } else if (kind === 'attendance-review') {
       const organizationId = form.dataset.organizationId, attendanceId = form.dataset.attendanceId;
