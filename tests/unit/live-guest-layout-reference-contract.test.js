@@ -109,8 +109,8 @@ test('Roundtable guest-box choices do not replace the selected screen grid', () 
   const start = css.indexOf('/* Guest-box layouts');
   const end = css.indexOf('/* Layout picker thumbnails', start);
   const roundtable = css.slice(start, end);
-  assert.match(roundtable, /data-live-guest-layout="roundtable-1"\]\s*>\.live-guest-seat\.is-host\{grid-column:2!important;grid-row:2!important/);
-  assert.match(roundtable, /data-live-guest-layout="roundtable-2"\]\s*>\.live-guest-seat\.is-host\{grid-column:span 2!important;grid-row:span 2!important/);
+  assert.match(roundtable, /data-live-guest-layout="roundtable-1"\]\s*>\.live-guest-seat\.is-host\{\s*grid-column:2!important;grid-row:2!important/);
+  assert.match(roundtable, /data-live-guest-layout="roundtable-2"\]\s*>\.live-guest-seat\.is-host\{\s*grid-column:span 2!important;grid-row:span 2!important/);
   assert.doesNotMatch(roundtable, /grid-template-(columns|rows)/);
   assert.match(app, /topic:"minglora-live-guest-layout"/);
 });
