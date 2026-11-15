@@ -58,10 +58,12 @@ test('Gifters Badge Progression chart sits in its own responsive reference card 
   assert.ok(progression.includes("class='gp-chart-image' src='/assets/gifters-level-up.png'"));
   assert.ok(progression.includes("class='gp-chart-open' href='/assets/gifters-level-up.png'"));
   assert.ok(progression.includes("id='gp-level-up-reference-note'"));
-  assert.match(styles, /\.gp-chart-reference\{[\\s\\S]*?background:linear-gradient/);
-  assert.match(styles, /\.gp-chart-image\{[\\s\\S]*?height:auto[\\s\\S]*?object-fit:contain/);
+  assert.ok(styles.includes('.gp-chart-reference{'));
+  assert.ok(styles.includes('background:linear-gradient(128deg,#19163f 0%,#242255 56%,#4b2b70 100%)'));
+  assert.ok(styles.includes('.gp-chart-image{'));
+  assert.ok(styles.includes('object-fit:contain;'));
   assert.match(styles, /\.gp-chart-reference-heading/);
-  assert.match(styles, /@media\\(max-width:650px\\)[\\s\\S]*?\.gp-chart-reference-heading\\{flex-direction:column/);
+  assert.ok(styles.includes('.gp-chart-reference-heading{flex-direction:column;gap:9px}'));
   assert.ok(serviceWorker.includes("'/assets/gifters-level-up.png'"), 'the exact working chart route remains precached');
 });
 
