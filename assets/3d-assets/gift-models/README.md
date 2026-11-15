@@ -89,3 +89,16 @@ The existing gift build generates both subject-specific transparent SVG artwork 
 - Materials: named PBR meshes for gold, mane, face, enamel, eyes and gemstones; geometry buffers are embedded for the existing model viewer
 - Review: `design-review-pending`; no premium, human visual, licensing or device approval is implied
 - Integration: the existing gift generator routes only the exact canonical gift code to this source; the configured catalogue value, publication flag, backend offers and transaction logic remain unchanged
+
+
+## Baseball v1
+
+- Source: `baseball-model.mjs`
+- Target: canonical catalogue item `baseball-orcdx9` (Baseball; sports; configured value 1 Coin)
+- Generated output: `public/assets/gifts/catalog/baseball-orcdx9.gltf`, primary SVG and transparent `-icon.svg`
+- Format: self-contained glTF 2.0 JSON with embedded binary mesh buffers and per-part PBR factors
+- Geometry: full-grain warm-ivory leather shell, fine leather-grain flecks, two curved recessed seam channels, raised scarlet cotton seams, hand-sewn stitch strands and thread highlights
+- Artwork: original subject-specific baseball vector illustration marked `baseball-original-v1`
+- Review state: `design-review-pending`; no human art, rights or device approval is implied
+- Integration: exact-code route in `scripts/generate-minglora-gifts.mjs`; canonical catalogue price, active flag and LIVE transaction flow remain unchanged
+- Verification target: desktop, tablet and mobile Chromium model-render matrix plus gift-catalogue model/artwork regression tests

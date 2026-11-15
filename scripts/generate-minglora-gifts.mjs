@@ -11,6 +11,7 @@ import { createCrystalCrownModel } from "../assets/3d-assets/gift-models/crystal
 import { createPhoenixModel } from "../assets/3d-assets/gift-models/phoenix-model.mjs";
 import { createBeachMaracasModel } from "../assets/3d-assets/gift-models/beach-maracas-model.mjs";
 import { createRoyalLionsScepterModel } from "../assets/3d-assets/gift-models/royal-lions-scepter-model.mjs";
+import { createBaseballModel } from "../assets/3d-assets/gift-models/baseball-model.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const MANIFEST = path.join(ROOT, "data", "minglora-gift-catalog.json");
@@ -123,8 +124,8 @@ function svgArt(gift, options = {}) {
   } else if (/fighting/.test(name)) {
     shape = '<path d="M163 311q-13-22 5-43l39-49q14-16 31-5l20 13 23-43q15-24 34-9 13 10 5 29l-19 45 24-33q17-20 34-5 13 12 1 31l-26 42q25-19 40-1 12 15-3 33l-48 61q-23 30-62 28l-59-7q-40-7-50-43z" fill="url(#main)" stroke="#fff" stroke-width="10" stroke-linejoin="round"/><path d="M162 346l-34 28 41 59 37-30" fill="#f3b2c9" stroke="#fff" stroke-width="8" stroke-linejoin="round"/><path d="M225 253l25 20m21-47 24 19m21-17 22 18" fill="none" stroke="url(#shine)" stroke-width="13" stroke-linecap="round"/>';
   } else if (/baseball/.test(name)) {
-    shape = '<circle cx="256" cy="252" r="132" fill="#fff" stroke="#d6e2ef" stroke-width="12"/><path d="M158 154q98 98 0 196m196-196q-98 98 0 196" fill="none" stroke="#d84854" stroke-width="12" stroke-linecap="round"/><path d="M165 173l-15 15m34 14-15 15m34 14-15 15m34 14-15 15m34 14-15 15m34 14-15 15m34-173 15 15m-34 14 15 15m-34 14 15 15m-34 14 15 15m-34 14 15 15m-34 14 15 15" stroke="#d84854" stroke-width="7" stroke-linecap="round"/>';
-  } else if (/dj headphone|headphone/.test(name)) {
+     shape = '<defs><radialGradient id="baseball-leather" cx="30%" cy="22%" r="82%"><stop offset="0" stop-color="#fff"/><stop offset=".55" stop-color="#f5f1e7"/><stop offset="1" stop-color="#d6d0c2"/></radialGradient></defs><g data-gift-artwork="baseball-original-v1"><ellipse cx="256" cy="392" rx="105" ry="16" fill="#172239" opacity=".13"/><circle cx="256" cy="252" r="132" fill="url(#baseball-leather)" stroke="#fff" stroke-width="9"/><circle cx="256" cy="252" r="122" fill="none" stroke="#c9c4b8" stroke-opacity=".45" stroke-width="2"/><path d="M158 154Q256 252 158 350M354 154Q256 252 354 350" fill="none" stroke="#8f2734" stroke-width="13" stroke-linecap="round" opacity=".9"/><path d="M158 154Q256 252 158 350M354 154Q256 252 354 350" fill="none" stroke="#e24a56" stroke-width="7" stroke-linecap="round"/><path d="M164 161Q257 252 164 343M348 161Q255 252 348 343" fill="none" stroke="#fff4ed" stroke-width="4" stroke-linecap="round" stroke-dasharray="2 17"/><path d="M180 151Q216 121 258 124M276 377Q314 368 333 347" fill="none" stroke="#fff" stroke-opacity=".78" stroke-width="9" stroke-linecap="round"/><g fill="#c7c1b5" opacity=".34"><circle cx="232" cy="153" r="2.5"/><circle cx="282" cy="174" r="2"/><circle cx="310" cy="224" r="2.3"/><circle cx="206" cy="276" r="2"/><circle cx="284" cy="315" r="2.4"/><circle cx="235" cy="344" r="1.8"/></g></g>';
+   } else if (/dj headphone|headphone/.test(name)) {
     shape = '<path d="M112 268v-36q0-144 144-144t144 144v36" fill="none" stroke="url(#main)" stroke-width="31" stroke-linecap="round"/><path d="M112 245q0-23 23-23h27q23 0 23 23v112q0 23-23 23h-27q-23 0-23-23zm215 0q0-23 23-23h27q23 0 23 23v112q0 23-23 23h-27q-23 0-23-23z" fill="url(#main)" stroke="#fff" stroke-width="9"/><path d="M145 258v86m223-86v86" stroke="#fff" stroke-opacity=".75" stroke-width="8" stroke-linecap="round"/><circle cx="256" cy="94" r="16" fill="url(#shine)"/>';
   } else if (/ice cream|gelato|popsicle/.test(name)) {
     shape = '<path d="M186 252h140l-65 174q-5 13-12 0z" fill="#b87b48" stroke="#fff" stroke-width="8" stroke-linejoin="round"/><path d="M186 256q-28-18-28-56 0-75 98-75t98 75q0 38-28 56z" fill="url(#main)" stroke="#fff" stroke-width="9"/><circle cx="224" cy="193" r="14" fill="#fff" fill-opacity=".6"/><circle cx="277" cy="174" r="10" fill="#fff" fill-opacity=".7"/>';
@@ -195,6 +196,7 @@ function modelDocument(gift) {
   if (gift.code === "phoenix-wep6uk") return createPhoenixModel();
   if (gift.code === "beach-maracas-1exxoag") return createBeachMaracasModel();
   if (gift.code === "royal-lions-scepter-15000-mgl") return createRoyalLionsScepterModel();
+  if (gift.code === "baseball-orcdx9") return createBaseballModel();
   const seed = hash32(gift.code);
   const hue = seed % 360;
   const colors = palette(gift);

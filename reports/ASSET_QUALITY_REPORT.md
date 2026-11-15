@@ -215,3 +215,10 @@ The source record's category, configured 15,000-Coin value, animation identity/p
 ## Royal Lions Scepter event-effect checkpoint — 2026-11-15
 
 The canonical gift now has an exact-code lion-scepter-rise motion override in the generated motion index and the existing Web Animations gift mount. It retains its source catalogue grand-entry preset, key, 1,900-ms duration and sound-preset field. Its event sound is locally synthesized using a low band-pass growl sweep, sub impact, five-note fanfare and high-frequency shimmer; the LIVE asset manifest labels it gift_specific_web_audio_synthesis and explicitly records no dedicated mastered audio file. Sound opt-out and reduced-motion behavior remain active. This confirms runtime wiring and test coverage, not a human-approved composition, mastered recording, licensing review, audio-mix approval or physical-device verification.
+
+
+## Baseball model and vector-art quality record — 2026-11-15
+
+The exact canonical Baseball record now has an individually authored model source rather than shared sports-category geometry. The model uses an ivory full-grain shell, two curved seam paths with recessed channels, raised scarlet seam cords, separate hand-sewn stitch strands/thread highlights and subtle grain flecks. Its vector artwork uses a leather-shaded sphere and individually drawn curved seam/stitch details; the same subject-specific illustration is emitted in the primary SVG and transparent gift icon.
+
+The GLTF declares self-contained embedded geometry buffers, per-part material records, accessor bounds and `design-review-pending` provenance. The browser-render matrix covers desktop, tablet and mobile; final workflow outcome is pending at the time this record was added. This structural/artwork source inspection is not human visual approval, licensing clearance, final premium art acceptance or physical-device certification. No catalogue Coin value, source active flag, production offer, wallet, transaction or payout was changed.
