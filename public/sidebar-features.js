@@ -5,20 +5,38 @@
   const list = document.getElementById('left-rail-feature-list');
   const toggle = document.getElementById('left-rail-see-toggle');
   const adminCentreLink = document.getElementById('admin-centre-sidebar-link');
+  const aiNetworkLink = document.getElementById('ai-network-sidebar-link');
   let adminAccessCheck = 0;
 
-  const hideAdminCentre = () => {
+  const setLinkVisibility = (link, visible) => {
+    if (!link) return;
+    link.hidden = !visible;
+    link.classList.toggle('hidden', !visible);
+    link.setAttribute('aria-hidden', String(!visible));
+  };
+
+  const publishAdminAccess = access => {
+    window.__mingloraAdminAccess = access && typeof access === 'object'
+      ? access
+      : { canAccess: false, setupRequired: false, mfaVerified: false };
+    window.dispatchEvent(new CustomEvent('minglora:admin-access-updated', {
+      detail: window.__mingloraAdminAccess
+    }));
+  };
+
+  const hideAdminNavigation = () => {
     adminAccessCheck += 1;
-    if (!adminCentreLink) return;
-    adminCentreLink.hidden = true;
-    adminCentreLink.classList.add('hidden');
-    adminCentreLink.setAttribute('aria-hidden', 'true');
+    publishAdminAccess({ canAccess: false, setupRequired: false, mfaVerified: false });
+    setLinkVisibility(adminCentreLink, false);
+    setLinkVisibility(aiNetworkLink, false);
   };
 
   const refreshAdminCentreVisibility = async () => {
-    if (!adminCentreLink) return;
+    if (!adminCentreLink && !aiNetworkLink) return;
     const check = ++adminAccessCheck;
-    hideAdminCentreLinkOnly();
+    publishAdminAccess({ canAccess: false, setupRequired: false, mfaVerified: false });
+    setLinkVisibility(adminCentreLink, false);
+    setLinkVisibility(aiNetworkLink, false);
     try {
       const response = await fetch('/api/admin/access', {
         credentials: 'same-origin',
@@ -27,25 +45,19 @@
       });
       const access = await response.json().catch(() => ({}));
       if (check !== adminAccessCheck) return;
-      const isDesignatedAdmin = response.ok &&
+      publishAdminAccess(response.ok ? access : null);
+      const canOpenAdminCentre = response.ok &&
         (access.canAccess === true || access.setupRequired === true);
-      adminCentreLink.hidden = !isDesignatedAdmin;
-      adminCentreLink.classList.toggle('hidden', !isDesignatedAdmin);
-      adminCentreLink.setAttribute('aria-hidden', String(!isDesignatedAdmin));
+      const canOpenAINetwork = response.ok && access.canAccess === true;
+      setLinkVisibility(adminCentreLink, canOpenAdminCentre);
+      setLinkVisibility(aiNetworkLink, canOpenAINetwork);
     } catch {
-      if (check === adminAccessCheck) hideAdminCentreLinkOnly();
+      if (check === adminAccessCheck) hideAdminNavigation();
     }
   };
 
-  function hideAdminCentreLinkOnly() {
-    if (!adminCentreLink) return;
-    adminCentreLink.hidden = true;
-    adminCentreLink.classList.add('hidden');
-    adminCentreLink.setAttribute('aria-hidden', 'true');
-  }
-
   window.addEventListener('minglora:session-ready', refreshAdminCentreVisibility);
-  window.addEventListener('minglora:session-ended', hideAdminCentre);
+  window.addEventListener('minglora:session-ended', hideAdminNavigation);
   if (document.getElementById('app') && !document.getElementById('app').classList.contains('hidden')) {
     void refreshAdminCentreVisibility();
   }
