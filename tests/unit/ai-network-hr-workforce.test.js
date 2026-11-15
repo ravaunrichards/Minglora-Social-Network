@@ -9,6 +9,7 @@ const read = path => readFileSync(resolve(root, path), 'utf8');
 const migration = read('supabase/migrations/20261114234000_minglora_ai_hr_training_and_attendance.sql');
 const runtime = read('supabase/functions/minglora-runtime-state/index.ts');
 const server = read('src/server.js');
+const ui = read('public/ai-network.js');
 
 test('AI HR training and attendance records are additive, private and service-role only', () => {
   for (const table of [
@@ -100,4 +101,22 @@ test('workforce HTTP endpoints require platform staff and use private Supabase r
     "'record_attendance'",
     "'review_attendance'"
   ]) assert.ok(route.includes(token), 'Missing protected workforce route element: ' + token);
+});
+
+test('HR workspace exposes owner-admin training, progress and attendance controls', () => {
+  for (const token of [
+    "request(base + '/training-programs')",
+    "request(base + '/training-enrollments')",
+    "request(base + '/attendance')",
+    'data-ai-form="training-program"',
+    'data-ai-form="training-assignment"',
+    'data-ai-form="training-enrollment-status"',
+    'data-ai-form="attendance-entry"',
+    'data-ai-form="attendance-review"',
+    'trainingPrograms: list(trainingProgramResult.training_programs)',
+    'attendanceRecords: list(attendanceResult.attendance_records)',
+    'localDateTimeInZoneToIso',
+    "America/Jamaica",
+    "'Human-recorded'"
+  ]) assert.ok(ui.includes(token), 'Missing HR workforce UI element: ' + token);
 });
