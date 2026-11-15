@@ -435,9 +435,8 @@
 @media(prefers-reduced-motion:reduce){.gp-leader-badge svg{animation:none}}
 
 
-/* TEMPORARY: hide only the incorrect Gifters Level Up chart at the top of the progression page. Keep gifter status and all other content/data intact until the chart is fixed. */
-.gp-page .gp-hero-art{display:none!important}
- 
+/* Original Level-Up artwork is visible as a reference; live progression remains server-authoritative. */
+
 /* Show the member's earned TikTok-style level badge beside Gifter Status. */
 .gp-current-badge-row{align-items:center;gap:14px}
 .gp-current-badge-art{display:grid;place-items:center;flex:0 0 112px;width:112px;height:120px;min-width:0;overflow:visible}
@@ -486,3 +485,26 @@
   .gp-level-index-grid[data-layout="vertical"] .gp-level-index-art{width:120px}
 }
 @media(prefers-reduced-motion:reduce){.gp-leader-badge svg{animation:none}}
+
+
+/* The original PNG badge accompanies its crisp shared-vector badge on each level card. */
+.gp-level-index-original{display:inline-flex;align-items:center;gap:7px;width:max-content;max-width:100%;margin-top:3px;padding:4px 7px;border:1px solid var(--border,#dce2ec);border-radius:9px;background:var(--soft,#f7f9fc);color:var(--muted,#667085);font-size:.66rem;font-weight:750;text-decoration:none}
+.gp-level-index-original img{display:block;width:44px;height:44px;max-width:44px;object-fit:contain;object-position:center;flex:0 0 44px}
+.gp-level-index-original span{overflow-wrap:anywhere}
+.gp-reference-note{display:block;max-width:100%;margin:8px 2px 0;color:var(--muted,#667085);font-size:.72rem;line-height:1.45;overflow-wrap:anywhere}
+.gp-reference-section{display:grid;gap:14px;min-width:0}
+.gp-master-reference-grid{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(0,1fr);align-items:start;gap:14px;min-width:0}
+.gp-range-reference-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:12px;min-width:0}
+.gp-reference-figure{display:grid;align-content:start;gap:9px;min-width:0;max-width:100%;margin:0;padding:clamp(8px,1.2vw,13px);box-sizing:border-box;border:1px solid var(--border,#e2e7ef);border-radius:14px;background:var(--surface,#fff);box-shadow:0 4px 14px rgba(25,35,55,.06)}
+.gp-reference-figure figcaption{display:grid;gap:3px;min-width:0}
+.gp-reference-figure figcaption strong{color:var(--text,#172033);font-size:.86rem;line-height:1.25;overflow-wrap:anywhere}
+.gp-reference-figure figcaption span{color:var(--muted,#667085);font-size:.7rem;line-height:1.35}
+.gp-reference-figure>a{display:block;max-width:100%;min-width:0}
+.gp-reference-figure img{display:block;width:100%;max-width:100%;height:auto;min-width:0;object-fit:contain;object-position:center;border-radius:8px}
+.gp-master-reference-preview img{max-height:440px;object-fit:contain}
+@media(max-width:760px){
+  .gp-master-reference-grid{grid-template-columns:minmax(0,1fr)}
+  .gp-range-reference-grid{grid-template-columns:minmax(0,1fr)}
+  .gp-reference-figure{padding:8px;border-radius:12px}
+  .gp-reference-figure img{width:100%;height:auto}
+}

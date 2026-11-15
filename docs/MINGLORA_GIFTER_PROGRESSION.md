@@ -41,3 +41,17 @@ Confirmed gift transaction IDs are stored in `gifterProgressionLedger`, a persis
 Earned Gifter badges appear in member profiles, post/comment bylines, and LIVE directory identity after the relevant level is achieved. The temporary NEW GIFTER identity appears in those same identity surfaces during its seven-day window. Badge levels and identity dates are calculated by the server from the deduplicated confirmed-gift ledger; the browser cannot assign, unlock, or extend them.
 
 Creator League rank and gifts received do not grant Gifter badges.
+
+
+## Complete source-reference placement — 2026-11-15
+
+The canonical `assets/Gifters Badge Levels/` collection contains 71 images, all retained in their original source folders and assigned to these UI locations:
+
+- `Gifters Rewards.png` remains the primary artwork banner at the top of the Gifts entry page.
+- `Gifters Level Up.png` appears in the Gifter Progression hero as original artwork, labelled visual-reference-only. Live Coin thresholds and unlock states continue to come from server-confirmed gifting activity.
+- The 11 `Levels 1-4.jpg` through `Levels 50.jpg` panels appear in the detailed, ordered LV 1–50 section.
+- The six `LV.1 - LV.9.jpg` through `LV.50+.jpg` sheets appear in a separate ordered level-range gallery.
+- `Badges_Level_01-50/Badges_Level_01-50.png` and its `_preview.jpg` appear together in a separate master-collection section.
+- Each of the 50 numbered individual PNG files is displayed as an original-art thumbnail/link on its matching level-directory row. The shared vector sprite remains the primary crisp badge rendering; the original PNG preview is visible beside it.
+
+The six range JPGs, two master-sheet files, and 50 individual PNGs use explicit server allow-list routes and are included in the PWA shell cache. All images preserve their source aspect ratio with `object-fit: contain`; master and range reference sheets do not replace the live Coin-threshold calculation.
