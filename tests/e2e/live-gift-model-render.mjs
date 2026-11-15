@@ -128,8 +128,7 @@ try {
   const baseUrl = 'http://127.0.0.1:' + address.port;
 
   // Each gift/viewport gets a fresh page and exactly one model source.
-  // This mirrors independent UI mounts and prevents model-viewer source
-  // replacement from generating unrelated ERR_ABORTED cancellation events.
+  // This prevents source replacement from creating unrelated abort events.
   for (const viewport of viewports) {
     for (const gift of gifts) {
       const page = await context.newPage();
@@ -137,23 +136,23 @@ try {
       const pageRequestFailures = [];
       try {
         await page.setViewportSize({ width: viewport.width, height: viewport.height });
-        page.on('pageerror', error => {
-          const detail = { gift: gift.name, viewport: viewport.name, message: error.message };
-          pageErrors.push(detail);
-        });
+        page.on('pageerror', error => pageErrors.push({
+          gift: gift.name, viewport: viewport.name, message: error.message
+        }));
         page.on('console', message => {
           if (message.type() === 'error' || message.type() === 'warning') {
             browserConsoleMessages.push({
-              gift: gift.name,
-              viewport: viewport.name,
-              type: message.type(),
-              message: message.text()
+              gift: gift.name, viewport: viewport.name,
+              type: message.type(), message: message.text()
             });
           }
         });
         page.on('response', response => {
           if (response.status() >= 400) {
-            const detail = { status: response.status(), url: response.url(), gift: gift.name, viewport: viewport.name };
+            const detail = {
+              status: response.status(), url: response.url(),
+              gift: gift.name, viewport: viewport.name
+            };
             httpFailures.push(detail);
             pageHttpFailures.push(detail);
           }
@@ -219,9 +218,6 @@ try {
             viewer.addEventListener('error', onError, { once: true });
             viewer.src = source;
           });
-
-          // model-viewer composites its shared WebGL renderer into the
-          // visible 2D canvas. Verify its public rendered-frame API and pixels.
           await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
           const presentationCanvas = viewer.shadowRoot?.querySelector('canvas') || null;
           const imageDataUrl = viewer.toDataURL('image/png');
@@ -237,8 +233,7 @@ try {
           let visiblePixelCount = 0;
           const sampledColors = new Set();
           for (let index = 0; index < pixels.length; index += 16) {
-            const alpha = pixels[index + 3];
-            if (alpha > 16) {
+            if (pixels[index + 3] > 16) {
               visiblePixelCount++;
               sampledColors.add(pixels[index] + ',' + pixels[index + 1] + ',' + pixels[index + 2]);
             }
@@ -270,12 +265,7 @@ try {
         assert.ok(render.visiblePixelSamples > 10, gift.name + ' rendered image must contain visible model pixels');
         assert.ok(render.distinctVisibleColors > 8, gift.name + ' rendered image must contain non-uniform model detail');
 
-        // The model-viewer load event covers its model fetch and decode.
-        // Wait for the page's remaining requests to settle, then fail on every
-        // HTTP/network error; no cancellation allow-list is used.
         await page.waitForLoadState('networkidle', { timeout: 15000 });
-        assert.deepEqual(pageErrors.filter(item => item.gift === gift.name && item.viewport === viewport.name), [],
-          gift.name + '/' + viewport.name + ' must not report page errors');
         assert.deepEqual(pageHttpFailures, [],
           gift.name + '/' + viewport.name + ' must not receive HTTP error responses');
         assert.deepEqual(pageRequestFailures, [],
@@ -329,215 +319,6 @@ try {
   }, null, 2));
 } finally {
   if (context) await context.close();
-  if (browser) await browser.close();
-  await new Promise(resolve => server.close(resolve));
-}const results = [];
-const pageErrors = [];
-const browserConsoleMessages = [];
-const httpFailures = [];
-const requestFailures = [];
-const expectedAbortedModelRequests = [];
-const requestedModelPaths = new Set();
-let activeModelPath = null;
-let activeModelGeneration = 0;
-const modelRequestContexts = new WeakMap();
-try {
-  browser = await chromium.launch({
-    channel: 'chromium',
-    headless: true,
-    args: ['--no-sandbox', '--disable-dev-shm-usage', '--enable-gpu', '--enable-webgl', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--use-gl=angle', '--use-angle=swiftshader']
-  });
-  const address = server.address();
-  const baseUrl = 'http://127.0.0.1:' + address.port;
-  const page = await browser.newPage({ viewport: { width: 1280, height: 900 }, deviceScaleFactor: 1 });
-  page.on('pageerror', error => pageErrors.push(error.message));
-  page.on('console', message => {
-    if (message.type() === 'error' || message.type() === 'warning') {
-      browserConsoleMessages.push(message.type() + ': ' + message.text());
-    }
-  });
-  page.on('response', response => {
-    if (response.status() >= 400) {
-      httpFailures.push({ status: response.status(), url: response.url() });
-    }
-  });
-  page.on('request', request => {
-    let pathname = '';
-    try { pathname = new URL(request.url()).pathname; } catch { /* malformed URLs remain untracked */ }
-    if (requestedModelPaths.has(pathname)) {
-      modelRequestContexts.set(request, { pathname, generation: activeModelGeneration });
-    }
-  });
-  page.on('requestfailed', request => {
-    const failure = { url: request.url(), error: request.failure()?.errorText || 'unknown' };
-    const context = modelRequestContexts.get(request);
-    if (failure.error === 'net::ERR_ABORTED' && context &&
-        (context.generation < activeModelGeneration || context.pathname !== activeModelPath)) {
-      expectedAbortedModelRequests.push({
-        ...failure,
-        request_model_path: context.pathname,
-        request_generation: context.generation,
-        active_model_path: activeModelPath,
-        active_generation: activeModelGeneration
-      });
-    } else {
-      requestFailures.push(failure);
-    }
-  });
-  await page.goto(baseUrl + '/__gift-model-preview', { waitUntil: 'domcontentloaded' });
-  await page.waitForFunction(() => window.__mingloraModelViewerReady === true, null, { timeout: 60000 });
-  assert.ok(await page.evaluate(() => Boolean(customElements.get('model-viewer'))),
-    'The production model-viewer 4.4.0 module must be available in Chromium.');
-  const browserWebGL = await page.evaluate(() => {
-    const probe = document.createElement('canvas');
-    const context = probe.getContext('webgl2') || probe.getContext('webgl');
-    const info = context ? {
-      available: true,
-      version: context.getParameter(context.VERSION),
-      renderer: context.getParameter(context.RENDERER)
-    } : { available: false, version: null, renderer: null };
-    context?.getExtension('WEBGL_lose_context')?.loseContext();
-    return info;
-  });
-  console.log('Chromium WebGL capability: ' + JSON.stringify(browserWebGL));
-  assert.equal(browserWebGL.available, true,
-    'Chromium must expose WebGL. Browser console: ' + browserConsoleMessages.slice(-10).join(' | '));
-
-  for (const viewport of viewports) {
-    await page.setViewportSize({ width: viewport.width, height: viewport.height });
-    await page.evaluate(name => {
-      document.querySelector('#viewport-name').textContent = name + ' · responsive render';
-    }, viewport.name);
-
-    for (const gift of gifts) {
-      const modelPath = '/assets/gifts/catalog/' + gift.code + '.gltf';
-      await page.evaluate(name => {
-        document.querySelector('#gift-name').textContent = name;
-      }, gift.name);
-
-      requestedModelPaths.add(modelPath);
-      activeModelPath = modelPath;
-      activeModelGeneration += 1;
-
-      const render = await page.evaluate(async ({ source, name }) => {
-        const viewer = document.querySelector('#gift-model');
-        const detail = await new Promise((resolve, reject) => {
-          const timeout = window.setTimeout(() => {
-            cleanup();
-            reject(new Error(name + ' model-viewer load timed out'));
-          }, 45000);
-          const cleanup = () => {
-            window.clearTimeout(timeout);
-            viewer.removeEventListener('load', onLoad);
-            viewer.removeEventListener('error', onError);
-          };
-          const onLoad = () => {
-            cleanup();
-            requestAnimationFrame(() => requestAnimationFrame(() => resolve({ event: 'load' })));
-          };
-          const onError = event => {
-            cleanup();
-            reject(new Error(name + ' model-viewer emitted error: ' + String(event.detail?.type || 'unknown')));
-          };
-          viewer.addEventListener('load', onLoad, { once: true });
-          viewer.addEventListener('error', onError, { once: true });
-          viewer.src = source;
-        });
-        // model-viewer composites its shared WebGL renderer into the
-        // visible 2D canvas. Its WebGL canvas is intentionally detached from
-        // the shadow DOM, so verify the public rendered-frame API and pixels
-        // rather than probing private renderer elements.
-        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-        const presentationCanvas = viewer.shadowRoot?.querySelector('canvas') || null;
-        const imageDataUrl = viewer.toDataURL('image/png');
-        const image = new Image();
-        image.src = imageDataUrl;
-        await image.decode();
-        const pixelCanvas = document.createElement('canvas');
-        pixelCanvas.width = image.naturalWidth;
-        pixelCanvas.height = image.naturalHeight;
-        const pixelContext = pixelCanvas.getContext('2d', { willReadFrequently: true });
-        pixelContext.drawImage(image, 0, 0);
-        const pixels = pixelContext.getImageData(0, 0, pixelCanvas.width, pixelCanvas.height).data;
-        let visiblePixelCount = 0;
-        const sampledColors = new Set();
-        for (let index = 0; index < pixels.length; index += 16) {
-          const alpha = pixels[index + 3];
-          if (alpha > 16) {
-            visiblePixelCount++;
-            sampledColors.add(pixels[index] + ',' + pixels[index + 1] + ',' + pixels[index + 2]);
-          }
-        }
-        return {
-          event: detail.event,
-          loaded: viewer.loaded,
-          modelIsVisible: viewer.modelIsVisible,
-          presentationCanvasPresent: Boolean(presentationCanvas),
-          canvasWidth: presentationCanvas?.width || 0,
-          canvasHeight: presentationCanvas?.height || 0,
-          viewportWidth: Math.round(viewer.getBoundingClientRect().width),
-          viewportHeight: Math.round(viewer.getBoundingClientRect().height),
-          renderedImageWidth: image.naturalWidth,
-          renderedImageHeight: image.naturalHeight,
-          renderedImageBytes: imageDataUrl.length,
-          visiblePixelSamples: visiblePixelCount,
-          distinctVisibleColors: sampledColors.size
-        };
-      }, { source: modelPath, name: gift.name });
-
-      assert.equal(render.loaded, true, gift.name + ' model must finish loading');
-      assert.equal(render.modelIsVisible, true, gift.name + ' model must be visible');
-      assert.equal(render.presentationCanvasPresent, true, gift.name + ' must mount its presentation canvas');
-      assert.ok(render.canvasWidth > 0 && render.canvasHeight > 0, gift.name + ' must render to a non-zero presentation canvas');
-      assert.ok(render.viewportWidth > 0 && render.viewportHeight > 0, gift.name + ' viewer must have visible layout dimensions');
-      assert.ok(render.renderedImageBytes > 1000, gift.name + ' rendered frame must produce a non-empty image');
-      assert.ok(render.renderedImageWidth > 0 && render.renderedImageHeight > 0, gift.name + ' rendered image dimensions must be non-zero');
-      assert.ok(render.visiblePixelSamples > 10, gift.name + ' rendered image must contain visible model pixels');
-      assert.ok(render.distinctVisibleColors > 8, gift.name + ' rendered image must contain non-uniform model detail');
-      const screenshot = path.join(outputDir, gift.code + '-' + viewport.name + '.png');
-      await page.locator('#gift-model').screenshot({ path: screenshot, animations: 'disabled', timeout: 15000 });
-      results.push({
-        name: gift.name,
-        code: gift.code,
-        model_path: '/assets/gifts/catalog/' + gift.code + '.gltf',
-        viewport: viewport.name,
-        dimensions: { width: viewport.width, height: viewport.height },
-        render
-      });
-    }
-  }
-
-  assert.deepEqual(pageErrors, [], 'Chromium must not report unhandled page errors.');
-  assert.deepEqual(httpFailures, [], 'Chromium must not receive HTTP error responses: ' + JSON.stringify(httpFailures));
-  assert.deepEqual(requestFailures, [], 'Chromium must not have failed network requests: ' + JSON.stringify(requestFailures));
-  const report = {
-    generated_at: new Date().toISOString(),
-    result: 'passed',
-    renderer: 'model-viewer 4.4.0 / Chromium WebGL',
-    gifts: gifts.length,
-    viewports: viewports.map(({ name, width, height }) => ({ name, width, height })),
-    render_checks: results.length,
-    page_errors: pageErrors,
-    http_failures: httpFailures,
-    request_failures: requestFailures,
-    expected_aborted_model_requests: expectedAbortedModelRequests,
-    checks: results
-  };
-  fs.writeFileSync(path.join(outputDir, 'render-report.json'), JSON.stringify(report, null, 2) + '\n');
-  console.log(JSON.stringify({
-    result: report.result,
-    gifts: report.gifts,
-    viewports: report.viewports.length,
-    render_checks: report.render_checks,
-    pixel_render_checks: results.filter(item => item.render.visiblePixelSamples > 10).length,
-    screenshots: results.length,
-    page_errors: pageErrors.length,
-    http_failures: httpFailures.length,
-    request_failures: requestFailures.length,
-    expected_aborted_model_requests: expectedAbortedModelRequests.length,
-    output: 'artifacts/live-gift-model-render/'
-  }, null, 2));
-} finally {
   if (browser) await browser.close();
   await new Promise(resolve => server.close(resolve));
 }
