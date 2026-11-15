@@ -47,7 +47,7 @@ Creator League rank and gifts received do not grant Gifter badges.
 
 ## Complete source-reference placement — 2026-11-15
 
-The canonical `assets/Gifters Badge Levels/` collection contains 72 image files (52 PNG, 20 JPEG). Two JPEG file paths in that collection contain the exact same progression-strip artwork; the dedicated `assets/Gifter Badge Progressions/` upload path is a third byte-identical copy. The 70 mapped reference files below cover the Rewards banner, 11 detailed panels, six range sheets, two master-sheet files, and 50 individual level badges; the progression-strip image is documented separately below:
+The canonical `assets/Gifters Badge Levels/` collection contains 72 image files (52 PNG, 20 JPEG). Two JPEG file paths in that collection contain the exact same progression-strip artwork; the dedicated uploaded copy is separately served from `public/assets/gifter-badge-progression-art.jpg`. The 70 mapped reference files below cover the Rewards banner, 11 detailed panels, six range sheets, two master-sheet files, and 50 individual level badges; the progression-strip image is documented separately below:
 
 - `Gifters Rewards.png` remains the primary artwork banner at the top of the Gifts entry page.
 - The 11 `Levels 1-4.jpg` through `Levels 50.jpg` panels appear in the detailed, ordered LV 1–50 section.
@@ -57,4 +57,4 @@ The canonical `assets/Gifters Badge Levels/` collection contains 72 image files 
 
 The six range JPGs, two master-sheet files, and 50 individual PNGs use explicit server allow-list routes and are included in the PWA shell cache. All images preserve their source aspect ratio with `object-fit: contain`; master and range reference sheets do not replace the live Coin-threshold calculation.
 
-The supplied `assets/Gifter Badge Progressions/Gifter Badge Progressions.jpg` is displayed as a separate, uncropped badge-tier artwork strip immediately below the Gifter page heading. It is served through `/assets/gifter-badge-progression-art.jpg` and cached by the PWA shell. This is visual reference artwork only: it contains no Coin thresholds and does not drive level calculations or unlocks.
+The supplied `public/assets/gifter-badge-progression-art.jpg` is displayed as a separate, uncropped badge-tier artwork strip immediately below the Gifter page heading. It is served through `/assets/gifter-badge-progression-art.jpg` and cached by the PWA shell. This is visual reference artwork only: it contains no Coin thresholds and does not drive level calculations or unlocks.
