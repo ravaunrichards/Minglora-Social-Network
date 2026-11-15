@@ -41,6 +41,23 @@ The latest failed-run screenshot artifact is `14180376315` (`minglora-live-gift-
 - Reconfirmed the remaining full-catalogue art, human visual review, rights, mastered audio, Lottie/Rive/GLTF animation-channel, device-QA and production version-3 approval requirements from the existing audit reports.
 - No production application routes, catalogue rows, prices, wallet balances, transactions, payouts, user data, Supabase configuration or deployment target were changed.
 
+### Generated manifest artifact audit — run 12532
+
+The generated CI artifact `minglora-live-asset-manifest-12532` (artifact ID `14180351408`) was downloaded and parsed independently. Its machine-readable manifest reports:
+
+- **1,748/1,748** catalogue records; **1,737 active** and **11 inactive** in the source catalogue.
+- Required generated files verified: **true**; **1,748** primary SVG artwork files, **1,748** transparent subject SVG icons and **1,748** glTF 2.0 models.
+- Emoji-font overlays: **0**.
+- Model sources: **1,739 generated procedural mesh entries** and **9 gift-specific repository mesh sources**.
+- Artwork human review: **not completed for 1,748/1,748**. Model human review: **not completed for 1,748/1,748**. All artwork and model entries remain marked `review_required` for licensing; none are marked approved for premium production.
+- glTF texture maps: **0/1,748**. Embedded glTF animation channels: **0/1,748**.
+- Standalone animated-preview files: **0/1,748**. The active 1,737 animation entries use generated JSON profiles plus the Web Animations runtime; they are not Lottie/Rive/video exports or embedded model animation tracks.
+- Dedicated mastered gift sound files: **0**. Seven gift-specific sound designs use synthesized Web Audio; the catalogue otherwise contains synthetic sound-profile metadata, not mastered recordings.
+- Physical-device QA verified: **0**.
+- Integrated icon packs: **16** LIVE room controls, **22** LIVE gift-category icons and **12** LIVE tools shortcuts.
+
+This artifact is a generated inventory and path/integrity report, not evidence of human visual approval, rights clearance, premium artwork quality, physical-device testing or production eligibility. The 1,748 source catalogue rows must not be treated as 1,748 live production gift offers. The production database release gate remains unchanged.
+
 ### Current task register
 
 | Task | Status | Evidence / remaining work |
