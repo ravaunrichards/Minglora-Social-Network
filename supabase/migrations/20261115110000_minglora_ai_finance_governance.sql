@@ -154,6 +154,7 @@ begin
   if current_user<>'service_role' then
     raise exception using errcode='42501',message='AI task budget checks are restricted to the private Minglora runtime.';
   end if;
+  if tg_op='UPDATE' and new.status not in ('queued','running') then return new; end if;
   if new.organization_id is not null then
     select e.department_id into v_department_id
     from ai_network.ai_employment_records e
@@ -264,7 +265,7 @@ revoke all on function ai_network.enforce_ai_finance_task_budget() from public,a
 grant execute on function ai_network.enforce_ai_finance_task_budget() to service_role;
 drop trigger if exists ai_finance_task_budget_guard on ai_network.ai_task_queue;
 create trigger ai_finance_task_budget_guard
-  before insert on ai_network.ai_task_queue
+  before insert or update on ai_network.ai_task_queue
   for each row execute function ai_network.enforce_ai_finance_task_budget();
 
 create or replace function public.minglora_ai_finance_command(
@@ -301,6 +302,8 @@ declare
   v_event_type text;
   v_assignment uuid;
   v_task uuid;
+  v_org uuid;
+  v_department uuid;
   v_provider text;
   v_model text;
   v_input bigint;
@@ -419,7 +422,7 @@ begin
       owner_user_id,budget_policy_id,actor_user_id,action,reason,previous_policy,new_policy
     ) values(
       p_actor_user_id,v_policy_id,p_actor_user_id,
-      case when v_before is null then 'created' when v_status='archived' then 'archived' when v_status='paused' then 'paused' when v_status='active' and coalesce(v_before->>'policy_status','')='paused' then 'reactivated' else 'updated' end,
+      case when v_before is null then 'created' when coalesce(v_policy->>'policy_status','')='archived' then 'archived' when coalesce(v_policy->>'policy_status','')='paused' then 'paused' when coalesce(v_policy->>'policy_status','')='active' and coalesce(v_before->>'policy_status','')='paused' then 'reactivated' else 'updated' end,
       v_reason,v_before,coalesce(v_policy,'{}'::jsonb)
     );
     return jsonb_build_object('budget',v_policy,'reused',v_before is not null);
@@ -492,16 +495,30 @@ begin
     if v_task is not null and not exists(
       select 1 from ai_network.ai_task_queue q where q.task_id=v_task and q.owner_user_id=p_actor_user_id and q.identity_id=v_identity
     ) then raise exception using errcode='42501',message='Task does not belong to this owner and AI identity.'; end if;
+    if v_task is not null then
+      select q.organization_id into v_org from ai_network.ai_task_queue q
+      where q.task_id=v_task and q.owner_user_id=p_actor_user_id and q.identity_id=v_identity;
+    end if;
+    if v_org is null then
+      select e.organization_id into v_org from ai_network.ai_employment_records e
+      where e.identity_id=v_identity and e.employment_status in ('active','restricted')
+      order by e.updated_at desc limit 1;
+    end if;
+    if v_org is not null then
+      select e.department_id into v_department from ai_network.ai_employment_records e
+      where e.organization_id=v_org and e.identity_id=v_identity and e.employment_status in ('active','restricted')
+      order by e.updated_at desc limit 1;
+    end if;
     if jsonb_typeof(v_metadata)<>'object' or octet_length(v_metadata::text)>8192 or
        v_metadata::text ~* '"(api[_-]?key|access[_-]?token|password|secret|authorization|cookie|credential)"[[:space:]]*:' then
       raise exception using errcode='22023',message='Usage metadata must be a small, non-secret JSON object.';
     end if;
     insert into ai_network.ai_finance_usage_ledger(
-      owner_user_id,identity_id,task_id,provider_assignment_id,event_type,provider_name,model_identifier,
+      owner_user_id,identity_id,organization_id,department_id,task_id,provider_assignment_id,event_type,provider_name,model_identifier,
       input_tokens,output_tokens,actual_cost_usd,cpu_milliseconds,gpu_milliseconds,
       memory_mb_minutes,storage_byte_hours,source_event_id,occurred_at,metadata
     ) values(
-      p_actor_user_id,v_identity,v_task,v_assignment,v_event_type,v_provider,v_model,
+      p_actor_user_id,v_identity,v_org,v_department,v_task,v_assignment,v_event_type,v_provider,v_model,
       v_input,v_output,v_cost,v_cpu_used,v_gpu_used,v_memory_used,v_storage_used,
       v_source,v_occurred,v_metadata
     ) on conflict(owner_user_id,source_event_id) do nothing
@@ -509,11 +526,15 @@ begin
     if v_event_id is null then
       select * into v_existing from ai_network.ai_finance_usage_ledger l
       where l.owner_user_id=p_actor_user_id and l.source_event_id=v_source;
-      if v_existing.identity_id<>v_identity or v_existing.task_id is distinct from v_task or
+      if v_existing.identity_id<>v_identity or v_existing.organization_id is distinct from v_org or
+         v_existing.department_id is distinct from v_department or v_existing.task_id is distinct from v_task or
+         v_existing.provider_assignment_id is distinct from v_assignment or
+         v_existing.provider_name is distinct from v_provider or v_existing.model_identifier is distinct from v_model or
          v_existing.event_type<>v_event_type or v_existing.input_tokens<>v_input or
          v_existing.output_tokens<>v_output or v_existing.actual_cost_usd<>v_cost or
          v_existing.cpu_milliseconds<>v_cpu_used or v_existing.gpu_milliseconds<>v_gpu_used or
-         v_existing.memory_mb_minutes<>v_memory_used or v_existing.storage_byte_hours<>v_storage_used then
+         v_existing.memory_mb_minutes<>v_memory_used or v_existing.storage_byte_hours<>v_storage_used or
+         v_existing.occurred_at is distinct from v_occurred or v_existing.metadata is distinct from v_metadata then
         raise exception using errcode='23505',message='Usage source event ID was reused with different measured values.';
       end if;
       return jsonb_build_object('usage_event',to_jsonb(v_existing),'reused',true);
