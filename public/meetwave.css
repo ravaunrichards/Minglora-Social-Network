@@ -2603,8 +2603,8 @@
   width:48%!important;height:66%!important;min-width:0!important;min-height:0!important;
   grid-column:auto!important;grid-row:auto!important;
 }
-.mw-meeting #mw-screen-stage:not(.has-screen-share) #mw-grid[data-guest-layout="roundtable-1"]>.live-guest-seat[data-seat-index],
-.mw-meeting #mw-screen-stage:not(.has-screen-share) #mw-grid[data-guest-layout="roundtable-2"]>.live-guest-seat[data-seat-index]{
+.mw-meeting #mw-screen-stage:not(.has-screen-share) #mw-grid[data-guest-layout="roundtable-1"]>.live-guest-seat:not(.is-host)[data-seat-index],
+.mw-meeting #mw-screen-stage:not(.has-screen-share) #mw-grid[data-guest-layout="roundtable-2"]>.live-guest-seat:not(.is-host)[data-seat-index]{
   position:absolute!important;z-index:6!important;left:auto!important;right:auto!important;
   width:17%!important;height:16%!important;min-width:0!important;min-height:0!important;
   max-width:112px!important;max-height:105px!important;grid-column:auto!important;grid-row:auto!important;
@@ -2670,8 +2670,8 @@
     width:25%!important;height:15%!important;right:4%!important;
   }
   .mw-meeting #mw-screen-stage[data-screen-layout="fluid-panel"]:not(.has-screen-share) #mw-grid>.live-guest-seat[data-seat-index="2"]{bottom:22%!important}
-  .mw-meeting #mw-screen-stage:not(.has-screen-share) #mw-grid[data-guest-layout="roundtable-1"]>.live-guest-seat[data-seat-index],
-  .mw-meeting #mw-screen-stage:not(.has-screen-share) #mw-grid[data-guest-layout="roundtable-2"]>.live-guest-seat[data-seat-index]{
+  .mw-meeting #mw-screen-stage:not(.has-screen-share) #mw-grid[data-guest-layout="roundtable-1"]>.live-guest-seat:not(.is-host)[data-seat-index],
+  .mw-meeting #mw-screen-stage:not(.has-screen-share) #mw-grid[data-guest-layout="roundtable-2"]>.live-guest-seat:not(.is-host)[data-seat-index]{
     width:18%!important;height:14%!important;max-width:76px!important;max-height:65px!important;
   }
   .mw-meeting #mw-screen-stage:not(.has-screen-share) #mw-grid[data-guest-layout="roundtable-2"]>.live-guest-seat.is-host{
