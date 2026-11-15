@@ -118,3 +118,13 @@ The generated motion-index record retains both `catalog_motion_preset` (unchange
 - The generated motion index and LIVE asset manifest carry the exact-code override and sound-design provenance. Regression tests cover runtime selection, sound dispatch, opt-out/reduced motion and generated metadata.
 - Current known bespoke motion overrides total nine: Djembe Master, Palm Breeze, Gamer Otter, LIVE Island, Crystal Crown, Phoenix, Beach Maracas, Royal Lions Scepter and Rose. This count describes exact-code runtime overrides, not standalone animation files.
 - No Lottie/Rive/WebM/MP4 asset, embedded glTF animation channel, mastered recording, human visual approval, licensing clearance or physical-device QA is claimed. Rose remains `design-review-pending`; no catalogue price, activation, wallet or transaction state was changed.
+
+## Keeper of Atlantis trident surge and underwater bell cue — 2026-11-15
+
+- Canonical gift: `keeper-of-atlantis-15000-mgl` (Keeper of Atlantis). Existing source catalogue value (15,000 Coins), active flag, category and `cosmic-orbit` catalogue animation preset are preserved.
+- Bespoke source: `assets/3d-assets/gift-models/keeper-of-atlantis-model.mjs`, producing a self-contained glTF 2.0 mesh, primary SVG and transparent icon. Named PBR geometry includes the three-prong gold trident, aquamarine and opal gems, enamel grip, nacre shell medallion, coral fronds, bubbles and tidal accents.
+- Effective runtime preset: `atlantis-trident-surge`, selected only for the exact canonical code. The existing Web Animations route provides a staged surge, impact, rebound and settle.
+- Sound design ID: `keeper-of-atlantis-deep-surge-and-trident-bells-v1`; locally synthesized filtered underwater wave noise, sub-bass impact, five-note glassy trident-bell sequence and high-frequency bubble shimmer.
+- Sound respects the existing opt-out. Motion respects the existing reduced-motion path. Audio is Web Audio synthesis, not a mastered recording; animation is code-driven Web Animations, not an embedded glTF animation channel or Lottie/Rive file.
+- Generated motion index and LIVE asset manifest identify the exact-code preset and sound provenance. Regression tests cover canonical gift metadata, generated model, model render matrix, effect dispatch and metadata.
+- Review remains `design-review-pending`; human visual/audio approval, rights review and physical-device QA are not claimed. No price, active state, wallet, transaction, earnings, payout or production offer is changed.
