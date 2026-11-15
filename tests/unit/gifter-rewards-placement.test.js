@@ -82,7 +82,7 @@ test('the uploaded Gifter badge progression artwork is served and displayed with
   const artwork = path.join(root, 'public', 'assets', 'gifter-badge-progression-art.jpg');
   assert.ok(fs.existsSync(artwork), 'the uploaded original progression artwork exists');
   assert.ok(progression.includes("src='/assets/gifter-badge-progression-art.jpg'"), 'the progression page displays the supplied image');
-  assert.match(server, /if\(p==='\/assets\/gifter-badge-progression-art\.jpg'\)[\s\S]*?path\.join\(__dirname,'\.\.','assets','Gifter Badge Progressions','Gifter Badge Progressions\.jpg'\)/);
+  assert.match(server, /if\(p==='\/assets\/gifter-badge-progression-art\.jpg'\)[\s\S]*?path\.join\(publicDir,'assets','gifter-badge-progression-art\.jpg'\)/);
   assert.match(server, /Gifter badge progression artwork not found/);
   assert.ok(styles.includes('.gp-progression-art-frame img'));
   assert.match(styles, /\.gp-progression-art-frame img\{[^}]*height:auto[^}]*object-fit:contain/);
