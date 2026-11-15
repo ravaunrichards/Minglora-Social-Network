@@ -110,7 +110,7 @@ test("uploaded Gifter Badge Progressions JPEG is displayed, routed and cached as
   assert.ok(html.includes("/gifter-progression.js?v=20261115-gifter-badge-progression-strip-1"));
   assert.ok(sw.includes("/gifter-progression.js?v=20261115-gifter-badge-progression-strip-1"));
   assert.ok(sw.includes("'/assets/gifter-badge-progression.jpg'"), "the uploaded source is included in the PWA shell");
-  assert.ok(sw.includes("minglora-shell-v324-gifter-progression-strip-1"));
+  assert.ok(sw.includes("minglora-shell-v324-self-updating-1"));
 });
 
 test("level and badge names have separate horizontal and vertical ordered layouts", () => {
