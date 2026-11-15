@@ -180,3 +180,32 @@ Use supplied third-party screenshots only to understand geometry, hierarchy and 
 - PR: #387. Original isolated task commit: `b640926b112a1016ddc7ca3daf70a625274164c3`; seam compatibility correction: `a85c3d51d118a288198f230b40a4428810f15b25`. The current main head advanced to `7a6aa1b9...` during review and must be preserved in final sync.
 
 **Next action:** finish reconciling the documentation against current main, update the existing PR branch with a two-parent merge commit, rerun all required CI/layout/model-render checks on the new head, and merge only when all are verified successful.
+
+## Active execution checkpoint — Rose LIVE effects, 2026-11-15
+
+**Task ID:** LIVE-ASSET-ROSE-1
+
+- Project: Minglora Social Network only.
+- Active review: [PR #392](https://github.com/ravaunrichards/Minglora-Social-Network/pull/392).
+- Branch: `feat/minglora-rose-live-assets-current-main-20261115`.
+- Verified branch head at checkpoint: `c454bfbe1903ade589a601c22b661973c0251050`.
+- Implementation commits: initial eight scoped commits, followed by the cache-contract correction `c454bfbe1903ade589a601c22b661973c0251050`.
+- Changed runtime/test/cache files: `public/gift-effects.js`, `public/index.html`, `public/sw.js`, `scripts/generate-live-gift-motion-index.mjs`, `scripts/generate-minglora-live-asset-manifest.mjs`, `tests/unit/gift-animation-runtime.test.js`, `tests/unit/live-asset-manifest.test.js`, `tests/unit/live-gift-motion-index.test.js`.
+- Rose runtime mapping: `rose-4ieccm` → `rose-unfurl`; synthesized sound ID `rose-petal-rustle-and-celesta-v1`.
+- Cache: HTML and service worker reference `gift-effects.js?v=20261115-rose-unfurl-petal-chime-1`; service-worker shell uses `minglora-shell-v323-self-updating-1`.
+- CI run #12940: **passed** after correcting the cache naming convention. For You functional navigation: **passed**. Gift asset generation, generated motion index, Sound Studio audio pack, LIVE manifest, raster metadata audit, JavaScript syntax and dependency audit: **passed**.
+- LIVE/MeetWave layout independence matrix: **passed**. AI Network browser acceptance: **passed**. Profile visual QA on the latest PR head: **in progress at checkpoint creation**; prior head's profile run passed, but that is not substituted for the latest-head result.
+- A newer mainline contains Gifter threshold corrections (PR #393) and an unrelated League UI removal. No Rose file overlaps were identified; PR #392 was reported mergeable. Do not overwrite or revert either mainline change during synchronization.
+- Old Rose PR #388 is closed as superseded; its branch is retained. No force-push, deletion, direct-main update, production database change or deployment occurred.
+
+### Remaining acceptance gates
+
+1. Re-fetch PR #392 and latest workflow statuses; complete latest-head profile QA before merging.
+2. Reconcile current `main` commits (Gifter Levels 38/48 threshold correction and League progression UI removal) through the normal PR merge workflow; never force-push.
+3. Continue individual original art direction across the remaining catalogue; do not treat generated procedural outputs as bespoke premium artwork.
+4. Complete human visual review and rights/provenance clearance for every production candidate; keep screenshot-derived crops quarantined.
+5. Produce and review mastered gift audio and standalone animation assets where required; current local synthesis/code-driven motion does not satisfy those deliverables.
+6. Complete actual Android, iPhone, tablet, foldable, desktop/laptop and supported TV acceptance.
+7. Keep production gift offers inactive until approved version-3 artwork, rights, genuine configured Coin values, sound/animation mapping and transaction compatibility are separately verified.
+
+This checkpoint records one focused Rose integration slice, not completion of the full LIVE asset mission.
