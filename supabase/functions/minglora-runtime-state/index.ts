@@ -4583,6 +4583,43 @@ Deno.serve(async (req: Request) => {
     return json(200, { result: data });
   }
 
+  if (action === "ai_hr_workforce_command") {
+    const actorUserId = String(input.actorUserId || "");
+    const aiAction = String(input.aiAction || "");
+    const payload = input.payload && typeof input.payload === "object" && !Array.isArray(input.payload)
+      ? input.payload
+      : {};
+    const supportedHRWorkforceCommands = [
+      "list_training_programs", "create_training_program", "set_training_program_status",
+      "list_training_enrollments", "assign_training", "update_training_enrollment",
+      "list_attendance", "record_attendance", "review_attendance"
+    ];
+
+    if (!validUuid(actorUserId)) {
+      return json(400, { error: "A valid signed-in Minglora user is required for HR workforce access." });
+    }
+    if (!supportedHRWorkforceCommands.includes(aiAction)) {
+      return json(400, { error: "Unsupported AI HR workforce command." });
+    }
+    if (!validUuid(String(payload.organization_id || ""))) {
+      return json(400, { error: "A valid organization ID is required for HR workforce access." });
+    }
+
+    const { data, error } = await admin.rpc("minglora_ai_hr_workforce_command", {
+      p_action: aiAction,
+      p_actor_user_id: actorUserId,
+      p_payload: payload
+    });
+    if (error) {
+      const code = String(error.code || "");
+      const status = code === "42501" ? 403 : code === "P0002" ? 404 : code === "23505" ? 409 : 400;
+      return json(status, {
+        error: String(error.message || "Minglora AI HR workforce request failed.").slice(0, 240)
+      });
+    }
+    return json(200, { result: data });
+  }
+
   if (action === "ai_schedule_command") {
     const actorUserId = String(input.actorUserId || "");
     const aiAction = String(input.aiAction || "");
