@@ -355,3 +355,14 @@ The browser captures establish that all nine bespoke models load and remain visi
 - Expanded the Chromium model matrix to include Baseball and the existing Royal Lions Scepter alongside the original nine models, across desktop, tablet and mobile.
 - Validation: the initial CI run exposed an existing assertion requiring seam signature `stroke="#d84854" stroke-width="12"`; the SVG seam was corrected to match it while retaining the layered red seam treatment. Latest-head rerun is pending.
 - Release boundary: the model remains `design-review-pending`; human art review, rights clearance, mastered individual gift audio/animation and physical-device acceptance remain outstanding. No database, wallet, price, transaction or deployment operation occurred.
+
+## Rose LIVE choreography and synthesized sound — current-main checkpoint, 2026-11-15
+
+- Ported the exact-code Rose implementation to a branch based on current main after preserving the intervening Gifter threshold correction, League UI removal, and Gift Studio/Match Power-Up preview removals. The current branch keeps the latest Gift Studio/Match Power-Up selection and activation flows and uses the newer shell asset versions.
+- Scope includes `rose-unfurl` runtime/preview choreography, local Web Audio petal-rustle/celesta synthesis, exact-code dispatch, generated motion/sound metadata, regression tests and matching HTML/service-worker query versions.
+- The shell cache follows the established `minglora-shell-v324-self-updating-1` pattern. The Rose asset URL is identical in HTML and the service-worker precache.
+- The earlier Rose PR passed full CI after correcting the cache namespace. Fresh CI and visual QA must pass again on the current-main branch before merge; earlier-head checks are not substituted for current-head verification.
+- The Rose cue is local synthesis, not a mastered audio file; the motion uses Web Animations, not an embedded glTF/Lottie/Rive animation. The source and effects remain `design-review-pending`; rights review, human creative/audio approval and physical-device checks remain outstanding.
+- No production catalogue row, Coin price, publication flag, wallet, transaction, payout, Supabase record or deployment was changed.
+
+The overall LIVE asset mission remains incomplete: 1,748 source catalogue records (1,737 marked active, 11 retired); 11 individually authored model sources and 1,737 procedural/category-generated entries; 9 gift-specific synthesized sound designs; zero dedicated mastered per-gift audio files; no verified complete Lottie/Rive collections, embedded glTF animation channels, KTX2 texture packs or physical-device QA approvals. Full human visual approval, licensing review, complete 18-theme art direction and complete LIVE icon-state coverage remain open. Extracted screenshot-derived artwork crops remain quarantined.
