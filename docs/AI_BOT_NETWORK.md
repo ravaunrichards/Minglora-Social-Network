@@ -1,3 +1,17 @@
+## Execution checkpoint — 2026-11-15 (AI HR disciplinary rollback-only functional contract)
+
+- Working branch: `feat/ai-hr-disciplinary-cases`; PR #353 remains draft/open against `main`.
+- Current source implementation includes confidential organization-scoped cases, append-only case history, server-only RPC command, moderator-gated APIs and HR workspace controls.
+- Rollback-only Supabase PostgreSQL 17.11 contract passed **8/8**: case creation, idempotent retry, append-only note event, valid open→under_review→resolved transitions, rejection of open→resolved, future incident-date rejection, cross-owner organization access denial, and list/history retrieval (one case, four history events).
+- The test created temporary organization, department, position, organizational AI identity/name and employment fixtures only inside an explicit transaction. Independent post-rollback verification confirms disciplinary tables and RPC are absent, and production counts remain zero for organizations, employment records and AI identities.
+- Production migration ledger is unchanged; latest entry remains `20261115025508` (`minglora_ai_hr_training_attendance`). No production DDL, data, Auth accounts or Storage objects were retained.
+- Runtime safety remains `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`.
+- On checkpoint commit `73053418ec6f9e638ba60928180d782dd0d627dd`, GitHub confirmed CI, AI Network syntax/regression, AI identity/discovery browser fixture acceptance and LIVE/MeetWave layout visual QA all passed. These are automated/fixture checks, not authenticated owner or deployed API/device acceptance.
+- PR #353 remains **DRAFT / OPEN / NOT MERGED**. The new HR disciplinary migration and RPC remain source-only. Render workspace selection, existing service identification, deployed Edge/Node handler acceptance, and signed-in owner/browser/device acceptance remain outstanding.
+- AI Network accepted task accounting remains **2/19 = 10.53% verified tasks**. The HR slice remains partial and does not increment the verified-task count.
+
+---
+
 ## Execution checkpoint — 2026-11-15 (AI HR disciplinary case source verification)
 
 - Branch: \`feat/ai-hr-disciplinary-cases\`; draft PR #353 targets \`main\`: https://github.com/ravaunrichards/Minglora-Social-Network/pull/353
