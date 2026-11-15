@@ -266,3 +266,17 @@ The glyph overlay and unused emoji lookup were removed from `scripts/generate-mi
 - The generated motion index and LIVE asset manifest now agree with all seven gift-specific runtime presets. Each entry retains its unmodified \`catalog_motion_preset\` separately from effective \`motion_preset\`, and the manifest identifies \`gift_specific_motion_override\`; strict canonical catalogue validation remains enabled.
 - Generated catalogue summary: **1,748** gift records (**1,737 active, 11 inactive**); **1,748/1,748** primary SVGs, transparent icons and GLTF files verified; **7** gift-specific synthesized sound designs; **0** dedicated mastered gift-sound files; **0** physical-device QA approvals. These outputs are catalogue-generation evidence, not 1,748 human-approved premium artworks.
 - Human artwork/rights approval, premium acceptance, texture/KTX2 work where applicable, physical Android/iOS/tablet/foldable/desktop/laptop/TV rendering/audio QA, and production deployment remain outstanding. Existing gift code, active state, 349-Coin value, wallet, transaction, earnings, payout and AI runtime state were not modified.
+
+
+## Legacy standalone glTF structural audit — 2026-11-15
+
+A read-only technical pass inspected all 45 retained legacy standalone gift models in `public/assets/gifts/`. The review parsed each glTF 2.0 JSON document and inspected its embedded vertex buffers, POSITION accessors, referenced resources, material/texture declarations and animation channel declarations.
+
+- **45/45** documents parse as glTF 2.0 JSON and contain scene geometry.
+- **45/45** use an embedded geometry buffer; **0** external resource URIs were found.
+- **0** texture/image resources and **0** embedded glTF animation channels were found. Runtime gift motion is a separate JavaScript/CSS/Web Animations system; it is not model-embedded animation.
+- **7 models** were missing the required `min` and `max` values on vertex-position accessors. The values were calculated directly from their embedded float32 vertex data and added to **21 POSITION accessors** across: `minglora_confetti.gltf`, `minglora_finger_heart.gltf`, `minglora_galaxy.gltf`, `minglora_money_gun.gltf`, `minglora_perfume.gltf`, `minglora_thunder_falcon.gltf` and `minglora_zeus.gltf`.
+- The repair changes only accessor metadata; mesh geometry, materials, model appearance, catalogue prices, gift status, transactions and production activation were not changed.
+- The legacy inventory records and content hashes are updated. A regression test now re-computes each POSITION accessor's extrema from the embedded buffer and compares them with the declared bounds.
+
+**Approval remains blocked:** these models are still unverified against canonical production gift codes, visual rendering, design quality and source rights. Structural validity does not mean premium artwork approval or production eligibility. No legacy model was activated in the production gift catalogue.

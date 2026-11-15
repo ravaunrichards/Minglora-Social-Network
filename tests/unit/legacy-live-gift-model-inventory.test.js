@@ -177,3 +177,60 @@ test('legacy GLTF technical profiles match the actual source documents', () => {
     buffer_bytes: summary.total_buffer_bytes
   });
 });
+
+
+function getPositionBoundsFromEmbeddedGeometry(document, accessor, fileName) {
+  assert.equal(accessor.componentType, 5126, fileName + ' POSITION accessors must use float32 components');
+  assert.equal(accessor.type, 'VEC3', fileName + ' POSITION accessors must use VEC3 values');
+  const bufferView = document.bufferViews?.[accessor.bufferView];
+  assert.ok(bufferView, fileName + ' POSITION accessors must reference a buffer view');
+  const buffer = document.buffers?.[bufferView.buffer];
+  assert.ok(buffer && /^data:[^,]*;base64,/.test(buffer.uri || ''),
+    fileName + ' geometry must use a self-contained embedded buffer');
+  const encoded = buffer.uri.slice(buffer.uri.indexOf(',') + 1);
+  const bytes = Buffer.from(encoded, 'base64');
+  assert.ok(bytes.length >= buffer.byteLength, fileName + ' embedded geometry buffer must contain its declared bytes');
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const stride = bufferView.byteStride || 12;
+  const start = (bufferView.byteOffset || 0) + (accessor.byteOffset || 0);
+  const min = [Infinity, Infinity, Infinity];
+  const max = [-Infinity, -Infinity, -Infinity];
+  for (let row = 0; row < accessor.count; row += 1) {
+    for (let component = 0; component < 3; component += 1) {
+      const value = view.getFloat32(start + row * stride + component * 4, true);
+      assert.ok(Number.isFinite(value), fileName + ' POSITION vertices must be finite');
+      min[component] = Math.min(min[component], value);
+      max[component] = Math.max(max[component], value);
+    }
+  }
+  return { min, max };
+}
+
+test('POSITION accessor bounds match their embedded float32 vertex geometry', () => {
+  for (const asset of manifest.assets) {
+    const document = JSON.parse(fs.readFileSync(path.join(root, asset.repository_path), 'utf8'));
+    const positionIds = new Set();
+    for (const mesh of document.meshes || []) {
+      for (const primitive of mesh.primitives || []) {
+        const positionId = primitive.attributes?.POSITION;
+        if (Number.isInteger(positionId)) positionIds.add(positionId);
+      }
+    }
+    assert.ok(positionIds.size > 0, asset.file_name + ' must expose at least one POSITION accessor');
+    for (const positionId of positionIds) {
+      const accessor = document.accessors?.[positionId];
+      assert.ok(accessor, asset.file_name + ' POSITION accessor must exist');
+      assert.ok(Array.isArray(accessor.min) && accessor.min.length === 3 &&
+        accessor.min.every(Number.isFinite), asset.file_name + ' POSITION min bounds must contain three finite values');
+      assert.ok(Array.isArray(accessor.max) && accessor.max.length === 3 &&
+        accessor.max.every(Number.isFinite), asset.file_name + ' POSITION max bounds must contain three finite values');
+      const expected = getPositionBoundsFromEmbeddedGeometry(document, accessor, asset.file_name);
+      for (let component = 0; component < 3; component += 1) {
+        assert.ok(Math.abs(accessor.min[component] - expected.min[component]) < 1e-6,
+          asset.file_name + ' POSITION minimum must match embedded vertex data');
+        assert.ok(Math.abs(accessor.max[component] - expected.max[component]) < 1e-6,
+          asset.file_name + ' POSITION maximum must match embedded vertex data');
+      }
+    }
+  }
+});
