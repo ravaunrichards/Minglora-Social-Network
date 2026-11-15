@@ -217,6 +217,7 @@
       "<header class='gp-heading'><div><span class='gp-eyebrow'>MINGLORA GIFTER JOURNEY</span><h1>Gifter Level &amp; Badges</h1>" +
       "<p>Every confirmed gift you send moves your own Minglora gifter journey forward.</p></div>" +
       (embedded ? "" : "<div class='gp-heading-actions'><button type='button' class='gp-back-link' id='gp-back-gifts'>← Back to Gifts</button></div>") + "</header>" +
+      "<section class='gp-progression-art-reference card' aria-labelledby='gp-progression-art-title'><div class='gp-section-heading'><div><span class='gp-eyebrow'>ORIGINAL BADGE ARTWORK</span><h2 id='gp-progression-art-title'>Gifter badge progression</h2><p>Original badge-tier artwork shown as supplied. Your current badge and unlock progress are calculated from confirmed gifts.</p></div></div><figure class='gp-progression-art-frame'><img src='/assets/gifter-badge-progression-art.jpg' alt='Minglora Gifter badge progression artwork showing badge tiers connected in sequence' loading='eager' decoding='async'></figure></section>" +
       "<section class='gp-hero card'><div class='gp-hero-summary'>" +
       "<span class='gp-eyebrow'>YOUR GIFTER STATUS</span><div class='gp-current-badge-row'>" +
       (currentBadgeMarkup ? "<div class='gp-current-badge-art' aria-label='Your current Gifter badge'>" + currentBadgeMarkup + "</div>" : "") +
