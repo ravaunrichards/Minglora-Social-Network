@@ -2683,3 +2683,10 @@
   .mw-meeting .mw-layout-option .mw-layout-preview{flex-basis:33px!important;width:33px!important;height:42px!important;min-width:33px!important}
   .mw-meeting .mw-layout-option .mw-layout-preview svg{width:26px!important;height:34px!important}
 }
+
+/* Roundtable modes intentionally reactivate all eight boxes, even when the
+   selected screen template would otherwise hide unused secondary seats. */
+.mw-meeting #mw-screen-stage:not(.has-screen-share) #mw-grid[data-guest-layout="roundtable-1"]>.live-guest-seat.is-guest[data-seat-index],
+.mw-meeting #mw-screen-stage:not(.has-screen-share) #mw-grid[data-guest-layout="roundtable-2"]>.live-guest-seat.is-guest[data-seat-index]{
+  display:flex!important;
+}
