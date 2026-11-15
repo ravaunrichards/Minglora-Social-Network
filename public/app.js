@@ -2344,7 +2344,7 @@ function bindLiveDiscoveryBoards(sessions){
   });
   void loadLiveDiscoveryBoard('daily',sessions);
 }
-const LIVE_CONTROL_ICON_NAMES=Object.freeze(["mic","mic-off","camera","camera-off","flip","multi-guest","cohost","message","screen","fullscreen","gift","volume","volume-off","settings","share","end"]);
+const LIVE_CONTROL_ICON_NAMES=Object.freeze(["mic","mic-off","camera","camera-off","flip","multi-guest","cohost","message","screen","screen-stop","fullscreen","fullscreen-exit","gift","volume","volume-off","settings","share","end"]);
 function liveControlIcon(name){
   if(!LIVE_CONTROL_ICON_NAMES.includes(name))return "";
   return "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true' focusable='false'><use href='/assets/icons/live-controls/"+name+".svg#icon'></use></svg>";
@@ -3004,7 +3004,7 @@ activeLivePinnedComment=null;
     const liveFullscreenChangeListener=()=>{
       const active=Boolean(document.fullscreenElement===livePlayerShell);
       livePlayerShell?.classList.toggle("live-browser-fullscreen",active);
-      updateLiveControlButton(liveFullscreenControl,"fullscreen",active?"Exit room full screen":"Enter room full screen",active?"Exit full":"Expand",active);
+      updateLiveControlButton(liveFullscreenControl,active?"fullscreen-exit":"fullscreen",active?"Exit room full screen":"Enter room full screen",active?"Exit full":"Expand",active);
     };
     document.addEventListener("fullscreenchange",liveFullscreenChangeListener);
     liveFullscreenControl?.addEventListener("click",async()=>{
@@ -3110,7 +3110,7 @@ activeLivePinnedComment=null;
           $("#live-screen-share-stage")?.replaceChildren();
           $("#live-video-stage")?.classList.remove("has-live-screen-share");
         }
-        updateLiveControlButton(screenShareControl,"screen",nextEnabled?"Stop sharing":"Share "+(liveMode==="mobile_gaming"?"game screen":"screen"),nextEnabled?"Stop share":liveMode==="mobile_gaming"?"Game screen":"Screen",nextEnabled);
+        updateLiveControlButton(screenShareControl,nextEnabled?"screen-stop":"screen",nextEnabled?"Stop sharing":"Share "+(liveMode==="mobile_gaming"?"game screen":"screen"),nextEnabled?"Stop share":liveMode==="mobile_gaming"?"Game screen":"Screen",nextEnabled);
       }catch(error){
         liveScreenShareEnabled=false;
         updateLiveControlButton(screenShareControl,"screen",liveMode==="mobile_gaming"?"Share your game screen":"Share your screen",liveMode==="mobile_gaming"?"Game screen":"Screen",false);
