@@ -50,7 +50,7 @@ test("Gifter order reference directory shows the exact assigned badge name besid
   assert.ok(progression.includes("const badgeName = String(item.badgeName"));
   assert.ok(progression.includes("esc(badgeName)"));
   assert.ok(progression.includes("gp-level-index-art"));
-  assert.ok(progression.includes("level_"));
+  assert.ok(progression.includes("badges.svg#level-"));
 });
 
 test("Gifter progression leaderboard shows username, display name, original badge image and exact badge name", () => {
@@ -58,7 +58,7 @@ test("Gifter progression leaderboard shows username, display name, original badg
   assert.ok(progression.includes("gp-leader-display-name"));
   assert.ok(progression.includes("gp-leader-badge"));
   assert.ok(progression.includes("String(level).padStart(2, \"0\")"));
-  assert.ok(progressionCss.includes(".gp-leader-badge img"));
+  assert.ok(progressionCss.includes(".gp-leader-badge svg"));
 });
 
 test("shared non-LIVE gifter badge styling is responsive and reduced-motion safe", () => {
