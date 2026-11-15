@@ -108,3 +108,13 @@ The generated motion-index record retains both `catalog_motion_preset` (unchange
 - Sound design ID: royal-lions-scepter-roar-and-regal-fanfare-v1. The existing Web Audio path synthesizes a low band-pass lion-like growl, a short low-frequency impact, five brass-like fanfare tones (196, 293.66, 392, 587.33 and 783.99 Hz) and a restrained high-pass jewel shimmer.
 - Audio is generated locally by Web Audio and is not a mastered/recorded sound asset. Existing sound opt-out behavior and reduced-motion handling remain active.
 - No Lottie/Rive file, GLTF skeletal animation track, mastered sound recording, licensing clearance, human design approval or physical-device QA is claimed. No catalogue pricing, activation, wallet or transaction state was changed.
+
+
+## Keeper of Atlantis tidal trident surge and underwater bells — 2026-11-15
+
+- Canonical gift: keeper-of-atlantis-15000-mgl (Keeper of Atlantis).
+- Effective LIVE motion preset: atlantis-trident-surge. The subject-specific keyframes raise the trident through a short ocean-current sweep, bright aquamarine highlight and settled hold.
+- Canonical source animation_preset remains cosmic-orbit; the generated motion index records the effective motion_preset separately and identifies the exact-code override. The existing source animation_key and 1,900-ms duration are unchanged.
+- Sound design ID: keeper-of-atlantis-deep-surge-and-trident-bells-v1. The existing Web Audio path synthesizes an underwater band-pass wave swell, low tidal impact, five glass-like bell tones (196, 293.66, 440, 587.33 and 880 Hz) and high-frequency bubble shimmer.
+- Sound is locally synthesized, not a mastered/recorded asset. Existing sound opt-out and prefers-reduced-motion handling remain active.
+- No Lottie/Rive file, GLTF skeletal animation channel, mastered audio, human design/rights approval or physical-device QA is claimed. The trident and its effects remain design-review-pending.
