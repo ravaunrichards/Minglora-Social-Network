@@ -167,7 +167,7 @@ test("Royal Lions Scepter has a dedicated regal rise motion and locally synthesi
   assert.ok(effects.includes('gift.code==="royal-lions-scepter-15000-mgl"'));
   assert.ok(effects.includes("growl.buffer=createGiftNoise(c,seed,1.04)"));
   assert.ok(effects.includes("notes=[196,293.66,392,587.33,783.99]"));
-  assert.ok(effects.includes('gift.code==="royal-lions-scepter-15000-mgl"? "lion-scepter-rise":'));
+  assert.ok(effects.includes('gift.code==="royal-lions-scepter-15000-mgl"?"lion-scepter-rise":'));
   assert.ok(effects.includes('preset==="lion-scepter-rise"'));
   assert.ok(effects.includes("motionElement.animate(semanticFrames"));
   assert.ok(effects.includes('if(options.sound!==false)play(gift)'));
