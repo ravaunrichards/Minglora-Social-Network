@@ -10,7 +10,7 @@ const manifestPath = path.join(root, 'assets/manifests/legacy-live-gift-models.j
 const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 
 function gitBlobSha1(bytes) {
-  const header = Buffer.from('blob ' + bytes.length + '\\0');
+  const header = Buffer.from('blob ' + bytes.length + '\0');
   return crypto.createHash('sha1').update(Buffer.concat([header, bytes])).digest('hex');
 }
 
