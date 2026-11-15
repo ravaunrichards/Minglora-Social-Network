@@ -1,3 +1,18 @@
+## Execution checkpoint — 2026-11-15 (Task 15 finance/resource CI verified)
+
+- Task 15 status: **IN PROGRESS**; implementation and current-head CI have passed, but full operational acceptance has not.
+- Feature branch `feat/ai-network-finance-governance-20261115`, review PR [#356](https://github.com/ravaunrichards/Minglora-Social-Network/pull/356), marked ready for human review. Code/test head `ba818e339bed0aa7217ae069559a1097de48c059` was 21 commits ahead / 0 behind main at comparison.
+- Verified workflows on that head: CI 1,186/1,186 pass; AI Network 141/141 pass, Edge TypeScript parse/transpile pass; AI identity/discovery browser checks pass; seven-plus-two LIVE/MeetWave layout QA pass; Auth provider acceptance and For You navigation pass.
+- The additive finance migration compiles in a live Supabase rollback-only transaction. No finance tables or rows persist; production migration is not applied.
+- Changes include three RLS-protected service-role-only tables: `ai_finance_budget_policies`, `ai_finance_budget_history`, `ai_finance_usage_ledger`; owner/org/department/identity policy scopes; append-only/idempotent actual usage; designated-admin controls and a Finance & Resource Center; queue-time token/spend/concurrency reservations; owner-wide serialized task/policy reservations.
+- Actual provider pricing/usage, live compute/storage resource metering, secrets-manager integration and real provider health remain unconnected/unverified. No worker is enabled. No payments or coin movement are available.
+- Task 3 still needs real signed-in platform-owner browser/device acceptance. User has explicitly authorized and accepted the project work, but no browser session is available to provide that runtime proof.
+- Master progress remains **2/19 VERIFIED COMPLETE (10.53%)**. No change to verified task count.
+
+**Next:** obtain human PR review; resolve feedback; then execute gated production migration and owner-authenticated acceptance only with real verified deployment access.
+
+---
+
 ## Execution checkpoint — 2026-11-15 (Task 15 finance/resource governance)
 
 - Task 15 status: **IN PROGRESS** (partial implementation; acceptance incomplete). The feature branch `feat/ai-network-finance-governance-20261115` starts from current `main` SHA `6125afeb5c5aca430bef921418edacbf87bef0f0` and is 14 commits ahead / 0 behind at this checkpoint, before this tracker update.
