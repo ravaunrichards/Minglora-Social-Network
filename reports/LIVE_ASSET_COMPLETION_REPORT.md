@@ -318,3 +318,13 @@ The browser captures establish that all nine bespoke models load and remain visi
 - Regression tests assert the source catalogue identity, fantasy category, configured 15,000-Coin value, source active flag, embedded GLTF geometry, named components/materials, provenance, review state and SVG artwork signature. The LIVE manifest test includes the new model source identity.
 - The configured catalogue fields, `grand-entry` animation identity/preset, existing sound mapping, backend offers, Coin pricing, user data, production gift rows, wallets and transactions are unchanged.
 - **Acceptance boundary:** the source is labelled `design-review-pending`. Automated generation/tests do not establish human visual/design approval, rights clearance, premium quality, physical-device rendering approval, embedded GLTF animation channels or mastered audio. The connected production gift catalogue remains gated on separately approved version-3 assets; no gift was activated in production.
+
+
+## Royal Lions Scepter motion and event-sound checkpoint — 2026-11-15
+
+- Added exact-code effective motion preset lion-scepter-rise to scripts/generate-live-gift-motion-index.mjs and the existing subject-aware Web Animations trigger in public/gift-effects.js. The catalogue's original grand-entry preset, animation key and 1,900-ms duration remain unchanged and are retained separately in the motion-index record.
+- Added playRoyalLionsScepter to the existing server-confirmed gift event sound path. The local Web Audio cue combines a low band-pass growl, short low-frequency impact, five-note ceremonial fanfare and subtle high-frequency jewel shimmer.
+- Added the sound design provenance to scripts/generate-minglora-live-asset-manifest.mjs; the manifest classifies it as gift-specific Web Audio synthesis and continues to declare zero dedicated mastered sound-file assets. Sound opt-out and reduced-motion behavior are preserved.
+- Updated the LIVE effect script version in HTML and service worker and advanced service-worker shell cache to v318.
+- Added unit coverage for exact-code visual preset selection, sound dispatch, synthesized layer signature, motion-index mapping and manifest provenance. These changes do not create a production transaction or activate the source catalogue gift.
+- Acceptance boundary: this is a runtime-generated motion/audio implementation, not an embedded GLTF animation channel, Lottie/Rive file, mastered recording, composer/artist approval, licensing clearance, human visual/design approval or physical-device QA. The scepter model and effects remain design-review-pending.
