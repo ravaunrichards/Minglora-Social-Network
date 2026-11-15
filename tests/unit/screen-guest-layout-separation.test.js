@@ -46,6 +46,17 @@ test('All nine reference layouts define their own grid proportions, positions an
   assert.match(contract,/roundtable-2[\s\S]*?grid-column:2\/4/);
   assert.doesNotMatch(contract,/data-live-guest-layout/);
 });
+test('LIVE Fluid Panel keeps the main participant full-stage and all guest windows in a right rail',()=>{
+  const correction=guestCss.slice(guestCss.lastIndexOf('/* REFERENCE PARITY CORRECTION: Fluid Panel'));
+  assert.ok(correction.length>0);
+  assert.match(correction,/grid-template-columns:minmax\\(0,1fr\\)/);
+  assert.match(correction,/\.live-guest-seat\.is-host[\\s\\S]*?grid-row:1!important/);
+  assert.match(correction,/\.live-guest-seat\.is-guest[\\s\\S]*?right:8px!important/);
+  for(let seat=3;seat<=10;seat++)assert.ok(correction.includes('nth-child('+seat+')'), 'guest seat '+(seat-2)+' has an explicit right-rail position');
+  assert.match(correction,/nth-child\\(10\\)\\{top:84\\.5%/);
+  assert.doesNotMatch(correction,/bottom:calc/);
+});
+
 test('MeetWave screen and guest registries are disjoint and exact',()=>{
   const screen=meetwave.match(/const MEETING_SCREEN_LAYOUTS = \{([^}]+)\}/);
   const guest=meetwave.match(/const MEETING_GUEST_LAYOUTS = \{([^}]+)\}/);
