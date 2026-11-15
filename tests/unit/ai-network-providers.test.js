@@ -178,7 +178,7 @@ test('provider workspace renders the environment provider registry without expos
     'providerCatalogue = list(state.snapshot?.providerStatus?.providerCatalogue)',
     'Provider environment registry',
     'providersWithCredentials',
-    'Required environment keys:',
+    'Required environment keys (complete one set):',
     'Credential values are never shown or accepted',
     'Execution enabled:'
   ]) assert.ok(ui.includes(token), 'Missing provider environment registry UI: ' + token);
