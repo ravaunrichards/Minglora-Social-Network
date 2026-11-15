@@ -21,7 +21,7 @@ test("Toucan gift uses original keel-billed geometry and subject-specific Minglo
   assert.equal(model.asset?.extras?.mingloraAssetId, "gift-toucan-3d-v1");
   assert.equal(model.asset?.extras?.source, "assets/3d-assets/gift-models/toucan-model.mjs");
   assert.equal(model.asset?.extras?.reviewStatus, "design-review-pending");
-  assert.match(model.asset?.extras?.artDirection || "", /three-quarter-profile keel-billed rainforest toucan.*matte deep-black plumage.*golden-yellow throat bib.*oversized horizontally presented banana-curved lime bill.*scarlet undertail.*zygodactyl feet/i);
+  assert.match(model.asset?.extras?.artDirection || "", /three-quarter-profile keel-billed rainforest toucan.*near-black matte plumage.*rich golden-yellow throat bib.*exposed orange bill blaze stripe.*oversized horizontally presented banana-curved lime bill.*scarlet undertail.*zygodactyl feet/i);
 
   const primitives = model.meshes?.[0]?.primitives || [];
   assert.ok(primitives.length >= 35, "Toucan must be assembled from subject-specific meshes, not a shared animal sphere");
@@ -35,6 +35,7 @@ test("Toucan gift uses original keel-billed geometry and subject-specific Minglo
     "Toucan turquoise lower mandible",
     "Toucan oversized lime-green upper bill",
     "Toucan orange bill blaze",
+    "Toucan exposed orange upper-bill blaze stripe",
     "Toucan red upper bill tip",
     "Toucan deep-blue lower bill tip",
     "Toucan left blue-grey leg",
