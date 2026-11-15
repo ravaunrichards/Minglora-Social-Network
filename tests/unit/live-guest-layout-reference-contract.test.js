@@ -77,8 +77,9 @@ test('Fluid Grid has one large left tile and two stacked right tiles', () => {
 test('Fixed Grid is exactly 3 columns by 3 equal rows for nine participants', () => {
   const fixedGrid = css.slice(css.indexOf('/* 4. Fixed Grid'), css.indexOf('/* 5. Fixed Panel'));
   assert.match(fixedGrid, /grid-template-columns:repeat\(3,minmax\(0,1fr\)\)!important/);
-  assert.match(fixedGrid, /grid-template-rows:repeat\(3,minmax\(72px,1fr\)\)!important/);
+  assert.match(fixedGrid, /grid-template-rows:repeat\(3,minmax\(0,1fr\)\)!important/);
   assert.match(fixedGrid, /aspect-ratio:1\/1!important/);
+  assert.match(fixedGrid, /width:min\(100%,60dvh\)!important/);
   assert.match(app, /guests\.slice\(0,8\)/);
 });
 
