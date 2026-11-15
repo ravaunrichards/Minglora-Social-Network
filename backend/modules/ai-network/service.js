@@ -597,8 +597,11 @@ export function beginAIBotChatRequest(db, ownerId, {
   const messageHash = createHash('sha256').update(normalizedMessage).digest('hex');
   const existing = ownerRows(db.aiBotChatRequests, ownerId).find(row => row.requestId === requestId);
   if (existing) {
+    const suppliedConversationId = String(conversationId || '');
+    const originalConversationId = String(existing.requestedConversationId || '');
+    const completedConversationId = String(existing.conversationId || '');
     if (existing.botId !== botId || existing.identityId !== identityId || existing.messageHash !== messageHash ||
-        String(existing.conversationId || '') !== String(conversationId || '')) {
+        (suppliedConversationId !== originalConversationId && suppliedConversationId !== completedConversationId)) {
       throw fail(409, 'This chat request ID was already used for a different request.');
     }
     if (existing.status === 'completed') {
@@ -624,7 +627,7 @@ export function beginAIBotChatRequest(db, ownerId, {
   }
   const request = {
     id: makeId(), ownerId, botId, identityId, conversationId: conversationId || null,
-    requestId, messageHash, status: 'running',
+    requestId, messageHash, requestedConversationId: conversationId || null, status: 'running',
     startedAt: nowIso(now), completedAt: null, createdAt: nowIso(now), updatedAt: nowIso(now)
   };
   db.aiBotChatRequests.push(request);
