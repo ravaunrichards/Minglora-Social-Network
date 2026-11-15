@@ -8,6 +8,9 @@ import {
   createAIBotTeam,
   createAIApprovalRequest,
   createAICreatorJob,
+  startAICreatorJobGeneration,
+  completeAICreatorJobGeneration,
+  failAICreatorJobGeneration,
   createAICommunityEvent,
   decideAIApproval,
   emergencyPauseAI,
@@ -169,6 +172,74 @@ test('Creator Studio jobs remain drafts until a real provider-backed worker exis
   assert.equal(job.providerExecution, 'not_started');
   assert.equal(job.aiDisclosureRequired, true);
   assert.equal(job.humanReviewRequired, true);
+});
+
+test('Creator Studio generation state transitions persist only moderated OpenAI output for human review', () => {
+  const db = state();
+  const bot = makeBot(db);
+  const job = createAICreatorJob(db, 'owner-1', {
+    botId: bot.id,
+    taskType: 'caption_draft',
+    brief: 'Write three captions for a Minglora community technology learning event.'
+  }, { now });
+  const started = startAICreatorJobGeneration(db, 'owner-1', job.id, { now });
+  assert.equal(started.providerExecution, 'running');
+  assert.throws(() => startAICreatorJobGeneration(db, 'owner-1', job.id, { now }), { status: 409 });
+  const completed = completeAICreatorJobGeneration(db, 'owner-1', job.id, {
+    provider: 'openai',
+    output: 'Caption A\\n\\nCaption B\\n\\nCaption C',
+    model: 'test-model',
+    responseId: 'resp-test',
+    requestId: 'req-test',
+    usage: { input_tokens: 40, output_tokens: 60, total_tokens: 100 },
+    moderation: { model: 'omni-moderation-latest', flagged: false }
+  }, { now });
+  assert.equal(completed.providerExecution, 'completed');
+  assert.equal(completed.output, 'Caption A\\n\\nCaption B\\n\\nCaption C');
+  assert.equal(completed.published, false);
+  assert.equal(completed.externalActionTaken, false);
+  assert.equal(completed.humanReviewRequired, true);
+  assert.equal(completed.aiDisclosureRequired, true);
+  assert.equal(completed.providerUsage.total_tokens, 100);
+  assert.equal(db.aiBotAudit.at(-1).action, 'creator_job_generated_for_human_review');
+  assert.throws(() => startAICreatorJobGeneration(db, 'owner-1', job.id, { now }), { status: 409 });
+});
+
+test('Creator Studio generation failure stores no output and can be retried safely', () => {
+  const db = state();
+  const job = createAICreatorJob(db, 'owner-1', {
+    taskType: 'title_ideas',
+    brief: 'Suggest titles for a local community technology education event.'
+  }, { now });
+  startAICreatorJobGeneration(db, 'owner-1', job.id, { now });
+  const failed = failAICreatorJobGeneration(db, 'owner-1', job.id, 'Moderation service unavailable.', { now });
+  assert.equal(failed.providerExecution, 'failed');
+  assert.equal(failed.output, null);
+  assert.match(failed.providerError, /Moderation service unavailable/);
+  const retry = startAICreatorJobGeneration(db, 'owner-1', job.id, { now });
+  assert.equal(retry.providerExecution, 'running');
+  assert.equal(retry.output, null);
+  assert.equal(retry.providerError, null);
+});
+
+test('OpenAI manual draft availability does not enable autonomous execution', () => {
+  const status = getAIProviderStatus({
+    OPENAI_API_KEY: 'private-openai-test-key',
+    OPENAI_DEFAULT_MODEL: 'test-model'
+  });
+  assert.equal(status.manualDraftsAvailable, true);
+  assert.equal(status.adapterAvailable, true);
+  assert.equal(status.executionEnabled, false);
+  assert.equal(status.connected, false);
+  assert.equal(JSON.stringify(status).includes('private-openai-test-key'), false);
+  const otherProvider = getAIProviderStatus({
+    MINGLORA_AI_PROVIDER: 'anthropic',
+    ANTHROPIC_API_KEY: 'private-anthropic-test-key',
+    OPENAI_API_KEY: 'private-openai-test-key',
+    OPENAI_DEFAULT_MODEL: 'test-model'
+  });
+  assert.equal(otherProvider.manualDraftsAvailable, false);
+  assert.equal(otherProvider.executionEnabled, false);
 });
 
 test('high-impact actions require a pending approval and never execute on approval', () => {
