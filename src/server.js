@@ -9674,6 +9674,15 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
     fs.readFile(assetFile,(error,data)=>{if(error)return json(res,404,{error:'Gifters rewards artwork not found.'});res.writeHead(200,{'Content-Type':'image/png','Cache-Control':'public, max-age=3600',...SECURITY_HEADERS});res.end(data);});
     return;
   }
+  if(p==='/assets/gifter-badge-progression-art.jpg'){
+    const assetFile=path.join(__dirname,'..','assets','Gifter Badge Progressions','Gifter Badge Progressions.jpg');
+    fs.readFile(assetFile,(error,data)=>{
+      if(error)return json(res,404,{error:'Gifter badge progression artwork not found.'});
+      res.writeHead(200,{'Content-Type':'image/jpeg','Cache-Control':'public, max-age=86400',...SECURITY_HEADERS});
+      res.end(data);
+    });
+    return;
+  }
   const gifterBadgePanelFile = ({
     '/assets/gifter-badge-level-panels/levels-1-4.jpg': 'Levels 1-4.jpg',
     '/assets/gifter-badge-level-panels/levels-5-9.jpg': 'Levels 5-9.jpg',
