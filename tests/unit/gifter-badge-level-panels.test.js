@@ -79,11 +79,33 @@ test("level artwork route is an explicit allow-list and serves JPEG without expo
   assert.match(server, /Gifter badge level artwork not found/);
 });
 
+test("uploaded Gifter Badge Progressions artwork is served, displayed and cached as an uncropped reference", () => {
+  const imagePath = path.join(root, "assets", "Gifters Badge Levels", "Badges_Level_01-50", "Gifter Badge Progressions.jpg");
+  const image = fs.readFileSync(imagePath);
+  const progression = read("public/gifter-progression.js");
+  const server = read("src/server.js");
+  const styles = read("public/gifter-progression.css");
+  const html = read("public/index.html");
+  const sw = read("public/sw.js");
+
+  assert.equal(image.subarray(0, 2).toString("hex"), "ffd8", "the uploaded source remains an original JPEG");
+  assert.match(progression, /function renderProgressionStrip\(\)/);
+  assert.ok(progression.includes("renderProgressionStrip() +"), "the strip appears in the shared standalone and embedded progression view");
+  assert.ok(progression.includes("src='/assets/gifter-badge-progression.jpg'"));
+  assert.ok(progression.includes("alt='Original horizontal Minglora Gifter Badge Progressions artwork showing a sequence of geometric and gem-shaped badge icons connected by lines'"));
+  assert.match(server, /if\(p==='\/assets\/gifter-badge-progression\.jpg'\)[\s\S]*?Badges_Level_01-50[\s\S]*?Gifter Badge Progressions\.jpg[\s\S]*?'Content-Type':'image\/jpeg'/);
+  assert.match(styles, /\.gp-reference-figure img\{[^}]*width:100%[^}]*height:auto[^}]*object-fit:contain/);
+  assert.ok(html.includes("/gifter-progression.js?v=20261115-gifter-badge-progression-strip-1"));
+  assert.ok(sw.includes("'/assets/gifter-badge-progression.jpg'"), "the original uploaded image is precached");
+  assert.ok(sw.includes("/gifter-progression.js?v=20261115-gifter-badge-progression-strip-1"));
+  assert.ok(sw.includes("minglora-shell-v322-self-updating-1"));
+});
+
 test("updated progression assets and all original JPG panels are included in the app shell", () => {
   const html = read("public/index.html");
   const sw = read("public/sw.js");
   assert.ok(html.includes("/gifter-progression.css?v=20261115-original-individual-badges-rollback-1"));
-  assert.ok(html.includes("/gifter-progression.js?v=20261115-original-individual-badges-rollback-1"));
+  assert.ok(html.includes("/gifter-progression.js?v=20261115-gifter-badge-progression-strip-1"));
   panelFiles.forEach(filename => {
     const routeName = filename.toLowerCase().replaceAll(" ", "-");
     assert.ok(sw.includes("/assets/gifter-badge-level-panels/" + routeName));
@@ -212,9 +234,9 @@ test("all 71 supplied Gifter reference images are placed at their correct Reward
   assert.ok(!progression.includes("gp-level-index-original"), "level cards do not add a duplicate PNG thumbnail");
   assert.match(styles, /\.gp-reference-figure img\{display:block;width:100%[^}]*height:auto[^}]*object-fit:contain/);
   assert.ok(html.includes("/gifter-progression.css?v=20261115-original-individual-badges-rollback-1"));
-  assert.ok(html.includes("/gifter-progression.js?v=20261115-original-individual-badges-rollback-1"));
+  assert.ok(html.includes("/gifter-progression.js?v=20261115-gifter-badge-progression-strip-1"));
   assert.ok(sw.includes("/gifter-progression.css?v=20261115-original-individual-badges-rollback-1"));
-  assert.ok(sw.includes("/gifter-progression.js?v=20261115-original-individual-badges-rollback-1"));
+  assert.ok(sw.includes("/gifter-progression.js?v=20261115-gifter-badge-progression-strip-1"));
 });
 
 test("the PWA shell precaches all 50 original numbered Gifter PNGs", () => {
