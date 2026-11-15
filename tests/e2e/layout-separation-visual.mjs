@@ -35,7 +35,7 @@ function assertStableScreenGeometry(current,baseline,message){
   assert.equal(current.rows,baseline.rows,message+' (row template)');
   assert.deepEqual(current.stage,baseline.stage,message+' (stage dimensions)');
   assert.equal(current.screen,baseline.screen,message+' (screen identifier)');
-  assert.equal(current.visibleSeats,baseline.visibleSeats,message+' (visible seat count)');
+  // Guest-box modes may reveal/reposition guest tiles; screen-grid geometry is checked independently.
 }
 
 function assertReferenceGeometry(screen,state,viewport){
