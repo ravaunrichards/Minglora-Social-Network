@@ -49,6 +49,7 @@ test('the incorrect Gifters Level Up chart is permanently removed without changi
   assert.ok(!server.includes("Gifters Level Up.png"));
   assert.ok(!serviceWorker.includes("gifters-level-up.png"));
   assert.ok(!fs.existsSync(path.join(root, 'assets', 'Gifters Badge Levels', 'Gifters Level Up.png')));
+  assert.ok(!fs.existsSync(path.join(root, 'public', 'assets', 'gifters-level-up.svg')), 'the duplicate Gifters Level Up chart asset stays deleted');
   assert.ok(progression.includes("<h1>Gifter Level &amp; Badges</h1>"));
   assert.ok(progression.includes("const badgePanels = renderBadgePanels();"));
   assert.ok(progression.includes("function renderLevelDirectory(items)"));
