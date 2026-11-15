@@ -2120,7 +2120,7 @@
       payload.companionOptIn = form.querySelector('[name="companionOptIn"]').checked;
       payload.companionAcknowledged = form.querySelector('[name="companionAcknowledgedAIIdentity"]').checked;
     } else return;
-    const patchKinds = ['settings','languages','memory-settings','memory-edit','vacancy-status','application-review','employment-status','employment-manager','provider-assignment-status','task-approval','identity-edit','training-program-status','training-enrollment-status','attendance-review'];
+    const patchKinds = ['settings','languages','memory-settings','memory-edit','vacancy-status','application-review','employment-status','employment-manager','provider-assignment-status','task-approval','training-program-status','training-enrollment-status','attendance-review','identity-edit'];
     const talentPatchKinds = ['performance-review-finalize','succession-status'];
     const result = await request(path, { method: patchKinds.concat(talentPatchKinds).includes(kind) ? 'PATCH' : 'POST', body: payload });
     let uploadedMediaCount = 0;
