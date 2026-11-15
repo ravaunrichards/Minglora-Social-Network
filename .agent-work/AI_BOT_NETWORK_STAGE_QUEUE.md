@@ -1,9 +1,25 @@
-## AI HR training and attendance implementation checkpoint — 2026-11-15
+## Latest verified checkpoint — 2026-11-15 (AI HR training and attendance release)
+
+- PR #351 merged to `main` as `0fbcdc6a92bf94ac980c2015833f8ea11caaf7a1`; merge request: https://github.com/ravaunrichards/Minglora-Social-Network/pull/351.
+- Added six organization-scoped HR development tables: training courses, course history, training enrollments, enrollment history, daily employee attendance and attendance correction history. All six are RLS-enabled, direct anon/authenticated grants are revoked, and the HR development RPC is SECURITY INVOKER with a locked empty search path and service_role-only EXECUTE.
+- Applied existing-project migration ledger version `20261115025508`, name `minglora_ai_hr_training_attendance`.
+- Rollback-only production SQL contract passed: temporary course create/publish, enrollment/idempotent assignment, start/completion with score/note, listing, human-recorded attendance, same-day duplicate reuse, correction with history, and future-date rejection. Transaction rolled back.
+- GitHub checks on corrected PR head `302a6fe8d79c322df38c35debdf6c3fb526ba67d`: full Minglora suite **1,178 passed / 0 failed**; focused AI Network suite **133 passed / 0 failed**; Auth/OAuth, For You navigation, AI Network browser acceptance and LIVE/MeetWave layout workflows passed.
+- Existing `minglora-runtime-state` Edge Function is ACTIVE at **v131**, with the existing custom authentication configuration (`verify_jwt=false`) preserved and the HR development command/RPC handler present.
+- Existing Render free service deployment `dep-dbshuj2jnfac73cb1mpg` is **LIVE** on the same main SHA. Build reported **0 vulnerabilities**; startup logs confirm port 10000, durable Supabase persistence readiness and LiveKit connectivity. Public /api/ready HTTP validation could not be completed because the external verifier could not access the service hostname.
+- Production HR counts remain zero across all six new tables; AI identity count remains zero; runtime controls remain `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`. No sample identities, HR rows, human Auth users, training completions or attendance entries were retained.
+- AI task register remains **2/19 verified tasks = 10.53%**. This is checklist task-count progress, not a product feature-completion estimate. Task 7 remains partial pending signed-in owner/browser/device acceptance and the rest of the full HR lifecycle. Task 3 owner identity create/list/get/edit and first real private avatar/cover upload/device acceptance remain open.
+
+**Next action:** continue from the next unverified AI Network requirement; keep workers paused and do not fabricate owner/AI records to bypass live signed-in acceptance.
+
+---
+
+## Historical AI HR training and attendance implementation checkpoint — 2026-11-15 (superseded by the verified checkpoint above)
 
 - Active branch: `feat/ai-hr-training-attendance`, created from latest main `8695b5a2c5dd0b0ae75d607cae72b4607fa2ca23`.
 - This slice adds owner-scoped HR training courses, employee enrollments, training status history, daily attendance records and attendance correction history. Courses begin as drafts; only published courses may be assigned. Only onboarding, active and restricted employees may receive training or attendance entries.
 - Training status transitions are bounded and reasoned; completion requires a score or completion note. Attendance is explicitly human/admin-recorded, limited to employment dates and past/current dates, and corrections require a reason. No attendance is inferred and no AI workers are activated.
-- Status: IMPLEMENTED — AWAITING VERIFICATION. Automated tests, rollback-only database contract, production migration, Edge Function deployment, Render deployment and signed-in owner/device acceptance remain outstanding. This migration does not insert HR records.
+- Historical status at implementation time: IMPLEMENTED — AWAITING VERIFICATION. CI, rollback-only contract, migration, Edge Function and Render release are now completed as documented in the verified checkpoint above; owner/device acceptance remains outstanding.
 
 ---
 
