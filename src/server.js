@@ -48,7 +48,7 @@ import { getGiftGallery, giftGalleryTimeZone, recordGiftGalleryEvent, updateGift
 import { CREATOR_LEAGUE_CLASSES, recordLiveGiftForLeagues, refundCreatorLeagueGift, getCreatorLeagueOverview, createCreatorLeagueMatch, acceptCreatorLeagueMatch, supportCreatorLeagueMatch, useCreatorLeaguePowerup, listCreatorLeagueMatches, settleExpiredLeagueMatches, settleScheduledCreatorLeagueDays } from '../backend/modules/leagues/service.js';
 import { recordGifterGift, refundGifterGift, getGifterProgressionOverview, getGifterBadgeSummary, getNewGifterIdentity, getLiveGifterLeaderboard } from '../backend/modules/gifter-progression/service.js';
 import { LIVE_FAN_CLUB_GIFT_CODES, LIVE_FAN_CLUB_JOIN_GIFT_CODE, LIVE_FAN_CLUB_JOIN_COIN_COST, ensureLiveFanClubCollections, getLiveFanClubMembership, countActiveLiveFanClubMembers, joinLiveFanClub, awardLiveFanClubPoints, publicLiveFanClubMembership } from '../backend/modules/live/fan-club.js';
-import { ensureAICollections, getAICommandCenter, getAIProviderStatus, createAIBot, updateAIBotStatus, createAIBotTeam, createAIBotSchedule, updateAIBotScheduleStatus, updateAISettings, createAICreatorJob, startAICreatorJobGeneration, completeAICreatorJobGeneration, failAICreatorJobGeneration, createAIApprovalRequest, decideAIApproval, setAICompanionConsent, createAICommunityEvent, emergencyPauseAI } from '../backend/modules/ai-network/service.js';
+import { ensureAICollections, getAICommandCenter, getAIProviderStatus, getAISettings, getAICreatorDailyUsage, createAIBot, updateAIBotStatus, createAIBotTeam, createAIBotSchedule, updateAIBotScheduleStatus, updateAISettings, createAICreatorJob, startAICreatorJobGeneration, completeAICreatorJobGeneration, failAICreatorJobGeneration, createAIApprovalRequest, decideAIApproval, setAICompanionConsent, createAICommunityEvent, emergencyPauseAI } from '../backend/modules/ai-network/service.js';
 import { probeOpenAIProvider } from '../backend/modules/ai-network/openai-provider-probe.js';
 import { generateOpenAICreatorDraft } from '../backend/modules/ai-network/openai-creator-drafts.js';
 import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseExchangeOAuthCode, supabaseGetAuthSettings, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseRequestMagicLink, supabaseCompletePasswordReset, supabaseGetUser, supabaseUpdateEmail, supabaseRequestPhoneChange, supabaseVerifyPhoneChange, supabaseUpdateUserMetadata, supabaseUpdateProfile } from './supabase-auth.js';
@@ -2934,6 +2934,22 @@ async function route(req, res) {
         if (!currentProviderStatus.manualDraftsAvailable) {
           throw Object.assign(new Error('OpenAI Creator Studio generation is not configured. Set OPENAI_API_KEY and OPENAI_DEFAULT_MODEL in the private Minglora server environment. No draft was generated.'), { status: 503 });
         }
+        const draft = (db.aiBotCreatorJobs || []).find(item => item.id === parts[1] && item.ownerId === user.id);
+        if (!draft) throw Object.assign(new Error('Creator Studio draft not found.'), { status: 404 });
+        if (draft.output || draft.providerExecution === 'completed' || draft.status !== 'draft') {
+          throw Object.assign(new Error('Only an unfinished Creator Studio draft can be generated.'), { status: 409 });
+        }
+        const creatorSettings = getAISettings(db, user.id);
+        const creatorDailyUsage = getAICreatorDailyUsage(db, user.id);
+        const dailyTokenLimit = Math.max(0, Math.floor(Number(creatorSettings.dailyTokenBudget) || 0));
+        const availableDailyTokens = dailyTokenLimit - creatorDailyUsage.tokensUsed;
+        const configuredOutputLimit = Number(process.env.MINGLORA_AI_MAX_OUTPUT_TOKENS) || 1200;
+        const requestedOutputLimit = Math.min(1200, Math.max(128, Math.floor(configuredOutputLimit)));
+        const estimatedInputReserve = Math.ceil(draft.brief.length / 3) + 400;
+        const allowedOutputTokens = Math.min(requestedOutputLimit, availableDailyTokens - estimatedInputReserve);
+        if (allowedOutputTokens < 128) {
+          throw Object.assign(new Error('This request would exceed the remaining daily AI token budget. Adjust the budget or retry after the daily reset. No provider generation request was sent.'), { status: 429 });
+        }
         const providerHealth = await probeOpenAIProvider();
         if (!providerHealth.connected) {
           throw Object.assign(new Error('OpenAI provider check failed (' + providerHealth.status + '): ' + providerHealth.note), { status: 503 });
@@ -2945,7 +2961,7 @@ async function route(req, res) {
             taskType: started.taskType,
             brief: started.brief,
             env: process.env,
-            maxOutputTokens: Number(process.env.MINGLORA_AI_MAX_OUTPUT_TOKENS) || 1200
+            maxOutputTokens: allowedOutputTokens
           });
           const job = completeAICreatorJobGeneration(db, user.id, started.id, generated);
           await saveStore();
