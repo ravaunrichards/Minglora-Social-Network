@@ -23,6 +23,9 @@ test('Minglora Menu beside Messenger has a clean single-row header', () => {
     assert.ok(script.includes(label), 'Menu includes ' + label);
   }
   assert.ok(script.includes("window.MingloraActivateView"));
+  assert.ok(script.includes('data-admin-only="true"'));
+  assert.ok(script.includes('minglora:admin-access-updated'));
+  assert.ok(script.includes("window.__mingloraAdminAccess?.canAccess !== true"));
   assert.ok(script.includes("window.MingloraSettings"));
 });
 
