@@ -50,7 +50,7 @@ Creator League rank and gifts received do not grant Gifter badges.
 The canonical `assets/Gifters Badge Levels/` collection contains 71 images, all retained in their original source folders and assigned to these UI locations:
 
 - `Gifters Rewards.png` remains the primary artwork banner at the top of the Gifts entry page.
-- `Gifters Level Up.png` appears in the Gifter Progression hero as original artwork, labelled visual-reference-only. Live Coin thresholds and unlock states continue to come from server-confirmed gifting activity.
+- `Gifters Level Up.png` appears unchanged in a dedicated, full-width **Gifters Badge Progression** reference card immediately below the Gifter Progression page heading and above the member's live status/progress card. The card uses the server allow-listed `/assets/gifters-level-up.png` route, preserves the full image without cropping, and provides a full-size view. Live Coin totals and unlock states still come from server-confirmed gifting activity.
 - The 11 `Levels 1-4.jpg` through `Levels 50.jpg` panels appear in the detailed, ordered LV 1–50 section.
 - The six `LV.1 - LV.9.jpg` through `LV.50+.jpg` sheets appear in a separate ordered level-range gallery.
 - `Badges_Level_01-50/Badges_Level_01-50.png` and its `_preview.jpg` appear together in a separate master-collection section.
