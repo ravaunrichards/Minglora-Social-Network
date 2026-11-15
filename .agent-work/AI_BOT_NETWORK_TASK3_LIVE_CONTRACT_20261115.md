@@ -34,3 +34,25 @@ Status: **IN PROGRESS — LIVE DATABASE CONTRACT VERIFIED; SIGNED-IN OWNER ACCEP
 ## Exact next action
 
 Complete the signed-in designated-owner API/browser acceptance and one genuine private avatar/cover upload using the owner's active MFA-verified Minglora session. Verify create/list/get/edit, profile media authorization, private Storage behavior, then close Task 3 only after device/API tests pass.
+
+
+## Additional live contracts — 2026-11-15
+
+### Discovery (rollback-only live database contract)
+- Verified discover using ten combined multi-select dimensions: category, population, gender, countries, nationality, language, interests, skills, capabilities and regions; also applied profession and recent-day filters.
+- Verified bounded result shape and pagination fields against the current empty public AI dataset (0 results, accurately represented).
+- Invalid country code `JAM` was rejected because country inputs must use ISO alpha-2 codes.
+- Saved discovery group create/list/readback/delete passed. Entire transaction rolled back.
+
+### Provider/model (rollback-only live database contract)
+- Created a temporary `rollback_test` account and model only inside the transaction. Account reported `unconfigured` / `unknown`; no credentials or secrets were accepted or stored.
+- Created a temporary identity, assigned the test model within declared text capability and English language limits, and verified assignment starts `pending` / `unknown`.
+- Duplicate assignment returned the existing assignment; premature activation to `active` was rejected until a real provider health verifier exists.
+- Owner-scoped account/model/assignment list operations returned the temporary records while the transaction was active. Entire transaction rolled back.
+
+### Post-rollback verification
+- Zero retained AI identities/names/profiles/emails, provider accounts/assignments, rollback-test models or saved discovery test groups.
+- Runtime remains globally paused, execution disabled and max workers zero.
+- These contracts strengthen Task 3/5/6 database evidence but do not close owner-authenticated HTTP/UI/device acceptance or prove any real provider is connected. Master acceptance remains 2/19 (10.53%).
+
+A test pre-check that tried to read `auth.users` as `service_role` was denied by PostgreSQL as expected. The owner was validated before switching roles on the successful retry; no database privileges were changed.
