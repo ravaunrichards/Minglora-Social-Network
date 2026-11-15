@@ -193,34 +193,57 @@ try {
           viewer.addEventListener('error', onError, { once: true });
           viewer.src = source;
         });
-        // model-viewer 4.4.0 has a 2D scene canvas plus a separate WebGL
-        // renderer canvas. Check the actual renderer canvas, not the first
-        // canvas in the shadow root (which is reserved for 2D presentation).
-        const canvases = Array.from(viewer.shadowRoot?.querySelectorAll('canvas') || []);
-        const webglCanvas = viewer.shadowRoot?.querySelector('canvas') || null;
-        const gl = webglCanvas
-          ? (webglCanvas.getContext('webgl2') || webglCanvas.getContext('webgl'))
-          : null;
+        // model-viewer composites its shared WebGL renderer into the
+        // visible 2D canvas. Its WebGL canvas is intentionally detached from
+        // the shadow DOM, so verify the public rendered-frame API and pixels
+        // rather than probing private renderer elements.
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        const presentationCanvas = viewer.shadowRoot?.querySelector('canvas') || null;
+        const imageDataUrl = viewer.toDataURL('image/png');
+        const image = new Image();
+        image.src = imageDataUrl;
+        await image.decode();
+        const pixelCanvas = document.createElement('canvas');
+        pixelCanvas.width = image.naturalWidth;
+        pixelCanvas.height = image.naturalHeight;
+        const pixelContext = pixelCanvas.getContext('2d', { willReadFrequently: true });
+        pixelContext.drawImage(image, 0, 0);
+        const pixels = pixelContext.getImageData(0, 0, pixelCanvas.width, pixelCanvas.height).data;
+        let visiblePixelCount = 0;
+        const sampledColors = new Set();
+        for (let index = 0; index < pixels.length; index += 16) {
+          const alpha = pixels[index + 3];
+          if (alpha > 16) {
+            visiblePixelCount++;
+            sampledColors.add(pixels[index] + ',' + pixels[index + 1] + ',' + pixels[index + 2]);
+          }
+        }
         return {
           event: detail.event,
           loaded: viewer.loaded,
           modelIsVisible: viewer.modelIsVisible,
-          canvasPresent: Boolean(webglCanvas),
-          canvasWidth: webglCanvas?.width || 0,
-          canvasHeight: webglCanvas?.height || 0,
-          rendererCanvasCount: canvases.length,
+          presentationCanvasPresent: Boolean(presentationCanvas),
+          canvasWidth: presentationCanvas?.width || 0,
+          canvasHeight: presentationCanvas?.height || 0,
           viewportWidth: Math.round(viewer.getBoundingClientRect().width),
           viewportHeight: Math.round(viewer.getBoundingClientRect().height),
-          webglVersion: gl ? gl.getParameter(gl.VERSION) : null
+          renderedImageWidth: image.naturalWidth,
+          renderedImageHeight: image.naturalHeight,
+          renderedImageBytes: imageDataUrl.length,
+          visiblePixelSamples: visiblePixelCount,
+          distinctVisibleColors: sampledColors.size
         };
       }, { source: '/assets/gifts/catalog/' + gift.code + '.gltf', name: gift.name });
 
       assert.equal(render.loaded, true, gift.name + ' model must finish loading');
       assert.equal(render.modelIsVisible, true, gift.name + ' model must be visible');
-      assert.equal(render.canvasPresent, true, gift.name + ' must create a WebGL canvas');
-      assert.ok(render.canvasWidth > 0 && render.canvasHeight > 0, gift.name + ' must render to a non-zero canvas');
+      assert.equal(render.presentationCanvasPresent, true, gift.name + ' must mount its presentation canvas');
+      assert.ok(render.canvasWidth > 0 && render.canvasHeight > 0, gift.name + ' must render to a non-zero presentation canvas');
       assert.ok(render.viewportWidth > 0 && render.viewportHeight > 0, gift.name + ' viewer must have visible layout dimensions');
-      assert.ok(render.webglVersion, gift.name + ' must acquire a WebGL rendering context');
+      assert.ok(render.renderedImageBytes > 1000, gift.name + ' rendered frame must produce a non-empty image');
+      assert.ok(render.renderedImageWidth > 0 && render.renderedImageHeight > 0, gift.name + ' rendered image dimensions must be non-zero');
+      assert.ok(render.visiblePixelSamples > 10, gift.name + ' rendered image must contain visible model pixels');
+      assert.ok(render.distinctVisibleColors > 8, gift.name + ' rendered image must contain non-uniform model detail');
 
       const screenshot = path.join(outputDir, gift.code + '-' + viewport.name + '.png');
       await page.locator('#gift-model').screenshot({ path: screenshot, animations: 'disabled', timeout: 15000 });
@@ -256,7 +279,7 @@ try {
     gifts: report.gifts,
     viewports: report.viewports.length,
     render_checks: report.render_checks,
-    webgl_checks: results.filter(item => Boolean(item.render.webglVersion)).length,
+    pixel_render_checks: results.filter(item => item.render.visiblePixelSamples > 10).length,
     screenshots: results.length,
     page_errors: pageErrors.length,
     http_failures: httpFailures.length,
