@@ -14,7 +14,7 @@
     return Number.isNaN(parsed.getTime()) ? 'Not recorded' : parsed.toLocaleString();
   };
   const localDateTimeInZoneToIso = (value, timeZone) => {
-    const match = /^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2})(?::(\\d{2}))?$/.exec(String(value || ''));
+    const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(String(value || ''));
     if (!match) throw new Error('Enter a valid local date and time.');
     const expected = match.slice(1).map((part, index) => Number(part || (index === 5 ? 0 : part)));
     const target = Date.UTC(expected[0], expected[1] - 1, expected[2], expected[3], expected[4], expected[5] || 0);
