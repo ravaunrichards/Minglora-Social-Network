@@ -90,6 +90,15 @@
       {offset:.8,opacity:1,transform:"translate3d(-2px,0,0) rotateZ(2deg) scale(1.02)",filter:"brightness(1.08)"},
       neutral
     ];
+    if(preset==="atlantis-trident-surge")return [
+      {offset:0,opacity:0,transform:"translate3d(0,34px,0) rotateZ(-9deg) scale(.72)",filter:"brightness(.62) saturate(.78)"},
+      {offset:.18,opacity:1,transform:"translate3d(0,-14px,0) rotateZ(5deg) scale(1.16)",filter:"brightness(1.55) saturate(1.42)"},
+      {offset:.34,opacity:1,transform:"translate3d(0,3px,0) rotateZ(-2.8deg) scale(.95)",filter:"brightness(1.28) saturate(1.22)"},
+      {offset:.54,opacity:1,transform:"translate3d(-4px,-7px,0) rotateZ(2deg) scale(1.07)",filter:"brightness(1.34) saturate(1.3)"},
+      {offset:.72,opacity:1,transform:"translate3d(4px,-3px,0) rotateZ(-1.5deg) scale(1.035)",filter:"brightness(1.2)"},
+      {offset:.88,opacity:1,transform:"translate3d(0,0,0) rotateZ(0deg) scale(1)",filter:"brightness(1.1)"},
+      neutral
+    ];
     if(preset==="phoenix-rise")return [
       {offset:0,opacity:0,transform:"translate3d(0,32px,0) rotateZ(-10deg) scale(.68)",filter:"brightness(.62) saturate(.72)"},
       {offset:.18,opacity:1,transform:"translate3d(0,-13px,0) rotateZ(5deg) scale(1.16)",filter:"brightness(1.62) saturate(1.55)"},
@@ -415,6 +424,31 @@
     shimmer.connect(filter);filter.connect(shimmerGain);shimmerGain.connect(c.destination);shimmer.start(now+.12);shimmer.stop(now+.7);
     return true;
   }
+  function playKeeperOfAtlantis(c,now,seed){
+    const surge=c.createBufferSource(),band=c.createBiquadFilter(),lowpass=c.createBiquadFilter(),envelope=c.createGain();
+    surge.buffer=createGiftNoise(c,seed,1.18);
+    band.type="bandpass";band.frequency.setValueAtTime(95,now);band.frequency.exponentialRampToValueAtTime(310,now+.3);band.frequency.exponentialRampToValueAtTime(145,now+1.02);band.Q.setValueAtTime(.7,now);
+    lowpass.type="lowpass";lowpass.frequency.setValueAtTime(1200,now);lowpass.frequency.exponentialRampToValueAtTime(780,now+1.12);
+    envelope.gain.setValueAtTime(.0001,now);envelope.gain.exponentialRampToValueAtTime(.052,now+.18);envelope.gain.exponentialRampToValueAtTime(.0001,now+1.18);
+    surge.connect(band);band.connect(lowpass);lowpass.connect(envelope);envelope.connect(c.destination);surge.start(now);surge.stop(now+1.2);
+    const sub=c.createOscillator(),subGain=c.createGain();
+    sub.type="sine";sub.frequency.setValueAtTime(54,now);sub.frequency.exponentialRampToValueAtTime(38,now+.5);
+    subGain.gain.setValueAtTime(.0001,now);subGain.gain.exponentialRampToValueAtTime(.046,now+.035);subGain.gain.exponentialRampToValueAtTime(.0001,now+.6);
+    sub.connect(subGain);subGain.connect(c.destination);sub.start(now);sub.stop(now+.62);
+    const bells=[196,293.66,440,587.33,880],delays=[.18,.34,.52,.72,.94];
+    bells.forEach((frequency,index)=>{
+      const start=now+delays[index],tone=c.createOscillator(),gain=c.createGain(),pan=c.createStereoPanner?.();
+      tone.type=index>2?"sine":"triangle";tone.frequency.setValueAtTime(frequency*(1+((seed+index*11)%13-6)*.0007),start);
+      gain.gain.setValueAtTime(.0001,start);gain.gain.exponentialRampToValueAtTime(.031/(1+index*.16),start+.025);gain.gain.exponentialRampToValueAtTime(.0001,start+.52);
+      if(pan){pan.pan.setValueAtTime((index-2)*.18,start);tone.connect(gain);gain.connect(pan);pan.connect(c.destination);}else{tone.connect(gain);gain.connect(c.destination);}
+      tone.start(start);tone.stop(start+.55);
+    });
+    const bubbles=c.createBufferSource(),highpass=c.createBiquadFilter(),bubbleGain=c.createGain();
+    bubbles.buffer=createGiftNoise(c,seed,0.74);highpass.type="highpass";highpass.frequency.setValueAtTime(2400,now+.14);
+    bubbleGain.gain.setValueAtTime(.0001,now+.14);bubbleGain.gain.exponentialRampToValueAtTime(.009,now+.3);bubbleGain.gain.exponentialRampToValueAtTime(.0001,now+.86);
+    bubbles.connect(highpass);highpass.connect(bubbleGain);bubbleGain.connect(c.destination);bubbles.start(now+.14);bubbles.stop(now+.88);
+    return true;
+  }
   function play(gift){
     if(!gift)return false;
     const c=audio();if(!c)return false;
@@ -429,6 +463,7 @@
       if(gift.code==="phoenix-wep6uk")return playPhoenix(c,now,seed);
       if(gift.code==="beach-maracas-1exxoag")return playBeachMaracas(c,now,seed);
       if(gift.code==="royal-lions-scepter-15000-mgl")return playRoyalLionsScepter(c,now,seed);
+      if(gift.code==="keeper-of-atlantis-15000-mgl")return playKeeperOfAtlantis(c,now,seed);
       const p=profiles[gift.category]||profiles.other,variation=(seed%9)-4;
       const base=p.base*(.92+(seed%17)/100);
       p.notes.forEach((step,i)=>{
@@ -552,7 +587,7 @@
     const motionElement=card.querySelector(".minglora-gift-fx-model");
     if(motionElement&&gift.motion_preset&&typeof motionElement.animate==="function"){
       const reduced=Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);
-      const visualPreset=gift.code==="djembe-master-1v3jzkm"?"djembe-strike":gift.code==="palm-breeze-gknyt0"?"palm-canopy-sway":gift.code==="gamer-otter-100-mgl"?"gamer-otter-cheer":gift.code==="live-island-rmn3mc"?"island-tide":gift.code==="crystal-crown-1itryeu"?"crown-lustre":gift.code==="phoenix-wep6uk"?"phoenix-rise":gift.code==="beach-maracas-1exxoag"?"maraca-rhythm":gift.code==="royal-lions-scepter-15000-mgl"?"lion-scepter-rise":gift.motion_preset;
+      const visualPreset=gift.code==="djembe-master-1v3jzkm"?"djembe-strike":gift.code==="palm-breeze-gknyt0"?"palm-canopy-sway":gift.code==="gamer-otter-100-mgl"?"gamer-otter-cheer":gift.code==="live-island-rmn3mc"?"island-tide":gift.code==="crystal-crown-1itryeu"?"crown-lustre":gift.code==="phoenix-wep6uk"?"phoenix-rise":gift.code==="beach-maracas-1exxoag"?"maraca-rhythm":gift.code==="royal-lions-scepter-15000-mgl"?"lion-scepter-rise":gift.code==="keeper-of-atlantis-15000-mgl"?"atlantis-trident-surge":gift.motion_preset;
       const semanticFrames=buildPreviewFrames(visualPreset,{dx,dy,tilt,spin,peak,rebound});
       motionElement.animate(semanticFrames,{
         duration:reduced?320:Math.max(950,Math.min(4200,Number(gift.motion_duration_ms)||duration)),
