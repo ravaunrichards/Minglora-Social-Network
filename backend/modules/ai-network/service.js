@@ -508,12 +508,30 @@ export function emergencyPauseAI(db, ownerId, reason = 'Owner emergency pause', 
   return { paused: true, reason: text(reason, 180) || 'Owner emergency pause', pausedAt: settings.updatedAt };
 }
 
+export function getAICreatorDailyUsage(db, ownerId, { now = new Date() } = {}) {
+  ensureAICollections(db);
+  const dayStart = new Date(now);
+  dayStart.setUTCHours(0, 0, 0, 0);
+  const cutoff = dayStart.getTime();
+  const jobs = ownerRows(db.aiBotCreatorJobs, ownerId).filter(job => {
+    const completedAt = Date.parse(job.providerCompletedAt || '');
+    return job.providerExecution === 'completed' && Number.isFinite(completedAt) && completedAt >= cutoff;
+  });
+  return {
+    tokensUsed: jobs.reduce((sum, job) => sum + Math.max(0, Number(job.providerUsage?.total_tokens) || 0), 0),
+    completedDrafts: jobs.length,
+    date: dayStart.toISOString().slice(0, 10)
+  };
+}
+
 export function getAIPerformanceSummary(db, ownerId) {
   ensureAICollections(db);
   const bots = ownerRows(db.aiBots, ownerId);
   const botIds = new Set(bots.map(bot => bot.id));
   const runs = ownerRows(db.aiBotRuns, ownerId).filter(run => botIds.has(run.botId));
   const tokenUse = runs.reduce((sum, run) => sum + Math.max(0, Number(run.totalTokens) || 0), 0);
+  const creatorDraftTokenUse = ownerRows(db.aiBotCreatorJobs, ownerId)
+    .reduce((sum, job) => sum + Math.max(0, Number(job.providerUsage?.total_tokens) || 0), 0);
   return {
     botCount: bots.length,
     activeBots: bots.filter(bot => bot.status === 'active').length,
@@ -524,7 +542,8 @@ export function getAIPerformanceSummary(db, ownerId) {
     creatorDrafts: ownerRows(db.aiBotCreatorJobs, ownerId).filter(item => item.status === 'draft').length,
     completedRuns: runs.filter(run => run.status === 'completed').length,
     failedRuns: runs.filter(run => run.status === 'failed').length,
-    totalTokensUsed: tokenUse,
+    totalTokensUsed: tokenUse + creatorDraftTokenUse,
+    creatorDraftTokensUsed: creatorDraftTokenUse,
     measuredRunCount: runs.length,
     source: 'recorded_ai_run_events_only'
   };
