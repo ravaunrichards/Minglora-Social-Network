@@ -124,6 +124,40 @@ test('provider UI offers a secret-free OpenAI connection probe and no browser ke
   assert.ok(!ui.includes('name="OPENAI_API_KEY"'));
 });
 
+test('Creator Studio generation is owner-MFA protected, calls the moderation adapter and only saves a draft', () => {
+  const start = server.indexOf("if (p === '/api/ai-network'");
+  const end = server.indexOf("if (method === 'POST' && p === '/api/webhooks/paypal')", start);
+  const route = server.slice(start, end);
+  for (const token of [
+    "if (method === 'POST' && parts[0] === 'creator-jobs' && parts[2] === 'generate'",
+    'currentProviderStatus.manualDraftsAvailable',
+    'startAICreatorJobGeneration(db, user.id, parts[1])',
+    'generateOpenAICreatorDraft({',
+    'completeAICreatorJobGeneration(db, user.id, started.id, generated)',
+    'failAICreatorJobGeneration(db, user.id, started.id, safeMessage)',
+    'await saveStore()',
+    'Provider credentials and prompt overrides are not accepted',
+    'No draft was generated'
+  ]) assert.ok(route.includes(token), 'Missing Creator Studio provider generation safeguard: ' + token);
+  assert.ok(route.indexOf('!isDesignatedCreatorHubAdmin(user)') >= 0);
+  assert.ok(route.indexOf('!hasActiveReviewerSession(user)') >= 0);
+  assert.ok(!route.includes('publish_content('));
+  assert.ok(!route.includes('activate_worker('));
+});
+
+test('Creator Studio UI lets an owner trigger generation and renders human-review-only output', () => {
+  for (const token of [
+    "data-ai-action=\\\"creator-generate\\\"",
+    "request('/creator-jobs/' + encodeURIComponent(id) + '/generate'",
+    'Generate with OpenAI',
+    'Retry AI generation',
+    'AI-generated draft · human review required',
+    'Minglora does not publish or schedule it automatically',
+    'Configure OPENAI_API_KEY and OPENAI_DEFAULT_MODEL'
+  ]) assert.ok(ui.includes(token), 'Missing Creator Studio generation UI: ' + token);
+  assert.ok(ui.includes('window.confirm('));
+});
+
 test('provider workspace renders the environment provider registry without exposing credential values', () => {
   for (const token of [
     'providerCatalogue = list(state.snapshot?.providerStatus?.providerCatalogue)',
