@@ -203,3 +203,10 @@ A dedicated Chromium 141 / model-viewer 4.4.0 workflow generated and captured al
 - **Beach Maracas:** the paired instrument silhouette and decorative rings are visible; gourd grain, paint and handle material detail remain simplified.
 
 **Acceptance boundary:** These results establish generated-file loading and visible browser rendering for 27 test cases. They do **not** establish premium art quality, approved licensing, authored GLTF animation channels, mastered synchronized gift audio, reduced-motion/device performance certification, or production release approval. All nine bespoke sources remain design-review-pending; no production gift was activated.
+
+
+## Royal Lions Scepter bespoke model checkpoint — 2026-11-15
+
+The canonical source gift `royal-lions-scepter-15000-mgl` now selects `assets/3d-assets/gift-models/royal-lions-scepter-model.mjs`. The generated self-contained glTF 2.0 has separately named geometry/material parts for a forward-facing lion face, 28 radial mane locks, ears, muzzle, brow ridges, crown points, cut gemstones, the gold staff, spiral shaft filigree, enamel grip and lower pommel. The existing generator also emits the subject-specific `royal-lions-scepter-original-v1` transparent SVG artwork and icon.
+
+The source record's category, configured 15,000-Coin value, animation identity/preset and active flag are not changed. Automated tests verify the catalogue mapping, embedded GLTF buffer, named mesh/material provenance and SVG artwork signatures. The model remains `design-review-pending`: these checks do not constitute premium visual approval, rights clearance, physical-device rendering approval, texture-map/KTX2 completion, skeletal GLTF animation or mastered audio. No production gift offering or economy record was changed.
