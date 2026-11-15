@@ -10,7 +10,7 @@ const provider = (id, label, category, credentialGroups = [], options = {}) => O
 });
 
 export const AI_PROVIDER_CATALOG = Object.freeze([
-  provider('openai', 'OpenAI API (ChatGPT models)', 'language_model', [['OPENAI_API_KEY']], { healthProbeAvailable: true, optionalEnvironmentVariables: ['OPENAI_BASE_URL','OPENAI_ORGANIZATION_ID','OPENAI_PROJECT_ID','OPENAI_DEFAULT_MODEL'] }),
+  provider('openai', 'OpenAI API (ChatGPT models)', 'language_model', [['OPENAI_API_KEY']], { healthProbeAvailable: true, note: 'A read-only model-access probe is available; no text-generation adapter or worker execution is enabled.', optionalEnvironmentVariables: ['OPENAI_BASE_URL','OPENAI_ORGANIZATION_ID','OPENAI_PROJECT_ID','OPENAI_DEFAULT_MODEL'] }),
   provider('anthropic', 'Anthropic Claude API', 'language_model', [['ANTHROPIC_API_KEY']], { optionalEnvironmentVariables: ['ANTHROPIC_BASE_URL','ANTHROPIC_DEFAULT_MODEL'] }),
   provider('google_gemini', 'Google Gemini Developer API', 'language_model', [['GEMINI_API_KEY'],['GOOGLE_AI_API_KEY']], { optionalEnvironmentVariables: ['GEMINI_BASE_URL','GEMINI_DEFAULT_MODEL'] }),
   provider('xai', 'xAI API', 'language_model', [['XAI_API_KEY']], { optionalEnvironmentVariables: ['XAI_BASE_URL','XAI_DEFAULT_MODEL'] }),
