@@ -57,6 +57,12 @@ test("Toucan gift uses original keel-billed geometry and subject-specific Minglo
   assert.ok(body, "the body mesh must exist");
   const bodyMaterial = model.materials?.[body.material];
   assert.ok(bodyMaterial?.pbrMetallicRoughness?.roughnessFactor >= 0.85, "dark plumage must use a matte material to avoid washed-out metallic reflections");
+  assert.ok(bodyMaterial.pbrMetallicRoughness.baseColorFactor.slice(0, 3).every(channel => channel < 0.01), "black plumage must retain a true near-black base colour");
+  const perch = primitives.find(primitive => primitive.extras?.mingloraPartName === "Toucan rainforest perch - textured branch");
+  assert.ok(perch, "the Toucan must retain its natural perch");
+  const perchBounds = model.accessors?.[perch.attributes?.POSITION];
+  assert.ok(perchBounds.max[0] - perchBounds.min[0] > (perchBounds.max[1] - perchBounds.min[1]) * 8, "the perch must remain horizontal when the bird is shown in profile");
+
   assert.equal(model.materials?.length, primitives.length, "each named part must retain its own PBR material");
 
   for (const primitive of primitives) {
