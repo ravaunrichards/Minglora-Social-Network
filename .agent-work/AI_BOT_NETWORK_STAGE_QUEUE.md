@@ -551,3 +551,15 @@ This section supersedes older live-count and runtime-version snapshots above; hi
 - Organizational templates and HR/teams/delegation schema exist, but the actual organization, department, employee and team tables have no live records; owner-authenticated management remains to be accepted.
 - **10-billion identities remain a design objective only**. Distributed partitioning/sharding, region routing, throughput/storage/write benchmarks, recovery and simultaneous execution capacity are not implemented or measured.
 - Current accepted checklist remains **2/19 = 10.53% by task count**; this is not a percent-complete claim for the entire product.
+
+
+## 2026-11-15 — next implementation checkpoint: supervised AI bot conversations
+
+**Task ID:** 1A1 — Human-initiated owner-only AI bot conversation path  
+**Status:** IN PROGRESS — working branch source prepared; not yet committed, CI-tested, migrated or deployed.
+
+Completed draft work: conversation/turn schema and private RPC; per-owner scoping; RLS with direct browser grants revoked; Bot Lab identity mapping; idempotent creation and turn writes; token reservation; stale-turn recovery; OpenAI moderation adapter; admin/MFA-protected server routes; conversation list/open/archive UI; adapter and database-contract tests; AI/API documentation edits planned.
+
+Required continuation order: (1) commit on feature branch and open PR, (2) execute focused AI checks and full CI, repair failures, (3) apply migration to existing Minglora Supabase project, verify grants/RLS/function, (4) deploy the existing Edge Function without changing its custom authentication setting and verify version, (5) seek real owner/provider acceptance when a configured credential and authorized browser session are available, (6) merge only after verifications.
+
+Do not seed identities, users, conversations or fake provider results. No autonomous worker, follow, publish, outbound messaging or financial path is enabled. Report the current verified count and tested capacity separately; 10 billion remains architectural only.

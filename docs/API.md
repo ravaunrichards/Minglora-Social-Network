@@ -327,3 +327,20 @@ The worker is packaged by `Dockerfile.video-worker` and runs separately from the
 | GET | `/api/video-channels/subscriptions` | Also includes recent updates from the member's subscribed channels |
 
 Channel updates are separate from regular feed posts and video uploads. Titles are limited to 100 characters, messages to 3,000 characters and active updates to 500 per owner. A channel's existing visibility, profile-privacy and block rules control who can read updates; only the owner can edit or delete them.
+
+
+## AI Bot Network — private conversation endpoints
+
+These endpoints are part of the existing `/api/ai-network` workspace. They inherit the signed-in Minglora session, designated Creator Hub administrator check, moderator authorization and active reviewer MFA-session gate. All records are scoped to the requesting owner. A bot must already exist in Bot Lab and be linked to its relational AI identity.
+
+| Method and path | Purpose | Request body |
+|---|---|---|
+| `GET /api/ai-network/conversations` | List up to 50 of the owner's private conversations | None |
+| `POST /api/ai-network/conversations` | Start a private conversation | `{ "botId": "<owned Bot Lab id>", "title": "Optional title", "idempotencyKey": "<UUID>" }` |
+| `GET /api/ai-network/conversations/:conversationId` | Read one conversation and its recent turns | None |
+| `PATCH /api/ai-network/conversations/:conversationId/archive` | Archive a conversation without deleting its history | Empty JSON object |
+| `POST /api/ai-network/conversations/:conversationId/turns` | Submit one human-initiated message | `{ "message": "…", "idempotencyKey": "<UUID>" }` |
+
+Messages are limited to 4,000 characters and each conversation to 200 turns. Sending requires a verified, configured OpenAI provider and model, input/output moderation, and sufficient daily token budget. Provider credentials are accepted only from private server environment configuration; request bodies cannot override provider, model, tokens, instructions or tools. Provider requests set `store:false` and `tools:[]`. The generated response is saved only after output moderation succeeds. A failed/incomplete provider response is not displayed as completed.
+
+Long-term AI memory is not conversation storage. Memory is passed only when that identity's owner has separately enabled memory. Conversations do not send posts, direct messages to other members, invitations, scheduled tasks or external actions. Runtime workers and autonomous execution remain paused.

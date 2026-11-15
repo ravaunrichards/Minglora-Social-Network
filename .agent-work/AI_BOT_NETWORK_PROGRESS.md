@@ -384,3 +384,20 @@ Do not report a percentage until every requirement is decomposed and weighted. A
 - [ ] Task migration and updated Edge Function are source-only; no task tables or controls have been deployed to production.
 - [ ] No task/approval records, worker credentials, model calls or external operations have been created or executed.
 
+
+
+## 2026-11-15 — supervised bot conversation slice (in progress)
+
+- [x] Inspected the latest main checkpoint and current Bot Lab identity-linking, owner/MFA gate, memory consent, provider health, budget and private runtime gateway paths.
+- [x] Created isolated feature branch `feat/minglora-supervised-bot-conversations` from main `7a6aa1b9d51f1b3644737665a7f05ec6f8e5c3c8`.
+- [x] Drafted additive owner-scoped conversation and turn tables, SECURITY INVOKER service-role-only RPC, row-level security, idempotency, message caps, budget reservations and stale-turn recovery.
+- [x] Added a human-initiated OpenAI conversation adapter with input/output moderation, `store:false`, no tools and optional separately enabled memory.
+- [x] Added admin-gated server routes, owner/MFA gate reuse, bot/identity linkage checks and the AI Bot Conversations workspace panel.
+- [x] Added focused adapter and conversation isolation tests; repository CI and database rollout remain pending.
+- [ ] Commit feature branch, open PR and pass AI Network/full repository checks.
+- [ ] Apply the additive migration to the existing Minglora Supabase project and verify schema, grants, RLS and RPC.
+- [ ] Deploy updated `minglora-runtime-state` while preserving its existing custom authentication mode; verify active function version.
+- [ ] Obtain real owner/device and configured-provider acceptance. No owner identity, AI bot or provider credential is fabricated; live generation remains blocked until legitimate setup.
+- [ ] Merge only after CI and database/runtime rollout checks pass.
+
+**Current status:** implementation draft, not yet committed, deployed or production-accepted. Existing production AI identity count remains zero. Global execution remains paused, `execution_enabled=false`, `max_concurrent_workers=0`. The 10-billion identity goal is architecture-only; no capacity test is claimed.

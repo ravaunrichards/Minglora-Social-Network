@@ -50,7 +50,7 @@ import { recordGifterGift, refundGifterGift, getGifterProgressionOverview, getGi
 import { LIVE_FAN_CLUB_GIFT_CODES, LIVE_FAN_CLUB_JOIN_GIFT_CODE, LIVE_FAN_CLUB_JOIN_COIN_COST, ensureLiveFanClubCollections, getLiveFanClubMembership, countActiveLiveFanClubMembers, joinLiveFanClub, awardLiveFanClubPoints, publicLiveFanClubMembership } from '../backend/modules/live/fan-club.js';
 import { ensureAICollections, getAICommandCenter, getAIProviderStatus, getAISettings, getAICreatorDailyUsage, createAIBot, updateAIBotStatus, createAIBotTeam, createAIBotSchedule, updateAIBotScheduleStatus, updateAISettings, createAICreatorJob, startAICreatorJobGeneration, completeAICreatorJobGeneration, failAICreatorJobGeneration, createAIApprovalRequest, decideAIApproval, setAICompanionConsent, createAICommunityEvent, emergencyPauseAI } from '../backend/modules/ai-network/service.js';
 import { probeOpenAIProvider } from '../backend/modules/ai-network/openai-provider-probe.js';
-import { generateOpenAICreatorDraft } from '../backend/modules/ai-network/openai-creator-drafts.js';
+import { generateOpenAICreatorDraft, generateOpenAIBotConversation } from '../backend/modules/ai-network/openai-creator-drafts.js';
 import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseExchangeOAuthCode, supabaseGetAuthSettings, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseRequestMagicLink, supabaseCompletePasswordReset, supabaseGetUser, supabaseUpdateEmail, supabaseRequestPhoneChange, supabaseVerifyPhoneChange, supabaseUpdateUserMetadata, supabaseUpdateProfile } from './supabase-auth.js';
 const scrypt = promisify(crypto.scrypt);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -1644,6 +1644,36 @@ async function route(req, res) {
         return response?.result;
       };
 
+      const listAIConversationMemory = entries => (Array.isArray(entries) ? entries : []).map(entry => ({
+        summary: String(entry?.summary || '').slice(0, 500),
+        memory_content: entry?.content && typeof entry.content === 'object' && !Array.isArray(entry.content)
+          ? { note: String(entry.content.note || '').slice(0, 500) }
+          : { note: '' }
+      })).filter(entry => entry.summary || entry.memory_content.note);
+
+      const runAIConversationCommand = async (aiAction, payload = {}) => {
+        if (!isSupabasePersistence()) {
+          throw Object.assign(new Error('AI conversations require Minglora Supabase persistence.'), { status: 503 });
+        }
+        try {
+          const response = await requestSupabaseState('ai_conversation_command', {
+            actorUserId: user.id,
+            aiAction,
+            payload
+          });
+          if (response?.skipped) {
+            throw Object.assign(new Error('AI conversations are unavailable in local-only persistence mode.'), { status: 503 });
+          }
+          return response?.result;
+        } catch (error) {
+          const message = String(error?.message || '');
+          if (/unsupported action|unsupported AI conversation command|function .*minglora_ai_conversation_command.*does not exist|could not find the function|schema cache/i.test(message)) {
+            throw Object.assign(new Error('The AI conversation migration and private runtime gateway must be deployed before this operation is available. No conversation data was changed.'), { status: 503 });
+          }
+          throw error;
+        }
+      };
+
       const aiIdentityIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
       const aiMediaBucketForSlot = slot => slot === 'avatar' || slot === 'cover' ? 'minglora-ai-profile-media' : '';
       const aiMediaLimitForSlot = slot => slot === 'avatar' ? 10 * 1024 * 1024 : slot === 'cover' ? 20 * 1024 * 1024 : 0;
@@ -2027,6 +2057,181 @@ async function route(req, res) {
         }
       }
 
+      if (method === 'GET' && sub === 'conversations' && parts.length === 1) {
+        const result = await runAIConversationCommand('list_conversations');
+        return json(res, 200, result || { conversations: [] });
+      }
+      if (method === 'POST' && sub === 'conversations' && parts.length === 1) {
+        const input = await body(req, 5000);
+        if (!input || typeof input !== 'object' || Array.isArray(input) ||
+            Object.keys(input).some(key => !['botId','title','idempotencyKey'].includes(key))) {
+          throw Object.assign(new Error('Conversation creation accepts only a linked bot, title and retry-safe request key.'), { status: 400 });
+        }
+        const botId = String(input.botId || '').trim();
+        const bot = (db.aiBots || []).find(item => item.id === botId && item.ownerId === user.id);
+        if (!bot || bot.status === 'archived') {
+          throw Object.assign(new Error('Choose an available AI bot owned by this Minglora account.'), { status: 404 });
+        }
+        if (bot.identityLinkStatus !== 'linked' || !aiIdentityIdPattern.test(String(bot.identityId || ''))) {
+          throw Object.assign(new Error('This bot is not linked to a verified relational AI identity. No conversation was created.'), { status: 409 });
+        }
+        const idempotencyKey = String(input.idempotencyKey || '').trim();
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(idempotencyKey)) {
+          throw Object.assign(new Error('A valid retry-safe conversation request key is required.'), { status: 400 });
+        }
+        const result = await runAIConversationCommand('create_conversation', {
+          identity_id: bot.identityId,
+          bot_id: bot.id,
+          title: String(input.title || ('Chat with ' + bot.name)).trim().slice(0, 100),
+          idempotency_key: idempotencyKey
+        });
+        return json(res, result?.reused ? 200 : 201, result || {});
+      }
+      if (method === 'GET' && parts[0] === 'conversations' && parts.length === 2) {
+        if (!aiIdentityIdPattern.test(String(parts[1] || ''))) {
+          throw Object.assign(new Error('A valid AI conversation ID is required.'), { status: 400 });
+        }
+        const result = await runAIConversationCommand('get_conversation', { conversation_id: parts[1] });
+        return json(res, 200, result || {});
+      }
+      if (method === 'PATCH' && parts[0] === 'conversations' && parts.length === 3 && parts[2] === 'archive') {
+        if (!aiIdentityIdPattern.test(String(parts[1] || ''))) {
+          throw Object.assign(new Error('A valid AI conversation ID is required.'), { status: 400 });
+        }
+        const result = await runAIConversationCommand('archive_conversation', { conversation_id: parts[1] });
+        return json(res, 200, result || {});
+      }
+      if (method === 'POST' && parts[0] === 'conversations' && parts.length === 3 && parts[2] === 'turns') {
+        const input = await body(req, 6000);
+        if (!input || typeof input !== 'object' || Array.isArray(input) ||
+            Object.keys(input).some(key => !['message','idempotencyKey'].includes(key))) {
+          throw Object.assign(new Error('A conversation request may contain only a message and retry-safe request key.'), { status: 400 });
+        }
+        const message = String(input.message || '').trim();
+        const idempotencyKey = String(input.idempotencyKey || '').trim();
+        if (!message || message.length > 4000) {
+          throw Object.assign(new Error('Conversation messages must contain between 1 and 4,000 characters.'), { status: 400 });
+        }
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(idempotencyKey)) {
+          throw Object.assign(new Error('A valid retry-safe message request key is required.'), { status: 400 });
+        }
+        const conversationId = String(parts[1] || '');
+        if (!aiIdentityIdPattern.test(conversationId)) {
+          throw Object.assign(new Error('A valid AI conversation ID is required.'), { status: 400 });
+        }
+        const conversationData = await runAIConversationCommand('get_conversation', { conversation_id: conversationId });
+        const conversation = conversationData?.conversation;
+        if (!conversation || conversation.conversation_status !== 'open') {
+          throw Object.assign(new Error('This AI conversation is unavailable or archived.'), { status: 409 });
+        }
+        const bot = (db.aiBots || []).find(item =>
+          item.id === String(conversation.bot_id || '') &&
+          item.ownerId === user.id &&
+          item.identityLinkStatus === 'linked' &&
+          item.identityId === String(conversation.identity_id || '') &&
+          item.status !== 'archived'
+        );
+        if (!bot) {
+          throw Object.assign(new Error('The linked AI bot is no longer available to this Minglora owner.'), { status: 409 });
+        }
+        const currentProviderStatus = getAIProviderStatus();
+        if (!currentProviderStatus.manualDraftsAvailable) {
+          throw Object.assign(new Error('AI conversation generation is not configured. Add OPENAI_API_KEY and OPENAI_DEFAULT_MODEL in the private Minglora server environment. No AI response was generated.'), { status: 503 });
+        }
+        const providerHealth = await probeOpenAIProvider();
+        if (!providerHealth.connected) {
+          throw Object.assign(new Error('OpenAI provider check failed (' + providerHealth.status + '): ' + providerHealth.note), { status: 503 });
+        }
+
+        // Memory remains separate and opt-in. Failure to inspect consent blocks generation.
+        const memoryAccess = await runAIMemoryCommand('list', { identity_id: conversation.identity_id });
+        const memoryEnabled = memoryAccess?.settings?.memory_enabled === true;
+        const memories = memoryEnabled ? listAIConversationMemory(memoryAccess.entries) : [];
+        const history = (Array.isArray(conversationData?.turns) ? conversationData.turns : [])
+          .filter(turn => turn.turn_status === 'completed' && turn.user_message && turn.assistant_message)
+          .slice(-10)
+          .map(turn => ({ user_message: turn.user_message, assistant_message: turn.assistant_message }));
+        const historyCharacters = history.reduce((sum, turn) => sum + turn.user_message.length + turn.assistant_message.length, 0);
+        const memoryCharacters = memories.reduce((sum, entry) => sum + String(entry.summary || '').length +
+          String(entry.memory_content?.note || '').length, 0);
+        const creatorSettings = getAISettings(db, user.id);
+        const creatorDailyUsage = getAICreatorDailyUsage(db, user.id);
+        const dailyTokenLimit = Math.max(0, Math.floor(Number(creatorSettings.dailyTokenBudget) || 0));
+        const creatorTokensUsed = Math.max(0, Math.floor(Number(creatorDailyUsage.tokensUsed) || 0));
+        const availableTokens = Math.max(0, dailyTokenLimit - creatorTokensUsed);
+        const estimatedInputReserve = Math.ceil((message.length + historyCharacters + memoryCharacters + 1600) / 3);
+        const configuredOutputLimit = Number(process.env.MINGLORA_AI_MAX_OUTPUT_TOKENS) || 1200;
+        const requestedOutputLimit = Math.min(1200, Math.max(128, Math.floor(configuredOutputLimit)));
+        const allowedOutputTokens = Math.min(requestedOutputLimit, availableTokens - estimatedInputReserve - 256);
+        if (allowedOutputTokens < 128) {
+          throw Object.assign(new Error('This conversation would exceed the remaining daily AI token budget. Adjust the budget or retry after the daily reset. No provider generation request was sent.'), { status: 429 });
+        }
+        const reservedTokens = estimatedInputReserve + allowedOutputTokens + 256;
+        const started = await runAIConversationCommand('start_turn', {
+          conversation_id: conversationId,
+          user_message: message,
+          idempotency_key: idempotencyKey,
+          available_tokens: availableTokens,
+          reserved_tokens: reservedTokens
+        });
+        const startedTurn = started?.turn || {};
+        if (started?.reused) {
+          if (startedTurn.turn_status === 'completed') {
+            const current = await runAIConversationCommand('get_conversation', { conversation_id: conversationId });
+            return json(res, 200, { ...current, reused: true });
+          }
+          if (startedTurn.turn_status === 'failed') {
+            throw Object.assign(new Error('This message request already failed. Submit a new message to retry it.'), { status: 409 });
+          }
+          throw Object.assign(new Error('This message request is already being processed. Refresh the conversation before retrying.'), { status: 409 });
+        }
+        const turnId = String(startedTurn.turn_id || '');
+        if (!aiIdentityIdPattern.test(turnId)) {
+          throw Object.assign(new Error('Minglora could not reserve this message turn. No provider request was sent.'), { status: 503 });
+        }
+        try {
+          const generated = await generateOpenAIBotConversation({
+            bot,
+            message,
+            history,
+            memories,
+            env: process.env,
+            maxOutputTokens: allowedOutputTokens
+          });
+          await runAIConversationCommand('complete_turn', {
+            conversation_id: conversationId,
+            turn_id: turnId,
+            assistant_message: generated.output,
+            provider: generated.provider,
+            model: generated.model,
+            input_tokens: Number(generated.usage?.input_tokens) || 0,
+            output_tokens: Number(generated.usage?.output_tokens) || 0,
+            total_tokens: Number(generated.usage?.total_tokens) ||
+              ((Number(generated.usage?.input_tokens) || 0) + (Number(generated.usage?.output_tokens) || 0))
+          });
+          const completed = await runAIConversationCommand('get_conversation', { conversation_id: conversationId });
+          return json(res, 200, { ...completed, reused: false });
+        } catch (error) {
+          const failure = {
+            conversation_id: conversationId,
+            turn_id: turnId,
+            failure_code: String(error?.code || 'provider_error').toLowerCase().replace(/[^a-z0-9_]/g, '_').slice(0, 60) || 'provider_error',
+            provider: error?.provider || null,
+            model: error?.model || null,
+            input_tokens: Number(error?.usage?.input_tokens) || 0,
+            output_tokens: Number(error?.usage?.output_tokens) || 0,
+            total_tokens: Number(error?.usage?.total_tokens) ||
+              ((Number(error?.usage?.input_tokens) || 0) + (Number(error?.usage?.output_tokens) || 0))
+          };
+          try { await runAIConversationCommand('fail_turn', failure); }
+          catch { /* Preserve the original safe provider error; the turn remains recoverable in the database. */ }
+          throw Object.assign(
+            new Error(error?.safeForClient ? String(error.message || 'AI conversation generation failed.') :
+              'The AI provider request failed. No assistant response was saved; check server logs without exposing credentials.'),
+            { status: Number(error?.status) || 502 }
+          );
+        }
+      }
       const runAITaskCommand = async (aiAction, payload = {}) => {
         if (!isModerator(user, req)) {
           throw Object.assign(
