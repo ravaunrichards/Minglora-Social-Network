@@ -439,3 +439,33 @@ test("Beach Maracas uses an original crossed Caribbean maraca pair with painted 
   assert.ok(svg.includes('data-gift-artwork="beach-maracas-original-v1"'), "the primary SVG must use the original pair artwork");
   assert.ok(icon.includes('data-gift-artwork="beach-maracas-original-v1"'), "the transparent icon must preserve the original pair");
 });
+
+
+test("Royal Lions Scepter uses an original sculpted lion-head and jeweled gold staff model", () => {
+  const scepter = gifts.find(gift => gift.code === "royal-lions-scepter-15000-mgl");
+  assert.ok(scepter, "Royal Lions Scepter must remain in the canonical gift catalogue");
+  assert.equal(scepter.name, "Royal Lions Scepter");
+  assert.equal(scepter.category, "fantasy");
+  assert.equal(scepter.coin_price, 15000, "the configured Coin value must remain unchanged");
+  assert.equal(scepter.active, true, "the source catalogue publication flag must remain unchanged");
+
+  const model = JSON.parse(readFileSync(path.join(assetRoot, scepter.code + ".gltf"), "utf8"));
+  assert.equal(model.asset?.version, "2.0");
+  assert.equal(model.asset?.extras?.mingloraAssetId, "gift-royal-lions-scepter-3d-v1");
+  assert.equal(model.asset?.extras?.source, "assets/3d-assets/gift-models/royal-lions-scepter-model.mjs");
+  assert.match(model.asset?.extras?.artDirection || "", /forward-facing lion head.*radial individually modelled mane locks.*sapphire eyes.*central deep-blue faceted sapphire.*spiral-fluted shaft/i);
+  assert.match(model.asset?.extras?.reviewStatus || "", /design-review-pending/);
+  assert.ok(model.meshes?.[0]?.primitives?.length >= 100, "the scepter must expose separately named lion, mane, crown and staff geometry");
+  assert.ok(model.materials?.some(material => material.name.includes("Royal Lions Scepter sculpted lion face")));
+  assert.ok(model.materials?.some(material => material.name.includes("Royal Lions Scepter radial mane lock")));
+  assert.ok(model.materials?.some(material => material.name.includes("Royal Lions Scepter main gold shaft")));
+  assert.ok(model.materials?.some(material => material.name.includes("Royal Lions Scepter crown central sapphire upper cut facet")));
+  assert.ok(model.materials?.some(material => material.name.includes("Royal Lions Scepter central enamel grip")));
+  assert.ok(model.buffers?.[0]?.uri.startsWith("data:application/octet-stream;base64,"), "the model must be self-contained for the existing viewer");
+  assert.ok(model.accessors?.filter(accessor => accessor.type === "VEC3").length >= 250, "the model must expose separate positions and normals for its sculpted meshes");
+
+  const svg = readFileSync(path.join(assetRoot, scepter.code + ".svg"), "utf8");
+  const icon = readFileSync(path.join(assetRoot, scepter.code + "-icon.svg"), "utf8");
+  assert.ok(svg.includes('data-gift-artwork="royal-lions-scepter-original-v1"'), "the primary SVG must use original lion-scepter artwork");
+  assert.ok(icon.includes('data-gift-artwork="royal-lions-scepter-original-v1"'), "the transparent icon must preserve the original lion-scepter artwork");
+});

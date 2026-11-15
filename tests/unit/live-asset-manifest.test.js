@@ -133,7 +133,8 @@ test("named gift models retain gift-specific source provenance in the LIVE manif
     ["LIVE Island", "gift-live-island-3d-v1", "assets/3d-assets/gift-models/live-island-model.mjs"],
     ["Crystal Crown", "gift-crystal-crown-3d-v1", "assets/3d-assets/gift-models/crystal-crown-model.mjs"],
     ["Phoenix", "gift-phoenix-3d-v1", "assets/3d-assets/gift-models/phoenix-model.mjs"],
-    ["Beach Maracas", "gift-beach-maracas-3d-v1", "assets/3d-assets/gift-models/beach-maracas-model.mjs"]
+    ["Beach Maracas", "gift-beach-maracas-3d-v1", "assets/3d-assets/gift-models/beach-maracas-model.mjs"],
+    ["Royal Lions Scepter", "gift-royal-lions-scepter-3d-v1", "assets/3d-assets/gift-models/royal-lions-scepter-model.mjs"]
   ];
   for (const [name, assetId, sourceFile] of expected) {
     const gift = manifest.gifts.find(entry => entry.name === name);
