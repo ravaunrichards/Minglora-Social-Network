@@ -137,6 +137,24 @@ export async function generateOpenAICreatorDraft({
     'This output is an AI-generated draft and must be reviewed by a human before any use.'
   ].join(' ');
 
+  const inputModeration = await postOpenAIJson({
+    fetchImpl,
+    endpoint: moderationEndpoint,
+    apiKey,
+    timeoutMs: requestTimeoutMs,
+    payload: {
+      model: 'omni-moderation-latest',
+      input: normalizedBrief
+    }
+  });
+  const inputModerationResult = Array.isArray(inputModeration.results) ? inputModeration.results[0] : null;
+  if (!inputModerationResult || typeof inputModerationResult.flagged !== 'boolean') {
+    throw providerError('moderation_unavailable', 'The submitted brief could not be verified by content moderation. No generation request was sent.', 502);
+  }
+  if (inputModerationResult.flagged) {
+    throw providerError('moderation_blocked', 'The submitted brief was flagged by content moderation. Revise it before requesting a draft.', 422);
+  }
+
   const generation = await postOpenAIJson({
     fetchImpl,
     endpoint: responsesEndpoint,
