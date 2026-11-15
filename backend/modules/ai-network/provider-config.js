@@ -100,6 +100,7 @@ export function getAIProviderCredentialStatus(providerId, env = process.env) {
     healthProbeAvailable: entry.healthProbeAvailable,
     adapterAvailable: entry.inferenceAdapterAvailable,
     credentialEnvironmentVariables: requiredVariables,
+    credentialEnvironmentVariableGroups: entry.credentialGroups.map(group => [...group]),
     optionalEnvironmentVariables: [...entry.optionalEnvironmentVariables],
     presentEnvironmentVariables: presentVariables,
     missingCredentialEnvironmentVariables: credentialsPresent
