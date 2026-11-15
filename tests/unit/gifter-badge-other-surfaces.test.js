@@ -41,7 +41,7 @@ test("Gift Gallery Title Gifters and ranked supporters use the same original bad
 
 test("platform Top Gifters uses the original level image and visibly prints its existing badge name", () => {
   assert.ok(topGifters.includes("item.gifterBadge || user.gifterBadge"));
-  assert.ok(topGifters.includes("/assets/gifter-badges/level_"));
+  assert.ok(topGifters.includes("/assets/gifter-badges/badges.svg#level-"));
   assert.ok(topGifters.includes("badgeMarkup"));
   assert.ok(topGifters.includes("minglora-gifter-badge-name"));
 });
