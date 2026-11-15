@@ -171,3 +171,13 @@ Canonical name, code, animals category, active flag and 25,999-Coin value are re
 | `assets/3d-assets/gift-models/beach-maracas-model.mjs` | Beach Maracas (`beach-maracas-1exxoag`, music; existing value 349 Coins) | Self-contained glTF 2.0 crossed gourd-shaker pair in distinct coral and lagoon palettes, hardwood handles, woven grip bands, painted seed motifs, sunburst details and conch charm. Matching subject-specific SVG and transparent icon carry `beach-maracas-original-v1`. | Exact-code generator, alternating maraca-rhythm motion and dedicated synthesized shaker/tonal sound. Human visual and rights review pending. |
 
 The canonical gift name, code, music category, active flag and 349-Coin value are reused without mutation. Source ID is `gift-beach-maracas-3d-v1`; review state remains `design-review-pending`.
+## Legacy standalone glTF gift-model inventory — 2026-11-15
+
+A machine-readable integrity inventory is now maintained at `assets/manifests/legacy-live-gift-models.json`.
+
+- **45** repository-tracked standalone glTF files are retained under `public/assets/gifts/` (**676,631 bytes total**).
+- Each record includes the repository/public path, byte size and Git blob SHA-1. The hash field is explicitly identified as Git's SHA-1 object identifier, not SHA-256.
+- `tests/unit/legacy-live-gift-model-inventory.test.js` verifies manifest uniqueness, file presence, byte sizes, Git blob hashes and core glTF 2.0 scene/mesh/buffer structure.
+- These are **legacy source assets**, not a production-ready gift catalogue. Catalogue identity mapping, visual review, technical render review and rights review remain pending for every item. The inventory intentionally records `production_eligible: false`; no LIVE runtime route, catalogue row, gift price or transaction was changed.
+- Reuse requires matching each model to a canonical gift code, visually inspecting the rendered asset, checking the actual runtime fallback/animation path and documenting rights/provenance before release.
+
