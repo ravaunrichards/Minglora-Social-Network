@@ -551,3 +551,27 @@ This section supersedes older live-count and runtime-version snapshots above; hi
 - Organizational templates and HR/teams/delegation schema exist, but the actual organization, department, employee and team tables have no live records; owner-authenticated management remains to be accepted.
 - **10-billion identities remain a design objective only**. Distributed partitioning/sharding, region routing, throughput/storage/write benchmarks, recovery and simultaneous execution capacity are not implemented or measured.
 - Current accepted checklist remains **2/19 = 10.53% by task count**; this is not a percent-complete claim for the entire product.
+
+
+## Owner-started AI bot conversation runtime checkpoint — 2026-11-15
+
+**Scope:** Minglora Social Network only. Feature branch: `feat/ai-owner-bot-conversations-20261115`. This is one implementation slice within the existing AI Network plan; it does not change the wider 2/19 accepted checklist or claim full AI Network completion.
+
+### Subtask register
+
+- [x] **AI-CHAT-01 — Provider adapter and capability:** added the human-triggered OpenAI Responses adapter with input/output moderation, `store:false`, bounded history, optional memory context only after explicit memory opt-in, and no tools or external actions. Added the explicit `conversation` bot capability. Commits: `4ec3c86df98fed5fd5eef5ba6379791e00d16dbd`, `0baea9f94652f1865c12ca435c6198fff4e4121d`, `9df21a62de253f7e0480405b1faa5ac82d6993c9`.
+- [x] **AI-CHAT-02 — Private persistence and gateway:** added owner-scoped conversation sessions/messages, request idempotency, five-minute leases, daily token reservations/usage, RLS and service-role-only grants; added the private Edge Function action. Commits: `1cb83d17f09b143d190f9a84037893fc8db2a31f`, `412dc924e94d6d591805396c8d31dcad53085cc1`.
+- [x] **AI-CHAT-03 — Authenticated Node API:** added owner-bot/conversation checks, provider re-probe, token reservation, generated-reply moderation and transcript persistence. Commit: `3ee7558b138327008a4db159be5805e529392403`.
+- [x] **AI-CHAT-04 — Admin UI and documentation:** added the explicit capability selector, private Chat control, transcript and owner-started message form; recorded module documentation. Commits: `03f3c5ce40ce9bb4f825a338cf7fd1d80aa37b41`, `5cfec4b87095f3dad671dd9102c0e2dbd36110c3`.
+- [ ] **AI-CHAT-05 — Verification and release:** regression tests authored and gateway tests extended. Still pending CI execution, SQL migration validation in a non-production database, live provider health/inference using the private server environment, authenticated owner browser acceptance, Render deployment selection/approval, and deployment verification.
+
+### Safety and live-state evidence
+
+- Production Supabase project remains `gzycobgbasnqqhnympkr`; no separate database created.
+- The read-only live registry count was **0 AI identities** at inspection. No test identity, human Auth user, bot, conversation or message was created in production.
+- Existing AI task runtime remained `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`. This feature adds no autonomous worker or scheduler execution.
+- The conversation migration and Edge Function handler are **source-only**; no production schema change or Edge Function deployment was made. No isolated Supabase development branch was available in this execution, so the migration must be validated/deployed through an approved non-production target before production rollout.
+- The last durable repository checkpoint reported no live provider inference. The current request path performs a fresh read-only OpenAI model probe and refuses to create a response if the private provider environment is not configured. No credentials are read into the UI or accepted in request bodies.
+- The 10,000,000,000 identity objective remains an architectural target only; it is not a live identity count or measured scale result.
+
+**Current task status:** AI-CHAT-01 through AI-CHAT-04 are source-committed on the isolated feature branch. AI-CHAT-05 is the next unfinished task. Do not merge, apply the new migration to production, deploy the Edge Function, enable workers or claim successful inference until the outstanding verification and release gates pass.
