@@ -250,3 +250,14 @@ The source catalogue grand-entry value, animation key and 1,900-ms duration are 
 | assets/3d-assets/gift-models/keeper-of-atlantis-model.mjs | Keeper of Atlantis (keeper-of-atlantis-15000-mgl, fantasy; source catalogue value 15,000 Coins) | Original glTF 2.0 three-prong underwater trident, aquamarine/opal jewels, nacre shell medallion, branching coral, sea-glass bubbles and curling tidal currents; matching keeper-of-atlantis-original-v1 SVG/icon. | Exact-code generator route and regression checks for code/name/category/value/active state/canonical cosmic-orbit preset, model parts/materials, embedded buffers and SVG artwork signatures. Design/licensing review pending. |
 
 The model source records gift-keeper-of-atlantis-3d-v1 and design-review-pending. The source catalogue item is not evidence of a production active offer; the version-3 production publication gate remains separate.
+
+
+## Keeper of Atlantis LIVE event effects — 2026-11-15
+
+| Resource | Runtime mapping | Acceptance boundary |
+|---|---|---|
+| Motion | keeper-of-atlantis-15000-mgl → atlantis-trident-surge; the generated motion-index record retains catalog_motion_preset: cosmic-orbit separately. | Existing Web Animations gift mount; reduced-motion support retained; physical-device timing QA pending. |
+| Sound | keeper-of-atlantis-deep-surge-and-trident-bells-v1; Web Audio filtered underwater swell, sub-bass impact, five bell tones and bubble shimmer. | Local synthesis only; no mastered sound recording; sound opt-out remains respected. |
+| Cache | gift-effects.js?v=20261115-keeper-atlantis-surge-1; service-worker shell v319. | HTML and service worker reference the same versioned script. |
+
+The source gift code, name, fantasy category, 15,000-Coin configured value, active flag and cosmic-orbit source preset are unchanged. No production offer/economy record changed.
