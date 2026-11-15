@@ -151,10 +151,14 @@
 
 /* 4. Fixed Grid — nine equal-sized participant cells in an exact 3×3 grid. */
 #live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fixed-grid"]{
+  width:min(100%,60dvh)!important;
+  height:auto!important;
+  min-height:0!important;
+  aspect-ratio:1/1!important;
+  margin-inline:auto!important;
   grid-template-columns:repeat(3,minmax(0,1fr))!important;
-  grid-template-rows:repeat(3,minmax(72px,1fr))!important;
-  grid-auto-rows:minmax(72px,1fr)!important;
-  min-height:clamp(300px,60dvh,690px)!important;
+  grid-template-rows:repeat(3,minmax(0,1fr))!important;
+  grid-auto-rows:minmax(0,1fr)!important;
 }
 #live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fixed-grid"]>.live-guest-layout-heading{display:none!important}
 #live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fixed-grid"]>.live-guest-seat{
