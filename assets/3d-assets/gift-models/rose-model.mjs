@@ -132,22 +132,35 @@ export function createRoseModel() {
     add(name, positions, normals, indices, color, metallic, 0.48);
   }
 
-  stem("Rose stem", -0.17, 0.023, 0.014, 0.78, "#287342");
-  stem("Stem collar", -0.535, 0.041, 0.041, 0.042, "#c8a24d", 0.72);
-  surfacePetal("Lower leaf - left", -2.42, -0.31, 0.31, 0.078, 0.012, 0.05, "#318b50", 14, 10, 0.48, {color: "#91c77e", radius: 0.0042, branches: [0.28, 0.47, 0.66], lift: 0.003});
-  surfacePetal("Lower leaf - right", -0.48, -0.12, 0.28, 0.074, 0.01, 0.04, "#46a75f", 14, 10, 0.46, {color: "#a2d889", radius: 0.0038, branches: [0.3, 0.5, 0.69], lift: 0.003});
-  surfacePetal("Upper leaf", 2.86, -0.23, 0.23, 0.064, 0.008, 0.055, "#267c48", 14, 10, 0.5, {color: "#83b96f", radius: 0.0035, branches: [0.32, 0.55], lift: 0.003});
+  stem("Rose stem", -0.1, 0.023, 0.014, 0.9, "#1d6034");
+  stem("Stem collar", -0.535, 0.041, 0.041, 0.042, "#a77d36", 0.72);
+  surfacePetal("Lower leaf - left", -2.42, -0.31, 0.31, 0.078, 0.012, 0.05, "#1b6538", 18, 12, 0.5, {color: "#3d8a50", radius: 0.0022, branches: [0.28, 0.47, 0.66], lift: 0.0018});
+  surfacePetal("Lower leaf - right", -0.48, -0.12, 0.28, 0.074, 0.01, 0.04, "#287b45", 18, 12, 0.48, {color: "#4b965a", radius: 0.002, branches: [0.3, 0.5, 0.69], lift: 0.0018});
+  surfacePetal("Upper leaf", 2.86, -0.23, 0.23, 0.064, 0.008, 0.055, "#185d33", 18, 12, 0.52, {color: "#397d49", radius: 0.0019, branches: [0.32, 0.55], lift: 0.0018});
+  tubeNetwork("Rose leaf petioles", [
+    [[0, -0.31, 0], [-0.018, -0.296, -0.016], [-0.037, -0.284, -0.033]],
+    [[0, -0.12, 0], [0.022, -0.105, -0.011], [0.044, -0.09, -0.022]],
+    [[0, -0.23, 0], [-0.022, -0.215, 0.006], [-0.043, -0.2, 0.012]]
+  ], 0.007, "#245b34", 0.54);
   surfacePetal("Stem thorn one", 0.12, -0.32, 0.09, 0.024, 0.006, -0.03, "#286b3e", 7, 5, 0.52);
   surfacePetal("Stem thorn two", Math.PI + 0.12, -0.08, 0.08, 0.022, 0.005, -0.025, "#286b3e", 7, 5, 0.52);
 
-  for (let i = 0; i < 5; i++) surfacePetal("Rose sepal " + (i + 1), i * TAU / 5, 0.31, 0.19, 0.052, 0.008, -0.075, "#2f874b", 14, 10, 0.5);
-  for (let i = 0; i < 7; i++) surfacePetal("Velvet outer petal " + (i + 1), i * TAU / 7, 0.4, 0.34, 0.145, 0.025, 0.15, "#a91746", 14, 10, 0.37, {color: "#cf5574", radius: 0.0024, branches: [0.42, 0.67], lift: 0.002});
-  for (let i = 0; i < 6; i++) surfacePetal("Satin middle petal " + (i + 1), (i + 0.5) * TAU / 6, 0.435, 0.25, 0.12, 0.016, 0.185, "#d32459", 14, 10, 0.34, {color: "#f27692", radius: 0.0021, branches: [0.51], lift: 0.002});
-  for (let i = 0; i < 5; i++) surfacePetal("Silk inner petal " + (i + 1), (i + 0.15) * TAU / 5, 0.47, 0.16, 0.092, 0.008, 0.215, "#f05b7c", 14, 10, 0.31);
+  for (let i = 0; i < 5; i++) surfacePetal("Rose sepal " + (i + 1), i * TAU / 5, 0.33, 0.19, 0.052, 0.008, -0.065, "#226b3d", 18, 12, 0.52);
+  for (let i = 0; i < 7; i++) surfacePetal("Velvet outer petal " + (i + 1), i * TAU / 7, 0.38, 0.3, 0.142, 0.025, 0.31, "#95153f", 20, 14, 0.39, {color: "#a83b5f", radius: 0.00125, branches: [0.42, 0.67], lift: 0.00125});
+  for (let i = 0; i < 6; i++) surfacePetal("Satin middle petal " + (i + 1), (i + 0.5) * TAU / 6, 0.48, 0.22, 0.118, 0.016, 0.33, "#bf2452", 18, 14, 0.36, {color: "#d85170", radius: 0.0011, branches: [0.51], lift: 0.0012});
+  for (let i = 0; i < 5; i++) surfacePetal("Silk inner petal " + (i + 1), (i + 0.15) * TAU / 5, 0.58, 0.145, 0.088, 0.008, 0.34, "#e84d76", 18, 12, 0.33);
 
-  ellipsoid("Rose heart", 0, 0.535, 0, 0.084, 0.091, 0.078, "#8e123b");
-  ellipsoid("Rose heart highlight", -0.025, 0.59, 0.055, 0.022, 0.018, 0.012, "#ffd1dc", 0.28);
-  ellipsoid("Dew drop", 0.255, 0.56, 0.04, 0.028, 0.035, 0.022, "#fff2f5", 0.12);
+  ellipsoid("Rose heart", 0, 0.68, 0, 0.086, 0.084, 0.078, "#7e1235");
+  const stamenPaths = [];
+  for (let i = 0; i < 8; i++) {
+    const angle = i * TAU / 8;
+    const x = Math.cos(angle), z = Math.sin(angle);
+    stamenPaths.push([[x * 0.025, 0.67, z * 0.025], [x * 0.045, 0.72, z * 0.045], [x * 0.061, 0.79, z * 0.061]]);
+    ellipsoid("Rose golden anther " + (i + 1), x * 0.061, 0.79, z * 0.061, 0.009, 0.012, 0.009, "#d6a13a", 0.34);
+  }
+  tubeNetwork("Rose golden stamen filaments", stamenPaths, 0.0025, "#e5b858", 0.42);
+  ellipsoid("Rose heart highlight", -0.025, 0.735, 0.055, 0.022, 0.018, 0.012, "#e5a4b5", 0.34);
+  ellipsoid("Dew drop", 0.235, 0.65, 0.04, 0.02, 0.026, 0.016, "#f4d7df", 0.18);
 
   const chunks = [], views = [], accessors = [], primitives = [], materials = [];
   let offset = 0;
@@ -182,7 +195,7 @@ export function createRoseModel() {
     asset: {version: "2.0", generator: "Minglora Gift Studio", extras: {
       mingloraAssetId: "gift-rose-3d-v1",
       source: "assets/3d-assets/gift-models/rose-model.mjs",
-      artDirection: "layered curled petal sculpture with raised surface vein networks, five sepals, tapered thorned stem, three sculpted leaves with branching venation and dew detail",
+      artDirection: "upright layered rose bloom with cupped velvet outer petals, raised midribs and branching leaf venation, fitted green calyx, tapered thorned stem, three attached leaves, golden stamens and dew detail",
       reviewStatus: "design-review-pending"
     }},
     scene: 0, scenes: [{nodes: [0]}], nodes: [{mesh: 0, name: "Minglora Rose - Botanical Sculpture"}],
