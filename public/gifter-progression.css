@@ -504,3 +504,10 @@
   .gp-reference-figure{padding:8px;border-radius:12px}
   .gp-reference-figure img{width:100%;height:auto}
 }
+
+
+/* Supplied Gifter badge progression strip: keep the original artwork uncropped. */
+.gp-progression-art-reference{display:grid;gap:12px;min-width:0}
+.gp-progression-art-frame{display:block;min-width:0;max-width:100%;margin:0;padding:clamp(8px,1.2vw,13px);box-sizing:border-box;border:1px solid var(--border,#e2e7ef);border-radius:14px;background:var(--surface,#fff);box-shadow:0 4px 14px rgba(25,35,55,.06)}
+.gp-progression-art-frame img{display:block;width:100%;max-width:100%;height:auto;min-width:0;object-fit:contain;object-position:center;border-radius:8px}
+@media(max-width:760px){.gp-progression-art-frame{padding:8px;border-radius:12px}.gp-progression-art-frame img{width:100%;height:auto}}
