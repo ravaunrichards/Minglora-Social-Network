@@ -355,3 +355,15 @@ The browser captures establish that all nine bespoke models load and remain visi
 - Expanded the Chromium model matrix to include Baseball and the existing Royal Lions Scepter alongside the original nine models, across desktop, tablet and mobile.
 - Validation: the initial CI run exposed an existing assertion requiring seam signature `stroke="#d84854" stroke-width="12"`; the SVG seam was corrected to match it while retaining the layered red seam treatment. Latest-head rerun is pending.
 - Release boundary: the model remains `design-review-pending`; human art review, rights clearance, mastered individual gift audio/animation and physical-device acceptance remain outstanding. No database, wallet, price, transaction or deployment operation occurred.
+
+
+## Djembe Master refinement — 2026-11-15
+- Added 18 named mahogany grain meshes and matte-leaning shell material values.
+- Focused test, 33/33 Chromium renders and layout QA passed.
+- Visual review found the shell still too uniform for premium sign-off; authored wood texture and human review remain outstanding.
+- PR #400 remains draft/unmerged. No production data or deployment changed.
+## Toucan original animal gift — 2026-11-15 (PR #406)
+- Added bespoke Toucan GLTF source, exact-code generator dispatch, original primary/transparent SVG artwork and focused unit test.
+- Extended browser matrix to 12 models × desktop/tablet/mobile. Initial face-on render was corrected to a profile and passed 36/36; visual inspection prompted an additional orange-stripe/deeper-matte refinement.
+- The latest source/test commits need fresh CI and screenshot confirmation. PR #406 stays draft; art/rights/human review and final device QA are open gates.
+- No production catalogue activation or deployment occurred.
