@@ -41,7 +41,7 @@ test("ordered Level references each display their matching individual original b
   const progression = read("public/gifter-progression.js");
   const styles = read("public/gifter-progression.css");
   assert.match(progression, /gp-level-index-art/);
-  assert.match(progression, /href='\/assets\/gifter-badges\/badges\.svg#level-/);
+  assert.match(progression, /src='\/assets\/gifter-badges\/level_/);
   assert.match(progression, /String\(levelNumber\)\.padStart\(2, "0"\)/);
   assert.match(progression, /aria-label='" \+ esc\(badgeName\) \+ "'/);
   assert.match(progression, /width='170' height='76'/);
