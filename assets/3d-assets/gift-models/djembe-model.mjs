@@ -143,9 +143,9 @@ export function createDjembeModel() {
     return 0.4;
   };
 
-  const wood = "#6f3528", woodLight = "#a95b3c", woodDark = "#3d211e";
+  const wood = "#54271e", woodLight = "#8d4d32", woodDark = "#2d1715";
   const rope = "#d4bd91", ropeHighlight = "#eee0c3";
-  lathe("Djembe hand-carved mahogany shell", profile, wood, { segments: 56, roughness: 0.39 });
+  lathe("Djembe hand-carved mahogany shell", profile, wood, { segments: 56, roughness: 0.62 });
   lathe("Djembe dark hollow inner wall", [[0.33, 0.385], [0.43, 0.405], [0.54, 0.444], [0.65, 0.478]], woodDark, { segments: 48, inside: true, roughness: 0.58 });
   lathe("Djembe sculpted lower foot", [[-0.79, 0.218], [-0.77, 0.254], [-0.72, 0.265], [-0.68, 0.252]], woodDark, { segments: 48, roughness: 0.5 });
   lathe("Djembe top leather binding", [[0.645, 0.492], [0.675, 0.518], [0.707, 0.515]], woodDark, { segments: 56, roughness: 0.46 });
@@ -188,20 +188,20 @@ export function createDjembeModel() {
   // Fine, restrained grain threads follow the carved mahogany shell rather than floating off its surface.
   // They use the existing geometry/material pipeline and remain lightweight for the LIVE model viewer.
   const grainY = [-0.62, -0.44, -0.25, -0.05, 0.16, 0.36, 0.54];
-  const grainColors = ["#542b23", "#a95e41", "#bd805e"];
-  for (let i = 0; i < 12; i++) {
-    const anchor = TAU * i / 12;
+  const grainColors = ["#321811", "#9a583d", "#bd805e"];
+  for (let i = 0; i < 18; i++) {
+    const anchor = TAU * (i + 0.5) / 18;
     const points = grainY.map((y, index) => {
       const angle = anchor +
         0.018 * Math.sin(index * 0.74 + i * 1.31) +
         0.007 * Math.sin(index * 1.37 + i * 0.61);
-      const radius = bodyRadius(y) + 0.0055;
+      const radius = bodyRadius(y) + 0.0095;
       return [radius * Math.cos(angle), y, radius * Math.sin(angle)];
     });
     tube(
       "Djembe flowing mahogany grain inlay " + (i + 1),
       points,
-      0.0042,
+      0.0065,
       grainColors[i % grainColors.length],
       0.82
     );
@@ -285,7 +285,7 @@ export function createDjembeModel() {
       extras: {
         mingloraAssetId: "gift-djembe-3d-v1",
         source: "assets/3d-assets/gift-models/djembe-model.mjs",
-        artDirection: "sculpted goblet-shaped mahogany shell with twelve fine flowing grain inlays, hollow bowl, taut hide drumhead, sixteen hand-laid tension cords, woven diamond lacing, carved lower-band detailing and concentric rim bindings",
+        artDirection: "sculpted goblet-shaped mahogany shell with eighteen flowing mahogany grain inlays, hollow bowl, taut hide drumhead, sixteen hand-laid tension cords, woven diamond lacing, carved lower-band detailing and concentric rim bindings",
         reviewStatus: "design-review-pending"
       }
     },
