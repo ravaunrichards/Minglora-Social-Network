@@ -179,7 +179,7 @@ test('The nine supplied guest arrangements have distinct reference-matched grid 
 
 test('Full Screen has its own expand icon with no guest panels; Fluid Panel keeps its panel icon', () => {
   assert.ok(app.includes("value:'full-screen',label:'Full Screen',icon:'fullscreen'"));
-  assert.ok(app.includes("value:'fluid-panel',label:'Fluid Panel',icon:'featured'"));
+  assert.ok(app.includes("value:'fluid-panel',label:'Fluid Panel',icon:'fluidPanel'"));
   const iconMap=app.slice(app.indexOf('function liveLayoutIcon'),app.indexOf('function applyLiveScreenLayout'));
   const fullScreenIcon=iconMap.split('fullscreen:')[1].split(',fluidPanel:')[0];
   assert.ok(fullScreenIcon.includes("M8 3H3v5 M16 3h5v5 M21 16v5h-5 M8 21H3v-5"));
