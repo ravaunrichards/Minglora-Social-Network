@@ -8,6 +8,10 @@ import {
   createAIBotTeam,
   createAIApprovalRequest,
   createAICreatorJob,
+  getAIBotConversation,
+  beginAIBotChatRequest,
+  completeAIBotChatRequest,
+  failAIBotChatRequest,
   startAICreatorJobGeneration,
   completeAICreatorJobGeneration,
   failAICreatorJobGeneration,
@@ -297,6 +301,142 @@ test('Creator Studio usage is measured in the daily token budget and performance
   const performance = getAIPerformanceSummary(db, 'owner-1');
   assert.equal(performance.creatorDraftTokensUsed, 220);
   assert.equal(performance.totalTokensUsed, 220);
+});
+
+test('owner-initiated AI bot conversations persist moderated exchanges with AI disclosure and no external actions', () => {
+  const db = state();
+  const bot = makeBot(db);
+  bot.identityId = 'identity-1';
+  bot.identityLinkStatus = 'linked';
+  const requestId = '11111111-1111-4111-a111-111111111111';
+  const started = beginAIBotChatRequest(db, 'owner-1', {
+    botId: bot.id, identityId: bot.identityId, requestId,
+    message: 'Can you explain how to prepare a creator post?'
+  }, { now });
+  assert.equal(started.reused, false);
+  assert.equal(started.request.status, 'running');
+  const result = completeAIBotChatRequest(db, 'owner-1', requestId, {
+    userMessage: 'Can you explain how to prepare a creator post?',
+    assistantMessage: 'I am an AI assistant. Start with one clear goal and a short outline.',
+    provider: 'openai', model: 'test-model', responseId: 'resp-chat-1',
+    providerRequestId: 'req-chat-1',
+    usage: { input_tokens: 45, output_tokens: 35, total_tokens: 80 },
+    moderation: { model: 'omni-moderation-latest', flagged: false }
+  }, { now });
+  assert.equal(result.bot.id, bot.id);
+  assert.equal(result.conversation.ownerId, 'owner-1');
+  assert.equal(result.messages.length, 2);
+  assert.equal(result.messages[0].role, 'user');
+  assert.equal(result.messages[1].role, 'assistant');
+  assert.equal(result.messages[1].aiDisclosureRequired, true);
+  assert.equal(result.messages[1].externalActionsTaken, false);
+  assert.equal(result.messages[1].providerUsage.total_tokens, 80);
+  assert.equal(bot.status, 'draft');
+  assert.equal(db.aiBotUsageEvents.length, 1);
+  assert.equal(db.aiBotChatRequests[0].status, 'completed');
+  assert.equal(db.aiBotAudit.at(-1).action, 'bot_chat_exchange_completed');
+});
+
+test('bot chat is owner-isolated, identity-linked, and prevents duplicate request IDs', () => {
+  const db = state();
+  const bot = makeBot(db);
+  bot.identityId = 'identity-owner-one';
+  bot.identityLinkStatus = 'linked';
+  assert.throws(() => getAIBotConversation(db, 'owner-2', bot.id), { status: 404 });
+  assert.throws(() => beginAIBotChatRequest(db, 'owner-1', {
+    botId: bot.id, identityId: 'different-identity',
+    requestId: '22222222-2222-4222-a222-222222222222',
+    message: 'Please explain this topic.'
+  }), { status: 409 });
+
+  const requestId = '33333333-3333-4333-a333-333333333333';
+  const first = beginAIBotChatRequest(db, 'owner-1', {
+    botId: bot.id, identityId: bot.identityId, requestId,
+    message: 'Please explain this topic.'
+  }, { now });
+  assert.equal(first.reused, false);
+  assert.throws(() => beginAIBotChatRequest(db, 'owner-1', {
+    botId: bot.id, identityId: bot.identityId, requestId,
+    message: 'Please explain this topic.'
+  }, { now }), { status: 409 });
+  completeAIBotChatRequest(db, 'owner-1', requestId, {
+    userMessage: 'Please explain this topic.',
+    assistantMessage: 'I am an AI assistant. Here is an explanation.',
+    provider: 'openai', model: 'test-model', responseId: 'resp-idempotent',
+    usage: { input_tokens: 20, output_tokens: 20, total_tokens: 40 },
+    moderation: { model: 'omni-moderation-latest', flagged: false }
+  }, { now });
+  const replay = beginAIBotChatRequest(db, 'owner-1', {
+    botId: bot.id, identityId: bot.identityId, requestId,
+    message: 'Please explain this topic.'
+  }, { now });
+  assert.equal(replay.reused, true);
+  assert.equal(replay.conversationId, db.aiBotConversations[0].id);
+  assert.equal(db.aiBotConversationMessages.length, 2);
+});
+
+test('failed bot chat records billable token usage but never stores rejected message or reply content', () => {
+  const db = state();
+  const bot = makeBot(db);
+  bot.identityId = 'identity-usage';
+  bot.identityLinkStatus = 'linked';
+  const requestId = '44444444-4444-4444-a444-444444444444';
+  beginAIBotChatRequest(db, 'owner-1', {
+    botId: bot.id, identityId: bot.identityId, requestId,
+    message: 'A safe question used only for this failure test.'
+  }, { now });
+  const failed = failAIBotChatRequest(db, 'owner-1', requestId, 'Output moderation unavailable.', {
+    now,
+    providerFailure: {
+      provider: 'openai', model: 'test-model',
+      usage: { input_tokens: 25, output_tokens: 40, total_tokens: 65 }
+    }
+  });
+  assert.equal(failed.status, 'failed');
+  assert.equal(db.aiBotConversationMessages.length, 0);
+  assert.equal(db.aiBotUsageEvents[0].usage.total_tokens, 65);
+  assert.equal(getAICreatorDailyUsage(db, 'owner-1', { now }).tokensUsed, 65);
+  assert.equal(getAIPerformanceSummary(db, 'owner-1').botChatTokensUsed, 65);
+});
+
+test('bot chat daily token usage includes Creator Studio and bot conversations', () => {
+  const db = state();
+  const bot = makeBot(db);
+  bot.identityId = 'identity-combined';
+  bot.identityLinkStatus = 'linked';
+  const requestId = '55555555-5555-4555-a555-555555555555';
+  beginAIBotChatRequest(db, 'owner-1', {
+    botId: bot.id, identityId: bot.identityId, requestId,
+    message: 'Can you help me prepare for an event?'
+  }, { now });
+  completeAIBotChatRequest(db, 'owner-1', requestId, {
+    userMessage: 'Can you help me prepare for an event?',
+    assistantMessage: 'I am an AI assistant. Here is a checklist.',
+    provider: 'openai', model: 'test-model',
+    usage: { input_tokens: 30, output_tokens: 30, total_tokens: 60 },
+    moderation: { model: 'omni-moderation-latest', flagged: false }
+  }, { now });
+  assert.equal(getAICreatorDailyUsage(db, 'owner-1', { now }).tokensUsed, 60);
+  assert.equal(getAIPerformanceSummary(db, 'owner-1').botChatTokensUsed, 60);
+});
+
+test('bot chat can retry after a stale request lease without duplicating messages', () => {
+  const db = state();
+  const bot = makeBot(db);
+  bot.identityId = 'identity-stale';
+  bot.identityLinkStatus = 'linked';
+  const requestId = '66666666-6666-4666-a666-666666666666';
+  beginAIBotChatRequest(db, 'owner-1', {
+    botId: bot.id, identityId: bot.identityId, requestId,
+    message: 'Please explain a useful creator workflow.'
+  }, { now });
+  const retry = beginAIBotChatRequest(db, 'owner-1', {
+    botId: bot.id, identityId: bot.identityId, requestId,
+    message: 'Please explain a useful creator workflow.'
+  }, { now: new Date(now.getTime() + 6 * 60 * 1000) });
+  assert.equal(retry.reused, false);
+  assert.equal(retry.request.status, 'running');
+  assert.equal(db.aiBotConversationMessages.length, 0);
 });
 
 test('OpenAI manual draft availability does not enable autonomous execution', () => {
