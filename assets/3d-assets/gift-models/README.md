@@ -89,3 +89,14 @@ The existing gift build generates both subject-specific transparent SVG artwork 
 - Materials: named PBR meshes for gold, mane, face, enamel, eyes and gemstones; geometry buffers are embedded for the existing model viewer
 - Review: `design-review-pending`; no premium, human visual, licensing or device approval is implied
 - Integration: the existing gift generator routes only the exact canonical gift code to this source; the configured catalogue value, publication flag, backend offers and transaction logic remain unchanged
+
+
+## Keeper of Atlantis v1
+
+- Source: keeper-of-atlantis-model.mjs
+- Target: canonical catalogue item keeper-of-atlantis-15000-mgl (Keeper of Atlantis)
+- Output: generated glTF 2.0, primary SVG and transparent icon
+- Geometry: a three-prong ceremonial trident with individually modelled gold prongs, central aquamarine and opal jewels, a spiral-fluted staff, dark-sea enamel grip, nacre shell medallion with raised ribs/pearls, branching coral, sea-glass bubbles and curling tidal currents
+- Materials: named PBR geometry for gold, aquamarine, opal, nacre, coral, sea-glass and ocean-current elements; the geometry buffer is embedded
+- Review: design-review-pending; no premium, human visual, licensing or physical-device approval is implied
+- Integration: the generator routes only the exact canonical gift code; the source catalogue's 15,000-Coin value, active flag and cosmic-orbit animation preset remain unchanged
