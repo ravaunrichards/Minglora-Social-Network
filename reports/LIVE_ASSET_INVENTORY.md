@@ -71,6 +71,14 @@ The nine files in `assets/Guests Layout/` map to seven host-selectable screen la
 
 The inspected `assets/animations/` directory had only a README before this branch. The existing app animation implementation is JavaScript/CSS/Web Animations; no populated Lottie or Rive collection was found there. No gift GLTF animation channels or KTX2 texture pack were verified. Dedicated mastered/per-gift audio files are still not present; however, Djembe Master and Palm Breeze now have individual local Web Audio synthesis designs triggered with their gift effects. Do not describe those synthesized effects as recorded/mastered audio files.
 
+## LIVE room control icon pack — 2026-11-15
+
+| Location | Observed state | Production interpretation |
+|---|---|---|
+| `public/assets/icons/live-controls/` | 18 individually addressable original SVG symbols plus `manifest.json` | Integrated room controls with dedicated microphone, camera, room-audio, screen-share and fullscreen state glyphs; 24×24 currentColor vectors; design and rights review pending |
+
+The active screen-share state switches to `screen-stop.svg`; active browser fullscreen switches to `fullscreen-exit.svg`. The same real button event flow, `aria-pressed` state and disabled handling are retained. Both new SVGs are precached by shell v316. This expands icon coverage but does not complete every requested LIVE feature-specific icon or every loading/success/warning/error illustration state.
+
 ## LIVE tools shortcut icon pack — 2026-11-14
 
 | Location | Observed state | Production interpretation |

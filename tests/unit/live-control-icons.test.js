@@ -10,7 +10,7 @@ const manifest = JSON.parse(fs.readFileSync(path.join(iconRoot, 'manifest.json')
 const app = fs.readFileSync(path.join(root, 'public/app.js'), 'utf8');
 const worker = fs.readFileSync(path.join(root, 'public/sw.js'), 'utf8');
 const styles = fs.readFileSync(path.join(root, 'public/live-tiktok-compact.css'), 'utf8');
-const expected = ["mic","mic-off","camera","camera-off","flip","multi-guest","cohost","message","screen","fullscreen","gift","volume","volume-off","settings","share","end"];
+const expected = ["mic","mic-off","camera","camera-off","flip","multi-guest","cohost","message","screen","screen-stop","fullscreen","fullscreen-exit","gift","volume","volume-off","settings","share","end"];
 
 test('LIVE controls use individually addressable original SVG icon assets', () => {
   assert.deepEqual(manifest.icons.map(icon => icon.id), expected);
@@ -44,4 +44,25 @@ test('standalone SVG assets preserve the existing button-driven icon state and s
   assert.ok(manifest.state_handling.includes('danger'));
   assert.ok(styles.includes('.live-player-controls .live-control-icon svg'));
   assert.ok(app.includes('aria-pressed='));
+});
+
+
+test('screen sharing and fullscreen switch to dedicated active-state icon artwork', () => {
+  const screenStop = manifest.icons.find(icon => icon.id === 'screen-stop');
+  const fullscreenExit = manifest.icons.find(icon => icon.id === 'fullscreen-exit');
+  assert.deepEqual(
+    { stateRole: screenStop?.state_role, stateFor: screenStop?.state_for },
+    { stateRole: 'active', stateFor: 'screen' }
+  );
+  assert.deepEqual(
+    { stateRole: fullscreenExit?.state_role, stateFor: fullscreenExit?.state_for },
+    { stateRole: 'active', stateFor: 'fullscreen' }
+  );
+  assert.match(app, /active\?"fullscreen-exit":"fullscreen"/);
+  assert.match(app, /nextEnabled\?"screen-stop":"screen"/);
+  assert.ok(worker.includes("'/assets/icons/live-controls/screen-stop.svg'"));
+  assert.ok(worker.includes("'/assets/icons/live-controls/fullscreen-exit.svg'"));
+  assert.ok(app.includes('const LIVE_CONTROL_ICON_NAMES=Object.freeze('));
+  assert.ok(app.includes('"screen-stop"'));
+  assert.ok(app.includes('"fullscreen-exit"'));
 });

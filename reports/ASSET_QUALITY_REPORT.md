@@ -23,6 +23,12 @@ The current generator emits one SVG and one GLTF file for each catalogue row, bu
 
 The exact Rose catalogue entry has a dedicated original source model at assets/3d-assets/gift-models/rose-model.mjs. The gift build emits a self-contained glTF 2.0 botanical sculpture with layered curved petals, five sepals, a tapered stem, thorns, three leaves and separate PBR materials. The generated transparent Rose SVG has matching layered Minglora flower artwork. This is one gift-specific art-direction exception; it does not make the remaining catalogue premium-complete. Human design approval, licensing review, renderer review and device QA remain pending.
 
+## LIVE room-control state variants — 2026-11-15
+
+The individually addressable LIVE room-control pack now contains **18 original 24×24 SVG symbols**. In addition to the microphone/camera/room-audio on/off pairs, it includes `screen-stop.svg` and `fullscreen-exit.svg`; `public/app.js` changes to these glyphs only when the corresponding screen-share/fullscreen state is active. The versioned shell cache is v316, and the asset manifest generator inventories the full pack from its JSON manifest. Automated tests verify the asset paths, vector structure, offline precache and runtime state switching.
+
+This is a targeted active-state improvement, not a claim that the entire requested icon/state library is complete. The remaining camera/filter/beauty, ranking, battle, accessibility, notification and moderation visual review gaps remain. All 18 icons still require human visual/design and rights review; the UI state styles are driven by real button `aria-pressed`/`disabled` state and the artwork inherits `currentColor`.
+
 ## Interface icon and effect quality
 
 `public/assets/icons/navigation-3d.svg` contains **53 named SVG symbols** and `public/assets/icons/minglora-push.svg` is a separate push graphic. The 53-symbol sheet is a useful shared application icon source, but it is not a complete individually exported LIVE icon library. Dedicated camera/flip, beauty/filter, host/guest, viewer, battle, ranking, fan-club, moderation and accessibility artwork, including every active/selected/disabled/loading/error state, has not been verified as a complete set. LIVE also uses CSS/SVG/DOM controls. The animation runtime has effect layers and reduced-motion handling; a full Lottie/Rive pack, audio-synchronized video gift clips and all error/loading/selected state artwork have not been completed.
