@@ -1,3 +1,15 @@
+## Execution checkpoint — 2026-11-15 (AI HR disciplinary case management)
+
+- Working branch: \`feat/ai-hr-disciplinary-cases\`, based on the checked \`main\` commit \`16fbb98a9ea11f6a53b9aee5c38965cfe7d747ec\`.
+- Added an additive migration source for confidential, organization-scoped disciplinary cases and append-only history.
+- Added server administrator/persistence gates, private Supabase runtime command allowlisting, and HR administrator workspace controls for creating cases, adding investigation notes, and recording reasoned status transitions.
+- Added four focused source-level tests covering schema access, lifecycle rules, runtime/server authorization wiring, and UI wiring.
+- Workflow is human-entered and human-reviewed only. It does not automate sanctions, employee decisions, worker execution, or AI actions.
+- **Status: IMPLEMENTED — AWAITING VERIFICATION.** Unit tests, SQL validation, CI, and signed-in owner/API/browser/device acceptance have not yet been completed.
+- Migration is committed as source only and has **not** been applied to Supabase. The Edge Function and Render service have **not** been deployed. Production database and runtime state were not changed.
+- AI execution controls remain \`global_paused=true\`, \`execution_enabled=false\`, \`max_concurrent_workers=0\`.
+- Accepted AI Network task register remains **2/19 = 10.53% verified tasks**. This partial HR increment does not change the verified task count.
+
 ## Latest verified checkpoint — 2026-11-15 (AI HR training and attendance release)
 
 - PR #351 merged to `main` as `0fbcdc6a92bf94ac980c2015833f8ea11caaf7a1`; merge request: https://github.com/ravaunrichards/Minglora-Social-Network/pull/351.
