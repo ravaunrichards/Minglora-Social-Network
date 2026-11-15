@@ -543,7 +543,8 @@ export function getAICreatorDailyUsage(db, ownerId, { now = new Date() } = {}) {
   const cutoff = dayStart.getTime();
   const jobs = ownerRows(db.aiBotCreatorJobs, ownerId).filter(job => {
     const completedAt = Date.parse(job.providerCompletedAt || '');
-    return job.providerExecution === 'completed' && Number.isFinite(completedAt) && completedAt >= cutoff;
+    const totalTokens = Number(job.providerUsage?.total_tokens) || 0;
+    return Number.isFinite(completedAt) && completedAt >= cutoff && totalTokens > 0;
   });
   return {
     tokensUsed: jobs.reduce((sum, job) => sum + Math.max(0, Number(job.providerUsage?.total_tokens) || 0), 0),
