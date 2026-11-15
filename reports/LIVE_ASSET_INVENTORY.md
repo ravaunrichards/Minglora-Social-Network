@@ -180,4 +180,24 @@ A machine-readable integrity inventory is now maintained at `assets/manifests/le
 - `tests/unit/legacy-live-gift-model-inventory.test.js` verifies manifest uniqueness, file presence, byte sizes, Git blob hashes and core glTF 2.0 scene/mesh/buffer structure.
 - These are **legacy source assets**, not a production-ready gift catalogue. Catalogue identity mapping, visual review, technical render review and rights review remain pending for every item. The inventory intentionally records `production_eligible: false`; no LIVE runtime route, catalogue row, gift price or transaction was changed.
 - Reuse requires matching each model to a canonical gift code, visually inspecting the rendered asset, checking the actual runtime fallback/animation path and documenting rights/provenance before release.
+## Historical identity reconciliation for legacy standalone gift models — 2026-11-15
+
+The 45 standalone glTF files have now been traced back to their original catalogue identities in the migration history:
+
+- **45/45 unique model files** map to **45/45 unique historical gift codes**.
+- **38** mappings originate from explicit gift `INSERT` rows across migrations 021, 023, 024 and 025. Their names, source categories, animation keys/presets, historical seed coin values and sort order are recorded as historical provenance only.
+- **7** base-catalogue models are mapped by the `model_url CASE` in migration 021 (`rose`, `heart`, `coffee`, `party`, `trophy`, `lion`, and `universe`). That migration does not provide the gift name/category/price fields for those seven, so those fields are intentionally left unknown here.
+- A read-only query against the connected Minglora Supabase `public.live_gift_catalog` on 2026-11-15 returned **zero rows** for these 45 historical codes. None is currently confirmed as a production gift in that snapshot.
+- The manifest records exact source migration paths and a conservative production status. Historical seed Coin values are **not current prices** and must not be reused for publication or gifting.
+
+The reconciliation test reads the source migrations and verifies that each model path resolves to the exact historical code or INSERT row. It does not modify or reactivate catalogue records.
+## Technical structure audit of the 45 legacy GLTF models — 2026-11-15
+
+The individual structural profile for each file is recorded in `assets/manifests/legacy-live-gift-models.json` and is checked against the source GLTF document by the unit suite.
+
+- 45/45 declare glTF 2.0, with scene mesh geometry and one buffer each.
+- Combined geometry inventory: **531 meshes**, **342 nodes**, **196 materials**, and **394,992 buffer bytes**.
+- 0/45 contain texture files, image files or embedded animation channels. These models are static mesh packages; current room/gift animation must come from the separate application effect runtime, not from GLTF animation tracks.
+- 38/45 expose at least one position accessor with min/max bounds; 7/45 do not expose these bounds. The recorded values are accessor-local only. Node transforms have not been applied, so world-space dimensions and final presentation scale remain unverified.
+- This is a structural audit, not a visual-render, PBR-material, performance or artistic-quality approval.
 
