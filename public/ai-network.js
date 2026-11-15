@@ -990,7 +990,8 @@
             '</div><small>Provider ID: ' + esc(provider.providerId) + '</small>' +
             '<p>Required environment keys: ' + esc(required || 'No server credential slot') + '</p>' +
             (optional ? '<small>Optional settings: ' + esc(optional) + '</small>' : '') +
-            '<small>Adapter verified: ' + (provider.adapterAvailable ? 'Yes' : 'No') +
+            '<small>Read-only health probe: ' + (provider.healthProbeAvailable ? 'Available' : 'Not implemented') +
+            ' · Inference adapter: ' + (provider.adapterAvailable ? 'Available' : 'Not implemented') +
             ' · Execution enabled: ' + (provider.executionEnabled ? 'Yes' : 'No') + '</small>' +
             (provider.note ? '<p>' + esc(provider.note) + '</p>' : '') +
             '</div></div></article>';
