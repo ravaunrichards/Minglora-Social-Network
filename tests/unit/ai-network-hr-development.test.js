@@ -75,7 +75,7 @@ test('HR development endpoints and admin workspace are connected to persistence'
   }
   for (const token of ["request(base + '/training-courses')","request(base + '/training-enrollments')","request(base + '/attendance')",
     'data-ai-form="training-course"','data-ai-form="training-enrollment"','data-ai-form="training-enrollment-status"',
-    'data-ai-form="attendance'',"kind === 'training-course'","kind === 'training-enrollment'","kind === 'attendance'",
+    'data-ai-form="attendance"',"kind === 'training-course'","kind === 'training-enrollment'","kind === 'attendance'",
     'No employee training assignments have been made','No attendance records have been entered']) {
     assert.ok(ui.includes(token),'Missing HR training/attendance UI: '+token);
   }
