@@ -269,6 +269,6 @@ test('MeetWave Full Screen follows the single-stage reference while retaining th
   for(let seat=1;seat<=8;seat++){
     assert.ok(fit.includes('data-seat-index="'+seat+'"'), 'Guest Seat '+seat+' can be shown as a connected guest');
   }
-  assert.ok(fit.includes('height:min(66dvh,calc(100dvh - 210px),760px)!important'));
+  assert.ok(css.includes('height:min(66dvh,calc(100dvh - 210px),760px)!important'));
   assert.ok(fit.includes('@media(max-width:760px)'));
 });
