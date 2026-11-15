@@ -1053,12 +1053,12 @@
       '</strong><p>' + esc(event.reason || '') + '</p><small>' + esc(date(event.occurred_at)) +
       '</small></div>' + pill('audited') + '</article>'
     ));
-    const usageRows = wrap(events.slice(0,20).map(event =>
+    const usageRows = events.length ? '<div class="ai-network-list">' + events.slice(0,20).map(event =>
       '<article class="ai-network-list-row"><div class="ai-network-list-main"><strong>' + esc(event.event_type || 'usage event') +
       '</strong><p>' + esc(event.provider_name || event.model_identifier || 'Runtime resource event') + ' · ' +
       esc(date(event.occurred_at)) + '</p><small>' + number(event.total_tokens) + ' tokens · $' +
       usd(event.actual_cost_usd) + '</small></div>' + pill('measured') + '</article>'
-    ));
+    ).join('') + '</div>' : empty('No provider or resource usage events have been recorded.');
     const metrics = [['Recorded events',number(summary.event_count)],['Recorded tokens',number(summary.total_tokens)],
       ['Actual spend','USD ' + usd(summary.actual_cost_usd)],['CPU milliseconds',number(summary.cpu_milliseconds)],
       ['GPU milliseconds',number(summary.gpu_milliseconds)],['Memory MB-minutes',number(summary.memory_mb_minutes)],
