@@ -194,7 +194,7 @@
       "<button type='button' class='league-podium-member is-place-" + place + "' data-league-profile='" + esc(member.id) + "' aria-label='Open " + esc(member.name || member.username || "creator") + " profile, ranked number " + place + "'>" +
         "<span class='league-podium-crown' aria-hidden='true'>" + (place === 1 ? "👑" : place === 2 ? "✦" : "✧") + "</span>" +
         "<span class='league-podium-avatar-wrap'>" + image(member, "ml-creator-ring ml-creator-ring--league") +
-          "<span class='league-podium-avatar-medal is-place-" + place + "' aria-hidden='true'>" + place + "</span></span>" +
+          "<span class='league-podium-avatar-medal is-place-" + place + "' role='img' aria-label='Creator League No. " + place + " reward badge'>" + place + "</span></span>" +
         "<strong>" + esc(member.name || "Minglora creator") + "</strong><small>@" + esc(member.username || "creator") + "</small>" +
         "<b class='league-podium-points'>" + Number(member.points ?? member.seasonPoints ?? 0).toLocaleString() + " pts</b>" +
         "<span class='league-podium-base' aria-hidden='true'>" + place + "</span></button>"
@@ -206,7 +206,10 @@
       const position = Math.max(0, Number(item.position || 0));
       const award = position >= 4 && position <= 10 ? "top-ten" : position >= 11 && position <= 20 ? "top-twenty" : "";
       const awardMarkup = award
-        ? "<span class='league-ranking-medal league-ranking-medal--" + award + "' aria-hidden='true'>" + (award === "top-ten" ? "✦" : "◆") + "</span>"
+        ? "<span class='league-ranking-medal league-ranking-medal--" + award + "' role='img' aria-label='" +
+          (award === "top-ten" ? "Creator League reward badge for positions 4 to 10" : "Creator League reward badge for positions 11 to 20") +
+          "' title='" + (award === "top-ten" ? "Top 10 Creator League reward" : "Top 20 Creator League reward") + "'>" +
+          "<span aria-hidden='true'>" + (award === "top-ten" ? "✦" : "◆") + "</span></span>"
         : "";
       const bandMarkup = award
         ? "<span class='league-leader-band league-leader-band--" + award + "'>" + (award === "top-ten" ? "TOP 10" : "TOP 20") + "</span>"
@@ -272,7 +275,14 @@
     const classOptions = availableClasses.map(item =>
       "<option value='" + esc(item) + "' " + (item === state.rankingClass ? "selected" : "") + ">" + esc(item) + "</option>"
     ).join("");
-    return "<div class='league-ranking-controls'>" +
+    const rankingEnabled = overview.profile.rankingEnabled !== false;
+    return "<div class='league-ranking-visibility'>" +
+      "<label for='league-ranking-toggle'><span><strong>Appear in Creator League rankings</strong><small>When enabled, your public standing and placement reward badge are visible in League details.</small></span></label>" +
+      "<input id='league-ranking-toggle' type='checkbox' role='switch' aria-label='Appear in Creator League rankings' aria-describedby='league-ranking-visibility-status' " +
+      (rankingEnabled ? "checked" : "") + ">" +
+      "<small id='league-ranking-visibility-status' role='status' aria-live='polite'>" +
+      (rankingEnabled ? "Your ranking is visible to other members." : "Your ranking is hidden from public standings.") + "</small>" +
+      "</div><div class='league-ranking-controls'>" +
       "<div class='league-ranking-period' role='group' aria-label='Leaderboard period'>" +
         "<button type='button' class='league-ranking-filter' data-league-period='daily' aria-pressed='" + (state.rankingPeriod === "daily") + "'>Daily</button>" +
         "<button type='button' class='league-ranking-filter' data-league-period='weekly' aria-pressed='" + (state.rankingPeriod === "weekly") + "'>Weekly</button>" +
@@ -443,6 +453,35 @@
     }
     updatePowerupSelection();
 
+    const rankingToggle = $("#league-ranking-toggle");
+    if (rankingToggle && rankingToggle.dataset.rankingVisibilityBound !== "true") {
+      rankingToggle.dataset.rankingVisibilityBound = "true";
+      rankingToggle.addEventListener("change", async () => {
+        const enabled = rankingToggle.checked;
+        const status = $("#league-ranking-visibility-status");
+        const previous = state.overview?.profile?.rankingEnabled !== false;
+        rankingToggle.disabled = true;
+        if (status) status.textContent = "Saving your ranking visibility…";
+        try {
+          const result = await request("/leagues/ranking-preference", {
+            method: "POST", body: JSON.stringify({ enabled })
+          });
+          const saved = result.rankingEnabled === true;
+          if (state.overview?.profile) state.overview.profile.rankingEnabled = saved;
+          rankingToggle.checked = saved;
+          if (status) status.textContent = saved
+            ? "Your ranking is visible to other members."
+            : "Your ranking is hidden from public standings. Your League progress is unchanged.";
+          await loadLeaderboard();
+        } catch (error) {
+          rankingToggle.checked = previous;
+          if (status) status.textContent = error.message || "Your ranking visibility could not be saved.";
+          toast(error.message || "Your ranking visibility could not be saved.");
+        } finally {
+          rankingToggle.disabled = false;
+        }
+      });
+    }
     document.querySelectorAll("[data-league-period]").forEach(button => {
       if (button.dataset.leaguePeriodBound === "true") return;
       button.dataset.leaguePeriodBound = "true";
