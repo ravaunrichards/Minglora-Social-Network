@@ -18,8 +18,8 @@ test('each earned Gifter Level maps to its original numbered PNG', () => {
   assert.ok(start >= 0 && end > start, 'shared gifter image renderer exists');
   const renderer = app.slice(start, end);
   assert.ok(renderer.includes('String(level).padStart(2, "0")'));
-  assert.ok(renderer.includes('/assets/gifter-badges/badges.svg#level-'));
-  assert.ok(renderer.includes("aria-label=\"' + label + '\""));
+  assert.ok(renderer.includes('/assets/gifter-badges/level_'));
+  assert.ok(renderer.includes("alt=\"' + label + '\""));
   assert.ok(renderer.includes("width=\"' + size[0] + '\" height=\"' + size[1]"));
   assert.ok(server.includes('Level_Badges_01-50_Individual'));
   assert.ok(server.includes("'Content-Type':'image/png'"));
