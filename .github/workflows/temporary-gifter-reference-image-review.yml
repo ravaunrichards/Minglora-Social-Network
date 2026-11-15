@@ -11,10 +11,16 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
-      - name: Export exact original chart image for inspection
+      - name: Export original Gifter chart and final-level source panels
         uses: actions/upload-artifact@v4
         with:
-          name: minglora-gifters-level-up-source-image
-          path: assets/Gifters Badge Levels/Gifters Level Up.png
+          name: minglora-gifter-threshold-panels
+          path: |
+            assets/Gifters Badge Levels/Gifters Level Up.png
+            assets/Gifters Badge Levels/Levels 40-44.jpg
+            assets/Gifters Badge Levels/Levels 45-49.jpg
+            assets/Gifters Badge Levels/Levels 50.jpg
+            assets/Gifters Badge Levels/LV.40 - LV.49.jpg
+            assets/Gifters Badge Levels/LV.50+.jpg
           if-no-files-found: error
           retention-days: 1
