@@ -1,3 +1,37 @@
+## Supplemental mainline and HR/scheduler reconciliation — 2026-11-14
+
+This update supersedes any earlier note that HR talent or durable scheduling was still source-only/unmerged.
+
+### Verified GitHub merges
+
+- PR #308 — **Minglora: add audited AI HR promotions, performance reviews and succession planning** — merged to `main` as `a9b07763059cc64e5cb622c318835fcc1e72d043`.
+- PR #310 — **Minglora: index AI HR talent foreign keys** — merged to `main` as `3d8e0fec66a0447d6b15ec98b399113880736e3b`.
+- PR #311 — **Wire Minglora AI schedules through the durable private runtime** — merged to `main` as `a38aa4eda7d8f49cf5e226487e6b28f82fbc23dd`.
+- Latest audited main commit remains `9526972669651ac79cda8145be882dd1e1abc962`; these merges precede it in the mainline history.
+
+### New live database checks
+
+- Production migration ledger contains the exact deployed versions:
+  - `20261114144052` — `minglora_ai_durable_schedules`
+  - `20261114144454` — `minglora_ai_hr_talent_management`
+  - `20261114144542` — `minglora_ai_schedule_audit_ledger_fix`
+  - `20261114144838` — `minglora_ai_hr_talent_foreign_key_indexes`
+- RLS is enabled on the five HR talent tables (`ai_performance_reviews`, `ai_performance_review_history`, `ai_succession_plans`, `ai_succession_plan_history`, `ai_employee_promotions`) and both schedule tables (`ai_task_schedules`, `ai_task_schedule_events`).
+- `public.minglora_ai_hr_talent_command` and `public.minglora_ai_schedule_command` are SECURITY INVOKER; execute is denied to `anon` and `authenticated`, granted to `service_role`.
+- Deployed `minglora-runtime-state` Edge Function is ACTIVE v129 and its source includes the HR-talent and schedule allowlisted commands.
+- Current live AI-schema foreign-key audit returned zero uncovered AI foreign keys after the HR talent index migration.
+- Registered AI identity count remains zero; no fake identities, worker accounts, mailbox records or provider assignments were added.
+- Runtime remains `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`.
+
+### Status correction and remaining HR gaps
+
+- HR recruitment, appointments, employment transitions, transfers, performance reviews, succession planning and audited promotions have code, schema, migrations and private service RPCs in mainline/production.
+- HR remains **IN PROGRESS**, not complete: training/development workflows, attendance/availability records and disciplinary investigation workflows still need implementation, and the authorized owner/device acceptance is outstanding.
+- Durable schedule persistence, cron dispatch and the private gateway are implemented, but schedules remain gated by global pause and human approval. This does not provide independent worker authentication, real provider execution, lease/heartbeat/retry/recovery or worker-pool capacity.
+- No task count is increased by this reconciliation; the production owner, provider, email, device, worker and scale acceptance gates remain open.
+
+---
+
 ## Supplemental deployment log verification — 2026-11-14
 
 - Render deployment `dep-dbsetmnf3r2c73ec3csg` completed successfully for main commit `9526972669651ac79cda8145be882dd1e1abc962`.
