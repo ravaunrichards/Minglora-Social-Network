@@ -101,12 +101,12 @@ test("uploaded Gifter Badge Progressions JPEG is displayed, routed and cached as
   const sw = read("public/sw.js");
 
   assert.equal(image.subarray(0, 2).toString("hex"), "ffd8", "the supplied source remains an original JPEG");
-  assert.match(progression, /function renderProgressionStrip\\(\\)/);
+  assert.match(progression, /function renderProgressionStrip\(\)/);
   assert.ok(progression.includes("renderProgressionStrip() +"), "the reference appears in the shared standalone and embedded view");
   assert.ok(progression.includes("src='/assets/gifter-badge-progression.jpg'"));
   assert.ok(progression.includes("Gifter Badge Progressions artwork"));
-  assert.match(server, /if\\(p==='\\/assets\\/gifter-badge-progression\\.jpg'\\)[\\s\\S]*?Badges_Level_01-50[\\s\\S]*?Gifter Badge Progressions\\.jpg[\\s\\S]*?'Content-Type':'image\\/jpeg'/);
-  assert.match(styles, /\\.gp-reference-figure img\\{[^}]*width:100%[^}]*height:auto[^}]*object-fit:contain/);
+  assert.match(server, /if\(p==='\/assets\/gifter-badge-progression\.jpg'\)[\s\S]*?Badges_Level_01-50[\s\S]*?Gifter Badge Progressions\.jpg[\s\S]*?'Content-Type':'image\/jpeg'/);
+  assert.match(styles, /\.gp-reference-figure img\{[^}]*width:100%[^}]*height:auto[^}]*object-fit:contain/);
   assert.ok(html.includes("/gifter-progression.js?v=20261115-gifter-badge-progression-strip-1"));
   assert.ok(sw.includes("/gifter-progression.js?v=20261115-gifter-badge-progression-strip-1"));
   assert.ok(sw.includes("'/assets/gifter-badge-progression.jpg'"), "the uploaded source is included in the PWA shell");
