@@ -165,7 +165,7 @@ try {
           return Boolean(viewer?.shadowRoot?.querySelector('canvas#webgl-canvas'));
         }, null, { timeout: 15000 });
       } catch (error) {
-        throw new Error(name + ' loaded but the model-viewer WebGL canvas did not mount. ' +
+        throw new Error(gift.name + ' loaded but the model-viewer WebGL canvas did not mount. ' +
           'WebGL probe: ' + JSON.stringify(browserWebGL) + '. Browser console: ' +
           browserConsoleMessages.slice(-10).join(' | ') + '. ' + error.message);
       }
