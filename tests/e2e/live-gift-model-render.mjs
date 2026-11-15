@@ -116,6 +116,9 @@ const pageErrors = [];
 const browserConsoleMessages = [];
 const httpFailures = [];
 const requestFailures = [];
+const expectedAbortedModelRequests = [];
+const supersededModelPaths = new Set();
+let activeModelPath = null;
 try {
   browser = await chromium.launch({
     channel: 'chromium',
@@ -137,7 +140,14 @@ try {
     }
   });
   page.on('requestfailed', request => {
-    requestFailures.push({ url: request.url(), error: request.failure()?.errorText || 'unknown' });
+    const failure = { url: request.url(), error: request.failure()?.errorText || 'unknown' };
+    let pathname = '';
+    try { pathname = new URL(request.url()).pathname; } catch { /* malformed URLs remain unexpected */ }
+    if (failure.error === 'net::ERR_ABORTED' && supersededModelPaths.has(pathname)) {
+      expectedAbortedModelRequests.push(failure);
+    } else {
+      requestFailures.push(failure);
+    }
   });
   await page.goto(baseUrl + '/__gift-model-preview', { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => window.__mingloraModelViewerReady === true, null, { timeout: 60000 });
@@ -165,6 +175,9 @@ try {
     }, viewport.name);
 
     for (const gift of gifts) {
+      const modelPath = '/assets/gifts/catalog/' + gift.code + '.gltf';
+      if (activeModelPath && activeModelPath !== modelPath) supersededModelPaths.add(activeModelPath);
+      activeModelPath = modelPath;
       await page.evaluate(name => {
         document.querySelector('#gift-name').textContent = name;
       }, gift.name);
@@ -233,7 +246,7 @@ try {
           visiblePixelSamples: visiblePixelCount,
           distinctVisibleColors: sampledColors.size
         };
-      }, { source: '/assets/gifts/catalog/' + gift.code + '.gltf', name: gift.name });
+      }, { source: modelPath, name: gift.name });
 
       assert.equal(render.loaded, true, gift.name + ' model must finish loading');
       assert.equal(render.modelIsVisible, true, gift.name + ' model must be visible');
@@ -271,6 +284,7 @@ try {
     page_errors: pageErrors,
     http_failures: httpFailures,
     request_failures: requestFailures,
+    expected_aborted_model_requests: expectedAbortedModelRequests,
     checks: results
   };
   fs.writeFileSync(path.join(outputDir, 'render-report.json'), JSON.stringify(report, null, 2) + '\n');
@@ -284,6 +298,7 @@ try {
     page_errors: pageErrors.length,
     http_failures: httpFailures.length,
     request_failures: requestFailures.length,
+    expected_aborted_model_requests: expectedAbortedModelRequests.length,
     output: 'artifacts/live-gift-model-render/'
   }, null, 2));
 } finally {
