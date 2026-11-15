@@ -240,7 +240,7 @@ begin
       end if;
     end if;
 
-    if v_budget.max_concurrent_tasks is not null then
+    if v_budget.max_concurrent_tasks is not null and new.status in ('queued','running') then
       select count(*) into v_active_tasks
       from ai_network.ai_task_queue q
       where q.owner_user_id=new.owner_user_id and q.task_id<>new.task_id
