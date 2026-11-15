@@ -3,7 +3,7 @@
 
   const API = '/api/ai-network';
   const root = () => document.getElementById('main-content');
-  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', adminAccess: false, discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, performanceReviews: [], successionPlans: [], promotions: [], organizationError: '', memoryIdentityId: '', memorySettings: null, memoryEntries: [], memoryError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', aiTasks: [], taskRuntime: null, taskError: '', categoryAdmin: null, delegationGrants: [], delegationAccess: false, delegationError: '' };
+  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', adminAccess: false, discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, performanceReviews: [], successionPlans: [], promotions: [], trainingCourses: [], trainingEnrollments: [], attendance: [], developmentUnavailable: false, organizationError: '', memoryIdentityId: '', memorySettings: null, memoryEntries: [], memoryError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', aiTasks: [], taskRuntime: null, taskError: '', categoryAdmin: null, delegationGrants: [], delegationAccess: false, delegationError: '' };
   const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[character]));
@@ -570,11 +570,21 @@
         const reviewResult = talentResults[0].status === 'fulfilled' ? talentResults[0].value : {};
         const successionResult = talentResults[1].status === 'fulfilled' ? talentResults[1].value : {};
         const promotionResult = talentResults[2].status === 'fulfilled' ? talentResults[2].value : {};
+        const developmentResults = await Promise.allSettled([
+          request(base + '/training-courses'), request(base + '/training-enrollments'), request(base + '/attendance')
+        ]);
+        const courseResult = developmentResults[0].status === 'fulfilled' ? developmentResults[0].value : {};
+        const enrollmentResult = developmentResults[1].status === 'fulfilled' ? developmentResults[1].value : {};
+        const attendanceResult = developmentResults[2].status === 'fulfilled' ? developmentResults[2].value : {};
         return [organizationId, {
           departments: list(departmentResult.departments), positions: list(positionResult.positions),
           vacancies: list(vacancyResult.vacancies), applications: list(applicationResult.applications),
           employees: list(employeeResult.employees), performanceReviews: list(reviewResult.performance_reviews),
           successionPlans: list(successionResult.succession_plans), promotions: list(promotionResult.promotions),
+          trainingCourses: list(courseResult.training_courses),
+          trainingEnrollments: list(enrollmentResult.training_enrollments),
+          attendance: list(attendanceResult.attendance),
+          developmentUnavailable: developmentResults.some(result => result.status === 'rejected'),
           talentUnavailable: talentResults.some(result => result.status === 'rejected')
         }];
       }));
@@ -598,6 +608,9 @@
     const reviews = list(hr.performanceReviews);
     const successionPlans = list(hr.successionPlans);
     const promotions = list(hr.promotions);
+    const trainingCourses = list(hr.trainingCourses);
+    const trainingEnrollments = list(hr.trainingEnrollments);
+    const attendanceRecords = list(hr.attendance);
     const identityRecords = list(state.identityRegistry?.identities);
     const identityOptions = identityRecords.map(row => ({
       value: row.identity?.identity_id || '',
@@ -796,6 +809,75 @@
               '<label><span>Reason</span><input name="reason" required minlength="3" maxlength="1000"></label>' +
               '<button class="secondary" type="submit">Update plan</button></form>' : '') + '</article>';
         }).join('') + '</div>' : empty('No succession plans have been created.');
+    const employeeOptions = employees
+      .filter(row => ['onboarding','active','restricted'].includes(row.employment?.employment_status))
+      .map(row => ({ value:row.employment?.employment_id || '', label:(row.identity?.display_name || 'AI employee') + ' · ' + (row.position_name || '') }))
+      .filter(option => option.value);
+    const publishedCourses = trainingCourses.map(row => row.course || {}).filter(course => course.course_status === 'published')
+      .map(course => ({value:course.course_id,label:course.course_title}));
+    const courseForm = '<form class="ai-network-form ai-network-hr-form" data-ai-form="training-course" data-organization-id="' + esc(organizationId) + '">' +
+      '<div class="ai-network-form-title">Create training course</div><div class="ai-network-form-grid">' +
+      '<label>Course key<input name="courseKey" required minlength="3" maxlength="80" pattern="[a-z0-9][a-z0-9_-]{1,78}[a-z0-9]"></label>' +
+      '<label>Course title<input name="courseTitle" required minlength="3" maxlength="160"></label>' +
+      '<label class="ai-network-checkbox-label"><input type="checkbox" name="requiredTraining"> Required training</label></div>' +
+      '<label>Description<textarea name="description" maxlength="4000" rows="2"></textarea></label>' +
+      '<label>Learning objectives (one per line)<textarea name="learningObjectives" maxlength="4000" rows="3"></textarea></label>' +
+      '<button class="primary" type="submit">Save course draft</button></form>';
+    const courseRows = trainingCourses.length ? '<div class="ai-network-list">' + trainingCourses.map(row => {
+      const course=row.course || {};
+      const choices=course.course_status==='draft' ? [{value:'published',label:'Publish'},{value:'archived',label:'Archive'}]
+        : course.course_status==='published' ? [{value:'archived',label:'Archive'}] : [];
+      return '<article class="ai-network-list-row"><div class="ai-network-list-main"><div><strong>' + esc(course.course_title || 'Training course') +
+        '</strong><div class="ai-network-meta">' + pill(course.course_status || 'draft') + ' ' + pill(course.required_training ? 'Required' : 'Optional') +
+        '</div><p>' + esc(course.description || '') + '</p><small>' + number(row.enrollment_count) + ' assigned · ' + number(row.completed_count) +
+        ' completed · ' + list(course.learning_objectives).map(esc).join(' · ') + '</small></div></div>' +
+        (choices.length ? '<form class="ai-network-inline-form" data-ai-form="training-course-status" data-organization-id="' + esc(organizationId) +
+          '" data-course-id="' + esc(course.course_id) + '"><label><span>Course status</span><select name="status">' +
+          options(choices,choices[0].value) + '</select></label><label><span>Reason (required when archiving)</span><input name="reason" maxlength="1000"></label>' +
+          '<button class="secondary" type="submit">Update course</button></form>' : '') + '</article>';
+    }).join('') + '</div>' : empty('No training courses have been created.');
+    const assignmentForm = publishedCourses.length && employeeOptions.length
+      ? '<form class="ai-network-form ai-network-hr-form" data-ai-form="training-enrollment" data-organization-id="' + esc(organizationId) + '">' +
+        '<div class="ai-network-form-title">Assign published training</div><div class="ai-network-form-grid">' +
+        '<label>Course<select name="courseId" required>' + options(publishedCourses,publishedCourses[0].value) + '</select></label>' +
+        '<label>Employee<select name="employmentId" required>' + options(employeeOptions,employeeOptions[0].value) + '</select></label>' +
+        '<label>Due date<input type="date" name="dueOn"></label></div><button class="primary" type="submit">Assign training</button></form>'
+      : '<p class="ai-network-note">Publish a course and appoint an employee before assigning training.</p>';
+    const enrollmentRows = trainingEnrollments.length ? '<div class="ai-network-list">' + trainingEnrollments.map(row => {
+      const item=row.enrollment || {}, status=item.enrollment_status || 'assigned';
+      const choices=status==='assigned' ? [{value:'in_progress',label:'Start'},{value:'completed',label:'Complete'},{value:'waived',label:'Waive'},{value:'cancelled',label:'Cancel'}]
+        : status==='in_progress' ? [{value:'completed',label:'Complete'},{value:'waived',label:'Waive'},{value:'cancelled',label:'Cancel'}] : [];
+      return '<article class="ai-network-list-row"><div class="ai-network-list-main"><div><strong>' + esc(row.identity?.display_name || 'AI employee') +
+        '</strong><div class="ai-network-meta">' + pill(status) + ' ' + esc(row.course_title || 'Course') + '</div><small>' +
+        (item.due_on ? 'Due ' + esc(item.due_on) : 'No due date') +
+        (item.score !== null && item.score !== undefined ? ' · Score ' + esc(item.score) + '/100' : '') + '</small></div></div>' +
+        (choices.length ? '<form class="ai-network-inline-form" data-ai-form="training-enrollment-status" data-organization-id="' + esc(organizationId) +
+          '" data-enrollment-id="' + esc(item.enrollment_id) + '"><label><span>Status</span><select name="status">' + options(choices,choices[0].value) +
+          '</select></label><label><span>Score (completion only)</span><input name="score" type="number" min="0" max="100" step="0.01"></label>' +
+          '<label><span>Completion note</span><input name="completionNote" maxlength="2000"></label>' +
+          '<label><span>Reason (waive/cancel)</span><input name="reason" maxlength="1000"></label>' +
+          '<button class="secondary" type="submit">Update training</button></form>' : '') + '</article>';
+    }).join('') + '</div>' : empty('No employee training assignments have been made.');
+    const attendanceForm = employeeOptions.length
+      ? '<form class="ai-network-form ai-network-hr-form" data-ai-form="attendance" data-organization-id="' + esc(organizationId) + '">' +
+        '<div class="ai-network-form-title">Record daily attendance</div><div class="ai-network-form-grid">' +
+        '<label>Employee<select name="employmentId" required>' + options(employeeOptions,employeeOptions[0].value) + '</select></label>' +
+        '<label>Date<input type="date" name="attendanceDate" required></label>' +
+        '<label>Status<select name="attendanceStatus">' + options([{value:'present',label:'Present'},{value:'late',label:'Late'},{value:'absent',label:'Absent'},{value:'excused',label:'Excused'},{value:'on_leave',label:'On leave'}],'present') + '</select></label>' +
+        '<label>Check-in<input type="datetime-local" name="checkInAt"></label><label>Check-out<input type="datetime-local" name="checkOutAt"></label></div>' +
+        '<label>Reason / correction reason<textarea name="reason" maxlength="2000" rows="2"></textarea></label>' +
+        '<button class="primary" type="submit">Save attendance record</button></form>'
+      : '<p class="ai-network-note">An onboarding, active or restricted employee is required before attendance can be recorded.</p>';
+    const attendanceRows = attendanceRecords.length ? '<div class="ai-network-list">' + attendanceRecords.map(row => {
+      const item=row.attendance || {};
+      return '<article class="ai-network-list-row"><div class="ai-network-list-main"><div><strong>' + esc(row.identity?.display_name || 'AI employee') +
+        '</strong><div class="ai-network-meta">' + pill(item.attendance_status || 'not recorded') + ' ' + esc(item.attendance_date || '') +
+        '</div><small>' + (item.check_in_at ? 'Check-in ' + date(item.check_in_at) : '') +
+        (item.check_out_at ? ' · Check-out ' + date(item.check_out_at) : '') + (item.reason ? ' · ' + esc(item.reason) : '') +
+        '</small></div></div></article>';
+    }).join('') + '</div>' : empty('No attendance records have been entered.');
+    const developmentUnavailableNote = hr.developmentUnavailable
+      ? '<p class="ai-network-note">Training and attendance are waiting for the HR development migration and private runtime gateway. Existing HR records remain available.</p>' : '';
     const candidateOptions = identityOptions.length
       ? '<p class="ai-network-note">' + identityOptions.length + ' owner-managed AI identities available for recruitment.</p>'
       : '<p class="ai-network-note">No eligible owner-managed AI identities are currently listed. Register an identity first.</p>';
@@ -809,7 +891,9 @@
       '<div><h5>AI employees</h5>' + employeeRows + '</div>' +
       '<div><h5>Performance reviews · human-authored</h5>' + performanceReviewRows + '</div>' +
       '<div><h5>Recorded promotions</h5>' + promotionRows + '</div>' +
-      '<div><h5>Succession planning · no automatic appointments</h5>' + successionForm + successionRows + '</div></section>';
+      '<div><h5>Succession planning · no automatic appointments</h5>' + successionForm + successionRows + '</div>' +
+      '<div><h5>Employee training</h5>' + developmentUnavailableNote + courseForm + courseRows + assignmentForm + enrollmentRows + '</div>' +
+      '<div><h5>Daily attendance · human recorded</h5>' + attendanceForm + attendanceRows + '</div></section>';
   }
 
   function renderAIProviderCenter() {
@@ -1884,6 +1968,42 @@
       if (!organizationId || !planId) throw new Error('Succession plan details are missing.');
       path = '/organizations/' + encodeURIComponent(organizationId) + '/succession-plans/' + encodeURIComponent(planId) + '/status';
       payload.status = value('status'); payload.reason = value('reason');
+    } else if (kind === 'training-course') {
+      const organizationId=form.dataset.organizationId;
+      if(!organizationId) throw new Error('Training course organization is missing.');
+      path='/organizations/'+encodeURIComponent(organizationId)+'/training-courses';
+      form.dataset.idempotencyKey=form.dataset.idempotencyKey || window.crypto.randomUUID();
+      payload.course_key=value('courseKey'); payload.course_title=value('courseTitle'); payload.description=value('description');
+      payload.required_training=form.querySelector('[name="requiredTraining"]').checked;
+      payload.learning_objectives=value('learningObjectives').split(/\r?\n/).map(item=>item.trim()).filter(Boolean);
+      payload.idempotency_key=form.dataset.idempotencyKey;
+    } else if (kind === 'training-course-status') {
+      const organizationId=form.dataset.organizationId,courseId=form.dataset.courseId;
+      if(!organizationId||!courseId) throw new Error('Training course details are missing.');
+      path='/organizations/'+encodeURIComponent(organizationId)+'/training-courses/'+encodeURIComponent(courseId)+'/status';
+      payload.status=value('status'); payload.reason=value('reason');
+    } else if (kind === 'training-enrollment') {
+      const organizationId=form.dataset.organizationId;
+      if(!organizationId) throw new Error('Training enrollment organization is missing.');
+      path='/organizations/'+encodeURIComponent(organizationId)+'/training-enrollments';
+      form.dataset.idempotencyKey=form.dataset.idempotencyKey || window.crypto.randomUUID();
+      payload.course_id=value('courseId'); payload.employment_id=value('employmentId'); payload.due_on=value('dueOn') || null;
+      payload.idempotency_key=form.dataset.idempotencyKey;
+    } else if (kind === 'training-enrollment-status') {
+      const organizationId=form.dataset.organizationId,enrollmentId=form.dataset.enrollmentId;
+      if(!organizationId||!enrollmentId) throw new Error('Training enrollment details are missing.');
+      path='/organizations/'+encodeURIComponent(organizationId)+'/training-enrollments/'+encodeURIComponent(enrollmentId)+'/status';
+      payload.status=value('status'); payload.reason=value('reason'); payload.completion_note=value('completionNote'); payload.score=value('score') || null;
+    } else if (kind === 'attendance') {
+      const organizationId=form.dataset.organizationId;
+      if(!organizationId) throw new Error('Attendance organization is missing.');
+      path='/organizations/'+encodeURIComponent(organizationId)+'/attendance';
+      form.dataset.idempotencyKey=form.dataset.idempotencyKey || window.crypto.randomUUID();
+      payload.employment_id=value('employmentId'); payload.attendance_date=value('attendanceDate'); payload.attendance_status=value('attendanceStatus');
+      const checkIn=value('checkInAt'),checkOut=value('checkOutAt');
+      payload.check_in_at=checkIn ? new Date(checkIn).toISOString() : null;
+      payload.check_out_at=checkOut ? new Date(checkOut).toISOString() : null;
+      payload.reason=value('reason'); payload.idempotency_key=form.dataset.idempotencyKey;
     } else if (kind === 'bot') {
       path = '/bots';
       form.dataset.idempotencyKey = form.dataset.idempotencyKey || window.crypto.randomUUID();
@@ -1950,7 +2070,7 @@
       payload.companionAcknowledged = form.querySelector('[name="companionAcknowledgedAIIdentity"]').checked;
     } else return;
     const patchKinds = ['settings','languages','memory-settings','memory-edit','vacancy-status','application-review','employment-status','employment-manager','provider-assignment-status','task-approval','identity-edit'];
-    const talentPatchKinds = ['performance-review-finalize','succession-status'];
+    const talentPatchKinds = ['performance-review-finalize','succession-status','training-course-status','training-enrollment-status'];
     const result = await request(path, { method: patchKinds.concat(talentPatchKinds).includes(kind) ? 'PATCH' : 'POST', body: payload });
     let uploadedMediaCount = 0;
     if (kind === 'identity-edit' && identityIdForMedia) {
@@ -1974,7 +2094,7 @@
       const categoryKeyInput = form.querySelector('[name="categoryKey"]');
       if (categoryKeyInput) categoryKeyInput.readOnly = false;
     }
-    if (['identity','bot','team','delegation-create','delegation-task','organization','vacancy','application','appointment','employment-transfer','employee-promotion','performance-review','succession-plan','task-create'].includes(kind)) form.dataset.idempotencyKey = window.crypto.randomUUID();
+    if (['identity','bot','team','delegation-create','delegation-task','organization','vacancy','application','appointment','employment-transfer','employee-promotion','performance-review','succession-plan','training-course','training-enrollment','attendance','task-create'].includes(kind)) form.dataset.idempotencyKey = window.crypto.randomUUID();
     const categoryActionLabels = { created:'created', updated:'updated', activated:'reactivated', deactivated:'deactivated' };
     const message = kind === 'memory-edit'
       ? 'AI memory entry updated; its retention expiry was refreshed.'
@@ -2034,6 +2154,11 @@
                                 : kind === 'performance-review-finalize' ? 'Performance review finalized and audit history updated.'
                                   : kind === 'succession-plan' ? 'Succession plan saved as a draft; no employee was appointed or promoted.'
                                     : kind === 'succession-status' ? 'Succession plan status and audit history updated.'
+                                      : kind === 'training-course' ? 'Training course saved as a draft; publish it before assignment.'
+                                      : kind === 'training-course-status' ? 'Training course status and history updated.'
+                                      : kind === 'training-enrollment' ? 'Training assigned to the selected employee.'
+                                      : kind === 'training-enrollment-status' ? 'Training status and enrollment history updated.'
+                                      : kind === 'attendance' ? 'Human-recorded attendance saved; no attendance was inferred.'
                                       : 'Saved successfully.';
     const batchFailures = ['identity-profile-bulk','provider-assignment-bulk'].includes(kind) ? list(result.failed) : [];
     if (batchFailures.length) {
