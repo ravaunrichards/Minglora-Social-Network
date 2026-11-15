@@ -120,8 +120,8 @@ test('Finance & Resource Center displays only ledger data and submits scoped aud
     'function renderAIFinanceCenter()',
     "data-ai-form=\"finance-budget\"",
     "path = '/finance/budgets'",
-    'payload.scope_type = value(\\'scopeType\\')',
-    'payload.reason = value(\\'reason\\')',
+    `payload.scope_type = value('scopeType')`,
+    `payload.reason = value('reason')`,
     'state.financeUsage',
     'No provider or resource usage events have been recorded',
     "renderAIFinanceCenter()"
