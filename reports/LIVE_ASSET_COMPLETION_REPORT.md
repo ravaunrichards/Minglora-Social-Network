@@ -355,3 +355,16 @@ The browser captures establish that all nine bespoke models load and remain visi
 - Expanded the Chromium model matrix to include Baseball and the existing Royal Lions Scepter alongside the original nine models, across desktop, tablet and mobile.
 - Validation: the initial CI run exposed an existing assertion requiring seam signature `stroke="#d84854" stroke-width="12"`; the SVG seam was corrected to match it while retaining the layered red seam treatment. Latest-head rerun is pending.
 - Release boundary: the model remains `design-review-pending`; human art review, rights clearance, mastered individual gift audio/animation and physical-device acceptance remain outstanding. No database, wallet, price, transaction or deployment operation occurred.
+
+## Rose LIVE choreography and synthesized sound — PR #392 checkpoint, 2026-11-15
+
+- Ported the exact-code Rose implementation from the stale PR #388 onto a branch based on the then-current mainline, preserving the intervening nine-layout LIVE/MeetWave work, League changes, Jamaican culture category icon and original numbered Gifter PNG rollback.
+- Branch: `feat/minglora-rose-live-assets-current-main-20261115`. PR: [#392](https://github.com/ravaunrichards/Minglora-Social-Network/pull/392). The old #388 review was closed as superseded; its branch was retained.
+- Current Rose commit at this checkpoint: `c454bfbe1903ade589a601c22b661973c0251050`.
+- Implemented `rose-unfurl` runtime/preview choreography, local Web Audio petal-rustle/celesta synthesis, exact-code dispatch, generated motion/sound metadata, regression tests and matching HTML/service-worker query versions.
+- Repository CI on run #12940 passed after restoring the required service-worker cache-name pattern `minglora-shell-v323-self-updating-1`. For You functional navigation passed. Gift asset generation, motion-index generation, Sound Studio generation, LIVE manifest generation, raster metadata audit, JavaScript syntax and dependency audit also passed.
+- LIVE/MeetWave layout independence matrix passed; AI Network browser acceptance passed. Profile visual QA for this latest PR head was still running when this checkpoint was appended. These are automated browser checks, not physical-device certification.
+- The Rose cue is local synthesis, not a mastered audio file; the motion uses Web Animations, not an embedded glTF/Lottie/Rive animation. The source and effects remain `design-review-pending`; rights review, human creative/audio approval and physical-device checks remain outstanding.
+- No production catalogue row, Coin price, publication flag, wallet, transaction, payout, Supabase record or deployment was changed.
+
+The overall LIVE asset mission remains incomplete: the current source catalogue has 1,748 entries (1,737 marked active, 11 retired); 11 gift-specific model sources coexist with 1,737 procedural/category-generated records; 9 gift-specific sound designs are synthesized; dedicated mastered gift sound files, verified Lottie/Rive collections, embedded glTF animation channels, KTX2 texture packs and physical-device QA approvals remain at zero. Full per-item human visual approval, licensing review, complete 18-theme art direction and complete icon-state coverage are not finished. Extracted screenshot-derived crops remain quarantined.
