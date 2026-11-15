@@ -1,3 +1,70 @@
+## Supplemental whole-mission audit — 2026-11-14 Jamaica local (2026-11-15 UTC)
+
+This is the newest evidence-led checkpoint. It supersedes older snapshots below wherever they conflict. Scope remains the Minglora Social Network AI Bot Network only; no production data, migrations, Auth configuration, worker state, provider settings, or deployment configuration were changed during this audit.
+
+### Current repository, branch and release state
+
+- Current main remains 9526972669651ac79cda8145be882dd1e1abc962.
+- Current documentation checkpoint branch is docs/minglora-ai-network-mission-register-20261114; it is 3 commits ahead of main, 0 behind, and its only changed path is this progress register.
+- The older code branch feat/minglora-ai-bot-network-core is diverged from current main: 1 commit ahead and 81 behind. Its unique delta is a documentation queue file; it is not a safe integration branch and was not merged or force-updated.
+- Draft PR #202, [Draft] Add Minglora Personal AI Bots Network foundation, remains open, draft and non-mergeable. It was not merged. Its historical body is stale against current production and must not be treated as current deployment status.
+- PR #308 (HR performance reviews, succession plans and audited promotions), #310 (HR FK indexes), and #311 (durable schedule gateway) are already merged to main; their merge commits remain as recorded in the earlier checkpoint.
+- GitHub Actions run 43657081989 on the current main SHA completed successfully: test, For You functional navigation, and Supabase Auth provider acceptance all succeeded. The test job also completed dependency audit (zero vulnerabilities reported), project structure, JavaScript syntax, build-asset checks, Admin Finance/server syntax, and automated tests. These are repository CI checks, not signed-in production AI-owner/device acceptance.
+
+### Live AI database and runtime confirmation
+
+- Existing Supabase project gzycobgbasnqqhnympkr remains the only AI Network database used.
+- ai_network has 48 base tables; all 48 have RLS enabled. anon and authenticated have no schema USAGE; service_role has schema USAGE. No browser-role access to the AI schema was granted.
+- The required identity/profile/name/email/provider account/provider model/provider assignment tables exist. Current live counts are 0 identities, 0 profiles, 0 name rows, 0 email rows, 0 provider accounts, 0 provider models and 0 provider assignments. No artificial identity or Auth users were created.
+- Existing reference data is 15 active AI categories, 20 active department templates and 20 active position templates.
+- A corrected full-schema FK/index audit confirms 136/136 AI foreign keys have a supporting leading-key index. The initial custom audit incorrectly excluded expression indexes; ai_identity_languages_unique_uq begins with identity_id and covers its FK. No missing AI FK index remains in the corrected audit.
+- The 24-index additive migration minglora_ai_network_late_foreign_key_indexes is also confirmed in production: all 24 expected index objects are present.
+- Migration history alignment is not fully verified: production ledger records this migration name at version 20261114204328, while the current repository migration file and unit test use filename 20261114205000_minglora_ai_network_late_foreign_key_indexes.sql. The index objects exist, but local/remote migration-history reconciliation has not been run. The execution environment lacks Supabase CLI and no Supabase development branch is available in the current workflow; do not blindly apply or rename a production migration.
+- Additional HR gap verification: relational training, attendance and disciplinary case tables are absent. HR remains incomplete even though core recruitment, appointments, transfers, performance reviews, succession plans and promotions are live.
+- Runtime-control row ai_network.ai_task_runtime_controls: global_paused=true, execution_enabled=false, max_concurrent_workers=0, lease_seconds=120. Preserve these safeguards.
+- Cron job minglora_ai_schedule_dispatch is active every minute and calls the private dispatcher as service_role; it remains gated by global pause and cannot be represented as active worker execution.
+- Private Storage bucket minglora-ai-profile-media is absent (0 rows in storage.buckets); application logic creates it lazily on the first authorized owner upload. Human profile buckets remain distinct and unchanged.
+- Edge Function minglora-runtime-state is ACTIVE v129 with its existing custom gateway authentication setting unchanged.
+
+### Security and advisory review
+
+- Security advisor: 105 informational RLS enabled without policy findings, including the private AI schema. This is consistent with the backend-only model: browser roles lack schema USAGE/table grants and command RPC execution is restricted to service_role. Do not add broad browser policies merely to clear informational notices.
+- Security advisor also reports public.minglora_list_my_mfa_factors() as a signed-in-user-executable SECURITY DEFINER RPC. Source and live body were inspected: it uses an empty locked search_path and filters MFA rows to auth.uid(); the Minglora sign-in helper calls it because Auth's factor table is not directly queryable through the ordinary API. It is owner-scoped and was not revoked or rewritten blindly because doing so could break MFA management.
+- Advisor reports anonymous-role policy warnings across existing public Minglora/social/storage/cron resources. These need a deliberate Auth anonymous-sign-in and per-policy authorization review; bulk policy revocation would risk existing member behavior, so no blanket policy changes were made.
+- Advisor reports leaked-password protection disabled. Supabase documentation says leaked-password protection is configured in the existing project's Auth password settings and is available on Pro plan and above. The connected Supabase actions expose no Auth-settings mutation operation, so this remains an external dashboard action; verify plan eligibility, then enable leaked-password protection in Auth settings. No password/Auth setting was changed.
+- Supabase health advisor returned no lints/findings at this audit.
+- The full project security/performance advisories still include unrelated existing Minglora public schema warnings; no unrelated tables or settings were modified.
+
+### Render / deployment confirmation
+
+- Render service minglora-social-network-temp remains on main, auto-deploy enabled, Free plan, one instance, and not suspended.
+- Latest deploy dep-dbsetmnf3r2c73ec3csg is live for main SHA 9526972669651ac79cda8145be882dd1e1abc962.
+- Earlier post-start logs confirmed the application listening on port 10000, Supabase Auth configured, durable Supabase persistence ready, and LiveKit connected.
+- Public HTTP/API and authenticated AI-owner acceptance remain unverified. The earlier external browser probe failed to open the public URL/API, which is not proof of outage and is not a successful HTTP acceptance test either.
+
+### Unified acceptance register correction
+
+The 19-task register and eight-phase crosswalk below remain authoritative. Current verified accounting remains 2/19 (10.53%) because the new checks reconcile evidence and correct one audit method but do not close an additional end-to-end feature acceptance task. Phase 1 remains VERIFIED COMPLETE; Phases 2–8 remain IN PROGRESS. Task 7 specifically remains IN PROGRESS because training/development, attendance/availability and disciplinary-investigation functionality is absent. Tasks 3–5 retain external owner/provider/email gates. Tasks 11, 15 and 17 remain NOT STARTED.
+
+### Exact remaining work and external actions
+
+1. Owner acceptance and private media: an authorized Minglora platform owner must sign into the real deployed application and perform identity create/list/get/edit/bulk acceptance and a genuine private avatar/cover upload, then verify on a real device. Do not create a synthetic owner or retained test identity.
+2. Email: select and configure a real email provider/domain using protected server-side credentials; test mailbox provisioning and sending before claiming an inbox.
+3. AI models: provide access to an approved provider account and protected secret-manager reference; then implement and verify provider health, inference, routing/fallback and usage telemetry.
+4. Database migration workflow: install/use the Supabase CLI in a trusted connected development environment or provision an approved development branch, reconcile the production ledger with repository migrations, correct the filename/version discrepancy through a reviewed migration process, and re-run migrations/tests. No production DDL was applied here.
+5. HR: implement and test training/development, attendance/availability, and disciplinary-investigation data/workflows, with authorized owner/device acceptance.
+6. Security configuration: review anonymous Auth access warnings per feature policy and enable leaked-password protection in the existing Supabase Auth dashboard if the project's plan permits.
+7. Workers and scale: implement dedicated worker identities/authentication, scoped permissions, secret custody, budgets, leases, retries, observability and crash recovery before enabling workers. Add real partitioned/distributed storage, regional failover and reproducible write/query/load/recovery benchmarks before claiming any 10-billion capacity.
+8. Feature/device acceptance: complete AI social participation, Creator Studio/events, memory retrieval/multimodal execution, AI-specific finance/resource metering, all 12 admin centers, event-backed analytics, API acceptance, Android/desktop/mobile accessibility, security and disaster-recovery testing.
+
+### Audit boundary
+
+This checkpoint is read-only with respect to production. It adds no identities, Auth users, emails, provider assignments, workers, schedules, engagement, funds, or media; it does not change runtime controls, Auth configuration, migrations, or deployment. No task was upgraded to VERIFIED COMPLETE solely because a table, page, fixture, deployment or CI job exists.
+
+Mission status: PARTIALLY COMPLETE — OUTSTANDING BLOCKERS DOCUMENTED — CURRENT EXECUTION CLOSED.
+Verified task count: 2/19 (10.53%). This is acceptance-checklist counting only, not a feature-completeness estimate or 10-billion capacity claim.
+
+---
 ## Supplemental mainline and HR/scheduler reconciliation — 2026-11-14
 
 This update supersedes any earlier note that HR talent or durable scheduling was still source-only/unmerged.
