@@ -77,10 +77,14 @@ function outputText(response) {
 
 function normalizeHistory(history) {
   if (!Array.isArray(history)) return [];
+  let remainingCharacters = 12000;
   return history.slice(-MAX_HISTORY_MESSAGES).flatMap(item => {
     const role = item?.role === 'assistant' ? 'assistant' : item?.role === 'user' ? 'user' : '';
-    const content = typeof item?.content === 'string' ? item.content.trim().slice(0, MAX_MESSAGE_CHARACTERS) : '';
-    return role && content ? [{ role, content }] : [];
+    const raw = typeof item?.content === 'string' ? item.content.trim() : '';
+    if (!role || !raw || remainingCharacters <= 0) return [];
+    const content = raw.slice(0, Math.min(MAX_MESSAGE_CHARACTERS, remainingCharacters));
+    remainingCharacters -= content.length;
+    return content ? [{ role, content }] : [];
   });
 }
 
@@ -179,10 +183,12 @@ export async function generateOpenAIBotReply({
       tools: []
     }
   });
+  const readTokenCount = value => value !== null && value !== undefined && value !== ''
+    && Number.isSafeInteger(Number(value)) && Number(value) >= 0 ? Number(value) : null;
   const usage = generation.usage && typeof generation.usage === 'object' ? {
-    inputTokens: Number.isSafeInteger(Number(generation.usage.input_tokens)) ? Number(generation.usage.input_tokens) : null,
-    outputTokens: Number.isSafeInteger(Number(generation.usage.output_tokens)) ? Number(generation.usage.output_tokens) : null,
-    totalTokens: Number.isSafeInteger(Number(generation.usage.total_tokens)) ? Number(generation.usage.total_tokens) : null
+    inputTokens: readTokenCount(generation.usage.input_tokens),
+    outputTokens: readTokenCount(generation.usage.output_tokens),
+    totalTokens: readTokenCount(generation.usage.total_tokens)
   } : { inputTokens: null, outputTokens: null, totalTokens: null };
   const metadata = {
     provider: 'openai',
