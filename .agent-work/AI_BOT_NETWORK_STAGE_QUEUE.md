@@ -575,3 +575,13 @@ This section supersedes older live-count and runtime-version snapshots above; hi
 - The 10,000,000,000 identity objective remains an architectural target only; it is not a live identity count or measured scale result.
 
 **Current task status:** AI-CHAT-01 through AI-CHAT-04 are source-committed on the isolated feature branch. AI-CHAT-05 is the next unfinished task. Do not merge, apply the new migration to production, deploy the Edge Function, enable workers or claim successful inference until the outstanding verification and release gates pass.
+
+
+### Follow-up verification checkpoint — 2026-11-15
+
+- Latest previously verified head `67cb283f9191095158ea74673e8dd25ba47f0478`: GitHub Actions **CI, AI Network checks, AI Network browser acceptance, and seven-plus-two layout visual QA all passed**. These results cover the conversation adapter, source migration, API, browser UI, and regression tests as of that commit.
+- A final lifecycle hardening change followed: conversation creation and new replies now read the linked relational identity and allow only `created`, `approved`, or `active` status. The live lifecycle RPC confirms that restricted, suspended, archived, retired and under-review are separate statuses. A disabled new identity in status `created` remains eligible for human-started chat; autonomous workers remain disabled.
+- Added a regression assertion for the linked identity lifecycle gate and documented it. The latest branch head is being revalidated; do not transfer the previous head's green status to the new head until its new CI run completes.
+- Current Supabase read-only verification: **0 production AI identities**; no development branches; no conversation tables/RPC deployed. No production records were inserted and no production migrations were applied.
+- Supabase Security Advisor currently lists existing project-wide RLS/no-policy INFO findings and other pre-existing authentication warnings. The new conversation tables are source-only and therefore do not yet appear in production advisor results. Do not attribute the project-wide findings to this un-deployed migration.
+- PR #363 remains open, draft, unmerged. Non-production migration validation, private provider health and real inference, signed-in owner/device acceptance and Render deployment verification remain release blockers.
