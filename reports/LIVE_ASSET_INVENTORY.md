@@ -241,3 +241,12 @@ The model source carries `gift-royal-lions-scepter-3d-v1` provenance and `design
 | Cache | gift-effects.js?v=20261115-royal-lions-scepter-rise-1; service-worker shell v318. | HTML and service worker use the same versioned script URL. |
 
 The source catalogue grand-entry value, animation key and 1,900-ms duration are unchanged. No production offer, price, wallet or transaction was modified.
+
+
+## Keeper of Atlantis bespoke model — 2026-11-15
+
+| Source | Canonical item | Generated output | Acceptance boundary |
+|---|---|---|---|
+| assets/3d-assets/gift-models/keeper-of-atlantis-model.mjs | Keeper of Atlantis (keeper-of-atlantis-15000-mgl, fantasy; source catalogue value 15,000 Coins) | Original glTF 2.0 three-prong underwater trident, aquamarine/opal jewels, nacre shell medallion, branching coral, sea-glass bubbles and curling tidal currents; matching keeper-of-atlantis-original-v1 SVG/icon. | Exact-code generator route and regression checks for code/name/category/value/active state/canonical cosmic-orbit preset, model parts/materials, embedded buffers and SVG artwork signatures. Design/licensing review pending. |
+
+The model source records gift-keeper-of-atlantis-3d-v1 and design-review-pending. The source catalogue item is not evidence of a production active offer; the version-3 production publication gate remains separate.
