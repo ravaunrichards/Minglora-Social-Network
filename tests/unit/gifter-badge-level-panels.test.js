@@ -98,7 +98,7 @@ test("uploaded Gifter Badge Progressions artwork is served, displayed and cached
   assert.ok(html.includes("/gifter-progression.js?v=20261115-gifter-badge-progression-strip-1"));
   assert.ok(sw.includes("'/assets/gifter-badge-progression.jpg'"), "the original uploaded image is precached");
   assert.ok(sw.includes("/gifter-progression.js?v=20261115-gifter-badge-progression-strip-1"));
-  assert.ok(sw.includes("minglora-shell-v322-self-updating-1"));
+  assert.ok(sw.includes("minglora-shell-v323-self-updating-1"));
 });
 
 test("updated progression assets and all original JPG panels are included in the app shell", () => {
