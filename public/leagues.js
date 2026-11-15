@@ -11,12 +11,6 @@
   const esc = value => String(value ?? "").replace(/[&<>"']/g, char => ({
     "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
   })[char]);
-  const powerupModelPaths = Object.freeze({
-    momentum_boost: "/assets/match-powerups/minglora_momentum_boost.gltf",
-    shield: "/assets/match-powerups/minglora_shield.gltf",
-    time_boost: "/assets/match-powerups/minglora_time_boost.gltf",
-    score_multiplier: "/assets/match-powerups/minglora_score_multiplier.gltf"
-  });
   function currentPowerup() {
     return (state.overview?.powerups || []).find(item => item.id === state.selectedPowerupId) || null;
   }
@@ -44,7 +38,6 @@
     const powerups = Array.isArray(overview.powerups) ? overview.powerups : [];
     if (!powerups.some(item => item.id === state.selectedPowerupId)) state.selectedPowerupId = powerups[0]?.id || "";
     const selected = powerups.find(item => item.id === state.selectedPowerupId) || powerups[0] || null;
-    const modelUrl = selected ? powerupModelPaths[selected.id] || "" : "";
     const cards = powerups.map(power => {
       const active = power.id === selected?.id;
       return "<button type='button' class='league-powerup-info-card" + (active ? " is-selected" : "") +
@@ -52,47 +45,39 @@
         "<span class='league-powerup-card-symbol' aria-hidden='true'>" + esc(power.symbol) + "</span>" +
         "<strong>" + esc(power.name) + "</strong><p>" + esc(power.description) + "</p>" +
         "<small>" + (power.usedToday ? "Used today" : "One free use per UTC day") + "</small>" +
-        "<span class='league-powerup-card-link'>View 3D preview <span aria-hidden='true'>↗</span></span></button>";
+        "<span class='league-powerup-card-action'>" + (active ? "Selected" : "Select power-up") + "</span></button>";
     }).join("");
-    return "<section class='card league-powerup-info' id='league-powerup-preview-panel' aria-labelledby='league-powerup-heading'>" +
+    return "<section class='card league-powerup-info' id='league-powerup-panel' aria-labelledby='league-powerup-heading'>" +
       "<div class='league-section-heading'><div><span class='league-eyebrow'>MATCH-ONLY TOOLS</span><h2 id='league-powerup-heading'>Match Power-Ups</h2>" +
-      "<p>Inspect every original 3D power-up before activating it. These temporary effects never multiply Creator League points or official class standings.</p></div></div>" +
-      "<div class='league-powerup-preview-layout'><div class='league-powerup-preview-copy'><span class='league-eyebrow'>ROTATABLE 3D PREVIEW</span>" +
-      "<h3 id='league-powerup-preview-title'>" + esc(selected?.name || "Choose a power-up") + "</h3>" +
-      "<p id='league-powerup-preview-description'>" + esc(selected?.description || "Select a Match Power-Up to inspect its original 3D model.") + "</p>" +
-      "<div class='league-powerup-preview-meta'><span id='league-powerup-preview-duration'>" + (selected ? esc(powerupDurationLabel(selected)) : "—") + "</span>" +
-      "<span id='league-powerup-preview-usage'>" + (selected?.usedToday ? "Used today" : "One free use per UTC day") + "</span></div>" +
-      "<p class='league-powerup-preview-status' id='league-powerup-preview-status' role='status' aria-live='polite'>The selected 3D model is loading. Drag to rotate and pinch or scroll to zoom.</p>" +
-      "<p class='league-powerup-availability' id='league-powerup-availability' role='status' aria-live='polite'>Choose Preview from a live match to prepare an activation.</p>" +
-      "<button type='button' class='primary league-powerup-activate' id='league-powerup-activate' hidden disabled>Activate for this match</button></div>" +
-      "<div class='league-powerup-preview-stage' aria-label='Selected Match Power-Up 3D model'>" +
-      "<model-viewer id='league-powerup-selected-model' src='" + esc(modelUrl) + "' alt='" + esc(selected?.name || "Match Power-Up") + " original 3D model' camera-controls auto-rotate rotation-per-second='18deg' interaction-prompt='none' shadow-intensity='.85' exposure='1.12' loading='eager' reveal='auto'></model-viewer></div></div>" +
-      "<div class='league-powerup-info-grid' aria-label='Available Match Power-Ups'>" + cards + "</div></section>";
+      "<p>Select a power-up and activate it during your live match. These temporary effects never multiply Creator League points or official class standings.</p></div></div>" +
+      "<div class='league-powerup-info-grid' aria-label='Available Match Power-Ups'>" + cards + "</div>" +
+      "<div class='league-powerup-selected-details'>" +
+      "<h3 id='league-powerup-selected-title'>" + esc(selected?.name || "Choose a power-up") + "</h3>" +
+      "<p id='league-powerup-selected-description'>" + esc(selected?.description || "Select one of the available Match Power-Ups.") + "</p>" +
+      "<div class='league-powerup-selected-meta'><span id='league-powerup-selected-duration'>" + (selected ? esc(powerupDurationLabel(selected)) : "—") + "</span>" +
+      "<span id='league-powerup-selected-usage'>" + (selected?.usedToday ? "Used today" : "One free use per UTC day") + "</span></div>" +
+      "<p class='league-powerup-availability' id='league-powerup-availability' role='status' aria-live='polite'>Choose a power-up from one of your live matches to prepare an activation.</p>" +
+      "<button type='button' class='primary league-powerup-activate' id='league-powerup-activate' hidden disabled>Activate for this match</button></div></section>";
   }
-  function updatePowerupPreview() {
+  function updatePowerupSelection() {
     const power = currentPowerup();
-    const model = $("#league-powerup-selected-model");
-    const title = $("#league-powerup-preview-title");
-    const description = $("#league-powerup-preview-description");
-    const duration = $("#league-powerup-preview-duration");
-    const usage = $("#league-powerup-preview-usage");
-    const status = $("#league-powerup-preview-status");
+    const title = $("#league-powerup-selected-title");
+    const description = $("#league-powerup-selected-description");
+    const duration = $("#league-powerup-selected-duration");
+    const usage = $("#league-powerup-selected-usage");
     const availability = $("#league-powerup-availability");
     const activate = $("#league-powerup-activate");
-    if (!power) return;
-    const source = powerupModelPaths[power.id] || "";
+    if (!power) {
+      if (title) title.textContent = "No power-ups available";
+      if (description) description.textContent = "No Match Power-Ups are currently available.";
+      if (availability) availability.textContent = "No Match Power-Ups are currently available.";
+      if (activate) { activate.hidden = true; activate.disabled = true; }
+      return;
+    }
     if (title) title.textContent = power.name;
     if (description) description.textContent = power.description;
     if (duration) duration.textContent = powerupDurationLabel(power);
     if (usage) usage.textContent = power.usedToday ? "Used today" : "One free use per UTC day";
-    if (model && source) {
-      model.alt = power.name + " original Minglora 3D power-up model";
-      if (model.getAttribute("src") !== source) {
-        model.dataset.powerupId = power.id;
-        if (status) status.textContent = "Loading the original 3D model…";
-        model.setAttribute("src", source);
-      } else model.dataset.powerupId = power.id;
-    } else if (status) status.textContent = "A 3D model is not available for this power-up yet.";
     const match = selectedPowerupMatch();
     const reason = powerupRestriction(power, match);
     if (activate) {
@@ -104,7 +89,7 @@
     }
     if (availability) availability.textContent = match
       ? (reason || "Ready to activate in the selected live match.")
-      : "Preview only. Choose Preview on one of your live matches to prepare an activation.";
+      : "Select a power-up from one of your live matches to prepare an activation.";
     document.querySelectorAll("[data-powerup-select]").forEach(button => {
       const active = button.dataset.powerupSelect === power.id;
       button.classList.toggle("is-selected", active);
@@ -348,9 +333,9 @@
         const unavailableShield = power.id === "shield" &&
           (match.activeEffects || []).some(effect => effect.type === "shield" && effect.side === side && new Date(effect.expiresAt).getTime() > Date.now());
         const fixedTimer = power.id === "time_boost" && match.timerMode === "fixed";
-        const restriction = power.usedToday ? "Used today" : unavailableShield ? "Shield active" : fixedTimer ? "Fixed timer" : "Preview before use";
-        return "<button type='button' class='league-powerup-btn' data-match-powerup-preview='" + esc(power.id) + "' data-match-id='" + esc(match.id) + "' aria-label='Preview " + esc(power.name) + " in 3D'>" +
-          "<span aria-hidden='true'>" + esc(power.symbol) + "</span><strong>" + esc(power.name) + "</strong><small>" + (restriction === "Preview before use" ? "Preview 3D" : "Preview · " + restriction) + "</small></button>";
+        const restriction = power.usedToday ? "Used today" : unavailableShield ? "Shield active" : fixedTimer ? "Unavailable · fixed timer" : "Available once daily";
+        return "<button type='button' class='league-powerup-btn' data-match-powerup-select='" + esc(power.id) + "' data-match-id='" + esc(match.id) + "' aria-label='Select " + esc(power.name) + " for this match'>" +
+          "<span aria-hidden='true'>" + esc(power.symbol) + "</span><strong>" + esc(power.name) + "</strong><small>" + restriction + "</small></button>";
       }).join("");
       controls = "<div class='league-powerup-grid'>" + powers + "</div>";
     } else if (match.status === "live" && !isParticipant) {
@@ -432,40 +417,30 @@
       });
     });
     document.querySelectorAll("[data-powerup-select]").forEach(button => {
-      if (button.dataset.previewSelectBound) return;
-      button.dataset.previewSelectBound = "true";
+      if (button.dataset.powerupSelectBound === "true") return;
+      button.dataset.powerupSelectBound = "true";
       button.addEventListener("click", () => {
         state.selectedPowerupId = button.dataset.powerupSelect || "";
         state.selectedMatchId = "";
-        updatePowerupPreview();
+        updatePowerupSelection();
       });
     });
-    document.querySelectorAll("[data-match-powerup-preview]").forEach(button => {
-      if (button.dataset.leaguePreviewBound === "true") return;
-      button.dataset.leaguePreviewBound = "true";
+    document.querySelectorAll("[data-match-powerup-select]").forEach(button => {
+      if (button.dataset.leaguePowerupSelectBound === "true") return;
+      button.dataset.leaguePowerupSelectBound = "true";
       button.addEventListener("click", () => {
-        state.selectedPowerupId = button.dataset.matchPowerupPreview || "";
+        state.selectedPowerupId = button.dataset.matchPowerupSelect || "";
         state.selectedMatchId = button.dataset.matchId || "";
-        updatePowerupPreview();
-        $("#league-powerup-preview-panel")?.scrollIntoView({behavior:"smooth",block:"center"});
+        updatePowerupSelection();
+        $("#league-powerup-panel")?.scrollIntoView({behavior:"smooth",block:"center"});
       });
     });
-    const powerupModel = $("#league-powerup-selected-model");
-    if (powerupModel && !powerupModel.dataset.previewEventsBound) {
-      powerupModel.dataset.previewEventsBound = "true";
-      powerupModel.addEventListener("load", () => {
-        if ($("#league-powerup-preview-status")) $("#league-powerup-preview-status").textContent = "3D preview ready. Drag to rotate and pinch or scroll to zoom.";
-      });
-      powerupModel.addEventListener("error", () => {
-        if ($("#league-powerup-preview-status")) $("#league-powerup-preview-status").textContent = "The 3D model could not load. Check your connection and try again; no flat icon is substituted.";
-      });
-    }
     const activatePowerup = $("#league-powerup-activate");
     if (activatePowerup && !activatePowerup.dataset.actionBound) {
       activatePowerup.dataset.actionBound = "true";
       activatePowerup.addEventListener("click", () => { void activateSelectedPowerup(activatePowerup); });
     }
-    updatePowerupPreview();
+    updatePowerupSelection();
 
     document.querySelectorAll("[data-league-period]").forEach(button => {
       if (button.dataset.leaguePeriodBound === "true") return;
@@ -550,6 +525,7 @@
         "league-progression-zone",
         "league-fragment-reference-zone",
         "league-challenge-zone",
+        "league-powerup-panel",
         "league-matches-zone",
         "league-leaderboard-zone",
         "league-events-zone"
