@@ -1296,26 +1296,59 @@ let liveGiftScope='all';
 let refreshLiveGiftGrid=null;
 let liveDirectoryFilter='all';
 const MINGLORA_FAN_CLUB_GIFT_CODES=Object.freeze(['heart-me-2mk7ob','community-heart-mg6zzi','blue-heart-19gp9xp','flame-heart-yv4ovw','fan-1avs41e']);
-const LIVE_SCREEN_LAYOUT_OPTIONS=Object.freeze([
-  {value:'full-screen',label:'Full Screen',icon:'fullscreen'},
-  {value:'fluid-panel',label:'Fluid Panel',icon:'featured'},
-  {value:'fluid-grid',label:'Fluid Grid',icon:'grid'},
-  {value:'fixed-grid',label:'Fixed Grid',icon:'grid'},
-  {value:'fixed-panel',label:'Fixed Panel',icon:'columns'},
-  {value:'side-by-side',label:'Side by Side',icon:'columns'},
-  {value:'spotlight',label:'Spotlight',icon:'host'}
-]);
 const LIVE_GUEST_LAYOUT_OPTIONS=Object.freeze([
-  {value:'roundtable-1',label:'Roundtable 1',icon:'stack'},
-  {value:'roundtable-2',label:'Roundtable 2',icon:'match'}
+  {value:'full-screen',label:'Full Screen',icon:'fullscreen'},
+  {value:'fluid-panel',label:'Fluid Panel',icon:'fluidPanel'},
+  {value:'fluid-grid',label:'Fluid Grid',icon:'fluidGrid'},
+  {value:'fixed-grid',label:'Fixed Grid',icon:'fixedGrid'},
+  {value:'fixed-panel',label:'Fixed Panel',icon:'fixedPanel'},
+  {value:'side-by-side',label:'Side by Side',icon:'sideBySide'},
+  {value:'spotlight',label:'Spotlight',icon:'spotlight'},
+  {value:'roundtable-1',label:'Roundtable 1',icon:'roundtable1'},
+  {value:'roundtable-2',label:'Roundtable 2',icon:'roundtable2'}
 ]);
+// Kept as an internal alias so existing LIVE screen integrations can migrate safely.
+// The user-facing control and persisted choice are one nine-layout guest-stage setting.
+const LIVE_SCREEN_LAYOUT_OPTIONS=LIVE_GUEST_LAYOUT_OPTIONS;
 let activeLiveScreenLayout='full-screen';
-let activeLiveGuestLayout='roundtable-1';
-function normalizeLiveScreenLayout(value){const candidate=String(value||'full-screen');return LIVE_SCREEN_LAYOUT_OPTIONS.some(option=>option.value===candidate)?candidate:'full-screen';}
-function normalizeLiveGuestLayout(value){const candidate=String(value||'roundtable-1');return LIVE_GUEST_LAYOUT_OPTIONS.some(option=>option.value===candidate)?candidate:'roundtable-1';}
-function applyLiveGuestLayout(value){activeLiveGuestLayout=normalizeLiveGuestLayout(value);document.querySelectorAll('.live-guest-layout').forEach(root=>{root.dataset.liveGuestLayout=activeLiveGuestLayout;root.setAttribute('aria-label','LIVE guest panel · '+(LIVE_GUEST_LAYOUT_OPTIONS.find(option=>option.value===activeLiveGuestLayout)?.label||'Roundtable 1'));});document.querySelectorAll('#live-guest-layout-options [data-live-guest-layout]').forEach(button=>{const selected=button.dataset.liveGuestLayout===activeLiveGuestLayout;button.classList.toggle('active',selected);button.setAttribute('aria-pressed',String(selected));});}
-function liveLayoutIcon(name){const paths={grid:"<rect x='3' y='3' width='8' height='8' rx='1'/><rect x='13' y='3' width='8' height='8' rx='1'/><rect x='3' y='13' width='8' height='8' rx='1'/><rect x='13' y='13' width='8' height='8' rx='1'/>",columns:"<rect x='3' y='3' width='8' height='18' rx='1'/><rect x='13' y='3' width='8' height='18' rx='1'/>",stack:"<rect x='3' y='3' width='18' height='5' rx='1'/><rect x='3' y='10' width='18' height='5' rx='1'/><rect x='3' y='17' width='18' height='4' rx='1'/>",featured:"<rect x='3' y='3' width='12' height='18' rx='1'/><rect x='17' y='3' width='4' height='5' rx='1'/><rect x='17' y='10' width='4' height='5' rx='1'/><rect x='17' y='17' width='4' height='4' rx='1'/>",host:"<rect x='3' y='3' width='18' height='12' rx='1'/><rect x='3' y='17' width='5' height='4' rx='1'/><rect x='10' y='17' width='5' height='4' rx='1'/><rect x='17' y='17' width='4' height='4' rx='1'/>",guest:"<rect x='3' y='3' width='5' height='4' rx='1'/><rect x='10' y='3' width='5' height='4' rx='1'/><rect x='17' y='3' width='4' height='4' rx='1'/><rect x='3' y='9' width='18' height='12' rx='1'/>",fullscreen:"<path d='M8 3H3v5 M16 3h5v5 M21 16v5h-5 M8 21H3v-5'/>",match:"<rect x='3' y='3' width='8' height='18' rx='1'/><rect x='13' y='3' width='8' height='18' rx='1'/><path d='m9 12 2 2 2-2'/>"};return "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'>"+(paths[name]||paths.grid)+"</svg>";}
-function applyLiveScreenLayout(value){activeLiveScreenLayout=normalizeLiveScreenLayout(value);document.querySelectorAll('.live-guest-layout').forEach(root=>{root.dataset.liveLayout=activeLiveScreenLayout;root.setAttribute('aria-label','LIVE host and guest seats');root.closest('.live-video-stage')?.classList.toggle('live-full-screen-layout',activeLiveScreenLayout==='full-screen');root.closest('.live-audio-stage')?.classList.remove('live-host-only-layout');});document.querySelectorAll('[data-live-screen-layout]').forEach(button=>{const selected=button.dataset.liveScreenLayout===activeLiveScreenLayout;button.classList.toggle('active',selected);button.setAttribute('aria-pressed',String(selected));});}
+let activeLiveGuestLayout='full-screen';
+function normalizeLiveScreenLayout(value){
+  const candidate=String(value||'full-screen');
+  return LIVE_GUEST_LAYOUT_OPTIONS.some(option=>option.value===candidate)?candidate:'full-screen';
+}
+function normalizeLiveGuestLayout(value){return normalizeLiveScreenLayout(value);}
+function liveLayoutIcon(name){
+  const paths={
+    fullscreen:"<path d='M8 3H3v5 M16 3h5v5 M21 16v5h-5 M8 21H3v-5'/>",
+    fluidPanel:"<rect x='2.5' y='2.5' width='19' height='19' rx='2'/><rect x='4.5' y='4.5' width='12' height='15' rx='1'/><rect x='18' y='5' width='2' height='4' rx='.5'/><rect x='18' y='11' width='2' height='4' rx='.5'/><rect x='18' y='17' width='2' height='2' rx='.5'/>",
+    fluidGrid:"<rect x='2.5' y='2.5' width='12' height='19' rx='1'/><rect x='16.5' y='2.5' width='5' height='5' rx='1'/><rect x='16.5' y='9.5' width='5' height='5' rx='1'/><rect x='16.5' y='16.5' width='5' height='5' rx='1'/>",
+    fixedGrid:"<rect x='2.5' y='2.5' width='6' height='6' rx='.8'/><rect x='9' y='2.5' width='6' height='6' rx='.8'/><rect x='15.5' y='2.5' width='6' height='6' rx='.8'/><rect x='2.5' y='9' width='6' height='6' rx='.8'/><rect x='9' y='9' width='6' height='6' rx='.8'/><rect x='15.5' y='9' width='6' height='6' rx='.8'/><rect x='2.5' y='15.5' width='6' height='6' rx='.8'/><rect x='9' y='15.5' width='6' height='6' rx='.8'/><rect x='15.5' y='15.5' width='6' height='6' rx='.8'/>",
+    fixedPanel:"<rect x='2.5' y='2.5' width='12' height='19' rx='1'/><rect x='16.5' y='2.5' width='5' height='3' rx='.6'/><rect x='16.5' y='7' width='5' height='3' rx='.6'/><rect x='16.5' y='11.5' width='5' height='3' rx='.6'/><rect x='16.5' y='16' width='5' height='3' rx='.6'/>",
+    sideBySide:"<rect x='2.5' y='2.5' width='9' height='11' rx='1'/><rect x='12.5' y='2.5' width='9' height='11' rx='1'/><path d='M2.5 16h19'/><rect x='2.5' y='17' width='4' height='4' rx='.6'/><rect x='7.5' y='17' width='4' height='4' rx='.6'/><rect x='12.5' y='17' width='4' height='4' rx='.6'/><rect x='17.5' y='17' width='4' height='4' rx='.6'/>",
+    spotlight:"<rect x='2.5' y='2.5' width='19' height='10' rx='1'/><rect x='2.5' y='14' width='4' height='7.5' rx='.6'/><rect x='7.5' y='14' width='4' height='7.5' rx='.6'/><rect x='12.5' y='14' width='4' height='7.5' rx='.6'/><rect x='17.5' y='14' width='4' height='7.5' rx='.6'/>",
+    roundtable1:"<rect x='2.5' y='3' width='5' height='5' rx='.7'/><rect x='2.5' y='10' width='5' height='5' rx='.7'/><rect x='2.5' y='17' width='5' height='4' rx='.7'/><rect x='9' y='7' width='6' height='10' rx='1'/><rect x='16.5' y='3' width='5' height='5' rx='.7'/><rect x='16.5' y='10' width='5' height='5' rx='.7'/><rect x='16.5' y='17' width='5' height='4' rx='.7'/>",
+    roundtable2:"<rect x='2.5' y='3' width='4' height='5' rx='.7'/><rect x='2.5' y='10' width='4' height='5' rx='.7'/><rect x='2.5' y='17' width='4' height='4' rx='.7'/><rect x='7.5' y='7' width='9' height='10' rx='1'/><rect x='17.5' y='3' width='4' height='5' rx='.7'/><rect x='17.5' y='10' width='4' height='5' rx='.7'/><rect x='17.5' y='17' width='4' height='4' rx='.7'/>"
+  };
+  return "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'>"+(paths[name]||paths.fixedGrid)+"</svg>";
+}
+function applyLiveScreenLayout(value){
+  activeLiveScreenLayout=normalizeLiveScreenLayout(value);
+  activeLiveGuestLayout=activeLiveScreenLayout;
+  const label=LIVE_GUEST_LAYOUT_OPTIONS.find(option=>option.value===activeLiveScreenLayout)?.label||'Full Screen';
+  document.querySelectorAll('.live-guest-layout').forEach(root=>{
+    root.dataset.liveLayout=activeLiveScreenLayout;
+    delete root.dataset.liveGuestLayout;
+    root.setAttribute('aria-label','LIVE guest layout · '+label);
+    root.closest('.live-video-stage')?.classList.toggle('live-full-screen-layout',activeLiveScreenLayout==='full-screen');
+    root.closest('.live-audio-stage')?.classList.remove('live-host-only-layout');
+  });
+  document.querySelectorAll('[data-live-screen-layout]').forEach(button=>{
+    const selected=button.dataset.liveScreenLayout===activeLiveScreenLayout;
+    button.classList.toggle('active',selected);
+    button.setAttribute('aria-pressed',String(selected));
+  });
+}
+function applyLiveGuestLayout(value){applyLiveScreenLayout(value);}
 function restoreLiveChatToStage(){
   const chat=$('#live-chat-overlay')||$('#live-chat-disabled-note');
   const slot=$('#live-fullscreen-chat-slot');
@@ -2621,10 +2654,10 @@ async function openLiveRoom(session,role,issuedLiveKit){
   const liveMode=['video_audio','audio_only','mobile_gaming','live_studio'].includes(session.liveMode)
     ?session.liveMode:(broadcastType==='audio_only'?'audio_only':'video_audio');
   const liveSettings=session.liveSettings&&typeof session.liveSettings==='object'?session.liveSettings:{};
-  activeLiveScreenLayout=normalizeLiveScreenLayout(session.liveLayout);
-  activeLiveGuestLayout=normalizeLiveGuestLayout(session.liveGuestLayout||(['roundtable-1','roundtable-2'].includes(session.liveLayout)?session.liveLayout:'roundtable-1'));
-  session.liveGuestLayout=activeLiveGuestLayout;
+  activeLiveScreenLayout=normalizeLiveScreenLayout(session.liveLayout||session.liveGuestLayout||'full-screen');
+  activeLiveGuestLayout=activeLiveScreenLayout;
   session.liveLayout=activeLiveScreenLayout;
+  session.liveGuestLayout=activeLiveScreenLayout;
   const canUseCamera=broadcastType==='video_audio'&&liveMode!=='mobile_gaming'&&(role!=='guest'||liveSettings.guestCamera!==false);
   const giftsEnabled=liveSettings.liveGifts!==false&&!liveSettings.practiceMode;
   const client=window.LivekitClient;
@@ -2719,7 +2752,7 @@ async function openLiveRoom(session,role,issuedLiveKit){
     ['voiceRings','Voice rings',true,'Play a short tone for new guest requests']
   ];
   const liveRoomPermissionPanel=role==='host'?"<section id='live-room-permission-panel' class='live-tools-card live-room-permission-panel' data-live-tools-panel='permissions'><div class='live-panel-title'><strong>Guest & host permissions</strong><small>Enable or disable each control during your LIVE.</small></div><div id='live-room-permission-controls' class='live-room-permission-grid'>"+liveRoomPermissionSettings.map(([key,label,defaultValue,description])=>"<label class='live-room-permission-toggle'><input type='checkbox' data-live-room-setting='"+key+"'"+((liveSettings[key]??defaultValue)?" checked":"")+"><span class='live-preflight-switch'></span><span><strong>"+esc(label)+"</strong><small>"+esc(description)+"</small></span></label>").join('')+"</div></section>":"";
-  const liveLayoutPanel=role==="host"?"<section id='live-layout-panel' class='live-tools-card live-layout-panel' data-live-tools-panel='layouts'><div class='live-panel-title'><strong>Screen layout</strong><small>Choose one of the seven ways to arrange the LIVE screen. The guest panel layout is controlled separately below.</small></div><div id='live-layout-options' class='live-layout-options' role='group' aria-label='Choose LIVE screen layout'>"+LIVE_SCREEN_LAYOUT_OPTIONS.map(option=>"<button type='button' class='live-layout-option"+(option.value===activeLiveScreenLayout?" active":"")+"' data-live-screen-layout='"+option.value+"' aria-pressed='"+String(option.value===activeLiveScreenLayout)+"'>"+liveLayoutIcon(option.icon)+"<span>"+esc(option.label)+"</span></button>").join("")+"</div><p class='live-layout-status' id='live-layout-status' role='status' aria-live='polite'>"+esc(LIVE_SCREEN_LAYOUT_OPTIONS.find(option=>option.value===activeLiveScreenLayout)?.label||'Full Screen')+" screen layout selected.</p><div class='live-panel-title live-guest-layout-heading'><strong>Guest panel / grid layout</strong><small>Choose how the host and guest boxes are arranged inside the LIVE guest panel.</small></div><div id='live-guest-layout-options' class='live-layout-options' role='group' aria-label='Choose LIVE guest panel layout'>"+LIVE_GUEST_LAYOUT_OPTIONS.map(option=>"<button type='button' class='live-layout-option"+(option.value===activeLiveGuestLayout?" active":"")+"' data-live-guest-layout='"+option.value+"' aria-pressed='"+String(option.value===activeLiveGuestLayout)+"'>"+liveLayoutIcon(option.icon)+"<span>"+esc(option.label)+"</span></button>").join("")+"</div><p class='live-layout-status' id='live-guest-layout-status' role='status' aria-live='polite'>"+esc(LIVE_GUEST_LAYOUT_OPTIONS.find(option=>option.value===activeLiveGuestLayout)?.label||'Roundtable 1')+" guest layout selected.</p></section>":"";
+  const liveLayoutPanel=role==="host"?"<section id='live-layout-panel' class='live-tools-card live-layout-panel' data-live-tools-panel='layouts'><div class='live-panel-title'><strong>Guest layout</strong><small>Choose one of the nine supplied guest-stage arrangements. Each layout has its own participant grid, tile proportions and guest positions.</small></div><div id='live-layout-options' class='live-layout-options' role='group' aria-label='Choose LIVE guest layout'>"+LIVE_GUEST_LAYOUT_OPTIONS.map(option=>"<button type='button' class='live-layout-option"+(option.value===activeLiveScreenLayout?" active":"")+"' data-live-screen-layout='"+option.value+"' aria-pressed='"+String(option.value===activeLiveScreenLayout)+"'>"+liveLayoutIcon(option.icon)+"<span>"+esc(option.label)+"</span></button>").join("")+"</div><p class='live-layout-status' id='live-layout-status' role='status' aria-live='polite'>"+esc(LIVE_GUEST_LAYOUT_OPTIONS.find(option=>option.value===activeLiveScreenLayout)?.label||'Full Screen')+" guest layout selected.</p></section>":"";
   const liveViewerTools=role==="host"?"<section id='live-viewer-panel' class='live-tools-card live-viewer-panel' data-live-tools-panel='viewers'><div class='live-panel-title'><strong>Viewers & guests</strong><small id='live-viewer-total'>Loading connected people…</small></div><div id='live-viewer-roster' class='live-viewer-roster'><p class='muted'>Loading the real-time audience…</p></div></section>":"";
   const liveTopGiftersTools="<section id='live-top-gifters-panel' class='live-tools-card live-top-gifters-panel' data-live-tools-panel='top-gifters'><div class='live-panel-title'><strong>Top Gifters</strong><small>Ranked by confirmed Coins sent in this LIVE</small></div><div id='live-top-gifters-list' class='live-top-gifters-list'><p class='muted'>Loading this room’s gifter ranking…</p></div></section>";
   const liveToolsDrawer="<div id='live-tools-backdrop' class='live-tools-backdrop hidden' aria-hidden='true'>"+
@@ -2902,9 +2935,12 @@ activeLivePinnedComment=null;
       return;
     }
     if(topic==="minglora-live-guest-layout"&&participant.identity===session.hostId&&packet?.type==="minglora.live.guest-layout"&&packet.version===1){
+      // Compatibility with clients that still send the retired guest-box topic.
       if(!LIVE_GUEST_LAYOUT_OPTIONS.some(option=>option.value===packet.layout))return;
-      const nextLayout=normalizeLiveGuestLayout(packet.layout);
-      session.liveGuestLayout=nextLayout;activeLiveSession.liveGuestLayout=nextLayout;applyLiveGuestLayout(nextLayout);renderLiveGuestLayout(room,role,session,activeLiveSpeakerIds);
+      const nextLayout=normalizeLiveScreenLayout(packet.layout);
+      session.liveLayout=nextLayout;session.liveGuestLayout=nextLayout;
+      activeLiveSession.liveLayout=nextLayout;activeLiveSession.liveGuestLayout=nextLayout;
+      applyLiveScreenLayout(nextLayout);renderLiveGuestLayout(room,role,session,activeLiveSpeakerIds);
       return;
     }
     if(topic==="minglora-live-reaction"){
@@ -3244,42 +3280,25 @@ activeLivePinnedComment=null;
       const button=event.target?.closest?.('[data-live-screen-layout]');
       if(!button||role!=="host"||button.disabled)return;
       const nextLayout=String(button.dataset.liveScreenLayout||'');
-      if(!LIVE_SCREEN_LAYOUT_OPTIONS.some(option=>option.value===nextLayout))return;
+      if(!LIVE_GUEST_LAYOUT_OPTIONS.some(option=>option.value===nextLayout))return;
       $("#live-layout-options")?.querySelectorAll('button').forEach(item=>item.disabled=true);
       const status=$("#live-layout-status");
       try{
         await api("/live/sessions/"+encodeURIComponent(session.id)+"/layout",{method:"PATCH",body:JSON.stringify({layout:nextLayout})});
-        session.liveLayout=nextLayout;activeLiveSession.liveLayout=nextLayout;applyLiveScreenLayout(nextLayout);renderLiveGuestLayout(room,role,session,activeLiveSpeakerIds);
+        session.liveLayout=nextLayout;session.liveGuestLayout=nextLayout;
+        activeLiveSession.liveLayout=nextLayout;activeLiveSession.liveGuestLayout=nextLayout;
+        applyLiveScreenLayout(nextLayout);renderLiveGuestLayout(room,role,session,activeLiveSpeakerIds);
         const packet=new TextEncoder().encode(JSON.stringify({type:"minglora.live.layout",version:1,layout:nextLayout}));
         await room.localParticipant.publishData(packet,{reliable:true,topic:"minglora-live-layout"});
-        const label=LIVE_SCREEN_LAYOUT_OPTIONS.find(option=>option.value===nextLayout)?.label||'Grid';
-        if(status)status.textContent=label+' layout is now live for everyone.';
-      }catch(error){
-        applyLiveScreenLayout(session.liveLayout||'full-screen');renderLiveGuestLayout(room,role,session,activeLiveSpeakerIds);
-        if(status)status.textContent='Layout could not be synchronized. '+(error.message||'Try again.');
-        toast(error.message||'The LIVE layout could not be changed.');
-      }finally{$("#live-layout-options")?.querySelectorAll('button').forEach(item=>item.disabled=false);}
-    });
-    $("#live-guest-layout-options")?.addEventListener("click",async event=>{
-      const button=event.target?.closest?.('[data-live-guest-layout]');
-      if(!button||role!=="host"||button.disabled)return;
-      const nextLayout=String(button.dataset.liveGuestLayout||'');
-      if(!LIVE_GUEST_LAYOUT_OPTIONS.some(option=>option.value===nextLayout))return;
-      $("#live-guest-layout-options")?.querySelectorAll('button').forEach(item=>item.disabled=true);
-      const status=$("#live-guest-layout-status");
-      try{
-        await api("/live/sessions/"+encodeURIComponent(session.id)+"/guest-layout",{method:"PATCH",body:JSON.stringify({layout:nextLayout})});
-        session.liveGuestLayout=nextLayout;activeLiveSession.liveGuestLayout=nextLayout;applyLiveGuestLayout(nextLayout);renderLiveGuestLayout(room,role,session,activeLiveSpeakerIds);
-        const packet=new TextEncoder().encode(JSON.stringify({type:"minglora.live.guest-layout",version:1,layout:nextLayout}));
-        await room.localParticipant.publishData(packet,{reliable:true,topic:"minglora-live-guest-layout"});
-        const label=LIVE_GUEST_LAYOUT_OPTIONS.find(option=>option.value===nextLayout)?.label||'Roundtable 1';
+        const label=LIVE_GUEST_LAYOUT_OPTIONS.find(option=>option.value===nextLayout)?.label||'Full Screen';
         if(status)status.textContent=label+' guest layout is now live for everyone.';
       }catch(error){
-        applyLiveGuestLayout(session.liveGuestLayout||'roundtable-1');renderLiveGuestLayout(room,role,session,activeLiveSpeakerIds);
+        applyLiveScreenLayout(session.liveLayout||'full-screen');renderLiveGuestLayout(room,role,session,activeLiveSpeakerIds);
         if(status)status.textContent='Guest layout could not be synchronized. '+(error.message||'Try again.');
         toast(error.message||'The LIVE guest layout could not be changed.');
-      }finally{$("#live-guest-layout-options")?.querySelectorAll('button').forEach(item=>item.disabled=false);}
+      }finally{$("#live-layout-options")?.querySelectorAll('button').forEach(item=>item.disabled=false);}
     });
+
     const liveDevicePreferences={echoCancellation:true,noiseSuppression:liveSettings.noiseSuppression!==false,autoGainControl:true,videoFit:"cover",mirrorSelf:true,showNames:true};
     activeLiveDevicePreferences=liveDevicePreferences;
     const noiseSuppressionControl=$("#live-noise-suppression");

@@ -55,25 +55,9 @@ The generator and tests validate unique codes and animation keys, safe local pat
 
 The 1,509 extracted screenshot crops in `assets/Artwork/` are explicitly marked review-only. Their extraction did not establish commercial use permission. They must not be activated as production gifts until each asset's rights/provenance is established or it is replaced by original Minglora artwork.
 
-## Gift-specific 3D model sources
+## Gift-specific 3D model exceptions
+The generator now has **11 individually art-directed gift-specific source models**: Rose (`rose-4ieccm`), Hibiscus (`hibiscus-5-mgl`), Djembe Master (`djembe-master-1v3jzkm`), Palm Breeze (`palm-breeze-gknyt0`), Gamer Otter (`gamer-otter-100-mgl`), LIVE Island (`live-island-rmn3mc`), Crystal Crown (`crystal-crown-1itryeu`), Phoenix (`phoenix-wep6uk`), Beach Maracas (`beach-maracas-1exxoag`), Royal Lions Scepter (`royal-lions-scepter-15000-mgl`) and Baseball (`baseball-orcdx9`). Their source modules are `rose-model.mjs`, `hibiscus-model.mjs`, `djembe-model.mjs`, `palm-breeze-model.mjs`, `gamer-otter-model.mjs`, `live-island-model.mjs`, `crystal-crown-model.mjs`, `phoenix-model.mjs`, `beach-maracas-model.mjs`, `royal-lions-scepter-model.mjs` and `baseball-model.mjs` under `assets/3d-assets/gift-models/`. The canonical generator selects these models only for their exact gift codes and continues to use the shared procedural builder for the remaining 1,737 rows. All eleven retain `design-review-pending` status; none is premium-approved until human visual and rights review pass. The Baseball model and vector artwork do not change its configured 1-Coin source value or active flag and do not activate any production offer.
 
-The generator now routes **11 exact canonical gift codes** to individually authored Minglora model sources:
-
-| Gift | Canonical code | Individually authored geometry |
-|---|---|---|
-| Rose | `rose-4ieccm` | Layered cupped petals, sepals, thorned stem, three leaves, raised leaf/petal veins, golden stamens and dew |
-| Hibiscus | `hibiscus-5-mgl` | Five cupped tropical petals, sepals, leaves, central stamen column and pollen anthers |
-| Djembe Master | `djembe-master-1v3jzkm` | Mahogany shell, hollow bowl, hide drumhead, bindings, tension strands and woven diamond lacing |
-| Palm Breeze | `palm-breeze-gknyt0` | Curved trunk, pinnate fronds, individual leaflets and veins, coconuts and shoreline plinth |
-| Gamer Otter | `gamer-otter-100-mgl` | Seated otter, sculpted face, tail, headset, microphone and controller |
-| LIVE Island | `live-island-rmn3mc` | Lagoon, surf, raised island, waterfall, palms, pavilion, canoe and coral |
-| Crystal Crown | `crystal-crown-1itryeu` | Gold band, velvet lining, arched points, faceted gems, pavé and pendant drops |
-| Phoenix | `phoenix-wep6uk` | Layered firebird body, crest, coverts, flight feathers, tail fan, talons and embers |
-| Beach Maracas | `beach-maracas-1exxoag` | Crossed carved gourd shakers, wooden handles, grip bands and painted motifs |
-| Royal Lions Scepter | `royal-lions-scepter-15000-mgl` | Sculpted lion face, radial mane locks, crown, faceted jewels, gold staff and enamel grip |
-| Baseball | `baseball-orcdx9` | Warm-ivory leather sphere, curved recessed seam channels, raised cotton seams, hand-sewn stitches and leather grain |
-
-The **1,737 remaining catalogue records** continue to use the shared procedural model builder. Each bespoke source is generated only for its exact code; catalogue names, category, configured Coin values, source active flags, asset paths and transaction logic are preserved. All 11 models remain `design-review-pending`; generated geometry or successful browser loading is not human visual approval, rights clearance or production approval. The separate production version-3 gift publication gate is unchanged.
 ## Transparent icon and full-artwork separation — 2026-11-14
 
 - Every canonical gift retains its existing full SVG artwork and glTF model URL. A separate `icon_url` now points to `/assets/gifts/catalog/<code>-icon.svg`.

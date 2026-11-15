@@ -88,9 +88,9 @@ This artifact is a generated inventory and path/integrity report, not evidence o
 
 - Canonical repository catalogue: 1,748 records (1,737 marked active in source, 11 retired).
 - Build pipeline generates 1,748 primary SVG artworks, 1,748 transparent SVG icons and 1,748 GLTF model files.
-- 1,739 GLTF models use shared procedural category geometry.
-- 9 gift-specific model sources have been authored: Rose, Hibiscus, Djembe Master, Palm Breeze, Gamer Otter, LIVE Island, Crystal Crown, Phoenix and Beach Maracas. Their presence is not human visual approval.
-- Existing standalone icon packs: 16 LIVE room controls, 22 gift-category icons and 12 LIVE tools shortcuts.
+- 1,737 GLTF models use shared procedural category geometry.
+- 10 gift-specific model sources have been authored: Rose, Hibiscus, Djembe Master, Palm Breeze, Gamer Otter, LIVE Island, Crystal Crown, Phoenix, Beach Maracas and Royal Lions Scepter. Their presence is not human visual approval.
+- Existing standalone icon packs: 18 LIVE room controls, 22 gift-category icons and 12 LIVE tools shortcuts. The Jamaican culture category icon now has original full-colour green/gold/black flag saltire artwork; visual and rights review remain pending.
 - Existing animation/effects runtime and 1,737 source-catalogue motion profiles are present. These do not establish a complete set of individually authored cinematic gift animations.
 - The generated manifest records human visual/licensing review as outstanding for the catalogue artwork and models.
 
@@ -147,17 +147,36 @@ These changes are test/workflow infrastructure only. They do not implement or ap
 
 Use supplied third-party screenshots only to understand geometry, hierarchy and interaction. Do not copy third-party company names, logos, trademarks, brand identifiers or proprietary artwork. Use Minglora branding and original or properly licensed artwork. Preserve all source references as read-only. Keep this task limited to Minglora LIVE and the assets directly required by it.
 
+## Latest verified checkpoint — 2026-11-15 (PR #377)
 
-## Continuation checkpoint — Baseball bespoke model branch — 2026-11-15
+- Project/repository: Minglora Social Network — `ravaunrichards/Minglora-Social-Network`.
+- Main branch: `5b3dc50508e684cb7478cfa5eb1b4f56580ed566`.
+- Merged task: original Rose glTF refinement; merge commit `5b3dc50508e684cb7478cfa5eb1b4f56580ed566`.
+- Changed source/test paths: `assets/3d-assets/gift-models/rose-model.mjs`, `tests/unit/gift-catalog.test.js`, `tests/e2e/live-gift-model-render.mjs`.
+- Verification: repository CI passed; separate LIVE/MeetWave layout QA passed; nine original gift models rendered in Chromium WebGL across desktop, tablet and mobile (27/27). Latest render report recorded zero page errors, HTTP errors, failed requests and request cancellations.
+- No deployment, production catalogue activation, pricing change, wallet/transaction operation or user-data mutation occurred.
+- Artwork review status remains pending; no premium, rights or physical-device approval is claimed.
 
-- Verified current main before changes: `5b3dc50508e684cb7478cfa5eb1b4f56580ed566` (includes merged Rose leaf/petal detail).
-- Previous PR #377 was merged successfully as `5b3dc50508e684cb7478cfa5eb1b4f56580ed566`; its CI, seven-plus-two layout QA and Chromium model-render workflows passed on its exact head.
-- PR #367's renderer correction is on main; merged-branch browser model render job completed successfully and the previous nine-model matrix passed 27/27.
-- Stale draft PR #376 was not merged or overwritten. Its original Baseball model source blob was reused on a new branch based on the current main commit.
-- Canonical record verified read-only: `baseball-orcdx9`, `Baseball`, category `sports`, configured `coin_price=1`, source `active=true`. No catalogue values were changed.
-- New branch: `feat/minglora-baseball-bespoke-live-asset-20261115`.
-- This increment adds exact-code GLTF routing, original `baseball-original-v1` vector artwork, unit regressions, and Scepter+Baseball in the desktop/tablet/mobile renderer matrix (11×3 = 33 checks).
-- The GLTF and artwork are review-pending; this is not human art approval, rights clearance, physical-device acceptance, production catalogue activation or deployment.
-- CI results and final merge status: pending.
+### Next unfinished work
 
-**Next action:** run repository CI, seven-plus-two layout QA and the dedicated Chromium gift render workflow on this branch. Diagnose any failures, then merge only after all required checks pass and read back the resulting main commit.
+1. Continue bespoke gift artwork beyond the existing small set of individually authored model sources; prioritize original Caribbean/Jamaican culture subjects using canonical catalogue records and genuine configured metadata.
+2. Improve the remaining procedural catalogue artwork and maintain subject-specific, non-duplicated source assets.
+3. Complete standalone animation/audio libraries; current motion is largely code-driven Web Animations and sound is locally synthesized, not mastered audio files.
+4. Extend LIVE control/icon coverage where actual panels or states still lack a dedicated asset, retaining accessible active/disabled/loading/error states and offline cache mappings.
+5. Perform human visual and rights review before any asset is marked production-approved.
+6. Test actual Android, iPhone, tablet, foldable, desktop/laptop and supported TV devices. Chromium viewport tests are not hardware acceptance.
+7. Keep the production database gift catalogue inactive until v3 assets, source rights, configured prices and transaction compatibility are approved.
+
+
+## Baseball asset integration checkpoint — 2026-11-15
+
+- Current main at sync: `7a6aa1b9d51f1b3644737665a7f05ec6f8e5c3c8`, including the merged Gifter reference/cache work, Jamaican culture category icon and updated LIVE asset report checkpoint. This task's branch is being synchronized as a normal two-parent merge commit, not force-pushed.
+- Canonical record verified read-only: `baseball-orcdx9`, Baseball, category `sports`, configured value 1 Coin, source `active=true`. No catalogue price/status mutation was made.
+- Added `assets/3d-assets/gift-models/baseball-model.mjs`, exact-code generator routing, original Baseball vector art for the primary SVG and transparent icon, model/artwork regression assertions and desktop/tablet/mobile render coverage.
+- The renderer matrix now contains 11 bespoke model sources (11 × 3 viewports = 33 expected captures), including Royal Lions Scepter which had been missing from the pre-existing nine-model list.
+- First PR #387 CI attempt: 1,229 tests passed and 1 failed. The failing assertion was the pre-existing Baseball SVG seam signature `stroke="#d84854" stroke-width="12"`; the new SVG source has been corrected to preserve that exact existing signature. This is a compatibility fix, not a test weakening.
+- Layout visual QA passed on the first PR head. Gift-model Chromium render workflow was still running when this checkpoint was recorded. Standard CI and render QA must pass again on the corrected, latest-main-synchronized PR head before merge.
+- Asset and source remain `design-review-pending`; no legal/rights/human art approval, mastered sound, production activation, physical-device testing or deployment is implied.
+- PR: #387. Original isolated task commit: `b640926b112a1016ddc7ca3daf70a625274164c3`; seam compatibility correction: `a85c3d51d118a288198f230b40a4428810f15b25`. The current main head advanced to `7a6aa1b9...` during review and must be preserved in final sync.
+
+**Next action:** finish reconciling the documentation against current main, update the existing PR branch with a two-parent merge commit, rerun all required CI/layout/model-render checks on the new head, and merge only when all are verified successful.

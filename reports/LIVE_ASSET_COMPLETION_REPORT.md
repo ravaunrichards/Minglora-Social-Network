@@ -329,14 +329,29 @@ The browser captures establish that all nine bespoke models load and remain visi
 - Added unit coverage for exact-code visual preset selection, sound dispatch, synthesized layer signature, motion-index mapping and manifest provenance. These changes do not create a production transaction or activate the source catalogue gift.
 - Acceptance boundary: this is a runtime-generated motion/audio implementation, not an embedded GLTF animation channel, Lottie/Rive file, mastered recording, composer/artist approval, licensing clearance, human visual/design approval or physical-device QA. The scepter model and effects remain design-review-pending.
 
+## Rose refinement — verified 2026-11-15
 
-## Incremental completion — Baseball bespoke model and artwork source — 2026-11-15
+- PR #377 merged into `main` as `5b3dc50508e684cb7478cfa5eb1b4f56580ed566`.
+- The canonical Rose source now emits layered cupped petals, raised petal/leaf venation, connected leaf petioles, sepals, a tapered stem and individual golden stamens/anthers.
+- Regression test coverage was extended for these named mesh/material parts.
+- CI: passed. LIVE/MeetWave layout matrix: passed. Chromium WebGL model render: 27/27 checks across nine models and desktop/tablet/mobile. Render report: zero page errors, HTTP failures, request failures or cancellations.
+- Remaining release gates: human art review, licensing/provenance clearance, complete individual animation/audio assets and actual physical-device acceptance. The Rose remains design-review-pending and is not marked production-approved.
 
-**Implementation scope:** one canonical Minglora LIVE gift asset; not completion of the full LIVE asset mission.
+## Jamaican culture category icon — 2026-11-15
 
-- Original Baseball GLTF source added from the existing repository-authored asset branch and wired by exact canonical code `baseball-orcdx9`.
-- Primary SVG and transparent icon now carry the unique `baseball-original-v1` artwork identity.
-- Canonical source record values are asserted unchanged: Baseball / sports / 1 Coin / source `active=true`.
-- Unit regression covers the named mesh parts, embedded buffer, finite POSITION bounds, review status and both SVG outputs.
-- Chromium gift-model matrix includes Baseball plus Royal Lions Scepter, for 11 models across three desktop/tablet/mobile viewports (33 planned checks).
-- Workflow verification is pending; the asset remains design-review-pending. No production database activation or deployment is part of this increment.
+- Replaced the plain crossed-outline Jamaican culture category mark with an original Jamaican flag saltire SVG using green, gold and black gradient artwork.
+- Preserved the existing category ID, symbol, URL, 24×24 viewBox, currentColor outline and service-worker asset path.
+- Added tests for the three national colours, gradients and saltire; repository CI and independent layout QA passed before PR #383 was merged as `aaf1182a5f6bced14685a3db2b9e1a3c95557299`.
+- Human visual and rights review remain pending. The icon is not represented as a fully approved or premium production asset.
+
+
+## Baseball bespoke gift model and artwork — 2026-11-15
+
+- Canonical item: `baseball-orcdx9` / Baseball / sports.
+- Preserved source catalogue metadata: configured `coin_price=1`, `active=true`, asset version 1. No production offer was activated.
+- Added the original self-contained GLTF source `assets/3d-assets/gift-models/baseball-model.mjs`; the canonical generator routes only this gift code to the bespoke model.
+- Added subject-specific primary SVG and transparent gift icon artwork marked `baseball-original-v1`.
+- Added regression coverage for metadata, separate leather/seam/stitch mesh groups, finite bounds, embedded buffers and both vector artworks.
+- Expanded the Chromium model matrix to include Baseball and the existing Royal Lions Scepter alongside the original nine models, across desktop, tablet and mobile.
+- Validation: the initial CI run exposed an existing assertion requiring seam signature `stroke="#d84854" stroke-width="12"`; the SVG seam was corrected to match it while retaining the layered red seam treatment. Latest-head rerun is pending.
+- Release boundary: the model remains `design-review-pending`; human art review, rights clearance, mastered individual gift audio/animation and physical-device acceptance remain outstanding. No database, wallet, price, transaction or deployment operation occurred.
