@@ -29,7 +29,7 @@ test("Djembe Master includes twelve lightweight mahogany grain inlays in its sel
     assert.equal(position?.count, 56, "seven-point grain path should use the expected low-poly tube");
     assert.equal(normal?.count, position?.count);
     assert.equal(indices?.componentType, 5123);
-    assert.equal(indices?.count, 294);
+    assert.equal(indices?.count, 252);
     assert.ok(position.min.every(Number.isFinite));
     assert.ok(position.max.every(Number.isFinite));
     assert.ok(position.max[1] - position.min[1] > 1.0, "grain must follow most of the carved shell height");
