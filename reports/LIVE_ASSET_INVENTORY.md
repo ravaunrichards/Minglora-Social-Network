@@ -92,10 +92,10 @@ The shortcuts remain Layout, Permissions, Guests, Viewers, Fan Club, Match, Top 
 |---|---|---|---|
 | assets/3d-assets/gift-models/rose-model.mjs | Rose | Layered rose petals, sepals, thorned stem, sculpted leaves and dew | Design review pending |
 | assets/3d-assets/gift-models/hibiscus-model.mjs | Hibiscus (hibiscus-5-mgl) | Five cupped tropical petals, sepals, three leaves, central stamen column and pollen anthers | Design review pending; CI/build tests passed in merged PR #339 validation set |
-| assets/3d-assets/gift-models/djembe-model.mjs | Djembe Master (djembe-master-1v3jzkm) | Mahogany shell, hollow bowl, hide drumhead, rim bindings, 16 tension strands, diamond lacing and carved detailing | Design review pending; CI/build tests passed in merged PR #339 |
+| assets/3d-assets/gift-models/djembe-model.mjs | Djembe Master (djembe-master-1v3jzkm) | Mahogany shell with 12 individually named fine grain inlays, hollow bowl, hide drumhead, rim bindings, 16 tension strands, diamond lacing and carved detailing | Grain geometry unit test added; design review pending |
 | assets/3d-assets/gift-models/palm-breeze-model.mjs | Palm Breeze (palm-breeze-gknyt0) | Curved trunk, eight pinnate fronds, grouped leaflets and veins, coconuts, roots and sand/water plinth | Design review pending; CI/build tests passed in merged PR #340 |
 
-The repository now has eleven individually art-directed model sources: Rose, Hibiscus, Djembe Master, Palm Breeze, Gamer Otter, LIVE Island, Crystal Crown, Phoenix, Beach Maracas, Royal Lions Scepter and Baseball. The generator still uses shared procedural category/name geometry for the remaining 1,737 catalogue gifts; the presence of a generated GLTF file per catalogue row must not be interpreted as proof of bespoke modelling or premium approval.
+The repository now has twelve individually art-directed model sources: Rose, Hibiscus, Djembe Master, Palm Breeze, Gamer Otter, LIVE Island, Crystal Crown, Phoenix, Beach Maracas, Royal Lions Scepter and Baseball. The generator still uses shared procedural category/name geometry for the remaining 1,736 catalogue gifts; the presence of a generated GLTF file per catalogue row must not be interpreted as proof of bespoke modelling or premium approval.
 
 ## Transparent gift-icon inventory — 2026-11-14
 
@@ -290,3 +290,10 @@ The existing Rose and Keeper models/artwork and their event effects remain `desi
 | Cache | `gift-effects.js?v=20261115-rose-unfurl-atlantis-trident-2` | `public/index.html` and `public/sw.js` | Matching reference; shell cache v325 |
 
 The source catalogue's 15,000-Coin price, active flag and `cosmic-orbit` catalogue preset remain unchanged. The exact-code runtime override is separate metadata. Model generation, test and browser-render CI on the combined PR are still pending.
+
+## Djembe mahogany-grain refinement — 2026-11-15
+
+- Source: `assets/3d-assets/gift-models/djembe-model.mjs`.
+- Added 12 low-poly flowing grain inlay meshes on the existing mahogany shell; each path has a unique name and follows seven sampled points around the body.
+- Focused regression test: `tests/unit/djembe-mahogany-grain.test.js` checks mesh count and uniqueness, VEC3 position/normal accessors, finite bounds, index buffer shape, PBR material values and embedded buffer integrity.
+- The source remains `design-review-pending`; this does not imply final human art approval or physical-device certification.
