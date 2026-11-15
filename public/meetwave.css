@@ -2690,3 +2690,12 @@
 .mw-meeting #mw-screen-stage:not(.has-screen-share) #mw-grid[data-guest-layout="roundtable-2"]>.live-guest-seat.is-guest[data-seat-index]{
   display:flex!important;
 }
+
+/* Keep the two Roundtable host anchors distinguishable for grid-state/accessibility
+   diagnostics while their actual visual positions use the absolute reference boxes. */
+.mw-meeting #mw-screen-stage:not(.has-screen-share) #mw-grid[data-guest-layout="roundtable-1"]>.live-guest-seat.is-host{
+  grid-column:1/-1!important;grid-row:1/3!important;
+}
+.mw-meeting #mw-screen-stage:not(.has-screen-share) #mw-grid[data-guest-layout="roundtable-2"]>.live-guest-seat.is-host{
+  grid-column:2/4!important;grid-row:1/3!important;
+}
