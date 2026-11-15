@@ -304,10 +304,13 @@ test('MeetWave screen and guest-box preferences persist independently per signed
 });
 
 test('MeetWave guest-box choices remain separate from screen grid geometry and the support column', () => {
-  const contract=css.slice(css.lastIndexOf('/* FINAL SEVEN-PLUS-TWO CONTRACT:'));
-  const guestPart=contract.slice(contract.indexOf('/* Roundtable modes'));
+  const contract=css.slice(css.indexOf('/* MINGLORA MEETWAVE — exact nine guest-layout reference contract.'));
+  const guestStart=contract.indexOf('/* Roundtable guest-box arrangements — positions seats only; no screen grid rewrite. */');
+  const guestEnd=contract.indexOf('/* The eight side seats are inviteable placeholders',guestStart);
+  assert.ok(guestStart>=0&&guestEnd>guestStart);
+  const guestPart=contract.slice(guestStart,guestEnd);
   for(const layout of ['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight']) {
-    assert.ok(contract.includes('data-screen-layout="'+layout+'"'), layout+' owns a screen-grid template');
+    assert.ok(contract.includes('#mw-grid[data-layout="'+layout+'"]'), layout+' owns a screen-grid template');
   }
   assert.ok(guestPart.includes('data-guest-layout="roundtable-1"'));
   assert.ok(guestPart.includes('data-guest-layout="roundtable-2"'));
