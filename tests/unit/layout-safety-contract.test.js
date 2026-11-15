@@ -14,10 +14,12 @@ test('the overlay contract loads after mobile styles and is included in the serv
   const appLockLink = html.indexOf('app-lock.css?v=20261107-app-lock-1');
   assert.ok(mobileLink >= 0 && safetyLink > mobileLink && liveLink > safetyLink);
   assert.ok(phoneLink > appLockLink && appLockLink >= 0);
+  const meetwaveAsset = html.match(/\\/meetwave\\.css\\?v=[^\"']+/)?.[0];
+  assert.ok(meetwaveAsset, 'MeetWave stylesheet has a versioned URL');
   for (const asset of [
     '/layout-safety.css?v=20261110-facebook-menu-size-scroll-2',
     '/phone-experience.css?v=20261108-phone-overlay-panels-1',
-    '/meetwave.css?v=20261113-meetwave-guest-box-layout-separation-2'
+    meetwaveAsset
   ]) assert.ok(sw.includes("'" + asset + "'"), 'service worker caches ' + asset);
   assert.match(sw,/^const CACHE_NAME='minglora-shell-v[0-9]+-[^']+';$/m);
 });
