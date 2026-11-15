@@ -215,3 +215,13 @@ The source record's category, configured 15,000-Coin value, animation identity/p
 ## Royal Lions Scepter event-effect checkpoint — 2026-11-15
 
 The canonical gift now has an exact-code lion-scepter-rise motion override in the generated motion index and the existing Web Animations gift mount. It retains its source catalogue grand-entry preset, key, 1,900-ms duration and sound-preset field. Its event sound is locally synthesized using a low band-pass growl sweep, sub impact, five-note fanfare and high-frequency shimmer; the LIVE asset manifest labels it gift_specific_web_audio_synthesis and explicitly records no dedicated mastered audio file. Sound opt-out and reduced-motion behavior remain active. This confirms runtime wiring and test coverage, not a human-approved composition, mastered recording, licensing review, audio-mix approval or physical-device verification.
+
+## Rose 3D refinement checkpoint — 2026-11-15
+
+**Merged source change:** PR #377, merge commit `5b3dc50508e684cb7478cfa5eb1b4f56580ed566`.
+
+- Added higher-detail layered/cupped petal geometry, subdued raised venation, leaf-to-stem petioles, calyx/sepals and golden stamens/anthers to the existing canonical Rose model source.
+- Kept the catalogue ID, configured price, publication flag, generated output paths, viewer fallback and actual gift event path unchanged.
+- Unit coverage checks the presence of the named source details. Chromium model-render QA completed 27/27 model/viewport renders; report showed zero page errors, HTTP failures, request failures or cancellations.
+- Repository CI and independent LIVE/MeetWave layout QA both passed for the reviewed source revision.
+- This is an incremental asset-quality improvement, not approval of the entire gift catalogue. Human visual review, rights clearance, mastered audio, full gift-specific animation files and physical device QA remain separate release gates.
