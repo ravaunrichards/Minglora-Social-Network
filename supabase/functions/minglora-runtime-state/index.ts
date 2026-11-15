@@ -1068,7 +1068,8 @@ Deno.serve(async (req: Request) => {
           { "label": "AI audit events", "key": "aiBotAudit" },
           { "label": "AI Creator Studio drafts", "key": "aiBotCreatorJobs" },
           { "label": "AI companion consent", "key": "aiBotCompanionConsents" },
-          { "label": "AI community event drafts", "key": "aiBotCommunityEvents" }
+          { "label": "AI community event drafts", "key": "aiBotCommunityEvents" },
+          { "label": "AI bot conversation sessions", "key": "aiBotConversationSessions" }
         ]
       },
       {
