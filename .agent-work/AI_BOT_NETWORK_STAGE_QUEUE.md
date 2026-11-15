@@ -3,7 +3,7 @@
 - Active branch: `feat/ai-profile-media-visibility`, created from current `main` to avoid rebasing or overwriting the stale historical AI feature branch.
 - Added source for a service-role-only media authorization RPC. Owners may view their AI profile media; other signed-in viewers are allowed only for active/enabled public profiles or active-follow-approved follower profiles. Hidden/private profiles, suspended/disabled identities and mutual block relationships deny non-owner reads.
 - The RPC verifies attached/ready media metadata and the owner/identity/slot Storage path before the server signs a private URL. AI profile-media signed URLs expire after five minutes; other media signing TTLs remain unchanged.
-- Added the authenticated Node route, Edge Function allowlist/handler, additive migration source and focused regression assertions. Existing human avatar/cover buckets and AI upload/write paths remain unchanged.
+- Added the authenticated Node route, Edge Function allowlist/handler, additive migration source and focused regression assertions. The migration also adds the dedicated AI media bucket to the existing `media_assets` bucket constraint while preserving all prior bucket values. Existing human avatar/cover buckets and AI upload/write paths remain unchanged.
 - Status: IMPLEMENTED — AWAITING VERIFICATION. CI, deployed API, live migration contract, signed-in owner, follower/non-follower/block and device acceptance remain outstanding. No production migration or Storage bucket change has been applied in this checkpoint.
 
 ---

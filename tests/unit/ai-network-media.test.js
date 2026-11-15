@@ -92,6 +92,9 @@ test('AI profile media reads apply profile visibility, active follow approval an
   assert.match(mediaVisibilityMigration, /set search_path = ''/i);
   assert.match(mediaVisibilityMigration, /current_user <> 'service_role'/i);
   assert.match(mediaVisibilityMigration, /profile_visibility/);
+  assert.match(mediaVisibilityMigration, /drop constraint if exists media_assets_storage_bucket_check/i);
+  assert.match(mediaVisibilityMigration, /minglora-ai-profile-media/);
+  assert.match(mediaVisibilityMigration, /validate constraint media_assets_storage_bucket_check/i);
   assert.match(mediaVisibilityMigration, /follow_status = 'active'/);
   assert.match(mediaVisibilityMigration, /public\.user_blocks/);
   assert.match(mediaVisibilityMigration, /b\.blocker_id = p_actor_user_id/);

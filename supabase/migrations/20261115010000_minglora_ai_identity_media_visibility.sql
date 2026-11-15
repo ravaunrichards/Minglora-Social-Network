@@ -1,3 +1,30 @@
+-- The AI profile bucket is private Storage, but the relational media registry also
+-- validates bucket IDs. Extend that existing allowlist without changing any
+-- existing bucket values or making the bucket public.
+alter table public.media_assets
+  drop constraint if exists media_assets_storage_bucket_check;
+
+alter table public.media_assets
+  add constraint media_assets_storage_bucket_check
+  check (
+    storage_bucket is null
+    or storage_bucket = any (array[
+      'minglora-avatars',
+      'minglora-covers',
+      'minglora-post-media',
+      'minglora-stories',
+      'minglora-message-attachments',
+      'minglora-group-media',
+      'minglora-page-media',
+      'minglora-ringtones',
+      'minglora-sounds',
+      'minglora-ai-profile-media'
+    ]::text[])
+  ) not valid;
+
+alter table public.media_assets
+  validate constraint media_assets_storage_bucket_check;
+
 -- Authorize private AI avatar/cover reads from profile visibility and relationship state.
 create or replace function public.minglora_ai_identity_media_access(
   p_actor_user_id uuid,
