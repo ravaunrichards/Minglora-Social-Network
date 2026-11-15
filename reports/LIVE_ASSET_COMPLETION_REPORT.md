@@ -355,3 +355,28 @@ The browser captures establish that all nine bespoke models load and remain visi
 - Expanded the Chromium model matrix to include Baseball and the existing Royal Lions Scepter alongside the original nine models, across desktop, tablet and mobile.
 - Validation: the initial CI run exposed an existing assertion requiring seam signature `stroke="#d84854" stroke-width="12"`; the SVG seam was corrected to match it while retaining the layered red seam treatment. Latest-head rerun is pending.
 - Release boundary: the model remains `design-review-pending`; human art review, rights clearance, mastered individual gift audio/animation and physical-device acceptance remain outstanding. No database, wallet, price, transaction or deployment operation occurred.
+
+## Rose LIVE choreography and synthesized sound — current-main checkpoint, 2026-11-15
+
+- Ported the exact-code Rose implementation to a branch based on current main after preserving the intervening Gifter threshold correction, League UI removal, and Gift Studio/Match Power-Up preview removals. The current branch keeps the latest Gift Studio/Match Power-Up selection and activation flows and uses the newer shell asset versions.
+- Scope includes `rose-unfurl` runtime/preview choreography, local Web Audio petal-rustle/celesta synthesis, exact-code dispatch, generated motion/sound metadata, regression tests and matching HTML/service-worker query versions.
+- The shell cache follows the established `minglora-shell-v324-self-updating-1` pattern. The Rose asset URL is identical in HTML and the service-worker precache.
+- The earlier Rose PR passed full CI after correcting the cache namespace. Fresh CI and visual QA must pass again on the current-main branch before merge; earlier-head checks are not substituted for current-head verification.
+- The Rose cue is local synthesis, not a mastered audio file; the motion uses Web Animations, not an embedded glTF/Lottie/Rive animation. The source and effects remain `design-review-pending`; rights review, human creative/audio approval and physical-device checks remain outstanding.
+- No production catalogue row, Coin price, publication flag, wallet, transaction, payout, Supabase record or deployment was changed.
+
+The overall LIVE asset mission remains incomplete: 1,748 source catalogue records (1,737 marked active, 11 retired); 12 individually authored model sources and 1,736 procedural/category-generated entries; 10 gift-specific synthesized sound designs; zero dedicated mastered per-gift audio files; no verified complete Lottie/Rive collections, embedded glTF animation channels, KTX2 texture packs or physical-device QA approvals. Full human visual approval, licensing review, complete 18-theme art direction and complete LIVE icon-state coverage remain open. Extracted screenshot-derived artwork crops remain quarantined.
+
+
+## Keeper of Atlantis bespoke model and LIVE effects — 2026-11-15
+
+- Added `assets/3d-assets/gift-models/keeper-of-atlantis-model.mjs`, integrated through the existing GLTF/SVG/icon gift generator for the exact canonical code `keeper-of-atlantis-15000-mgl`.
+- Original sculpture: three-prong ceremonial trident, curved gold prongs, aquamarine/opal jewels, enamel grip, nautilus/nacre shell medallion, coral branches, sea-glass bubbles and tidal currents.
+- The source gift remains fantasy, 15,000 Coins, active=true and catalogue preset `cosmic-orbit`; the runtime override is `atlantis-trident-surge`. The new synthesized sound ID is `keeper-of-atlantis-deep-surge-and-trident-bells-v1`.
+- The combined 12-model browser matrix has been updated. It expects desktop 1280×900, tablet 768×1024 and mobile 390×844 (36 model/viewport cases). CI has not yet verified this new addition.
+- The current LIVE source count is 12 individually authored model modules and 10 gift-specific synthesized sound designs. Dedicated mastered per-gift sound files remain zero. This does not imply a complete premium catalogue; the other source catalogue entries continue to use procedural/category geometry and generic sound profiles.
+- Review status remains `design-review-pending`: no human art/audio signoff, rights clearance or physical-device certification is implied. No Coin value, active flag, wallet, transaction, creator earnings, payout or production offer is altered.
+
+## Djembe mahogany detail refinement — 2026-11-15
+
+The existing Djembe source model receives twelve flowing mahogany grain inlay meshes and a focused geometry/material regression test. This is a source-level quality enhancement, not a new catalogue gift. Human visual/rights approval and physical-device checks remain pending.
