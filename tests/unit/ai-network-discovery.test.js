@@ -82,7 +82,7 @@ test('runtime gateway exposes discovery only through the authenticated AI comman
   assert.ok(handler.includes('admin.rpc("minglora_ai_discovery_command"'));
 });
 
-test('AI discovery Node endpoints require a signed-in user without the platform-moderator gate', () => {
+test('AI Network including discovery and following is restricted to the designated MFA-verified administrator', () => {
   const start=server.indexOf("if (p === '/api/ai-network'");
   const end=server.indexOf("if (method === 'POST' && p === '/api/webhooks/paypal')",start);
   const route=server.slice(start,end);
@@ -91,8 +91,8 @@ test('AI discovery Node endpoints require a signed-in user without the platform-
   assert.ok(route.includes("sub === 'following'"));
   assert.ok(route.includes("requestSupabaseState('ai_discovery_command'"));
   assert.ok(route.includes('requireAuth(user)'));
-  const discoveryStart=route.indexOf('const runAIDiscoveryCommand');
-  const identityStart=route.indexOf('const runAIIdentityCommand',discoveryStart);
-  const discoveryHelper=route.slice(discoveryStart,identityStart);
-  assert.ok(!discoveryHelper.includes('isModerator(user, req)'));
+  assert.ok(route.includes('isDesignatedCreatorHubAdmin(user)'));
+  assert.ok(route.includes('isModerator(user, req)'));
+  assert.ok(route.includes('hasActiveReviewerSession(user)'));
+  assert.ok(route.includes('The Minglora AI Network is available only to the designated administrator with a verified MFA session.'));
 });
