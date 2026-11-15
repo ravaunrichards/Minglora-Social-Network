@@ -312,7 +312,7 @@ begin
       completed_at=case when v_status='completed' then now() else null end,updated_at=now()
     where e.organization_id=v_org and e.enrollment_id=v_enrollment_id;
     insert into ai_network.ai_hr_workforce_events(organization_id,record_type,record_id,action,actor_user_id,details)
-    values(v_org,'training_enrollment',''||v_enrollment_id,'training_'||v_status,p_actor_user_id,
+    values(v_org,'training_enrollment',v_enrollment_id,'training_'||v_status,p_actor_user_id,
       jsonb_build_object('previous_status',v_previous_status,'status',v_status,'progress_percent',v_progress,'summary',v_reason));
     select to_jsonb(e) into v_result from ai_network.ai_training_enrollments e
     where e.organization_id=v_org and e.enrollment_id=v_enrollment_id;
