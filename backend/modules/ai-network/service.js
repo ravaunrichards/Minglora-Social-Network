@@ -343,7 +343,17 @@ export function startAICreatorJobGeneration(db, ownerId, jobId, { now = new Date
   const job = ownerRows((ensureAICollections(db), db.aiBotCreatorJobs), ownerId).find(row => row.id === jobId);
   if (!job) throw fail(404, 'Creator Studio draft not found.');
   if (job.status !== 'draft' || job.output) throw fail(409, 'Only an unfinished Creator Studio draft can be generated.');
-  if (job.providerExecution === 'running') throw fail(409, 'This Creator Studio draft is already being generated.');
+  if (job.providerExecution === 'running') {
+    const startedAt = Date.parse(job.providerStartedAt || '');
+    const currentTime = new Date(now).getTime();
+    const generationLeaseMs = 5 * 60 * 1000;
+    const leaseExpired = !Number.isFinite(startedAt) || !Number.isFinite(currentTime) || currentTime - startedAt >= generationLeaseMs;
+    if (!leaseExpired) throw fail(409, 'This Creator Studio draft is already being generated.');
+    job.providerExecution = 'failed';
+    job.providerError = 'The previous generation attempt expired before completing. You can safely retry this draft.';
+    job.providerCompletedAt = nowIso(now);
+    audit(db, ownerId, ownerId, 'creator_job_generation_lease_expired', 'creator_job', job.id, now);
+  }
   if (job.providerExecution === 'completed') throw fail(409, 'This Creator Studio draft already has generated output.');
   job.providerExecution = 'running';
   job.providerStartedAt = nowIso(now);
