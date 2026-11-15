@@ -134,7 +134,7 @@ test('Creator Studio generation is owner-MFA protected, calls the moderation ada
     'startAICreatorJobGeneration(db, user.id, parts[1])',
     'generateOpenAICreatorDraft({',
     'completeAICreatorJobGeneration(db, user.id, started.id, generated)',
-    'failAICreatorJobGeneration(db, user.id, started.id, safeMessage)',
+    'failAICreatorJobGeneration(db, user.id, started.id, safeMessage, { providerFailure: error })',
     'await saveStore()',
     'Provider credentials and prompt overrides are not accepted',
     'No draft was generated'
