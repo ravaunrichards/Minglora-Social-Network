@@ -340,13 +340,25 @@ export function createAICreatorJob(db, ownerId, input = {}, { now = new Date() }
 }
 
 export function startAICreatorJobGeneration(db, ownerId, jobId, { now = new Date() } = {}) {
-  const job = ownerRows((ensureAICollections(db), db.aiBotCreatorJobs), ownerId).find(row => row.id === jobId);
+  const ownerJobs = ownerRows((ensureAICollections(db), db.aiBotCreatorJobs), ownerId);
+  const job = ownerJobs.find(row => row.id === jobId);
   if (!job) throw fail(404, 'Creator Studio draft not found.');
   if (job.status !== 'draft' || job.output) throw fail(409, 'Only an unfinished Creator Studio draft can be generated.');
+  const currentTime = new Date(now).getTime();
+  const generationLeaseMs = 5 * 60 * 1000;
+  for (const otherJob of ownerJobs) {
+    if (otherJob.id === jobId || otherJob.providerExecution !== 'running') continue;
+    const otherStartedAt = Date.parse(otherJob.providerStartedAt || '');
+    const otherLeaseActive = Number.isFinite(otherStartedAt) && Number.isFinite(currentTime) && currentTime - otherStartedAt < generationLeaseMs;
+    if (otherLeaseActive) throw fail(409, 'Another Creator Studio draft is currently being generated. Wait for it to finish before starting another.');
+    otherJob.providerExecution = 'failed';
+    otherJob.providerError = 'The previous generation attempt expired before completing. You can safely retry this draft.';
+    otherJob.providerCompletedAt = nowIso(now);
+    otherJob.updatedAt = nowIso(now);
+    audit(db, ownerId, ownerId, 'creator_job_generation_lease_expired', 'creator_job', otherJob.id, now);
+  }
   if (job.providerExecution === 'running') {
     const startedAt = Date.parse(job.providerStartedAt || '');
-    const currentTime = new Date(now).getTime();
-    const generationLeaseMs = 5 * 60 * 1000;
     const leaseExpired = !Number.isFinite(startedAt) || !Number.isFinite(currentTime) || currentTime - startedAt >= generationLeaseMs;
     if (!leaseExpired) throw fail(409, 'This Creator Studio draft is already being generated.');
     job.providerExecution = 'failed';
