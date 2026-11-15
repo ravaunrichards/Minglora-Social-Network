@@ -993,7 +993,7 @@
             '<small>Read-only health probe: ' + (provider.healthProbeAvailable ? 'Available' : 'Not implemented') +
             ' · Inference adapter: ' + (provider.adapterAvailable ? 'Available' : 'Not implemented') +
             ' · Execution enabled: ' + (provider.executionEnabled ? 'Yes' : 'No') + '</small>' +
-            (provider.note ? '<p>' + esc(provider.note) + '</p>' : '') +
+            (provider.note && provider.providerId !== 'openai' ? '<p>' + esc(provider.note) + '</p>' : '') +
             '</div></div></article>';
         }).join('') + '</div></details>'
       : '<p class="ai-network-note">Provider environment registry is unavailable. Reload the administrator workspace.</p>';
@@ -1410,7 +1410,8 @@
       '<div><span>Model</span><strong>' + esc(provider.model || '—') + '</strong></div>' +
       '<div><span>Global state</span><strong>' + esc(settings.globalPaused ? 'Paused' : 'Enabled') + '</strong></div>' +
       '<div><span>Execution</span><strong>Disabled until provider adapter is verified</strong></div></div>' +
-      '<div class="ai-network-provider"><div><strong>Provider readiness</strong><p>' + esc(provider.note) + '</p></div>' +
+      '<div class="ai-network-provider"><div><strong>Provider readiness</strong>' +
+      (provider.manualDraftsAvailable ? '' : (provider.note ? '<p>' + esc(provider.note) + '</p>' : '')) + '</div>' +
       pill(provider.configured ? 'Configured · execution disabled' : 'Not configured', provider.configured ? 'warning' : 'neutral') + '</div>' +
       '<div class="ai-network-safety-actions"><button type="button" class="danger" data-ai-action="emergency-pause">Emergency pause all AI work</button>' +
       '<button type="button" class="secondary" data-ai-action="emergency-resume" disabled title="Provider execution is not verified">Resume network</button></div>' +
