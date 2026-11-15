@@ -153,3 +153,15 @@ The current Admin Centre remains designated-owner/MFA restricted. The staff tabl
 - Added a regression assertion that the duplicate SVG path must remain absent (test-file commit `d8d5afbc7921eb4eac091ef84884a8e4263d453d`).
 - Verified both chart paths return not found on `main` and on the task branch. The separate Gifters Rewards artwork and the 50-level progression renderer are not targeted; the existing regression suite retains checks for them.
 - CI on the test-file commit: the Auth/OAuth acceptance check passed, while the general automated-test job and For You functional-navigation check failed. Those failures were not diagnosed in this chart-only task, so no full-suite pass or deployment is claimed.
+
+
+### Uploaded Gifter badge progression artwork — 2026-11-15
+- Task branch: `feature/gifter-badge-progression-art-upload-20261115`.
+- Verified the newly uploaded `assets/Gifters Badge Progressions/Gifters Badge Progressions.jpg` is the original horizontal badge-tier artwork strip, not the removed Coin-threshold chart.
+- Added the explicit read-only image route `/assets/gifter-badge-progression-art.jpg` and placed it directly below the Gifter page heading, before personal progress.
+- The supplied image is displayed uncropped at its natural aspect ratio and included in the PWA shell cache; HTML asset versions and the shell cache were bumped.
+- Preserved every individual badge PNG, all detailed panels and range sheets, badge display sizing, level calculations, Coin thresholds, gift ledgers, wallets and database state. The removed `Gifters Level Up.png` chart remains absent.
+- Added regression coverage for the image source, route, responsive containment and PWA precache. Validation and deployment status are recorded in this task's PR and final checkpoint.
+
+- PR merge-preparation correction: restored a byte-identical deployed copy at `public/assets/gifter-badge-progression-art.jpg`; the canonical upload remains at `assets/Gifters Badge Progressions/Gifters Badge Progressions.jpg`. The server route now reads this deployable public file.
+- Fixed the PWA shell to precache both current Gifter progression CSS and JS URLs (not only the image) after CI found stale shell references. Updated the source-file test to verify the public uploaded image path.
