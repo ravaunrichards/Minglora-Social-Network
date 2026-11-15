@@ -310,10 +310,11 @@ const member = {
   platformRole: 'platform_owner'
 };
 
+let adminAccess = false;
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url || '/', 'http://127.0.0.1');
   if (url.pathname === '/api/admin/access') {
-    return json(res, { canAccess: true, setupRequired: false, mfaVerified: true });
+    return json(res, { canAccess: adminAccess, setupRequired: false, mfaVerified: adminAccess });
   }
   if (url.pathname.startsWith('/api/ai-network')) {
     try {
@@ -390,6 +391,21 @@ try {
 
   await page.goto(baseUrl + '/', { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => typeof window.MingloraAINetwork?.render === 'function', null, { timeout: 30000 });
+
+  // Ordinary-member session: both navigation surfaces and direct page entry must fail closed.
+  await page.evaluate(() => window.dispatchEvent(new Event('minglora:session-ready')));
+  await page.waitForFunction(() => document.querySelector('#ai-network-sidebar-link')?.hidden === true);
+  await page.click('#minglora-menu-toggle');
+  await page.waitForFunction(() => document.querySelector('[data-menu-action="ai-network"]')?.hidden === true);
+  await page.evaluate(() => window.MingloraAINetwork.render());
+  await page.getByText(/available only to the designated administrator with a verified MFA session/).waitFor({ state: 'visible' });
+
+  // The designated admin's verified access exposes the same routes without a separate UI copy.
+  adminAccess = true;
+  await page.evaluate(() => window.dispatchEvent(new Event('minglora:session-ready')));
+  await page.waitForFunction(() => document.querySelector('#ai-network-sidebar-link')?.hidden === false);
+  await page.waitForFunction(() => document.querySelector('[data-menu-action="ai-network"]')?.hidden === false);
+  await page.evaluate(() => window.MingloraMenu?.close());
   await page.evaluate(() => window.MingloraAINetwork.render());
   await page.locator('.ai-network-page h1').waitFor({ state: 'visible' });
   await page.getByText('AI Identity & Profile Registry').waitFor({ state: 'visible' });
