@@ -228,7 +228,7 @@ The motion-index schema keeps the original `catalog_motion_preset` and the effec
 - Generated model: `public/assets/gifts/catalog/baseball-orcdx9.gltf`, self-contained glTF 2.0 with embedded geometry buffers, named leather/seam/stitch mesh parts and PBR material factors.
 - Original artwork: the generator emits `baseball-original-v1` into both `baseball-orcdx9.svg` and the transparent `baseball-orcdx9-icon.svg`; both retain canonical per-gift path conventions.
 - Runtime: the existing gift viewer consumes the canonical generated `.gltf` path; no new renderer, third-party brand asset, transaction route or backend data mutation is introduced.
-- QA target: the isolated Chromium matrix includes 11 bespoke models at desktop (1280×900), tablet (768×1024) and mobile (390×844) sizes: 33 model/viewport renders. Workflow results are pending at this checkpoint.
+- QA target: the isolated Chromium matrix includes 12 bespoke models at desktop (1280×900), tablet (768×1024) and mobile (390×844) sizes: 36 model/viewport renders. Workflow results are pending at this checkpoint.
 - Release boundary: the asset remains `design-review-pending`; production catalogue version-3 approval, rights review, human artwork sign-off and physical-device testing remain separate gates.
 
 ## Rose LIVE event choreography and sound — 2026-11-15
@@ -241,3 +241,14 @@ The motion-index schema keeps the original `catalog_motion_preset` and the effec
 - Regression coverage: `tests/unit/gift-animation-runtime.test.js`, `tests/unit/live-gift-motion-index.test.js` and `tests/unit/live-asset-manifest.test.js` verify exact-code choreography/sound selection, opt-out/reduced-motion paths, generated metadata and motion mapping.
 
 No catalogue price, active flag, production gift offering, wallet balance, transaction, earnings, payout, database record or deployment was changed. The Rose assets/effects remain design-review-pending; rights review, human visual/audio approval and physical-device QA are still required.
+
+
+## Keeper of Atlantis exact-code LIVE integration — 2026-11-15
+
+- The existing canonical source item `keeper-of-atlantis-15000-mgl` is routed to the original source module `assets/3d-assets/gift-models/keeper-of-atlantis-model.mjs`; the generator produces the self-contained GLTF 2.0 sculpture and matching original SVG/icon.
+- The source catalogue value (15,000 Coins), active flag and `cosmic-orbit` preset are retained. The effective exact-code motion override is `atlantis-trident-surge`.
+- Existing confirmed gift playback dispatches the local synthesized underwater swell, sub impact, trident bell notes and bubble shimmer design. Sound opt-out and reduced-motion handling remain supported.
+- Manifest provenance ID: `gift-keeper-of-atlantis-3d-v1`; sound ID: `keeper-of-atlantis-deep-surge-and-trident-bells-v1`.
+- HTML and service worker now reference `gift-effects.js?v=20261115-rose-unfurl-atlantis-trident-2`; service-worker shell version `minglora-shell-v325-self-updating-1`.
+- The Chromium model render matrix now contains 12 named models across desktop, tablet and mobile viewports (36 expected render cases); latest combined PR CI has not yet run this addition.
+- Visual/right clearance, human art/audio approval and physical-device QA remain pending. No catalogue price, wallet, transaction or payout logic is changed.
