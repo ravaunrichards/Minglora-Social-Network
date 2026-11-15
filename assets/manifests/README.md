@@ -23,5 +23,5 @@ Track asset identifier, relative path, source, license, content type, dimensions
 
 - The generated live manifest inventories `public/assets/icons/live-controls/` and `public/assets/icons/live-gift-categories/` using their JSON manifests.
 - Each standalone SVG record includes path, SHA-256, 24×24 viewBox, component usage, visual-review state and rights-review state.
-- CI validates all 16 room-control icons and all 22 gift-category icons before publishing the generated manifest.
+- CI validates all 18 room-control icons and all 22 gift-category icons before publishing the generated manifest. The two active-state variants cover stopping screen sharing and exiting fullscreen; the pack still records design/licensing review as pending.
 - The packs are individually addressable UI vector assets; this does not certify premium 3D gift art or human design approval.

@@ -223,10 +223,10 @@ test("shared LIVE control and gift-category SVG packs are inventoried with file 
   assert.ok(controlPack);
   assert.ok(categoryPack);
   assert.ok(toolsPack);
-  assert.equal(controlPack.icon_count, 16);
+  assert.equal(controlPack.icon_count, 18);
   assert.equal(categoryPack.icon_count, 22);
   assert.equal(toolsPack.icon_count, 12);
-  assert.equal(manifest.summary.live_control_icon_count, 16);
+  assert.equal(manifest.summary.live_control_icon_count, 18);
   assert.equal(manifest.summary.live_gift_category_icon_count, 22);
   assert.equal(manifest.summary.live_tools_shortcut_icon_count, 12);
   for (const pack of [controlPack, categoryPack, toolsPack]) {

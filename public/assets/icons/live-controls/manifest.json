@@ -5,7 +5,7 @@
   "view_box": "0 0 24 24",
   "rendering": "same-origin external SVG symbol references via SVG use",
   "color": "currentColor inherited from the existing LIVE control button",
-  "state_handling": "Existing button aria-pressed, disabled and danger styles remain authoritative; icon artwork does not hard-code status colors.",
+  "state_handling": "Existing button aria-pressed, disabled and danger styles remain authoritative. Microphone, camera and room audio use dedicated on/off glyphs; screen sharing and fullscreen now switch to dedicated active-state glyphs. Icon artwork inherits currentColor and does not hard-code status colors.",
   "icons": [
     {
       "id": "mic",
@@ -62,10 +62,26 @@
       "stateful": true
     },
     {
+      "id": "screen-stop",
+      "file": "/assets/icons/live-controls/screen-stop.svg",
+      "label": "stop screen sharing",
+      "stateful": true,
+      "state_role": "active",
+      "state_for": "screen"
+    },
+    {
       "id": "fullscreen",
       "file": "/assets/icons/live-controls/fullscreen.svg",
       "label": "fullscreen",
       "stateful": true
+    },
+    {
+      "id": "fullscreen-exit",
+      "file": "/assets/icons/live-controls/fullscreen-exit.svg",
+      "label": "exit fullscreen",
+      "stateful": true,
+      "state_role": "active",
+      "state_for": "fullscreen"
     },
     {
       "id": "gift",

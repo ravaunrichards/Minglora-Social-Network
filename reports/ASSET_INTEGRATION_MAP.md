@@ -37,10 +37,13 @@ No prices, balances, transactions, account state, LiveKit credentials, or existi
 
 ## Individually addressable LIVE control icons
 
+- Added original `screen-stop.svg` and `fullscreen-exit.svg` state variants. `public/app.js` switches to the stop-sharing glyph only after screen-share publication is enabled, and to the exit-fullscreen glyph only while the room shell is in browser fullscreen; failed or ended screen shares return to the idle screen glyph.
+- The immutable 18-name allow-list, machine-readable manifest, versioned service-worker shell (`v316`) and `tests/unit/live-control-icons.test.js` all cover both new files. The SVGs inherit `currentColor`; design and rights review remain pending.
+
 - The LIVE room control buttons now use a dedicated SVG asset pack under `public/assets/icons/live-controls/`.
-- `manifest.json` records all 16 original control symbols and their canonical paths. SVG files share a `0 0 24 24` viewBox and inherit `currentColor`, preserving existing responsive sizing and button-state styling.
+- `manifest.json` records all 18 original control symbols and their canonical paths. SVG files share a `0 0 24 24` viewBox and inherit `currentColor`, preserving existing responsive sizing and button-state styling.
 - `public/app.js` references only the immutable icon allow-list; user input is never interpolated into an asset path.
-- `public/sw.js` increments the shell cache version and pre-caches the manifest plus all 16 SVG files for offline LIVE controls.
+- `public/sw.js` increments the shell cache version and pre-caches the manifest plus all 18 SVG files for offline LIVE controls.
 - `tests/unit/live-control-icons.test.js` validates the inventory, SVG structure, safe reference logic, state inheritance and offline cache coverage.
 
 
@@ -55,7 +58,7 @@ No prices, balances, transactions, account state, LiveKit credentials, or existi
 
 ## Shared asset manifest coverage
 
-- The generated LIVE asset manifest now indexes the 16 standalone control SVGs and the 22 gift-category SVGs, including each file path and SHA-256 checksum.
+- The generated LIVE asset manifest now indexes the 18 standalone control SVGs and the 22 gift-category SVGs, including each file path and SHA-256 checksum.
 - The asset-manifest build validates canonical URLs, unique IDs, 24×24 SVG symbols, `currentColor` vector geometry and absence of emoji glyph artwork.
 - Design review and rights review remain pending for these new vector packs; the manifest records this rather than inferring approval.
 
