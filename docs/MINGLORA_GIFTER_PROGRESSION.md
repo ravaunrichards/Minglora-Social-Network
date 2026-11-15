@@ -47,7 +47,7 @@ Creator League rank and gifts received do not grant Gifter badges.
 
 ## Complete source-reference placement — 2026-11-15
 
-The canonical `assets/Gifters Badge Levels/` collection contains 70 remaining images, all retained in their original source folders and assigned to these UI locations:
+The canonical `assets/Gifters Badge Levels/` collection contains 72 image files (52 PNG, 20 JPEG). Two JPEG file paths in that collection contain the exact same progression-strip artwork; the dedicated `assets/Gifter Badge Progressions/` upload path is a third byte-identical copy. The 70 mapped reference files below cover the Rewards banner, 11 detailed panels, six range sheets, two master-sheet files, and 50 individual level badges; the progression-strip image is documented separately below:
 
 - `Gifters Rewards.png` remains the primary artwork banner at the top of the Gifts entry page.
 - The 11 `Levels 1-4.jpg` through `Levels 50.jpg` panels appear in the detailed, ordered LV 1–50 section.
