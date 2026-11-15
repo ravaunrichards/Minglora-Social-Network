@@ -2782,7 +2782,7 @@ async function route(req, res) {
           const dailyUsage = getAICreatorDailyUsage(db, user.id);
           const dailyTokenLimit = Math.max(0, Math.floor(Number(creatorSettings.dailyTokenBudget) || 0));
           const availableDailyTokens = dailyTokenLimit - dailyUsage.tokensUsed;
-          const history = list(chatState.messages).slice(-10).map(item => ({ role: item.role, content: item.content }));
+          const history = (Array.isArray(chatState.messages) ? chatState.messages : []).slice(-10).map(item => ({ role: item.role, content: item.content }));
           const contextLength = history.reduce((sum, item) => sum + String(item.content || '').length, 0);
           const estimatedInputReserve = Math.ceil((String(input.message).length + contextLength) / 3) + 500;
           const allowedOutputTokens = Math.min(700, availableDailyTokens - estimatedInputReserve);
