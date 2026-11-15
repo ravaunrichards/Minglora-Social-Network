@@ -1,11 +1,12 @@
 (() => {
   "use strict";
-  const state = { overview: null, sessions: [], gifts: [], selectedPowerupId: "momentum_boost", selectedMatchId: "", lastUpdatedAt: null, refreshing: false, refreshError: "" };
+  const state = { overview: null, sessions: [], gifts: [], selectedPowerupId: "momentum_boost", selectedMatchId: "", rankingPeriod: "weekly", rankingClass: "", lastUpdatedAt: null, refreshing: false, refreshError: "" };
   let refreshController = null;
   let refreshInFlight = false;
   let viewGeneration = 0;
   let refreshToken = 0;
   let autoSyncTimer = null;
+  let leaderboardLoadToken = 0;
   const $ = selector => document.querySelector(selector);
   const esc = value => String(value ?? "").replace(/[&<>"']/g, char => ({
     "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
@@ -209,7 +210,7 @@
         "<span class='league-podium-crown' aria-hidden='true'>" + (place === 1 ? "👑" : place === 2 ? "✦" : "✧") + "</span>" +
         image(member, "ml-creator-ring ml-creator-ring--league") +
         "<strong>" + esc(member.name || "Minglora creator") + "</strong><small>@" + esc(member.username || "creator") + "</small>" +
-        "<b class='league-podium-points'>" + Number(member.seasonPoints || 0).toLocaleString() + " pts</b>" +
+        "<b class='league-podium-points'>" + Number(member.points ?? member.seasonPoints ?? 0).toLocaleString() + " pts</b>" +
         "<span class='league-podium-base' aria-hidden='true'>" + place + "</span></button>"
     ).join("") + "</div>";
   }
@@ -219,7 +220,7 @@
       "<button type='button' class='league-leader-row' data-league-profile='" + esc(item.id || "") + "' " + (!item.id ? "disabled" : "") + ">" +
         "<b class='league-position'>#" + Number(item.position || 0) + "</b>" + image(item, "ml-creator-ring ml-creator-ring--league") +
         "<span class='league-leader-name'><strong>" + esc(item.name || "Minglora creator") + "</strong><small>@" + esc(item.username || "creator") + "</small></span>" +
-        "<strong class='league-leader-points'>" + Number(item.seasonPoints || 0).toLocaleString() + " pts</strong></button>"
+        "<strong class='league-leader-points'>" + Number(item.points ?? item.seasonPoints ?? 0).toLocaleString() + " pts</strong></button>"
     ).join("");
     return podiumMarkup(leaderboard) + (remaining ? "<div class='league-leaderboard league-leaderboard-rest'>" + remaining + "</div>" : "");
   }
@@ -236,6 +237,43 @@
     return "<div class='match-rank-ladder'>" + ranks.map((item, index) =>
       "<span class='match-rank-step " + (item === active ? "is-current" : "") + "'><small>" + (index + 1) + "</small>" + esc(item) + "</span>"
     ).join("") + "</div>";
+  }
+  function rankingControlsMarkup(overview) {
+    const availableClasses = (overview.classes || []).slice().reverse();
+    if (!availableClasses.includes(state.rankingClass)) state.rankingClass = overview.profile.leagueClass;
+    if (!["daily", "weekly"].includes(state.rankingPeriod)) state.rankingPeriod = "weekly";
+    const classOptions = availableClasses.map(item =>
+      "<option value='" + esc(item) + "' " + (item === state.rankingClass ? "selected" : "") + ">" + esc(item) + "</option>"
+    ).join("");
+    return "<div class='league-ranking-controls'>" +
+      "<div class='league-ranking-period' role='group' aria-label='Leaderboard period'>" +
+        "<button type='button' class='league-ranking-filter' data-league-period='daily' aria-pressed='" + (state.rankingPeriod === "daily") + "'>Daily</button>" +
+        "<button type='button' class='league-ranking-filter' data-league-period='weekly' aria-pressed='" + (state.rankingPeriod === "weekly") + "'>Weekly</button>" +
+      "</div>" +
+      "<label class='league-ranking-class-label'>League class<select id='league-ranking-class' aria-label='Choose a Creator League class'>" + classOptions + "</select></label>" +
+      "<small id='league-ranking-status' role='status' aria-live='polite'>Loading " + esc(state.rankingPeriod) + " " + esc(state.rankingClass) + " rankings…</small>" +
+      "</div><div id='league-leaderboard-results'>" + leaderboardMarkup(overview.leaderboard || []) + "</div>";
+  }
+  async function loadLeaderboard() {
+    const results = $("#league-leaderboard-results");
+    const status = $("#league-ranking-status");
+    if (!results || !isLeagueViewActive()) return;
+    const token = ++leaderboardLoadToken;
+    const period = state.rankingPeriod === "daily" ? "daily" : "weekly";
+    const leagueClass = state.rankingClass || state.overview?.profile?.leagueClass || "";
+    if (status) status.textContent = "Loading " + period + " " + leagueClass + " rankings…";
+    try {
+      const data = await request("/leagues/leaderboard?period=" + encodeURIComponent(period) + "&class=" + encodeURIComponent(leagueClass));
+      if (token !== leaderboardLoadToken || !isLeagueViewActive()) return;
+      results.innerHTML = leaderboardMarkup(data.leaderboard || []);
+      if (status) {
+        const count = Array.isArray(data.leaderboard) ? data.leaderboard.length : 0;
+        status.textContent = (period === "daily" ? "Today" : "This week") + " · " +
+          data.leagueClass + " · " + data.region + " · " + count + " creators ranked";
+      }
+    } catch (error) {
+      if (token === leaderboardLoadToken && status) status.textContent = "Rankings could not update: " + error.message;
+    }
   }
   function eventLabel(item) {
     const details = item.details || {};
@@ -308,7 +346,7 @@
       challengeMarkup(overview,sessions) +
       powerupStudioMarkup(overview) +
       "<section class='league-matches-section' id='league-matches-zone'><div class='league-section-heading'><div><span class='league-eyebrow'>LIVE COMPETITION</span><h2>League Matches</h2><p>Gift points are counted for the match score while the original confirmed Gift value stays in Creator League totals.</p></div><div class='league-refresh-tools'><small id='league-refresh-status' aria-live='polite'>Live scores update automatically.</small></div></div>" + (matches.length ? "<div class='league-matches-grid'>" + matches.map(match=>matchCard(match,overview)).join("") + "</div>" : "<div class='league-empty-inline'>No League Matches yet. Challenge another creator who is LIVE to start one.</div>") + "</section>" +
-      "<section class='card league-leaderboard-panel' id='league-leaderboard-zone'><div class='league-section-heading'><div><span class='league-eyebrow'>YOUR CLASS</span><h2>" + esc(p.leagueClass) + " leaderboard</h2><p>Regional weekly LIVE Gift standings. Tap any creator to open their profile.</p></div></div>" + leaderboardMarkup(leaderboard) + "</section>" +
+      "<section class='card league-leaderboard-panel' id='league-leaderboard-zone'><div class='league-section-heading'><div><span class='league-eyebrow'>CREATOR DIVISIONS</span><h2>League leaderboard</h2><p>Browse daily or weekly confirmed LIVE Gift standings across your region's Creator League classes. Tap any creator to open their profile.</p></div></div>" + rankingControlsMarkup(overview) + "</section>" +
       "<section class='card league-events-panel' id='league-events-zone'><div class='league-section-heading'><div><span class='league-eyebrow'>YOUR PROGRESSION</span><h2>League activity</h2></div></div>" + (events.length ? "<div class='league-events-list'>" + events.map(item=>"<div class='league-event-row'><span>✦</span><div><strong>" + esc(eventLabel(item)) + "</strong><small>" + new Date(item.createdAt).toLocaleString() + "</small></div></div>").join("") + "</div>" : "<div class='league-empty-inline'>Promotions, demotions, shields and completed matches will appear here.</div>") + "</section>" +
 
       "<p class='league-footnote'>Minglora League rules are platform rules, independent of TikTok. Weekly seasons reset season points; lifetime points and Match Rank records remain on your profile.</p></div>";
@@ -389,6 +427,27 @@
     }
     updatePowerupPreview();
 
+    document.querySelectorAll("[data-league-period]").forEach(button => {
+      if (button.dataset.leaguePeriodBound === "true") return;
+      button.dataset.leaguePeriodBound = "true";
+      button.addEventListener("click", () => {
+        const next = button.dataset.leaguePeriod;
+        if (!["daily", "weekly"].includes(next) || next === state.rankingPeriod) return;
+        state.rankingPeriod = next;
+        document.querySelectorAll("[data-league-period]").forEach(item =>
+          item.setAttribute("aria-pressed", String(item.dataset.leaguePeriod === next))
+        );
+        void loadLeaderboard();
+      });
+    });
+    const rankingClass = $("#league-ranking-class");
+    if (rankingClass && rankingClass.dataset.leagueClassBound !== "true") {
+      rankingClass.dataset.leagueClassBound = "true";
+      rankingClass.addEventListener("change", () => {
+        state.rankingClass = rankingClass.value;
+        void loadLeaderboard();
+      });
+    }
     document.querySelectorAll("[data-league-profile]").forEach(button => {
       if (button.dataset.leagueProfileBound === "true") return;
       button.dataset.leagueProfileBound = "true";
@@ -398,6 +457,7 @@
       });
     });
     updateRefreshStatus();
+    void loadLeaderboard();
   }
   function onNavigateAway() {
     viewGeneration += 1;
