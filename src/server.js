@@ -9675,7 +9675,7 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
     return;
   }
   if(p==='/assets/gifter-badge-progression-art.jpg'){
-    const assetFile=path.join(__dirname,'..','assets','Gifter Badge Progressions','Gifter Badge Progressions.jpg');
+    const assetFile=path.join(publicDir,'assets','gifter-badge-progression-art.jpg');
     fs.readFile(assetFile,(error,data)=>{
       if(error)return json(res,404,{error:'Gifter badge progression artwork not found.'});
       res.writeHead(200,{'Content-Type':'image/jpeg','Cache-Control':'public, max-age=86400',...SECURITY_HEADERS});
