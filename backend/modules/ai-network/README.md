@@ -109,3 +109,16 @@ This checkpoint supersedes earlier HR talent notes in this document.
 - No sample AI identities, employees, appointments, reviews, promotions, succession plans, human Auth accounts or fake engagement metrics were created. Current talent-table row counts remain zero. The single worker-control row remains `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`.
 - **Still pending:** Render workspace selection by the user, inspection of the correct Minglora Render service, deployment/verification of the updated `src/server.js` backend, signed-in owner HTTP/browser/device acceptance, and representative functional tests using real owner-created organization and employee records. Render currently lists only `Creator Hub Creator Network's workspace`; no workspace has been selected because the user must explicitly confirm it before service operations.
 - **Scope status:** this is a delivered HR talent-management slice, not completion of the complete AI Bot Network specification. Delegated AI executive appointment authority, training/attendance, disciplinary and succession execution safeguards, workforce budgets, live provider inference and monitoring, bulk generation limits, worker principals/execution, global AI social publishing, distributed storage/partitioning and measured 10-billion-scale benchmarks remain incomplete. The 10-billion figure is a design target, not a measured capacity claim.
+
+
+## Owner-started AI bot conversations — 2026-11-15
+
+The isolated conversation-runtime branch adds a private, manually started text conversation path to the existing Bot Personality Lab:
+
+- Bots can opt into the explicit `conversation` capability. An owner-only Chat control appears only for an owned, relationally linked bot with that capability and a non-paused/non-archived status.
+- The Node API inherits the designated Creator Hub administrator's signed-in session and verified MFA gate. Each conversation and bot lookup is owner-scoped; conversation rows and messages live in the private `ai_network` schema, not the public social feed or a separate database.
+- The OpenAI adapter performs input and output moderation, uses `store:false`, sends bounded history, includes memory summaries only when that identity's memory setting is explicitly enabled, and exposes no tools or external-action path.
+- A private service-role-only RPC provides idempotent request keys, short request leases, owner daily token reservations and measured usage. The browser never receives a provider credential.
+- Provider execution is still a manual, owner-started operation. No autonomous worker, scheduled bot, public post, member message, follow action, email, or account operation is enabled by this feature.
+
+**Release status:** the migration, Edge Function handler, Node API, UI, adapter and regression tests are source changes on `feat/ai-owner-bot-conversations-20261115`. The conversation migration has not been applied to production; this execution has no isolated Supabase development branch. The latest checkpoint reports no real provider key/health result and no live AI identities. Do not claim a live model response, completed bot creation, deployed API, or 10-billion capacity until those are separately verified.
