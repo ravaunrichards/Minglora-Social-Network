@@ -355,3 +355,16 @@ The browser captures establish that all nine bespoke models load and remain visi
 - Expanded the Chromium model matrix to include Baseball and the existing Royal Lions Scepter alongside the original nine models, across desktop, tablet and mobile.
 - Validation: the initial CI run exposed an existing assertion requiring seam signature `stroke="#d84854" stroke-width="12"`; the SVG seam was corrected to match it while retaining the layered red seam treatment. Latest-head rerun is pending.
 - Release boundary: the model remains `design-review-pending`; human art review, rights clearance, mastered individual gift audio/animation and physical-device acceptance remain outstanding. No database, wallet, price, transaction or deployment operation occurred.
+
+## Djembe Master mahogany-detail refinement — 2026-11-15 (PR #400)
+
+- Added 18 individually named mahogany grain inlays to `assets/3d-assets/gift-models/djembe-model.mjs`, with deeper, less-glossy shell material settings. Existing tension cords, woven lacing, carved trim and canonical model route remain intact.
+- Added `tests/unit/djembe-mahogany-grain.test.js`; the focused GLTF geometry/material/buffer test passed in CI run `43773761760`.
+- Chromium browser render passed: 11 original models × 3 viewports = 33 pixel checks/screenshots, with 0 page errors, 0 HTTP failures, 0 request failures and 0 cancellations. Workflow run `43773761799`, evidence artifact `14184524400`.
+- The independent LIVE/MeetWave layout matrix passed in workflow run `43773761794`.
+- Global CI remains blocked: 1,216 passed and 22 failed in run `43773761760`; failures are existing API/cache/For You/profile/LIVE-shell/League/Gifter assertions outside the two Djembe code/test files. The For You navigation workflow also failed its existing stylesheet-version assertion. Supabase Auth acceptance passed.
+- The final screenshots still show a mostly uniform wood shell; the grain is present but not premium-natural at normal display size. The model is therefore still `design-review-pending`, not production-approved.
+- PR #400 is open as a draft: https://github.com/ravaunrichards/Minglora-Social-Network/pull/400. It has not been merged or deployed. Its base has advanced independently; intervening changes are badge/League files and do not overlap the two Djembe source/test paths.
+- No production catalogue, price, active flag, wallet, transaction, payout or user data was changed.
+
+**Next action:** keep PR #400 draft; proceed only after proper wood-material art treatment and human review. Then continue with the next uncovered LIVE gift-model/category asset. Do not activate legacy gifts or report the overall LIVE asset mission complete.

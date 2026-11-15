@@ -230,3 +230,12 @@ The motion-index schema keeps the original `catalog_motion_preset` and the effec
 - Runtime: the existing gift viewer consumes the canonical generated `.gltf` path; no new renderer, third-party brand asset, transaction route or backend data mutation is introduced.
 - QA target: the isolated Chromium matrix includes 11 bespoke models at desktop (1280×900), tablet (768×1024) and mobile (390×844) sizes: 33 model/viewport renders. Workflow results are pending at this checkpoint.
 - Release boundary: the asset remains `design-review-pending`; production catalogue version-3 approval, rights review, human artwork sign-off and physical-device testing remain separate gates.
+
+## Djembe Master mahogany-detail source refinement — 2026-11-15 (PR #400)
+
+- Canonical gift code: `djembe-master-1v3jzkm`; source model: `assets/3d-assets/gift-models/djembe-model.mjs`.
+- The exact-code dispatch in `scripts/generate-minglora-gifts.mjs` remains the model-selection path. The canonical GLTF URL and existing Gift Center/LIVE model-viewer integration are unchanged.
+- The source now generates 18 individually named flowing mahogany grain meshes, with a deeper matte-leaning shell finish. The existing djembe shell, head, tension-cord and woven-lacing parts are preserved.
+- `tests/unit/djembe-mahogany-grain.test.js` passed. The full 11-gift × 3-viewport Chromium render passed with 33 screenshots and zero page/HTTP/request failures (workflow run `43773761799`).
+- No new runtime endpoint, third-party logo, gift-price, active-status, wallet, transaction, payout or database mutation was introduced.
+- Release boundary: model remains `design-review-pending`; the final image review found that the wood grain still needs genuine texture/art treatment and human approval.
