@@ -117,6 +117,6 @@ test('HR workspace exposes owner-admin training, progress and attendance control
     'attendanceRecords: list(attendanceResult.attendance_records)',
     'localDateTimeInZoneToIso',
     "America/Jamaica",
-    "'human-recorded'"
+    'human-recorded'
   ]) assert.ok(ui.includes(token), 'Missing HR workforce UI element: ' + token);
 });
