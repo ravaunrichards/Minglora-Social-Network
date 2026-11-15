@@ -312,6 +312,9 @@ const member = {
 
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url || '/', 'http://127.0.0.1');
+  if (url.pathname === '/api/admin/access') {
+    return json(res, { canAccess: true, setupRequired: false, mfaVerified: true });
+  }
   if (url.pathname.startsWith('/api/ai-network')) {
     try {
       const body = ['POST', 'PATCH', 'PUT', 'DELETE'].includes(req.method || '') ? await readBody(req) : {};
