@@ -978,7 +978,7 @@
       ? '<details class="ai-network-provider-catalogue"><summary>Provider environment registry · ' + number(providerCatalogue.length) + ' integrations</summary>' +
         '<p class="ai-network-note">These entries identify private server environment keys. Credential values are never shown or accepted in this page. A populated key is not proof of a successful connection or a working adapter.</p>' +
         '<div class="ai-network-list">' + providerCatalogue.map(provider => {
-          const required = list(provider.credentialEnvironmentVariables).join(', ');
+          const required = list(provider.credentialEnvironmentVariableGroups).map(group => list(group).join(' + ')).join(' OR ') || list(provider.credentialEnvironmentVariables).join(', ');
           const optional = list(provider.optionalEnvironmentVariables).join(', ');
           const label = provider.serverSelectable === false
             ? 'Interactive only · not server-callable'
@@ -988,7 +988,7 @@
             pill(provider.category || 'provider') + ' ' + pill(label, provider.credentialsPresent ? 'success' : 'neutral') +
             ' ' + pill(provider.connected ? 'Connected' : 'Not connected', 'warning') +
             '</div><small>Provider ID: ' + esc(provider.providerId) + '</small>' +
-            '<p>Required environment keys: ' + esc(required || 'No server credential slot') + '</p>' +
+            '<p>Required environment keys (complete one set): ' + esc(required || 'No server credential slot') + '</p>' +
             (optional ? '<small>Optional settings: ' + esc(optional) + '</small>' : '') +
             '<small>Read-only health probe: ' + (provider.healthProbeAvailable ? 'Available' : 'Not implemented') +
             ' · Inference adapter: ' + (provider.adapterAvailable ? 'Available' : 'Not implemented') +
