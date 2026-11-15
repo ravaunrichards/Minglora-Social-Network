@@ -61,7 +61,7 @@ button,input,select,textarea{max-width:100%;min-width:0}
   #main-content>*{width:100%;max-width:100%;min-width:0}
   .card,.side-card,.welcome,.page-heading,.profile-card,.profile-header,.live-player-shell,
   .creator-studio-shell,.settings-layout,.settings-content,.messenger-panel,.message-window,
-  .notification-center,.gift-catalogue-panel,.gift-preview-panel,.gift-send-panel{
+  .notification-center,.gift-catalogue-panel,.gift-send-panel{
     min-width:0!important;max-width:100%!important
   }
   .card{padding:12px!important;margin:0 0 10px!important;border-radius:12px!important}
