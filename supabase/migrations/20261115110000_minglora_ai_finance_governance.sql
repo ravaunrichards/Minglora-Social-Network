@@ -335,7 +335,15 @@ begin
   if v_action='list_budgets' then
     select jsonb_build_object(
       'budgets',coalesce(jsonb_agg(to_jsonb(b) order by b.scope_type,b.created_at),'[]'::jsonb),
-      'policy_count',count(*)
+      'policy_count',count(*),
+      'history',coalesce((
+        select jsonb_agg(to_jsonb(h) order by h.occurred_at desc)
+        from (
+          select * from ai_network.ai_finance_budget_history
+          where owner_user_id=p_actor_user_id
+          order by occurred_at desc limit 100
+        ) h
+      ),'[]'::jsonb)
     ) into v_result
     from ai_network.ai_finance_budget_policies b
     where b.owner_user_id=p_actor_user_id and b.policy_status<>'archived';
