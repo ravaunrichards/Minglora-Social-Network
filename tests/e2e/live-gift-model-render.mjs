@@ -162,15 +162,24 @@ try {
           viewer.addEventListener('error', onError, { once: true });
           viewer.src = source;
         });
-        const canvas = viewer.shadowRoot?.querySelector('canvas') || null;
-        const gl = canvas ? (canvas.getContext('webgl2') || canvas.getContext('webgl')) : null;
+        // model-viewer 4.4.0 has a 2D scene canvas plus a separate WebGL
+        // renderer canvas. Check the actual renderer canvas, not the first
+        // canvas in the shadow root (which is reserved for 2D presentation).
+        const canvases = Array.from(viewer.shadowRoot?.querySelectorAll('canvas') || []);
+        const webglCanvas = canvases.find(candidate =>
+          candidate.getContext('webgl2') || candidate.getContext('webgl')
+        ) || null;
+        const gl = webglCanvas
+          ? (webglCanvas.getContext('webgl2') || webglCanvas.getContext('webgl'))
+          : null;
         return {
           event: detail.event,
           loaded: viewer.loaded,
           modelIsVisible: viewer.modelIsVisible,
-          canvasPresent: Boolean(canvas),
-          canvasWidth: canvas?.width || 0,
-          canvasHeight: canvas?.height || 0,
+          canvasPresent: Boolean(webglCanvas),
+          canvasWidth: webglCanvas?.width || 0,
+          canvasHeight: webglCanvas?.height || 0,
+          rendererCanvasCount: canvases.length,
           viewportWidth: Math.round(viewer.getBoundingClientRect().width),
           viewportHeight: Math.round(viewer.getBoundingClientRect().height),
           webglVersion: gl ? gl.getParameter(gl.VERSION) : null
