@@ -94,6 +94,36 @@ test('provider API requires authorized platform staff and uses the Supabase runt
   ]) assert.ok(route.includes(token), 'Missing authorized provider API control: ' + token);
 });
 
+test('OpenAI provider-health endpoint remains behind owner MFA and never accepts a key in the request', () => {
+  const start = server.indexOf("if (p === '/api/ai-network'");
+  const end = server.indexOf("if (method === 'POST' && p === '/api/webhooks/paypal')", start);
+  const route = server.slice(start, end);
+  for (const token of [
+    'requireAuth(user)',
+    '!isDesignatedCreatorHubAdmin(user)',
+    '!hasActiveReviewerSession(user)',
+    "if (method === 'POST' && sub === 'provider-health')",
+    "input.provider !== 'openai'",
+    "Object.keys(input).some(key => key !== 'provider')",
+    'await probeOpenAIProvider()',
+    'Credentials must be configured in the private server environment'
+  ]) assert.ok(route.includes(token), 'Missing provider health route safety control: ' + token);
+});
+
+test('provider UI offers a secret-free OpenAI connection probe and no browser key input', () => {
+  for (const token of [
+    'data-ai-form="provider-health-probe"',
+    "path = '/provider-health'",
+    "payload.provider = 'openai'",
+    'OPENAI_API_KEY',
+    'Latest OpenAI probe:',
+    'read-only probe',
+    'AI inference and workers remain disabled'
+  ]) assert.ok(ui.includes(token), 'Missing OpenAI probe workspace behavior: ' + token);
+  assert.ok(!ui.includes('name="openaiApiKey"'));
+  assert.ok(!ui.includes('name="OPENAI_API_KEY"'));
+});
+
 test('provider workspace renders the environment provider registry without exposing credential values', () => {
   for (const token of [
     'providerCatalogue = list(state.snapshot?.providerStatus?.providerCatalogue)',
