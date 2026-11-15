@@ -201,17 +201,15 @@ The individual structural profile for each file is recorded in `assets/manifests
 - 38/45 expose at least one position accessor with min/max bounds; 7/45 do not expose these bounds. The recorded values are accessor-local only. Node transforms have not been applied, so world-space dimensions and final presentation scale remain unverified.
 - This is a structural audit, not a visual-render, PBR-material, performance or artistic-quality approval.
 
-
-
 ## Legacy standalone glTF structural audit — 2026-11-15
 
-A read-only technical pass inspected all 45 retained legacy standalone gift models in `public/assets/gifts/`. The review parsed each glTF 2.0 JSON document and inspected its embedded vertex buffers, POSITION accessors, referenced resources, material/texture declarations and animation channel declarations.
+All **45** retained standalone gift models in `public/assets/gifts/` were inspected against their embedded float32 vertex data and their technical profiles reconciled.
 
-- **45/45** documents parse as glTF 2.0 JSON and contain scene geometry.
+- **45/45** documents parse as glTF 2.0 and contain scene mesh geometry.
 - **45/45** use an embedded geometry buffer; **0** external resource URIs were found.
-- **0** texture/image resources and **0** embedded glTF animation channels were found. Runtime gift motion is a separate JavaScript/CSS/Web Animations system; it is not model-embedded animation.
-- **7 models** were missing the required `min` and `max` values on vertex-position accessors. The values were calculated directly from their embedded float32 vertex data and added to **21 POSITION accessors** across: `minglora_confetti.gltf`, `minglora_finger_heart.gltf`, `minglora_galaxy.gltf`, `minglora_money_gun.gltf`, `minglora_perfume.gltf`, `minglora_thunder_falcon.gltf` and `minglora_zeus.gltf`.
-- The repair changes only accessor metadata; mesh geometry, materials, model appearance, catalogue prices, gift status, transactions and production activation were not changed.
-- The legacy inventory records and content hashes are updated. A regression test now re-computes each POSITION accessor's extrema from the embedded buffer and compares them with the declared bounds.
+- **0** texture/image resources and **0** embedded glTF animation channels were found. Gift motion in the application is implemented separately from embedded model animation.
+- **23 models** required correction: **7** lacked POSITION accessor bounds and **16** had existing bounds that did not match the actual vertex extrema. **42 unique POSITION accessors** were recalculated from the embedded float32 data. All **531 POSITION accessor references** are now covered by finite, three-component `min`/`max` bounds matching the stored vertices.
+- Updated files: `minglora_aurora_whale.gltf`, `minglora_blue_mountain_coffee.gltf`, `minglora_christmas_lantern.gltf`, `minglora_confetti.gltf`, `minglora_cosmic_orbit.gltf`, `minglora_cricket_bat.gltf`, `minglora_diamond_basketball.gltf`, `minglora_diamond_ring.gltf`, `minglora_finger_heart.gltf`, `minglora_fireworks.gltf`, `minglora_galaxy.gltf`, `minglora_golden_microphone.gltf`, `minglora_golden_trophy.gltf`, `minglora_island_pride.gltf`, `minglora_jade_dragon.gltf`, `minglora_money_gun.gltf`, `minglora_money_rain.gltf`, `minglora_parish_pride_crest.gltf`, `minglora_perfume.gltf`, `minglora_royal_lion.gltf`, `minglora_thunder_falcon.gltf`, `minglora_tropical_sunset.gltf` and `minglora_zeus.gltf`.
+- The per-model inventory now records corrected byte sizes, Git blob hashes, POSITION-reference counts and accessor-local bounds. The regression test recalculates the extrema from each embedded vertex buffer across all 45 files.
 
-**Approval remains blocked:** these models are still unverified against canonical production gift codes, visual rendering, design quality and source rights. Structural validity does not mean premium artwork approval or production eligibility. No legacy model was activated in the production gift catalogue.
+**Approval remains blocked:** these models are still production-ineligible pending canonical catalogue mapping, visual/render review and rights clearance. Structural validity is not premium artwork approval. World-space dimensions have deliberately not been guessed because node transforms have not been applied. No production gift, price, wallet, transaction or earning state was changed.

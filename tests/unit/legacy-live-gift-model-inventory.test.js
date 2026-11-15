@@ -123,8 +123,8 @@ test('legacy GLTF technical profiles match the actual source documents', () => {
   assert.equal(summary.image_files, 0);
   assert.equal(summary.embedded_animation_channels, 0);
   assert.equal(summary.buffers_per_model, 1);
-  assert.equal(summary.models_with_position_accessor_bounds, 38);
-  assert.equal(summary.models_without_position_accessor_bounds, 7);
+  assert.equal(summary.models_with_position_accessor_bounds, 45);
+  assert.equal(summary.models_without_position_accessor_bounds, 0);
   assert.equal(summary.world_space_dimensions_verified, 0);
 
   const totals = { mesh_count: 0, node_count: 0, material_count: 0, buffer_bytes: 0 };
