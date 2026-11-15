@@ -4,14 +4,6 @@ export const CREATOR_LEAGUE_CLASSES = Object.freeze([
   "D5", "D4", "D3", "D2", "D1", "C5", "C4", "C3", "C2", "C1",
   "B5", "B4", "B3", "B2", "B1", "A3", "A2", "A1"
 ]);
-export const MATCH_RANKS = Object.freeze([
-  "Bronze III", "Bronze II", "Bronze I",
-  "Silver III", "Silver II", "Silver I",
-  "Gold IV", "Gold III", "Gold II", "Gold I",
-  "Platinum IV", "Platinum III", "Platinum II", "Platinum I",
-  "Diamond IV", "Diamond III", "Diamond II", "Diamond I",
-  "Heroic", "Master", "Grandmaster"
-]);
 export const MATCH_POWERUPS = Object.freeze([
   { id: "momentum_boost", name: "Momentum Boost", symbol: "⚡", durationMs: 30000, multiplier: 1.25, description: "25% extra eligible match points for 30 seconds." },
   { id: "shield", name: "Shield", symbol: "🛡️", durationMs: 30000, description: "Blocks the next opposing Momentum Boost or Score Multiplier bonus for 30 seconds. Base Gift points still count." },
@@ -306,14 +298,14 @@ export function ensureCreatorLeagueProfile(db, userId, region = "GLOBAL", now = 
       userId, region: String(region || "GLOBAL").trim().toUpperCase() || "GLOBAL",
       leagueClass: "D5", fragments: 0, leagueShields: 0,
       lifetimeGiftPoints: 0, seasonPoints: 0, seasonKey,
-      matchRankIndex: 0, matchRankPoints: 0,
       matchWins: 0, matchLosses: 0, matchDraws: 0,
       createdAt: now.toISOString(), updatedAt: now.toISOString()
     };
     db.creatorLeagueProfiles.push(profile);
   } else {
     if (!CREATOR_LEAGUE_CLASSES.includes(profile.leagueClass)) profile.leagueClass = "D5";
-    if (!Number.isInteger(profile.matchRankIndex) || profile.matchRankIndex < 0 || profile.matchRankIndex >= MATCH_RANKS.length) profile.matchRankIndex = 0;
+    delete profile.matchRankIndex;
+    delete profile.matchRankPoints;
     if (!Number.isInteger(profile.fragments) || profile.fragments < 0) profile.fragments = 0;
     if (!Number.isInteger(profile.leagueShields) || profile.leagueShields < 0) profile.leagueShields = 0;
     if (profile.seasonKey !== seasonKey) { profile.seasonKey = seasonKey; profile.seasonPoints = 0; }
@@ -402,8 +394,6 @@ export function settleScheduledCreatorLeagueDays(db, now = new Date()) {
       lifetimeGiftPoints: 0,
       seasonPoints: 0,
       seasonKey: seasonKeyForNewProfiles,
-      matchRankIndex: 0,
-      matchRankPoints: 0,
       matchWins: 0,
       matchLosses: 0,
       matchDraws: 0,
@@ -479,45 +469,25 @@ export function settleScheduledCreatorLeagueDays(db, now = new Date()) {
     seasonKey
   };
 }
-function applyMatchRating(db, userId, delta, now) {
-  const profile = ensureCreatorLeagueProfile(db, userId, "GLOBAL", now);
-  const before = MATCH_RANKS[profile.matchRankIndex];
-  profile.matchRankPoints += delta;
-  while (profile.matchRankPoints >= 100 && profile.matchRankIndex < MATCH_RANKS.length - 1) {
-    profile.matchRankPoints -= 100;
-    profile.matchRankIndex += 1;
-  }
-  while (profile.matchRankPoints < 0 && profile.matchRankIndex > 0) {
-    profile.matchRankIndex -= 1;
-    profile.matchRankPoints = Math.max(0, 85 + profile.matchRankPoints);
-  }
-  profile.matchRankPoints = Math.max(0, Math.min(99, profile.matchRankPoints));
-  const after = MATCH_RANKS[profile.matchRankIndex];
-  if (before !== after) event(db, userId, "match_rank_change", { from: before, to: after, delta }, now);
-  profile.updatedAt = now.toISOString();
-}
 function finishMatch(db, match, now) {
-  if (!match || match.status !== "live" || match.ratingAwarded) return false;
+  if (!match || match.status !== "live" || match.resultRecorded || match.ratingAwarded) return false;
   match.status = "completed";
   match.completedAt = now.toISOString();
   const challenger = Number(match.scores.challenger || 0);
   const opponent = Number(match.scores.opponent || 0);
   if (challenger === opponent) {
     match.result = "draw"; match.winnerId = null;
-    applyMatchRating(db, match.challengerId, 5, now);
-    applyMatchRating(db, match.opponentId, 5, now);
     ensureCreatorLeagueProfile(db, match.challengerId, "GLOBAL", now).matchDraws += 1;
     ensureCreatorLeagueProfile(db, match.opponentId, "GLOBAL", now).matchDraws += 1;
   } else {
     const winnerId = challenger > opponent ? match.challengerId : match.opponentId;
     const loserId = winnerId === match.challengerId ? match.opponentId : match.challengerId;
     match.result = "win"; match.winnerId = winnerId;
-    applyMatchRating(db, winnerId, 25, now);
-    applyMatchRating(db, loserId, -15, now);
     ensureCreatorLeagueProfile(db, winnerId, "GLOBAL", now).matchWins += 1;
     ensureCreatorLeagueProfile(db, loserId, "GLOBAL", now).matchLosses += 1;
   }
-  match.ratingAwarded = true;
+  match.resultRecorded = true;
+  delete match.ratingAwarded;
   event(db, match.challengerId, "match_completed", { matchId: match.id, result: match.result, winnerId: match.winnerId, score: challenger + "-" + opponent }, now);
   event(db, match.opponentId, "match_completed", { matchId: match.id, result: match.result, winnerId: match.winnerId, score: opponent + "-" + challenger }, now);
   return true;
@@ -787,7 +757,6 @@ export function getCreatorLeagueOverview(db, user, now = new Date()) {
     .sort((a, b) => Number(b.seasonPoints || 0) - Number(a.seasonPoints || 0) || Number(b.lifetimeGiftPoints || 0) - Number(a.lifetimeGiftPoints || 0))
     .slice(0, 50).map((item, index) => ({ position: index + 1, ...publicMember(db.users, item.userId), leagueClass: item.leagueClass, seasonPoints: Number(item.seasonPoints || 0), fragments: Number(item.fragments || 0) }));
   const uses = db.creatorLeaguePowerupUses.filter(item => item.userId === user.id && item.dayKey === dayKey);
-  const matchRank = MATCH_RANKS[profile.matchRankIndex] || MATCH_RANKS[0];
   return {
     profile: {
       ...creatorLeagueProgressForPoints(profile.lifetimeGiftPoints),
@@ -795,12 +764,9 @@ export function getCreatorLeagueOverview(db, user, now = new Date()) {
       lifetimeGiftPoints: profile.lifetimeGiftPoints,
       seasonPoints: profile.seasonPoints, todayGiftPoints: Number(daily ? daily.points : 0),
       seasonKey: profile.seasonKey, seasonEndsAt: seasonEndsAt(now),
-      matchRank, matchRankIndex: profile.matchRankIndex, matchRankPoints: profile.matchRankPoints,
-      matchRankPointsToNext: profile.matchRankIndex >= MATCH_RANKS.length - 1 ? null : 100 - profile.matchRankPoints,
       matchWins: profile.matchWins, matchLosses: profile.matchLosses, matchDraws: profile.matchDraws
     },
     classes: CREATOR_LEAGUE_CLASSES.slice().reverse(),
-    matchRanks: MATCH_RANKS,
     leaderboard: leaders,
     recentEvents: db.creatorLeagueEvents.filter(item => item.userId === user.id).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 12),
     powerups: MATCH_POWERUPS.map(item => ({ ...item, usedToday: uses.some(use => use.powerupId === item.id) })),
