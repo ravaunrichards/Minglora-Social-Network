@@ -213,10 +213,19 @@ test('Creator Studio generation failure stores no output and can be retried safe
     brief: 'Suggest titles for a local community technology education event.'
   }, { now });
   startAICreatorJobGeneration(db, 'owner-1', job.id, { now });
-  const failed = failAICreatorJobGeneration(db, 'owner-1', job.id, 'Moderation service unavailable.', { now });
+  const failed = failAICreatorJobGeneration(db, 'owner-1', job.id, 'Output moderation rejected the draft.', {
+    now,
+    providerFailure: {
+      provider: 'openai', model: 'test-model', responseId: 'resp-rejected',
+      usage: { input_tokens: 30, output_tokens: 50, total_tokens: 80 }
+    }
+  });
   assert.equal(failed.providerExecution, 'failed');
   assert.equal(failed.output, null);
-  assert.match(failed.providerError, /Moderation service unavailable/);
+  assert.equal(failed.providerModel, 'test-model');
+  assert.equal(failed.providerUsage.total_tokens, 80);
+  assert.match(failed.providerError, /Output moderation rejected/);
+  assert.equal(getAICreatorDailyUsage(db, 'owner-1', { now }).tokensUsed, 80);
   const retry = startAICreatorJobGeneration(db, 'owner-1', job.id, { now });
   assert.equal(retry.providerExecution, 'running');
   assert.equal(retry.output, null);
