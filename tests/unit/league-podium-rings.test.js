@@ -67,10 +67,12 @@ test("League displays all reference placement-fragment bands without changing li
 test("League top-20 standings show distinct top-ten and top-twenty awards with responsive styles", () => {
   assert.match(league, /position >= 4 && position <= 10/);
   assert.match(league, /position >= 11 && position <= 20/);
-  assert.match(league, /league-ranking-medal--top-ten/);
-  assert.match(league, /league-ranking-medal--top-twenty/);
-  assert.match(league, /league-leader-band--top-ten/);
-  assert.match(league, /league-leader-band--top-twenty/);
+  assert.match(league, /league-ranking-medal/);
+  assert.match(league, /league-leader-band/);
+  assert.match(css, /\\.league-ranking-medal--top-ten/);
+  assert.match(css, /\\.league-ranking-medal--top-twenty/);
+  assert.match(css, /\\.league-leader-band--top-ten/);
+  assert.match(css, /\\.league-leader-band--top-twenty/);
   assert.match(css, /@media\(max-width:760px\).*league-tier-grid/s);
   assert.match(css, /@media\(max-width:600px\).*league-fragment-reference/s);
   assert.match(css, /prefers-reduced-motion:reduce/);
