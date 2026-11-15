@@ -41,7 +41,7 @@ test("Gift Gallery Title Gifters and ranked supporters use the same original bad
 
 test("platform Top Gifters uses the original level image and visibly prints its existing badge name", () => {
   assert.ok(topGifters.includes("item.gifterBadge || user.gifterBadge"));
-  assert.ok(topGifters.includes("/assets/gifter-badges/badges.svg#level-"));
+  assert.ok(topGifters.includes("/assets/gifter-badges/level_"));
   assert.ok(topGifters.includes("badgeMarkup"));
   assert.ok(topGifters.includes("minglora-gifter-badge-name"));
 });
@@ -50,7 +50,7 @@ test("Gifter order reference directory shows the exact assigned badge name besid
   assert.ok(progression.includes("const badgeName = String(item.badgeName"));
   assert.ok(progression.includes("esc(badgeName)"));
   assert.ok(progression.includes("gp-level-index-art"));
-  assert.ok(progression.includes("badges.svg#level-"));
+  assert.ok(progression.includes("/assets/gifter-badges/level_"));
 });
 
 test("Gifter progression leaderboard shows username, display name, original badge image and exact badge name", () => {
@@ -58,7 +58,7 @@ test("Gifter progression leaderboard shows username, display name, original badg
   assert.ok(progression.includes("gp-leader-display-name"));
   assert.ok(progression.includes("gp-leader-badge"));
   assert.ok(progression.includes("String(level).padStart(2, \"0\")"));
-  assert.ok(progressionCss.includes(".gp-leader-badge svg"));
+  assert.ok(progressionCss.includes(".gp-leader-badge img"));
 });
 
 test("shared non-LIVE gifter badge styling is responsive and reduced-motion safe", () => {
