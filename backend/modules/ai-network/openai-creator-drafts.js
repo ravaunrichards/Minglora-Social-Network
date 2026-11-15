@@ -170,15 +170,7 @@ export async function generateOpenAICreatorDraft({
     }
   });
 
-  if (generation.status !== 'completed') {
-    throw providerError('incomplete_generation', 'OpenAI did not complete the draft. No partial output was saved.', 502);
-  }
-  const output = extractOutputText(generation);
-  if (!output || output.length > 12000) {
-    throw providerError('invalid_generation', 'OpenAI did not return a usable draft within the allowed output length.', 502);
-  }
-
-  // Fail closed: no generated output is stored when the moderation service is unavailable.
+  // Record provider usage even when an incomplete response or later moderation failure prevents saving the draft.
   const usage = generation.usage && typeof generation.usage === 'object' ? {
     input_tokens: Number.isFinite(Number(generation.usage.input_tokens)) ? Number(generation.usage.input_tokens) : null,
     output_tokens: Number.isFinite(Number(generation.usage.output_tokens)) ? Number(generation.usage.output_tokens) : null,
@@ -192,6 +184,15 @@ export async function generateOpenAICreatorDraft({
     usage
   };
 
+  if (generation.status !== 'completed') {
+    throw providerError('incomplete_generation', 'OpenAI did not complete the draft. No partial output was saved.', 502, generatedMetadata);
+  }
+  const output = extractOutputText(generation);
+  if (!output || output.length > 12000) {
+    throw providerError('invalid_generation', 'OpenAI did not return a usable draft within the allowed output length.', 502, generatedMetadata);
+  }
+
+  // Fail closed: no generated output is stored when the moderation service is unavailable.
   let moderation;
   try {
     moderation = await postOpenAIJson({
