@@ -1,3 +1,18 @@
+## Execution checkpoint — 2026-11-15 (email provisioning boundary and live AI security audit)
+
+- Project: Minglora Social Network only; existing repository and Supabase project gzycobgbasnqqhnympkr.
+- Task 4 — AI email identities: the existing ai_network.ai_emails table is present with 13 fields, RLS enabled, service-role-only table access, lowercased-address uniqueness, and a unique primary-email-per-identity index. Verification statuses are constrained to unverified/pending/verified/failed; provisioning statuses to not_requested/pending/provisioned/failed/suspended. Live count: zero email rows, zero verified rows and zero provisioned inboxes.
+- Existing identity create/profile code and regression tests deliberately default email metadata to verification_status=unverified / provisioning_status=not_requested and do not create Supabase Auth users. No mailbox-provisioning API adapter or provider-specific admin integration is present in the inspected backend. .env.example defaults EMAIL_PROVIDER=none and leaves SMTP fields blank; SMTP delivery is not mailbox creation. Task 4 is therefore BLOCKED — EXTERNAL ACTION REQUIRED until a mailbox-hosting provider/domain and its approved server-side provisioning credentials/API are selected and connected. No email rows or inboxes were fabricated.
+- Task 14 — Security audit: live inventory confirms 54/54 AI tables RLS-enabled; anon and authenticated have no ai_network schema usage and zero table grants; service_role has backend grants. All 21/21 public minglora_ai_* RPCs are SECURITY INVOKER, all use search_path='', none are SECURITY DEFINER, anon/authenticated have zero EXECUTE grants, and service_role has EXECUTE on all 21.
+- Supabase security advisor also reports informational RLS-enabled/no-policy notices for private server-only tables, plus separate project-wide warnings including leaked-password protection disabled and anonymous-role policies on existing public application tables. These broader Auth/application settings were not modified because they are outside this AI Network checkpoint and require a separate impact review. Task 14 remains IN PROGRESS pending the remaining prompt-injection, abuse, credential-isolation and operational security tests.
+- No production migrations, Auth settings, runtime controls, mailbox accounts, email rows, credentials or data were changed. AI execution remains paused, disabled and at zero workers.
+- Task 3 remains BLOCKED — EXTERNAL ACTION REQUIRED for the real designated-owner browser session and profile-media/device acceptance. No synthetic user or identity was created.
+- Master register accounting: 2/19 VERIFIED COMPLETE (10.53%); 5/19 IMPLEMENTED — AWAITING VERIFICATION (26.32%); 8/19 IN PROGRESS (42.11%); 2/19 BLOCKED — EXTERNAL ACTION REQUIRED (10.53%); 2/19 NOT STARTED (10.53%). Verified completion remains 2/19 = 10.53%.
+- Latest full CI and AI Network tests remain green on the previous PR code head; these audit actions are read-only and tracker-only. New CI will run for the tracker commit.
+
+Next safe action: continue the remaining Task 14 security checks while keeping Task 3/4 blockers explicit; do not activate workers or change global Auth settings.
+
+---
 ## Execution checkpoint — 2026-11-15 (Task 15 finance governance CI verified)
 
 - Project: Minglora Social Network only. Feature branch: `feat/ai-network-finance-governance-20261115`; review PR: [#356](https://github.com/ravaunrichards/Minglora-Social-Network/pull/356), now ready for human review (not merged).
