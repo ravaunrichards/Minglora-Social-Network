@@ -82,8 +82,10 @@ function assertReferenceGeometry(screen,state,viewport){
     assert.equal(state.columnsCount,4,label+': four columns for two large and compact guest cells');
     assert.equal(state.hostPlacement[0],'1',label+': first large tile begins at first column');
     assert.equal(state.hostPlacement[1],'3',label+': first large tile spans two columns');
-    assert.equal(state.smallGuestRects.length,7,label+': seven remaining compact guest cells after two upper tiles');
-    assert.ok(state.hostRect.height>state.smallGuestRects[0].height,label+': top tiles are taller than compact guest cells');
+    const compactGuests=state.smallGuestRects.slice(1);
+    assert.equal(compactGuests.length,7,label+': seven remaining compact guest cells after two upper tiles');
+    assert.ok(state.hostRect.height>compactGuests[0].height,label+': top tiles are taller than compact guest cells');
+    assert.ok(state.hostRect.width>compactGuests[0].width,label+': top tiles are wider than compact guest cells');
   }
   if(screen==='spotlight'){
     assert.equal(state.columnsCount,4,label+': four compact columns below the spotlight');
