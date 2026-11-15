@@ -241,3 +241,11 @@ The model source carries `gift-royal-lions-scepter-3d-v1` provenance and `design
 | Cache | gift-effects.js?v=20261115-royal-lions-scepter-rise-1; service-worker shell v318. | HTML and service worker use the same versioned script URL. |
 
 The source catalogue grand-entry value, animation key and 1,900-ms duration are unchanged. No production offer, price, wallet or transaction was modified.
+
+## Rose model refinement — 2026-11-15
+
+- Merged PR #377 (`5b3dc50508e684cb7478cfa5eb1b4f56580ed566`) updates the existing original Rose source with cupped petal layers, raised petal and leaf vein geometry, connected petioles, fitted sepals/calyx, and individual golden stamens/anthers.
+- The exact canonical Rose item and configured coin value/publication state were preserved. No backend gift offer, balance, transaction, or production catalogue data was changed.
+- Unit assertions now require the source art-direction metadata and named mesh/material groups for veins, petioles and stamens.
+- Automated evidence: CI passed; separate LIVE/MeetWave layout matrix passed; Chromium WebGL passed 27 renders (nine gift models × three viewports). The saved report recorded zero page errors, HTTP failures, failed requests and model-request cancellations.
+- Limitation: the renderer test verifies glTF loading and visible pixels, not photorealism or human design approval. Rose remains design-review-pending; rights review and physical-device checks remain outstanding.
