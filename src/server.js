@@ -2129,6 +2129,38 @@ async function route(req, res) {
         }
       };
 
+      const runAIHRWorkforceCommand = async (aiAction, payload = {}) => {
+        if (!isModerator(user, req)) {
+          throw Object.assign(
+            new Error('Only an authorized Minglora platform administrator with the required active session can manage AI HR workforce development and attendance.'),
+            { status: 403 }
+          );
+        }
+        if (!isSupabasePersistence()) {
+          throw Object.assign(new Error('AI HR workforce records require Minglora Supabase persistence.'), { status: 503 });
+        }
+        try {
+          const response = await requestSupabaseState('ai_hr_workforce_command', {
+            actorUserId: user.id,
+            aiAction,
+            payload
+          });
+          if (response?.skipped) {
+            throw Object.assign(new Error('AI HR workforce records are unavailable in local-only persistence mode.'), { status: 503 });
+          }
+          return response?.result;
+        } catch (error) {
+          const message = String(error?.message || '');
+          if (/unsupported action|unsupported AI HR workforce command|function .*minglora_ai_hr_workforce_command.*does not exist|could not find the function|schema cache/i.test(message)) {
+            throw Object.assign(
+              new Error('The AI HR training and attendance migration and private runtime gateway must be deployed before this operation is available. No workforce data was changed.'),
+              { status: 503 }
+            );
+          }
+          throw error;
+        }
+      };
+
       const runAIScheduleCommand = async (aiAction, payload = {}) => {
         if (!['create_schedule','list_schedules','set_schedule_status'].includes(aiAction)) {
           throw Object.assign(new Error('Unsupported AI schedule command.'), { status: 400 });
@@ -2564,6 +2596,66 @@ async function route(req, res) {
           }
         }
       }
+      if (parts[0] === 'organizations' && parts.length >= 3 &&
+          ['training-programs', 'training-enrollments', 'attendance'].includes(parts[2])) {
+        const organizationId = parts[1];
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(organizationId)) {
+          throw Object.assign(new Error('A valid organization ID is required.'), { status: 400 });
+        }
+        const resource = parts[2];
+        const basePayload = { organization_id: organizationId };
+        const readWorkforceBody = async () => {
+          const input = await body(req, 24000);
+          if (!input || typeof input !== 'object' || Array.isArray(input)) {
+            throw Object.assign(new Error('AI HR workforce input must be a JSON object.'), { status: 400 });
+          }
+          return { ...basePayload, ...input, organization_id: organizationId };
+        };
+        if (parts.length === 3 && method === 'GET') {
+          const command = resource === 'training-programs' ? 'list_training_programs'
+            : resource === 'training-enrollments' ? 'list_training_enrollments' : 'list_attendance';
+          const result = await runAIHRWorkforceCommand(command, basePayload);
+          const key = resource === 'training-programs' ? 'training_programs'
+            : resource === 'training-enrollments' ? 'training_enrollments' : 'attendance_records';
+          return json(res, 200, { [key]: Array.isArray(result) ? result : [] });
+        }
+        if (parts.length === 3 && method === 'POST') {
+          const input = await readWorkforceBody();
+          const command = resource === 'training-programs' ? 'create_training_program'
+            : resource === 'training-enrollments' ? 'assign_training' : 'record_attendance';
+          const result = await runAIHRWorkforceCommand(command, input);
+          return json(res, result?.reused ? 200 : 201, result || {});
+        }
+        if (parts.length === 5 && parts[4] === 'status' && method === 'PATCH') {
+          const recordId = parts[3];
+          if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(recordId)) {
+            throw Object.assign(new Error('A valid AI HR workforce record ID is required.'), { status: 400 });
+          }
+          const input = await readWorkforceBody();
+          input.status = input.status || '';
+          if (resource === 'training-programs') {
+            input.program_id = recordId;
+            const result = await runAIHRWorkforceCommand('set_training_program_status', input);
+            return json(res, 200, result || {});
+          }
+          if (resource === 'training-enrollments') {
+            input.enrollment_id = recordId;
+            const result = await runAIHRWorkforceCommand('update_training_enrollment', input);
+            return json(res, 200, result || {});
+          }
+        }
+        if (parts.length === 5 && parts[4] === 'review' && resource === 'attendance' && method === 'PATCH') {
+          const attendanceId = parts[3];
+          if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(attendanceId)) {
+            throw Object.assign(new Error('A valid attendance record ID is required.'), { status: 400 });
+          }
+          const input = await readWorkforceBody();
+          input.attendance_id = attendanceId;
+          const result = await runAIHRWorkforceCommand('review_attendance', input);
+          return json(res, 200, result || {});
+        }
+      }
+
       if (parts[0] === 'organizations' && parts.length >= 3 &&
           ['performance-reviews', 'succession-plans', 'promotions'].includes(parts[2])) {
         const organizationId = parts[1];
