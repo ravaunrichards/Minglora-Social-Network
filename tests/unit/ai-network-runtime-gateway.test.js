@@ -21,7 +21,8 @@ test('AI identity, organization, HR, provider and task RPC commands are reachabl
     'ai_organization_command',
     'ai_hr_command',
     'ai_provider_command',
-    'ai_task_command'
+    'ai_task_command',
+    'ai_conversation_command'
   ]) {
     assert.ok(allowlist.includes('"' + action + '"'), action + ' is accepted by the global action allowlist');
     assert.ok(runtime.includes('if (action === "' + action + '")'), action + ' has a runtime handler');
@@ -39,6 +40,22 @@ test('AI memory command is available only through the allowlisted authenticated 
   assert.match(server, /runAIMemoryCommand\('create'/);
   assert.match(server, /runAIMemoryCommand\('update'/);
   assert.match(server, /runAIMemoryCommand\('delete'/);
+});
+
+test('AI conversation RPC is private, owner-scoped and restricted to bounded session/exchange commands', () => {
+  const start = runtime.indexOf('const supportedActions = [');
+  const end = runtime.indexOf('];', start);
+  const allowlist = runtime.slice(start, end);
+  assert.ok(allowlist.includes('"ai_conversation_command"'));
+  const handlerStart = runtime.indexOf('if (action === "ai_conversation_command")');
+  const handlerEnd = runtime.indexOf('if (action === "ai_category_command")', handlerStart);
+  const handler = runtime.slice(handlerStart, handlerEnd);
+  assert.match(handler, /supportedConversationCommands/);
+  assert.match(handler, /validUuid\(actorUserId\)/);
+  assert.match(handler, /admin\.rpc\("minglora_ai_conversation_command"/);
+  assert.match(server, /runAIConversationCommand\('begin_exchange'/);
+  assert.match(server, /runAIConversationCommand\('complete_exchange'/);
+  assert.match(server, /runAIConversationCommand\('fail_exchange'/);
 });
 
 test('durable AI task processing remains paused and non-executing by default', () => {
