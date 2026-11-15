@@ -134,4 +134,6 @@ The current Admin Centre remains designated-owner/MFA restricted. The staff tabl
 - Corrected the image and full-size link to the existing server allow-listed route `/assets/gifters-level-up.png`; the previous URL-encoded path did not match that explicit route.
 - Added responsive, uncropped image styling and dedicated placement regression coverage. Bumped the Gifter Progression asset URLs and service-worker cache to `minglora-shell-v324-self-updating-1`.
 - No badge source files, individual badge artwork, Coin thresholds, progression logic, gift ledgers, wallets, or database records were changed.
-- Validation: CI results pending for the pull request; no production deployment claimed.
+- PR #403 merged into `main` on 2026-11-15; merge commit `3aedfcfb54860a32a4d34911a0db82cfa807c7e4`.
+- Validation: the new Gifters Badge Progression placement test, all existing Gifter artwork/level tests, 71-image reference-placement coverage, JavaScript syntax, server syntax, asset generation and raster metadata audit passed. LIVE/MeetWave layout independence, AI identity/discovery browser checks and Supabase Auth provider acceptance passed. The full test job remained red on five unrelated API/Creator League/For You expectations; the separate For You functional check also failed its existing stylesheet-version assertion. No Gifter-specific test failed.
+- No deployment was triggered or claimed.
