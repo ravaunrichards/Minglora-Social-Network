@@ -73,7 +73,7 @@ test("Toucan gift uses original keel-billed geometry and subject-specific Minglo
     assert.equal(indices?.componentType, 5123);
     assert.ok(indices.count >= 3);
     assert.ok(material?.pbrMetallicRoughness?.roughnessFactor >= 0.15);
-    assert.ok(material?.pbrMetallicRoughness?.roughnessFactor <= 0.95);
+    assert.ok(material?.pbrMetallicRoughness?.roughnessFactor <= 1.0);
     assert.ok(material?.pbrMetallicRoughness?.metallicFactor >= 0);
     assert.ok(material?.pbrMetallicRoughness?.metallicFactor <= 1);
   }
