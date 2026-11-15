@@ -49,19 +49,19 @@ test("League reference parity includes four original Minglora tier crests and th
   assert.match(css, /\.league-tier-card--D/);
 });
 
-test("League displays all reference placement-fragment bands without changing live progression rules", () => {
+test("League displays the current reference placement-fragment bands without mixing Match results", () => {
   assert.match(league, /function fragmentRulesMarkup\(\)/);
-  assert.match(league, /Placement fragment guide/);
-  assert.match(league, /Bottom 99%/);
-  assert.match(league, /Top 80%/);
-  assert.match(league, /Top 70%/);
-  assert.match(league, /Top 60%/);
-  assert.match(league, /Top 20%/);
-  assert.match(league, /Top 10%/);
-  assert.match(league, /Top 1%/);
-  assert.match(league, /REFERENCE ONLY/);
-  assert.match(league, /100,000 points per class/);
-  assert.match(league, /match rank.*completed League Match results/i);
+  for (const rule of [
+    "Top 1%", "Top 10%", "Top 20%", "Top 60%", "Top 70%", "Top 80%",
+    "Bottom 40%", "Bottom 30%", "Bottom 20%", "Other placements"
+  ]) {
+    assert.ok(league.includes(rule), "missing current placement rule " + rule);
+  }
+  assert.match(league, /4 FRAGMENTS = 1 TIER/);
+  assert.match(league, /D2–D5 have no fragment-loss penalty/);
+  assert.match(league, /Your class is determined by daily placement and fragments, not a lifetime gift threshold/);
+  assert.match(league, /weekly and lifetime gift totals remain reporting statistics/);
+  assert.match(league, /League Match/);
 });
 
 test("League top-20 standings show distinct top-ten and top-twenty awards with responsive styles", () => {

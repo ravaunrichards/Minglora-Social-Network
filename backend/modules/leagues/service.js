@@ -36,6 +36,10 @@ function uniqueRecords(records, keyFor, merge = current => current) {
 function mergeProfileRecords(current, incoming) {
   const preferred = recordTime(incoming) > recordTime(current) ? incoming : current;
   const merged = { ...(preferred === current ? incoming : current), ...preferred };
+  if (typeof preferred.rankingEnabled !== "boolean") {
+    const fallbackRankingPreference = preferred === current ? incoming.rankingEnabled : current.rankingEnabled;
+    merged.rankingEnabled = typeof fallbackRankingPreference === "boolean" ? fallbackRankingPreference : true;
+  }
   for (const key of ["lifetimeGiftPoints", "matchWins", "matchLosses", "matchDraws"]) {
     merged[key] = Math.max(asNumber(current[key]), asNumber(incoming[key]));
   }
@@ -287,7 +291,7 @@ export function ensureCreatorLeagueProfile(db, userId, region = "GLOBAL", now = 
   if (!profile) {
     profile = {
       userId, region: String(region || "GLOBAL").trim().toUpperCase() || "GLOBAL",
-      leagueClass: "D5", fragments: 0, leagueShields: 0,
+      leagueClass: "D5", fragments: 0, leagueShields: 0, rankingEnabled: true,
       lifetimeGiftPoints: 0, seasonPoints: 0, seasonKey,
       matchWins: 0, matchLosses: 0, matchDraws: 0,
       createdAt: now.toISOString(), updatedAt: now.toISOString()
@@ -301,11 +305,30 @@ export function ensureCreatorLeagueProfile(db, userId, region = "GLOBAL", now = 
     profile.fragments = Math.max(-3, Math.min(3, profile.fragments));
     if (!Number.isInteger(profile.leagueShields) || profile.leagueShields < 0) profile.leagueShields = 0;
     profile.leagueShields = Math.min(10, profile.leagueShields);
+    if (typeof profile.rankingEnabled !== "boolean") profile.rankingEnabled = true;
     if (profile.seasonKey !== seasonKey) { profile.seasonKey = seasonKey; profile.seasonPoints = 0; }
     if (!profile.region) profile.region = String(region || "GLOBAL").trim().toUpperCase() || "GLOBAL";
     profile.updatedAt = now.toISOString();
   }
   return profile;
+}
+export function setCreatorLeagueRankingPreference(db, user, enabled, now = new Date()) {
+  if (!user?.id) {
+    throw Object.assign(new Error("A signed-in creator account is required."), { status: 401 });
+  }
+  if (typeof enabled !== "boolean") {
+    throw Object.assign(new Error("Choose whether your Creator League ranking is visible."), { status: 400 });
+  }
+  const timestamp = now instanceof Date ? now : new Date(now);
+  if (!Number.isFinite(timestamp.getTime())) {
+    throw Object.assign(new Error("The ranking preference update time is invalid."), { status: 400 });
+  }
+  const profile = ensureCreatorLeagueProfile(
+    db, user.id, user.country || user.region || "GLOBAL", timestamp
+  );
+  profile.rankingEnabled = enabled;
+  profile.updatedAt = timestamp.toISOString();
+  return { rankingEnabled: enabled, updatedAt: profile.updatedAt };
 }
 function applyClassMovement(profile, fragmentDelta, db, now) {
   const currentIndex = CREATOR_LEAGUE_CLASSES.indexOf(profile.leagueClass);
@@ -771,7 +794,7 @@ export function getCreatorLeagueLeaderboard(db, user, options = {}) {
   }
 
   const eligible = db.creatorLeagueProfiles
-    .filter(item => item.userId && item.leagueClass === requestedClass &&
+    .filter(item => item.userId && item.rankingEnabled !== false && item.leagueClass === requestedClass &&
       String(item.region || "GLOBAL").toUpperCase() === String(viewerProfile.region || "GLOBAL").toUpperCase())
     .map(item => ({
       profile: item,
@@ -823,7 +846,7 @@ export function getCreatorLeagueOverview(db, user, now = new Date()) {
     todayScores.set(item.userId, (todayScores.get(item.userId) || 0) + Math.max(0, asNumber(item.points)));
   }
   const leaders = db.creatorLeagueProfiles
-    .filter(item => item.leagueClass === profile.leagueClass &&
+    .filter(item => item.rankingEnabled !== false && item.leagueClass === profile.leagueClass &&
       String(item.region || "GLOBAL").toUpperCase() === String(profile.region || "GLOBAL").toUpperCase())
     .map(item => ({ profile: item, points: todayScores.get(item.userId) || 0 }))
     .sort((a, b) => b.points - a.points || String(a.profile.userId).localeCompare(String(b.profile.userId)))
@@ -837,6 +860,7 @@ export function getCreatorLeagueOverview(db, user, now = new Date()) {
     profile: {
       leagueClass: profile.leagueClass,
       region: profile.region,
+      rankingEnabled: profile.rankingEnabled !== false,
       fragments: Math.trunc(asNumber(profile.fragments)),
       fragmentsToPromotion: Math.max(0, 4 - Math.max(0, Math.trunc(asNumber(profile.fragments)))),
       demotionFragments: Math.max(0, -Math.trunc(asNumber(profile.fragments))),
