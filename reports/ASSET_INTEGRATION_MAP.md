@@ -209,3 +209,13 @@ The motion-index schema keeps the original `catalog_motion_preset` and the effec
 - The build-time generator routes that exact gift code to `assets/3d-assets/gift-models/royal-lions-scepter-model.mjs`, producing the canonical GLTF path alongside the `royal-lions-scepter-original-v1` primary SVG and transparent icon.
 - Gift Studio and LIVE continue to use the existing canonical asset paths, 3D preview loader, SVG fallback and server-confirmed gift event path. No new gift event or transaction route is introduced.
 - The manifest/test suite records the bespoke source as design-review-pending and verifies the source identity, model geometry and SVG artwork. Rights/human visual review and physical-device QA are not claimed.
+
+
+## Royal Lions Scepter LIVE event motion/audio — 2026-11-15
+
+- Canonical source catalogue animation fields remain grand-entry, the existing animation key and 1,900-ms duration; the runtime does not rewrite them.
+- scripts/generate-live-gift-motion-index.mjs maps exact code royal-lions-scepter-15000-mgl to effective lion-scepter-rise. The generated motion index retains both the canonical catalogue preset and effective override.
+- public/gift-effects.js selects the same exact-code visual motion at the existing model element's Web Animations trigger. The normal gift mount and prefers-reduced-motion handling remain authoritative.
+- The same server-confirmed gift mount reaches playRoyalLionsScepter through the existing sound dispatch. It synthesizes a filtered growl sweep, low impact, five-note ceremonial fanfare and high-frequency jewel shimmer using Web Audio.
+- The asset manifest records royal-lions-scepter-roar-and-regal-fanfare-v1 as gift-specific synthesis, not mastered audio. Sound opt-out remains respected. HTML references gift-effects.js?v=20261115-royal-lions-scepter-rise-1; service-worker shell v318 caches that exact version.
+- No API, production catalogue row, Coin price, wallet, transaction, payout or production activation is changed by this event-effect integration.
