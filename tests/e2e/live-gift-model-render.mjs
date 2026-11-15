@@ -11,7 +11,7 @@ const outputDir = path.join(root, 'artifacts/live-gift-model-render');
 const cdnModule = 'https://ajax.googleapis.com/ajax/libs/model-viewer/4.4.0/model-viewer.min.js';
 
 const gifts = [
-  { name: 'Rose', code: 'rose' },
+  { name: 'Rose', code: 'rose-4ieccm' },
   { name: 'Hibiscus', code: 'hibiscus-5-mgl' },
   { name: 'Djembe Master', code: 'djembe-master-1v3jzkm' },
   { name: 'Palm Breeze', code: 'palm-breeze-gknyt0' },
@@ -123,7 +123,7 @@ try {
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 }, deviceScaleFactor: 1 });
   page.on('pageerror', error => pageErrors.push(error.message));
   await page.goto(baseUrl + '/__gift-model-preview', { waitUntil: 'domcontentloaded' });
-  await page.waitForFunction(() => window.__mingloraModelViewerReady === true, { timeout: 60000 });
+  await page.waitForFunction(() => window.__mingloraModelViewerReady === true, null, { timeout: 60000 });
   assert.ok(await page.evaluate(() => Boolean(customElements.get('model-viewer'))),
     'The production model-viewer 4.4.0 module must be available in Chromium.');
 
