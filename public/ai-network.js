@@ -570,12 +570,14 @@
         const reviewResult = talentResults[0].status === 'fulfilled' ? talentResults[0].value : {};
         const successionResult = talentResults[1].status === 'fulfilled' ? talentResults[1].value : {};
         const promotionResult = talentResults[2].status === 'fulfilled' ? talentResults[2].value : {};
-        const developmentResults = await Promise.allSettled([
-          request(base + '/training-courses'), request(base + '/training-enrollments'), request(base + '/attendance')
+        const [developmentResults, disciplinaryResults] = await Promise.all([
+          Promise.allSettled([request(base + '/training-courses'),request(base + '/training-enrollments'),request(base + '/attendance')]),
+          Promise.allSettled([request(base + '/disciplinary-cases')])
         ]);
         const courseResult = developmentResults[0].status === 'fulfilled' ? developmentResults[0].value : {};
         const enrollmentResult = developmentResults[1].status === 'fulfilled' ? developmentResults[1].value : {};
         const attendanceResult = developmentResults[2].status === 'fulfilled' ? developmentResults[2].value : {};
+        const disciplinaryResult = disciplinaryResults[0].status === 'fulfilled' ? disciplinaryResults[0].value : {};
         return [organizationId, {
           departments: list(departmentResult.departments), positions: list(positionResult.positions),
           vacancies: list(vacancyResult.vacancies), applications: list(applicationResult.applications),
@@ -584,6 +586,8 @@
           trainingCourses: list(courseResult.training_courses),
           trainingEnrollments: list(enrollmentResult.training_enrollments),
           attendance: list(attendanceResult.attendance),
+          disciplinaryCases: list(disciplinaryResult.disciplinary_cases),
+          disciplinaryUnavailable: disciplinaryResults.some(result => result.status === 'rejected'),
           developmentUnavailable: developmentResults.some(result => result.status === 'rejected'),
           talentUnavailable: talentResults.some(result => result.status === 'rejected')
         }];
@@ -611,6 +615,7 @@
     const trainingCourses = list(hr.trainingCourses);
     const trainingEnrollments = list(hr.trainingEnrollments);
     const attendanceRecords = list(hr.attendance);
+    const disciplinaryCases = list(hr.disciplinaryCases);
     const identityRecords = list(state.identityRegistry?.identities);
     const identityOptions = identityRecords.map(row => ({
       value: row.identity?.identity_id || '',
@@ -892,6 +897,40 @@
         '<label><span>Correction reason (minimum 10 characters)</span><input name="reason" required minlength="10" maxlength="2000" placeholder="Explain the correction and supporting reason"></label>' +
         '<button class="secondary" type="submit">Save correction with audit history</button></form></details></article>';
     }).join('') + '</div>' : empty('No attendance records have been entered.');
+    const disciplinaryCaseForm = employeeOptions.length
+      ? '<form class="ai-network-form ai-network-hr-form" data-ai-form="disciplinary-case" data-organization-id="' + esc(organizationId) + '">' +
+        '<div class="ai-network-form-title">Open confidential employee case</div><div class="ai-network-form-grid">' +
+        '<label>Employee<select name="employmentId" required>' + options(employeeOptions,employeeOptions[0].value) + '</select></label>' +
+        '<label>Category<select name="caseCategory">' + options([{value:'conduct',label:'Conduct'},{value:'policy',label:'Policy'},{value:'performance',label:'Performance'},{value:'attendance',label:'Attendance'},{value:'safety',label:'Safety'},{value:'security',label:'Security'},{value:'other',label:'Other'}],'conduct') + '</select></label>' +
+        '<label>Severity<select name="severity">' + options([{value:'low',label:'Low'},{value:'medium',label:'Medium'},{value:'high',label:'High'},{value:'critical',label:'Critical'}],'medium') + '</select></label>' +
+        '<label>Incident date<input type="date" name="incidentDate" required></label><label>Case title<input name="caseTitle" required minlength="3" maxlength="180"></label></div>' +
+        '<label>Summary<input name="summary" required minlength="3" maxlength="2000"></label><label>Details<textarea name="details" maxlength="8000" rows="3"></textarea></label>' +
+        '<button class="primary" type="submit">Open case</button></form>'
+      : '<p class="ai-network-note">An employee record is required before opening an HR case.</p>';
+    const disciplinaryCaseRows = disciplinaryCases.length ? '<div class="ai-network-list">' + disciplinaryCases.map(row => {
+      const item=row.case || {}, history=list(row.history);
+      const next=item.case_status==='open' ? [{value:'under_review',label:'Under review'},{value:'dismissed',label:'Dismiss'}]
+        : item.case_status==='under_review' ? [{value:'awaiting_response',label:'Awaiting response'},{value:'resolved',label:'Resolve'},{value:'dismissed',label:'Dismiss'}]
+        : item.case_status==='awaiting_response' ? [{value:'under_review',label:'Resume review'},{value:'resolved',label:'Resolve'},{value:'dismissed',label:'Dismiss'}] : [];
+      const historyRows=history.length ? '<div class="ai-network-case-history">' + history.map(event =>
+        '<p><small>' + esc((event.action || 'case event').replaceAll('_',' ')) + ' · ' + date(event.occurred_at) + '</small>' +
+        (event.note ? '<br><span>' + esc(event.note) + '</span>' : '') + '</p>').join('') + '</div>' : '';
+      const statusForm=next.length
+        ? '<form class="ai-network-inline-form" data-ai-form="disciplinary-case-status" data-organization-id="' + esc(organizationId) + '" data-case-id="' + esc(item.case_id) + '">' +
+          '<label><span>Case status</span><select name="status">' + options(next,next[0].value) + '</select></label>' +
+          '<label><span>Reason (minimum 10 characters)</span><input name="reason" required minlength="10" maxlength="4000"></label>' +
+          '<button class="secondary" type="submit">Update case status</button></form>'
+        : '<p class="ai-network-note">This case is closed.</p>';
+      return '<article class="ai-network-list-row ai-network-hr-row"><strong>' + esc(item.case_title || 'Disciplinary case') +
+        '</strong><div class="ai-network-meta">' + pill(item.case_status || 'open') + ' ' + pill(item.severity || 'medium') + ' ' + pill(item.case_category || 'other') +
+        '</div><p>' + esc(row.identity?.display_name || 'AI employee') + ' · ' + esc(item.incident_date || '') + '</p><p>' + esc(item.summary || '') + '</p>' +
+        (item.details ? '<small>' + esc(item.details) + '</small>' : '') + statusForm +
+        '<form class="ai-network-inline-form" data-ai-form="disciplinary-case-note" data-organization-id="' + esc(organizationId) + '" data-case-id="' + esc(item.case_id) + '">' +
+        '<label><span>Add investigation note</span><textarea name="note" required minlength="3" maxlength="4000"></textarea></label>' +
+        '<button class="secondary" type="submit">Add confidential note</button></form>' + historyRows + '</article>';
+    }).join('') + '</div>' : empty('No disciplinary cases have been opened.');
+    const disciplinaryUnavailableNote = hr.disciplinaryUnavailable
+      ? '<p class="ai-network-note">Confidential case management is waiting for its additive migration and private runtime gateway. Existing HR records remain available.</p>' : '';
     const developmentUnavailableNote = hr.developmentUnavailable
       ? '<p class="ai-network-note">Training and attendance are waiting for the HR development migration and private runtime gateway. Existing HR records remain available.</p>' : '';
     const candidateOptions = identityOptions.length
@@ -909,7 +948,10 @@
       '<div><h5>Recorded promotions</h5>' + promotionRows + '</div>' +
       '<div><h5>Succession planning · no automatic appointments</h5>' + successionForm + successionRows + '</div>' +
       '<div><h5>Employee training</h5>' + developmentUnavailableNote + courseForm + courseRows + assignmentForm + enrollmentRows + '</div>' +
-      '<div><h5>Daily attendance · human recorded</h5>' + attendanceForm + attendanceRows + '</div></section>';
+      '<div><h5>Daily attendance · human recorded</h5>' + attendanceForm + attendanceRows + '</div>' +
+      '<div><h5>Disciplinary investigations · human reviewed</h5>' + disciplinaryUnavailableNote +
+      '<p class="ai-network-note">Cases are confidential and organization-scoped; decisions are human-entered. No sanction or employment action is automated.</p>' +
+      disciplinaryCaseForm + disciplinaryCaseRows + '</div></section>';
   }
 
   function renderAIProviderCenter() {
@@ -2020,6 +2062,19 @@
       payload.check_in_at=checkIn ? new Date(checkIn).toISOString() : null;
       payload.check_out_at=checkOut ? new Date(checkOut).toISOString() : null;
       payload.reason=value('reason'); payload.idempotency_key=form.dataset.idempotencyKey;
+    } else if (kind === 'disciplinary-case') {
+      const o=form.dataset.organizationId;if(!o)throw new Error('Disciplinary case organization is missing.');
+      path='/organizations/'+encodeURIComponent(o)+'/disciplinary-cases';
+      form.dataset.idempotencyKey=form.dataset.idempotencyKey||window.crypto.randomUUID();
+      payload.employment_id=value('employmentId');payload.case_category=value('caseCategory');payload.severity=value('severity');
+      payload.incident_date=value('incidentDate');payload.case_title=value('caseTitle');payload.summary=value('summary');
+      payload.details=value('details');payload.idempotency_key=form.dataset.idempotencyKey;
+    } else if (kind === 'disciplinary-case-note') {
+      const o=form.dataset.organizationId,c=form.dataset.caseId;if(!o||!c)throw new Error('Case details are missing.');
+      path='/organizations/'+encodeURIComponent(o)+'/disciplinary-cases/'+encodeURIComponent(c)+'/notes';payload.note=value('note');
+    } else if (kind === 'disciplinary-case-status') {
+      const o=form.dataset.organizationId,c=form.dataset.caseId;if(!o||!c)throw new Error('Case details are missing.');
+      path='/organizations/'+encodeURIComponent(o)+'/disciplinary-cases/'+encodeURIComponent(c)+'/status';payload.status=value('status');payload.reason=value('reason');
     } else if (kind === 'bot') {
       path = '/bots';
       form.dataset.idempotencyKey = form.dataset.idempotencyKey || window.crypto.randomUUID();
@@ -2085,7 +2140,7 @@
       payload.companionOptIn = form.querySelector('[name="companionOptIn"]').checked;
       payload.companionAcknowledged = form.querySelector('[name="companionAcknowledgedAIIdentity"]').checked;
     } else return;
-    const patchKinds = ['settings','languages','memory-settings','memory-edit','vacancy-status','application-review','employment-status','employment-manager','provider-assignment-status','task-approval','identity-edit'];
+    const patchKinds = ['settings','languages','memory-settings','memory-edit','vacancy-status','application-review','employment-status','employment-manager','provider-assignment-status','task-approval','identity-edit','disciplinary-case-status'];
     const talentPatchKinds = ['performance-review-finalize','succession-status','training-course-status','training-enrollment-status'];
     const result = await request(path, { method: patchKinds.concat(talentPatchKinds).includes(kind) ? 'PATCH' : 'POST', body: payload });
     let uploadedMediaCount = 0;
@@ -2110,7 +2165,7 @@
       const categoryKeyInput = form.querySelector('[name="categoryKey"]');
       if (categoryKeyInput) categoryKeyInput.readOnly = false;
     }
-    if (['identity','bot','team','delegation-create','delegation-task','organization','vacancy','application','appointment','employment-transfer','employee-promotion','performance-review','succession-plan','training-course','training-enrollment','attendance','task-create'].includes(kind)) form.dataset.idempotencyKey = window.crypto.randomUUID();
+    if (['identity','bot','team','delegation-create','delegation-task','organization','vacancy','application','appointment','employment-transfer','employee-promotion','performance-review','succession-plan','training-course','training-enrollment','attendance','disciplinary-case','task-create'].includes(kind)) form.dataset.idempotencyKey = window.crypto.randomUUID();
     const categoryActionLabels = { created:'created', updated:'updated', activated:'reactivated', deactivated:'deactivated' };
     const message = kind === 'memory-edit'
       ? 'AI memory entry updated; its retention expiry was refreshed.'
@@ -2175,6 +2230,9 @@
                                       : kind === 'training-enrollment' ? 'Training assigned to the selected employee.'
                                       : kind === 'training-enrollment-status' ? 'Training status and enrollment history updated.'
                                       : kind === 'attendance' ? 'Human-recorded attendance saved; no attendance was inferred.'
+                                      : kind === 'disciplinary-case' ? 'Confidential case opened and audit history recorded.'
+                                      : kind === 'disciplinary-case-note' ? 'Confidential case note added to history.'
+                                      : kind === 'disciplinary-case-status' ? 'Case status updated with an audit reason.'
                                       : 'Saved successfully.';
     const batchFailures = ['identity-profile-bulk','provider-assignment-bulk'].includes(kind) ? list(result.failed) : [];
     if (batchFailures.length) {
