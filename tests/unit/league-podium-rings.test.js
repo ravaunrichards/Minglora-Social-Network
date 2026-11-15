@@ -61,7 +61,7 @@ test("League displays all reference placement-fragment bands without changing li
   assert.match(league, /Top 1%/);
   assert.match(league, /REFERENCE ONLY/);
   assert.match(league, /100,000 points per class/);
-  assert.match(league, /match rank.*completed League Match results/i);
+  assert.match(league, /Completed League Match results do not change Creator League class points/i);
 });
 
 test("League top-20 standings show distinct top-ten and top-twenty awards with responsive styles", () => {
