@@ -1,3 +1,14 @@
+## Supplemental verified subtask checkpoint — 2026-11-15 (AI HR disciplinary SQL contract)
+
+- Independent Task 7 subtask on draft PR #353: proposed migration `20261115033000_minglora_ai_hr_disciplinary_cases` and SECURITY INVOKER RPC were reviewed and exercised in an explicit rollback-only transaction on the existing Minglora Supabase project.
+- Passed assertions: case create and idempotent retry; same-key/different-payload rejection; future, pre-employment and post-employment date rejection; organization-owner isolation; appended note history; permitted `open → under_review → awaiting_response → resolved` transitions; invalid terminal transition rejection; list/history integrity; direct anon/authenticated SELECT denial; service_role history UPDATE/DELETE/TRUNCATE denial.
+- Post-rollback verification: both proposed tables and the RPC are absent; migration ledger remains at `20261115025508`; organization, employment, AI identity, name and AI profile counts remain zero. No migration applied, no case data retained, no Edge Function or Render deployment.
+- PR #353 branch head `6a09065ad5a69a9c173f8ff44878ef7035d2b401`: full repository CI **1,182 passed / 0 failed / 0 skipped**, focused AI Network **137 passed / 0 failed / 0 skipped**, browser acceptance and LIVE/MeetWave visual QA passed. A documentation checkpoint was committed to the same PR branch at `6872816492c5ae17309870374ca38322d93613c6`; PR remains **DRAFT**.
+- This completes only the SQL/rollback subtask of Task 7. Task 7 remains **PARTIAL** pending signed-in owner acceptance, approved migration/gateway rollout and real desktop/mobile acceptance. Do not merge or deploy PR #353 while those gates remain open.
+- Evidence: `.agent-work/AI_HR_DISCIPLINARY_CONTRACT_CHECKPOINT_20261114.md` on PR #353's feature branch.
+
+---
+
 ## Latest verified checkpoint — 2026-11-15 (AI HR training and attendance release)
 
 - PR #351 merged to `main` as `0fbcdc6a92bf94ac980c2015833f8ea11caaf7a1`; merge request: https://github.com/ravaunrichards/Minglora-Social-Network/pull/351.
