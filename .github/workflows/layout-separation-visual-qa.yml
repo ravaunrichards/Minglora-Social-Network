@@ -24,10 +24,24 @@ jobs:
         run: npm install --no-save --package-lock=false playwright@1.56.0
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
+      - name: Generate canonical Minglora gift models and artwork
+        run: npm run build:gifts
+      - name: Check real LIVE gift model render test syntax
+        run: node --check tests/e2e/live-gift-model-render.mjs
+      - name: Render original Minglora LIVE gift models in Chromium
+        run: node tests/e2e/live-gift-model-render.mjs
       - name: Check visual test syntax
         run: node --check tests/e2e/layout-separation-visual.mjs
       - name: Render every screen and guest-box combination
         run: node tests/e2e/layout-separation-visual.mjs
+      - name: Upload LIVE gift model render evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: minglora-live-gift-model-render-evidence
+          path: artifacts/live-gift-model-render/
+          if-no-files-found: warn
+          retention-days: 7
       - name: Upload layout screenshots
         if: always()
         uses: actions/upload-artifact@v4
