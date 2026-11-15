@@ -36,6 +36,10 @@ function uniqueRecords(records, keyFor, merge = current => current) {
 function mergeProfileRecords(current, incoming) {
   const preferred = recordTime(incoming) > recordTime(current) ? incoming : current;
   const merged = { ...(preferred === current ? incoming : current), ...preferred };
+  if (typeof preferred.rankingEnabled !== "boolean") {
+    const fallbackRankingPreference = preferred === current ? incoming.rankingEnabled : current.rankingEnabled;
+    merged.rankingEnabled = typeof fallbackRankingPreference === "boolean" ? fallbackRankingPreference : true;
+  }
   for (const key of ["lifetimeGiftPoints", "matchWins", "matchLosses", "matchDraws"]) {
     merged[key] = Math.max(asNumber(current[key]), asNumber(incoming[key]));
   }
