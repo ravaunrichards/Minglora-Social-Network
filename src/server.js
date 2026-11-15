@@ -2973,7 +2973,7 @@ async function route(req, res) {
           const safeMessage = error?.safeForClient
             ? String(error.message || 'Provider generation failed.')
             : 'The AI provider request failed. No draft output was saved; check server logs without exposing credentials.';
-          failAICreatorJobGeneration(db, user.id, started.id, safeMessage);
+          failAICreatorJobGeneration(db, user.id, started.id, safeMessage, { providerFailure: error });
           await saveStore();
           return json(res, Number(error?.status) || 502, { error: safeMessage, job: (db.aiBotCreatorJobs || []).find(item => item.id === started.id && item.ownerId === user.id) || null });
         }
