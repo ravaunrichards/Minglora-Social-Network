@@ -84,15 +84,23 @@ export function getAISettings(db, ownerId) {
 }
 
 export function getAIProviderStatus(env = process.env) {
-  const provider = text(env.MINGLORA_AI_PROVIDER, 40).toLowerCase();
-  const model = text(env.MINGLORA_AI_MODEL, 120);
-  // Keep the legacy generic triplet contract unchanged. Provider-specific keys alone
-  // do not make the current runtime appear configured or permit worker execution.
-  const configured = Boolean(provider && model && text(env.MINGLORA_AI_API_KEY, 4096));
+  const configuredProvider = text(env.MINGLORA_AI_PROVIDER, 40).toLowerCase();
+  const legacyModel = text(env.MINGLORA_AI_MODEL, 120);
+  const openAIKeyPresent = Boolean(text(env.OPENAI_API_KEY, 4096) ||
+    (configuredProvider === 'openai' && text(env.MINGLORA_AI_API_KEY, 4096)));
+  const openAIModel = text(env.OPENAI_DEFAULT_MODEL, 120) ||
+    (configuredProvider === 'openai' ? legacyModel : '');
+  const provider = configuredProvider || (openAIKeyPresent ? 'openai' : '');
+  const model = provider === 'openai' ? openAIModel : legacyModel;
+  const legacyConfigured = Boolean(configuredProvider && legacyModel && text(env.MINGLORA_AI_API_KEY, 4096));
+  const openAIConfigured = provider === 'openai' && openAIKeyPresent && Boolean(openAIModel);
+  const configured = legacyConfigured || openAIConfigured;
   const providerCredentialStatus = provider
     ? getAIProviderCredentialStatus(provider, env)
     : null;
   const credentialsPresent = configured || Boolean(providerCredentialStatus?.credentialsPresent);
+  const adapterAvailable = Boolean(providerCredentialStatus?.adapterAvailable);
+  const manualDraftsAvailable = provider === 'openai' && openAIKeyPresent && Boolean(openAIModel) && adapterAvailable;
   return {
     configured,
     provider: configured ? provider : 'not_configured',
@@ -100,15 +108,18 @@ export function getAIProviderStatus(env = process.env) {
     credentialsPresent,
     providerCredentialStatus,
     providerCatalogue: listAIProviderCredentialStatuses(env),
-    adapterAvailable: false,
+    adapterAvailable,
+    manualDraftsAvailable,
     connected: false,
     executionEnabled: false,
-    note: configured
-      ? 'Provider credentials are present. Execution remains disabled until the server-side provider adapter and safety checks are verified.'
-      : providerCredentialStatus?.credentialsPresent
-        ? 'Selected provider credentials are present, but no tested server-side adapter or health verifier is connected. Execution remains disabled.'
-        : providerCredentialStatus?.note
-          || 'No AI provider is configured. Minglora will not invent AI responses or simulate completed runs.'
+    note: manualDraftsAvailable
+      ? 'OpenAI moderated Creator Studio draft generation is available for explicit human requests. Autonomous workers, schedules and publishing remain disabled.'
+      : configured
+        ? 'Provider credentials are present, but this provider has no accepted human-triggered Creator Studio generation adapter.'
+        : providerCredentialStatus?.credentialsPresent
+          ? 'Selected provider credentials are present, but a usable model and approved generation adapter are not both configured.'
+          : providerCredentialStatus?.note
+            || 'No AI provider is configured. Minglora will not invent AI responses or simulate completed runs.'
   };
 }
 
@@ -325,6 +336,65 @@ export function createAICreatorJob(db, ownerId, input = {}, { now = new Date() }
   };
   db.aiBotCreatorJobs.push(job);
   audit(db, ownerId, ownerId, 'creator_job_drafted', 'creator_job', job.id, now);
+  return job;
+}
+
+export function startAICreatorJobGeneration(db, ownerId, jobId, { now = new Date() } = {}) {
+  const job = ownerRows((ensureAICollections(db), db.aiBotCreatorJobs), ownerId).find(row => row.id === jobId);
+  if (!job) throw fail(404, 'Creator Studio draft not found.');
+  if (job.status !== 'draft' || job.output) throw fail(409, 'Only an unfinished Creator Studio draft can be generated.');
+  if (job.providerExecution === 'running') throw fail(409, 'This Creator Studio draft is already being generated.');
+  if (job.providerExecution === 'completed') throw fail(409, 'This Creator Studio draft already has generated output.');
+  job.providerExecution = 'running';
+  job.providerStartedAt = nowIso(now);
+  job.providerCompletedAt = null;
+  job.providerError = null;
+  job.updatedAt = nowIso(now);
+  audit(db, ownerId, ownerId, 'creator_job_generation_started', 'creator_job', job.id, now);
+  return job;
+}
+
+export function completeAICreatorJobGeneration(db, ownerId, jobId, generated, { now = new Date() } = {}) {
+  const job = ownerRows((ensureAICollections(db), db.aiBotCreatorJobs), ownerId).find(row => row.id === jobId);
+  if (!job) throw fail(404, 'Creator Studio draft not found.');
+  if (job.providerExecution !== 'running') throw fail(409, 'The Creator Studio generation is not in a running state.');
+  const output = text(generated?.output, 12000);
+  if (output.length < 1) throw fail(502, 'The provider did not return draft content.');
+  if (generated?.provider !== 'openai' || generated?.moderation?.flagged !== false) {
+    throw fail(502, 'The provider result did not pass the required AI provider and moderation checks.');
+  }
+  job.output = output;
+  job.provider = 'openai';
+  job.providerModel = text(generated.model, 180);
+  job.providerResponseId = text(generated.responseId, 180) || null;
+  job.providerRequestId = text(generated.requestId, 180) || null;
+  job.providerUsage = {
+    input_tokens: Number.isFinite(Number(generated.usage?.input_tokens)) ? Number(generated.usage.input_tokens) : null,
+    output_tokens: Number.isFinite(Number(generated.usage?.output_tokens)) ? Number(generated.usage.output_tokens) : null,
+    total_tokens: Number.isFinite(Number(generated.usage?.total_tokens)) ? Number(generated.usage.total_tokens) : null
+  };
+  job.moderation = { model: text(generated.moderation.model, 80), flagged: false };
+  job.aiDisclosureRequired = true;
+  job.humanReviewRequired = true;
+  job.published = false;
+  job.externalActionTaken = false;
+  job.providerExecution = 'completed';
+  job.providerCompletedAt = nowIso(now);
+  job.providerError = null;
+  job.updatedAt = nowIso(now);
+  audit(db, ownerId, ownerId, 'creator_job_generated_for_human_review', 'creator_job', job.id, now);
+  return job;
+}
+
+export function failAICreatorJobGeneration(db, ownerId, jobId, reason, { now = new Date() } = {}) {
+  const job = ownerRows((ensureAICollections(db), db.aiBotCreatorJobs), ownerId).find(row => row.id === jobId);
+  if (!job) throw fail(404, 'Creator Studio draft not found.');
+  if (job.providerExecution !== 'running') return job;
+  job.providerExecution = 'failed';
+  job.providerError = text(reason, 360) || 'Provider generation failed; no draft output was saved.';
+  job.providerCompletedAt = nowIso(now);
+  job.updatedAt = nowIso(now);
+  audit(db, ownerId, ownerId, 'creator_job_generation_failed', 'creator_job', job.id, now);
   return job;
 }
 
