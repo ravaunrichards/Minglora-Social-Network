@@ -41,7 +41,8 @@ const GIFT_SPECIFIC_MOTION_PRESET = Object.freeze({
   "crystal-crown-1itryeu": "crown-lustre",
   "phoenix-wep6uk": "phoenix-rise",
   "beach-maracas-1exxoag": "maraca-rhythm",
-  "royal-lions-scepter-15000-mgl": "lion-scepter-rise"
+  "royal-lions-scepter-15000-mgl": "lion-scepter-rise",
+  "keeper-of-atlantis-15000-mgl": "atlantis-trident-surge"
 });
 
 
