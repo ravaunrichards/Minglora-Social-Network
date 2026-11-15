@@ -504,3 +504,86 @@
   .gp-reference-figure{padding:8px;border-radius:12px}
   .gp-reference-figure img{width:100%;height:auto}
 }
+
+
+/* Dedicated, responsive Gifter Badge Progression chart reference. */
+.gp-chart-reference{
+  display:grid;
+  gap:clamp(12px,2vw,18px);
+  min-width:0;
+  overflow:hidden;
+  padding:clamp(14px,2.3vw,24px);
+  border:1px solid rgba(151,128,232,.34);
+  border-radius:20px;
+  background:linear-gradient(128deg,#19163f 0%,#242255 56%,#4b2b70 100%);
+  color:#fff;
+  box-shadow:0 12px 30px rgba(24,20,60,.16);
+}
+.gp-chart-reference-heading{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:14px;
+  min-width:0;
+}
+.gp-chart-reference-heading>div{min-width:0}
+.gp-chart-reference-heading .gp-eyebrow{color:#d9ccff}
+.gp-chart-reference-heading h2{margin:5px 0 6px;color:#fff;font-size:clamp(1.2rem,2.2vw,1.55rem);line-height:1.2}
+.gp-chart-reference-heading p{margin:0;max-width:760px;color:rgba(255,255,255,.8);font-size:.88rem;line-height:1.5}
+.gp-chart-reference-count{
+  flex:0 0 auto;
+  padding:7px 11px;
+  border:1px solid rgba(224,213,255,.3);
+  border-radius:999px;
+  background:rgba(255,255,255,.09);
+  color:#f4edff;
+  font-size:.7rem;
+  font-weight:900;
+  letter-spacing:.08em;
+  white-space:nowrap;
+}
+.gp-chart-reference-frame{
+  display:grid;
+  gap:11px;
+  width:100%;
+  max-width:1180px;
+  min-width:0;
+  box-sizing:border-box;
+  margin:0 auto;
+  padding:clamp(7px,1.25vw,14px);
+  border:1px solid rgba(211,199,255,.2);
+  border-radius:16px;
+  background:rgba(7,10,30,.38);
+}
+.gp-chart-image{
+  display:block;
+  width:100%;
+  max-width:1100px;
+  height:auto;
+  max-height:none;
+  margin:0 auto;
+  object-fit:contain;
+  object-position:center;
+  border-radius:10px;
+}
+.gp-chart-caption{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px 16px;
+  flex-wrap:wrap;
+  min-width:0;
+  padding-top:10px;
+  border-top:1px solid rgba(226,217,255,.16);
+}
+.gp-chart-caption small{flex:1 1 280px;color:rgba(255,255,255,.76);font-size:.75rem;line-height:1.45}
+.gp-chart-open{flex:0 0 auto;color:#f0e8ff;font-size:.78rem;font-weight:850;text-decoration:underline;text-decoration-color:rgba(240,232,255,.65);text-underline-offset:3px}
+.gp-chart-open:hover{color:#fff;text-decoration-color:#fff}
+@media(max-width:650px){
+  .gp-chart-reference{gap:11px;padding:13px;border-radius:16px}
+  .gp-chart-reference-heading{flex-direction:column;gap:9px}
+  .gp-chart-reference-count{align-self:flex-start}
+  .gp-chart-reference-frame{padding:6px;border-radius:12px}
+  .gp-chart-image{border-radius:8px}
+  .gp-chart-caption{align-items:flex-start;gap:8px}
+}
