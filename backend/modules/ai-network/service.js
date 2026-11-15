@@ -49,7 +49,7 @@ export function ensureAICollections(db) {
   for (const key of [
     'aiBotSettings', 'aiBots', 'aiBotTeams', 'aiBotSchedules', 'aiBotRuns',
     'aiBotApprovals', 'aiBotAudit', 'aiBotCreatorJobs', 'aiBotCompanionConsents',
-    'aiBotCommunityEvents'
+    'aiBotCommunityEvents', 'aiBotConversationSessions'
   ]) if (!Array.isArray(db[key])) db[key] = [];
   return db;
 }
@@ -101,6 +101,7 @@ export function getAIProviderStatus(env = process.env) {
   const credentialsPresent = configured || Boolean(providerCredentialStatus?.credentialsPresent);
   const adapterAvailable = Boolean(providerCredentialStatus?.adapterAvailable);
   const manualDraftsAvailable = provider === 'openai' && openAIKeyPresent && Boolean(openAIModel) && adapterAvailable;
+  const botConversationsAvailable = manualDraftsAvailable;
   return {
     configured,
     provider: configured ? provider : 'not_configured',
@@ -110,6 +111,7 @@ export function getAIProviderStatus(env = process.env) {
     providerCatalogue: listAIProviderCredentialStatuses(env),
     adapterAvailable,
     manualDraftsAvailable,
+    botConversationsAvailable,
     connected: false,
     executionEnabled: false,
     note: manualDraftsAvailable
@@ -536,6 +538,85 @@ export function emergencyPauseAI(db, ownerId, reason = 'Owner emergency pause', 
   return { paused: true, reason: text(reason, 180) || 'Owner emergency pause', pausedAt: settings.updatedAt };
 }
 
+const MAX_CONVERSATION_CONTEXT_MESSAGES=10;
+const MAX_CONVERSATION_STORED_MESSAGES=200;
+
+export function startAIBotConversationTurn(db,ownerId,botId,input={}, {now=new Date()}={}){
+  ensureAICollections(db);
+  const bot=ownerRows(db.aiBots,ownerId).find(row=>row.id===botId);
+  if(!bot||!bot.identityId||bot.status==='archived')throw fail(404,'Choose an existing, linked AI bot that is not archived.');
+  const idempotencyKey=text(input.idempotencyKey,128);
+  if(!/^[A-Za-z0-9_-]{8,128}$/.test(idempotencyKey))throw fail(400,'A valid retry-safe conversation request key is required.');
+  const priorRun=ownerRows(db.aiBotRuns,ownerId).find(run=>run.actionClass==='ai_bot_conversation'&&run.idempotencyKey===idempotencyKey);
+  if(priorRun){
+    if(priorRun.botId!==bot.id)throw fail(409,'This conversation request key belongs to another AI bot.');
+    if(priorRun.status==='completed'){
+      const priorSession=ownerRows(db.aiBotConversationSessions,ownerId).find(session=>session.id===priorRun.conversationId);
+      if(!priorSession)throw fail(409,'The previous conversation result is no longer available.');
+      return{session:priorSession,run:priorRun,history:priorSession.messages.slice(-MAX_CONVERSATION_CONTEXT_MESSAGES),reused:true};
+    }
+    if(priorRun.status==='running')throw fail(409,'This conversation request is already being processed.');
+    throw fail(409,'The previous conversation request failed. Send a new message to retry it.');
+  }
+  const currentTime=new Date(now).getTime(),leaseMs=5*60*1000;
+  const running=ownerRows(db.aiBotRuns,ownerId).find(run=>{
+    if(run.actionClass!=='ai_bot_conversation'||run.status!=='running')return false;
+    const started=Date.parse(run.startedAt||'');
+    return Number.isFinite(started)&&Number.isFinite(currentTime)&&currentTime-started<leaseMs;
+  });
+  if(running)throw fail(409,'Another AI bot response is already being generated for this administrator account.');
+  let session;
+  if(input.conversationId){
+    session=ownerRows(db.aiBotConversationSessions,ownerId).find(row=>row.id===String(input.conversationId)&&row.botId===bot.id&&row.identityId===bot.identityId);
+    if(!session)throw fail(404,'The selected AI conversation was not found for this bot.');
+    if(session.status!=='active')throw fail(409,'This conversation is closed. Start a new conversation.');
+  }else{
+    session={id:makeId(),ownerId,botId:bot.id,identityId:bot.identityId,status:'active',title:text(bot.name,80)||'AI conversation',messages:[],createdAt:nowIso(now),updatedAt:nowIso(now),lastMessageAt:null};
+    db.aiBotConversationSessions.push(session);
+    audit(db,ownerId,ownerId,'bot_conversation_created','conversation',session.id,now);
+  }
+  if(!Array.isArray(session.messages))session.messages=[];
+  if(session.messages.length>=MAX_CONVERSATION_STORED_MESSAGES)throw fail(409,'This conversation reached its history limit. Start a new conversation to continue.');
+  const run={id:makeId(),ownerId,botId:bot.id,identityId:bot.identityId,conversationId:session.id,actionClass:'ai_bot_conversation',taskType:'conversation',idempotencyKey,status:'running',providerExecution:'running',totalTokens:0,startedAt:nowIso(now),completedAt:null,createdAt:nowIso(now),updatedAt:nowIso(now)};
+  db.aiBotRuns.push(run);
+  audit(db,ownerId,ownerId,'bot_conversation_turn_started','conversation',session.id,now);
+  return{session,run,history:session.messages.slice(-MAX_CONVERSATION_CONTEXT_MESSAGES),reused:false};
+}
+export function completeAIBotConversationTurn(db,ownerId,runId,userMessage,generated,{now=new Date()}={}){
+  ensureAICollections(db);
+  const run=ownerRows(db.aiBotRuns,ownerId).find(row=>row.id===runId&&row.actionClass==='ai_bot_conversation');
+  if(!run)throw fail(404,'AI conversation request not found.');
+  if(run.status!=='running')throw fail(409,'This AI conversation request is not running.');
+  const session=ownerRows(db.aiBotConversationSessions,ownerId).find(row=>row.id===run.conversationId&&row.botId===run.botId&&row.identityId===run.identityId);
+  if(!session||session.status!=='active')throw fail(409,'The AI conversation is no longer available.');
+  const prompt=text(userMessage,4000),output=text(generated?.output,12000);
+  if(!prompt||!output)throw fail(502,'A completed user message and assistant response are required.');
+  if(generated?.provider!=='openai'||generated?.moderation?.flagged!==false||generated?.inputModeration?.flagged!==false||generated?.externalActionTaken!==false||generated?.toolsUsed!==false||!Number.isSafeInteger(Number(generated?.usage?.total_tokens))||Number(generated.usage.total_tokens)<=0)throw fail(502,'The AI provider result did not pass provider, measured-usage, moderation and no-tools checks.');
+  const createdAt=nowIso(now);
+  session.messages.push({id:makeId(),role:'user',content:prompt,createdAt},{id:makeId(),role:'assistant',content:output,aiDisclosureRequired:true,provider:'openai',model:text(generated.model,180),createdAt});
+  if(session.messages.length>MAX_CONVERSATION_STORED_MESSAGES)session.messages.splice(0,session.messages.length-MAX_CONVERSATION_STORED_MESSAGES);
+  session.updatedAt=createdAt;session.lastMessageAt=createdAt;
+  run.status='completed';run.providerExecution='completed';run.provider='openai';run.model=text(generated.model,180);run.responseId=text(generated.responseId,180)||null;run.requestId=text(generated.requestId,180)||null;
+  run.providerUsage={input_tokens:Number.isFinite(Number(generated.usage?.input_tokens))?Number(generated.usage.input_tokens):null,output_tokens:Number.isFinite(Number(generated.usage?.output_tokens))?Number(generated.usage.output_tokens):null,total_tokens:Number(generated.usage.total_tokens)};
+  run.totalTokens=Number(generated.usage.total_tokens);run.moderation={inputFlagged:false,outputFlagged:false,model:text(generated.moderation?.model,80)};
+  run.aiDisclosureRequired=true;run.externalActionTaken=false;run.toolsUsed=false;run.completedAt=createdAt;run.updatedAt=createdAt;
+  audit(db,ownerId,ownerId,'bot_conversation_turn_completed','conversation',session.id,now);
+  return{session,run};
+}
+export function failAIBotConversationTurn(db,ownerId,runId,reason,{now=new Date(),providerFailure=null}={}){
+  ensureAICollections(db);
+  const run=ownerRows(db.aiBotRuns,ownerId).find(row=>row.id===runId&&row.actionClass==='ai_bot_conversation');
+  if(!run||run.status!=='running')return run||null;
+  run.status='failed';run.providerExecution='failed';run.providerError=text(reason,360)||'The AI conversation could not be completed.';
+  if(providerFailure?.provider==='openai'){
+    run.provider='openai';run.model=text(providerFailure.model,180);run.responseId=text(providerFailure.responseId,180)||null;run.requestId=text(providerFailure.requestId,180)||null;
+    run.providerUsage={input_tokens:Number.isFinite(Number(providerFailure.usage?.input_tokens))?Number(providerFailure.usage.input_tokens):null,output_tokens:Number.isFinite(Number(providerFailure.usage?.output_tokens))?Number(providerFailure.usage.output_tokens):null,total_tokens:Number.isFinite(Number(providerFailure.usage?.total_tokens))?Number(providerFailure.usage.total_tokens):0};
+    run.totalTokens=Math.max(0,Number(run.providerUsage.total_tokens)||0);
+  }
+  run.completedAt=nowIso(now);run.updatedAt=nowIso(now);audit(db,ownerId,ownerId,'bot_conversation_turn_failed','conversation',run.conversationId,now);
+  return run;
+}
+
 export function getAICreatorDailyUsage(db, ownerId, { now = new Date() } = {}) {
   ensureAICollections(db);
   const dayStart = new Date(now);
@@ -546,9 +627,16 @@ export function getAICreatorDailyUsage(db, ownerId, { now = new Date() } = {}) {
     const totalTokens = Number(job.providerUsage?.total_tokens) || 0;
     return Number.isFinite(completedAt) && completedAt >= cutoff && totalTokens > 0;
   });
+  const conversationRuns = ownerRows(db.aiBotRuns, ownerId).filter(run => {
+    if (run.actionClass !== 'ai_bot_conversation') return false;
+    const completedAt = Date.parse(run.completedAt || run.updatedAt || run.startedAt || '');
+    return Number.isFinite(completedAt) && completedAt >= cutoff && Number(run.totalTokens) > 0;
+  });
   return {
-    tokensUsed: jobs.reduce((sum, job) => sum + Math.max(0, Number(job.providerUsage?.total_tokens) || 0), 0),
+    tokensUsed: jobs.reduce((sum, job) => sum + Math.max(0, Number(job.providerUsage?.total_tokens) || 0), 0) +
+      conversationRuns.reduce((sum, run) => sum + Math.max(0, Number(run.totalTokens) || 0), 0),
     draftsWithTokenUsage: jobs.length,
+    conversationTurnsWithTokenUsage: conversationRuns.length,
     date: dayStart.toISOString().slice(0, 10)
   };
 }
@@ -589,6 +677,9 @@ export function getAICommandCenter(db, ownerId, { providerStatus = getAIProvider
     schedules: ownerRows(db.aiBotSchedules, ownerId),
     approvals: ownerRows(db.aiBotApprovals, ownerId).filter(item => item.status === 'pending_human_review'),
     creatorJobs: ownerRows(db.aiBotCreatorJobs, ownerId),
+    conversations: ownerRows(db.aiBotConversationSessions, ownerId).filter(session => session.status === 'active')
+      .sort((a,b) => Date.parse(b.lastMessageAt || b.updatedAt || b.createdAt) - Date.parse(a.lastMessageAt || a.updatedAt || a.createdAt))
+      .slice(0,25).map(session => ({ ...session, messages:(Array.isArray(session.messages) ? session.messages : []).slice(-20) })),
     companionConsent: db.aiBotCompanionConsents.find(row => row.ownerId === ownerId) || null,
     communityEvents: ownerRows(db.aiBotCommunityEvents, ownerId),
     safeguards: {

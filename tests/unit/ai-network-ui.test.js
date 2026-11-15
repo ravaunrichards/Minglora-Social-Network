@@ -101,7 +101,7 @@ test('AI Network APIs are behind the signed-in session and the feature-owned col
   assert.ok(route.includes('await saveStore();'));
   for (const collection of [
     'aiBotSettings','aiBots','aiBotTeams','aiBotSchedules','aiBotRuns',
-    'aiBotApprovals','aiBotAudit','aiBotCreatorJobs','aiBotCompanionConsents','aiBotCommunityEvents'
+    'aiBotApprovals','aiBotAudit','aiBotCreatorJobs','aiBotCompanionConsents','aiBotCommunityEvents','aiBotConversationSessions'
   ]) {
     assert.ok(store.includes("'" + collection + "'"), collection);
     assert.ok(moduleSource.includes("'" + collection + "'"), collection);
