@@ -146,3 +146,10 @@ The current Admin Centre remains designated-owner/MFA restricted. The staff tabl
 - Preserved `Gifters Rewards.png`, all 50 original individual badges, all 11 detailed level panels, all 6 range sheets, both master-sheet files, existing badge display sizes, Coin thresholds, and server-confirmed progression calculations.
 - Updated the reference inventory from 71 to 70 source images and added regression tests that the deleted chart and route remain absent while the 50-level progression remains available.
 - No wallet, ledger, Coin threshold, admin award, or database data was modified. No deployment is claimed until verified.
+
+### Follow-up completion — remove the remaining duplicate Gifters Level Up chart asset
+- Confirmed the original `assets/Gifters Badge Levels/Gifters Level Up.png` had already been deleted, but a duplicate vector chart remained at `public/assets/gifters-level-up.svg`.
+- Deleted the duplicate SVG from `main` (commit `07e2c907b6cba92c1a8b297adf2ff69e00c810f6`) and from the stale chart-removal task branch (commit `f4fc9438a11e3898a05a1d24640fa66dd69f3a85`).
+- Added a regression assertion that the duplicate SVG path must remain absent (test-file commit `d8d5afbc7921eb4eac091ef84884a8e4263d453d`).
+- Verified both chart paths return not found on `main` and on the task branch. The separate Gifters Rewards artwork and the 50-level progression renderer are not targeted; the existing regression suite retains checks for them.
+- CI on the test-file commit: the Auth/OAuth acceptance check passed, while the general automated-test job and For You functional-navigation check failed. Those failures were not diagnosed in this chart-only task, so no full-suite pass or deployment is claimed.
