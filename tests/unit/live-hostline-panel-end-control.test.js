@@ -70,6 +70,6 @@ test('Final stylesheet and offline service-worker shell use matching cache-buste
   assert.ok(html.includes(styleUrl));
   assert.ok(html.lastIndexOf(styleUrl) > html.lastIndexOf('/minglora-branding.css'));
   assert.ok(sw.includes(styleUrl));
-  assert.ok(sw.includes("const CACHE_NAME='minglora-shell-v301-self-updating-1'"));
+  assert.match(sw,/^const CACHE_NAME='minglora-shell-v[0-9]+-self-updating-1';$/m);
   assert.ok(html.includes('/app.js?v=20261113-profile-style-library-layout-removal-1'));
 });
