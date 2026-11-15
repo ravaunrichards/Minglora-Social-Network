@@ -3,7 +3,7 @@
 
   const API = '/api/ai-network';
   const root = () => document.getElementById('main-content');
-  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', adminAccess: false, discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, performanceReviews: [], successionPlans: [], promotions: [], trainingCourses: [], trainingEnrollments: [], attendance: [], developmentUnavailable: false, organizationError: '', memoryIdentityId: '', memorySettings: null, memoryEntries: [], memoryError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', aiTasks: [], taskRuntime: null, taskError: '', categoryAdmin: null, delegationGrants: [], delegationAccess: false, delegationError: '' };
+  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', adminAccess: false, discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, performanceReviews: [], successionPlans: [], promotions: [], trainingCourses: [], trainingEnrollments: [], attendance: [], developmentUnavailable: false, organizationError: '', memoryIdentityId: '', memorySettings: null, memoryEntries: [], memoryError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', providerHealth: null, aiTasks: [], taskRuntime: null, taskError: '', categoryAdmin: null, delegationGrants: [], delegationAccess: false, delegationError: '' };
   const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[character]));
@@ -996,6 +996,20 @@
             '</div></div></article>';
         }).join('') + '</div></details>'
       : '<p class="ai-network-note">Provider environment registry is unavailable. Reload the administrator workspace.</p>';
+    const providerHealth = state.providerHealth;
+    const providerProbeResult = providerHealth
+      ? '<div class="ai-network-alert ai-network-alert--' + (providerHealth.connected ? 'success' : 'warning') + '" role="status">' +
+        '<strong>Latest OpenAI probe: ' + esc(providerHealth.status || 'unknown') + '</strong> ' +
+        pill(providerHealth.connected ? 'Model access verified' : 'Not connected', providerHealth.connected ? 'success' : 'warning') +
+        '<p>' + esc(providerHealth.note || 'No probe result was returned.') + '</p>' +
+        '<small>Model: ' + esc(providerHealth.model || 'Not configured') +
+        ' · HTTP: ' + esc(providerHealth.httpStatus || 'Not reached') +
+        ' · Checked: ' + esc(date(providerHealth.checkedAt)) + '</small></div>'
+      : '<p class="ai-network-note">No OpenAI health probe has been run in this session.</p>';
+    const providerProbeForm = '<form class="ai-network-form" data-ai-form="provider-health-probe">' +
+      '<div class="ai-network-form-title">OpenAI API connection check</div>' +
+      '<p class="ai-network-note">Runs a read-only model-access check using OPENAI_API_KEY and OPENAI_DEFAULT_MODEL from the private Minglora server environment. No key is entered here, sent by the browser, or returned to the page. It does not generate content or activate AI execution.</p>' +
+      '<button class="secondary" type="submit">Check OpenAI API connection</button></form>';
     const warning = state.providerError
       ? '<div class="ai-network-alert ai-network-alert--warning" role="status">' + esc(state.providerError) + '</div>'
       : '<p class="ai-network-note">Provider account records begin unconfigured. Model assignments begin pending with health unknown. Nothing here verifies access to the provider or activates model execution.</p>';
@@ -1033,7 +1047,7 @@
       '<p class="ai-network-note">Paste assignment records with identity_id, model_id and optional provider_account_id, fallback_model_id, routing_priority, assigned_capabilities and supported_languages. Every assignment remains pending with unknown health; this does not activate provider execution. Raw credentials and secrets are rejected.</p>' +
       '<label>Provider assignment batch JSON<textarea name="items" required rows="8" maxlength="160000" spellcheck="false" placeholder=\'[{"identity_id":"existing-ai-identity-uuid","model_id":"catalogue-model-uuid","provider_account_id":null,"fallback_model_id":null,"routing_priority":100,"assigned_capabilities":["text"],"supported_languages":["en"]}]\'></textarea></label>' +
       '<button class="secondary" type="submit">Save pending provider assignments</button></form>';
-    return card('Provider & Model Assignment Center', '02 · PROVIDERS', warning + providerCatalogueRows +
+    return card('Provider & Model Assignment Center', '02 · PROVIDERS', warning + providerProbeForm + providerProbeResult + providerCatalogueRows +
       '<div class="ai-network-command-grid"><div><span>Catalogued providers</span><strong>' + number(providerCatalogue.length) + '</strong></div>' +
       '<div><span>Credentials present</span><strong>' + number(providersWithCredentials) + '</strong></div>' +
       '<div><span>Connected</span><strong>' + number(providerCatalogue.filter(provider => provider.connected).length) + '</strong></div>' +
@@ -1863,6 +1877,9 @@
         throw new Error('Each assignment needs valid AI identity and model IDs plus optional capability/language arrays.');
       }
       payload.items = items;
+    } else if (kind === 'provider-health-probe') {
+      path = '/provider-health';
+      payload.provider = 'openai';
     } else if (kind === 'provider-assignment-status') {
       const assignmentId = form.dataset.assignmentId;
       if (!assignmentId) throw new Error('Provider assignment details are missing.');
@@ -2136,6 +2153,7 @@
     const patchKinds = ['settings','languages','memory-settings','memory-edit','vacancy-status','application-review','employment-status','employment-manager','provider-assignment-status','task-approval','identity-edit'];
     const talentPatchKinds = ['performance-review-finalize','succession-status','training-course-status','training-enrollment-status'];
     const result = await request(path, { method: patchKinds.concat(talentPatchKinds).includes(kind) ? 'PATCH' : 'POST', body: payload });
+    if (kind === 'provider-health-probe') state.providerHealth = result;
     let uploadedMediaCount = 0;
     if (kind === 'identity-edit' && identityIdForMedia) {
       const selectedMedia = [
@@ -2189,7 +2207,9 @@
         ? 'Provider model metadata saved; availability and access are not verified.'
         : kind === 'provider-assignment'
           ? 'Model assignment saved as pending; provider execution remains disabled.'
-          : kind === 'provider-assignment-status'
+          : kind === 'provider-health-probe'
+        ? (result.connected ? 'OpenAI model access verified by a read-only probe. AI inference and workers remain disabled.' : 'OpenAI probe completed: ' + String(result.status || 'unknown') + '. AI inference and workers remain disabled.')
+      : kind === 'provider-assignment-status'
             ? 'Provider assignment status updated.'
             : kind === 'identity'
       ? 'AI identity record saved in Minglora Supabase.'
