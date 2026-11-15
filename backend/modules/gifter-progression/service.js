@@ -10,13 +10,14 @@ function safeText(value, max = 120) {
 }
 
 // Cumulative Minglora Gifter coin thresholds for Levels 1–50.
+// Based on the widely reproduced TikTok LIVE community reference table; TikTok does not publish an official threshold table.
 // One Coin spent on a confirmed gift contributes one progression point.
 export const GIFTER_LEVEL_COIN_THRESHOLDS = Object.freeze([
   1, 8, 18, 34, 56, 90, 140, 220, 340, 530,
   820, 1260, 1920, 2840, 4340, 6420, 9280, 13500, 19400, 27600,
   39600, 54600, 75800, 105000, 144000, 196000, 265000, 357000, 478000, 637000,
   845000, 1120000, 1470000, 1920000, 2500000, 3230000, 4180000, 5430000, 6890000, 8780000,
-  11200000, 14100000, 17800000, 22300000, 27900000, 37500000, 47500000, 60000000, 75000000, 80000000
+  11200000, 14100000, 17800000, 22300000, 30000000, 37500000, 47500000, 60000000, 75000000, 97500000
 ]);
 
 export function gifterXpRequired(level) {
