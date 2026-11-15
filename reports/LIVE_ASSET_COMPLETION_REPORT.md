@@ -308,3 +308,13 @@ The browser captures establish that all nine bespoke models load and remain visi
 2. Continue with independent asset-quality work: human/rights review, per-gift art direction, dedicated sound audition/approval, and the remaining LIVE control-state asset gaps.
 3. Do not publish or activate any candidate gift/sound solely to make the production catalogue non-empty.
 4. Complete device QA and production approval gates before claiming premium production readiness.
+
+
+## Bespoke Royal Lions Scepter source checkpoint — 2026-11-15
+
+- Added `assets/3d-assets/gift-models/royal-lions-scepter-model.mjs` for the exact existing repository source item `royal-lions-scepter-15000-mgl` (Royal Lions Scepter).
+- The original self-contained glTF 2.0 source creates a forward-facing lion finial with individually modelled radial mane locks, sculpted face/muzzle/brows, gemstone eyes, crown points, faceted sapphire/ruby gems, a gold spiral-fluted shaft, dark enamel grip and lower jeweled pommel. It records a unique asset ID and authoring-source path in glTF extras.
+- The existing generator routes only the exact gift code to this model source and emits matching `royal-lions-scepter-original-v1` primary SVG/transparent icon artwork. Existing asset paths, model viewer, image fallback and server-confirmed gift event flow are reused.
+- Regression tests assert the source catalogue identity, fantasy category, configured 15,000-Coin value, source active flag, embedded GLTF geometry, named components/materials, provenance, review state and SVG artwork signature. The LIVE manifest test includes the new model source identity.
+- The configured catalogue fields, `grand-entry` animation identity/preset, existing sound mapping, backend offers, Coin pricing, user data, production gift rows, wallets and transactions are unchanged.
+- **Acceptance boundary:** the source is labelled `design-review-pending`. Automated generation/tests do not establish human visual/design approval, rights clearance, premium quality, physical-device rendering approval, embedded GLTF animation channels or mastered audio. The connected production gift catalogue remains gated on separately approved version-3 assets; no gift was activated in production.
