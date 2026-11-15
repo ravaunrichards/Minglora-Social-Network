@@ -116,7 +116,7 @@ const pageErrors = [];
 try {
   browser = await chromium.launch({
     headless: true,
-    args: ['--no-sandbox', '--disable-dev-shm-usage', '--enable-webgl', '--enable-unsafe-swiftshader', '--use-gl=angle', '--use-angle=swiftshader']
+    args: ['--no-sandbox', '--disable-dev-shm-usage', '--enable-gpu', '--enable-webgl', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--use-gl=angle', '--use-angle=swiftshader-webgl']
   });
   const address = server.address();
   const baseUrl = 'http://127.0.0.1:' + address.port;
