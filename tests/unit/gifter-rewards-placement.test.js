@@ -37,34 +37,23 @@ test('Gifters Rewards embeds the same complete server-backed 50-level badge rend
   assert.match(giftEntry, /scrollIntoView\(\{behavior:"smooth",block:"start"\}\)/);
 });
 
-test('Gifters Level Up remains inside the separate Gifter Progression page', () => {
-  assert.ok(progression.includes("src='/assets/gifters-level-up.png' alt='Original Minglora 50-level Gifters badge progression chart'"));
-  assert.ok(progression.includes("href='/assets/gifters-level-up.png' target='_blank' rel='noopener noreferrer'"));
+test('the incorrect Gifters Level Up chart is permanently removed without changing Gifter progression', () => {
+  assert.ok(!progression.includes("gp-chart-reference"));
+  assert.ok(!progression.includes("gifters-level-up.png"));
+  assert.ok(!progression.includes("Gifters Badge Progression"));
+  assert.ok(!progression.includes("gp-level-up-reference-note"));
+  assert.ok(!styles.includes("gp-chart-reference"));
+  assert.ok(!styles.includes("gp-chart-image"));
+  assert.ok(!styles.includes("gp-chart-open"));
+  assert.ok(!server.includes("gifters-level-up.png"));
+  assert.ok(!server.includes("Gifters Level Up.png"));
+  assert.ok(!serviceWorker.includes("gifters-level-up.png"));
+  assert.ok(!fs.existsSync(path.join(root, 'assets', 'Gifters Badge Levels', 'Gifters Level Up.png')));
   assert.ok(progression.includes("<h1>Gifter Level &amp; Badges</h1>"));
   assert.ok(progression.includes("const badgePanels = renderBadgePanels();"));
-  assert.ok(!progression.includes("Gifters Rewards"));
-  assert.ok(fs.existsSync(path.join(root, 'assets', 'Gifters Badge Levels', 'Gifters Level Up.png')), 'the original Level-Up artwork remains in its canonical folder');
-  assert.ok(server.includes("if(p==='/assets/gifters-level-up.png')"));
-  assert.ok(server.includes("path.join(__dirname,'..','assets','Gifters Badge Levels','Gifters Level Up.png')"));
-});
-
-
-test('Gifters Badge Progression chart sits in its own responsive reference card above personal status', () => {
-  const chart = progression.indexOf("<section class='gp-chart-reference card'");
-  const personalStatus = progression.indexOf("<section class='gp-hero card'");
-  assert.ok(chart >= 0 && personalStatus > chart, 'the chart appears directly before the member status card');
-  assert.ok(progression.includes("<h2 id='gp-chart-reference-title'>Gifters Badge Progression</h2>"));
-  assert.ok(progression.includes("class='gp-chart-reference-frame'"));
-  assert.ok(progression.includes("class='gp-chart-image' src='/assets/gifters-level-up.png'"));
-  assert.ok(progression.includes("class='gp-chart-open' href='/assets/gifters-level-up.png'"));
-  assert.ok(progression.includes("id='gp-level-up-reference-note'"));
-  assert.ok(styles.includes('.gp-chart-reference{'));
-  assert.ok(styles.includes('background:linear-gradient(128deg,#19163f 0%,#242255 56%,#4b2b70 100%)'));
-  assert.ok(styles.includes('.gp-chart-image{'));
-  assert.ok(styles.includes('object-fit:contain;'));
-  assert.match(styles, /\.gp-chart-reference-heading/);
-  assert.ok(styles.includes('.gp-chart-reference-heading{flex-direction:column;gap:9px}'));
-  assert.ok(serviceWorker.includes("'/assets/gifters-level-up.png'"), 'the exact working chart route remains precached');
+  assert.ok(progression.includes("function renderLevelDirectory(items)"));
+  assert.ok(progression.includes("levels.length !== 50"));
+  assert.ok(fs.existsSync(path.join(root, 'assets', 'Gifters Badge Levels', 'Gifters Rewards.png')));
 });
 
 test('Gifters Rewards image route serves the exact repository artwork', () => {
