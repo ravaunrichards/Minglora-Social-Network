@@ -228,5 +228,15 @@ The motion-index schema keeps the original `catalog_motion_preset` and the effec
 - Generated model: `public/assets/gifts/catalog/baseball-orcdx9.gltf`, self-contained glTF 2.0 with embedded geometry buffers, named leather/seam/stitch mesh parts and PBR material factors.
 - Original artwork: the generator emits `baseball-original-v1` into both `baseball-orcdx9.svg` and the transparent `baseball-orcdx9-icon.svg`; both retain canonical per-gift path conventions.
 - Runtime: the existing gift viewer consumes the canonical generated `.gltf` path; no new renderer, third-party brand asset, transaction route or backend data mutation is introduced.
-- QA target: the isolated Chromium matrix includes 11 bespoke models at desktop (1280×900), tablet (768×1024) and mobile (390×844) sizes: 33 model/viewport renders. Workflow results are pending at this checkpoint.
+- QA target: the isolated Chromium matrix includes 12 bespoke models at desktop (1280×900), tablet (768×1024) and mobile (390×844) sizes: 36 model/viewport renders. Workflow results are pending at this checkpoint.
 - Release boundary: the asset remains `design-review-pending`; production catalogue version-3 approval, rights review, human artwork sign-off and physical-device testing remain separate gates.
+
+
+## Carnival Music bespoke LIVE gift asset integration — 2026-11-15
+
+- Canonical source record: \`carnival-music-14x4zts\`; Carnival Music; music; configured value 999 Coins; source \`active=true\`. Catalogue identity, value, active state, animation key/preset, sound preset and transaction code remain unchanged.
+- Model source: \`assets/3d-assets/gift-models/carnival-music-model.mjs\`, routed only by the exact code in \`scripts/generate-minglora-gifts.mjs\`.
+- Canonical generated paths: \`/assets/gifts/catalog/carnival-music-14x4zts.gltf\`, \`.svg\` and \`-icon.svg\`. Gift Center, LIVE gift picker and model viewer continue to use the shared canonical paths; no new app route or decorative control was added.
+- The generated LIVE manifest records \`gift-carnival-music-3d-v1\` and its exact source file as a review-required repository mesh. The existing \`grand-entry\` animation preset and category sound synthesis are preserved.
+- Chromium render matrix target: 12 bespoke models × desktop/tablet/mobile = **36** browser captures. This is simulated viewport QA, not physical device certification.
+- Design and rights review remain pending; no premium/high-detail approval, mastered sound file, production catalogue activation or deployment is implied.

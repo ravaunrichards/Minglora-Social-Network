@@ -95,7 +95,7 @@ The shortcuts remain Layout, Permissions, Guests, Viewers, Fan Club, Match, Top 
 | assets/3d-assets/gift-models/djembe-model.mjs | Djembe Master (djembe-master-1v3jzkm) | Mahogany shell, hollow bowl, hide drumhead, rim bindings, 16 tension strands, diamond lacing and carved detailing | Design review pending; CI/build tests passed in merged PR #339 |
 | assets/3d-assets/gift-models/palm-breeze-model.mjs | Palm Breeze (palm-breeze-gknyt0) | Curved trunk, eight pinnate fronds, grouped leaflets and veins, coconuts, roots and sand/water plinth | Design review pending; CI/build tests passed in merged PR #340 |
 
-The repository now has eleven individually art-directed model sources: Rose, Hibiscus, Djembe Master, Palm Breeze, Gamer Otter, LIVE Island, Crystal Crown, Phoenix, Beach Maracas, Royal Lions Scepter and Baseball. The generator still uses shared procedural category/name geometry for the remaining 1,737 catalogue gifts; the presence of a generated GLTF file per catalogue row must not be interpreted as proof of bespoke modelling or premium approval.
+The repository now has twelve individually art-directed model sources: Rose, Hibiscus, Djembe Master, Palm Breeze, Gamer Otter, LIVE Island, Crystal Crown, Phoenix, Beach Maracas, Royal Lions Scepter, Baseball and Carnival Music. The generator still uses shared procedural category/name geometry for the remaining 1,736 catalogue gifts; the presence of a generated GLTF file per catalogue row must not be interpreted as proof of bespoke modelling or premium approval.
 
 ## Transparent gift-icon inventory — 2026-11-14
 
@@ -266,3 +266,12 @@ The source catalogue grand-entry value, animation key and 1,900-ms duration are 
 - Geometry: full-grain ivory leather sphere, recessed curved seam channels, raised scarlet cotton seams, individual hand-sewn stitches and subtle leather-grain flecks.
 - Exact canonical source metadata: Baseball / sports / 1 Coin / source active true; unchanged by this asset implementation.
 - Artwork and model review: design-review-pending; no human visual, legal or physical device acceptance is implied.
+
+
+## Carnival Music original Caribbean steelpan asset — 2026-11-15
+
+| Source | Canonical item | Generated outputs | Acceptance boundary |
+|---|---|---|---|
+| \`assets/3d-assets/gift-models/carnival-music-model.mjs\` | Carnival Music (\`carnival-music-14x4zts\`, music; source value 999 Coins; active true) | Self-contained glTF 2.0 steelpan, tuned note fields, crossed pan mallets, support stand and layered satin carnival feather fan; bespoke primary SVG and transparent icon | Exact-code generator route, catalogue regression, manifest provenance assertion and 12-model × 3-viewport Chromium target; design/rights review and physical-device QA remain pending |
+
+The existing catalogue record and its configured Coin value, active flag, animation key, animation preset and sound preset are preserved. The source model is an original Caribbean carnival music visual; it is not an assertion of a Jamaica-specific national symbol. The \`grand-entry\` and music-category synthesized sound paths are reused without creating a mastered recording or separate animation file.
