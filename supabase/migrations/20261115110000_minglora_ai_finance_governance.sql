@@ -155,6 +155,7 @@ begin
     raise exception using errcode='42501',message='AI task budget checks are restricted to the private Minglora runtime.';
   end if;
   if tg_op='UPDATE' and new.status not in ('queued','running') then return new; end if;
+  perform pg_advisory_xact_lock(hashtextextended(new.owner_user_id::text||':ai-finance-policy',0));
   if new.organization_id is not null then
     select e.department_id into v_department_id
     from ai_network.ai_employment_records e
@@ -392,6 +393,7 @@ begin
       raise exception using errcode='42501',message='AI identity is not owned by this Minglora administrator.';
     end if;
 
+    perform pg_advisory_xact_lock(hashtextextended(p_actor_user_id::text||':ai-finance-policy',0));
     perform pg_advisory_xact_lock(hashtextextended(p_actor_user_id::text||':'||v_scope||':'||coalesce(v_org::text,'')||':'||coalesce(v_department::text,'')||':'||coalesce(v_identity::text,''),0));
     select b.budget_policy_id,to_jsonb(b) into v_policy_id,v_before
     from ai_network.ai_finance_budget_policies b
