@@ -79,7 +79,7 @@ test('updated Gift entry script and Rewards image are refreshed through the serv
 });
 
 test('the uploaded Gifter badge progression artwork is served and displayed without restoring the removed Coin chart', () => {
-  const artwork = path.join(root, 'assets', 'Gifter Badge Progressions', 'Gifter Badge Progressions.jpg');
+  const artwork = path.join(root, 'public', 'assets', 'gifter-badge-progression-art.jpg');
   assert.ok(fs.existsSync(artwork), 'the uploaded original progression artwork exists');
   assert.ok(progression.includes("src='/assets/gifter-badge-progression-art.jpg'"), 'the progression page displays the supplied image');
   assert.match(server, /if\(p==='\/assets\/gifter-badge-progression-art\.jpg'\)[\s\S]*?path\.join\(__dirname,'\.\.','assets','Gifter Badge Progressions','Gifter Badge Progressions\.jpg'\)/);
