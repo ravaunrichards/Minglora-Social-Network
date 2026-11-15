@@ -39,7 +39,7 @@ test("Creator League reference awards distinguish podium and positions 4–20", 
 test("Ranking assets are versioned in the page and the PWA shell cache", () => {
   assert.match(index, /leagues\.css\?v=20261115-league-ranking-opt-in-rewards-1/);
   assert.match(index, /leagues\.js\?v=20261115-league-ranking-opt-in-rewards-1/);
-  assert.match(worker, /minglora-shell-v325-league-ranking-rewards-1/);
+  assert.match(worker, /minglora-shell-v325-self-updating-1/);
   assert.match(worker, /leagues\.css\?v=20261115-league-ranking-opt-in-rewards-1/);
   assert.match(worker, /leagues\.js\?v=20261115-league-ranking-opt-in-rewards-1/);
 });
