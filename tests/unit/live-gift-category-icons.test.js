@@ -46,3 +46,17 @@ test('all category SVGs and the manifest are cached by the versioned service wor
     assert.ok(worker.includes("'/assets/icons/live-gift-categories/" + id + ".svg'"), id + ' must be pre-cached');
   }
 });
+
+test('Jamaican culture category uses original full-colour flag artwork', () => {
+  const svg = fs.readFileSync(path.join(iconRoot, 'jamaican_culture.svg'), 'utf8');
+  assert.ok(svg.includes('data-artwork="jamaica-flag-saltire-v1"'));
+  assert.ok(svg.includes('clipPath id="jamaica-flag-clip"'));
+  assert.ok(svg.includes('linearGradient id="jc-green"'));
+  assert.ok(svg.includes('linearGradient id="jc-gold"'));
+  assert.ok(svg.includes('linearGradient id="jc-black"'));
+  assert.ok(svg.includes('#14753f'), 'Flag artwork must include Jamaica green');
+  assert.ok(svg.includes('#f3c63f'), 'Flag artwork must include Jamaica gold');
+  assert.ok(svg.includes('#11151c'), 'Flag artwork must include Jamaica black');
+  assert.ok(svg.includes('stroke="currentColor"'), 'Pole and outline must still inherit the active UI theme');
+  assert.ok(svg.includes('M5.45 4.15L20.8 17.1M20.8 4.15L5.45 17.1'), 'Flag must contain the gold saltire');
+});
