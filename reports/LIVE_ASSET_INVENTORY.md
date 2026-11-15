@@ -266,3 +266,14 @@ The source catalogue grand-entry value, animation key and 1,900-ms duration are 
 - Geometry: full-grain ivory leather sphere, recessed curved seam channels, raised scarlet cotton seams, individual hand-sewn stitches and subtle leather-grain flecks.
 - Exact canonical source metadata: Baseball / sports / 1 Coin / source active true; unchanged by this asset implementation.
 - Artwork and model review: design-review-pending; no human visual, legal or physical device acceptance is implied.
+
+## Djembe Master mahogany-detail refinement — 2026-11-15 (PR #400)
+
+- Source: `assets/3d-assets/gift-models/djembe-model.mjs`; exact canonical gift code: `djembe-master-1v3jzkm`.
+- The individually authored source now contains 18 named, curved mahogany grain inlays. Each path is seven control points and is generated as a lightweight tube mesh with 56 position/normal vertices and 252 indices.
+- The shell finish uses a deeper mahogany palette and a more matte PBR roughness setting. Existing hollow shell, hide head, 16 tension cords, woven diamond lacing, rim bindings and carved details remain in the source.
+- The canonical generator continues to route only this exact gift code to the bespoke model and emits the existing self-contained `public/assets/gifts/catalog/djembe-master-1v3jzkm.gltf` plus subject-specific SVG/icon output.
+- Regression test: `tests/unit/djembe-mahogany-grain.test.js`; it checks the 18 unique paths, GLTF/accessor/buffer integrity, finite bounds and material values. It passed in CI run `43773761760`.
+- Chromium matrix: 11 bespoke gifts × 3 viewports = 33 pixel render checks; 33 screenshots; 0 page errors, HTTP failures, request failures or cancellations. Workflow run `43773761799`, artifact `14184524400`.
+- Review boundary: the latest renders show stronger detail but the drum body still reads as mostly uniform at normal viewing size. This is not premium-art approval. The model remains `design-review-pending`; a convincing authored wood-grain texture/normal/roughness treatment and human visual/rights review remain outstanding.
+- No catalogue price, source active flag, production approval, wallet, transaction, payout or database row was changed.

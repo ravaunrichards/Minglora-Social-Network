@@ -180,3 +180,31 @@ Use supplied third-party screenshots only to understand geometry, hierarchy and 
 - PR: #387. Original isolated task commit: `b640926b112a1016ddc7ca3daf70a625274164c3`; seam compatibility correction: `a85c3d51d118a288198f230b40a4428810f15b25`. The current main head advanced to `7a6aa1b9...` during review and must be preserved in final sync.
 
 **Next action:** finish reconciling the documentation against current main, update the existing PR branch with a two-parent merge commit, rerun all required CI/layout/model-render checks on the new head, and merge only when all are verified successful.
+
+## Recovery checkpoint — 2026-11-15 23:19 UTC
+
+### Project and scope
+- Project: `ravaunrichards/Minglora-Social-Network`; active branch: `feat/minglora-djembe-mahogany-grain-20261115`.
+- Scope remains Minglora LIVE and directly required assets only. No other project was touched.
+- Mainline has continued advancing in parallel. The seven commits since this branch's original base modify Gifter progression and League files; no overlapping path exists with the Djembe model/test diff. PR base is `6ba9dcf2f80914d7c75898d7682cc1984aec5c72`.
+
+### Current task — Djembe Master mahogany refinement
+- PR #400: https://github.com/ravaunrichards/Minglora-Social-Network/pull/400 (open, draft, not merged).
+- Latest source/test head before this documentation commit: `59e02a62a55c038a30265c0ad611637649e51d51`.
+- Changed implementation paths: `assets/3d-assets/gift-models/djembe-model.mjs` and `tests/unit/djembe-mahogany-grain.test.js`.
+- Source contains 18 named grain meshes, seven-point tube paths (56 position/normal vertices and 252 indices per path), a deeper mahogany palette and matte-leaning body finish. Existing structural meshes and runtime code paths remain.
+- Focused Djembe GLTF unit test: PASS.
+- Chromium matrix: PASS — 11 gifts × 3 viewports = 33 screenshots, zero page errors, zero HTTP failures, zero request failures and zero cancellations. Workflow run `43773761799`; artifact `14184524400`.
+- LIVE/MeetWave layout independence matrix: PASS — run `43773761794`.
+- Full CI: FAIL — 1,216 passed / 22 failed in run `43773761760`; unrelated test assertions in API, cache/service worker, For You, profile, LIVE shell, Gifter progression and League areas. For You browser acceptance also failed its stale stylesheet-version assertion. Supabase Auth acceptance passed.
+- Manual screenshot review: visible grain and darker finish improved, but the shell still reads as mostly uniform. Do not claim premium texture or mark design approval. `design-review-pending` stays in place.
+- Production catalogue and all monetary/active states remain unchanged. No database operation or deploy occurred.
+
+### Mission-level remaining work
+- Reference screenshots have a metadata inventory, but comprehensive human review and asset-to-reference sign-off are not complete.
+- The 1,748-record source catalogue is not a bespoke-art catalogue: CI currently generates primary SVGs/icons/GLTFs from a mix of dedicated models and a shared procedural fallback. Only the individually documented art-directed sources count as bespoke.
+- Legacy production gift rows remain inactive pending proper version-3 approval; do not reactivate them.
+- Natural PBR wood treatment and human design/rights review remain required for Djembe Master.
+- Remaining gift categories, gift-specific animations/audio, full asset verification, device QA, integration audit and overall production release are incomplete.
+
+**Exact next action:** continue with a distinct, uncovered LIVE gift-model/category asset after preserving this Djembe checkpoint. Keep PR #400 open as draft until its art-quality gap is resolved and required checks are green.

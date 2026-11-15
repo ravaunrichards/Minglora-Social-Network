@@ -236,3 +236,11 @@ The existing Jamaican culture gift-category placeholder has been replaced by ori
 The exact canonical Baseball record now has an individually authored model source rather than shared sports-category geometry. The model uses an ivory full-grain shell, two curved seam paths with recessed channels, raised scarlet seam cords, separate hand-sewn stitch strands/thread highlights and subtle grain flecks. Its vector artwork uses a leather-shaded sphere and individually drawn curved seam/stitch details; the same subject-specific illustration is emitted in the primary SVG and transparent gift icon.
 
 The GLTF declares self-contained embedded geometry buffers, per-part material records, accessor bounds and `design-review-pending` provenance. The browser-render matrix covers desktop, tablet and mobile; final workflow outcome is pending at the time this record was added. This structural/artwork source inspection is not human visual approval, licensing clearance, final premium art acceptance or physical-device certification. No catalogue Coin value, source active flag, production offer, wallet, transaction or payout was changed.
+
+## Djembe Master mahogany-detail quality review — 2026-11-15 (PR #400)
+
+The Djembe Master source adds 18 distinct grain-inlay paths and changes the shell finish to a deeper, more matte mahogany PBR treatment while retaining the existing rope and lacing assembly. The focused GLTF regression test passes. The latest Chromium run produced 33/33 pixel renders across desktop/tablet/mobile with zero page, HTTP or request failures.
+
+**Visual limitation remains:** inspection of the final desktop, tablet and mobile screenshots still shows a largely uniform shell; the grain does not yet read like convincing natural wood at normal presentation size. A further blind color/line adjustment was intentionally not applied. The next art-quality step is a genuine authored wood-grain material treatment (base-color plus suitable normal/roughness detail, or equivalent geometry/material art direction), followed by human visual review on supported devices.
+
+The status stays `design-review-pending`. Passing structure and browser-render tests proves load/render stability, not premium photorealism, legal rights clearance, human art acceptance or production readiness. No catalogue value, active flag, transaction or production state was changed.
