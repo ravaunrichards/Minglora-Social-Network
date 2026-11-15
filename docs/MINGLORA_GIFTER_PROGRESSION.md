@@ -52,6 +52,6 @@ The canonical `assets/Gifters Badge Levels/` collection contains 71 images, all 
 - The 11 `Levels 1-4.jpg` through `Levels 50.jpg` panels appear in the detailed, ordered LV 1–50 section.
 - The six `LV.1 - LV.9.jpg` through `LV.50+.jpg` sheets appear in a separate ordered level-range gallery.
 - `Badges_Level_01-50/Badges_Level_01-50.png` and its `_preview.jpg` appear together in a separate master-collection section.
-- Each of the 50 numbered individual PNG files is displayed as an original-art thumbnail/link on its matching level-directory row. The shared vector sprite remains the primary crisp badge rendering; the original PNG preview is visible beside it.
+- Each of the 50 numbered original PNG files is the primary badge artwork in its matching Level 1–50 directory row. The same level-matched original PNG is used for the current earned badge, Gifter leaderboard, Top Gifters and member/LIVE identity renderers. The renderer selects the corresponding image by the server-confirmed level number, padded to two digits (`level_01.png` through `level_50.png`). The PNG is the badge itself, not a secondary thumbnail; no generated SVG badge sprite is used.
 
 The six range JPGs, two master-sheet files, and 50 individual PNGs use explicit server allow-list routes and are included in the PWA shell cache. All images preserve their source aspect ratio with `object-fit: contain`; master and range reference sheets do not replace the live Coin-threshold calculation.
