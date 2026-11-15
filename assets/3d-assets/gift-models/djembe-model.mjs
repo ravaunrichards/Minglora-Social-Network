@@ -188,20 +188,20 @@ export function createDjembeModel() {
   // Fine, restrained grain threads follow the carved mahogany shell rather than floating off its surface.
   // They use the existing geometry/material pipeline and remain lightweight for the LIVE model viewer.
   const grainY = [-0.62, -0.44, -0.25, -0.05, 0.16, 0.36, 0.54];
-  const grainColors = ["#83513a", "#b87552", "#4e2923"];
+  const grainColors = ["#542b23", "#a95e41", "#bd805e"];
   for (let i = 0; i < 12; i++) {
     const anchor = TAU * i / 12;
     const points = grainY.map((y, index) => {
       const angle = anchor +
         0.018 * Math.sin(index * 0.74 + i * 1.31) +
         0.007 * Math.sin(index * 1.37 + i * 0.61);
-      const radius = bodyRadius(y) + 0.0035;
+      const radius = bodyRadius(y) + 0.0055;
       return [radius * Math.cos(angle), y, radius * Math.sin(angle)];
     });
     tube(
       "Djembe flowing mahogany grain inlay " + (i + 1),
       points,
-      0.0022,
+      0.0042,
       grainColors[i % grainColors.length],
       0.82
     );
