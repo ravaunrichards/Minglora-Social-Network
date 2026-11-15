@@ -1,8 +1,8 @@
 # Minglora League System
 
-## Two separate progression tracks
+## Creator League progression and LIVE match competition
 
-Minglora has a Creator League class and a Match Rank. Confirmed LIVE Gift activity changes the Creator League only. Completed League Match results change Match Rank only. Match power-ups never multiply Creator League points or official class standings.
+Confirmed LIVE Gift activity advances Creator League classes. Completed League Matches record match outcomes and win/loss/draw history only; they do not create a second rank ladder or change Creator League classes. Match power-ups affect only an active match score and never multiply Creator League points or official class standings.
 
 ## Creator League classes
 
@@ -22,22 +22,15 @@ Coin purchases, direct profile gifts, social gifts, viewer support and match pow
 
 ## Division leaderboards
 
-Members can browse the **daily** and **weekly** confirmed LIVE Gift rankings for every Creator League class in their own region. The selected class and period are validated by the server; the browser never submits or calculates ranking points. Daily standings use the current UTC day, weekly standings use the current Monday-start UTC season, and only persisted Creator League profiles in the viewer's region and selected class are returned. A weekly reset changes season standings, not lifetime class progress or Match Rank.
+Members can browse the **daily** and **weekly** confirmed LIVE Gift rankings for every Creator League class in their own region. The selected class and period are validated by the server; the browser never submits or calculates ranking points. Daily standings use the current UTC day, weekly standings use the current Monday-start UTC season, and only persisted Creator League profiles in the viewer's region and selected class are returned. A weekly reset changes season standings, not lifetime class progress or match records.
 
 
-## Match Rank
-
-Progression from lowest to highest:
-
-**Bronze III → Bronze II → Bronze I → Silver III → Silver II → Silver I → Gold IV → Gold III → Gold II → Gold I → Platinum IV → Platinum III → Platinum II → Platinum I → Diamond IV → Diamond III → Diamond II → Diamond I → Heroic → Master → Grandmaster**
-
-New creators start at Bronze III. A completed match awards +25 rating points to the winner, +5 to each creator for a draw, and −15 to the loser. Every 100 points advances one rank. A creator cannot drop below Bronze III or advance beyond Grandmaster. These values are initial Minglora settings.
 
 ## LIVE League Matches
 
 A challenge pairs two active, independently hosted LIVE sessions. Both hosts must be connected to their LiveKit rooms when a challenge is sent and accepted. Invitations expire after two minutes. An accepted match runs for five minutes by default. Match scoring can use all LIVE Gifts or one selected Gift. Confirmed Gift value scores the match while its original eligible LIVE Gift value also contributes to the recipient's Creator League.
 
-Viewers can support one side once per match for three match points. Creators cannot support their own match. Viewer support changes only that match result and Match Rank; it does not change Creator League points.
+Viewers can support one side once per match for three match points. Creators cannot support their own match. Viewer support changes only that match result and its win/loss/draw record; it does not change Creator League points or class.
 
 The server settles a match once when its timer ends and expires unanswered invitations. The League Arena refreshes current scores and match status.
 
@@ -56,6 +49,6 @@ Momentum Boost and Score Multiplier do not stack multiplicatively; the strongest
 
 ## TikTok-inspired principles, Minglora-owned rules
 
-Minglora uses original class names, progression values, match rating rules, power-up values, and original assets. The class thresholds above are Minglora-owned settings.
+Minglora uses original class names, Creator League progression values, match power-up values, and original assets. The class thresholds above are Minglora-owned settings.
 
 The current implementation pairs two separate existing LIVE sessions. It does not claim to provide a shared co-host stage or a full 2v2 multi-creator room.
