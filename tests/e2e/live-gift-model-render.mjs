@@ -19,7 +19,8 @@ const gifts = [
   { name: 'LIVE Island', code: 'live-island-rmn3mc' },
   { name: 'Crystal Crown', code: 'crystal-crown-1itryeu' },
   { name: 'Phoenix', code: 'phoenix-wep6uk' },
-  { name: 'Beach Maracas', code: 'beach-maracas-1exxoag' }
+  { name: 'Beach Maracas', code: 'beach-maracas-1exxoag' },
+  { name: 'Royal Lions Scepter', code: 'royal-lions-scepter-15000-mgl' }
 ];
 
 const viewports = [
