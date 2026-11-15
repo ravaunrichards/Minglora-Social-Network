@@ -2,21 +2,21 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createDjembeModel } from "../../assets/3d-assets/gift-models/djembe-model.mjs";
 
-test("Djembe Master includes twelve lightweight mahogany grain inlays in its self-contained GLTF", () => {
+test("Djembe Master includes eighteen lightweight mahogany grain inlays in its self-contained GLTF", () => {
   const model = createDjembeModel();
   assert.equal(model.asset?.version, "2.0");
   assert.equal(model.asset?.extras?.mingloraAssetId, "gift-djembe-3d-v1");
   assert.equal(model.asset?.extras?.reviewStatus, "design-review-pending");
-  assert.match(model.asset?.extras?.artDirection || "", /twelve fine flowing grain inlays/);
+  assert.match(model.asset?.extras?.artDirection || "", /eighteen fine flowing grain inlays/);
 
   const primitives = model.meshes?.[0]?.primitives || [];
   const grain = primitives.filter(primitive =>
     primitive.extras?.mingloraPartName?.startsWith("Djembe flowing mahogany grain inlay ")
   );
-  assert.equal(grain.length, 12, "each original grain path must remain individually inspectable");
+  assert.equal(grain.length, 18, "each original grain path must remain individually inspectable");
 
   const names = grain.map(primitive => primitive.extras.mingloraPartName);
-  assert.equal(new Set(names).size, 12, "grain path names must be unique");
+  assert.equal(new Set(names).size, 18, "grain path names must be unique");
 
   for (const primitive of grain) {
     const position = model.accessors?.[primitive.attributes?.POSITION];
