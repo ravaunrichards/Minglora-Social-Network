@@ -204,7 +204,6 @@ test('Node API chat remains under owner MFA, checks bot ownership/capability, pr
   assert.ok(route.includes("item.ownerId === user.id"),'Bot lookup must be scoped to the signed-in owner');
   assert.ok(route.includes("bot.capabilities.includes('conversation')"),'Bot must explicitly allow conversation');
   for (const token of [
-    "bot.capabilities.includes('conversation')",
     "getAIProviderStatus()",
     "await probeOpenAIProvider()",
     "runAIConversationCommand('begin_exchange'",
