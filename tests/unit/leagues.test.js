@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   CREATOR_LEAGUE_CLASSES, creatorLeagueSeasonKey, ensureCreatorLeagueProfile,
-  recordLiveGiftForLeagues, refundCreatorLeagueGift, settleCreatorLeagueDay, creatorLeagueProgressForPoints, createCreatorLeagueMatch,
+  recordLiveGiftForLeagues, refundCreatorLeagueGift, settleCreatorLeagueDay, creatorLeagueFragmentsForPlacement, createCreatorLeagueMatch,
   acceptCreatorLeagueMatch, useCreatorLeaguePowerup, supportCreatorLeagueMatch,
   settleExpiredLeagueMatches, getCreatorLeagueOverview, listCreatorLeagueMatches
 } from "../../backend/modules/leagues/service.js";
@@ -87,26 +87,26 @@ test("one viewer may support one side of a live match only once", () => {
   assert.throws(() => supportCreatorLeagueMatch(db, match, "creator-a", "opponent", now), /cannot support/i);
 });
 
-test("daily placements do not replace lifetime Gift-point class progression", () => {
+test("four days of strong placement move a creator through the Creator League", () => {
   const db = blankDb();
   const start = new Date("2026-11-02T12:00:00.000Z");
   ensureCreatorLeagueProfile(db, "creator-top", "JAMAICA", start);
-  ensureCreatorLeagueProfile(db, "creator-bottom", "JAMAICA", start);
   for (let offset = 0; offset < 4; offset += 1) {
     const day = new Date(start.getTime() + offset * 86400000);
     const dayKey = day.toISOString().slice(0,10);
-    db.creatorLeagueDailyScores.push(
-      { id: "top-" + offset, userId: "creator-top", dayKey, points: 100 },
-      { id: "bottom-" + offset, userId: "creator-bottom", dayKey, points: 10 }
-    );
-    settleCreatorLeagueDay(db, dayKey, new Date(day.getTime() + 86400000));
+    db.creatorLeagueDailyScores.push({
+      id: "top-" + offset, userId: "creator-top", dayKey, points: 100
+    });
+    const settled = settleCreatorLeagueDay(db, dayKey, new Date(day.getTime() + 86400000));
+    assert.equal(settled.placementsProcessed, 1);
   }
-  assert.equal(db.creatorLeagueProfiles.find(item => item.userId === "creator-top").leagueClass, "D5");
-  assert.equal(db.creatorLeagueProfiles.find(item => item.userId === "creator-top").leagueShields, 0);
-  assert.equal(db.creatorLeagueProfiles.find(item => item.userId === "creator-bottom").leagueClass, "D5");
+  const top = db.creatorLeagueProfiles.find(item => item.userId === "creator-top");
+  assert.equal(top.leagueClass, "D3");
+  assert.equal(top.fragments, 0);
+  assert.equal(top.leagueShields, 2);
 });
 
-test("daily placements remain reporting-only; class promotion follows cumulative confirmed LIVE Gifts", () => {
+test("daily regional placements drive fragments; lifetime totals do not set class", () => {
   const db = blankDb();
   const start = new Date("2026-11-02T12:00:00.000Z");
   const creatorIds = ["gifted-creator", "zero-1", "zero-2", "zero-3", "zero-4", "zero-5", "zero-6"];
@@ -122,22 +122,21 @@ test("daily placements remain reporting-only; class promotion follows cumulative
       coinAmount: 500,
       now: day
     });
-
     const placement = settleCreatorLeagueDay(db, dayKey, new Date(day.getTime() + 86400000));
     assert.equal(placement.activeCreators, 7);
-    assert.equal(placement.placementsProcessed, 0);
+    assert.equal(placement.placementsProcessed, 7);
   }
 
   const giftedCreator = db.creatorLeagueProfiles.find(item => item.userId === "gifted-creator");
   assert.equal(giftedCreator.lifetimeGiftPoints, 2000);
-  assert.equal(giftedCreator.leagueClass, "D5");
-  assert.equal(giftedCreator.leagueShields, 0);
+  assert.equal(giftedCreator.leagueClass, "D3");
+  assert.equal(giftedCreator.leagueShields, 2);
   for (const id of creatorIds.slice(1)) {
     assert.equal(db.creatorLeagueProfiles.find(item => item.userId === id).leagueClass, "D5");
   }
 });
 
-test("confirmed lifetime LIVE Gift milestones promote creators immediately through the full class ladder", () => {
+test("large lifetime LIVE Gift totals do not bypass daily fragment progression", () => {
   const db = blankDb();
   const now = new Date("2026-11-06T12:00:00.000Z");
   const result = recordLiveGiftForLeagues(db, {
@@ -150,15 +149,99 @@ test("confirmed lifetime LIVE Gift milestones promote creators immediately throu
   assert.equal(result.creatorLeaguePoints, 985092);
   const profile = ensureCreatorLeagueProfile(db, "tommy", "GLOBAL", now);
   assert.equal(profile.lifetimeGiftPoints, 985092);
-  assert.equal(profile.leagueClass, "C1");
-  assert.deepEqual(creatorLeagueProgressForPoints(profile.lifetimeGiftPoints), {
-    leagueClass: "C1",
-    nextClass: "B5",
-    classProgressPoints: 85092,
-    pointsPerClass: 100000,
-    pointsToNextClass: 14908
+  assert.equal(profile.leagueClass, "D5");
+  assert.equal(profile.fragments, 0);
+  assert.equal(profile.leagueShields, 0);
+});
+
+
+
+test("daily placement bands award division-specific fragments", () => {
+  assert.equal(creatorLeagueFragmentsForPlacement("A3", 1, 200), 3);
+  assert.equal(creatorLeagueFragmentsForPlacement("A3", 3, 200), 2);
+  assert.equal(creatorLeagueFragmentsForPlacement("A3", 21, 200), 1);
+  assert.equal(creatorLeagueFragmentsForPlacement("A3", 41, 200), 0);
+  assert.equal(creatorLeagueFragmentsForPlacement("A3", 121, 200), -1);
+  assert.equal(creatorLeagueFragmentsForPlacement("B5", 141, 200), -1);
+  assert.equal(creatorLeagueFragmentsForPlacement("C1", 161, 200), -1);
+  assert.equal(creatorLeagueFragmentsForPlacement("D1", 161, 200), -1);
+  assert.equal(creatorLeagueFragmentsForPlacement("D5", 199, 200), 0);
+});
+
+test("four lost fragments demote one tier, while a League Shield absorbs one loss", () => {
+  const start = new Date("2026-11-07T12:00:00.000Z");
+  const dayKey = start.toISOString().slice(0, 10);
+  const db = blankDb();
+  for (let i = 0; i < 9; i += 1) {
+    const id = "peer-" + i;
+    const profile = ensureCreatorLeagueProfile(db, id, "JAMAICA", start);
+    profile.leagueClass = "B5";
+    db.creatorLeagueDailyScores.push({ id, userId: id, dayKey, points: 100 + i });
+  }
+  const target = ensureCreatorLeagueProfile(db, "target", "JAMAICA", start);
+  target.leagueClass = "B5";
+  target.fragments = -3;
+  db.creatorLeagueDailyScores.push({ id: "target-score", userId: "target", dayKey, points: 1 });
+  settleCreatorLeagueDay(db, dayKey, new Date(start.getTime() + 86400000));
+  assert.equal(target.leagueClass, "C1");
+  assert.equal(target.fragments, 0);
+
+  const shieldDb = blankDb();
+  for (let i = 0; i < 9; i += 1) {
+    const id = "shield-peer-" + i;
+    const profile = ensureCreatorLeagueProfile(shieldDb, id, "JAMAICA", start);
+    profile.leagueClass = "B5";
+    shieldDb.creatorLeagueDailyScores.push({ id, userId: id, dayKey, points: 100 + i });
+  }
+  const protectedCreator = ensureCreatorLeagueProfile(shieldDb, "protected", "JAMAICA", start);
+  protectedCreator.leagueClass = "B5";
+  protectedCreator.fragments = -3;
+  protectedCreator.leagueShields = 1;
+  shieldDb.creatorLeagueDailyScores.push({ id: "protected-score", userId: "protected", dayKey, points: 1 });
+  settleCreatorLeagueDay(shieldDb, dayKey, new Date(start.getTime() + 86400000));
+  assert.equal(protectedCreator.leagueClass, "B5");
+  assert.equal(protectedCreator.fragments, -3);
+  assert.equal(protectedCreator.leagueShields, 0);
+});
+
+test("daily creator ties do not produce arbitrary fragment changes", () => {
+  const db = blankDb();
+  const now = new Date("2026-11-08T12:00:00.000Z");
+  for (const id of ["creator-a", "creator-b"]) {
+    const profile = ensureCreatorLeagueProfile(db, id, "JAMAICA", now);
+    profile.leagueClass = "A3";
+    db.creatorLeagueDailyScores.push({
+      id: "score-" + id, userId: id, dayKey: now.toISOString().slice(0, 10), points: 100
+    });
+  }
+  settleCreatorLeagueDay(db, now.toISOString().slice(0, 10), new Date(now.getTime() + 86400000));
+  assert.equal(db.creatorLeagueProfiles.every(profile => profile.fragments === 0), true);
+});
+
+test("refunding a settled LIVE Gift replays affected class placement fragments", () => {
+  const db = blankDb();
+  const now = new Date("2026-11-09T12:00:00.000Z");
+  const dayKey = now.toISOString().slice(0, 10);
+  const first = ensureCreatorLeagueProfile(db, "creator-a", "JAMAICA", now);
+  const second = ensureCreatorLeagueProfile(db, "creator-b", "JAMAICA", now);
+  first.leagueClass = "A3";
+  second.leagueClass = "A3";
+  recordLiveGiftForLeagues(db, {
+    giftId: "gift-refund-placement", recipientId: "creator-a",
+    broadcastId: "live-refund-placement", region: "JAMAICA", coinAmount: 200, now
   });
-  assert.equal(creatorLeagueProgressForPoints(1700000).leagueClass, "A1");
+  recordLiveGiftForLeagues(db, {
+    giftId: "gift-other-placement", recipientId: "creator-b",
+    broadcastId: "live-other-placement", region: "JAMAICA", coinAmount: 10, now
+  });
+  settleCreatorLeagueDay(db, dayKey, new Date(now.getTime() + 86400000));
+  assert.equal(first.fragments, 3);
+
+  refundCreatorLeagueGift(db, "gift-refund-placement", new Date(now.getTime() + 2 * 86400000));
+  assert.equal(first.leagueClass, "A3");
+  assert.equal(first.fragments, 0);
+  assert.equal(second.fragments, 3);
+  assert.equal(db.creatorLeagueDailySettlements.some(item => item.dayKey === dayKey && item.placements), true);
 });
 
 test("match completion records results once without a separate rank ladder", () => {
