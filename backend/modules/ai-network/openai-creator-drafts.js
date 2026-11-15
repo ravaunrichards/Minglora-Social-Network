@@ -11,8 +11,8 @@ const TASK_LABELS = Object.freeze({
   creator_calendar: 'a realistic, useful creator content calendar'
 });
 
-const providerError = (code, message, status = 502) => Object.assign(new Error(message), {
-  code, status, safeForClient: true
+const providerError = (code, message, status = 502, metadata = {}) => Object.assign(new Error(message), {
+  code, status, safeForClient: true, ...metadata
 });
 
 const extractOutputText = response => {
@@ -179,37 +179,46 @@ export async function generateOpenAICreatorDraft({
   }
 
   // Fail closed: no generated output is stored when the moderation service is unavailable.
-  const moderation = await postOpenAIJson({
-    fetchImpl,
-    endpoint: moderationEndpoint,
-    apiKey,
-    timeoutMs: requestTimeoutMs,
-    payload: {
-      model: 'omni-moderation-latest',
-      input: output
-    }
-  });
-  const moderationResult = Array.isArray(moderation.results) ? moderation.results[0] : null;
-  if (!moderationResult || typeof moderationResult.flagged !== 'boolean') {
-    throw providerError('moderation_unavailable', 'The generated draft could not be verified by content moderation. It was not saved.', 502);
-  }
-  if (moderationResult.flagged) {
-    throw providerError('moderation_blocked', 'The generated draft was flagged by content moderation and was not saved. Revise the brief and try again.', 422);
-  }
-
   const usage = generation.usage && typeof generation.usage === 'object' ? {
     input_tokens: Number.isFinite(Number(generation.usage.input_tokens)) ? Number(generation.usage.input_tokens) : null,
     output_tokens: Number.isFinite(Number(generation.usage.output_tokens)) ? Number(generation.usage.output_tokens) : null,
     total_tokens: Number.isFinite(Number(generation.usage.total_tokens)) ? Number(generation.usage.total_tokens) : null
   } : { input_tokens: null, output_tokens: null, total_tokens: null };
-
-  return {
-    output,
+  const generatedMetadata = {
     provider: 'openai',
     model: String(generation.model || model).slice(0, 180),
     responseId: String(generation.id || '').slice(0, 180) || null,
     requestId: String(generation._request_id || '').slice(0, 180) || null,
-    usage,
+    usage
+  };
+
+  let moderation;
+  try {
+    moderation = await postOpenAIJson({
+      fetchImpl,
+      endpoint: moderationEndpoint,
+      apiKey,
+      timeoutMs: requestTimeoutMs,
+      payload: {
+        model: 'omni-moderation-latest',
+        input: output
+      }
+    });
+  } catch (error) {
+    Object.assign(error, generatedMetadata);
+    throw error;
+  }
+  const moderationResult = Array.isArray(moderation.results) ? moderation.results[0] : null;
+  if (!moderationResult || typeof moderationResult.flagged !== 'boolean') {
+    throw providerError('moderation_unavailable', 'The generated draft could not be verified by content moderation. It was not saved.', 502, generatedMetadata);
+  }
+  if (moderationResult.flagged) {
+    throw providerError('moderation_blocked', 'The generated draft was flagged by content moderation and was not saved. Revise the brief and try again.', 422, generatedMetadata);
+  }
+
+  return {
+    output,
+    ...generatedMetadata,
     moderation: {
       model: String(moderation.model || 'omni-moderation-latest').slice(0, 80),
       flagged: false
