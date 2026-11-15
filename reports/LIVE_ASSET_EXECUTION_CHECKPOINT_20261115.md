@@ -205,3 +205,18 @@ Use supplied third-party screenshots only to understand geometry, hierarchy and 
 7. Keep production gift offers inactive until version-3 assets, rights, genuine configured Coin values and transaction compatibility pass their separate release gate.
 
 This checkpoint records one focused Rose effect integration, not completion of the full LIVE asset mission.
+
+
+## Active execution checkpoint — Keeper of Atlantis gift assets, 2026-11-15
+
+**Task ID:** LIVE-ASSET-ATLANTIS-1
+
+- Project: Minglora Social Network only.
+- Combined review: PR #398, branch `feat/minglora-rose-live-assets-main-sync3-20261115`.
+- Reused only the original Keeper model source from superseded PR #379; no stale workflow, old cache version, or unrelated PR changes were copied.
+- New model source: `assets/3d-assets/gift-models/keeper-of-atlantis-model.mjs`. Generator route and original SVG art are exact-code only.
+- Runtime mapping: `keeper-of-atlantis-15000-mgl` → `atlantis-trident-surge`; sound ID `keeper-of-atlantis-deep-surge-and-trident-bells-v1`.
+- Source catalogue values preserved: fantasy category, 15,000 Coins, active=true, original `cosmic-orbit` catalogue preset. No database, wallet or transaction mutation.
+- The model render matrix now has 12 bespoke models × 3 Chromium viewports = 36 expected renders. Combined PR CI is pending for this addition.
+- Rose runtime and generated metadata remain included in the same combined script version. HTML/service-worker URL: `gift-effects.js?v=20261115-rose-unfurl-atlantis-trident-2`; service-worker cache: `minglora-shell-v325-self-updating-1`.
+- Remaining: run current-head CI/model-render QA; complete human visual/audio and licensing review; complete physical-device acceptance; continue original art direction for the rest of the catalogue. No full mission completion claim.
