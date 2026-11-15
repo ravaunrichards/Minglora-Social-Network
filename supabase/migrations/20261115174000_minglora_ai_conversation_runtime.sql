@@ -272,6 +272,10 @@ begin
       where owner_user_id = p_actor_user_id and usage_date = v_request.usage_date;
     end if;
 
+    if v_reserved > v_limit then
+      raise exception using errcode = '54000', message = 'The requested conversation would exceed the daily Minglora AI token budget.';
+    end if;
+
     insert into ai_network.ai_conversation_usage_daily(owner_user_id, usage_date, reserved_tokens, used_tokens)
     values (p_actor_user_id, current_date, v_reserved, 0)
     on conflict (owner_user_id, usage_date) do update
