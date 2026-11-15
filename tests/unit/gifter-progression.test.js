@@ -18,22 +18,23 @@ test("gifter levels use the fixed cumulative coin thresholds from the reference 
     820, 1260, 1920, 2840, 4340, 6420, 9280, 13500, 19400, 27600,
     39600, 54600, 75800, 105000, 144000, 196000, 265000, 357000, 478000, 637000,
     845000, 1120000, 1470000, 1920000, 2500000, 3230000, 4180000, 5430000, 6890000, 8780000,
-    11200000, 14100000, 17800000, 22300000, 27900000, 37500000, 47500000, 60000000, 75000000, 80000000
+    11200000, 14100000, 17800000, 22300000, 30000000, 37500000, 47500000, 60000000, 75000000, 97500000
   ];
   assert.equal(gifterXpRequired(1), 1);
   assert.equal(gifterXpRequired(2), 8);
-  assert.equal(gifterXpRequired(50), 80000000);
+  assert.equal(gifterXpRequired(50), 97500000);
   assert.equal(gifterXpRequired(38), 5430000);
-  assert.equal(gifterXpRequired(45), 27900000);
+  assert.equal(gifterXpRequired(45), 30000000);
   assert.equal(gifterXpRequired(48), 60000000);
   assert.equal(getGifterLevel(5429999), 37);
   assert.equal(getGifterLevel(5430000), 38);
-  assert.equal(getGifterLevel(27899999), 44);
-  assert.equal(getGifterLevel(27900000), 45);
+  assert.equal(getGifterLevel(29999999), 44);
+  assert.equal(getGifterLevel(30000000), 45);
   assert.equal(getGifterLevel(59999999), 47);
   assert.equal(getGifterLevel(60000000), 48);
-  assert.equal(getGifterLevel(79999999), 49);
-  assert.equal(getGifterLevel(80000000), 50);
+  assert.equal(getGifterLevel(80000000), 49);
+  assert.equal(getGifterLevel(97499999), 49);
+  assert.equal(getGifterLevel(97500000), 50);
   assert.equal(getGifterLevel(0), 0);
   assert.equal(getGifterLevel(1), 1);
   assert.equal(getGifterLevel(7), 1);
