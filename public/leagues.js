@@ -207,7 +207,8 @@
     return "<div class='league-podium' aria-label='Top three creators'>" + ranked.map(({member, place}) =>
       "<button type='button' class='league-podium-member is-place-" + place + "' data-league-profile='" + esc(member.id) + "' aria-label='Open " + esc(member.name || member.username || "creator") + " profile, ranked number " + place + "'>" +
         "<span class='league-podium-crown' aria-hidden='true'>" + (place === 1 ? "👑" : place === 2 ? "✦" : "✧") + "</span>" +
-        image(member, "ml-creator-ring ml-creator-ring--league") +
+        "<span class='league-podium-avatar-wrap'>" + image(member, "ml-creator-ring ml-creator-ring--league") +
+          "<span class='league-podium-avatar-medal is-place-" + place + "' aria-hidden='true'>" + place + "</span></span>" +
         "<strong>" + esc(member.name || "Minglora creator") + "</strong><small>@" + esc(member.username || "creator") + "</small>" +
         "<b class='league-podium-points'>" + Number(member.seasonPoints || 0).toLocaleString() + " pts</b>" +
         "<span class='league-podium-base' aria-hidden='true'>" + place + "</span></button>"
@@ -215,12 +216,22 @@
   }
   function leaderboardMarkup(leaderboard) {
     if (!leaderboard.length) return "<div class='league-empty-inline'>Your class leaderboard will appear when creators earn confirmed LIVE Gift points in your region.</div>";
-    const remaining = leaderboard.slice(3).map(item =>
-      "<button type='button' class='league-leader-row' data-league-profile='" + esc(item.id || "") + "' " + (!item.id ? "disabled" : "") + ">" +
-        "<b class='league-position'>#" + Number(item.position || 0) + "</b>" + image(item, "ml-creator-ring ml-creator-ring--league") +
-        "<span class='league-leader-name'><strong>" + esc(item.name || "Minglora creator") + "</strong><small>@" + esc(item.username || "creator") + "</small></span>" +
-        "<strong class='league-leader-points'>" + Number(item.seasonPoints || 0).toLocaleString() + " pts</strong></button>"
-    ).join("");
+    const remaining = leaderboard.slice(3).map(item => {
+      const position = Math.max(0, Number(item.position || 0));
+      const award = position >= 4 && position <= 10 ? "top-ten" : position >= 11 && position <= 20 ? "top-twenty" : "";
+      const awardMarkup = award
+        ? "<span class='league-ranking-medal league-ranking-medal--" + award + "' aria-hidden='true'>" + (award === "top-ten" ? "✦" : "◆") + "</span>"
+        : "";
+      const bandMarkup = award
+        ? "<span class='league-leader-band league-leader-band--" + award + "'>" + (award === "top-ten" ? "TOP 10" : "TOP 20") + "</span>"
+        : "";
+      const rowClass = award ? " league-leader-row--" + award : "";
+      return "<button type='button' class='league-leader-row" + rowClass + "' data-league-profile='" + esc(item.id || "") + "' aria-label='Open " + esc(item.name || item.username || "creator") + " profile, place " + position + "' " + (!item.id ? "disabled" : "") + ">" +
+        "<b class='league-position'>#" + position + "</b>" +
+        "<span class='league-rank-avatar-wrap'>" + image(item, "ml-creator-ring ml-creator-ring--league") + awardMarkup + "</span>" +
+        "<span class='league-leader-name'><strong>" + esc(item.name || "Minglora creator") + "</strong><small>@" + esc(item.username || "creator") + "</small>" + bandMarkup + "</span>" +
+        "<strong class='league-leader-points'>" + Number(item.seasonPoints || 0).toLocaleString() + " pts</strong></button>";
+    }).join("");
     return podiumMarkup(leaderboard) + (remaining ? "<div class='league-leaderboard league-leaderboard-rest'>" + remaining + "</div>" : "");
   }
   function meter(value, max) {
@@ -228,9 +239,45 @@
     return "<div class='league-meter' aria-label='" + Math.round(percent) + "% complete'><span style='width:" + percent + "%'></span></div>";
   }
   function classLadderMarkup(classes, active) {
-    return "<div class='league-class-ladder'>" + classes.map(item =>
-      "<span class='league-class-step " + (item === active ? "is-current" : "") + "'>" + esc(item) + "</span>"
-    ).join("") + "</div>";
+    const hierarchy = [
+      { tier: "A", title: "Highest tier", levels: ["A3", "A2", "A1"] },
+      { tier: "B", title: "Upper tier", levels: ["B5", "B4", "B3", "B2", "B1"] },
+      { tier: "C", title: "Middle tier", levels: ["C5", "C4", "C3", "C2", "C1"] },
+      { tier: "D", title: "Entry tier", levels: ["D5", "D4", "D3", "D2", "D1"] }
+    ];
+    const available = new Set(Array.isArray(classes) ? classes : []);
+    const groups = hierarchy.map(group => {
+      const levels = group.levels.filter(item => available.has(item));
+      if (!levels.length) return "";
+      const currentTier = levels.includes(active);
+      return "<article class='league-tier-card league-tier-card--" + group.tier + (currentTier ? " is-active-tier" : "") + "'>" +
+        "<div class='league-tier-card-heading'><span class='league-tier-emblem' role='img' aria-label='League " + group.tier + " emblem'><b>" + group.tier + "</b></span>" +
+        "<span><strong>League " + group.tier + "</strong><small>" + group.title + "</small></span></div>" +
+        "<div class='league-tier-class-list'>" + levels.map(item =>
+          "<span class='league-class-step " + (item === active ? "is-current" : "") + "' " + (item === active ? "aria-current='true' aria-label='Current class " + esc(item) + "'" : "") + ">" + esc(item) + "</span>"
+        ).join("") + "</div></article>";
+    }).join("");
+    return "<div class='league-class-ladder league-tier-grid' aria-label='Creator League class hierarchy'>" + groups + "</div>";
+  }
+  function fragmentRulesMarkup() {
+    const groups = [
+      { tier: "A", title: "A3–A1", rules: [[-1, "Bottom 99%"], [0, "Top 60%"], [1, "Top 20%"], [2, "Top 10%"], [3, "Top 1%"]] },
+      { tier: "B", title: "B5–B1", rules: [[-1, "Bottom 99%"], [0, "Top 70%"], [1, "Top 20%"], [2, "Top 10%"], [3, "Top 1%"]] },
+      { tier: "C", title: "C5–C1", rules: [[-1, "Bottom 99%"], [0, "Top 80%"], [1, "Top 20%"], [2, "Top 10%"]] },
+      { tier: "D", title: "D1", rules: [[-1, "Bottom 99%"], [0, "Top 80%"], [1, "Top 20%"], [2, "Top 10%"]] },
+      { tier: "D", title: "D2–D5", rules: [[0, "Bottom 99%"], [1, "Top 20%"], [2, "Top 10%"]] }
+    ];
+    const cards = groups.map(group =>
+      "<article class='league-fragment-rule-card league-tier-card--" + group.tier + "'><div class='league-fragment-rule-heading'><span class='league-fragment-tier-mark'>" + group.tier + "</span><strong>" + group.title + "</strong></div>" +
+      "<div class='league-fragment-rule-steps'>" + group.rules.map(([value, placement]) =>
+        "<span class='league-fragment-rule-step'><b>" + (value > 0 ? "+" : "") + value + "</b><small>" + placement + "</small></span>"
+      ).join("") + "</div></article>"
+    ).join("");
+    return "<section class='card league-fragment-reference' id='league-fragment-reference-zone' aria-labelledby='league-fragment-reference-heading'>" +
+      "<div class='league-section-heading'><div><span class='league-eyebrow'>SUPPLIED LEAGUE RULE REFERENCES</span><h2 id='league-fragment-reference-heading'>Placement fragment guide</h2>" +
+      "<p>Reference thresholds organized by the class bands in the League captures.</p></div><span class='league-reference-status'>REFERENCE ONLY</span></div>" +
+      "<div class='league-fragment-rule-grid'>" + cards + "</div>" +
+      "<p class='league-fragment-reference-note'>These placement-fragment thresholds are displayed for reference; they are not currently used to calculate Minglora class movement. Active Creator League promotion remains based on confirmed lifetime LIVE Gift points (100,000 points per class). Match Rank is calculated separately from completed League Match results.</p></section>";
   }
   function matchLadderMarkup(ranks, active) {
     return "<div class='match-rank-ladder'>" + ranks.map((item, index) =>
@@ -304,6 +351,7 @@
       "<article class='card league-stat-card'><span class='league-eyebrow'>MATCH RANK</span><div class='league-stat-value match-rank-value'>" + esc(p.matchRank) + "</div><strong>" + Number(p.matchRankPoints).toLocaleString() + " / 100 rank points</strong>" + meter(matchPercent,100) + "<p>" + (p.matchRankPointsToNext === null ? "Highest match rank reached" : p.matchRankPointsToNext + " points to next rank") + "</p><small>" + p.matchWins + " wins · " + p.matchLosses + " losses · " + p.matchDraws + " draws</small></article>" +
       "<article class='card league-stat-card'><span class='league-eyebrow'>NEXT CLASS</span><div class='league-stat-value match-rank-value'>" + (p.nextClass ? esc(p.nextClass) : "A1") + "</div><strong>" + (p.nextClass ? Number(p.pointsToNextClass).toLocaleString() + " points remaining" : "Top Creator League class") + "</strong><p>Every 100,000 confirmed lifetime LIVE Gift points advances one class.</p><small>Refunded Gifts do not count.</small></article></section>" +
       "<section class='card league-ladder-panel' id='league-progression-zone'><div class='league-section-heading'><div><span class='league-eyebrow'>CREATOR PROGRESSION</span><h2>Creator League classes</h2><p>Your class updates automatically from confirmed lifetime LIVE Gift value.</p></div><span class='league-feature-icon'>📈</span></div>" + classLadderMarkup(overview.classes,p.leagueClass) + "<div class='league-rules-grid'><div><strong>Automatic promotion</strong><p>Every 100,000 eligible lifetime LIVE Gift points advances you one class immediately after the Gift is confirmed.</p></div><div><strong>Lifetime progress</strong><p>Gift points remain across weekly season resets. Refunded Gifts are removed from your total and can change your class.</p></div><div><strong>Eligible Gifts</strong><p>Only confirmed LIVE Gifts count. Coin purchases, direct profile/social gifts, viewer support and match power-up bonuses do not add Creator League points.</p></div></div></section>" +
+      fragmentRulesMarkup() +
       "<section class='card league-ladder-panel'><div class='league-section-heading'><div><span class='league-eyebrow'>MATCH PROGRESSION</span><h2>Bronze to Grandmaster</h2><p>Match rank changes only from completed League Match results, never from LIVE Gift league points.</p></div><span class='league-feature-icon'>🥇</span></div>" + matchLadderMarkup(overview.matchRanks,p.matchRank) + "<div class='league-rank-rules'><span>Win: +25</span><span>Draw: +5</span><span>Loss: −15</span><span>100 points advances one rank</span></div></section>" +
       challengeMarkup(overview,sessions) +
       powerupStudioMarkup(overview) +
@@ -448,6 +496,7 @@
         "league-hero-zone",
         "league-overview-zone",
         "league-progression-zone",
+        "league-fragment-reference-zone",
         "league-challenge-zone",
         "league-matches-zone",
         "league-leaderboard-zone",
