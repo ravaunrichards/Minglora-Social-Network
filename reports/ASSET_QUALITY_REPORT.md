@@ -172,3 +172,28 @@ All **45** retained standalone gift models in `public/assets/gifts/` were inspec
 - The per-model inventory now records corrected byte sizes, Git blob hashes, POSITION-reference counts and accessor-local bounds. The regression test recalculates the extrema from each embedded vertex buffer across all 45 files.
 
 **Approval remains blocked:** these models are still production-ineligible pending canonical catalogue mapping, visual/render review and rights clearance. Structural validity is not premium artwork approval. World-space dimensions have deliberately not been guessed because node transforms have not been applied. No production gift, price, wallet, transaction or earning state was changed.
+
+
+## Chromium render evidence — nine original gift-specific models (2026-11-15)
+
+A dedicated Chromium 141 / model-viewer 4.4.0 workflow generated and captured all **27 model/viewport combinations** for these nine repository-authored sources: Rose, Hibiscus, Djembe Master, Palm Breeze, Gamer Otter, LIVE Island, Crystal Crown, Phoenix and Beach Maracas.
+
+- Desktop: 1280×900; tablet: 768×1024; mobile: 390×844.
+- The 27 captures were uploaded by workflow run **#11** as artifact **14178519822**. The contact sheet is an inspection aid; the individual PNGs remain the primary evidence.
+- For every combination, the model-load event, loaded state, model visibility, presentation-canvas dimensions, rendered-image output, visible-pixel sample count and colour diversity assertions completed successfully.
+- The browser page-error and HTTP-error-response assertions passed. The job is nevertheless **FAILED**, because its final network assertion treats three `net::ERR_ABORTED` cancellations on previously rendered gift GLTF paths as unexpected. The exact requests are recorded in the workflow log; no HTTP 404/5xx is reported for this run. This is a test-harness failure and is not a green end-to-end workflow result.
+- An AI-assisted visual inspection of the 27 screenshots found each model visible and contained in the three Chromium viewport captures. This is not physical-device QA or formal human design approval.
+
+### Visual quality findings from the captures
+
+- **Rose:** recognisable flower silhouette, but petal facets are angular and the stem/leaves are simple; surface detail and natural material depth are insufficient for the premium target.
+- **Hibiscus:** recognisable flower/stamen silhouette, but petals read as thin, planar forms; botanical curvature and surface detail need improvement.
+- **Djembe Master:** drum shell and lacing are clear; the wood and hide lack convincing texture/grain and finer construction details.
+- **Palm Breeze:** silhouette and canopy read clearly; the fronds and trunk remain stylised/low-detail.
+- **Gamer Otter:** character and accessories are visible, but fur, facial, fabric and hardware details are simplified.
+- **LIVE Island:** the environment silhouette and key elements read at all three viewports; small pavilion/reef/waterfall details remain stylised.
+- **Crystal Crown:** the model has the richest ornamental geometry in this set, but the rendered capture appears soft; gem facets and fine gold detail need sharper visual review.
+- **Phoenix:** the firebird silhouette is clear, while feather layering/material realism and ember detail need further art direction.
+- **Beach Maracas:** the paired instrument silhouette and decorative rings are visible; gourd grain, paint and handle material detail remain simplified.
+
+**Acceptance boundary:** These results establish generated-file loading and visible browser rendering for 27 test cases. They do **not** establish premium art quality, approved licensing, authored GLTF animation channels, mastered synchronized gift audio, reduced-motion/device performance certification, or production release approval. All nine bespoke sources remain design-review-pending; no production gift was activated.

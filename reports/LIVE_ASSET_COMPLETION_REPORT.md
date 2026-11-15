@@ -279,3 +279,32 @@ All **45** retained standalone gift models in `public/assets/gifts/` were inspec
 - The per-model inventory now records corrected byte sizes, Git blob hashes, POSITION-reference counts and accessor-local bounds. The regression test recalculates the extrema from each embedded vertex buffer across all 45 files.
 
 **Approval remains blocked:** these models are still production-ineligible pending canonical catalogue mapping, visual/render review and rights clearance. Structural validity is not premium artwork approval. World-space dimensions have deliberately not been guessed because node transforms have not been applied. No production gift, price, wallet, transaction or earning state was changed.
+
+
+## Current continuation checkpoint — 2026-11-15
+
+### Verified browser and repository evidence
+
+- The nine gift-specific model sources (Rose, Hibiscus, Djembe Master, Palm Breeze, Gamer Otter, LIVE Island, Crystal Crown, Phoenix and Beach Maracas) each produced desktop, tablet and mobile Chromium captures: **27/27 screenshots uploaded** in GitHub Actions artifact `14178519822` (workflow run #11).
+- The per-model load, visibility, rendered-image and pixel-content assertions completed for all 27 combinations. The 27 captures were inspected in a combined contact sheet and selected full-resolution screenshots. Visible output is present at all three tested viewport sizes; this is a browser-render check, not physical-device validation.
+- **Dedicated gift-render workflow: FAILED** at the final network-request assertion. Three `net::ERR_ABORTED` events occurred for previously rendered gift GLTF paths after the viewer changed models. No HTTP 404/5xx response or unhandled page error was recorded in that run. The cancellation classifier remains unresolved; PR #367 is open and unmerged. Do not treat the render workflow as passed or merge it while its required check is red.
+- **Standard CI: PASSED** on the same code head — 1,219 tests passed, 0 failed. Supabase Auth provider acceptance and For You functional navigation passed.
+- **Independent LIVE/MeetWave seven-plus-two layout visual-QA workflow: PASSED.**
+
+### Visual review interpretation
+
+The browser captures establish that all nine bespoke models load and remain visible in the three tested Chromium viewport sizes. They do not satisfy the premium creative target by themselves. The Rose remains angular, Hibiscus petals look planar, Djembe materials lack convincing wood/hide texture, Palm Breeze is low-detail, Gamer Otter has simplified surface features, LIVE Island's small scene details are stylised, Crystal Crown appears soft in the capture, and Phoenix/Beach Maracas still need finer material and surface detailing. The AI-assisted visual findings are recorded in `reports/ASSET_QUALITY_REPORT.md`; human design approval and rights clearance remain pending.
+
+### Additional release and source gates reconfirmed
+
+- The connected production `public.live_gift_catalog` snapshot has 97 retained rows and **zero active offers**; there are no version-3 rows. The production empty state remains intentional until original art, model/image paths, rights, real configured Coin prices, animation/sound mapping and transaction compatibility pass review. No production row, price, wallet, transaction or user record was changed.
+- The separate draft audio PR #243 contains 33 source recordings and 101 per-gift candidate copies, but its own source register records **zero human listening approvals and zero production-ready gift sounds**. It is a divergent, non-mergeable draft with unrelated changes; none of those candidate sounds was activated or enabled in LIVE.
+- The current runtime's synthesized Sound Studio and gift Web Audio cues must not be described as mastered per-gift recordings. The dedicated mastered gift-audio count remains zero.
+- All extracted screenshot-derived gift crops remain quarantined for rights/provenance and visual review. The legacy 45-model inventory remains review-only; its historical Coin seeds are not current prices.
+
+### Next safe execution order
+
+1. Keep PR #367 unmerged while the GLTF cancellation test-harness failure is unresolved; do not suppress all failed requests or consume further retries on the same false-negative loop.
+2. Continue with independent asset-quality work: human/rights review, per-gift art direction, dedicated sound audition/approval, and the remaining LIVE control-state asset gaps.
+3. Do not publish or activate any candidate gift/sound solely to make the production catalogue non-empty.
+4. Complete device QA and production approval gates before claiming premium production readiness.
