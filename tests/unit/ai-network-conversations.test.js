@@ -201,6 +201,15 @@ test('Node API chat remains under owner MFA, checks bot ownership/capability, pr
   const chatStart=route.indexOf("if (method === 'POST' && parts[0] === 'bots' && parts.length === 3 && parts[2] === 'chat')");
   const chatEnd=route.indexOf("if (method === 'GET' && sub === 'schedules')",chatStart);
   const chat=route.slice(chatStart,chatEnd);
+  const lifecycleGuardStart=route.indexOf('const assertAIIdentityCanStartConversation');
+  const lifecycleGuardEnd=route.indexOf("if (method === 'GET' && parts[0] === 'bots' && parts.length === 3 && parts[2] === 'conversations')",lifecycleGuardStart);
+  const lifecycleGuard=route.slice(lifecycleGuardStart,lifecycleGuardEnd);
+  assert.match(lifecycleGuard,/runAIIdentityCommand\('get'/);
+  assert.match(lifecycleGuard,/\['created','approved','active'\]\.includes\(lifecycleStatus\)/);
+  const createConversationStart=route.indexOf("if (method === 'POST' && parts[0] === 'bots' && parts.length === 3 && parts[2] === 'conversations')");
+  const createConversationEnd=route.indexOf("if (method === 'POST' && parts[0] === 'bots' && parts.length === 3 && parts[2] === 'chat')",createConversationStart);
+  assert.ok(route.slice(createConversationStart,createConversationEnd).includes('await assertAIIdentityCanStartConversation(bot)'));
+  assert.ok(chat.includes('await assertAIIdentityCanStartConversation(bot)'));
   assert.ok(route.includes("item.ownerId === user.id"),'Bot lookup must be scoped to the signed-in owner');
   assert.ok(route.includes("bot.capabilities.includes('conversation')"),'Bot must explicitly allow conversation');
   for (const token of [
