@@ -53,7 +53,17 @@ export const AI_PROVIDER_CATALOG = Object.freeze([
   provider('serpapi', 'SerpAPI search', 'web_search', [['SERPAPI_API_KEY']], { optionalEnvironmentVariables: ['SERPAPI_BASE_URL'] }),
   provider('pinecone', 'Pinecone vector database', 'vector_database', [['PINECONE_API_KEY','PINECONE_INDEX_NAME']], { optionalEnvironmentVariables: ['PINECONE_CLOUD','PINECONE_REGION','PINECONE_HOST'] }),
   provider('qdrant', 'Qdrant vector database', 'vector_database', [['QDRANT_URL','QDRANT_API_KEY']]),
-  provider('weaviate', 'Weaviate vector database', 'vector_database', [['WEAVIATE_URL','WEAVIATE_API_KEY']])
+  provider('weaviate', 'Weaviate vector database', 'vector_database', [['WEAVIATE_URL','WEAVIATE_API_KEY']]),
+  provider('smtp', 'SMTP transactional email', 'email_delivery', [['SMTP_HOST','SMTP_USER','SMTP_PASS','EMAIL_FROM']]),
+  provider('resend', 'Resend transactional email API', 'email_delivery', [['RESEND_API_KEY']]),
+  provider('sendgrid', 'Twilio SendGrid email API', 'email_delivery', [['SENDGRID_API_KEY']]),
+  provider('postmark', 'Postmark transactional email API', 'email_delivery', [['POSTMARK_SERVER_TOKEN']]),
+  provider('mailgun', 'Mailgun email API', 'email_delivery', [['MAILGUN_API_KEY','MAILGUN_DOMAIN']], { optionalEnvironmentVariables: ['MAILGUN_BASE_URL'] }),
+  provider('amazon_ses', 'Amazon Simple Email Service', 'email_delivery', [
+    ['AMAZON_SES_REGION','AWS_ACCESS_KEY_ID','AWS_SECRET_ACCESS_KEY'],
+    ['AMAZON_SES_REGION','AWS_PROFILE'],
+    ['AMAZON_SES_REGION','AWS_WEB_IDENTITY_TOKEN_FILE']
+  ], { optionalEnvironmentVariables: ['AMAZON_SES_CONFIGURATION_SET','AWS_SESSION_TOKEN'] })
 ]);
 
 const hasValue = value => String(value ?? '').trim().length > 0;

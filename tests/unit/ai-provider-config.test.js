@@ -19,6 +19,14 @@ test('provider catalogue has unique IDs and includes ChatGPT guest plus independ
   assert.ok(ids.includes('openai'));
 });
 
+test('transactional email providers are catalogued with their required environment keys', () => {
+  const emailProviders = new Set(AI_PROVIDER_CATALOG.filter(item => item.category === 'email_delivery').map(item => item.id));
+  assert.deepEqual([...emailProviders].sort(), ['amazon_ses','mailgun','postmark','resend','sendgrid','smtp']);
+  for (const key of ['SMTP_HOST','SMTP_USER','SMTP_PASS','EMAIL_FROM','RESEND_API_KEY','SENDGRID_API_KEY','POSTMARK_SERVER_TOKEN','MAILGUN_API_KEY','MAILGUN_DOMAIN','AMAZON_SES_REGION']) {
+    assert.ok(envExample.split(String.fromCharCode(10)).some(line => line.startsWith(key + '=')), 'Missing email provider environment variable: ' + key);
+  }
+});
+
 test('ChatGPT guest is explicitly non-routable and cannot be marked connected', () => {
   const guest = getAIProviderCredentialStatus('chatgpt_guest', {});
   assert.equal(guest.known, true);
