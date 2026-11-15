@@ -186,3 +186,57 @@
 #league-leaderboard-results{min-width:0}
 @media(max-width:700px){.league-ranking-controls{grid-template-columns:1fr 1fr}.league-ranking-class-label{grid-column:2;grid-row:1}.league-ranking-period{grid-column:1;grid-row:1;align-self:end}.league-ranking-filter{flex:1;padding-inline:8px}#league-ranking-status{grid-column:1/-1;text-align:left}}
 @media(max-width:420px){.league-ranking-controls{grid-template-columns:1fr}.league-ranking-class-label,.league-ranking-period,#league-ranking-status{grid-column:1;grid-row:auto}.league-ranking-period{width:100%}}
+
+
+/* Creator League public-ranking preference and reference reward badges. */
+.league-ranking-visibility{
+  display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:4px 14px;
+  margin:0 0 14px;padding:13px 15px;border:1px solid var(--line);border-radius:13px;
+  background:var(--surface);min-width:0
+}
+.league-ranking-visibility>label{display:grid;gap:3px;min-width:0;cursor:pointer}
+.league-ranking-visibility>label strong{font-size:12px;font-weight:900;color:var(--text)}
+.league-ranking-visibility>label small{font-size:10px;line-height:1.45;color:var(--muted)}
+#league-ranking-toggle{
+  appearance:none;-webkit-appearance:none;position:relative;width:48px;height:28px;flex:0 0 48px;
+  margin:0;border:1px solid #8d99aa;border-radius:999px;background:#8d99aa;cursor:pointer;
+  transition:background .16s ease,border-color .16s ease
+}
+#league-ranking-toggle::before{
+  content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;
+  background:#fff;box-shadow:0 1px 4px rgba(15,23,42,.24);transition:transform .16s ease
+}
+#league-ranking-toggle:checked{background:#2475d2;border-color:#2475d2}
+#league-ranking-toggle:checked::before{transform:translateX(20px)}
+#league-ranking-toggle:focus-visible{outline:3px solid rgba(52,123,210,.4);outline-offset:3px}
+#league-ranking-toggle:disabled{opacity:.55;cursor:wait}
+#league-ranking-visibility-status{grid-column:1/-1;min-height:14px;color:var(--muted);font-size:10px;line-height:1.4}
+.league-podium-avatar-medal{
+  z-index:1;box-shadow:0 2px 7px rgba(15,23,42,.24),inset 0 1px 0 rgba(255,255,255,.55)
+}
+.league-podium-avatar-medal.is-place-1{border-color:#fff0a8}
+.league-podium-avatar-medal.is-place-2{border-color:#edf3fb}
+.league-podium-avatar-medal.is-place-3{border-color:#ffe0c0}
+/* Reference top-10 and top-20 award marks use Minglora's own silver-blue treatment. */
+.league-ranking-medal{
+  z-index:2;border:1px solid rgba(255,255,255,.86);
+  box-shadow:0 2px 7px rgba(15,23,42,.18),inset 0 1px 0 rgba(255,255,255,.68)
+}
+.league-ranking-medal--top-ten{
+  background:linear-gradient(145deg,#f4f8ff 0%,#9eb7d9 48%,#456a9b 100%);
+  color:#173d6c
+}
+.league-ranking-medal--top-twenty{
+  background:linear-gradient(145deg,#fff 0%,#cfdae8 52%,#8296b2 100%);
+  color:#304864
+}
+.league-leader-band--top-ten{background:rgba(86,126,181,.15);color:#55749f}
+.league-leader-band--top-twenty{background:rgba(133,154,183,.16);color:#74849a}
+@media(max-width:600px){
+  .league-ranking-visibility{grid-template-columns:minmax(0,1fr) auto;padding:12px}
+  .league-ranking-visibility>label small{max-width:38ch}
+}
+@media(prefers-reduced-motion:reduce){
+  #league-ranking-toggle,#league-ranking-toggle::before{transition:none}
+  .league-podium-avatar-medal,.league-ranking-medal{filter:none}
+}

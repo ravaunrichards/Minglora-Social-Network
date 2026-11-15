@@ -146,3 +146,13 @@ The current Admin Centre remains designated-owner/MFA restricted. The staff tabl
 - Preserved `Gifters Rewards.png`, all 50 original individual badges, all 11 detailed level panels, all 6 range sheets, both master-sheet files, existing badge display sizes, Coin thresholds, and server-confirmed progression calculations.
 - Updated the reference inventory from 71 to 70 source images and added regression tests that the deleted chart and route remain absent while the 50-level progression remains available.
 - No wallet, ledger, Coin threshold, admin award, or database data was modified. No deployment is claimed until verified.
+
+### Creator League Ranking Reference Parity — implementation checkpoint
+- Scope: Minglora Social Network only. Source reviewed: all 20 checked-in captures in `assets/League/` plus the League FAQ reference.
+- Branch: `feat/league-ranking-opt-in-rewards-20261115`.
+- PR: #408 — https://github.com/ravaunrichards/Minglora-Social-Network/pull/408 (open, not merged).
+- Reference behaviors preserved or added: daily/weekly regional class standings; Top 3 podium; distinct podium and Top 10 (positions 4–10) / Top 20 (positions 11–20) recognition; owner-controlled “Appear in Creator League rankings” setting; reward visibility for opted-in creators.
+- Added persisted `rankingEnabled` preference (default true for new and legacy profiles), authenticated `POST /api/leagues/ranking-preference`, public leaderboard filtering when opted out, accessible responsive toggle/status and rank badge labels, and PWA asset cache-busting.
+- Opting out hides public ranking placement only. It does not delete points, mutate daily placement scores, alter classes/fragments/Shields, or change League Match results. Creator League, League Matches, and LIVE Top Gifters remain separate systems.
+- Updated ranking preference/visibility docs and added unit coverage. Corrected the stale placement-threshold assertions and the division-isolation ranking fixture. Restored the existing service-worker cache naming convention while advancing the shell to `minglora-shell-v325-self-updating-1`.
+- Final branch CI run #43775844075: every ranking-specific test passed, including opt-in/default behavior, filtering, badge positions and service-worker asset checks. The overall repository test job remains red on unrelated existing API (expected D5 / actual D2), Creator League settlement timing (expected 0 / actual 2), and For You stylesheet-version expectations; the separate For You navigation job also failed its existing check. No production merge or deployment was performed.
