@@ -117,6 +117,7 @@ const pageErrors = [];
 const browserConsoleMessages = [];
 const httpFailures = [];
 const requestFailures = [];
+const requestCancellations = [];
 try {
   browser = await chromium.launch({
     channel: 'chromium',
@@ -134,6 +135,9 @@ try {
       const page = await context.newPage();
       const pageHttpFailures = [];
       const pageRequestFailures = [];
+      const modelPath = '/assets/gifts/catalog/' + gift.code + '.gltf';
+      const modelUrl = baseUrl + modelPath;
+      let successfulModelResponses = 0;
       try {
         await page.setViewportSize({ width: viewport.width, height: viewport.height });
         page.on('pageerror', error => pageErrors.push({
@@ -148,6 +152,9 @@ try {
           }
         });
         page.on('response', response => {
+          if (response.url() === modelUrl && response.status() === 200) {
+            successfulModelResponses++;
+          }
           if (response.status() >= 400) {
             const detail = {
               status: response.status(), url: response.url(),
@@ -164,7 +171,6 @@ try {
             gift: gift.name,
             viewport: viewport.name
           };
-          requestFailures.push(failure);
           pageRequestFailures.push(failure);
         });
 
@@ -193,7 +199,6 @@ try {
           document.querySelector('#viewport-name').textContent = viewportName + ' · isolated responsive render';
         }, { name: gift.name, viewportName: viewport.name });
 
-        const modelPath = '/assets/gifts/catalog/' + gift.code + '.gltf';
         const render = await page.evaluate(async ({ source, name }) => {
           const viewer = document.querySelector('#gift-model');
           const detail = await new Promise((resolve, reject) => {
@@ -268,8 +273,31 @@ try {
         await page.waitForLoadState('networkidle', { timeout: 15000 });
         assert.deepEqual(pageHttpFailures, [],
           gift.name + '/' + viewport.name + ' must not receive HTTP error responses');
-        assert.deepEqual(pageRequestFailures, [],
-          gift.name + '/' + viewport.name + ' must not have failed network requests');
+        assert.ok(successfulModelResponses > 0,
+          gift.name + '/' + viewport.name + ' must receive a successful HTTP 200 response for its exact GLTF URL');
+
+        // model-viewer may cancel a superseded duplicate fetch after the same model URL
+        // has already returned HTTP 200 and rendered visibly. Classify only that exact,
+        // proven-safe case as a browser cancellation; all other request failures remain fatal.
+        const provenModelCancellations = pageRequestFailures.filter(failure =>
+          failure.error === 'net::ERR_ABORTED' &&
+          failure.url === modelUrl &&
+          successfulModelResponses > 0 &&
+          render.loaded === true &&
+          render.modelIsVisible === true &&
+          render.visiblePixelSamples > 10
+        );
+        const unexpectedRequestFailures = pageRequestFailures.filter(failure =>
+          !provenModelCancellations.includes(failure)
+        );
+        requestCancellations.push(...provenModelCancellations.map(failure => ({
+          ...failure,
+          classification: 'superseded-model-fetch-after-successful-render',
+          successful_model_responses: successfulModelResponses
+        })));
+        requestFailures.push(...unexpectedRequestFailures);
+        assert.deepEqual(unexpectedRequestFailures, [],
+          gift.name + '/' + viewport.name + ' must not have failed asset or external network requests');
 
         const screenshot = path.join(outputDir, gift.code + '-' + viewport.name + '.png');
         await page.locator('#gift-model').screenshot({ path: screenshot, animations: 'disabled', timeout: 15000 });
@@ -302,6 +330,7 @@ try {
     page_errors: pageErrors,
     http_failures: httpFailures,
     request_failures: requestFailures,
+    request_cancellations: requestCancellations,
     checks: results
   };
   fs.writeFileSync(path.join(outputDir, 'render-report.json'), JSON.stringify(report, null, 2) + '\n');
@@ -315,6 +344,7 @@ try {
     page_errors: pageErrors.length,
     http_failures: httpFailures.length,
     request_failures: requestFailures.length,
+    request_cancellations: requestCancellations.length,
     output: 'artifacts/live-gift-model-render/'
   }, null, 2));
 } finally {
