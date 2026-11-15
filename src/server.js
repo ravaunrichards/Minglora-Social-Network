@@ -2883,6 +2883,18 @@ async function route(req, res) {
         return bot;
       };
 
+      const assertAIIdentityCanStartConversation = async bot => {
+        const identity = await runAIIdentityCommand('get', { identity_id: bot.identityId });
+        const lifecycleStatus = String(identity?.identity?.status || '').toLowerCase();
+        if (!['created','approved','active'].includes(lifecycleStatus)) {
+          throw Object.assign(
+            new Error('This AI identity is not cleared for a new conversation. Its lifecycle status is ' + (lifecycleStatus || 'unavailable') + '.'),
+            { status: 409 }
+          );
+        }
+        return identity;
+      };
+
       if (method === 'GET' && parts[0] === 'bots' && parts.length === 3 && parts[2] === 'conversations') {
         const bot = getOwnedChatBot(parts[1]);
         const listed = await runAIConversationCommand('list_sessions', { identity_id: bot.identityId });
@@ -2898,6 +2910,7 @@ async function route(req, res) {
 
       if (method === 'POST' && parts[0] === 'bots' && parts.length === 3 && parts[2] === 'conversations') {
         const bot = getOwnedChatBot(parts[1]);
+        await assertAIIdentityCanStartConversation(bot);
         const input = await body(req, 4000);
         if (!input || typeof input !== 'object' || Array.isArray(input) ||
             Object.keys(input).some(key => key !== 'title')) {
@@ -2913,6 +2926,7 @@ async function route(req, res) {
 
       if (method === 'POST' && parts[0] === 'bots' && parts.length === 3 && parts[2] === 'chat') {
         const bot = getOwnedChatBot(parts[1]);
+        await assertAIIdentityCanStartConversation(bot);
         const input = await body(req, 10000);
         if (!input || typeof input !== 'object' || Array.isArray(input) ||
             Object.keys(input).some(key => !['message','conversationId','requestKey'].includes(key))) {
