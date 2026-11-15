@@ -67,3 +67,14 @@ The daily and weekly leaderboard views remain available for standings and report
 ## Minglora presentation
 
 Minglora uses its own product name, visual identity, class badges, icons, sounds, and UI. The goal is comparable functional behavior and progression structure, not copying TikTok branding, logos, artwork, or proprietary assets.
+
+
+## Public ranking visibility and placement recognition
+
+Creator League has an account-level **Appear in Creator League rankings** switch in League Arena. It is owner-controlled through the authenticated ranking-preference endpoint; one member cannot change another member's preference. Existing and newly initialized profiles default to visible so this addition does not silently remove current members from standings.
+
+When enabled, the creator is eligible to appear in the public regional, class-specific daily and weekly standings and receive the matching placement recognition. The League details view shows a distinct podium treatment for positions 1–3, the top-10 award treatment for positions 4–10, and the top-20 award treatment for positions 11–20. These treatments are recreated with Minglora-owned CSS, labels and existing Minglora presentation assets; the read-only reference captures are not shipped as production UI assets.
+
+When disabled, the creator is omitted from public leaderboard rows and placement recognition. This is a visibility preference only: it does not delete earned points, change the creator's class/fragments/Shields, change gifts or wallet records, or alter the internal daily placement cohort. The creator can still browse other eligible members' standings. Switching visibility back on restores public eligibility using current ranking data; it does not restore an old placement.
+
+Ranking recognition is a presentation badge in League details, not a Coin credit, wallet balance, purchasable item, Gifter Level badge, or Match Rank. Creator League class progression, League Match results, and LIVE Top Gifters remain separate score tracks.
