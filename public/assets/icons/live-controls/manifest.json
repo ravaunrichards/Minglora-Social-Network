@@ -62,10 +62,26 @@
       "stateful": true
     },
     {
+      "id": "screen-stop",
+      "file": "/assets/icons/live-controls/screen-stop.svg",
+      "label": "stop screen sharing",
+      "stateful": true,
+      "state_role": "active",
+      "state_for": "screen"
+    },
+    {
       "id": "fullscreen",
       "file": "/assets/icons/live-controls/fullscreen.svg",
       "label": "fullscreen",
       "stateful": true
+    },
+    {
+      "id": "fullscreen-exit",
+      "file": "/assets/icons/live-controls/fullscreen-exit.svg",
+      "label": "exit fullscreen",
+      "stateful": true,
+      "state_role": "active",
+      "state_for": "fullscreen"
     },
     {
       "id": "gift",
@@ -102,22 +118,6 @@
       "file": "/assets/icons/live-controls/end.svg",
       "label": "end",
       "stateful": true
-    },
-    {
-      "id": "screen-stop",
-      "file": "/assets/icons/live-controls/screen-stop.svg",
-      "label": "stop screen sharing",
-      "stateful": true,
-      "state_role": "active",
-      "state_for": "screen"
-    },
-    {
-      "id": "fullscreen-exit",
-      "file": "/assets/icons/live-controls/fullscreen-exit.svg",
-      "label": "exit fullscreen",
-      "stateful": true,
-      "state_role": "active",
-      "state_for": "fullscreen"
     }
   ]
 }
