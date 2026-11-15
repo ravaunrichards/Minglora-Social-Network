@@ -1,3 +1,12 @@
+## Supplemental deployment log verification — 2026-11-14
+
+- Render deployment `dep-dbsetmnf3r2c73ec3csg` completed successfully for main commit `9526972669651ac79cda8145be882dd1e1abc962`.
+- Post-start logs show `Minglora listening on port 10000`, Supabase auth configured, durable Supabase persistence ready, and LiveKit configured/connected.
+- The available external browser inspection could not open the public Render URL or `/api/ai-network`; that tool limitation means public HTTP response and authenticated AI-owner acceptance are not independently verified. Do not infer service outage from that inspection error.
+- No further production writes or configuration changes were made by this supplemental check.
+
+---
+
 # Verified mission register — 2026-11-14 (read-only live reconciliation)
 
 **Scope:** Minglora Social Network AI Bot Network only.  
