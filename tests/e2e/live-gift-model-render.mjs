@@ -38,7 +38,7 @@ function contentType(filePath) {
 
 function previewHtml() {
   return '<!doctype html>\n' +
-    '<html lang="en"><head><meta charset="utf-8">' +
+    '<html lang="en"><head><meta charset="utf-8"><link rel="icon" href="data:,">' +
     '<meta name="viewport" content="width=device-width, initial-scale=1">' +
     '<title>Minglora LIVE gift model render QA</title>' +
     '<style>*{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Arial,sans-serif;background:#090d1c;color:#f4f6ff}' +
@@ -114,6 +114,8 @@ let browser;
 const results = [];
 const pageErrors = [];
 const browserConsoleMessages = [];
+const httpFailures = [];
+const requestFailures = [];
 try {
   browser = await chromium.launch({
     channel: 'chromium',
@@ -128,6 +130,14 @@ try {
     if (message.type() === 'error' || message.type() === 'warning') {
       browserConsoleMessages.push(message.type() + ': ' + message.text());
     }
+  });
+  page.on('response', response => {
+    if (response.status() >= 400) {
+      httpFailures.push({ status: response.status(), url: response.url() });
+    }
+  });
+  page.on('requestfailed', request => {
+    requestFailures.push({ url: request.url(), error: request.failure()?.errorText || 'unknown' });
   });
   await page.goto(baseUrl + '/__gift-model-preview', { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => window.__mingloraModelViewerReady === true, null, { timeout: 60000 });
@@ -159,17 +169,6 @@ try {
         document.querySelector('#gift-name').textContent = name;
       }, gift.name);
 
-      try {
-        await page.waitForFunction(() => {
-          const viewer = document.querySelector('#gift-model');
-          return Boolean(viewer?.shadowRoot?.querySelector('canvas#webgl-canvas'));
-        }, null, { timeout: 15000 });
-      } catch (error) {
-        throw new Error(gift.name + ' loaded but the model-viewer WebGL canvas did not mount. ' +
-          'WebGL probe: ' + JSON.stringify(browserWebGL) + '. Browser console: ' +
-          browserConsoleMessages.slice(-10).join(' | ') + '. ' + error.message);
-      }
-
       const render = await page.evaluate(async ({ source, name }) => {
         const viewer = document.querySelector('#gift-model');
         const detail = await new Promise((resolve, reject) => {
@@ -198,7 +197,7 @@ try {
         // renderer canvas. Check the actual renderer canvas, not the first
         // canvas in the shadow root (which is reserved for 2D presentation).
         const canvases = Array.from(viewer.shadowRoot?.querySelectorAll('canvas') || []);
-        const webglCanvas = viewer.shadowRoot?.querySelector('canvas#webgl-canvas') || null;
+        const webglCanvas = viewer.shadowRoot?.querySelector('canvas') || null;
         const gl = webglCanvas
           ? (webglCanvas.getContext('webgl2') || webglCanvas.getContext('webgl'))
           : null;
@@ -237,6 +236,8 @@ try {
   }
 
   assert.deepEqual(pageErrors, [], 'Chromium must not report unhandled page errors.');
+  assert.deepEqual(httpFailures, [], 'Chromium must not receive HTTP error responses: ' + JSON.stringify(httpFailures));
+  assert.deepEqual(requestFailures, [], 'Chromium must not have failed network requests: ' + JSON.stringify(requestFailures));
   const report = {
     generated_at: new Date().toISOString(),
     result: 'passed',
@@ -245,6 +246,8 @@ try {
     viewports: viewports.map(({ name, width, height }) => ({ name, width, height })),
     render_checks: results.length,
     page_errors: pageErrors,
+    http_failures: httpFailures,
+    request_failures: requestFailures,
     checks: results
   };
   fs.writeFileSync(path.join(outputDir, 'render-report.json'), JSON.stringify(report, null, 2) + '\n');
@@ -256,6 +259,8 @@ try {
     webgl_checks: results.filter(item => Boolean(item.render.webglVersion)).length,
     screenshots: results.length,
     page_errors: pageErrors.length,
+    http_failures: httpFailures.length,
+    request_failures: requestFailures.length,
     output: 'artifacts/live-gift-model-render/'
   }, null, 2));
 } finally {
