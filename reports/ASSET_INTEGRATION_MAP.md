@@ -219,3 +219,11 @@ The motion-index schema keeps the original `catalog_motion_preset` and the effec
 - The same server-confirmed gift mount reaches playRoyalLionsScepter through the existing sound dispatch. It synthesizes a filtered growl sweep, low impact, five-note ceremonial fanfare and high-frequency jewel shimmer using Web Audio.
 - The asset manifest records royal-lions-scepter-roar-and-regal-fanfare-v1 as gift-specific synthesis, not mastered audio. Sound opt-out remains respected. HTML references gift-effects.js?v=20261115-royal-lions-scepter-rise-1; service-worker shell v318 caches that exact version.
 - No API, production catalogue row, Coin price, wallet, transaction, payout or production activation is changed by this event-effect integration.
+
+
+## Keeper of Atlantis bespoke asset integration — 2026-11-15
+
+- The canonical source item keeper-of-atlantis-15000-mgl retains fantasy category, configured 15,000-Coin value, active flag and source animation preset cosmic-orbit.
+- The build-time generator routes only that exact gift code to assets/3d-assets/gift-models/keeper-of-atlantis-model.mjs and emits the canonical GLTF, keeper-of-atlantis-original-v1 primary SVG and transparent icon.
+- Gift Studio and LIVE continue using the existing canonical asset paths, model viewer, SVG fallback and server-confirmed gift event path. No gift transaction or route is added.
+- Manifest provenance and tests record the dedicated model source as design-review-pending; human visual/right review and physical-device QA are not claimed.
