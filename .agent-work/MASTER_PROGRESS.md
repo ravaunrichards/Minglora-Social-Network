@@ -146,3 +146,12 @@ The current Admin Centre remains designated-owner/MFA restricted. The staff tabl
 - Preserved `Gifters Rewards.png`, all 50 original individual badges, all 11 detailed level panels, all 6 range sheets, both master-sheet files, existing badge display sizes, Coin thresholds, and server-confirmed progression calculations.
 - Updated the reference inventory from 71 to 70 source images and added regression tests that the deleted chart and route remain absent while the 50-level progression remains available.
 - No wallet, ledger, Coin threshold, admin award, or database data was modified. No deployment is claimed until verified.
+
+
+### Uploaded Gifter badge progression artwork — 2026-11-15
+- Task branch: `feature/gifter-badge-progression-art-upload-20261115`.
+- Verified the newly uploaded `assets/Gifter Badge Progressions/Gifter Badge Progressions.jpg` is the original horizontal badge-tier artwork strip, not the removed Coin-threshold chart.
+- Added the explicit read-only image route `/assets/gifter-badge-progression-art.jpg` and placed it directly below the Gifter page heading, before personal progress.
+- The supplied image is displayed uncropped at its natural aspect ratio and included in the PWA shell cache; HTML asset versions and the shell cache were bumped.
+- Preserved every individual badge PNG, all detailed panels and range sheets, badge display sizing, level calculations, Coin thresholds, gift ledgers, wallets and database state. The removed `Gifters Level Up.png` chart remains absent.
+- Added regression coverage for the image source, route, responsive containment and PWA precache. Validation and deployment status are recorded in this task's PR and final checkpoint.
