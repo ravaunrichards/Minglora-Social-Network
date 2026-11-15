@@ -1602,7 +1602,17 @@
     const payload = {};
     let path = '';
     let identityIdForMedia = null;
-    if (kind === 'memory-settings') {
+    if (kind === 'bot-chat') {
+      const botId = form.dataset.botId || '';
+      if (!botId) throw new Error('Choose a valid linked AI bot before sending a message.');
+      const message = value('message');
+      if (!message || message.length > 4000) throw new Error('Enter a message between 1 and 4,000 characters.');
+      form.dataset.requestId = form.dataset.requestId || window.crypto.randomUUID();
+      path = '/bots/' + encodeURIComponent(botId) + '/chat';
+      payload.message = message;
+      payload.requestId = form.dataset.requestId;
+      if (form.dataset.conversationId) payload.conversationId = form.dataset.conversationId;
+    } else if (kind === 'memory-settings') {
       const identityId = form.dataset.identityId || '';
       if (!identityId) throw new Error('Choose an AI identity before updating its memory settings.');
       path = '/identities/' + encodeURIComponent(identityId) + '/memory/settings';
@@ -2196,6 +2206,11 @@
     const talentPatchKinds = ['performance-review-finalize','succession-status','training-course-status','training-enrollment-status'];
     const result = await request(path, { method: patchKinds.concat(talentPatchKinds).includes(kind) ? 'PATCH' : 'POST', body: payload });
     if (kind === 'provider-health-probe') state.providerHealth = result;
+    if (kind === 'bot-chat') {
+      state.botChat = result;
+      state.selectedBotChatId = result.bot?.id || form.dataset.botId || '';
+      state.botChatError = '';
+    }
     let uploadedMediaCount = 0;
     if (kind === 'identity-edit' && identityIdForMedia) {
       const selectedMedia = [
@@ -2228,6 +2243,8 @@
         ? 'Owner-managed AI memory entry saved with its retention expiry.'
     : kind === 'category'
       ? 'AI category ' + (categoryActionLabels[result.action] || 'changes saved') + ' and an audit event recorded.'
+      : kind === 'bot-chat'
+        ? 'AI bot replied. The conversation is private; the AI cannot publish or take external actions.'
       : kind === 'bot'
         ? 'AI bot saved and linked to relational identity ' + String(result.identity?.identity?.identity_id || '') + '. The identity is private and execution remains paused.'
       : kind === 'team'
@@ -2387,6 +2404,17 @@
         await loadAIDiscovery(state.discoveryFilters);
       }
       else if (action === 'delete-discovery-group') await request('/saved-groups/' + encodeURIComponent(id), { method:'DELETE' });
+      else if (action === 'bot-chat-open') {
+        const result = await request('/bots/' + encodeURIComponent(id) + '/conversation');
+        state.botChat = result;
+        state.selectedBotChatId = result.bot?.id || id;
+        state.botChatError = '';
+      }
+      else if (action === 'bot-chat-close') {
+        state.botChat = null;
+        state.selectedBotChatId = '';
+        state.botChatError = '';
+      }
       else if (action === 'bot-status') await request('/bots/' + encodeURIComponent(id) + '/status', { method:'PATCH', body:{ status:button.dataset.status } });
       else if (action === 'schedule-status') await request('/schedules/' + encodeURIComponent(id) + '/status', { method:'PATCH', body:{ status:button.dataset.status, reason:'Updated by the signed-in Minglora account.' } });
       else if (action === 'approval') await request('/approvals/' + encodeURIComponent(id), { method:'PATCH', body:{ decision:button.dataset.decision } });
@@ -2408,6 +2436,9 @@
           state.error = refreshError.message || error.message;
           paintSnapshot();
         }
+      } else if (action === 'bot-chat-open' || action === 'bot-chat-close') {
+        state.botChatError = error.message;
+        paintSnapshot();
       } else {
         state.error = error.message;
         paintSnapshot();
