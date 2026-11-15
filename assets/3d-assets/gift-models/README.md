@@ -78,3 +78,14 @@ The existing gift build generates both subject-specific transparent SVG artwork 
 - Output: generated bespoke GLTF, primary SVG and transparent icon
 - Geometry: crossed coral/lagoon gourd shakers, handles, grip rings, painted motifs and conch charm
 - Review: `design-review-pending`; no premium or licensing approval is implied
+
+
+## Royal Lions Scepter v1
+
+- Source: `royal-lions-scepter-model.mjs`
+- Target: canonical catalogue item `royal-lions-scepter-15000-mgl` (Royal Lions Scepter)
+- Output: generated gift GLTF, primary SVG and transparent icon
+- Geometry: forward-facing lion face, individually modelled radial mane locks, ears, muzzle, crown points, faceted sapphire and ruby details, fluted staff, spiral filigree, enamel grip and jeweled pommel
+- Materials: named PBR meshes for gold, mane, face, enamel, eyes and gemstones; geometry buffers are embedded for the existing model viewer
+- Review: `design-review-pending`; no premium, human visual, licensing or device approval is implied
+- Integration: the existing gift generator routes only the exact canonical gift code to this source; the configured catalogue value, publication flag, backend offers and transaction logic remain unchanged
