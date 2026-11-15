@@ -2934,6 +2934,10 @@ async function route(req, res) {
         if (!currentProviderStatus.manualDraftsAvailable) {
           throw Object.assign(new Error('OpenAI Creator Studio generation is not configured. Set OPENAI_API_KEY and OPENAI_DEFAULT_MODEL in the private Minglora server environment. No draft was generated.'), { status: 503 });
         }
+        const providerHealth = await probeOpenAIProvider();
+        if (!providerHealth.connected) {
+          throw Object.assign(new Error('OpenAI provider check failed (' + providerHealth.status + '): ' + providerHealth.note), { status: 503 });
+        }
         const started = startAICreatorJobGeneration(db, user.id, parts[1]);
         await saveStore();
         try {
