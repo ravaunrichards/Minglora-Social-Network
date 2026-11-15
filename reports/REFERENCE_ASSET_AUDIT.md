@@ -57,7 +57,7 @@ The path/size/hash inventory is complete for the 1,121 images under `assets/refe
 ## Preservation and source-of-truth rules
 
 - Keep `assets/reference/` and `assets/Gifts/` read-only.
-- TikTok/Facebook screenshots are layout/interaction references only. Do not copy their logos, proprietary artwork, text or branded icons.
+- Supplied platform screenshots are layout/interaction references only. Recreate their useful structure, geometry, spacing, states, generic non-brand labels and interaction behavior with original Minglora implementation. Exclude the source platforms' names, logos, wordmarks, trademarks, proprietary artwork and branded iconography; do not ship reference screenshots or extracted crops as product artwork.
 - Use them to guide Minglora-specific composition and control geometry.
 - Do not publish extracted catalogue crops from `assets/Artwork/` until rights and visual review are complete.
 - This continuation does not delete, move or overwrite any supplied reference file; its changes are limited to audit documentation.
@@ -83,3 +83,11 @@ A separate read-only metadata scanner is part of the LIVE asset workflow:
 - The new gift icon pipeline generates original subject-only SVG variants from the canonical repository gift catalogue. It does not overwrite, re-label, or silently approve supplied captures or extracted artwork.
 - Generated icons are stored at build/runtime under `public/assets/gifts/catalog/<gift-code>-icon.svg`; source references remain preserved and separate.
 - The generated icon provenance is recorded per gift in the LIVE asset manifest. Visual approval and licensing clearance remain outstanding for generated catalogue artwork; extracted reference artwork remains quarantined pending its own review.
+
+
+## Explicit source-brand exclusion — 2026-11-15
+
+- Source folder names and screenshot filenames are provenance metadata only; they must not become visible application branding.
+- Preserve platform-neutral text, content hierarchy, layout geometry, controls, interaction patterns, responsive behavior and relevant states when recreating the supplied references.
+- Exclude source-company names, logos, wordmarks, trademarks, distinctive branded marks and branded icon artwork from the Minglora application. Use Minglora identity and original assets instead.
+- Keep supplied screenshots and extracted reference crops read-only and separate from production asset paths. Generated artwork remains subject to human visual and rights review before publication.
