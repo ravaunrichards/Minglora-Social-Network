@@ -101,7 +101,8 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   const initialLeague = await request('/api/leagues/overview');
   assert.equal(initialLeague.status, 200, JSON.stringify(initialLeague.body));
   assert.equal(initialLeague.body.profile.leagueClass, 'D5');
-  assert.equal(initialLeague.body.profile.matchRank, 'Bronze III');
+  assert.equal(Object.hasOwn(initialLeague.body.profile, 'matchRank'), false);
+  assert.equal(Object.hasOwn(initialLeague.body.profile, 'matchRankPoints'), false);
 
   const weeklyLeagueLeaderboard = await request('/api/leagues/leaderboard?period=weekly&class=D5');
   assert.equal(weeklyLeagueLeaderboard.status, 200, JSON.stringify(weeklyLeagueLeaderboard.body));
