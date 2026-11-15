@@ -117,6 +117,7 @@ The isolated conversation-runtime branch adds a private, manually started text c
 
 - Bots can opt into the explicit `conversation` capability. An owner-only Chat control appears only for an owned, relationally linked bot with that capability and a non-paused/non-archived status.
 - The Node API inherits the designated Creator Hub administrator's signed-in session and verified MFA gate. Each conversation and bot lookup is owner-scoped; conversation rows and messages live in the private `ai_network` schema, not the public social feed or a separate database.
+- Conversation creation and new replies additionally verify the linked relational AI identity lifecycle; only `created`, `approved` and `active` identities are eligible. Restricted, suspended, archived, retired, proposed and under-review identities fail closed.
 - The OpenAI adapter performs input and output moderation, uses `store:false`, sends bounded history, includes memory summaries only when that identity's memory setting is explicitly enabled, and exposes no tools or external-action path.
 - A private service-role-only RPC provides idempotent request keys, short request leases, owner daily token reservations and measured usage. The browser never receives a provider credential.
 - Provider execution is still a manual, owner-started operation. No autonomous worker, scheduled bot, public post, member message, follow action, email, or account operation is enabled by this feature.
