@@ -102,6 +102,7 @@ export function getAIProviderStatus(env = process.env) {
   const credentialsPresent = configured || Boolean(providerCredentialStatus?.credentialsPresent);
   const adapterAvailable = Boolean(providerCredentialStatus?.adapterAvailable);
   const manualDraftsAvailable = provider === 'openai' && openAIKeyPresent && Boolean(openAIModel) && adapterAvailable;
+  const botChatAvailable = provider === 'openai' && openAIKeyPresent && Boolean(openAIModel) && adapterAvailable;
   return {
     configured,
     provider: configured ? provider : 'not_configured',
@@ -111,6 +112,7 @@ export function getAIProviderStatus(env = process.env) {
     providerCatalogue: listAIProviderCredentialStatuses(env),
     adapterAvailable,
     manualDraftsAvailable,
+    botChatAvailable,
     connected: false,
     executionEnabled: false,
     note: manualDraftsAvailable
