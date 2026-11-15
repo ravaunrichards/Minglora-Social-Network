@@ -145,17 +145,17 @@ export function createToucanModel() {
   leaf("Rainforest leaf lower", [-0.35, -0.67, 0.01], [-0.47, -0.84, 0.08], 0.082, "#14724a", "#5dbd66");
 
   // Compact black body, layered wings and the characteristic yellow breast bib.
-  ellipsoid("Toucan sculpted glossy-black body plumage", [0, -0.12, -0.12], [0.335, 0.435, 0.295], "#090f16", { roughness: 0.9, metallic: 0.005 });
-  ellipsoid("Toucan bright golden-yellow throat and chest bib", [0, 0.055, 0.115], [0.245, 0.355, 0.19], "#e9bc2f", { roughness: 0.88, metallic: 0.0 });
+  ellipsoid("Toucan sculpted glossy-black body plumage", [0, -0.12, -0.12], [0.335, 0.435, 0.295], "#030609", { roughness: 0.98, metallic: 0.0 });
+  ellipsoid("Toucan bright golden-yellow throat and chest bib", [0, 0.055, 0.115], [0.245, 0.355, 0.19], "#d5a51f", { roughness: 0.92, metallic: 0.0 });
   ellipsoid("Toucan cream lower breast transition", [0, -0.235, 0.16], [0.202, 0.19, 0.115], "#f4e5b2", { roughness: 0.88 });
   ellipsoid("Toucan scarlet undertail coverts", [0, -0.43, -0.245], [0.205, 0.11, 0.105], "#d63c36", { roughness: 0.72 });
   ellipsoid("Toucan upper rump white accent", [0, -0.36, -0.34], [0.16, 0.09, 0.075], "#eee9d9", { roughness: 0.82 });
 
   for (const side of [-1, 1]) {
     ellipsoid(side < 0 ? "Toucan left folded wing" : "Toucan right folded wing",
-      [side * 0.255, -0.085, -0.065], [0.125, 0.285, 0.245], "#0e151d", { roughness: 0.84, metallic: 0.005 });
+      [side * 0.255, -0.085, -0.065], [0.125, 0.285, 0.245], "#060a10", { roughness: 0.96, metallic: 0.0 });
     ellipsoid(side < 0 ? "Toucan left wing coverts" : "Toucan right wing coverts",
-      [side * 0.315, -0.105, 0.055], [0.075, 0.205, 0.17], "#1c3440", { roughness: 0.82, metallic: 0.005 });
+      [side * 0.315, -0.105, 0.055], [0.075, 0.205, 0.17], "#12232e", { roughness: 0.9, metallic: 0.0 });
     for (let feather = 0; feather < 5; feather++) {
       const spread = feather - 2;
       tube(
@@ -184,7 +184,7 @@ export function createToucanModel() {
   tube("Toucan tail red feather base", [[-0.12, -0.4, -0.32], [0, -0.48, -0.37], [0.12, -0.4, -0.32]], 0.026, "#cf3437", { roughness: 0.68 });
 
   // Head and face: black crown, yellow-green facial mask and blue-green bare eye skin.
-  ellipsoid("Toucan rounded black crown and head", [0, 0.455, -0.035], [0.265, 0.285, 0.255], "#080f16", { roughness: 0.88, metallic: 0.005 });
+  ellipsoid("Toucan rounded black crown and head", [0, 0.455, -0.035], [0.265, 0.285, 0.255], "#03070b", { roughness: 0.98, metallic: 0.0 });
   ellipsoid("Toucan yellow-green cheek mask", [0, 0.41, 0.145], [0.205, 0.17, 0.112], "#e7dc53", { roughness: 0.78 });
   for (const side of [-1, 1]) {
     ellipsoid(side < 0 ? "Toucan left turquoise eye skin" : "Toucan right turquoise eye skin",
@@ -206,6 +206,16 @@ export function createToucanModel() {
     [0, 0.425, 0.18], [0, 0.40, 0.36], [0, 0.355, 0.54], [0, 0.315, 0.68]
   ], [0.072, 0.095, 0.075, 0.006], "#23a8bc", { sides: 18, roughness: 0.4, metallic: 0.025 });
   ellipsoid("Toucan orange bill blaze", [0, 0.555, 0.49], [0.104, 0.053, 0.19], "#ef762c", { roughness: 0.36 });
+  // Raised blaze stripe follows the camera-facing keratin surface; the inset colour
+  // region above remains as its underlying enamel layer.
+  tube("Toucan exposed orange upper-bill blaze stripe", [
+    [-0.108, 0.60, 0.295],
+    [-0.128, 0.615, 0.385],
+    [-0.135, 0.595, 0.475],
+    [-0.12, 0.555, 0.56],
+    [-0.09, 0.51, 0.635]
+  ], 0.026, "#f06b27", { roughness: 0.58, metallic: 0.0 });
+
   ellipsoid("Toucan red upper bill tip", [0, 0.365, 0.755], [0.065, 0.055, 0.06], "#d93631", { roughness: 0.32 });
   ellipsoid("Toucan deep-blue lower bill tip", [0, 0.315, 0.665], [0.061, 0.026, 0.065], "#1687b7", { roughness: 0.36 });
   tube("Toucan upper bill ridge highlight", [
@@ -332,7 +342,7 @@ export function createToucanModel() {
       extras: {
         mingloraAssetId: "gift-toucan-3d-v1",
         source: "assets/3d-assets/gift-models/toucan-model.mjs",
-        artDirection: "original three-quarter-profile keel-billed rainforest toucan with matte deep-black plumage, golden-yellow throat bib, turquoise eye skin, oversized horizontally presented banana-curved lime bill with orange blaze and red-blue tips, layered wings, scarlet undertail, zygodactyl feet and natural perch",
+        artDirection: "original three-quarter-profile keel-billed rainforest toucan with near-black matte plumage, rich golden-yellow throat bib, turquoise eye skin with an exposed orange bill blaze stripe, oversized horizontally presented banana-curved lime bill with orange blaze and red-blue tips, layered wings, scarlet undertail, zygodactyl feet and natural perch",
         reviewStatus: "design-review-pending"
       }
     },
