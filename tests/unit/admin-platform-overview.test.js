@@ -82,17 +82,18 @@ test("Only the designated Creator Hub admin identity can receive the Admin Centr
 });
 
 test("App shell and service worker load the restored Admin Centre navigation assets", () => {
-  const version = "20261110-admin-centre-seven-pages-1";
+  const cssVersion = "20261110-admin-centre-seven-pages-1";
+  const scriptVersion = "20261115-admin-ai-bot-centre-entry-1";
   const sidebarVersion = "20261115-ai-admin-only-1";
-  assert.ok(index.includes("/admin-centre.css?v=" + version));
-  assert.ok(index.includes("/admin-centre.js?v=" + version));
+  assert.ok(index.includes("/admin-centre.css?v=" + cssVersion));
+  assert.ok(index.includes("/admin-centre.js?v=" + scriptVersion));
   const appScript = index.match(/<script\b[^>]*src="(\/app\.js\?v=[^"]+)"/)?.[1] || '';
   assert.ok(appScript, 'the current application script must be referenced by the app shell');
   assert.ok(serviceWorker.includes(appScript), 'the service worker must precache the exact application script URL');
   assert.ok(index.includes("/sidebar-features.js?v=" + sidebarVersion));
   const cacheName = serviceWorker.match(/const CACHE_NAME='([^']+)'/)?.[1] || '';
   assert.ok(/^minglora-shell-v\d+-[a-z0-9-]+$/.test(cacheName), 'the shell cache uses a versioned cache name');
-  assert.ok(serviceWorker.includes("/admin-centre.css?v=" + version));
-  assert.ok(serviceWorker.includes("/admin-centre.js?v=" + version));
+  assert.ok(serviceWorker.includes("/admin-centre.css?v=" + cssVersion));
+  assert.ok(serviceWorker.includes("/admin-centre.js?v=" + scriptVersion));
   assert.ok(serviceWorker.includes("/sidebar-features.js?v=" + sidebarVersion));
 });
