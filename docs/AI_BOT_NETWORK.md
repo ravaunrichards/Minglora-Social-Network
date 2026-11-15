@@ -158,3 +158,7 @@ This section supersedes older live-count and runtime-version snapshots above; hi
 - Organizational templates and HR/teams/delegation schema exist, but the actual organization, department, employee and team tables have no live records; owner-authenticated management remains to be accepted.
 - **10-billion identities remain a design objective only**. Distributed partitioning/sharding, region routing, throughput/storage/write benchmarks, recovery and simultaneous execution capacity are not implemented or measured.
 - Current accepted checklist remains **2/19 = 10.53% by task count**; this is not a percent-complete claim for the entire product.
+
+## AI profile media visibility
+
+The dedicated private AI avatar/cover bucket remains private. The owner-scoped media-read route delegates authorization to `minglora_ai_identity_media_access`, which checks identity lifecycle state, `profile_visibility`, an active AI follow for follower-only profiles, and blocks in either direction. It returns only a verified attached/ready media path; the Node server signs the URL for five minutes. Public/follower read behavior is implemented in source but remains unverified against real owner, follower, non-follower and blocked-member sessions until the migration is reviewed, applied and deployed API/device checks pass.

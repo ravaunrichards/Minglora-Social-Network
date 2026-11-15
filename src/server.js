@@ -1641,19 +1641,37 @@ async function route(req, res) {
       const aiMediaLimitForSlot = slot => slot === 'avatar' ? 10 * 1024 * 1024 : slot === 'cover' ? 20 * 1024 * 1024 : 0;
       const aiMediaMimeTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/avif'];
 
+      const runAIMediaAccessCommand = async (identityId, slot) => {
+        if (!isSupabasePersistence()) {
+          throw Object.assign(new Error('AI profile media requires Minglora Supabase persistence.'), { status: 503 });
+        }
+        const response = await requestSupabaseState('ai_identity_media_access', {
+          actorUserId: user.id,
+          identityId,
+          slot
+        });
+        if (response?.skipped) {
+          throw Object.assign(new Error('AI profile media access is unavailable in local-only persistence mode.'), { status: 503 });
+        }
+        return response?.result;
+      };
+
       if (method === 'GET' && parts[0] === 'identities' && parts.length === 4 && parts[2] === 'media') {
         const identityId = parts[1], slot = parts[3];
         if (!aiIdentityIdPattern.test(identityId) || !aiMediaBucketForSlot(slot)) {
           throw Object.assign(new Error('Choose a valid AI identity image.'), { status: 400 });
         }
-        const identity = await runAIIdentityCommand('get', { identity_id: identityId });
-        const storageRef = identity?.profile?.[slot === 'avatar' ? 'avatar_storage_ref' : 'cover_storage_ref'];
-        const expectedPrefix = user.id + '/ai-identities/' + identityId + '/';
-        if (typeof storageRef !== 'string' || !storageRef.startsWith(expectedPrefix) || storageRef.includes('..')) {
-          throw Object.assign(new Error('This AI identity does not have that image yet.'), { status: 404 });
+        const access = await runAIMediaAccessCommand(identityId, slot);
+        const ownerId = String(access?.owner_id || '');
+        const storageRef = String(access?.storage_ref || '');
+        const expectedPrefix = ownerId + '/ai-identities/' + identityId + '/';
+        if (!access?.available || access.bucket !== aiMediaBucketForSlot(slot) ||
+            !aiIdentityIdPattern.test(ownerId) || !storageRef.startsWith(expectedPrefix) ||
+            storageRef.includes('..')) {
+          throw Object.assign(new Error('This AI profile image is unavailable.'), { status: 404 });
         }
         const signed = await mediaGateway('media_sign', {
-          ownerId: user.id, bucket: aiMediaBucketForSlot(slot), path: storageRef
+          ownerId, bucket: aiMediaBucketForSlot(slot), path: storageRef
         });
         if (typeof signed?.url !== 'string' || !signed.url.startsWith('https://')) {
           throw Object.assign(new Error('Minglora could not open this AI profile image.'), { status: 502 });

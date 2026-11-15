@@ -8,6 +8,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const read = path => readFileSync(resolve(root, path), 'utf8');
 const migration = read('supabase/migrations/20261114033000_minglora_ai_identity_profile_media.sql');
 const privateMediaMigration = read('supabase/migrations/20261114130752_minglora_ai_private_profile_media.sql');
+const mediaVisibilityMigration = read('supabase/migrations/20261115010000_minglora_ai_identity_media_visibility.sql');
 const runtime = read('supabase/functions/minglora-runtime-state/index.ts');
 const server = read('src/server.js');
 const app = read('public/app.js');
@@ -64,7 +65,7 @@ test('AI media completion validates the nested owner path and never updates the 
   assert.match(handler, /expectedFolder/);
   assert.match(handler, /ai_identity:/);
   assert.match(handler, /AI_PROFILE_MEDIA_BUCKET/);
-  assert.match(handler, /createSignedUrl\(objectPath,3600\)/);
+  assert.match(handler, /createSignedUrl\(objectPath,300\)/);
   assert.match(handler, /minglora_ai_identity_profile_media_update/);
   assert.match(handler, /if\(aiIdentityRequested\)[\s\S]*else if\(slot==="avatar"\|\|slot==="cover"\)/);
   assert.match(handler, /\.from\("profiles"\)/);
@@ -84,6 +85,30 @@ test('authenticated server routes expose only owner-scoped AI identity media and
   assert.match(route, /minglora-ai-profile-media/);
   assert.match(route, /asset\.url = asset\.aiIdentityId \? null : completed\.url/);
   assert.match(server, /if\(asset\.url&&!asset\.aiIdentityId\)return asset\.url/);
+});
+
+test('AI profile media reads apply profile visibility, active follow approval and mutual block checks in a service-only RPC', () => {
+  assert.match(mediaVisibilityMigration, /security invoker/i);
+  assert.match(mediaVisibilityMigration, /set search_path = ''/i);
+  assert.match(mediaVisibilityMigration, /current_user <> 'service_role'/i);
+  assert.match(mediaVisibilityMigration, /profile_visibility/);
+  assert.match(mediaVisibilityMigration, /follow_status = 'active'/);
+  assert.match(mediaVisibilityMigration, /public\.user_blocks/);
+  assert.match(mediaVisibilityMigration, /b\.blocker_id = p_actor_user_id/);
+  assert.match(mediaVisibilityMigration, /b\.blocker_id = v_owner_user_id/);
+  assert.match(mediaVisibilityMigration, /asset_status = 'attached'/);
+  assert.match(mediaVisibilityMigration, /processing_status = 'ready'/);
+  assert.match(mediaVisibilityMigration, /revoke all on function public\.minglora_ai_identity_media_access[\s\S]*from public, anon, authenticated/i);
+  assert.match(mediaVisibilityMigration, /grant execute on function public\.minglora_ai_identity_media_access[\s\S]*to service_role/i);
+  assert.match(runtime, /"ai_identity_media_access"/);
+  assert.match(runtime, /admin\.rpc\("minglora_ai_identity_media_access"/);
+  assert.match(runtime, /AI_PROFILE_MEDIA_BUCKET\?300:3600/);
+  const start = server.indexOf("if (p === '/api/ai-network' || p.startsWith('/api/ai-network/'))");
+  const end = server.indexOf("if (method === 'POST' && p === '/api/webhooks/paypal')", start);
+  const route = server.slice(start, end);
+  assert.match(route, /runAIMediaAccessCommand\(identityId, slot\)/);
+  assert.match(route, /requestSupabaseState\('ai_identity_media_access'/);
+  assert.match(route, /ownerId, bucket: aiMediaBucketForSlot\(slot\), path: storageRef/);
 });
 
 test('shared uploader preserves regular media behavior and routes AI images through AI endpoints', () => {
