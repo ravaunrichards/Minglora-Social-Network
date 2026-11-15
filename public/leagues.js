@@ -307,7 +307,7 @@
     if (item.type === "creator_promotion") return "Promoted from " + (details.from || "a lower class") + " to " + (details.to || "a new class");
     if (item.type === "creator_demotion") return "Moved from " + (details.from || "a higher class") + " to " + (details.to || "a lower class");
     if (item.type === "league_shield_used") return "A League Shield protected your class";
-    if (item.type === "match_rank_change") return "Match rank changed from " + (details.from || "—") + " to " + (details.to || "—");
+    if (item.type === "match_rank_change") return "A League Match result was recorded";
     if (item.type === "match_completed") return "League Match completed: " + (details.result || "result recorded");
     if (item.type === "match_challenge_received") return "You received a League Match challenge";
     if (item.type === "match_challenge_sent") return "You sent a League Match challenge";
