@@ -12,8 +12,8 @@ const compact = fs.readFileSync(path.join(root, 'public/live-tiktok-compact.css'
 
 test('LIVE compact presentation is scoped to the active room and loaded after existing layout styles', () => {
   assert.match(compact, /body:has\(#live-player-shell\)/);
-  assert.ok(index.includes('/live-tiktok-compact.css?v=20261111-live-tiktok-compact-1'));
-  assert.ok(worker.includes("SHELL.push('/live-tiktok-compact.css?v=20261111-live-tiktok-compact-1')"));
+  assert.ok(index.includes('/live-tiktok-compact.css?v=20261115-nine-guest-layout-reference-parity-1'));
+  assert.ok(worker.includes("SHELL.push('/live-tiktok-compact.css?v=20261115-nine-guest-layout-reference-parity-1')"));
 });
 
 test('Phones and portrait tablets use one immersive stage with overlays, not stacked video and chat rows', () => {
@@ -44,16 +44,18 @@ test('All existing LIVE actions, chat, guest management and role-specific behavi
   assert.match(app, /topic:"minglora-live-layout"/);
 });
 
-test('The seven established screen layout IDs remain intact and guest-box layouts stay separate', () => {
-  for (const layout of [
+test('The nine supplied guest layout IDs use one selector and one live layout attribute', () => {
+  const registry=app.match(/const LIVE_GUEST_LAYOUT_OPTIONS=Object\.freeze\(\[([\s\S]*?)\]\);/);
+  assert.ok(registry);
+  assert.deepEqual([...registry[1].matchAll(/value:'([^']+)'/g)].map(match=>match[1]),[
     'full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel',
-    'side-by-side','spotlight'
-  ]) assert.ok(app.includes("value:'" + layout + "'"), 'missing saved screen layout ID: ' + layout);
-  assert.ok(app.includes("value:'roundtable-1'"));
-  assert.ok(app.includes("value:'roundtable-2'"));
-  assert.match(app,/const LIVE_GUEST_LAYOUT_OPTIONS=Object\.freeze/);
-  assert.match(app,/data-live-guest-layout='"\+option\.value\+"'/);
-  assert.match(compact, /#live-guest-layout\.live-guest-layout/);
+    'side-by-side','spotlight','roundtable-1','roundtable-2'
+  ]);
+  assert.equal((app.match(/id='live-layout-options'/g)||[]).length,1);
+  assert.doesNotMatch(app,/live-guest-layout-options|data-live-guest-layout=/);
+  assert.match(compact,/FINAL NINE GUEST LAYOUTS/);
+  assert.match(compact,/data-live-layout="roundtable-1"/);
+  assert.match(compact,/data-live-layout="roundtable-2"/);
 });
 
 test('Compact tools remain usable as a bottom sheet on touch devices and respect reduced motion', () => {

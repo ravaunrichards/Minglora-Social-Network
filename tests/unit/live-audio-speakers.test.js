@@ -11,6 +11,7 @@ const styles = read('public/styles.css');
 const server = read('src/server.js');
 const edge = read('supabase/functions/minglora-runtime-state/index.ts');
 const fit = read('public/live-room-fit.css');
+const guestLayouts = read('public/live-tiktok-compact.css');
 
 test('Audio LIVE shows connected microphone publishers even when nobody is actively speaking', () => {
   assert.match(app, /function participantHasLiveAudio\(/);
@@ -140,19 +141,19 @@ test('Audio LIVE defines a real rounded grid template for each of the seven scre
   assert.match(fit, /\.live-audio-stage #live-guest-layout\.audio-guest-layout/);
 });
 
-test('Seven Audio LIVE screen layouts and two guest-box layouts persist and synchronize independently', () => {
-  for (const layout of AUDIO_LIVE_LAYOUTS) {
-    assert.ok(server.includes("'" + layout + "'"), layout + ' must be accepted by the server');
-    assert.ok(app.includes("value:'" + layout + "'"), layout + ' must be available in the selector');
+test('All nine Audio LIVE guest presets share the unified layout state and synchronization', () => {
+  const layouts=['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight','roundtable-1','roundtable-2'];
+  const registry=app.match(/const LIVE_GUEST_LAYOUT_OPTIONS=Object\.freeze\(\[([\s\S]*?)\]\);/);
+  assert.ok(registry);
+  assert.deepEqual([...registry[1].matchAll(/value:'([^']+)'/g)].map(match=>match[1]),layouts);
+  for(const layout of layouts){
+    assert.ok(server.includes("'" + layout + "'"),layout+' must be accepted by the server');
+    assert.ok(guestLayouts.includes('data-live-layout="'+layout+'"'),layout+' must have its own grid rules');
   }
-  assert.match(server, /LIVE_SCREEN_LAYOUTS\.includes\(layout\)/);
-  assert.match(server, /LIVE_GUEST_LAYOUTS\.includes\(layout\)/);
-  assert.ok(app.includes("value:'roundtable-1'"));
-  assert.ok(app.includes("value:'roundtable-2'"));
-  assert.match(app, /data-live-guest-layout=.*option\.value/);
-  assert.ok(fit.includes('data-live-guest-layout="roundtable-1"'));
-  assert.ok(fit.includes('data-live-guest-layout="roundtable-2"'));
-  assert.match(server, /session\.liveLayout = layout/);
-  assert.match(app, /topic:"minglora-live-layout"/);
-  assert.match(app, /applyLiveScreenLayout\(nextLayout\)/);
+  assert.match(server,/LIVE_SCREEN_LAYOUTS\.includes\(layout\)/);
+  assert.match(server,/session\.liveLayout = layout/);
+  assert.equal((app.match(/id='live-layout-options'/g)||[]).length,1);
+  assert.doesNotMatch(app,/live-guest-layout-options|data-live-guest-layout=/);
+  assert.match(app,/topic:"minglora-live-layout"/);
+  assert.match(app,/applyLiveScreenLayout\(nextLayout\)/);
 });

@@ -9,38 +9,32 @@ const app = fs.readFileSync(path.join(root, 'public/app.js'), 'utf8');
 const server = fs.readFileSync(path.join(root, 'src/server.js'), 'utf8');
 const styles = fs.readFileSync(path.join(root, 'public/styles.css'), 'utf8');
 const compact = fs.readFileSync(path.join(root, 'public/live-room-compact.css'), 'utf8');
+const tiktok = fs.readFileSync(path.join(root, 'public/live-tiktok-compact.css'), 'utf8');
 const liveSettings = fs.readFileSync(path.join(root, 'backend/modules/live/settings.js'), 'utf8');
 
-test('LIVE has seven host-selectable screen layouts with a safe default', () => {
-  assert.ok(app.includes('const LIVE_SCREEN_LAYOUT_OPTIONS=Object.freeze'), 'missing layout preset registry');
-  for (const layout of ['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight']) {
-    assert.ok(app.includes("value:'" + layout + "'"), 'missing ' + layout + ' layout');
-    assert.ok(styles.includes('data-live-layout="' + layout + '"'), 'missing responsive layout rules for ' + layout);
-  }
-  assert.ok(app.includes('normalizeLiveScreenLayout(session.liveLayout)'), 'session must restore the saved host layout');
-  assert.ok(server.includes("liveLayout: 'full-screen'"), 'new sessions must start in Full Screen with guest seats visible');
-  assert.ok(app.includes("let activeLiveScreenLayout='full-screen'"), 'client must default to Full Screen');
-  assert.ok(app.includes("String(value||'full-screen')"), 'missing saved layout must fall back to Full Screen');
+test('LIVE exposes all nine supplied guest layouts in one host selector', () => {
+  const match=app.match(/const LIVE_GUEST_LAYOUT_OPTIONS=Object\.freeze\(\[([\s\S]*?)\]\);/);
+  assert.ok(match,'missing canonical guest layout registry');
+  const expected=['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight','roundtable-1','roundtable-2'];
+  assert.deepEqual([...match[1].matchAll(/value:'([^']+)'/g)].map(item=>item[1]),expected);
+  assert.equal((app.match(/id='live-layout-options'/g)||[]).length,1);
+  assert.doesNotMatch(app,/live-guest-layout-options/);
+  assert.match(app,/aria-label='Choose LIVE guest layout'/);
+  assert.match(app,/let activeLiveScreenLayout='full-screen'/);
+  assert.match(app,/normalizeLiveScreenLayout\(session\.liveLayout/);
+  assert.match(server,/LIVE_SCREEN_LAYOUTS=\['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight','roundtable-1','roundtable-2'\]/);
 });
 
-test('LIVE guest-box layouts are separate, persisted and synchronized independently', () => {
-  for (const layout of ['roundtable-1','roundtable-2']) {
-    assert.ok(app.includes("value:'" + layout + "'"), layout + ' must be available as a guest-box layout');
-
-    assert.ok(styles.includes('data-live-guest-layout="' + layout + '"'), layout + ' guest-box styles must use their own attribute');
-    assert.ok(server.includes("'" + layout + "'"));
-  }
-  assert.match(app, /data-live-guest-layout=.*option\.value/);
-  assert.match(server, /LIVE_GUEST_LAYOUTS=\['roundtable-1','roundtable-2'\]/);
-  assert.match(server, /liveGuestLayout: 'roundtable-1'/);
-  assert.match(server, /const liveGuestLayoutMatch = p\.match/);
-  assert.match(server, /Only the LIVE host can change the guest-box layout/);
-  assert.match(server, /LIVE_GUEST_LAYOUTS\.includes\(layout\)/);
-  assert.match(server, /session\.liveGuestLayout = layout/);
-  assert.match(app, /topic:"minglora-live-guest-layout"/);
-  assert.match(app, /applyLiveGuestLayout\(nextLayout\)/);
+test('All nine guest layout choices use one host-authorized endpoint and realtime selection', () => {
+  assert.match(app,/data-live-screen-layout=/);
+  assert.match(app,/\/layout",\{method:"PATCH"/);
+  assert.match(app,/topic:"minglora-live-layout"/);
+  assert.match(app,/type:"minglora\.live\.layout"/);
+  assert.match(server,/Only the LIVE host can change the screen layout/);
+  assert.match(server,/LIVE_SCREEN_LAYOUTS\.includes\(layout\)/);
+  assert.match(app,/function applyLiveGuestLayout\(value\)\{applyLiveScreenLayout\(value\);\}/);
+  assert.match(server,/Only the LIVE host can change the guest-box layout/);
 });
-
 test('Only the signed-in LIVE host can persist a valid layout choice', () => {
   assert.match(server, /const LIVE_SCREEN_LAYOUTS=/);
   assert.match(server, /const liveLayoutMatch = p\.match/);
@@ -167,11 +161,27 @@ test('Every Full Screen LIVE control icon has its expected working event handler
   assert.match(app, /typeof navigator\.mediaDevices\?\.getDisplayMedia!=="function"/);
 });;
 
+
+test('The nine supplied guest arrangements have distinct reference-matched grid geometry',()=>{
+  const contract=tiktok.slice(tiktok.indexOf('/* FINAL NINE GUEST LAYOUTS'));
+  const layouts=['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight','roundtable-1','roundtable-2'];
+  for(const layout of layouts)assert.ok(contract.includes('data-live-layout="'+layout+'"'),layout+' geometry missing');
+  assert.match(contract,/fluid-panel[\s\S]*?position:absolute/);
+  assert.match(contract,/fluid-grid[\s\S]*?grid-template-columns:minmax\(0,2\.05fr\)/);
+  assert.match(contract,/fixed-grid[\s\S]*?grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
+  assert.match(contract,/fixed-panel[\s\S]*?grid-template-columns:minmax\(0,2fr\)/);
+  assert.match(contract,/side-by-side[\s\S]*?grid-column:1\/3/);
+  assert.match(contract,/spotlight[\s\S]*?grid-column:1\/\-1/);
+  assert.match(contract,/roundtable-1[\s\S]*?grid-column:2!important/);
+  assert.match(contract,/roundtable-2[\s\S]*?grid-column:2\/4/);
+  assert.doesNotMatch(contract,/data-live-guest-layout/);
+});
+
 test('Full Screen has its own expand icon with no guest panels; Fluid Panel keeps its panel icon', () => {
   assert.ok(app.includes("value:'full-screen',label:'Full Screen',icon:'fullscreen'"));
-  assert.ok(app.includes("value:'fluid-panel',label:'Fluid Panel',icon:'featured'"));
+  assert.ok(app.includes("value:'fluid-panel',label:'Fluid Panel',icon:'fluidPanel'"));
   const iconMap=app.slice(app.indexOf('function liveLayoutIcon'),app.indexOf('function applyLiveScreenLayout'));
-  const fullScreenIcon=iconMap.split('fullscreen:')[1].split(',match:')[0];
+  const fullScreenIcon=iconMap.split('fullscreen:')[1].split(',fluidPanel:')[0];
   assert.ok(fullScreenIcon.includes("M8 3H3v5 M16 3h5v5 M21 16v5h-5 M8 21H3v-5"));
   assert.doesNotMatch(fullScreenIcon, /<rect/);
 });
