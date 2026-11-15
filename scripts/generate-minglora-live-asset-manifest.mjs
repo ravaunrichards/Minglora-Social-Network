@@ -84,6 +84,13 @@ const GIFT_SPECIFIC_WEB_AUDIO_DESIGNS = Object.freeze({
     layers: ["filtered_petal_rustle_sweep", "five_note_soft_celesta_arpeggio_523_659_784_1047_1319hz", "seeded_stereo_note_placement"],
     status: "gift_specific_synthesized_sound_not_mastered_recording"
   }),
+  "keeper-of-atlantis-15000-mgl": Object.freeze({
+    sound_design_id: "keeper-of-atlantis-deep-surge-and-trident-bells-v1",
+    sound_profile_scope: "gift_specific_web_audio_synthesis",
+    format: "Web Audio API synthesized underwater filtered wave-noise swell, sub-bass tidal impact, five-note glassy trident bell accent and high-frequency bubble shimmer",
+    layers: ["underwater_bandpass_wave_surge", "sub_bass_tidal_impact", "five_note_trident_bell_accent_196_294_440_587_880hz", "highpass_bubble_shimmer"],
+    status: "gift_specific_synthesized_sound_not_mastered_recording"
+  }),
 
 });
 
