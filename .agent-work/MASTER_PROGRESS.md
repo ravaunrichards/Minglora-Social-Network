@@ -155,3 +155,6 @@ The current Admin Centre remains designated-owner/MFA restricted. The staff tabl
 - The supplied image is displayed uncropped at its natural aspect ratio and included in the PWA shell cache; HTML asset versions and the shell cache were bumped.
 - Preserved every individual badge PNG, all detailed panels and range sheets, badge display sizing, level calculations, Coin thresholds, gift ledgers, wallets and database state. The removed `Gifters Level Up.png` chart remains absent.
 - Added regression coverage for the image source, route, responsive containment and PWA precache. Validation and deployment status are recorded in this task's PR and final checkpoint.
+
+- PR merge-preparation correction: restored a byte-identical copy of the uploaded source at `public/assets/gifter-badge-progression-art.jpg` so the image is included in the current `main` merge diff even though a later main commit removed the earlier temporary source-folder copy. The server route now reads this deployable public file.
+- Fixed the PWA shell to precache both current Gifter progression CSS and JS URLs (not only the image) after CI found stale shell references. Updated the source-file test to verify the public uploaded image path.
