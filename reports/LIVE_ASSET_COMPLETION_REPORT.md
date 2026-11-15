@@ -355,3 +355,13 @@ The browser captures establish that all nine bespoke models load and remain visi
 - Expanded the Chromium model matrix to include Baseball and the existing Royal Lions Scepter alongside the original nine models, across desktop, tablet and mobile.
 - Validation: the initial CI run exposed an existing assertion requiring seam signature `stroke="#d84854" stroke-width="12"`; the SVG seam was corrected to match it while retaining the layered red seam treatment. Latest-head rerun is pending.
 - Release boundary: the model remains `design-review-pending`; human art review, rights clearance, mastered individual gift audio/animation and physical-device acceptance remain outstanding. No database, wallet, price, transaction or deployment operation occurred.
+
+
+## Carnival Music original Caribbean steelpan model — 2026-11-15
+
+- Added \`assets/3d-assets/gift-models/carnival-music-model.mjs\` for canonical item \`carnival-music-14x4zts\` (Carnival Music).
+- The source builds self-contained glTF 2.0 geometry for a brushed steelpan barrel/dish, eight tuned note fields, two crossed maple mallets, a display stand and layered multicolour satin feather plumes.
+- \`scripts/generate-minglora-gifts.mjs\` routes only the exact canonical gift code to this source and emits primary SVG plus transparent icon artwork marked \`carnival-music-original-v1\`.
+- Canonical catalogue fields are preserved: music category, 999 Coins, source active true, existing animation identity/preset and sound preset. No catalogue data, prices, balances, transactions, database rows or production publication states are changed.
+- Unit checks cover canonical record integrity, source identity, named geometry, self-contained GLTF buffers and SVG provenance. The LIVE manifest test checks source provenance; Chromium target increases to 12 bespoke gifts across three viewport sizes (36 captures).
+- Review remains \`design-review-pending\`; no human visual or rights clearance, premium approval, mastered audio, physical-device sign-off, production activation or deployment is claimed.

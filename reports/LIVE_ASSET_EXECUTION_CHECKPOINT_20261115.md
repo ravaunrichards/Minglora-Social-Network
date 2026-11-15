@@ -180,3 +180,16 @@ Use supplied third-party screenshots only to understand geometry, hierarchy and 
 - PR: #387. Original isolated task commit: `b640926b112a1016ddc7ca3daf70a625274164c3`; seam compatibility correction: `a85c3d51d118a288198f230b40a4428810f15b25`. The current main head advanced to `7a6aa1b9...` during review and must be preserved in final sync.
 
 **Next action:** finish reconciling the documentation against current main, update the existing PR branch with a two-parent merge commit, rerun all required CI/layout/model-render checks on the new head, and merge only when all are verified successful.
+
+
+## Carnival Music bespoke Caribbean steelpan checkpoint — 2026-11-15
+
+- Project: Minglora Social Network — \`ravaunrichards/Minglora-Social-Network\`.
+- Work branch: \`feat/minglora-carnival-music-bespoke-asset-20261115\`; source base: \`1ac1574f6a2189649a18f4e432b0e4fb917d4ca7\`.
+- Implementation commit: \`a16c57f24f752b843c91588dafdff9589ef4955f\`.
+- Canonical source record verified from \`data/minglora-gift-catalog.json\`: \`carnival-music-14x4zts\`, Carnival Music, music, **999 Coins**, \`active=true\`; existing animation and sound metadata preserved.
+- Added \`assets/3d-assets/gift-models/carnival-music-model.mjs\`, exact-code model routing, original \`carnival-music-original-v1\` SVG/transparent icon, catalogue/model regression assertions, LIVE asset-manifest provenance assertion and desktop/tablet/mobile Chromium render-matrix coverage.
+- Expected model-render coverage after this increment: 12 bespoke model sources × 3 simulated viewports = 36 checks.
+- No catalogue record, configured Coin value, active state, production Supabase row, wallet, transaction, payout, user data or deployment target was modified.
+- Review status remains \`design-review-pending\`; no legal/rights approval, human visual sign-off, mastered sound, physical-device acceptance or production activation is claimed.
+- This section must be updated with the actual pull request, commit SHA and CI/layout/render workflow results after GitHub Actions completes.
