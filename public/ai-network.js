@@ -3,7 +3,7 @@
 
   const API = '/api/ai-network';
   const root = () => document.getElementById('main-content');
-  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', adminAccess: false, discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, performanceReviews: [], successionPlans: [], promotions: [], trainingCourses: [], trainingEnrollments: [], attendance: [], developmentUnavailable: false, organizationError: '', memoryIdentityId: '', memorySettings: null, memoryEntries: [], memoryError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', financeBudgets: [], financeUsage: null, financeError: '', aiTasks: [], taskRuntime: null, taskError: '', categoryAdmin: null, delegationGrants: [], delegationAccess: false, delegationError: '' };
+  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', adminAccess: false, discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, performanceReviews: [], successionPlans: [], promotions: [], trainingCourses: [], trainingEnrollments: [], attendance: [], developmentUnavailable: false, organizationError: '', memoryIdentityId: '', memorySettings: null, memoryEntries: [], memoryError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', financeBudgets: [], financeBudgetHistory: [], financeUsage: null, financeError: '', aiTasks: [], taskRuntime: null, taskError: '', categoryAdmin: null, delegationGrants: [], delegationAccess: false, delegationError: '' };
   const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[character]));
@@ -536,9 +536,11 @@
     try {
       const [budgets, usage] = await Promise.all([request('/finance/budgets'), request('/finance/usage')]);
       state.financeBudgets = list(budgets.budgets);
+      state.financeBudgetHistory = list(budgets.history);
       state.financeUsage = usage || { summary: {}, events: [] };
     } catch (error) {
       state.financeBudgets = [];
+      state.financeBudgetHistory = [];
       state.financeUsage = null;
       state.financeError = error.message || 'AI finance and resource records are unavailable.';
     }
@@ -2409,6 +2411,16 @@
             '</article>';
         }).join('') + '</div>'
       : empty('No owner, organization, department or identity budget policies are recorded.');
+    const history = list(state.financeBudgetHistory);
+    const historyRows = history.length
+      ? '<div class="ai-network-list">' + history.slice(0,30).map(event =>
+          '<article class="ai-network-list-row"><div class="ai-network-list-main"><strong>' +
+          esc(event.action || 'budget change') + '</strong><p>' + esc(event.reason || '') +
+          '</p><small>' + esc(date(event.occurred_at)) + ' · policy ' +
+          esc(String(event.budget_policy_id || '').slice(0,12)) + '</small></div>' +
+          pill('audited') + '</article>'
+        ).join('') + '</div>'
+      : empty('No budget changes have been recorded yet.');
     const summaryMetrics = [
       ['Usage events', number(summary.event_count)],
       ['Tokens recorded', number(summary.total_tokens)],
@@ -5095,6 +5107,7 @@
       '<label>Reason for audit<input name="reason" required minlength="10" maxlength="1000" placeholder="Explain why this limit is being created or changed"></label>' +
       '<p class="ai-network-note">At least one limit is required. Blank fields clear that limit. Active token, monthly spend and concurrency limits are checked before new tasks enter the durable queue. A paused applicable policy blocks new tasks.</p>' +
       '<button class="primary" type="submit">Save audited budget policy</button></form>' +
+      '<div><h4>Budget audit history</h4>' + historyRows + '</div>' +
       '<div><h4>Recorded usage events</h4>' + eventRows + '</div>' +
       '<p class="ai-network-note">Ledger source IDs are idempotent. Historical usage and budget audit entries cannot be edited or deleted through this interface. No financial transfers, refunds, payouts or Coin operations are delegated to AI.</p>',
       'ai-network-span-2');
