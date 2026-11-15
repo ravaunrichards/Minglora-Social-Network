@@ -43,7 +43,7 @@ test("ordered Level references each display their matching individual original b
   assert.match(progression, /gp-level-index-art/);
   assert.match(progression, /src='\/assets\/gifter-badges\/level_/);
   assert.match(progression, /String\(levelNumber\)\.padStart\(2, "0"\)/);
-  assert.match(progression, /aria-label='" \+ esc\(badgeName\) \+ "'/);
+  assert.match(progression, /alt='" \+ esc\(badgeName\) \+ "'/);
   assert.match(progression, /width='170' height='76'/);
   assert.doesNotMatch(progression, /MingloraGifterBadgeArt/);
   assert.match(styles, /\.gp-level-index-art\{[^}]*width:min\(100%,170px\);height:auto;aspect-ratio:170 \/ 76/);
