@@ -71,6 +71,8 @@ All routes are under /api/ai-network and require the signed-in Minglora session.
 
 MINGLORA_AI_PROVIDER, MINGLORA_AI_MODEL and MINGLORA_AI_API_KEY are read only on the server. The provider catalogue/assignment workflow stores provider account references as `unconfigured`, model metadata as catalogue entries, and each new identity assignment as `pending` with health `unknown`. It never accepts or returns credentials and does not mark a provider connected. Assignments cannot be activated through these APIs. A separate approved secrets-manager integration, real provider probe, request validation, output moderation, timeout/retry policy, usage accounting and tests are required before execution. `executionEnabled` remains false; therefore bot execution and schedules cannot yet be activated.
 
+Provider environment slots, the credential inventory, and the non-routable ChatGPT guest-session boundary are documented in [AI Provider Configuration](../../../docs/AI_PROVIDER_CONFIGURATION.md). Provider-specific credential presence is reported without exposing values; it does not mark a provider connected or enable execution.
+
 ## Persistence note
 
 The module uses feature-owned collections through the existing Minglora durable store adapter. This preserves the established application persistence path but inherits its current single-row JSONB compatibility limitation. A future normalized repository/worker stage must provide transaction-safe claims and verify RLS before enabling multi-instance execution.
