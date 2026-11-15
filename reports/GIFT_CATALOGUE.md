@@ -138,3 +138,11 @@ The canonical Palm Breeze nature gift now uses its own palm-tree/island glTF sou
 - The source catalogue retains its canonical grand-entry animation preset, animation key, 1,900-ms duration and existing sound-preset value. The generated LIVE motion index records the effective exact-code lion-scepter-rise override without rewriting those source fields.
 - The actual gift-event playback path selects lion-scepter-rise and locally synthesizes the royal-lions-scepter-roar-and-regal-fanfare-v1 growl/impact/fanfare/shimmer cue through Web Audio. This is synthesized audio, not a mastered sound file; existing sound opt-out and reduced-motion behavior are retained.
 - Design review remains pending. No production gift row was inserted or activated, and no Coin price, wallet, transaction, creator earning or payout was changed. The production catalogue's separate version-3 publication and rights gates still apply.
+
+
+## Keeper of Atlantis bespoke artwork — 2026-11-15
+
+- Existing canonical source item: keeper-of-atlantis-15000-mgl, Keeper of Atlantis, fantasy category, configured at 15,000 Coins and active in the source catalogue. The name, code, category, configured source value, publication flag and cosmic-orbit animation preset are preserved.
+- New original model source: assets/3d-assets/gift-models/keeper-of-atlantis-model.mjs. It builds a self-contained glTF 2.0 underwater trident with three distinct curved prongs, aquamarine/opal facets, a nacre shell medallion with ribs/pearls, branching coral, sea-glass bubbles, spiral staff engraving and tidal currents.
+- The existing gift generator routes only this exact gift code and emits keeper-of-atlantis-original-v1 primary SVG and transparent icon artwork.
+- The asset is labelled design-review-pending. No price, production offer, wallet, transaction or payout was changed.
