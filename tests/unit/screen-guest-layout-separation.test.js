@@ -67,18 +67,20 @@ test('MeetWave screen and guest registries are disjoint and exact',()=>{
   assert.match(meetwave,/MEETWAVE_PARTICIPANT_LIMIT = MEETWAVE_GUEST_LIMIT \+ 1/);
 });
 
-test('MeetWave screen CSS owns grid templates while Roundtable only positions the host',()=>{
-  const contract=meetwaveCss.slice(meetwaveCss.indexOf('/* FINAL SEVEN-PLUS-TWO CONTRACT'));
-  for(const layout of seven)assert.ok(contract.includes('data-screen-layout="'+layout+'"'),layout+' screen template missing');
-  const guest=contract.slice(contract.indexOf('/* Roundtable modes change host-seat placement only'));
-  const end=guest.indexOf('/* END FINAL MEETWAVE LAYOUT INDEPENDENCE CONTRACT. */');
-  assert.ok(end>0);
-  const guestRules=guest.slice(0,end);
-  for(const layout of two)assert.ok(guestRules.includes('data-guest-layout="'+layout+'"'));
-  assert.ok(guestRules.includes('#mw-screen-stage[data-screen-layout] #mw-grid[data-layout][data-guest-layout="roundtable-1"]'));
-  assert.ok(guestRules.includes('#mw-screen-stage[data-screen-layout] #mw-grid[data-layout][data-guest-layout="roundtable-2"]'));
+test('MeetWave screen layouts own the grid; Roundtable 1/2 only position guest boxes',()=>{
+  const contract=meetwaveCss.slice(meetwaveCss.indexOf('/* MINGLORA NINE-LAYOUT REFERENCE PARITY'));
+  for(const layout of seven)assert.ok(contract.includes('data-screen-layout="'+layout+'"')||contract.includes('data-layout="'+layout+'"'),layout+' screen template missing');
+  for(const layout of two)assert.ok(contract.includes('data-guest-layout="'+layout+'"'),layout+' guest-box positioning missing');
+  const guestStart=contract.indexOf('/* Roundtable guest-box layouts never replace the selected screen grid template. */');
+  const guestEnd=contract.indexOf('.mw-meeting #mw-screen-stage.has-screen-share',guestStart);
+  assert.ok(guestStart>=0&&guestEnd>guestStart);
+  const guestRules=contract.slice(guestStart,guestEnd);
+  assert.match(guestRules,/data-guest-layout="roundtable-1"[\\s\\S]*?\.live-guest-seat\.is-host/);
+  assert.match(guestRules,/data-guest-layout="roundtable-2"[\\s\\S]*?\.live-guest-seat\.is-host/);
+  assert.match(guestRules,/data-seat-index="8"/);
   assert.doesNotMatch(guestRules,/grid-template-(columns|rows)/);
 });
+
 
 test('No Roundtable identifier is present in the Profile Style Library screen-layout registry',()=>{
   const start=app.indexOf('const PROFILE_SCREEN_LAYOUT_OPTIONS = Object.freeze([');
