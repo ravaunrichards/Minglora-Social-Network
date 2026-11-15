@@ -328,3 +328,13 @@ The browser captures establish that all nine bespoke models load and remain visi
 - Updated the LIVE effect script version in HTML and service worker and advanced service-worker shell cache to v318.
 - Added unit coverage for exact-code visual preset selection, sound dispatch, synthesized layer signature, motion-index mapping and manifest provenance. These changes do not create a production transaction or activate the source catalogue gift.
 - Acceptance boundary: this is a runtime-generated motion/audio implementation, not an embedded GLTF animation channel, Lottie/Rive file, mastered recording, composer/artist approval, licensing clearance, human visual/design approval or physical-device QA. The scepter model and effects remain design-review-pending.
+
+
+## Keeper of Atlantis bespoke trident model checkpoint — 2026-11-15
+
+- Added assets/3d-assets/gift-models/keeper-of-atlantis-model.mjs for existing source gift keeper-of-atlantis-15000-mgl.
+- The independent self-contained glTF 2.0 source includes three curved trident prongs, central aquamarine/opal facets, fluted gold shaft, dark-sea enamel grip, nacre shell medallion with raised ribs/pearls, coral branches, sea-glass bubbles and curling tidal currents.
+- The exact-code generator routes only keeper-of-atlantis-15000-mgl to this model and emits matching keeper-of-atlantis-original-v1 primary SVG/transparent icon.
+- Tests verify the source catalogue identity, 15,000-Coin value, category, active flag, unchanged cosmic-orbit preset, model source/provenance, distinct named mesh/materials, embedded buffer, finite bounds and SVG artwork signature; the LIVE asset manifest test includes the bespoke model source.
+- The source item fields, production gift catalogue, wallet, Coin ledger, transactions and earnings were not changed.
+- Acceptance boundary: design-review-pending. No premium human visual approval, rights clearance, mastered sound, physical-device rendering or production publication is claimed.
