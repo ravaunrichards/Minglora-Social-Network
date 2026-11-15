@@ -1310,14 +1310,12 @@ const LIVE_GUEST_LAYOUT_OPTIONS=Object.freeze([
 // The user-facing control and persisted choice are one nine-layout guest-stage setting.
 const LIVE_SCREEN_LAYOUT_OPTIONS=LIVE_GUEST_LAYOUT_OPTIONS;
 let activeLiveScreenLayout='full-screen';
-let activeLiveGuestLayout='roundtable-1';
+let activeLiveGuestLayout='full-screen';
 function normalizeLiveScreenLayout(value){
   const candidate=String(value||'full-screen');
   return LIVE_GUEST_LAYOUT_OPTIONS.some(option=>option.value===candidate)?candidate:'full-screen';
 }
 function normalizeLiveGuestLayout(value){return normalizeLiveScreenLayout(value);}
-let activeLiveScreenLayout='full-screen';
-let activeLiveGuestLayout='full-screen';
 function liveLayoutIcon(name){
   const paths={
     fullscreen:"<path d='M8 3H3v5 M16 3h5v5 M21 16v5h-5 M8 21H3v-5'/>",
