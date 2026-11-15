@@ -33,6 +33,7 @@ const EFFECT_BY_CATEGORY = Object.freeze({
 });
 const VALID_EFFECTS = new Set(["petals", "waves", "rings", "trail", "orbits", "bubbles", "sparkles"]);
 const GIFT_SPECIFIC_MOTION_PRESET = Object.freeze({
+  "rose-4ieccm": "rose-unfurl",
   "djembe-master-1v3jzkm": "djembe-strike",
   "palm-breeze-gknyt0": "palm-canopy-sway",
   "gamer-otter-100-mgl": "gamer-otter-cheer",
