@@ -215,3 +215,10 @@ The source record's category, configured 15,000-Coin value, animation identity/p
 ## Royal Lions Scepter event-effect checkpoint — 2026-11-15
 
 The canonical gift now has an exact-code lion-scepter-rise motion override in the generated motion index and the existing Web Animations gift mount. It retains its source catalogue grand-entry preset, key, 1,900-ms duration and sound-preset field. Its event sound is locally synthesized using a low band-pass growl sweep, sub impact, five-note fanfare and high-frequency shimmer; the LIVE asset manifest labels it gift_specific_web_audio_synthesis and explicitly records no dedicated mastered audio file. Sound opt-out and reduced-motion behavior remain active. This confirms runtime wiring and test coverage, not a human-approved composition, mastered recording, licensing review, audio-mix approval or physical-device verification.
+
+
+## Keeper of Atlantis bespoke model checkpoint — 2026-11-15
+
+The exact canonical item keeper-of-atlantis-15000-mgl now selects assets/3d-assets/gift-models/keeper-of-atlantis-model.mjs. The self-contained glTF source includes a three-prong trident head, raised wave-fork details, aquamarine/opal cut gems, fluted gold staff, dark-sea enamel grip, nacre shell medallion, pearl/rib details, coral branches, sea-glass bubbles and curling ocean currents. The existing gift generator emits matching keeper-of-atlantis-original-v1 vector artwork and transparent icon.
+
+The canonical source name, code, fantasy category, configured 15,000-Coin value, active flag and cosmic-orbit preset are retained. Regression tests verify the source identity, model provenance, named materials, finite mesh bounds, embedded geometry buffer and artwork signatures. The source remains design-review-pending: automated tests do not establish premium visual approval, rights clearance, physical-device rendering approval, texture-map/KTX2 completion, an embedded GLTF animation track or mastered sound.
