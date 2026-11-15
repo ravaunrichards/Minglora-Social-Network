@@ -220,3 +220,14 @@ This checkpoint records one focused Rose effect integration, not completion of t
 - The model render matrix now has 12 bespoke models × 3 Chromium viewports = 36 expected renders. Combined PR CI is pending for this addition.
 - Rose runtime and generated metadata remain included in the same combined script version. HTML/service-worker URL: `gift-effects.js?v=20261115-rose-unfurl-atlantis-trident-2`; service-worker cache: `minglora-shell-v325-self-updating-1`.
 - Remaining: run current-head CI/model-render QA; complete human visual/audio and licensing review; complete physical-device acceptance; continue original art direction for the rest of the catalogue. No full mission completion claim.
+
+## Active execution checkpoint — Djembe mahogany detail, 2026-11-15
+
+**Task ID:** LIVE-ASSET-DJEMBE-1
+
+- Source module: `assets/3d-assets/gift-models/djembe-model.mjs`.
+- Added twelve individually named grain inlay tubes following the carved mahogany shell surface.
+- Added `tests/unit/djembe-mahogany-grain.test.js` with topology, bounds, GLTF buffer and PBR material assertions.
+- Djembe catalogue identity, Coin value, active status, audio design and motion mapping remain unchanged.
+- The existing model remains `design-review-pending`; no physical-device or human rights/art approval is claimed.
+- Combined LIVE PR: #398. Its new Djembe test and complete asset build/visual QA must pass on the latest head before merge.
