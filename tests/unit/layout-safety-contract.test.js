@@ -16,7 +16,7 @@ test('the overlay contract loads after mobile styles and is included in the serv
   assert.ok(phoneLink > appLockLink && appLockLink >= 0);
   const meetwaveStart = html.indexOf('/meetwave.css?v=');
   assert.ok(meetwaveStart >= 0, 'MeetWave stylesheet has a versioned URL');
-  const meetwaveEnd = html.indexOf('\\\"', meetwaveStart);
+  const meetwaveEnd = html.indexOf('"', meetwaveStart);
   const meetwaveAsset = html.slice(meetwaveStart, meetwaveEnd);
   for (const asset of [
     '/layout-safety.css?v=20261110-facebook-menu-size-scroll-2',
