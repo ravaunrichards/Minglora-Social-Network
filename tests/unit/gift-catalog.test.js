@@ -510,3 +510,36 @@ test("Baseball uses an original full-grain leather model and subject-specific Mi
   assert.ok(svg.includes('data-gift-artwork="baseball-original-v1"'), "the primary SVG must carry original Baseball artwork provenance");
   assert.ok(icon.includes('data-gift-artwork="baseball-original-v1"'), "the transparent gift icon must preserve the original Baseball artwork");
 });
+
+test("Keeper of Atlantis uses an original three-prong trident and underwater sculpture", () => {
+  const keeper = gifts.find(gift => gift.code === "keeper-of-atlantis-15000-mgl");
+  assert.ok(keeper, "Keeper of Atlantis must remain in the canonical gift catalogue");
+  assert.equal(keeper.name, "Keeper of Atlantis");
+  assert.equal(keeper.category, "fantasy");
+  assert.equal(keeper.coin_price, 15000, "the configured Coin value must remain unchanged");
+  assert.equal(keeper.active, true, "the source publication state must remain unchanged");
+  assert.equal(keeper.animation_preset, "cosmic-orbit", "the canonical animation preset must remain unchanged");
+
+  const model = JSON.parse(readFileSync(path.join(assetRoot, keeper.code + ".gltf"), "utf8"));
+  assert.equal(model.asset?.version, "2.0");
+  assert.equal(model.asset?.extras?.mingloraAssetId, "gift-keeper-of-atlantis-3d-v1");
+  assert.equal(model.asset?.extras?.source, "assets/3d-assets/gift-models/keeper-of-atlantis-model.mjs");
+  assert.match(model.asset?.extras?.artDirection || "", /underwater ceremonial trident.*three curved gold prongs.*faceted aquamarine and opal jewels.*pearl-inlaid nautilus shell medallion.*branching coral.*tidal currents/i);
+  assert.match(model.asset?.extras?.reviewStatus || "", /design-review-pending/);
+  assert.ok(model.meshes?.[0]?.primitives?.length >= 65, "the model must expose distinct trident, shell, coral and ocean details");
+  assert.ok(model.materials?.some(material => material.name.includes("Keeper of Atlantis central trident spear")));
+  assert.ok(model.materials?.some(material => material.name.includes("Keeper of Atlantis main aquamarine crown cut")));
+  assert.ok(model.materials?.some(material => material.name.includes("Keeper of Atlantis shell medallion gold rim")));
+  assert.ok(model.materials?.some(material => material.name.includes("Keeper of Atlantis coral branch")));
+  assert.ok(model.materials?.some(material => material.name.includes("Keeper of Atlantis spiral shaft engraving")));
+  assert.ok(model.buffers?.[0]?.uri.startsWith("data:application/octet-stream;base64,"), "the model must be self-contained for the existing viewer");
+  assert.ok(model.accessors?.filter(accessor => accessor.type === "VEC3").length >= 130, "the model must expose separate positions and normals for its named meshes");
+  for (const accessor of model.accessors.filter(value => value.type === "VEC3" && value.min && value.max)) {
+    assert.ok(accessor.min.every(Number.isFinite) && accessor.max.every(Number.isFinite), "all generated mesh bounds must contain finite coordinates");
+  }
+
+  const svg = readFileSync(path.join(assetRoot, keeper.code + ".svg"), "utf8");
+  const icon = readFileSync(path.join(assetRoot, keeper.code + "-icon.svg"), "utf8");
+  assert.ok(svg.includes('data-gift-artwork="keeper-of-atlantis-original-v1"'), "the primary SVG must use the original trident-and-ocean artwork");
+  assert.ok(icon.includes('data-gift-artwork="keeper-of-atlantis-original-v1"'), "the transparent icon must preserve the original Keeper artwork");
+});
