@@ -221,3 +221,12 @@ All **45** retained standalone gift models in `public/assets/gifts/` were inspec
 - The per-model inventory now records corrected byte sizes, Git blob hashes, POSITION-reference counts and accessor-local bounds. The regression test recalculates the extrema from each embedded vertex buffer across all 45 files.
 
 **Approval remains blocked:** these models are still production-ineligible pending canonical catalogue mapping, visual/render review and rights clearance. Structural validity is not premium artwork approval. World-space dimensions have deliberately not been guessed because node transforms have not been applied. No production gift, price, wallet, transaction or earning state was changed.
+
+
+## Royal Lions Scepter bespoke gift model — 2026-11-15
+
+| Source | Canonical item | Generated output | Integration / acceptance |
+|---|---|---|---|
+| `assets/3d-assets/gift-models/royal-lions-scepter-model.mjs` | Royal Lions Scepter (`royal-lions-scepter-15000-mgl`, fantasy; source catalogue value 15,000 Coins) | Original glTF 2.0 lion-head scepter with radial mane locks, sculpted face, crown points, faceted jewels, gold shaft, enamel grip and pommel; matching subject-specific SVG and transparent icon use `royal-lions-scepter-original-v1`. | Exact-code generator route and regression checks for source catalogue identity, configured value/state, mesh/material provenance, embedded buffers and SVG artwork signature. Design and rights review remain pending. |
+
+The model source carries `gift-royal-lions-scepter-3d-v1` provenance and `design-review-pending`. The existing `grand-entry` animation preset and sound mapping are retained. The source catalogue item is not evidence of a live production offer; the connected production catalogue remains governed by the independent version-3 release gate.
