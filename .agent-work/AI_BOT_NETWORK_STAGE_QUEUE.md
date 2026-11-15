@@ -585,3 +585,18 @@ This section supersedes older live-count and runtime-version snapshots above; hi
 - Current Supabase read-only verification: **0 production AI identities**; no development branches; no conversation tables/RPC deployed. No production records were inserted and no production migrations were applied.
 - Supabase Security Advisor currently lists existing project-wide RLS/no-policy INFO findings and other pre-existing authentication warnings. The new conversation tables are source-only and therefore do not yet appear in production advisor results. Do not attribute the project-wide findings to this un-deployed migration.
 - PR #363 remains open, draft, unmerged. Non-production migration validation, private provider health and real inference, signed-in owner/device acceptance and Render deployment verification remain release blockers.
+
+
+### Verified code checkpoint — 2026-11-15 (final automated run)
+
+- Latest tested code commit: `df0c57b26bfdabb4f61aa5fc1ffcada126e35333`.
+- GitHub Actions results on that code commit: 
+  - Full CI run `43745818450`: **1,222 passed, 0 failed**.
+  - AI Network checks run `43745818444`: **157 passed, 0 failed**. This includes moderated bot chat adapter, owner/MFA API checks, identity lifecycle guard, private Edge RPC allowlist and UI assertions.
+  - AI Network browser acceptance run `43745818463`: **passed**.
+  - Seven-plus-two layout visual QA run `43745818484`: **passed**.
+- GitHub PR #363 is open, draft, unmerged and currently reported mergeable. The PR description has been updated with these verified outcomes.
+- No code changes occurred after the tested code commit; this appended checkpoint is documentation-only.
+- Remaining external acceptance gates: non-production Supabase migration validation (no development branch exists; branch creation requires cost approval), private provider credential/health and live inference, signed-in owner/device acceptance, and correct Render service selection/deployment verification.
+- Production AI identity count remains **0**. No bots, profiles, Auth accounts, conversations or messages have been inserted; no production SQL migration or Edge Function deployment was performed; task workers remain globally paused and disabled.
+- The 10-billion identity target remains a design objective, not an operational or benchmarked capacity.
