@@ -121,3 +121,17 @@
 .league-powerup-info-card:focus-visible,.league-powerup-btn:focus-visible{outline:3px solid rgba(52,123,210,.55);outline-offset:3px}
 @media(max-width:760px){.league-powerup-preview-layout{grid-template-columns:1fr}.league-powerup-preview-stage{height:300px;min-height:260px}.league-powerup-info-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:420px){.league-powerup-info{padding:15px}.league-powerup-info-grid{grid-template-columns:1fr}.league-powerup-preview-stage{height:260px;min-height:240px}.league-powerup-preview-stage model-viewer{min-height:240px}}
+
+
+/* Creator League division browser: daily and weekly views, no client-side score fabrication. */
+.league-ranking-controls{display:grid;grid-template-columns:auto minmax(150px,220px) minmax(0,1fr);gap:10px;align-items:center;margin:0 0 14px}
+.league-ranking-period{display:flex;gap:5px;padding:4px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.league-ranking-filter{min-height:35px;padding:7px 13px;border:1px solid transparent;border-radius:9px;background:transparent;color:var(--muted);font:inherit;font-size:11px;font-weight:850;cursor:pointer}
+.league-ranking-filter[aria-pressed=true]{border-color:rgba(52,123,210,.35);background:rgba(52,123,210,.12);color:var(--text)}
+.league-ranking-filter:focus-visible,.league-ranking-class-label select:focus-visible{outline:3px solid rgba(52,123,210,.45);outline-offset:2px}
+.league-ranking-class-label{display:grid;gap:5px;color:var(--muted);font-size:10px;font-weight:850}
+.league-ranking-class-label select{width:100%;min-height:42px;padding:8px 11px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--text);font:inherit;font-size:12px}
+#league-ranking-status{min-width:0;color:var(--muted);font-size:10px;line-height:1.45;text-align:right}
+#league-leaderboard-results{min-width:0}
+@media(max-width:700px){.league-ranking-controls{grid-template-columns:1fr 1fr}.league-ranking-class-label{grid-column:2;grid-row:1}.league-ranking-period{grid-column:1;grid-row:1;align-self:end}.league-ranking-filter{flex:1;padding-inline:8px}#league-ranking-status{grid-column:1/-1;text-align:left}}
+@media(max-width:420px){.league-ranking-controls{grid-template-columns:1fr}.league-ranking-class-label,.league-ranking-period,#league-ranking-status{grid-column:1;grid-row:auto}.league-ranking-period{width:100%}}
