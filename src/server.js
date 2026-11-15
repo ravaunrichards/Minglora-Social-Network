@@ -48,8 +48,9 @@ import { getGiftGallery, giftGalleryTimeZone, recordGiftGalleryEvent, updateGift
 import { CREATOR_LEAGUE_CLASSES, recordLiveGiftForLeagues, refundCreatorLeagueGift, getCreatorLeagueOverview, createCreatorLeagueMatch, acceptCreatorLeagueMatch, supportCreatorLeagueMatch, useCreatorLeaguePowerup, listCreatorLeagueMatches, settleExpiredLeagueMatches, settleScheduledCreatorLeagueDays } from '../backend/modules/leagues/service.js';
 import { recordGifterGift, refundGifterGift, getGifterProgressionOverview, getGifterBadgeSummary, getNewGifterIdentity, getLiveGifterLeaderboard } from '../backend/modules/gifter-progression/service.js';
 import { LIVE_FAN_CLUB_GIFT_CODES, LIVE_FAN_CLUB_JOIN_GIFT_CODE, LIVE_FAN_CLUB_JOIN_COIN_COST, ensureLiveFanClubCollections, getLiveFanClubMembership, countActiveLiveFanClubMembers, joinLiveFanClub, awardLiveFanClubPoints, publicLiveFanClubMembership } from '../backend/modules/live/fan-club.js';
-import { ensureAICollections, getAICommandCenter, getAIProviderStatus, createAIBot, updateAIBotStatus, createAIBotTeam, createAIBotSchedule, updateAIBotScheduleStatus, updateAISettings, createAICreatorJob, createAIApprovalRequest, decideAIApproval, setAICompanionConsent, createAICommunityEvent, emergencyPauseAI } from '../backend/modules/ai-network/service.js';
+import { ensureAICollections, getAICommandCenter, getAIProviderStatus, createAIBot, updateAIBotStatus, createAIBotTeam, createAIBotSchedule, updateAIBotScheduleStatus, updateAISettings, createAICreatorJob, startAICreatorJobGeneration, completeAICreatorJobGeneration, failAICreatorJobGeneration, createAIApprovalRequest, decideAIApproval, setAICompanionConsent, createAICommunityEvent, emergencyPauseAI } from '../backend/modules/ai-network/service.js';
 import { probeOpenAIProvider } from '../backend/modules/ai-network/openai-provider-probe.js';
+import { generateOpenAICreatorDraft } from '../backend/modules/ai-network/openai-creator-drafts.js';
 import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseExchangeOAuthCode, supabaseGetAuthSettings, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseRequestMagicLink, supabaseCompletePasswordReset, supabaseGetUser, supabaseUpdateEmail, supabaseRequestPhoneChange, supabaseVerifyPhoneChange, supabaseUpdateUserMetadata, supabaseUpdateProfile } from './supabase-auth.js';
 const scrypt = promisify(crypto.scrypt);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -2923,6 +2924,36 @@ async function route(req, res) {
         const job = createAICreatorJob(db, user.id, await body(req, 16000));
         await saveStore();
         return json(res, 201, { job });
+      }
+      if (method === 'POST' && parts[0] === 'creator-jobs' && parts[2] === 'generate' && parts.length === 3) {
+        const input = await body(req, 2000);
+        if (!input || typeof input !== 'object' || Array.isArray(input) || Object.keys(input).length) {
+          throw Object.assign(new Error('Creator Studio generation accepts an empty request only. Provider credentials and prompt overrides are not accepted.'), { status: 400 });
+        }
+        const currentProviderStatus = getAIProviderStatus();
+        if (!currentProviderStatus.manualDraftsAvailable) {
+          throw Object.assign(new Error('OpenAI Creator Studio generation is not configured. Set OPENAI_API_KEY and OPENAI_DEFAULT_MODEL in the private Minglora server environment. No draft was generated.'), { status: 503 });
+        }
+        const started = startAICreatorJobGeneration(db, user.id, parts[1]);
+        await saveStore();
+        try {
+          const generated = await generateOpenAICreatorDraft({
+            taskType: started.taskType,
+            brief: started.brief,
+            env: process.env,
+            maxOutputTokens: Number(process.env.MINGLORA_AI_MAX_OUTPUT_TOKENS) || 1200
+          });
+          const job = completeAICreatorJobGeneration(db, user.id, started.id, generated);
+          await saveStore();
+          return json(res, 200, { job });
+        } catch (error) {
+          const safeMessage = error?.safeForClient
+            ? String(error.message || 'Provider generation failed.')
+            : 'The AI provider request failed. No draft output was saved; check server logs without exposing credentials.';
+          failAICreatorJobGeneration(db, user.id, started.id, safeMessage);
+          await saveStore();
+          return json(res, Number(error?.status) || 502, { error: safeMessage, job: (db.aiBotCreatorJobs || []).find(item => item.id === started.id && item.ownerId === user.id) || null });
+        }
       }
       if (method === 'POST' && sub === 'approvals') {
         const approval = createAIApprovalRequest(db, user.id, await body(req, 8000));
