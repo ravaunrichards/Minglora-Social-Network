@@ -484,7 +484,7 @@ test("Keeper of Atlantis uses an original three-prong trident and underwater scu
   assert.equal(model.asset?.version, "2.0");
   assert.equal(model.asset?.extras?.mingloraAssetId, "gift-keeper-of-atlantis-3d-v1");
   assert.equal(model.asset?.extras?.source, "assets/3d-assets/gift-models/keeper-of-atlantis-model.mjs");
-  assert.match(model.asset?.extras?.artDirection || "", /underwater ceremonial trident.*three curved gold prongs.*faceted aquamarine and opal jewels.*nacre shell medallion.*branching coral.*tidal currents/i);
+  assert.match(model.asset?.extras?.artDirection || "", /underwater ceremonial trident.*three curved gold prongs.*faceted aquamarine and opal jewels.*pearl-inlaid nautilus shell medallion.*branching coral.*tidal currents/i);
   assert.match(model.asset?.extras?.reviewStatus || "", /design-review-pending/);
   assert.ok(model.meshes?.[0]?.primitives?.length >= 65, "the model must expose distinct trident, shell, coral and ocean details");
   assert.ok(model.materials?.some(material => material.name.includes("Keeper of Atlantis central trident spear")));
