@@ -10,7 +10,7 @@ const read=relative=>fs.readFileSync(path.join(root,relative),'utf8');
 const liveCss=read('public/styles.css')+'\n'+read('public/live-room-fit.css')+'\n'+read('public/live-guest-layout-reference.css');
 const meetwaveCss=read('public/meetwave.css');
 const screens=['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight'];
-const guests=['roundtable-1','roundtable-2'];
+const guests=[null,'roundtable-1','roundtable-2'];
 const viewports=[{name:'desktop',width:1280,height:900},{name:'mobile',width:390,height:844}];
 const artifacts=path.join(root,'artifacts/layout-separation-visual');
 fs.mkdirSync(artifacts,{recursive:true});
@@ -129,7 +129,7 @@ try{
               stage.classList.remove('live-full-screen-layout');
             }
             grid.dataset.liveLayout=screen;
-            grid.dataset.liveGuestLayout=guest;
+            if(guest)grid.dataset.liveGuestLayout=guest;else delete grid.dataset.liveGuestLayout;
             const gridStyle=getComputedStyle(grid);
             const host=grid.querySelector('.is-host');
             const hostStyle=getComputedStyle(host);
@@ -143,7 +143,7 @@ try{
               rowsCount:gridStyle.gridTemplateRows.trim().split(/\s+/).length,
               stage:[stage.getBoundingClientRect().width,stage.getBoundingClientRect().height],
               screen:grid.dataset.liveLayout,
-              guest:grid.dataset.liveGuestLayout,
+              guest:grid.dataset.liveGuestLayout||'default',
               hostPlacement:[hostStyle.gridColumnStart,hostStyle.gridColumnEnd,hostStyle.gridRowStart,hostStyle.gridRowEnd],
               hostRect:rect(host),
               smallGuestPlacements:seats.filter(seat=>seat.classList.contains('is-guest')).slice(0,2).map(seat=>{const style=getComputedStyle(seat);return [style.gridColumnStart,style.gridColumnEnd,style.gridRowStart,style.gridRowEnd];}),
@@ -155,9 +155,10 @@ try{
           },{screen,guest,mode});
           if(baseline){
             assertStableScreenGeometry(state,baseline,mode+' LIVE '+screen+' screen geometry must not change when only guest-box layout changes at '+viewport.name);
-            assert.equal(state.guest,guest,'LIVE guest selection did not apply independently');
+            assert.equal(state.guest,guest||'default','LIVE guest selection did not apply independently');
           }else baseline=state;
           guestPositions.push(state.hostPlacement);
+          if(mode==='video'&&!guest)assertReferenceGeometry(screen,state,viewport.name);
           if(mode==='video'){
             assertReferenceGeometry(screen,state,viewport.name);
             await livePage.screenshot({
@@ -167,7 +168,8 @@ try{
           }
           combinations++;
         }
-        assert.notDeepEqual(guestPositions[0],guestPositions[1],mode+' LIVE '+screen+' guest-box choices do not produce different host placement at '+viewport.name);
+        assert.notDeepEqual(guestPositions[1],guestPositions[2],mode+' LIVE '+screen+' Roundtable 1 and Roundtable 2 must place the host differently at '+viewport.name);
+        assert.notDeepEqual(guestPositions[0],guestPositions[1],mode+' LIVE '+screen+' Roundtable 1 must change guest-box placement at '+viewport.name);
       }
     }
     await livePage.close();
@@ -181,9 +183,9 @@ try{
       for(const guest of guests){
         const state=await mwPage.evaluate(({screen,guest})=>{
           const stage=document.querySelector('#mw-screen-stage'),grid=document.querySelector('#mw-grid');
-          stage.dataset.screenLayout=screen;grid.dataset.layout=screen;grid.dataset.guestLayout=guest;
+          stage.dataset.screenLayout=screen;grid.dataset.layout=screen;if(guest)grid.dataset.guestLayout=guest;else delete grid.dataset.guestLayout;
           const css=getComputedStyle(grid),host=getComputedStyle(grid.querySelector('.is-host'));
-          return {columns:css.gridTemplateColumns,stage:[stage.getBoundingClientRect().width,stage.getBoundingClientRect().height],screen:stage.dataset.screenLayout,gridScreen:grid.dataset.layout,guest:grid.dataset.guestLayout,host:[host.gridColumnStart,host.gridColumnEnd,host.gridRowStart,host.gridRowEnd],seats:grid.querySelectorAll('.live-guest-seat').length};
+          return {columns:css.gridTemplateColumns,stage:[stage.getBoundingClientRect().width,stage.getBoundingClientRect().height],screen:stage.dataset.screenLayout,gridScreen:grid.dataset.layout,guest:grid.dataset.guestLayout||'default',host:[host.gridColumnStart,host.gridColumnEnd,host.gridRowStart,host.gridRowEnd],seats:grid.querySelectorAll('.live-guest-seat').length};
         },{screen,guest});
         if(baseline){
           assertStableScreenGeometry({
@@ -191,7 +193,7 @@ try{
           },{
             columns:baseline.columns,rows:'',stage:baseline.stage,screen:baseline.screen,visibleSeats:baseline.seats
           },'MeetWave '+screen+' screen mode or stage geometry changed when only guest layout changed at '+viewport.name);
-          assert.equal(state.guest,guest,'MeetWave guest selection did not apply independently');
+          assert.equal(state.guest,guest||'default','MeetWave guest selection did not apply independently');
         }else baseline=state;
         guestPositions.push(state.host);
         combinations++;
@@ -202,7 +204,8 @@ try{
           await mwPage.screenshot({path:path.join(artifacts,'meetwave-spotlight-roundtable-2-'+viewport.name+'.png'),fullPage:true});
         }
       }
-      assert.notDeepEqual(guestPositions[0],guestPositions[1],'MeetWave '+screen+' guest-box choices do not produce different host placement at '+viewport.name);
+      assert.notDeepEqual(guestPositions[1],guestPositions[2],'MeetWave '+screen+' Roundtable 1 and Roundtable 2 must place the host differently at '+viewport.name);
+      assert.notDeepEqual(guestPositions[0],guestPositions[1],'MeetWave '+screen+' Roundtable 1 must change guest-box placement at '+viewport.name);
     }
     await mwPage.close();
   }
@@ -217,5 +220,5 @@ console.log(JSON.stringify({
   liveModes:2,
   combinations,
   referenceGeometryChecks:referenceChecks,
-  liveScreenshots:28
+  liveScreenshots:42
 },null,2));
