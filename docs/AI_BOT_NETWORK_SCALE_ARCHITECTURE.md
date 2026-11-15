@@ -223,3 +223,17 @@ Publish measured storage, throughput, latency, restore and concurrency results w
 | Simultaneous execution capacity benchmark | Not run |
 
 **Conclusion:** This document establishes a safe target architecture and measurable release gates. It does not change production infrastructure, migrations, runtime settings or data. Task 17 remains **IN PROGRESS**, not complete, until the directory/router, shard infrastructure, migration, operational controls and measured capacity acceptance are implemented.
+
+## 14. Measured current control-plane baseline — 2026-11-15
+
+Read-only measurements from the existing production Minglora Supabase project:
+
+- PostgreSQL **17.11**; database size approximately **36 MB** at inspection time.
+- The private `ai_network` schema contains **54 base tables; RLS is enabled on all 54**.
+- Counts at inspection time: **0** AI identities, names, profiles, email identity records, provider accounts, provider models, provider assignments, organizations and employment records. This is an empty operational dataset, not evidence of a registration throughput or scale limit.
+- Runtime controls remain `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`.
+- Largest observed `ai_network` relations by total on-disk size included `ai_employment_records` (240 kB), `ai_task_queue` (184 kB), `ai_departments` (176 kB), `ai_recruitment_applications` (160 kB) and `ai_identities` (144 kB). The inspected tables had zero estimated live rows; relation size includes index and allocated storage and must not be interpreted as data volume.
+- An `EXPLAIN ANALYZE` point lookup against the empty `ai_identities` table completed in 0.027 ms and used a sequential scan. Because there are no identity rows, this is only a smoke-check of the current empty table and is not a query-performance or capacity benchmark.
+- The public Render `/api/ready` URL was not accessible to the available external verifier. Render startup logs do confirm the process listening on port 10000, Supabase Auth configured, durable Supabase persistence ready, and LiveKit connected. These are separate signals; public HTTP readiness is not claimed.
+
+**Interpretation:** the current project has a secure, empty relational AI schema and a functioning control-plane runtime, but no measured identity data volume, registration rate, query throughput under load, concurrent execution capacity, physical shard, or regional failover evidence. The 10-billion target remains a design objective pending implementation and representative benchmarks.
