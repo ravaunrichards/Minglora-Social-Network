@@ -223,6 +223,25 @@ test('Creator Studio generation failure stores no output and can be retried safe
   assert.equal(retry.providerError, null);
 });
 
+test('only one Creator Studio generation runs per owner at a time', () => {
+  const db = state();
+  const first = createAICreatorJob(db, 'owner-1', {
+    taskType: 'caption_draft',
+    brief: 'Create a caption for a Minglora technology community gathering.'
+  }, { now });
+  const second = createAICreatorJob(db, 'owner-1', {
+    taskType: 'title_ideas',
+    brief: 'Suggest titles for the Minglora technology community gathering.'
+  }, { now });
+  startAICreatorJobGeneration(db, 'owner-1', first.id, { now });
+  assert.throws(() => startAICreatorJobGeneration(db, 'owner-1', second.id, { now }), { status: 409 });
+  const retryAt = new Date(now.getTime() + 6 * 60 * 1000);
+  const secondStarted = startAICreatorJobGeneration(db, 'owner-1', second.id, { now: retryAt });
+  assert.equal(secondStarted.providerExecution, 'running');
+  assert.equal(first.providerExecution, 'failed');
+  assert.match(first.providerError, /expired/);
+});
+
 test('stale Creator Studio generation leases expire and become safely retryable', () => {
   const db = state();
   const job = createAICreatorJob(db, 'owner-1', {
