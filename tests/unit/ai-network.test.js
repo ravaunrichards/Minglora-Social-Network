@@ -16,6 +16,7 @@ import {
   emergencyPauseAI,
   ensureAICollections,
   getAICommandCenter,
+  getAICreatorDailyUsage,
   getAIProviderStatus,
   getAIPerformanceSummary,
   getAISettings,
@@ -235,6 +236,39 @@ test('stale Creator Studio generation leases expire and become safely retryable'
   assert.equal(retry.output, null);
   assert.equal(retry.providerError, null);
   assert.ok(db.aiBotAudit.some(event => event.action === 'creator_job_generation_lease_expired'));
+});
+
+test('Creator Studio usage is measured in the daily token budget and performance summary', () => {
+  const db = state();
+  const todayJob = createAICreatorJob(db, 'owner-1', {
+    taskType: 'caption_draft',
+    brief: 'Create an accessible caption for a technology training event.'
+  }, { now });
+  startAICreatorJobGeneration(db, 'owner-1', todayJob.id, { now });
+  completeAICreatorJobGeneration(db, 'owner-1', todayJob.id, {
+    provider: 'openai', output: 'A moderated creator draft.',
+    model: 'test-model', responseId: 'resp-today',
+    usage: { input_tokens: 50, output_tokens: 70, total_tokens: 120 },
+    moderation: { model: 'omni-moderation-latest', flagged: false }
+  }, { now });
+  const yesterdayJob = createAICreatorJob(db, 'owner-1', {
+    taskType: 'title_ideas',
+    brief: 'Suggest titles for a digital skills training programme.'
+  }, { now: new Date(now.getTime() - 86400000) });
+  startAICreatorJobGeneration(db, 'owner-1', yesterdayJob.id, { now: new Date(now.getTime() - 86400000) });
+  completeAICreatorJobGeneration(db, 'owner-1', yesterdayJob.id, {
+    provider: 'openai', output: 'Yesterday draft.',
+    model: 'test-model', responseId: 'resp-yesterday',
+    usage: { input_tokens: 40, output_tokens: 60, total_tokens: 100 },
+    moderation: { model: 'omni-moderation-latest', flagged: false }
+  }, { now: new Date(now.getTime() - 86400000) });
+  const daily = getAICreatorDailyUsage(db, 'owner-1', { now });
+  assert.equal(daily.tokensUsed, 120);
+  assert.equal(daily.completedDrafts, 1);
+  assert.equal(daily.date, '2026-11-11');
+  const performance = getAIPerformanceSummary(db, 'owner-1');
+  assert.equal(performance.creatorDraftTokensUsed, 220);
+  assert.equal(performance.totalTokensUsed, 220);
 });
 
 test('OpenAI manual draft availability does not enable autonomous execution', () => {
