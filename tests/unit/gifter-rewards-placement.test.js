@@ -77,3 +77,16 @@ test('updated Gift entry script and Rewards image are refreshed through the serv
   assert.ok(serviceWorker.includes("'/assets/gifters-rewards.png'"), 'service worker precaches the Rewards artwork');
   assert.match(serviceWorker, /const CACHE_NAME='minglora-shell-v\d+-self-updating-1';/);
 });
+
+test('the uploaded Gifter badge progression artwork is served and displayed without restoring the removed Coin chart', () => {
+  const artwork = path.join(root, 'assets', 'Gifter Badge Progressions', 'Gifter Badge Progressions.jpg');
+  assert.ok(fs.existsSync(artwork), 'the uploaded original progression artwork exists');
+  assert.ok(progression.includes("src='/assets/gifter-badge-progression-art.jpg'"), 'the progression page displays the supplied image');
+  assert.match(server, /if\(p==='\/assets\/gifter-badge-progression-art\.jpg'\)[\s\S]*?path\.join\(__dirname,'\.\.','assets','Gifter Badge Progressions','Gifter Badge Progressions\.jpg'\)/);
+  assert.match(server, /Gifter badge progression artwork not found/);
+  assert.ok(styles.includes('.gp-progression-art-frame img'));
+  assert.match(styles, /\.gp-progression-art-frame img\{[^}]*height:auto[^}]*object-fit:contain/);
+  assert.ok(serviceWorker.includes("'/assets/gifter-badge-progression-art.jpg'"));
+  assert.ok(!progression.includes('gifters-level-up.png'), 'the removed Coin threshold chart stays absent');
+  assert.ok(!progression.includes('gp-chart-reference'), 'the removed chart card stays absent');
+});
