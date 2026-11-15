@@ -82,8 +82,8 @@ test("level artwork route is an explicit allow-list and serves JPEG without expo
 test("updated progression assets and all original JPG panels are included in the app shell", () => {
   const html = read("public/index.html");
   const sw = read("public/sw.js");
-  assert.ok(html.includes("/gifter-progression.css?v=20261115-gifter-reference-placement-1"));
-  assert.ok(html.includes("/gifter-progression.js?v=20261115-gifter-reference-placement-1"));
+  assert.ok(html.includes("/gifter-progression.css?v=20261115-original-individual-badges-rollback-1"));
+  assert.ok(html.includes("/gifter-progression.js?v=20261115-original-individual-badges-rollback-1"));
   panelFiles.forEach(filename => {
     const routeName = filename.toLowerCase().replaceAll(" ", "-");
     assert.ok(sw.includes("/assets/gifter-badge-level-panels/" + routeName));
@@ -129,8 +129,8 @@ test("Gifter artwork removes unused outer padding and uses a brighter clean edge
 test("clean-edge stylesheet cache key is current in HTML and service-worker shell", () => {
   const html = read("public/index.html");
   const sw = read("public/sw.js");
-  assert.ok(html.includes("/gifter-progression.css?v=20261115-gifter-reference-placement-1"));
-  assert.ok(sw.includes("/gifter-progression.css?v=20261115-gifter-reference-placement-1"));
+  assert.ok(html.includes("/gifter-progression.css?v=20261115-original-individual-badges-rollback-1"));
+  assert.ok(sw.includes("/gifter-progression.css?v=20261115-original-individual-badges-rollback-1"));
   assert.ok(!sw.includes("/gifter-progression.css?v=20261110-gifter-level-polish-1"));
 });
 
@@ -149,8 +149,8 @@ test("Gifter progression uses the original ordered Level panels as its primary a
   assert.ok(!styles.includes(".gp-page .gp-hero-art{display:none!important}"), "the original Level-Up artwork is shown as a reference");
   assert.ok(progression.includes("gp-level-up-reference-note"), "the Level-Up artwork is labelled visual-reference-only");
   assert.ok(styles.includes(".gp-art-panel-stack{display:grid;grid-template-columns:minmax(0,1fr);gap:14px"));
-  assert.ok(html.includes("/gifter-progression.css?v=20261115-gifter-reference-placement-1"));
-  assert.ok(sw.includes("/gifter-progression.css?v=20261115-gifter-reference-placement-1"));
+  assert.ok(html.includes("/gifter-progression.css?v=20261115-original-individual-badges-rollback-1"));
+  assert.ok(sw.includes("/gifter-progression.css?v=20261115-original-individual-badges-rollback-1"));
   assert.match(sw, /const CACHE_NAME='minglora-shell-v\d+-self-updating-1';/);
 });
 
@@ -207,14 +207,14 @@ test("all 71 supplied Gifter reference images are placed at their correct Reward
   });
   assert.ok(progression.includes("renderMasterBadgeReference()"));
   assert.ok(progression.includes("renderRangeReferenceSheets()"));
-  assert.ok(progression.includes("href='/assets/gifter-badges/level_" + '" + badgeNumber + "' + ".png'"), "every original PNG has an open-original link");
+  assert.ok(progression.includes("src='/assets/gifter-badges/level_" + '" + badgeNumber + "' + ".png'"), "each level card displays its corresponding original PNG");
   assert.ok(progression.includes("src='/assets/gifter-badges/level_" + '" + badgeNumber + "' + ".png'"), "every original PNG is visibly previewed on its matching level card");
-  assert.ok(styles.includes(".gp-level-index-original{"));
+  assert.ok(!progression.includes("gp-level-index-original"), "level cards do not add a duplicate PNG thumbnail");
   assert.match(styles, /\.gp-reference-figure img\{display:block;width:100%[^}]*height:auto[^}]*object-fit:contain/);
-  assert.ok(html.includes("/gifter-progression.css?v=20261115-gifter-reference-placement-1"));
-  assert.ok(html.includes("/gifter-progression.js?v=20261115-gifter-reference-placement-1"));
-  assert.ok(sw.includes("/gifter-progression.css?v=20261115-gifter-reference-placement-1"));
-  assert.ok(sw.includes("/gifter-progression.js?v=20261115-gifter-reference-placement-1"));
+  assert.ok(html.includes("/gifter-progression.css?v=20261115-original-individual-badges-rollback-1"));
+  assert.ok(html.includes("/gifter-progression.js?v=20261115-original-individual-badges-rollback-1"));
+  assert.ok(sw.includes("/gifter-progression.css?v=20261115-original-individual-badges-rollback-1"));
+  assert.ok(sw.includes("/gifter-progression.js?v=20261115-original-individual-badges-rollback-1"));
 });
 
 test("the PWA shell precaches all 50 original numbered Gifter PNGs", () => {
