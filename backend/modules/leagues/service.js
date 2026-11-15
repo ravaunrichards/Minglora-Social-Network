@@ -252,7 +252,32 @@ export function refundCreatorLeagueGift(db, giftId, now = new Date()) {
   event(db, gift.userId, "gift_refunded", {
     giftId: id, coinAmount: asNumber(gift.coinAmount), giftCode: String(gift.giftCode || "")
   }, new Date(timestamp));
+  const refundedDayKey = String(gift.dayKey || "");
   ensureCollections(db);
+
+  // If this Gift belonged to an already-settled day, rewind to the first
+  // placement snapshot and replay affected days from the corrected Gift ledger.
+  const affectedSettlements = db.creatorLeagueDailySettlements
+    .filter(item => item.dayKey && refundedDayKey && item.dayKey >= refundedDayKey)
+    .sort((a, b) => String(a.dayKey).localeCompare(String(b.dayKey)));
+  const firstReplay = affectedSettlements.find(item => Array.isArray(item.placements));
+  if (firstReplay) {
+    for (const placement of firstReplay.placements) {
+      const profile = db.creatorLeagueProfiles.find(item => item.userId === placement.userId);
+      if (!profile) continue;
+      profile.leagueClass = placement.leagueClass;
+      profile.fragments = Math.max(-3, Math.min(3, Math.trunc(asNumber(placement.fragmentsBefore))));
+      profile.leagueShields = Math.max(0, Math.min(10, Math.trunc(asNumber(placement.shieldsBefore))));
+    }
+    const replayDays = affectedSettlements
+      .filter(item => String(item.dayKey) >= String(firstReplay.dayKey))
+      .map(item => String(item.dayKey));
+    db.creatorLeagueDailySettlements = db.creatorLeagueDailySettlements
+      .filter(item => String(item.dayKey) < String(firstReplay.dayKey));
+    for (const replayDay of replayDays) {
+      settleCreatorLeagueDay(db, replayDay, new Date(timestamp));
+    }
+  }
   return { reversed: true, userId: gift.userId, coinAmount: asNumber(gift.coinAmount) };
 }
 export function ensureCreatorLeagueProfile(db, userId, region = "GLOBAL", now = new Date()) {
