@@ -293,10 +293,14 @@ test("Rose uses an individually authored layered GLTF botanical sculpture", () =
   assert.equal(model.asset?.version, "2.0");
   assert.equal(model.asset?.extras?.mingloraAssetId, "gift-rose-3d-v1");
   assert.equal(model.asset?.extras?.source, "assets/3d-assets/gift-models/rose-model.mjs");
-  assert.ok(model.meshes?.[0]?.primitives?.length >= 25, "Rose should include individually addressable botanical mesh parts");
+  assert.match(model.asset?.extras?.artDirection || "", /raised surface vein networks.*branching venation/i);
+  assert.ok(model.meshes?.[0]?.primitives?.length >= 45, "Rose should include individually addressable botanical and surface-detail mesh parts");
   assert.ok(model.materials?.some(material => material.name.includes("Velvet outer petal")), "Rose should include a dedicated outer-petal material");
   assert.ok(model.materials?.some(material => material.name.includes("Rose sepal")), "Rose should include dedicated calyx materials");
   assert.ok(model.materials?.some(material => material.name.toLowerCase().includes("leaf")), "Rose should include dedicated foliage materials");
+  assert.ok(model.materials?.some(material => material.name.includes("Lower leaf - left venation")), "Rose foliage must include a raised midrib and branching veins");
+  assert.ok(model.materials?.some(material => material.name.includes("Velvet outer petal 1 venation")), "Rose outer petals must include fine raised surface veins");
+  assert.ok(model.materials?.some(material => material.name.includes("Satin middle petal 1 venation")), "Rose middle petals must include fine raised surface veins");
   assert.ok(model.buffers?.[0]?.uri.startsWith("data:application/octet-stream;base64,"), "Rose must be self-contained for the existing model viewer");
   assert.ok(model.accessors?.filter(accessor => accessor.type === "VEC3").length >= 20, "Rose should expose mesh position and normal accessors");
 });
