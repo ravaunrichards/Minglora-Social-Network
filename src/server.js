@@ -1472,6 +1472,12 @@ async function route(req, res) {
     const user = sessionUser(req);
     try {
       requireAuth(user);
+      if (!isDesignatedCreatorHubAdmin(user) || !isModerator(user, req) || !hasActiveReviewerSession(user)) {
+        throw Object.assign(
+          new Error('The Minglora AI Network is available only to the designated administrator with a verified MFA session.'),
+          { status: 403 }
+        );
+      }
       ensureAICollections(db);
       const providerStatus = getAIProviderStatus();
       const providerReady = providerStatus.configured && providerStatus.executionEnabled;
