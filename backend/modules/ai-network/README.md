@@ -49,6 +49,9 @@ All routes are under /api/ai-network and require the signed-in Minglora session.
 - PATCH /api/ai-network/provider-assignments/:assignmentId/status
 - GET /api/ai-network/tasks
 - POST /api/ai-network/tasks
+- GET /api/ai-network/finance/budgets
+- POST /api/ai-network/finance/budgets
+- GET /api/ai-network/finance/usage (last 30 days; recorded events only)
 - PATCH /api/ai-network/tasks/:taskId/approval
 - POST /api/ai-network/tasks/:taskId/cancel
 - GET/POST /api/ai-network/organizations/:id/positions
@@ -66,6 +69,14 @@ All routes are under /api/ai-network and require the signed-in Minglora session.
 - GET/POST /api/ai-network/organizations/:id/succession-plans
 - PATCH /api/ai-network/organizations/:id/succession-plans/:planId/status
 - GET /api/ai-network/organizations/:id/promotions
+
+## AI finance and resource governance
+
+The finance migration adds private owner, organization, department and identity budget policies with append-only change history, plus an immutable usage ledger. Budget policy updates require an audit reason. The task queue checks active applicable owner/org/department/identity limits before insertion or promotion into queued/running status: daily token reservations, monthly spend reservations and concurrent-task limits. A paused matching policy blocks new work. Existing task budget fields are reservations supplied by the task request; actual usage is recorded separately and is never inferred from those reservations.
+
+Only authenticated designated Minglora administrators can list or update budget policies and view usage reports through the Node API. The private runtime gateway accepts usage events from internal server processes; public browser routes do not expose usage insertion. Usage events require an owner-owned AI identity, verify provider assignment/task linkage, reject secret-bearing metadata, use a stable source event ID for idempotency, and cannot be updated or deleted. Cost and token totals are derived from these recorded events only.
+
+The Finance & Resource Center displays actual ledger summaries and saved policies. No usage events currently exist, so the panel must show empty measured usage rather than estimate spend, tokens or compute. CPU/GPU/memory/storage limits are persisted as policy controls, but enforcement on live infrastructure requires corresponding resource metering adapters. Budget policies do not authorize payments, payouts, refunds, Coin actions or transfers. AI workers remain globally paused and disabled; no provider execution is claimed.
 
 ## Provider execution gate
 
