@@ -1,11 +1,12 @@
 (() => {
   "use strict";
-  const state = { overview: null, sessions: [], gifts: [], selectedPowerupId: "momentum_boost", selectedMatchId: "", lastUpdatedAt: null, refreshing: false, refreshError: "" };
+  const state = { overview: null, sessions: [], gifts: [], selectedPowerupId: "momentum_boost", selectedMatchId: "", rankingPeriod: "weekly", rankingClass: "", lastUpdatedAt: null, refreshing: false, refreshError: "" };
   let refreshController = null;
   let refreshInFlight = false;
   let viewGeneration = 0;
   let refreshToken = 0;
   let autoSyncTimer = null;
+  let leaderboardLoadToken = 0;
   const $ = selector => document.querySelector(selector);
   const esc = value => String(value ?? "").replace(/[&<>"']/g, char => ({
     "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
@@ -207,20 +208,31 @@
     return "<div class='league-podium' aria-label='Top three creators'>" + ranked.map(({member, place}) =>
       "<button type='button' class='league-podium-member is-place-" + place + "' data-league-profile='" + esc(member.id) + "' aria-label='Open " + esc(member.name || member.username || "creator") + " profile, ranked number " + place + "'>" +
         "<span class='league-podium-crown' aria-hidden='true'>" + (place === 1 ? "👑" : place === 2 ? "✦" : "✧") + "</span>" +
-        image(member, "ml-creator-ring ml-creator-ring--league") +
+        "<span class='league-podium-avatar-wrap'>" + image(member, "ml-creator-ring ml-creator-ring--league") +
+          "<span class='league-podium-avatar-medal is-place-" + place + "' aria-hidden='true'>" + place + "</span></span>" +
         "<strong>" + esc(member.name || "Minglora creator") + "</strong><small>@" + esc(member.username || "creator") + "</small>" +
-        "<b class='league-podium-points'>" + Number(member.seasonPoints || 0).toLocaleString() + " pts</b>" +
+        "<b class='league-podium-points'>" + Number(member.points ?? member.seasonPoints ?? 0).toLocaleString() + " pts</b>" +
         "<span class='league-podium-base' aria-hidden='true'>" + place + "</span></button>"
     ).join("") + "</div>";
   }
   function leaderboardMarkup(leaderboard) {
-    if (!leaderboard.length) return "<div class='league-empty-inline'>Your class leaderboard will appear when creators earn confirmed LIVE Gift points in your region.</div>";
-    const remaining = leaderboard.slice(3).map(item =>
-      "<button type='button' class='league-leader-row' data-league-profile='" + esc(item.id || "") + "' " + (!item.id ? "disabled" : "") + ">" +
-        "<b class='league-position'>#" + Number(item.position || 0) + "</b>" + image(item, "ml-creator-ring ml-creator-ring--league") +
-        "<span class='league-leader-name'><strong>" + esc(item.name || "Minglora creator") + "</strong><small>@" + esc(item.username || "creator") + "</small></span>" +
-        "<strong class='league-leader-points'>" + Number(item.seasonPoints || 0).toLocaleString() + " pts</strong></button>"
-    ).join("");
+    if (!leaderboard.length) return "<div class='league-empty-inline'>No creators have earned confirmed LIVE Gift points for this division and period yet.</div>";
+    const remaining = leaderboard.slice(3).map(item => {
+      const position = Math.max(0, Number(item.position || 0));
+      const award = position >= 4 && position <= 10 ? "top-ten" : position >= 11 && position <= 20 ? "top-twenty" : "";
+      const awardMarkup = award
+        ? "<span class='league-ranking-medal league-ranking-medal--" + award + "' aria-hidden='true'>" + (award === "top-ten" ? "✦" : "◆") + "</span>"
+        : "";
+      const bandMarkup = award
+        ? "<span class='league-leader-band league-leader-band--" + award + "'>" + (award === "top-ten" ? "TOP 10" : "TOP 20") + "</span>"
+        : "";
+      const rowClass = award ? " league-leader-row--" + award : "";
+      return "<button type='button' class='league-leader-row" + rowClass + "' data-league-profile='" + esc(item.id || "") + "' aria-label='Open " + esc(item.name || item.username || "creator") + " profile, place " + position + "' " + (!item.id ? "disabled" : "") + ">" +
+        "<b class='league-position'>#" + position + "</b>" +
+        "<span class='league-rank-avatar-wrap'>" + image(item, "ml-creator-ring ml-creator-ring--league") + awardMarkup + "</span>" +
+        "<span class='league-leader-name'><strong>" + esc(item.name || "Minglora creator") + "</strong><small>@" + esc(item.username || "creator") + "</small>" + bandMarkup + "</span>" +
+        "<strong class='league-leader-points'>" + Number(item.points ?? item.seasonPoints ?? 0).toLocaleString() + " pts</strong></button>";
+    }).join("");
     return podiumMarkup(leaderboard) + (remaining ? "<div class='league-leaderboard league-leaderboard-rest'>" + remaining + "</div>" : "");
   }
   function meter(value, max) {
@@ -228,14 +240,87 @@
     return "<div class='league-meter' aria-label='" + Math.round(percent) + "% complete'><span style='width:" + percent + "%'></span></div>";
   }
   function classLadderMarkup(classes, active) {
-    return "<div class='league-class-ladder'>" + classes.map(item =>
-      "<span class='league-class-step " + (item === active ? "is-current" : "") + "'>" + esc(item) + "</span>"
-    ).join("") + "</div>";
+    const hierarchy = [
+      { tier: "A", title: "Highest tier", levels: ["A3", "A2", "A1"] },
+      { tier: "B", title: "Upper tier", levels: ["B5", "B4", "B3", "B2", "B1"] },
+      { tier: "C", title: "Middle tier", levels: ["C5", "C4", "C3", "C2", "C1"] },
+      { tier: "D", title: "Entry tier", levels: ["D5", "D4", "D3", "D2", "D1"] }
+    ];
+    const available = new Set(Array.isArray(classes) ? classes : []);
+    const groups = hierarchy.map(group => {
+      const levels = group.levels.filter(item => available.has(item));
+      if (!levels.length) return "";
+      const currentTier = levels.includes(active);
+      return "<article class='league-tier-card league-tier-card--" + group.tier + (currentTier ? " is-active-tier" : "") + "'>" +
+        "<div class='league-tier-card-heading'><span class='league-tier-emblem' role='img' aria-label='League " + group.tier + " emblem'><b>" + group.tier + "</b></span>" +
+        "<span><strong>League " + group.tier + "</strong><small>" + group.title + "</small></span></div>" +
+        "<div class='league-tier-class-list'>" + levels.map(item =>
+          "<span class='league-class-step " + (item === active ? "is-current" : "") + "' " + (item === active ? "aria-current='true' aria-label='Current class " + esc(item) + "'" : "") + ">" + esc(item) + "</span>"
+        ).join("") + "</div></article>";
+    }).join("");
+    return "<div class='league-class-ladder league-tier-grid' aria-label='Creator League class hierarchy'>" + groups + "</div>";
+  }
+  function fragmentRulesMarkup() {
+    const groups = [
+      { tier: "A", title: "A3–A1", rules: [[-1, "Bottom 99%"], [0, "Top 60%"], [1, "Top 20%"], [2, "Top 10%"], [3, "Top 1%"]] },
+      { tier: "B", title: "B5–B1", rules: [[-1, "Bottom 99%"], [0, "Top 70%"], [1, "Top 20%"], [2, "Top 10%"], [3, "Top 1%"]] },
+      { tier: "C", title: "C5–C1", rules: [[-1, "Bottom 99%"], [0, "Top 80%"], [1, "Top 20%"], [2, "Top 10%"]] },
+      { tier: "D", title: "D1", rules: [[-1, "Bottom 99%"], [0, "Top 80%"], [1, "Top 20%"], [2, "Top 10%"]] },
+      { tier: "D", title: "D2–D5", rules: [[0, "Bottom 99%"], [1, "Top 20%"], [2, "Top 10%"]] }
+    ];
+    const cards = groups.map(group =>
+      "<article class='league-fragment-rule-card league-tier-card--" + group.tier + "'><div class='league-fragment-rule-heading'><span class='league-fragment-tier-mark'>" + group.tier + "</span><strong>" + group.title + "</strong></div>" +
+      "<div class='league-fragment-rule-steps'>" + group.rules.map(([value, placement]) =>
+        "<span class='league-fragment-rule-step'><b>" + (value > 0 ? "+" : "") + value + "</b><small>" + placement + "</small></span>"
+      ).join("") + "</div></article>"
+    ).join("");
+    return "<section class='card league-fragment-reference' id='league-fragment-reference-zone' aria-labelledby='league-fragment-reference-heading'>" +
+      "<div class='league-section-heading'><div><span class='league-eyebrow'>SUPPLIED LEAGUE RULE REFERENCES</span><h2 id='league-fragment-reference-heading'>Placement fragment guide</h2>" +
+      "<p>Reference thresholds organized by the class bands in the League captures.</p></div><span class='league-reference-status'>REFERENCE ONLY</span></div>" +
+      "<div class='league-fragment-rule-grid'>" + cards + "</div>" +
+      "<p class='league-fragment-reference-note'>These placement-fragment thresholds are displayed for reference; they are not currently used to calculate Minglora class movement. Active Creator League promotion remains based on confirmed lifetime LIVE Gift points (100,000 points per class). Match Rank is calculated separately from completed League Match results.</p></section>";
   }
   function matchLadderMarkup(ranks, active) {
     return "<div class='match-rank-ladder'>" + ranks.map((item, index) =>
       "<span class='match-rank-step " + (item === active ? "is-current" : "") + "'><small>" + (index + 1) + "</small>" + esc(item) + "</span>"
     ).join("") + "</div>";
+  }
+  function rankingControlsMarkup(overview) {
+    const availableClasses = (overview.classes || []).slice().reverse();
+    if (!availableClasses.includes(state.rankingClass)) state.rankingClass = overview.profile.leagueClass;
+    if (!["daily", "weekly"].includes(state.rankingPeriod)) state.rankingPeriod = "weekly";
+    const classOptions = availableClasses.map(item =>
+      "<option value='" + esc(item) + "' " + (item === state.rankingClass ? "selected" : "") + ">" + esc(item) + "</option>"
+    ).join("");
+    return "<div class='league-ranking-controls'>" +
+      "<div class='league-ranking-period' role='group' aria-label='Leaderboard period'>" +
+        "<button type='button' class='league-ranking-filter' data-league-period='daily' aria-pressed='" + (state.rankingPeriod === "daily") + "'>Daily</button>" +
+        "<button type='button' class='league-ranking-filter' data-league-period='weekly' aria-pressed='" + (state.rankingPeriod === "weekly") + "'>Weekly</button>" +
+      "</div>" +
+      "<label class='league-ranking-class-label'>League class<select id='league-ranking-class' aria-label='Choose a Creator League class'>" + classOptions + "</select></label>" +
+      "<small id='league-ranking-status' role='status' aria-live='polite'>Loading " + esc(state.rankingPeriod) + " " + esc(state.rankingClass) + " rankings…</small>" +
+      "</div><div id='league-leaderboard-results'>" + leaderboardMarkup(overview.leaderboard || []) + "</div>";
+  }
+  async function loadLeaderboard() {
+    const results = $("#league-leaderboard-results");
+    const status = $("#league-ranking-status");
+    if (!results || !isLeagueViewActive()) return;
+    const token = ++leaderboardLoadToken;
+    const period = state.rankingPeriod === "daily" ? "daily" : "weekly";
+    const leagueClass = state.rankingClass || state.overview?.profile?.leagueClass || "";
+    if (status) status.textContent = "Loading " + period + " " + leagueClass + " rankings…";
+    try {
+      const data = await request("/leagues/leaderboard?period=" + encodeURIComponent(period) + "&class=" + encodeURIComponent(leagueClass));
+      if (token !== leaderboardLoadToken || !isLeagueViewActive()) return;
+      results.innerHTML = leaderboardMarkup(data.leaderboard || []);
+      if (status) {
+        const count = Array.isArray(data.leaderboard) ? data.leaderboard.length : 0;
+        status.textContent = (period === "daily" ? "Today" : "This week") + " · " +
+          data.leagueClass + " · " + data.region + " · " + count + " creators ranked";
+      }
+    } catch (error) {
+      if (token === leaderboardLoadToken && status) status.textContent = "Rankings could not update: " + error.message;
+    }
   }
   function eventLabel(item) {
     const details = item.details || {};
@@ -304,11 +389,12 @@
       "<article class='card league-stat-card'><span class='league-eyebrow'>MATCH RANK</span><div class='league-stat-value match-rank-value'>" + esc(p.matchRank) + "</div><strong>" + Number(p.matchRankPoints).toLocaleString() + " / 100 rank points</strong>" + meter(matchPercent,100) + "<p>" + (p.matchRankPointsToNext === null ? "Highest match rank reached" : p.matchRankPointsToNext + " points to next rank") + "</p><small>" + p.matchWins + " wins · " + p.matchLosses + " losses · " + p.matchDraws + " draws</small></article>" +
       "<article class='card league-stat-card'><span class='league-eyebrow'>NEXT CLASS</span><div class='league-stat-value match-rank-value'>" + (p.nextClass ? esc(p.nextClass) : "A1") + "</div><strong>" + (p.nextClass ? Number(p.pointsToNextClass).toLocaleString() + " points remaining" : "Top Creator League class") + "</strong><p>Every 100,000 confirmed lifetime LIVE Gift points advances one class.</p><small>Refunded Gifts do not count.</small></article></section>" +
       "<section class='card league-ladder-panel' id='league-progression-zone'><div class='league-section-heading'><div><span class='league-eyebrow'>CREATOR PROGRESSION</span><h2>Creator League classes</h2><p>Your class updates automatically from confirmed lifetime LIVE Gift value.</p></div><span class='league-feature-icon'>📈</span></div>" + classLadderMarkup(overview.classes,p.leagueClass) + "<div class='league-rules-grid'><div><strong>Automatic promotion</strong><p>Every 100,000 eligible lifetime LIVE Gift points advances you one class immediately after the Gift is confirmed.</p></div><div><strong>Lifetime progress</strong><p>Gift points remain across weekly season resets. Refunded Gifts are removed from your total and can change your class.</p></div><div><strong>Eligible Gifts</strong><p>Only confirmed LIVE Gifts count. Coin purchases, direct profile/social gifts, viewer support and match power-up bonuses do not add Creator League points.</p></div></div></section>" +
+      fragmentRulesMarkup() +
       "<section class='card league-ladder-panel'><div class='league-section-heading'><div><span class='league-eyebrow'>MATCH PROGRESSION</span><h2>Bronze to Grandmaster</h2><p>Match rank changes only from completed League Match results, never from LIVE Gift league points.</p></div><span class='league-feature-icon'>🥇</span></div>" + matchLadderMarkup(overview.matchRanks,p.matchRank) + "<div class='league-rank-rules'><span>Win: +25</span><span>Draw: +5</span><span>Loss: −15</span><span>100 points advances one rank</span></div></section>" +
       challengeMarkup(overview,sessions) +
       powerupStudioMarkup(overview) +
       "<section class='league-matches-section' id='league-matches-zone'><div class='league-section-heading'><div><span class='league-eyebrow'>LIVE COMPETITION</span><h2>League Matches</h2><p>Gift points are counted for the match score while the original confirmed Gift value stays in Creator League totals.</p></div><div class='league-refresh-tools'><small id='league-refresh-status' aria-live='polite'>Live scores update automatically.</small></div></div>" + (matches.length ? "<div class='league-matches-grid'>" + matches.map(match=>matchCard(match,overview)).join("") + "</div>" : "<div class='league-empty-inline'>No League Matches yet. Challenge another creator who is LIVE to start one.</div>") + "</section>" +
-      "<section class='card league-leaderboard-panel' id='league-leaderboard-zone'><div class='league-section-heading'><div><span class='league-eyebrow'>YOUR CLASS</span><h2>" + esc(p.leagueClass) + " leaderboard</h2><p>Regional weekly LIVE Gift standings. Tap any creator to open their profile.</p></div></div>" + leaderboardMarkup(leaderboard) + "</section>" +
+      "<section class='card league-leaderboard-panel' id='league-leaderboard-zone'><div class='league-section-heading'><div><span class='league-eyebrow'>CREATOR DIVISIONS</span><h2>League leaderboard</h2><p>Browse daily or weekly confirmed LIVE Gift standings across your region's Creator League classes. Tap any creator to open their profile.</p></div></div>" + rankingControlsMarkup(overview) + "</section>" +
       "<section class='card league-events-panel' id='league-events-zone'><div class='league-section-heading'><div><span class='league-eyebrow'>YOUR PROGRESSION</span><h2>League activity</h2></div></div>" + (events.length ? "<div class='league-events-list'>" + events.map(item=>"<div class='league-event-row'><span>✦</span><div><strong>" + esc(eventLabel(item)) + "</strong><small>" + new Date(item.createdAt).toLocaleString() + "</small></div></div>").join("") + "</div>" : "<div class='league-empty-inline'>Promotions, demotions, shields and completed matches will appear here.</div>") + "</section>" +
 
       "<p class='league-footnote'>Minglora League rules are platform rules, independent of TikTok. Weekly seasons reset season points; lifetime points and Match Rank records remain on your profile.</p></div>";
@@ -389,6 +475,27 @@
     }
     updatePowerupPreview();
 
+    document.querySelectorAll("[data-league-period]").forEach(button => {
+      if (button.dataset.leaguePeriodBound === "true") return;
+      button.dataset.leaguePeriodBound = "true";
+      button.addEventListener("click", () => {
+        const next = button.dataset.leaguePeriod;
+        if (!["daily", "weekly"].includes(next) || next === state.rankingPeriod) return;
+        state.rankingPeriod = next;
+        document.querySelectorAll("[data-league-period]").forEach(item =>
+          item.setAttribute("aria-pressed", String(item.dataset.leaguePeriod === next))
+        );
+        void loadLeaderboard();
+      });
+    });
+    const rankingClass = $("#league-ranking-class");
+    if (rankingClass && rankingClass.dataset.leagueClassBound !== "true") {
+      rankingClass.dataset.leagueClassBound = "true";
+      rankingClass.addEventListener("change", () => {
+        state.rankingClass = rankingClass.value;
+        void loadLeaderboard();
+      });
+    }
     document.querySelectorAll("[data-league-profile]").forEach(button => {
       if (button.dataset.leagueProfileBound === "true") return;
       button.dataset.leagueProfileBound = "true";
@@ -398,6 +505,7 @@
       });
     });
     updateRefreshStatus();
+    void loadLeaderboard();
   }
   function onNavigateAway() {
     viewGeneration += 1;
@@ -448,6 +556,7 @@
         "league-hero-zone",
         "league-overview-zone",
         "league-progression-zone",
+        "league-fragment-reference-zone",
         "league-challenge-zone",
         "league-matches-zone",
         "league-leaderboard-zone",

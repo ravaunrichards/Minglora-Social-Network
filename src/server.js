@@ -45,7 +45,7 @@ import { getPlatformAdminBadge, getProfileVerificationBadge } from './platform-b
 import { listActiveCreatorSubscriptions } from '../backend/modules/subscriptions/service.js';
 import { SOUND_AUDIO_MIME_TYPES, validateSoundInput, normalizeSoundtrackInput, canUseSound, soundUsageCounts } from '../backend/modules/sounds/service.js';
 import { getGiftGallery, giftGalleryTimeZone, recordGiftGalleryEvent, updateGiftGallerySettings } from '../backend/modules/gift-gallery/service.js';
-import { CREATOR_LEAGUE_CLASSES, recordLiveGiftForLeagues, refundCreatorLeagueGift, getCreatorLeagueOverview, createCreatorLeagueMatch, acceptCreatorLeagueMatch, supportCreatorLeagueMatch, useCreatorLeaguePowerup, listCreatorLeagueMatches, settleExpiredLeagueMatches, settleScheduledCreatorLeagueDays } from '../backend/modules/leagues/service.js';
+import { CREATOR_LEAGUE_CLASSES, recordLiveGiftForLeagues, refundCreatorLeagueGift, getCreatorLeagueOverview, getCreatorLeagueLeaderboard, createCreatorLeagueMatch, acceptCreatorLeagueMatch, supportCreatorLeagueMatch, useCreatorLeaguePowerup, listCreatorLeagueMatches, settleExpiredLeagueMatches, settleScheduledCreatorLeagueDays } from '../backend/modules/leagues/service.js';
 import { recordGifterGift, refundGifterGift, getGifterProgressionOverview, getGifterBadgeSummary, getNewGifterIdentity, getLiveGifterLeaderboard } from '../backend/modules/gifter-progression/service.js';
 import { LIVE_FAN_CLUB_GIFT_CODES, LIVE_FAN_CLUB_JOIN_GIFT_CODE, LIVE_FAN_CLUB_JOIN_COIN_COST, ensureLiveFanClubCollections, getLiveFanClubMembership, countActiveLiveFanClubMembers, joinLiveFanClub, awardLiveFanClubPoints, publicLiveFanClubMembership } from '../backend/modules/live/fan-club.js';
 import { ensureAICollections, getAICommandCenter, getAIProviderStatus, getAISettings, getAICreatorDailyUsage, createAIBot, updateAIBotStatus, createAIBotTeam, createAIBotSchedule, updateAIBotScheduleStatus, updateAISettings, createAICreatorJob, startAICreatorJobGeneration, completeAICreatorJobGeneration, failAICreatorJobGeneration, createAIApprovalRequest, decideAIApproval, setAICompanionConsent, createAICommunityEvent, emergencyPauseAI } from '../backend/modules/ai-network/service.js';
@@ -6646,6 +6646,20 @@ async function route(req, res) {
             }:null;
           }).filter(Boolean);
         return json(res,200,{dayKey,leaderboard,scoring:'confirmed LIVE Coin gifts sent'});
+      }
+      if(method==='GET'&&p==='/api/leagues/leaderboard'){
+        await syncRefundedGiftActivity();
+        try{
+          const ranking=getCreatorLeagueLeaderboard(db,user,{
+            period:url.searchParams.get('period')||'weekly',
+            leagueClass:url.searchParams.get('class')||'',
+            now:new Date()
+          });
+          await saveStore();
+          return json(res,200,ranking);
+        }catch(error){
+          return json(res,error.status||400,{error:error.message||'The Creator League leaderboard could not be loaded.'});
+        }
       }
       if(method==='GET'&&p==='/api/leagues/overview'){
         await syncRefundedGiftActivity();

@@ -20,6 +20,11 @@ Weekly seasons start Monday at 00:00 UTC. Season points reset weekly; lifetime L
 
 Coin purchases, direct profile gifts, social gifts, viewer support and match power-up bonuses do not add Creator League points. Match power-ups change only an active match score.
 
+## Division leaderboards
+
+Members can browse the **daily** and **weekly** confirmed LIVE Gift rankings for every Creator League class in their own region. The selected class and period are validated by the server; the browser never submits or calculates ranking points. Daily standings use the current UTC day, weekly standings use the current Monday-start UTC season, and only persisted Creator League profiles in the viewer's region and selected class are returned. A weekly reset changes season standings, not lifetime class progress or Match Rank.
+
+
 ## Match Rank
 
 Progression from lowest to highest:
