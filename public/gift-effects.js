@@ -66,6 +66,14 @@
   function buildPreviewFrames(preset,v){
     const {dx,dy,tilt,spin,peak,rebound}=v;
     const neutral={offset:1,opacity:1,transform:"translate3d(0,0,0) rotateZ(0deg) scale(1)",filter:"none"};
+    if(preset==="rose-unfurl")return [
+      {offset:0,opacity:0,transform:"translate3d(0,24px,0) rotateZ(-15deg) scale(.68)",filter:"brightness(.74) saturate(.76)"},
+      {offset:.2,opacity:1,transform:"translate3d(0,-9px,0) rotateZ(7deg) scale(1.12)",filter:"brightness(1.34) saturate(1.28)"},
+      {offset:.4,opacity:1,transform:"translate3d(0,2px,0) rotateZ(-4deg) scale(.96)",filter:"brightness(1.16) saturate(1.12)"},
+      {offset:.63,opacity:1,transform:"translate3d(0,-4px,0) rotateZ(2.5deg) scale(1.055)",filter:"brightness(1.2)"},
+      {offset:.84,opacity:1,transform:"translate3d(0,-1px,0) rotateZ(-.7deg) scale(1.012)",filter:"brightness(1.08)"},
+      neutral
+    ];
     if(preset==="djembe-strike")return [
       {offset:0,opacity:0,transform:"translate3d(0,15px,0) rotateZ(-5deg) scale(.84)",filter:"brightness(.78)"},
       {offset:.16,opacity:1,transform:"translate3d(0,-5px,0) rotateZ(4deg) scale(1.14)",filter:"brightness(1.42) saturate(1.24)"},
@@ -415,12 +423,35 @@
     shimmer.connect(filter);filter.connect(shimmerGain);shimmerGain.connect(c.destination);shimmer.start(now+.12);shimmer.stop(now+.7);
     return true;
   }
+  function playRose(c,now,seed){
+    const rustle=c.createBufferSource(),highpass=c.createBiquadFilter(),lowpass=c.createBiquadFilter(),rustleGain=c.createGain();
+    rustle.buffer=createGiftNoise(c,seed,0.52);
+    highpass.type="highpass";highpass.frequency.setValueAtTime(680,now);
+    lowpass.type="lowpass";lowpass.frequency.setValueAtTime(1950,now);lowpass.frequency.exponentialRampToValueAtTime(4600,now+.34);
+    rustleGain.gain.setValueAtTime(.0001,now);rustleGain.gain.exponentialRampToValueAtTime(.026,now+.075);
+    rustleGain.gain.exponentialRampToValueAtTime(.0001,now+.52);
+    rustle.connect(highpass);highpass.connect(lowpass);lowpass.connect(rustleGain);rustleGain.connect(c.destination);
+    rustle.start(now);rustle.stop(now+.54);
+    const notes=[523.25,659.25,783.99,1046.5,1318.51],delays=[0,.12,.255,.415,.595];
+    notes.forEach((frequency,index)=>{
+      const start=now+delays[index],tone=c.createOscillator(),gain=c.createGain(),pan=c.createStereoPanner?.();
+      tone.type=index===4?"triangle":"sine";
+      tone.frequency.setValueAtTime(frequency*(1+((seed+index*5)%9-4)*.00065),start);
+      gain.gain.setValueAtTime(.0001,start);gain.gain.exponentialRampToValueAtTime(.021/(1+index*.24),start+.03);
+      gain.gain.exponentialRampToValueAtTime(.0001,start+.62);
+      if(pan){pan.pan.setValueAtTime((index-2)*.13,start);tone.connect(gain);gain.connect(pan);pan.connect(c.destination);}
+      else{tone.connect(gain);gain.connect(c.destination);}
+      tone.start(start);tone.stop(start+.65);
+    });
+    return true;
+  }
   function play(gift){
     if(!gift)return false;
     const c=audio();if(!c)return false;
     try{
       if(c.state==="suspended")void c.resume();
       const seed=hash([gift.sound_preset,gift.code,gift.name].join("|")),now=c.currentTime;
+      if(gift.code==="rose-4ieccm")return playRose(c,now,seed);
       if(gift.code==="djembe-master-1v3jzkm")return playDjembe(c,now,seed);
       if(gift.code==="palm-breeze-gknyt0")return playPalmBreeze(c,now,seed);
       if(gift.code==="gamer-otter-100-mgl")return playGamerOtter(c,now,seed);
@@ -443,7 +474,7 @@
       return true;
     }catch{return false;}
   }
-  const presets=new Set(["petal-bloom","heart-pulse","creature-entrance","grand-entry","soundwave-ripple","power-impact","delight-pop","glam-spin","royal-shimmer","celebration-burst","cosmic-orbit","nature-rise","horizon-sweep","pixel-burst","warm-wave","spark-float","gift-reveal"]);
+  const presets=new Set(["rose-unfurl","petal-bloom","heart-pulse","creature-entrance","grand-entry","soundwave-ripple","power-impact","delight-pop","glam-spin","royal-shimmer","celebration-burst","cosmic-orbit","nature-rise","horizon-sweep","pixel-burst","warm-wave","spark-float","gift-reveal"]);
   function mount(parent,gift,options={}){
     if(!parent||!gift)return null;
     const originalGift=gift;
@@ -552,7 +583,7 @@
     const motionElement=card.querySelector(".minglora-gift-fx-model");
     if(motionElement&&gift.motion_preset&&typeof motionElement.animate==="function"){
       const reduced=Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);
-      const visualPreset=gift.code==="djembe-master-1v3jzkm"?"djembe-strike":gift.code==="palm-breeze-gknyt0"?"palm-canopy-sway":gift.code==="gamer-otter-100-mgl"?"gamer-otter-cheer":gift.code==="live-island-rmn3mc"?"island-tide":gift.code==="crystal-crown-1itryeu"?"crown-lustre":gift.code==="phoenix-wep6uk"?"phoenix-rise":gift.code==="beach-maracas-1exxoag"?"maraca-rhythm":gift.code==="royal-lions-scepter-15000-mgl"?"lion-scepter-rise":gift.motion_preset;
+      const visualPreset=gift.code==="rose-4ieccm"?"rose-unfurl":gift.code==="djembe-master-1v3jzkm"?"djembe-strike":gift.code==="palm-breeze-gknyt0"?"palm-canopy-sway":gift.code==="gamer-otter-100-mgl"?"gamer-otter-cheer":gift.code==="live-island-rmn3mc"?"island-tide":gift.code==="crystal-crown-1itryeu"?"crown-lustre":gift.code==="phoenix-wep6uk"?"phoenix-rise":gift.code==="beach-maracas-1exxoag"?"maraca-rhythm":gift.code==="royal-lions-scepter-15000-mgl"?"lion-scepter-rise":gift.motion_preset;
       const semanticFrames=buildPreviewFrames(visualPreset,{dx,dy,tilt,spin,peak,rebound});
       motionElement.animate(semanticFrames,{
         duration:reduced?320:Math.max(950,Math.min(4200,Number(gift.motion_duration_ms)||duration)),
@@ -576,7 +607,7 @@
       const dx=(seed%121)-60,dy=-24-((seed>>>7)%76),tilt=(seed>>>13)%81-40;
       const spin=((seed>>>19)%2?1:-1)*(70+((seed>>>20)%420));
       const peak=(108+((seed>>>3)%31))/100,rebound=(88+((seed>>>11)%19))/100;
-      const preset=gift.motion_preset||gift.animation_preset||"gift-reveal";
+      const preset=gift.code==="rose-4ieccm"?"rose-unfurl":gift.motion_preset||gift.animation_preset||"gift-reveal";
       const frames=buildPreviewFrames(preset,{dx,dy,tilt,spin,peak,rebound});
       if(typeof target.animate==="function"){
         const reduced=Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);
