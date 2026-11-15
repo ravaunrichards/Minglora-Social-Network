@@ -5,7 +5,7 @@ This is the newest evidence-led checkpoint. It supersedes older snapshots below 
 ### Current repository, branch and release state
 
 - Current main remains 9526972669651ac79cda8145be882dd1e1abc962.
-- Current documentation checkpoint branch is docs/minglora-ai-network-mission-register-20261114; it is 3 commits ahead of main, 0 behind, and its only changed path is this progress register.
+- Current documentation checkpoint branch is docs/minglora-ai-network-mission-register-20261114; it is 4 commits ahead of main, 0 behind, and its only changed path is this progress register.
 - The older code branch feat/minglora-ai-bot-network-core is diverged from current main: 1 commit ahead and 81 behind. Its unique delta is a documentation queue file; it is not a safe integration branch and was not merged or force-updated.
 - Draft PR #202, [Draft] Add Minglora Personal AI Bots Network foundation, remains open, draft and non-mergeable. It was not merged. Its historical body is stale against current production and must not be treated as current deployment status.
 - PR #308 (HR performance reviews, succession plans and audited promotions), #310 (HR FK indexes), and #311 (durable schedule gateway) are already merged to main; their merge commits remain as recorded in the earlier checkpoint.
