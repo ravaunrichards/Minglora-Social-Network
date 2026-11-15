@@ -1,3 +1,19 @@
+## Execution checkpoint — 2026-11-15 (AI provider environment and guest provider registry)
+
+- Branch: `feat/minglora-ai-provider-environment-20261115`; open review PR #358: https://github.com/ravaunrichards/Minglora-Social-Network/pull/358. Latest recorded environment cleanup commit: `2f2d468fc2c08c3052b8101c1dddc9aec681ded8`.
+- Added `backend/modules/ai-network/provider-config.js` with **38 provider entries** across hosted language/multimodal models, enterprise model platforms, local runtimes, speech/voice, image/video, search and vector databases. The current ChatGPT conversation is explicitly catalogued as `chatgpt_guest`, but is non-routable because it is an interactive chat session, not a Minglora server API endpoint. OpenAI Platform API is a separate provider.
+- Extended the existing tracked `.env.example` with blank server-only provider credential, endpoint, deployment, model, search, vector, voice/media, AI observability and additional email-provider slots. Readback found **177 environment variables**, no duplicate names, and all expected provider keys present. Existing Supabase, session, LiveKit, Tenor and PayPal template entries remain present.
+- Integrated provider-specific credential-presence reporting into the existing AI status service. It returns environment variable names and boolean readiness only; it never returns secret values. The legacy generic `MINGLORA_AI_PROVIDER/MODEL/API_KEY` contract is preserved. Every catalogue entry reports `adapterAvailable=false`, `connected=false`, and `executionEnabled=false` until an actual adapter and health verifier pass.
+- Added `tests/unit/ai-provider-config.test.js` covering unique provider IDs, the non-routable ChatGPT guest entry, credentials-not-secrets reporting, multi-field credential readiness, compatibility with the legacy generic triplet, and `.env.example` coverage. Added `docs/AI_PROVIDER_CONFIGURATION.md` and linked it from the module README.
+- **No live credentials, local `.env`, Render variables, Supabase secrets, database records, provider account rows, email mailboxes, workers or deployments were changed.** All new secret slots are blank placeholders; existing credentials were not fetched or overwritten.
+- PR #358 was opened with 6 changed files. Repository CI workflows were observed queued/in progress on the initial PR head; a local clone/test run was unavailable because this execution container could not resolve github.com. Do not mark the code/tests verified until checks on the latest PR head report success.
+- **Task 5 remains PARTIAL — METADATA / CONFIGURATION ONLY.** Real secret-manager custody, provider-specific inference adapters, live authentication/health probes, model capability checks, routing/fallback execution, output moderation, request limits/timeouts, usage/cost metering and worker acceptance remain incomplete. Task 5 is not marked VERIFIED COMPLETE.
+- Master acceptance remains **2/19 VERIFIED COMPLETE = 10.53%**. No stage/task completion count was increased by this configuration checkpoint.
+
+**Next action:** verify PR #358 checks against its latest head; correct any CI failures; then continue Task 5 with an approved secrets-manager adapter and a real provider health check while keeping workers paused.
+
+---
+
 ## Live execution checkpoint — 2026-11-15 (identity, discovery and provider rollback contracts)
 
 - Repository remains `ravaunrichards/Minglora-Social-Network`; existing Supabase project only: `gzycobgbasnqqhnympkr`. Main checkpoint base: `6125afeb5c5aca430bef921418edacbf87bef0f0`.
