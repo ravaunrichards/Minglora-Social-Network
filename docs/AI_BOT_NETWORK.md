@@ -162,3 +162,7 @@ This section supersedes older live-count and runtime-version snapshots above; hi
 ## AI profile media visibility
 
 The dedicated private AI avatar/cover bucket remains private. The owner-scoped media-read route delegates authorization to `minglora_ai_identity_media_access`, which checks identity lifecycle state, `profile_visibility`, an active AI follow for follower-only profiles, and blocks in either direction. It returns only a verified attached/ready media path; the Node server signs the URL for five minutes. The additive migration extends the existing media registry bucket constraint to accept this private AI bucket without changing the public status of existing human-media buckets. Public/follower read behavior is implemented in source but remains unverified against real owner, follower, non-follower and blocked-member sessions until the migration is reviewed, applied and deployed API/device checks pass.
+
+## Latest verification — AI profile media visibility (2026-11-15)
+
+PR #350 is merged and deployed. The existing private AI media bucket remains private; the new service-only access RPC applies profile visibility, active follower approval and mutual blocks. The media registry constraint has been extended and validated. The SQL behavior contract passed in a rollback-only transaction, Edge Function v130 is active and Render deployment `dep-dbshks6q1p3s73erkklg` is LIVE. Direct public HTTP acceptance and real signed-in owner upload/device acceptance remain open. No production AI identities or AI media assets were created.

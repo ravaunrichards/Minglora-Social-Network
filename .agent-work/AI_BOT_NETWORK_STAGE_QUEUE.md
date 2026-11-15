@@ -1,10 +1,27 @@
-## AI profile media visibility implementation checkpoint — 2026-11-15
+## Latest verified checkpoint — 2026-11-15 (private AI profile media visibility)
+
+- PR #350 merged to `main` as `e5fd5329f79dbecbaf4f9ae2f7b236ac72f772ff`.
+- Existing Supabase project `gzycobgbasnqqhnympkr`: migration version `20261115023503`, name `minglora_ai_identity_media_visibility`, successfully applied.
+- `public.minglora_ai_identity_media_access(uuid,uuid,text)` is present as SECURITY INVOKER with locked empty search_path. Execute is denied to `anon` and `authenticated`, granted to `service_role`. It verifies owner, identity lifecycle, profile visibility, active follower approval, mutual block state and attached/ready media metadata.
+- The existing `public.media_assets_storage_bucket_check` constraint is validated and now includes `minglora-ai-profile-media`; all prior bucket values remain. Existing 57 media records were preserved; 0 AI media asset rows and 0 AI identities remain. The AI Storage bucket is still absent pending a real owner-authenticated upload; no public bucket was created.
+- Rollback-only production SQL contract passed owner/public/follower/non-follower/block/private/hidden/disabled cases. The test transaction rolled back; no identities, follows, blocks, media objects or asset rows were retained.
+- Existing `minglora-runtime-state` Edge Function is ACTIVE at v130 with `verify_jwt=false` preserved; deployed source contains the `ai_identity_media_access` handler.
+- Existing Render free service `minglora-social-network-temp` deployment `dep-dbshks6q1p3s73erkklg` is LIVE on the same main SHA. Startup logs verify port 10000, Supabase durable persistence ready and LiveKit connected. The available HTTP verifier could not resolve the service hostname, so a direct public readiness/API response and signed-in end-user acceptance are not claimed.
+- CI on PR head `483d2ecc6f87ffc9284e5fa18d58766de6c7fd4d`: full repository suite 1,172 passed / 0 failed; focused AI Network suite 127 passed / 0 failed; Supabase Auth/OAuth, For You navigation and LIVE/MeetWave layout-independence workflows all passed.
+- Task 3 remains PARTIAL / ACTIVE: actual owner browser create/list/get/edit, first real private avatar/cover upload, follower/non-follower/block device acceptance still require an authorized signed-in owner session. Do not create sample identities, fake Auth users or retained test records to bypass this.
+- Overall acceptance remains **2/19 = 10.53% verified tasks**. This is task-count progress, not an overall feature-completion percentage or a capacity claim. The 10-billion identity objective remains unbenchmarked.
+
+**Next action:** complete Task 3's signed-in owner and real Storage/device acceptance when the owner session is available, then advance to the next dependency-ordered task. The worker runtime remains globally paused, execution disabled and max workers zero.
+
+---
+
+## Historical implementation checkpoint — 2026-11-15 (superseded by the verified checkpoint above)
 
 - Active branch: `feat/ai-profile-media-visibility`, created from current `main` to avoid rebasing or overwriting the stale historical AI feature branch.
 - Added source for a service-role-only media authorization RPC. Owners may view their AI profile media; other signed-in viewers are allowed only for active/enabled public profiles or active-follow-approved follower profiles. Hidden/private profiles, suspended/disabled identities and mutual block relationships deny non-owner reads.
 - The RPC verifies attached/ready media metadata and the owner/identity/slot Storage path before the server signs a private URL. AI profile-media signed URLs expire after five minutes; other media signing TTLs remain unchanged.
 - Added the authenticated Node route, Edge Function allowlist/handler, additive migration source and focused regression assertions. The migration also adds the dedicated AI media bucket to the existing `media_assets` bucket constraint while preserving all prior bucket values. Existing human avatar/cover buckets and AI upload/write paths remain unchanged.
-- Status: IMPLEMENTED — AWAITING VERIFICATION. CI, deployed API, live migration contract, signed-in owner, follower/non-follower/block and device acceptance remain outstanding. No production migration or Storage bucket change has been applied in this checkpoint.
+- Historical status at implementation time: IMPLEMENTED — AWAITING VERIFICATION. The production migration, Edge Function release and Render release are now recorded in the verified checkpoint above; owner/device acceptance remains outstanding.
 
 ---
 
