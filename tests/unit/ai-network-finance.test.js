@@ -129,5 +129,5 @@ test('Finance & Resource Center displays only ledger data and submits scoped aud
   assert.ok(readme.includes('GET /api/ai-network/finance/budgets'));
   assert.ok(readme.includes('GET /api/ai-network/finance/usage'));
   assert.ok(readme.includes('Usage events'));
-  assert.ok(readme.includes('Workers remain globally paused'));
+  assert.ok(readme.includes('globally paused and disabled'));
 });
