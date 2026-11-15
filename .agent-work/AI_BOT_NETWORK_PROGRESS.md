@@ -1,3 +1,97 @@
+# Verified mission register — 2026-11-14 (read-only live reconciliation)
+
+**Scope:** Minglora Social Network AI Bot Network only.  
+**Repository:** `ravaunrichards/Minglora-Social-Network`  
+**Audited main commit:** `9526972669651ac79cda8145be882dd1e1abc962`  
+**Supabase project:** `Minglora` / `gzycobgbasnqqhnympkr` (PostgreSQL 17.11, ACTIVE_HEALTHY)  
+**Render service:** `minglora-social-network-temp` / `srv-dbphq63rjlhs73fviegg` (free plan, auto-deploys main)  
+**Latest verified Render deploy:** `dep-dbsetmnf3r2c73ec3csg` — status live; build and deploy events succeeded for the audited main commit.  
+**Private Edge gateway:** `minglora-runtime-state` — ACTIVE v129; custom API-key verification remains enabled; no service secret is stored in this register.
+
+## Unified acceptance register
+
+Statuses below use only the mission's authorized status vocabulary. A task is counted as complete only when its full acceptance boundary has passed; code, tables, fixtures, rollbacks and deployment alone do not satisfy owner/device/provider acceptance.
+
+| # | Dependency-ordered task | Status | Latest evidence and remaining exit criteria |
+|---:|---|---|---|
+| 1 | Reconcile repository, Supabase project, migrations, live schema, runtime controls, release and test evidence | VERIFIED COMPLETE | Existing repo/project confirmed; live schema, grants, migration ledger, deployed gateway, Render service, latest deploy and main commit checks reconciled. |
+| 2 | Relational foundation and private runtime boundary | VERIFIED COMPLETE | Live `ai_network` schema contains 48 base tables; 48/48 have RLS enabled. `anon` and `authenticated` have no schema USAGE or AI-table grants; `service_role` has the required private access. All 18 public AI command RPCs inspected are SECURITY INVOKER and executable only by `service_role`. |
+| 3 | Individual AI identity creation, separate names, profiles, safe bulk lifecycle and private media | BLOCKED — EXTERNAL ACTION REQUIRED | Schemas, RPC/API/UI, separate first/middle/last name fields, lifecycle controls and bounded bulk paths exist. Live identity/profile/name row counts are zero. Real signed-in Minglora owner create/list/get/edit/bulk acceptance and authenticated private avatar/cover upload/device verification are still required. The private AI media bucket is not yet present because its creation is lazy on the first authorized owner upload. |
+| 4 | AI email identity records and genuine mailbox provisioning | BLOCKED — EXTERNAL ACTION REQUIRED | Email metadata schema exists; live email records are zero. No actual mailbox is claimed. A selected email provider/domain and server-side credentials/provisioning confirmation are required before provisioning can be verified. |
+| 5 | Provider accounts, model catalogues, assignments, secret custody, health, routing and inference | BLOCKED — EXTERNAL ACTION REQUIRED | Provider metadata schema and safe pending/unconfigured states exist; live provider account/model/assignment counts are zero. No real provider credential, health result or inference is connected. Requires an approved provider account and protected secret-manager reference, then health/inference validation. |
+| 6 | Worldwide discovery, saved groups, following and privacy approval | IMPLEMENTED — AWAITING VERIFICATION | Combined filters, following/unfollowing, bulk duplicate prevention, saved groups and privacy guards have rollback-only contract evidence and UI fixture coverage. Signed-in production owner/member and real device acceptance remain. |
+| 7 | Corporate governance, departments, positions, recruitment, appointments and employment lifecycle | IN PROGRESS | 20 active department templates and 20 active position templates exist; relational HR schema and command paths are present. Live organizations, departments, positions, applications and employment rows are empty. Full owner-authenticated acceptance and remaining HR/discipline/attendance/training lifecycle coverage are pending. |
+| 8 | Supervision levels, human approvals, observation mode, task queue and execution boundaries | IMPLEMENTED — AWAITING VERIFICATION | Relational queue, approvals, runtime controls and safety guards are deployed; rollback-only tests cover approval, idempotency, cancellation and observation restrictions. Worker identities, authenticated claims, monitored execution and recovery are not enabled or verified. |
+| 9 | AI teams, collaboration, reporting relationships and delegated tasks | IMPLEMENTED — AWAITING VERIFICATION | Relational teams/memberships, audited delegation grants and database authority guard are deployed; delegation is limited to read-only/content work and pending human approval. Signed-in owner/browser/device acceptance and operational validation remain. |
+| 10 | Durable scheduling, worker identity, leases, retries and crash recovery | IMPLEMENTED — AWAITING VERIFICATION | Durable schedule tables/RPC and an active `pg_cron` dispatch job (`* * * * *`) exist. Dispatcher is constrained by global pause and can only materialize human-approval tasks. Independent worker authentication, execution, leases, retries, recovery and load tests remain. |
+| 11 | AI social participation: posts, comments, reactions, groups, messaging, stories and LIVE | NOT STARTED | No full production AI social participation integration has been verified. Requires visible AI disclosure, user privacy, moderation and real integration with Minglora social services. |
+| 12 | AI Creator Studio and AI community events | IN PROGRESS | Draft/job and opt-in event contract surfaces exist. Provider-backed generation, complete editor/review/publish integration, RSVP, attendance and event moderation are not verified. |
+| 13 | Individual memory, knowledge retrieval, multilingual intelligence and multimodal capabilities | IN PROGRESS | Owner-managed consent-based memory settings/entries and language metadata exist. Automatic recall/capture, knowledge retrieval, verified translation, voice/audio/image/video provider execution and behavioral evaluation remain. |
+| 14 | Security, trust, lifecycle, moderation, audit, credential isolation and emergency governance | IN PROGRESS | Server-only data boundary, service-only invoker RPC grants, audit/version structures, lifecycle guards and global pause are verified. Full prompt-injection/abuse testing, credential isolation, complete lifecycle UI and security incident workflows remain. |
+| 15 | Finance, AI operating budgets, compute/storage metering, procurement and reconciliation | NOT STARTED | No verified AI-specific usage metering, model-cost ledger, resource allocation or finance reconciliation is operational. AI agents must never authorize real-money transfers. |
+| 16 | Twelve administration centers, live analytics, alerts, forecasts and exports | IN PROGRESS | Some owner command-center, category, HR, team, task, provider metadata and emergency-pause surfaces exist. Full administration centers and actual event-backed analytics/alerts/reports are not complete. |
+| 17 | Distributed architecture for the 10-billion registered-identity design target | NOT STARTED | No deployed sharding/partitioning, multi-region identity storage, distributed worker fleet, caching/recovery architecture or measured 10-billion-capacity evidence is available. |
+| 18 | Cross-device accessibility, regression, security, load and production acceptance | IN PROGRESS | Current main SHA has three completed successful checks (test, Supabase Auth provider acceptance and For You navigation). Fixture-based browser tests are not signed-in production/device acceptance. Owner-session, Android, desktop, mobile, API, storage, load and recovery tests remain. |
+| 19 | Final integration, operational runbooks, release and final acceptance report | NOT STARTED | Depends on completion and verification of tasks 3–18; cannot be closed from current evidence. |
+
+## Eight-phase master-spec crosswalk
+
+| Phase | Name | Status |
+|---:|---|---|
+| 1 | Foundation and relational database integration | VERIFIED COMPLETE |
+| 2 | AI identities, profiles, worldwide discovery and following | IN PROGRESS |
+| 3 | Corporate governance, organizational charts and workforce management | IN PROGRESS |
+| 4 | Supervision, autonomy, delegation and AI collaboration | IN PROGRESS |
+| 5 | Social activities, creator capabilities, messaging and communities | IN PROGRESS |
+| 6 | Finance, resource management, security and governance | IN PROGRESS |
+| 7 | Intelligence, analytics and performance systems | IN PROGRESS |
+| 8 | Infrastructure scaling, load testing, device testing and production verification | IN PROGRESS |
+
+## Live verification snapshot
+
+- `ai_network`: 48 base tables, all 48 have RLS enabled.
+- Browser roles `anon` and `authenticated`: no `ai_network` schema USAGE and no AI table grants.
+- AI command functions inspected: 18 SECURITY INVOKER routines; execute denied to `anon`/`authenticated`, granted to `service_role`.
+- Reference data: 15 active AI categories, 20 active department templates, 20 active position templates.
+- Live AI records: 0 identities, 0 profiles, 0 name records, 0 email records, 0 provider accounts, 0 provider models, 0 provider assignments.
+- Runtime control: `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`. Preserve these settings.
+- Runtime gateway: `minglora-runtime-state` ACTIVE v129.
+- Scheduler: `minglora_ai_schedule_dispatch` active every minute; it remains a no-op while globally paused.
+- Private Storage bucket `minglora-ai-profile-media`: not yet created; lazy creation awaits a real owner-authorized upload.
+- 10-billion target and simultaneous execution capacity: architectural objective only; no capacity or throughput claim is made.
+
+## CI, deployment and advisory notes
+
+- Latest audited main SHA: `9526972669651ac79cda8145be882dd1e1abc962`.
+- Three checks for that SHA completed successfully: `test`, `Supabase Auth provider acceptance`, `For You functional navigation`. This does not replace live signed-in AI owner acceptance.
+- Latest Render deploy `dep-dbsetmnf3r2c73ec3csg` is live; its build and deploy events both succeeded for the same main SHA.
+- The open scheduler PR #309 is stale/diverged (14 commits ahead, 77 behind main, mergeable=false). The current schedule migration, gateway handler and cron job are already in the live database/deployment; do not merge the stale branch as-is.
+- Supabase security advisor reports RLS-enabled/no-policy informational findings for the private AI schema. This is consistent with the deliberate server-only boundary: browser roles lack schema/table/function privileges; AI RPCs are service-role-only. Do not add broad browser policies just to silence the informational finding.
+- Supabase performance advisor reports 53 unindexed foreign keys project-wide and two RLS init-plan warnings in Help Center tables; these are separate platform backlogs, not evidence of an AI Network feature failure. No unrelated tables were changed.
+- Health advisor returned no findings.
+- No new AI identity, Auth user, mailbox, provider credential, team, schedule, worker or fake engagement record was created during this audit. No production migration or runtime control was changed.
+
+## Blockers requiring external action
+
+1. An authorized Minglora platform-owner must sign into the real app/browser/device and complete the production AI identity/profile and private avatar/cover upload acceptance. No synthetic account or retained test identity is permitted.
+2. An actual email provider/domain and protected server-side configuration are needed before mailbox provisioning can be tested.
+3. An approved AI model provider and protected secret-manager reference are needed before provider health, inference, routing and usage metering can be verified.
+4. Worker principal/authentication, controlled capacity resources, monitoring and recovery infrastructure must be implemented and validated before worker execution is enabled.
+5. Distributed storage/partitioning/regions and reproducible load/recovery benchmarks are needed before the 10-billion registered-identity architecture or concurrent execution target can be claimed.
+6. Signed-in owner/device, production API, private media, Android, desktop and mobile acceptance must be performed against the real deployed application.
+
+## Completion calculation and checkpoint boundary
+
+**Verified tasks:** 2 of 19 (**10.53%** by acceptance-task count).  
+**Incomplete tasks:** 17 of 19 (**89.47%**).  
+This is a conservative acceptance register count, not a feature-completeness or capacity estimate.
+
+This checkpoint records a read-only reconciliation of the current production state plus a documentation-only Git checkpoint. No production data, migrations, runtime controls, providers, emails or deployments were changed by the audit. Execution remains open for the next approved implementation/acceptance cycle; it is not a mission-complete declaration.
+
+---
+
+## Prior progress history
+
 ## Live reconciliation checkpoint — 2026-11-14 (current-main and production read-only audit)
 
 - Repository: `ravaunrichards/Minglora-Social-Network`; audited main HEAD: `c0df74f68a1499e5c44095f9a5510f433a5d3a45`. Existing Supabase project only: `gzycobgbasnqqhnympkr` (PostgreSQL 17.11).
