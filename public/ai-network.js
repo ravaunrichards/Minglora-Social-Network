@@ -1456,12 +1456,32 @@
     if (host) host.innerHTML = renderSnapshot(state.snapshot);
   }
 
+  async function requireDesignatedAdminAccess() {
+    const response = await fetch('/api/admin/access', {
+      credentials: 'same-origin',
+      cache: 'no-store',
+      headers: { Accept: 'application/json' }
+    });
+    const access = await response.json().catch(() => ({}));
+    window.__mingloraAdminAccess = access;
+    window.dispatchEvent(new CustomEvent('minglora:admin-access-updated', { detail: access }));
+    if (!response.ok || access.canAccess !== true) {
+      throw Object.assign(
+        new Error('The Minglora AI Network is available only to the designated administrator with a verified MFA session.'),
+        { status: response.status || 403 }
+      );
+    }
+    state.adminAccess = true;
+    return access;
+  }
+
   async function load() {
     state.error = '';
     const host = root();
     if (!host) return;
-    host.innerHTML = '<section class="ai-network-loading" role="status"><span class="ai-network-spinner" aria-hidden="true"></span><strong>Opening your AI Network workspace…</strong></section>';
+    host.innerHTML = '<section class="ai-network-loading" role="status"><span class="ai-network-spinner" aria-hidden="true"></span><strong>Verifying administrator access…</strong></section>';
     try {
+      await requireDesignatedAdminAccess();
       state.snapshot = await request();
       await loadAIIdentityRegistry();
       await loadAIMemory();
@@ -1479,6 +1499,7 @@
   }
 
   async function refresh(message) {
+    await requireDesignatedAdminAccess();
     if (message) setNotice(message);
     state.snapshot = await request();
     await loadAIIdentityRegistry();
