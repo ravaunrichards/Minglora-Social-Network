@@ -137,3 +137,14 @@ The current Admin Centre remains designated-owner/MFA restricted. The staff tabl
 - PR #403 merged into `main` on 2026-11-15; merge commit `3aedfcfb54860a32a4d34911a0db82cfa807c7e4`.
 - Validation: the new Gifters Badge Progression placement test, all existing Gifter artwork/level tests, 71-image reference-placement coverage, JavaScript syntax, server syntax, asset generation and raster metadata audit passed. LIVE/MeetWave layout independence, AI identity/discovery browser checks and Supabase Auth provider acceptance passed. The full test job remained red on five unrelated API/Creator League/For You expectations; the separate For You functional check also failed its existing stylesheet-version assertion. No Gifter-specific test failed.
 - No deployment was triggered or claimed.
+
+
+### Creator League Ranking Reference Parity — implementation checkpoint
+- Scope: Minglora Social Network only. Source reviewed: all 20 checked-in captures in `assets/League/` plus the League FAQ reference.
+- Branch: `feat/league-ranking-opt-in-rewards-20261115`.
+- PR: #408 — https://github.com/ravaunrichards/Minglora-Social-Network/pull/408 (open, not merged).
+- Reference behaviors preserved or added: daily/weekly regional class standings; Top 3 podium; distinct podium and Top 10 (positions 4–10) / Top 20 (positions 11–20) recognition; owner-controlled “Appear in Creator League rankings” setting; reward visibility for opted-in creators.
+- Added persisted `rankingEnabled` preference (default true for new and legacy profiles), authenticated `POST /api/leagues/ranking-preference`, public leaderboard filtering when opted out, accessible responsive toggle/status and rank badge labels, and PWA asset cache-busting.
+- Opting out hides public ranking placement only. It does not delete points, mutate daily placement scores, alter classes/fragments/Shields, or change League Match results. Creator League, League Matches, and LIVE Top Gifters remain separate systems.
+- Updated ranking preference/visibility docs and added unit coverage. Corrected the stale placement-threshold assertions and the division-isolation ranking fixture. Restored the existing service-worker cache naming convention while advancing the shell to `minglora-shell-v325-self-updating-1`.
+- CI on earlier task commits reported unrelated mainline failures (For You layout assertions, API test expecting D5 where the live code returns D2, and Creator League settlement timing expectation); the first completed branch run also exposed stale ranking test assertions which were corrected in follow-up commits. The final updated commit is queued for CI verification. No merge or deployment performed.
