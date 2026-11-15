@@ -46,6 +46,8 @@ test('budget changes are owner-scoped, serialized and audited with immutable his
   assert.ok(migration.includes("if v_org is not null and not exists(select 1 from ai_network.ai_organizations o where o.organization_id=v_org and o.owner_user_id=p_actor_user_id)"));
   assert.ok(migration.includes("AI identity is not owned by this Minglora administrator."));
   assert.ok(migration.includes('pg_advisory_xact_lock'));
+  assert.ok(migration.includes("p_actor_user_id::text||':ai-finance-policy'"));
+  assert.ok(migration.includes("new.owner_user_id::text||':ai-finance-policy'"));
   assert.ok(migration.includes('ai_finance_budget_history'));
   assert.ok(migration.includes('length(v_reason)<10'));
   assert.ok(migration.includes("v_policy->>'policy_status'"));
