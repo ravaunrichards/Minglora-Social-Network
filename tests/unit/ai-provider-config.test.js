@@ -36,6 +36,8 @@ test('the provider registry returns safe readiness for every catalogued model an
   assert.equal(inventory.length, AI_PROVIDER_CATALOG.length);
   assert.equal(inventory.length, 44);
   assert.equal(inventory.find(item => item.providerId === 'openai').credentialsPresent, true);
+  assert.equal(inventory.find(item => item.providerId === 'openai').healthProbeAvailable, true);
+  assert.equal(inventory.find(item => item.providerId === 'anthropic').healthProbeAvailable, false);
   assert.equal(inventory.find(item => item.providerId === 'resend').credentialsPresent, true);
   assert.equal(inventory.find(item => item.providerId === 'chatgpt_guest').serverSelectable, false);
   assert.ok(inventory.every(item => item.connected === false && item.adapterAvailable === false && item.executionEnabled === false));

@@ -49,6 +49,7 @@ import { CREATOR_LEAGUE_CLASSES, recordLiveGiftForLeagues, refundCreatorLeagueGi
 import { recordGifterGift, refundGifterGift, getGifterProgressionOverview, getGifterBadgeSummary, getNewGifterIdentity, getLiveGifterLeaderboard } from '../backend/modules/gifter-progression/service.js';
 import { LIVE_FAN_CLUB_GIFT_CODES, LIVE_FAN_CLUB_JOIN_GIFT_CODE, LIVE_FAN_CLUB_JOIN_COIN_COST, ensureLiveFanClubCollections, getLiveFanClubMembership, countActiveLiveFanClubMembers, joinLiveFanClub, awardLiveFanClubPoints, publicLiveFanClubMembership } from '../backend/modules/live/fan-club.js';
 import { ensureAICollections, getAICommandCenter, getAIProviderStatus, createAIBot, updateAIBotStatus, createAIBotTeam, createAIBotSchedule, updateAIBotScheduleStatus, updateAISettings, createAICreatorJob, createAIApprovalRequest, decideAIApproval, setAICompanionConsent, createAICommunityEvent, emergencyPauseAI } from '../backend/modules/ai-network/service.js';
+import { probeOpenAIProvider } from '../backend/modules/ai-network/openai-provider-probe.js';
 import { supabaseAuthConfigured, supabaseSignUp, supabaseSignIn, supabaseExchangeOAuthCode, supabaseGetAuthSettings, supabaseUpdatePassword, supabaseListFactors, supabaseEnrollTotp, supabaseChallengeFactor, supabaseVerifyFactor, supabaseUnenrollFactor, supabaseRefreshSession, supabaseRequestPasswordReset, supabaseRequestMagicLink, supabaseCompletePasswordReset, supabaseGetUser, supabaseUpdateEmail, supabaseRequestPhoneChange, supabaseVerifyPhoneChange, supabaseUpdateUserMetadata, supabaseUpdateProfile } from './supabase-auth.js';
 const scrypt = promisify(crypto.scrypt);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -2391,6 +2392,19 @@ async function route(req, res) {
         input.task_id = taskId;
         const result = await runAITaskCommand('cancel_task', input);
         return json(res, 200, result || {});
+      }
+
+      if (method === 'POST' && sub === 'provider-health') {
+        const input = await body(req, 4000);
+        if (!input || typeof input !== 'object' || Array.isArray(input) ||
+            input.provider !== 'openai' || Object.keys(input).some(key => key !== 'provider')) {
+          throw Object.assign(
+            new Error('The read-only provider probe currently accepts only provider=openai. Credentials must be configured in the private server environment, never in the request body.'),
+            { status: 400 }
+          );
+        }
+        const health = await probeOpenAIProvider();
+        return json(res, 200, health);
       }
 
       if (method === 'GET' && sub === 'provider-accounts') {
