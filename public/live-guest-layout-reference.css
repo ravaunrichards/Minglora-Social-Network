@@ -1,0 +1,308 @@
+/* Minglora LIVE — canonical guest-layout reference contract.
+   Reconstructed from the nine supplied diagrams in assets/Guests Layout/.
+   This stylesheet loads after legacy LIVE patches so one final grid definition
+   controls the rendered result. Source reference images remain read-only. */
+
+#live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout{
+  display:grid!important;
+  box-sizing:border-box!important;
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+  min-height:0!important;
+  height:100%!important;
+  align-content:stretch!important;
+  justify-content:stretch!important;
+  grid-auto-flow:row dense!important;
+  grid-auto-rows:minmax(0,1fr)!important;
+  gap:clamp(4px,1vw,9px)!important;
+  padding:clamp(6px,1.2vw,10px)!important;
+  position:relative!important;
+  overflow:hidden!important;
+}
+#live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout>.live-guest-layout-heading{
+  display:flex!important;
+  grid-column:1/-1!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:8px!important;
+  min-width:0!important;
+  margin:0!important;
+  padding:0 2px 4px!important;
+  color:#e9eef6!important;
+  font-size:11px!important;
+  line-height:1.25!important;
+}
+#live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout>.live-guest-seat{
+  position:relative!important;
+  box-sizing:border-box!important;
+  display:flex!important;
+  width:100%!important;
+  max-width:none!important;
+  min-width:0!important;
+  min-height:0!important;
+  height:100%!important;
+  max-height:none!important;
+  margin:0!important;
+  overflow:hidden!important;
+  border-radius:clamp(7px,1.2vw,14px)!important;
+  aspect-ratio:auto!important;
+}
+#live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout>.live-guest-seat .live-guest-seat-media,
+#live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout>.live-guest-seat .live-video-element{
+  min-width:0!important;
+  min-height:0!important;
+}
+#live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout>.live-guest-seat .live-guest-seat-tag{
+  top:5px!important;
+  left:5px!important;
+  max-width:calc(100% - 10px)!important;
+  padding:3px 5px!important;
+  font-size:clamp(7px,1vw,10px)!important;
+  line-height:1.1!important;
+}
+#live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout>.live-guest-seat .live-guest-seat-meta{
+  right:4px!important;
+  bottom:4px!important;
+  left:4px!important;
+  min-width:0!important;
+  padding:4px 5px!important;
+  border-radius:6px!important;
+}
+#live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout>.live-guest-seat .live-guest-seat-meta strong{
+  display:block!important;
+  overflow:hidden!important;
+  font-size:clamp(8px,1vw,11px)!important;
+  line-height:1.2!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+}
+#live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout>.live-guest-seat .live-guest-seat-meta small{
+  display:block!important;
+  overflow:hidden!important;
+  font-size:clamp(7px,.85vw,9px)!important;
+  line-height:1.15!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+}
+#live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout>.live-guest-seat.empty{
+  align-items:center!important;
+  justify-content:center!important;
+  gap:4px!important;
+  padding:5px!important;
+  text-align:center!important;
+}
+#live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout>.live-guest-seat.empty strong{
+  font-size:clamp(8px,1vw,11px)!important;
+  line-height:1.15!important;
+}
+#live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout>.live-guest-seat.empty small{
+  font-size:clamp(7px,.8vw,9px)!important;
+  line-height:1.1!important;
+}
+
+/* Full Screen remains governed by the existing host-first implementation.
+   This preserves its active-guest strip, compact portrait sizing and stage controls. */
+
+/* 2. Fluid Panel — full-stage primary tile with two small right-side overlays. */
+#live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]{
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  grid-template-rows:auto repeat(4,minmax(58px,1fr))!important;
+  grid-auto-rows:minmax(58px,1fr)!important;
+  min-height:clamp(300px,62dvh,720px)!important;
+}
+#live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-host{
+  grid-column:1/-1!important;
+  grid-row:2/6!important;
+  z-index:1!important;
+}
+#live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat:nth-child(3){
+  grid-column:4!important;
+  grid-row:4!important;
+  z-index:3!important;
+}
+#live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat:nth-child(4){
+  grid-column:4!important;
+  grid-row:5!important;
+  z-index:3!important;
+}
+#live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat:nth-child(n+5){display:none!important}
+
+/* 3. Fluid Grid — one large left tile and two vertically stacked small tiles. */
+#live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-grid"]{
+  grid-template-columns:minmax(0,1.35fr) minmax(0,.65fr)!important;
+  grid-template-rows:auto repeat(2,minmax(76px,1fr))!important;
+  grid-auto-rows:minmax(76px,1fr)!important;
+  min-height:clamp(280px,58dvh,680px)!important;
+}
+#live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-grid"]>.live-guest-seat.is-host{
+  grid-column:1!important;
+  grid-row:2/4!important;
+}
+#live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-grid"]>.live-guest-seat:nth-child(3){
+  grid-column:2!important;
+  grid-row:2!important;
+}
+#live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-grid"]>.live-guest-seat:nth-child(4){
+  grid-column:2!important;
+  grid-row:3!important;
+}
+#live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-grid"]>.live-guest-seat:nth-child(n+5){display:none!important}
+
+/* 4. Fixed Grid — nine equal-sized participant cells in an exact 3×3 grid. */
+#live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fixed-grid"]{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  grid-template-rows:repeat(3,minmax(72px,1fr))!important;
+  grid-auto-rows:minmax(72px,1fr)!important;
+  min-height:clamp(300px,60dvh,690px)!important;
+}
+#live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fixed-grid"]>.live-guest-layout-heading{display:none!important}
+#live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fixed-grid"]>.live-guest-seat{
+  grid-column:auto!important;
+  grid-row:auto!important;
+  aspect-ratio:1/1!important;
+}
+
+/* 5. Fixed Panel — one large left panel and exactly three fixed right-side boxes. */
+#live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fixed-panel"]{
+  grid-template-columns:minmax(0,1.7fr) minmax(76px,.7fr)!important;
+  grid-template-rows:repeat(3,minmax(76px,1fr))!important;
+  grid-auto-rows:minmax(76px,1fr)!important;
+  min-height:clamp(300px,60dvh,690px)!important;
+}
+#live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fixed-panel"]>.live-guest-layout-heading{display:none!important}
+#live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fixed-panel"]>.live-guest-seat.is-host{
+  grid-column:1!important;
+  grid-row:1/4!important;
+}
+#live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fixed-panel"]>.live-guest-seat:nth-child(3){
+  grid-column:2!important;grid-row:1!important;
+}
+#live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fixed-panel"]>.live-guest-seat:nth-child(4){
+  grid-column:2!important;grid-row:2!important;
+}
+#live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fixed-panel"]>.live-guest-seat:nth-child(5){
+  grid-column:2!important;grid-row:3!important;
+}
+#live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fixed-panel"]>.live-guest-seat:nth-child(n+6){display:none!important}
+
+/* 6. Side by Side — two large top tiles, then a compact four-column guest grid. */
+#live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="side-by-side"]{
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  grid-template-rows:auto minmax(112px,1.45fr) repeat(2,minmax(54px,.58fr))!important;
+  grid-auto-rows:minmax(54px,.58fr)!important;
+  min-height:clamp(330px,64dvh,720px)!important;
+}
+#live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="side-by-side"]>.live-guest-seat.is-host{
+  grid-column:1/3!important;grid-row:2!important;
+}
+#live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="side-by-side"]>.live-guest-seat:nth-child(3){
+  grid-column:3/5!important;grid-row:2!important;
+}
+#live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="side-by-side"]>.live-guest-seat:nth-child(n+4){
+  grid-column:auto!important;grid-row:auto!important;
+}
+
+/* 7. Spotlight — one wide upper tile with eight small seats below. */
+#live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="spotlight"]{
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  grid-template-rows:auto minmax(112px,1.4fr) repeat(2,minmax(54px,.6fr))!important;
+  grid-auto-rows:minmax(54px,.6fr)!important;
+  min-height:clamp(330px,64dvh,720px)!important;
+}
+#live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="spotlight"]>.live-guest-seat.is-host{
+  grid-column:1/-1!important;
+  grid-row:2!important;
+}
+
+/* Guest-box layouts are independent of the seven screen templates.
+   They reposition the host seat only; the screen layout retains its own grid. */
+#live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-guest-layout="roundtable-1"]>.live-guest-seat.is-host{
+  grid-column:2!important;grid-row:2!important;
+}
+#live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-guest-layout="roundtable-2"]>.live-guest-seat.is-host{
+  grid-column:span 2!important;grid-row:span 2!important;
+}
+
+/* Layout picker thumbnails mirror all nine supplied diagrams; labels stay text. */
+#live-layout-options .live-layout-option,
+#live-guest-layout-options .live-layout-option{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:5px!important;
+  min-height:88px!important;
+  padding:7px 5px!important;
+  text-align:center!important;
+}
+#live-layout-options .live-layout-option svg,
+#live-guest-layout-options .live-layout-option svg{display:none!important}
+#live-layout-options .live-layout-option::before,
+#live-guest-layout-options .live-layout-option::before{
+  content:""!important;
+  display:block!important;
+  width:42px!important;
+  height:56px!important;
+  flex:0 0 56px!important;
+  border-radius:7px!important;
+  background-position:center!important;
+  background-repeat:no-repeat!important;
+  background-size:contain!important;
+  border:1px solid rgba(196,207,224,.24)!important;
+  box-shadow:0 2px 8px rgba(0,0,0,.2)!important;
+}
+#live-layout-options .live-layout-option>span,
+#live-guest-layout-options .live-layout-option>span{
+  display:block!important;
+  max-width:100%!important;
+  overflow-wrap:anywhere!important;
+  font-size:10px!important;
+  line-height:1.2!important;
+  text-align:center!important;
+}
+#live-layout-options .live-layout-option[data-live-screen-layout="full-screen"]::before{background-image:url("data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2060%2078%22%3E%3Crect%20x%3D%222%22%20y%3D%222%22%20width%3D%2256%22%20height%3D%2274%22%20rx%3D%229%22%20fill%3D%22%23101827%22%20stroke%3D%22%238290a3%22%20stroke-width%3D%221.8%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%227%22%20y%3D%227%22%20width%3D%2246%22%20height%3D%2262%22%20rx%3D%225%22%2F%3E%3C%2Fsvg%3E");}
+#live-layout-options .live-layout-option[data-live-screen-layout="fluid-panel"]::before{background-image:url("data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2060%2078%22%3E%3Crect%20x%3D%222%22%20y%3D%222%22%20width%3D%2256%22%20height%3D%2274%22%20rx%3D%229%22%20fill%3D%22%23101827%22%20stroke%3D%22%238290a3%22%20stroke-width%3D%221.8%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%227%22%20y%3D%227%22%20width%3D%2246%22%20height%3D%2262%22%20rx%3D%225%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%2240%22%20y%3D%2236%22%20width%3D%2212%22%20height%3D%2213%22%20rx%3D%223%22%20fill%3D%22%23e2e7ef%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%2240%22%20y%3D%2251%22%20width%3D%2212%22%20height%3D%2213%22%20rx%3D%223%22%20fill%3D%22%23e2e7ef%22%2F%3E%3C%2Fsvg%3E");}
+#live-layout-options .live-layout-option[data-live-screen-layout="fluid-grid"]::before{background-image:url("data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2060%2078%22%3E%3Crect%20x%3D%222%22%20y%3D%222%22%20width%3D%2256%22%20height%3D%2274%22%20rx%3D%229%22%20fill%3D%22%23101827%22%20stroke%3D%22%238290a3%22%20stroke-width%3D%221.8%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%227%22%20y%3D%227%22%20width%3D%2226%22%20height%3D%2262%22%20rx%3D%224%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%2236%22%20y%3D%227%22%20width%3D%2217%22%20height%3D%2229%22%20rx%3D%224%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%2236%22%20y%3D%2240%22%20width%3D%2217%22%20height%3D%2229%22%20rx%3D%224%22%2F%3E%3C%2Fsvg%3E");}
+#live-layout-options .live-layout-option[data-live-screen-layout="fixed-grid"]::before{background-image:url("data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2060%2078%22%3E%3Crect%20x%3D%222%22%20y%3D%222%22%20width%3D%2256%22%20height%3D%2274%22%20rx%3D%229%22%20fill%3D%22%23101827%22%20stroke%3D%22%238290a3%22%20stroke-width%3D%221.8%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%227%22%20y%3D%229%22%20width%3D%2213%22%20height%3D%2216%22%20rx%3D%223%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%2223%22%20y%3D%229%22%20width%3D%2213%22%20height%3D%2216%22%20rx%3D%223%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%2239%22%20y%3D%229%22%20width%3D%2213%22%20height%3D%2216%22%20rx%3D%223%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%227%22%20y%3D%2229%22%20width%3D%2213%22%20height%3D%2216%22%20rx%3D%223%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%2223%22%20y%3D%2229%22%20width%3D%2213%22%20height%3D%2216%22%20rx%3D%223%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%2239%22%20y%3D%2229%22%20width%3D%2213%22%20height%3D%2216%22%20rx%3D%223%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%227%22%20y%3D%2249%22%20width%3D%2213%22%20height%3D%2216%22%20rx%3D%223%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%2223%22%20y%3D%2249%22%20width%3D%2213%22%20height%3D%2216%22%20rx%3D%223%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%2239%22%20y%3D%2249%22%20width%3D%2213%22%20height%3D%2216%22%20rx%3D%223%22%2F%3E%3C%2Fsvg%3E");}
+#live-layout-options .live-layout-option[data-live-screen-layout="fixed-panel"]::before{background-image:url("data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2060%2078%22%3E%3Crect%20x%3D%222%22%20y%3D%222%22%20width%3D%2256%22%20height%3D%2274%22%20rx%3D%229%22%20fill%3D%22%23101827%22%20stroke%3D%22%238290a3%22%20stroke-width%3D%221.8%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%226%22%20y%3D%227%22%20width%3D%2230%22%20height%3D%2262%22%20rx%3D%224%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%2239%22%20y%3D%227%22%20width%3D%2214%22%20height%3D%2218%22%20rx%3D%223%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%2239%22%20y%3D%2229%22%20width%3D%2214%22%20height%3D%2218%22%20rx%3D%223%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%2239%22%20y%3D%2251%22%20width%3D%2214%22%20height%3D%2218%22%20rx%3D%223%22%2F%3E%3C%2Fsvg%3E");}
+#live-layout-options .live-layout-option[data-live-screen-layout="side-by-side"]::before{background-image:url("data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2060%2078%22%3E%3Crect%20x%3D%222%22%20y%3D%222%22%20width%3D%2256%22%20height%3D%2274%22%20rx%3D%229%22%20fill%3D%22%23101827%22%20stroke%3D%22%238290a3%22%20stroke-width%3D%221.8%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%226%22%20y%3D%228%22%20width%3D%2222%22%20height%3D%2225%22%20rx%3D%224%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%2232%22%20y%3D%228%22%20width%3D%2222%22%20height%3D%2225%22%20rx%3D%224%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%226%22%20y%3D%2238%22%20width%3D%2210%22%20height%3D%2212%22%20rx%3D%223%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%2219%22%20y%3D%2238%22%20width%3D%2210%22%20height%3D%2212%22%20rx%3D%223%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%2232%22%20y%3D%2238%22%20width%3D%2210%22%20height%3D%2212%22%20rx%3D%223%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%2245%22%20y%3D%2238%22%20width%3D%2210%22%20height%3D%2212%22%20rx%3D%223%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%226%22%20y%3D%2253%22%20width%3D%2210%22%20height%3D%2212%22%20rx%3D%223%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%2219%22%20y%3D%2253%22%20width%3D%2210%22%20height%3D%2212%22%20rx%3D%223%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%2232%22%20y%3D%2253%22%20width%3D%2210%22%20height%3D%2212%22%20rx%3D%223%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%2245%22%20y%3D%2253%22%20width%3D%2210%22%20height%3D%2212%22%20rx%3D%223%22%2F%3E%3C%2Fsvg%3E");}
+#live-layout-options .live-layout-option[data-live-screen-layout="spotlight"]::before{background-image:url("data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2060%2078%22%3E%3Crect%20x%3D%222%22%20y%3D%222%22%20width%3D%2256%22%20height%3D%2274%22%20rx%3D%229%22%20fill%3D%22%23101827%22%20stroke%3D%22%238290a3%22%20stroke-width%3D%221.8%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%226%22%20y%3D%228%22%20width%3D%2248%22%20height%3D%2224%22%20rx%3D%224%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%226%22%20y%3D%2237%22%20width%3D%2210%22%20height%3D%2212%22%20rx%3D%223%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%2219%22%20y%3D%2237%22%20width%3D%2210%22%20height%3D%2212%22%20rx%3D%223%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%2232%22%20y%3D%2237%22%20width%3D%2210%22%20height%3D%2212%22%20rx%3D%223%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%2245%22%20y%3D%2237%22%20width%3D%2210%22%20height%3D%2212%22%20rx%3D%223%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%226%22%20y%3D%2252%22%20width%3D%2210%22%20height%3D%2212%22%20rx%3D%223%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%2219%22%20y%3D%2252%22%20width%3D%2210%22%20height%3D%2212%22%20rx%3D%223%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%2232%22%20y%3D%2252%22%20width%3D%2210%22%20height%3D%2212%22%20rx%3D%223%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%2245%22%20y%3D%2252%22%20width%3D%2210%22%20height%3D%2212%22%20rx%3D%223%22%2F%3E%3C%2Fsvg%3E");}
+#live-guest-layout-options .live-layout-option[data-live-guest-layout="roundtable-1"]::before{background-image:url("data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2060%2078%22%3E%3Crect%20x%3D%222%22%20y%3D%222%22%20width%3D%2256%22%20height%3D%2274%22%20rx%3D%229%22%20fill%3D%22%23101827%22%20stroke%3D%22%238290a3%22%20stroke-width%3D%221.8%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%2215%22%20y%3D%227%22%20width%3D%2230%22%20height%3D%2263%22%20rx%3D%224%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%226%22%20y%3D%2210%22%20width%3D%2210%22%20height%3D%2212%22%20rx%3D%223%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%2245%22%20y%3D%2210%22%20width%3D%2210%22%20height%3D%2212%22%20rx%3D%223%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%226%22%20y%3D%2225%22%20width%3D%2210%22%20height%3D%2212%22%20rx%3D%223%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%2245%22%20y%3D%2225%22%20width%3D%2210%22%20height%3D%2212%22%20rx%3D%223%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%226%22%20y%3D%2240%22%20width%3D%2210%22%20height%3D%2212%22%20rx%3D%223%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%2245%22%20y%3D%2240%22%20width%3D%2210%22%20height%3D%2212%22%20rx%3D%223%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%226%22%20y%3D%2255%22%20width%3D%2210%22%20height%3D%2212%22%20rx%3D%223%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%2245%22%20y%3D%2255%22%20width%3D%2210%22%20height%3D%2212%22%20rx%3D%223%22%2F%3E%3C%2Fsvg%3E");}
+#live-guest-layout-options .live-layout-option[data-live-guest-layout="roundtable-2"]::before{background-image:url("data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2060%2078%22%3E%3Crect%20x%3D%222%22%20y%3D%222%22%20width%3D%2256%22%20height%3D%2274%22%20rx%3D%229%22%20fill%3D%22%23101827%22%20stroke%3D%22%238290a3%22%20stroke-width%3D%221.8%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%2221%22%20y%3D%227%22%20width%3D%2218%22%20height%3D%2263%22%20rx%3D%224%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%225%22%20y%3D%2210%22%20width%3D%2210%22%20height%3D%2212%22%20rx%3D%223%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%2250%22%20y%3D%2210%22%20width%3D%2210%22%20height%3D%2212%22%20rx%3D%223%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%225%22%20y%3D%2225%22%20width%3D%2210%22%20height%3D%2212%22%20rx%3D%223%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%2250%22%20y%3D%2225%22%20width%3D%2210%22%20height%3D%2212%22%20rx%3D%223%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%225%22%20y%3D%2240%22%20width%3D%2210%22%20height%3D%2212%22%20rx%3D%223%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%2250%22%20y%3D%2240%22%20width%3D%2210%22%20height%3D%2212%22%20rx%3D%223%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%225%22%20y%3D%2255%22%20width%3D%2210%22%20height%3D%2212%22%20rx%3D%223%22%2F%3E%3Crect%20fill%3D%22%23c2cbd8%22%20stroke%3D%22%23f2f5fa%22%20stroke-width%3D%22.6%22%20x%3D%2250%22%20y%3D%2255%22%20width%3D%2210%22%20height%3D%2212%22%20rx%3D%223%22%2F%3E%3C%2Fsvg%3E");}
+
+/* Small screens retain each reference's grid instead of collapsing it to generic columns. */
+@media(max-width:640px){
+  #live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout{
+    gap:4px!important;
+    padding:5px!important;
+  }
+  #live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout>.live-guest-seat .live-guest-seat-meta{
+    right:2px!important;bottom:2px!important;left:2px!important;padding:3px!important;
+  }
+  #live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout>.live-guest-seat .live-guest-seat-meta small{display:none!important}
+  #live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="full-screen"]{grid-template-columns:minmax(0,1fr)!important}
+  #live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]{grid-template-columns:repeat(4,minmax(0,1fr))!important;grid-template-rows:auto repeat(4,minmax(50px,1fr))!important}
+  #live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-grid"]{grid-template-columns:minmax(0,1.25fr) minmax(0,.75fr)!important;grid-template-rows:auto repeat(2,minmax(70px,1fr))!important}
+  #live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fixed-grid"]{grid-template-columns:repeat(3,minmax(0,1fr))!important;grid-template-rows:repeat(3,minmax(76px,1fr))!important}
+  #live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fixed-panel"]{grid-template-columns:minmax(0,1.55fr) minmax(64px,.65fr)!important;grid-template-rows:repeat(3,minmax(64px,1fr))!important}
+  #live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="side-by-side"]{grid-template-columns:repeat(4,minmax(0,1fr))!important;grid-template-rows:auto minmax(92px,1.35fr) repeat(2,minmax(48px,.58fr))!important}
+  #live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="spotlight"]{grid-template-columns:repeat(4,minmax(0,1fr))!important;grid-template-rows:auto minmax(92px,1.35fr) repeat(2,minmax(48px,.58fr))!important}
+  #live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-guest-layout="roundtable-1"]{grid-template-columns:repeat(4,minmax(0,1fr))!important;grid-template-rows:auto repeat(4,minmax(54px,1fr))!important}
+  #live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-guest-layout="roundtable-2"]{grid-template-columns:repeat(3,minmax(0,1fr))!important;grid-template-rows:auto repeat(4,minmax(54px,1fr))!important}
+  #live-player-shell .live-video-stage.live-full-screen-layout:not(.live-audio-stage){
+    width:min(100%,56.25dvh,420px)!important;
+    height:min(82dvh,746px)!important;
+    max-height:82dvh!important;
+    aspect-ratio:9/16!important;
+  }
+  #live-layout-options .live-layout-option,
+  #live-guest-layout-options .live-layout-option{min-height:82px!important}
+}
+@media(max-height:520px) and (orientation:landscape){
+  #live-player-shell .live-video-stage.live-full-screen-layout:not(.live-audio-stage){
+    width:min(100%,88dvh,720px)!important;
+    height:min(78dvh,440px)!important;
+    aspect-ratio:16/9!important;
+  }
+}
