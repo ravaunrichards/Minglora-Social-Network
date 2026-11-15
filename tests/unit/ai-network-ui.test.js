@@ -21,16 +21,23 @@ test('Minglora AI Network is a restorable first-party destination, separate from
   assert.ok(app.includes("state.view==='ai-network'"));
   assert.ok(app.includes('window.MingloraAINetwork?.render()'));
   assert.ok(html.includes('data-view="ai-network"'));
+  assert.ok(html.includes('id="ai-network-sidebar-link"'));
+  assert.match(html, /id="ai-network-sidebar-link"[^>]*hidden/);
   assert.ok(html.includes('Minglora AI Network'));
   assert.ok(html.includes('href="https://www.meta.ai/"'));
   assert.ok(html.includes('/ai-network.css?v=20261114-ai-network-integration-2'));
-  assert.ok(html.includes('/ai-network.js?v=20261114-ai-network-integration-2'));
+  assert.ok(html.includes('/ai-network.js?v=20261115-ai-admin-only-1'));
 });
 
 test('Minglora main menu includes a separate AI Network route', () => {
   assert.ok(menu.includes("label: 'Minglora AI Network'"));
   assert.ok(menu.includes("action: 'ai-network'"));
   assert.ok(menu.includes("'ai-network': 'ai-network'"));
+  assert.ok(menu.includes('data-admin-only="true"'));
+  assert.ok(menu.includes("window.__mingloraAdminAccess?.canAccess !== true"));
+  const sidebar = read('public/sidebar-features.js');
+  assert.ok(sidebar.includes("const aiNetworkLink = document.getElementById('ai-network-sidebar-link')"));
+  assert.ok(sidebar.includes('const canOpenAINetwork = response.ok && access.canAccess === true'));
 });
 
 test('AI Network script and styles are precached with matching asset versions', () => {
@@ -38,11 +45,14 @@ test('AI Network script and styles are precached with matching asset versions', 
   const menuAsset = html.match(/minglora-menu\.js\?v=[^"']+/)?.[0] || '';
   const cacheName = sw.match(/CACHE_NAME='([^']+)'/)?.[1] || '';
   assert.match(appAsset, /^app\.js\?v=\d{8}-[a-z0-9-]+$/);
-  assert.equal(menuAsset, 'minglora-menu.js?v=20261114-ai-network-integration-1');
+  assert.equal(menuAsset, 'minglora-menu.js?v=20261115-ai-admin-only-1');
   assert.ok(sw.includes('/' + appAsset));
   assert.ok(sw.includes('/' + menuAsset));
-  assert.ok(sw.includes('/ai-network.js?v=20261114-ai-network-integration-2'));
+  assert.ok(sw.includes('/ai-network.js?v=20261115-ai-admin-only-1'));
   assert.ok(sw.includes('/ai-network.css?v=20261114-ai-network-integration-2'));
+  assert.ok(html.includes('/sidebar-features.js?v=20261115-ai-admin-only-1'));
+  assert.ok(sw.includes('/minglora-menu.js?v=20261115-ai-admin-only-1'));
+  assert.ok(sw.includes('/sidebar-features.js?v=20261115-ai-admin-only-1'));
   assert.match(cacheName, /^minglora-shell-v\d+-self-updating-1$/);
 });
 
@@ -75,6 +85,11 @@ test('AI Network APIs are behind the signed-in session and the feature-owned col
   assert.ok(route.startsWith("if (p === '/api/ai-network'"));
   assert.ok(route.includes('const user = sessionUser(req);'));
   assert.ok(route.includes('requireAuth(user);'));
+  assert.ok(route.includes('isDesignatedCreatorHubAdmin(user)'));
+  assert.ok(route.includes('isModerator(user, req)'));
+  assert.ok(route.includes('hasActiveReviewerSession(user)'));
+  assert.ok(ui.includes("fetch('/api/admin/access'"));
+  assert.ok(ui.includes('access.canAccess !== true'));
   assert.ok(route.includes('getAICommandCenter(db, user.id'));
   assert.ok(route.includes('await saveStore();'));
   for (const collection of [
