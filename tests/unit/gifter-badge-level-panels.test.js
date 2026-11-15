@@ -41,12 +41,12 @@ test("ordered Level references each display their matching individual original b
   const progression = read("public/gifter-progression.js");
   const styles = read("public/gifter-progression.css");
   assert.match(progression, /gp-level-index-art/);
-  assert.match(progression, /src='\/assets\/gifter-badges\/level_"/);
+  assert.match(progression, /href='\/assets\/gifter-badges\/badges\.svg#level-/);
   assert.match(progression, /String\(levelNumber\)\.padStart\(2, "0"\)/);
-  assert.match(progression, /alt='" \+ esc\(badgeName\) \+ "'/);
-  assert.match(progression, /loading='lazy' decoding='async' width='170' height='76'/);
+  assert.match(progression, /aria-label='" \+ esc\(badgeName\) \+ "'/);
+  assert.match(progression, /width='170' height='76'/);
   assert.doesNotMatch(progression, /MingloraGifterBadgeArt/);
-  assert.match(styles, /\.gp-level-index-art\{[^}]*width:76px;height:76px[^}]*aspect-ratio:1\/1[^}]*object-fit:contain/);
+  assert.match(styles, /\.gp-level-index-art\{[^}]*width:min\(100%,170px\);height:auto;aspect-ratio:170 \/ 76/);
   assert.match(styles, /@media\(max-width:760px\)[\s\S]*?\.gp-level-index-art\{width:64px;height:64px\}/);
   assert.match(styles, /@media\(max-width:480px\)[\s\S]*?\.gp-level-index-grid\[data-layout="horizontal"\]\{grid-template-columns:minmax\(0,1fr\)\}/);
   assert.match(styles, /\.gp-art-panel-stack\{display:grid;grid-template-columns:minmax\(0,1fr\);gap:14px/);
@@ -83,7 +83,7 @@ test("updated progression assets and all original JPG panels are included in the
   const html = read("public/index.html");
   const sw = read("public/sw.js");
   assert.ok(html.includes("/gifter-progression.css?v=20261111-tiktok-readable-badge-size-2"));
-  assert.ok(html.includes("/gifter-progression.js?v=20261115-gifter-rewards-inline-1"));
+  assert.ok(html.includes("/gifter-progression.js?v=20261115-gifter-badge-vector-sprite-1"));
   panelFiles.forEach(filename => {
     const routeName = filename.toLowerCase().replaceAll(" ", "-");
     assert.ok(sw.includes("/assets/gifter-badge-level-panels/" + routeName));

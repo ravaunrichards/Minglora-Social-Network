@@ -119,7 +119,7 @@
         const stateLabel = item.current ? "Current" : item.adminAwarded ? "Admin awarded" : item.unlocked ? "Unlocked" : "Locked";
         const stateClass = item.current ? "is-current" : item.adminAwarded ? "is-admin-awarded" : item.unlocked ? "is-unlocked" : "is-locked";
         return "<article class='gp-level-index-item " + stateClass + "'>" +
-          "<img class='gp-level-index-art' src='/assets/gifter-badges/level_" + badgeNumber + ".png' alt='" + esc(badgeName) + "' loading='lazy' decoding='async' width='170' height='76'>" +
+          "<svg class='gp-level-index-art' role='img' aria-label='" + esc(badgeName) + "' viewBox='0 0 170 76' xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' width='170' height='76'><use href='/assets/gifter-badges/badges.svg#level-" + badgeNumber + "' xlink:href='/assets/gifter-badges/badges.svg#level-" + badgeNumber + "'></use></svg>" +
           "<div class='gp-level-index-copy'>" +
           "<span class='gp-level-index-level'>Level " + number(levelNumber) + "</span>" +
           "<strong class='gp-level-index-badge'>" + esc(badgeName) + "</strong>" +
@@ -148,8 +148,7 @@
       const level = Math.max(0, Math.min(50, Math.floor(Number(item.level) || 0)));
       const badgeName = String(item.badgeName || (level ? "Level " + level + " Gifter" : ""));
       const badgeMarkup = level
-        ? "<span class='gp-leader-badge'><img src='/assets/gifter-badges/level_" + String(level).padStart(2, "0") +
-          ".png' alt='Level " + level + " gifter badge' loading='lazy' decoding='async' width='40' height='18'><span>" +
+        ? "<span class='gp-leader-badge'><svg role='img' aria-label='Level " + level + " gifter badge' viewBox='0 0 170 76' xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' width='40' height='18'><use href='/assets/gifter-badges/badges.svg#level-" + String(level).padStart(2, "0") + "' xlink:href='/assets/gifter-badges/badges.svg#level-" + String(level).padStart(2, "0") + "'></use></svg><span>" +
           esc(badgeName) + "</span></span>"
         : "";
       return "<article class='gp-leader-row " + (item.userId === current.userId ? "is-you" : "") + "'>" +
@@ -176,8 +175,7 @@
       : "";
     const currentBadgeLevel = Math.max(1, Math.min(50, Math.floor(Number(current.level) || 1)));
     const currentBadgeMarkup = current.hasUnlockedBadge
-      ? "<img class='gp-current-badge-image' src='/assets/gifter-badges/level_" + String(currentBadgeLevel).padStart(2, "0") +
-        ".png' alt='Level " + currentBadgeLevel + " gifter badge' loading='eager' decoding='async' width='170' height='76'>"
+      ? "<svg class='gp-current-badge-image' role='img' aria-label='Level " + currentBadgeLevel + " gifter badge' viewBox='0 0 170 76' xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' width='170' height='76'><use href='/assets/gifter-badges/badges.svg#level-" + String(currentBadgeLevel).padStart(2, "0") + "' xlink:href='/assets/gifter-badges/badges.svg#level-" + String(currentBadgeLevel).padStart(2, "0") + "'></use></svg>"
       : "";
 
     return "<div class='" + (embedded ? "gp-page gp-page--embedded" : "gp-page") + "'>" +
