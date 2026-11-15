@@ -1,3 +1,12 @@
+## Execution checkpoint — 2026-11-15 (AI security review follow-up and CI verified)
+
+- Provider security: live ai_provider_accounts contains only an opaque credential_secret_ref field; there are no raw API-key/password/token columns. Live provider data counts: 0 accounts, 0 credential references, 0 models and 0 assignments. No provider is connected or claimed.
+- The sole Supabase security-advisor SECURITY DEFINER warning was reviewed: public.minglora_list_my_mfa_factors() is not an AI Network RPC. It has an empty search_path, performs read-only aggregation from auth.mfa_factors filtered by auth.uid(), denies anon EXECUTE, and grants authenticated self-service access. A read-only transaction under the authenticated role with a non-existent test subject returned an empty list; no Auth user or MFA factor was created. The function is intentionally SECURITY DEFINER so authenticated users can list their own factors; no change was made.
+- Latest feature-branch head before this documentation checkpoint: 0c7150c459dccbb6885f9d773cd262753e0c58a8. Verified workflows: full Minglora CI 1,186/1,186 passing; AI Network checks 141/141 passing; AI identity/discovery browser acceptance PASS; LIVE/MeetWave layout QA PASS.
+- AI security tests still cannot validate live provider prompt-injection, model/tool abuse, worker identity or usage leakage because provider assignments and workers are absent/disabled. Keep Task 14 IN PROGRESS; do not create credentials or activate execution merely to simulate acceptance.
+- No application code, database schema/data, Auth settings, provider connections or runtime controls were changed. This checkpoint records live evidence and test results only.
+
+---
 ## Execution checkpoint — 2026-11-15 (email provisioning boundary and live AI security audit)
 
 - Project: Minglora Social Network only; existing repository and Supabase project gzycobgbasnqqhnympkr.
