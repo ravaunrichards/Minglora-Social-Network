@@ -173,3 +173,26 @@ test("Royal Lions Scepter has a dedicated regal rise motion and locally synthesi
   assert.ok(effects.includes('if(options.sound!==false)play(gift)'));
   assert.ok(effects.includes('window.matchMedia?.("(prefers-reduced-motion: reduce)")'));
 });
+
+test("Rose uses dedicated unfurl choreography and locally synthesized petal/celesta sound", () => {
+  assert.ok(effects.includes("function playRose(c,now,seed)"));
+  assert.ok(effects.includes('gift.code==="rose-4ieccm"?"rose-unfurl":'));
+  assert.ok(effects.includes('if(preset==="rose-unfurl")return'));
+  assert.ok(effects.includes("rustle.buffer=createGiftNoise(c,seed,0.52)"));
+  assert.ok(effects.includes("notes=[523.25,659.25,783.99,1046.5,1318.51]"));
+  assert.ok(effects.includes('if(gift.code==="rose-4ieccm")return playRose(c,now,seed)'));
+  assert.ok(effects.includes('if(options.sound!==false)play(gift)'));
+  assert.ok(effects.includes('window.matchMedia?.("(prefers-reduced-motion: reduce)")'));
+  assert.ok(!effects.includes("new Audio("), "Rose sound must stay local and not fetch unreviewed remote audio");
+});
+
+test("Keeper of Atlantis uses an original tidal trident surge and synthesized underwater bell sound", () => {
+  assert.ok(effects.includes("function playKeeperOfAtlantis(c,now,seed)"));
+  assert.ok(effects.includes('gift.code==="keeper-of-atlantis-15000-mgl"'));
+  assert.ok(effects.includes('gift.code==="keeper-of-atlantis-15000-mgl"?"atlantis-trident-surge":'));
+  assert.ok(effects.includes('preset==="atlantis-trident-surge"'));
+  assert.ok(effects.includes('surge.buffer=createGiftNoise(c,seed,1.18)'));
+  assert.ok(effects.includes("bells=[196,293.66,440,587.33,880]"));
+  assert.ok(effects.includes('if(options.sound!==false)play(gift)'));
+  assert.ok(effects.includes('window.matchMedia?.("(prefers-reduced-motion: reduce)")'));
+});
