@@ -34,7 +34,7 @@ test('legacy LIVE gift-model inventory is explicit and not production-approved',
     paths.add(asset.repository_path);
     assert.equal(asset.format, 'glTF 2.0 JSON');
     assert.equal(asset.production_eligible, false);
-    assert.equal(asset.catalogue_mapping_status, 'unverified');
+    assert.equal(asset.catalogue_mapping_status, 'historical_identity_mapped');
     assert.equal(asset.visual_review_status, 'pending');
     assert.equal(asset.technical_render_review_status, 'pending');
     assert.equal(asset.rights_review_status, 'pending');
