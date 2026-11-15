@@ -587,8 +587,10 @@ export function beginAIBotChatRequest(db, ownerId, {
     throw fail(409, 'The AI bot is not linked to the selected relational identity.');
   }
   if (!CHAT_REQUEST_ID_PATTERN.test(String(requestId || ''))) throw fail(400, 'A valid chat request ID is required for safe retries.');
-  const normalizedMessage = text(message, CHAT_MESSAGE_MAX_CHARACTERS);
-  if (!normalizedMessage) throw fail(400, 'Enter a message for the AI bot.');
+  const normalizedMessage = String(message ?? '').trim();
+  if (!normalizedMessage || normalizedMessage.length > CHAT_MESSAGE_MAX_CHARACTERS) {
+    throw fail(400, 'Bot chat messages must contain between 1 and 4,000 characters.');
+  }
   if (conversationId) {
     const existingConversation = ownerRows(db.aiBotConversations, ownerId)
       .find(row => row.id === conversationId && row.botId === botId && row.identityId === identityId && row.status === 'open');
