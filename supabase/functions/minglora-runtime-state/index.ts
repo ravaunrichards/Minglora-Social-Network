@@ -3574,8 +3574,7 @@ Deno.serve(async (req: Request) => {
     const mediaType=mimeType.startsWith("image/")?"image":mimeType.startsWith("video/")?"video":mimeType.startsWith("audio/")?"audio":mimeType==="model/gltf-binary"?"model3d":"document";
     const result:Record<string,unknown>={bucket,path:objectPath,mimeType,mediaType,byteSize};
     if(bucket===AI_PROFILE_MEDIA_BUCKET){
-      const expiresIn=bucket===AI_PROFILE_MEDIA_BUCKET?300:3600;
-    const {data,error}=await admin.storage.from(bucket).createSignedUrl(objectPath,expiresIn);
+      const {data,error}=await admin.storage.from(bucket).createSignedUrl(objectPath,3600);
       if(error||!data?.signedUrl)return json(502,{error:"The private AI image uploaded but a preview link could not be prepared."});
       result.url=data.signedUrl;
     }else if(bucket==="minglora-avatars"||bucket==="minglora-covers"){
@@ -3648,7 +3647,8 @@ Deno.serve(async (req: Request) => {
       const {data}=admin.storage.from(bucket).getPublicUrl(objectPath);
       return json(200,{url:data.publicUrl});
     }
-    const {data,error}=await admin.storage.from(bucket).createSignedUrl(objectPath,3600);
+    const expiresIn=bucket===AI_PROFILE_MEDIA_BUCKET?300:3600;
+    const {data,error}=await admin.storage.from(bucket).createSignedUrl(objectPath,expiresIn);
     if(error||!data?.signedUrl)return json(404,{error:"Media is unavailable."});
     return json(200,{url:data.signedUrl});
   }

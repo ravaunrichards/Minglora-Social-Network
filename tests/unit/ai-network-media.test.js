@@ -102,7 +102,17 @@ test('AI profile media reads apply profile visibility, active follow approval an
   assert.match(mediaVisibilityMigration, /grant execute on function public\.minglora_ai_identity_media_access[\s\S]*to service_role/i);
   assert.match(runtime, /"ai_identity_media_access"/);
   assert.match(runtime, /admin\.rpc\("minglora_ai_identity_media_access"/);
-  assert.match(runtime, /AI_PROFILE_MEDIA_BUCKET\?300:3600/);
+
+  const mediaSignStart = runtime.indexOf('if (action === "media_sign") {');
+  const mediaSignEnd = runtime.indexOf('if (action === "profile_verification_get") {', mediaSignStart);
+  const mediaSignHandler = runtime.slice(mediaSignStart, mediaSignEnd);
+  assert.match(mediaSignHandler, /AI_PROFILE_MEDIA_BUCKET\?300:3600/);
+  const uploadCompleteStart = runtime.indexOf('if (action === "media_upload_complete") {');
+  const uploadCompleteEnd = runtime.indexOf('if (action === "media_delete") {', uploadCompleteStart);
+  const uploadCompleteHandler = runtime.slice(uploadCompleteStart, uploadCompleteEnd);
+  assert.match(uploadCompleteHandler, /AI_PROFILE_MEDIA_BUCKET/);
+  assert.match(uploadCompleteHandler, /createSignedUrl\(objectPath,300\)/);
+  assert.match(uploadCompleteHandler, /createSignedUrl\(objectPath,3600\)/);
   const start = server.indexOf("if (p === '/api/ai-network' || p.startsWith('/api/ai-network/'))");
   const end = server.indexOf("if (method === 'POST' && p === '/api/webhooks/paypal')", start);
   const route = server.slice(start, end);
