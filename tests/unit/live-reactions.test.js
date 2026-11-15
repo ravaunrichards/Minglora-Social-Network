@@ -9,6 +9,7 @@ const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 const app = read('public/app.js');
 const server = read('src/server.js');
 const styles = read('public/styles.css');
+const guestLayouts = read('public/live-tiktok-compact.css');
 
 test('LIVE likes have a white-to-red heart button and also respond to stage taps', () => {
   assert.ok(app.includes("class='live-stage-topbar "));
@@ -82,20 +83,15 @@ test('Audio Only LIVE removes the oversized microphone and keeps the room compac
 });
 
 
-test('Minglora LIVE exposes seven screen layouts and separate guest-box layouts', () => {
-  const layouts = ['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight'];
-  for (const layout of layouts) {
-    assert.match(app, new RegExp("value:'" + layout + "'"));
-    assert.ok(styles.includes('data-live-layout="' + layout + '"'));
-  }
-  assert.match(server, /LIVE_SCREEN_LAYOUTS=\['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight'\]/);
+test('Minglora LIVE exposes all nine supplied guest layouts in one selector', () => {
+  const layouts = ['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight','roundtable-1','roundtable-2'];
+  for (const layout of layouts) assert.ok(app.includes("value:'" + layout + "'"),'missing guest layout '+layout);
+  assert.match(server, /LIVE_SCREEN_LAYOUTS=\['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight','roundtable-1','roundtable-2'\]/);
+  assert.equal((app.match(/id='live-layout-options'/g)||[]).length,1);
+  assert.doesNotMatch(app,/live-guest-layout-options|data-live-guest-layout=/);
   assert.match(app, /function applyLiveScreenLayout/);
   assert.match(app, /topic:"minglora-live-layout"/);
-  assert.match(server, /LIVE_GUEST_LAYOUTS=\['roundtable-1','roundtable-2'\]/);
-  for (const layout of ['roundtable-1','roundtable-2']) {
-    assert.ok(app.includes("value:'" + layout + "'"));
-    assert.ok(styles.includes('data-live-guest-layout="' + layout + '"'));
-  }
+  for (const layout of layouts) assert.ok(guestLayouts.includes('data-live-layout="'+layout+'"'),'missing guest grid '+layout);
   assert.match(app, /data-live-tools-panel-target='permissions'/);
 });
 
