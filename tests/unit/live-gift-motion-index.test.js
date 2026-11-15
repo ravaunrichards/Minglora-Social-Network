@@ -37,6 +37,7 @@ test("each LIVE motion entry resolves the exact unique artwork, model, animation
     assert.equal(entry.model_url, gift.model_url);
     assert.equal(entry.animation_key, gift.animation_key);
     const giftSpecificMotionPreset = {
+      "rose-4ieccm": "rose-unfurl",
       "djembe-master-1v3jzkm": "djembe-strike",
       "palm-breeze-gknyt0": "palm-canopy-sway",
       "gamer-otter-100-mgl": "gamer-otter-cheer",
@@ -70,6 +71,7 @@ test("runtime and service worker use the generated index at the same canonical p
 
 test("bespoke gift runtime presets are reflected in the generated motion index without mutating the source catalogue", () => {
   const overrides = {
+    "rose-4ieccm": "rose-unfurl",
     "djembe-master-1v3jzkm": "djembe-strike",
     "palm-breeze-gknyt0": "palm-canopy-sway",
     "gamer-otter-100-mgl": "gamer-otter-cheer",
