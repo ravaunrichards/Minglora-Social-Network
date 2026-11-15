@@ -9708,11 +9708,6 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
     });
     return;
   }
-  if(p==='/assets/gifters-level-up.png'){
-    const assetFile=path.join(__dirname,'..','assets','Gifters Badge Levels','Gifters Level Up.png');
-    fs.readFile(assetFile,(error,data)=>{if(error)return json(res,404,{error:'Gifter progression artwork not found.'});res.writeHead(200,{'Content-Type':'image/png','Cache-Control':'public, max-age=3600',...SECURITY_HEADERS});res.end(data);});
-    return;
-  }
   const gifterBadgeRangeSheetFile = ({
     '/assets/gifter-badge-range-sheets/lv-1-9.jpg': 'LV.1 - LV.9.jpg',
     '/assets/gifter-badge-range-sheets/lv-10-19.jpg': 'LV.10 - LV.19.jpg',

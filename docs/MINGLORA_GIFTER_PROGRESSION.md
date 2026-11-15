@@ -22,7 +22,7 @@ Every account starts with **no gifting badge and all 50 Gifter Levels locked**. 
 ])
 ```
 
-**Reference precedence:** Live thresholds use the widely reproduced TikTok LIVE gifter community reference table, not the conflicting lower values in the old `Gifters Level Up.png` artwork. The corrected thresholds are Level 45 = 30,000,000 Coins and Level 50 = 97,500,000 Coins. Level 48 remains 60,000,000 Coins in the selected reference table. TikTok does not publish an official threshold table, so these are community-compiled reference amounts; see the cited comparison at https://tikradar.io/blog/tiktok-gifter-levels/ and the full 1–50 table at https://tikradar.io/blog/tiktok-gifter-level-50-cost/. The chart artwork/layout is intentionally left unchanged; the server-driven level directory is authoritative for unlocks.
+**Reference precedence:** Live thresholds use the widely reproduced TikTok LIVE gifter community reference table, not the conflicting lower values in the removed `Gifters Level Up.png` artwork. The corrected thresholds are Level 45 = 30,000,000 Coins and Level 50 = 97,500,000 Coins. Level 48 remains 60,000,000 Coins in the selected reference table. TikTok does not publish an official threshold table, so these are community-compiled reference amounts; see the cited comparison at https://tikradar.io/blog/tiktok-gifter-levels/ and the full 1–50 table at https://tikradar.io/blog/tiktok-gifter-level-50-cost/. The conflicting chart image has been removed from the member interface and source asset folder. The server-driven Level 1–50 directory remains authoritative for unlocks.
 
 The maximum level is 50. The client receives the server-calculated level, progress, chart, history, and leaderboard; it cannot submit or award XP. Earned levels remain unlocked. An authorized MFA-verified Creator Hub admin may separately grant a level (including all 50), with an admin-awarded marker and audit entry; this does not add Coin spend or change any wallet. An admin reset starts a new progression epoch without deleting the original gift ledger or lifetime history.
 
@@ -47,10 +47,9 @@ Creator League rank and gifts received do not grant Gifter badges.
 
 ## Complete source-reference placement — 2026-11-15
 
-The canonical `assets/Gifters Badge Levels/` collection contains 71 images, all retained in their original source folders and assigned to these UI locations:
+The canonical `assets/Gifters Badge Levels/` collection contains 70 remaining images, all retained in their original source folders and assigned to these UI locations:
 
 - `Gifters Rewards.png` remains the primary artwork banner at the top of the Gifts entry page.
-- `Gifters Level Up.png` appears unchanged in a dedicated, full-width **Gifters Badge Progression** reference card immediately below the Gifter Progression page heading and above the member's live status/progress card. The card uses the server allow-listed `/assets/gifters-level-up.png` route, preserves the full image without cropping, and provides a full-size view. Live Coin totals and unlock states still come from server-confirmed gifting activity.
 - The 11 `Levels 1-4.jpg` through `Levels 50.jpg` panels appear in the detailed, ordered LV 1–50 section.
 - The six `LV.1 - LV.9.jpg` through `LV.50+.jpg` sheets appear in a separate ordered level-range gallery.
 - `Badges_Level_01-50/Badges_Level_01-50.png` and its `_preview.jpg` appear together in a separate master-collection section.

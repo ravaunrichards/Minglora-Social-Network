@@ -137,3 +137,12 @@ The current Admin Centre remains designated-owner/MFA restricted. The staff tabl
 - PR #403 merged into `main` on 2026-11-15; merge commit `3aedfcfb54860a32a4d34911a0db82cfa807c7e4`.
 - Validation: the new Gifters Badge Progression placement test, all existing Gifter artwork/level tests, 71-image reference-placement coverage, JavaScript syntax, server syntax, asset generation and raster metadata audit passed. LIVE/MeetWave layout independence, AI identity/discovery browser checks and Supabase Auth provider acceptance passed. The full test job remained red on five unrelated API/Creator League/For You expectations; the separate For You functional check also failed its existing stylesheet-version assertion. No Gifter-specific test failed.
 - No deployment was triggered or claimed.
+
+
+### User-requested removal — Gifters Level Up chart only
+- Task branch: `feature/remove-gifters-level-up-chart-only-20261115`.
+- Removed the dedicated Gifters Badge Progression chart card from the member Gifter Progression page.
+- Deleted only `assets/Gifters Badge Levels/Gifters Level Up.png`, its dedicated server route, and its service-worker precache entry; removed its chart-only CSS.
+- Preserved `Gifters Rewards.png`, all 50 original individual badges, all 11 detailed level panels, all 6 range sheets, both master-sheet files, existing badge display sizes, Coin thresholds, and server-confirmed progression calculations.
+- Updated the reference inventory from 71 to 70 source images and added regression tests that the deleted chart and route remain absent while the 50-level progression remains available.
+- No wallet, ledger, Coin threshold, admin award, or database data was modified. No deployment is claimed until verified.

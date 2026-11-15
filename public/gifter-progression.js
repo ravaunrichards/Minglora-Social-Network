@@ -217,9 +217,6 @@
       "<header class='gp-heading'><div><span class='gp-eyebrow'>MINGLORA GIFTER JOURNEY</span><h1>Gifter Level &amp; Badges</h1>" +
       "<p>Every confirmed gift you send moves your own Minglora gifter journey forward.</p></div>" +
       (embedded ? "" : "<div class='gp-heading-actions'><button type='button' class='gp-back-link' id='gp-back-gifts'>← Back to Gifts</button></div>") + "</header>" +
-      "<section class='gp-chart-reference card' aria-labelledby='gp-chart-reference-title'>" +
-      "<div class='gp-chart-reference-heading'><div><span class='gp-eyebrow'>MINGLORA GIFTER LEVELS</span><h2 id='gp-chart-reference-title'>Gifters Badge Progression</h2><p>Explore the original 50-level badge chart, then check your personal progress and unlocked rewards below.</p></div><span class='gp-chart-reference-count'>50 LEVELS</span></div>" +
-      "<figure class='gp-chart-reference-frame'><img class='gp-chart-image' src='/assets/gifters-level-up.png' alt='Original Minglora 50-level Gifters badge progression chart' loading='eager' decoding='async'><figcaption class='gp-chart-caption'><small id='gp-level-up-reference-note'>Original chart artwork, shown unchanged. Live progress and badge unlocks are calculated from confirmed gifts.</small><a class='gp-chart-open' href='/assets/gifters-level-up.png' target='_blank' rel='noopener noreferrer' aria-label='Open the full-size original Gifters Badge Progression chart in a new tab'>View full-size chart ↗</a></figcaption></figure></section>" +
       "<section class='gp-hero card'><div class='gp-hero-summary'>" +
       "<span class='gp-eyebrow'>YOUR GIFTER STATUS</span><div class='gp-current-badge-row'>" +
       (currentBadgeMarkup ? "<div class='gp-current-badge-art' aria-label='Your current Gifter badge'>" + currentBadgeMarkup + "</div>" : "") +
