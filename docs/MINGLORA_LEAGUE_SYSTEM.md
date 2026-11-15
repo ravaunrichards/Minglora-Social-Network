@@ -1,54 +1,69 @@
-# Minglora League System
+# Minglora Creator League
 
-## Creator League progression and LIVE match competition
+## League structure
 
-Confirmed LIVE Gift activity advances Creator League classes. Completed League Matches record match outcomes and win/loss/draw history only; they do not create a second rank ladder or change Creator League classes. Match power-ups affect only an active match score and never multiply Creator League points or official class standings.
-
-## Creator League classes
-
-Progression from lowest to highest:
+Minglora uses an 18-class Creator League, ordered from entry to highest:
 
 **D5 → D4 → D3 → D2 → D1 → C5 → C4 → C3 → C2 → C1 → B5 → B4 → B3 → B2 → B1 → A3 → A2 → A1**
 
-New creators start at D5. A1 is the ceiling and D5 is the floor.
+The divisions use Minglora's own presentation: Division D (bronze), C (copper), B (silver), and A (gold). There is no Bronze-to-Grandmaster Match Rank ladder.
 
-Creator League points are awarded only after the trusted Minglora LIVE Gift settlement function returns a confirmed transaction. The server uses its confirmed gift transaction ID and coin amount; the browser cannot supply points. One confirmed Minglora Coin of LIVE Gift value earns one Creator League point.
+New Minglora creators currently enter at D5. Public descriptions report that TikTok uses recent gift history when assigning an initial tier, but its exact initial-seeding cutoffs are not published. Minglora does not invent those cutoffs.
 
-**Automatic class progression:** every 100,000 confirmed lifetime LIVE Gift points advances a creator exactly one class in the hierarchy above. The class updates as soon as the confirmed Gift is recorded; it does not wait for the end of a UTC day, a relative leaderboard placement, or four promotion fragments. A creator with 985,092 eligible lifetime LIVE Gift points is therefore in C1. A1 is reached at 1,700,000 points. These are Minglora progression settings, not claims about TikTok's internal thresholds.
+## Daily regional placement
 
-Weekly seasons start Monday at 00:00 UTC. Season points reset weekly; lifetime LIVE Gift points and the class earned from them remain. Refunded LIVE Gifts are excluded and removed from the lifetime total when their refund is reconciled. Daily and weekly leaderboards are informational rankings and do not override a creator's lifetime-point class.
+Each completed UTC day, creators are ranked against other creators in the same region and current class. The score is the value of confirmed, eligible LIVE Gifts credited to the main LIVE host during that day. The League settlement uses the trusted gift ledger; the browser cannot submit or edit placement points.
 
-Coin purchases, direct profile gifts, social gifts, viewer support and match power-up bonuses do not add Creator League points. Match power-ups change only an active match score.
+Daily placement is relative to the class cohort, not a fixed lifetime Coin milestone. Lifetime and weekly Gift totals remain reporting statistics and do not directly promote a class.
 
-## Division leaderboards
+Minglora's current reset boundary is 00:00 UTC for all regions. This is a documented Minglora setting; TikTok's observed boards may use region-specific reset times.
 
-Members can browse the **daily** and **weekly** confirmed LIVE Gift rankings for every Creator League class in their own region. The selected class and period are validated by the server; the browser never submits or calculates ranking points. Daily standings use the current UTC day, weekly standings use the current Monday-start UTC season, and only persisted Creator League profiles in the viewer's region and selected class are returned. A weekly reset changes season standings, not lifetime class progress or match records.
+## Fragment placement rules
 
+Fragments are awarded or deducted according to placement within the creator's own class:
 
+| Division | Placement | Fragment change |
+| --- | --- | ---: |
+| A (A3–A1) | Top 1% | +3 |
+| A (A3–A1) | Top 1–10% | +2 |
+| A (A3–A1) | Top 10–20% | +1 |
+| A (A3–A1) | Top 20–60% | 0 |
+| A (A3–A1) | Bottom 40% | −1 |
+| B (B5–B1) | Top 1% | +3 |
+| B (B5–B1) | Top 1–10% | +2 |
+| B (B5–B1) | Top 10–20% | +1 |
+| B (B5–B1) | Top 20–70% | 0 |
+| B (B5–B1) | Bottom 30% | −1 |
+| C (C5–C1) | Top 10% | +2 |
+| C (C5–C1) | Top 10–20% | +1 |
+| C (C5–C1) | Top 20–80% | 0 |
+| C (C5–C1) | Bottom 20% | −1 |
+| D1 | Top 10% | +2 |
+| D1 | Top 10–20% | +1 |
+| D1 | Top 20–80% | 0 |
+| D1 | Bottom 20% | −1 |
+| D2–D5 | Top 10% | +2 |
+| D2–D5 | Top 10–20% | +1 |
+| D2–D5 | Other placements | 0 |
 
-## LIVE League Matches
+Four accumulated fragments promote a creator one class. Four lost fragments demote a creator one class. Fragment progress carries across daily settlements, and the class ladder stops at D5 and A1.
 
-A challenge pairs two active, independently hosted LIVE sessions. Both hosts must be connected to their LiveKit rooms when a challenge is sent and accepted. Invitations expire after two minutes. An accepted match runs for five minutes by default. Match scoring can use all LIVE Gifts or one selected Gift. Confirmed Gift value scores the match while its original eligible LIVE Gift value also contributes to the recipient's Creator League.
+Exact placement thresholds are based on publicly reported and observed TikTok LIVE League guidance, not an official TikTok-published technical specification. Minglora treats these as its own rules and does not claim access to TikTok's private ranking algorithm.
 
-Viewers can support one side once per match for three match points. Creators cannot support their own match. Viewer support changes only that match result and its win/loss/draw record; it does not change Creator League points or class.
+## League Shields
 
-The server settles a match once when its timer ends and expires unanswered invitations. The League Arena refreshes current scores and match status.
+A promotion grants one League Shield. A Shield automatically absorbs one negative fragment before it can reduce fragment progress. Unused Shields do not expire, and a creator may hold up to 10. D2–D5 have no negative fragment placement, because D5 is the entry floor.
 
-## Match Power-Ups
+A refund remains recorded in the gift audit ledger. If it affects a day that has already been settled, Minglora restores the saved pre-settlement class/fragment/Shield state and replays that day and later recorded settlements from the corrected confirmed-gift totals.
 
-Each power-up is available once per member per UTC day. These affect only the active match:
+## Eligible activity and separation of features
 
-| Power-up | Initial Minglora rule |
-| --- | --- |
-| Momentum Boost | Adds 25% to eligible match Gift points for 30 seconds. |
-| Shield | For 30 seconds, blocks the next opposing Momentum Boost or Score Multiplier bonus. The base Gift points still count; it cannot erase a result or override a referee. |
-| Time Boost | Adds 30 seconds in flexible-timer matches. Fixed-timer matches reject it. |
-| Score Multiplier | Doubles eligible match Gift points for 15 seconds. |
+Only confirmed main-host LIVE Gift value contributes to Creator League placement. Coin purchases, direct profile gifts, social gifts, match viewer support, and match power-up bonuses do not grant Creator League fragments.
 
-Momentum Boost and Score Multiplier do not stack multiplicatively; the strongest active multiplier is used. No power-up changes the underlying Gift transaction, Creator League total, or league class.
+LIVE League Matches remain a separate head-to-head feature. They can record results, winner, and win/loss/draw history, but they do not create a Bronze-to-Grandmaster rank or change Creator League classes. Match Power-Ups affect only the active match score.
 
-## TikTok-inspired principles, Minglora-owned rules
+The daily and weekly leaderboard views remain available for standings and reporting. Daily class placement is the input to fragment movement; weekly and lifetime totals are informational.
 
-Minglora uses original class names, Creator League progression values, match power-up values, and original assets. The class thresholds above are Minglora-owned settings.
+## Minglora presentation
 
-The current implementation pairs two separate existing LIVE sessions. It does not claim to provide a shared co-host stage or a full 2v2 multi-creator room.
+Minglora uses its own product name, visual identity, class badges, icons, sounds, and UI. The goal is comparable functional behavior and progression structure, not copying TikTok branding, logos, artwork, or proprietary assets.
