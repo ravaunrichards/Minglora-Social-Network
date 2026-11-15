@@ -83,6 +83,28 @@
     ).join('') + '</div>';
   }
 
+  function renderAIBotChat() {
+    const chat = state.botChat;
+    if (!chat?.bot || chat.bot.id !== state.selectedBotChatId) {
+      return '<p class="ai-network-note">Select Chat on a linked AI bot to start an owner-initiated conversation. Bot status stays unchanged; autonomous workers remain paused.</p>';
+    }
+    const messages = list(chat.messages).map(item =>
+      '<article class="ai-network-chat-message ai-network-chat-message--' + (item.role === 'assistant' ? 'assistant' : 'user') + '">' +
+      '<div class="ai-network-chat-message-heading"><strong>' + (item.role === 'assistant' ? esc(chat.bot.name) + ' · AI' : 'You') + '</strong> ' +
+      (item.role === 'assistant' ? pill('AI', 'ai') : '') + '</div><p>' + esc(item.content) + '</p>' +
+      '<small>' + esc(date(item.createdAt)) + '</small></article>'
+    ).join('');
+    const canChat = Boolean(state.snapshot?.providerStatus?.botChatAvailable);
+    const error = state.botChatError ? '<p class="ai-network-alert ai-network-alert--warning" role="status">' + esc(state.botChatError) + '</p>' : '';
+    return '<section class="ai-network-bot-chat" aria-label="AI bot conversation"><div class="ai-network-bot-chat-heading"><div><strong>Chat with ' +
+      esc(chat.bot.name) + '</strong><p>' + esc(chat.bot.purpose) + '</p></div><button type="button" class="secondary" data-ai-action="bot-chat-close">Close</button></div>' +
+      error + '<div class="ai-network-chat-thread" aria-live="polite">' +
+      (messages || empty('No messages yet. Send a question to start this private AI conversation.')) +
+      '</div><form class="ai-network-form" data-ai-form="bot-chat" data-bot-id="' + esc(chat.bot.id) + '" data-conversation-id="' + esc(chat.conversation?.id || '') + '">' +
+      '<label>Message ' + esc(chat.bot.name) + '<textarea name="message" required minlength="1" maxlength="4000" rows="3" placeholder="Ask your AI bot a question…" ' + (!canChat ? 'disabled' : '') + '></textarea></label>' +
+      '<p class="ai-network-note">Your message and the AI reply are checked by content moderation. This bot can answer and help draft text only; it cannot post, message other members, schedule, spend money or perform admin actions.</p>' +
+      '<button class="primary" type="submit" ' + (!canChat ? 'disabled title="Configure a healthy OpenAI provider in the private server environment first."' : '') + '>Send to AI bot</button></form></section>';
+  }
   const identityStatusTransitions = Object.freeze({
     proposed: ['created'],
     created: ['under_review','suspended'],
@@ -1449,7 +1471,7 @@
       (state.adminAccess ? renderAITaskQueueCenter() : '') +
       (state.adminAccess ? renderAIOrganizationCenter() : '') +
       card('Bot Personality Laboratory', '01 · PERSONALITY', '<p>Build unique AI helpers with a clear purpose, tone, traits, expertise and permitted tasks. Every Bot Lab creation is also registered as an individually addressable, private AI identity in Minglora.</p>' +
-        renderBotRows(bots) + '<form class="ai-network-form" data-ai-form="bot"><div class="ai-network-form-title">Create a new AI bot and identity</div>' +
+        renderBotRows(bots) + renderAIBotChat() + '<form class="ai-network-form" data-ai-form="bot"><div class="ai-network-form-title">Create a new AI bot and identity</div>' +
         '<div class="ai-network-form-grid"><label>AI first name<input name="firstName" required maxlength="80" autocomplete="off"></label>' +
         '<label>AI last name<input name="lastName" required maxlength="80" autocomplete="off"></label>' +
         '<label>Middle name (optional)<input name="middleName" maxlength="80" autocomplete="off"></label>' +
@@ -1480,7 +1502,7 @@
       card('Smart Activity Scheduling', '03 · SCHEDULING', '<p>Plan content support by time zone and cadence. Every new schedule is paused until execution is verified.</p>' + renderSchedules(schedules,bots)) +
       card('Bot Performance Center', '04 · PERFORMANCE', renderPerformance(performance)) +
       card('Multilingual Intelligence', '05 · LANGUAGES', '<p>Set preferred languages and opt-in translation. Original text stays available.</p>' + renderLanguages(settings)) +
-      card('AI Creator Studio', '06 · CREATOR', '<p>Create structured draft requests. No content is generated or published while the provider is disabled.</p>' +
+      card('AI Creator Studio', '06 · CREATOR', '<p>Create moderated, human-reviewed draft content. Nothing is published automatically.</p>' +
         renderCreatorJobs(creatorJobs) + '<form class="ai-network-form" data-ai-form="creator"><div class="ai-network-form-title">Start a Creator Studio draft</div>' +
         '<label>Draft type<select name="taskType">' + options([{value:'content_outline',label:'Content outline'},{value:'caption_draft',label:'Caption options'},
           {value:'title_ideas',label:'Title ideas'},{value:'translation_draft',label:'Translation draft'},{value:'creator_calendar',label:'Creator calendar'}],'content_outline') + '</select></label>' +
