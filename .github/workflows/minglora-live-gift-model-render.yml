@@ -1,4 +1,4 @@
-name: Minglora LIVE gift model browser render QA
+name: Minglora LIVE ten-model browser render QA
 
 on:
   pull_request:
@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   gift-model-render:
-    name: Original Minglora gift models — Chromium WebGL
+    name: Ten original Minglora gift models — Chromium WebGL
     runs-on: ubuntu-24.04
     steps:
       - name: Check out repository
