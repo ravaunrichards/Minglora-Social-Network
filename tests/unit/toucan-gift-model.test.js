@@ -21,7 +21,7 @@ test("Toucan gift uses original keel-billed geometry and subject-specific Minglo
   assert.equal(model.asset?.extras?.mingloraAssetId, "gift-toucan-3d-v1");
   assert.equal(model.asset?.extras?.source, "assets/3d-assets/gift-models/toucan-model.mjs");
   assert.equal(model.asset?.extras?.reviewStatus, "design-review-pending");
-  assert.match(model.asset?.extras?.artDirection || "", /keel-billed rainforest toucan.*glossy black plumage.*yellow throat bib.*oversized banana-curved lime bill.*scarlet undertail.*zygodactyl feet/i);
+  assert.match(model.asset?.extras?.artDirection || "", /three-quarter-profile keel-billed rainforest toucan.*matte deep-black plumage.*golden-yellow throat bib.*oversized horizontally presented banana-curved lime bill.*scarlet undertail.*zygodactyl feet/i);
 
   const primitives = model.meshes?.[0]?.primitives || [];
   assert.ok(primitives.length >= 35, "Toucan must be assembled from subject-specific meshes, not a shared animal sphere");
@@ -48,6 +48,14 @@ test("Toucan gift uses original keel-billed geometry and subject-specific Minglo
   }
   assert.ok(partNames.some(name => name.startsWith("Toucan left layered wing feather")));
   assert.ok(partNames.some(name => name.startsWith("Toucan right layered wing feather")));
+  const upperBill = primitives.find(primitive => primitive.extras?.mingloraPartName === "Toucan oversized lime-green upper bill");
+  assert.ok(upperBill, "the original upper bill mesh must exist");
+  const upperBillBounds = model.accessors?.[upperBill.attributes?.POSITION];
+  assert.ok(upperBillBounds.max[0] - upperBillBounds.min[0] > 0.5, "the bill must project horizontally in the model viewer rather than point into the camera");
+  const body = primitives.find(primitive => primitive.extras?.mingloraPartName === "Toucan sculpted glossy-black body plumage");
+  assert.ok(body, "the body mesh must exist");
+  const bodyMaterial = model.materials?.[body.material];
+  assert.ok(bodyMaterial?.pbrMetallicRoughness?.roughnessFactor >= 0.85, "dark plumage must use a matte material to avoid washed-out metallic reflections");
   assert.equal(model.materials?.length, primitives.length, "each named part must retain its own PBR material");
 
   for (const primitive of primitives) {
