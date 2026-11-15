@@ -222,6 +222,21 @@ test('Creator Studio generation failure stores no output and can be retried safe
   assert.equal(retry.providerError, null);
 });
 
+test('stale Creator Studio generation leases expire and become safely retryable', () => {
+  const db = state();
+  const job = createAICreatorJob(db, 'owner-1', {
+    taskType: 'caption_draft',
+    brief: 'Write three captions for a technology community event.'
+  }, { now });
+  startAICreatorJobGeneration(db, 'owner-1', job.id, { now });
+  const retryAt = new Date(now.getTime() + 6 * 60 * 1000);
+  const retry = startAICreatorJobGeneration(db, 'owner-1', job.id, { now: retryAt });
+  assert.equal(retry.providerExecution, 'running');
+  assert.equal(retry.output, null);
+  assert.equal(retry.providerError, null);
+  assert.ok(db.aiBotAudit.some(event => event.action === 'creator_job_generation_lease_expired'));
+});
+
 test('OpenAI manual draft availability does not enable autonomous execution', () => {
   const status = getAIProviderStatus({
     OPENAI_API_KEY: 'private-openai-test-key',
