@@ -563,7 +563,7 @@ This section supersedes older live-count and runtime-version snapshots above; hi
 - [x] **AI-CHAT-02 — Private persistence and gateway:** added owner-scoped conversation sessions/messages, request idempotency, five-minute leases, daily token reservations/usage, RLS and service-role-only grants; added the private Edge Function action. Commits: `1cb83d17f09b143d190f9a84037893fc8db2a31f`, `412dc924e94d6d591805396c8d31dcad53085cc1`.
 - [x] **AI-CHAT-03 — Authenticated Node API:** added owner-bot/conversation checks, provider re-probe, token reservation, generated-reply moderation and transcript persistence. Commit: `3ee7558b138327008a4db159be5805e529392403`.
 - [x] **AI-CHAT-04 — Admin UI and documentation:** added the explicit capability selector, private Chat control, transcript and owner-started message form; recorded module documentation. Commits: `03f3c5ce40ce9bb4f825a338cf7fd1d80aa37b41`, `5cfec4b87095f3dad671dd9102c0e2dbd36110c3`.
-- [ ] **AI-CHAT-05 — Verification and release:** regression tests authored and gateway tests extended. Still pending CI execution, SQL migration validation in a non-production database, live provider health/inference using the private server environment, authenticated owner browser acceptance, Render deployment selection/approval, and deployment verification.
+- [ ] **AI-CHAT-05 — Verification and release:** automated verification is GREEN on code commit `df0c57b26bfdabb4f61aa5fc1ffcada126e35333` (CI 1,222/1,222, AI Network 157/157, browser acceptance and layout visual QA passed). Remaining release gates: non-production Supabase migration validation (project has no development branch; branch creation requires cost approval), real provider health/inference using the private server environment, authenticated owner/device acceptance, confirmed Minglora Render target and deployment verification.
 
 ### Safety and live-state evidence
 
@@ -600,3 +600,11 @@ This section supersedes older live-count and runtime-version snapshots above; hi
 - Remaining external acceptance gates: non-production Supabase migration validation (no development branch exists; branch creation requires cost approval), private provider credential/health and live inference, signed-in owner/device acceptance, and correct Render service selection/deployment verification.
 - Production AI identity count remains **0**. No bots, profiles, Auth accounts, conversations or messages have been inserted; no production SQL migration or Edge Function deployment was performed; task workers remain globally paused and disabled.
 - The 10-billion identity target remains a design objective, not an operational or benchmarked capacity.
+
+
+### Next master-task checkpoint after conversation source verification
+
+- The broader ordered tracker still records Task 3 (individual AI identity creation, names, profile and safe lifecycle) as **PARTIAL / ACTIVE / external acceptance blocker**. The relational create/list/get/edit/bulk RPC and source/UI contracts exist, but no signed-in owner session is available here for real profile creation, private avatar/cover upload and device acceptance.
+- Do not create an artificial Auth user or sample AI identity to bypass the owner acceptance requirement. Current production AI identity count is still zero.
+- Provider/email infrastructure remains metadata-only until a genuine provider credential/service is connected and verified. Do not report a mailbox, model inference or operational bot without evidence.
+- The new owner-started chat slice is automated-test green but remains a draft PR and source-only until its non-production migration, provider and real-owner release gates are completed.
