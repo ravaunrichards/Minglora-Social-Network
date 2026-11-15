@@ -13,6 +13,37 @@
     const parsed = new Date(value);
     return Number.isNaN(parsed.getTime()) ? 'Not recorded' : parsed.toLocaleString();
   };
+  const localDateTimeInZoneToIso = (value, timeZone) => {
+    const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(String(value || ''));
+    if (!match) throw new Error('Enter a valid local date and time.');
+    const expected = match.slice(1).map((part, index) => Number(part || (index === 5 ? 0 : part)));
+    const target = Date.UTC(expected[0], expected[1] - 1, expected[2], expected[3], expected[4], expected[5] || 0);
+    const zone = String(timeZone || '').trim();
+    if (!zone) throw new Error('Enter the time zone for this attendance record.');
+    let instant = target;
+    let formatter;
+    try {
+      formatter = new Intl.DateTimeFormat('en-CA', {
+        timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'
+      });
+      for (let attempt = 0; attempt < 4; attempt += 1) {
+        const parts = Object.fromEntries(formatter.formatToParts(new Date(instant)).map(part => [part.type, part.value]));
+        const observed = Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day),
+          Number(parts.hour), Number(parts.minute), Number(parts.second));
+        instant += target - observed;
+      }
+      const verify = Object.fromEntries(formatter.formatToParts(new Date(instant)).map(part => [part.type, part.value]));
+      const matches = Number(verify.year) === expected[0] && Number(verify.month) === expected[1] &&
+        Number(verify.day) === expected[2] && Number(verify.hour) === expected[3] &&
+        Number(verify.minute) === expected[4] && Number(verify.second) === (expected[5] || 0);
+      if (!matches) throw new Error('That local time does not exist in the selected time zone.');
+    } catch (error) {
+      if (error instanceof RangeError) throw new Error('Enter a valid IANA time zone, such as America/Jamaica.');
+      throw error;
+    }
+    return new Date(instant).toISOString();
+  };
   const options = (values, current) => values.map(value =>
     '<option value="' + esc(value.value) + '"' + (current === value.value ? ' selected' : '') + '>' + esc(value.label) + '</option>'
   ).join('');
@@ -570,12 +601,22 @@
         const reviewResult = talentResults[0].status === 'fulfilled' ? talentResults[0].value : {};
         const successionResult = talentResults[1].status === 'fulfilled' ? talentResults[1].value : {};
         const promotionResult = talentResults[2].status === 'fulfilled' ? talentResults[2].value : {};
+        const workforceResults = await Promise.allSettled([
+          request(base + '/training-programs'), request(base + '/training-enrollments'), request(base + '/attendance')
+        ]);
+        const trainingProgramResult = workforceResults[0].status === 'fulfilled' ? workforceResults[0].value : {};
+        const trainingEnrollmentResult = workforceResults[1].status === 'fulfilled' ? workforceResults[1].value : {};
+        const attendanceResult = workforceResults[2].status === 'fulfilled' ? workforceResults[2].value : {};
         return [organizationId, {
           departments: list(departmentResult.departments), positions: list(positionResult.positions),
           vacancies: list(vacancyResult.vacancies), applications: list(applicationResult.applications),
           employees: list(employeeResult.employees), performanceReviews: list(reviewResult.performance_reviews),
           successionPlans: list(successionResult.succession_plans), promotions: list(promotionResult.promotions),
-          talentUnavailable: talentResults.some(result => result.status === 'rejected')
+          talentUnavailable: talentResults.some(result => result.status === 'rejected'),
+          trainingPrograms: list(trainingProgramResult.training_programs),
+          trainingEnrollments: list(trainingEnrollmentResult.training_enrollments),
+          attendanceRecords: list(attendanceResult.attendance_records),
+          workforceUnavailable: workforceResults.some(result => result.status === 'rejected')
         }];
       }));
       state.organizationHR = Object.fromEntries(details.filter(Boolean));
@@ -598,6 +639,10 @@
     const reviews = list(hr.performanceReviews);
     const successionPlans = list(hr.successionPlans);
     const promotions = list(hr.promotions);
+    const trainingPrograms = list(hr.trainingPrograms);
+    const trainingEnrollments = list(hr.trainingEnrollments);
+    const attendanceRecords = list(hr.attendanceRecords).map(row => row.attendance || row).filter(Boolean);
+    const workforceUnavailable = hr.workforceUnavailable === true;
     const identityRecords = list(state.identityRegistry?.identities);
     const identityOptions = identityRecords.map(row => ({
       value: row.identity?.identity_id || '',
@@ -796,20 +841,102 @@
               '<label><span>Reason</span><input name="reason" required minlength="3" maxlength="1000"></label>' +
               '<button class="secondary" type="submit">Update plan</button></form>' : '') + '</article>';
         }).join('') + '</div>' : empty('No succession plans have been created.');
+    const activeTrainingPrograms = trainingPrograms.map(row => row.program || row).filter(program => program.program_status === 'active');
+    const trainingProgramForm = '<form class="ai-network-form ai-network-hr-form" data-ai-form="training-program" data-organization-id="' + esc(organizationId) + '">' +
+      '<div class="ai-network-form-title">Create a training and development program</div><div class="ai-network-form-grid">' +
+      '<label>Program title<input name="programTitle" required minlength="3" maxlength="160" placeholder="AI Safety and Privacy Foundations"></label>' +
+      '<label>Category<input name="category" required minlength="2" maxlength="80" value="general"></label>' +
+      '<label class="ai-network-checkbox-label"><input type="checkbox" name="mandatory"> Mandatory for assigned employees</label></div>' +
+      '<label>Description<textarea name="description" maxlength="4000" rows="2" placeholder="Learning outcomes, expected practice and evidence requirements"></textarea></label>' +
+      '<button class="primary" type="submit">Save draft training program</button></form>';
+    const trainingProgramRows = trainingPrograms.length
+      ? '<div class="ai-network-list">' + trainingPrograms.map(row => {
+          const program = row.program || row;
+          const nextStatus = program.program_status === 'draft' ? 'active' : program.program_status === 'active' ? 'retired' : '';
+          return '<article class="ai-network-list-row"><div class="ai-network-list-main"><div><strong>' +
+            esc(program.program_title || 'Training program') + '</strong><div class="ai-network-meta">' +
+            pill(program.program_status || 'draft') + ' ' + pill(program.category || 'general') + ' ' +
+            pill(program.mandatory ? 'mandatory' : 'optional') + '</div><small>' +
+            number(row.enrollment_count || 0) + ' training assignment(s) · ' + esc(program.description || '') +
+            '</small></div></div>' +
+            (nextStatus ? '<form class="ai-network-inline-form" data-ai-form="training-program-status" data-organization-id="' + esc(organizationId) + '" data-program-id="' + esc(program.program_id) + '">' +
+              '<input type="hidden" name="status" value="' + nextStatus + '"><button class="secondary" type="submit">' +
+              (nextStatus === 'active' ? 'Activate program' : 'Retire program') + '</button></form>' : '') + '</article>';
+        }).join('') + '</div>' : empty('No training programs have been configured.');
+    const trainingAssignmentForm = activeEmployees.length && activeTrainingPrograms.length
+      ? '<form class="ai-network-form ai-network-hr-form" data-ai-form="training-assignment" data-organization-id="' + esc(organizationId) + '">' +
+        '<div class="ai-network-form-title">Assign an active program to an employee</div><div class="ai-network-form-grid">' +
+        '<label>AI employee<select name="employmentId" required>' + options(activeEmployees.map(row => ({value:row.employment?.employment_id || '',label:(row.identity?.display_name || 'AI employee') + ' · ' + (row.position_name || '')})).filter(row=>row.value),'') + '</select></label>' +
+        '<label>Training program<select name="programId" required>' + options(activeTrainingPrograms.map(program => ({value:program.program_id,label:program.program_title})),'') + '</select></label>' +
+        '<label>Due date (optional)<input type="date" name="dueOn"></label></div>' +
+        '<button class="secondary" type="submit">Assign training</button></form>'
+      : '<p class="ai-network-note">An active training program and an onboarding or active employee are required before an assignment can be made.</p>';
+    const trainingEnrollmentRows = trainingEnrollments.length
+      ? '<div class="ai-network-list">' + trainingEnrollments.map(row => {
+          const enrollment = row.enrollment || row;
+          const employee = employees.find(item => item.employment?.employment_id === enrollment.employment_id);
+          const program = row.program || trainingPrograms.map(item=>item.program||item).find(item=>item.program_id===enrollment.program_id) || {};
+          const statusChoices = enrollment.enrollment_status === 'assigned'
+            ? [{value:'in_progress',label:'Mark in progress'},{value:'completed',label:'Complete'},{value:'waived',label:'Waive'},{value:'cancelled',label:'Cancel'}]
+            : enrollment.enrollment_status === 'in_progress'
+              ? [{value:'completed',label:'Complete'},{value:'waived',label:'Waive'},{value:'cancelled',label:'Cancel'}] : [];
+          return '<article class="ai-network-list-row"><div class="ai-network-list-main"><div><strong>' +
+            esc(employee?.identity?.display_name || 'AI employee') + ' · ' + esc(program.program_title || 'Training') +
+            '</strong><div class="ai-network-meta">' + pill(enrollment.enrollment_status || 'assigned') + ' ' +
+            pill(number(enrollment.progress_percent || 0) + '% complete') + '</div><small>Due ' +
+            esc(enrollment.due_on || 'not set') + ' · ' + esc(enrollment.outcome_summary || '') + '</small></div></div>' +
+            (statusChoices.length ? '<form class="ai-network-inline-form" data-ai-form="training-enrollment-status" data-organization-id="' + esc(organizationId) + '" data-enrollment-id="' + esc(enrollment.enrollment_id) + '">' +
+              '<label><span>Update progress state</span><select name="status">' + options(statusChoices,statusChoices[0].value) + '</select></label>' +
+              '<label><span>Progress % (completion sets 100%)</span><input name="progressPercent" type="number" min="0" max="100" value="' + number(enrollment.progress_percent || 0) + '"></label>' +
+              '<label><span>Human note</span><input name="outcomeSummary" maxlength="2000"></label><button class="secondary" type="submit">Save progress</button></form>' : '') +
+            '</article>';
+        }).join('') + '</div>' : empty('No training assignments have been made.');
+    const attendanceForm = activeEmployees.length
+      ? '<form class="ai-network-form ai-network-hr-form" data-ai-form="attendance-entry" data-organization-id="' + esc(organizationId) + '">' +
+        '<div class="ai-network-form-title">Record an availability, shift, leave or absence entry</div><div class="ai-network-form-grid">' +
+        '<label>AI employee<select name="employmentId" required>' + options(activeEmployees.map(row => ({value:row.employment?.employment_id || '',label:(row.identity?.display_name || 'AI employee') + ' · ' + (row.position_name || '')})).filter(row=>row.value),'') + '</select></label>' +
+        '<label>Record type<select name="recordType">' + options([{value:'availability',label:'Availability'},{value:'shift',label:'Shift'},{value:'leave',label:'Leave request'},{value:'absence',label:'Absence'}],'availability') + '</select></label>' +
+        '<label>Start (local date/time)<input type="datetime-local" name="startsAt" required></label>' +
+        '<label>End (local date/time)<input type="datetime-local" name="endsAt" required></label>' +
+        '<label>Timezone<input name="timezone" required minlength="1" maxlength="80" value="America/Jamaica"></label></div>' +
+        '<label>Reason / source note<input name="reason" required minlength="3" maxlength="1000" placeholder="Human-entered schedule or attendance record"></label>' +
+        '<button class="secondary" type="submit">Submit attendance record for review</button></form>'
+      : '<p class="ai-network-note">An onboarding or active employee is required before recording attendance.</p>';
+    const attendanceRows = attendanceRecords.length
+      ? '<div class="ai-network-list">' + attendanceRecords.map(row => {
+          const attendance = row.attendance || row;
+          const employee = employees.find(item => item.employment?.employment_id === attendance.employment_id);
+          const canReview = attendance.record_status === 'submitted';
+          return '<article class="ai-network-list-row"><div class="ai-network-list-main"><div><strong>' +
+            esc(employee?.identity?.display_name || 'AI employee') + ' · ' + esc(attendance.record_type || 'attendance') +
+            '</strong><div class="ai-network-meta">' + pill(attendance.record_status || 'submitted') + ' ' +
+            pill(attendance.timezone || 'UTC') + '</div><small>' + date(attendance.starts_at) + ' – ' + date(attendance.ends_at) +
+            '</small><p>' + esc(attendance.reason || '') + '</p><small>' + esc(attendance.review_note || '') + '</small></div></div>' +
+            (canReview ? '<form class="ai-network-inline-form" data-ai-form="attendance-review" data-organization-id="' + esc(organizationId) + '" data-attendance-id="' + esc(attendance.attendance_id) + '">' +
+              '<label><span>Human review decision</span><select name="status">' + options([{value:'approved',label:'Approve'},{value:'rejected',label:'Reject'},{value:'recorded',label:'Confirm recorded'},{value:'cancelled',label:'Cancel'}],'approved') + '</select></label>' +
+              '<label><span>Review reason</span><input name="reviewNote" required minlength="3" maxlength="1000"></label>' +
+              '<button class="secondary" type="submit">Save attendance review</button></form>' : '') +
+            '</article>';
+        }).join('') + '</div>' : empty('No attendance, availability, leave or absence entries have been recorded.');
     const candidateOptions = identityOptions.length
       ? '<p class="ai-network-note">' + identityOptions.length + ' owner-managed AI identities available for recruitment.</p>'
       : '<p class="ai-network-note">No eligible owner-managed AI identities are currently listed. Register an identity first.</p>';
     const talentAvailabilityNote = hr.talentUnavailable
       ? '<p class="ai-network-note">Performance reviews, promotions and succession planning are waiting for the new HR talent migration and private runtime gateway to be deployed. Existing recruitment and employee workflows remain available.</p>'
       : '';
+    const workforceAvailabilityNote = workforceUnavailable
+      ? '<p class="ai-network-note">Training and attendance controls are waiting for the private HR workforce migration and runtime gateway. Existing HR records remain available.</p>'
+      : '';
     return '<section class="ai-network-hr-workspace"><div class="ai-network-hr-heading"><h4>Recruitment & workforce management</h4>' +
-      '<p class="ai-network-note">Vacancies begin as drafts. Candidates must be owner-managed AI identities and approved before appointment. Employee status, manager and transfer changes are recorded in persistent history.</p>' + talentAvailabilityNote + '</div>' +
+      '<p class="ai-network-note">Vacancies begin as drafts. Candidates must be owner-managed AI identities and approved before appointment. Employee status, manager and transfer changes are recorded in persistent history.</p>' + talentAvailabilityNote + workforceAvailabilityNote + '</div>' +
       vacancyForm + '<div><h5>Vacancies</h5>' + vacancyRows + '</div>' +
       '<div><h5>Candidate applications</h5>' + candidateOptions + applicationRows + '</div>' +
       '<div><h5>AI employees</h5>' + employeeRows + '</div>' +
       '<div><h5>Performance reviews · human-authored</h5>' + performanceReviewRows + '</div>' +
       '<div><h5>Recorded promotions</h5>' + promotionRows + '</div>' +
-      '<div><h5>Succession planning · no automatic appointments</h5>' + successionForm + successionRows + '</div></section>';
+      '<div><h5>Succession planning · no automatic appointments</h5>' + successionForm + successionRows + '</div>' +
+      '<div><h5>Training & employee development</h5>' + trainingProgramForm + trainingProgramRows + trainingAssignmentForm + trainingEnrollmentRows + '</div>' +
+      '<div><h5>Attendance & availability · human-recorded</h5>' + attendanceForm + attendanceRows + '</div></section>';
   }
 
   function renderAIProviderCenter() {
@@ -1853,6 +1980,50 @@
       payload.manager_employment_id = value('managerEmploymentId') || null;
       payload.supporting_review_id = value('supportingReviewId') || null;
       payload.reason = value('reason'); payload.idempotency_key = form.dataset.idempotencyKey;
+    } else if (kind === 'training-program') {
+      const organizationId = form.dataset.organizationId;
+      if (!organizationId) throw new Error('Training program organization is missing.');
+      path = '/organizations/' + encodeURIComponent(organizationId) + '/training-programs';
+      form.dataset.idempotencyKey = form.dataset.idempotencyKey || window.crypto.randomUUID();
+      payload.program_title = value('programTitle'); payload.category = value('category');
+      payload.description = value('description');
+      payload.mandatory = Boolean(form.querySelector('[name="mandatory"]')?.checked);
+      payload.idempotency_key = form.dataset.idempotencyKey;
+    } else if (kind === 'training-program-status') {
+      const organizationId = form.dataset.organizationId, programId = form.dataset.programId;
+      if (!organizationId || !programId) throw new Error('Training program details are missing.');
+      path = '/organizations/' + encodeURIComponent(organizationId) + '/training-programs/' + encodeURIComponent(programId) + '/status';
+      payload.status = value('status');
+    } else if (kind === 'training-assignment') {
+      const organizationId = form.dataset.organizationId;
+      if (!organizationId) throw new Error('Training assignment organization is missing.');
+      path = '/organizations/' + encodeURIComponent(organizationId) + '/training-enrollments';
+      form.dataset.idempotencyKey = form.dataset.idempotencyKey || window.crypto.randomUUID();
+      payload.employment_id = value('employmentId'); payload.program_id = value('programId');
+      payload.due_on = value('dueOn') || null; payload.idempotency_key = form.dataset.idempotencyKey;
+    } else if (kind === 'training-enrollment-status') {
+      const organizationId = form.dataset.organizationId, enrollmentId = form.dataset.enrollmentId;
+      if (!organizationId || !enrollmentId) throw new Error('Training enrollment details are missing.');
+      path = '/organizations/' + encodeURIComponent(organizationId) + '/training-enrollments/' + encodeURIComponent(enrollmentId) + '/status';
+      payload.status = value('status'); payload.progress_percent = Number(value('progressPercent'));
+      payload.outcome_summary = value('outcomeSummary');
+    } else if (kind === 'attendance-entry') {
+      const organizationId = form.dataset.organizationId;
+      if (!organizationId) throw new Error('Attendance organization is missing.');
+      path = '/organizations/' + encodeURIComponent(organizationId) + '/attendance';
+      form.dataset.idempotencyKey = form.dataset.idempotencyKey || window.crypto.randomUUID();
+      payload.employment_id = value('employmentId'); payload.record_type = value('recordType');
+      payload.timezone = value('timezone');
+      payload.starts_at = localDateTimeInZoneToIso(value('startsAt'), payload.timezone);
+      payload.ends_at = localDateTimeInZoneToIso(value('endsAt'), payload.timezone);
+      if (new Date(payload.ends_at) <= new Date(payload.starts_at)) throw new Error('Attendance end time must be after its start time.');
+      payload.reason = value('reason');
+      payload.idempotency_key = form.dataset.idempotencyKey;
+    } else if (kind === 'attendance-review') {
+      const organizationId = form.dataset.organizationId, attendanceId = form.dataset.attendanceId;
+      if (!organizationId || !attendanceId) throw new Error('Attendance record details are missing.');
+      path = '/organizations/' + encodeURIComponent(organizationId) + '/attendance/' + encodeURIComponent(attendanceId) + '/review';
+      payload.status = value('status'); payload.review_note = value('reviewNote');
     } else if (kind === 'performance-review') {
       const organizationId = form.dataset.organizationId, employmentId = form.dataset.employmentId;
       if (!organizationId || !employmentId) throw new Error('Performance review details are missing.');
@@ -1949,7 +2120,7 @@
       payload.companionOptIn = form.querySelector('[name="companionOptIn"]').checked;
       payload.companionAcknowledged = form.querySelector('[name="companionAcknowledgedAIIdentity"]').checked;
     } else return;
-    const patchKinds = ['settings','languages','memory-settings','memory-edit','vacancy-status','application-review','employment-status','employment-manager','provider-assignment-status','task-approval','identity-edit'];
+    const patchKinds = ['settings','languages','memory-settings','memory-edit','vacancy-status','application-review','employment-status','employment-manager','provider-assignment-status','task-approval','training-program-status','training-enrollment-status','attendance-review','identity-edit'];
     const talentPatchKinds = ['performance-review-finalize','succession-status'];
     const result = await request(path, { method: patchKinds.concat(talentPatchKinds).includes(kind) ? 'PATCH' : 'POST', body: payload });
     let uploadedMediaCount = 0;
@@ -1974,7 +2145,7 @@
       const categoryKeyInput = form.querySelector('[name="categoryKey"]');
       if (categoryKeyInput) categoryKeyInput.readOnly = false;
     }
-    if (['identity','bot','team','delegation-create','delegation-task','organization','vacancy','application','appointment','employment-transfer','employee-promotion','performance-review','succession-plan','task-create'].includes(kind)) form.dataset.idempotencyKey = window.crypto.randomUUID();
+    if (['identity','bot','team','delegation-create','delegation-task','organization','vacancy','application','appointment','employment-transfer','employee-promotion','performance-review','succession-plan','training-program','training-assignment','attendance-entry','task-create'].includes(kind)) form.dataset.idempotencyKey = window.crypto.randomUUID();
     const categoryActionLabels = { created:'created', updated:'updated', activated:'reactivated', deactivated:'deactivated' };
     const message = kind === 'memory-edit'
       ? 'AI memory entry updated; its retention expiry was refreshed.'
@@ -2034,6 +2205,12 @@
                                 : kind === 'performance-review-finalize' ? 'Performance review finalized and audit history updated.'
                                   : kind === 'succession-plan' ? 'Succession plan saved as a draft; no employee was appointed or promoted.'
                                     : kind === 'succession-status' ? 'Succession plan status and audit history updated.'
+                                      : kind === 'training-program' ? 'Draft training program saved.'
+                                        : kind === 'training-program-status' ? 'Training program status updated.'
+                                          : kind === 'training-assignment' ? 'Training assigned to the selected AI employee.'
+                                            : kind === 'training-enrollment-status' ? 'Training progress and completion history updated.'
+                                              : kind === 'attendance-entry' ? 'Attendance entry submitted for human review.'
+                                                : kind === 'attendance-review' ? 'Attendance decision recorded with reviewer and reason.'
                                       : 'Saved successfully.';
     const batchFailures = ['identity-profile-bulk','provider-assignment-bulk'].includes(kind) ? list(result.failed) : [];
     if (batchFailures.length) {

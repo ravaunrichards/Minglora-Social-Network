@@ -339,3 +339,19 @@ Do not report a percentage until every requirement is decomposed and weighted. A
 - [ ] Task migration and updated Edge Function are source-only; no task tables or controls have been deployed to production.
 - [ ] No task/approval records, worker credentials, model calls or external operations have been created or executed.
 
+
+
+## Free-tier AI HR workforce development checkpoint — 2026-11-14
+
+- Active work branch: `feat/minglora-ai-hr-lifecycle`, based directly on main `9526972669651ac79cda8145be882dd1e1abc962`; branch is 12 commits ahead and 0 behind at checkpoint.
+- Draft PR #348: https://github.com/ravaunrichards/Minglora-Social-Network/pull/348. The PR remains open and unmerged.
+- Added source for organization-scoped training programs, training enrollments/progress, human-recorded attendance/availability/shift/leave/absence entries, explicit human review, and append-only workforce audit events.
+- Added a SECURITY INVOKER/empty-search-path workforce RPC with organization-owner validation, service-role-only EXECUTE, RLS on all four new tables, and no browser-role grants.
+- Added an explicit Edge Function action allowlist and platform-staff-only server routes. Added admin-workspace forms for training, assignments/progress and attendance submission/review; attendance local time is converted using the entered IANA timezone.
+- Automated evidence on latest branch commit `c4c23a953166c9185b704a7c0f377deef0e80e39`: AI Network syntax/regression checks **success** (run 43662654133); AI Network browser acceptance with disposable fixtures **success** (43662654141); full repository CI and automated tests **success** (43662654214); seven-plus-two layout visual QA **success** (43662654140). Edge Function TypeScript parse/transpile, backend/UI JavaScript syntax, AI Network unit tests, browser fixture suite and layout screenshot matrix passed. This is CI evidence, not signed-in production-owner or device acceptance.
+- Read-only verification of the existing Supabase project `gzycobgbasnqqhnympkr`: production still has 48 AI tables, all 48 RLS-enabled; migration ledger still ends at `20261114204328`; none of the four new workforce tables or migration `20261114234000` is applied. No production DDL or runtime deployment was performed.
+- No training programs, enrollments, attendance rows, sample employees, identities, test Auth users or provider accounts were created. The AI worker control remains `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`.
+- **Free-tier constraint honored:** no paid Supabase development branch, new Supabase project, paid Render service or paid infrastructure was created.
+- Remaining before release: independent SQL execution/catalog/index validation, reconciliation of migration execution plan, migration application and Edge Function deployment to the existing project, correct Render service selection/deployment, signed-in owner API/browser/device acceptance and real workflow verification. No Render deployment or merge was attempted.
+- **Still missing from HR:** disciplinary investigation/case management, workforce budget controls and additional HR safeguards remain incomplete. Succession planning remains a planning record and not an automatic appointment mechanism.
+- The broader AI Bot Network remains partial; no overall mission task is marked newly complete from this source-only HR slice. Existing strict accounting remains 2/19 accepted tasks (10.53%). The 10-billion identity figure remains an unmeasured design target, not a live capacity claim.
