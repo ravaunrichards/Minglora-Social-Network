@@ -14,12 +14,27 @@ const styles = read('public/gifter-progression.css');
 const html = read('public/index.html');
 const serviceWorker = read('public/sw.js');
 
-test('Gift entry shows the repository Gifters Rewards artwork outside the level journey', () => {
+test('Gift entry retains the original Gifters Rewards artwork and mounts the full level journey inline', () => {
   assert.match(giftEntry, /<section class='gift-level-up-banner'[^>]*>[\s\S]*?<img src='\/assets\/gifters-rewards\.png' alt='Gifters Rewards'/);
   assert.match(giftEntry, /<h2 id='minglora-gifter-rewards-title'>Gifters Rewards<\/h2>/);
   assert.match(giftEntry, /id='minglora-gifter-level-up-open'>View all 50 levels/);
   assert.doesNotMatch(giftEntry, /gifters-level-up\.svg/);
   assert.ok(fs.existsSync(path.join(root, 'assets', 'Gifters Badge Levels', 'Gifters Rewards.png')), 'the original artwork remains in assets');
+  assert.match(giftEntry, /id='minglora-gifter-rewards-content' class='gift-gifter-rewards-content'/);
+  assert.match(giftEntry, /MingloraGifterProgression\?\.renderInto\?\.\(/);
+});
+
+test('Gifters Rewards embeds the same complete server-backed 50-level badge renderer', () => {
+  assert.match(progression, /async function renderInto\(container\)/);
+  assert.match(progression, /renderMarkup\(overview, \{ embedded: true \}\)/);
+  assert.match(progression, /window\.MingloraGifterProgression = \{ render, renderInto, onNavigateAway \}/);
+  assert.match(progression, /BADGE_LEVEL_PANELS = Object\.freeze\(\[/);
+  assert.match(progression, /function renderBadgePanels\(\)/);
+  assert.match(progression, /function renderLevelDirectory\(items\)/);
+  assert.match(progression, /levels\.length !== 50/);
+  assert.match(progression, /\/api\/gifter-progression\/overview/);
+  assert.match(progression, /gp-page--embedded/);
+  assert.match(giftEntry, /scrollIntoView\(\{behavior:"smooth",block:"start"\}\)/);
 });
 
 test('Gifters Level Up remains inside the separate Gifter Progression page', () => {

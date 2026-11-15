@@ -52,15 +52,17 @@
       const mainScrollTop = main.scrollTop;
       const windowScrollX = window.scrollX || 0;
       const windowScrollY = window.scrollY || 0;
-      const incomingRoot = document.createElement("div");
-      incomingRoot.innerHTML = renderMarkup(overview);
-      const incomingPage = incomingRoot.firstElementChild;
       const currentPage = main.querySelector(".gp-page");
+      const embedded = Boolean(currentPage?.classList.contains("gp-page--embedded"));
+      const markup = renderMarkup(overview, { embedded });
+      const incomingRoot = document.createElement("div");
+      incomingRoot.innerHTML = markup;
+      const incomingPage = incomingRoot.firstElementChild;
       if (currentPage && incomingPage) currentPage.replaceWith(incomingPage);
-      else main.innerHTML = renderMarkup(overview);
+      else main.innerHTML = markup;
       main.scrollTop = mainScrollTop;
       window.scrollTo(windowScrollX, windowScrollY);
-      bindPage();
+      bindPage(main);
       publishBadge(overview);
     } catch (error) {
       console.warn("[Minglora Gifter Progression] Automatic sync failed:", error?.message || error);
@@ -159,7 +161,8 @@
     }).join("") + "</div>";
   }
 
-  function renderMarkup(data) {
+  function renderMarkup(data, options = {}) {
+    const embedded = Boolean(options.embedded);
     const current = data.current;
     const progressText = current.maxLevel
       ? "You have reached the maximum gifter LV."
@@ -177,10 +180,10 @@
         ".png' alt='Level " + currentBadgeLevel + " gifter badge' loading='eager' decoding='async' width='170' height='76'>"
       : "";
 
-    return "<div class='gp-page'>" +
+    return "<div class='" + (embedded ? "gp-page gp-page--embedded" : "gp-page") + "'>" +
       "<header class='gp-heading'><div><span class='gp-eyebrow'>MINGLORA GIFTER JOURNEY</span><h1>Gifter Level &amp; Badges</h1>" +
       "<p>Every confirmed gift you send moves your own Minglora gifter journey forward.</p></div>" +
-      "<div class='gp-heading-actions'><button type='button' class='gp-back-link' id='gp-back-gifts'>← Back to Gifts</button></div></header>" +
+      (embedded ? "" : "<div class='gp-heading-actions'><button type='button' class='gp-back-link' id='gp-back-gifts'>← Back to Gifts</button></div>") + "</header>" +
       "<section class='gp-hero card'><div class='gp-hero-art'><img class='gp-reference-art' src='/assets/Gifters%20Level%20Up.png' alt='Original Minglora Gifters Level Up chart artwork' loading='eager' decoding='async'><a class='gp-chart-fullsize' href='/assets/Gifters%20Level%20Up.png' target='_blank' rel='noopener noreferrer' aria-label='Open the original full-size Minglora Gifters Level Up chart in a new tab to zoom'>View original full-size chart to zoom ↗</a></div><div class='gp-hero-summary'>" +
       "<span class='gp-eyebrow'>YOUR GIFTER STATUS</span><div class='gp-current-badge-row'>" +
       (currentBadgeMarkup ? "<div class='gp-current-badge-art' aria-label='Your current Gifter badge'>" + currentBadgeMarkup + "</div>" : "") +
@@ -214,9 +217,9 @@
       "</div>";
   }
 
-  function bindPage() {
-    document.getElementById("gp-back-gifts")?.addEventListener("click", () => window.activateNav?.("gifts"));
-    const levelGrid = document.getElementById("gp-level-index-grid");
+  function bindPage(root = document) {
+    root.querySelector("#gp-back-gifts")?.addEventListener("click", () => window.activateNav?.("gifts"));
+    const levelGrid = root.querySelector("#gp-level-index-grid");
     levelGrid?.parentElement?.querySelector(".gp-level-layout-controls")?.addEventListener("click", event => {
       const button = event.target.closest("[data-gp-level-layout]");
       if (!button || !levelGrid) return;
@@ -228,6 +231,37 @@
         control.setAttribute("aria-pressed", active ? "true" : "false");
       });
     });
+  }
+
+  function startAutoSync() {
+    if (autoSyncTimer !== null) window.clearInterval(autoSyncTimer);
+    autoSyncTimer = window.setInterval(() => void refreshOverview(), 30000);
+  }
+
+  async function renderInto(container) {
+    const target = typeof container === "string" ? document.querySelector(container) : container;
+    if (!target) return;
+    onNavigateAway();
+    const generation = ++viewGeneration;
+    target.innerHTML = "<section class='card gp-loading' role='status' aria-live='polite'><strong>Loading your gifter rewards…</strong><p>Checking confirmed Minglora gifts and all 50 badge levels.</p></section>";
+    try {
+      const overview = await requestOverview();
+      if (generation !== viewGeneration || !target.isConnected) return;
+      if (!overview || !overview.current || !Array.isArray(overview.levels) || overview.levels.length !== 50) {
+        throw new Error("Minglora returned incomplete gifter progression data. Please retry.");
+      }
+      state.overview = overview;
+      target.innerHTML = renderMarkup(overview, { embedded: true });
+      bindPage(target);
+      publishBadge(overview);
+      startAutoSync();
+    } catch (error) {
+      if (generation !== viewGeneration || !target.isConnected) return;
+      const message = error?.message || "Minglora could not load your confirmed gift progress.";
+      target.innerHTML = "<section class='card gp-loading gp-load-error' role='alert'><strong>Your 50 gifter levels could not load</strong><p>" +
+        esc(message) + "</p><button type='button' class='primary' id='gp-retry'>Try again</button></section>";
+      target.querySelector("#gp-retry")?.addEventListener("click", () => void renderInto(target));
+    }
   }
 
   async function render() {
@@ -244,9 +278,9 @@
       }
       state.overview = overview;
       main.innerHTML = renderMarkup(overview);
-      bindPage();
+      bindPage(main);
       publishBadge(overview);
-      autoSyncTimer = window.setInterval(() => void refreshOverview(), 30000);
+      startAutoSync();
     } catch (error) {
       if (generation !== viewGeneration) return;
       const message = error?.message || "Minglora could not load your confirmed gift progress.";
@@ -258,5 +292,5 @@
   }
 
   // Gifter progression syncs quietly without interrupting the member's page.
-  window.MingloraGifterProgression = { render, onNavigateAway };
+  window.MingloraGifterProgression = { render, renderInto, onNavigateAway };
 })();
