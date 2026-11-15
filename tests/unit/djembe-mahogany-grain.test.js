@@ -7,7 +7,7 @@ test("Djembe Master includes eighteen lightweight mahogany grain inlays in its s
   assert.equal(model.asset?.version, "2.0");
   assert.equal(model.asset?.extras?.mingloraAssetId, "gift-djembe-3d-v1");
   assert.equal(model.asset?.extras?.reviewStatus, "design-review-pending");
-  assert.match(model.asset?.extras?.artDirection || "", /eighteen fine flowing grain inlays/);
+  assert.match(model.asset?.extras?.artDirection || "", /eighteen flowing mahogany grain inlays/);
 
   const primitives = model.meshes?.[0]?.primitives || [];
   const grain = primitives.filter(primitive =>
