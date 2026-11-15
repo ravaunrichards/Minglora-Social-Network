@@ -2135,6 +2135,21 @@ async function route(req, res) {
         }
       };
 
+      const runAIHRDisciplinaryCommand = async (aiAction, payload = {}) => {
+        if (!isModerator(user, req)) throw Object.assign(new Error('Only an authorized Minglora administrator may manage confidential disciplinary cases.'),{status:403});
+        if (!isSupabasePersistence()) throw Object.assign(new Error('AI HR disciplinary records require Minglora Supabase persistence.'),{status:503});
+        try {
+          const response=await requestSupabaseState('ai_hr_disciplinary_command',{actorUserId:user.id,aiAction,payload});
+          if(response?.skipped) throw Object.assign(new Error('AI HR disciplinary records require Supabase persistence.'),{status:503});
+          return response?.result;
+        } catch(error) {
+          const message=String(error?.message||'');
+          if(/unsupported action|unsupported AI HR disciplinary command|function .*minglora_ai_hr_disciplinary_command.*does not exist|could not find the function|schema cache/i.test(message))
+            throw Object.assign(new Error('The additive AI HR disciplinary migration and private runtime gateway must be deployed first. No case data was changed.'),{status:503});
+          throw error;
+        }
+      };
+
       const runAIHRTalentCommand = async (aiAction, payload = {}) => {
         if (!isModerator(user, req)) {
           throw Object.assign(
@@ -2602,6 +2617,19 @@ async function route(req, res) {
           }
         }
       }
+      if (parts[0] === 'organizations' && parts.length >= 3 && parts[2] === 'disciplinary-cases') {
+        const organizationId=parts[1];
+        if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(organizationId)) throw Object.assign(new Error('A valid organization ID is required.'),{status:400});
+        const basePayload={organization_id:organizationId};
+        const readCaseBody=async()=>{const input=await body(req,16000);if(!input||typeof input!=='object'||Array.isArray(input))throw Object.assign(new Error('AI HR disciplinary input must be a JSON object.'),{status:400});return {...basePayload,...input,organization_id:organizationId};};
+        if(parts.length===3&&method==='GET') return json(res,200,{disciplinary_cases:(await runAIHRDisciplinaryCommand('list_disciplinary_cases',basePayload))||[]});
+        if(parts.length===3&&method==='POST'){const input=await readCaseBody();const result=await runAIHRDisciplinaryCommand('create_disciplinary_case',input);return json(res,result?.reused?200:201,result||{});}
+        if(parts.length===5){const caseId=parts[3];if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(caseId))throw Object.assign(new Error('A valid disciplinary case ID is required.'),{status:400});const input=await readCaseBody();input.case_id=caseId;
+          if(parts[4]==='notes'&&method==='POST')return json(res,201,await runAIHRDisciplinaryCommand('add_disciplinary_case_note',input)||{});
+          if(parts[4]==='status'&&method==='PATCH')return json(res,200,await runAIHRDisciplinaryCommand('set_disciplinary_case_status',input)||{});
+        }
+      }
+
       if (parts[0] === 'organizations' && parts.length >= 3 &&
           ['training-courses', 'training-enrollments', 'attendance'].includes(parts[2])) {
         const organizationId = parts[1];

@@ -1,3 +1,55 @@
+## Execution checkpoint — 2026-11-15 (AI HR disciplinary rollback-only functional contract)
+
+- Working branch: `feat/ai-hr-disciplinary-cases`; PR #353 remains draft/open against `main`.
+- Current source implementation includes confidential organization-scoped cases, append-only case history, server-only RPC command, moderator-gated APIs and HR workspace controls.
+- Rollback-only Supabase PostgreSQL 17.11 contract passed **8/8**: case creation, idempotent retry, append-only note event, valid open→under_review→resolved transitions, rejection of open→resolved, future incident-date rejection, cross-owner organization access denial, and list/history retrieval (one case, four history events).
+- The test created temporary organization, department, position, organizational AI identity/name and employment fixtures only inside an explicit transaction. Independent post-rollback verification confirms disciplinary tables and RPC are absent, and production counts remain zero for organizations, employment records and AI identities.
+- Production migration ledger is unchanged; latest entry remains `20261115025508` (`minglora_ai_hr_training_attendance`). No production DDL, data, Auth accounts or Storage objects were retained.
+- Runtime safety remains `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`.
+- On checkpoint commit `73053418ec6f9e638ba60928180d782dd0d627dd`, GitHub confirmed CI, AI Network syntax/regression, AI identity/discovery browser fixture acceptance and LIVE/MeetWave layout visual QA all passed. These are automated/fixture checks, not authenticated owner or deployed API/device acceptance.
+- PR #353 remains **DRAFT / OPEN / NOT MERGED**. The new HR disciplinary migration and RPC remain source-only. Render workspace selection, existing service identification, deployed Edge/Node handler acceptance, and signed-in owner/browser/device acceptance remain outstanding.
+- AI Network accepted task accounting remains **2/19 = 10.53% verified tasks**. The HR slice remains partial and does not increment the verified-task count.
+
+---
+
+## Execution checkpoint — 2026-11-14 (rollback-only HR disciplinary migration validation)
+
+- Working branch: `feat/ai-hr-disciplinary-cases`; PR #353 remains draft/open against `main`.
+- Validated source migration `supabase/migrations/20261115033000_minglora_ai_hr_disciplinary_cases.sql` against the existing Supabase PostgreSQL 17.11 database inside an explicit `BEGIN ... ROLLBACK` transaction.
+- Inside the transaction, migration execution and assertions passed for both organization-scoped case/history tables, RLS enabled on both, no direct anon/authenticated SELECT grants, required service_role table grants, a SECURITY INVOKER RPC, service_role-only RPC EXECUTE, and configured search_path.
+- Independent post-rollback verification confirmed both tables and the RPC are absent, so no production schema change was retained. The migration ledger remains unchanged; its latest AI/HR entry is `20261115025508` (`minglora_ai_hr_training_attendance`).
+- Live data remains empty for organizations, employment records and AI identities. Runtime control remains `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`.
+- This is SQL syntax/schema/security-contract validation only. It does not apply the migration, test a real organization/employee lifecycle, deploy the Edge Function, or replace signed-in owner/API/browser/device acceptance.
+- PR #353's existing head `bb986a964354723d6927d6af762a1c1bb5b63fc9` had green CI (1,182/0), AI Network workflow (137/0), browser fixture acceptance and layout visual QA. New checkpoint commits require their own workflow results before any new-head CI claim.
+- AI task accounting remains `2/19 = 10.53%` verified tasks. Disciplinary case work remains `IMPLEMENTED — AWAITING LIVE/OWNER ACCEPTANCE`.
+
+---
+
+## Execution checkpoint — 2026-11-15 (AI HR disciplinary case source verification)
+
+- Branch: \`feat/ai-hr-disciplinary-cases\`; draft PR #353 targets \`main\`: https://github.com/ravaunrichards/Minglora-Social-Network/pull/353
+- Latest corrected head before this checkpoint: \`ae6b37cc6bc7f860c07c16a4e947f0057ad6ed38\`.
+- Six feature commits add the additive disciplinary schema, moderator-gated server routes, private Supabase runtime action, HR administrator case UI, four regression tests and documentation.
+- AI Network workflow: **137 passed / 0 failed**. This includes the four new disciplinary tests, runtime TypeScript parse/transpile, and backend/UI JavaScript syntax checks.
+- Full repository CI: **1,182 passed / 0 failed**. A pre-fix run exposed one existing profile-editor assertion because the shared PATCH-kind array was extended; the implementation was corrected by isolating the new status PATCH kind, then CI passed on the corrected head.
+- AI identity/discovery browser acceptance and LIVE/MeetWave layout QA workflows both completed successfully. The browser test uses disposable fixtures; it is not live-owner or production HR case acceptance.
+- PR #353 remains **DRAFT / OPEN / NOT MERGED**. No merge or deployment was performed. The Supabase migration remains source-only and has not been applied; no Edge Function or Render deployment was performed.
+- No live organization, employee, case, note, Auth user, or other test record was created. No production data or runtime controls changed. AI execution remains \`global_paused=true\`, \`execution_enabled=false\`, \`max_concurrent_workers=0\`.
+- HR disciplinary implementation is **IMPLEMENTED — AWAITING LIVE/SQL ACCEPTANCE**. Required next evidence: SQL migration validation through approved migration workflow, signed-in owner/API acceptance with a real owner-controlled organization, and deployed browser/device acceptance.
+- Accepted AI Network task accounting remains **2/19 = 10.53% verified tasks**. This is task-count completion, not a feature-completion percentage; the partial HR task is not counted as complete.
+
+## Execution checkpoint — 2026-11-15 (AI HR disciplinary case management)
+
+- Working branch: \`feat/ai-hr-disciplinary-cases\`, based on the checked \`main\` commit \`16fbb98a9ea11f6a53b9aee5c38965cfe7d747ec\`.
+- Added an additive migration source for confidential, organization-scoped disciplinary cases and append-only history.
+- Added server administrator/persistence gates, private Supabase runtime command allowlisting, and HR administrator workspace controls for creating cases, adding investigation notes, and recording reasoned status transitions.
+- Added four focused source-level tests covering schema access, lifecycle rules, runtime/server authorization wiring, and UI wiring.
+- Workflow is human-entered and human-reviewed only. It does not automate sanctions, employee decisions, worker execution, or AI actions.
+- **Status: IMPLEMENTED — AWAITING VERIFICATION.** Unit tests, SQL validation, CI, and signed-in owner/API/browser/device acceptance have not yet been completed.
+- Migration is committed as source only and has **not** been applied to Supabase. The Edge Function and Render service have **not** been deployed. Production database and runtime state were not changed.
+- AI execution controls remain \`global_paused=true\`, \`execution_enabled=false\`, \`max_concurrent_workers=0\`.
+- Accepted AI Network task register remains **2/19 = 10.53% verified tasks**. This partial HR increment does not change the verified task count.
+
 ## Execution checkpoint — 2026-11-15 (AI HR attendance correction UI)
 
 - Added inline correction controls to each persisted attendance record in `public/ai-network.js`. The form reuses the existing moderator-authenticated `POST /organizations/:id/attendance` path and existing SQL idempotency/correction-history logic; it preloads the recorded employee/date/status/check-in/check-out values.
