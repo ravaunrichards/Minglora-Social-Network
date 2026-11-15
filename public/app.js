@@ -11024,6 +11024,13 @@ async function enterMingloraApp(user,showWelcome=false){
     }
   }
   await renderSidebar();await updateNotificationDot();await updateMessengerBadge();
+  if(params.get('mingloraView')==='ai-network'){
+    params.delete('mingloraView');
+    const remaining=params.toString();
+    window.history.replaceState({},'',window.location.pathname+(remaining?'?'+remaining:'')+window.location.hash);
+    activateNav('ai-network');
+    return;
+  }
   if(params.get('paypal')==='coins'||params.get('paypal')==='cancel'){await finishPaypalCoinReturn();if(state.view!=='coins')activateNav('feed');}
   else await restoreLastView();
   if(showWelcome)toast('Welcome to Minglora!');
