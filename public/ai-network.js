@@ -913,6 +913,7 @@
   }
 
   function renderAIProviderCenter() {
+    const providerCatalogue = list(state.snapshot?.providerStatus?.providerCatalogue);
     const accounts = list(state.providerAccounts);
     const models = list(state.providerModels);
     const assignments = list(state.providerAssignments);
@@ -972,6 +973,29 @@
             '<button class="secondary" type="submit">Save status</button></form></article>';
         }).join('') + '</div>'
       : empty('No provider model assignments have been registered.');
+    const providersWithCredentials = providerCatalogue.filter(provider => provider.credentialsPresent).length;
+    const providerCatalogueRows = providerCatalogue.length
+      ? '<details class="ai-network-provider-catalogue"><summary>Provider environment registry · ' + number(providerCatalogue.length) + ' integrations</summary>' +
+        '<p class="ai-network-note">These entries identify private server environment keys. Credential values are never shown or accepted in this page. A populated key is not proof of a successful connection or a working adapter.</p>' +
+        '<div class="ai-network-list">' + providerCatalogue.map(provider => {
+          const required = list(provider.credentialEnvironmentVariables).join(', ');
+          const optional = list(provider.optionalEnvironmentVariables).join(', ');
+          const label = provider.serverSelectable === false
+            ? 'Interactive only · not server-callable'
+            : (provider.credentialsPresent ? 'Required values present' : 'Configuration missing');
+          return '<article class="ai-network-list-row"><div class="ai-network-list-main"><div><strong>' +
+            esc(provider.label || provider.providerId) + '</strong><div class="ai-network-meta">' +
+            pill(provider.category || 'provider') + ' ' + pill(label, provider.credentialsPresent ? 'success' : 'neutral') +
+            ' ' + pill(provider.connected ? 'Connected' : 'Not connected', 'warning') +
+            '</div><small>Provider ID: ' + esc(provider.providerId) + '</small>' +
+            '<p>Required environment keys: ' + esc(required || 'No server credential slot') + '</p>' +
+            (optional ? '<small>Optional settings: ' + esc(optional) + '</small>' : '') +
+            '<small>Adapter verified: ' + (provider.adapterAvailable ? 'Yes' : 'No') +
+            ' · Execution enabled: ' + (provider.executionEnabled ? 'Yes' : 'No') + '</small>' +
+            (provider.note ? '<p>' + esc(provider.note) + '</p>' : '') +
+            '</div></div></article>';
+        }).join('') + '</div></details>'
+      : '<p class="ai-network-note">Provider environment registry is unavailable. Reload the administrator workspace.</p>';
     const warning = state.providerError
       ? '<div class="ai-network-alert ai-network-alert--warning" role="status">' + esc(state.providerError) + '</div>'
       : '<p class="ai-network-note">Provider account records begin unconfigured. Model assignments begin pending with health unknown. Nothing here verifies access to the provider or activates model execution.</p>';
@@ -1009,8 +1033,11 @@
       '<p class="ai-network-note">Paste assignment records with identity_id, model_id and optional provider_account_id, fallback_model_id, routing_priority, assigned_capabilities and supported_languages. Every assignment remains pending with unknown health; this does not activate provider execution. Raw credentials and secrets are rejected.</p>' +
       '<label>Provider assignment batch JSON<textarea name="items" required rows="8" maxlength="160000" spellcheck="false" placeholder=\'[{"identity_id":"existing-ai-identity-uuid","model_id":"catalogue-model-uuid","provider_account_id":null,"fallback_model_id":null,"routing_priority":100,"assigned_capabilities":["text"],"supported_languages":["en"]}]\'></textarea></label>' +
       '<button class="secondary" type="submit">Save pending provider assignments</button></form>';
-    return card('Provider & Model Assignment Center', '02 · PROVIDERS', warning +
-      '<div class="ai-network-command-grid"><div><span>Account references</span><strong>' + number(accounts.length) + '</strong></div>' +
+    return card('Provider & Model Assignment Center', '02 · PROVIDERS', warning + providerCatalogueRows +
+      '<div class="ai-network-command-grid"><div><span>Catalogued providers</span><strong>' + number(providerCatalogue.length) + '</strong></div>' +
+      '<div><span>Credentials present</span><strong>' + number(providersWithCredentials) + '</strong></div>' +
+      '<div><span>Connected</span><strong>' + number(providerCatalogue.filter(provider => provider.connected).length) + '</strong></div>' +
+      '<div><span>Account references</span><strong>' + number(accounts.length) + '</strong></div>' +
       '<div><span>Catalogue models</span><strong>' + number(models.length) + '</strong></div>' +
       '<div><span>Identity assignments</span><strong>' + number(assignments.length) + '</strong></div></div>' +
       '<div class="ai-network-provider-columns"><div><h4>Provider accounts</h4>' + accountRows + accountForm + '</div>' +

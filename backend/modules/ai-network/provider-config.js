@@ -108,3 +108,8 @@ export function getAIProviderCredentialStatus(providerId, env = process.env) {
     note
   };
 }
+
+
+export function listAIProviderCredentialStatuses(env = process.env) {
+  return AI_PROVIDER_CATALOG.map(entry => getAIProviderCredentialStatus(entry.id, env));
+}

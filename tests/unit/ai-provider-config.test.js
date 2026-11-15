@@ -5,7 +5,8 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   AI_PROVIDER_CATALOG,
-  getAIProviderCredentialStatus
+  getAIProviderCredentialStatus,
+  listAIProviderCredentialStatuses
 } from '../../backend/modules/ai-network/provider-config.js';
 import { getAIProviderStatus } from '../../backend/modules/ai-network/service.js';
 
@@ -25,6 +26,22 @@ test('transactional email providers are catalogued with their required environme
   for (const key of ['SMTP_HOST','SMTP_USER','SMTP_PASS','EMAIL_FROM','RESEND_API_KEY','SENDGRID_API_KEY','POSTMARK_SERVER_TOKEN','MAILGUN_API_KEY','MAILGUN_DOMAIN','AMAZON_SES_REGION']) {
     assert.ok(envExample.split(String.fromCharCode(10)).some(line => line.startsWith(key + '=')), 'Missing email provider environment variable: ' + key);
   }
+});
+
+test('the provider registry returns safe readiness for every catalogued model and service', () => {
+  const inventory = listAIProviderCredentialStatuses({
+    OPENAI_API_KEY: 'private-openai-test-key',
+    RESEND_API_KEY: 'private-resend-test-key'
+  });
+  assert.equal(inventory.length, AI_PROVIDER_CATALOG.length);
+  assert.equal(inventory.length, 44);
+  assert.equal(inventory.find(item => item.providerId === 'openai').credentialsPresent, true);
+  assert.equal(inventory.find(item => item.providerId === 'resend').credentialsPresent, true);
+  assert.equal(inventory.find(item => item.providerId === 'chatgpt_guest').serverSelectable, false);
+  assert.ok(inventory.every(item => item.connected === false && item.adapterAvailable === false && item.executionEnabled === false));
+  const serialized = JSON.stringify(inventory);
+  assert.equal(serialized.includes('private-openai-test-key'), false);
+  assert.equal(serialized.includes('private-resend-test-key'), false);
 });
 
 test('ChatGPT guest is explicitly non-routable and cannot be marked connected', () => {

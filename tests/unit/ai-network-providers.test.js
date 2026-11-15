@@ -94,6 +94,17 @@ test('provider API requires authorized platform staff and uses the Supabase runt
   ]) assert.ok(route.includes(token), 'Missing authorized provider API control: ' + token);
 });
 
+test('provider workspace renders the environment provider registry without exposing credential values', () => {
+  for (const token of [
+    'providerCatalogue = list(state.snapshot?.providerStatus?.providerCatalogue)',
+    'Provider environment registry',
+    'providersWithCredentials',
+    'Required environment keys:',
+    'Credential values are never shown or accepted',
+    'Execution enabled:'
+  ]) assert.ok(ui.includes(token), 'Missing provider environment registry UI: ' + token);
+});
+
 test('provider workspace uses real rows and does not offer credential or activation controls', () => {
   for (const token of [
     'async function loadAIProviderRegistry',
