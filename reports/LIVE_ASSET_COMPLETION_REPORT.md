@@ -336,3 +336,10 @@ The browser captures establish that all nine bespoke models load and remain visi
 - Regression test coverage was extended for these named mesh/material parts.
 - CI: passed. LIVE/MeetWave layout matrix: passed. Chromium WebGL model render: 27/27 checks across nine models and desktop/tablet/mobile. Render report: zero page errors, HTTP failures, request failures or cancellations.
 - Remaining release gates: human art review, licensing/provenance clearance, complete individual animation/audio assets and actual physical-device acceptance. The Rose remains design-review-pending and is not marked production-approved.
+
+## Jamaican culture category icon — 2026-11-15
+
+- Replaced the plain crossed-outline Jamaican culture category mark with an original Jamaican flag saltire SVG using green, gold and black gradient artwork.
+- Preserved the existing category ID, symbol, URL, 24×24 viewBox, currentColor outline and service-worker asset path.
+- Added tests for the three national colours, gradients and saltire; repository CI and independent layout QA passed before PR #383 was merged as `aaf1182a5f6bced14685a3db2b9e1a3c95557299`.
+- Human visual and rights review remain pending. The icon is not represented as a fully approved or premium production asset.
