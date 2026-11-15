@@ -145,6 +145,21 @@ test('Creator Studio generation is owner-MFA protected, calls the moderation ada
   assert.ok(!route.includes('activate_worker('));
 });
 
+test('Creator Studio generation enforces the owner daily token budget before contacting OpenAI', () => {
+  const start = server.indexOf("if (p === '/api/ai-network'");
+  const end = server.indexOf("if (method === 'POST' && p === '/api/webhooks/paypal')", start);
+  const route = server.slice(start, end);
+  for (const token of [
+    'getAISettings(db, user.id)',
+    'getAICreatorDailyUsage(db, user.id)',
+    'creatorSettings.dailyTokenBudget',
+    'creatorDailyUsage.tokensUsed',
+    'estimatedInputReserve',
+    'allowedOutputTokens < 128',
+    'maxOutputTokens: allowedOutputTokens'
+  ]) assert.ok(route.includes(token), 'Missing Creator Studio token budget control: ' + token);
+});
+
 test('Creator Studio UI lets an owner trigger generation and renders human-review-only output', () => {
   for (const token of [
     'data-ai-action="creator-generate"',
