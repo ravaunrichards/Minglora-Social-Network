@@ -870,11 +870,27 @@
       : '<p class="ai-network-note">An onboarding, active or restricted employee is required before attendance can be recorded.</p>';
     const attendanceRows = attendanceRecords.length ? '<div class="ai-network-list">' + attendanceRecords.map(row => {
       const item=row.attendance || {};
+      const localDateTime = value => {
+        if (!value) return '';
+        const parsed = new Date(value);
+        if (Number.isNaN(parsed.getTime())) return '';
+        const pad = part => String(part).padStart(2,'0');
+        return parsed.getFullYear()+'-'+pad(parsed.getMonth()+1)+'-'+pad(parsed.getDate())+'T'+pad(parsed.getHours())+':'+pad(parsed.getMinutes());
+      };
       return '<article class="ai-network-list-row"><div class="ai-network-list-main"><div><strong>' + esc(row.identity?.display_name || 'AI employee') +
         '</strong><div class="ai-network-meta">' + pill(item.attendance_status || 'not recorded') + ' ' + esc(item.attendance_date || '') +
         '</div><small>' + (item.check_in_at ? 'Check-in ' + date(item.check_in_at) : '') +
         (item.check_out_at ? ' · Check-out ' + date(item.check_out_at) : '') + (item.reason ? ' · ' + esc(item.reason) : '') +
-        '</small></div></div></article>';
+        '</small></div></div>' +
+        '<details class="ai-network-inline-details"><summary>Correct attendance record</summary>' +
+        '<form class="ai-network-inline-form" data-ai-form="attendance" data-organization-id="' + esc(organizationId) + '">' +
+        '<label><span>Employee</span><select name="employmentId" required>' + options(employeeOptions,item.employment_id || '') + '</select></label>' +
+        '<label><span>Attendance date</span><input type="date" name="attendanceDate" value="' + esc(item.attendance_date || '') + '" required></label>' +
+        '<label><span>Corrected status</span><select name="attendanceStatus">' + options([{value:'present',label:'Present'},{value:'late',label:'Late'},{value:'absent',label:'Absent'},{value:'excused',label:'Excused'},{value:'on_leave',label:'On leave'}],item.attendance_status || 'present') + '</select></label>' +
+        '<label><span>Check-in</span><input type="datetime-local" name="checkInAt" value="' + esc(localDateTime(item.check_in_at)) + '"></label>' +
+        '<label><span>Check-out</span><input type="datetime-local" name="checkOutAt" value="' + esc(localDateTime(item.check_out_at)) + '"></label>' +
+        '<label><span>Correction reason (minimum 10 characters)</span><input name="reason" required minlength="10" maxlength="2000" placeholder="Explain the correction and supporting reason"></label>' +
+        '<button class="secondary" type="submit">Save correction with audit history</button></form></details></article>';
     }).join('') + '</div>' : empty('No attendance records have been entered.');
     const developmentUnavailableNote = hr.developmentUnavailable
       ? '<p class="ai-network-note">Training and attendance are waiting for the HR development migration and private runtime gateway. Existing HR records remain available.</p>' : '';

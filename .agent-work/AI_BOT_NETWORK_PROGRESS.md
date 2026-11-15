@@ -1,3 +1,15 @@
+## Execution checkpoint — 2026-11-15 (AI HR attendance correction UI)
+
+- Added inline correction controls to each persisted attendance record in `public/ai-network.js`. The form reuses the existing moderator-authenticated `POST /organizations/:id/attendance` path and existing SQL idempotency/correction-history logic; it preloads the recorded employee/date/status/check-in/check-out values.
+- Correction reason is required in the UI with a 10-character minimum, matching the database correction invariant. Each form receives a fresh idempotency key on submit through the existing handler.
+- Added focused regression assertions in `tests/unit/ai-network-hr-development.test.js` and updated `docs/AI_BOT_NETWORK.md`.
+- Branch: `feat/ai-hr-attendance-corrections-ui`; PR #352: https://github.com/ravaunrichards/Minglora-Social-Network/pull/352.
+- Commits before this checkpoint: `8b872f69fc73266c132f612de0c4ea60e10dae06`, `7d8cd737fb35921f35c02e14a286cf1c985adf53`, `708bdd194364f72b04f505b0c6cca7d82a4a3875`.
+- Verification so far: browser script syntax parse **PASS**; focused source assertions **4/4 PASS**. GitHub CI has not yet reported a run/status for this PR; merge and deployment are therefore pending. No production database, runtime control, AI identity, or user data was changed.
+- This is a UI implementation checkpoint only; signed-in owner/device acceptance and the broader HR lifecycle remain outstanding. Overall verified acceptance remains 2/19 (10.53%) until the master checklist is formally advanced by verified acceptance.
+
+---
+
 ## Latest verified checkpoint — 2026-11-15 (AI HR training and attendance release)
 
 - PR #351 merged to `main` as `0fbcdc6a92bf94ac980c2015833f8ea11caaf7a1`; merge request: https://github.com/ravaunrichards/Minglora-Social-Network/pull/351.
