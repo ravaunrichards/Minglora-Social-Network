@@ -292,7 +292,7 @@ test('Creator Studio usage is measured in the daily token budget and performance
   }, { now: new Date(now.getTime() - 86400000) });
   const daily = getAICreatorDailyUsage(db, 'owner-1', { now });
   assert.equal(daily.tokensUsed, 120);
-  assert.equal(daily.completedDrafts, 1);
+  assert.equal(daily.draftsWithTokenUsage, 1);
   assert.equal(daily.date, '2026-11-11');
   const performance = getAIPerformanceSummary(db, 'owner-1');
   assert.equal(performance.creatorDraftTokensUsed, 220);
