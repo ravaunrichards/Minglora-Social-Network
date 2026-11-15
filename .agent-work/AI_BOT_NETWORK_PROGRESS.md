@@ -1,3 +1,19 @@
+## Execution checkpoint — 2026-11-15 (AI finance and resource governance implementation)
+
+- Project: `ravaunrichards/Minglora-Social-Network`; branch: `feat/ai-network-finance-governance-20261115`; base: `main` at `6125afeb5c5aca430bef921418edacbf87bef0f0`.
+- Task 15 — Finance and Resource Management: **IN PROGRESS**. Added a new additive migration with owner-, organization-, department- and identity-scoped budget policies, append-only budget-change history, and an idempotent append-only usage ledger for provider tokens/cost and compute/storage measurements.
+- Added database-side checks for daily token reservations, monthly spend reservations, concurrent queued/running task limits and paused policies when tasks are inserted or transitioned into queued/running. These are queue-acceptance checks; actual provider cost/resource metering is not yet operational.
+- Connected the private existing `minglora-runtime-state` gateway, authenticated designated-admin Node routes, Finance & Resource Center UI, budget audit history and measured-ledger reporting. Public browser API permits budget read/write and usage read only; usage ingestion remains private to the authenticated server runtime.
+- Added focused regression coverage in `tests/unit/ai-network-finance.test.js` and documented the finance boundary in `backend/modules/ai-network/README.md`.
+- Migration compile/DDL contract check passed in an explicit `BEGIN … ROLLBACK` against the existing Supabase project after correcting a duplicate declaration. The check left production schema and data unchanged. No production migration was applied; no budget or usage rows were created.
+- The change is not yet CI-verified, merged or deployed. Actual provider events, secrets-manager integration, provider price/cost reconciliation, CPU/GPU/memory/storage metering adapters, production browser acceptance and enforcement by live provider workers remain outstanding. The worker runtime remains `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`.
+- Task 3 owner-authenticated identity/media/device acceptance is still an independent external browser-session gate. User authorization is recorded, but no live signed-in browser session is available in this tool context.
+- Overall verified acceptance remains **2/19 = 10.53%**. This is unchanged master-checklist task-count progress; Task 15 is not counted complete.
+
+**Next action:** open a draft PR from this branch, run the full repository and AI Network checks, fix any failures, and only then request review. Do not apply the migration or deploy it before CI/review and production-release verification.
+
+---
+
 ## Execution checkpoint — 2026-11-15 (AI HR attendance correction UI)
 
 - Added inline correction controls to each persisted attendance record in `public/ai-network.js`. The form reuses the existing moderator-authenticated `POST /organizations/:id/attendance` path and existing SQL idempotency/correction-history logic; it preloads the recorded employee/date/status/check-in/check-out values.
