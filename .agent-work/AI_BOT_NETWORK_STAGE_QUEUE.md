@@ -1,3 +1,22 @@
+## Live execution checkpoint — 2026-11-15 (identity, discovery and provider rollback contracts)
+
+- Repository remains `ravaunrichards/Minglora-Social-Network`; existing Supabase project only: `gzycobgbasnqqhnympkr`. Main checkpoint base: `6125afeb5c5aca430bef921418edacbf87bef0f0`.
+- The live `ai_network` catalogue returned all **15 original active categories** through the service-only identity RPC.
+- **Task 3 identity/profile contract:** a rollback-only live database transaction passed canonical identity creation, separate first/middle/last names, username, private profile, gender, location/language relations, disabled-by-default state, truthful email metadata (`unverified` / `not_requested`), idempotent duplicate retry, profile update/version history, owner-scoped get/list. Transaction rolled back.
+- **Task 6 discovery contract:** a rollback-only live database transaction passed discovery using ten combined multi-select dimensions (category, population, gender, countries, nationality, language, interests, skills, capabilities and region) plus profession/recent-day criteria; an invalid ISO country code (`JAM`) was rejected; saved discovery group create/list/delete round-tripped. Transaction rolled back.
+- **Task 5 provider contract:** a rollback-only live database transaction passed temporary provider-account metadata creation, model catalogue metadata, per-identity assignment, duplicate assignment reuse, owner-scoped account/model/assignment listing and the guard that rejects `active` status until an independent provider health verifier exists. The temporary provider began `unconfigured` / `unknown`; its assignment remained `pending` / `unknown`. Transaction rolled back.
+- After rollback, live readback confirmed **zero** retained identities, names, profiles, emails, provider accounts, provider assignments, rollback-test models or saved discovery test groups.
+- Security/runtime remains unchanged: 54/54 `ai_network` base tables have RLS; `anon` and `authenticated` have no schema access; the 21 inspected `minglora_ai_%` RPCs are SECURITY INVOKER with locked empty search paths and service-role-only execution. `minglora-runtime-state` remains ACTIVE v131. AI task controls remain `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`.
+- An initial test pre-check attempted to query `auth.users` after switching to `service_role` and PostgreSQL correctly denied that privilege. The retry validated the designated owner profile first as the database administrator, then switched to `service_role`; tests passed. No grants or permissions were broadened.
+- **No production code, migration, Edge Function, Render service, runtime control, provider secret, mailbox, Auth user, public identity or user data was changed.** All write-path test records were rolled back.
+- Task 3 remains **PARTIAL — ACTIVE / EXTERNAL ACCEPTANCE BLOCKER** because this execution has no signed-in designated-owner browser session with active MFA/reviewer state; real HTTP owner route, actual durable user-approved registration, real private Storage avatar/cover upload and device acceptance remain open.
+- Task 5 remains **PARTIAL — METADATA ONLY**: no real provider account, secret-manager reference, health probe, inference, fallback execution or usage reconciliation is connected. Task 6 remains **PARTIAL**: the live RPC contract does not replace signed-in production UI/follow/privacy acceptance.
+- Master tracker remains **2/19 VERIFIED COMPLETE = 10.53%** by the repository's accepted checklist count. No task was closed by these additional contracts.
+
+**Exact next action:** continue Task 3 with the actual signed-in designated Minglora owner session and MFA verification for real HTTP/API and private-media/device acceptance. Keep all workers and external providers disabled until their independent safety gates pass.
+
+---
+
 ## Execution checkpoint — 2026-11-15 (10-billion identity scale architecture design)
 
 - Added `docs/AI_BOT_NETWORK_SCALE_ARCHITECTURE.md` on branch `docs/ai-network-scale-architecture-20261115`.
