@@ -1,3 +1,11 @@
+## Execution checkpoint — 2026-11-15 (provider command security and latest regression gate)
+
+- Provider API authorization review: src/server.js runAIProviderCommand rejects non-moderator callers and requires Supabase persistence. The private Edge Function has an explicit provider-command allowlist and rejects forbidden top-level credential fields. The provider RPC requires current_user=service_role, validates a real Minglora profile actor, rejects API-key/access-token/password/credential/secret/credential_secret_ref payload keys, stores newly registered accounts with a NULL credential reference and empty provider configuration, and never includes credential_secret_ref in account-list JSON. New accounts are unconfigured/unknown; assignments are pending/unknown and cannot be activated before an independent provider health verifier exists.
+- Existing regression coverage: tests/unit/ai-network-providers.test.js checks private service-runtime access, forbidden credential keys, null credential reference/empty config, no secret-reference output, pending/unknown assignments, activation denial before health verification, runtime command allowlist, designated-admin API boundary and UI exclusion of credential controls.
+- Latest reviewed PR head: 7db5676c701715d59fcdbd8fbfc4a9db99b997f2. Full CI: 1,186/1,186 passed; AI Network checks: 141/141 passed; AI identity/discovery browser acceptance PASS; LIVE/MeetWave layout QA PASS.
+- This is source, SQL and CI evidence only. Provider accounts/models/assignments and credential references remain zero in live Supabase. No real provider, secret manager, inference adapter, health probe or worker is connected; no provider execution is claimed.
+
+---
 ## Execution checkpoint — 2026-11-15 (AI security review follow-up and CI verified)
 
 - Provider security: live ai_provider_accounts contains only an opaque credential_secret_ref field; there are no raw API-key/password/token columns. Live provider data counts: 0 accounts, 0 credential references, 0 models and 0 assignments. No provider is connected or claimed.
