@@ -89,3 +89,13 @@ The existing gift build generates both subject-specific transparent SVG artwork 
 - Materials: named PBR meshes for gold, mane, face, enamel, eyes and gemstones; geometry buffers are embedded for the existing model viewer
 - Review: `design-review-pending`; no premium, human visual, licensing or device approval is implied
 - Integration: the existing gift generator routes only the exact canonical gift code to this source; the configured catalogue value, publication flag, backend offers and transaction logic remain unchanged
+
+## Rose refinement v2 — 2026-11-15
+
+- Source: `rose-model.mjs`
+- Canonical gift: `Rose` (`rose-4ieccm`)
+- Model detail: layered cupped petal tiers, raised petal/leaf venation, three connected leaf petioles, five sepals, tapered thorned stem, eight gold stamen filaments/anthers and dew detail.
+- Geometry is emitted as a self-contained glTF 2.0 model by the existing canonical gift generator; the primary SVG, transparent icon, catalogue record, coin value, publication state and LIVE gift event flow are unchanged.
+- Regression coverage requires the named petal, vein, petiole, stamen and anther meshes/materials.
+- Validation: repository CI passed; independent LIVE/MeetWave layout matrix passed; Chromium WebGL rendered 9 bespoke model sources across desktop/tablet/mobile (27/27 checks).
+- Review state remains `design-review-pending`. This change is not a human-approved premium artwork, rights clearance, mastered audio asset or physical-device sign-off.
