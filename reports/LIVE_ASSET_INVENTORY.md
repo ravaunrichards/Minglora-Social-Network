@@ -95,7 +95,7 @@ The shortcuts remain Layout, Permissions, Guests, Viewers, Fan Club, Match, Top 
 | assets/3d-assets/gift-models/djembe-model.mjs | Djembe Master (djembe-master-1v3jzkm) | Mahogany shell, hollow bowl, hide drumhead, rim bindings, 16 tension strands, diamond lacing and carved detailing | Design review pending; CI/build tests passed in merged PR #339 |
 | assets/3d-assets/gift-models/palm-breeze-model.mjs | Palm Breeze (palm-breeze-gknyt0) | Curved trunk, eight pinnate fronds, grouped leaflets and veins, coconuts, roots and sand/water plinth | Design review pending; CI/build tests passed in merged PR #340 |
 
-These are four individually art-directed model sources. The generator still uses procedural category/name geometry for the remaining catalogue gifts; the presence of a generated GLTF file per catalogue row must not be interpreted as proof of bespoke modelling or premium approval.
+The repository now has ten individually art-directed model sources: Rose, Hibiscus, Djembe Master, Palm Breeze, Gamer Otter, LIVE Island, Crystal Crown, Phoenix, Beach Maracas and Royal Lions Scepter. The generator still uses shared procedural category/name geometry for the remaining 1,738 catalogue gifts; the presence of a generated GLTF file per catalogue row must not be interpreted as proof of bespoke modelling or premium approval.
 
 ## Transparent gift-icon inventory — 2026-11-14
 
@@ -241,3 +241,19 @@ The model source carries `gift-royal-lions-scepter-3d-v1` provenance and `design
 | Cache | gift-effects.js?v=20261115-royal-lions-scepter-rise-1; service-worker shell v318. | HTML and service worker use the same versioned script URL. |
 
 The source catalogue grand-entry value, animation key and 1,900-ms duration are unchanged. No production offer, price, wallet or transaction was modified.
+
+## Rose model refinement — 2026-11-15
+
+- Merged PR #377 (`5b3dc50508e684cb7478cfa5eb1b4f56580ed566`) updates the existing original Rose source with cupped petal layers, raised petal and leaf vein geometry, connected petioles, fitted sepals/calyx, and individual golden stamens/anthers.
+- The exact canonical Rose item and configured coin value/publication state were preserved. No backend gift offer, balance, transaction, or production catalogue data was changed.
+- Unit assertions now require the source art-direction metadata and named mesh/material groups for veins, petioles and stamens.
+- Automated evidence: CI passed; separate LIVE/MeetWave layout matrix passed; Chromium WebGL passed 27 renders (nine gift models × three viewports). The saved report recorded zero page errors, HTTP failures, failed requests and model-request cancellations.
+- Limitation: the renderer test verifies glTF loading and visible pixels, not photorealism or human design approval. Rose remains design-review-pending; rights review and physical-device checks remain outstanding.
+
+## Jamaican culture gift-category icon — 2026-11-15
+
+- Updated source: `public/assets/icons/live-gift-categories/jamaican_culture.svg`; asset manifest: adjacent `manifest.json`.
+- The category now uses original full-colour Jamaican flag saltire artwork with green, gold and black gradients and a currentColor pole/outline.
+- The existing 24×24 symbol ID, `jamaican_culture` key, public asset URL, category selection flow and service-worker precache URL are unchanged.
+- Unit coverage verifies the flag saltire, all three national colours, gradient definitions and theme-inheriting outline. PR #383 merged as `aaf1182a5f6bced14685a3db2b9e1a3c95557299`.
+- Review state remains `design-review-pending`; this automated vector check is not human visual approval or a legal review.

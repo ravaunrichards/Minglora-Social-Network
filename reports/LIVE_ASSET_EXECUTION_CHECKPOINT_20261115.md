@@ -88,9 +88,9 @@ This artifact is a generated inventory and path/integrity report, not evidence o
 
 - Canonical repository catalogue: 1,748 records (1,737 marked active in source, 11 retired).
 - Build pipeline generates 1,748 primary SVG artworks, 1,748 transparent SVG icons and 1,748 GLTF model files.
-- 1,739 GLTF models use shared procedural category geometry.
-- 9 gift-specific model sources have been authored: Rose, Hibiscus, Djembe Master, Palm Breeze, Gamer Otter, LIVE Island, Crystal Crown, Phoenix and Beach Maracas. Their presence is not human visual approval.
-- Existing standalone icon packs: 16 LIVE room controls, 22 gift-category icons and 12 LIVE tools shortcuts.
+- 1,738 GLTF models use shared procedural category geometry.
+- 10 gift-specific model sources have been authored: Rose, Hibiscus, Djembe Master, Palm Breeze, Gamer Otter, LIVE Island, Crystal Crown, Phoenix, Beach Maracas and Royal Lions Scepter. Their presence is not human visual approval.
+- Existing standalone icon packs: 18 LIVE room controls, 22 gift-category icons and 12 LIVE tools shortcuts. The Jamaican culture category icon now has original full-colour green/gold/black flag saltire artwork; visual and rights review remain pending.
 - Existing animation/effects runtime and 1,737 source-catalogue motion profiles are present. These do not establish a complete set of individually authored cinematic gift animations.
 - The generated manifest records human visual/licensing review as outstanding for the catalogue artwork and models.
 
@@ -146,3 +146,23 @@ These changes are test/workflow infrastructure only. They do not implement or ap
 ## Scope and safety
 
 Use supplied third-party screenshots only to understand geometry, hierarchy and interaction. Do not copy third-party company names, logos, trademarks, brand identifiers or proprietary artwork. Use Minglora branding and original or properly licensed artwork. Preserve all source references as read-only. Keep this task limited to Minglora LIVE and the assets directly required by it.
+
+## Latest verified checkpoint — 2026-11-15 (PR #377)
+
+- Project/repository: Minglora Social Network — `ravaunrichards/Minglora-Social-Network`.
+- Main branch: `5b3dc50508e684cb7478cfa5eb1b4f56580ed566`.
+- Merged task: original Rose glTF refinement; merge commit `5b3dc50508e684cb7478cfa5eb1b4f56580ed566`.
+- Changed source/test paths: `assets/3d-assets/gift-models/rose-model.mjs`, `tests/unit/gift-catalog.test.js`, `tests/e2e/live-gift-model-render.mjs`.
+- Verification: repository CI passed; separate LIVE/MeetWave layout QA passed; nine original gift models rendered in Chromium WebGL across desktop, tablet and mobile (27/27). Latest render report recorded zero page errors, HTTP errors, failed requests and request cancellations.
+- No deployment, production catalogue activation, pricing change, wallet/transaction operation or user-data mutation occurred.
+- Artwork review status remains pending; no premium, rights or physical-device approval is claimed.
+
+### Next unfinished work
+
+1. Continue bespoke gift artwork beyond the existing small set of individually authored model sources; prioritize original Caribbean/Jamaican culture subjects using canonical catalogue records and genuine configured metadata.
+2. Improve the remaining procedural catalogue artwork and maintain subject-specific, non-duplicated source assets.
+3. Complete standalone animation/audio libraries; current motion is largely code-driven Web Animations and sound is locally synthesized, not mastered audio files.
+4. Extend LIVE control/icon coverage where actual panels or states still lack a dedicated asset, retaining accessible active/disabled/loading/error states and offline cache mappings.
+5. Perform human visual and rights review before any asset is marked production-approved.
+6. Test actual Android, iPhone, tablet, foldable, desktop/laptop and supported TV devices. Chromium viewport tests are not hardware acceptance.
+7. Keep the production database gift catalogue inactive until v3 assets, source rights, configured prices and transaction compatibility are approved.
