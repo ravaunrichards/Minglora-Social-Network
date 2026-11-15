@@ -1,6 +1,14 @@
 name: Minglora LIVE ten-model browser render QA
 
 on:
+  push:
+    branches: ['**']
+    paths:
+      - 'assets/3d-assets/gift-models/**'
+      - 'scripts/generate-minglora-gifts.mjs'
+      - 'tests/e2e/live-gift-model-render.mjs'
+      - '.github/workflows/minglora-live-gift-model-render.yml'
+      - 'data/minglora-gift-catalog.json'
   pull_request:
     branches: [main]
     paths:
