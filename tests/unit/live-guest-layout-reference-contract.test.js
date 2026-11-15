@@ -55,8 +55,8 @@ test('Full Screen keeps its host-first implementation and connected guest strip'
   assert.match(app, /classList\.toggle\('live-full-screen-layout',activeLiveScreenLayout==='full-screen'\)/);
   assert.match(legacyStyles, /\.live-host-only-layout:not\(\.has-active-guests\)/);
   assert.match(legacyStyles, /\.live-host-only-layout\.has-active-guests:not\(\.has-many-guests\)/);
-  assert.doesNotMatch(css, /data-live-layout="full-screen"\]\{/,
-    'the additive file must not override the existing Full Screen host/guest sizing contract');
+  assert.doesNotMatch(css, /live-video-stage\.live-full-screen-layout/,
+    'the additive file must leave all Full Screen stage sizing to the existing host/guest contract');
 });
 
 test('Fluid Panel has a full-stage host with exactly two bottom-right overlay guest boxes', () => {
