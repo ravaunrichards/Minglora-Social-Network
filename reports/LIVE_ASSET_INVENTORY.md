@@ -230,3 +230,14 @@ All **45** retained standalone gift models in `public/assets/gifts/` were inspec
 | `assets/3d-assets/gift-models/royal-lions-scepter-model.mjs` | Royal Lions Scepter (`royal-lions-scepter-15000-mgl`, fantasy; source catalogue value 15,000 Coins) | Original glTF 2.0 lion-head scepter with radial mane locks, sculpted face, crown points, faceted jewels, gold shaft, enamel grip and pommel; matching subject-specific SVG and transparent icon use `royal-lions-scepter-original-v1`. | Exact-code generator route and regression checks for source catalogue identity, configured value/state, mesh/material provenance, embedded buffers and SVG artwork signature. Design and rights review remain pending. |
 
 The model source carries `gift-royal-lions-scepter-3d-v1` provenance and `design-review-pending`. The existing `grand-entry` animation preset and sound mapping are retained. The source catalogue item is not evidence of a live production offer; the connected production catalogue remains governed by the independent version-3 release gate.
+
+
+## Royal Lions Scepter LIVE event effects — 2026-11-15
+
+| Resource | Runtime mapping | Acceptance boundary |
+|---|---|---|
+| Motion | Exact code royal-lions-scepter-15000-mgl → lion-scepter-rise; generated motion-index record retains original catalog_motion_preset: grand-entry and the new effective override. | Existing Web Animations gift mount; reduced-motion support retained; physical-device timing QA pending. |
+| Sound | royal-lions-scepter-roar-and-regal-fanfare-v1; Web Audio growl sweep, low impact, five-note fanfare and jewel shimmer. | Local synthesis only; not a mastered recording; sound opt-out remains respected. |
+| Cache | gift-effects.js?v=20261115-royal-lions-scepter-rise-1; service-worker shell v318. | HTML and service worker use the same versioned script URL. |
+
+The source catalogue grand-entry value, animation key and 1,900-ms duration are unchanged. No production offer, price, wallet or transaction was modified.
