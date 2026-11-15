@@ -49,13 +49,16 @@ test('All nine reference layouts define their own grid proportions, positions an
 test('LIVE Fluid Panel keeps the main participant full-stage and all guest windows in a right rail',()=>{
   const correction=guestCss.slice(guestCss.lastIndexOf('/* REFERENCE PARITY CORRECTION: Fluid Panel'));
   assert.ok(correction.length>0);
-  assert.match(correction,/grid-template-columns:minmax\\(0,1fr\\)/);
-  assert.match(correction,/\.live-guest-seat\.is-host[\\s\\S]*?grid-row:1!important/);
-  assert.match(correction,/\.live-guest-seat\.is-guest[\\s\\S]*?right:8px!important/);
+  assert.ok(correction.includes('grid-template-columns:minmax(0,1fr)!important'));
+  assert.ok(correction.includes('.live-guest-seat.is-host'));
+  assert.ok(correction.includes('grid-row:1!important'));
+  assert.ok(correction.includes('.live-guest-seat.is-guest'));
+  assert.ok(correction.includes('right:8px!important'));
   for(let seat=3;seat<=10;seat++)assert.ok(correction.includes('nth-child('+seat+')'), 'guest seat '+(seat-2)+' has an explicit right-rail position');
-  assert.match(correction,/nth-child\\(10\\)\\{top:84\\.5%/);
-  assert.doesNotMatch(correction,/bottom:calc/);
+  assert.ok(correction.includes('nth-child(10){top:84.5%!important}'));
+  assert.ok(!correction.includes('bottom:calc'));
 });
+
 
 test('MeetWave screen and guest registries are disjoint and exact',()=>{
   const screen=meetwave.match(/const MEETING_SCREEN_LAYOUTS = \{([^}]+)\}/);
@@ -75,10 +78,12 @@ test('MeetWave screen layouts own the grid; Roundtable 1/2 only position guest b
   const guestEnd=contract.indexOf('.mw-meeting #mw-screen-stage.has-screen-share',guestStart);
   assert.ok(guestStart>=0&&guestEnd>guestStart);
   const guestRules=contract.slice(guestStart,guestEnd);
-  assert.match(guestRules,/data-guest-layout="roundtable-1"[\\s\\S]*?\.live-guest-seat\.is-host/);
-  assert.match(guestRules,/data-guest-layout="roundtable-2"[\\s\\S]*?\.live-guest-seat\.is-host/);
-  assert.match(guestRules,/data-seat-index="8"/);
-  assert.doesNotMatch(guestRules,/grid-template-(columns|rows)/);
+  assert.ok(guestRules.includes('data-guest-layout="roundtable-1"'));
+  assert.ok(guestRules.includes('data-guest-layout="roundtable-2"'));
+  assert.ok(guestRules.includes('.live-guest-seat.is-host'));
+  assert.ok(guestRules.includes('data-seat-index="8"'));
+  assert.ok(!guestRules.includes('grid-template-columns'));
+  assert.ok(!guestRules.includes('grid-template-rows'));
 });
 
 
