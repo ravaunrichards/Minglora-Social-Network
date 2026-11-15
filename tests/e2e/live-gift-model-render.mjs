@@ -119,6 +119,8 @@ const requestFailures = [];
 const expectedAbortedModelRequests = [];
 const requestedModelPaths = new Set();
 let activeModelPath = null;
+let activeModelGeneration = 0;
+const modelRequestContexts = new WeakMap();
 try {
   browser = await chromium.launch({
     channel: 'chromium',
@@ -139,12 +141,25 @@ try {
       httpFailures.push({ status: response.status(), url: response.url() });
     }
   });
+  page.on('request', request => {
+    let pathname = '';
+    try { pathname = new URL(request.url()).pathname; } catch { /* malformed URLs remain untracked */ }
+    if (requestedModelPaths.has(pathname)) {
+      modelRequestContexts.set(request, { pathname, generation: activeModelGeneration });
+    }
+  });
   page.on('requestfailed', request => {
     const failure = { url: request.url(), error: request.failure()?.errorText || 'unknown' };
-    let pathname = '';
-    try { pathname = new URL(request.url()).pathname; } catch { /* malformed URLs remain unexpected */ }
-    if (failure.error === 'net::ERR_ABORTED' && requestedModelPaths.has(pathname) && pathname !== activeModelPath) {
-      expectedAbortedModelRequests.push({ ...failure, active_model_path: activeModelPath });
+    const context = modelRequestContexts.get(request);
+    if (failure.error === 'net::ERR_ABORTED' && context &&
+        (context.generation < activeModelGeneration || context.pathname !== activeModelPath)) {
+      expectedAbortedModelRequests.push({
+        ...failure,
+        request_model_path: context.pathname,
+        request_generation: context.generation,
+        active_model_path: activeModelPath,
+        active_generation: activeModelGeneration
+      });
     } else {
       requestFailures.push(failure);
     }
@@ -182,6 +197,7 @@ try {
 
       requestedModelPaths.add(modelPath);
       activeModelPath = modelPath;
+      activeModelGeneration += 1;
 
       const render = await page.evaluate(async ({ source, name }) => {
         const viewer = document.querySelector('#gift-model');
