@@ -146,3 +146,18 @@ These changes are test/workflow infrastructure only. They do not implement or ap
 ## Scope and safety
 
 Use supplied third-party screenshots only to understand geometry, hierarchy and interaction. Do not copy third-party company names, logos, trademarks, brand identifiers or proprietary artwork. Use Minglora branding and original or properly licensed artwork. Preserve all source references as read-only. Keep this task limited to Minglora LIVE and the assets directly required by it.
+
+
+## Continuation checkpoint — Baseball bespoke model branch — 2026-11-15
+
+- Verified current main before changes: `5b3dc50508e684cb7478cfa5eb1b4f56580ed566` (includes merged Rose leaf/petal detail).
+- Previous PR #377 was merged successfully as `5b3dc50508e684cb7478cfa5eb1b4f56580ed566`; its CI, seven-plus-two layout QA and Chromium model-render workflows passed on its exact head.
+- PR #367's renderer correction is on main; merged-branch browser model render job completed successfully and the previous nine-model matrix passed 27/27.
+- Stale draft PR #376 was not merged or overwritten. Its original Baseball model source blob was reused on a new branch based on the current main commit.
+- Canonical record verified read-only: `baseball-orcdx9`, `Baseball`, category `sports`, configured `coin_price=1`, source `active=true`. No catalogue values were changed.
+- New branch: `feat/minglora-baseball-bespoke-live-asset-20261115`.
+- This increment adds exact-code GLTF routing, original `baseball-original-v1` vector artwork, unit regressions, and Scepter+Baseball in the desktop/tablet/mobile renderer matrix (11×3 = 33 checks).
+- The GLTF and artwork are review-pending; this is not human art approval, rights clearance, physical-device acceptance, production catalogue activation or deployment.
+- CI results and final merge status: pending.
+
+**Next action:** run repository CI, seven-plus-two layout QA and the dedicated Chromium gift render workflow on this branch. Diagnose any failures, then merge only after all required checks pass and read back the resulting main commit.

@@ -87,16 +87,23 @@ The active screen-share state switches to `screen-stop.svg`; active browser full
 
 The shortcuts remain Layout, Permissions, Guests, Viewers, Fan Club, Match, Top Gifters, Gifts, Rewards, Moderators, Appearance and Devices. The existing role gates, rewards visibility gate, panel selectors and active `aria-pressed` behavior remain authoritative. The service worker cache v306 includes the new manifest and every icon.
 
-## Gift-specific botanical model sources
-| Source | Canonical item | Model art direction | Review state |
+## Individually authored LIVE gift model sources
+
+| Source | Canonical gift | Distinct authored geometry | Review state |
 |---|---|---|---|
-| assets/3d-assets/gift-models/rose-model.mjs | Rose | Layered rose petals, sepals, thorned stem, sculpted leaves and dew | Design review pending |
-| assets/3d-assets/gift-models/hibiscus-model.mjs | Hibiscus (hibiscus-5-mgl) | Five cupped tropical petals, sepals, three leaves, central stamen column and pollen anthers | Design review pending; CI/build tests passed in merged PR #339 validation set |
-| assets/3d-assets/gift-models/djembe-model.mjs | Djembe Master (djembe-master-1v3jzkm) | Mahogany shell, hollow bowl, hide drumhead, rim bindings, 16 tension strands, diamond lacing and carved detailing | Design review pending; CI/build tests passed in merged PR #339 |
-| assets/3d-assets/gift-models/palm-breeze-model.mjs | Palm Breeze (palm-breeze-gknyt0) | Curved trunk, eight pinnate fronds, grouped leaflets and veins, coconuts, roots and sand/water plinth | Design review pending; CI/build tests passed in merged PR #340 |
+| `assets/3d-assets/gift-models/rose-model.mjs` | Rose (`rose-4ieccm`) | Layered petals, sepals, thorned stem, sculpted leaves, raised branching venation, stamens and dew | Design review pending |
+| `assets/3d-assets/gift-models/hibiscus-model.mjs` | Hibiscus (`hibiscus-5-mgl`) | Five cupped petals, sepals, leaves, stamen column and anthers | Design review pending |
+| `assets/3d-assets/gift-models/djembe-model.mjs` | Djembe Master (`djembe-master-1v3jzkm`) | Mahogany shell, hollow bowl, hide drumhead, tension strands and diamond lacing | Design review pending |
+| `assets/3d-assets/gift-models/palm-breeze-model.mjs` | Palm Breeze (`palm-breeze-gknyt0`) | Curved trunk, pinnate fronds, leaflets, veins, coconuts and plinth | Design review pending |
+| `assets/3d-assets/gift-models/gamer-otter-model.mjs` | Gamer Otter (`gamer-otter-100-mgl`) | Seated otter, face, tail, headset, microphone and controller | Design review pending |
+| `assets/3d-assets/gift-models/live-island-model.mjs` | LIVE Island (`live-island-rmn3mc`) | Lagoon, surf, headland, waterfall, palms, pavilion, canoe and coral | Design review pending |
+| `assets/3d-assets/gift-models/crystal-crown-model.mjs` | Crystal Crown (`crystal-crown-1itryeu`) | Gold tiara, velvet lining, faceted gems, pavé and pendants | Design review pending |
+| `assets/3d-assets/gift-models/phoenix-model.mjs` | Phoenix (`phoenix-wep6uk`) | Sculpted firebird, layered flight feathers, crest, tail fan, talons and embers | Design review pending |
+| `assets/3d-assets/gift-models/beach-maracas-model.mjs` | Beach Maracas (`beach-maracas-1exxoag`) | Crossed gourd shakers, carved handles, painted motifs, woven grips and conch charm | Design review pending |
+| `assets/3d-assets/gift-models/royal-lions-scepter-model.mjs` | Royal Lions Scepter (`royal-lions-scepter-15000-mgl`) | Sculpted lion, radial mane, crown, faceted stones, gold staff and enamel grip | Design review pending |
+| `assets/3d-assets/gift-models/baseball-model.mjs` | Baseball (`baseball-orcdx9`) | Full-grain ivory leather shell, recessed curved seam channels, raised red cotton seams, individual hand-sewn stitches and leather grain | Design review pending |
 
-These are four individually art-directed model sources. The generator still uses procedural category/name geometry for the remaining catalogue gifts; the presence of a generated GLTF file per catalogue row must not be interpreted as proof of bespoke modelling or premium approval.
-
+The model generator now has **11 exact-code bespoke source routes** and **1,737 procedural catalogue records**. Each named source emits a self-contained GLTF 2.0 model with embedded mesh buffers and a matching original subject-specific vector illustration/icon. The Baseball source preserves the canonical 1-Coin source value and `active=true` flag; this is source-catalogue metadata only and does not create a production offer. All 11 sources remain pending human visual, rights and physical-device review.
 ## Transparent gift-icon inventory — 2026-11-14
 
 - The canonical catalogue contains 1,748 distinct gift records. The generator now produces three separate per-record files: primary SVG artwork (`<code>.svg`), subject-only transparent SVG icon (`<code>-icon.svg`), and glTF 2.0 model (`<code>.gltf`).

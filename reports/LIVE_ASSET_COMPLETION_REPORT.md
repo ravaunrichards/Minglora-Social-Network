@@ -328,3 +328,15 @@ The browser captures establish that all nine bespoke models load and remain visi
 - Updated the LIVE effect script version in HTML and service worker and advanced service-worker shell cache to v318.
 - Added unit coverage for exact-code visual preset selection, sound dispatch, synthesized layer signature, motion-index mapping and manifest provenance. These changes do not create a production transaction or activate the source catalogue gift.
 - Acceptance boundary: this is a runtime-generated motion/audio implementation, not an embedded GLTF animation channel, Lottie/Rive file, mastered recording, composer/artist approval, licensing clearance, human visual/design approval or physical-device QA. The scepter model and effects remain design-review-pending.
+
+
+## Incremental completion — Baseball bespoke model and artwork source — 2026-11-15
+
+**Implementation scope:** one canonical Minglora LIVE gift asset; not completion of the full LIVE asset mission.
+
+- Original Baseball GLTF source added from the existing repository-authored asset branch and wired by exact canonical code `baseball-orcdx9`.
+- Primary SVG and transparent icon now carry the unique `baseball-original-v1` artwork identity.
+- Canonical source record values are asserted unchanged: Baseball / sports / 1 Coin / source `active=true`.
+- Unit regression covers the named mesh parts, embedded buffer, finite POSITION bounds, review status and both SVG outputs.
+- Chromium gift-model matrix includes Baseball plus Royal Lions Scepter, for 11 models across three desktop/tablet/mobile viewports (33 planned checks).
+- Workflow verification is pending; the asset remains design-review-pending. No production database activation or deployment is part of this increment.
