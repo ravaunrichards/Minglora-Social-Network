@@ -1,3 +1,16 @@
+## Execution checkpoint — 2026-11-14 (rollback-only HR disciplinary migration validation)
+
+- Working branch: `feat/ai-hr-disciplinary-cases`; PR #353 remains draft/open against `main`.
+- Validated source migration `supabase/migrations/20261115033000_minglora_ai_hr_disciplinary_cases.sql` against the existing Supabase PostgreSQL 17.11 database inside an explicit `BEGIN ... ROLLBACK` transaction.
+- Inside the transaction, migration execution and assertions passed for both organization-scoped case/history tables, RLS enabled on both, no direct anon/authenticated SELECT grants, required service_role table grants, a SECURITY INVOKER RPC, service_role-only RPC EXECUTE, and configured search_path.
+- Independent post-rollback verification confirmed both tables and the RPC are absent, so no production schema change was retained. The migration ledger remains unchanged; its latest AI/HR entry is `20261115025508` (`minglora_ai_hr_training_attendance`).
+- Live data remains empty for organizations, employment records and AI identities. Runtime control remains `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`.
+- This is SQL syntax/schema/security-contract validation only. It does not apply the migration, test a real organization/employee lifecycle, deploy the Edge Function, or replace signed-in owner/API/browser/device acceptance.
+- PR #353's existing head `bb986a964354723d6927d6af762a1c1bb5b63fc9` had green CI (1,182/0), AI Network workflow (137/0), browser fixture acceptance and layout visual QA. New checkpoint commits require their own workflow results before any new-head CI claim.
+- AI task accounting remains `2/19 = 10.53%` verified tasks. Disciplinary case work remains `IMPLEMENTED — AWAITING LIVE/OWNER ACCEPTANCE`.
+
+---
+
 ## Execution checkpoint — 2026-11-15 (AI HR disciplinary case source verification)
 
 - Branch: \`feat/ai-hr-disciplinary-cases\`; draft PR #353 targets \`main\`: https://github.com/ravaunrichards/Minglora-Social-Network/pull/353
