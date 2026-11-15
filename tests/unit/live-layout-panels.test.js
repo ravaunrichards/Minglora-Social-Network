@@ -70,7 +70,7 @@ test('Host panels switch without removing the chat, guest tools, gifts or modera
 
 
 test('Full Screen keeps the host and visible guest and empty-seat windows', () => {
-  assert.match(app, /root\.setAttribute\('aria-label','LIVE host and guest seats'\)/);
+  assert.match(app, /root\.setAttribute\('aria-label','LIVE guest layout · '\+label\)/);
   assert.match(app, /classList\.toggle\('live-full-screen-layout',activeLiveScreenLayout==='full-screen'\)/);
   assert.ok(styles.includes('#live-guest-layout[data-live-layout="full-screen"]{'), 'missing Full Screen guest layout rules');
   assert.match(styles, /#live-guest-layout\[data-live-layout="full-screen"\]>.live-guest-seat:not\(\.is-host\)\{display:flex!important/);
@@ -181,7 +181,7 @@ test('Full Screen has its own expand icon with no guest panels; Fluid Panel keep
   assert.ok(app.includes("value:'full-screen',label:'Full Screen',icon:'fullscreen'"));
   assert.ok(app.includes("value:'fluid-panel',label:'Fluid Panel',icon:'fluidPanel'"));
   const iconMap=app.slice(app.indexOf('function liveLayoutIcon'),app.indexOf('function applyLiveScreenLayout'));
-  const fullScreenIcon=iconMap.split('fullscreen:')[1].split(',fluidPanel:')[0];
+  const fullScreenIcon=iconMap.match(/fullscreen:"([^"]+)"/)?.[1]||'';
   assert.ok(fullScreenIcon.includes("M8 3H3v5 M16 3h5v5 M21 16v5h-5 M8 21H3v-5"));
   assert.doesNotMatch(fullScreenIcon, /<rect/);
 });
