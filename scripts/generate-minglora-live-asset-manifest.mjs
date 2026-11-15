@@ -69,6 +69,13 @@ const GIFT_SPECIFIC_WEB_AUDIO_DESIGNS = Object.freeze({
     format: "Web Audio API synthesized pulsed shaker noise with four bright steelpan-like tones",
     layers: ["five_pulsed_highpass_shaker_bursts", "four_note_island_tonal_accent_262_392_523_659hz", "seeded_stereo_rhythm_placement"],
     status: "gift_specific_synthesized_sound_not_mastered_recording"
+  }),
+  "royal-lions-scepter-15000-mgl": Object.freeze({
+    sound_design_id: "royal-lions-scepter-roar-and-regal-fanfare-v1",
+    sound_profile_scope: "gift_specific_web_audio_synthesis",
+    format: "Web Audio API synthesized low lion-like formant growl, sub impact, five-note brass-like ceremonial fanfare and high-frequency jewel shimmer",
+    layers: ["bandpass_growl_noise_sweep", "low_frequency_staff_impact", "five_note_regal_fanfare_196_294_392_587_784hz", "highpass_jewel_shimmer"],
+    status: "gift_specific_synthesized_sound_not_mastered_recording"
   })
 });
 

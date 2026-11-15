@@ -39,7 +39,8 @@ const GIFT_SPECIFIC_MOTION_PRESET = Object.freeze({
   "live-island-rmn3mc": "island-tide",
   "crystal-crown-1itryeu": "crown-lustre",
   "phoenix-wep6uk": "phoenix-rise",
-  "beach-maracas-1exxoag": "maraca-rhythm"
+  "beach-maracas-1exxoag": "maraca-rhythm",
+  "royal-lions-scepter-15000-mgl": "lion-scepter-rise"
 });
 
 

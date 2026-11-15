@@ -157,7 +157,8 @@ test("LIVE asset manifest exposes the same bespoke motion presets as the runtime
     "live-island-rmn3mc": "island-tide",
     "crystal-crown-1itryeu": "crown-lustre",
     "phoenix-wep6uk": "phoenix-rise",
-    "beach-maracas-1exxoag": "maraca-rhythm"
+    "beach-maracas-1exxoag": "maraca-rhythm",
+    "royal-lions-scepter-15000-mgl": "lion-scepter-rise"
   };
   for (const [code,preset] of Object.entries(expected)) {
     const gift = manifest.gifts.find(item => item.code === code);
@@ -173,7 +174,7 @@ test("LIVE asset manifest exposes the same bespoke motion presets as the runtime
 
 test("gift-specific synthesized sound designs are inventoried without claiming mastered recordings", () => {
   assert.equal(manifest.summary.dedicated_mastered_gift_sound_file_count, 0);
-  assert.equal(manifest.summary.gift_specific_synthesized_sound_design_count, 7);
+  assert.equal(manifest.summary.gift_specific_synthesized_sound_design_count, 8);
   assert.equal(manifest.summary.physical_device_qa_verified_count, 0);
   const expected = [
     ["djembe-master-1v3jzkm","djembe-hand-drum-impact-v1","gift_specific_synthesized_sound_not_mastered_recording"],
@@ -182,7 +183,8 @@ test("gift-specific synthesized sound designs are inventoried without claiming m
     ["live-island-rmn3mc","live-island-tide-and-chime-v1","gift_specific_synthesized_sound_not_mastered_recording"],
     ["crystal-crown-1itryeu","crystal-crown-royal-glass-chime-v1","gift_specific_synthesized_sound_not_mastered_recording"],
     ["phoenix-wep6uk","phoenix-flame-rise-and-ember-choir-v1","gift_specific_synthesized_sound_not_mastered_recording"],
-    ["beach-maracas-1exxoag","beach-maracas-caribbean-shaker-rhythm-v1","gift_specific_synthesized_sound_not_mastered_recording"]
+    ["beach-maracas-1exxoag","beach-maracas-caribbean-shaker-rhythm-v1","gift_specific_synthesized_sound_not_mastered_recording"],
+    ["royal-lions-scepter-15000-mgl","royal-lions-scepter-roar-and-regal-fanfare-v1","gift_specific_synthesized_sound_not_mastered_recording"]
   ];
   for (const [code,designId,status] of expected) {
     const entry = manifest.gifts.find(item => item.code === code);
