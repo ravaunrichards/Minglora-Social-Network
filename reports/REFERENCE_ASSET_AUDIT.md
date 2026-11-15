@@ -48,11 +48,11 @@ These nine references correspond to the existing implementation's seven host-sel
 ## Additional LIVE-adjacent references inventoried
 
 - `assets/Guests Layout/`: 9 JPEG layout diagrams (all 9 visually inspected individually).
-- `assets/Gifters Badge Levels/`: 71 image files (53 PNG and 18 JPEG); file inventory completed, not a full badge-by-badge visual/rights review.
+- `assets/Gifters Badge Levels/`: 72 image files (53 PNG and 19 JPEG); file inventory completed, not a full badge-by-badge visual/rights review.
 - `assets/League/`: 20 JPEG reference captures; file inventory completed, with the Android League FAQ sample above visually inspected.
 - `assets/Gifts/`: 131 catalogue capture PNGs plus the `Video Gifts/Video Gifts.jpg` reference sheet. The directory contains 132 image files in total.
 
-The path/size/hash inventory is complete for the 1,121 images under `assets/reference/`. A complete image-by-image human visual review and per-image dimension/transparency extraction for all 1,121 references, all 1,509 extracted gift crops and all 71 badge files has **not** been completed. No original reference was altered or copied into a production asset directory.
+The path/size/hash inventory is complete for the 1,121 images under `assets/reference/`. A complete image-by-image human visual review and per-image dimension/transparency extraction for all 1,121 references, all 1,509 extracted gift crops and all 72 badge files has **not** been completed. No original reference was altered or copied into a production asset directory.
 
 ## Preservation and source-of-truth rules
 
