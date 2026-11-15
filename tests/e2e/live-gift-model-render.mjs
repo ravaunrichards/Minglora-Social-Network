@@ -115,17 +115,37 @@ const results = [];
 const pageErrors = [];
 try {
   browser = await chromium.launch({
+    channel: 'chromium',
     headless: true,
-    args: ['--no-sandbox', '--disable-dev-shm-usage', '--enable-gpu', '--enable-webgl', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--use-gl=angle', '--use-angle=swiftshader-webgl']
+    args: ['--no-sandbox', '--disable-dev-shm-usage', '--enable-gpu', '--enable-webgl', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--use-gl=angle', '--use-angle=swiftshader']
   });
   const address = server.address();
   const baseUrl = 'http://127.0.0.1:' + address.port;
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 }, deviceScaleFactor: 1 });
   page.on('pageerror', error => pageErrors.push(error.message));
+  page.on('console', message => {
+    if (message.type() === 'error' || message.type() === 'warning') {
+      browserConsoleMessages.push(message.type() + ': ' + message.text());
+    }
+  });
   await page.goto(baseUrl + '/__gift-model-preview', { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => window.__mingloraModelViewerReady === true, null, { timeout: 60000 });
   assert.ok(await page.evaluate(() => Boolean(customElements.get('model-viewer'))),
     'The production model-viewer 4.4.0 module must be available in Chromium.');
+  const browserWebGL = await page.evaluate(() => {
+    const probe = document.createElement('canvas');
+    const context = probe.getContext('webgl2') || probe.getContext('webgl');
+    const info = context ? {
+      available: true,
+      version: context.getParameter(context.VERSION),
+      renderer: context.getParameter(context.RENDERER)
+    } : { available: false, version: null, renderer: null };
+    context?.getExtension('WEBGL_lose_context')?.loseContext();
+    return info;
+  });
+  console.log('Chromium WebGL capability: ' + JSON.stringify(browserWebGL));
+  assert.equal(browserWebGL.available, true,
+    'Chromium must expose WebGL. Browser console: ' + browserConsoleMessages.slice(-10).join(' | '));
 
   for (const viewport of viewports) {
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
@@ -137,6 +157,17 @@ try {
       await page.evaluate(name => {
         document.querySelector('#gift-name').textContent = name;
       }, gift.name);
+
+      try {
+        await page.waitForFunction(() => {
+          const viewer = document.querySelector('#gift-model');
+          return Boolean(viewer?.shadowRoot?.querySelector('canvas#webgl-canvas'));
+        }, null, { timeout: 15000 });
+      } catch (error) {
+        throw new Error(name + ' loaded but the model-viewer WebGL canvas did not mount. ' +
+          'WebGL probe: ' + JSON.stringify(browserWebGL) + '. Browser console: ' +
+          browserConsoleMessages.slice(-10).join(' | ') + '. ' + error.message);
+      }
 
       const render = await page.evaluate(async ({ source, name }) => {
         const viewer = document.querySelector('#gift-model');
@@ -166,9 +197,7 @@ try {
         // renderer canvas. Check the actual renderer canvas, not the first
         // canvas in the shadow root (which is reserved for 2D presentation).
         const canvases = Array.from(viewer.shadowRoot?.querySelectorAll('canvas') || []);
-        const webglCanvas = canvases.find(candidate =>
-          candidate.getContext('webgl2') || candidate.getContext('webgl')
-        ) || null;
+        const webglCanvas = viewer.shadowRoot?.querySelector('canvas#webgl-canvas') || null;
         const gl = webglCanvas
           ? (webglCanvas.getContext('webgl2') || webglCanvas.getContext('webgl'))
           : null;
