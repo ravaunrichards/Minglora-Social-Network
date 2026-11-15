@@ -95,7 +95,7 @@ The shortcuts remain Layout, Permissions, Guests, Viewers, Fan Club, Match, Top 
 | assets/3d-assets/gift-models/djembe-model.mjs | Djembe Master (djembe-master-1v3jzkm) | Mahogany shell, hollow bowl, hide drumhead, rim bindings, 16 tension strands, diamond lacing and carved detailing | Design review pending; CI/build tests passed in merged PR #339 |
 | assets/3d-assets/gift-models/palm-breeze-model.mjs | Palm Breeze (palm-breeze-gknyt0) | Curved trunk, eight pinnate fronds, grouped leaflets and veins, coconuts, roots and sand/water plinth | Design review pending; CI/build tests passed in merged PR #340 |
 
-The repository now has ten individually art-directed model sources: Rose, Hibiscus, Djembe Master, Palm Breeze, Gamer Otter, LIVE Island, Crystal Crown, Phoenix, Beach Maracas and Royal Lions Scepter. The generator still uses shared procedural category/name geometry for the remaining 1,738 catalogue gifts; the presence of a generated GLTF file per catalogue row must not be interpreted as proof of bespoke modelling or premium approval.
+The repository now has eleven individually art-directed model sources: Rose, Hibiscus, Djembe Master, Palm Breeze, Gamer Otter, LIVE Island, Crystal Crown, Phoenix, Beach Maracas, Royal Lions Scepter and Baseball. The generator still uses shared procedural category/name geometry for the remaining 1,737 catalogue gifts; the presence of a generated GLTF file per catalogue row must not be interpreted as proof of bespoke modelling or premium approval.
 
 ## Transparent gift-icon inventory — 2026-11-14
 
@@ -257,3 +257,12 @@ The source catalogue grand-entry value, animation key and 1,900-ms duration are 
 - The existing 24×24 symbol ID, `jamaican_culture` key, public asset URL, category selection flow and service-worker precache URL are unchanged.
 - Unit coverage verifies the flag saltire, all three national colours, gradient definitions and theme-inheriting outline. PR #383 merged as `aaf1182a5f6bced14685a3db2b9e1a3c95557299`.
 - Review state remains `design-review-pending`; this automated vector check is not human visual approval or a legal review.
+
+
+## Baseball bespoke source model — 2026-11-15
+
+- Source: `assets/3d-assets/gift-models/baseball-model.mjs`; canonical code: `baseball-orcdx9`.
+- Generated GLTF: `public/assets/gifts/catalog/baseball-orcdx9.gltf`; original artwork: `baseball-orcdx9.svg` and transparent icon `baseball-orcdx9-icon.svg`.
+- Geometry: full-grain ivory leather sphere, recessed curved seam channels, raised scarlet cotton seams, individual hand-sewn stitches and subtle leather-grain flecks.
+- Exact canonical source metadata: Baseball / sports / 1 Coin / source active true; unchanged by this asset implementation.
+- Artwork and model review: design-review-pending; no human visual, legal or physical device acceptance is implied.

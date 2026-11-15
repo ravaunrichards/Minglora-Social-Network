@@ -343,3 +343,15 @@ The browser captures establish that all nine bespoke models load and remain visi
 - Preserved the existing category ID, symbol, URL, 24×24 viewBox, currentColor outline and service-worker asset path.
 - Added tests for the three national colours, gradients and saltire; repository CI and independent layout QA passed before PR #383 was merged as `aaf1182a5f6bced14685a3db2b9e1a3c95557299`.
 - Human visual and rights review remain pending. The icon is not represented as a fully approved or premium production asset.
+
+
+## Baseball bespoke gift model and artwork — 2026-11-15
+
+- Canonical item: `baseball-orcdx9` / Baseball / sports.
+- Preserved source catalogue metadata: configured `coin_price=1`, `active=true`, asset version 1. No production offer was activated.
+- Added the original self-contained GLTF source `assets/3d-assets/gift-models/baseball-model.mjs`; the canonical generator routes only this gift code to the bespoke model.
+- Added subject-specific primary SVG and transparent gift icon artwork marked `baseball-original-v1`.
+- Added regression coverage for metadata, separate leather/seam/stitch mesh groups, finite bounds, embedded buffers and both vector artworks.
+- Expanded the Chromium model matrix to include Baseball and the existing Royal Lions Scepter alongside the original nine models, across desktop, tablet and mobile.
+- Validation: the initial CI run exposed an existing assertion requiring seam signature `stroke="#d84854" stroke-width="12"`; the SVG seam was corrected to match it while retaining the layered red seam treatment. Latest-head rerun is pending.
+- Release boundary: the model remains `design-review-pending`; human art review, rights clearance, mastered individual gift audio/animation and physical-device acceptance remain outstanding. No database, wallet, price, transaction or deployment operation occurred.

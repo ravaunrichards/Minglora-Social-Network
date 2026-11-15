@@ -219,3 +219,14 @@ The motion-index schema keeps the original `catalog_motion_preset` and the effec
 - The same server-confirmed gift mount reaches playRoyalLionsScepter through the existing sound dispatch. It synthesizes a filtered growl sweep, low impact, five-note ceremonial fanfare and high-frequency jewel shimmer using Web Audio.
 - The asset manifest records royal-lions-scepter-roar-and-regal-fanfare-v1 as gift-specific synthesis, not mastered audio. Sound opt-out remains respected. HTML references gift-effects.js?v=20261115-royal-lions-scepter-rise-1; service-worker shell v318 caches that exact version.
 - No API, production catalogue row, Coin price, wallet, transaction, payout or production activation is changed by this event-effect integration.
+
+
+## Baseball bespoke LIVE asset integration — 2026-11-15
+
+- Canonical source record: `baseball-orcdx9`; name `Baseball`; category `sports`; source Coin value `1`; source active flag `true`. These catalogue fields are asserted by tests and are not changed.
+- 3D source: `assets/3d-assets/gift-models/baseball-model.mjs`; exact-code route in `scripts/generate-minglora-gifts.mjs`.
+- Generated model: `public/assets/gifts/catalog/baseball-orcdx9.gltf`, self-contained glTF 2.0 with embedded geometry buffers, named leather/seam/stitch mesh parts and PBR material factors.
+- Original artwork: the generator emits `baseball-original-v1` into both `baseball-orcdx9.svg` and the transparent `baseball-orcdx9-icon.svg`; both retain canonical per-gift path conventions.
+- Runtime: the existing gift viewer consumes the canonical generated `.gltf` path; no new renderer, third-party brand asset, transaction route or backend data mutation is introduced.
+- QA target: the isolated Chromium matrix includes 11 bespoke models at desktop (1280×900), tablet (768×1024) and mobile (390×844) sizes: 33 model/viewport renders. Workflow results are pending at this checkpoint.
+- Release boundary: the asset remains `design-review-pending`; production catalogue version-3 approval, rights review, human artwork sign-off and physical-device testing remain separate gates.

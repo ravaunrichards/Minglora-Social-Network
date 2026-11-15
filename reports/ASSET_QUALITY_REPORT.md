@@ -229,3 +229,10 @@ The canonical gift now has an exact-code lion-scepter-rise motion override in th
 ## Jamaican culture icon update — 2026-11-15
 
 The existing Jamaican culture gift-category placeholder has been replaced by original Minglora full-colour flag/saltire vector artwork at `public/assets/icons/live-gift-categories/jamaican_culture.svg`. Its green/gold/black gradient geometry is covered by unit assertions; the 24×24 SVG symbol contract and currentColor outline compatibility remain intact. PR #383 merged as `aaf1182a5f6bced14685a3db2b9e1a3c95557299`. The icon remains design-review-pending; automated structure tests do not establish human visual acceptance or rights clearance.
+
+
+## Baseball model and vector-art quality record — 2026-11-15
+
+The exact canonical Baseball record now has an individually authored model source rather than shared sports-category geometry. The model uses an ivory full-grain shell, two curved seam paths with recessed channels, raised scarlet seam cords, separate hand-sewn stitch strands/thread highlights and subtle grain flecks. Its vector artwork uses a leather-shaded sphere and individually drawn curved seam/stitch details; the same subject-specific illustration is emitted in the primary SVG and transparent gift icon.
+
+The GLTF declares self-contained embedded geometry buffers, per-part material records, accessor bounds and `design-review-pending` provenance. The browser-render matrix covers desktop, tablet and mobile; final workflow outcome is pending at the time this record was added. This structural/artwork source inspection is not human visual approval, licensing clearance, final premium art acceptance or physical-device certification. No catalogue Coin value, source active flag, production offer, wallet, transaction or payout was changed.
