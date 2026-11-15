@@ -7,6 +7,56 @@
 **Related PR:** [#367 — original gift-model Chromium render QA](https://github.com/ravaunrichards/Minglora-Social-Network/pull/367)  
 **Status:** PARTIAL — DO NOT MERGE AS PRODUCTION-READY
 
+## Latest continuation update — 2026-11-15 21:04 UTC
+
+This section supersedes earlier workflow/head details below where they conflict. It records the latest verified state after two bounded attempts to repair the dedicated Chromium request-cancellation assertion.
+
+### Current Git and PR state
+
+- Current work branch: `feat/minglora-live-model-viewer-e2e-20261115`.
+- Latest verified head: `e03b57ae640e1885a799e8a6963db69c45bba0dd`.
+- PR #367 remains OPEN and NOT MERGED: https://github.com/ravaunrichards/Minglora-Social-Network/pull/367.
+- Comparison against current `main`: DIVERGED, 17 commits ahead and 8 behind. The branch was not force-pushed, merged or deployed. It must be reconciled with current main only after the render-check and review gates are resolved.
+- Two test-only commits were added during this continuation:
+  - `6594faf2037d836280305d032106fed94aa67108` — classify cancellations for superseded GLTF paths.
+  - `e03b57ae640e1885a799e8a6963db69c45bba0dd` — add per-request model-generation context. This second attempt also failed to distinguish the cancellation events reliably.
+
+### Latest verified workflows for head `e03b57ae...`
+
+| Check | Run | Result | Evidence |
+|---|---:|---|---|
+| Standard repository CI | `43761265847` | PASSED | 1,220 tests passed, 0 failed; dependency audit, structure check, JavaScript syntax, gift generation, LIVE motion index, Sound Studio pack, asset manifest and 2,862-image metadata audit passed |
+| Supabase Auth/OAuth acceptance | `43761265847` | PASSED | Dedicated Auth/OAuth acceptance job passed |
+| For You functional navigation | `43761265847` | PASSED | Navigation acceptance job passed |
+| LIVE/MeetWave seven-plus-two layout matrix | `43761265862` | PASSED | Browser render and screenshot-upload steps passed; this is synthetic layout QA, not live calls or physical-device validation |
+| LIVE gift-model Chromium render QA | `43761265871` | FAILED — BLOCKED | WebGL capability, asset generation, syntax check, model load/pixel assertions and all 27 screenshots completed; final failed-request assertion recorded 14 `net::ERR_ABORTED` GLTF request events |
+
+The latest failed-run screenshot artifact is `14180376315` (`minglora-live-gift-model-render-evidence`, approximately 6.76 MB; 27 PNGs). The failure is isolated to request-cancellation accounting at the final assertion, not an HTTP error assertion or an earlier model-render assertion. Two bounded correction attempts have been used for this test operation; do not continue blind retries or weaken the network-failure gate. The next repair must establish request lifecycle ownership deterministically, or replace the single-page source-switch test with an isolated model/page lifecycle and a bounded test strategy before a further run is authorized.
+
+### Work completed in this continuation
+
+- Re-read this checkpoint and verified current PR metadata, changed files, patches, current head, workflow jobs and logs from GitHub.
+- Retrieved and visually inspected the generated contact sheets for desktop, tablet and mobile model renders. All 27 captures exist; the nine models render at the tested viewport sizes. The observed forms remain below the requested premium-art standard and are not human-approved.
+- Reconfirmed source inventory and gaps from the current repository reports: 1,121 reference screenshots, 132 gift-capture images, 1,509 quarantined artwork crops, 9 guest-layout diagrams, 71 badge references, 20 League captures; 1,748 source catalogue records (1,737 marked active, 11 retired); 9 individually authored gift-model sources and 1,739 generic/procedural catalogue models; 16 LIVE room control icons, 22 category icons and 12 tool shortcuts.
+- Reconfirmed the remaining full-catalogue art, human visual review, rights, mastered audio, Lottie/Rive/GLTF animation-channel, device-QA and production version-3 approval requirements from the existing audit reports.
+- No production application routes, catalogue rows, prices, wallet balances, transactions, payouts, user data, Supabase configuration or deployment target were changed.
+
+### Current task register
+
+| Task | Status | Evidence / remaining work |
+|---|---|---|
+| 1. Locate Minglora repository and supplied source inventories | VERIFIED COMPLETE | Repository identity, source inventories and reference/audit reports inspected |
+| 2. Preserve source references and branding exclusions | VERIFIED COMPLETE | References remain read-only; production use of branded captures/crops is prohibited |
+| 3. Maintain LIVE asset generation and manifest pipeline | VERIFIED BASELINE | Standard CI generated gifts, motion index, Sound Studio pack and LIVE manifest; this does not prove premium approval |
+| 4. Verify current bespoke model rendering | PARTIAL / BLOCKED | 27 screenshots produced; final network-cancellation assertion failed twice |
+| 5. Premium artwork and full 18-theme catalogue | INCOMPLETE | Most catalogue geometry/artwork remains procedural/template-based; 9 bespoke models only; visual/rights review pending |
+| 6. Full LIVE icon/state, animation and mastered-audio libraries | INCOMPLETE | Existing packs/runtime are partial; complete state coverage, standalone animation exports and mastered per-gift audio not verified |
+| 7. Device and human visual acceptance | NOT STARTED / BLOCKED | No real-device acceptance for Android, iPhone, tablet, foldable, desktop/laptop or supported TV |
+| 8. PR synchronization, merge and deployment | BLOCKED BY QUALITY GATES | PR #367 is divergent and dedicated render QA is failed; do not merge/deploy |
+
+**Next exact action:** diagnose and implement a deterministic request lifecycle strategy for the model renderer test without suppressing real failures; separately continue original premium gift art production and review in small, testable increments. Preserve this checkpoint and do not activate production catalogue entries until all version-3 release gates pass.
+
+
 ## Verified source inventory
 
 - `assets/reference/`: 1,121 screenshots (1,071 Android JPEG, 29 desktop TikTok PNG, 21 desktop Facebook PNG).
