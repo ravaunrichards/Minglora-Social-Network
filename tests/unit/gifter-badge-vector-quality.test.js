@@ -53,7 +53,7 @@ test("all Gifter identity surfaces use the SVG sprite and keep their established
   assert.ok(html.includes("/top-gifters.js?v=20261115-gifter-badge-vector-sprite-1"));
   assert.ok(html.includes("/gifter-progression.js?v=20261115-gifter-reference-placement-1"));
   assert.ok(sw.includes("SHELL.push('/assets/gifter-badges/badges.svg')"));
-  assert.ok(sw.includes("minglora-shell-v319-self-updating-1"));
+  assert.ok(sw.includes("minglora-shell-v320-self-updating-1"));
   assert.ok(sw.includes("/app.js?v=20261115-gifter-badge-vector-sprite-1"));
   assert.ok(sw.includes("/top-gifters.js?v=20261115-gifter-badge-vector-sprite-1"));
   assert.ok(sw.includes("/gifter-progression.js?v=20261115-gifter-reference-placement-1"));
