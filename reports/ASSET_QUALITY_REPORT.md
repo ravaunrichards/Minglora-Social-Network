@@ -141,3 +141,21 @@ The model remains `design-review-pending`. No high-resolution texture maps/KTX2 
 The new source `assets/3d-assets/gift-models/beach-maracas-model.mjs` creates a self-contained glTF 2.0 crossed pair of gourd shakers, distinct coral and lagoon shells, hardwood handles, woven grip rings, individually positioned seed motifs, sunburst rays, gold ferrules and conch detail. All geometry is embedded and materials specify PBR metallic/roughness factors. Original subject-specific SVG and transparent icon are generated.
 
 Source remains `design-review-pending`. High-resolution texture maps/KTX2, embedded animation channels, mastered audio and human visual/rights clearance are not claimed. Physical Android/iOS/tablet/foldable/desktop/TV rendering and sound QA remain outstanding.
+## Legacy standalone gift-model technical findings — 2026-11-15
+
+The 45 standalone files in `public/assets/gifts/` pass JSON/glTF 2.0 structure checks but are not complete cinematic animation packages:
+
+| Check | Verified result |
+|---|---:|
+| GLTF 2.0 documents | 45 / 45 |
+| Files with mesh geometry | 45 / 45 |
+| Total meshes | 531 |
+| Total nodes | 342 |
+| Total materials | 196 |
+| Texture / image files | 0 |
+| Embedded animation channels | 0 |
+| Models with some position accessor min/max | 38 |
+| Models without position accessor min/max | 7 |
+| World-space dimensions evaluated with node transforms | 0 |
+
+Every model has one buffer. These files are static glTF mesh assets; the separate Minglora application animation runtime is required to animate them. Position accessor bounds are not world-space dimensions. Technical review, actual renderer screenshots, visual review and rights review remain outstanding; all models remain excluded from production approval.

@@ -112,3 +112,68 @@ test('legacy model files map to unique historical gift identities without implyi
     }
   }
 });
+
+
+test('legacy GLTF technical profiles match the actual source documents', () => {
+  const summary = manifest.technical_audit_summary;
+  assert.equal(summary.audited_model_count, 45);
+  assert.equal(summary.gltf_version, '2.0');
+  assert.equal(summary.models_with_mesh_geometry, 45);
+  assert.equal(summary.texture_files, 0);
+  assert.equal(summary.image_files, 0);
+  assert.equal(summary.embedded_animation_channels, 0);
+  assert.equal(summary.buffers_per_model, 1);
+  assert.equal(summary.models_with_position_accessor_bounds, 38);
+  assert.equal(summary.models_without_position_accessor_bounds, 7);
+  assert.equal(summary.world_space_dimensions_verified, 0);
+
+  const totals = { mesh_count: 0, node_count: 0, material_count: 0, buffer_bytes: 0 };
+  for (const asset of manifest.assets) {
+    const doc = JSON.parse(fs.readFileSync(path.join(root, asset.repository_path), 'utf8'));
+    const profile = asset.technical_profile;
+    assert.ok(profile, asset.file_name + ' must have a technical profile');
+    assert.equal(doc.asset?.version, profile.gltf_version);
+    assert.equal(doc.meshes?.length || 0, profile.mesh_count);
+    assert.equal(doc.nodes?.length || 0, profile.node_count);
+    assert.equal(doc.materials?.length || 0, profile.material_count);
+    assert.equal(doc.textures?.length || 0, profile.texture_count);
+    assert.equal(doc.images?.length || 0, profile.image_count);
+    assert.equal(doc.animations?.length || 0, profile.embedded_animation_count);
+    assert.equal(doc.buffers?.length || 0, profile.buffer_count);
+    assert.equal((doc.buffers || []).reduce((sum, buffer) => sum + Number(buffer.byteLength || 0), 0), profile.buffer_bytes);
+
+    let boundedPositionAccessors = 0;
+    const localMin = [Infinity, Infinity, Infinity];
+    const localMax = [-Infinity, -Infinity, -Infinity];
+    for (const mesh of doc.meshes || []) {
+      for (const primitive of mesh.primitives || []) {
+        const index = primitive.attributes?.POSITION;
+        const accessor = doc.accessors?.[index];
+        if (!Array.isArray(accessor?.min) || !Array.isArray(accessor?.max)) continue;
+        boundedPositionAccessors += 1;
+        for (let axis = 0; axis < 3; axis += 1) {
+          localMin[axis] = Math.min(localMin[axis], Number(accessor.min[axis]));
+          localMax[axis] = Math.max(localMax[axis], Number(accessor.max[axis]));
+        }
+      }
+    }
+    assert.equal(boundedPositionAccessors, profile.position_accessors_with_bounds, asset.file_name + ' position-bound count must match');
+    if (boundedPositionAccessors > 0) {
+      assert.deepEqual(profile.accessor_local_bounds.min, localMin);
+      assert.deepEqual(profile.accessor_local_bounds.max, localMax);
+    } else {
+      assert.equal(profile.accessor_local_bounds, null);
+    }
+    assert.equal(profile.world_space_dimensions, null, 'world-space dimensions must not be guessed');
+    totals.mesh_count += profile.mesh_count;
+    totals.node_count += profile.node_count;
+    totals.material_count += profile.material_count;
+    totals.buffer_bytes += profile.buffer_bytes;
+  }
+  assert.deepEqual(totals, {
+    mesh_count: summary.total_meshes,
+    node_count: summary.total_nodes,
+    material_count: summary.total_materials,
+    buffer_bytes: summary.total_buffer_bytes
+  });
+});

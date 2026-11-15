@@ -43,7 +43,38 @@
           "active_at_migration": true
         }
       },
-      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot"
+      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot",
+      "technical_profile": {
+        "gltf_version": "2.0",
+        "mesh_count": 12,
+        "node_count": 7,
+        "material_count": 4,
+        "texture_count": 0,
+        "image_count": 0,
+        "embedded_animation_count": 0,
+        "buffer_count": 1,
+        "buffer_bytes": 15264,
+        "position_accessors_with_bounds": 12,
+        "accessor_local_bounds": {
+          "min": [
+            -1,
+            -1,
+            -1
+          ],
+          "max": [
+            1,
+            1,
+            1
+          ],
+          "size": [
+            2,
+            2,
+            2
+          ]
+        },
+        "world_space_dimensions": null,
+        "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
+      }
     },
     {
       "id": "minglora-blue-mountain-coffee",
@@ -64,7 +95,38 @@
         "mapping_basis": "model_url_case",
         "historical_seed": null
       },
-      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot"
+      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot",
+      "technical_profile": {
+        "gltf_version": "2.0",
+        "mesh_count": 15,
+        "node_count": 6,
+        "material_count": 5,
+        "texture_count": 0,
+        "image_count": 0,
+        "embedded_animation_count": 0,
+        "buffer_count": 1,
+        "buffer_bytes": 17856,
+        "position_accessors_with_bounds": 15,
+        "accessor_local_bounds": {
+          "min": [
+            -1,
+            -1,
+            -1
+          ],
+          "max": [
+            1,
+            1,
+            1
+          ],
+          "size": [
+            2,
+            2,
+            2
+          ]
+        },
+        "world_space_dimensions": null,
+        "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
+      }
     },
     {
       "id": "minglora-caribbean-crown",
@@ -93,7 +155,38 @@
           "active_at_migration": true
         }
       },
-      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot"
+      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot",
+      "technical_profile": {
+        "gltf_version": "2.0",
+        "mesh_count": 12,
+        "node_count": 11,
+        "material_count": 4,
+        "texture_count": 0,
+        "image_count": 0,
+        "embedded_animation_count": 0,
+        "buffer_count": 1,
+        "buffer_bytes": 6624,
+        "position_accessors_with_bounds": 12,
+        "accessor_local_bounds": {
+          "min": [
+            -1,
+            -1,
+            -1
+          ],
+          "max": [
+            1,
+            1,
+            1
+          ],
+          "size": [
+            2,
+            2,
+            2
+          ]
+        },
+        "world_space_dimensions": null,
+        "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
+      }
     },
     {
       "id": "minglora-carnival-mask",
@@ -122,7 +215,38 @@
           "active_at_migration": true
         }
       },
-      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot"
+      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot",
+      "technical_profile": {
+        "gltf_version": "2.0",
+        "mesh_count": 18,
+        "node_count": 15,
+        "material_count": 6,
+        "texture_count": 0,
+        "image_count": 0,
+        "embedded_animation_count": 0,
+        "buffer_count": 1,
+        "buffer_bytes": 4032,
+        "position_accessors_with_bounds": 18,
+        "accessor_local_bounds": {
+          "min": [
+            -1,
+            -1,
+            -1
+          ],
+          "max": [
+            1,
+            1,
+            1
+          ],
+          "size": [
+            2,
+            2,
+            2
+          ]
+        },
+        "world_space_dimensions": null,
+        "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
+      }
     },
     {
       "id": "minglora-christmas-lantern",
@@ -151,7 +275,38 @@
           "active_at_migration": true
         }
       },
-      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot"
+      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot",
+      "technical_profile": {
+        "gltf_version": "2.0",
+        "mesh_count": 16,
+        "node_count": 6,
+        "material_count": 4,
+        "texture_count": 0,
+        "image_count": 0,
+        "embedded_animation_count": 0,
+        "buffer_count": 1,
+        "buffer_bytes": 17568,
+        "position_accessors_with_bounds": 16,
+        "accessor_local_bounds": {
+          "min": [
+            -1,
+            -1,
+            -1
+          ],
+          "max": [
+            1,
+            1,
+            1
+          ],
+          "size": [
+            2,
+            2,
+            2
+          ]
+        },
+        "world_space_dimensions": null,
+        "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
+      }
     },
     {
       "id": "minglora-confetti",
@@ -180,7 +335,22 @@
           "active_at_migration": true
         }
       },
-      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot"
+      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot",
+      "technical_profile": {
+        "gltf_version": "2.0",
+        "mesh_count": 21,
+        "node_count": 7,
+        "material_count": 7,
+        "texture_count": 0,
+        "image_count": 0,
+        "embedded_animation_count": 0,
+        "buffer_count": 1,
+        "buffer_bytes": 2880,
+        "position_accessors_with_bounds": 0,
+        "accessor_local_bounds": null,
+        "world_space_dimensions": null,
+        "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
+      }
     },
     {
       "id": "minglora-coral-castle",
@@ -209,7 +379,38 @@
           "active_at_migration": true
         }
       },
-      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot"
+      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot",
+      "technical_profile": {
+        "gltf_version": "2.0",
+        "mesh_count": 27,
+        "node_count": 9,
+        "material_count": 9,
+        "texture_count": 0,
+        "image_count": 0,
+        "embedded_animation_count": 0,
+        "buffer_count": 1,
+        "buffer_bytes": 6912,
+        "position_accessors_with_bounds": 27,
+        "accessor_local_bounds": {
+          "min": [
+            -1,
+            -1,
+            -1
+          ],
+          "max": [
+            1,
+            1,
+            1
+          ],
+          "size": [
+            2,
+            2,
+            2
+          ]
+        },
+        "world_space_dimensions": null,
+        "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
+      }
     },
     {
       "id": "minglora-cosmic-orbit",
@@ -230,7 +431,38 @@
         "mapping_basis": "model_url_case",
         "historical_seed": null
       },
-      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot"
+      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot",
+      "technical_profile": {
+        "gltf_version": "2.0",
+        "mesh_count": 12,
+        "node_count": 6,
+        "material_count": 6,
+        "texture_count": 0,
+        "image_count": 0,
+        "embedded_animation_count": 0,
+        "buffer_count": 1,
+        "buffer_bytes": 14400,
+        "position_accessors_with_bounds": 12,
+        "accessor_local_bounds": {
+          "min": [
+            -1,
+            -1,
+            -1
+          ],
+          "max": [
+            1,
+            1,
+            1
+          ],
+          "size": [
+            2,
+            2,
+            2
+          ]
+        },
+        "world_space_dimensions": null,
+        "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
+      }
     },
     {
       "id": "minglora-cricket-bat",
@@ -259,7 +491,38 @@
           "active_at_migration": true
         }
       },
-      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot"
+      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot",
+      "technical_profile": {
+        "gltf_version": "2.0",
+        "mesh_count": 12,
+        "node_count": 4,
+        "material_count": 4,
+        "texture_count": 0,
+        "image_count": 0,
+        "embedded_animation_count": 0,
+        "buffer_count": 1,
+        "buffer_bytes": 16416,
+        "position_accessors_with_bounds": 12,
+        "accessor_local_bounds": {
+          "min": [
+            -1,
+            -1,
+            -1
+          ],
+          "max": [
+            1,
+            1,
+            1
+          ],
+          "size": [
+            2,
+            2,
+            2
+          ]
+        },
+        "world_space_dimensions": null,
+        "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
+      }
     },
     {
       "id": "minglora-crystal-heart",
@@ -280,7 +543,38 @@
         "mapping_basis": "model_url_case",
         "historical_seed": null
       },
-      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot"
+      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot",
+      "technical_profile": {
+        "gltf_version": "2.0",
+        "mesh_count": 6,
+        "node_count": 4,
+        "material_count": 3,
+        "texture_count": 0,
+        "image_count": 0,
+        "embedded_animation_count": 0,
+        "buffer_count": 1,
+        "buffer_bytes": 3168,
+        "position_accessors_with_bounds": 6,
+        "accessor_local_bounds": {
+          "min": [
+            -1,
+            -1,
+            -1
+          ],
+          "max": [
+            1,
+            1,
+            1
+          ],
+          "size": [
+            2,
+            2,
+            2
+          ]
+        },
+        "world_space_dimensions": null,
+        "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
+      }
     },
     {
       "id": "minglora-crystal-snowflake",
@@ -309,7 +603,38 @@
           "active_at_migration": true
         }
       },
-      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot"
+      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot",
+      "technical_profile": {
+        "gltf_version": "2.0",
+        "mesh_count": 9,
+        "node_count": 10,
+        "material_count": 3,
+        "texture_count": 0,
+        "image_count": 0,
+        "embedded_animation_count": 0,
+        "buffer_count": 1,
+        "buffer_bytes": 6624,
+        "position_accessors_with_bounds": 9,
+        "accessor_local_bounds": {
+          "min": [
+            -1,
+            -1,
+            -1
+          ],
+          "max": [
+            1,
+            1,
+            1
+          ],
+          "size": [
+            2,
+            2,
+            2
+          ]
+        },
+        "world_space_dimensions": null,
+        "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
+      }
     },
     {
       "id": "minglora-diamond-basketball",
@@ -338,7 +663,38 @@
           "active_at_migration": true
         }
       },
-      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot"
+      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot",
+      "technical_profile": {
+        "gltf_version": "2.0",
+        "mesh_count": 9,
+        "node_count": 4,
+        "material_count": 3,
+        "texture_count": 0,
+        "image_count": 0,
+        "embedded_animation_count": 0,
+        "buffer_count": 1,
+        "buffer_bytes": 16128,
+        "position_accessors_with_bounds": 9,
+        "accessor_local_bounds": {
+          "min": [
+            -1,
+            -1,
+            -1
+          ],
+          "max": [
+            1,
+            1,
+            1
+          ],
+          "size": [
+            2,
+            2,
+            2
+          ]
+        },
+        "world_space_dimensions": null,
+        "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
+      }
     },
     {
       "id": "minglora-diamond-ring",
@@ -367,7 +723,38 @@
           "active_at_migration": true
         }
       },
-      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot"
+      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot",
+      "technical_profile": {
+        "gltf_version": "2.0",
+        "mesh_count": 8,
+        "node_count": 5,
+        "material_count": 4,
+        "texture_count": 0,
+        "image_count": 0,
+        "embedded_animation_count": 0,
+        "buffer_count": 1,
+        "buffer_bytes": 12672,
+        "position_accessors_with_bounds": 8,
+        "accessor_local_bounds": {
+          "min": [
+            -1,
+            -1,
+            -1
+          ],
+          "max": [
+            1,
+            1,
+            1
+          ],
+          "size": [
+            2,
+            2,
+            2
+          ]
+        },
+        "world_space_dimensions": null,
+        "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
+      }
     },
     {
       "id": "minglora-dolphin",
@@ -396,7 +783,38 @@
           "active_at_migration": true
         }
       },
-      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot"
+      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot",
+      "technical_profile": {
+        "gltf_version": "2.0",
+        "mesh_count": 10,
+        "node_count": 6,
+        "material_count": 5,
+        "texture_count": 0,
+        "image_count": 0,
+        "embedded_animation_count": 0,
+        "buffer_count": 1,
+        "buffer_bytes": 3168,
+        "position_accessors_with_bounds": 10,
+        "accessor_local_bounds": {
+          "min": [
+            -1,
+            -1,
+            -1
+          ],
+          "max": [
+            1,
+            1,
+            1
+          ],
+          "size": [
+            2,
+            2,
+            2
+          ]
+        },
+        "world_space_dimensions": null,
+        "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
+      }
     },
     {
       "id": "minglora-electric-guitar",
@@ -425,7 +843,38 @@
           "active_at_migration": true
         }
       },
-      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot"
+      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot",
+      "technical_profile": {
+        "gltf_version": "2.0",
+        "mesh_count": 12,
+        "node_count": 10,
+        "material_count": 4,
+        "texture_count": 0,
+        "image_count": 0,
+        "embedded_animation_count": 0,
+        "buffer_count": 1,
+        "buffer_bytes": 4896,
+        "position_accessors_with_bounds": 12,
+        "accessor_local_bounds": {
+          "min": [
+            -1,
+            -1,
+            -1
+          ],
+          "max": [
+            1,
+            1,
+            1
+          ],
+          "size": [
+            2,
+            2,
+            2
+          ]
+        },
+        "world_space_dimensions": null,
+        "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
+      }
     },
     {
       "id": "minglora-finger-heart",
@@ -454,7 +903,22 @@
           "active_at_migration": true
         }
       },
-      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot"
+      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot",
+      "technical_profile": {
+        "gltf_version": "2.0",
+        "mesh_count": 4,
+        "node_count": 4,
+        "material_count": 2,
+        "texture_count": 0,
+        "image_count": 0,
+        "embedded_animation_count": 0,
+        "buffer_count": 1,
+        "buffer_bytes": 2736,
+        "position_accessors_with_bounds": 0,
+        "accessor_local_bounds": null,
+        "world_space_dimensions": null,
+        "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
+      }
     },
     {
       "id": "minglora-fireworks",
@@ -475,7 +939,38 @@
         "mapping_basis": "model_url_case",
         "historical_seed": null
       },
-      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot"
+      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot",
+      "technical_profile": {
+        "gltf_version": "2.0",
+        "mesh_count": 12,
+        "node_count": 14,
+        "material_count": 4,
+        "texture_count": 0,
+        "image_count": 0,
+        "embedded_animation_count": 0,
+        "buffer_count": 1,
+        "buffer_bytes": 7488,
+        "position_accessors_with_bounds": 12,
+        "accessor_local_bounds": {
+          "min": [
+            -1,
+            -1,
+            -1
+          ],
+          "max": [
+            1,
+            1,
+            1
+          ],
+          "size": [
+            2,
+            2,
+            2
+          ]
+        },
+        "world_space_dimensions": null,
+        "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
+      }
     },
     {
       "id": "minglora-galaxy",
@@ -504,7 +999,22 @@
           "active_at_migration": true
         }
       },
-      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot"
+      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot",
+      "technical_profile": {
+        "gltf_version": "2.0",
+        "mesh_count": 21,
+        "node_count": 7,
+        "material_count": 7,
+        "texture_count": 0,
+        "image_count": 0,
+        "embedded_animation_count": 0,
+        "buffer_count": 1,
+        "buffer_bytes": 14112,
+        "position_accessors_with_bounds": 0,
+        "accessor_local_bounds": null,
+        "world_space_dimensions": null,
+        "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
+      }
     },
     {
       "id": "minglora-golden-microphone",
@@ -533,7 +1043,38 @@
           "active_at_migration": true
         }
       },
-      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot"
+      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot",
+      "technical_profile": {
+        "gltf_version": "2.0",
+        "mesh_count": 12,
+        "node_count": 5,
+        "material_count": 4,
+        "texture_count": 0,
+        "image_count": 0,
+        "embedded_animation_count": 0,
+        "buffer_count": 1,
+        "buffer_bytes": 16416,
+        "position_accessors_with_bounds": 12,
+        "accessor_local_bounds": {
+          "min": [
+            -1,
+            -1,
+            -1
+          ],
+          "max": [
+            1,
+            1,
+            1
+          ],
+          "size": [
+            2,
+            2,
+            2
+          ]
+        },
+        "world_space_dimensions": null,
+        "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
+      }
     },
     {
       "id": "minglora-golden-trophy",
@@ -554,7 +1095,38 @@
         "mapping_basis": "model_url_case",
         "historical_seed": null
       },
-      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot"
+      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot",
+      "technical_profile": {
+        "gltf_version": "2.0",
+        "mesh_count": 9,
+        "node_count": 8,
+        "material_count": 3,
+        "texture_count": 0,
+        "image_count": 0,
+        "embedded_animation_count": 0,
+        "buffer_count": 1,
+        "buffer_bytes": 18720,
+        "position_accessors_with_bounds": 9,
+        "accessor_local_bounds": {
+          "min": [
+            -1,
+            -1,
+            -1
+          ],
+          "max": [
+            1,
+            1,
+            1
+          ],
+          "size": [
+            2,
+            2,
+            2
+          ]
+        },
+        "world_space_dimensions": null,
+        "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
+      }
     },
     {
       "id": "minglora-hibiscus-bouquet",
@@ -583,7 +1155,38 @@
           "active_at_migration": true
         }
       },
-      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot"
+      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot",
+      "technical_profile": {
+        "gltf_version": "2.0",
+        "mesh_count": 6,
+        "node_count": 10,
+        "material_count": 3,
+        "texture_count": 0,
+        "image_count": 0,
+        "embedded_animation_count": 0,
+        "buffer_count": 1,
+        "buffer_bytes": 4032,
+        "position_accessors_with_bounds": 6,
+        "accessor_local_bounds": {
+          "min": [
+            -1,
+            -1,
+            -1
+          ],
+          "max": [
+            1,
+            1,
+            1
+          ],
+          "size": [
+            2,
+            2,
+            2
+          ]
+        },
+        "world_space_dimensions": null,
+        "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
+      }
     },
     {
       "id": "minglora-hummingbird",
@@ -612,7 +1215,38 @@
           "active_at_migration": true
         }
       },
-      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot"
+      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot",
+      "technical_profile": {
+        "gltf_version": "2.0",
+        "mesh_count": 14,
+        "node_count": 7,
+        "material_count": 7,
+        "texture_count": 0,
+        "image_count": 0,
+        "embedded_animation_count": 0,
+        "buffer_count": 1,
+        "buffer_bytes": 3168,
+        "position_accessors_with_bounds": 14,
+        "accessor_local_bounds": {
+          "min": [
+            -1,
+            -1,
+            -1
+          ],
+          "max": [
+            1,
+            1,
+            1
+          ],
+          "size": [
+            2,
+            2,
+            2
+          ]
+        },
+        "world_space_dimensions": null,
+        "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
+      }
     },
     {
       "id": "minglora-island-pride",
@@ -641,7 +1275,38 @@
           "active_at_migration": true
         }
       },
-      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot"
+      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot",
+      "technical_profile": {
+        "gltf_version": "2.0",
+        "mesh_count": 16,
+        "node_count": 6,
+        "material_count": 4,
+        "texture_count": 0,
+        "image_count": 0,
+        "embedded_animation_count": 0,
+        "buffer_count": 1,
+        "buffer_bytes": 6336,
+        "position_accessors_with_bounds": 16,
+        "accessor_local_bounds": {
+          "min": [
+            -1,
+            -1,
+            -1
+          ],
+          "max": [
+            1,
+            1,
+            1
+          ],
+          "size": [
+            2,
+            2,
+            2
+          ]
+        },
+        "world_space_dimensions": null,
+        "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
+      }
     },
     {
       "id": "minglora-jade-dragon",
@@ -670,7 +1335,38 @@
           "active_at_migration": true
         }
       },
-      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot"
+      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot",
+      "technical_profile": {
+        "gltf_version": "2.0",
+        "mesh_count": 9,
+        "node_count": 8,
+        "material_count": 3,
+        "texture_count": 0,
+        "image_count": 0,
+        "embedded_animation_count": 0,
+        "buffer_count": 1,
+        "buffer_bytes": 15264,
+        "position_accessors_with_bounds": 9,
+        "accessor_local_bounds": {
+          "min": [
+            -1,
+            -1,
+            -1
+          ],
+          "max": [
+            1,
+            1,
+            1
+          ],
+          "size": [
+            2,
+            2,
+            2
+          ]
+        },
+        "world_space_dimensions": null,
+        "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
+      }
     },
     {
       "id": "minglora-money-gun",
@@ -699,7 +1395,22 @@
           "active_at_migration": true
         }
       },
-      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot"
+      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot",
+      "technical_profile": {
+        "gltf_version": "2.0",
+        "mesh_count": 15,
+        "node_count": 7,
+        "material_count": 5,
+        "texture_count": 0,
+        "image_count": 0,
+        "embedded_animation_count": 0,
+        "buffer_count": 1,
+        "buffer_bytes": 5760,
+        "position_accessors_with_bounds": 0,
+        "accessor_local_bounds": null,
+        "world_space_dimensions": null,
+        "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
+      }
     },
     {
       "id": "minglora-money-rain",
@@ -728,7 +1439,38 @@
           "active_at_migration": true
         }
       },
-      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot"
+      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot",
+      "technical_profile": {
+        "gltf_version": "2.0",
+        "mesh_count": 9,
+        "node_count": 6,
+        "material_count": 3,
+        "texture_count": 0,
+        "image_count": 0,
+        "embedded_animation_count": 0,
+        "buffer_count": 1,
+        "buffer_bytes": 14400,
+        "position_accessors_with_bounds": 9,
+        "accessor_local_bounds": {
+          "min": [
+            -1,
+            -1,
+            -1
+          ],
+          "max": [
+            1,
+            1,
+            1
+          ],
+          "size": [
+            2,
+            2,
+            2
+          ]
+        },
+        "world_space_dimensions": null,
+        "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
+      }
     },
     {
       "id": "minglora-ocean-shark",
@@ -757,7 +1499,38 @@
           "active_at_migration": true
         }
       },
-      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot"
+      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot",
+      "technical_profile": {
+        "gltf_version": "2.0",
+        "mesh_count": 6,
+        "node_count": 6,
+        "material_count": 3,
+        "texture_count": 0,
+        "image_count": 0,
+        "embedded_animation_count": 0,
+        "buffer_count": 1,
+        "buffer_bytes": 3168,
+        "position_accessors_with_bounds": 6,
+        "accessor_local_bounds": {
+          "min": [
+            -1,
+            -1,
+            -1
+          ],
+          "max": [
+            1,
+            1,
+            1
+          ],
+          "size": [
+            2,
+            2,
+            2
+          ]
+        },
+        "world_space_dimensions": null,
+        "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
+      }
     },
     {
       "id": "minglora-parish-pride-crest",
@@ -786,7 +1559,38 @@
           "active_at_migration": true
         }
       },
-      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot"
+      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot",
+      "technical_profile": {
+        "gltf_version": "2.0",
+        "mesh_count": 16,
+        "node_count": 4,
+        "material_count": 4,
+        "texture_count": 0,
+        "image_count": 0,
+        "embedded_animation_count": 0,
+        "buffer_count": 1,
+        "buffer_bytes": 17568,
+        "position_accessors_with_bounds": 16,
+        "accessor_local_bounds": {
+          "min": [
+            -1,
+            -1,
+            -1
+          ],
+          "max": [
+            1,
+            1,
+            1
+          ],
+          "size": [
+            2,
+            2,
+            2
+          ]
+        },
+        "world_space_dimensions": null,
+        "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
+      }
     },
     {
       "id": "minglora-pegasus",
@@ -815,7 +1619,38 @@
           "active_at_migration": true
         }
       },
-      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot"
+      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot",
+      "technical_profile": {
+        "gltf_version": "2.0",
+        "mesh_count": 8,
+        "node_count": 7,
+        "material_count": 4,
+        "texture_count": 0,
+        "image_count": 0,
+        "embedded_animation_count": 0,
+        "buffer_count": 1,
+        "buffer_bytes": 3168,
+        "position_accessors_with_bounds": 8,
+        "accessor_local_bounds": {
+          "min": [
+            -1,
+            -1,
+            -1
+          ],
+          "max": [
+            1,
+            1,
+            1
+          ],
+          "size": [
+            2,
+            2,
+            2
+          ]
+        },
+        "world_space_dimensions": null,
+        "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
+      }
     },
     {
       "id": "minglora-perfume",
@@ -844,7 +1679,22 @@
           "active_at_migration": true
         }
       },
-      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot"
+      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot",
+      "technical_profile": {
+        "gltf_version": "2.0",
+        "mesh_count": 9,
+        "node_count": 5,
+        "material_count": 3,
+        "texture_count": 0,
+        "image_count": 0,
+        "embedded_animation_count": 0,
+        "buffer_count": 1,
+        "buffer_bytes": 14112,
+        "position_accessors_with_bounds": 0,
+        "accessor_local_bounds": null,
+        "world_space_dimensions": null,
+        "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
+      }
     },
     {
       "id": "minglora-phoenix",
@@ -873,7 +1723,38 @@
           "active_at_migration": true
         }
       },
-      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot"
+      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot",
+      "technical_profile": {
+        "gltf_version": "2.0",
+        "mesh_count": 8,
+        "node_count": 11,
+        "material_count": 4,
+        "texture_count": 0,
+        "image_count": 0,
+        "embedded_animation_count": 0,
+        "buffer_count": 1,
+        "buffer_bytes": 3168,
+        "position_accessors_with_bounds": 8,
+        "accessor_local_bounds": {
+          "min": [
+            -1,
+            -1,
+            -1
+          ],
+          "max": [
+            1,
+            1,
+            1
+          ],
+          "size": [
+            2,
+            2,
+            2
+          ]
+        },
+        "world_space_dimensions": null,
+        "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
+      }
     },
     {
       "id": "minglora-prism-butterfly",
@@ -902,7 +1783,38 @@
           "active_at_migration": true
         }
       },
-      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot"
+      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot",
+      "technical_profile": {
+        "gltf_version": "2.0",
+        "mesh_count": 15,
+        "node_count": 7,
+        "material_count": 5,
+        "texture_count": 0,
+        "image_count": 0,
+        "embedded_animation_count": 0,
+        "buffer_count": 1,
+        "buffer_bytes": 6624,
+        "position_accessors_with_bounds": 15,
+        "accessor_local_bounds": {
+          "min": [
+            -1,
+            -1,
+            -1
+          ],
+          "max": [
+            1,
+            1,
+            1
+          ],
+          "size": [
+            2,
+            2,
+            2
+          ]
+        },
+        "world_space_dimensions": null,
+        "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
+      }
     },
     {
       "id": "minglora-private-jet",
@@ -931,7 +1843,38 @@
           "active_at_migration": true
         }
       },
-      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot"
+      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot",
+      "technical_profile": {
+        "gltf_version": "2.0",
+        "mesh_count": 9,
+        "node_count": 6,
+        "material_count": 3,
+        "texture_count": 0,
+        "image_count": 0,
+        "embedded_animation_count": 0,
+        "buffer_count": 1,
+        "buffer_bytes": 6912,
+        "position_accessors_with_bounds": 9,
+        "accessor_local_bounds": {
+          "min": [
+            -1,
+            -1,
+            -1
+          ],
+          "max": [
+            1,
+            1,
+            1
+          ],
+          "size": [
+            2,
+            2,
+            2
+          ]
+        },
+        "world_space_dimensions": null,
+        "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
+      }
     },
     {
       "id": "minglora-reggae-drum",
@@ -960,7 +1903,38 @@
           "active_at_migration": true
         }
       },
-      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot"
+      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot",
+      "technical_profile": {
+        "gltf_version": "2.0",
+        "mesh_count": 4,
+        "node_count": 14,
+        "material_count": 4,
+        "texture_count": 0,
+        "image_count": 0,
+        "embedded_animation_count": 0,
+        "buffer_count": 1,
+        "buffer_bytes": 3456,
+        "position_accessors_with_bounds": 4,
+        "accessor_local_bounds": {
+          "min": [
+            -1,
+            -1,
+            -1
+          ],
+          "max": [
+            1,
+            1,
+            1
+          ],
+          "size": [
+            2,
+            2,
+            2
+          ]
+        },
+        "world_space_dimensions": null,
+        "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
+      }
     },
     {
       "id": "minglora-reggae-parrot",
@@ -989,7 +1963,38 @@
           "active_at_migration": true
         }
       },
-      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot"
+      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot",
+      "technical_profile": {
+        "gltf_version": "2.0",
+        "mesh_count": 12,
+        "node_count": 6,
+        "material_count": 6,
+        "texture_count": 0,
+        "image_count": 0,
+        "embedded_animation_count": 0,
+        "buffer_count": 1,
+        "buffer_bytes": 3168,
+        "position_accessors_with_bounds": 12,
+        "accessor_local_bounds": {
+          "min": [
+            -1,
+            -1,
+            -1
+          ],
+          "max": [
+            1,
+            1,
+            1
+          ],
+          "size": [
+            2,
+            2,
+            2
+          ]
+        },
+        "world_space_dimensions": null,
+        "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
+      }
     },
     {
       "id": "minglora-rocket",
@@ -1018,7 +2023,38 @@
           "active_at_migration": true
         }
       },
-      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot"
+      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot",
+      "technical_profile": {
+        "gltf_version": "2.0",
+        "mesh_count": 16,
+        "node_count": 6,
+        "material_count": 4,
+        "texture_count": 0,
+        "image_count": 0,
+        "embedded_animation_count": 0,
+        "buffer_count": 1,
+        "buffer_bytes": 7488,
+        "position_accessors_with_bounds": 16,
+        "accessor_local_bounds": {
+          "min": [
+            -1,
+            -1,
+            -1
+          ],
+          "max": [
+            1,
+            1,
+            1
+          ],
+          "size": [
+            2,
+            2,
+            2
+          ]
+        },
+        "world_space_dimensions": null,
+        "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
+      }
     },
     {
       "id": "minglora-royal-lion",
@@ -1039,7 +2075,38 @@
         "mapping_basis": "model_url_case",
         "historical_seed": null
       },
-      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot"
+      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot",
+      "technical_profile": {
+        "gltf_version": "2.0",
+        "mesh_count": 10,
+        "node_count": 8,
+        "material_count": 5,
+        "texture_count": 0,
+        "image_count": 0,
+        "embedded_animation_count": 0,
+        "buffer_count": 1,
+        "buffer_bytes": 14400,
+        "position_accessors_with_bounds": 10,
+        "accessor_local_bounds": {
+          "min": [
+            -1,
+            -1,
+            -1
+          ],
+          "max": [
+            1,
+            1,
+            1
+          ],
+          "size": [
+            2,
+            2,
+            2
+          ]
+        },
+        "world_space_dimensions": null,
+        "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
+      }
     },
     {
       "id": "minglora-royal-peacock",
@@ -1068,7 +2135,38 @@
           "active_at_migration": true
         }
       },
-      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot"
+      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot",
+      "technical_profile": {
+        "gltf_version": "2.0",
+        "mesh_count": 8,
+        "node_count": 12,
+        "material_count": 4,
+        "texture_count": 0,
+        "image_count": 0,
+        "embedded_animation_count": 0,
+        "buffer_count": 1,
+        "buffer_bytes": 4032,
+        "position_accessors_with_bounds": 8,
+        "accessor_local_bounds": {
+          "min": [
+            -1,
+            -1,
+            -1
+          ],
+          "max": [
+            1,
+            1,
+            1
+          ],
+          "size": [
+            2,
+            2,
+            2
+          ]
+        },
+        "world_space_dimensions": null,
+        "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
+      }
     },
     {
       "id": "minglora-royal-rose",
@@ -1089,7 +2187,38 @@
         "mapping_basis": "model_url_case",
         "historical_seed": null
       },
-      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot"
+      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot",
+      "technical_profile": {
+        "gltf_version": "2.0",
+        "mesh_count": 8,
+        "node_count": 12,
+        "material_count": 4,
+        "texture_count": 0,
+        "image_count": 0,
+        "embedded_animation_count": 0,
+        "buffer_count": 1,
+        "buffer_bytes": 4032,
+        "position_accessors_with_bounds": 8,
+        "accessor_local_bounds": {
+          "min": [
+            -1,
+            -1,
+            -1
+          ],
+          "max": [
+            1,
+            1,
+            1
+          ],
+          "size": [
+            2,
+            2,
+            2
+          ]
+        },
+        "world_space_dimensions": null,
+        "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
+      }
     },
     {
       "id": "minglora-silver-falcon",
@@ -1118,7 +2247,38 @@
           "active_at_migration": true
         }
       },
-      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot"
+      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot",
+      "technical_profile": {
+        "gltf_version": "2.0",
+        "mesh_count": 12,
+        "node_count": 7,
+        "material_count": 6,
+        "texture_count": 0,
+        "image_count": 0,
+        "embedded_animation_count": 0,
+        "buffer_count": 1,
+        "buffer_bytes": 3168,
+        "position_accessors_with_bounds": 12,
+        "accessor_local_bounds": {
+          "min": [
+            -1,
+            -1,
+            -1
+          ],
+          "max": [
+            1,
+            1,
+            1
+          ],
+          "size": [
+            2,
+            2,
+            2
+          ]
+        },
+        "world_space_dimensions": null,
+        "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
+      }
     },
     {
       "id": "minglora-soccer-ball",
@@ -1147,7 +2307,38 @@
           "active_at_migration": true
         }
       },
-      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot"
+      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot",
+      "technical_profile": {
+        "gltf_version": "2.0",
+        "mesh_count": 2,
+        "node_count": 6,
+        "material_count": 2,
+        "texture_count": 0,
+        "image_count": 0,
+        "embedded_animation_count": 0,
+        "buffer_count": 1,
+        "buffer_bytes": 576,
+        "position_accessors_with_bounds": 2,
+        "accessor_local_bounds": {
+          "min": [
+            -1,
+            -1,
+            -1
+          ],
+          "max": [
+            1,
+            1,
+            1
+          ],
+          "size": [
+            2,
+            2,
+            2
+          ]
+        },
+        "world_space_dimensions": null,
+        "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
+      }
     },
     {
       "id": "minglora-sports-car",
@@ -1176,7 +2367,38 @@
           "active_at_migration": true
         }
       },
-      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot"
+      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot",
+      "technical_profile": {
+        "gltf_version": "2.0",
+        "mesh_count": 8,
+        "node_count": 12,
+        "material_count": 4,
+        "texture_count": 0,
+        "image_count": 0,
+        "embedded_animation_count": 0,
+        "buffer_count": 1,
+        "buffer_bytes": 4320,
+        "position_accessors_with_bounds": 8,
+        "accessor_local_bounds": {
+          "min": [
+            -1,
+            -1,
+            -1
+          ],
+          "max": [
+            1,
+            1,
+            1
+          ],
+          "size": [
+            2,
+            2,
+            2
+          ]
+        },
+        "world_space_dimensions": null,
+        "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
+      }
     },
     {
       "id": "minglora-thunder-falcon",
@@ -1205,7 +2427,22 @@
           "active_at_migration": true
         }
       },
-      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot"
+      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot",
+      "technical_profile": {
+        "gltf_version": "2.0",
+        "mesh_count": 18,
+        "node_count": 8,
+        "material_count": 6,
+        "texture_count": 0,
+        "image_count": 0,
+        "embedded_animation_count": 0,
+        "buffer_count": 1,
+        "buffer_bytes": 4032,
+        "position_accessors_with_bounds": 0,
+        "accessor_local_bounds": null,
+        "world_space_dimensions": null,
+        "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
+      }
     },
     {
       "id": "minglora-tropical-sunset",
@@ -1234,7 +2471,38 @@
           "active_at_migration": true
         }
       },
-      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot"
+      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot",
+      "technical_profile": {
+        "gltf_version": "2.0",
+        "mesh_count": 20,
+        "node_count": 5,
+        "material_count": 5,
+        "texture_count": 0,
+        "image_count": 0,
+        "embedded_animation_count": 0,
+        "buffer_count": 1,
+        "buffer_bytes": 19584,
+        "position_accessors_with_bounds": 20,
+        "accessor_local_bounds": {
+          "min": [
+            -1,
+            -1,
+            -1
+          ],
+          "max": [
+            1,
+            1,
+            1
+          ],
+          "size": [
+            2,
+            2,
+            2
+          ]
+        },
+        "world_space_dimensions": null,
+        "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
+      }
     },
     {
       "id": "minglora-zeus",
@@ -1263,7 +2531,22 @@
           "active_at_migration": true
         }
       },
-      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot"
+      "current_production_catalogue_status": "absent_in_2026-11-15_database_snapshot",
+      "technical_profile": {
+        "gltf_version": "2.0",
+        "mesh_count": 16,
+        "node_count": 8,
+        "material_count": 4,
+        "texture_count": 0,
+        "image_count": 0,
+        "embedded_animation_count": 0,
+        "buffer_count": 1,
+        "buffer_bytes": 14976,
+        "position_accessors_with_bounds": 0,
+        "accessor_local_bounds": null,
+        "world_space_dimensions": null,
+        "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
+      }
     }
   ],
   "catalogue_identity_provenance": {
@@ -1279,5 +2562,22 @@
     "production_database_query_date": "2026-11-15",
     "matching_codes_in_public_live_gift_catalog": 0,
     "interpretation": "The historical migrations map all 45 model files to unique gift codes. The current connected Supabase live_gift_catalog snapshot returned zero rows for these 45 codes. Historical seed values are provenance only, not current production prices or activation."
+  },
+  "technical_audit_summary": {
+    "audited_model_count": 45,
+    "gltf_version": "2.0",
+    "models_with_mesh_geometry": 45,
+    "total_meshes": 531,
+    "total_nodes": 342,
+    "total_materials": 196,
+    "texture_files": 0,
+    "image_files": 0,
+    "embedded_animation_channels": 0,
+    "buffers_per_model": 1,
+    "total_buffer_bytes": 394992,
+    "models_with_position_accessor_bounds": 38,
+    "models_without_position_accessor_bounds": 7,
+    "world_space_dimensions_verified": 0,
+    "conclusion": "These are static glTF mesh packages. They contain no texture/image assets or embedded animation channels. Accessor-local bounds are recorded where present, but world-space dimensions require node-transform evaluation and have not been verified."
   }
 }
