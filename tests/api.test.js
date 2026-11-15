@@ -103,6 +103,20 @@ test('API supports empty startup, registration, feed, posting, reactions, commen
   assert.equal(initialLeague.body.profile.leagueClass, 'D5');
   assert.equal(initialLeague.body.profile.matchRank, 'Bronze III');
 
+  const weeklyLeagueLeaderboard = await request('/api/leagues/leaderboard?period=weekly&class=D5');
+  assert.equal(weeklyLeagueLeaderboard.status, 200, JSON.stringify(weeklyLeagueLeaderboard.body));
+  assert.equal(weeklyLeagueLeaderboard.body.period, 'weekly');
+  assert.equal(weeklyLeagueLeaderboard.body.leagueClass, 'D5');
+  assert.ok(weeklyLeagueLeaderboard.body.leaderboard.some(item => item.id === registration.body.user.id));
+
+  const dailyLeagueLeaderboard = await request('/api/leagues/leaderboard?period=daily&class=D5');
+  assert.equal(dailyLeagueLeaderboard.status, 200, JSON.stringify(dailyLeagueLeaderboard.body));
+  assert.equal(dailyLeagueLeaderboard.body.period, 'daily');
+  assert.equal(dailyLeagueLeaderboard.body.leagueClass, 'D5');
+
+  const invalidLeagueLeaderboard = await request('/api/leagues/leaderboard?period=monthly&class=D5');
+  assert.equal(invalidLeagueLeaderboard.status, 400);
+  assert.match(invalidLeagueLeaderboard.body.error, /daily or weekly/i);
 
   const duplicateUsername = await request('/api/auth/register', {
     method: 'POST',
