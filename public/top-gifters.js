@@ -44,8 +44,7 @@
     const badgeLevel = Math.max(0, Math.min(50, Math.floor(Number(badge?.level || item.level) || 0)));
     const earned = String(badge?.badgeName || item.badgeName || (badgeLevel ? "Level " + badgeLevel + " Gifter" : ""));
     const badgeMarkup = badgeLevel
-      ? "<span class='minglora-gifter-identity' aria-label='" + escapeHtml(earned) + "'><svg class='gp-profile-level-badge gp-profile-level-badge--compact' role='img' aria-label='Level " + badgeLevel + " gifter badge' title='" + escapeHtml(earned) + "' viewBox='0 0 170 76' xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' width='24' height='24'><use href='/assets/gifter-badges/badges.svg#level-" + String(badgeLevel).padStart(2, "0") + "' xlink:href='/assets/gifter-badges/badges.svg#level-" + String(badgeLevel).padStart(2, "0") + "'></use></svg><span class='minglora-gifter-badge-name'>"+
-        escapeHtml(earned) + "</span></span>"
+      ? "<span class='minglora-gifter-identity' aria-label='" + escapeHtml(earned) + "'><img class='gp-profile-level-badge gp-profile-level-badge--compact' src='/assets/gifter-badges/level_" + String(badgeLevel).padStart(2, "0") + ".png' alt='Level " + badgeLevel + " gifter badge' title='" + escapeHtml(earned) + "' loading='lazy' decoding='async' width='24' height='24'><span class='minglora-gifter-badge-name'>" +
       : "";
     const avatar = user.avatarUrl || user.avatar_url || user.avatar || user.profilePicture || "";
     const image = avatar
