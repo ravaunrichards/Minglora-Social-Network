@@ -88,9 +88,9 @@ This artifact is a generated inventory and path/integrity report, not evidence o
 
 - Canonical repository catalogue: 1,748 records (1,737 marked active in source, 11 retired).
 - Build pipeline generates 1,748 primary SVG artworks, 1,748 transparent SVG icons and 1,748 GLTF model files.
-- 1,739 GLTF models use shared procedural category geometry.
-- 9 gift-specific model sources have been authored: Rose, Hibiscus, Djembe Master, Palm Breeze, Gamer Otter, LIVE Island, Crystal Crown, Phoenix and Beach Maracas. Their presence is not human visual approval.
-- Existing standalone icon packs: 16 LIVE room controls, 22 gift-category icons and 12 LIVE tools shortcuts.
+- 1,738 GLTF models use shared procedural category geometry.
+- 10 gift-specific model sources have been authored: Rose, Hibiscus, Djembe Master, Palm Breeze, Gamer Otter, LIVE Island, Crystal Crown, Phoenix, Beach Maracas and Royal Lions Scepter. Their presence is not human visual approval.
+- Existing standalone icon packs: 18 LIVE room controls, 22 gift-category icons and 12 LIVE tools shortcuts. The Jamaican culture category icon now has original full-colour green/gold/black flag saltire artwork; visual and rights review remain pending.
 - Existing animation/effects runtime and 1,737 source-catalogue motion profiles are present. These do not establish a complete set of individually authored cinematic gift animations.
 - The generated manifest records human visual/licensing review as outstanding for the catalogue artwork and models.
 
