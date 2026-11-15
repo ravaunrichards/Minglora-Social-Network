@@ -113,6 +113,7 @@ await new Promise((resolve, reject) => {
 let browser;
 const results = [];
 const pageErrors = [];
+const browserConsoleMessages = [];
 try {
   browser = await chromium.launch({
     channel: 'chromium',
