@@ -1340,11 +1340,27 @@
 
   function renderCreatorJobs(jobs) {
     if (!jobs.length) return empty('No Creator Studio drafts yet.');
-    return '<div class="ai-network-list">' + jobs.map(job =>
-      '<article class="ai-network-list-row"><div><strong>' + esc(job.taskType.replaceAll('_', ' ')) + '</strong><p>' + esc(job.brief) +
-      '</p><small>Created ' + esc(date(job.createdAt)) + ' · ' + esc(job.providerExecution || 'not started') + '</small></div>' +
-      pill(job.status) + '</article>'
-    ).join('') + '</div>';
+    const canGenerate = Boolean(state.snapshot?.providerStatus?.manualDraftsAvailable);
+    return '<div class="ai-network-list">' + jobs.map(job => {
+      const output = job.output
+        ? '<section class="ai-network-draft-output"><strong>AI-generated draft · human review required</strong><pre>' + esc(job.output) + '</pre>' +
+          '<small>Model: ' + esc(job.providerModel || 'OpenAI') + ' · Tokens: ' +
+          esc(job.providerUsage?.total_tokens ?? 'not reported') + ' · Moderation: ' +
+          esc(job.moderation?.model || 'not recorded') + '</small></section>'
+        : '';
+      const error = job.providerExecution === 'failed' && job.providerError
+        ? '<p class="ai-network-alert ai-network-alert--warning" role="status">' + esc(job.providerError) + '</p>'
+        : '';
+      const canRetry = !job.output && job.providerExecution !== 'running';
+      const action = canRetry
+        ? '<button type="button" class="secondary" data-ai-action="creator-generate" data-id="' + esc(job.id) + '"' +
+          (canGenerate ? '' : ' disabled title="Configure OPENAI_API_KEY and OPENAI_DEFAULT_MODEL on the private server first."') + '>' +
+          (job.providerExecution === 'failed' ? 'Retry AI generation' : 'Generate with OpenAI') + '</button>'
+        : '';
+      return '<article class="ai-network-list-row"><div><strong>' + esc(job.taskType.replaceAll('_', ' ')) + '</strong><p>' + esc(job.brief) +
+        '</p><small>Created ' + esc(date(job.createdAt)) + ' · Provider execution: ' + esc(job.providerExecution || 'not started') + '</small>' +
+        error + output + action + '</div>' + pill(job.status) + '</article>';
+    }).join('') + '</div><p class="ai-network-note">Generated text is an unpublished AI draft. Review and edit it before any use. Minglora does not publish or schedule it automatically.</p>';
   }
 
   function renderEvents(events) {
@@ -2349,6 +2365,11 @@
       else if (action === 'bot-status') await request('/bots/' + encodeURIComponent(id) + '/status', { method:'PATCH', body:{ status:button.dataset.status } });
       else if (action === 'schedule-status') await request('/schedules/' + encodeURIComponent(id) + '/status', { method:'PATCH', body:{ status:button.dataset.status, reason:'Updated by the signed-in Minglora account.' } });
       else if (action === 'approval') await request('/approvals/' + encodeURIComponent(id), { method:'PATCH', body:{ decision:button.dataset.decision } });
+      else if (action === 'creator-generate') {
+        if (!id) throw new Error('A valid Creator Studio draft is required.');
+        if (!window.confirm('Generate an AI draft for human review? This sends the saved brief to OpenAI. Nothing will be published.')) return;
+        await request('/creator-jobs/' + encodeURIComponent(id) + '/generate', { method:'POST', body:{} });
+      }
       else if (action === 'delegation-status') await request('/delegations/' + encodeURIComponent(id), { method:'PATCH', body:{ status:button.dataset.status, reason:'Updated by authorized Minglora platform administrator.' } });
       else if (action === 'emergency-pause') await request('/emergency-pause', { method:'POST', body:{ reason:'Owner initiated emergency pause from the AI Network command center.' } });
       else if (action === 'emergency-resume') await request('/emergency-resume', { method:'POST', body:{} });
