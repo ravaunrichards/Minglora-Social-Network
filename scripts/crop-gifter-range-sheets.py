@@ -49,6 +49,12 @@ def find_content_box(rgb: Image.Image):
 
 def make_contact_sheet(entries, originals, cropped):
     REVIEW.mkdir(parents=True, exist_ok=True)
+    before_dir, after_dir = REVIEW/"before", REVIEW/"after"
+    before_dir.mkdir(parents=True, exist_ok=True)
+    after_dir.mkdir(parents=True, exist_ok=True)
+    for filename in FILES:
+        originals[filename].save(before_dir/(Path(filename).stem + ".jpg"), quality=96, optimize=True)
+        cropped[filename].save(after_dir/(Path(filename).stem + ".jpg"), quality=96, optimize=True)
     cell_w, image_h, label_h = 620, 355, 42
     sheet = Image.new("RGB", (cell_w*3, (image_h+label_h)*2), "#f0f2f5")
     draw = ImageDraw.Draw(sheet)
