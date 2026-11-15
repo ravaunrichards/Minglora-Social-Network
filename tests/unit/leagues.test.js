@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  CREATOR_LEAGUE_CLASSES, MATCH_RANKS, creatorLeagueSeasonKey, ensureCreatorLeagueProfile,
+  CREATOR_LEAGUE_CLASSES, creatorLeagueSeasonKey, ensureCreatorLeagueProfile,
   recordLiveGiftForLeagues, refundCreatorLeagueGift, settleCreatorLeagueDay, creatorLeagueProgressForPoints, createCreatorLeagueMatch,
   acceptCreatorLeagueMatch, useCreatorLeaguePowerup, supportCreatorLeagueMatch,
   settleExpiredLeagueMatches, getCreatorLeagueOverview, listCreatorLeagueMatches
@@ -9,13 +9,10 @@ import {
 
 function blankDb() { return { users: [], creatorLeagueProfiles: [], creatorLeagueGiftLedger: [], creatorLeagueDailyScores: [], creatorLeagueDailySettlements: [], creatorLeagueMatches: [], creatorLeaguePowerupUses: [], creatorLeagueEvents: [] }; }
 
-test("Minglora keeps the full creator class and match rank hierarchies", () => {
+test("Minglora keeps the full Creator League class hierarchy", () => {
   assert.equal(CREATOR_LEAGUE_CLASSES[0], "D5");
   assert.equal(CREATOR_LEAGUE_CLASSES.at(-1), "A1");
   assert.equal(CREATOR_LEAGUE_CLASSES.length, 18);
-  assert.equal(MATCH_RANKS[0], "Bronze III");
-  assert.equal(MATCH_RANKS.at(-1), "Grandmaster");
-  assert.equal(MATCH_RANKS.length, 21);
 });
 
 test("only confirmed LIVE Gift value enters Creator League points, once per transaction", () => {
@@ -164,7 +161,7 @@ test("confirmed lifetime LIVE Gift milestones promote creators immediately throu
   assert.equal(creatorLeagueProgressForPoints(1700000).leagueClass, "A1");
 });
 
-test("match completion awards match rating only once", () => {
+test("match completion records results once without a separate rank ladder", () => {
   const db = blankDb();
   const now = new Date("2026-11-04T12:00:00.000Z");
   const match = createCreatorLeagueMatch(db, {
@@ -178,9 +175,30 @@ test("match completion awards match rating only once", () => {
   match.endsAt = new Date(now.getTime() - 1000).toISOString();
   assert.equal(settleExpiredLeagueMatches(db, now), 1);
   assert.equal(settleExpiredLeagueMatches(db, now), 0);
-  assert.equal(ensureCreatorLeagueProfile(db, "creator-a", "GLOBAL", now).matchRankPoints, 25);
-  assert.equal(ensureCreatorLeagueProfile(db, "creator-b", "GLOBAL", now).matchRankPoints, 0);
-  assert.equal(getCreatorLeagueOverview(db, {id:"creator-a",country:"JAMAICA"}, now).profile.matchRank, "Bronze III");
+  const winner = ensureCreatorLeagueProfile(db, "creator-a", "GLOBAL", now);
+  const loser = ensureCreatorLeagueProfile(db, "creator-b", "GLOBAL", now);
+  assert.equal(winner.matchWins, 1);
+  assert.equal(loser.matchLosses, 1);
+  assert.equal(Object.hasOwn(winner, "matchRankPoints"), false);
+  const overview = getCreatorLeagueOverview(db, {id:"creator-a",country:"JAMAICA"}, now);
+  assert.equal(Object.hasOwn(overview.profile, "matchRank"), false);
+  assert.equal(Object.hasOwn(overview, "matchRanks"), false);
+});
+
+
+test("legacy Bronze-to-Grandmaster profile fields are removed on read", () => {
+  const db = blankDb();
+  const now = new Date("2026-11-04T12:00:00.000Z");
+  db.creatorLeagueProfiles.push({
+    userId: "creator-legacy", region: "JAMAICA", leagueClass: "D5",
+    matchRankIndex: 12, matchRankPoints: 45, matchWins: 2, matchLosses: 1, matchDraws: 0,
+    lifetimeGiftPoints: 0, seasonPoints: 0, seasonKey: creatorLeagueSeasonKey(now)
+  });
+  const profile = ensureCreatorLeagueProfile(db, "creator-legacy", "JAMAICA", now);
+  assert.equal(Object.hasOwn(profile, "matchRankIndex"), false);
+  assert.equal(Object.hasOwn(profile, "matchRankPoints"), false);
+  assert.equal(profile.matchWins, 2);
+  assert.equal(profile.matchLosses, 1);
 });
 
 
@@ -207,8 +225,7 @@ test("League reads collapse duplicate creator profiles and repeated active match
     userId: "creator-a", region: "JAMAICA", leagueClass: "D5",
     fragments: 2, leagueShields: 0, lifetimeGiftPoints: 20,
     seasonPoints: 15, seasonKey: "2026-11-02",
-    matchRankIndex: 0, matchRankPoints: 0,
-    matchWins: 0, matchLosses: 0, matchDraws: 0,
+        matchWins: 0, matchLosses: 0, matchDraws: 0,
     createdAt: now.toISOString(), updatedAt: now.toISOString()
   };
   db.creatorLeagueProfiles.push({ ...profile }, { ...profile, updatedAt: new Date(now.getTime() + 1000).toISOString() });
@@ -396,8 +413,7 @@ test("League daily, season and lifetime Gift points rebuild from unique confirme
   const profile = {
     userId: "creator-a", region: "JAMAICA", leagueClass: "D5",
     fragments: 0, leagueShields: 0, lifetimeGiftPoints: 20,
-    seasonPoints: 20, seasonKey, matchRankIndex: 0, matchRankPoints: 0,
-    matchWins: 0, matchLosses: 0, matchDraws: 0,
+    seasonPoints: 20, seasonKey,     matchWins: 0, matchLosses: 0, matchDraws: 0,
     createdAt: now.toISOString(), updatedAt: now.toISOString()
   };
   db.creatorLeagueProfiles.push({ ...profile }, { ...profile, lifetimeGiftPoints: 10, seasonPoints: 10 });
