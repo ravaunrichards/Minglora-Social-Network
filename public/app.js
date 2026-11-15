@@ -1988,10 +1988,10 @@ function renderLiveGuestLayout(room,role,session,activeSpeakerIds=new Set()){
   root.classList.toggle("has-many-guests",fullScreenHostOnly&&guests.length>4);
   root.dataset.activeGuestCount=String(guests.length);
   const specs=[{
-    key:"host",identity:hostIdentity,name:hostName,person:hostParticipant,isHost:true
+    key:"host",seatNumber:0,identity:hostIdentity,name:hostName,person:hostParticipant,isHost:true
   }];
   guests.slice(0,8).forEach((person,index)=>specs.push({
-    key:"guest:"+String(person.identity||index),identity:String(person.identity||""),name:person.name||person.identity||"Minglora guest",
+    key:"guest:"+String(person.identity||index),seatNumber:index+1,identity:String(person.identity||""),name:person.name||person.identity||"Minglora guest",
     person,isHost:false
   }));
   if(!fullScreenHostOnly)while(specs.length<9)specs.push({key:"empty:"+specs.length,empty:true,seatNumber:specs.length});
@@ -2002,7 +2002,7 @@ function renderLiveGuestLayout(room,role,session,activeSpeakerIds=new Set()){
   const nodes=specs.map(spec=>{
     if(spec.empty){
       const seat=previous.get(spec.key)||document.createElement("button");
-      seat.type="button";seat.className="live-guest-seat empty";seat.dataset.seatKey=spec.key;
+      seat.type="button";seat.className="live-guest-seat empty";seat.dataset.seatKey=spec.key;seat.dataset.seatIndex=String(spec.seatNumber||0);
       seat.removeAttribute("data-participant");seat.setAttribute("data-open-guest-panel","");
       seat.setAttribute("aria-label","Open guest seat "+(spec.seatNumber));
       seat.innerHTML="<span class='live-guest-seat-plus' aria-hidden='true'>+</span><strong>Guest seat</strong><small>"+(role==="host"?"Invite a speaker":"Open seat")+"</small>";
@@ -2019,7 +2019,7 @@ function renderLiveGuestLayout(room,role,session,activeSpeakerIds=new Set()){
     const status=speaking?"Speaking":connected?(muted?"Microphone muted":"Microphone connected"):spec.isHost?"Waiting for host":"Connecting to stage";
     const hasVideo=Boolean(media.querySelector(".live-video-element"));
     seat.className="live-guest-seat"+(spec.isHost?" is-host":" is-guest")+(speaking?" is-speaking":"")+(hasVideo?" has-video":"");
-    seat.dataset.seatKey=spec.key;seat.dataset.participant=identity;
+    seat.dataset.seatKey=spec.key;seat.dataset.seatIndex=String(spec.seatNumber||0);seat.dataset.participant=identity;
     seat.setAttribute("aria-label",name+" · "+(spec.isHost?"Host":"Guest speaker")+" · "+status);
     seat.innerHTML="<span class='live-guest-seat-tag'>"+(spec.isHost?"HOST":"GUEST")+"</span>"+
       "<span class='live-guest-seat-avatar' aria-hidden='true'>"+esc(initials)+"</span>"+
