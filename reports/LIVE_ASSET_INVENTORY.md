@@ -26,7 +26,7 @@
 | `assets/Artwork/` | 1,509 extracted PNG records | Review-only, not cleared for production |
 | `assets/Guests Layout/` | 9 JPEG layout diagrams | Read-only layout references; all 9 individually visually inspected |
 | `assets/Gifters Badge Levels/` | 72 image files (52 PNG, 20 JPEG; 71 unique image contents because the progression-strip JPEG is duplicated at two paths) | Badge/level source references; full visual and rights review pending |
-| `assets/Gifter Badge Progressions/` | 1 JPEG (byte-identical third path for the same progression strip) | Dedicated uploaded source path; served uncropped on the Gifter Progression page without altering the source image |
+| `public/assets/gifter-badge-progression-art.jpg` | 1 JPEG (uploaded original badge-tier progression strip; byte-identical to the supplied source image) | Public production asset; served uncropped on the Gifter Progression page |
 | `assets/League/` | 20 JPEG reference captures | League/rules references; full visual review pending |
 | `public/assets/gifts/` | 45 standalone original Minglora GLTF models | Existing original gift models; retained |
 | `data/minglora-gift-catalog.json` | 1,748 gift rows; 1,737 active and 11 retired | Canonical catalogue metadata and configured coin values |
