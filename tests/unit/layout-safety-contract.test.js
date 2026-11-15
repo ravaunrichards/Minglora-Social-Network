@@ -14,8 +14,10 @@ test('the overlay contract loads after mobile styles and is included in the serv
   const appLockLink = html.indexOf('app-lock.css?v=20261107-app-lock-1');
   assert.ok(mobileLink >= 0 && safetyLink > mobileLink && liveLink > safetyLink);
   assert.ok(phoneLink > appLockLink && appLockLink >= 0);
-  const meetwaveAsset = html.match(/\\/meetwave\\.css\\?v=[^\"']+/)?.[0];
-  assert.ok(meetwaveAsset, 'MeetWave stylesheet has a versioned URL');
+  const meetwaveStart = html.indexOf('/meetwave.css?v=');
+  assert.ok(meetwaveStart >= 0, 'MeetWave stylesheet has a versioned URL');
+  const meetwaveEnd = html.indexOf('\\\"', meetwaveStart);
+  const meetwaveAsset = html.slice(meetwaveStart, meetwaveEnd);
   for (const asset of [
     '/layout-safety.css?v=20261110-facebook-menu-size-scroll-2',
     '/phone-experience.css?v=20261108-phone-overlay-panels-1',
