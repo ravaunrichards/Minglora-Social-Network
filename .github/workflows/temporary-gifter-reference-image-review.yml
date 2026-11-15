@@ -1,0 +1,20 @@
+name: Temporary Gifter Reference Image Review
+on:
+  push:
+    branches:
+      - inspect/gifter-reference-chart-20261115
+permissions:
+  contents: read
+jobs:
+  export-reference-image:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Export exact original chart image for inspection
+        uses: actions/upload-artifact@v4
+        with:
+          name: minglora-gifters-level-up-source-image
+          path: assets/Gifters Badge Levels/Gifters Level Up.png
+          if-no-files-found: error
+          retention-days: 1
