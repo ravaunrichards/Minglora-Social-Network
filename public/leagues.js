@@ -247,11 +247,11 @@
   }
   function fragmentRulesMarkup() {
     const groups = [
-      { tier: "A", title: "A3–A1", rules: [[-1, "Bottom 99%"], [0, "Top 60%"], [1, "Top 20%"], [2, "Top 10%"], [3, "Top 1%"]] },
-      { tier: "B", title: "B5–B1", rules: [[-1, "Bottom 99%"], [0, "Top 70%"], [1, "Top 20%"], [2, "Top 10%"], [3, "Top 1%"]] },
-      { tier: "C", title: "C5–C1", rules: [[-1, "Bottom 99%"], [0, "Top 80%"], [1, "Top 20%"], [2, "Top 10%"]] },
-      { tier: "D", title: "D1", rules: [[-1, "Bottom 99%"], [0, "Top 80%"], [1, "Top 20%"], [2, "Top 10%"]] },
-      { tier: "D", title: "D2–D5", rules: [[0, "Bottom 99%"], [1, "Top 20%"], [2, "Top 10%"]] }
+      { tier: "A", title: "A3–A1", rules: [[3, "Top 1%"], [2, "Top 10%"], [1, "Top 20%"], [0, "Top 60%"], [-1, "Bottom 40%"]] },
+      { tier: "B", title: "B5–B1", rules: [[3, "Top 1%"], [2, "Top 10%"], [1, "Top 20%"], [0, "Top 70%"], [-1, "Bottom 30%"]] },
+      { tier: "C", title: "C5–C1", rules: [[2, "Top 10%"], [1, "Top 20%"], [0, "Top 80%"], [-1, "Bottom 20%"]] },
+      { tier: "D", title: "D1", rules: [[2, "Top 10%"], [1, "Top 20%"], [0, "Top 80%"], [-1, "Bottom 20%"]] },
+      { tier: "D", title: "D2–D5", rules: [[2, "Top 10%"], [1, "Top 20%"], [0, "Other placements"]] }
     ];
     const cards = groups.map(group =>
       "<article class='league-fragment-rule-card league-tier-card--" + group.tier + "'><div class='league-fragment-rule-heading'><span class='league-fragment-tier-mark'>" + group.tier + "</span><strong>" + group.title + "</strong></div>" +
@@ -260,10 +260,10 @@
       ).join("") + "</div></article>"
     ).join("");
     return "<section class='card league-fragment-reference' id='league-fragment-reference-zone' aria-labelledby='league-fragment-reference-heading'>" +
-      "<div class='league-section-heading'><div><span class='league-eyebrow'>SUPPLIED LEAGUE RULE REFERENCES</span><h2 id='league-fragment-reference-heading'>Placement fragment guide</h2>" +
-      "<p>Reference thresholds organized by the class bands in the League captures.</p></div><span class='league-reference-status'>REFERENCE ONLY</span></div>" +
+      "<div class='league-section-heading'><div><span class='league-eyebrow'>DAILY LEAGUE PLACEMENT</span><h2 id='league-fragment-reference-heading'>Fragment rewards and protection</h2>" +
+      "<p>Each creator is ranked against their own class in their region using eligible confirmed LIVE Gift value for the completed day.</p></div><span class='league-reference-status'>4 FRAGMENTS = 1 TIER</span></div>" +
       "<div class='league-fragment-rule-grid'>" + cards + "</div>" +
-      "<p class='league-fragment-reference-note'>These placement-fragment thresholds are displayed for reference; they are not currently used to calculate Minglora class movement. Active Creator League promotion remains based on confirmed lifetime LIVE Gift points (100,000 points per class). Completed League Match results do not change Creator League class points.</p></section>";
+      "<p class='league-fragment-reference-note'>Four accumulated fragments promote one tier; four lost fragments demote one tier. A League Shield automatically protects one fragment loss, does not expire, and the balance is capped at 10. D2–D5 have no fragment-loss penalty. Placement thresholds are an observed public model, not a published TikTok specification.</p></section>";
   }
   function rankingControlsMarkup(overview) {
     const availableClasses = (overview.classes || []).slice().reverse();
@@ -364,9 +364,10 @@
     const leaderboard = overview.leaderboard || [];
     const events = overview.recentEvents || [];
     return "<div class='league-page'><section class='league-hero' id='league-hero-zone'><div class='league-hero-copy'><span class='league-eyebrow'>MINGLORA COMPETITIVE</span><h1>League Arena</h1><p>Build your LIVE creator league. Compete in matches. Earn your place at the top.</p><div class='league-hero-tags'><span>🌍 " + esc(p.region) + " league</span><span>Season starts " + esc(p.seasonKey) + "</span></div></div><div class='league-hero-emblem'><span>🏆</span><small>" + esc(p.leagueClass) + "</small></div></section>" +
-      "<section class='league-overview-grid' id='league-overview-zone'><article class='card league-stat-card league-primary-stat'><span class='league-eyebrow'>CREATOR LEAGUE</span><div class='league-stat-value'>" + esc(p.leagueClass) + "</div><strong>" + Number(p.lifetimeGiftPoints).toLocaleString() + " lifetime LIVE Gift points</strong><p>" + Number(p.seasonPoints).toLocaleString() + " season points · " + Number(p.todayGiftPoints).toLocaleString() + " today</p>" + meter(p.classProgressPoints,p.pointsPerClass) + "<small>" + (p.nextClass ? Number(p.pointsToNextClass).toLocaleString() + " points to " + esc(p.nextClass) : "Highest Creator League class reached") + "</small></article>" +
-      "<article class='card league-stat-card'><span class='league-eyebrow'>NEXT CLASS</span><div class='league-stat-value match-rank-value'>" + (p.nextClass ? esc(p.nextClass) : "A1") + "</div><strong>" + (p.nextClass ? Number(p.pointsToNextClass).toLocaleString() + " points remaining" : "Top Creator League class") + "</strong><p>Every 100,000 confirmed lifetime LIVE Gift points advances one class.</p><small>Refunded Gifts do not count.</small></article></section>" +
-      "<section class='card league-ladder-panel' id='league-progression-zone'><div class='league-section-heading'><div><span class='league-eyebrow'>CREATOR PROGRESSION</span><h2>Creator League classes</h2><p>Your class updates automatically from confirmed lifetime LIVE Gift value.</p></div><span class='league-feature-icon'>📈</span></div>" + classLadderMarkup(overview.classes,p.leagueClass) + "<div class='league-rules-grid'><div><strong>Automatic promotion</strong><p>Every 100,000 eligible lifetime LIVE Gift points advances you one class immediately after the Gift is confirmed.</p></div><div><strong>Lifetime progress</strong><p>Gift points remain across weekly season resets. Refunded Gifts are removed from your total and can change your class.</p></div><div><strong>Eligible Gifts</strong><p>Only confirmed LIVE Gifts count. Coin purchases, direct profile/social gifts, viewer support and match power-up bonuses do not add Creator League points.</p></div></div></section>" +
+      "<section class='league-overview-grid' id='league-overview-zone'><article class='card league-stat-card league-primary-stat'><span class='league-eyebrow'>CURRENT CREATOR LEAGUE</span><div class='league-stat-value'>" + esc(p.leagueClass) + "</div><strong>" + Number(p.todayGiftPoints).toLocaleString() + " LIVE Gift points today</strong><p>" + Number(p.lifetimeGiftPoints).toLocaleString() + " lifetime eligible points · " + Number(p.seasonPoints).toLocaleString() + " this week</p><small>Your class is determined by daily placement and fragments, not a lifetime gift threshold.</small></article>" +
+      "<article class='card league-stat-card'><span class='league-eyebrow'>LEAGUE FRAGMENTS</span><div class='league-stat-value match-rank-value'>" + (p.fragments >= 0 ? "+" : "") + Number(p.fragments || 0) + "</div><strong>" + (p.fragments >= 0 ? Number(p.fragments || 0) + " / 4 promotion fragments" : Math.abs(Number(p.fragments || 0)) + " / 4 demotion fragments") + "</strong>" + meter(Math.abs(Number(p.fragments || 0)),4) + "<small>" + (p.fragments < 0 ? "Recover fragments to protect your current tier." : p.fragments === 0 ? "Earn fragments through strong daily placement." : "Keep earning fragments to reach the next tier.") + "</small></article>" +
+      "<article class='card league-stat-card'><span class='league-eyebrow'>LEAGUE SHIELDS</span><div class='league-stat-value match-rank-value'>" + Number(p.leagueShields || 0) + " / 10</div><strong>Automatic fragment protection</strong><p>A Shield absorbs one fragment loss before it affects your progress.</p><small>Earn one when promoted. Unused Shields do not expire.</small></article></section>" +
+      "<section class='card league-ladder-panel' id='league-progression-zone'><div class='league-section-heading'><div><span class='league-eyebrow'>CREATOR PROGRESSION</span><h2>Creator League classes</h2><p>Climb the 18 regional tiers through daily class placement, accumulated fragments and League Shields.</p></div><span class='league-feature-icon'>📈</span></div>" + classLadderMarkup(overview.classes,p.leagueClass) + "<div class='league-rules-grid'><div><strong>Daily class placement</strong><p>Confirmed eligible LIVE Gift value ranks creators against others in the same class and region each day.</p></div><div><strong>Four-fragment movement</strong><p>Four earned fragments move you up one tier. Four lost fragments move you down one tier, except protected entry tiers D2–D5.</p></div><div><strong>League Shield protection</strong><p>Every promotion grants a Shield, up to 10. A Shield automatically prevents one fragment loss and never expires.</p></div></div></section>" +
       fragmentRulesMarkup() +
       challengeMarkup(overview,sessions) +
       powerupStudioMarkup(overview) +
@@ -374,7 +375,7 @@
       "<section class='card league-leaderboard-panel' id='league-leaderboard-zone'><div class='league-section-heading'><div><span class='league-eyebrow'>CREATOR DIVISIONS</span><h2>League leaderboard</h2><p>Browse daily or weekly confirmed LIVE Gift standings across your region's Creator League classes. Tap any creator to open their profile.</p></div></div>" + rankingControlsMarkup(overview) + "</section>" +
       "<section class='card league-events-panel' id='league-events-zone'><div class='league-section-heading'><div><span class='league-eyebrow'>YOUR PROGRESSION</span><h2>League activity</h2></div></div>" + (events.length ? "<div class='league-events-list'>" + events.map(item=>"<div class='league-event-row'><span>✦</span><div><strong>" + esc(eventLabel(item)) + "</strong><small>" + new Date(item.createdAt).toLocaleString() + "</small></div></div>").join("") + "</div>" : "<div class='league-empty-inline'>Promotions, demotions, shields and completed matches will appear here.</div>") + "</section>" +
 
-      "<p class='league-footnote'>Minglora League rules are platform rules, independent of TikTok. Weekly seasons reset season points; lifetime Creator League points remain on your profile.</p></div>";
+      "<p class='league-footnote'>Minglora uses its own branding and assets with a TikTok LIVE-style Creator League structure. Daily class placement controls fragment movement; weekly and lifetime gift totals remain reporting statistics and do not directly promote a class.</p></div>";
   }
   function bindActions() {
     const form = $("#league-challenge-form");
