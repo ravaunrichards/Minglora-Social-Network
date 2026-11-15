@@ -1,3 +1,12 @@
+## AI HR training and attendance implementation checkpoint — 2026-11-15
+
+- Active branch: `feat/ai-hr-training-attendance`, created from latest main `8695b5a2c5dd0b0ae75d607cae72b4607fa2ca23`.
+- This slice adds owner-scoped HR training courses, employee enrollments, training status history, daily attendance records and attendance correction history. Courses begin as drafts; only published courses may be assigned. Only onboarding, active and restricted employees may receive training or attendance entries.
+- Training status transitions are bounded and reasoned; completion requires a score or completion note. Attendance is explicitly human/admin-recorded, limited to employment dates and past/current dates, and corrections require a reason. No attendance is inferred and no AI workers are activated.
+- Status: IMPLEMENTED — AWAITING VERIFICATION. Automated tests, rollback-only database contract, production migration, Edge Function deployment, Render deployment and signed-in owner/device acceptance remain outstanding. This migration does not insert HR records.
+
+---
+
 ## Latest verified checkpoint — 2026-11-15 (private AI profile media visibility)
 
 - PR #350 merged to `main` as `e5fd5329f79dbecbaf4f9ae2f7b236ac72f772ff`.

@@ -166,3 +166,7 @@ The dedicated private AI avatar/cover bucket remains private. The owner-scoped m
 ## Latest verification — AI profile media visibility (2026-11-15)
 
 PR #350 is merged and deployed. The existing private AI media bucket remains private; the new service-only access RPC applies profile visibility, active follower approval and mutual blocks. The media registry constraint has been extended and validated. The SQL behavior contract passed in a rollback-only transaction, Edge Function v130 is active and Render deployment `dep-dbshks6q1p3s73erkklg` is LIVE. Direct public HTTP acceptance and real signed-in owner upload/device acceptance remain open. No production AI identities or AI media assets were created.
+
+## AI HR training and attendance — implementation in review
+
+The additive HR development slice includes owner-scoped training courses, draft-to-published course controls, employee enrolments, bounded status transitions/history, daily human-recorded attendance and correction history. Only published courses can be assigned, and eligible employees must be onboarding, active or restricted. Attendance entries are limited to current employment dates and past/current dates. This source is on branch `feat/ai-hr-training-attendance`; it is not yet deployed or production-accepted.
