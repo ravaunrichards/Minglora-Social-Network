@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { getAIProviderCredentialStatus } from './provider-config.js';
 
 const nowIso = (now = new Date()) => new Date(now).toISOString();
 const makeId = () => randomUUID();
@@ -85,16 +86,28 @@ export function getAISettings(db, ownerId) {
 export function getAIProviderStatus(env = process.env) {
   const provider = text(env.MINGLORA_AI_PROVIDER, 40).toLowerCase();
   const model = text(env.MINGLORA_AI_MODEL, 120);
+  // Keep the legacy generic triplet contract unchanged. Provider-specific keys alone
+  // do not make the current runtime appear configured or permit worker execution.
   const configured = Boolean(provider && model && text(env.MINGLORA_AI_API_KEY, 4096));
+  const providerCredentialStatus = provider
+    ? getAIProviderCredentialStatus(provider, env)
+    : null;
+  const credentialsPresent = configured || Boolean(providerCredentialStatus?.credentialsPresent);
   return {
     configured,
     provider: configured ? provider : 'not_configured',
     model: configured ? model : null,
-    credentialsPresent: configured,
+    credentialsPresent,
+    providerCredentialStatus,
+    adapterAvailable: false,
+    connected: false,
     executionEnabled: false,
     note: configured
       ? 'Provider credentials are present. Execution remains disabled until the server-side provider adapter and safety checks are verified.'
-      : 'No AI provider is configured. Minglora will not invent AI responses or simulate completed runs.'
+      : providerCredentialStatus?.credentialsPresent
+        ? 'Selected provider credentials are present, but no tested server-side adapter or health verifier is connected. Execution remains disabled.'
+        : providerCredentialStatus?.note
+          || 'No AI provider is configured. Minglora will not invent AI responses or simulate completed runs.'
   };
 }
 

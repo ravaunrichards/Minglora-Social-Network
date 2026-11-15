@@ -1,0 +1,95 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import {
+  AI_PROVIDER_CATALOG,
+  getAIProviderCredentialStatus
+} from '../../backend/modules/ai-network/provider-config.js';
+import { getAIProviderStatus } from '../../backend/modules/ai-network/service.js';
+
+const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
+const envExample = readFileSync(resolve(root, '.env.example'), 'utf8');
+
+test('provider catalogue has unique IDs and includes ChatGPT guest plus independent OpenAI API', () => {
+  const ids = AI_PROVIDER_CATALOG.map(item => item.id);
+  assert.equal(new Set(ids).size, ids.length);
+  assert.ok(ids.includes('chatgpt_guest'));
+  assert.ok(ids.includes('openai'));
+});
+
+test('ChatGPT guest is explicitly non-routable and cannot be marked connected', () => {
+  const guest = getAIProviderCredentialStatus('chatgpt_guest', {});
+  assert.equal(guest.known, true);
+  assert.equal(guest.serverSelectable, false);
+  assert.equal(guest.credentialsPresent, false);
+  assert.equal(guest.adapterAvailable, false);
+  assert.equal(guest.connected, false);
+  assert.equal(guest.executionEnabled, false);
+  assert.match(guest.note, /not a server API endpoint/i);
+});
+
+test('provider-specific credential presence never claims an adapter or enables execution', () => {
+  const status = getAIProviderCredentialStatus('openai', { OPENAI_API_KEY: 'test-secret-do-not-return' });
+  assert.equal(status.credentialsPresent, true);
+  assert.equal(status.adapterAvailable, false);
+  assert.equal(status.connected, false);
+  assert.equal(status.executionEnabled, false);
+  assert.ok(status.presentEnvironmentVariables.includes('OPENAI_API_KEY'));
+  assert.equal(JSON.stringify(status).includes('test-secret-do-not-return'), false);
+});
+
+test('provider credential helper recognizes complete and incomplete credential sets', () => {
+  const missing = getAIProviderCredentialStatus('azure_openai', {
+    AZURE_OPENAI_API_KEY: 'test-key',
+    AZURE_OPENAI_ENDPOINT: 'https://example.invalid'
+  });
+  assert.equal(missing.credentialsPresent, false);
+  assert.ok(missing.missingCredentialEnvironmentVariables.includes('AZURE_OPENAI_DEPLOYMENT'));
+  const complete = getAIProviderCredentialStatus('azure_openai', {
+    AZURE_OPENAI_API_KEY: 'test-key',
+    AZURE_OPENAI_ENDPOINT: 'https://example.invalid',
+    AZURE_OPENAI_API_VERSION: '2024-10-21',
+    AZURE_OPENAI_DEPLOYMENT: 'minglora-test'
+  });
+  assert.equal(complete.credentialsPresent, true);
+  assert.deepEqual(complete.missingCredentialEnvironmentVariables, []);
+  assert.equal(complete.executionEnabled, false);
+});
+
+test('legacy generic provider status contract remains unchanged and execution stays disabled', () => {
+  const configured = getAIProviderStatus({
+    MINGLORA_AI_PROVIDER: 'openai',
+    MINGLORA_AI_MODEL: 'unit-test-model',
+    MINGLORA_AI_API_KEY: 'test-generic-secret'
+  });
+  assert.equal(configured.configured, true);
+  assert.equal(configured.provider, 'openai');
+  assert.equal(configured.model, 'unit-test-model');
+  assert.equal(configured.executionEnabled, false);
+  assert.equal(JSON.stringify(configured).includes('test-generic-secret'), false);
+
+  const providerSpecificOnly = getAIProviderStatus({
+    MINGLORA_AI_PROVIDER: 'openai',
+    MINGLORA_AI_MODEL: 'unit-test-model',
+    OPENAI_API_KEY: 'test-specific-secret'
+  });
+  assert.equal(providerSpecificOnly.configured, false);
+  assert.equal(providerSpecificOnly.credentialsPresent, true);
+  assert.equal(providerSpecificOnly.providerCredentialStatus.adapterAvailable, false);
+  assert.equal(providerSpecificOnly.executionEnabled, false);
+  assert.equal(JSON.stringify(providerSpecificOnly).includes('test-specific-secret'), false);
+});
+
+test('all provider credential environment variables have blank placeholders in .env.example', () => {
+  const requiredVariables = new Set(
+    AI_PROVIDER_CATALOG.flatMap(item => item.credentialGroups.flat())
+      .concat(AI_PROVIDER_CATALOG.flatMap(item => item.optionalEnvironmentVariables))
+  );
+  for (const name of requiredVariables) {
+    const line = envExample.split(/\r?\n/).find(row => row.startsWith(name + '='));
+    assert.ok(line, 'Missing .env.example variable: ' + name);
+    assert.equal(line.slice(name.length + 1).trim(), '', 'Credential/config placeholder must be blank: ' + name);
+  }
+});
