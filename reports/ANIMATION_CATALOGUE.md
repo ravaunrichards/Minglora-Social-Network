@@ -98,3 +98,13 @@ The generated catalogue motion index now publishes the exact runtime presets for
 
 
 The generated motion-index record retains both `catalog_motion_preset` (unchanged source-catalogue value) and `motion_preset` (effective runtime preset). The manifest records `gift_specific_motion_override` explicitly. This avoids overwriting catalogue defaults and makes a bespoke motion choice auditable.
+
+
+## Royal Lions Scepter regal rise and synthesized fanfare — 2026-11-15
+
+- Canonical gift: royal-lions-scepter-15000-mgl (Royal Lions Scepter).
+- Effective motion preset: lion-scepter-rise, selected by exact gift code in the generated LIVE motion index and the existing public/gift-effects.js gift-mount path. The sequence gives the upright scepter a short ceremonial lift, controlled jewel-brightness bloom and settled hold.
+- Source catalogue animation_preset remains grand-entry; the generated motion index records the effective motion_preset separately and marks this as a gift-specific override. Canonical animation key, 1,900-ms source duration and the configured sound-preset field remain unchanged.
+- Sound design ID: royal-lions-scepter-roar-and-regal-fanfare-v1. The existing Web Audio path synthesizes a low band-pass lion-like growl, a short low-frequency impact, five brass-like fanfare tones (196, 293.66, 392, 587.33 and 783.99 Hz) and a restrained high-pass jewel shimmer.
+- Audio is generated locally by Web Audio and is not a mastered/recorded sound asset. Existing sound opt-out behavior and reduced-motion handling remain active.
+- No Lottie/Rive file, GLTF skeletal animation track, mastered sound recording, licensing clearance, human design approval or physical-device QA is claimed. No catalogue pricing, activation, wallet or transaction state was changed.
