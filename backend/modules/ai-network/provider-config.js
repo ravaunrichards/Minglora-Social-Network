@@ -96,6 +96,7 @@ export function getAIProviderCredentialStatus(providerId, env = process.env) {
     category: entry.category,
     known: true,
     serverSelectable: entry.serverSelectable,
+    healthProbeAvailable: entry.healthProbeAvailable,
     credentialEnvironmentVariables: requiredVariables,
     optionalEnvironmentVariables: [...entry.optionalEnvironmentVariables],
     presentEnvironmentVariables: presentVariables,
