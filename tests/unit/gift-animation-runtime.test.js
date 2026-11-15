@@ -176,7 +176,6 @@ test("Royal Lions Scepter has a dedicated regal rise motion and locally synthesi
 
 test("Rose uses dedicated unfurl choreography and locally synthesized petal/celesta sound", () => {
   assert.ok(effects.includes("function playRose(c,now,seed)"));
-  assert.ok(effects.includes('gift.code==="rose-4ieccm"? "rose-unfurl"'));
   assert.ok(effects.includes('gift.code==="rose-4ieccm"?"rose-unfurl":'));
   assert.ok(effects.includes('if(preset==="rose-unfurl")return'));
   assert.ok(effects.includes("rustle.buffer=createGiftNoise(c,seed,0.52)"));
