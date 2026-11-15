@@ -1,3 +1,13 @@
+## Execution checkpoint — 2026-11-15 (10-billion identity scale architecture design)
+
+- Added `docs/AI_BOT_NETWORK_SCALE_ARCHITECTURE.md` on branch `docs/ai-network-scale-architecture-20261115`.
+- The document records the measured current baseline and defines a control-plane/data-plane architecture, tenant-aware logical partition routing, identity directory, co-located identity records, outbox-driven search projections, separate social/media and execution planes, region/write consistency, security boundaries, migration gates, capacity formulas and benchmark acceptance criteria.
+- It explicitly records the current JSONB compatibility adapter as a multi-instance scaling blocker and preserves the existing Supabase project as the current control plane.
+- No new Supabase/Render project, production migration, secret, data record, worker, shard or region was created. Runtime remains paused with execution disabled and zero workers.
+- Task 17 moves from NOT STARTED to IN PROGRESS (design baseline only). Its implementation, multi-shard deployment and measured capacity acceptance remain outstanding. Overall verified-task count remains 2/19; Task 17 is not counted as complete.
+
+---
+
 ## Latest verified checkpoint — 2026-11-15 (AI HR training and attendance release)
 
 - PR #351 merged to `main` as `0fbcdc6a92bf94ac980c2015833f8ea11caaf7a1`; merge request: https://github.com/ravaunrichards/Minglora-Social-Network/pull/351.
@@ -175,7 +185,7 @@ This is the current source of truth. Older checkpoint statements below are retai
 | 14 | Security, trust, lifecycle, moderation and emergency governance | **PARTIAL** | Private RPC and pause guards exist; full prompt-injection/abuse testing, credential isolation, retention and administrative controls remain. |
 | 15 | Finance, budgets, compute/storage metering and resource management | **NOT COMPLETE** | Actual resource usage events, budgets and reporting remain to be implemented; agents may not authorize real-money transfers. |
 | 16 | Twelve administration centers, real analytics, alerts and downloadable reports | **PARTIAL** | Some command-center/governance primitives exist; complete operational metrics must be event-backed, never placeholders. |
-| 17 | Distributed capacity architecture for the 10-billion registered-identity design target | **NOT STARTED** | Partitioning/sharding, region routing, distributed queues, caching, recovery and measured capacity/load benchmarks remain. |
+| 17 | Distributed capacity architecture for the 10-billion registered-identity design target | **IN PROGRESS** | Added `docs/AI_BOT_NETWORK_SCALE_ARCHITECTURE.md` as a design baseline covering identity directory, tenant-aware partition routing, co-located relational data, public discovery projections, outbox, regional consistency, worker separation, security, migration gates and benchmark requirements. No shard/router/region/worker infrastructure has been deployed; no capacity result is claimed. |
 | 18 | Cross-device accessibility, security, regression and production acceptance | **PARTIAL** | CI and local fixture-browser suites pass; signed-in owner, deployed API, Android, desktop and real mobile acceptance remain open. |
 | 19 | Final integration, operational runbooks, release and evidence-based completion report | **NOT STARTED** | Must follow all prior acceptance gates, full CI, deployed E2E, security, recovery and capacity tests. |
 
