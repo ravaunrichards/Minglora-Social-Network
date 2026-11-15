@@ -20,6 +20,15 @@
     { file: "levels-50.jpg", alt: "Minglora Gifter badge level 50", final: true }
   ]);
 
+  const BADGE_RANGE_SHEETS = Object.freeze([
+    { file: "lv-1-9.jpg", label: "LV.1 – LV.9", alt: "Original Gifter badge range reference, Levels 1 through 9" },
+    { file: "lv-10-19.jpg", label: "LV.10 – LV.19", alt: "Original Gifter badge range reference, Levels 10 through 19" },
+    { file: "lv-20-29.jpg", label: "LV.20 – LV.29", alt: "Original Gifter badge range reference, Levels 20 through 29" },
+    { file: "lv-30-39.jpg", label: "LV.30 – LV.39", alt: "Original Gifter badge range reference, Levels 30 through 39" },
+    { file: "lv-40-49.jpg", label: "LV.40 – LV.49", alt: "Original Gifter badge range reference, Levels 40 through 49" },
+    { file: "lv-50-plus.jpg", label: "LV.50+", alt: "Original Gifter badge range reference, Level 50 and above" }
+  ]);
+
   function isGifterViewActive() {
     return Boolean(document.querySelector("#main-content .gp-page"));
   }
@@ -102,6 +111,30 @@
       ).join("") + "</div>";
   }
 
+  function renderMasterBadgeReference() {
+    return "<section class='gp-reference-section gp-master-reference card' aria-labelledby='gp-master-reference-title'>" +
+      "<div class='gp-section-heading'><div><span class='gp-eyebrow'>MASTER COLLECTION REFERENCE</span><h2 id='gp-master-reference-title'>Complete 50-badge overview</h2>" +
+      "<p>The original master sheet and its supplied preview are shown together as reference artwork.</p></div></div>" +
+      "<div class='gp-master-reference-grid'>" +
+      "<figure class='gp-reference-figure gp-master-reference-primary'><figcaption><strong>Full master sheet</strong><span>Original Levels 1–50 composition</span></figcaption>" +
+      "<a href='/assets/gifter-badge-reference/master-sheet.png' target='_blank' rel='noopener noreferrer' aria-label='Open the full original 50-badge master sheet'>" +
+      "<img src='/assets/gifter-badge-reference/master-sheet.png' alt='Original Minglora Gifter master sheet showing all 50 badge levels' loading='lazy' decoding='async'></a></figure>" +
+      "<figure class='gp-reference-figure gp-master-reference-preview'><figcaption><strong>Master sheet preview</strong><span>Supplied preview image</span></figcaption>" +
+      "<img src='/assets/gifter-badge-reference/master-sheet-preview.jpg' alt='Preview of the original Minglora 50-level Gifter badge master sheet' loading='lazy' decoding='async'></figure>" +
+      "</div></section>";
+  }
+
+  function renderRangeReferenceSheets() {
+    return "<section class='gp-reference-section gp-range-reference-section card' aria-labelledby='gp-range-reference-title'>" +
+      "<div class='gp-section-heading'><div><span class='gp-eyebrow'>ADDITIONAL ORIGINAL REFERENCES</span><h2 id='gp-range-reference-title'>Gifter level range sheets</h2>" +
+      "<p>All six supplied broad-range sheets appear in their original level order. The live level directory remains authoritative for current unlock status and Coin thresholds.</p></div></div>" +
+      "<div class='gp-range-reference-grid'>" +
+      BADGE_RANGE_SHEETS.map(sheet =>
+        "<figure class='gp-reference-figure gp-range-reference-figure'><figcaption><strong>" + esc(sheet.label) + "</strong><span>Original range reference</span></figcaption>" +
+        "<img src='/assets/gifter-badge-range-sheets/" + sheet.file + "' alt='" + esc(sheet.alt) + "' loading='lazy' decoding='async'></figure>"
+      ).join("") + "</div></section>";
+  }
+
   function renderLevelDirectory(items) {
     const ordered = [...items].sort((a, b) => Number(a.level) - Number(b.level));
     return "<section class='gp-level-directory card' aria-labelledby='gp-level-directory-title'>" +
@@ -124,7 +157,9 @@
           "<span class='gp-level-index-level'>Level " + number(levelNumber) + "</span>" +
           "<strong class='gp-level-index-badge'>" + esc(badgeName) + "</strong>" +
           "<small class='gp-level-index-coins'>" + number(item.coinsRequired ?? item.xpRequired) + " Coins required</small>" +
-          "<span class='gp-level-index-state'>" + stateLabel + "</span></div></article>";
+          "<span class='gp-level-index-state'>" + stateLabel + "</span>" +
+          "<a class='gp-level-index-original' href='/assets/gifter-badges/level_" + badgeNumber + ".png' target='_blank' rel='noopener noreferrer' aria-label='Open original PNG artwork for Level " + number(levelNumber) + "'>" +
+          "<img src='/assets/gifter-badges/level_" + badgeNumber + ".png' alt='Original PNG badge artwork for Level " + number(levelNumber) + "' loading='lazy' decoding='async' width='44' height='44'><span>Original PNG</span></a></div></article>";
       }).join("") + "</div></section>";
   }
 
@@ -182,7 +217,7 @@
       "<header class='gp-heading'><div><span class='gp-eyebrow'>MINGLORA GIFTER JOURNEY</span><h1>Gifter Level &amp; Badges</h1>" +
       "<p>Every confirmed gift you send moves your own Minglora gifter journey forward.</p></div>" +
       (embedded ? "" : "<div class='gp-heading-actions'><button type='button' class='gp-back-link' id='gp-back-gifts'>← Back to Gifts</button></div>") + "</header>" +
-      "<section class='gp-hero card'><div class='gp-hero-art'><img class='gp-reference-art' src='/assets/Gifters%20Level%20Up.png' alt='Original Minglora Gifters Level Up chart artwork' loading='eager' decoding='async'><a class='gp-chart-fullsize' href='/assets/Gifters%20Level%20Up.png' target='_blank' rel='noopener noreferrer' aria-label='Open the original full-size Minglora Gifters Level Up chart in a new tab to zoom'>View original full-size chart to zoom ↗</a></div><div class='gp-hero-summary'>" +
+      "<section class='gp-hero card'><div class='gp-hero-art'><img class='gp-reference-art' src='/assets/Gifters%20Level%20Up.png' alt='Original Minglora Gifters Level Up artwork reference' loading='eager' decoding='async'><a class='gp-chart-fullsize' href='/assets/Gifters%20Level%20Up.png' target='_blank' rel='noopener noreferrer' aria-label='Open the original full-size Minglora Gifters Level Up artwork in a new tab to zoom'>View original full-size artwork ↗</a><small id='gp-level-up-reference-note' class='gp-reference-note'>Original supplied artwork for visual reference only. The live Coin thresholds and unlock states below are calculated from confirmed gifting activity.</small></div><div class='gp-hero-summary'>" +
       "<span class='gp-eyebrow'>YOUR GIFTER STATUS</span><div class='gp-current-badge-row'>" +
       (currentBadgeMarkup ? "<div class='gp-current-badge-art' aria-label='Your current Gifter badge'>" + currentBadgeMarkup + "</div>" : "") +
       "<div class='gp-current-status-copy'>" +
@@ -198,9 +233,11 @@
       "<article class='gp-stat-card'><span>Coins to next LV</span><strong>" + (current.maxLevel ? "MAX" : number(current.xpRemaining)) + "</strong><small>" + (current.maxLevel ? "LV 50 reached" : "More Coins needed") + "</small></article>" +
       "<article class='gp-stat-card'><span>Gifts sent</span><strong>" + number(current.giftsSent) + "</strong><small>Unique confirmed transactions</small></article>" +
       "<article class='gp-stat-card'><span>Members supported</span><strong>" + number(current.uniqueRecipients) + "</strong><small>Different recipients</small></article></section>" +
+      renderMasterBadgeReference() +
       "<section class='gp-section card'><div class='gp-section-heading'><div><span class='gp-eyebrow'>THE FULL PROGRESSION</span><h2>LV 1–50</h2>" +
       "<p>Earn levels with confirmed gifts, or receive an admin-awarded badge. Admin awards do not count as Coins spent.</p></div><span class='gp-level-count'>LV " + current.level + " / 50</span></div>" +
       badgePanels + "</section>" +
+      renderRangeReferenceSheets() +
       levelDirectory +
       "<section class='gp-level25 card'><div class='gp-level25-copy'><span class='gp-eyebrow'>SPECIAL MILESTONE</span><h2>LV 25 · LIVE Entrance Badge</h2><p>LV 25 unlocks special Minglora LIVE entrance recognition.</p><strong>" + (level25?.adminAwarded ? "✓ Unlocked by admin award" : level25?.unlocked ? "✓ Unlocked" : number(Math.max(0, (level25?.coinsRequired ?? level25?.xpRequired ?? 0) - current.xp)) + " Coins remaining") + "</strong></div></section>" +
       "<div class='gp-lower-grid'><section class='gp-section card'><div class='gp-section-heading'><div><span class='gp-eyebrow'>YOUR ACTIVITY</span><h2>Recent gifts</h2>" +

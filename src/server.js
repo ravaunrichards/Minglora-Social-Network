@@ -9698,6 +9698,37 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
     fs.readFile(assetFile,(error,data)=>{if(error)return json(res,404,{error:'Gifter progression artwork not found.'});res.writeHead(200,{'Content-Type':'image/png','Cache-Control':'public, max-age=3600',...SECURITY_HEADERS});res.end(data);});
     return;
   }
+  const gifterBadgeRangeSheetFile = ({
+    '/assets/gifter-badge-range-sheets/lv-1-9.jpg': 'LV.1 - LV.9.jpg',
+    '/assets/gifter-badge-range-sheets/lv-10-19.jpg': 'LV.10 - LV.19.jpg',
+    '/assets/gifter-badge-range-sheets/lv-20-29.jpg': 'LV.20 - LV.29.jpg',
+    '/assets/gifter-badge-range-sheets/lv-30-39.jpg': 'LV.30 - LV.39.jpg',
+    '/assets/gifter-badge-range-sheets/lv-40-49.jpg': 'LV.40 - LV.49.jpg',
+    '/assets/gifter-badge-range-sheets/lv-50-plus.jpg': 'LV.50+.jpg'
+  })[p];
+  if(gifterBadgeRangeSheetFile){
+    const assetFile=path.join(__dirname,'..','assets','Gifters Badge Levels',gifterBadgeRangeSheetFile);
+    fs.readFile(assetFile,(error,data)=>{
+      if(error)return json(res,404,{error:'Gifter badge range reference not found.'});
+      res.writeHead(200,{'Content-Type':'image/jpeg','Cache-Control':'public, max-age=86400',...SECURITY_HEADERS});
+      res.end(data);
+    });
+    return;
+  }
+  const gifterBadgeMasterReference = ({
+    '/assets/gifter-badge-reference/master-sheet.png': ['Badges_Level_01-50','Badges_Level_01-50.png','image/png'],
+    '/assets/gifter-badge-reference/master-sheet-preview.jpg': ['Badges_Level_01-50','Badges_Level_01-50_preview.jpg','image/jpeg']
+  })[p];
+  if(gifterBadgeMasterReference){
+    const [directory,filename,contentType]=gifterBadgeMasterReference;
+    const assetFile=path.join(__dirname,'..','assets','Gifters Badge Levels',directory,filename);
+    fs.readFile(assetFile,(error,data)=>{
+      if(error)return json(res,404,{error:'Gifter master badge reference not found.'});
+      res.writeHead(200,{'Content-Type':contentType,'Cache-Control':'public, max-age=86400',...SECURITY_HEADERS});
+      res.end(data);
+    });
+    return;
+  }
   const rel=p==='/'?'index.html':decodeURIComponent(p.slice(1)); const file=path.resolve(publicDir,rel);
   if(!file.startsWith(publicDir+path.sep)&&file!==path.join(publicDir,'index.html'))return json(res,403,{error:'Forbidden'});
   fs.readFile(file,(err,data)=>{if(err){fs.readFile(path.join(publicDir,'index.html'),(e,d)=>{if(e)return json(res,404,{error:'Not found'});res.writeHead(200,{'Content-Type':MIME['.html'],'Cache-Control':'no-store',...SECURITY_HEADERS});res.end(d);});return;}const extension=path.extname(file);const cacheHeaders=extension==='.html'?{'Cache-Control':'no-store'}:(['.js','.css','.webmanifest'].includes(extension)||path.basename(file)==='sw.js')?{'Cache-Control':'no-cache, max-age=0, must-revalidate'}:{};res.writeHead(200,{'Content-Type':MIME[extension]||'application/octet-stream',...cacheHeaders,...SECURITY_HEADERS});res.end(data);});

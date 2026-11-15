@@ -112,3 +112,12 @@ The current Admin Centre remains designated-owner/MFA restricted. The staff tabl
 - PR-head CI passed: **1,226 tests passed, 0 failed**. Seven-plus-two layout QA, AI browser acceptance and profile Chromium visual QA all passed.
 - PR #378: https://github.com/ravaunrichards/Minglora-Social-Network/pull/378.
 - Merged source verified on `main`; no deployment was performed or claimed in this checkpoint.
+
+
+### Gifter Badge References — complete 71-image placement
+- Task branch: `feat/gifter-all-reference-placement-20261115`.
+- Source inventory: 71 original images: 2 banners, 11 detailed level panels, 6 broad-range sheets, 2 master-sheet assets and 50 individual PNG badges.
+- Placement: Rewards banner on Gifts entry; Level-Up artwork in Gifter Progression with reference-only notice; 11 detailed panels in full LV 1–50; six broad-range sheets in their own ordered gallery; master PNG and preview together; each original PNG thumbnail beside its matching vector badge in the numbered level directory.
+- Added server allow-list routes for six range sheets and two master images; added the 6 range JPGs, 2 master files and all 50 individual PNGs to PWA precache. Original source files were not modified.
+- Added regression tests for all 71 source paths, destinations, routes, responsive presentation and offline caching.
+- Implementation blobs created; final tree/commit, PR and CI verification are pending.

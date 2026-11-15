@@ -82,7 +82,7 @@ test("level artwork route is an explicit allow-list and serves JPEG without expo
 test("updated progression assets and all original JPG panels are included in the app shell", () => {
   const html = read("public/index.html");
   const sw = read("public/sw.js");
-  assert.ok(html.includes("/gifter-progression.css?v=20261111-tiktok-readable-badge-size-2"));
+  assert.ok(html.includes("/gifter-progression.css?v=20261115-gifter-reference-placement-1"));
   assert.ok(html.includes("/gifter-progression.js?v=20261115-gifter-badge-vector-sprite-1"));
   panelFiles.forEach(filename => {
     const routeName = filename.toLowerCase().replaceAll(" ", "-");
@@ -129,8 +129,8 @@ test("Gifter artwork removes unused outer padding and uses a brighter clean edge
 test("clean-edge stylesheet cache key is current in HTML and service-worker shell", () => {
   const html = read("public/index.html");
   const sw = read("public/sw.js");
-  assert.ok(html.includes("/gifter-progression.css?v=20261111-tiktok-readable-badge-size-2"));
-  assert.ok(sw.includes("/gifter-progression.css?v=20261111-tiktok-readable-badge-size-2"));
+  assert.ok(html.includes("/gifter-progression.css?v=20261115-gifter-reference-placement-1"));
+  assert.ok(sw.includes("/gifter-progression.css?v=20261115-gifter-reference-placement-1"));
   assert.ok(!sw.includes("/gifter-progression.css?v=20261110-gifter-level-polish-1"));
 });
 
@@ -146,9 +146,81 @@ test("Gifter progression uses the original ordered Level panels as its primary a
   assert.ok(progression.includes("aria-label='Original Gifter Badge Levels artwork'"));
   assert.ok(progression.includes("const badgePanels = renderBadgePanels();"));
   assert.ok(progression.includes('badgePanels + "</section>" +'));
-  assert.ok(styles.includes(".gp-page .gp-hero-art{display:none!important}"));
+  assert.ok(!styles.includes(".gp-page .gp-hero-art{display:none!important}"), "the original Level-Up artwork is shown as a reference");
+  assert.ok(progression.includes("gp-level-up-reference-note"), "the Level-Up artwork is labelled visual-reference-only");
   assert.ok(styles.includes(".gp-art-panel-stack{display:grid;grid-template-columns:minmax(0,1fr);gap:14px"));
-  assert.ok(html.includes("/gifter-progression.css?v=20261111-tiktok-readable-badge-size-2"));
-  assert.ok(sw.includes("/gifter-progression.css?v=20261111-tiktok-readable-badge-size-2"));
+  assert.ok(html.includes("/gifter-progression.css?v=20261115-gifter-reference-placement-1"));
+  assert.ok(sw.includes("/gifter-progression.css?v=20261115-gifter-reference-placement-1"));
   assert.match(sw, /const CACHE_NAME='minglora-shell-v\d+-self-updating-1';/);
+});
+
+
+test("all 71 supplied Gifter reference images are placed at their correct Rewards locations", () => {
+  const progression = read("public/gifter-progression.js");
+  const gifts = read("public/gifts.js");
+  const server = read("src/server.js");
+  const styles = read("public/gifter-progression.css");
+  const sw = read("public/sw.js");
+  const html = read("public/index.html");
+  const rangeSheets = [
+    ["LV.1 - LV.9.jpg", "lv-1-9.jpg"],
+    ["LV.10 - LV.19.jpg", "lv-10-19.jpg"],
+    ["LV.20 - LV.29.jpg", "lv-20-29.jpg"],
+    ["LV.30 - LV.39.jpg", "lv-30-39.jpg"],
+    ["LV.40 - LV.49.jpg", "lv-40-49.jpg"],
+    ["LV.50+.jpg", "lv-50-plus.jpg"]
+  ];
+  const masterSheets = [
+    ["Badges_Level_01-50/Badges_Level_01-50.png", "/assets/gifter-badge-reference/master-sheet.png"],
+    ["Badges_Level_01-50/Badges_Level_01-50_preview.jpg", "/assets/gifter-badge-reference/master-sheet-preview.jpg"]
+  ];
+  const sourcePaths = [
+    "Gifters Rewards.png",
+    "Gifters Level Up.png",
+    ...rangeSheets.map(([file]) => file),
+    ...panelFiles,
+    ...masterSheets.map(([file]) => file),
+    ...individualBadgeFiles.map(file => path.join("Level_Badges_01-50_Individual", file))
+  ];
+  assert.equal(sourcePaths.length, 71, "the source folder inventory totals 71 Gifter references");
+  assert.equal(individualBadgeFiles.length, 50, "every individual Gifter PNG is enumerated");
+  sourcePaths.forEach(file => {
+    assert.ok(fs.existsSync(path.join(root, "assets", "Gifters Badge Levels", file)), file + " remains in the canonical source folder");
+  });
+
+  assert.ok(gifts.includes("/assets/gifters-rewards.png"), "Gifters Rewards artwork remains on the Gifts entry banner");
+  assert.ok(progression.includes("/assets/Gifters%20Level%20Up.png"), "Level-Up artwork remains in Gifter Progression");
+  assert.ok(progression.includes("gp-level-up-reference-note"), "Level-Up source artwork is explicitly reference-only");
+  assert.ok(!styles.includes(".gp-page .gp-hero-art{display:none!important}"), "the Level-Up artwork is not hidden");
+
+  rangeSheets.forEach(([sourceFile, routeFile]) => {
+    assert.ok(progression.includes('file: "' + routeFile + '"'), routeFile + " is rendered in the range gallery");
+    assert.ok(server.includes("'/assets/gifter-badge-range-sheets/" + routeFile + "'"), routeFile + " has an explicit server allow-list route");
+    assert.ok(sw.includes("'/assets/gifter-badge-range-sheets/" + routeFile + "'"), routeFile + " is precached");
+    assert.ok(server.includes("'" + sourceFile + "'"), sourceFile + " maps to its original source file");
+  });
+  masterSheets.forEach(([sourceFile, route]) => {
+    assert.ok(progression.includes(route), route + " appears in the master collection section");
+    assert.ok(server.includes("'" + route + "'"), route + " has an explicit server route");
+    assert.ok(sw.includes("'" + route + "'"), route + " is precached");
+    assert.ok(server.includes("'" + sourceFile.split("/").at(-1) + "'"), sourceFile + " maps to the correct original file");
+  });
+  assert.ok(progression.includes("renderMasterBadgeReference()"));
+  assert.ok(progression.includes("renderRangeReferenceSheets()"));
+  assert.ok(progression.includes("href='/assets/gifter-badges/level_" + '" + badgeNumber + "' + ".png'"), "every original PNG has an open-original link");
+  assert.ok(progression.includes("src='/assets/gifter-badges/level_" + '" + badgeNumber + "' + ".png'"), "every original PNG is visibly previewed on its matching level card");
+  assert.ok(styles.includes(".gp-level-index-original{"));
+  assert.match(styles, /\.gp-reference-figure img\{display:block;width:100%[^}]*height:auto[^}]*object-fit:contain/);
+  assert.ok(html.includes("/gifter-progression.css?v=20261115-gifter-reference-placement-1"));
+  assert.ok(html.includes("/gifter-progression.js?v=20261115-gifter-reference-placement-1"));
+  assert.ok(sw.includes("/gifter-progression.css?v=20261115-gifter-reference-placement-1"));
+  assert.ok(sw.includes("/gifter-progression.js?v=20261115-gifter-reference-placement-1"));
+});
+
+test("the PWA shell precaches all 50 original numbered Gifter PNGs", () => {
+  const sw = read("public/sw.js");
+  assert.match(sw, /for\(let level=1;level<=50;level\+\+\)/);
+  assert.ok(sw.includes("SHELL.push('/assets/gifter-badges/level_'+String(level).padStart(2,'0')+'.png');"));
+  assert.ok(sw.includes("'/assets/gifter-badge-range-sheets/lv-1-9.jpg'"));
+  assert.ok(sw.includes("'/assets/gifter-badge-reference/master-sheet.png'"));
 });
