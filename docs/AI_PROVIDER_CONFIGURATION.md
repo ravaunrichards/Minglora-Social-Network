@@ -25,6 +25,7 @@ The provider inventory covers the following integration families. These are conf
 | Image and video generation | stability_ai, fal_ai, runway, luma_ai, replicate |
 | Web search | tavily, brave_search, serpapi |
 | Vector storage / retrieval | pinecone, qdrant, weaviate |
+| Transactional email | smtp, resend, sendgrid, postmark, mailgun, amazon_ses |
 
 The matching provider credential variable names are defined in backend/modules/ai-network/provider-config.js and have blank entries in .env.example. Optional endpoint, deployment, model and region fields are included beside each provider's credential slots.
 
@@ -80,7 +81,7 @@ These slots do not imply that those services are required for the first release.
 
 ### Email provider preparation
 
-The existing SMTP, Resend and SendGrid settings remain intact. Optional Postmark, Mailgun and Amazon SES placeholders are also included for future email provisioning. An email address record is not an inbox; mailbox creation, delivery and bounce/verification handling need a working email adapter.
+SMTP, Resend, SendGrid, Postmark, Mailgun and Amazon SES are represented in the provider catalogue. The existing SMTP, Resend and SendGrid settings remain intact; the newer Postmark, Mailgun and SES environment slots are blank placeholders. SMTP expects a host, username, password and sender address; Mailgun expects its API key and sending domain; Amazon SES uses the AWS region plus an IAM credential chain. An email address record is not an inbox; mailbox creation, delivery and bounce/verification handling need a real email adapter and provider-side verification.
 
 ## Safe setup procedure
 
