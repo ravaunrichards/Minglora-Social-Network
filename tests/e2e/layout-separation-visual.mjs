@@ -41,7 +41,8 @@ function assertStableScreenGeometry(current,baseline,message){
 function assertReferenceGeometry(screen,state,viewport){
   const label=screen+' '+viewport+' reference geometry';
   if(screen==='full-screen'){
-    assert.ok(state.hostRect.height>state.hostRect.width*.8,label+': host-first stage should remain prominent');
+    assert.ok(state.hostRect.height>state.smallGuestRects[0].height*1.5,label+': host-first stage must remain substantially taller than guest tiles');
+    assert.ok(state.hostRect.width>state.smallGuestRects[0].width*1.5,label+': host-first stage must remain substantially wider than guest tiles');
     assert.equal(state.headingDisplay,'none',label+': no extra layout heading in Full Screen');
   }
   if(screen==='fluid-panel'){
