@@ -855,3 +855,55 @@ body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layo
   body:has(#live-player-shell) #live-video-stage #live-guest-layout .live-guest-seat-meta small{display:none!important}
 }
 /* END FINAL NINE GUEST LAYOUTS. */
+
+
+/* REFERENCE PARITY CORRECTION: Fluid Panel keeps the host full-stage and
+   stacks guest windows vertically on the right, as in the supplied diagram.
+   The older bottom-left row rules above are intentionally superseded here. */
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr)!important;
+  grid-template-rows:minmax(0,1fr)!important;
+  align-content:stretch!important;
+}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-layout-heading{
+  position:absolute!important;top:7px!important;left:8px!important;right:auto!important;
+  z-index:7!important;grid-column:auto!important;grid-row:auto!important;
+  width:auto!important;max-width:calc(100% - 16px)!important;height:auto!important;
+  min-height:18px!important;padding:3px 6px!important;
+  border-radius:6px!important;background:rgba(8,13,22,.56)!important;
+}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-host{
+  grid-column:1!important;grid-row:1!important;
+  width:100%!important;height:100%!important;min-width:0!important;min-height:0!important;
+}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest{
+  position:absolute!important;left:auto!important;right:8px!important;bottom:auto!important;
+  z-index:5!important;width:clamp(52px,18%,118px)!important;
+  height:clamp(44px,8.4%,78px)!important;min-width:0!important;min-height:0!important;
+  max-width:calc(100% - 16px)!important;max-height:11%!important;
+  aspect-ratio:4/5!important;border:1px solid rgba(255,255,255,.3)!important;
+  border-radius:9px!important;box-shadow:0 4px 14px rgba(0,0,0,.3)!important;
+}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest:nth-child(3){top:4%!important}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest:nth-child(4){top:15.5%!important}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest:nth-child(5){top:27%!important}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest:nth-child(6){top:38.5%!important}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest:nth-child(7){top:50%!important}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest:nth-child(8){top:61.5%!important}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest:nth-child(9){top:73%!important}
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest:nth-child(10){top:84.5%!important}
+@media(max-width:760px){
+  body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest{
+    right:4px!important;width:clamp(44px,20%,74px)!important;
+    height:clamp(38px,8%,54px)!important;border-radius:7px!important;
+  }
+  body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest:nth-child(3){top:4%!important}
+  body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest:nth-child(4){top:15%!important}
+  body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest:nth-child(5){top:26%!important}
+  body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest:nth-child(6){top:37%!important}
+  body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest:nth-child(7){top:48%!important}
+  body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest:nth-child(8){top:59%!important}
+  body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest:nth-child(9){top:70%!important}
+  body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat.is-guest:nth-child(10){top:81%!important}
+}
