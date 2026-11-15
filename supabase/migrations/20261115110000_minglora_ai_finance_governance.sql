@@ -302,8 +302,6 @@ declare
   v_event_type text;
   v_assignment uuid;
   v_task uuid;
-  v_org uuid;
-  v_department uuid;
   v_provider text;
   v_model text;
   v_input bigint;
