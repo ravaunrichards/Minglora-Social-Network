@@ -159,3 +159,16 @@ The 45 standalone files in `public/assets/gifts/` pass JSON/glTF 2.0 structure c
 | World-space dimensions evaluated with node transforms | 0 |
 
 Every model has one buffer. These files are static glTF mesh assets; the separate Minglora application animation runtime is required to animate them. Position accessor bounds are not world-space dimensions. Technical review, actual renderer screenshots, visual review and rights review remain outstanding; all models remain excluded from production approval.
+
+## Legacy standalone glTF structural audit — 2026-11-15
+
+All **45** retained standalone gift models in `public/assets/gifts/` were inspected against their embedded float32 vertex data and their technical profiles reconciled.
+
+- **45/45** documents parse as glTF 2.0 and contain scene mesh geometry.
+- **45/45** use an embedded geometry buffer; **0** external resource URIs were found.
+- **0** texture/image resources and **0** embedded glTF animation channels were found. Gift motion in the application is implemented separately from embedded model animation.
+- **23 models** required correction: **7** lacked POSITION accessor bounds and **16** had existing bounds that did not match the actual vertex extrema. **42 unique POSITION accessors** were recalculated from the embedded float32 data. All **531 POSITION accessor references** are now covered by finite, three-component `min`/`max` bounds matching the stored vertices.
+- Updated files: `minglora_aurora_whale.gltf`, `minglora_blue_mountain_coffee.gltf`, `minglora_christmas_lantern.gltf`, `minglora_confetti.gltf`, `minglora_cosmic_orbit.gltf`, `minglora_cricket_bat.gltf`, `minglora_diamond_basketball.gltf`, `minglora_diamond_ring.gltf`, `minglora_finger_heart.gltf`, `minglora_fireworks.gltf`, `minglora_galaxy.gltf`, `minglora_golden_microphone.gltf`, `minglora_golden_trophy.gltf`, `minglora_island_pride.gltf`, `minglora_jade_dragon.gltf`, `minglora_money_gun.gltf`, `minglora_money_rain.gltf`, `minglora_parish_pride_crest.gltf`, `minglora_perfume.gltf`, `minglora_royal_lion.gltf`, `minglora_thunder_falcon.gltf`, `minglora_tropical_sunset.gltf` and `minglora_zeus.gltf`.
+- The per-model inventory now records corrected byte sizes, Git blob hashes, POSITION-reference counts and accessor-local bounds. The regression test recalculates the extrema from each embedded vertex buffer across all 45 files.
+
+**Approval remains blocked:** these models are still production-ineligible pending canonical catalogue mapping, visual/render review and rights clearance. Structural validity is not premium artwork approval. World-space dimensions have deliberately not been guessed because node transforms have not been applied. No production gift, price, wallet, transaction or earning state was changed.

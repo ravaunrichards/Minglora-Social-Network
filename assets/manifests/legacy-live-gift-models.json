@@ -4,7 +4,7 @@
   "audited_at": "2026-11-15",
   "source_directory": "public/assets/gifts/",
   "asset_count": 45,
-  "total_bytes": 676631,
+  "total_bytes": 680053,
   "purpose": "Integrity and review inventory for repository-tracked standalone glTF gift models retained from earlier Minglora LIVE catalogue work.",
   "publication_policy": {
     "production_eligible": false,
@@ -22,8 +22,8 @@
       "repository_path": "public/assets/gifts/minglora_aurora_whale.gltf",
       "public_path": "/assets/gifts/minglora_aurora_whale.gltf",
       "format": "glTF 2.0 JSON",
-      "bytes": 23562,
-      "git_blob_sha1": "62b301d8da84235593196a1073dc0dedb2a5cd8d",
+      "bytes": 23666,
+      "git_blob_sha1": "3a609a9256ebb183a0d754b52a5c1f0a6a9e76f8",
       "catalogue_mapping_status": "historical_identity_mapped",
       "visual_review_status": "pending",
       "technical_render_review_status": "pending",
@@ -57,19 +57,19 @@
         "position_accessors_with_bounds": 12,
         "accessor_local_bounds": {
           "min": [
+            -1.1799999475479126,
             -1,
-            -1,
-            -1
+            -1.1504149436950684
           ],
           "max": [
+            1.1799999475479126,
             1,
-            1,
-            1
+            1.1504149436950684
           ],
           "size": [
+            2.359999895095825,
             2,
-            2,
-            2
+            2.3008298873901367
           ]
         },
         "world_space_dimensions": null,
@@ -82,8 +82,8 @@
       "repository_path": "public/assets/gifts/minglora_blue_mountain_coffee.gltf",
       "public_path": "/assets/gifts/minglora_blue_mountain_coffee.gltf",
       "format": "glTF 2.0 JSON",
-      "bytes": 27743,
-      "git_blob_sha1": "97a8fcb452f5f1c7e5af8aef8b7f784238aa7b14",
+      "bytes": 27847,
+      "git_blob_sha1": "483519918bbdf81461afe9eda25f439c0b15917c",
       "catalogue_mapping_status": "historical_identity_mapped",
       "visual_review_status": "pending",
       "technical_render_review_status": "pending",
@@ -109,19 +109,19 @@
         "position_accessors_with_bounds": 15,
         "accessor_local_bounds": {
           "min": [
+            -1.1799999475479126,
             -1,
-            -1,
-            -1
+            -1.1799999475479126
           ],
           "max": [
+            1.1799999475479126,
             1,
-            1,
-            1
+            1.1799999475479126
           ],
           "size": [
+            2.359999895095825,
             2,
-            2,
-            2
+            2.359999895095825
           ]
         },
         "world_space_dimensions": null,
@@ -254,8 +254,8 @@
       "repository_path": "public/assets/gifts/minglora_christmas_lantern.gltf",
       "public_path": "/assets/gifts/minglora_christmas_lantern.gltf",
       "format": "glTF 2.0 JSON",
-      "bytes": 27119,
-      "git_blob_sha1": "afb8d0e9ae46370699c9b3730fb46d6426443df2",
+      "bytes": 27308,
+      "git_blob_sha1": "290adbddd69cafc0fc9c0d791814f4fee6002a7c",
       "catalogue_mapping_status": "historical_identity_mapped",
       "visual_review_status": "pending",
       "technical_render_review_status": "pending",
@@ -289,19 +289,19 @@
         "position_accessors_with_bounds": 16,
         "accessor_local_bounds": {
           "min": [
+            -1.1799999475479126,
             -1,
-            -1,
-            -1
+            -1.1504149436950684
           ],
           "max": [
+            1.1799999475479126,
             1,
-            1,
-            1
+            1.1504149436950684
           ],
           "size": [
+            2.359999895095825,
             2,
-            2,
-            2
+            2.3008298873901367
           ]
         },
         "world_space_dimensions": null,
@@ -314,8 +314,8 @@
       "repository_path": "public/assets/gifts/minglora_confetti.gltf",
       "public_path": "/assets/gifts/minglora_confetti.gltf",
       "format": "glTF 2.0 JSON",
-      "bytes": 7679,
-      "git_blob_sha1": "1c6eb7ceebbfd9cf354823afa35c983fe5f9c904",
+      "bytes": 7857,
+      "git_blob_sha1": "b3c7085a1f84139afd310a3a8ae674a1a7a82834",
       "catalogue_mapping_status": "historical_identity_mapped",
       "visual_review_status": "pending",
       "technical_render_review_status": "pending",
@@ -346,8 +346,24 @@
         "embedded_animation_count": 0,
         "buffer_count": 1,
         "buffer_bytes": 2880,
-        "position_accessors_with_bounds": 0,
-        "accessor_local_bounds": null,
+        "position_accessors_with_bounds": 21,
+        "accessor_local_bounds": {
+          "min": [
+            -1,
+            -1,
+            -1
+          ],
+          "max": [
+            1,
+            1,
+            1
+          ],
+          "size": [
+            2,
+            2,
+            2
+          ]
+        },
         "world_space_dimensions": null,
         "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
       }
@@ -418,8 +434,8 @@
       "repository_path": "public/assets/gifts/minglora_cosmic_orbit.gltf",
       "public_path": "/assets/gifts/minglora_cosmic_orbit.gltf",
       "format": "glTF 2.0 JSON",
-      "bytes": 22593,
-      "git_blob_sha1": "441bb36d56b5e320ecee82ad9846adcc16204a2c",
+      "bytes": 22697,
+      "git_blob_sha1": "251e0d759e6254274d6fecd436fbbde98819965f",
       "catalogue_mapping_status": "historical_identity_mapped",
       "visual_review_status": "pending",
       "technical_render_review_status": "pending",
@@ -445,19 +461,19 @@
         "position_accessors_with_bounds": 12,
         "accessor_local_bounds": {
           "min": [
+            -1.1799999475479126,
             -1,
-            -1,
-            -1
+            -1.1799999475479126
           ],
           "max": [
+            1.1799999475479126,
             1,
-            1,
-            1
+            1.1799999475479126
           ],
           "size": [
+            2.359999895095825,
             2,
-            2,
-            2
+            2.359999895095825
           ]
         },
         "world_space_dimensions": null,
@@ -470,8 +486,8 @@
       "repository_path": "public/assets/gifts/minglora_cricket_bat.gltf",
       "public_path": "/assets/gifts/minglora_cricket_bat.gltf",
       "format": "glTF 2.0 JSON",
-      "bytes": 24755,
-      "git_blob_sha1": "8f11c29cff58d280a3352a408a9d33d9f0a9d81f",
+      "bytes": 24859,
+      "git_blob_sha1": "d7c70db780005fae3cf6526e8a972583cbed0faf",
       "catalogue_mapping_status": "historical_identity_mapped",
       "visual_review_status": "pending",
       "technical_render_review_status": "pending",
@@ -505,19 +521,19 @@
         "position_accessors_with_bounds": 12,
         "accessor_local_bounds": {
           "min": [
+            -1.1799999475479126,
             -1,
-            -1,
-            -1
+            -1.1504149436950684
           ],
           "max": [
+            1.1799999475479126,
             1,
-            1,
-            1
+            1.1504149436950684
           ],
           "size": [
+            2.359999895095825,
             2,
-            2,
-            2
+            2.3008298873901367
           ]
         },
         "world_space_dimensions": null,
@@ -642,8 +658,8 @@
       "repository_path": "public/assets/gifts/minglora_diamond_basketball.gltf",
       "public_path": "/assets/gifts/minglora_diamond_basketball.gltf",
       "format": "glTF 2.0 JSON",
-      "bytes": 24065,
-      "git_blob_sha1": "5670ea45dbf6d64da71b1a19aaba292e68a1c041",
+      "bytes": 24169,
+      "git_blob_sha1": "4ad8b1ebb1f704738a3d1a46f07af3e767ec7208",
       "catalogue_mapping_status": "historical_identity_mapped",
       "visual_review_status": "pending",
       "technical_render_review_status": "pending",
@@ -677,19 +693,19 @@
         "position_accessors_with_bounds": 9,
         "accessor_local_bounds": {
           "min": [
+            -1.1799999475479126,
             -1,
-            -1,
-            -1
+            -1.1504149436950684
           ],
           "max": [
+            1.1799999475479126,
             1,
-            1,
-            1
+            1.1504149436950684
           ],
           "size": [
+            2.359999895095825,
             2,
-            2,
-            2
+            2.3008298873901367
           ]
         },
         "world_space_dimensions": null,
@@ -702,8 +718,8 @@
       "repository_path": "public/assets/gifts/minglora_diamond_ring.gltf",
       "public_path": "/assets/gifts/minglora_diamond_ring.gltf",
       "format": "glTF 2.0 JSON",
-      "bytes": 19265,
-      "git_blob_sha1": "4dcd239b61a02ccbe9b2334fb3638e3c07b617e0",
+      "bytes": 19369,
+      "git_blob_sha1": "1c1770c4db9cd260892f3d21503259a4bb42df5b",
       "catalogue_mapping_status": "historical_identity_mapped",
       "visual_review_status": "pending",
       "technical_render_review_status": "pending",
@@ -737,19 +753,19 @@
         "position_accessors_with_bounds": 8,
         "accessor_local_bounds": {
           "min": [
+            -1.1799999475479126,
             -1,
-            -1,
-            -1
+            -1.1504149436950684
           ],
           "max": [
+            1.1799999475479126,
             1,
-            1,
-            1
+            1.1504149436950684
           ],
           "size": [
+            2.359999895095825,
             2,
-            2,
-            2
+            2.3008298873901367
           ]
         },
         "world_space_dimensions": null,
@@ -882,8 +898,8 @@
       "repository_path": "public/assets/gifts/minglora_finger_heart.gltf",
       "public_path": "/assets/gifts/minglora_finger_heart.gltf",
       "format": "glTF 2.0 JSON",
-      "bytes": 5232,
-      "git_blob_sha1": "fefd9f8e968994c0a5a7c8ad10c3ce2f9bc8ea6c",
+      "bytes": 5328,
+      "git_blob_sha1": "7b1c5bcca067d2addcbc9aa8ecdba44ae5741fdd",
       "catalogue_mapping_status": "historical_identity_mapped",
       "visual_review_status": "pending",
       "technical_render_review_status": "pending",
@@ -914,8 +930,24 @@
         "embedded_animation_count": 0,
         "buffer_count": 1,
         "buffer_bytes": 2736,
-        "position_accessors_with_bounds": 0,
-        "accessor_local_bounds": null,
+        "position_accessors_with_bounds": 4,
+        "accessor_local_bounds": {
+          "min": [
+            -1,
+            -1,
+            -1
+          ],
+          "max": [
+            1,
+            1,
+            1
+          ],
+          "size": [
+            2,
+            2,
+            2
+          ]
+        },
         "world_space_dimensions": null,
         "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
       }
@@ -926,8 +958,8 @@
       "repository_path": "public/assets/gifts/minglora_fireworks.gltf",
       "public_path": "/assets/gifts/minglora_fireworks.gltf",
       "format": "glTF 2.0 JSON",
-      "bytes": 15151,
-      "git_blob_sha1": "ca48311abcccc86f3052c04763864e98b7839f77",
+      "bytes": 15236,
+      "git_blob_sha1": "be4a7a4f25548caeacb0a58a8c130624cb48abe1",
       "catalogue_mapping_status": "historical_identity_mapped",
       "visual_review_status": "pending",
       "technical_render_review_status": "pending",
@@ -978,8 +1010,8 @@
       "repository_path": "public/assets/gifts/minglora_galaxy.gltf",
       "public_path": "/assets/gifts/minglora_galaxy.gltf",
       "format": "glTF 2.0 JSON",
-      "bytes": 22603,
-      "git_blob_sha1": "9b1051fdcc8ae1d3c97c8e3123fe5b4d70179073",
+      "bytes": 22885,
+      "git_blob_sha1": "7774f0669dbd962c644d2ea6d52b4c7b639e17f6",
       "catalogue_mapping_status": "historical_identity_mapped",
       "visual_review_status": "pending",
       "technical_render_review_status": "pending",
@@ -1010,8 +1042,24 @@
         "embedded_animation_count": 0,
         "buffer_count": 1,
         "buffer_bytes": 14112,
-        "position_accessors_with_bounds": 0,
-        "accessor_local_bounds": null,
+        "position_accessors_with_bounds": 21,
+        "accessor_local_bounds": {
+          "min": [
+            -1.1799999475479126,
+            -1,
+            -1.1504149436950684
+          ],
+          "max": [
+            1.1799999475479126,
+            1,
+            1.1504149436950684
+          ],
+          "size": [
+            2.359999895095825,
+            2,
+            2.3008298873901367
+          ]
+        },
         "world_space_dimensions": null,
         "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
       }
@@ -1022,8 +1070,8 @@
       "repository_path": "public/assets/gifts/minglora_golden_microphone.gltf",
       "public_path": "/assets/gifts/minglora_golden_microphone.gltf",
       "format": "glTF 2.0 JSON",
-      "bytes": 24889,
-      "git_blob_sha1": "9d66d36569d9eee1fc76d4932efbe0c8724b0528",
+      "bytes": 24993,
+      "git_blob_sha1": "9a1fb5725def854d70dee847b21e63b97f47fe7f",
       "catalogue_mapping_status": "historical_identity_mapped",
       "visual_review_status": "pending",
       "technical_render_review_status": "pending",
@@ -1057,19 +1105,19 @@
         "position_accessors_with_bounds": 12,
         "accessor_local_bounds": {
           "min": [
+            -1.1799999475479126,
             -1,
-            -1,
-            -1
+            -1.1504149436950684
           ],
           "max": [
+            1.1799999475479126,
             1,
-            1,
-            1
+            1.1504149436950684
           ],
           "size": [
+            2.359999895095825,
             2,
-            2,
-            2
+            2.3008298873901367
           ]
         },
         "world_space_dimensions": null,
@@ -1082,8 +1130,8 @@
       "repository_path": "public/assets/gifts/minglora_golden_trophy.gltf",
       "public_path": "/assets/gifts/minglora_golden_trophy.gltf",
       "format": "glTF 2.0 JSON",
-      "bytes": 28235,
-      "git_blob_sha1": "944c1e80c10f32357b42ef945b222ef93f651b9c",
+      "bytes": 28424,
+      "git_blob_sha1": "2bac182743a307a6f6468f0259f46579fa3c997c",
       "catalogue_mapping_status": "historical_identity_mapped",
       "visual_review_status": "pending",
       "technical_render_review_status": "pending",
@@ -1109,19 +1157,19 @@
         "position_accessors_with_bounds": 9,
         "accessor_local_bounds": {
           "min": [
+            -1.1799999475479126,
             -1,
-            -1,
-            -1
+            -1.1799999475479126
           ],
           "max": [
+            1.1799999475479126,
             1,
-            1,
-            1
+            1.1799999475479126
           ],
           "size": [
+            2.359999895095825,
             2,
-            2,
-            2
+            2.359999895095825
           ]
         },
         "world_space_dimensions": null,
@@ -1254,8 +1302,8 @@
       "repository_path": "public/assets/gifts/minglora_island_pride.gltf",
       "public_path": "/assets/gifts/minglora_island_pride.gltf",
       "format": "glTF 2.0 JSON",
-      "bytes": 12569,
-      "git_blob_sha1": "b6cd0faa020050a5909ee4b980f694f4d2f5c812",
+      "bytes": 12654,
+      "git_blob_sha1": "2c34e0ab6c3c61b66127e1505885aa7d071ddaf7",
       "catalogue_mapping_status": "historical_identity_mapped",
       "visual_review_status": "pending",
       "technical_render_review_status": "pending",
@@ -1314,8 +1362,8 @@
       "repository_path": "public/assets/gifts/minglora_jade_dragon.gltf",
       "public_path": "/assets/gifts/minglora_jade_dragon.gltf",
       "format": "glTF 2.0 JSON",
-      "bytes": 23335,
-      "git_blob_sha1": "a6ea9af53e1b88feac9129c3d0140560e38c5718",
+      "bytes": 23439,
+      "git_blob_sha1": "ce68d6532cacf21f3a479b66ca2292fc041d5fa8",
       "catalogue_mapping_status": "historical_identity_mapped",
       "visual_review_status": "pending",
       "technical_render_review_status": "pending",
@@ -1349,19 +1397,19 @@
         "position_accessors_with_bounds": 9,
         "accessor_local_bounds": {
           "min": [
+            -1.1799999475479126,
             -1,
-            -1,
-            -1
+            -1.1504149436950684
           ],
           "max": [
+            1.1799999475479126,
             1,
-            1,
-            1
+            1.1504149436950684
           ],
           "size": [
+            2.359999895095825,
             2,
-            2,
-            2
+            2.3008298873901367
           ]
         },
         "world_space_dimensions": null,
@@ -1374,8 +1422,8 @@
       "repository_path": "public/assets/gifts/minglora_money_gun.gltf",
       "public_path": "/assets/gifts/minglora_money_gun.gltf",
       "format": "glTF 2.0 JSON",
-      "bytes": 10947,
-      "git_blob_sha1": "d52fe4e6ff2bf952825717dbff601282699c6617",
+      "bytes": 11125,
+      "git_blob_sha1": "a5be6f0d1f7e055885c23e154a5e8ee87d6c1e1c",
       "catalogue_mapping_status": "historical_identity_mapped",
       "visual_review_status": "pending",
       "technical_render_review_status": "pending",
@@ -1406,8 +1454,24 @@
         "embedded_animation_count": 0,
         "buffer_count": 1,
         "buffer_bytes": 5760,
-        "position_accessors_with_bounds": 0,
-        "accessor_local_bounds": null,
+        "position_accessors_with_bounds": 15,
+        "accessor_local_bounds": {
+          "min": [
+            -1,
+            -1,
+            -1
+          ],
+          "max": [
+            1,
+            1,
+            1
+          ],
+          "size": [
+            2,
+            2,
+            2
+          ]
+        },
         "world_space_dimensions": null,
         "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
       }
@@ -1418,8 +1482,8 @@
       "repository_path": "public/assets/gifts/minglora_money_rain.gltf",
       "public_path": "/assets/gifts/minglora_money_rain.gltf",
       "format": "glTF 2.0 JSON",
-      "bytes": 22035,
-      "git_blob_sha1": "47cf5751576421a63dd8772caf3fffabb0249b7f",
+      "bytes": 22224,
+      "git_blob_sha1": "6d9f6f5eeed4bc97d798518db36fdba2fc868aad",
       "catalogue_mapping_status": "historical_identity_mapped",
       "visual_review_status": "pending",
       "technical_render_review_status": "pending",
@@ -1453,19 +1517,19 @@
         "position_accessors_with_bounds": 9,
         "accessor_local_bounds": {
           "min": [
+            -1.1799999475479126,
             -1,
-            -1,
-            -1
+            -1.1504149436950684
           ],
           "max": [
+            1.1799999475479126,
             1,
-            1,
-            1
+            1.1504149436950684
           ],
           "size": [
+            2.359999895095825,
             2,
-            2,
-            2
+            2.3008298873901367
           ]
         },
         "world_space_dimensions": null,
@@ -1538,8 +1602,8 @@
       "repository_path": "public/assets/gifts/minglora_parish_pride_crest.gltf",
       "public_path": "/assets/gifts/minglora_parish_pride_crest.gltf",
       "format": "glTF 2.0 JSON",
-      "bytes": 26930,
-      "git_blob_sha1": "7fb06cc2ec0ae4a361e173a771667f77d3c9b146",
+      "bytes": 27119,
+      "git_blob_sha1": "743b4ad413f058d83588cbb9f06e8c46fad60115",
       "catalogue_mapping_status": "historical_identity_mapped",
       "visual_review_status": "pending",
       "technical_render_review_status": "pending",
@@ -1573,19 +1637,19 @@
         "position_accessors_with_bounds": 16,
         "accessor_local_bounds": {
           "min": [
+            -1.1799999475479126,
             -1,
-            -1,
-            -1
+            -1.1504149436950684
           ],
           "max": [
+            1.1799999475479126,
             1,
-            1,
-            1
+            1.1504149436950684
           ],
           "size": [
+            2.359999895095825,
             2,
-            2,
-            2
+            2.3008298873901367
           ]
         },
         "world_space_dimensions": null,
@@ -1658,8 +1722,8 @@
       "repository_path": "public/assets/gifts/minglora_perfume.gltf",
       "public_path": "/assets/gifts/minglora_perfume.gltf",
       "format": "glTF 2.0 JSON",
-      "bytes": 21178,
-      "git_blob_sha1": "14d6c68baf2dcc0d5edb708ff5b3c1f72e194728",
+      "bytes": 21409,
+      "git_blob_sha1": "7584ca60985a26d6dfcbb3a3a1574ce9ced367b0",
       "catalogue_mapping_status": "historical_identity_mapped",
       "visual_review_status": "pending",
       "technical_render_review_status": "pending",
@@ -1690,8 +1754,24 @@
         "embedded_animation_count": 0,
         "buffer_count": 1,
         "buffer_bytes": 14112,
-        "position_accessors_with_bounds": 0,
-        "accessor_local_bounds": null,
+        "position_accessors_with_bounds": 9,
+        "accessor_local_bounds": {
+          "min": [
+            -1.1799999475479126,
+            -1,
+            -1.1799999475479126
+          ],
+          "max": [
+            1.1799999475479126,
+            1,
+            1.1799999475479126
+          ],
+          "size": [
+            2.359999895095825,
+            2,
+            2.359999895095825
+          ]
+        },
         "world_space_dimensions": null,
         "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
       }
@@ -2062,8 +2142,8 @@
       "repository_path": "public/assets/gifts/minglora_royal_lion.gltf",
       "public_path": "/assets/gifts/minglora_royal_lion.gltf",
       "format": "glTF 2.0 JSON",
-      "bytes": 22443,
-      "git_blob_sha1": "e458ec50f7f6e91fc368378bf19b751ccdb3b419",
+      "bytes": 22547,
+      "git_blob_sha1": "5e53b2409b2f85e04263319dbaf37bb7abe6b328",
       "catalogue_mapping_status": "historical_identity_mapped",
       "visual_review_status": "pending",
       "technical_render_review_status": "pending",
@@ -2089,19 +2169,19 @@
         "position_accessors_with_bounds": 10,
         "accessor_local_bounds": {
           "min": [
+            -1.1799999475479126,
             -1,
-            -1,
-            -1
+            -1.1799999475479126
           ],
           "max": [
+            1.1799999475479126,
             1,
-            1,
-            1
+            1.1799999475479126
           ],
           "size": [
+            2.359999895095825,
             2,
-            2,
-            2
+            2.359999895095825
           ]
         },
         "world_space_dimensions": null,
@@ -2406,8 +2486,8 @@
       "repository_path": "public/assets/gifts/minglora_thunder_falcon.gltf",
       "public_path": "/assets/gifts/minglora_thunder_falcon.gltf",
       "format": "glTF 2.0 JSON",
-      "bytes": 9152,
-      "git_blob_sha1": "25c7618f64993bc0347cffeb4cd842b50bf3ec91",
+      "bytes": 9245,
+      "git_blob_sha1": "88da41c4fcd7cda546efb21cd19691a74c77806a",
       "catalogue_mapping_status": "historical_identity_mapped",
       "visual_review_status": "pending",
       "technical_render_review_status": "pending",
@@ -2438,8 +2518,24 @@
         "embedded_animation_count": 0,
         "buffer_count": 1,
         "buffer_bytes": 4032,
-        "position_accessors_with_bounds": 0,
-        "accessor_local_bounds": null,
+        "position_accessors_with_bounds": 18,
+        "accessor_local_bounds": {
+          "min": [
+            -1,
+            -1,
+            -1
+          ],
+          "max": [
+            1,
+            1,
+            1
+          ],
+          "size": [
+            2,
+            2,
+            2
+          ]
+        },
         "world_space_dimensions": null,
         "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
       }
@@ -2450,8 +2546,8 @@
       "repository_path": "public/assets/gifts/minglora_tropical_sunset.gltf",
       "public_path": "/assets/gifts/minglora_tropical_sunset.gltf",
       "format": "glTF 2.0 JSON",
-      "bytes": 30143,
-      "git_blob_sha1": "0f253320062ac942961db83188fe696a7d70e922",
+      "bytes": 30332,
+      "git_blob_sha1": "daf4b638de33de5eb225937b64df78022b57359b",
       "catalogue_mapping_status": "historical_identity_mapped",
       "visual_review_status": "pending",
       "technical_render_review_status": "pending",
@@ -2485,19 +2581,19 @@
         "position_accessors_with_bounds": 20,
         "accessor_local_bounds": {
           "min": [
+            -1.1799999475479126,
             -1,
-            -1,
-            -1
+            -1.1504149436950684
           ],
           "max": [
+            1.1799999475479126,
             1,
-            1,
-            1
+            1.1504149436950684
           ],
           "size": [
+            2.359999895095825,
             2,
-            2,
-            2
+            2.3008298873901367
           ]
         },
         "world_space_dimensions": null,
@@ -2510,8 +2606,8 @@
       "repository_path": "public/assets/gifts/minglora_zeus.gltf",
       "public_path": "/assets/gifts/minglora_zeus.gltf",
       "format": "glTF 2.0 JSON",
-      "bytes": 23527,
-      "git_blob_sha1": "efd3b25543375d4092fa74dd6e67c3d8e5b1b60e",
+      "bytes": 23840,
+      "git_blob_sha1": "49c74ce76ca89fc7c68ff9c6c8d815115edb6d1c",
       "catalogue_mapping_status": "historical_identity_mapped",
       "visual_review_status": "pending",
       "technical_render_review_status": "pending",
@@ -2542,8 +2638,24 @@
         "embedded_animation_count": 0,
         "buffer_count": 1,
         "buffer_bytes": 14976,
-        "position_accessors_with_bounds": 0,
-        "accessor_local_bounds": null,
+        "position_accessors_with_bounds": 16,
+        "accessor_local_bounds": {
+          "min": [
+            -1.1799999475479126,
+            -1,
+            -1.1504149436950684
+          ],
+          "max": [
+            1.1799999475479126,
+            1,
+            1.1504149436950684
+          ],
+          "size": [
+            2.359999895095825,
+            2,
+            2.3008298873901367
+          ]
+        },
         "world_space_dimensions": null,
         "bounds_note": "Accessor-local bounds only; node transforms have not been applied, so these are not world-space model dimensions."
       }
@@ -2575,9 +2687,36 @@
     "embedded_animation_channels": 0,
     "buffers_per_model": 1,
     "total_buffer_bytes": 394992,
-    "models_with_position_accessor_bounds": 38,
-    "models_without_position_accessor_bounds": 7,
+    "models_with_position_accessor_bounds": 45,
+    "models_without_position_accessor_bounds": 0,
     "world_space_dimensions_verified": 0,
-    "conclusion": "These are static glTF mesh packages. They contain no texture/image assets or embedded animation channels. Accessor-local bounds are recorded where present, but world-space dimensions require node-transform evaluation and have not been verified."
+    "conclusion": "All 45 standalone glTF model files have POSITION accessor min/max bounds recomputed against the embedded float32 vertex data. The files contain no texture/image assets or embedded animation channels. Accessor-local bounds are recorded; world-space dimensions remain unverified because node transforms have not been applied."
+  },
+  "technical_structure_audit": {
+    "audited_at": "2026-11-15",
+    "model_count": 45,
+    "gltf_2_json_documents_parsed": 45,
+    "models_with_embedded_geometry_buffer": 45,
+    "models_with_external_resource_uris": 0,
+    "models_with_texture_or_image_assets": 0,
+    "models_with_embedded_animation_channels": 0,
+    "models_missing_position_bounds_before_repair": 7,
+    "models_with_inaccurate_position_bounds_before_repair": 16,
+    "models_corrected": 23,
+    "position_accessors_repaired_or_corrected": 42,
+    "models_missing_position_bounds_after_repair": 0,
+    "models_with_position_bounds_mismatching_embedded_vertices_after_repair": 0,
+    "position_accessor_references_validated": 531,
+    "bounds_derived_from_embedded_float32_vertex_data": true,
+    "all_position_accessors_have_finite_three_component_min_max": true,
+    "all_declared_bounds_match_embedded_float32_vertex_extrema": true,
+    "production_eligible": false,
+    "review_status": "structural_integrity_checked_visual_render_and_rights_review_pending",
+    "limitations": [
+      "Accessor-local bounds do not include scene-node transforms; world-space dimensions were not calculated.",
+      "No screenshot or device renderer review was performed by this structural audit.",
+      "No material, lighting, texture, or artistic premium approval is implied.",
+      "No legacy model was mapped to or activated in the production gift catalogue."
+    ]
   }
 }
