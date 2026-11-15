@@ -581,7 +581,7 @@
     }
     outer.append(card,rays,particles);parent.append(outer);
     const motionElement=card.querySelector(".minglora-gift-fx-model");
-    if(motionElement&&gift.motion_preset&&typeof motionElement.animate==="function"){
+    if(motionElement&&(gift.motion_preset||gift.code==="rose-4ieccm")&&typeof motionElement.animate==="function"){
       const reduced=Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);
       const visualPreset=gift.code==="rose-4ieccm"?"rose-unfurl":gift.code==="djembe-master-1v3jzkm"?"djembe-strike":gift.code==="palm-breeze-gknyt0"?"palm-canopy-sway":gift.code==="gamer-otter-100-mgl"?"gamer-otter-cheer":gift.code==="live-island-rmn3mc"?"island-tide":gift.code==="crystal-crown-1itryeu"?"crown-lustre":gift.code==="phoenix-wep6uk"?"phoenix-rise":gift.code==="beach-maracas-1exxoag"?"maraca-rhythm":gift.code==="royal-lions-scepter-15000-mgl"?"lion-scepter-rise":gift.motion_preset;
       const semanticFrames=buildPreviewFrames(visualPreset,{dx,dy,tilt,spin,peak,rebound});
