@@ -3574,13 +3574,13 @@ Deno.serve(async (req: Request) => {
     const mediaType=mimeType.startsWith("image/")?"image":mimeType.startsWith("video/")?"video":mimeType.startsWith("audio/")?"audio":mimeType==="model/gltf-binary"?"model3d":"document";
     const result:Record<string,unknown>={bucket,path:objectPath,mimeType,mediaType,byteSize};
     if(bucket===AI_PROFILE_MEDIA_BUCKET){
-      const {data,error}=await admin.storage.from(bucket).createSignedUrl(objectPath,3600);
+      const {data,error}=await admin.storage.from(bucket).createSignedUrl(objectPath,300);
       if(error||!data?.signedUrl)return json(502,{error:"The private AI image uploaded but a preview link could not be prepared."});
       result.url=data.signedUrl;
     }else if(bucket==="minglora-avatars"||bucket==="minglora-covers"){
       const {data}=admin.storage.from(bucket).getPublicUrl(objectPath);result.url=data.publicUrl;
     }else{
-      const {data,error}=await admin.storage.from(bucket).createSignedUrl(objectPath,300);
+      const {data,error}=await admin.storage.from(bucket).createSignedUrl(objectPath,3600);
       if(error||!data?.signedUrl)return json(502,{error:"The upload completed but Minglora could not prepare a preview."});
       result.signedUrl=data.signedUrl;
     }
