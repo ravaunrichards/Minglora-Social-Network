@@ -188,6 +188,7 @@
 
     const pageDefinitions = [
       {key:'overview',title:'Overview',group:'Dashboard',description:'A clear starting point with shortcuts to every available administration workspace.'},
+      {key:'ai-bot-centre',title:'AI Bot Centre',group:'AI Operations',description:'Open the protected Minglora AI Bot Network workspace for bot identities, teams, provider status, memory, task controls and safeguards.',selector:'#admin-ai-bot-centre'},
       {key:'company-finance',title:'Company finance & service management',group:'Finance & Operations',description:'Manage operating providers, subscriptions, budgets, invoices and expenses without mixing creator or seller balances.',selector:'#admin-finance-control'},
       {key:'internal-operations',title:'Platform operations',group:'Dashboard',description:'Review metadata-only activity across accounts, social features, calls, meetings, LIVE and finance.',selector:'#admin-internal-operations'},
       {key:'platform-overview',title:'Platform inventory',group:'Dashboard',description:'Review live inventory counts for active Minglora runtime collections.',selector:'#admin-platform-overview'},
@@ -219,7 +220,7 @@
       return Boolean(resolveTarget(definition));
     });
     const pageByKey = new Map(availablePages.map(definition => [definition.key, definition]));
-    const groupOrder = ['Dashboard','Profile & Community','User Management','Creator Finance','Live Pro Access','Trust & Support','Finance & Operations','Administration'];
+    const groupOrder = ['Dashboard','AI Operations','Profile & Community','User Management','Creator Finance','Live Pro Access','Trust & Support','Finance & Operations','Administration'];
 
     const workspace = document.createElement('div');
     workspace.className = 'admin-centre-workspace';
@@ -548,6 +549,25 @@
         </div>
       </nav>
       ${unlocked ? `
+        <section class="admin-ai-bot-centre admin-control-centre-section" id="admin-ai-bot-centre" aria-labelledby="admin-ai-bot-centre-title">
+          <div class="admin-platform-overview-heading">
+            <div>
+              <span class="admin-centre-dashboard-eyebrow">AI OPERATIONS</span>
+              <h3 id="admin-ai-bot-centre-title">Minglora AI Bot Centre</h3>
+              <p>Open the dedicated, owner-protected workspace for AI identities, bot teams, creator drafts, provider health, memory controls, budgets and task safeguards</p>
+            </div>
+            <span class="admin-control-centre-status">Designated administrator only</span>
+          </div>
+          <div class="admin-centre-dashboard-links">
+            <a class="admin-centre-dashboard-link" href="/?mingloraView=ai-network">
+              <span class="admin-centre-dashboard-link-group">AI Operations</span>
+              <strong>Open AI Bot Centre</strong>
+              <span>Launch the complete Minglora AI Network workspace in the main application</span>
+              <span class="admin-centre-dashboard-link-arrow" aria-hidden="true">→</span>
+            </a>
+          </div>
+          <p class="admin-internal-activity-footnote">This entry does not grant new privileges. The AI Network server routes independently re-check the designated owner identity, moderator status and MFA-verified session before returning workspace data or accepting changes.</p>
+        </section>
         <section class="admin-internal-activity" id="admin-internal-operations" aria-labelledby="admin-internal-activity-title">
           <div class="admin-internal-activity-heading">
             <div><h3 id="admin-internal-activity-title">Minglora internal operations</h3>
