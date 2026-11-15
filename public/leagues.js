@@ -11,12 +11,6 @@
   const esc = value => String(value ?? "").replace(/[&<>"']/g, char => ({
     "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
   })[char]);
-  const powerupModelPaths = Object.freeze({
-    momentum_boost: "/assets/match-powerups/minglora_momentum_boost.gltf",
-    shield: "/assets/match-powerups/minglora_shield.gltf",
-    time_boost: "/assets/match-powerups/minglora_time_boost.gltf",
-    score_multiplier: "/assets/match-powerups/minglora_score_multiplier.gltf"
-  });
   function currentPowerup() {
     return (state.overview?.powerups || []).find(item => item.id === state.selectedPowerupId) || null;
   }
@@ -44,7 +38,6 @@
     const powerups = Array.isArray(overview.powerups) ? overview.powerups : [];
     if (!powerups.some(item => item.id === state.selectedPowerupId)) state.selectedPowerupId = powerups[0]?.id || "";
     const selected = powerups.find(item => item.id === state.selectedPowerupId) || powerups[0] || null;
-    const modelUrl = selected ? powerupModelPaths[selected.id] || "" : "";
     const cards = powerups.map(power => {
       const active = power.id === selected?.id;
       return "<button type='button' class='league-powerup-info-card" + (active ? " is-selected" : "") +
@@ -52,47 +45,39 @@
         "<span class='league-powerup-card-symbol' aria-hidden='true'>" + esc(power.symbol) + "</span>" +
         "<strong>" + esc(power.name) + "</strong><p>" + esc(power.description) + "</p>" +
         "<small>" + (power.usedToday ? "Used today" : "One free use per UTC day") + "</small>" +
-        "<span class='league-powerup-card-link'>View 3D preview <span aria-hidden='true'>↗</span></span></button>";
+        "<span class='league-powerup-card-action'>" + (active ? "Selected" : "Select power-up") + "</span></button>";
     }).join("");
-    return "<section class='card league-powerup-info' id='league-powerup-preview-panel' aria-labelledby='league-powerup-heading'>" +
+    return "<section class='card league-powerup-info' id='league-powerup-panel' aria-labelledby='league-powerup-heading'>" +
       "<div class='league-section-heading'><div><span class='league-eyebrow'>MATCH-ONLY TOOLS</span><h2 id='league-powerup-heading'>Match Power-Ups</h2>" +
-      "<p>Inspect every original 3D power-up before activating it. These temporary effects never multiply Creator League points or official class standings.</p></div></div>" +
-      "<div class='league-powerup-preview-layout'><div class='league-powerup-preview-copy'><span class='league-eyebrow'>ROTATABLE 3D PREVIEW</span>" +
-      "<h3 id='league-powerup-preview-title'>" + esc(selected?.name || "Choose a power-up") + "</h3>" +
-      "<p id='league-powerup-preview-description'>" + esc(selected?.description || "Select a Match Power-Up to inspect its original 3D model.") + "</p>" +
-      "<div class='league-powerup-preview-meta'><span id='league-powerup-preview-duration'>" + (selected ? esc(powerupDurationLabel(selected)) : "—") + "</span>" +
-      "<span id='league-powerup-preview-usage'>" + (selected?.usedToday ? "Used today" : "One free use per UTC day") + "</span></div>" +
-      "<p class='league-powerup-preview-status' id='league-powerup-preview-status' role='status' aria-live='polite'>The selected 3D model is loading. Drag to rotate and pinch or scroll to zoom.</p>" +
-      "<p class='league-powerup-availability' id='league-powerup-availability' role='status' aria-live='polite'>Choose Preview from a live match to prepare an activation.</p>" +
-      "<button type='button' class='primary league-powerup-activate' id='league-powerup-activate' hidden disabled>Activate for this match</button></div>" +
-      "<div class='league-powerup-preview-stage' aria-label='Selected Match Power-Up 3D model'>" +
-      "<model-viewer id='league-powerup-selected-model' src='" + esc(modelUrl) + "' alt='" + esc(selected?.name || "Match Power-Up") + " original 3D model' camera-controls auto-rotate rotation-per-second='18deg' interaction-prompt='none' shadow-intensity='.85' exposure='1.12' loading='eager' reveal='auto'></model-viewer></div></div>" +
-      "<div class='league-powerup-info-grid' aria-label='Available Match Power-Ups'>" + cards + "</div></section>";
+      "<p>Select a power-up and activate it during your live match. These temporary effects never multiply Creator League points or official class standings.</p></div></div>" +
+      "<div class='league-powerup-info-grid' aria-label='Available Match Power-Ups'>" + cards + "</div>" +
+      "<div class='league-powerup-selected-details'>" +
+      "<h3 id='league-powerup-selected-title'>" + esc(selected?.name || "Choose a power-up") + "</h3>" +
+      "<p id='league-powerup-selected-description'>" + esc(selected?.description || "Select one of the available Match Power-Ups.") + "</p>" +
+      "<div class='league-powerup-selected-meta'><span id='league-powerup-selected-duration'>" + (selected ? esc(powerupDurationLabel(selected)) : "—") + "</span>" +
+      "<span id='league-powerup-selected-usage'>" + (selected?.usedToday ? "Used today" : "One free use per UTC day") + "</span></div>" +
+      "<p class='league-powerup-availability' id='league-powerup-availability' role='status' aria-live='polite'>Choose a power-up from one of your live matches to prepare an activation.</p>" +
+      "<button type='button' class='primary league-powerup-activate' id='league-powerup-activate' hidden disabled>Activate for this match</button></div></section>";
   }
-  function updatePowerupPreview() {
+  function updatePowerupSelection() {
     const power = currentPowerup();
-    const model = $("#league-powerup-selected-model");
-    const title = $("#league-powerup-preview-title");
-    const description = $("#league-powerup-preview-description");
-    const duration = $("#league-powerup-preview-duration");
-    const usage = $("#league-powerup-preview-usage");
-    const status = $("#league-powerup-preview-status");
+    const title = $("#league-powerup-selected-title");
+    const description = $("#league-powerup-selected-description");
+    const duration = $("#league-powerup-selected-duration");
+    const usage = $("#league-powerup-selected-usage");
     const availability = $("#league-powerup-availability");
     const activate = $("#league-powerup-activate");
-    if (!power) return;
-    const source = powerupModelPaths[power.id] || "";
+    if (!power) {
+      if (title) title.textContent = "No power-ups available";
+      if (description) description.textContent = "No Match Power-Ups are currently available.";
+      if (availability) availability.textContent = "No Match Power-Ups are currently available.";
+      if (activate) { activate.hidden = true; activate.disabled = true; }
+      return;
+    }
     if (title) title.textContent = power.name;
     if (description) description.textContent = power.description;
     if (duration) duration.textContent = powerupDurationLabel(power);
     if (usage) usage.textContent = power.usedToday ? "Used today" : "One free use per UTC day";
-    if (model && source) {
-      model.alt = power.name + " original Minglora 3D power-up model";
-      if (model.getAttribute("src") !== source) {
-        model.dataset.powerupId = power.id;
-        if (status) status.textContent = "Loading the original 3D model…";
-        model.setAttribute("src", source);
-      } else model.dataset.powerupId = power.id;
-    } else if (status) status.textContent = "A 3D model is not available for this power-up yet.";
     const match = selectedPowerupMatch();
     const reason = powerupRestriction(power, match);
     if (activate) {
@@ -104,7 +89,7 @@
     }
     if (availability) availability.textContent = match
       ? (reason || "Ready to activate in the selected live match.")
-      : "Preview only. Choose Preview on one of your live matches to prepare an activation.";
+      : "Select a power-up from one of your live matches to prepare an activation.";
     document.querySelectorAll("[data-powerup-select]").forEach(button => {
       const active = button.dataset.powerupSelect === power.id;
       button.classList.toggle("is-selected", active);
@@ -278,12 +263,7 @@
       "<div class='league-section-heading'><div><span class='league-eyebrow'>SUPPLIED LEAGUE RULE REFERENCES</span><h2 id='league-fragment-reference-heading'>Placement fragment guide</h2>" +
       "<p>Reference thresholds organized by the class bands in the League captures.</p></div><span class='league-reference-status'>REFERENCE ONLY</span></div>" +
       "<div class='league-fragment-rule-grid'>" + cards + "</div>" +
-      "<p class='league-fragment-reference-note'>These placement-fragment thresholds are displayed for reference; they are not currently used to calculate Minglora class movement. Active Creator League promotion remains based on confirmed lifetime LIVE Gift points (100,000 points per class). Match Rank is calculated separately from completed League Match results.</p></section>";
-  }
-  function matchLadderMarkup(ranks, active) {
-    return "<div class='match-rank-ladder'>" + ranks.map((item, index) =>
-      "<span class='match-rank-step " + (item === active ? "is-current" : "") + "'><small>" + (index + 1) + "</small>" + esc(item) + "</span>"
-    ).join("") + "</div>";
+      "<p class='league-fragment-reference-note'>These placement-fragment thresholds are displayed for reference; they are not currently used to calculate Minglora class movement. Active Creator League promotion remains based on confirmed lifetime LIVE Gift points (100,000 points per class). Completed League Match results do not change Creator League class points.</p></section>";
   }
   function rankingControlsMarkup(overview) {
     const availableClasses = (overview.classes || []).slice().reverse();
@@ -353,9 +333,9 @@
         const unavailableShield = power.id === "shield" &&
           (match.activeEffects || []).some(effect => effect.type === "shield" && effect.side === side && new Date(effect.expiresAt).getTime() > Date.now());
         const fixedTimer = power.id === "time_boost" && match.timerMode === "fixed";
-        const restriction = power.usedToday ? "Used today" : unavailableShield ? "Shield active" : fixedTimer ? "Fixed timer" : "Preview before use";
-        return "<button type='button' class='league-powerup-btn' data-match-powerup-preview='" + esc(power.id) + "' data-match-id='" + esc(match.id) + "' aria-label='Preview " + esc(power.name) + " in 3D'>" +
-          "<span aria-hidden='true'>" + esc(power.symbol) + "</span><strong>" + esc(power.name) + "</strong><small>" + (restriction === "Preview before use" ? "Preview 3D" : "Preview · " + restriction) + "</small></button>";
+        const restriction = power.usedToday ? "Used today" : unavailableShield ? "Shield active" : fixedTimer ? "Unavailable · fixed timer" : "Available once daily";
+        return "<button type='button' class='league-powerup-btn' data-match-powerup-select='" + esc(power.id) + "' data-match-id='" + esc(match.id) + "' aria-label='Select " + esc(power.name) + " for this match'>" +
+          "<span aria-hidden='true'>" + esc(power.symbol) + "</span><strong>" + esc(power.name) + "</strong><small>" + restriction + "</small></button>";
       }).join("");
       controls = "<div class='league-powerup-grid'>" + powers + "</div>";
     } else if (match.status === "live" && !isParticipant) {
@@ -383,21 +363,18 @@
     const matches = overview.activeMatches || [];
     const leaderboard = overview.leaderboard || [];
     const events = overview.recentEvents || [];
-    const matchPercent = p.matchRankPoints;
     return "<div class='league-page'><section class='league-hero' id='league-hero-zone'><div class='league-hero-copy'><span class='league-eyebrow'>MINGLORA COMPETITIVE</span><h1>League Arena</h1><p>Build your LIVE creator league. Compete in matches. Earn your place at the top.</p><div class='league-hero-tags'><span>🌍 " + esc(p.region) + " league</span><span>Season starts " + esc(p.seasonKey) + "</span></div></div><div class='league-hero-emblem'><span>🏆</span><small>" + esc(p.leagueClass) + "</small></div></section>" +
       "<section class='league-overview-grid' id='league-overview-zone'><article class='card league-stat-card league-primary-stat'><span class='league-eyebrow'>CREATOR LEAGUE</span><div class='league-stat-value'>" + esc(p.leagueClass) + "</div><strong>" + Number(p.lifetimeGiftPoints).toLocaleString() + " lifetime LIVE Gift points</strong><p>" + Number(p.seasonPoints).toLocaleString() + " season points · " + Number(p.todayGiftPoints).toLocaleString() + " today</p>" + meter(p.classProgressPoints,p.pointsPerClass) + "<small>" + (p.nextClass ? Number(p.pointsToNextClass).toLocaleString() + " points to " + esc(p.nextClass) : "Highest Creator League class reached") + "</small></article>" +
-      "<article class='card league-stat-card'><span class='league-eyebrow'>MATCH RANK</span><div class='league-stat-value match-rank-value'>" + esc(p.matchRank) + "</div><strong>" + Number(p.matchRankPoints).toLocaleString() + " / 100 rank points</strong>" + meter(matchPercent,100) + "<p>" + (p.matchRankPointsToNext === null ? "Highest match rank reached" : p.matchRankPointsToNext + " points to next rank") + "</p><small>" + p.matchWins + " wins · " + p.matchLosses + " losses · " + p.matchDraws + " draws</small></article>" +
       "<article class='card league-stat-card'><span class='league-eyebrow'>NEXT CLASS</span><div class='league-stat-value match-rank-value'>" + (p.nextClass ? esc(p.nextClass) : "A1") + "</div><strong>" + (p.nextClass ? Number(p.pointsToNextClass).toLocaleString() + " points remaining" : "Top Creator League class") + "</strong><p>Every 100,000 confirmed lifetime LIVE Gift points advances one class.</p><small>Refunded Gifts do not count.</small></article></section>" +
       "<section class='card league-ladder-panel' id='league-progression-zone'><div class='league-section-heading'><div><span class='league-eyebrow'>CREATOR PROGRESSION</span><h2>Creator League classes</h2><p>Your class updates automatically from confirmed lifetime LIVE Gift value.</p></div><span class='league-feature-icon'>📈</span></div>" + classLadderMarkup(overview.classes,p.leagueClass) + "<div class='league-rules-grid'><div><strong>Automatic promotion</strong><p>Every 100,000 eligible lifetime LIVE Gift points advances you one class immediately after the Gift is confirmed.</p></div><div><strong>Lifetime progress</strong><p>Gift points remain across weekly season resets. Refunded Gifts are removed from your total and can change your class.</p></div><div><strong>Eligible Gifts</strong><p>Only confirmed LIVE Gifts count. Coin purchases, direct profile/social gifts, viewer support and match power-up bonuses do not add Creator League points.</p></div></div></section>" +
       fragmentRulesMarkup() +
-      "<section class='card league-ladder-panel'><div class='league-section-heading'><div><span class='league-eyebrow'>MATCH PROGRESSION</span><h2>Bronze to Grandmaster</h2><p>Match rank changes only from completed League Match results, never from LIVE Gift league points.</p></div><span class='league-feature-icon'>🥇</span></div>" + matchLadderMarkup(overview.matchRanks,p.matchRank) + "<div class='league-rank-rules'><span>Win: +25</span><span>Draw: +5</span><span>Loss: −15</span><span>100 points advances one rank</span></div></section>" +
       challengeMarkup(overview,sessions) +
       powerupStudioMarkup(overview) +
       "<section class='league-matches-section' id='league-matches-zone'><div class='league-section-heading'><div><span class='league-eyebrow'>LIVE COMPETITION</span><h2>League Matches</h2><p>Gift points are counted for the match score while the original confirmed Gift value stays in Creator League totals.</p></div><div class='league-refresh-tools'><small id='league-refresh-status' aria-live='polite'>Live scores update automatically.</small></div></div>" + (matches.length ? "<div class='league-matches-grid'>" + matches.map(match=>matchCard(match,overview)).join("") + "</div>" : "<div class='league-empty-inline'>No League Matches yet. Challenge another creator who is LIVE to start one.</div>") + "</section>" +
       "<section class='card league-leaderboard-panel' id='league-leaderboard-zone'><div class='league-section-heading'><div><span class='league-eyebrow'>CREATOR DIVISIONS</span><h2>League leaderboard</h2><p>Browse daily or weekly confirmed LIVE Gift standings across your region's Creator League classes. Tap any creator to open their profile.</p></div></div>" + rankingControlsMarkup(overview) + "</section>" +
       "<section class='card league-events-panel' id='league-events-zone'><div class='league-section-heading'><div><span class='league-eyebrow'>YOUR PROGRESSION</span><h2>League activity</h2></div></div>" + (events.length ? "<div class='league-events-list'>" + events.map(item=>"<div class='league-event-row'><span>✦</span><div><strong>" + esc(eventLabel(item)) + "</strong><small>" + new Date(item.createdAt).toLocaleString() + "</small></div></div>").join("") + "</div>" : "<div class='league-empty-inline'>Promotions, demotions, shields and completed matches will appear here.</div>") + "</section>" +
 
-      "<p class='league-footnote'>Minglora League rules are platform rules, independent of TikTok. Weekly seasons reset season points; lifetime points and Match Rank records remain on your profile.</p></div>";
+      "<p class='league-footnote'>Minglora League rules are platform rules, independent of TikTok. Weekly seasons reset season points; lifetime Creator League points remain on your profile.</p></div>";
   }
   function bindActions() {
     const form = $("#league-challenge-form");
@@ -440,40 +417,30 @@
       });
     });
     document.querySelectorAll("[data-powerup-select]").forEach(button => {
-      if (button.dataset.previewSelectBound) return;
-      button.dataset.previewSelectBound = "true";
+      if (button.dataset.powerupSelectBound === "true") return;
+      button.dataset.powerupSelectBound = "true";
       button.addEventListener("click", () => {
         state.selectedPowerupId = button.dataset.powerupSelect || "";
         state.selectedMatchId = "";
-        updatePowerupPreview();
+        updatePowerupSelection();
       });
     });
-    document.querySelectorAll("[data-match-powerup-preview]").forEach(button => {
-      if (button.dataset.leaguePreviewBound === "true") return;
-      button.dataset.leaguePreviewBound = "true";
+    document.querySelectorAll("[data-match-powerup-select]").forEach(button => {
+      if (button.dataset.leaguePowerupSelectBound === "true") return;
+      button.dataset.leaguePowerupSelectBound = "true";
       button.addEventListener("click", () => {
-        state.selectedPowerupId = button.dataset.matchPowerupPreview || "";
+        state.selectedPowerupId = button.dataset.matchPowerupSelect || "";
         state.selectedMatchId = button.dataset.matchId || "";
-        updatePowerupPreview();
-        $("#league-powerup-preview-panel")?.scrollIntoView({behavior:"smooth",block:"center"});
+        updatePowerupSelection();
+        $("#league-powerup-panel")?.scrollIntoView({behavior:"smooth",block:"center"});
       });
     });
-    const powerupModel = $("#league-powerup-selected-model");
-    if (powerupModel && !powerupModel.dataset.previewEventsBound) {
-      powerupModel.dataset.previewEventsBound = "true";
-      powerupModel.addEventListener("load", () => {
-        if ($("#league-powerup-preview-status")) $("#league-powerup-preview-status").textContent = "3D preview ready. Drag to rotate and pinch or scroll to zoom.";
-      });
-      powerupModel.addEventListener("error", () => {
-        if ($("#league-powerup-preview-status")) $("#league-powerup-preview-status").textContent = "The 3D model could not load. Check your connection and try again; no flat icon is substituted.";
-      });
-    }
     const activatePowerup = $("#league-powerup-activate");
     if (activatePowerup && !activatePowerup.dataset.actionBound) {
       activatePowerup.dataset.actionBound = "true";
       activatePowerup.addEventListener("click", () => { void activateSelectedPowerup(activatePowerup); });
     }
-    updatePowerupPreview();
+    updatePowerupSelection();
 
     document.querySelectorAll("[data-league-period]").forEach(button => {
       if (button.dataset.leaguePeriodBound === "true") return;
@@ -558,6 +525,7 @@
         "league-progression-zone",
         "league-fragment-reference-zone",
         "league-challenge-zone",
+        "league-powerup-panel",
         "league-matches-zone",
         "league-leaderboard-zone",
         "league-events-zone"
