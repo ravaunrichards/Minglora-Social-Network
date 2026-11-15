@@ -548,7 +548,7 @@ export function getAICreatorDailyUsage(db, ownerId, { now = new Date() } = {}) {
   });
   return {
     tokensUsed: jobs.reduce((sum, job) => sum + Math.max(0, Number(job.providerUsage?.total_tokens) || 0), 0),
-    completedDrafts: jobs.length,
+    draftsWithTokenUsage: jobs.length,
     date: dayStart.toISOString().slice(0, 10)
   };
 }
