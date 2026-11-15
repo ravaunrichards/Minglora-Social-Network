@@ -1,0 +1,1000 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="170" height="76" viewBox="0 0 170 76" aria-hidden="true"><title>Minglora Gifter Level Badges</title><symbol id="level-01" viewBox="0 0 170 76" overflow="visible">
+  <title>Level 1 Gifter Badge</title>
+  <desc>Minglora Gifter Level 1, original tier colours rendered as crisp vector artwork.</desc>
+  <defs>
+   <linearGradient id="pill-01" x1="0" y1="0" x2=".12" y2="1"><stop offset="0" stop-color="#4b70ad"/><stop offset="1" stop-color="#304c83"/></linearGradient>
+   <linearGradient id="sheen-01" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".48" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <linearGradient id="gem-01" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#eff7ff"/><stop offset=".48" stop-color="#9ec5f5"/><stop offset="1" stop-color="#628fcf"/></linearGradient>
+   <filter id="shadow-01" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/><feOffset dy="1.2" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="text-shadow-01" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation=".55" result="blur"/><feOffset dy=".65" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g filter="url(#shadow-01)">
+   <rect x="38" y="16" width="94" height="44" rx="12" fill="url(#pill-01)" stroke="#9bb9ed" stroke-width="1.35"/>
+   <rect x="39.3" y="17.3" width="91.4" height="41.4" rx="10.8" fill="url(#sheen-01)" opacity=".9"/>
+   <rect x="40.1" y="18.1" width="89.8" height="39.8" rx="10" fill="none" stroke="#d7e6ff" stroke-opacity=".38" stroke-width=".8"/>
+   <path d="M50 17.5 H120 Q130.5 17.5 130.5 28 V32.72" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="1.05" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(64 38) scale(1) translate(-64 -38)" stroke-linecap="round" stroke-linejoin="round"><path d="M64 20 L78 52 L50 52 Z" fill="url(#gem-01)" stroke="#f4f9ff" stroke-width="2.1" stroke-linejoin="round"/><path d="M64 21 L64 50 L51 51 Z" fill="#9ec5f5" opacity=".83"/><path d="M64 21 L77 51 L64 50 Z" fill="#628fcf" opacity=".74"/><path d="M64 21 L64 50" fill="none" stroke="#eff7ff" stroke-width="1.45" stroke-linecap="round"/><path d="M51 51 L64 37 L77 51" fill="none" stroke="#eff7ff" stroke-width="1.35" stroke-linejoin="round"/><path d="M59 32 L64 21 L69 32" fill="none" stroke="#fff" stroke-opacity=".82" stroke-width="1.05"/><path d="M55 26 l2 -3 2 3" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.05"/></g>
+  <text x="108" y="48" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800" letter-spacing="-.7" fill="#fff" filter="url(#text-shadow-01)">1</text>
+  
+ </symbol>
+<symbol id="level-02" viewBox="0 0 170 76" overflow="visible">
+  <title>Level 2 Gifter Badge</title>
+  <desc>Minglora Gifter Level 2, original tier colours rendered as crisp vector artwork.</desc>
+  <defs>
+   <linearGradient id="pill-02" x1="0" y1="0" x2=".12" y2="1"><stop offset="0" stop-color="#4b70ad"/><stop offset="1" stop-color="#304c83"/></linearGradient>
+   <linearGradient id="sheen-02" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".48" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <linearGradient id="gem-02" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#eff7ff"/><stop offset=".48" stop-color="#9ec5f5"/><stop offset="1" stop-color="#628fcf"/></linearGradient>
+   <filter id="shadow-02" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/><feOffset dy="1.2" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="text-shadow-02" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation=".55" result="blur"/><feOffset dy=".65" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g filter="url(#shadow-02)">
+   <rect x="38" y="16" width="94" height="44" rx="12" fill="url(#pill-02)" stroke="#9bb9ed" stroke-width="1.35"/>
+   <rect x="39.3" y="17.3" width="91.4" height="41.4" rx="10.8" fill="url(#sheen-02)" opacity=".9"/>
+   <rect x="40.1" y="18.1" width="89.8" height="39.8" rx="10" fill="none" stroke="#d7e6ff" stroke-opacity=".38" stroke-width=".8"/>
+   <path d="M50 17.5 H120 Q130.5 17.5 130.5 28 V32.72" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="1.05" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(64 38) scale(1) translate(-64 -38)" stroke-linecap="round" stroke-linejoin="round"><path d="M64 20 L78 52 L50 52 Z" fill="url(#gem-02)" stroke="#f4f9ff" stroke-width="2.1" stroke-linejoin="round"/><path d="M64 21 L64 50 L51 51 Z" fill="#9ec5f5" opacity=".83"/><path d="M64 21 L77 51 L64 50 Z" fill="#628fcf" opacity=".74"/><path d="M64 21 L64 50" fill="none" stroke="#eff7ff" stroke-width="1.45" stroke-linecap="round"/><path d="M51 51 L64 37 L77 51" fill="none" stroke="#eff7ff" stroke-width="1.35" stroke-linejoin="round"/><path d="M59 32 L64 21 L69 32" fill="none" stroke="#fff" stroke-opacity=".82" stroke-width="1.05"/><path d="M55 26 l2 -3 2 3" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.05"/></g>
+  <text x="108" y="48" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800" letter-spacing="-.7" fill="#fff" filter="url(#text-shadow-02)">2</text>
+  
+ </symbol>
+<symbol id="level-03" viewBox="0 0 170 76" overflow="visible">
+  <title>Level 3 Gifter Badge</title>
+  <desc>Minglora Gifter Level 3, original tier colours rendered as crisp vector artwork.</desc>
+  <defs>
+   <linearGradient id="pill-03" x1="0" y1="0" x2=".12" y2="1"><stop offset="0" stop-color="#4b70ad"/><stop offset="1" stop-color="#304c83"/></linearGradient>
+   <linearGradient id="sheen-03" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".48" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <linearGradient id="gem-03" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#eff7ff"/><stop offset=".48" stop-color="#9ec5f5"/><stop offset="1" stop-color="#628fcf"/></linearGradient>
+   <filter id="shadow-03" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/><feOffset dy="1.2" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="text-shadow-03" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation=".55" result="blur"/><feOffset dy=".65" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g filter="url(#shadow-03)">
+   <rect x="38" y="16" width="94" height="44" rx="12" fill="url(#pill-03)" stroke="#9bb9ed" stroke-width="1.35"/>
+   <rect x="39.3" y="17.3" width="91.4" height="41.4" rx="10.8" fill="url(#sheen-03)" opacity=".9"/>
+   <rect x="40.1" y="18.1" width="89.8" height="39.8" rx="10" fill="none" stroke="#d7e6ff" stroke-opacity=".38" stroke-width=".8"/>
+   <path d="M50 17.5 H120 Q130.5 17.5 130.5 28 V32.72" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="1.05" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(64 38) scale(1) translate(-64 -38)" stroke-linecap="round" stroke-linejoin="round"><path d="M64 20 L78 52 L50 52 Z" fill="url(#gem-03)" stroke="#f4f9ff" stroke-width="2.1" stroke-linejoin="round"/><path d="M64 21 L64 50 L51 51 Z" fill="#9ec5f5" opacity=".83"/><path d="M64 21 L77 51 L64 50 Z" fill="#628fcf" opacity=".74"/><path d="M64 21 L64 50" fill="none" stroke="#eff7ff" stroke-width="1.45" stroke-linecap="round"/><path d="M51 51 L64 37 L77 51" fill="none" stroke="#eff7ff" stroke-width="1.35" stroke-linejoin="round"/><path d="M59 32 L64 21 L69 32" fill="none" stroke="#fff" stroke-opacity=".82" stroke-width="1.05"/><path d="M55 26 l2 -3 2 3" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.05"/></g>
+  <text x="108" y="48" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800" letter-spacing="-.7" fill="#fff" filter="url(#text-shadow-03)">3</text>
+  
+ </symbol>
+<symbol id="level-04" viewBox="0 0 170 76" overflow="visible">
+  <title>Level 4 Gifter Badge</title>
+  <desc>Minglora Gifter Level 4, original tier colours rendered as crisp vector artwork.</desc>
+  <defs>
+   <linearGradient id="pill-04" x1="0" y1="0" x2=".12" y2="1"><stop offset="0" stop-color="#4b70ad"/><stop offset="1" stop-color="#304c83"/></linearGradient>
+   <linearGradient id="sheen-04" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".48" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <linearGradient id="gem-04" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#eff7ff"/><stop offset=".48" stop-color="#9ec5f5"/><stop offset="1" stop-color="#628fcf"/></linearGradient>
+   <filter id="shadow-04" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/><feOffset dy="1.2" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="text-shadow-04" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation=".55" result="blur"/><feOffset dy=".65" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g filter="url(#shadow-04)">
+   <rect x="38" y="16" width="94" height="44" rx="12" fill="url(#pill-04)" stroke="#9bb9ed" stroke-width="1.35"/>
+   <rect x="39.3" y="17.3" width="91.4" height="41.4" rx="10.8" fill="url(#sheen-04)" opacity=".9"/>
+   <rect x="40.1" y="18.1" width="89.8" height="39.8" rx="10" fill="none" stroke="#d7e6ff" stroke-opacity=".38" stroke-width=".8"/>
+   <path d="M50 17.5 H120 Q130.5 17.5 130.5 28 V32.72" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="1.05" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(64 38) scale(1) translate(-64 -38)" stroke-linecap="round" stroke-linejoin="round"><path d="M64 20 L78 52 L50 52 Z" fill="url(#gem-04)" stroke="#f4f9ff" stroke-width="2.1" stroke-linejoin="round"/><path d="M64 21 L64 50 L51 51 Z" fill="#9ec5f5" opacity=".83"/><path d="M64 21 L77 51 L64 50 Z" fill="#628fcf" opacity=".74"/><path d="M64 21 L64 50" fill="none" stroke="#eff7ff" stroke-width="1.45" stroke-linecap="round"/><path d="M51 51 L64 37 L77 51" fill="none" stroke="#eff7ff" stroke-width="1.35" stroke-linejoin="round"/><path d="M59 32 L64 21 L69 32" fill="none" stroke="#fff" stroke-opacity=".82" stroke-width="1.05"/><path d="M55 26 l2 -3 2 3" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.05"/></g>
+  <text x="108" y="48" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800" letter-spacing="-.7" fill="#fff" filter="url(#text-shadow-04)">4</text>
+  
+ </symbol>
+<symbol id="level-05" viewBox="0 0 170 76" overflow="visible">
+  <title>Level 5 Gifter Badge</title>
+  <desc>Minglora Gifter Level 5, original tier colours rendered as crisp vector artwork.</desc>
+  <defs>
+   <linearGradient id="pill-05" x1="0" y1="0" x2=".12" y2="1"><stop offset="0" stop-color="#4b70ad"/><stop offset="1" stop-color="#304c83"/></linearGradient>
+   <linearGradient id="sheen-05" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".48" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <linearGradient id="gem-05" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#eff7ff"/><stop offset=".48" stop-color="#9ec5f5"/><stop offset="1" stop-color="#628fcf"/></linearGradient>
+   <filter id="shadow-05" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/><feOffset dy="1.2" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="text-shadow-05" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation=".55" result="blur"/><feOffset dy=".65" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g filter="url(#shadow-05)">
+   <rect x="38" y="16" width="94" height="44" rx="12" fill="url(#pill-05)" stroke="#9bb9ed" stroke-width="1.35"/>
+   <rect x="39.3" y="17.3" width="91.4" height="41.4" rx="10.8" fill="url(#sheen-05)" opacity=".9"/>
+   <rect x="40.1" y="18.1" width="89.8" height="39.8" rx="10" fill="none" stroke="#d7e6ff" stroke-opacity=".38" stroke-width=".8"/>
+   <path d="M50 17.5 H120 Q130.5 17.5 130.5 28 V32.72" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="1.05" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(64 38) scale(1) translate(-64 -38)" stroke-linecap="round" stroke-linejoin="round"><path d="M64 20 L78 52 L50 52 Z" fill="url(#gem-05)" stroke="#f4f9ff" stroke-width="2.1" stroke-linejoin="round"/><path d="M64 21 L64 50 L51 51 Z" fill="#9ec5f5" opacity=".83"/><path d="M64 21 L77 51 L64 50 Z" fill="#628fcf" opacity=".74"/><path d="M64 21 L64 50" fill="none" stroke="#eff7ff" stroke-width="1.45" stroke-linecap="round"/><path d="M51 51 L64 37 L77 51" fill="none" stroke="#eff7ff" stroke-width="1.35" stroke-linejoin="round"/><path d="M59 32 L64 21 L69 32" fill="none" stroke="#fff" stroke-opacity=".82" stroke-width="1.05"/><path d="M55 26 l2 -3 2 3" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.05"/></g>
+  <text x="108" y="48" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800" letter-spacing="-.7" fill="#fff" filter="url(#text-shadow-05)">5</text>
+  
+ </symbol>
+<symbol id="level-06" viewBox="0 0 170 76" overflow="visible">
+  <title>Level 6 Gifter Badge</title>
+  <desc>Minglora Gifter Level 6, original tier colours rendered as crisp vector artwork.</desc>
+  <defs>
+   <linearGradient id="pill-06" x1="0" y1="0" x2=".12" y2="1"><stop offset="0" stop-color="#4b70ad"/><stop offset="1" stop-color="#304c83"/></linearGradient>
+   <linearGradient id="sheen-06" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".48" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <linearGradient id="gem-06" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#eff7ff"/><stop offset=".48" stop-color="#9ec5f5"/><stop offset="1" stop-color="#628fcf"/></linearGradient>
+   <filter id="shadow-06" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/><feOffset dy="1.2" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="text-shadow-06" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation=".55" result="blur"/><feOffset dy=".65" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g filter="url(#shadow-06)">
+   <rect x="38" y="16" width="94" height="44" rx="12" fill="url(#pill-06)" stroke="#9bb9ed" stroke-width="1.35"/>
+   <rect x="39.3" y="17.3" width="91.4" height="41.4" rx="10.8" fill="url(#sheen-06)" opacity=".9"/>
+   <rect x="40.1" y="18.1" width="89.8" height="39.8" rx="10" fill="none" stroke="#d7e6ff" stroke-opacity=".38" stroke-width=".8"/>
+   <path d="M50 17.5 H120 Q130.5 17.5 130.5 28 V32.72" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="1.05" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(64 38) scale(1) translate(-64 -38)" stroke-linecap="round" stroke-linejoin="round"><path d="M64 20 L78 52 L50 52 Z" fill="url(#gem-06)" stroke="#f4f9ff" stroke-width="2.1" stroke-linejoin="round"/><path d="M64 21 L64 50 L51 51 Z" fill="#9ec5f5" opacity=".83"/><path d="M64 21 L77 51 L64 50 Z" fill="#628fcf" opacity=".74"/><path d="M64 21 L64 50" fill="none" stroke="#eff7ff" stroke-width="1.45" stroke-linecap="round"/><path d="M51 51 L64 37 L77 51" fill="none" stroke="#eff7ff" stroke-width="1.35" stroke-linejoin="round"/><path d="M59 32 L64 21 L69 32" fill="none" stroke="#fff" stroke-opacity=".82" stroke-width="1.05"/><path d="M55 26 l2 -3 2 3" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.05"/></g>
+  <text x="108" y="48" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800" letter-spacing="-.7" fill="#fff" filter="url(#text-shadow-06)">6</text>
+  
+ </symbol>
+<symbol id="level-07" viewBox="0 0 170 76" overflow="visible">
+  <title>Level 7 Gifter Badge</title>
+  <desc>Minglora Gifter Level 7, original tier colours rendered as crisp vector artwork.</desc>
+  <defs>
+   <linearGradient id="pill-07" x1="0" y1="0" x2=".12" y2="1"><stop offset="0" stop-color="#4b70ad"/><stop offset="1" stop-color="#304c83"/></linearGradient>
+   <linearGradient id="sheen-07" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".48" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <linearGradient id="gem-07" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#eff7ff"/><stop offset=".48" stop-color="#9ec5f5"/><stop offset="1" stop-color="#628fcf"/></linearGradient>
+   <filter id="shadow-07" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/><feOffset dy="1.2" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="text-shadow-07" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation=".55" result="blur"/><feOffset dy=".65" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g filter="url(#shadow-07)">
+   <rect x="38" y="16" width="94" height="44" rx="12" fill="url(#pill-07)" stroke="#9bb9ed" stroke-width="1.35"/>
+   <rect x="39.3" y="17.3" width="91.4" height="41.4" rx="10.8" fill="url(#sheen-07)" opacity=".9"/>
+   <rect x="40.1" y="18.1" width="89.8" height="39.8" rx="10" fill="none" stroke="#d7e6ff" stroke-opacity=".38" stroke-width=".8"/>
+   <path d="M50 17.5 H120 Q130.5 17.5 130.5 28 V32.72" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="1.05" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(64 38) scale(1) translate(-64 -38)" stroke-linecap="round" stroke-linejoin="round"><path d="M64 20 L78 52 L50 52 Z" fill="url(#gem-07)" stroke="#f4f9ff" stroke-width="2.1" stroke-linejoin="round"/><path d="M64 21 L64 50 L51 51 Z" fill="#9ec5f5" opacity=".83"/><path d="M64 21 L77 51 L64 50 Z" fill="#628fcf" opacity=".74"/><path d="M64 21 L64 50" fill="none" stroke="#eff7ff" stroke-width="1.45" stroke-linecap="round"/><path d="M51 51 L64 37 L77 51" fill="none" stroke="#eff7ff" stroke-width="1.35" stroke-linejoin="round"/><path d="M59 32 L64 21 L69 32" fill="none" stroke="#fff" stroke-opacity=".82" stroke-width="1.05"/><path d="M55 26 l2 -3 2 3" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.05"/></g>
+  <text x="108" y="48" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800" letter-spacing="-.7" fill="#fff" filter="url(#text-shadow-07)">7</text>
+  
+ </symbol>
+<symbol id="level-08" viewBox="0 0 170 76" overflow="visible">
+  <title>Level 8 Gifter Badge</title>
+  <desc>Minglora Gifter Level 8, original tier colours rendered as crisp vector artwork.</desc>
+  <defs>
+   <linearGradient id="pill-08" x1="0" y1="0" x2=".12" y2="1"><stop offset="0" stop-color="#4b70ad"/><stop offset="1" stop-color="#304c83"/></linearGradient>
+   <linearGradient id="sheen-08" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".48" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <linearGradient id="gem-08" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#eff7ff"/><stop offset=".48" stop-color="#9ec5f5"/><stop offset="1" stop-color="#628fcf"/></linearGradient>
+   <filter id="shadow-08" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/><feOffset dy="1.2" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="text-shadow-08" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation=".55" result="blur"/><feOffset dy=".65" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g filter="url(#shadow-08)">
+   <rect x="38" y="16" width="94" height="44" rx="12" fill="url(#pill-08)" stroke="#9bb9ed" stroke-width="1.35"/>
+   <rect x="39.3" y="17.3" width="91.4" height="41.4" rx="10.8" fill="url(#sheen-08)" opacity=".9"/>
+   <rect x="40.1" y="18.1" width="89.8" height="39.8" rx="10" fill="none" stroke="#d7e6ff" stroke-opacity=".38" stroke-width=".8"/>
+   <path d="M50 17.5 H120 Q130.5 17.5 130.5 28 V32.72" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="1.05" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(64 38) scale(1) translate(-64 -38)" stroke-linecap="round" stroke-linejoin="round"><path d="M64 20 L78 52 L50 52 Z" fill="url(#gem-08)" stroke="#f4f9ff" stroke-width="2.1" stroke-linejoin="round"/><path d="M64 21 L64 50 L51 51 Z" fill="#9ec5f5" opacity=".83"/><path d="M64 21 L77 51 L64 50 Z" fill="#628fcf" opacity=".74"/><path d="M64 21 L64 50" fill="none" stroke="#eff7ff" stroke-width="1.45" stroke-linecap="round"/><path d="M51 51 L64 37 L77 51" fill="none" stroke="#eff7ff" stroke-width="1.35" stroke-linejoin="round"/><path d="M59 32 L64 21 L69 32" fill="none" stroke="#fff" stroke-opacity=".82" stroke-width="1.05"/><path d="M55 26 l2 -3 2 3" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.05"/></g>
+  <text x="108" y="48" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800" letter-spacing="-.7" fill="#fff" filter="url(#text-shadow-08)">8</text>
+  
+ </symbol>
+<symbol id="level-09" viewBox="0 0 170 76" overflow="visible">
+  <title>Level 9 Gifter Badge</title>
+  <desc>Minglora Gifter Level 9, original tier colours rendered as crisp vector artwork.</desc>
+  <defs>
+   <linearGradient id="pill-09" x1="0" y1="0" x2=".12" y2="1"><stop offset="0" stop-color="#4b70ad"/><stop offset="1" stop-color="#304c83"/></linearGradient>
+   <linearGradient id="sheen-09" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".48" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <linearGradient id="gem-09" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#eff7ff"/><stop offset=".48" stop-color="#9ec5f5"/><stop offset="1" stop-color="#628fcf"/></linearGradient>
+   <filter id="shadow-09" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/><feOffset dy="1.2" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="text-shadow-09" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation=".55" result="blur"/><feOffset dy=".65" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g filter="url(#shadow-09)">
+   <rect x="38" y="16" width="94" height="44" rx="12" fill="url(#pill-09)" stroke="#9bb9ed" stroke-width="1.35"/>
+   <rect x="39.3" y="17.3" width="91.4" height="41.4" rx="10.8" fill="url(#sheen-09)" opacity=".9"/>
+   <rect x="40.1" y="18.1" width="89.8" height="39.8" rx="10" fill="none" stroke="#d7e6ff" stroke-opacity=".38" stroke-width=".8"/>
+   <path d="M50 17.5 H120 Q130.5 17.5 130.5 28 V32.72" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="1.05" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(64 38) scale(1) translate(-64 -38)" stroke-linecap="round" stroke-linejoin="round"><path d="M64 20 L78 52 L50 52 Z" fill="url(#gem-09)" stroke="#f4f9ff" stroke-width="2.1" stroke-linejoin="round"/><path d="M64 21 L64 50 L51 51 Z" fill="#9ec5f5" opacity=".83"/><path d="M64 21 L77 51 L64 50 Z" fill="#628fcf" opacity=".74"/><path d="M64 21 L64 50" fill="none" stroke="#eff7ff" stroke-width="1.45" stroke-linecap="round"/><path d="M51 51 L64 37 L77 51" fill="none" stroke="#eff7ff" stroke-width="1.35" stroke-linejoin="round"/><path d="M59 32 L64 21 L69 32" fill="none" stroke="#fff" stroke-opacity=".82" stroke-width="1.05"/><path d="M55 26 l2 -3 2 3" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.05"/></g>
+  <text x="108" y="48" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800" letter-spacing="-.7" fill="#fff" filter="url(#text-shadow-09)">9</text>
+  
+ </symbol>
+<symbol id="level-10" viewBox="0 0 170 76" overflow="visible">
+  <title>Level 10 Gifter Badge</title>
+  <desc>Minglora Gifter Level 10, original tier colours rendered as crisp vector artwork.</desc>
+  <defs>
+   <linearGradient id="pill-10" x1="0" y1="0" x2=".12" y2="1"><stop offset="0" stop-color="#3262b4"/><stop offset="1" stop-color="#173e83"/></linearGradient>
+   <linearGradient id="sheen-10" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".48" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <linearGradient id="gem-10" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f4f9ff"/><stop offset=".48" stop-color="#8fbbf5"/><stop offset="1" stop-color="#4d80c7"/></linearGradient>
+   <filter id="shadow-10" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/><feOffset dy="1.2" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="text-shadow-10" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation=".55" result="blur"/><feOffset dy=".65" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g filter="url(#shadow-10)">
+   <rect x="38" y="16" width="94" height="44" rx="12" fill="url(#pill-10)" stroke="#9bb9ff" stroke-width="1.35"/>
+   <rect x="39.3" y="17.3" width="91.4" height="41.4" rx="10.8" fill="url(#sheen-10)" opacity=".9"/>
+   <rect x="40.1" y="18.1" width="89.8" height="39.8" rx="10" fill="none" stroke="#d8e7ff" stroke-opacity=".38" stroke-width=".8"/>
+   <path d="M50 17.5 H120 Q130.5 17.5 130.5 28 V32.72" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="1.05" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(64 38) scale(1) translate(-64 -38)" stroke-linecap="round" stroke-linejoin="round"><path d="M64 19 L79 52 L49 52 Z" fill="url(#gem-10)" stroke="#f3f8ff" stroke-width="2" stroke-linejoin="round"/><path d="M64 20 L64 36 L51 50 Z" fill="#8fbbf5" opacity=".88"/><path d="M64 20 L77 50 L64 36 Z" fill="#4d80c7" opacity=".88"/><path d="M51 50 L64 36 L77 50 Z" fill="#cfe6ff" opacity=".9"/><path d="M64 20 L64 36 M51 50 L77 50" fill="none" stroke="#f3f8ff" stroke-width="1.45"/><path d="M55 26 l2 -3 2 3" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.05"/></g>
+  <text x="108" y="48" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800" letter-spacing="-.7" fill="#fff" filter="url(#text-shadow-10)">10</text>
+  
+ </symbol>
+<symbol id="level-11" viewBox="0 0 170 76" overflow="visible">
+  <title>Level 11 Gifter Badge</title>
+  <desc>Minglora Gifter Level 11, original tier colours rendered as crisp vector artwork.</desc>
+  <defs>
+   <linearGradient id="pill-11" x1="0" y1="0" x2=".12" y2="1"><stop offset="0" stop-color="#3262b4"/><stop offset="1" stop-color="#173e83"/></linearGradient>
+   <linearGradient id="sheen-11" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".48" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <linearGradient id="gem-11" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f4f9ff"/><stop offset=".48" stop-color="#8fbbf5"/><stop offset="1" stop-color="#4d80c7"/></linearGradient>
+   <filter id="shadow-11" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/><feOffset dy="1.2" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="text-shadow-11" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation=".55" result="blur"/><feOffset dy=".65" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g filter="url(#shadow-11)">
+   <rect x="38" y="16" width="94" height="44" rx="12" fill="url(#pill-11)" stroke="#9bb9ff" stroke-width="1.35"/>
+   <rect x="39.3" y="17.3" width="91.4" height="41.4" rx="10.8" fill="url(#sheen-11)" opacity=".9"/>
+   <rect x="40.1" y="18.1" width="89.8" height="39.8" rx="10" fill="none" stroke="#d8e7ff" stroke-opacity=".38" stroke-width=".8"/>
+   <path d="M50 17.5 H120 Q130.5 17.5 130.5 28 V32.72" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="1.05" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(64 38) scale(1) translate(-64 -38)" stroke-linecap="round" stroke-linejoin="round"><path d="M64 19 L79 52 L49 52 Z" fill="url(#gem-11)" stroke="#f3f8ff" stroke-width="2" stroke-linejoin="round"/><path d="M64 20 L64 36 L51 50 Z" fill="#8fbbf5" opacity=".88"/><path d="M64 20 L77 50 L64 36 Z" fill="#4d80c7" opacity=".88"/><path d="M51 50 L64 36 L77 50 Z" fill="#cfe6ff" opacity=".9"/><path d="M64 20 L64 36 M51 50 L77 50" fill="none" stroke="#f3f8ff" stroke-width="1.45"/><path d="M55 26 l2 -3 2 3" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.05"/></g>
+  <text x="108" y="48" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800" letter-spacing="-.7" fill="#fff" filter="url(#text-shadow-11)">11</text>
+  
+ </symbol>
+<symbol id="level-12" viewBox="0 0 170 76" overflow="visible">
+  <title>Level 12 Gifter Badge</title>
+  <desc>Minglora Gifter Level 12, original tier colours rendered as crisp vector artwork.</desc>
+  <defs>
+   <linearGradient id="pill-12" x1="0" y1="0" x2=".12" y2="1"><stop offset="0" stop-color="#3262b4"/><stop offset="1" stop-color="#173e83"/></linearGradient>
+   <linearGradient id="sheen-12" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".48" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <linearGradient id="gem-12" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f4f9ff"/><stop offset=".48" stop-color="#8fbbf5"/><stop offset="1" stop-color="#4d80c7"/></linearGradient>
+   <filter id="shadow-12" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/><feOffset dy="1.2" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="text-shadow-12" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation=".55" result="blur"/><feOffset dy=".65" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g filter="url(#shadow-12)">
+   <rect x="38" y="16" width="94" height="44" rx="12" fill="url(#pill-12)" stroke="#9bb9ff" stroke-width="1.35"/>
+   <rect x="39.3" y="17.3" width="91.4" height="41.4" rx="10.8" fill="url(#sheen-12)" opacity=".9"/>
+   <rect x="40.1" y="18.1" width="89.8" height="39.8" rx="10" fill="none" stroke="#d8e7ff" stroke-opacity=".38" stroke-width=".8"/>
+   <path d="M50 17.5 H120 Q130.5 17.5 130.5 28 V32.72" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="1.05" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(64 38) scale(1) translate(-64 -38)" stroke-linecap="round" stroke-linejoin="round"><path d="M64 19 L79 52 L49 52 Z" fill="url(#gem-12)" stroke="#f3f8ff" stroke-width="2" stroke-linejoin="round"/><path d="M64 20 L64 36 L51 50 Z" fill="#8fbbf5" opacity=".88"/><path d="M64 20 L77 50 L64 36 Z" fill="#4d80c7" opacity=".88"/><path d="M51 50 L64 36 L77 50 Z" fill="#cfe6ff" opacity=".9"/><path d="M64 20 L64 36 M51 50 L77 50" fill="none" stroke="#f3f8ff" stroke-width="1.45"/><path d="M55 26 l2 -3 2 3" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.05"/></g>
+  <text x="108" y="48" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800" letter-spacing="-.7" fill="#fff" filter="url(#text-shadow-12)">12</text>
+  
+ </symbol>
+<symbol id="level-13" viewBox="0 0 170 76" overflow="visible">
+  <title>Level 13 Gifter Badge</title>
+  <desc>Minglora Gifter Level 13, original tier colours rendered as crisp vector artwork.</desc>
+  <defs>
+   <linearGradient id="pill-13" x1="0" y1="0" x2=".12" y2="1"><stop offset="0" stop-color="#3262b4"/><stop offset="1" stop-color="#173e83"/></linearGradient>
+   <linearGradient id="sheen-13" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".48" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <linearGradient id="gem-13" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f4f9ff"/><stop offset=".48" stop-color="#8fbbf5"/><stop offset="1" stop-color="#4d80c7"/></linearGradient>
+   <filter id="shadow-13" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/><feOffset dy="1.2" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="text-shadow-13" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation=".55" result="blur"/><feOffset dy=".65" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g filter="url(#shadow-13)">
+   <rect x="38" y="16" width="94" height="44" rx="12" fill="url(#pill-13)" stroke="#9bb9ff" stroke-width="1.35"/>
+   <rect x="39.3" y="17.3" width="91.4" height="41.4" rx="10.8" fill="url(#sheen-13)" opacity=".9"/>
+   <rect x="40.1" y="18.1" width="89.8" height="39.8" rx="10" fill="none" stroke="#d8e7ff" stroke-opacity=".38" stroke-width=".8"/>
+   <path d="M50 17.5 H120 Q130.5 17.5 130.5 28 V32.72" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="1.05" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(64 38) scale(1) translate(-64 -38)" stroke-linecap="round" stroke-linejoin="round"><path d="M64 19 L79 52 L49 52 Z" fill="url(#gem-13)" stroke="#f3f8ff" stroke-width="2" stroke-linejoin="round"/><path d="M64 20 L64 36 L51 50 Z" fill="#8fbbf5" opacity=".88"/><path d="M64 20 L77 50 L64 36 Z" fill="#4d80c7" opacity=".88"/><path d="M51 50 L64 36 L77 50 Z" fill="#cfe6ff" opacity=".9"/><path d="M64 20 L64 36 M51 50 L77 50" fill="none" stroke="#f3f8ff" stroke-width="1.45"/><path d="M55 26 l2 -3 2 3" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.05"/></g>
+  <text x="108" y="48" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800" letter-spacing="-.7" fill="#fff" filter="url(#text-shadow-13)">13</text>
+  
+ </symbol>
+<symbol id="level-14" viewBox="0 0 170 76" overflow="visible">
+  <title>Level 14 Gifter Badge</title>
+  <desc>Minglora Gifter Level 14, original tier colours rendered as crisp vector artwork.</desc>
+  <defs>
+   <linearGradient id="pill-14" x1="0" y1="0" x2=".12" y2="1"><stop offset="0" stop-color="#3262b4"/><stop offset="1" stop-color="#173e83"/></linearGradient>
+   <linearGradient id="sheen-14" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".48" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <linearGradient id="gem-14" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f4f9ff"/><stop offset=".48" stop-color="#8fbbf5"/><stop offset="1" stop-color="#4d80c7"/></linearGradient>
+   <filter id="shadow-14" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/><feOffset dy="1.2" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="text-shadow-14" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation=".55" result="blur"/><feOffset dy=".65" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g filter="url(#shadow-14)">
+   <rect x="38" y="16" width="94" height="44" rx="12" fill="url(#pill-14)" stroke="#9bb9ff" stroke-width="1.35"/>
+   <rect x="39.3" y="17.3" width="91.4" height="41.4" rx="10.8" fill="url(#sheen-14)" opacity=".9"/>
+   <rect x="40.1" y="18.1" width="89.8" height="39.8" rx="10" fill="none" stroke="#d8e7ff" stroke-opacity=".38" stroke-width=".8"/>
+   <path d="M50 17.5 H120 Q130.5 17.5 130.5 28 V32.72" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="1.05" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(64 38) scale(1) translate(-64 -38)" stroke-linecap="round" stroke-linejoin="round"><path d="M64 19 L79 52 L49 52 Z" fill="url(#gem-14)" stroke="#f3f8ff" stroke-width="2" stroke-linejoin="round"/><path d="M64 20 L64 36 L51 50 Z" fill="#8fbbf5" opacity=".88"/><path d="M64 20 L77 50 L64 36 Z" fill="#4d80c7" opacity=".88"/><path d="M51 50 L64 36 L77 50 Z" fill="#cfe6ff" opacity=".9"/><path d="M64 20 L64 36 M51 50 L77 50" fill="none" stroke="#f3f8ff" stroke-width="1.45"/><path d="M55 26 l2 -3 2 3" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.05"/></g>
+  <text x="108" y="48" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800" letter-spacing="-.7" fill="#fff" filter="url(#text-shadow-14)">14</text>
+  
+ </symbol>
+<symbol id="level-15" viewBox="0 0 170 76" overflow="visible">
+  <title>Level 15 Gifter Badge</title>
+  <desc>Minglora Gifter Level 15, original tier colours rendered as crisp vector artwork.</desc>
+  <defs>
+   <linearGradient id="pill-15" x1="0" y1="0" x2=".12" y2="1"><stop offset="0" stop-color="#3e62c4"/><stop offset="1" stop-color="#243e9f"/></linearGradient>
+   <linearGradient id="sheen-15" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".48" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <linearGradient id="gem-15" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f0f7ff"/><stop offset=".48" stop-color="#9ebdf8"/><stop offset="1" stop-color="#627ee2"/></linearGradient>
+   <filter id="shadow-15" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/><feOffset dy="1.2" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="text-shadow-15" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation=".55" result="blur"/><feOffset dy=".65" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g filter="url(#shadow-15)">
+   <rect x="38" y="16" width="94" height="44" rx="12" fill="url(#pill-15)" stroke="#a9c1ff" stroke-width="1.35"/>
+   <rect x="39.3" y="17.3" width="91.4" height="41.4" rx="10.8" fill="url(#sheen-15)" opacity=".9"/>
+   <rect x="40.1" y="18.1" width="89.8" height="39.8" rx="10" fill="none" stroke="#dce8ff" stroke-opacity=".38" stroke-width=".8"/>
+   <path d="M50 17.5 H120 Q130.5 17.5 130.5 28 V32.72" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="1.05" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(64 38) scale(1) translate(-64 -38)" stroke-linecap="round" stroke-linejoin="round"><path d="M64 19 L79 38 L64 57 L49 38 Z" fill="url(#gem-15)" stroke="#f7f9ff" stroke-width="2" stroke-linejoin="round"/><path d="M64 20 L70 38 L64 56 L58 38 Z" fill="#9ebdf8" opacity=".84"/><path d="M64 20 L79 38 L70 38 Z" fill="#f0f7ff" opacity=".84"/><path d="M79 38 L64 57 L70 38 Z" fill="#627ee2" opacity=".9"/><path d="M64 57 L49 38 L58 38 Z" fill="#dbe4ff" opacity=".9"/><path d="M49 38 L64 20 L58 38 Z" fill="#9ebdf8" opacity=".68"/><path d="M64 20 L70 38 L64 57 L58 38 Z" fill="none" stroke="#f7f9ff" stroke-width="1.05"/><path d="M49 38 H79 M64 20 V57" fill="none" stroke="#f7f9ff" stroke-opacity=".86" stroke-width="1.15"/><path d="M55 26 l2 -3 2 3" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.05"/></g>
+  <text x="108" y="48" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800" letter-spacing="-.7" fill="#fff" filter="url(#text-shadow-15)">15</text>
+  
+ </symbol>
+<symbol id="level-16" viewBox="0 0 170 76" overflow="visible">
+  <title>Level 16 Gifter Badge</title>
+  <desc>Minglora Gifter Level 16, original tier colours rendered as crisp vector artwork.</desc>
+  <defs>
+   <linearGradient id="pill-16" x1="0" y1="0" x2=".12" y2="1"><stop offset="0" stop-color="#3e62c4"/><stop offset="1" stop-color="#243e9f"/></linearGradient>
+   <linearGradient id="sheen-16" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".48" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <linearGradient id="gem-16" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f0f7ff"/><stop offset=".48" stop-color="#9ebdf8"/><stop offset="1" stop-color="#627ee2"/></linearGradient>
+   <filter id="shadow-16" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/><feOffset dy="1.2" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="text-shadow-16" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation=".55" result="blur"/><feOffset dy=".65" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g filter="url(#shadow-16)">
+   <rect x="38" y="16" width="94" height="44" rx="12" fill="url(#pill-16)" stroke="#a9c1ff" stroke-width="1.35"/>
+   <rect x="39.3" y="17.3" width="91.4" height="41.4" rx="10.8" fill="url(#sheen-16)" opacity=".9"/>
+   <rect x="40.1" y="18.1" width="89.8" height="39.8" rx="10" fill="none" stroke="#dce8ff" stroke-opacity=".38" stroke-width=".8"/>
+   <path d="M50 17.5 H120 Q130.5 17.5 130.5 28 V32.72" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="1.05" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(64 38) scale(1) translate(-64 -38)" stroke-linecap="round" stroke-linejoin="round"><path d="M64 19 L79 38 L64 57 L49 38 Z" fill="url(#gem-16)" stroke="#f7f9ff" stroke-width="2" stroke-linejoin="round"/><path d="M64 20 L70 38 L64 56 L58 38 Z" fill="#9ebdf8" opacity=".84"/><path d="M64 20 L79 38 L70 38 Z" fill="#f0f7ff" opacity=".84"/><path d="M79 38 L64 57 L70 38 Z" fill="#627ee2" opacity=".9"/><path d="M64 57 L49 38 L58 38 Z" fill="#dbe4ff" opacity=".9"/><path d="M49 38 L64 20 L58 38 Z" fill="#9ebdf8" opacity=".68"/><path d="M64 20 L70 38 L64 57 L58 38 Z" fill="none" stroke="#f7f9ff" stroke-width="1.05"/><path d="M49 38 H79 M64 20 V57" fill="none" stroke="#f7f9ff" stroke-opacity=".86" stroke-width="1.15"/><path d="M55 26 l2 -3 2 3" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.05"/></g>
+  <text x="108" y="48" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800" letter-spacing="-.7" fill="#fff" filter="url(#text-shadow-16)">16</text>
+  
+ </symbol>
+<symbol id="level-17" viewBox="0 0 170 76" overflow="visible">
+  <title>Level 17 Gifter Badge</title>
+  <desc>Minglora Gifter Level 17, original tier colours rendered as crisp vector artwork.</desc>
+  <defs>
+   <linearGradient id="pill-17" x1="0" y1="0" x2=".12" y2="1"><stop offset="0" stop-color="#3e62c4"/><stop offset="1" stop-color="#243e9f"/></linearGradient>
+   <linearGradient id="sheen-17" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".48" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <linearGradient id="gem-17" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f0f7ff"/><stop offset=".48" stop-color="#9ebdf8"/><stop offset="1" stop-color="#627ee2"/></linearGradient>
+   <filter id="shadow-17" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/><feOffset dy="1.2" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="text-shadow-17" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation=".55" result="blur"/><feOffset dy=".65" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g filter="url(#shadow-17)">
+   <rect x="38" y="16" width="94" height="44" rx="12" fill="url(#pill-17)" stroke="#a9c1ff" stroke-width="1.35"/>
+   <rect x="39.3" y="17.3" width="91.4" height="41.4" rx="10.8" fill="url(#sheen-17)" opacity=".9"/>
+   <rect x="40.1" y="18.1" width="89.8" height="39.8" rx="10" fill="none" stroke="#dce8ff" stroke-opacity=".38" stroke-width=".8"/>
+   <path d="M50 17.5 H120 Q130.5 17.5 130.5 28 V32.72" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="1.05" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(64 38) scale(1) translate(-64 -38)" stroke-linecap="round" stroke-linejoin="round"><path d="M64 19 L79 38 L64 57 L49 38 Z" fill="url(#gem-17)" stroke="#f7f9ff" stroke-width="2" stroke-linejoin="round"/><path d="M64 20 L70 38 L64 56 L58 38 Z" fill="#9ebdf8" opacity=".84"/><path d="M64 20 L79 38 L70 38 Z" fill="#f0f7ff" opacity=".84"/><path d="M79 38 L64 57 L70 38 Z" fill="#627ee2" opacity=".9"/><path d="M64 57 L49 38 L58 38 Z" fill="#dbe4ff" opacity=".9"/><path d="M49 38 L64 20 L58 38 Z" fill="#9ebdf8" opacity=".68"/><path d="M64 20 L70 38 L64 57 L58 38 Z" fill="none" stroke="#f7f9ff" stroke-width="1.05"/><path d="M49 38 H79 M64 20 V57" fill="none" stroke="#f7f9ff" stroke-opacity=".86" stroke-width="1.15"/><path d="M55 26 l2 -3 2 3" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.05"/></g>
+  <text x="108" y="48" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800" letter-spacing="-.7" fill="#fff" filter="url(#text-shadow-17)">17</text>
+  
+ </symbol>
+<symbol id="level-18" viewBox="0 0 170 76" overflow="visible">
+  <title>Level 18 Gifter Badge</title>
+  <desc>Minglora Gifter Level 18, original tier colours rendered as crisp vector artwork.</desc>
+  <defs>
+   <linearGradient id="pill-18" x1="0" y1="0" x2=".12" y2="1"><stop offset="0" stop-color="#3e62c4"/><stop offset="1" stop-color="#243e9f"/></linearGradient>
+   <linearGradient id="sheen-18" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".48" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <linearGradient id="gem-18" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f0f7ff"/><stop offset=".48" stop-color="#9ebdf8"/><stop offset="1" stop-color="#627ee2"/></linearGradient>
+   <filter id="shadow-18" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/><feOffset dy="1.2" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="text-shadow-18" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation=".55" result="blur"/><feOffset dy=".65" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g filter="url(#shadow-18)">
+   <rect x="38" y="16" width="94" height="44" rx="12" fill="url(#pill-18)" stroke="#a9c1ff" stroke-width="1.35"/>
+   <rect x="39.3" y="17.3" width="91.4" height="41.4" rx="10.8" fill="url(#sheen-18)" opacity=".9"/>
+   <rect x="40.1" y="18.1" width="89.8" height="39.8" rx="10" fill="none" stroke="#dce8ff" stroke-opacity=".38" stroke-width=".8"/>
+   <path d="M50 17.5 H120 Q130.5 17.5 130.5 28 V32.72" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="1.05" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(64 38) scale(1) translate(-64 -38)" stroke-linecap="round" stroke-linejoin="round"><path d="M64 19 L79 38 L64 57 L49 38 Z" fill="url(#gem-18)" stroke="#f7f9ff" stroke-width="2" stroke-linejoin="round"/><path d="M64 20 L70 38 L64 56 L58 38 Z" fill="#9ebdf8" opacity=".84"/><path d="M64 20 L79 38 L70 38 Z" fill="#f0f7ff" opacity=".84"/><path d="M79 38 L64 57 L70 38 Z" fill="#627ee2" opacity=".9"/><path d="M64 57 L49 38 L58 38 Z" fill="#dbe4ff" opacity=".9"/><path d="M49 38 L64 20 L58 38 Z" fill="#9ebdf8" opacity=".68"/><path d="M64 20 L70 38 L64 57 L58 38 Z" fill="none" stroke="#f7f9ff" stroke-width="1.05"/><path d="M49 38 H79 M64 20 V57" fill="none" stroke="#f7f9ff" stroke-opacity=".86" stroke-width="1.15"/><path d="M55 26 l2 -3 2 3" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.05"/></g>
+  <text x="108" y="48" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800" letter-spacing="-.7" fill="#fff" filter="url(#text-shadow-18)">18</text>
+  
+ </symbol>
+<symbol id="level-19" viewBox="0 0 170 76" overflow="visible">
+  <title>Level 19 Gifter Badge</title>
+  <desc>Minglora Gifter Level 19, original tier colours rendered as crisp vector artwork.</desc>
+  <defs>
+   <linearGradient id="pill-19" x1="0" y1="0" x2=".12" y2="1"><stop offset="0" stop-color="#3e62c4"/><stop offset="1" stop-color="#243e9f"/></linearGradient>
+   <linearGradient id="sheen-19" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".48" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <linearGradient id="gem-19" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f0f7ff"/><stop offset=".48" stop-color="#9ebdf8"/><stop offset="1" stop-color="#627ee2"/></linearGradient>
+   <filter id="shadow-19" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/><feOffset dy="1.2" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="text-shadow-19" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation=".55" result="blur"/><feOffset dy=".65" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g filter="url(#shadow-19)">
+   <rect x="38" y="16" width="94" height="44" rx="12" fill="url(#pill-19)" stroke="#a9c1ff" stroke-width="1.35"/>
+   <rect x="39.3" y="17.3" width="91.4" height="41.4" rx="10.8" fill="url(#sheen-19)" opacity=".9"/>
+   <rect x="40.1" y="18.1" width="89.8" height="39.8" rx="10" fill="none" stroke="#dce8ff" stroke-opacity=".38" stroke-width=".8"/>
+   <path d="M50 17.5 H120 Q130.5 17.5 130.5 28 V32.72" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="1.05" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(64 38) scale(1) translate(-64 -38)" stroke-linecap="round" stroke-linejoin="round"><path d="M64 19 L79 38 L64 57 L49 38 Z" fill="url(#gem-19)" stroke="#f7f9ff" stroke-width="2" stroke-linejoin="round"/><path d="M64 20 L70 38 L64 56 L58 38 Z" fill="#9ebdf8" opacity=".84"/><path d="M64 20 L79 38 L70 38 Z" fill="#f0f7ff" opacity=".84"/><path d="M79 38 L64 57 L70 38 Z" fill="#627ee2" opacity=".9"/><path d="M64 57 L49 38 L58 38 Z" fill="#dbe4ff" opacity=".9"/><path d="M49 38 L64 20 L58 38 Z" fill="#9ebdf8" opacity=".68"/><path d="M64 20 L70 38 L64 57 L58 38 Z" fill="none" stroke="#f7f9ff" stroke-width="1.05"/><path d="M49 38 H79 M64 20 V57" fill="none" stroke="#f7f9ff" stroke-opacity=".86" stroke-width="1.15"/><path d="M55 26 l2 -3 2 3" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.05"/></g>
+  <text x="108" y="48" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800" letter-spacing="-.7" fill="#fff" filter="url(#text-shadow-19)">19</text>
+  
+ </symbol>
+<symbol id="level-20" viewBox="0 0 170 76" overflow="visible">
+  <title>Level 20 Gifter Badge</title>
+  <desc>Minglora Gifter Level 20, original tier colours rendered as crisp vector artwork.</desc>
+  <defs>
+   <linearGradient id="pill-20" x1="0" y1="0" x2=".12" y2="1"><stop offset="0" stop-color="#3e4ac4"/><stop offset="1" stop-color="#252d9b"/></linearGradient>
+   <linearGradient id="sheen-20" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".48" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <linearGradient id="gem-20" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f2f6ff"/><stop offset=".48" stop-color="#a8b8fb"/><stop offset="1" stop-color="#6a75e6"/></linearGradient>
+   <filter id="shadow-20" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/><feOffset dy="1.2" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="text-shadow-20" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation=".55" result="blur"/><feOffset dy=".65" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g filter="url(#shadow-20)">
+   <rect x="38" y="16" width="94" height="44" rx="12" fill="url(#pill-20)" stroke="#b0b8ff" stroke-width="1.35"/>
+   <rect x="39.3" y="17.3" width="91.4" height="41.4" rx="10.8" fill="url(#sheen-20)" opacity=".9"/>
+   <rect x="40.1" y="18.1" width="89.8" height="39.8" rx="10" fill="none" stroke="#e1e6ff" stroke-opacity=".38" stroke-width=".8"/>
+   <path d="M50 17.5 H120 Q130.5 17.5 130.5 28 V32.72" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="1.05" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(64 38) scale(1) translate(-64 -38)" stroke-linecap="round" stroke-linejoin="round"><path d="M64 19 L79 38 L64 57 L49 38 Z" fill="url(#gem-20)" stroke="#f7f8ff" stroke-width="2" stroke-linejoin="round"/><path d="M64 20 L70 38 L64 56 L58 38 Z" fill="#a8b8fb" opacity=".84"/><path d="M64 20 L79 38 L70 38 Z" fill="#f2f6ff" opacity=".84"/><path d="M79 38 L64 57 L70 38 Z" fill="#6a75e6" opacity=".9"/><path d="M64 57 L49 38 L58 38 Z" fill="#d8e1ff" opacity=".9"/><path d="M49 38 L64 20 L58 38 Z" fill="#a8b8fb" opacity=".68"/><path d="M64 20 L70 38 L64 57 L58 38 Z" fill="none" stroke="#f7f8ff" stroke-width="1.05"/><path d="M49 38 H79 M64 20 V57" fill="none" stroke="#f7f8ff" stroke-opacity=".86" stroke-width="1.15"/><path d="M55 26 l2 -3 2 3" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.05"/></g>
+  <text x="108" y="48" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800" letter-spacing="-.7" fill="#fff" filter="url(#text-shadow-20)">20</text>
+  
+ </symbol>
+<symbol id="level-21" viewBox="0 0 170 76" overflow="visible">
+  <title>Level 21 Gifter Badge</title>
+  <desc>Minglora Gifter Level 21, original tier colours rendered as crisp vector artwork.</desc>
+  <defs>
+   <linearGradient id="pill-21" x1="0" y1="0" x2=".12" y2="1"><stop offset="0" stop-color="#3e4ac4"/><stop offset="1" stop-color="#252d9b"/></linearGradient>
+   <linearGradient id="sheen-21" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".48" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <linearGradient id="gem-21" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f2f6ff"/><stop offset=".48" stop-color="#a8b8fb"/><stop offset="1" stop-color="#6a75e6"/></linearGradient>
+   <filter id="shadow-21" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/><feOffset dy="1.2" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="text-shadow-21" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation=".55" result="blur"/><feOffset dy=".65" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g filter="url(#shadow-21)">
+   <rect x="38" y="16" width="94" height="44" rx="12" fill="url(#pill-21)" stroke="#b0b8ff" stroke-width="1.35"/>
+   <rect x="39.3" y="17.3" width="91.4" height="41.4" rx="10.8" fill="url(#sheen-21)" opacity=".9"/>
+   <rect x="40.1" y="18.1" width="89.8" height="39.8" rx="10" fill="none" stroke="#e1e6ff" stroke-opacity=".38" stroke-width=".8"/>
+   <path d="M50 17.5 H120 Q130.5 17.5 130.5 28 V32.72" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="1.05" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(64 38) scale(1) translate(-64 -38)" stroke-linecap="round" stroke-linejoin="round"><path d="M64 19 L79 38 L64 57 L49 38 Z" fill="url(#gem-21)" stroke="#f7f8ff" stroke-width="2" stroke-linejoin="round"/><path d="M64 20 L70 38 L64 56 L58 38 Z" fill="#a8b8fb" opacity=".84"/><path d="M64 20 L79 38 L70 38 Z" fill="#f2f6ff" opacity=".84"/><path d="M79 38 L64 57 L70 38 Z" fill="#6a75e6" opacity=".9"/><path d="M64 57 L49 38 L58 38 Z" fill="#d8e1ff" opacity=".9"/><path d="M49 38 L64 20 L58 38 Z" fill="#a8b8fb" opacity=".68"/><path d="M64 20 L70 38 L64 57 L58 38 Z" fill="none" stroke="#f7f8ff" stroke-width="1.05"/><path d="M49 38 H79 M64 20 V57" fill="none" stroke="#f7f8ff" stroke-opacity=".86" stroke-width="1.15"/><path d="M55 26 l2 -3 2 3" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.05"/></g>
+  <text x="108" y="48" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800" letter-spacing="-.7" fill="#fff" filter="url(#text-shadow-21)">21</text>
+  
+ </symbol>
+<symbol id="level-22" viewBox="0 0 170 76" overflow="visible">
+  <title>Level 22 Gifter Badge</title>
+  <desc>Minglora Gifter Level 22, original tier colours rendered as crisp vector artwork.</desc>
+  <defs>
+   <linearGradient id="pill-22" x1="0" y1="0" x2=".12" y2="1"><stop offset="0" stop-color="#3e4ac4"/><stop offset="1" stop-color="#252d9b"/></linearGradient>
+   <linearGradient id="sheen-22" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".48" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <linearGradient id="gem-22" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f2f6ff"/><stop offset=".48" stop-color="#a8b8fb"/><stop offset="1" stop-color="#6a75e6"/></linearGradient>
+   <filter id="shadow-22" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/><feOffset dy="1.2" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="text-shadow-22" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation=".55" result="blur"/><feOffset dy=".65" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g filter="url(#shadow-22)">
+   <rect x="38" y="16" width="94" height="44" rx="12" fill="url(#pill-22)" stroke="#b0b8ff" stroke-width="1.35"/>
+   <rect x="39.3" y="17.3" width="91.4" height="41.4" rx="10.8" fill="url(#sheen-22)" opacity=".9"/>
+   <rect x="40.1" y="18.1" width="89.8" height="39.8" rx="10" fill="none" stroke="#e1e6ff" stroke-opacity=".38" stroke-width=".8"/>
+   <path d="M50 17.5 H120 Q130.5 17.5 130.5 28 V32.72" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="1.05" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(64 38) scale(1) translate(-64 -38)" stroke-linecap="round" stroke-linejoin="round"><path d="M64 19 L79 38 L64 57 L49 38 Z" fill="url(#gem-22)" stroke="#f7f8ff" stroke-width="2" stroke-linejoin="round"/><path d="M64 20 L70 38 L64 56 L58 38 Z" fill="#a8b8fb" opacity=".84"/><path d="M64 20 L79 38 L70 38 Z" fill="#f2f6ff" opacity=".84"/><path d="M79 38 L64 57 L70 38 Z" fill="#6a75e6" opacity=".9"/><path d="M64 57 L49 38 L58 38 Z" fill="#d8e1ff" opacity=".9"/><path d="M49 38 L64 20 L58 38 Z" fill="#a8b8fb" opacity=".68"/><path d="M64 20 L70 38 L64 57 L58 38 Z" fill="none" stroke="#f7f8ff" stroke-width="1.05"/><path d="M49 38 H79 M64 20 V57" fill="none" stroke="#f7f8ff" stroke-opacity=".86" stroke-width="1.15"/><path d="M55 26 l2 -3 2 3" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.05"/></g>
+  <text x="108" y="48" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800" letter-spacing="-.7" fill="#fff" filter="url(#text-shadow-22)">22</text>
+  
+ </symbol>
+<symbol id="level-23" viewBox="0 0 170 76" overflow="visible">
+  <title>Level 23 Gifter Badge</title>
+  <desc>Minglora Gifter Level 23, original tier colours rendered as crisp vector artwork.</desc>
+  <defs>
+   <linearGradient id="pill-23" x1="0" y1="0" x2=".12" y2="1"><stop offset="0" stop-color="#3e4ac4"/><stop offset="1" stop-color="#252d9b"/></linearGradient>
+   <linearGradient id="sheen-23" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".48" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <linearGradient id="gem-23" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f2f6ff"/><stop offset=".48" stop-color="#a8b8fb"/><stop offset="1" stop-color="#6a75e6"/></linearGradient>
+   <filter id="shadow-23" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/><feOffset dy="1.2" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="text-shadow-23" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation=".55" result="blur"/><feOffset dy=".65" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g filter="url(#shadow-23)">
+   <rect x="38" y="16" width="94" height="44" rx="12" fill="url(#pill-23)" stroke="#b0b8ff" stroke-width="1.35"/>
+   <rect x="39.3" y="17.3" width="91.4" height="41.4" rx="10.8" fill="url(#sheen-23)" opacity=".9"/>
+   <rect x="40.1" y="18.1" width="89.8" height="39.8" rx="10" fill="none" stroke="#e1e6ff" stroke-opacity=".38" stroke-width=".8"/>
+   <path d="M50 17.5 H120 Q130.5 17.5 130.5 28 V32.72" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="1.05" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(64 38) scale(1) translate(-64 -38)" stroke-linecap="round" stroke-linejoin="round"><path d="M64 19 L79 38 L64 57 L49 38 Z" fill="url(#gem-23)" stroke="#f7f8ff" stroke-width="2" stroke-linejoin="round"/><path d="M64 20 L70 38 L64 56 L58 38 Z" fill="#a8b8fb" opacity=".84"/><path d="M64 20 L79 38 L70 38 Z" fill="#f2f6ff" opacity=".84"/><path d="M79 38 L64 57 L70 38 Z" fill="#6a75e6" opacity=".9"/><path d="M64 57 L49 38 L58 38 Z" fill="#d8e1ff" opacity=".9"/><path d="M49 38 L64 20 L58 38 Z" fill="#a8b8fb" opacity=".68"/><path d="M64 20 L70 38 L64 57 L58 38 Z" fill="none" stroke="#f7f8ff" stroke-width="1.05"/><path d="M49 38 H79 M64 20 V57" fill="none" stroke="#f7f8ff" stroke-opacity=".86" stroke-width="1.15"/><path d="M55 26 l2 -3 2 3" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.05"/></g>
+  <text x="108" y="48" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800" letter-spacing="-.7" fill="#fff" filter="url(#text-shadow-23)">23</text>
+  
+ </symbol>
+<symbol id="level-24" viewBox="0 0 170 76" overflow="visible">
+  <title>Level 24 Gifter Badge</title>
+  <desc>Minglora Gifter Level 24, original tier colours rendered as crisp vector artwork.</desc>
+  <defs>
+   <linearGradient id="pill-24" x1="0" y1="0" x2=".12" y2="1"><stop offset="0" stop-color="#3e4ac4"/><stop offset="1" stop-color="#252d9b"/></linearGradient>
+   <linearGradient id="sheen-24" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".48" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <linearGradient id="gem-24" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f2f6ff"/><stop offset=".48" stop-color="#a8b8fb"/><stop offset="1" stop-color="#6a75e6"/></linearGradient>
+   <filter id="shadow-24" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/><feOffset dy="1.2" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="text-shadow-24" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation=".55" result="blur"/><feOffset dy=".65" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g filter="url(#shadow-24)">
+   <rect x="38" y="16" width="94" height="44" rx="12" fill="url(#pill-24)" stroke="#b0b8ff" stroke-width="1.35"/>
+   <rect x="39.3" y="17.3" width="91.4" height="41.4" rx="10.8" fill="url(#sheen-24)" opacity=".9"/>
+   <rect x="40.1" y="18.1" width="89.8" height="39.8" rx="10" fill="none" stroke="#e1e6ff" stroke-opacity=".38" stroke-width=".8"/>
+   <path d="M50 17.5 H120 Q130.5 17.5 130.5 28 V32.72" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="1.05" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(64 38) scale(1) translate(-64 -38)" stroke-linecap="round" stroke-linejoin="round"><path d="M64 19 L79 38 L64 57 L49 38 Z" fill="url(#gem-24)" stroke="#f7f8ff" stroke-width="2" stroke-linejoin="round"/><path d="M64 20 L70 38 L64 56 L58 38 Z" fill="#a8b8fb" opacity=".84"/><path d="M64 20 L79 38 L70 38 Z" fill="#f2f6ff" opacity=".84"/><path d="M79 38 L64 57 L70 38 Z" fill="#6a75e6" opacity=".9"/><path d="M64 57 L49 38 L58 38 Z" fill="#d8e1ff" opacity=".9"/><path d="M49 38 L64 20 L58 38 Z" fill="#a8b8fb" opacity=".68"/><path d="M64 20 L70 38 L64 57 L58 38 Z" fill="none" stroke="#f7f8ff" stroke-width="1.05"/><path d="M49 38 H79 M64 20 V57" fill="none" stroke="#f7f8ff" stroke-opacity=".86" stroke-width="1.15"/><path d="M55 26 l2 -3 2 3" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.05"/></g>
+  <text x="108" y="48" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800" letter-spacing="-.7" fill="#fff" filter="url(#text-shadow-24)">24</text>
+  
+ </symbol>
+<symbol id="level-25" viewBox="0 0 170 76" overflow="visible">
+  <title>Level 25 Gifter Badge</title>
+  <desc>Minglora Gifter Level 25, original tier colours rendered as crisp vector artwork.</desc>
+  <defs>
+   <linearGradient id="pill-25" x1="0" y1="0" x2=".12" y2="1"><stop offset="0" stop-color="#2728c6"/><stop offset="1" stop-color="#1715a7"/></linearGradient>
+   <linearGradient id="sheen-25" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".48" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <linearGradient id="gem-25" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe4ff"/><stop offset=".48" stop-color="#dc9cf5"/><stop offset="1" stop-color="#8c65df"/></linearGradient>
+   <filter id="shadow-25" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/><feOffset dy="1.2" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="text-shadow-25" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation=".55" result="blur"/><feOffset dy=".65" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g filter="url(#shadow-25)">
+   <rect x="38" y="16" width="94" height="44" rx="12" fill="url(#pill-25)" stroke="#a8a1ff" stroke-width="1.35"/>
+   <rect x="39.3" y="17.3" width="91.4" height="41.4" rx="10.8" fill="url(#sheen-25)" opacity=".9"/>
+   <rect x="40.1" y="18.1" width="89.8" height="39.8" rx="10" fill="none" stroke="#e5dcff" stroke-opacity=".38" stroke-width=".8"/>
+   <path d="M50 17.5 H120 Q130.5 17.5 130.5 28 V32.72" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="1.05" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(64 38) scale(1) translate(-64 -38)" stroke-linecap="round" stroke-linejoin="round"><path d="M64 19 L79 38 L64 57 L49 38 Z" fill="url(#gem-25)" stroke="#fff0ff" stroke-width="2" stroke-linejoin="round"/><path d="M64 20 L70 38 L64 56 L58 38 Z" fill="#dc9cf5" opacity=".84"/><path d="M64 20 L79 38 L70 38 Z" fill="#ffe4ff" opacity=".84"/><path d="M79 38 L64 57 L70 38 Z" fill="#8c65df" opacity=".9"/><path d="M64 57 L49 38 L58 38 Z" fill="#f5cbff" opacity=".9"/><path d="M49 38 L64 20 L58 38 Z" fill="#dc9cf5" opacity=".68"/><path d="M64 20 L70 38 L64 57 L58 38 Z" fill="none" stroke="#fff0ff" stroke-width="1.05"/><path d="M49 38 H79 M64 20 V57" fill="none" stroke="#fff0ff" stroke-opacity=".86" stroke-width="1.15"/><path d="M55 26 l2 -3 2 3" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.05"/></g>
+  <text x="108" y="48" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800" letter-spacing="-.7" fill="#fff" filter="url(#text-shadow-25)">25</text>
+  
+ </symbol>
+<symbol id="level-26" viewBox="0 0 170 76" overflow="visible">
+  <title>Level 26 Gifter Badge</title>
+  <desc>Minglora Gifter Level 26, original tier colours rendered as crisp vector artwork.</desc>
+  <defs>
+   <linearGradient id="pill-26" x1="0" y1="0" x2=".12" y2="1"><stop offset="0" stop-color="#2728c6"/><stop offset="1" stop-color="#1715a7"/></linearGradient>
+   <linearGradient id="sheen-26" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".48" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <linearGradient id="gem-26" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe4ff"/><stop offset=".48" stop-color="#dc9cf5"/><stop offset="1" stop-color="#8c65df"/></linearGradient>
+   <filter id="shadow-26" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/><feOffset dy="1.2" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="text-shadow-26" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation=".55" result="blur"/><feOffset dy=".65" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g filter="url(#shadow-26)">
+   <rect x="38" y="16" width="94" height="44" rx="12" fill="url(#pill-26)" stroke="#a8a1ff" stroke-width="1.35"/>
+   <rect x="39.3" y="17.3" width="91.4" height="41.4" rx="10.8" fill="url(#sheen-26)" opacity=".9"/>
+   <rect x="40.1" y="18.1" width="89.8" height="39.8" rx="10" fill="none" stroke="#e5dcff" stroke-opacity=".38" stroke-width=".8"/>
+   <path d="M50 17.5 H120 Q130.5 17.5 130.5 28 V32.72" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="1.05" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(64 38) scale(1) translate(-64 -38)" stroke-linecap="round" stroke-linejoin="round"><path d="M64 19 L79 38 L64 57 L49 38 Z" fill="url(#gem-26)" stroke="#fff0ff" stroke-width="2" stroke-linejoin="round"/><path d="M64 20 L70 38 L64 56 L58 38 Z" fill="#dc9cf5" opacity=".84"/><path d="M64 20 L79 38 L70 38 Z" fill="#ffe4ff" opacity=".84"/><path d="M79 38 L64 57 L70 38 Z" fill="#8c65df" opacity=".9"/><path d="M64 57 L49 38 L58 38 Z" fill="#f5cbff" opacity=".9"/><path d="M49 38 L64 20 L58 38 Z" fill="#dc9cf5" opacity=".68"/><path d="M64 20 L70 38 L64 57 L58 38 Z" fill="none" stroke="#fff0ff" stroke-width="1.05"/><path d="M49 38 H79 M64 20 V57" fill="none" stroke="#fff0ff" stroke-opacity=".86" stroke-width="1.15"/><path d="M55 26 l2 -3 2 3" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.05"/></g>
+  <text x="108" y="48" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800" letter-spacing="-.7" fill="#fff" filter="url(#text-shadow-26)">26</text>
+  
+ </symbol>
+<symbol id="level-27" viewBox="0 0 170 76" overflow="visible">
+  <title>Level 27 Gifter Badge</title>
+  <desc>Minglora Gifter Level 27, original tier colours rendered as crisp vector artwork.</desc>
+  <defs>
+   <linearGradient id="pill-27" x1="0" y1="0" x2=".12" y2="1"><stop offset="0" stop-color="#2728c6"/><stop offset="1" stop-color="#1715a7"/></linearGradient>
+   <linearGradient id="sheen-27" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".48" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <linearGradient id="gem-27" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe4ff"/><stop offset=".48" stop-color="#dc9cf5"/><stop offset="1" stop-color="#8c65df"/></linearGradient>
+   <filter id="shadow-27" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/><feOffset dy="1.2" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="text-shadow-27" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation=".55" result="blur"/><feOffset dy=".65" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g filter="url(#shadow-27)">
+   <rect x="38" y="16" width="94" height="44" rx="12" fill="url(#pill-27)" stroke="#a8a1ff" stroke-width="1.35"/>
+   <rect x="39.3" y="17.3" width="91.4" height="41.4" rx="10.8" fill="url(#sheen-27)" opacity=".9"/>
+   <rect x="40.1" y="18.1" width="89.8" height="39.8" rx="10" fill="none" stroke="#e5dcff" stroke-opacity=".38" stroke-width=".8"/>
+   <path d="M50 17.5 H120 Q130.5 17.5 130.5 28 V32.72" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="1.05" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(64 38) scale(1) translate(-64 -38)" stroke-linecap="round" stroke-linejoin="round"><path d="M64 19 L79 38 L64 57 L49 38 Z" fill="url(#gem-27)" stroke="#fff0ff" stroke-width="2" stroke-linejoin="round"/><path d="M64 20 L70 38 L64 56 L58 38 Z" fill="#dc9cf5" opacity=".84"/><path d="M64 20 L79 38 L70 38 Z" fill="#ffe4ff" opacity=".84"/><path d="M79 38 L64 57 L70 38 Z" fill="#8c65df" opacity=".9"/><path d="M64 57 L49 38 L58 38 Z" fill="#f5cbff" opacity=".9"/><path d="M49 38 L64 20 L58 38 Z" fill="#dc9cf5" opacity=".68"/><path d="M64 20 L70 38 L64 57 L58 38 Z" fill="none" stroke="#fff0ff" stroke-width="1.05"/><path d="M49 38 H79 M64 20 V57" fill="none" stroke="#fff0ff" stroke-opacity=".86" stroke-width="1.15"/><path d="M55 26 l2 -3 2 3" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.05"/></g>
+  <text x="108" y="48" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800" letter-spacing="-.7" fill="#fff" filter="url(#text-shadow-27)">27</text>
+  
+ </symbol>
+<symbol id="level-28" viewBox="0 0 170 76" overflow="visible">
+  <title>Level 28 Gifter Badge</title>
+  <desc>Minglora Gifter Level 28, original tier colours rendered as crisp vector artwork.</desc>
+  <defs>
+   <linearGradient id="pill-28" x1="0" y1="0" x2=".12" y2="1"><stop offset="0" stop-color="#2728c6"/><stop offset="1" stop-color="#1715a7"/></linearGradient>
+   <linearGradient id="sheen-28" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".48" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <linearGradient id="gem-28" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe4ff"/><stop offset=".48" stop-color="#dc9cf5"/><stop offset="1" stop-color="#8c65df"/></linearGradient>
+   <filter id="shadow-28" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/><feOffset dy="1.2" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="text-shadow-28" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation=".55" result="blur"/><feOffset dy=".65" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g filter="url(#shadow-28)">
+   <rect x="38" y="16" width="94" height="44" rx="12" fill="url(#pill-28)" stroke="#a8a1ff" stroke-width="1.35"/>
+   <rect x="39.3" y="17.3" width="91.4" height="41.4" rx="10.8" fill="url(#sheen-28)" opacity=".9"/>
+   <rect x="40.1" y="18.1" width="89.8" height="39.8" rx="10" fill="none" stroke="#e5dcff" stroke-opacity=".38" stroke-width=".8"/>
+   <path d="M50 17.5 H120 Q130.5 17.5 130.5 28 V32.72" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="1.05" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(64 38) scale(1) translate(-64 -38)" stroke-linecap="round" stroke-linejoin="round"><path d="M64 19 L79 38 L64 57 L49 38 Z" fill="url(#gem-28)" stroke="#fff0ff" stroke-width="2" stroke-linejoin="round"/><path d="M64 20 L70 38 L64 56 L58 38 Z" fill="#dc9cf5" opacity=".84"/><path d="M64 20 L79 38 L70 38 Z" fill="#ffe4ff" opacity=".84"/><path d="M79 38 L64 57 L70 38 Z" fill="#8c65df" opacity=".9"/><path d="M64 57 L49 38 L58 38 Z" fill="#f5cbff" opacity=".9"/><path d="M49 38 L64 20 L58 38 Z" fill="#dc9cf5" opacity=".68"/><path d="M64 20 L70 38 L64 57 L58 38 Z" fill="none" stroke="#fff0ff" stroke-width="1.05"/><path d="M49 38 H79 M64 20 V57" fill="none" stroke="#fff0ff" stroke-opacity=".86" stroke-width="1.15"/><path d="M55 26 l2 -3 2 3" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.05"/></g>
+  <text x="108" y="48" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800" letter-spacing="-.7" fill="#fff" filter="url(#text-shadow-28)">28</text>
+  
+ </symbol>
+<symbol id="level-29" viewBox="0 0 170 76" overflow="visible">
+  <title>Level 29 Gifter Badge</title>
+  <desc>Minglora Gifter Level 29, original tier colours rendered as crisp vector artwork.</desc>
+  <defs>
+   <linearGradient id="pill-29" x1="0" y1="0" x2=".12" y2="1"><stop offset="0" stop-color="#2728c6"/><stop offset="1" stop-color="#1715a7"/></linearGradient>
+   <linearGradient id="sheen-29" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".48" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <linearGradient id="gem-29" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe4ff"/><stop offset=".48" stop-color="#dc9cf5"/><stop offset="1" stop-color="#8c65df"/></linearGradient>
+   <filter id="shadow-29" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/><feOffset dy="1.2" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="text-shadow-29" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation=".55" result="blur"/><feOffset dy=".65" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g filter="url(#shadow-29)">
+   <rect x="38" y="16" width="94" height="44" rx="12" fill="url(#pill-29)" stroke="#a8a1ff" stroke-width="1.35"/>
+   <rect x="39.3" y="17.3" width="91.4" height="41.4" rx="10.8" fill="url(#sheen-29)" opacity=".9"/>
+   <rect x="40.1" y="18.1" width="89.8" height="39.8" rx="10" fill="none" stroke="#e5dcff" stroke-opacity=".38" stroke-width=".8"/>
+   <path d="M50 17.5 H120 Q130.5 17.5 130.5 28 V32.72" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="1.05" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(64 38) scale(1) translate(-64 -38)" stroke-linecap="round" stroke-linejoin="round"><path d="M64 19 L79 38 L64 57 L49 38 Z" fill="url(#gem-29)" stroke="#fff0ff" stroke-width="2" stroke-linejoin="round"/><path d="M64 20 L70 38 L64 56 L58 38 Z" fill="#dc9cf5" opacity=".84"/><path d="M64 20 L79 38 L70 38 Z" fill="#ffe4ff" opacity=".84"/><path d="M79 38 L64 57 L70 38 Z" fill="#8c65df" opacity=".9"/><path d="M64 57 L49 38 L58 38 Z" fill="#f5cbff" opacity=".9"/><path d="M49 38 L64 20 L58 38 Z" fill="#dc9cf5" opacity=".68"/><path d="M64 20 L70 38 L64 57 L58 38 Z" fill="none" stroke="#fff0ff" stroke-width="1.05"/><path d="M49 38 H79 M64 20 V57" fill="none" stroke="#fff0ff" stroke-opacity=".86" stroke-width="1.15"/><path d="M55 26 l2 -3 2 3" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.05"/></g>
+  <text x="108" y="48" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800" letter-spacing="-.7" fill="#fff" filter="url(#text-shadow-29)">29</text>
+  
+ </symbol>
+<symbol id="level-30" viewBox="0 0 170 76" overflow="visible">
+  <title>Level 30 Gifter Badge</title>
+  <desc>Minglora Gifter Level 30, original tier colours rendered as crisp vector artwork.</desc>
+  <defs>
+   <linearGradient id="pill-30" x1="0" y1="0" x2=".12" y2="1"><stop offset="0" stop-color="#321bc8"/><stop offset="1" stop-color="#1c0ba9"/></linearGradient>
+   <linearGradient id="sheen-30" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".48" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <linearGradient id="gem-30" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe5ef"/><stop offset=".48" stop-color="#f2a4d2"/><stop offset="1" stop-color="#9d70ed"/></linearGradient>
+   <filter id="shadow-30" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/><feOffset dy="1.2" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="text-shadow-30" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation=".55" result="blur"/><feOffset dy=".65" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g filter="url(#shadow-30)">
+   <rect x="38" y="16" width="94" height="44" rx="12" fill="url(#pill-30)" stroke="#c0a9ff" stroke-width="1.35"/>
+   <rect x="39.3" y="17.3" width="91.4" height="41.4" rx="10.8" fill="url(#sheen-30)" opacity=".9"/>
+   <rect x="40.1" y="18.1" width="89.8" height="39.8" rx="10" fill="none" stroke="#e9dbff" stroke-opacity=".38" stroke-width=".8"/>
+   <path d="M50 17.5 H120 Q130.5 17.5 130.5 28 V32.72" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="1.05" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(64 38) scale(1) translate(-64 -38)" stroke-linecap="round" stroke-linejoin="round"><path d="M64 18 L77 26 L80 39 L64 58 L48 39 L51 26 Z" fill="url(#gem-30)" stroke="#fff3f8" stroke-width="2" stroke-linejoin="round"/><path d="M64 18 L64 38 L51 26 Z" fill="#ffe5ef" opacity=".92"/><path d="M64 18 L77 26 L64 38 Z" fill="#f2a4d2" opacity=".94"/><path d="M77 26 L80 39 L64 58 L64 38 Z" fill="#9d70ed" opacity=".87"/><path d="M48 39 L51 26 L64 38 L64 58 Z" fill="#ffe2a6" opacity=".82"/><path d="M51 26 L77 26 M48 39 L80 39 M64 18 V58 M51 26 L64 38 L77 26" fill="none" stroke="#fff3f8" stroke-width="1.05" stroke-linejoin="round"/><path d="M58 25 L64 20 L70 25" fill="none" stroke="#fff" stroke-opacity=".9" stroke-width="1.2"/><path d="M55 26 l2 -3 2 3" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.05"/></g>
+  <text x="108" y="48" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800" letter-spacing="-.7" fill="#fff" filter="url(#text-shadow-30)">30</text>
+  
+ </symbol>
+<symbol id="level-31" viewBox="0 0 170 76" overflow="visible">
+  <title>Level 31 Gifter Badge</title>
+  <desc>Minglora Gifter Level 31, original tier colours rendered as crisp vector artwork.</desc>
+  <defs>
+   <linearGradient id="pill-31" x1="0" y1="0" x2=".12" y2="1"><stop offset="0" stop-color="#321bc8"/><stop offset="1" stop-color="#1c0ba9"/></linearGradient>
+   <linearGradient id="sheen-31" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".48" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <linearGradient id="gem-31" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe5ef"/><stop offset=".48" stop-color="#f2a4d2"/><stop offset="1" stop-color="#9d70ed"/></linearGradient>
+   <filter id="shadow-31" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/><feOffset dy="1.2" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="text-shadow-31" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation=".55" result="blur"/><feOffset dy=".65" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g filter="url(#shadow-31)">
+   <rect x="38" y="16" width="94" height="44" rx="12" fill="url(#pill-31)" stroke="#c0a9ff" stroke-width="1.35"/>
+   <rect x="39.3" y="17.3" width="91.4" height="41.4" rx="10.8" fill="url(#sheen-31)" opacity=".9"/>
+   <rect x="40.1" y="18.1" width="89.8" height="39.8" rx="10" fill="none" stroke="#e9dbff" stroke-opacity=".38" stroke-width=".8"/>
+   <path d="M50 17.5 H120 Q130.5 17.5 130.5 28 V32.72" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="1.05" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(64 38) scale(1) translate(-64 -38)" stroke-linecap="round" stroke-linejoin="round"><path d="M64 18 L77 26 L80 39 L64 58 L48 39 L51 26 Z" fill="url(#gem-31)" stroke="#fff3f8" stroke-width="2" stroke-linejoin="round"/><path d="M64 18 L64 38 L51 26 Z" fill="#ffe5ef" opacity=".92"/><path d="M64 18 L77 26 L64 38 Z" fill="#f2a4d2" opacity=".94"/><path d="M77 26 L80 39 L64 58 L64 38 Z" fill="#9d70ed" opacity=".87"/><path d="M48 39 L51 26 L64 38 L64 58 Z" fill="#ffe2a6" opacity=".82"/><path d="M51 26 L77 26 M48 39 L80 39 M64 18 V58 M51 26 L64 38 L77 26" fill="none" stroke="#fff3f8" stroke-width="1.05" stroke-linejoin="round"/><path d="M58 25 L64 20 L70 25" fill="none" stroke="#fff" stroke-opacity=".9" stroke-width="1.2"/><path d="M55 26 l2 -3 2 3" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.05"/></g>
+  <text x="108" y="48" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800" letter-spacing="-.7" fill="#fff" filter="url(#text-shadow-31)">31</text>
+  
+ </symbol>
+<symbol id="level-32" viewBox="0 0 170 76" overflow="visible">
+  <title>Level 32 Gifter Badge</title>
+  <desc>Minglora Gifter Level 32, original tier colours rendered as crisp vector artwork.</desc>
+  <defs>
+   <linearGradient id="pill-32" x1="0" y1="0" x2=".12" y2="1"><stop offset="0" stop-color="#321bc8"/><stop offset="1" stop-color="#1c0ba9"/></linearGradient>
+   <linearGradient id="sheen-32" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".48" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <linearGradient id="gem-32" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe5ef"/><stop offset=".48" stop-color="#f2a4d2"/><stop offset="1" stop-color="#9d70ed"/></linearGradient>
+   <filter id="shadow-32" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/><feOffset dy="1.2" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="text-shadow-32" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation=".55" result="blur"/><feOffset dy=".65" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g filter="url(#shadow-32)">
+   <rect x="38" y="16" width="94" height="44" rx="12" fill="url(#pill-32)" stroke="#c0a9ff" stroke-width="1.35"/>
+   <rect x="39.3" y="17.3" width="91.4" height="41.4" rx="10.8" fill="url(#sheen-32)" opacity=".9"/>
+   <rect x="40.1" y="18.1" width="89.8" height="39.8" rx="10" fill="none" stroke="#e9dbff" stroke-opacity=".38" stroke-width=".8"/>
+   <path d="M50 17.5 H120 Q130.5 17.5 130.5 28 V32.72" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="1.05" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(64 38) scale(1) translate(-64 -38)" stroke-linecap="round" stroke-linejoin="round"><path d="M64 18 L77 26 L80 39 L64 58 L48 39 L51 26 Z" fill="url(#gem-32)" stroke="#fff3f8" stroke-width="2" stroke-linejoin="round"/><path d="M64 18 L64 38 L51 26 Z" fill="#ffe5ef" opacity=".92"/><path d="M64 18 L77 26 L64 38 Z" fill="#f2a4d2" opacity=".94"/><path d="M77 26 L80 39 L64 58 L64 38 Z" fill="#9d70ed" opacity=".87"/><path d="M48 39 L51 26 L64 38 L64 58 Z" fill="#ffe2a6" opacity=".82"/><path d="M51 26 L77 26 M48 39 L80 39 M64 18 V58 M51 26 L64 38 L77 26" fill="none" stroke="#fff3f8" stroke-width="1.05" stroke-linejoin="round"/><path d="M58 25 L64 20 L70 25" fill="none" stroke="#fff" stroke-opacity=".9" stroke-width="1.2"/><path d="M55 26 l2 -3 2 3" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.05"/></g>
+  <text x="108" y="48" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800" letter-spacing="-.7" fill="#fff" filter="url(#text-shadow-32)">32</text>
+  
+ </symbol>
+<symbol id="level-33" viewBox="0 0 170 76" overflow="visible">
+  <title>Level 33 Gifter Badge</title>
+  <desc>Minglora Gifter Level 33, original tier colours rendered as crisp vector artwork.</desc>
+  <defs>
+   <linearGradient id="pill-33" x1="0" y1="0" x2=".12" y2="1"><stop offset="0" stop-color="#321bc8"/><stop offset="1" stop-color="#1c0ba9"/></linearGradient>
+   <linearGradient id="sheen-33" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".48" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <linearGradient id="gem-33" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe5ef"/><stop offset=".48" stop-color="#f2a4d2"/><stop offset="1" stop-color="#9d70ed"/></linearGradient>
+   <filter id="shadow-33" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/><feOffset dy="1.2" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="text-shadow-33" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation=".55" result="blur"/><feOffset dy=".65" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g filter="url(#shadow-33)">
+   <rect x="38" y="16" width="94" height="44" rx="12" fill="url(#pill-33)" stroke="#c0a9ff" stroke-width="1.35"/>
+   <rect x="39.3" y="17.3" width="91.4" height="41.4" rx="10.8" fill="url(#sheen-33)" opacity=".9"/>
+   <rect x="40.1" y="18.1" width="89.8" height="39.8" rx="10" fill="none" stroke="#e9dbff" stroke-opacity=".38" stroke-width=".8"/>
+   <path d="M50 17.5 H120 Q130.5 17.5 130.5 28 V32.72" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="1.05" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(64 38) scale(1) translate(-64 -38)" stroke-linecap="round" stroke-linejoin="round"><path d="M64 18 L77 26 L80 39 L64 58 L48 39 L51 26 Z" fill="url(#gem-33)" stroke="#fff3f8" stroke-width="2" stroke-linejoin="round"/><path d="M64 18 L64 38 L51 26 Z" fill="#ffe5ef" opacity=".92"/><path d="M64 18 L77 26 L64 38 Z" fill="#f2a4d2" opacity=".94"/><path d="M77 26 L80 39 L64 58 L64 38 Z" fill="#9d70ed" opacity=".87"/><path d="M48 39 L51 26 L64 38 L64 58 Z" fill="#ffe2a6" opacity=".82"/><path d="M51 26 L77 26 M48 39 L80 39 M64 18 V58 M51 26 L64 38 L77 26" fill="none" stroke="#fff3f8" stroke-width="1.05" stroke-linejoin="round"/><path d="M58 25 L64 20 L70 25" fill="none" stroke="#fff" stroke-opacity=".9" stroke-width="1.2"/><path d="M55 26 l2 -3 2 3" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.05"/></g>
+  <text x="108" y="48" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800" letter-spacing="-.7" fill="#fff" filter="url(#text-shadow-33)">33</text>
+  
+ </symbol>
+<symbol id="level-34" viewBox="0 0 170 76" overflow="visible">
+  <title>Level 34 Gifter Badge</title>
+  <desc>Minglora Gifter Level 34, original tier colours rendered as crisp vector artwork.</desc>
+  <defs>
+   <linearGradient id="pill-34" x1="0" y1="0" x2=".12" y2="1"><stop offset="0" stop-color="#321bc8"/><stop offset="1" stop-color="#1c0ba9"/></linearGradient>
+   <linearGradient id="sheen-34" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".48" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <linearGradient id="gem-34" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe5ef"/><stop offset=".48" stop-color="#f2a4d2"/><stop offset="1" stop-color="#9d70ed"/></linearGradient>
+   <filter id="shadow-34" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/><feOffset dy="1.2" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="text-shadow-34" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation=".55" result="blur"/><feOffset dy=".65" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g filter="url(#shadow-34)">
+   <rect x="38" y="16" width="94" height="44" rx="12" fill="url(#pill-34)" stroke="#c0a9ff" stroke-width="1.35"/>
+   <rect x="39.3" y="17.3" width="91.4" height="41.4" rx="10.8" fill="url(#sheen-34)" opacity=".9"/>
+   <rect x="40.1" y="18.1" width="89.8" height="39.8" rx="10" fill="none" stroke="#e9dbff" stroke-opacity=".38" stroke-width=".8"/>
+   <path d="M50 17.5 H120 Q130.5 17.5 130.5 28 V32.72" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="1.05" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(64 38) scale(1) translate(-64 -38)" stroke-linecap="round" stroke-linejoin="round"><path d="M64 18 L77 26 L80 39 L64 58 L48 39 L51 26 Z" fill="url(#gem-34)" stroke="#fff3f8" stroke-width="2" stroke-linejoin="round"/><path d="M64 18 L64 38 L51 26 Z" fill="#ffe5ef" opacity=".92"/><path d="M64 18 L77 26 L64 38 Z" fill="#f2a4d2" opacity=".94"/><path d="M77 26 L80 39 L64 58 L64 38 Z" fill="#9d70ed" opacity=".87"/><path d="M48 39 L51 26 L64 38 L64 58 Z" fill="#ffe2a6" opacity=".82"/><path d="M51 26 L77 26 M48 39 L80 39 M64 18 V58 M51 26 L64 38 L77 26" fill="none" stroke="#fff3f8" stroke-width="1.05" stroke-linejoin="round"/><path d="M58 25 L64 20 L70 25" fill="none" stroke="#fff" stroke-opacity=".9" stroke-width="1.2"/><path d="M55 26 l2 -3 2 3" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.05"/></g>
+  <text x="108" y="48" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800" letter-spacing="-.7" fill="#fff" filter="url(#text-shadow-34)">34</text>
+  
+ </symbol>
+<symbol id="level-35" viewBox="0 0 170 76" overflow="visible">
+  <title>Level 35 Gifter Badge</title>
+  <desc>Minglora Gifter Level 35, original tier colours rendered as crisp vector artwork.</desc>
+  <defs>
+   <linearGradient id="pill-35" x1="0" y1="0" x2=".12" y2="1"><stop offset="0" stop-color="#5915c8"/><stop offset="1" stop-color="#3606a8"/></linearGradient>
+   <linearGradient id="sheen-35" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".48" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <linearGradient id="gem-35" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe4fb"/><stop offset=".48" stop-color="#e79ae8"/><stop offset="1" stop-color="#a16ae2"/></linearGradient>
+   <filter id="shadow-35" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/><feOffset dy="1.2" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="text-shadow-35" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation=".55" result="blur"/><feOffset dy=".65" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g filter="url(#shadow-35)">
+   <rect x="38" y="16" width="94" height="44" rx="12" fill="url(#pill-35)" stroke="#d5aaff" stroke-width="1.35"/>
+   <rect x="39.3" y="17.3" width="91.4" height="41.4" rx="10.8" fill="url(#sheen-35)" opacity=".9"/>
+   <rect x="40.1" y="18.1" width="89.8" height="39.8" rx="10" fill="none" stroke="#f0dfff" stroke-opacity=".38" stroke-width=".8"/>
+   <path d="M50 17.5 H120 Q130.5 17.5 130.5 28 V32.72" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="1.05" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(64 38) scale(1) translate(-64 -38)" stroke-linecap="round" stroke-linejoin="round"><path d="M64 18 L77 26 L80 39 L64 58 L48 39 L51 26 Z" fill="url(#gem-35)" stroke="#fff0ff" stroke-width="2" stroke-linejoin="round"/><path d="M64 18 L64 38 L51 26 Z" fill="#ffe4fb" opacity=".92"/><path d="M64 18 L77 26 L64 38 Z" fill="#e79ae8" opacity=".94"/><path d="M77 26 L80 39 L64 58 L64 38 Z" fill="#a16ae2" opacity=".87"/><path d="M48 39 L51 26 L64 38 L64 58 Z" fill="#ffe29a" opacity=".82"/><path d="M51 26 L77 26 M48 39 L80 39 M64 18 V58 M51 26 L64 38 L77 26" fill="none" stroke="#fff0ff" stroke-width="1.05" stroke-linejoin="round"/><path d="M58 25 L64 20 L70 25" fill="none" stroke="#fff" stroke-opacity=".9" stroke-width="1.2"/><path d="M55 26 l2 -3 2 3" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.05"/></g>
+  <text x="108" y="48" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800" letter-spacing="-.7" fill="#fff" filter="url(#text-shadow-35)">35</text>
+  
+ </symbol>
+<symbol id="level-36" viewBox="0 0 170 76" overflow="visible">
+  <title>Level 36 Gifter Badge</title>
+  <desc>Minglora Gifter Level 36, original tier colours rendered as crisp vector artwork.</desc>
+  <defs>
+   <linearGradient id="pill-36" x1="0" y1="0" x2=".12" y2="1"><stop offset="0" stop-color="#5915c8"/><stop offset="1" stop-color="#3606a8"/></linearGradient>
+   <linearGradient id="sheen-36" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".48" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <linearGradient id="gem-36" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe4fb"/><stop offset=".48" stop-color="#e79ae8"/><stop offset="1" stop-color="#a16ae2"/></linearGradient>
+   <filter id="shadow-36" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/><feOffset dy="1.2" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="text-shadow-36" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation=".55" result="blur"/><feOffset dy=".65" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g filter="url(#shadow-36)">
+   <rect x="38" y="16" width="94" height="44" rx="12" fill="url(#pill-36)" stroke="#d5aaff" stroke-width="1.35"/>
+   <rect x="39.3" y="17.3" width="91.4" height="41.4" rx="10.8" fill="url(#sheen-36)" opacity=".9"/>
+   <rect x="40.1" y="18.1" width="89.8" height="39.8" rx="10" fill="none" stroke="#f0dfff" stroke-opacity=".38" stroke-width=".8"/>
+   <path d="M50 17.5 H120 Q130.5 17.5 130.5 28 V32.72" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="1.05" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(64 38) scale(1) translate(-64 -38)" stroke-linecap="round" stroke-linejoin="round"><path d="M64 18 L77 26 L80 39 L64 58 L48 39 L51 26 Z" fill="url(#gem-36)" stroke="#fff0ff" stroke-width="2" stroke-linejoin="round"/><path d="M64 18 L64 38 L51 26 Z" fill="#ffe4fb" opacity=".92"/><path d="M64 18 L77 26 L64 38 Z" fill="#e79ae8" opacity=".94"/><path d="M77 26 L80 39 L64 58 L64 38 Z" fill="#a16ae2" opacity=".87"/><path d="M48 39 L51 26 L64 38 L64 58 Z" fill="#ffe29a" opacity=".82"/><path d="M51 26 L77 26 M48 39 L80 39 M64 18 V58 M51 26 L64 38 L77 26" fill="none" stroke="#fff0ff" stroke-width="1.05" stroke-linejoin="round"/><path d="M58 25 L64 20 L70 25" fill="none" stroke="#fff" stroke-opacity=".9" stroke-width="1.2"/><path d="M55 26 l2 -3 2 3" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.05"/></g>
+  <text x="108" y="48" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800" letter-spacing="-.7" fill="#fff" filter="url(#text-shadow-36)">36</text>
+  
+ </symbol>
+<symbol id="level-37" viewBox="0 0 170 76" overflow="visible">
+  <title>Level 37 Gifter Badge</title>
+  <desc>Minglora Gifter Level 37, original tier colours rendered as crisp vector artwork.</desc>
+  <defs>
+   <linearGradient id="pill-37" x1="0" y1="0" x2=".12" y2="1"><stop offset="0" stop-color="#5915c8"/><stop offset="1" stop-color="#3606a8"/></linearGradient>
+   <linearGradient id="sheen-37" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".48" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <linearGradient id="gem-37" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe4fb"/><stop offset=".48" stop-color="#e79ae8"/><stop offset="1" stop-color="#a16ae2"/></linearGradient>
+   <filter id="shadow-37" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/><feOffset dy="1.2" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="text-shadow-37" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation=".55" result="blur"/><feOffset dy=".65" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g filter="url(#shadow-37)">
+   <rect x="38" y="16" width="94" height="44" rx="12" fill="url(#pill-37)" stroke="#d5aaff" stroke-width="1.35"/>
+   <rect x="39.3" y="17.3" width="91.4" height="41.4" rx="10.8" fill="url(#sheen-37)" opacity=".9"/>
+   <rect x="40.1" y="18.1" width="89.8" height="39.8" rx="10" fill="none" stroke="#f0dfff" stroke-opacity=".38" stroke-width=".8"/>
+   <path d="M50 17.5 H120 Q130.5 17.5 130.5 28 V32.72" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="1.05" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(64 38) scale(1) translate(-64 -38)" stroke-linecap="round" stroke-linejoin="round"><path d="M64 18 L77 26 L80 39 L64 58 L48 39 L51 26 Z" fill="url(#gem-37)" stroke="#fff0ff" stroke-width="2" stroke-linejoin="round"/><path d="M64 18 L64 38 L51 26 Z" fill="#ffe4fb" opacity=".92"/><path d="M64 18 L77 26 L64 38 Z" fill="#e79ae8" opacity=".94"/><path d="M77 26 L80 39 L64 58 L64 38 Z" fill="#a16ae2" opacity=".87"/><path d="M48 39 L51 26 L64 38 L64 58 Z" fill="#ffe29a" opacity=".82"/><path d="M51 26 L77 26 M48 39 L80 39 M64 18 V58 M51 26 L64 38 L77 26" fill="none" stroke="#fff0ff" stroke-width="1.05" stroke-linejoin="round"/><path d="M58 25 L64 20 L70 25" fill="none" stroke="#fff" stroke-opacity=".9" stroke-width="1.2"/><path d="M55 26 l2 -3 2 3" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.05"/></g>
+  <text x="108" y="48" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800" letter-spacing="-.7" fill="#fff" filter="url(#text-shadow-37)">37</text>
+  
+ </symbol>
+<symbol id="level-38" viewBox="0 0 170 76" overflow="visible">
+  <title>Level 38 Gifter Badge</title>
+  <desc>Minglora Gifter Level 38, original tier colours rendered as crisp vector artwork.</desc>
+  <defs>
+   <linearGradient id="pill-38" x1="0" y1="0" x2=".12" y2="1"><stop offset="0" stop-color="#5915c8"/><stop offset="1" stop-color="#3606a8"/></linearGradient>
+   <linearGradient id="sheen-38" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".48" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <linearGradient id="gem-38" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe4fb"/><stop offset=".48" stop-color="#e79ae8"/><stop offset="1" stop-color="#a16ae2"/></linearGradient>
+   <filter id="shadow-38" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/><feOffset dy="1.2" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="text-shadow-38" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation=".55" result="blur"/><feOffset dy=".65" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g filter="url(#shadow-38)">
+   <rect x="38" y="16" width="94" height="44" rx="12" fill="url(#pill-38)" stroke="#d5aaff" stroke-width="1.35"/>
+   <rect x="39.3" y="17.3" width="91.4" height="41.4" rx="10.8" fill="url(#sheen-38)" opacity=".9"/>
+   <rect x="40.1" y="18.1" width="89.8" height="39.8" rx="10" fill="none" stroke="#f0dfff" stroke-opacity=".38" stroke-width=".8"/>
+   <path d="M50 17.5 H120 Q130.5 17.5 130.5 28 V32.72" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="1.05" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(64 38) scale(1) translate(-64 -38)" stroke-linecap="round" stroke-linejoin="round"><path d="M64 18 L77 26 L80 39 L64 58 L48 39 L51 26 Z" fill="url(#gem-38)" stroke="#fff0ff" stroke-width="2" stroke-linejoin="round"/><path d="M64 18 L64 38 L51 26 Z" fill="#ffe4fb" opacity=".92"/><path d="M64 18 L77 26 L64 38 Z" fill="#e79ae8" opacity=".94"/><path d="M77 26 L80 39 L64 58 L64 38 Z" fill="#a16ae2" opacity=".87"/><path d="M48 39 L51 26 L64 38 L64 58 Z" fill="#ffe29a" opacity=".82"/><path d="M51 26 L77 26 M48 39 L80 39 M64 18 V58 M51 26 L64 38 L77 26" fill="none" stroke="#fff0ff" stroke-width="1.05" stroke-linejoin="round"/><path d="M58 25 L64 20 L70 25" fill="none" stroke="#fff" stroke-opacity=".9" stroke-width="1.2"/><path d="M55 26 l2 -3 2 3" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.05"/></g>
+  <text x="108" y="48" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800" letter-spacing="-.7" fill="#fff" filter="url(#text-shadow-38)">38</text>
+  
+ </symbol>
+<symbol id="level-39" viewBox="0 0 170 76" overflow="visible">
+  <title>Level 39 Gifter Badge</title>
+  <desc>Minglora Gifter Level 39, original tier colours rendered as crisp vector artwork.</desc>
+  <defs>
+   <linearGradient id="pill-39" x1="0" y1="0" x2=".12" y2="1"><stop offset="0" stop-color="#5915c8"/><stop offset="1" stop-color="#3606a8"/></linearGradient>
+   <linearGradient id="sheen-39" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".48" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <linearGradient id="gem-39" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe4fb"/><stop offset=".48" stop-color="#e79ae8"/><stop offset="1" stop-color="#a16ae2"/></linearGradient>
+   <filter id="shadow-39" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/><feOffset dy="1.2" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="text-shadow-39" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation=".55" result="blur"/><feOffset dy=".65" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g filter="url(#shadow-39)">
+   <rect x="38" y="16" width="94" height="44" rx="12" fill="url(#pill-39)" stroke="#d5aaff" stroke-width="1.35"/>
+   <rect x="39.3" y="17.3" width="91.4" height="41.4" rx="10.8" fill="url(#sheen-39)" opacity=".9"/>
+   <rect x="40.1" y="18.1" width="89.8" height="39.8" rx="10" fill="none" stroke="#f0dfff" stroke-opacity=".38" stroke-width=".8"/>
+   <path d="M50 17.5 H120 Q130.5 17.5 130.5 28 V32.72" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="1.05" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(64 38) scale(1) translate(-64 -38)" stroke-linecap="round" stroke-linejoin="round"><path d="M64 18 L77 26 L80 39 L64 58 L48 39 L51 26 Z" fill="url(#gem-39)" stroke="#fff0ff" stroke-width="2" stroke-linejoin="round"/><path d="M64 18 L64 38 L51 26 Z" fill="#ffe4fb" opacity=".92"/><path d="M64 18 L77 26 L64 38 Z" fill="#e79ae8" opacity=".94"/><path d="M77 26 L80 39 L64 58 L64 38 Z" fill="#a16ae2" opacity=".87"/><path d="M48 39 L51 26 L64 38 L64 58 Z" fill="#ffe29a" opacity=".82"/><path d="M51 26 L77 26 M48 39 L80 39 M64 18 V58 M51 26 L64 38 L77 26" fill="none" stroke="#fff0ff" stroke-width="1.05" stroke-linejoin="round"/><path d="M58 25 L64 20 L70 25" fill="none" stroke="#fff" stroke-opacity=".9" stroke-width="1.2"/><path d="M55 26 l2 -3 2 3" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.05"/></g>
+  <text x="108" y="48" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800" letter-spacing="-.7" fill="#fff" filter="url(#text-shadow-39)">39</text>
+  
+ </symbol>
+<symbol id="level-40" viewBox="0 0 170 76" overflow="visible">
+  <title>Level 40 Gifter Badge</title>
+  <desc>Minglora Gifter Level 40, original tier colours rendered as crisp vector artwork.</desc>
+  <defs>
+   <linearGradient id="pill-40" x1="0" y1="0" x2=".12" y2="1"><stop offset="0" stop-color="#7420c8"/><stop offset="1" stop-color="#4b0b9d"/></linearGradient>
+   <linearGradient id="sheen-40" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".48" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <linearGradient id="gem-40" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff0c9"/><stop offset=".48" stop-color="#e9a2f4"/><stop offset="1" stop-color="#9875ec"/></linearGradient>
+   <filter id="shadow-40" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/><feOffset dy="1.2" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="text-shadow-40" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation=".55" result="blur"/><feOffset dy=".65" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g filter="url(#shadow-40)">
+   <rect x="38" y="16" width="94" height="44" rx="12" fill="url(#pill-40)" stroke="#f0c8ff" stroke-width="1.35"/>
+   <rect x="39.3" y="17.3" width="91.4" height="41.4" rx="10.8" fill="url(#sheen-40)" opacity=".9"/>
+   <rect x="40.1" y="18.1" width="89.8" height="39.8" rx="10" fill="none" stroke="#f8e5ff" stroke-opacity=".38" stroke-width=".8"/>
+   <path d="M50 17.5 H120 Q130.5 17.5 130.5 28 V32.72" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="1.05" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(64 38) scale(1) translate(-64 -38)" stroke-linecap="round" stroke-linejoin="round"><path d="M64 17 L75 23 L81 37 L75 51 L64 58 L53 51 L47 37 L53 23 Z" fill="url(#gem-40)" stroke="#fff8ee" stroke-width="2.1" stroke-linejoin="round"/><path d="M64 18 L75 23 L64 37 L53 23 Z" fill="#fff0c9" opacity=".94"/><path d="M75 23 L81 37 L64 37 Z" fill="#e9a2f4" opacity=".92"/><path d="M81 37 L75 51 L64 58 L64 37 Z" fill="#9875ec" opacity=".94"/><path d="M64 58 L53 51 L47 37 L64 37 Z" fill="#ffe5a1" opacity=".9"/><path d="M53 23 L64 37 L75 23 M47 37 H81 M64 18 V58" fill="none" stroke="#fff8ee" stroke-width="1.1"/><path d="M60 30 L64 26 L68 30" fill="none" stroke="#fff" stroke-width="1.1" stroke-linecap="round"/><path d="M55 26 l2 -3 2 3" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.05"/></g>
+  <text x="108" y="48" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800" letter-spacing="-.7" fill="#fff" filter="url(#text-shadow-40)">40</text>
+  
+ </symbol>
+<symbol id="level-41" viewBox="0 0 170 76" overflow="visible">
+  <title>Level 41 Gifter Badge</title>
+  <desc>Minglora Gifter Level 41, original tier colours rendered as crisp vector artwork.</desc>
+  <defs>
+   <linearGradient id="pill-41" x1="0" y1="0" x2=".12" y2="1"><stop offset="0" stop-color="#7420c8"/><stop offset="1" stop-color="#4b0b9d"/></linearGradient>
+   <linearGradient id="sheen-41" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".48" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <linearGradient id="gem-41" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff0c9"/><stop offset=".48" stop-color="#e9a2f4"/><stop offset="1" stop-color="#9875ec"/></linearGradient>
+   <filter id="shadow-41" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/><feOffset dy="1.2" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="text-shadow-41" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation=".55" result="blur"/><feOffset dy=".65" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g filter="url(#shadow-41)">
+   <rect x="38" y="16" width="94" height="44" rx="12" fill="url(#pill-41)" stroke="#f0c8ff" stroke-width="1.35"/>
+   <rect x="39.3" y="17.3" width="91.4" height="41.4" rx="10.8" fill="url(#sheen-41)" opacity=".9"/>
+   <rect x="40.1" y="18.1" width="89.8" height="39.8" rx="10" fill="none" stroke="#f8e5ff" stroke-opacity=".38" stroke-width=".8"/>
+   <path d="M50 17.5 H120 Q130.5 17.5 130.5 28 V32.72" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="1.05" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(64 38) scale(1) translate(-64 -38)" stroke-linecap="round" stroke-linejoin="round"><path d="M64 17 L75 23 L81 37 L75 51 L64 58 L53 51 L47 37 L53 23 Z" fill="url(#gem-41)" stroke="#fff8ee" stroke-width="2.1" stroke-linejoin="round"/><path d="M64 18 L75 23 L64 37 L53 23 Z" fill="#fff0c9" opacity=".94"/><path d="M75 23 L81 37 L64 37 Z" fill="#e9a2f4" opacity=".92"/><path d="M81 37 L75 51 L64 58 L64 37 Z" fill="#9875ec" opacity=".94"/><path d="M64 58 L53 51 L47 37 L64 37 Z" fill="#ffe5a1" opacity=".9"/><path d="M53 23 L64 37 L75 23 M47 37 H81 M64 18 V58" fill="none" stroke="#fff8ee" stroke-width="1.1"/><path d="M60 30 L64 26 L68 30" fill="none" stroke="#fff" stroke-width="1.1" stroke-linecap="round"/><path d="M55 26 l2 -3 2 3" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.05"/></g>
+  <text x="108" y="48" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800" letter-spacing="-.7" fill="#fff" filter="url(#text-shadow-41)">41</text>
+  
+ </symbol>
+<symbol id="level-42" viewBox="0 0 170 76" overflow="visible">
+  <title>Level 42 Gifter Badge</title>
+  <desc>Minglora Gifter Level 42, original tier colours rendered as crisp vector artwork.</desc>
+  <defs>
+   <linearGradient id="pill-42" x1="0" y1="0" x2=".12" y2="1"><stop offset="0" stop-color="#7420c8"/><stop offset="1" stop-color="#4b0b9d"/></linearGradient>
+   <linearGradient id="sheen-42" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".48" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <linearGradient id="gem-42" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff0c9"/><stop offset=".48" stop-color="#e9a2f4"/><stop offset="1" stop-color="#9875ec"/></linearGradient>
+   <filter id="shadow-42" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/><feOffset dy="1.2" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="text-shadow-42" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation=".55" result="blur"/><feOffset dy=".65" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g filter="url(#shadow-42)">
+   <rect x="38" y="16" width="94" height="44" rx="12" fill="url(#pill-42)" stroke="#f0c8ff" stroke-width="1.35"/>
+   <rect x="39.3" y="17.3" width="91.4" height="41.4" rx="10.8" fill="url(#sheen-42)" opacity=".9"/>
+   <rect x="40.1" y="18.1" width="89.8" height="39.8" rx="10" fill="none" stroke="#f8e5ff" stroke-opacity=".38" stroke-width=".8"/>
+   <path d="M50 17.5 H120 Q130.5 17.5 130.5 28 V32.72" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="1.05" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(64 38) scale(1) translate(-64 -38)" stroke-linecap="round" stroke-linejoin="round"><path d="M64 17 L75 23 L81 37 L75 51 L64 58 L53 51 L47 37 L53 23 Z" fill="url(#gem-42)" stroke="#fff8ee" stroke-width="2.1" stroke-linejoin="round"/><path d="M64 18 L75 23 L64 37 L53 23 Z" fill="#fff0c9" opacity=".94"/><path d="M75 23 L81 37 L64 37 Z" fill="#e9a2f4" opacity=".92"/><path d="M81 37 L75 51 L64 58 L64 37 Z" fill="#9875ec" opacity=".94"/><path d="M64 58 L53 51 L47 37 L64 37 Z" fill="#ffe5a1" opacity=".9"/><path d="M53 23 L64 37 L75 23 M47 37 H81 M64 18 V58" fill="none" stroke="#fff8ee" stroke-width="1.1"/><path d="M60 30 L64 26 L68 30" fill="none" stroke="#fff" stroke-width="1.1" stroke-linecap="round"/><path d="M55 26 l2 -3 2 3" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.05"/></g>
+  <text x="108" y="48" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800" letter-spacing="-.7" fill="#fff" filter="url(#text-shadow-42)">42</text>
+  
+ </symbol>
+<symbol id="level-43" viewBox="0 0 170 76" overflow="visible">
+  <title>Level 43 Gifter Badge</title>
+  <desc>Minglora Gifter Level 43, original tier colours rendered as crisp vector artwork.</desc>
+  <defs>
+   <linearGradient id="pill-43" x1="0" y1="0" x2=".12" y2="1"><stop offset="0" stop-color="#7420c8"/><stop offset="1" stop-color="#4b0b9d"/></linearGradient>
+   <linearGradient id="sheen-43" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".48" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <linearGradient id="gem-43" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff0c9"/><stop offset=".48" stop-color="#e9a2f4"/><stop offset="1" stop-color="#9875ec"/></linearGradient>
+   <filter id="shadow-43" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/><feOffset dy="1.2" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="text-shadow-43" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation=".55" result="blur"/><feOffset dy=".65" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g filter="url(#shadow-43)">
+   <rect x="38" y="16" width="94" height="44" rx="12" fill="url(#pill-43)" stroke="#f0c8ff" stroke-width="1.35"/>
+   <rect x="39.3" y="17.3" width="91.4" height="41.4" rx="10.8" fill="url(#sheen-43)" opacity=".9"/>
+   <rect x="40.1" y="18.1" width="89.8" height="39.8" rx="10" fill="none" stroke="#f8e5ff" stroke-opacity=".38" stroke-width=".8"/>
+   <path d="M50 17.5 H120 Q130.5 17.5 130.5 28 V32.72" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="1.05" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(64 38) scale(1) translate(-64 -38)" stroke-linecap="round" stroke-linejoin="round"><path d="M64 17 L75 23 L81 37 L75 51 L64 58 L53 51 L47 37 L53 23 Z" fill="url(#gem-43)" stroke="#fff8ee" stroke-width="2.1" stroke-linejoin="round"/><path d="M64 18 L75 23 L64 37 L53 23 Z" fill="#fff0c9" opacity=".94"/><path d="M75 23 L81 37 L64 37 Z" fill="#e9a2f4" opacity=".92"/><path d="M81 37 L75 51 L64 58 L64 37 Z" fill="#9875ec" opacity=".94"/><path d="M64 58 L53 51 L47 37 L64 37 Z" fill="#ffe5a1" opacity=".9"/><path d="M53 23 L64 37 L75 23 M47 37 H81 M64 18 V58" fill="none" stroke="#fff8ee" stroke-width="1.1"/><path d="M60 30 L64 26 L68 30" fill="none" stroke="#fff" stroke-width="1.1" stroke-linecap="round"/><path d="M55 26 l2 -3 2 3" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.05"/></g>
+  <text x="108" y="48" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800" letter-spacing="-.7" fill="#fff" filter="url(#text-shadow-43)">43</text>
+  
+ </symbol>
+<symbol id="level-44" viewBox="0 0 170 76" overflow="visible">
+  <title>Level 44 Gifter Badge</title>
+  <desc>Minglora Gifter Level 44, original tier colours rendered as crisp vector artwork.</desc>
+  <defs>
+   <linearGradient id="pill-44" x1="0" y1="0" x2=".12" y2="1"><stop offset="0" stop-color="#7420c8"/><stop offset="1" stop-color="#4b0b9d"/></linearGradient>
+   <linearGradient id="sheen-44" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".48" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <linearGradient id="gem-44" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff0c9"/><stop offset=".48" stop-color="#e9a2f4"/><stop offset="1" stop-color="#9875ec"/></linearGradient>
+   <filter id="shadow-44" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/><feOffset dy="1.2" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="text-shadow-44" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation=".55" result="blur"/><feOffset dy=".65" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g filter="url(#shadow-44)">
+   <rect x="38" y="16" width="94" height="44" rx="12" fill="url(#pill-44)" stroke="#f0c8ff" stroke-width="1.35"/>
+   <rect x="39.3" y="17.3" width="91.4" height="41.4" rx="10.8" fill="url(#sheen-44)" opacity=".9"/>
+   <rect x="40.1" y="18.1" width="89.8" height="39.8" rx="10" fill="none" stroke="#f8e5ff" stroke-opacity=".38" stroke-width=".8"/>
+   <path d="M50 17.5 H120 Q130.5 17.5 130.5 28 V32.72" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="1.05" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(64 38) scale(1) translate(-64 -38)" stroke-linecap="round" stroke-linejoin="round"><path d="M64 17 L75 23 L81 37 L75 51 L64 58 L53 51 L47 37 L53 23 Z" fill="url(#gem-44)" stroke="#fff8ee" stroke-width="2.1" stroke-linejoin="round"/><path d="M64 18 L75 23 L64 37 L53 23 Z" fill="#fff0c9" opacity=".94"/><path d="M75 23 L81 37 L64 37 Z" fill="#e9a2f4" opacity=".92"/><path d="M81 37 L75 51 L64 58 L64 37 Z" fill="#9875ec" opacity=".94"/><path d="M64 58 L53 51 L47 37 L64 37 Z" fill="#ffe5a1" opacity=".9"/><path d="M53 23 L64 37 L75 23 M47 37 H81 M64 18 V58" fill="none" stroke="#fff8ee" stroke-width="1.1"/><path d="M60 30 L64 26 L68 30" fill="none" stroke="#fff" stroke-width="1.1" stroke-linecap="round"/><path d="M55 26 l2 -3 2 3" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.05"/></g>
+  <text x="108" y="48" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800" letter-spacing="-.7" fill="#fff" filter="url(#text-shadow-44)">44</text>
+  
+ </symbol>
+<symbol id="level-45" viewBox="0 0 170 76" overflow="visible">
+  <title>Level 45 Gifter Badge</title>
+  <desc>Minglora Gifter Level 45, original tier colours rendered as crisp vector artwork.</desc>
+  <defs>
+   <linearGradient id="pill-45" x1="0" y1="0" x2=".12" y2="1"><stop offset="0" stop-color="#8a1bc9"/><stop offset="1" stop-color="#5b078f"/></linearGradient>
+   <linearGradient id="sheen-45" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".48" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <linearGradient id="gem-45" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff0bd"/><stop offset=".48" stop-color="#ee9ee8"/><stop offset="1" stop-color="#a877ee"/></linearGradient>
+   <filter id="shadow-45" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/><feOffset dy="1.2" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="text-shadow-45" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation=".55" result="blur"/><feOffset dy=".65" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g filter="url(#shadow-45)">
+   <rect x="38" y="16" width="94" height="44" rx="12" fill="url(#pill-45)" stroke="#ffd4ff" stroke-width="1.35"/>
+   <rect x="39.3" y="17.3" width="91.4" height="41.4" rx="10.8" fill="url(#sheen-45)" opacity=".9"/>
+   <rect x="40.1" y="18.1" width="89.8" height="39.8" rx="10" fill="none" stroke="#fae5ff" stroke-opacity=".38" stroke-width=".8"/>
+   <path d="M50 17.5 H120 Q130.5 17.5 130.5 28 V32.72" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="1.05" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(64 38) scale(1) translate(-64 -38)" stroke-linecap="round" stroke-linejoin="round"><path d="M64 16 L72 21 L81 31 L78 45 L64 59 L50 45 L47 31 L56 21 Z" fill="url(#gem-45)" stroke="#fff8e9" stroke-width="2.2" stroke-linejoin="round"/><path d="M64 16 L72 21 L64 36 L56 21 Z" fill="#fff0bd" opacity=".98"/><path d="M72 21 L81 31 L64 36 Z" fill="#ee9ee8" opacity=".94"/><path d="M81 31 L78 45 L64 59 L64 36 Z" fill="#a877ee" opacity=".92"/><path d="M64 59 L50 45 L47 31 L64 36 Z" fill="#ffd78e" opacity=".9"/><path d="M47 31 L56 21 L64 36 Z" fill="#ee9ee8" opacity=".78"/><path d="M64 16 L64 59 M47 31 L81 31 M50 45 L78 45 M56 21 L72 21" fill="none" stroke="#fff8e9" stroke-width="1.1"/><path d="M60 25 L64 20 L68 25 M58 45 L64 51 L70 45" fill="none" stroke="#fff" stroke-opacity=".9" stroke-width="1.05" stroke-linecap="round"/><path d="M55 26 l2 -3 2 3" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.05"/></g>
+  <text x="108" y="48" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800" letter-spacing="-.7" fill="#fff" filter="url(#text-shadow-45)">45</text>
+  
+ </symbol>
+<symbol id="level-46" viewBox="0 0 170 76" overflow="visible">
+  <title>Level 46 Gifter Badge</title>
+  <desc>Minglora Gifter Level 46, original tier colours rendered as crisp vector artwork.</desc>
+  <defs>
+   <linearGradient id="pill-46" x1="0" y1="0" x2=".12" y2="1"><stop offset="0" stop-color="#8a1bc9"/><stop offset="1" stop-color="#5b078f"/></linearGradient>
+   <linearGradient id="sheen-46" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".48" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <linearGradient id="gem-46" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff0bd"/><stop offset=".48" stop-color="#ee9ee8"/><stop offset="1" stop-color="#a877ee"/></linearGradient>
+   <filter id="shadow-46" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/><feOffset dy="1.2" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="text-shadow-46" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation=".55" result="blur"/><feOffset dy=".65" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g filter="url(#shadow-46)">
+   <rect x="38" y="16" width="94" height="44" rx="12" fill="url(#pill-46)" stroke="#ffd4ff" stroke-width="1.35"/>
+   <rect x="39.3" y="17.3" width="91.4" height="41.4" rx="10.8" fill="url(#sheen-46)" opacity=".9"/>
+   <rect x="40.1" y="18.1" width="89.8" height="39.8" rx="10" fill="none" stroke="#fae5ff" stroke-opacity=".38" stroke-width=".8"/>
+   <path d="M50 17.5 H120 Q130.5 17.5 130.5 28 V32.72" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="1.05" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(64 38) scale(1) translate(-64 -38)" stroke-linecap="round" stroke-linejoin="round"><path d="M64 16 L72 21 L81 31 L78 45 L64 59 L50 45 L47 31 L56 21 Z" fill="url(#gem-46)" stroke="#fff8e9" stroke-width="2.2" stroke-linejoin="round"/><path d="M64 16 L72 21 L64 36 L56 21 Z" fill="#fff0bd" opacity=".98"/><path d="M72 21 L81 31 L64 36 Z" fill="#ee9ee8" opacity=".94"/><path d="M81 31 L78 45 L64 59 L64 36 Z" fill="#a877ee" opacity=".92"/><path d="M64 59 L50 45 L47 31 L64 36 Z" fill="#ffd78e" opacity=".9"/><path d="M47 31 L56 21 L64 36 Z" fill="#ee9ee8" opacity=".78"/><path d="M64 16 L64 59 M47 31 L81 31 M50 45 L78 45 M56 21 L72 21" fill="none" stroke="#fff8e9" stroke-width="1.1"/><path d="M60 25 L64 20 L68 25 M58 45 L64 51 L70 45" fill="none" stroke="#fff" stroke-opacity=".9" stroke-width="1.05" stroke-linecap="round"/><path d="M55 26 l2 -3 2 3" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.05"/></g>
+  <text x="108" y="48" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800" letter-spacing="-.7" fill="#fff" filter="url(#text-shadow-46)">46</text>
+  
+ </symbol>
+<symbol id="level-47" viewBox="0 0 170 76" overflow="visible">
+  <title>Level 47 Gifter Badge</title>
+  <desc>Minglora Gifter Level 47, original tier colours rendered as crisp vector artwork.</desc>
+  <defs>
+   <linearGradient id="pill-47" x1="0" y1="0" x2=".12" y2="1"><stop offset="0" stop-color="#8a1bc9"/><stop offset="1" stop-color="#5b078f"/></linearGradient>
+   <linearGradient id="sheen-47" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".48" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <linearGradient id="gem-47" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff0bd"/><stop offset=".48" stop-color="#ee9ee8"/><stop offset="1" stop-color="#a877ee"/></linearGradient>
+   <filter id="shadow-47" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/><feOffset dy="1.2" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="text-shadow-47" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation=".55" result="blur"/><feOffset dy=".65" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g filter="url(#shadow-47)">
+   <rect x="38" y="16" width="94" height="44" rx="12" fill="url(#pill-47)" stroke="#ffd4ff" stroke-width="1.35"/>
+   <rect x="39.3" y="17.3" width="91.4" height="41.4" rx="10.8" fill="url(#sheen-47)" opacity=".9"/>
+   <rect x="40.1" y="18.1" width="89.8" height="39.8" rx="10" fill="none" stroke="#fae5ff" stroke-opacity=".38" stroke-width=".8"/>
+   <path d="M50 17.5 H120 Q130.5 17.5 130.5 28 V32.72" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="1.05" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(64 38) scale(1) translate(-64 -38)" stroke-linecap="round" stroke-linejoin="round"><path d="M64 16 L72 21 L81 31 L78 45 L64 59 L50 45 L47 31 L56 21 Z" fill="url(#gem-47)" stroke="#fff8e9" stroke-width="2.2" stroke-linejoin="round"/><path d="M64 16 L72 21 L64 36 L56 21 Z" fill="#fff0bd" opacity=".98"/><path d="M72 21 L81 31 L64 36 Z" fill="#ee9ee8" opacity=".94"/><path d="M81 31 L78 45 L64 59 L64 36 Z" fill="#a877ee" opacity=".92"/><path d="M64 59 L50 45 L47 31 L64 36 Z" fill="#ffd78e" opacity=".9"/><path d="M47 31 L56 21 L64 36 Z" fill="#ee9ee8" opacity=".78"/><path d="M64 16 L64 59 M47 31 L81 31 M50 45 L78 45 M56 21 L72 21" fill="none" stroke="#fff8e9" stroke-width="1.1"/><path d="M60 25 L64 20 L68 25 M58 45 L64 51 L70 45" fill="none" stroke="#fff" stroke-opacity=".9" stroke-width="1.05" stroke-linecap="round"/><path d="M55 26 l2 -3 2 3" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.05"/></g>
+  <text x="108" y="48" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800" letter-spacing="-.7" fill="#fff" filter="url(#text-shadow-47)">47</text>
+  
+ </symbol>
+<symbol id="level-48" viewBox="0 0 170 76" overflow="visible">
+  <title>Level 48 Gifter Badge</title>
+  <desc>Minglora Gifter Level 48, original tier colours rendered as crisp vector artwork.</desc>
+  <defs>
+   <linearGradient id="pill-48" x1="0" y1="0" x2=".12" y2="1"><stop offset="0" stop-color="#8a1bc9"/><stop offset="1" stop-color="#5b078f"/></linearGradient>
+   <linearGradient id="sheen-48" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".48" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <linearGradient id="gem-48" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff0bd"/><stop offset=".48" stop-color="#ee9ee8"/><stop offset="1" stop-color="#a877ee"/></linearGradient>
+   <filter id="shadow-48" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/><feOffset dy="1.2" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="text-shadow-48" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation=".55" result="blur"/><feOffset dy=".65" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g filter="url(#shadow-48)">
+   <rect x="38" y="16" width="94" height="44" rx="12" fill="url(#pill-48)" stroke="#ffd4ff" stroke-width="1.35"/>
+   <rect x="39.3" y="17.3" width="91.4" height="41.4" rx="10.8" fill="url(#sheen-48)" opacity=".9"/>
+   <rect x="40.1" y="18.1" width="89.8" height="39.8" rx="10" fill="none" stroke="#fae5ff" stroke-opacity=".38" stroke-width=".8"/>
+   <path d="M50 17.5 H120 Q130.5 17.5 130.5 28 V32.72" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="1.05" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(64 38) scale(1) translate(-64 -38)" stroke-linecap="round" stroke-linejoin="round"><path d="M64 16 L72 21 L81 31 L78 45 L64 59 L50 45 L47 31 L56 21 Z" fill="url(#gem-48)" stroke="#fff8e9" stroke-width="2.2" stroke-linejoin="round"/><path d="M64 16 L72 21 L64 36 L56 21 Z" fill="#fff0bd" opacity=".98"/><path d="M72 21 L81 31 L64 36 Z" fill="#ee9ee8" opacity=".94"/><path d="M81 31 L78 45 L64 59 L64 36 Z" fill="#a877ee" opacity=".92"/><path d="M64 59 L50 45 L47 31 L64 36 Z" fill="#ffd78e" opacity=".9"/><path d="M47 31 L56 21 L64 36 Z" fill="#ee9ee8" opacity=".78"/><path d="M64 16 L64 59 M47 31 L81 31 M50 45 L78 45 M56 21 L72 21" fill="none" stroke="#fff8e9" stroke-width="1.1"/><path d="M60 25 L64 20 L68 25 M58 45 L64 51 L70 45" fill="none" stroke="#fff" stroke-opacity=".9" stroke-width="1.05" stroke-linecap="round"/><path d="M55 26 l2 -3 2 3" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.05"/></g>
+  <text x="108" y="48" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800" letter-spacing="-.7" fill="#fff" filter="url(#text-shadow-48)">48</text>
+  
+ </symbol>
+<symbol id="level-49" viewBox="0 0 170 76" overflow="visible">
+  <title>Level 49 Gifter Badge</title>
+  <desc>Minglora Gifter Level 49, original tier colours rendered as crisp vector artwork.</desc>
+  <defs>
+   <linearGradient id="pill-49" x1="0" y1="0" x2=".12" y2="1"><stop offset="0" stop-color="#8a1bc9"/><stop offset="1" stop-color="#5b078f"/></linearGradient>
+   <linearGradient id="sheen-49" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".48" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <linearGradient id="gem-49" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff0bd"/><stop offset=".48" stop-color="#ee9ee8"/><stop offset="1" stop-color="#a877ee"/></linearGradient>
+   <filter id="shadow-49" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/><feOffset dy="1.2" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="text-shadow-49" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation=".55" result="blur"/><feOffset dy=".65" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g filter="url(#shadow-49)">
+   <rect x="38" y="16" width="94" height="44" rx="12" fill="url(#pill-49)" stroke="#ffd4ff" stroke-width="1.35"/>
+   <rect x="39.3" y="17.3" width="91.4" height="41.4" rx="10.8" fill="url(#sheen-49)" opacity=".9"/>
+   <rect x="40.1" y="18.1" width="89.8" height="39.8" rx="10" fill="none" stroke="#fae5ff" stroke-opacity=".38" stroke-width=".8"/>
+   <path d="M50 17.5 H120 Q130.5 17.5 130.5 28 V32.72" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="1.05" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(64 38) scale(1) translate(-64 -38)" stroke-linecap="round" stroke-linejoin="round"><path d="M64 16 L72 21 L81 31 L78 45 L64 59 L50 45 L47 31 L56 21 Z" fill="url(#gem-49)" stroke="#fff8e9" stroke-width="2.2" stroke-linejoin="round"/><path d="M64 16 L72 21 L64 36 L56 21 Z" fill="#fff0bd" opacity=".98"/><path d="M72 21 L81 31 L64 36 Z" fill="#ee9ee8" opacity=".94"/><path d="M81 31 L78 45 L64 59 L64 36 Z" fill="#a877ee" opacity=".92"/><path d="M64 59 L50 45 L47 31 L64 36 Z" fill="#ffd78e" opacity=".9"/><path d="M47 31 L56 21 L64 36 Z" fill="#ee9ee8" opacity=".78"/><path d="M64 16 L64 59 M47 31 L81 31 M50 45 L78 45 M56 21 L72 21" fill="none" stroke="#fff8e9" stroke-width="1.1"/><path d="M60 25 L64 20 L68 25 M58 45 L64 51 L70 45" fill="none" stroke="#fff" stroke-opacity=".9" stroke-width="1.05" stroke-linecap="round"/><path d="M55 26 l2 -3 2 3" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.05"/></g>
+  <text x="108" y="48" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800" letter-spacing="-.7" fill="#fff" filter="url(#text-shadow-49)">49</text>
+  
+ </symbol>
+<symbol id="level-50" viewBox="0 0 170 76" overflow="visible">
+  <title>Level 50 Gifter Badge</title>
+  <desc>Minglora Gifter Level 50, original tier colours rendered as crisp vector artwork.</desc>
+  <defs>
+   <linearGradient id="pill-50" x1="0" y1="0" x2=".12" y2="1"><stop offset="0" stop-color="#a12bbd"/><stop offset="1" stop-color="#5c087c"/></linearGradient>
+   <linearGradient id="sheen-50" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".48" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+   <linearGradient id="gem-50" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff4bd"/><stop offset=".48" stop-color="#ffbfdf"/><stop offset="1" stop-color="#d58af4"/></linearGradient>
+   <filter id="shadow-50" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/><feOffset dy="1.2" result="offset"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+   <filter id="text-shadow-50" x="-20%" y="-35%" width="140%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation=".55" result="blur"/><feOffset dy=".65" result="offset"/><feMerge><feMergeNode in="offset"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g filter="url(#shadow-50)">
+   <rect x="5" y="5" width="160" height="66" rx="16" fill="url(#pill-50)" stroke="#ffe7a6" stroke-width="2"/>
+   <rect x="6.3" y="6.3" width="157.4" height="63.4" rx="14.8" fill="url(#sheen-50)" opacity=".9"/>
+   <rect x="7.1" y="7.1" width="155.8" height="61.8" rx="14" fill="none" stroke="#fff0c6" stroke-opacity=".38" stroke-width=".8"/>
+   <path d="M21 6.5 H149 Q163.5 6.5 163.5 21 V30.080000000000002" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="1.05" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(41 38) scale(1.16) translate(-64 -38)" stroke-linecap="round" stroke-linejoin="round"><path d="M64 16 L72 21 L81 31 L78 45 L64 59 L50 45 L47 31 L56 21 Z" fill="url(#gem-50)" stroke="#fff8e7" stroke-width="2.2" stroke-linejoin="round"/><path d="M64 16 L72 21 L64 36 L56 21 Z" fill="#fff4bd" opacity=".98"/><path d="M72 21 L81 31 L64 36 Z" fill="#ffbfdf" opacity=".94"/><path d="M81 31 L78 45 L64 59 L64 36 Z" fill="#d58af4" opacity=".92"/><path d="M64 59 L50 45 L47 31 L64 36 Z" fill="#ffe18c" opacity=".9"/><path d="M47 31 L56 21 L64 36 Z" fill="#ffbfdf" opacity=".78"/><path d="M64 16 L64 59 M47 31 L81 31 M50 45 L78 45 M56 21 L72 21" fill="none" stroke="#fff8e7" stroke-width="1.1"/><path d="M60 25 L64 20 L68 25 M58 45 L64 51 L70 45" fill="none" stroke="#fff" stroke-opacity=".9" stroke-width="1.05" stroke-linecap="round"/><path d="M55 26 l2 -3 2 3" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.05"/></g>
+  <text x="123" y="51" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="800" letter-spacing="-.7" fill="#fff" filter="url(#text-shadow-50)">50</text>
+  <rect x="8" y="8" width="154" height="60" rx="13" fill="none" stroke="#fff3b0" stroke-width="1.05" opacity=".7"/><path d="M18 13 H48 M122 63 H151" stroke="#fff7d7" stroke-width="1.2" stroke-linecap="round" opacity=".76"/><path d="M22 19 l3 -5 3 5 -3 5 Z M148 53 l2.5 -4 2.5 4 -2.5 4 Z" fill="#fff3b0" opacity=".92"/>
+ </symbol></svg>

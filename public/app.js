@@ -245,10 +245,11 @@ const gifterBadgeImageMarkup = (badge, placement = "compact") => {
   const size = sizes[placement] || sizes.compact;
   const label = "Level " + level + " Gifter badge";
   const title = esc(badge?.badgeName || ("Level " + level + " Gifter"));
-  return '<img class="gp-profile-level-badge gp-profile-level-badge--' + placement +
-    '" src="/assets/gifter-badges/level_' + String(level).padStart(2, "0") +
-    '.png" alt="' + label + '" title="' + title +
-    '" loading="lazy" decoding="async" width="' + size[0] + '" height="' + size[1] + '">';
+  const symbol = "/assets/gifter-badges/badges.svg#level-" + String(level).padStart(2, "0");
+  return '<svg class="gp-profile-level-badge gp-profile-level-badge--' + placement +
+    '" role="img" aria-label="' + label + '" title="' + title +
+    '" viewBox="0 0 170 76" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="' + size[0] + '" height="' + size[1] +
+    '" focusable="false"><use href="' + symbol + '" xlink:href="' + symbol + '"></use></svg>';
 };
 const gifterProfileBadge = (member, placement = "compact") => {
   const identity = member?.newGifterIdentity?.active
