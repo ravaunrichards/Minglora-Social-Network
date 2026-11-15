@@ -408,12 +408,28 @@ export function completeAICreatorJobGeneration(db, ownerId, jobId, generated, { 
   return job;
 }
 
-export function failAICreatorJobGeneration(db, ownerId, jobId, reason, { now = new Date() } = {}) {
+export function failAICreatorJobGeneration(db, ownerId, jobId, reason, { now = new Date(), providerFailure = null } = {}) {
   const job = ownerRows((ensureAICollections(db), db.aiBotCreatorJobs), ownerId).find(row => row.id === jobId);
   if (!job) throw fail(404, 'Creator Studio draft not found.');
   if (job.providerExecution !== 'running') return job;
   job.providerExecution = 'failed';
   job.providerError = text(reason, 360) || 'Provider generation failed; no draft output was saved.';
+  if (providerFailure?.provider === 'openai') {
+    job.provider = 'openai';
+    job.providerModel = text(providerFailure.model, 180);
+    job.providerResponseId = text(providerFailure.responseId, 180) || null;
+    job.providerRequestId = text(providerFailure.requestId, 180) || null;
+    const usage = providerFailure.usage && typeof providerFailure.usage === 'object' ? providerFailure.usage : {};
+    job.providerUsage = {
+      input_tokens: Number.isFinite(Number(usage.input_tokens)) ? Math.max(0, Number(usage.input_tokens)) : null,
+      output_tokens: Number.isFinite(Number(usage.output_tokens)) ? Math.max(0, Number(usage.output_tokens)) : null,
+      total_tokens: Number.isFinite(Number(usage.total_tokens)) ? Math.max(0, Number(usage.total_tokens)) : null
+    };
+  }
+  job.published = false;
+  job.externalActionTaken = false;
+  job.humanReviewRequired = true;
+  job.aiDisclosureRequired = true;
   job.providerCompletedAt = nowIso(now);
   job.updatedAt = nowIso(now);
   audit(db, ownerId, ownerId, 'creator_job_generation_failed', 'creator_job', job.id, now);
