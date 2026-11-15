@@ -3,7 +3,7 @@
 
   const API = '/api/ai-network';
   const root = () => document.getElementById('main-content');
-  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', adminAccess: false, discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, performanceReviews: [], successionPlans: [], promotions: [], trainingCourses: [], trainingEnrollments: [], attendance: [], developmentUnavailable: false, organizationError: '', memoryIdentityId: '', memorySettings: null, memoryEntries: [], memoryError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', aiTasks: [], taskRuntime: null, taskError: '', categoryAdmin: null, delegationGrants: [], delegationAccess: false, delegationError: '' };
+  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', adminAccess: false, discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, performanceReviews: [], successionPlans: [], promotions: [], trainingCourses: [], trainingEnrollments: [], attendance: [], developmentUnavailable: false, organizationError: '', memoryIdentityId: '', memorySettings: null, memoryEntries: [], memoryError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', financeBudgets: [], financeBudgetHistory: [], financeUsage: null, financeError: '', aiTasks: [], taskRuntime: null, taskError: '', categoryAdmin: null, delegationGrants: [], delegationAccess: false, delegationError: '' };
   const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[character]));
@@ -531,6 +531,21 @@
     }
   }
 
+  async function loadAIFinanceRegistry() {
+    state.financeError = '';
+    try {
+      const [budgetResult, usageResult] = await Promise.all([request('/finance/budgets'), request('/finance/usage')]);
+      state.financeBudgets = list(budgetResult.budgets);
+      state.financeBudgetHistory = list(budgetResult.history);
+      state.financeUsage = usageResult || { summary: {}, events: [] };
+    } catch (error) {
+      state.financeBudgets = [];
+      state.financeBudgetHistory = [];
+      state.financeUsage = null;
+      state.financeError = error.message || 'Finance records are unavailable.';
+    }
+  }
+
   async function loadAIDelegations() {
     state.delegationGrants = [];
     state.delegationAccess = false;
@@ -1020,6 +1035,57 @@
       'ai-network-span-2');
   }
 
+  function renderAIFinanceCenter() {
+    const summary = state.financeUsage?.summary || {};
+    const budgets = list(state.financeBudgets), history = list(state.financeBudgetHistory), events = list(state.financeUsage?.events);
+    const usd = value => Number.isFinite(Number(value)) ? Number(value).toFixed(6) : '0.000000';
+    const wrap = values => values.length ? '<div class="ai-network-list">' + values.join('') + '</div>' : empty('No records are available.');
+    const budgetRows = wrap(budgets.map(policy =>
+      '<article class="ai-network-list-row"><div class="ai-network-list-main"><strong>' + esc(policy.scope_type || 'owner') +
+      ' budget</strong><p>' + esc(policy.organization_id || policy.department_id || policy.identity_id || 'Owner-wide') +
+      '</p><small>' + esc(policy.daily_token_limit == null ? 'No daily token limit' : number(policy.daily_token_limit) + ' tokens/day') +
+      ' · ' + esc(policy.monthly_spend_limit_usd == null ? 'No spend limit' : '$' + usd(policy.monthly_spend_limit_usd) + '/month') +
+      ' · ' + esc(policy.max_concurrent_tasks == null ? 'No concurrency limit' : number(policy.max_concurrent_tasks) + ' concurrent tasks') +
+      '</small></div>' + pill(policy.policy_status || 'unknown') + '</article>'
+    ));
+    const auditRows = wrap(history.slice(0,30).map(event =>
+      '<article class="ai-network-list-row"><div class="ai-network-list-main"><strong>' + esc(event.action || 'budget change') +
+      '</strong><p>' + esc(event.reason || '') + '</p><small>' + esc(date(event.occurred_at)) +
+      '</small></div>' + pill('audited') + '</article>'
+    ));
+    const usageRows = events.length ? '<div class="ai-network-list">' + events.slice(0,20).map(event =>
+      '<article class="ai-network-list-row"><div class="ai-network-list-main"><strong>' + esc(event.event_type || 'usage event') +
+      '</strong><p>' + esc(event.provider_name || event.model_identifier || 'Runtime resource event') + ' · ' +
+      esc(date(event.occurred_at)) + '</p><small>' + number(event.total_tokens) + ' tokens · $' +
+      usd(event.actual_cost_usd) + '</small></div>' + pill('measured') + '</article>'
+    ).join('') + '</div>' : empty('No provider or resource usage events have been recorded.');
+    const metrics = [['Recorded events',number(summary.event_count)],['Recorded tokens',number(summary.total_tokens)],
+      ['Actual spend','USD ' + usd(summary.actual_cost_usd)],['CPU milliseconds',number(summary.cpu_milliseconds)],
+      ['GPU milliseconds',number(summary.gpu_milliseconds)],['Memory MB-minutes',number(summary.memory_mb_minutes)],
+      ['Storage byte-hours',number(summary.storage_byte_hours)]];
+    return card('Finance & Resource Center','15 · FINANCE GOVERNANCE',
+      (state.financeError ? '<div class="ai-network-alert ai-network-alert--warning" role="status">' + esc(state.financeError) + '</div>' : '') +
+      '<p>Manage owner, organization, department and individual AI budgets. Usage totals come only from authenticated runtime ledger events.</p>' +
+      '<div class="ai-network-quick-stats">' + metrics.map(item => '<div><span>' + esc(item[0]) +
+      '</span><strong>' + esc(item[1]) + '</strong></div>').join('') + '</div>' +
+      '<p class="ai-network-note">Usage window: last 30 days. CPU/GPU/memory/storage limits are governance values until live resource-metering adapters exist. No estimated usage or provider connection is fabricated.</p>' +
+      '<form class="ai-network-form" data-ai-form="finance-budget"><div class="ai-network-form-title">Create or update budget</div>' +
+      '<label>Scope<select name="scopeType">' + options([{value:'owner',label:'Owner-wide'},{value:'organization',label:'Organization'},{value:'department',label:'Department'},{value:'identity',label:'AI identity'}],'owner') + '</select></label>' +
+      '<div class="ai-network-form-grid"><label>Organization ID<input name="organizationId" maxlength="36"></label><label>Department ID<input name="departmentId" maxlength="36"></label><label>AI identity ID<input name="identityId" maxlength="36"></label></div>' +
+      '<div class="ai-network-form-grid"><label>Daily token limit<input name="dailyTokenLimit" type="number" min="0"></label><label>Monthly spend USD<input name="monthlySpendLimitUsd" type="number" min="0" step="0.000001"></label>' +
+      '<label>Maximum concurrent tasks<input name="maxConcurrentTasks" type="number" min="0"></label><label>Monthly CPU milliseconds<input name="monthlyCpuMillisecondsLimit" type="number" min="0"></label>' +
+      '<label>Monthly GPU milliseconds<input name="monthlyGpuMillisecondsLimit" type="number" min="0"></label><label>Monthly memory MB-minutes<input name="monthlyMemoryMbMinutesLimit" type="number" min="0"></label>' +
+      '<label>Monthly storage byte-hours<input name="monthlyStorageByteHoursLimit" type="number" min="0"></label><label>Status<select name="policyStatus">' +
+      options([{value:'active',label:'Active'},{value:'paused',label:'Paused'},{value:'archived',label:'Archived'}],'active') + '</select></label></div>' +
+      '<label>Audit reason<input name="reason" required minlength="10" maxlength="1000"></label>' +
+      '<p class="ai-network-note">Set at least one limit. Blank fields clear that limit. Active token, spend and concurrency reservations are checked before a task enters queued/running status. Paused policies block new tasks.</p>' +
+      '<button class="primary" type="submit">Save budget policy</button></form>' +
+      '<div><h4>Saved budget policies</h4>' + budgetRows + '</div><div><h4>Budget audit history</h4>' + auditRows +
+      '</div><div><h4>Measured usage events</h4>' + usageRows + '</div>' +
+      '<p class="ai-network-note">Usage and audit history are append-only. Browser clients cannot submit usage events. No money transfers, payouts, refunds or Coin actions are delegated.</p>',
+      'ai-network-span-2');
+  }
+
   function renderAITaskQueueCenter() {
     const tasks = list(state.aiTasks);
     const identities = list(state.identityRegistry?.identities).filter(row =>
@@ -1385,6 +1451,7 @@
       (state.adminAccess ? renderAICategoryAdmin() : '') +
       renderAIDiscoveryCenter() +
       (state.adminAccess ? renderAIProviderCenter() : '') +
+      (state.adminAccess ? renderAIFinanceCenter() : '') +
       (state.adminAccess ? renderAITaskQueueCenter() : '') +
       (state.adminAccess ? renderAIOrganizationCenter() : '') +
       card('Bot Personality Laboratory', '01 · PERSONALITY', '<p>Build unique AI helpers with a clear purpose, tone, traits, expertise and permitted tasks. Every Bot Lab creation is also registered as an individually addressable, private AI identity in Minglora.</p>' +
@@ -1487,6 +1554,7 @@
       await loadAIMemory();
       await loadAIDiscovery();
       await loadAIProviderRegistry();
+      await loadAIFinanceRegistry();
       await loadAITaskQueue();
       await loadAIOrganizationRegistry();
       await loadAIDelegations();
@@ -1506,6 +1574,7 @@
     await loadAIMemory();
     await loadAIDiscovery();
     await loadAIProviderRegistry();
+    await loadAIFinanceRegistry();
     await loadAITaskQueue();
     await loadAIOrganizationRegistry();
     await loadAIDelegations();
@@ -1797,6 +1866,22 @@
       if (!taskId) throw new Error('Task details are missing.');
       path = '/tasks/' + encodeURIComponent(taskId) + '/cancel';
       payload.reason = value('reason');
+    } else if (kind === 'finance-budget') {
+      path = '/finance/budgets';
+      payload.scope_type = value('scopeType');
+      payload.organization_id = value('organizationId') || null;
+      payload.department_id = value('departmentId') || null;
+      payload.identity_id = value('identityId') || null;
+      const fields = { daily_token_limit:'dailyTokenLimit', monthly_spend_limit_usd:'monthlySpendLimitUsd',
+        monthly_cpu_milliseconds_limit:'monthlyCpuMillisecondsLimit', monthly_gpu_milliseconds_limit:'monthlyGpuMillisecondsLimit',
+        monthly_memory_mb_minutes_limit:'monthlyMemoryMbMinutesLimit', monthly_storage_byte_hours_limit:'monthlyStorageByteHoursLimit',
+        max_concurrent_tasks:'maxConcurrentTasks' };
+      for (const [target, source] of Object.entries(fields)) {
+        const raw = value(source); payload[target] = raw === '' ? null : Number(raw);
+      }
+      payload.policy_status = value('policyStatus');
+      payload.reason = value('reason');
+      if (!Object.values(fields).some(source => value(source) !== '')) throw new Error('Set at least one budget limit.');
     } else if (kind === 'provider-account') {
       path = '/provider-accounts';
       payload.provider_name = value('providerName').toLowerCase();
@@ -2133,7 +2218,9 @@
     }
     if (['identity','bot','team','delegation-create','delegation-task','organization','vacancy','application','appointment','employment-transfer','employee-promotion','performance-review','succession-plan','training-course','training-enrollment','attendance','task-create'].includes(kind)) form.dataset.idempotencyKey = window.crypto.randomUUID();
     const categoryActionLabels = { created:'created', updated:'updated', activated:'reactivated', deactivated:'deactivated' };
-    const message = kind === 'memory-edit'
+    const message = kind === 'finance-budget'
+      ? 'AI finance budget policy saved and its change recorded in immutable audit history.'
+      : kind === 'memory-edit'
       ? 'AI memory entry updated; its retention expiry was refreshed.'
       : kind === 'memory-settings'
       ? 'AI memory consent and retention settings saved for this identity. Existing entries were cleared when memory was disabled.'

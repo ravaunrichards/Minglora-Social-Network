@@ -2089,6 +2089,35 @@ async function route(req, res) {
         }
       };
 
+      const runAIFinanceCommand = async (aiAction, payload = {}) => {
+        if (!isModerator(user, req)) {
+          throw Object.assign(new Error('Only the designated Minglora platform administrator with an active verified session can manage AI finance records.'), { status: 403 });
+        }
+        if (!['list_budgets','set_budget','list_usage'].includes(aiAction)) {
+          throw Object.assign(new Error('Unsupported public AI finance command.'), { status: 400 });
+        }
+        if (!isSupabasePersistence()) {
+          throw Object.assign(new Error('AI finance records require Minglora Supabase persistence.'), { status: 503 });
+        }
+        try {
+          const response = await requestSupabaseState('ai_finance_command', {
+            actorUserId: user.id,
+            aiAction,
+            payload
+          });
+          if (response?.skipped) {
+            throw Object.assign(new Error('AI finance records are unavailable in local-only persistence mode.'), { status: 503 });
+          }
+          return response?.result;
+        } catch (error) {
+          const message = String(error?.message || '');
+          if (/unsupported action|unsupported AI finance command|function .*minglora_ai_finance_command.*does not exist|could not find the function|schema cache/i.test(message)) {
+            throw Object.assign(new Error('The AI finance migration and private runtime gateway must be deployed before this operation is available. No budget or usage data was changed.'), { status: 503 });
+          }
+          throw error;
+        }
+      };
+
       const runAIHRCommand = async (aiAction, payload = {}) => {
         if (!isModerator(user, req)) {
           throw Object.assign(
@@ -2391,6 +2420,25 @@ async function route(req, res) {
         input.task_id = taskId;
         const result = await runAITaskCommand('cancel_task', input);
         return json(res, 200, result || {});
+      }
+
+      if (parts[0] === 'finance' && parts.length === 2 && parts[1] === 'budgets') {
+        if (method === 'GET') {
+          const result = await runAIFinanceCommand('list_budgets');
+          return json(res, 200, result || { budgets: [], policy_count: 0 });
+        }
+        if (method === 'POST') {
+          const input = await body(req, 12000);
+          if (!input || typeof input !== 'object' || Array.isArray(input)) {
+            throw Object.assign(new Error('AI finance budget input must be a JSON object.'), { status: 400 });
+          }
+          const result = await runAIFinanceCommand('set_budget', input);
+          return json(res, result?.reused ? 200 : 201, result || {});
+        }
+      }
+      if (parts[0] === 'finance' && parts.length === 2 && parts[1] === 'usage' && method === 'GET') {
+        const result = await runAIFinanceCommand('list_usage');
+        return json(res, 200, result || { summary: {}, events: [] });
       }
 
       if (method === 'GET' && sub === 'provider-accounts') {

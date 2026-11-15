@@ -1,3 +1,78 @@
+## Execution checkpoint — 2026-11-15 (AI profile HTML-injection regression verified)
+
+- Task 14 security subtask: added a real Chromium regression to tests/e2e/ai-network-workspace.mjs using disposable API fixtures. An untrusted AI discovery display name and biography contain an image/event-handler payload. The browser acceptance asserts the payload is displayed literally as text, no injected DOM image is created, the onerror handler does not execute, and the accessibility label preserves the value safely.
+- The existing public/ai-network.js HTML escaping helper encodes ampersands, angle brackets, double quotes and apostrophes. Discovery result text and the aria-label are rendered through this helper. No production application code or data required modification for this finding; the regression test now guards the behavior.
+- Updated documentation: docs/AI_BOT_NETWORK.md now records the XSS/HTML-injection browser acceptance.
+- Latest PR #356 head 1bb0d26fecd8125a4d5e24c2bb28f813f942592e (branch feat/ai-network-finance-governance-20261115) passed: full Minglora CI 1,186/1,186 passed, 0 failed; AI Network suite 141/141 passed, 0 failed; AI identity/discovery browser acceptance PASS including the new HTML-injection payload; LIVE/MeetWave layout QA PASS; Supabase Auth provider acceptance PASS; For You navigation PASS.
+- Task 14 remains IN PROGRESS because prompt-injection/tool-abuse testing against an operational provider, verified worker identity, and live credential/usage-leakage testing require a provider and worker that do not yet exist. Runtime remains global_paused=true, execution_enabled=false, max_concurrent_workers=0.
+- Task 3 remains BLOCKED — EXTERNAL ACTION REQUIRED for the real designated-owner authenticated browser session and private media/device acceptance. Task 4 remains BLOCKED — EXTERNAL ACTION REQUIRED because mailbox host/domain and provider provisioning API credentials are not configured; the email table has zero records and no inbox is claimed.
+- No production database rows/schema, provider secrets, mailbox, Auth user, worker, runtime flag or deployment was changed. This acceptance suite used only disposable local browser fixtures.
+
+---
+## Execution checkpoint — 2026-11-15 (provider command security and latest regression gate)
+
+- Provider API authorization review: src/server.js runAIProviderCommand rejects non-moderator callers and requires Supabase persistence. The private Edge Function has an explicit provider-command allowlist and rejects forbidden top-level credential fields. The provider RPC requires current_user=service_role, validates a real Minglora profile actor, rejects API-key/access-token/password/credential/secret/credential_secret_ref payload keys, stores newly registered accounts with a NULL credential reference and empty provider configuration, and never includes credential_secret_ref in account-list JSON. New accounts are unconfigured/unknown; assignments are pending/unknown and cannot be activated before an independent provider health verifier exists.
+- Existing regression coverage: tests/unit/ai-network-providers.test.js checks private service-runtime access, forbidden credential keys, null credential reference/empty config, no secret-reference output, pending/unknown assignments, activation denial before health verification, runtime command allowlist, designated-admin API boundary and UI exclusion of credential controls.
+- Latest reviewed PR head: 7db5676c701715d59fcdbd8fbfc4a9db99b997f2. Full CI: 1,186/1,186 passed; AI Network checks: 141/141 passed; AI identity/discovery browser acceptance PASS; LIVE/MeetWave layout QA PASS.
+- This is source, SQL and CI evidence only. Provider accounts/models/assignments and credential references remain zero in live Supabase. No real provider, secret manager, inference adapter, health probe or worker is connected; no provider execution is claimed.
+
+---
+## Execution checkpoint — 2026-11-15 (AI security review follow-up and CI verified)
+
+- Provider security: live ai_provider_accounts contains only an opaque credential_secret_ref field; there are no raw API-key/password/token columns. Live provider data counts: 0 accounts, 0 credential references, 0 models and 0 assignments. No provider is connected or claimed.
+- The sole Supabase security-advisor SECURITY DEFINER warning was reviewed: public.minglora_list_my_mfa_factors() is not an AI Network RPC. It has an empty search_path, performs read-only aggregation from auth.mfa_factors filtered by auth.uid(), denies anon EXECUTE, and grants authenticated self-service access. A read-only transaction under the authenticated role with a non-existent test subject returned an empty list; no Auth user or MFA factor was created. The function is intentionally SECURITY DEFINER so authenticated users can list their own factors; no change was made.
+- Latest feature-branch head before this documentation checkpoint: 0c7150c459dccbb6885f9d773cd262753e0c58a8. Verified workflows: full Minglora CI 1,186/1,186 passing; AI Network checks 141/141 passing; AI identity/discovery browser acceptance PASS; LIVE/MeetWave layout QA PASS.
+- AI security tests still cannot validate live provider prompt-injection, model/tool abuse, worker identity or usage leakage because provider assignments and workers are absent/disabled. Keep Task 14 IN PROGRESS; do not create credentials or activate execution merely to simulate acceptance.
+- No application code, database schema/data, Auth settings, provider connections or runtime controls were changed. This checkpoint records live evidence and test results only.
+
+---
+## Execution checkpoint — 2026-11-15 (email provisioning boundary and live AI security audit)
+
+- Project: Minglora Social Network only; existing repository and Supabase project gzycobgbasnqqhnympkr.
+- Task 4 — AI email identities: the existing ai_network.ai_emails table is present with 13 fields, RLS enabled, service-role-only table access, lowercased-address uniqueness, and a unique primary-email-per-identity index. Verification statuses are constrained to unverified/pending/verified/failed; provisioning statuses to not_requested/pending/provisioned/failed/suspended. Live count: zero email rows, zero verified rows and zero provisioned inboxes.
+- Existing identity create/profile code and regression tests deliberately default email metadata to verification_status=unverified / provisioning_status=not_requested and do not create Supabase Auth users. No mailbox-provisioning API adapter or provider-specific admin integration is present in the inspected backend. .env.example defaults EMAIL_PROVIDER=none and leaves SMTP fields blank; SMTP delivery is not mailbox creation. Task 4 is therefore BLOCKED — EXTERNAL ACTION REQUIRED until a mailbox-hosting provider/domain and its approved server-side provisioning credentials/API are selected and connected. No email rows or inboxes were fabricated.
+- Task 14 — Security audit: live inventory confirms 54/54 AI tables RLS-enabled; anon and authenticated have no ai_network schema usage and zero table grants; service_role has backend grants. All 21/21 public minglora_ai_* RPCs are SECURITY INVOKER, all use search_path='', none are SECURITY DEFINER, anon/authenticated have zero EXECUTE grants, and service_role has EXECUTE on all 21.
+- Supabase security advisor also reports informational RLS-enabled/no-policy notices for private server-only tables, plus separate project-wide warnings including leaked-password protection disabled and anonymous-role policies on existing public application tables. These broader Auth/application settings were not modified because they are outside this AI Network checkpoint and require a separate impact review. Task 14 remains IN PROGRESS pending the remaining prompt-injection, abuse, credential-isolation and operational security tests.
+- No production migrations, Auth settings, runtime controls, mailbox accounts, email rows, credentials or data were changed. AI execution remains paused, disabled and at zero workers.
+- Task 3 remains BLOCKED — EXTERNAL ACTION REQUIRED for the real designated-owner browser session and profile-media/device acceptance. No synthetic user or identity was created.
+- Master register accounting: 2/19 VERIFIED COMPLETE (10.53%); 5/19 IMPLEMENTED — AWAITING VERIFICATION (26.32%); 8/19 IN PROGRESS (42.11%); 2/19 BLOCKED — EXTERNAL ACTION REQUIRED (10.53%); 2/19 NOT STARTED (10.53%). Verified completion remains 2/19 = 10.53%.
+- Latest full CI and AI Network tests remain green on the previous PR code head; these audit actions are read-only and tracker-only. New CI will run for the tracker commit.
+
+Next safe action: continue the remaining Task 14 security checks while keeping Task 3/4 blockers explicit; do not activate workers or change global Auth settings.
+
+---
+## Execution checkpoint — 2026-11-15 (Task 15 finance governance CI verified)
+
+- Project: Minglora Social Network only. Feature branch: `feat/ai-network-finance-governance-20261115`; review PR: [#356](https://github.com/ravaunrichards/Minglora-Social-Network/pull/356), now ready for human review (not merged).
+- Latest code/test head verified: `ba818e339bed0aa7217ae069559a1097de48c059`; comparison at that head: 21 commits ahead of `main`, 0 behind.
+- Current-head workflows: full repository CI **PASS (1,186/1,186; 0 failures)**; AI Network syntax/regression **PASS (141/141; 0 failures)**; AI identity/discovery browser acceptance **PASS**; seven-plus-two LIVE/MeetWave layout independence **PASS**; Supabase Auth provider acceptance and For You functional navigation **PASS**.
+- Existing Supabase project rollback-only finance migration compile/DDL test: **PASS**. Migration was executed in `BEGIN … ROLLBACK`; subsequent live catalogue check showed zero `ai_finance_%` tables. No production schema or rows were changed.
+- Task 15 — Finance and Resource Management: **IN PROGRESS**, not complete. Feature branch now contains owner/org/department/identity scoped budget policies, immutable budget audit history and usage ledger, private service-role finance RPC, authenticated designated-admin routes, Finance & Resource Center UI, regression tests and docs. Task queue checks token/spend/concurrency reservations and paused policies. Owner-level advisory serialization prevents budget-policy edits racing new task reservations.
+- Remaining Task 15 acceptance: production migration/release approval, live signed-in owner acceptance, real provider usage events and price reconciliation, secrets-manager-backed provider accounts/health, plus live CPU/GPU/memory/storage metering adapters. No provider/inference or cost data is claimed.
+- Workers remain `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`. No synthetic AI or Auth identities, credentials, email inboxes or financial events were created. Render was not deployed and its workspace is still unselected.
+- Task 3 signed-in owner identity create/list/get/edit, private profile media and cross-device acceptance remains **BLOCKED — EXTERNAL ACTION REQUIRED** until a real designated platform-owner browser session is available. User authorization has been granted; the session itself is not present in this execution environment.
+- Master acceptance register remains **2/19 VERIFIED COMPLETE = 10.53%**. Task 15 implementation and CI do not count as a verified-complete master task while release and live metering gates remain open.
+
+**Next action:** human review of PR #356; then production migration/release plan with owner-authenticated acceptance and metering/provider readiness. Do not merge/apply/deploy solely on CI success.
+
+---
+
+## Execution checkpoint — 2026-11-15 (AI finance and resource governance implementation)
+
+- Project: `ravaunrichards/Minglora-Social-Network`; branch: `feat/ai-network-finance-governance-20261115`; base: `main` at `6125afeb5c5aca430bef921418edacbf87bef0f0`.
+- Task 15 — Finance and Resource Management: **IN PROGRESS**. Added a new additive migration with owner-, organization-, department- and identity-scoped budget policies, append-only budget-change history, and an idempotent append-only usage ledger for provider tokens/cost and compute/storage measurements.
+- Added database-side checks for daily token reservations, monthly spend reservations, concurrent queued/running task limits and paused policies when tasks are inserted or transitioned into queued/running. These are queue-acceptance checks; actual provider cost/resource metering is not yet operational.
+- Connected the private existing `minglora-runtime-state` gateway, authenticated designated-admin Node routes, Finance & Resource Center UI, budget audit history and measured-ledger reporting. Public browser API permits budget read/write and usage read only; usage ingestion remains private to the authenticated server runtime.
+- Added focused regression coverage in `tests/unit/ai-network-finance.test.js` and documented the finance boundary in `backend/modules/ai-network/README.md`.
+- Migration compile/DDL contract check passed in an explicit `BEGIN … ROLLBACK` against the existing Supabase project after correcting a duplicate declaration. The check left production schema and data unchanged. No production migration was applied; no budget or usage rows were created.
+- The change is not yet CI-verified, merged or deployed. Actual provider events, secrets-manager integration, provider price/cost reconciliation, CPU/GPU/memory/storage metering adapters, production browser acceptance and enforcement by live provider workers remain outstanding. The worker runtime remains `global_paused=true`, `execution_enabled=false`, `max_concurrent_workers=0`.
+- Task 3 owner-authenticated identity/media/device acceptance is still an independent external browser-session gate. User authorization is recorded, but no live signed-in browser session is available in this tool context.
+- Overall verified acceptance remains **2/19 = 10.53%**. This is unchanged master-checklist task-count progress; Task 15 is not counted complete.
+
+**Next action:** open a draft PR from this branch, run the full repository and AI Network checks, fix any failures, and only then request review. Do not apply the migration or deploy it before CI/review and production-release verification.
+
+---
+
 ## Execution checkpoint — 2026-11-15 (AI HR attendance correction UI)
 
 - Added inline correction controls to each persisted attendance record in `public/ai-network.js`. The form reuses the existing moderator-authenticated `POST /organizations/:id/attendance` path and existing SQL idempotency/correction-history logic; it preloads the recorded employee/date/status/check-in/check-out values.
