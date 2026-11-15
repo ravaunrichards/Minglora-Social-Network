@@ -710,6 +710,64 @@ export function listCreatorLeagueMatches(db, users, userId, now = new Date()) {
     .sort((a, b) => new Date(b.startedAt || b.createdAt) - new Date(a.startedAt || a.createdAt))
     .slice(0, 50).map(match => decorateMatch(match, users));
 }
+export function getCreatorLeagueLeaderboard(db, user, options = {}) {
+  ensureCollections(db);
+  const now = options.now instanceof Date ? options.now : new Date(options.now || Date.now());
+  const period = String(options.period || "weekly").toLowerCase();
+  if (!["daily", "weekly"].includes(period)) {
+    throw Object.assign(new Error("Choose a daily or weekly Creator League ranking."), { status: 400 });
+  }
+
+  const viewerProfile = ensureCreatorLeagueProfile(
+    db, user.id, user.country || user.region || "GLOBAL", now
+  );
+  const requestedClass = String(options.leagueClass || viewerProfile.leagueClass).toUpperCase();
+  if (!CREATOR_LEAGUE_CLASSES.includes(requestedClass)) {
+    throw Object.assign(new Error("Choose a valid Creator League class."), { status: 400 });
+  }
+
+  const dayKey = utcDayKey(now);
+  const seasonKey = creatorLeagueSeasonKey(now);
+  const dailyPoints = new Map();
+  if (period === "daily") {
+    for (const item of db.creatorLeagueDailyScores) {
+      if (item.dayKey !== dayKey || !item.userId) continue;
+      dailyPoints.set(item.userId, (dailyPoints.get(item.userId) || 0) + Math.max(0, asNumber(item.points)));
+    }
+  }
+
+  const eligible = db.creatorLeagueProfiles
+    .filter(item => item.userId && item.leagueClass === requestedClass &&
+      String(item.region || "GLOBAL").toUpperCase() === String(viewerProfile.region || "GLOBAL").toUpperCase())
+    .map(item => ({
+      profile: item,
+      points: period === "daily"
+        ? (dailyPoints.get(item.userId) || 0)
+        : Math.max(0, asNumber(item.seasonKey === seasonKey ? item.seasonPoints : 0))
+    }))
+    .sort((a, b) =>
+      b.points - a.points ||
+      asNumber(b.profile.lifetimeGiftPoints) - asNumber(a.profile.lifetimeGiftPoints) ||
+      String(a.profile.userId).localeCompare(String(b.profile.userId))
+    )
+    .slice(0, 50);
+
+  return {
+    period,
+    leagueClass: requestedClass,
+    region: viewerProfile.region,
+    dayKey,
+    seasonKey,
+    leaderboard: eligible.map(({ profile, points }, index) => ({
+      position: index + 1,
+      ...publicMember(db.users, profile.userId),
+      leagueClass: profile.leagueClass,
+      points,
+      lifetimeGiftPoints: Math.max(0, asNumber(profile.lifetimeGiftPoints))
+    }))
+  };
+}
+
 export function getCreatorLeagueOverview(db, user, now = new Date()) {
   ensureCollections(db);
   settlePastDays(db, now);
