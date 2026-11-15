@@ -106,7 +106,6 @@ export function getAIProviderCredentialStatus(providerId, env = process.env) {
       ? []
       : requiredVariables.filter(name => !hasValue(env[name])),
     credentialsPresent,
-    adapterAvailable: false,
     connected: false,
     executionEnabled: false,
     note
