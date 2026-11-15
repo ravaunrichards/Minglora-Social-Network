@@ -43,7 +43,8 @@ test("each LIVE motion entry resolves the exact unique artwork, model, animation
       "live-island-rmn3mc": "island-tide",
       "crystal-crown-1itryeu": "crown-lustre",
       "phoenix-wep6uk": "phoenix-rise",
-      "beach-maracas-1exxoag": "maraca-rhythm"
+      "beach-maracas-1exxoag": "maraca-rhythm",
+      "royal-lions-scepter-15000-mgl": "lion-scepter-rise"
     };
     assert.equal(entry.motion_preset, giftSpecificMotionPreset[entry.code] || gift.animation_preset);
     assert.equal(entry.catalog_motion_preset, gift.animation_preset);
@@ -75,7 +76,8 @@ test("bespoke gift runtime presets are reflected in the generated motion index w
     "live-island-rmn3mc": "island-tide",
     "crystal-crown-1itryeu": "crown-lustre",
     "phoenix-wep6uk": "phoenix-rise",
-    "beach-maracas-1exxoag": "maraca-rhythm"
+    "beach-maracas-1exxoag": "maraca-rhythm",
+      "royal-lions-scepter-15000-mgl": "lion-scepter-rise"
   };
   const sourceByCode = new Map(source.gifts.map(gift => [gift.code, gift]));
   for (const [code, preset] of Object.entries(overrides)) {
