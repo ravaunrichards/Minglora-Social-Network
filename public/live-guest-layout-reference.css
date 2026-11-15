@@ -392,8 +392,8 @@
 #live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat[data-seat-index="6"],
 #live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat[data-seat-index="7"],
 #live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat[data-seat-index="8"]{display:none!important}
-#live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-guest-layout="roundtable-1"]>.live-guest-seat[data-seat-index],
-#live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-guest-layout="roundtable-2"]>.live-guest-seat[data-seat-index]{
+#live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-guest-layout="roundtable-1"]>.live-guest-seat:not(.is-host)[data-seat-index],
+#live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-guest-layout="roundtable-2"]>.live-guest-seat:not(.is-host)[data-seat-index]{
   position:absolute!important;left:auto!important;right:auto!important;z-index:6!important;
   display:flex!important;width:11%!important;height:16%!important;min-width:42px!important;min-height:44px!important;
   max-width:120px!important;max-height:112px!important;grid-column:auto!important;grid-row:auto!important;
@@ -421,8 +421,8 @@
   #live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat[data-seat-index="2"]{
     width:25%!important;height:15%!important;right:4%!important;
   }
-  #live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-guest-layout="roundtable-1"]>.live-guest-seat[data-seat-index],
-  #live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-guest-layout="roundtable-2"]>.live-guest-seat[data-seat-index]{
+  #live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-guest-layout="roundtable-1"]>.live-guest-seat:not(.is-host)[data-seat-index],
+  #live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-guest-layout="roundtable-2"]>.live-guest-seat:not(.is-host)[data-seat-index]{
     width:17%!important;height:15%!important;min-width:0!important;min-height:0!important;
     max-width:78px!important;max-height:76px!important;
   }
