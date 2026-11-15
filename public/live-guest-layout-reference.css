@@ -380,7 +380,7 @@
 #live-player-shell #live-video-stage:not(.live-audio-stage) #live-guest-layout[data-live-layout="fluid-panel"]>.live-guest-seat[data-seat-index="2"]{
   position:absolute!important;left:auto!important;right:5%!important;z-index:6!important;
   width:23%!important;height:16%!important;min-width:0!important;min-height:0!important;
-  max-width:132px!important;max-height:116px!important;grid-column:auto!important;grid-row:auto!important;
+  max-width:132px!important;max-height:116px!important;grid-column:4!important;grid-row:auto!important;
   border:1px solid rgba(255,255,255,.3)!important;border-radius:8px!important;
   box-shadow:0 3px 14px rgba(0,0,0,.32)!important;
 }
