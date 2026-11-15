@@ -2939,6 +2939,9 @@ async function route(req, res) {
         if (draft.output || draft.providerExecution === 'completed' || draft.status !== 'draft') {
           throw Object.assign(new Error('Only an unfinished Creator Studio draft can be generated.'), { status: 409 });
         }
+        if (typeof draft.brief !== 'string' || draft.brief.trim().length < 10 || draft.brief.trim().length > 4000) {
+          throw Object.assign(new Error('Creator Studio briefs must contain between 10 and 4,000 characters. No provider request was sent.'), { status: 400 });
+        }
         const creatorSettings = getAISettings(db, user.id);
         const creatorDailyUsage = getAICreatorDailyUsage(db, user.id);
         const dailyTokenLimit = Math.max(0, Math.floor(Number(creatorSettings.dailyTokenBudget) || 0));
