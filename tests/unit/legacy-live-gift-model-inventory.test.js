@@ -70,3 +70,45 @@ test('every legacy model parses as a GLTF 2.0 document with renderable scene geo
     }
   }
 });
+
+
+test('legacy model files map to unique historical gift identities without implying production activation', () => {
+  const provenance = manifest.catalogue_identity_provenance;
+  assert.equal(provenance.identity_mapping_count, 45);
+  assert.equal(provenance.gift_insert_metadata_count, 38);
+  assert.equal(provenance.existing_model_url_case_mapping_count, 7);
+  assert.equal(provenance.matching_codes_in_public_live_gift_catalog, 0);
+  assert.equal(provenance.production_database_query_date, '2026-11-15');
+
+  const codes = new Set();
+  for (const asset of manifest.assets) {
+    const identity = asset.historical_catalogue;
+    assert.ok(identity?.code, asset.file_name + ' must have a historical catalogue code');
+    assert.ok(!codes.has(identity.code), identity.code + ' must map to only one legacy model');
+    codes.add(identity.code);
+    assert.equal(asset.catalogue_mapping_status, 'historical_identity_mapped');
+    assert.equal(asset.current_production_catalogue_status, 'absent_in_2026-11-15_database_snapshot');
+    assert.equal(asset.production_eligible, false);
+
+    const migrationPath = path.join(root, identity.source_migration);
+    assert.ok(fs.existsSync(migrationPath), identity.source_migration + ' must exist');
+    const migration = fs.readFileSync(migrationPath, 'utf8');
+    const modelPath = '/assets/gifts/' + asset.file_name;
+
+    if (identity.mapping_basis === 'model_url_case') {
+      assert.equal(identity.historical_seed, null);
+      assert.ok(migration.includes("WHEN '" + identity.code + "' THEN '" + modelPath + "'"),
+        asset.file_name + ' must match its exact historical model_url CASE mapping');
+    } else {
+      assert.equal(identity.mapping_basis, 'gift_insert');
+      const seed = identity.historical_seed;
+      assert.ok(seed && seed.name && seed.category);
+      assert.equal(seed.active_at_migration, true);
+      assert.ok(Number.isInteger(seed.coin_price) && seed.coin_price > 0);
+      assert.ok(migration.includes("'" + identity.code + "','" + seed.name + "','" + seed.category + "'"),
+        asset.file_name + ' must match its historical gift INSERT identity');
+      assert.ok(migration.includes("'" + modelPath + "'"),
+        asset.file_name + ' must be referenced by its historical migration');
+    }
+  }
+});
