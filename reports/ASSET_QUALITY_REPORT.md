@@ -194,7 +194,7 @@ A dedicated Chromium 141 / model-viewer 4.4.0 workflow generated and captured al
 
 - **Rose:** recognisable flower silhouette, but petal facets are angular and the stem/leaves are simple; surface detail and natural material depth are insufficient for the premium target.
 - **Hibiscus:** recognisable flower/stamen silhouette, but petals read as thin, planar forms; botanical curvature and surface detail need improvement.
-- **Djembe Master:** drum shell and lacing are clear; the wood and hide lack convincing texture/grain and finer construction details.
+- **Djembe Master:** the shell now includes twelve fine mahogany grain paths following the wood surface; hide texture and overall material finish still need human review.
 - **Palm Breeze:** silhouette and canopy read clearly; the fronds and trunk remain stylised/low-detail.
 - **Gamer Otter:** character and accessories are visible, but fur, facial, fabric and hardware details are simplified.
 - **LIVE Island:** the environment silhouette and key elements read at all three viewports; small pavilion/reef/waterfall details remain stylised.
@@ -241,3 +241,7 @@ The GLTF declares self-contained embedded geometry buffers, per-part material re
 ## Keeper of Atlantis — source and runtime quality boundary, 2026-11-15
 
 The original `keeper-of-atlantis-model.mjs` produces named PBR GLTF 2.0 mesh parts for a three-prong ceremonial trident, jewels, enamel grip, nacre shell medallion, raised coral, bubbles and tidal details. The generated model embeds its geometry buffer and records `design-review-pending` provenance. The generator also creates subject-specific SVG and transparent icon artwork. The LIVE event effect uses code-driven Web Animations and locally synthesized Web Audio, not a mastered recording or embedded GLTF animation. The model is added to the 12-item Chromium visual matrix (desktop/tablet/mobile); current PR CI is pending. This is a source/integration milestone, not a claim of premium-approved art, licensing clearance, human visual/audio approval, physical-device acceptance or production activation.
+
+## Djembe mahogany shell grain pass — 2026-11-15
+
+The original Djembe GLTF source now includes twelve restrained grain paths following the carved shell surface, with uniquely named geometry and warm/dark mahogany material values. The focused unit test validates their count, uniqueness, topology, finite bounds, material properties and self-contained buffer. This improves the inspectable shell detail; it does not establish convincing hide texture, premium finish, human approval, licensing clearance or device performance. The source remains `design-review-pending`.
