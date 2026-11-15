@@ -230,3 +230,14 @@ The motion-index schema keeps the original `catalog_motion_preset` and the effec
 - Runtime: the existing gift viewer consumes the canonical generated `.gltf` path; no new renderer, third-party brand asset, transaction route or backend data mutation is introduced.
 - QA target: the isolated Chromium matrix includes 11 bespoke models at desktop (1280×900), tablet (768×1024) and mobile (390×844) sizes: 33 model/viewport renders. Workflow results are pending at this checkpoint.
 - Release boundary: the asset remains `design-review-pending`; production catalogue version-3 approval, rights review, human artwork sign-off and physical-device testing remain separate gates.
+
+## Rose LIVE event choreography and sound — 2026-11-15
+
+- Canonical item: `rose-4ieccm`. Existing catalogue identity and metadata are preserved; the effect is selected by exact gift code only.
+- Runtime: `public/gift-effects.js` adds the `rose-unfurl` keyframe sequence to the existing confirmed gift-effect mount and preview. Existing duration clamping, overlay cleanup and reduced-motion handling remain in place.
+- Audio: `playRose` synthesizes the filtered petal-rustle sweep and five-note celesta-like arpeggio with local Web Audio. It is action-triggered on the existing gift sound path and obeys the existing sound opt-out. No remote audio source is fetched.
+- Generated metadata: `scripts/generate-live-gift-motion-index.mjs` maps `rose-4ieccm` to effective preset `rose-unfurl`; `scripts/generate-minglora-live-asset-manifest.mjs` records `rose-petal-rustle-and-celesta-v1` as synthesized sound rather than a mastered recording.
+- Cache: `public/index.html` and `public/sw.js` use the same Rose runtime query version. Service-worker cache is `minglora-shell-v324-self-updating-1`, preserving the established cache-name contract and the newer mainline LIVE/Gifter precache entries while retaining the recent Gift Studio/Match preview removals.
+- Regression coverage: `tests/unit/gift-animation-runtime.test.js`, `tests/unit/live-gift-motion-index.test.js` and `tests/unit/live-asset-manifest.test.js` verify exact-code choreography/sound selection, opt-out/reduced-motion paths, generated metadata and motion mapping.
+
+No catalogue price, active flag, production gift offering, wallet balance, transaction, earnings, payout, database record or deployment was changed. The Rose assets/effects remain design-review-pending; rights review, human visual/audio approval and physical-device QA are still required.
