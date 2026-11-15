@@ -37,10 +37,12 @@ test('the provider registry returns safe readiness for every catalogued model an
   assert.equal(inventory.length, 44);
   assert.equal(inventory.find(item => item.providerId === 'openai').credentialsPresent, true);
   assert.equal(inventory.find(item => item.providerId === 'openai').healthProbeAvailable, true);
+  assert.equal(inventory.find(item => item.providerId === 'openai').adapterAvailable, true);
   assert.equal(inventory.find(item => item.providerId === 'anthropic').healthProbeAvailable, false);
   assert.equal(inventory.find(item => item.providerId === 'resend').credentialsPresent, true);
   assert.equal(inventory.find(item => item.providerId === 'chatgpt_guest').serverSelectable, false);
-  assert.ok(inventory.every(item => item.connected === false && item.adapterAvailable === false && item.executionEnabled === false));
+  assert.ok(inventory.every(item => item.connected === false && item.executionEnabled === false));
+  assert.ok(inventory.filter(item => item.providerId !== 'openai').every(item => item.adapterAvailable === false));
   const serialized = JSON.stringify(inventory);
   assert.equal(serialized.includes('private-openai-test-key'), false);
   assert.equal(serialized.includes('private-resend-test-key'), false);
@@ -57,10 +59,10 @@ test('ChatGPT guest is explicitly non-routable and cannot be marked connected', 
   assert.match(guest.note, /not a server API endpoint/i);
 });
 
-test('provider-specific credential presence never claims an adapter or enables execution', () => {
+test('provider-specific credential presence reports the Creator Studio adapter but never enables execution', () => {
   const status = getAIProviderCredentialStatus('openai', { OPENAI_API_KEY: 'test-secret-do-not-return' });
   assert.equal(status.credentialsPresent, true);
-  assert.equal(status.adapterAvailable, false);
+  assert.equal(status.adapterAvailable, true);
   assert.equal(status.connected, false);
   assert.equal(status.executionEnabled, false);
   assert.ok(status.presentEnvironmentVariables.includes('OPENAI_API_KEY'));
@@ -102,9 +104,10 @@ test('legacy generic provider status contract remains unchanged and execution st
     MINGLORA_AI_MODEL: 'unit-test-model',
     OPENAI_API_KEY: 'test-specific-secret'
   });
-  assert.equal(providerSpecificOnly.configured, false);
+  assert.equal(providerSpecificOnly.configured, true);
   assert.equal(providerSpecificOnly.credentialsPresent, true);
-  assert.equal(providerSpecificOnly.providerCredentialStatus.adapterAvailable, false);
+  assert.equal(providerSpecificOnly.providerCredentialStatus.adapterAvailable, true);
+  assert.equal(providerSpecificOnly.manualDraftsAvailable, true);
   assert.equal(providerSpecificOnly.executionEnabled, false);
   assert.equal(JSON.stringify(providerSpecificOnly).includes('test-specific-secret'), false);
 });

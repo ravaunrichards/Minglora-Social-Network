@@ -978,7 +978,7 @@
       ? '<details class="ai-network-provider-catalogue"><summary>Provider environment registry · ' + number(providerCatalogue.length) + ' integrations</summary>' +
         '<p class="ai-network-note">These entries identify private server environment keys. Credential values are never shown or accepted in this page. A populated key is not proof of a successful connection or a working adapter.</p>' +
         '<div class="ai-network-list">' + providerCatalogue.map(provider => {
-          const required = list(provider.credentialEnvironmentVariables).join(', ');
+          const required = list(provider.credentialEnvironmentVariableGroups).map(group => list(group).join(' + ')).join(' OR ') || list(provider.credentialEnvironmentVariables).join(', ');
           const optional = list(provider.optionalEnvironmentVariables).join(', ');
           const label = provider.serverSelectable === false
             ? 'Interactive only · not server-callable'
@@ -988,7 +988,7 @@
             pill(provider.category || 'provider') + ' ' + pill(label, provider.credentialsPresent ? 'success' : 'neutral') +
             ' ' + pill(provider.connected ? 'Connected' : 'Not connected', 'warning') +
             '</div><small>Provider ID: ' + esc(provider.providerId) + '</small>' +
-            '<p>Required environment keys: ' + esc(required || 'No server credential slot') + '</p>' +
+            '<p>Required environment keys (complete one set): ' + esc(required || 'No server credential slot') + '</p>' +
             (optional ? '<small>Optional settings: ' + esc(optional) + '</small>' : '') +
             '<small>Read-only health probe: ' + (provider.healthProbeAvailable ? 'Available' : 'Not implemented') +
             ' · Inference adapter: ' + (provider.adapterAvailable ? 'Available' : 'Not implemented') +
@@ -1340,11 +1340,27 @@
 
   function renderCreatorJobs(jobs) {
     if (!jobs.length) return empty('No Creator Studio drafts yet.');
-    return '<div class="ai-network-list">' + jobs.map(job =>
-      '<article class="ai-network-list-row"><div><strong>' + esc(job.taskType.replaceAll('_', ' ')) + '</strong><p>' + esc(job.brief) +
-      '</p><small>Created ' + esc(date(job.createdAt)) + ' · ' + esc(job.providerExecution || 'not started') + '</small></div>' +
-      pill(job.status) + '</article>'
-    ).join('') + '</div>';
+    const canGenerate = Boolean(state.snapshot?.providerStatus?.manualDraftsAvailable);
+    return '<div class="ai-network-list">' + jobs.map(job => {
+      const output = job.output
+        ? '<section class="ai-network-draft-output"><strong>AI-generated draft · human review required</strong><pre>' + esc(job.output) + '</pre>' +
+          '<small>Model: ' + esc(job.providerModel || 'OpenAI') + ' · Tokens: ' +
+          esc(job.providerUsage?.total_tokens ?? 'not reported') + ' · Moderation: ' +
+          esc(job.moderation?.model || 'not recorded') + '</small></section>'
+        : '';
+      const error = job.providerExecution === 'failed' && job.providerError
+        ? '<p class="ai-network-alert ai-network-alert--warning" role="status">' + esc(job.providerError) + '</p>'
+        : '';
+      const canRetry = !job.output && job.providerExecution !== 'running';
+      const action = canRetry
+        ? '<button type="button" class="secondary" data-ai-action="creator-generate" data-id="' + esc(job.id) + '"' +
+          (canGenerate ? '' : ' disabled title="Configure OPENAI_API_KEY and OPENAI_DEFAULT_MODEL on the private server first."') + '>' +
+          (job.providerExecution === 'failed' ? 'Retry AI generation' : 'Generate with OpenAI') + '</button>'
+        : '';
+      return '<article class="ai-network-list-row"><div><strong>' + esc(job.taskType.replaceAll('_', ' ')) + '</strong><p>' + esc(job.brief) +
+        '</p><small>Created ' + esc(date(job.createdAt)) + ' · Provider execution: ' + esc(job.providerExecution || 'not started') + '</small>' +
+        error + output + action + '</div>' + pill(job.status) + '</article>';
+    }).join('') + '</div><p class="ai-network-note">Generated text is an unpublished AI draft. Review and edit it before any use. Minglora does not publish or schedule it automatically.</p>';
   }
 
   function renderEvents(events) {
@@ -2349,14 +2365,28 @@
       else if (action === 'bot-status') await request('/bots/' + encodeURIComponent(id) + '/status', { method:'PATCH', body:{ status:button.dataset.status } });
       else if (action === 'schedule-status') await request('/schedules/' + encodeURIComponent(id) + '/status', { method:'PATCH', body:{ status:button.dataset.status, reason:'Updated by the signed-in Minglora account.' } });
       else if (action === 'approval') await request('/approvals/' + encodeURIComponent(id), { method:'PATCH', body:{ decision:button.dataset.decision } });
+      else if (action === 'creator-generate') {
+        if (!id) throw new Error('A valid Creator Studio draft is required.');
+        if (!window.confirm('Generate an AI draft for human review? This sends the saved brief to OpenAI. Nothing will be published.')) return;
+        await request('/creator-jobs/' + encodeURIComponent(id) + '/generate', { method:'POST', body:{} });
+      }
       else if (action === 'delegation-status') await request('/delegations/' + encodeURIComponent(id), { method:'PATCH', body:{ status:button.dataset.status, reason:'Updated by authorized Minglora platform administrator.' } });
       else if (action === 'emergency-pause') await request('/emergency-pause', { method:'POST', body:{ reason:'Owner initiated emergency pause from the AI Network command center.' } });
       else if (action === 'emergency-resume') await request('/emergency-resume', { method:'POST', body:{} });
       await refresh(action === 'emergency-pause' ? 'Emergency pause confirmed. AI work remains stopped.' :
         action === 'identity-status' ? 'AI identity lifecycle status updated and audited.' : 'AI Network updated.');
     } catch (error) {
-      state.error = error.message;
-      paintSnapshot();
+      if (action === 'creator-generate') {
+        try {
+          await refresh(error.message || 'OpenAI generation failed. Check the provider status and retry the draft.');
+        } catch (refreshError) {
+          state.error = refreshError.message || error.message;
+          paintSnapshot();
+        }
+      } else {
+        state.error = error.message;
+        paintSnapshot();
+      }
     } finally {
       state.busy = false;
     }

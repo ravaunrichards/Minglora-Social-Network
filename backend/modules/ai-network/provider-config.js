@@ -6,11 +6,12 @@ const provider = (id, label, category, credentialGroups = [], options = {}) => O
   optionalEnvironmentVariables: Object.freeze([...(options.optionalEnvironmentVariables || [])]),
   serverSelectable: options.serverSelectable !== false,
   healthProbeAvailable: options.healthProbeAvailable === true,
+  inferenceAdapterAvailable: options.inferenceAdapterAvailable === true,
   note: options.note || ''
 });
 
 export const AI_PROVIDER_CATALOG = Object.freeze([
-  provider('openai', 'OpenAI API (ChatGPT models)', 'language_model', [['OPENAI_API_KEY']], { healthProbeAvailable: true, note: 'A read-only model-access probe is available; no text-generation adapter or worker execution is enabled.', optionalEnvironmentVariables: ['OPENAI_BASE_URL','OPENAI_ORGANIZATION_ID','OPENAI_PROJECT_ID','OPENAI_DEFAULT_MODEL'] }),
+  provider('openai', 'OpenAI API (ChatGPT models)', 'language_model', [['OPENAI_API_KEY'], ['MINGLORA_AI_PROVIDER','MINGLORA_AI_API_KEY']], { healthProbeAvailable: true, inferenceAdapterAvailable: true, note: 'A server-side text-generation adapter is available for human-triggered, moderated Creator Studio drafts only; worker execution and publishing remain disabled.', optionalEnvironmentVariables: ['OPENAI_BASE_URL','OPENAI_ORGANIZATION_ID','OPENAI_PROJECT_ID','OPENAI_DEFAULT_MODEL'] }),
   provider('anthropic', 'Anthropic Claude API', 'language_model', [['ANTHROPIC_API_KEY']], { optionalEnvironmentVariables: ['ANTHROPIC_BASE_URL','ANTHROPIC_DEFAULT_MODEL'] }),
   provider('google_gemini', 'Google Gemini Developer API', 'language_model', [['GEMINI_API_KEY'],['GOOGLE_AI_API_KEY']], { optionalEnvironmentVariables: ['GEMINI_BASE_URL','GEMINI_DEFAULT_MODEL'] }),
   provider('xai', 'xAI API', 'language_model', [['XAI_API_KEY']], { optionalEnvironmentVariables: ['XAI_BASE_URL','XAI_DEFAULT_MODEL'] }),
@@ -97,14 +98,15 @@ export function getAIProviderCredentialStatus(providerId, env = process.env) {
     known: true,
     serverSelectable: entry.serverSelectable,
     healthProbeAvailable: entry.healthProbeAvailable,
+    adapterAvailable: entry.inferenceAdapterAvailable,
     credentialEnvironmentVariables: requiredVariables,
+    credentialEnvironmentVariableGroups: entry.credentialGroups.map(group => [...group]),
     optionalEnvironmentVariables: [...entry.optionalEnvironmentVariables],
     presentEnvironmentVariables: presentVariables,
     missingCredentialEnvironmentVariables: credentialsPresent
       ? []
       : requiredVariables.filter(name => !hasValue(env[name])),
     credentialsPresent,
-    adapterAvailable: false,
     connected: false,
     executionEnabled: false,
     note
