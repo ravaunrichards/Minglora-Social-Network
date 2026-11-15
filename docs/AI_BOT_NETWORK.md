@@ -1,3 +1,7 @@
+## 10-billion identity scale architecture
+
+The design baseline, routing model, shard/data-plane plan, region consistency rules, migration gates and measurable capacity acceptance criteria are documented in [AI Bot Network Scale Architecture](AI_BOT_NETWORK_SCALE_ARCHITECTURE.md). This is a design document only: it does not assert deployed shards, 10-billion capacity, regional failover, or worker concurrency.
+
 ## Latest verified checkpoint — 2026-11-15 (AI HR training and attendance release)
 
 - PR #351 merged to `main` as `0fbcdc6a92bf94ac980c2015833f8ea11caaf7a1`; merge request: https://github.com/ravaunrichards/Minglora-Social-Network/pull/351.
