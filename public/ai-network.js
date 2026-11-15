@@ -3,7 +3,7 @@
 
   const API = '/api/ai-network';
   const root = () => document.getElementById('main-content');
-  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', adminAccess: false, discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, performanceReviews: [], successionPlans: [], promotions: [], trainingCourses: [], trainingEnrollments: [], attendance: [], developmentUnavailable: false, organizationError: '', memoryIdentityId: '', memorySettings: null, memoryEntries: [], memoryError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', providerHealth: null, aiTasks: [], taskRuntime: null, taskError: '', categoryAdmin: null, delegationGrants: [], delegationAccess: false, delegationError: '' };
+  const state = { snapshot: null, busy: false, error: '', notice: '', identityRegistry: null, identityCategories: [], identityError: '', adminAccess: false, discoveryResults: { identities: [], total: 0 }, discoveryFilters: {}, discoveryError: '', following: [], followRequests: [], savedDiscoveryGroups: [], organizationRegistry: null, departmentTemplates: [], positionTemplates: [], organizationHR: {}, performanceReviews: [], successionPlans: [], promotions: [], trainingCourses: [], trainingEnrollments: [], attendance: [], developmentUnavailable: false, organizationError: '', memoryIdentityId: '', memorySettings: null, memoryEntries: [], memoryError: '', providerAccounts: [], providerModels: [], providerAssignments: [], providerError: '', providerHealth: null, aiTasks: [], taskRuntime: null, taskError: '', categoryAdmin: null, delegationGrants: [], delegationAccess: false, delegationError: '', conversationBotId: '', conversationId: '' };
   const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[character]));
@@ -75,6 +75,7 @@
         : bot.status !== 'archived'
           ? '<button type="button" class="secondary" data-ai-action="bot-status" data-id="' + esc(bot.id) + '" data-status="active" disabled title="Provider execution is not enabled">Activate</button>'
           : '') +
+      (bot.identityId && bot.status !== 'archived' ? '<button type="button" class="secondary" data-ai-action="conversation-select" data-id="' + esc(bot.id) + '">Chat</button>' : '') +
       (bot.status !== 'archived' ? '<button type="button" class="secondary" data-ai-action="bot-status" data-id="' + esc(bot.id) + '" data-status="archived">Archive</button>' : '') +
       '</div></article>'
     ).join('') + '</div>';
@@ -1418,10 +1419,50 @@
       '<p class="ai-network-note">Human approval and AI identity disclosure are mandatory and cannot be disabled. Emergency pause preserves history.</p>';
   }
 
+
+  function renderAIConversationCenter(bots, conversations, provider, networkPaused) {
+    const linkedBots = bots.filter(bot => bot.identityId && bot.status !== 'archived');
+    if (!linkedBots.length) return empty('Create a bot and link its private relational AI identity before starting a conversation.');
+    const selectedBot = linkedBots.find(bot => bot.id === state.conversationBotId) || linkedBots[0];
+    state.conversationBotId = selectedBot.id;
+    const sessions = conversations.filter(session => session.botId === selectedBot.id && session.status === 'active');
+    const selectedSession = sessions.find(session => session.id === state.conversationId) || null;
+    if (!selectedSession && state.conversationId) state.conversationId = '';
+    const sessionOptions = [{value:'',label:'New conversation'}].concat(sessions.map(session => ({
+      value:session.id,label:(session.title || 'AI conversation') + ' · ' + number(session.messages?.length || 0) + ' messages'
+    })));
+    const transcript = selectedSession && Array.isArray(selectedSession.messages) && selectedSession.messages.length
+      ? '<div class="ai-network-conversation-log" role="log" aria-live="polite" aria-relevant="additions text">' +
+        selectedSession.messages.map(message =>
+          '<article class="ai-network-conversation-message ai-network-conversation-message--' + (message.role === 'assistant' ? 'assistant' : 'user') + '">' +
+          '<strong>' + (message.role === 'assistant' ? 'AI · ' + esc(selectedBot.name) : 'You') + '</strong>' +
+          '<p>' + esc(message.content || '') + '</p></article>'
+        ).join('') + '</div>'
+      : '<div class="ai-network-conversation-log ai-network-conversation-log--empty">Your conversation will appear here after your first successful message.</div>';
+    const ready = provider?.botConversationsAvailable === true && !networkPaused;
+    return '<div class="ai-network-conversation-center">' +
+      '<p>Start a reply only when you send a message. This text-only feature does not activate workers, publish content, contact members or perform platform actions.</p>' +
+      '<form class="ai-network-form" data-ai-form="conversation">' +
+      '<div class="ai-network-form-grid">' +
+      '<label>AI assistant<select name="botId" data-ai-conversation-bot>' + options(linkedBots.map(bot => ({value:bot.id,label:bot.name + ' · ' + (bot.identityLabel || 'AI BOT')})),selectedBot.id) + '</select></label>' +
+      '<label>Conversation<select name="conversationId" data-ai-conversation-id>' + options(sessionOptions,selectedSession?.id || '') + '</select></label></div>' +
+      transcript +
+      '<label>Your message<textarea name="message" required minlength="1" maxlength="4000" rows="3" placeholder="Write a message to your AI assistant."></textarea></label>' +
+      '<label class="ai-network-memory-consent"><input type="checkbox" name="includeSavedMemory"><span>Include this identity’s saved memory for this turn. Checking this sends only owner-consented entries to the configured OpenAI provider.</span></label>' +
+      '<div class="ai-network-row-actions"><button type="button" class="secondary" data-ai-action="conversation-new">New conversation</button>' +
+      '<button class="primary" type="submit"' + (!ready ? ' disabled' : '') + '>Send message</button></div>' +
+      '<small class="ai-network-note">' + (networkPaused ? 'The Minglora AI Network is emergency-paused. Resume it in the authorized Command Center before sending.' :
+        ready ? 'OpenAI settings are present; every request still requires a fresh provider probe and input/output moderation.' :
+          'Conversation replies are unavailable until a real OpenAI API key and model are configured in the private server environment.') +
+      ' AI replies are clearly labelled. Saved memory is off by default; conversations do not write memory automatically.</small></form></div>';
+  }
+
   function renderSnapshot(snapshot) {
     const settings = snapshot.settings, performance = snapshot.performance, provider = snapshot.providerStatus;
     const bots = list(snapshot.bots), teams = list(snapshot.teams), schedules = list(snapshot.schedules);
     const approvals = list(snapshot.approvals), creatorJobs = list(snapshot.creatorJobs);
+    const conversations = list(snapshot.conversations);
+    const networkPaused = Boolean(snapshot.safeguards?.globalPaused);
     const events = list(snapshot.communityEvents);
     const botCategoryOptions = list(state.identityCategories).map(category => ({ value:category.category_key, label:category.display_name }));
     const botDefaultCategory = botCategoryOptions.some(option => option.value === 'ai_support')
@@ -1474,6 +1515,7 @@
           '<label class="ai-network-check"><input type="checkbox" name="capabilities" value="' + item.id + '"' + (index === 0 ? ' checked' : '') + '><span>' + item.label + '</span></label>'
         ).join('') + '</div></fieldset><p class="ai-network-note">The AI identity is created in the relational registry with separate first and last names. It starts private and the bot remains a draft requiring human review.</p>' +
         '<button class="primary" type="submit" ' + (!botCategoryOptions.length || !window.crypto?.randomUUID ? 'disabled' : '') + '>Create AI bot and relational identity</button></form>', 'ai-network-span-2') +
+      card('AI Bot Conversations', '01A · HUMAN-INITIATED CHAT', renderAIConversationCenter(bots, conversations, provider, networkPaused), 'ai-network-span-2') +
       card('Bot Teams', '02 · TEAM WORK', '<p>Coordinate your own specialist bots with human-reviewed plans and separate identities.</p>' + renderTeams(teams,bots)) +
       card('Smart Activity Scheduling', '03 · SCHEDULING', '<p>Plan content support by time zone and cadence. Every new schedule is paused until execution is verified.</p>' + renderSchedules(schedules,bots)) +
       card('Bot Performance Center', '04 · PERFORMANCE', renderPerformance(performance)) +
@@ -1578,7 +1620,26 @@
     const payload = {};
     let path = '';
     let identityIdForMedia = null;
-    if (kind === 'memory-settings') {
+    if (kind === 'conversation') {
+      const botId=value('botId'), message=value('message');
+      if (!botId || !message) throw new Error('Choose an AI assistant and enter a message.');
+      form.dataset.idempotencyKey=window.crypto.randomUUID();
+      const chatResult=await request('/bots/'+encodeURIComponent(botId)+'/conversation',{
+        method:'POST',
+        body:{
+          message,
+          conversationId:value('conversationId')||null,
+          idempotencyKey:form.dataset.idempotencyKey,
+          includeSavedMemory:form.querySelector('[name="includeSavedMemory"]').checked
+        }
+      });
+      state.conversationBotId=botId;
+      state.conversationId=chatResult.session?.id||value('conversationId')||'';
+      setNotice('AI response received and saved to this conversation. It was not published or sent to another member.');
+      state.snapshot=await request();
+      paintSnapshot();
+      return;
+    } else if (kind === 'memory-settings') {
       const identityId = form.dataset.identityId || '';
       if (!identityId) throw new Error('Choose an AI identity before updating its memory settings.');
       path = '/identities/' + encodeURIComponent(identityId) + '/memory/settings';
@@ -2363,6 +2424,18 @@
         await loadAIDiscovery(state.discoveryFilters);
       }
       else if (action === 'delete-discovery-group') await request('/saved-groups/' + encodeURIComponent(id), { method:'DELETE' });
+      else if (action === 'conversation-select') {
+        state.conversationBotId=id;
+        const recent=list(state.snapshot?.conversations).find(session=>session.botId===id&&session.status==='active');
+        state.conversationId=recent?.id||'';
+        paintSnapshot();
+        return;
+      }
+      else if (action === 'conversation-new') {
+        state.conversationId='';
+        paintSnapshot();
+        return;
+      }
       else if (action === 'bot-status') await request('/bots/' + encodeURIComponent(id) + '/status', { method:'PATCH', body:{ status:button.dataset.status } });
       else if (action === 'schedule-status') await request('/schedules/' + encodeURIComponent(id) + '/status', { method:'PATCH', body:{ status:button.dataset.status, reason:'Updated by the signed-in Minglora account.' } });
       else if (action === 'approval') await request('/approvals/' + encodeURIComponent(id), { method:'PATCH', body:{ decision:button.dataset.decision } });
@@ -2410,11 +2483,23 @@
     }
   };
 
+
+  const onConversationChange = event => {
+    const target=event.target instanceof Element?event.target:null;
+    const botSelect=target?.closest('select[data-ai-conversation-bot]');
+    const sessionSelect=target?.closest('select[data-ai-conversation-id]');
+    if(!botSelect&&!sessionSelect)return;
+    if(botSelect){state.conversationBotId=botSelect.value;state.conversationId='';}
+    else state.conversationId=sessionSelect.value;
+    paintSnapshot();
+  };
+
   if (!window.__mingloraAINetworkBound) {
     window.__mingloraAINetworkBound = true;
     document.addEventListener('submit', onSubmit);
     document.addEventListener('click', onClick);
     document.addEventListener('change', onMemoryIdentityChange);
+    document.addEventListener('change', onConversationChange);
   }
   window.MingloraAINetwork = { render: load, refresh: () => refresh(), request };
 })();
