@@ -11,6 +11,7 @@ import { createCrystalCrownModel } from "../assets/3d-assets/gift-models/crystal
 import { createPhoenixModel } from "../assets/3d-assets/gift-models/phoenix-model.mjs";
 import { createBeachMaracasModel } from "../assets/3d-assets/gift-models/beach-maracas-model.mjs";
 import { createRoyalLionsScepterModel } from "../assets/3d-assets/gift-models/royal-lions-scepter-model.mjs";
+import { createBaseballModel } from "../assets/3d-assets/gift-models/baseball-model.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const MANIFEST = path.join(ROOT, "data", "minglora-gift-catalog.json");
@@ -195,6 +196,7 @@ function modelDocument(gift) {
   if (gift.code === "phoenix-wep6uk") return createPhoenixModel();
   if (gift.code === "beach-maracas-1exxoag") return createBeachMaracasModel();
   if (gift.code === "royal-lions-scepter-15000-mgl") return createRoyalLionsScepterModel();
+  if (gift.code === "baseball-orcdx9") return createBaseballModel();
   const seed = hash32(gift.code);
   const hue = seed % 360;
   const colors = palette(gift);
