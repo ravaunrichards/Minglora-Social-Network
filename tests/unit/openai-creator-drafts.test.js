@@ -123,6 +123,7 @@ test('incomplete generation, flagged output and moderation-provider failure neve
   assert.equal(moderationCount, 2);
 
   let outputModerationCount = 0;
+  let outputModerationError;
   await assert.rejects(generateOpenAICreatorDraft({
     taskType: 'caption_draft', brief: 'A sufficiently long creator brief.', env,
     fetchImpl: async url => {
@@ -132,8 +133,15 @@ test('incomplete generation, flagged output and moderation-provider failure neve
         ? clearModeration()
         : response(503, {});
     }
-  }), error => error.code === 'provider_error');
+  }), error => {
+    outputModerationError = error;
+    return error.code === 'provider_error';
+  });
   assert.equal(outputModerationCount, 2);
+  assert.equal(outputModerationError.provider, 'openai');
+  assert.equal(outputModerationError.usage.total_tokens, 100);
+  assert.equal(outputModerationError.responseId, 'resp_test_123');
+  assert.equal(JSON.stringify(outputModerationError).includes('private-openai-test-key'), false);
 });
 
 test('invalid briefs, unsupported draft types and insecure endpoints are rejected before a request', async () => {
