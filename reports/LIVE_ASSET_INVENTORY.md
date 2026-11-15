@@ -87,15 +87,22 @@ The active screen-share state switches to `screen-stop.svg`; active browser full
 
 The shortcuts remain Layout, Permissions, Guests, Viewers, Fan Club, Match, Top Gifters, Gifts, Rewards, Moderators, Appearance and Devices. The existing role gates, rewards visibility gate, panel selectors and active `aria-pressed` behavior remain authoritative. The service worker cache v306 includes the new manifest and every icon.
 
-## Gift-specific botanical model sources
-| Source | Canonical item | Model art direction | Review state |
-|---|---|---|---|
-| assets/3d-assets/gift-models/rose-model.mjs | Rose | Layered rose petals, sepals, thorned stem, sculpted leaves and dew | Design review pending |
-| assets/3d-assets/gift-models/hibiscus-model.mjs | Hibiscus (hibiscus-5-mgl) | Five cupped tropical petals, sepals, three leaves, central stamen column and pollen anthers | Design review pending; CI/build tests passed in merged PR #339 validation set |
-| assets/3d-assets/gift-models/djembe-model.mjs | Djembe Master (djembe-master-1v3jzkm) | Mahogany shell, hollow bowl, hide drumhead, rim bindings, 16 tension strands, diamond lacing and carved detailing | Design review pending; CI/build tests passed in merged PR #339 |
-| assets/3d-assets/gift-models/palm-breeze-model.mjs | Palm Breeze (palm-breeze-gknyt0) | Curved trunk, eight pinnate fronds, grouped leaflets and veins, coconuts, roots and sand/water plinth | Design review pending; CI/build tests passed in merged PR #340 |
+## Individually authored gift-specific 3D model sources
 
-These are four individually art-directed model sources. The generator still uses procedural category/name geometry for the remaining catalogue gifts; the presence of a generated GLTF file per catalogue row must not be interpreted as proof of bespoke modelling or premium approval.
+| Source | Canonical catalogue item | Art direction / distinct geometry | Review state |
+|---|---|---|---|
+| `assets/3d-assets/gift-models/rose-model.mjs` | Rose (`rose-4ieccm`) | Layered rose petals, sepals, thorned stem, sculpted leaves and dew | Design review pending |
+| `assets/3d-assets/gift-models/hibiscus-model.mjs` | Hibiscus (`hibiscus-5-mgl`) | Five cupped tropical petals, sepals, three leaves, central stamen column and pollen anthers | Design review pending |
+| `assets/3d-assets/gift-models/djembe-model.mjs` | Djembe Master (`djembe-master-1v3jzkm`) | Mahogany shell, hollow bowl, hide drumhead, rim bindings, tension strands, diamond lacing and carved detailing | Design review pending |
+| `assets/3d-assets/gift-models/palm-breeze-model.mjs` | Palm Breeze (`palm-breeze-gknyt0`) | Curved trunk, pinnate fronds, grouped leaflets and veins, coconuts, roots and sand/water plinth | Design review pending |
+| `assets/3d-assets/gift-models/gamer-otter-model.mjs` | Gamer Otter (`gamer-otter-100-mgl`) | Seated otter character with sculpted face, cheeks, ears, whiskers, curled tail, gaming headset, mic and controller | Design review pending |
+| `assets/3d-assets/gift-models/live-island-model.mjs` | LIVE Island (`live-island-rmn3mc`) | Lagoon cay, surf rims, raised headland, waterfall, palms, pavilion, sail canoe, coral and beacon | Design review pending |
+| `assets/3d-assets/gift-models/crystal-crown-model.mjs` | Crystal Crown (`crystal-crown-1itryeu`) | Gold crown band, velvet lining, spires, faceted gemstones, engraved details, pavé and pendant drops | Design review pending |
+| `assets/3d-assets/gift-models/phoenix-model.mjs` | Phoenix (`phoenix-wep6uk`) | Sculpted firebird, layered coverts and flight feathers, crest, comet tail, talons and ember motes | Design review pending |
+| `assets/3d-assets/gift-models/beach-maracas-model.mjs` | Beach Maracas (`beach-maracas-1exxoag`) | Crossed carved gourd shakers, hardwood handles, painted seed/sunburst motifs, woven grips and conch charm | Design review pending |
+| `assets/3d-assets/gift-models/royal-lions-scepter-model.mjs` | Royal Lions Scepter (`royal-lions-scepter-15000-mgl`) | Forward-facing lion face, radial mane locks, crown points, faceted jewels, gold staff, spiral filigree, enamel grip and pommel | Design review pending |
+
+**Current source split:** 10 individually authored repository model sources and 1,738 generated procedural catalogue model entries across 1,748 source catalogue records. A source-specific model file is not automatically premium-approved. All ten sources remain pending human visual/design and rights review; generated catalogue files for other gifts use the shared procedural builder unless another exact-code source is added and tested.
 
 ## Transparent gift-icon inventory — 2026-11-14
 
