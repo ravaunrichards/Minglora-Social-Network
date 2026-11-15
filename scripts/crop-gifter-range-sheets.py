@@ -107,6 +107,7 @@ def main():
         cropped[name] = result
     print(json.dumps(entries, indent=2))
     if args.apply:
+        REVIEW.mkdir(parents=True, exist_ok=True)
         REPORT.parent.mkdir(parents=True, exist_ok=True)
         lines = [
             "# Gifter Range-Sheet Crop Report", "",
