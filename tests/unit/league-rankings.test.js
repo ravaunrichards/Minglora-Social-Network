@@ -3,7 +3,9 @@ import assert from "node:assert/strict";
 import {
   ensureCreatorLeagueProfile,
   recordLiveGiftForLeagues,
-  getCreatorLeagueLeaderboard
+  getCreatorLeagueLeaderboard,
+  getCreatorLeagueOverview,
+  setCreatorLeagueRankingPreference
 } from "../../backend/modules/leagues/service.js";
 
 function blankDb() {
@@ -75,6 +77,49 @@ test("daily and weekly Creator League rankings browse divisions without mixing r
   assert.deepEqual(higherDivision.leaderboard.map(item => item.id), ["creator-c"]);
   assert.equal(higherDivision.leaderboard[0].points, 985092);
   assert.ok(!daily.leaderboard.some(item => item.id === "outside-region"));
+});
+
+test("Creator League ranking visibility defaults on, can be disabled, and preserves progression", () => {
+  const db = blankDb();
+  const now = new Date("2026-11-15T12:00:00.000Z");
+  addMember(db, "creator-a");
+  addMember(db, "creator-b");
+  addConfirmedGift(db, "visible-creator-gift", "creator-a", 125, now);
+  addConfirmedGift(db, "hidden-creator-gift", "creator-b", 450, now);
+
+  const profile = db.creatorLeagueProfiles.find(item => item.userId === "creator-b");
+  assert.equal(profile.rankingEnabled, true, "new creators retain existing visible-ranking behavior");
+
+  const saved = setCreatorLeagueRankingPreference(db, {
+    id: "creator-b", country: "JAMAICA"
+  }, false, now);
+  assert.equal(saved.rankingEnabled, false);
+  assert.equal(profile.rankingEnabled, false);
+  assert.equal(profile.lifetimeGiftPoints, 450);
+
+  const leaderboard = getCreatorLeagueLeaderboard(db, {
+    id: "creator-a", country: "JAMAICA"
+  }, { period: "daily", leagueClass: "D5", now });
+  assert.deepEqual(leaderboard.leaderboard.map(item => item.id), ["creator-a"]);
+
+  const overview = getCreatorLeagueOverview(db, {
+    id: "creator-b", country: "JAMAICA"
+  }, now);
+  assert.equal(overview.profile.rankingEnabled, false);
+  assert.ok(!overview.leaderboard.some(item => item.id === "creator-b"));
+  assert.equal(profile.lifetimeGiftPoints, 450, "opting out never deletes earned League points");
+});
+
+test("Creator League ranking preference accepts only an authenticated account and boolean choice", () => {
+  const db = blankDb();
+  assert.throws(
+    () => setCreatorLeagueRankingPreference(db, null, true),
+    /signed-in creator account/i
+  );
+  assert.throws(
+    () => setCreatorLeagueRankingPreference(db, { id: "creator-a" }, "false"),
+    /whether your Creator League ranking is visible/i
+  );
 });
 
 test("Creator League ranking rejects unsupported periods and invalid divisions", () => {
