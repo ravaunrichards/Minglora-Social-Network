@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { getAIProviderCredentialStatus } from './provider-config.js';
+import { getAIProviderCredentialStatus, listAIProviderCredentialStatuses } from './provider-config.js';
 
 const nowIso = (now = new Date()) => new Date(now).toISOString();
 const makeId = () => randomUUID();
@@ -99,6 +99,7 @@ export function getAIProviderStatus(env = process.env) {
     model: configured ? model : null,
     credentialsPresent,
     providerCredentialStatus,
+    providerCatalogue: listAIProviderCredentialStatuses(env),
     adapterAvailable: false,
     connected: false,
     executionEnabled: false,
