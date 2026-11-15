@@ -44,6 +44,8 @@ test("daily and weekly Creator League rankings browse divisions without mixing r
   const previousWeek = new Date("2026-11-08T12:00:00.000Z");
 
   for (const id of ["creator-a", "creator-b", "creator-c", "outside-region"]) addMember(db, id);
+  // The higher-division fixture must not also appear in the D5 daily/weekly rows.
+  db.creatorLeagueProfiles.find(item => item.userId === "creator-c").leagueClass = "C1";
   db.users.find(item => item.id === "outside-region").country = "USA";
   db.creatorLeagueProfiles.find(item => item.userId === "outside-region").region = "USA";
 
