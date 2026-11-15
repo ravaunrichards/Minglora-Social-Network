@@ -227,3 +227,14 @@ The motion-index schema keeps the original `catalog_motion_preset` and the effec
 - The build-time generator routes only that exact gift code to assets/3d-assets/gift-models/keeper-of-atlantis-model.mjs and emits the canonical GLTF, keeper-of-atlantis-original-v1 primary SVG and transparent icon.
 - Gift Studio and LIVE continue using the existing canonical asset paths, model viewer, SVG fallback and server-confirmed gift event path. No gift transaction or route is added.
 - Manifest provenance and tests record the dedicated model source as design-review-pending; human visual/right review and physical-device QA are not claimed.
+
+
+## Keeper of Atlantis LIVE event motion/audio — 2026-11-15
+
+- Canonical source catalogue fields retain cosmic-orbit, the existing animation key and 1,900-ms duration.
+- scripts/generate-live-gift-motion-index.mjs maps exact gift code keeper-of-atlantis-15000-mgl to effective atlantis-trident-surge. The generated motion index retains both the source catalogue preset and runtime override.
+- public/gift-effects.js applies the trident tidal-rise keyframes at the existing subject-aware Web Animations mount.
+- The same server-confirmed gift event dispatches playKeeperOfAtlantis: Web Audio synthesis layers filtered underwater wave noise, a sub-bass impact, five glass-like bells and high-frequency bubbles.
+- Sound design ID keeper-of-atlantis-deep-surge-and-trident-bells-v1 is explicitly recorded as synthesized, not mastered. Sound opt-out and reduced-motion preferences remain respected.
+- HTML and the service worker use /gift-effects.js?v=20261115-keeper-atlantis-surge-1; the service-worker shell cache is v319.
+- No production catalogue row, Coin price, wallet, transaction, payout or deployment configuration was changed.
