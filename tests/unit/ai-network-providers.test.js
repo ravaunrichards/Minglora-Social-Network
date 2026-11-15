@@ -147,7 +147,7 @@ test('Creator Studio generation is owner-MFA protected, calls the moderation ada
 
 test('Creator Studio UI lets an owner trigger generation and renders human-review-only output', () => {
   for (const token of [
-    "data-ai-action=\\\"creator-generate\\\"",
+    'data-ai-action="creator-generate"',
     "request('/creator-jobs/' + encodeURIComponent(id) + '/generate'",
     'Generate with OpenAI',
     'Retry AI generation',
