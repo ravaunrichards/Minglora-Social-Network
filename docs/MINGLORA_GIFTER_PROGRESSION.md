@@ -18,11 +18,11 @@ Every account starts with **no gifting badge and all 50 Gifter Levels locked**. 
   820, 1260, 1920, 2840, 4340, 6420, 9280, 13500, 19400, 27600,
   39600, 54600, 75800, 105000, 144000, 196000, 265000, 357000, 478000, 637000,
   845000, 1120000, 1470000, 1920000, 2500000, 3230000, 4180000, 5430000, 6890000, 8780000,
-  11200000, 14100000, 17800000, 22300000, 27900000, 37500000, 47500000, 60000000, 75000000, 80000000
+  11200000, 14100000, 17800000, 22300000, 30000000, 37500000, 47500000, 60000000, 75000000, 97500000
 ])
 ```
 
-**Reference precedence:** The primary `Gifters Level Up.png` chart is the governing Coin-threshold source when supplied reference panels conflict. It specifies Level 45 at 27,900,000 Coins and Level 50 at 80,000,000 Coins. The separate `Levels 45-49.jpg` and `Levels 50.jpg` panels show conflicting 30,000,000 and 97,500,000 amounts for those levels; those conflicting secondary values are not used for live progression. Level 48 remains 60,000,000 Coins as shown in the supplied Levels 45–49 panel.
+**Reference precedence:** Live thresholds use the widely reproduced TikTok LIVE gifter community reference table, not the conflicting lower values in the old `Gifters Level Up.png` artwork. The corrected thresholds are Level 45 = 30,000,000 Coins and Level 50 = 97,500,000 Coins. Level 48 remains 60,000,000 Coins in the selected reference table. TikTok does not publish an official threshold table, so these are community-compiled reference amounts; see the cited comparison at https://tikradar.io/blog/tiktok-gifter-levels/ and the full 1–50 table at https://tikradar.io/blog/tiktok-gifter-level-50-cost/. The chart artwork/layout is intentionally left unchanged; the server-driven level directory is authoritative for unlocks.
 
 The maximum level is 50. The client receives the server-calculated level, progress, chart, history, and leaderboard; it cannot submit or award XP. Earned levels remain unlocked. An authorized MFA-verified Creator Hub admin may separately grant a level (including all 50), with an admin-awarded marker and audit entry; this does not add Coin spend or change any wallet. An admin reset starts a new progression epoch without deleting the original gift ledger or lifetime history.
 
