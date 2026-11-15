@@ -201,3 +201,11 @@ No catalogue record, Coin value, wallet, transaction, payout or database offer i
 
 
 The motion-index schema keeps the original `catalog_motion_preset` and the effective `motion_preset` as separate fields. The asset manifest carries `gift_specific_motion_override` so consumers and reviewers can distinguish catalog defaults from exact-code choreography. Strict validation now compares the canonical field to the source gift row while allowing an explicit runtime override.
+
+
+## Royal Lions Scepter bespoke asset integration — 2026-11-15
+
+- Canonical source item: `royal-lions-scepter-15000-mgl` (Royal Lions Scepter); the source catalogue's fantasy category, configured 15,000-Coin value, existing `grand-entry` animation and sound mapping are retained.
+- The build-time generator routes that exact gift code to `assets/3d-assets/gift-models/royal-lions-scepter-model.mjs`, producing the canonical GLTF path alongside the `royal-lions-scepter-original-v1` primary SVG and transparent icon.
+- Gift Studio and LIVE continue to use the existing canonical asset paths, 3D preview loader, SVG fallback and server-confirmed gift event path. No new gift event or transaction route is introduced.
+- The manifest/test suite records the bespoke source as design-review-pending and verifies the source identity, model geometry and SVG artwork. Rights/human visual review and physical-device QA are not claimed.
