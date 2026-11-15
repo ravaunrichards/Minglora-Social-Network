@@ -83,8 +83,12 @@
         '<span class="minglora-menu-item-copy"><strong>' + item.label + '</strong><small>' + item.detail + '</small></span>' +
         '<span class="minglora-menu-external" aria-hidden="true">↗</span></a>';
     }
+    const adminOnly = item.action === 'ai-network';
+    const adminAttributes = adminOnly
+      ? ' data-admin-only="true"' + (window.__mingloraAdminAccess?.canAccess === true ? '' : ' hidden aria-hidden="true"')
+      : '';
     return '<button type="button" class="minglora-menu-item" data-menu-item data-menu-action="' + item.action + '"' +
-      (item.pending ? ' disabled aria-disabled="true"' : '') + '>' +
+      adminAttributes + (item.pending ? ' disabled aria-disabled="true"' : '') + '>'
       '<span class="minglora-menu-item-icon">' + icon + '</span>' +
       '<span class="minglora-menu-item-copy"><strong>' + item.label + '</strong><small>' + item.detail + '</small></span>' +
       pending + '</button>';
@@ -144,7 +148,9 @@
         const headingMatches = Boolean(term && heading.includes(term));
         let visibleInSection = 0;
         section.querySelectorAll('[data-menu-item]').forEach(item => {
-          const matches = !term || headingMatches || normalizeMenuSearch(item.textContent).includes(term);
+          const adminDenied = item.dataset.adminOnly === 'true' &&
+            window.__mingloraAdminAccess?.canAccess !== true;
+          const matches = !adminDenied && (!term || headingMatches || normalizeMenuSearch(item.textContent).includes(term));
           item.hidden = !matches;
           if (matches) { visibleInSection += 1; visibleItems += 1; }
         });
@@ -154,6 +160,23 @@
       noResults.textContent = noResults.hidden ? '' : 'No menu results for "' + rawTerm + '".';
     }
 
+    const refreshAdminVisibility = () => {
+      const canAccess = window.__mingloraAdminAccess?.canAccess === true;
+      menuResults.querySelectorAll('[data-admin-only="true"]').forEach(item => {
+        item.hidden = !canAccess;
+        item.setAttribute('aria-hidden', String(!canAccess));
+      });
+      filterMenuItems(searchInput.value);
+    };
+    window.addEventListener('minglora:admin-access-updated', event => {
+      window.__mingloraAdminAccess = event.detail || { canAccess: false };
+      refreshAdminVisibility();
+    });
+    window.addEventListener('minglora:session-ended', () => {
+      window.__mingloraAdminAccess = { canAccess: false };
+      refreshAdminVisibility();
+    });
+    refreshAdminVisibility();
     searchInput.addEventListener('input', () => filterMenuItems(searchInput.value));
     searchInput.addEventListener('keydown', event => {
       if (event.key === 'Escape' && searchInput.value) {
@@ -275,6 +298,10 @@
       const item = event.target instanceof Element ? event.target.closest('[data-menu-action]') : null;
       if (!item || item.disabled) return;
       const action = item.dataset.menuAction;
+      if (action === 'ai-network' && window.__mingloraAdminAccess?.canAccess !== true) {
+        closeMenu();
+        return;
+      }
       const routes = {
         events: 'calendar',
         friends: 'friends',
@@ -301,7 +328,7 @@
       await runCreateAction(action);
     });
 
-    window.MingloraMenu = { open: openMenu, close: closeMenu };
+    window.MingloraMenu = { open: openMenu, close: closeMenu, refreshAdminVisibility };
   }
 
 
