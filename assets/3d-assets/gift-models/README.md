@@ -112,3 +112,13 @@ The existing gift build generates both subject-specific transparent SVG artwork 
 - Review state: `design-review-pending`; no human art, rights or device approval is implied
 - Integration: exact-code route in `scripts/generate-minglora-gifts.mjs`; canonical catalogue price, active flag and LIVE transaction flow remain unchanged
 - Verification target: desktop, tablet and mobile Chromium model-render matrix plus gift-catalogue model/artwork regression tests
+
+## Keeper of Atlantis v1
+
+- Source: `keeper-of-atlantis-model.mjs`
+- Target: canonical catalogue item `keeper-of-atlantis-15000-mgl` (Keeper of Atlantis)
+- Output: generated glTF 2.0, primary SVG and transparent gift icon
+- Geometry: three-prong ceremonial trident with curved gold prongs, faceted aquamarine and opal jewels, spiral-fluted staff, deep-sea enamel grip, nacre shell medallion with raised ribs and pearls, branching coral, sea-glass bubbles and curling tidal currents
+- Materials: named PBR meshes for gold, aquamarine, opal, nacre, coral, sea-glass and ocean-current elements; self-contained embedded geometry buffer
+- Review: `design-review-pending`; no premium, human visual, licensing or physical-device approval is implied
+- Integration: exact canonical gift code only; source catalogue Coin price (15,000), active flag and `cosmic-orbit` catalogue animation preset remain unchanged
