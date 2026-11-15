@@ -1,3 +1,17 @@
+## Execution checkpoint — 2026-11-15 (Task 15 finance/resource governance)
+
+- Task 15 status: **IN PROGRESS** (partial implementation; acceptance incomplete). The feature branch `feat/ai-network-finance-governance-20261115` starts from current `main` SHA `6125afeb5c5aca430bef921418edacbf87bef0f0` and is 14 commits ahead / 0 behind at this checkpoint, before this tracker update.
+- New migration `supabase/migrations/20261115110000_minglora_ai_finance_governance.sql` defines three RLS-protected service-role-only tables: `ai_finance_budget_policies`, `ai_finance_budget_history`, `ai_finance_usage_ledger`. Audit and usage records are append-only and usage source IDs are idempotent.
+- Budget policies cover owner, organization, department and individual AI identity scopes. Queue trigger validates token reservations, monthly spend reservations and concurrent-task caps on insertion and queue/running transitions; paused scopes block new work.
+- Existing private runtime gateway, designated-admin Node API, Finance & Resource Center and regression test file have been added/updated. The module README records actual limitations and routes.
+- Rollback-only Supabase migration compilation succeeded after a caught duplicate-variable defect was corrected. The transaction rolled back; no production tables, rows, runtime settings, secrets or provider connections changed.
+- CI/PR, merge, production migration, Edge deployment and Render deployment are **NOT STARTED**. There are no real usage events or provider-cost records. Compute/storage policy fields are recorded but need real worker metering adapters for enforcement. No worker execution is enabled.
+- Master accepted checklist remains **2/19 VERIFIED COMPLETE (10.53%)**; this partial work does not increase the verified count. Task 3 signed-in owner identity/media/device acceptance and Task 15 real metering/reconciliation remain outstanding.
+
+**Next action:** create draft PR, run CI, repair any failures and update this register from verified workflow evidence.
+
+---
+
 ## Execution checkpoint — 2026-11-15 (10-billion identity scale architecture design)
 
 - Added `docs/AI_BOT_NETWORK_SCALE_ARCHITECTURE.md` on branch `docs/ai-network-scale-architecture-20261115`.
