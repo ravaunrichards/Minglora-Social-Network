@@ -376,3 +376,7 @@ The overall LIVE asset mission remains incomplete: 1,748 source catalogue record
 - The combined 12-model browser matrix has been updated. It expects desktop 1280×900, tablet 768×1024 and mobile 390×844 (36 model/viewport cases). CI has not yet verified this new addition.
 - The current LIVE source count is 12 individually authored model modules and 10 gift-specific synthesized sound designs. Dedicated mastered per-gift sound files remain zero. This does not imply a complete premium catalogue; the other source catalogue entries continue to use procedural/category geometry and generic sound profiles.
 - Review status remains `design-review-pending`: no human art/audio signoff, rights clearance or physical-device certification is implied. No Coin value, active flag, wallet, transaction, creator earnings, payout or production offer is altered.
+
+## Djembe mahogany detail refinement — 2026-11-15
+
+The existing Djembe source model receives twelve flowing mahogany grain inlay meshes and a focused geometry/material regression test. This is a source-level quality enhancement, not a new catalogue gift. Human visual/rights approval and physical-device checks remain pending.
