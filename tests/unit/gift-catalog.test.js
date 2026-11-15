@@ -510,3 +510,30 @@ test("Baseball uses an original full-grain leather model and subject-specific Mi
   assert.ok(svg.includes('data-gift-artwork="baseball-original-v1"'), "the primary SVG must carry original Baseball artwork provenance");
   assert.ok(icon.includes('data-gift-artwork="baseball-original-v1"'), "the transparent gift icon must preserve the original Baseball artwork");
 });
+
+
+test("Carnival Music uses an original Caribbean steelpan and feather-fan model with matching SVG art",()=>{
+ const carnival=gifts.find(gift=>gift.code==="carnival-music-14x4zts");
+ assert.ok(carnival,"Carnival Music must remain in the canonical catalogue");
+ assert.equal(carnival.name,"Carnival Music");
+ assert.equal(carnival.category,"music");
+ assert.equal(carnival.coin_price,999,"configured Coin value remains unchanged");
+ assert.equal(carnival.active,true,"source catalogue publication flag remains unchanged");
+ const model=JSON.parse(readFileSync(path.join(assetRoot,carnival.code+".gltf"),"utf8"));
+ assert.equal(model.asset?.version,"2.0");
+ assert.equal(model.asset?.extras?.mingloraAssetId,"gift-carnival-music-3d-v1");
+ assert.equal(model.asset?.extras?.source,"assets/3d-assets/gift-models/carnival-music-model.mjs");
+ assert.match(model.asset?.extras?.artDirection||"",/Caribbean carnival steelpan.*individually modelled tuned note fields.*maple mallets.*satin feather fan/i);
+ assert.match(model.asset?.extras?.reviewStatus||"",/design-review-pending/);
+ const primitives=model.meshes?.[0]?.primitives||[];
+ assert.ok(primitives.length>=35,"steelpan, notes, mallets, stand and feather fan use distinct geometry");
+ const names=primitives.map(primitive=>primitive.extras?.mingloraPartName||"");
+ for(const signature of ["brushed chrome steelpan barrel","hammered steelpan dish","individually tuned steelpan note","maple pan mallet shaft","layered satin carnival feather","raised satin quill"])assert.ok(names.some(name=>name.includes(signature)),signature);
+ assert.ok(model.materials?.some(material=>material.name.includes("PBR material")));
+ assert.ok(model.buffers?.[0]?.uri.startsWith("data:application/octet-stream;base64,"),"GLTF geometry is self-contained");
+ assert.ok(model.accessors?.filter(accessor=>accessor.type==="VEC3").length>=80);
+ for(const accessor of model.accessors.filter(value=>value.type==="VEC3"&&value.min&&value.max))assert.ok(accessor.min.every(Number.isFinite)&&accessor.max.every(Number.isFinite));
+ const svg=readFileSync(path.join(assetRoot,carnival.code+".svg"),"utf8"),icon=readFileSync(path.join(assetRoot,carnival.code+"-icon.svg"),"utf8");
+ assert.ok(svg.includes('data-gift-artwork="carnival-music-original-v1"'));
+ assert.ok(icon.includes('data-gift-artwork="carnival-music-original-v1"'));
+});
