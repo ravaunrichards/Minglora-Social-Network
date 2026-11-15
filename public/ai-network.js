@@ -2376,8 +2376,17 @@
       await refresh(action === 'emergency-pause' ? 'Emergency pause confirmed. AI work remains stopped.' :
         action === 'identity-status' ? 'AI identity lifecycle status updated and audited.' : 'AI Network updated.');
     } catch (error) {
-      state.error = error.message;
-      paintSnapshot();
+      if (action === 'creator-generate') {
+        try {
+          await refresh(error.message || 'OpenAI generation failed. Check the provider status and retry the draft.');
+        } catch (refreshError) {
+          state.error = refreshError.message || error.message;
+          paintSnapshot();
+        }
+      } else {
+        state.error = error.message;
+        paintSnapshot();
+      }
     } finally {
       state.busy = false;
     }
