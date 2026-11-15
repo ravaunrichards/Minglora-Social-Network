@@ -34,6 +34,8 @@ test('All nine reference layouts define their own grid proportions, positions an
   assert.ok(start>=0);
   for(const layout of nine)assert.ok(contract.includes('data-live-layout="'+layout+'"'),layout+' layout is missing');
   assert.match(contract,/full-screen[\s\S]*?\.live-host-only-layout/);
+  assert.match(contract,/full-screen[^}]*grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
+  assert.match(contract,/@media\(max-width:760px\)[\s\S]*?full-screen[^}]*grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
   assert.match(contract,/fluid-panel[\s\S]*?bottom:calc/);
   assert.match(contract,/fluid-grid[\s\S]*?grid-template-columns:minmax\(0,2\.05fr\)/);
   assert.match(contract,/fixed-grid[\s\S]*?grid-template-rows:repeat\(3,minmax\(0,1fr\)\)/);
