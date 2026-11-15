@@ -180,3 +180,28 @@ Use supplied third-party screenshots only to understand geometry, hierarchy and 
 - PR: #387. Original isolated task commit: `b640926b112a1016ddc7ca3daf70a625274164c3`; seam compatibility correction: `a85c3d51d118a288198f230b40a4428810f15b25`. The current main head advanced to `7a6aa1b9...` during review and must be preserved in final sync.
 
 **Next action:** finish reconciling the documentation against current main, update the existing PR branch with a two-parent merge commit, rerun all required CI/layout/model-render checks on the new head, and merge only when all are verified successful.
+
+## Active execution checkpoint — Rose LIVE effects, current-main synchronization, 2026-11-15
+
+**Task ID:** LIVE-ASSET-ROSE-2
+
+- Project: Minglora Social Network only.
+- Rebuild base: latest inspected `main` commit `a472a93015be7a5fd6fbecbddf1e53cc162b7df8`.
+- Rebased implementation contains the Rose exact-code mapping `rose-4ieccm` → `rose-unfurl` and local synthesized sound ID `rose-petal-rustle-and-celesta-v1`.
+- Scope is restricted to the existing gift effect runtime, generated motion/asset manifests, HTML/service-worker asset references, regression tests and the LIVE asset documentation. It preserves the Gifter Level 38/48 correction, League UI removal and Gift Studio/Match Power-Up 3D preview removals from latest main.
+- Service-worker shell cache is advanced to `minglora-shell-v324-self-updating-1`; the Rose runtime query string matches in HTML and service worker. This preserves the unit-test cache namespace contract while retaining the latest-main cache entries.
+- The previous Rose PR passed full CI after the cache suffix fix; the subsequent latest-main rebase requires its own full CI and visual QA. Do not merge using earlier-head test results.
+- The old PR #388 was closed as superseded and its branch retained. PR #392 is superseded by this current-main rebuild; close it only after the replacement PR exists. Never force-push or delete the old branch.
+- No direct-main changes, production deployment, production catalogue activation, price change, wallet/transaction mutation, user-data change or Supabase change was made.
+
+### Remaining acceptance gates
+
+1. Open a replacement PR against the exact current main head and close only the superseded PR after the replacement is available.
+2. Run full repository CI, LIVE/MeetWave layout QA, AI browser acceptance and profile visual QA on the current replacement head.
+3. Continue original art direction beyond the eleven bespoke models; procedural output is not premium bespoke artwork.
+4. Complete per-item human visual review, licensing and provenance clearance; keep screenshot-derived third-party crops quarantined.
+5. Produce/approve mastered per-gift audio and standalone animation assets where required; Web Audio synthesis and code-driven motion do not satisfy those separate deliverables.
+6. Complete Android, iPhone, tablet, foldable, desktop/laptop and supported TV physical-device acceptance.
+7. Keep production gift offers inactive until version-3 assets, rights, genuine configured Coin values and transaction compatibility pass their separate release gate.
+
+This checkpoint records one focused Rose effect integration, not completion of the full LIVE asset mission.
