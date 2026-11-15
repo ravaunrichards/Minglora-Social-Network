@@ -120,4 +120,7 @@ The current Admin Centre remains designated-owner/MFA restricted. The staff tabl
 - Placement: Rewards banner on Gifts entry; Level-Up artwork in Gifter Progression with reference-only notice; 11 detailed panels in full LV 1–50; six broad-range sheets in their own ordered gallery; master PNG and preview together; each original PNG thumbnail beside its matching vector badge in the numbered level directory.
 - Added server allow-list routes for six range sheets and two master images; added the 6 range JPGs, 2 master files and all 50 individual PNGs to PWA precache. Original source files were not modified.
 - Added regression tests for all 71 source paths, destinations, routes, responsive presentation and offline caching.
-- Implementation blobs created; final tree/commit, PR and CI verification are pending.
+- Implementation commit: `1eaf3c48ad47f1802c98acf74d570f5711f87147`; compatibility/test correction commits: `25aacd61b1a8aba5f1de45fc187e97ebbee250d5` and `1eaf3c48ad47f1802c98acf74d570f5711f87147` (final PR head).
+- PR #384 merged into `main` on 2026-11-15; merge commit `5130c89780c413ad54e95e80749ba980630a5dde`.
+- Final CI run #12737: 1,229 tests passed, 0 failed. Seven-plus-two layout visual QA #435 passed; profile visual QA #182 passed; AI Network checks #307 passed; AI Network browser acceptance #182 passed.
+- Mainline verification confirms the 6 range routes, 2 master-sheet routes, all 50 original PNG previews, updated cache v320 and all 71-image regression coverage are present. No database, wallet, Coin thresholds, gift ledger or production records were changed. No deployment was triggered.
