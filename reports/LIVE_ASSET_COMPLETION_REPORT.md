@@ -338,3 +338,13 @@ The browser captures establish that all nine bespoke models load and remain visi
 - Tests verify the source catalogue identity, 15,000-Coin value, category, active flag, unchanged cosmic-orbit preset, model source/provenance, distinct named mesh/materials, embedded buffer, finite bounds and SVG artwork signature; the LIVE asset manifest test includes the bespoke model source.
 - The source item fields, production gift catalogue, wallet, Coin ledger, transactions and earnings were not changed.
 - Acceptance boundary: design-review-pending. No premium human visual approval, rights clearance, mastered sound, physical-device rendering or production publication is claimed.
+
+
+## Keeper of Atlantis motion and event-sound checkpoint — 2026-11-15
+
+- Added exact-code effective motion preset atlantis-trident-surge to scripts/generate-live-gift-motion-index.mjs and public/gift-effects.js. The canonical source cosmic-orbit preset, animation key and 1,900-ms duration remain unchanged and are stored separately from the generated override.
+- Added playKeeperOfAtlantis to the existing gift-event sound dispatcher. The local Web Audio cue combines an underwater-filtered wave swell, sub-bass tidal impact, five glass-like trident bell tones and restrained high-frequency bubble shimmer.
+- Added sound design provenance keeper-of-atlantis-deep-surge-and-trident-bells-v1 to the LIVE asset manifest as synthesized Web Audio, not a mastered sound file.
+- Preserved sound opt-out and prefers-reduced-motion handling. Updated the gift-effects script URL in HTML/service worker and advanced service-worker shell cache to v319.
+- Added unit coverage for the gift-specific motion override, runtime sound dispatch, synthesized cue layers and manifest provenance. No catalogue source field, production gift offer, price, wallet, transaction, creator earnings or payout changed.
+- Acceptance boundary: the model/effect remains design-review-pending. No mastered recording, embedded GLTF animation channel, Lottie/Rive asset, composer approval, licensing clearance, human visual approval or physical-device QA is claimed.
