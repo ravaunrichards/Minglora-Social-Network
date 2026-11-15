@@ -4,7 +4,7 @@
 
 - Repository: ravaunrichards/Minglora-Social-Network
 - Scope: Minglora Social Network only
-- Main branch checkpoint: 4bb3a9360a6e4b5b620560c0b3e65cea37a145fd
+- Main branch checkpoint: 49066ca68677b3a53e5ba074528375e19a2900ac (Gifters Rewards integration merged).
 - Main tree: b6a894cebb66d08d5f25c577b921cb7ebaf2743d
 - Latest post-merge CI: https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/43638100531 — completed successfully.
 - Admin Finance audit-history PR: #333, merged 2026-11-14 at 20:33:14 UTC; merge commit 4bb3a9360a6e4b5b620560c0b3e65cea37a145fd.
@@ -87,3 +87,15 @@ The current Admin Centre remains designated-owner/MFA restricted. The staff tabl
 - Commit 4bb3a9360a6e4b5b620560c0b3e65cea37a145fd is the current verified main checkpoint.
 - No working platform features were intentionally removed or replaced.
 - No production secrets, card data, bank passwords or API credentials were written to repository files.
+
+
+### Gifters Rewards — complete Gifter Levels and Badges inline
+- PR #372 merged into main on 2026-11-15; merge commit `49066ca68677b3a53e5ba074528375e19a2900ac`.
+- Gifters Rewards now embeds the shared authenticated Gifter Progression renderer instead of sending members only to a separate page.
+- The Rewards section reuses the original 11 ordered JPG badge-level panels, all 50 distinct numbered PNG badges and the existing 50-level names/threshold directory, current member progress, LV 25 LIVE entrance milestone, confirmed sent-gift history, Top Gifters leaderboard and earning rules.
+- The standalone Gifter Level & Badges page remains available. Embedded refresh preserves its inline mode; the Rewards CTA scrolls to the embedded levels.
+- Updated Gifts/progression script cache versions and bumped the service-worker shell to v316.
+- Changed files: `public/gifter-progression.js`, `public/gifts.js`, `public/index.html`, `public/sw.js`, `tests/unit/gifter-rewards-placement.test.js`, `tests/unit/gifter-badge-level-panels.test.js`.
+- PR-head checks on `404746d3e4d47b8e8eb6f1181ec263d183d96775`: CI passed (1,220 tests, 0 failures); seven-plus-two layout visual QA passed; AI Network browser acceptance passed; profile visual QA passed.
+- The exact merged file blobs were re-fetched from `main` and matched the verified PR branch content. No gift prices, wallet values, coin thresholds, progression ledger records or original badge files were changed.
+- Live signed-in member-browser acceptance for the new embedded Rewards section was not separately performed in this checkpoint.
