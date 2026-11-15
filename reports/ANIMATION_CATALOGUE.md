@@ -108,3 +108,23 @@ The generated motion-index record retains both `catalog_motion_preset` (unchange
 - Sound design ID: royal-lions-scepter-roar-and-regal-fanfare-v1. The existing Web Audio path synthesizes a low band-pass lion-like growl, a short low-frequency impact, five brass-like fanfare tones (196, 293.66, 392, 587.33 and 783.99 Hz) and a restrained high-pass jewel shimmer.
 - Audio is generated locally by Web Audio and is not a mastered/recorded sound asset. Existing sound opt-out behavior and reduced-motion handling remain active.
 - No Lottie/Rive file, GLTF skeletal animation track, mastered sound recording, licensing clearance, human design approval or physical-device QA is claimed. No catalogue pricing, activation, wallet or transaction state was changed.
+
+## Rose petal unfurl choreography and synthesized cue — 2026-11-15
+
+- Canonical gift code: `rose-4ieccm`; the source catalogue's animation key, default preset, duration, configured sound-preset field, category, Coin value and publication flag are not rewritten.
+- Effective runtime preset: `rose-unfurl`, selected only for the exact Rose code in the existing gift mount and preview. Its staged reveal, petal-opening overshoot and soft settle use the shared Web Animations path.
+- Sound design ID: `rose-petal-rustle-and-celesta-v1`; locally synthesized filtered petal-rustle noise plus five softly enveloped celesta-like notes at 523.25, 659.25, 783.99, 1046.5 and 1318.51 Hz with deterministic detuning/stereo placement.
+- The existing sound opt-out and reduced-motion behavior remain respected. The effect is runtime synthesis, not a mastered audio recording.
+- The generated motion index and LIVE asset manifest carry the exact-code override and sound-design provenance. Regression tests cover runtime selection, sound dispatch, opt-out/reduced motion and generated metadata.
+- Current known bespoke motion overrides total nine: Djembe Master, Palm Breeze, Gamer Otter, LIVE Island, Crystal Crown, Phoenix, Beach Maracas, Royal Lions Scepter and Rose. This count describes exact-code runtime overrides, not standalone animation files.
+- No Lottie/Rive/WebM/MP4 asset, embedded glTF animation channel, mastered recording, human visual approval, licensing clearance or physical-device QA is claimed. Rose remains `design-review-pending`; no catalogue price, activation, wallet or transaction state was changed.
+
+## Keeper of Atlantis trident surge and underwater bell cue — 2026-11-15
+
+- Canonical gift: `keeper-of-atlantis-15000-mgl` (Keeper of Atlantis). Existing source catalogue value (15,000 Coins), active flag, category and `cosmic-orbit` catalogue animation preset are preserved.
+- Bespoke source: `assets/3d-assets/gift-models/keeper-of-atlantis-model.mjs`, producing a self-contained glTF 2.0 mesh, primary SVG and transparent icon. Named PBR geometry includes the three-prong gold trident, aquamarine and opal gems, enamel grip, nacre shell medallion, coral fronds, bubbles and tidal accents.
+- Effective runtime preset: `atlantis-trident-surge`, selected only for the exact canonical code. The existing Web Animations route provides a staged surge, impact, rebound and settle.
+- Sound design ID: `keeper-of-atlantis-deep-surge-and-trident-bells-v1`; locally synthesized filtered underwater wave noise, sub-bass impact, five-note glassy trident-bell sequence and high-frequency bubble shimmer.
+- Sound respects the existing opt-out. Motion respects the existing reduced-motion path. Audio is Web Audio synthesis, not a mastered recording; animation is code-driven Web Animations, not an embedded glTF animation channel or Lottie/Rive file.
+- Generated motion index and LIVE asset manifest identify the exact-code preset and sound provenance. Regression tests cover canonical gift metadata, generated model, model render matrix, effect dispatch and metadata.
+- Review remains `design-review-pending`; human visual/audio approval, rights review and physical-device QA are not claimed. No price, active state, wallet, transaction, earnings, payout or production offer is changed.

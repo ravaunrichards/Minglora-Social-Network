@@ -180,3 +180,54 @@ Use supplied third-party screenshots only to understand geometry, hierarchy and 
 - PR: #387. Original isolated task commit: `b640926b112a1016ddc7ca3daf70a625274164c3`; seam compatibility correction: `a85c3d51d118a288198f230b40a4428810f15b25`. The current main head advanced to `7a6aa1b9...` during review and must be preserved in final sync.
 
 **Next action:** finish reconciling the documentation against current main, update the existing PR branch with a two-parent merge commit, rerun all required CI/layout/model-render checks on the new head, and merge only when all are verified successful.
+
+## Active execution checkpoint — Rose LIVE effects, current-main synchronization, 2026-11-15
+
+**Task ID:** LIVE-ASSET-ROSE-2
+
+- Project: Minglora Social Network only.
+- Rebuild base: latest inspected `main` commit `a472a93015be7a5fd6fbecbddf1e53cc162b7df8`.
+- Rebased implementation contains the Rose exact-code mapping `rose-4ieccm` → `rose-unfurl` and local synthesized sound ID `rose-petal-rustle-and-celesta-v1`.
+- Scope is restricted to the existing gift effect runtime, generated motion/asset manifests, HTML/service-worker asset references, regression tests and the LIVE asset documentation. It preserves the Gifter Level 38/48 correction, League UI removal and Gift Studio/Match Power-Up 3D preview removals from latest main.
+- Service-worker shell cache is advanced to `minglora-shell-v324-self-updating-1`; the Rose runtime query string matches in HTML and service worker. This preserves the unit-test cache namespace contract while retaining the latest-main cache entries.
+- The previous Rose PR passed full CI after the cache suffix fix; the subsequent latest-main rebase requires its own full CI and visual QA. Do not merge using earlier-head test results.
+- The old PR #388 was closed as superseded and its branch retained. PR #392 is superseded by this current-main rebuild; close it only after the replacement PR exists. Never force-push or delete the old branch.
+- No direct-main changes, production deployment, production catalogue activation, price change, wallet/transaction mutation, user-data change or Supabase change was made.
+
+### Remaining acceptance gates
+
+1. Open a replacement PR against the exact current main head and close only the superseded PR after the replacement is available.
+2. Run full repository CI, LIVE/MeetWave layout QA, AI browser acceptance and profile visual QA on the current replacement head.
+3. Continue original art direction beyond the eleven bespoke models; procedural output is not premium bespoke artwork.
+4. Complete per-item human visual review, licensing and provenance clearance; keep screenshot-derived third-party crops quarantined.
+5. Produce/approve mastered per-gift audio and standalone animation assets where required; Web Audio synthesis and code-driven motion do not satisfy those separate deliverables.
+6. Complete Android, iPhone, tablet, foldable, desktop/laptop and supported TV physical-device acceptance.
+7. Keep production gift offers inactive until version-3 assets, rights, genuine configured Coin values and transaction compatibility pass their separate release gate.
+
+This checkpoint records one focused Rose effect integration, not completion of the full LIVE asset mission.
+
+
+## Active execution checkpoint — Keeper of Atlantis gift assets, 2026-11-15
+
+**Task ID:** LIVE-ASSET-ATLANTIS-1
+
+- Project: Minglora Social Network only.
+- Combined review: PR #398, branch `feat/minglora-rose-live-assets-main-sync3-20261115`.
+- Reused only the original Keeper model source from superseded PR #379; no stale workflow, old cache version, or unrelated PR changes were copied.
+- New model source: `assets/3d-assets/gift-models/keeper-of-atlantis-model.mjs`. Generator route and original SVG art are exact-code only.
+- Runtime mapping: `keeper-of-atlantis-15000-mgl` → `atlantis-trident-surge`; sound ID `keeper-of-atlantis-deep-surge-and-trident-bells-v1`.
+- Source catalogue values preserved: fantasy category, 15,000 Coins, active=true, original `cosmic-orbit` catalogue preset. No database, wallet or transaction mutation.
+- The model render matrix now has 12 bespoke models × 3 Chromium viewports = 36 expected renders. Combined PR CI is pending for this addition.
+- Rose runtime and generated metadata remain included in the same combined script version. HTML/service-worker URL: `gift-effects.js?v=20261115-rose-unfurl-atlantis-trident-2`; service-worker cache: `minglora-shell-v325-self-updating-1`.
+- Remaining: run current-head CI/model-render QA; complete human visual/audio and licensing review; complete physical-device acceptance; continue original art direction for the rest of the catalogue. No full mission completion claim.
+
+## Active execution checkpoint — Djembe mahogany detail, 2026-11-15
+
+**Task ID:** LIVE-ASSET-DJEMBE-1
+
+- Source module: `assets/3d-assets/gift-models/djembe-model.mjs`.
+- Added twelve individually named grain inlay tubes following the carved mahogany shell surface.
+- Added `tests/unit/djembe-mahogany-grain.test.js` with topology, bounds, GLTF buffer and PBR material assertions.
+- Djembe catalogue identity, Coin value, active status, audio design and motion mapping remain unchanged.
+- The existing model remains `design-review-pending`; no physical-device or human rights/art approval is claimed.
+- Combined LIVE PR: #398. Its new Djembe test and complete asset build/visual QA must pass on the latest head before merge.

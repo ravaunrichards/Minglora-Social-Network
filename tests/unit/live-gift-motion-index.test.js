@@ -37,6 +37,7 @@ test("each LIVE motion entry resolves the exact unique artwork, model, animation
     assert.equal(entry.model_url, gift.model_url);
     assert.equal(entry.animation_key, gift.animation_key);
     const giftSpecificMotionPreset = {
+      "rose-4ieccm": "rose-unfurl",
       "djembe-master-1v3jzkm": "djembe-strike",
       "palm-breeze-gknyt0": "palm-canopy-sway",
       "gamer-otter-100-mgl": "gamer-otter-cheer",
@@ -44,7 +45,8 @@ test("each LIVE motion entry resolves the exact unique artwork, model, animation
       "crystal-crown-1itryeu": "crown-lustre",
       "phoenix-wep6uk": "phoenix-rise",
       "beach-maracas-1exxoag": "maraca-rhythm",
-      "royal-lions-scepter-15000-mgl": "lion-scepter-rise"
+      "royal-lions-scepter-15000-mgl": "lion-scepter-rise",
+      "keeper-of-atlantis-15000-mgl": "atlantis-trident-surge"
     };
     assert.equal(entry.motion_preset, giftSpecificMotionPreset[entry.code] || gift.animation_preset);
     assert.equal(entry.catalog_motion_preset, gift.animation_preset);
@@ -70,6 +72,7 @@ test("runtime and service worker use the generated index at the same canonical p
 
 test("bespoke gift runtime presets are reflected in the generated motion index without mutating the source catalogue", () => {
   const overrides = {
+    "rose-4ieccm": "rose-unfurl",
     "djembe-master-1v3jzkm": "djembe-strike",
     "palm-breeze-gknyt0": "palm-canopy-sway",
     "gamer-otter-100-mgl": "gamer-otter-cheer",
@@ -77,7 +80,8 @@ test("bespoke gift runtime presets are reflected in the generated motion index w
     "crystal-crown-1itryeu": "crown-lustre",
     "phoenix-wep6uk": "phoenix-rise",
     "beach-maracas-1exxoag": "maraca-rhythm",
-      "royal-lions-scepter-15000-mgl": "lion-scepter-rise"
+      "royal-lions-scepter-15000-mgl": "lion-scepter-rise",
+      "keeper-of-atlantis-15000-mgl": "atlantis-trident-surge"
   };
   const sourceByCode = new Map(source.gifts.map(gift => [gift.code, gift]));
   for (const [code, preset] of Object.entries(overrides)) {
