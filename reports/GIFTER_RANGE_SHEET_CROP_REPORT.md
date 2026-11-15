@@ -9,7 +9,7 @@ Only the six original Gifter range-reference JPGs were processed to remove solid
 | LV.20 - LV.29.jpg | 998×580 | 998×580 | 0 / 0 / 0 / 0 |
 | LV.30 - LV.39.jpg | 995×580 | 995×580 | 0 / 0 / 0 / 0 |
 | LV.40 - LV.49.jpg | 988×588 | 988×588 | 0 / 0 / 0 / 0 |
-| LV.50+.jpg | 1006×594 | 1006×592 | 0 / 0 / 0 / 2 |
+| LV.50+.jpg | 1006×592 | 1006×592 | 0 / 0 / 0 / 0 |
 
 Detection rule: near-black pixels have every RGB channel ≤ 42; an outer row or column is removed only when at least 99.2% of its pixels meet that rule. A 12% per-edge cap and 76% minimum-content gate prevent aggressive crops.
 
