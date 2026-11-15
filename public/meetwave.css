@@ -2643,3 +2643,38 @@
   .mw-meeting .mw-layout-option .mw-layout-preview{flex-basis:36px!important;width:36px!important;height:44px!important;min-width:36px!important}
   .mw-meeting .mw-layout-option .mw-layout-preview svg{width:28px!important;height:34px!important}
 }
+
+
+/* Roundtable side boxes include unoccupied invite seats as well as connected guests. */
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout][data-guest-layout="roundtable-1"]>.live-guest-seat[data-seat-index],
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout][data-guest-layout="roundtable-2"]>.live-guest-seat[data-seat-index]{
+  position:absolute!important;z-index:4!important;width:18%!important;height:20%!important;
+  min-width:0!important;min-height:0!important;grid-column:auto!important;grid-row:auto!important;
+}
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout][data-guest-layout="roundtable-1"]>.mw-empty-seat,
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout][data-guest-layout="roundtable-2"]>.mw-empty-seat{
+  display:grid!important;place-items:center!important;align-content:center!important;
+  padding:3px!important;background:rgba(27,39,58,.9)!important;
+}
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout][data-guest-layout="roundtable-1"]>.live-guest-seat[data-seat-index="1"],
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout][data-guest-layout="roundtable-2"]>.live-guest-seat[data-seat-index="1"]{left:2%!important;right:auto!important;top:3%!important}
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout][data-guest-layout="roundtable-1"]>.live-guest-seat[data-seat-index="2"],
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout][data-guest-layout="roundtable-2"]>.live-guest-seat[data-seat-index="2"]{left:auto!important;right:2%!important;top:3%!important}
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout][data-guest-layout="roundtable-1"]>.live-guest-seat[data-seat-index="3"],
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout][data-guest-layout="roundtable-2"]>.live-guest-seat[data-seat-index="3"]{left:2%!important;right:auto!important;top:27%!important}
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout][data-guest-layout="roundtable-1"]>.live-guest-seat[data-seat-index="4"],
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout][data-guest-layout="roundtable-2"]>.live-guest-seat[data-seat-index="4"]{left:auto!important;right:2%!important;top:27%!important}
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout][data-guest-layout="roundtable-1"]>.live-guest-seat[data-seat-index="5"],
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout][data-guest-layout="roundtable-2"]>.live-guest-seat[data-seat-index="5"]{left:2%!important;right:auto!important;top:51%!important}
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout][data-guest-layout="roundtable-1"]>.live-guest-seat[data-seat-index="6"],
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout][data-guest-layout="roundtable-2"]>.live-guest-seat[data-seat-index="6"]{left:auto!important;right:2%!important;top:51%!important}
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout][data-guest-layout="roundtable-1"]>.live-guest-seat[data-seat-index="7"],
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout][data-guest-layout="roundtable-2"]>.live-guest-seat[data-seat-index="7"]{left:2%!important;right:auto!important;top:75%!important}
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout][data-guest-layout="roundtable-1"]>.live-guest-seat[data-seat-index="8"],
+.mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout][data-guest-layout="roundtable-2"]>.live-guest-seat[data-seat-index="8"]{left:auto!important;right:2%!important;top:75%!important}
+@media(max-width:760px){
+  .mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout][data-guest-layout="roundtable-1"]>.live-guest-seat[data-seat-index],
+  .mw-meeting #mw-screen-stage[data-screen-layout] #mw-grid[data-layout][data-guest-layout="roundtable-2"]>.live-guest-seat[data-seat-index]{
+    width:22%!important;height:19%!important;
+  }
+}
