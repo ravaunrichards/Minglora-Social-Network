@@ -181,6 +181,7 @@ test('private conversation schema is service-role only, owner-scoped and lease/t
   assert.match(migration,/v_owner <> p_actor_user_id/);
   assert.match(migration,/unique \(owner_user_id, request_key\)/);
   assert.match(migration,/lease_expires_at/);
+  assert.match(migration,/if v_reserved > v_limit then/);
   assert.match(migration,/daily Minglora AI conversation token budget is exhausted/);
   assert.match(migration,/reserved_tokens = greatest\(0, reserved_tokens - v_request\.reserved_tokens\)/);
   assert.match(migration,/status = 'completed'/);
