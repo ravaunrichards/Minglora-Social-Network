@@ -83,7 +83,7 @@ test("updated progression assets and all original JPG panels are included in the
   const html = read("public/index.html");
   const sw = read("public/sw.js");
   assert.ok(html.includes("/gifter-progression.css?v=20261111-tiktok-readable-badge-size-2"));
-  assert.ok(html.includes("/gifter-progression.js?v=20261115-gifter-rewards-inline-1"));
+  assert.ok(html.includes("/gifter-progression.js?v=20261115-gifter-badge-vector-sprite-1"));
   panelFiles.forEach(filename => {
     const routeName = filename.toLowerCase().replaceAll(" ", "-");
     assert.ok(sw.includes("/assets/gifter-badge-level-panels/" + routeName));
