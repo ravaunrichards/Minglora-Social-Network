@@ -11,6 +11,12 @@
   const esc = value => String(value ?? "").replace(/[&<>"']/g, char => ({
     "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
   })[char]);
+  function leagueAssetIcon(symbol, className, label) {
+    const safeSymbol = String(symbol || "").replace(/[^a-z0-9-]/gi, "");
+    if (!safeSymbol) return "";
+    const accessibility = label ? " role='img' aria-label='" + esc(label) + "'" : " aria-hidden='true'";
+    return "<svg class='league-asset-icon " + esc(className || "") + "' viewBox='0 0 128 128'" + accessibility + " focusable='false'><use href='/assets/league/league-emblems.svg?v=20261116-original-league-svg-assets-1#" + safeSymbol + "'></use></svg>";
+  }
   function currentPowerup() {
     return (state.overview?.powerups || []).find(item => item.id === state.selectedPowerupId) || null;
   }
@@ -42,7 +48,7 @@
       const active = power.id === selected?.id;
       return "<button type='button' class='league-powerup-info-card" + (active ? " is-selected" : "") +
         "' data-powerup-select='" + esc(power.id) + "' aria-pressed='" + active + "'>" +
-        "<span class='league-powerup-card-symbol' aria-hidden='true'>" + esc(power.symbol) + "</span>" +
+        "<span class='league-powerup-card-symbol' aria-hidden='true'>" + ({"momentum_boost":leagueAssetIcon("powerup-momentum","league-powerup-svg-icon"),"score_multiplier":leagueAssetIcon("powerup-multiplier","league-powerup-svg-icon"),"shield":leagueAssetIcon("powerup-shield","league-powerup-svg-icon"),"time_boost":leagueAssetIcon("powerup-time","league-powerup-svg-icon")}[power.id] || esc(power.symbol)) + "</span>" +
         "<strong>" + esc(power.name) + "</strong><p>" + esc(power.description) + "</p>" +
         "<small>" + (power.usedToday ? "Used today" : "One free use per UTC day") + "</small>" +
         "<span class='league-powerup-card-action'>" + (active ? "Selected" : "Select power-up") + "</span></button>";
@@ -192,9 +198,9 @@
     if (!ranked.length) return "";
     return "<div class='league-podium' aria-label='Top three creators'>" + ranked.map(({member, place}) =>
       "<button type='button' class='league-podium-member is-place-" + place + "' data-league-profile='" + esc(member.id) + "' aria-label='Open " + esc(member.name || member.username || "creator") + " profile, ranked number " + place + "'>" +
-        "<span class='league-podium-crown' aria-hidden='true'>" + (place === 1 ? "👑" : place === 2 ? "✦" : "✧") + "</span>" +
+        "<span class='league-podium-crown' aria-hidden='true'>" + leagueAssetIcon("rank-" + place, "league-podium-crown-icon") + "</span>" +
         "<span class='league-podium-avatar-wrap'>" + image(member, "ml-creator-ring ml-creator-ring--league") +
-          "<span class='league-podium-avatar-medal is-place-" + place + "' aria-hidden='true'>" + place + "</span></span>" +
+        "</span>" +
         "<strong>" + esc(member.name || "Minglora creator") + "</strong><small>@" + esc(member.username || "creator") + "</small>" +
         "<b class='league-podium-points'>" + Number(member.points ?? member.seasonPoints ?? 0).toLocaleString() + " pts</b>" +
         "<span class='league-podium-base' aria-hidden='true'>" + place + "</span></button>"
@@ -206,7 +212,7 @@
       const position = Math.max(0, Number(item.position || 0));
       const award = position >= 4 && position <= 10 ? "top-ten" : position >= 11 && position <= 20 ? "top-twenty" : "";
       const awardMarkup = award
-        ? "<span class='league-ranking-medal league-ranking-medal--" + award + "' aria-hidden='true'>" + (award === "top-ten" ? "✦" : "◆") + "</span>"
+        ? "<span class='league-ranking-medal league-ranking-medal--" + award + "' aria-hidden='true'>" + leagueAssetIcon(award === "top-ten" ? "award-top-ten" : "award-top-twenty", "league-ranking-medal-icon") + "</span>"
         : "";
       const bandMarkup = award
         ? "<span class='league-leader-band league-leader-band--" + award + "'>" + (award === "top-ten" ? "TOP 10" : "TOP 20") + "</span>"
@@ -237,10 +243,10 @@
       if (!levels.length) return "";
       const currentTier = levels.includes(active);
       return "<article class='league-tier-card league-tier-card--" + group.tier + (currentTier ? " is-active-tier" : "") + "'>" +
-        "<div class='league-tier-card-heading'><span class='league-tier-emblem' role='img' aria-label='League " + group.tier + " emblem'><b>" + group.tier + "</b></span>" +
+        "<div class='league-tier-card-heading'><span class='league-tier-emblem'>" + leagueAssetIcon("division-" + group.tier.toLowerCase(), "league-tier-emblem-icon", "League " + group.tier + " emblem") + "</span>" +
         "<span><strong>League " + group.tier + "</strong><small>" + group.title + "</small></span></div>" +
         "<div class='league-tier-class-list'>" + levels.map(item =>
-          "<span class='league-class-step " + (item === active ? "is-current" : "") + "' " + (item === active ? "aria-current='true' aria-label='Current class " + esc(item) + "'" : "") + ">" + esc(item) + "</span>"
+          "<span class='league-class-step " + (item === active ? "is-current" : "") + "' " + (item === active ? "aria-current='true' aria-label='Current class " + esc(item) + "'" : "") + ">" + leagueAssetIcon("fragment-" + group.tier.toLowerCase(), "league-class-step-icon") + "<span>" + esc(item) + "</span></span>"
         ).join("") + "</div></article>";
     }).join("");
     return "<div class='league-class-ladder league-tier-grid' aria-label='Creator League class hierarchy'>" + groups + "</div>";
@@ -254,9 +260,9 @@
       { tier: "D", title: "D2–D5", rules: [[2, "Top 10%"], [1, "Top 20%"], [0, "Other placements"]] }
     ];
     const cards = groups.map(group =>
-      "<article class='league-fragment-rule-card league-tier-card--" + group.tier + "'><div class='league-fragment-rule-heading'><span class='league-fragment-tier-mark'>" + group.tier + "</span><strong>" + group.title + "</strong></div>" +
+      "<article class='league-fragment-rule-card league-tier-card--" + group.tier + "'><div class='league-fragment-rule-heading'><span class='league-fragment-tier-mark'>" + leagueAssetIcon("division-" + group.tier.toLowerCase(), "league-fragment-tier-icon") + "</span><strong>" + group.title + "</strong></div>" +
       "<div class='league-fragment-rule-steps'>" + group.rules.map(([value, placement]) =>
-        "<span class='league-fragment-rule-step'><b>" + (value > 0 ? "+" : "") + value + "</b><small>" + placement + "</small></span>"
+        "<span class='league-fragment-rule-step'>" + leagueAssetIcon("fragment-" + group.tier.toLowerCase(), "league-fragment-step-icon") + "<b>" + (value > 0 ? "+" : "") + value + "</b><small>" + placement + "</small></span>"
       ).join("") + "</div></article>"
     ).join("");
     return "<section class='card league-fragment-reference' id='league-fragment-reference-zone' aria-labelledby='league-fragment-reference-heading'>" +
@@ -363,7 +369,7 @@
     const matches = overview.activeMatches || [];
     const leaderboard = overview.leaderboard || [];
     const events = overview.recentEvents || [];
-    return "<div class='league-page'><section class='league-hero' id='league-hero-zone'><div class='league-hero-copy'><span class='league-eyebrow'>MINGLORA COMPETITIVE</span><h1>League Arena</h1><p>Build your LIVE creator league. Compete in matches. Earn your place at the top.</p><div class='league-hero-tags'><span>🌍 " + esc(p.region) + " league</span><span>Season starts " + esc(p.seasonKey) + "</span></div></div><div class='league-hero-emblem'><span>🏆</span><small>" + esc(p.leagueClass) + "</small></div></section>" +
+    return "<div class='league-page'><section class='league-hero' id='league-hero-zone'><div class='league-hero-copy'><span class='league-eyebrow'>MINGLORA COMPETITIVE</span><h1>League Arena</h1><p>Build your LIVE creator league. Compete in matches. Earn your place at the top.</p><div class='league-hero-tags'><span>🌍 " + esc(p.region) + " league</span><span>Season starts " + esc(p.seasonKey) + "</span></div></div><div class='league-hero-emblem'>" + leagueAssetIcon("division-" + String(p.leagueClass || "D5").charAt(0).toLowerCase(), "league-hero-emblem-icon", "Current " + p.leagueClass + " division emblem") + "<small>" + esc(p.leagueClass) + "</small></div></section>" +
       "<section class='league-overview-grid' id='league-overview-zone'><article class='card league-stat-card league-primary-stat'><span class='league-eyebrow'>CURRENT CREATOR LEAGUE</span><div class='league-stat-value'>" + esc(p.leagueClass) + "</div><strong>" + Number(p.todayGiftPoints).toLocaleString() + " LIVE Gift points today</strong><p>" + Number(p.lifetimeGiftPoints).toLocaleString() + " lifetime eligible points · " + Number(p.seasonPoints).toLocaleString() + " this week</p><small>Your class is determined by daily placement and fragments, not a lifetime gift threshold.</small></article>" +
       "<article class='card league-stat-card'><span class='league-eyebrow'>LEAGUE FRAGMENTS</span><div class='league-stat-value match-rank-value'>" + (p.fragments >= 0 ? "+" : "") + Number(p.fragments || 0) + "</div><strong>" + (p.fragments >= 0 ? Number(p.fragments || 0) + " / 4 promotion fragments" : Math.abs(Number(p.fragments || 0)) + " / 4 demotion fragments") + "</strong>" + meter(Math.abs(Number(p.fragments || 0)),4) + "<small>" + (p.fragments < 0 ? "Recover fragments to protect your current tier." : p.fragments === 0 ? "Earn fragments through strong daily placement." : "Keep earning fragments to reach the next tier.") + "</small></article>" +
       "<article class='card league-stat-card'><span class='league-eyebrow'>LEAGUE SHIELDS</span><div class='league-stat-value match-rank-value'>" + Number(p.leagueShields || 0) + " / 10</div><strong>Automatic fragment protection</strong><p>A Shield absorbs one fragment loss before it affects your progress.</p><small>Earn one when promoted. Unused Shields do not expire.</small></article></section>" +
