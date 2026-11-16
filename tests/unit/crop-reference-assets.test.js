@@ -64,6 +64,12 @@ test("the nine uploaded guest-layout references are used as LIVE layout thumbnai
 test("ENIGMA is the default profile avatar and is served from the original crop-reference file", () => {
   assert.match(app, /DEFAULT_PROFILE_AVATAR='\/assets\/profile-defaults\/enigma\.png/);
   assert.match(server, /'Crop References','Profile Picture','ENIGMA\.png'/);
+  const migration = read("database/migrations/086_minglora_enigma_default_profile_picture.sql");
+  assert.match(migration, /ALTER COLUMN avatar_url SET DEFAULT/);
+  assert.match(migration, /Crop%20References\/Profile%20Picture\/ENIGMA\.png/);
+  assert.match(migration, /WHERE avatar_url IN \(/);
+  assert.match(migration, /default-profile-avatar-3d\.svg/);
+
   assert.match(serviceWorker, /profile-defaults\/enigma\.png/);
 });
 
