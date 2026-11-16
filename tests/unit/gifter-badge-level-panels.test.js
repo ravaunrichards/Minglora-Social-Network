@@ -66,7 +66,7 @@ test("all 50 individual badge files are valid PNGs with distinct image content",
   });
   assert.equal(new Set(hashes).size, 50, "no Level reuses another Level's badge image");
   assert.match(progression, /String\(levelNumber\)\.padStart\(2, "0"\)/);
-  assert.match(server, /individualGifterBadgeMatch[\s\S]*?Level_Badges_01-50_Individual[\s\S]*?'Content-Type':'image\/png'/);
+  assert.match(server, /individualGifterBadgeMatch[\s\S]*?badgeRangeFile[\s\S]*?'Crop References','Gifters Badges','Png'/);
   assert.match(server, /badgeLevel<1\|\|badgeLevel>50/);
 });
 
@@ -82,8 +82,8 @@ test("level artwork route is an explicit allow-list and serves JPEG without expo
 test("updated progression assets and all original JPG panels are included in the app shell", () => {
   const html = read("public/index.html");
   const sw = read("public/sw.js");
-  assert.ok(html.includes("/gifter-progression.css?v=20261116-gifter-marker-original-size-1"));
-  assert.ok(html.includes("/gifter-progression.js?v=20261115-gifter-no-black-edge-1"));
+  assert.ok(html.includes("/gifter-progression.css?v=20261116-gifter-bright-stage-overlays-2"));
+  assert.ok(html.includes("/gifter-progression.js?v=20261116-bright-stage-badge-overlays-1"));
   panelFiles.forEach(filename => {
     const routeName = filename.toLowerCase().replaceAll(" ", "-");
     assert.ok(sw.includes("/assets/gifter-badge-level-panels/" + routeName));
