@@ -6,96 +6,122 @@ import { chromium } from 'playwright';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 const read=relative=>fs.readFileSync(path.join(root,relative),'utf8');
-const liveCss=read('public/styles.css')+'\n'+read('public/live-room-fit.css');
+const liveCss=read('public/styles.css')+'\n'+read('public/live-room-fit.css')+'\n'+read('public/live-tiktok-compact.css');
 const meetwaveCss=read('public/meetwave.css');
-const screens=['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight'];
-const guests=['roundtable-1','roundtable-2'];
+const layouts=['full-screen','fluid-panel','fluid-grid','fixed-grid','fixed-panel','side-by-side','spotlight','roundtable-1','roundtable-2'];
+const expectedColumns={'fluid-grid':2,'fixed-grid':3,'fixed-panel':2,'side-by-side':4,'spotlight':4,'roundtable-2':3};
 const viewports=[{name:'desktop',width:1280,height:900},{name:'mobile',width:390,height:844}];
-const artifacts=path.join(root,'artifacts/layout-separation-visual');
+const artifacts=path.join(root,'artifacts/cropped-guest-layout-visual');
 fs.mkdirSync(artifacts,{recursive:true});
-const seatMarkup=Array.from({length:9},(_,index)=>{
-  const role=index===0?'is-host':'is-guest';
-  return '<div class="live-guest-seat '+role+'" data-seat-index="'+index+'"><span>Seat '+index+'</span></div>';
+const makeSeats=meetwave=>Array.from({length:9},(_,index)=>{
+  const host=index===0;
+  const classes='live-guest-seat '+(meetwave?'mw-video-tile ':'')+(host?'is-host'+(meetwave?' is-focused':''):'is-guest');
+  return '<article class="'+classes+'" data-seat-index="'+index+'" style="order:'+index+'"><span>Seat '+index+'</span></article>';
 }).join('');
+const makeHeading='<div class="live-guest-layout-heading"><strong>Guest stage</strong></div>';
 const browser=await chromium.launch({headless:true});
-let combinations=0;
-function assertStableScreenGeometry(current,baseline,message){
-  const currentColumns=String(current[0]).trim().split(/\s+/).map(parseFloat);
-  const baselineColumns=String(baseline[0]).trim().split(/\s+/).map(parseFloat);
-  assert.equal(currentColumns.length,baselineColumns.length,message+' (column count)');
-  for(let index=0;index<currentColumns.length;index++){
-    assert.ok(Math.abs(currentColumns[index]-baselineColumns[index])<=1,message+' (column '+(index+1)+': '+currentColumns[index]+'px versus '+baselineColumns[index]+'px)');
+let rendered=0;
+function columnCount(value){
+  const text=String(value||'').trim();
+  return !text||text==='none'?0:text.split(/\s+/).length;
+}
+function assertFullTile(tile,stage,label){
+  assert.ok(tile.display!=='none',label+' should be visible');
+  assert.ok(tile.width>=stage.width-24,label+' should fill the main stage');
+  assert.ok(tile.height>=stage.height-24,label+' should fill the main stage height');
+}
+function assertSmallTile(tile,stage,label){
+  assert.ok(tile.display!=='none',label+' should be visible');
+  assert.ok(tile.width>0&&tile.height>0,label+' must have a visible panel');
+  assert.ok(tile.width<stage.width*.55,label+' should remain a smaller guest panel');
+}
+function checkGeometry(layout,state,product,viewport){
+  const label=product+' '+layout+' '+viewport;
+  const host=state.seats[0],g1=state.seats[1],g2=state.seats[2],g3=state.seats[3],g5=state.seats[5];
+  if(layout==='full-screen'){
+    assertFullTile(host,state.grid,label+' main tile');
+    for(let index=1;index<9;index++)assert.equal(state.seats[index].display,'none',label+' should show only the main tile');
+  }else if(layout==='fluid-panel'){
+    assertFullTile(host,state.grid,label+' main tile');
+    assertSmallTile(g1,state.grid,label+' first lower-right panel');
+    assertSmallTile(g2,state.grid,label+' second lower-right panel');
+    assert.ok(g1.y<g2.y,label+' guest panels should stack vertically');
+    assert.ok(g1.x>state.grid.x+state.grid.width*.55,label+' guest panels should sit on the right');
+  }else if(layout==='fluid-grid'){
+    assert.equal(state.columns,2,label+' should have two columns');
+    assert.ok(host.height>g1.height*1.45,label+' host panel should span the two grid rows');
+    assert.ok(host.x<g1.x,label+' host panel should be on the left');
+    assert.ok(g1.x>host.x+host.width-3&&g2.x>host.x+host.width-3,label+' two guest panels should stack on the right');
+  }else if(layout==='fixed-grid'){
+    assert.equal(state.columns,3,label+' should be a fixed three-column grid');
+    assert.equal(state.visibleSeats,9,label+' should display all nine positions');
+  }else if(layout==='fixed-panel'){
+    assert.equal(state.columns,2,label+' should have a main and side-panel column');
+    assert.ok(host.height>g1.height*2.2,label+' main tile should span three rows');
+    for(const tile of [g1,g2,g3])assertSmallTile(tile,state.grid,label+' right-side panel');
+    assert.ok(g1.x>host.x+host.width-3,label+' right panels should be on the right');
+  }else if(layout==='side-by-side'){
+    assert.equal(state.columns,4,label+' should have four columns');
+    assert.ok(Math.abs(host.y-g1.y)<3,label+' two large panels should share the top row');
+    assert.ok(Math.abs(host.width-g1.width)<3,label+' top panels should be equally wide');
+    assert.ok(g2.y>host.y+host.height-3,label+' smaller guest panels should be below the top row');
+    assert.ok(g2.width<host.width,label+' lower guest panels should be smaller');
+  }else if(layout==='spotlight'){
+    assert.equal(state.columns,4,label+' should have four columns');
+    assert.ok(host.width>state.grid.width-24,label+' spotlight panel should span the full top width');
+    assert.ok(g1.y>host.y+host.height-3,label+' guest grid should sit under the spotlight panel');
+    assert.ok(g1.width<host.width*.4,label+' guest panels should occupy the lower grid');
+  }else if(layout==='roundtable-1'){
+    assertFullTile(host,state.grid,label+' background/main tile');
+    assertSmallTile(g1,state.grid,label+' left-side guest overlay');
+    assertSmallTile(g5,state.grid,label+' right-side guest overlay');
+    assert.ok(g1.x<state.grid.x+state.grid.width*.25,label+' left guest rail should sit on the left');
+    assert.ok(g5.x>state.grid.x+state.grid.width*.7,label+' right guest rail should sit on the right');
+  }else if(layout==='roundtable-2'){
+    assert.equal(state.columns,3,label+' should have three columns');
+    assert.ok(host.height>g1.height*2.5,label+' center panel should span four rows');
+    assert.ok(g1.x<host.x&&g5.x>host.x+host.width-3,label+' guests should be on both sides');
   }
-  assert.deepEqual(current.slice(1),baseline.slice(1),message);
+}
+function stateInPage(){
+  const grid=document.querySelector('#guest-grid');
+  const stage=document.querySelector('#guest-stage');
+  const tiles=Array.from(grid.querySelectorAll('.live-guest-seat'));
+  const getTile=tile=>{
+    const r=tile.getBoundingClientRect(),c=getComputedStyle(tile);
+    return {display:c.display,position:c.position,x:r.x,y:r.y,width:r.width,height:r.height,
+      columnStart:c.gridColumnStart,columnEnd:c.gridColumnEnd,rowStart:c.gridRowStart,rowEnd:c.gridRowEnd};
+  };
+  const gr=grid.getBoundingClientRect();
+  return {display:getComputedStyle(grid).display,columns:columnCount(getComputedStyle(grid).gridTemplateColumns),
+    grid:{x:gr.x,y:gr.y,width:gr.width,height:gr.height},visibleSeats:tiles.filter(t=>getComputedStyle(t).display!=='none').length,
+    seats:tiles.map(getTile),stage:[stage.getBoundingClientRect().width,stage.getBoundingClientRect().height]};
 }
 try{
   for(const viewport of viewports){
-    const livePage=await browser.newPage({viewport:{width:viewport.width,height:viewport.height}});
-    for(const mode of ['video','audio']){
-      const stageClass=mode==='audio'?'live-video-stage live-audio-stage':'live-video-stage';
-      const gridClass=mode==='audio'?'live-guest-layout audio-guest-layout':'live-guest-layout';
-      const body='<main id="live-player-shell"><section id="live-video-stage" class="'+stageClass+'" style="width:100%;min-height:560px"><div id="live-guest-layout" class="'+gridClass+'">'+seatMarkup+'</div></section></main>';
-      await livePage.setContent('<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>'+liveCss+'</style></head><body>'+body+'</body></html>');
-      for(const screen of screens){
-        let baseline=null;
-        const guestPositions=[];
-        for(const guest of guests){
-          const state=await livePage.evaluate(({screen,guest})=>{
-            const grid=document.querySelector('#live-guest-layout');
-            grid.dataset.liveLayout=screen;
-            grid.dataset.liveGuestLayout=guest;
-            const css=getComputedStyle(grid),host=getComputedStyle(grid.querySelector('.is-host'));
-            return {columns:css.gridTemplateColumns,stage:[document.querySelector('#live-video-stage').getBoundingClientRect().width,document.querySelector('#live-video-stage').getBoundingClientRect().height],screen:grid.dataset.liveLayout,guest:grid.dataset.liveGuestLayout,host:[host.gridColumnStart,host.gridColumnEnd,host.gridRowStart,host.gridRowEnd],seats:grid.querySelectorAll('.live-guest-seat').length};
-          },{screen,guest});
-          if(baseline){
-            assertStableScreenGeometry([state.columns,state.stage,state.screen,state.seats],baseline,mode+' LIVE '+screen+' screen mode or stage geometry changed when only guest layout changed at '+viewport.name);
-            assert.equal(state.guest,guest,'LIVE guest selection did not apply independently');
-          }else baseline=[state.columns,state.stage,state.screen,state.seats];
-          guestPositions.push(state.host);
-          combinations++;
-        }
-        assert.notDeepEqual(guestPositions[0],guestPositions[1],mode+' LIVE '+screen+' guest-box choices do not produce different host placement at '+viewport.name);
-        if(screen==='full-screen'&&viewport.name==='desktop'&&mode==='video'){
-          await livePage.screenshot({path:path.join(artifacts,'live-video-roundtable-1-desktop.png'),fullPage:true});
-        }
-        if(screen==='spotlight'&&viewport.name==='mobile'&&mode==='audio'){
-          await livePage.screenshot({path:path.join(artifacts,'live-audio-spotlight-mobile.png'),fullPage:true});
-        }
+    for(const product of ['live','meetwave']){
+      const page=await browser.newPage({viewport:{width:viewport.width,height:viewport.height}});
+      for(const layout of layouts){
+        const tiles=makeSeats(product==='meetwave');
+        const stageId=product==='live'?'live-video-stage':'mw-screen-stage';
+        const gridClass=product==='live'?'live-guest-layout':'mw-video-grid live-guest-layout';
+        const stageClass=product==='live'?'live-video-stage':'mw-screen-stage';
+        const layoutAttribute=product==='live'?'data-live-layout':'data-guest-layout';
+        const body=product==='live'
+          ?'<main id="live-player-shell"><section id="guest-stage" id="'+stageId+'" class="'+stageClass+'" style="width:100%;height:640px;min-height:560px"><div id="guest-grid" id="live-guest-layout" class="'+gridClass+'" '+layoutAttribute+'="'+layout+'">'+makeHeading+tiles+'</div></section></main>'
+          :'<main class="mw-meeting"><section id="guest-stage" id="'+stageId+'" class="'+stageClass+'" '+layoutAttribute+'="'+layout+'" style="width:100%;height:640px;min-height:560px"><div id="guest-grid" id="mw-grid" class="'+gridClass+'" data-layout="'+layout+'" data-guest-layout="'+layout+'">'+makeHeading+tiles+'</div></section></main>';
+        const css=product==='live'?liveCss:meetwaveCss;
+        await page.setContent('<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0;padding:0;width:100%;min-height:100%;}'+css+'</style></head><body>'+body+'</body></html>');
+        const state=await page.evaluate(stateInPage);
+        checkGeometry(layout,state,product,viewport.name);
+        const file=product+'-'+layout+'-'+viewport.name+'.png';
+        await page.screenshot({path:path.join(artifacts,file),fullPage:true});
+        rendered++;
       }
+      await page.close();
     }
-    await livePage.close();
-
-    const mwPage=await browser.newPage({viewport:{width:viewport.width,height:viewport.height}});
-    const mwBody='<main class="mw-meeting"><section id="mw-screen-stage" class="mw-screen-stage" style="width:100%;min-height:560px"><div id="mw-grid" class="live-video-stage mw-video-grid live-guest-layout">'+seatMarkup+'</div></section></main>';
-    await mwPage.setContent('<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>'+meetwaveCss+'</style></head><body>'+mwBody+'</body></html>');
-    for(const screen of screens){
-      let baseline=null;
-      const guestPositions=[];
-      for(const guest of guests){
-        const state=await mwPage.evaluate(({screen,guest})=>{
-          const stage=document.querySelector('#mw-screen-stage'),grid=document.querySelector('#mw-grid');
-          stage.dataset.screenLayout=screen;grid.dataset.layout=screen;grid.dataset.guestLayout=guest;
-          const css=getComputedStyle(grid),host=getComputedStyle(grid.querySelector('.is-host'));
-          return {columns:css.gridTemplateColumns,stage:[stage.getBoundingClientRect().width,stage.getBoundingClientRect().height],screen:stage.dataset.screenLayout,gridScreen:grid.dataset.layout,guest:grid.dataset.guestLayout,host:[host.gridColumnStart,host.gridColumnEnd,host.gridRowStart,host.gridRowEnd],seats:grid.querySelectorAll('.live-guest-seat').length};
-        },{screen,guest});
-        if(baseline){
-          assertStableScreenGeometry([state.columns,state.stage,state.screen,state.gridScreen,state.seats],baseline,'MeetWave '+screen+' screen mode or stage geometry changed when only guest layout changed at '+viewport.name);
-          assert.equal(state.guest,guest,'MeetWave guest selection did not apply independently');
-        }else baseline=[state.columns,state.stage,state.screen,state.gridScreen,state.seats];
-        guestPositions.push(state.host);
-        combinations++;
-      }
-      assert.notDeepEqual(guestPositions[0],guestPositions[1],'MeetWave '+screen+' guest-box choices do not produce different host placement at '+viewport.name);
-      if(screen==='fluid-grid'&&viewport.name==='desktop'){
-        await mwPage.screenshot({path:path.join(artifacts,'meetwave-fluid-grid-roundtable-1-desktop.png'),fullPage:true});
-      }
-      if(screen==='spotlight'&&viewport.name==='mobile'){
-        await mwPage.screenshot({path:path.join(artifacts,'meetwave-spotlight-roundtable-2-mobile.png'),fullPage:true});
-      }
-    }
-    await mwPage.close();
   }
 }finally{
   await browser.close();
 }
-console.log(JSON.stringify({result:'passed',screenLayouts:7,guestBoxLayouts:2,viewports:2,liveModes:2,combinations,screenshots:4},null,2));
+console.log(JSON.stringify({result:'passed',guestLayouts:layouts.length,products:2,viewports:viewports.length,rendered,screenshots:rendered},null,2));
