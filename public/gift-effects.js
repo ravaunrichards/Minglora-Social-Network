@@ -90,6 +90,14 @@
       {offset:.86,opacity:1,transform:"translate3d(0,1px,0) rotateZ(0deg) scale(1.01)",filter:"none"},
       neutral
     ];
+    if(preset==="parrot-swoop")return [
+      {offset:0,opacity:0,transform:"translate3d(-30px,20px,0) rotateZ(-13deg) scale(.78)",filter:"brightness(.8) saturate(.84)"},
+      {offset:.18,opacity:1,transform:"translate3d(-8px,-12px,0) rotateZ(8deg) scale(1.12)",filter:"brightness(1.28) saturate(1.24)"},
+      {offset:.39,opacity:1,transform:"translate3d(15px,-8px,0) rotateZ(-5deg) scale(1.08)",filter:"brightness(1.22) saturate(1.2)"},
+      {offset:.58,opacity:1,transform:"translate3d(5px,4px,0) rotateZ(3deg) scale(1.03)",filter:"brightness(1.12)"},
+      {offset:.78,opacity:1,transform:"translate3d(-3px,-2px,0) rotateZ(-1.5deg) scale(1.025)",filter:"none"},
+      neutral
+    ];
     if(preset==="dolphin-leap")return [
       {offset:0,opacity:0,transform:"translate3d(-12px,22px,0) rotateZ(-7deg) scale(.82)",filter:"brightness(.82) saturate(.88)"},
       {offset:.18,opacity:1,transform:"translate3d(3px,-12px,0) rotateZ(4deg) scale(1.1)",filter:"brightness(1.24) saturate(1.2)"},
@@ -520,6 +528,30 @@
     shimmer.connect(filter);filter.connect(shimmerGain);shimmerGain.connect(c.destination);shimmer.start(now+.12);shimmer.stop(now+.7);
     return true;
   }
+  function playPopParrot(c,now,seed){
+    const notes=[1046.5,1318.51,1567.98,1174.66,1760],delays=[0,.14,.31,.52,.72];
+    notes.forEach((frequency,index)=>{
+      const start=now+delays[index],tone=c.createOscillator(),gain=c.createGain(),pan=c.createStereoPanner?.();
+      tone.type=index===2?"triangle":"sine";
+      tone.frequency.setValueAtTime(frequency*(1+((seed+index*11)%13-6)*.0007),start);
+      tone.frequency.exponentialRampToValueAtTime(frequency*1.13,start+.1);
+      gain.gain.setValueAtTime(.0001,start);
+      gain.gain.exponentialRampToValueAtTime(.034/(1+index*.18),start+.022);
+      gain.gain.exponentialRampToValueAtTime(.0001,start+.19);
+      if(pan){pan.pan.setValueAtTime((index-2)*.18,start);tone.connect(gain);gain.connect(pan);pan.connect(c.destination);}
+      else{tone.connect(gain);gain.connect(c.destination);}
+      tone.start(start);tone.stop(start+.21);
+    });
+    const flutter=c.createBufferSource(),filter=c.createBiquadFilter(),flutterGain=c.createGain();
+    flutter.buffer=createGiftNoise(c,seed^0x2c91,.34);
+    filter.type="highpass";filter.frequency.setValueAtTime(2600,now);
+    flutterGain.gain.setValueAtTime(.0001,now+.18);
+    flutterGain.gain.exponentialRampToValueAtTime(.006,now+.24);
+    flutterGain.gain.exponentialRampToValueAtTime(.0001,now+.49);
+    flutter.connect(filter);filter.connect(flutterGain);flutterGain.connect(c.destination);
+    flutter.start(now+.18);flutter.stop(now+.52);
+    return true;
+  }
   function play(gift){
     if(!gift)return false;
     const c=audio();if(!c)return false;
@@ -537,6 +569,7 @@
       if(gift.code==="maracas-1wegi7n")return playMaracas(c,now,seed);
       if(gift.code==="beach-maracas-1exxoag")return playBeachMaracas(c,now,seed);
       if(gift.code==="royal-lions-scepter-15000-mgl")return playRoyalLionsScepter(c,now,seed);
+      if(gift.code==="pop-parrot-alp4e8")return playPopParrot(c,now,seed);
       const p=profiles[gift.category]||profiles.other,variation=(seed%9)-4;
       const base=p.base*(.92+(seed%17)/100);
       p.notes.forEach((step,i)=>{
@@ -551,7 +584,7 @@
       return true;
     }catch{return false;}
   }
-  const presets=new Set(["petal-bloom","heart-pulse","creature-entrance","grand-entry","soundwave-ripple","power-impact","delight-pop","glam-spin","royal-shimmer","celebration-burst","cosmic-orbit","nature-rise","horizon-sweep","pixel-burst","warm-wave","spark-float","gift-reveal","dolphin-leap"]);
+  const presets=new Set(["petal-bloom","heart-pulse","creature-entrance","grand-entry","soundwave-ripple","power-impact","delight-pop","glam-spin","royal-shimmer","celebration-burst","cosmic-orbit","nature-rise","horizon-sweep","pixel-burst","warm-wave","spark-float","gift-reveal","dolphin-leap","parrot-swoop"]);
   function mount(parent,gift,options={}){
     if(!parent||!gift)return null;
     const originalGift=gift;
@@ -660,7 +693,7 @@
     const motionElement=card.querySelector(".minglora-gift-fx-model");
     if(motionElement&&gift.motion_preset&&typeof motionElement.animate==="function"){
       const reduced=Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);
-      const visualPreset=gift.code==="crocodile-tnyf2j"?"crocodile-snap":gift.code==="djembe-master-1v3jzkm"?"djembe-strike":gift.code==="palm-breeze-gknyt0"?"palm-canopy-sway":gift.code==="gamer-otter-100-mgl"?"gamer-otter-cheer":gift.code==="live-island-rmn3mc"?"island-tide":gift.code==="crystal-crown-1itryeu"?"crown-lustre":gift.code==="phoenix-wep6uk"?"phoenix-rise":gift.code==="dolphin-4bkejj"?"dolphin-leap":gift.code==="maracas-1wegi7n"?"maraca-rhythm":gift.code==="beach-maracas-1exxoag"?"maraca-rhythm":gift.code==="royal-lions-scepter-15000-mgl"?"lion-scepter-rise":gift.motion_preset;
+      const visualPreset=gift.code==="crocodile-tnyf2j"?"crocodile-snap":gift.code==="djembe-master-1v3jzkm"?"djembe-strike":gift.code==="palm-breeze-gknyt0"?"palm-canopy-sway":gift.code==="gamer-otter-100-mgl"?"gamer-otter-cheer":gift.code==="live-island-rmn3mc"?"island-tide":gift.code==="crystal-crown-1itryeu"?"crown-lustre":gift.code==="phoenix-wep6uk"?"phoenix-rise":gift.code==="dolphin-4bkejj"?"dolphin-leap":gift.code==="pop-parrot-alp4e8"?"parrot-swoop":gift.code==="maracas-1wegi7n"?"maraca-rhythm":gift.code==="beach-maracas-1exxoag"?"maraca-rhythm":gift.code==="royal-lions-scepter-15000-mgl"?"lion-scepter-rise":gift.motion_preset;
       const semanticFrames=buildPreviewFrames(visualPreset,{dx,dy,tilt,spin,peak,rebound});
       motionElement.animate(semanticFrames,{
         duration:reduced?320:Math.max(950,Math.min(4200,Number(gift.motion_duration_ms)||duration)),

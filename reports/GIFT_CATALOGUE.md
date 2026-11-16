@@ -152,3 +152,11 @@ The canonical Palm Breeze nature gift now uses its own palm-tree/island glTF sou
 - Crocodile (`crocodile-tnyf2j`) is an active Animals record with configured value 10 Coins. It now has a distinct authored source module, original vector gift artwork, transparent icon, exact-code glTF route, custom snap motion and synthesized snap/rumble sound.
 - The catalogue source value and active flag were not changed. Both Crocodile and the 13 preceding bespoke models passed the 14×3 Chromium matrix: 42/42 model renders, 42/42 pixel checks, 42 screenshots and zero page/network errors (PR #411 run 43781000444; artifact 14188617258).
 - This is browser/build verification, not design or licensing approval. The remaining 1,734 catalogue gifts still rely on shared procedural/category geometry and need bespoke artwork/model review where premium individual assets are required.
+
+## Pop Parrot bespoke gift entry — 2026-11-16
+
+- Canonical source gift: `pop-parrot-alp4e8` (Pop Parrot), Animals category, configured source value **400 Coins**, original source `active=true`. These fields were preserved and not used to activate a production gift.
+- Original dedicated model source: `assets/3d-assets/gift-models/pop-parrot-model.mjs`; output consists of a self-contained glTF 2.0 model, unique Pop Parrot SVG and transparent icon through the canonical gift generator.
+- The model includes sculpted body and head forms, hooked beak, cheek mask, swept multicolour crest, individually named layered flight feathers, seven tail feathers, feet and gripping talons. Gift-specific LIVE motion is `parrot-swoop`; sound design `pop-parrot-rainbow-whistle-chirp-v1` uses local Web Audio synthesis and is not a mastered recording.
+- Verification: unit/full CI 1,251 passed / 0 failed; 15-model × 3-viewport Chromium matrix 45/45 renders and pixels, 45 screenshots, zero page errors and request cancellations (run 43809576362; artifact 14200011992).
+- Review remains pending for human visual/design approval, rights, mastered audio and physical-device QA. Production gift activation and all economy/transaction data remain untouched.

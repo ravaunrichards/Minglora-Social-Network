@@ -630,3 +630,42 @@ test("Crocodile uses a bespoke original 3D reptile model, transparent artwork an
   assert.match(giftEffectsSource, /gift\.code==="crocodile-tnyf2j"\)return playCrocodile/, "the LIVE gift event must trigger dedicated crocodile audio");
   assert.match(giftEffectsSource, /gift\.code==="crocodile-tnyf2j"\?"crocodile-snap"/, "the LIVE gift must use dedicated snap choreography");
 });
+
+ 
+test("Pop Parrot uses original subject-specific 3D geometry and transparent artwork", () => {
+  const parrot = gifts.find(gift => gift.code === "pop-parrot-alp4e8");
+  assert.ok(parrot);
+  assert.equal(parrot.name, "Pop Parrot");
+  assert.equal(parrot.category, "animals");
+  assert.equal(parrot.coin_price, 400);
+  assert.equal(parrot.active, true);
+  const sourcePath = path.join(root, "assets/3d-assets/gift-models/pop-parrot-model.mjs");
+  assert.ok(existsSync(sourcePath));
+  const source = readFileSync(sourcePath, "utf8");
+  assert.match(source, /createPopParrotModel/);
+  assert.match(source, /Pop Parrot swept crest plume/);
+  assert.match(source, /primary flight feather/);
+  assert.match(source, /Pop Parrot long tail feather/);
+  assert.match(source, /\[side \* 0\.248, 0\.795, side \* 0\.39\]/, "each eye must be mirrored to its own side of the head");
+  assert.match(source, /tube\("Pop Parrot sculpted hooked upper beak"/, "the upper beak must use a curved multi-segment profile");
+  const model = JSON.parse(readFileSync(path.join(assetRoot, parrot.code + ".gltf"), "utf8"));
+  assert.equal(model.asset?.version, "2.0");
+  assert.equal(model.asset?.extras?.mingloraAssetId, "gift-pop-parrot-3d-v1");
+  assert.equal(model.asset?.extras?.source, "assets/3d-assets/gift-models/pop-parrot-model.mjs");
+  assert.match(model.asset?.extras?.artDirection || "", /scarlet macaw inspired parrot.*curved graphite beak.*ivory cheek mask.*five-colour crest.*layered cobalt and teal flight feathers/i);
+  assert.match(model.asset?.extras?.reviewStatus || "", /design-review-pending/);
+  assert.ok(model.meshes?.[0]?.primitives?.length >= 65);
+  const names = model.meshes?.[0]?.primitives?.map(item => item.extras?.mingloraPartName) || [];
+  for (const name of ["primary flight feather", "swept crest plume", "long tail feather", "ivory cheek feather patch", "hooked upper beak", "gripping toe"]) {
+    assert.ok(names.some(value => value?.includes(name)), "missing parrot mesh group: " + name);
+  }
+  assert.ok(model.buffers?.[0]?.uri.startsWith("data:application/octet-stream;base64,"));
+  assert.ok(model.accessors?.filter(item => item.type === "VEC3").length >= 150);
+  for (const accessor of model.accessors.filter(value => value.type === "VEC3" && value.min && value.max)) {
+    assert.ok(accessor.min.every(Number.isFinite) && accessor.max.every(Number.isFinite));
+  }
+  const svg = readFileSync(path.join(assetRoot, parrot.code + ".svg"), "utf8");
+  const icon = readFileSync(path.join(assetRoot, parrot.code + "-icon.svg"), "utf8");
+  assert.ok(svg.includes('data-gift-artwork="pop-parrot-original-v1"'));
+  assert.ok(icon.includes('data-gift-artwork="pop-parrot-original-v1"'));
+});
