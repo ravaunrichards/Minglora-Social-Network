@@ -124,6 +124,6 @@ test('LIVE Match Power-Ups use supplied SVG artwork and disable used or exhauste
   assert.match(app, /'Used today'/);
   assert.match(app, /'3 uses reached'/);
   assert.match(app, /'Used this match'/);
-  assert.match(app, /TIME MAKER · \+ /);
+  assert.ok(app.includes("TIME MAKER · +"));
   assert.match(styles, /\.live-match-powerup-icon/);
 });
