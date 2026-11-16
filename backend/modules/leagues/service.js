@@ -753,7 +753,7 @@ export function supportCreatorLeagueMatch(db, match, viewerId, side, now = new D
   match.events.push({ id: randomUUID(), type: "viewer_support", userId: viewerId, side, matchPoints: 3, createdAt: now.toISOString() });
   return match;
 }
-export function useCreatorLeaguePowerup(db, match, userId, powerupId, now = new Date(), options = {}) {
+export function useCreatorLeaguePowerup(db, match, userId, powerupId, now = new Date()) {
   settleExpiredLeagueMatches(db, now);
   match = resolveCanonicalMatch(db, match);
   if (!match || match.status !== "live") throw Object.assign(new Error("Power-ups can only be used during an active match."), { status: 409 });
@@ -818,7 +818,7 @@ export function useCreatorLeaguePowerup(db, match, userId, powerupId, now = new 
     match.activeEffects.push(effect);
     match.events.push({
       id: randomUUID(), type: "powerup_activated", side, powerupId,
-      targetRank: effect.targetRank || null, targetSide: effect.targetSide || null,
+      targetRanks: effect.targetRanks || null, targetSide: effect.targetSide || null,
       multiplier: effect.multiplier || null, durationMs: powerup.durationMs, createdAt: now.toISOString()
     });
   }
