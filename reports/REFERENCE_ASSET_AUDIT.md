@@ -48,7 +48,7 @@ These nine references correspond to the existing implementation's seven host-sel
 ## Additional LIVE-adjacent references inventoried
 
 - `assets/Guests Layout/`: 9 JPEG layout diagrams (all 9 visually inspected individually).
-- `assets/Gifters Badge Levels/`: 71 image files (53 PNG and 18 JPEG); file inventory completed, not a full badge-by-badge visual/rights review.
+- `assets/Gifters Badge Levels/`: 72 image files (52 PNG and 20 JPEG; 71 unique image contents); file inventory completed, not a full badge-by-badge visual/rights review.
 - `assets/League/`: 20 JPEG reference captures; file inventory completed, with the Android League FAQ sample above visually inspected.
 - `assets/Gifts/`: 131 catalogue capture PNGs plus the `Video Gifts/Video Gifts.jpg` reference sheet. The directory contains 132 image files in total.
 
@@ -91,3 +91,19 @@ A separate read-only metadata scanner is part of the LIVE asset workflow:
 - Preserve platform-neutral text, content hierarchy, layout geometry, controls, interaction patterns, responsive behavior and relevant states when recreating the supplied references.
 - Exclude source-company names, logos, wordmarks, trademarks, distinctive branded marks and branded icon artwork from the Minglora application. Use Minglora identity and original assets instead.
 - Keep supplied screenshots and extracted reference crops read-only and separate from production asset paths. Generated artwork remains subject to human visual and rights review before publication.
+
+
+## Gifter range-sheet edge-crop checkpoint — 2026-11-15
+
+The current mainline reference update records a controlled black-edge-only crop for the six original Gifter range sheets in `assets/Gifters Badge Levels/` (crop details: `reports/GIFTER_RANGE_SHEET_CROP_REPORT.md`). The sheets remain reference material, not approved product artwork:
+
+| Source | Before | After | Edge crop (L / T / R / B) |
+|---|---:|---:|---:|
+| LV.1–LV.9 | 985×566 | 985×552 | 0 / 14 / 0 / 0 |
+| LV.10–LV.19 | 989×560 | 989×542 | 0 / 18 / 0 / 0 |
+| LV.20–LV.29 | 998×580 | 986×558 | 0 / 22 / 12 / 0 |
+| LV.30–LV.39 | 995×580 | 987×541 | 0 / 39 / 8 / 0 |
+| LV.40–LV.49 | 988×588 | 988×565 | 0 / 23 / 0 / 0 |
+| LV.50+ | 1006×594 | 989×569 | 7 / 23 / 10 / 2 |
+
+The crop report states the 11 internal detailed panels, master sheets, Rewards banner, badge artwork/lettering, progression logic, Coin thresholds, wallets and the removed Level-Up chart were not changed by this edge crop. This is a technical border cleanup only; it does not constitute visual or rights review of all 72 files. The newly cropped references remain in the reference directory and are not copied into product assets.

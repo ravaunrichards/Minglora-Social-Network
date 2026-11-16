@@ -117,3 +117,13 @@ The generated motion-index record retains both `catalog_motion_preset` (unchange
 - Audio: an original locally synthesized high-pass shaker-noise sequence with six short rhythmic pulses and three quiet pitched accents is called from the normal gift playback path.
 - Artwork/model: the matching custom glTF and SVG gift pair is loaded through the canonical generated catalogue asset paths.
 - These sound effects are generated locally by Web Audio; they are not mastered recordings. The model and art remain design-review-pending; human visual, rights and physical-device review are still required.
+
+
+## Dolphin leap and synthesized ocean-splash effect — 2026-11-16
+
+- Canonical gift: `dolphin-4bkejj` (Dolphin; animals; configured 10 Coins; source active status unchanged).
+- Visual choreography: exact-code selection of `dolphin-leap` in `public/gift-effects.js`; the animal rises into a short arc, turns through a crest, then returns to its settled position. It uses the existing Web Animations event layer and overlay cleanup.
+- Sound: a locally synthesized low-pass ocean wash, delayed high-pass splash and three soft rising sine tones on the existing confirmed gift playback path. It is a Web Audio effect, not a mastered recording.
+- Artwork/model: original Dolphin SVG/icon artwork and the dedicated `dolphin-model.mjs` glTF source are selected by exact canonical code.
+- Test evidence: Dolphin unit assertions passed; Chromium 13-gift matrix passed 39/39 render and pixel checks with 39 screenshots, zero page errors, zero HTTP failures, zero request failures and zero cancellations (run 43779388045, artifact 14187976230).
+- Sound opt-out and reduced-motion handling remain governed by the existing runtime. Human timing/mix review, rights clearance, mastered audio and physical-device validation remain pending.

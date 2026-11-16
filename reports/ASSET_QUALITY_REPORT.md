@@ -236,3 +236,15 @@ The existing Jamaican culture gift-category placeholder has been replaced by ori
 The exact canonical Baseball record now has an individually authored model source rather than shared sports-category geometry. The model uses an ivory full-grain shell, two curved seam paths with recessed channels, raised scarlet seam cords, separate hand-sewn stitch strands/thread highlights and subtle grain flecks. Its vector artwork uses a leather-shaded sphere and individually drawn curved seam/stitch details; the same subject-specific illustration is emitted in the primary SVG and transparent gift icon.
 
 The GLTF declares self-contained embedded geometry buffers, per-part material records, accessor bounds and `design-review-pending` provenance. The browser-render matrix covers desktop, tablet and mobile; final workflow outcome is pending at the time this record was added. This structural/artwork source inspection is not human visual approval, licensing clearance, final premium art acceptance or physical-device certification. No catalogue Coin value, source active flag, production offer, wallet, transaction or payout was changed.
+
+
+## Maracas and Dolphin bespoke model quality checkpoints — 2026-11-16
+
+Two additional canonical catalogue records now have individually authored source modules rather than shared category meshes:
+
+- **Maracas** (`maracas-1wegi7n`, music, configured 1 Coin) — matched coral/lagoon gourd pair with hardwood handles, spiral wraps, painted seed inlays and PBR glTF materials; matching subject-specific SVG and transparent icon; dedicated rhythmic shaker Web Audio effect and `maraca-rhythm` motion.
+- **Dolphin** (`dolphin-4bkejj`, animals, configured 10 Coins) — bottlenose body, tapered rostrum, countershading, dorsal and pectoral fins, split tail flukes, eye/gill/blowhole details and sea-spray droplets; matching original SVG and transparent icon; dedicated `dolphin-leap` motion and locally synthesized ocean/splash sound.
+
+Both model outputs are self-contained glTF 2.0 with embedded geometry buffers, named mesh parts, per-mesh normals/accessors, material factors and finite bounds. CI built the canonical 1,748-record gift set and both new source-specific unit assertions passed. Chromium WebGL evidence for PR #411 run 43779388045: **39/39 model renders, 39/39 pixel checks and 39 screenshots**, with zero page errors, HTTP failures, request failures or cancellations (artifact 14187976230).
+
+This verifies generated asset loading and non-empty browser pixels, not premium visual acceptance. Both models/artworks remain `design-review-pending`; no high-resolution texture-map pack, embedded glTF animation channels, mastered audio recordings, human rights clearance or physical-device QA are claimed. The rest of the catalogue remains largely category-template/procedural output.

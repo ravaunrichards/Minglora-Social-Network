@@ -381,10 +381,10 @@ The browser captures establish that all nine bespoke models load and remain visi
 - Production Supabase gift rows, Coin values, wallet balances, purchases, ledger entries, payouts and deployments remain untouched.
 
 
-## Dolphin asset addition — implementation pending verification — 2026-11-15
+## Dolphin asset addition — implementation and browser verification passed — 2026-11-16
 
 - A new dedicated original PBR glTF source and canonical gift artwork are being added for the existing Dolphin record (`dolphin-4bkejj`, category `animals`, configured value 10 Coins, source `active=true`).
 - Exact-code generator routing, transparent SVG icon generation, a dedicated leap motion, locally synthesized water audio, source regression assertions and a 13-model desktop/tablet/mobile renderer matrix are included in this implementation.
-- Status remains **IN PROGRESS** until the generated-asset build, Dolphin unit test and 39-view Chromium model-render matrix pass on the final PR head.
+- **VERIFIED IMPLEMENTATION:** the canonical gift build passed, the Dolphin-specific unit test passed, and Chromium completed 39/39 model renders plus 39/39 non-empty pixel checks across desktop/tablet/mobile; 39 screenshots were uploaded with zero page errors, HTTP failures, request failures or cancellations (run 43779388045, artifact 14187976230).
 - Artwork/model remain `design-review-pending`; rights clearance, human visual approval, mastered recording and physical-device QA are not claimed.
 - No production catalogue, Coin price, wallet, payment, transaction or deployment change is part of this asset addition.
