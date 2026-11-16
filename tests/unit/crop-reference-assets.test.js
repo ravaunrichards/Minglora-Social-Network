@@ -12,6 +12,7 @@ const app = read("public/app.js");
 const topGifters = read("public/top-gifters.js");
 const rankingStyles = read("public/styles.css");
 const progressionStyles = read("public/gifter-progression.css");
+const profileBadgeStyles = read("public/profile-badges.css");
 const serviceWorker = read("public/sw.js");
 const html = read("public/index.html");
 const leagues = read("public/leagues.js");
@@ -82,13 +83,22 @@ test("all 50 Gifter levels keep unique artwork while six crop badges light miles
   assert.ok(!serviceWorker.includes("/assets/gifter-badge-range-sheets/lv-1-9.jpg"));
   assert.ok(server.includes("'Crop References','Gifter level range sheets'"));
   assert.match(html, /gifter-progression\.js\?v=20261116-gifter-range-sheets-png-2/);
-  assert.match(progressionStyles, /\.gp-level-index-item\.is-locked \.gp-level-index-art\{opacity:\.88\}/);
+  assert.match(progressionStyles, /\.gp-level-index-item\.is-locked \.gp-level-index-art\{opacity:1\}/);
   assert.match(progressionStyles, /is-unlocked \.gp-level-index-art/);
   assert.match(progressionStyles, /is-current \.gp-level-index-art/);
   assert.match(progressionStyles, /is-admin-awarded \.gp-level-index-art/);
   assert.match(progressionStyles, /\.gp-progression-range-badge/);
   assert.ok(progressionStyles.includes("brightness(1.48)"));
   assert.ok(progressionStyles.includes("gp-progression-milestone-glow"));
+  assert.match(progressionStyles, /\.gp-range-reference-grid\{gap:5px\}/);
+  assert.match(progressionStyles, /\.gp-range-reference-figure\{gap:4px;padding:5px\}/);
+  assert.match(progressionStyles, /aspect-ratio:170 \/ 76/);
+  assert.match(progressionStyles, /grid-template-columns:minmax\(0,170px\) minmax\(0,1fr\)/);
+  assert.match(progressionStyles, /\.gp-current-badge-image/);
+  assert.match(progressionStyles, /\.gp-leader-badge img/);
+  assert.match(profileBadgeStyles, /filter:brightness\(1\.48\) saturate\(1\.3\) contrast\(1\.12\)/);
+  assert.match(profileBadgeStyles, /@keyframes live-gifter-badge-glow/);
+  assert.match(profileBadgeStyles, /@keyframes minglora-gifter-badge-glow/);
 
 });
 
@@ -132,10 +142,10 @@ test("ENIGMA is the default profile avatar and is served from the original crop-
 });
 
 test("frontend and service-worker versions invalidate old assets and scripts", () => {
-  assert.match(serviceWorker, /minglora-shell-v346-self-updating-1/);
+  assert.match(serviceWorker, /minglora-shell-v347-self-updating-1/);
   assert.match(html, /app\.js\?v=20261116-ranking-podium-top100-1/);
   assert.match(html, /top-gifters\.js\?v=20261116-daily-ranking-crop-badges-2/);
-  assert.match(html, /gifter-progression\.css\?v=20261116-unified-badge-quality-1/);
+  assert.match(html, /gifter-progression\.css\?v=20261116-gifter-display-parity-2/);
   assert.match(html, /gifter-progression\.js\?v=20261116-gifter-range-sheets-png-2/);
 });
 
