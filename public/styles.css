@@ -6600,6 +6600,10 @@ button.live-ranking-row{cursor:pointer}
 .minglora-gifter-periods button{min-height:30px;padding:5px 12px;border:1px solid var(--border,rgba(150,160,180,.2));border-radius:999px;background:transparent;color:var(--muted,#9aa2b2);font-size:11px;font-weight:800;cursor:pointer}
 .minglora-gifter-periods button.is-active{border-color:rgba(255,185,83,.58);background:rgba(255,185,83,.13);color:var(--text,#fff)}
 .minglora-gifter-list{display:grid;gap:0}
+.minglora-gifter-podium{position:relative;display:block;flex:0 0 46px;width:46px;height:52px;isolation:isolate}
+.minglora-gifter-podium .minglora-gifter-rank-frame{position:absolute;inset:0;z-index:0;display:block;width:100%;height:100%;max-width:none;border-radius:0;object-fit:contain}
+.minglora-gifter-podium .minglora-gifter-rank-avatar,.minglora-gifter-podium .minglora-gifter-rank-fallback{position:absolute;z-index:1;left:50%;top:43%;display:grid;place-items:center;width:26px;height:26px;transform:translate(-50%,-50%);border:1.5px solid rgba(255,255,255,.9);border-radius:50%;object-fit:cover;background:#e8edf5;color:#263449;font-size:11px;font-weight:900;box-shadow:0 1px 4px rgba(0,0,0,.2)}
+
 .minglora-gifter-row{display:flex;align-items:center;gap:9px;min-width:0;min-height:64px;padding:8px 4px;border-bottom:1px solid var(--border,rgba(150,160,180,.15))}
 .minglora-gifter-rank{width:25px;flex:none;color:#ffbd65;font-size:13px;font-weight:950;text-align:center}
 .minglora-gifter-row img,.minglora-gifter-avatar{width:38px;height:38px;flex:none;border-radius:50%;object-fit:cover}
