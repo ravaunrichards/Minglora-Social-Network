@@ -56,6 +56,7 @@ test('All nine guest layouts use their own reference proportions and seat sizing
   assert.ok(contract.includes('display:none!important'));
   assert.ok(!contract.includes('data-live-guest-layout'));
 });
+
 test('MeetWave screen and guest registries are disjoint and exact',()=>{
   const screen=meetwave.match(/const MEETING_SCREEN_LAYOUTS = \{([^}]+)\}/);
   const guest=meetwave.match(/const MEETING_GUEST_LAYOUTS = \{([^}]+)\}/);
