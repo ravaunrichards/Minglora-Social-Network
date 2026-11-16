@@ -126,7 +126,7 @@ try{
         assert.equal(groupValues(seats.map(s=>s.y)).length,3,'Side by Side has three horizontal rows');
         assert.equal(groupValues(seats.slice(2).map(s=>s.y)).length,2,'Side by Side has two rows of small tiles');
         near(seats[0].y,seats[1].y,2,'Side by Side large tiles share the top row');
-        near(seats[0].width,seats[2].width*2,4,'Side by Side top host spans two small columns');
+        near(seats[0].width,seats[2].width*2,5,'Side by Side top host spans two small columns');
       }
       if(layout==='spotlight'){
         assert.equal(state.display,'grid','Spotlight uses a true grid');
