@@ -521,9 +521,10 @@
 }
 .gp-progression-level-marker{
   position:absolute;top:85%;transform:translate(-50%,-50%);
-  display:block;width:1.15%;min-width:6px;max-width:13px;aspect-ratio:1;border-radius:50%;
+  display:block;width:1.75%;min-width:5px;max-width:19px;aspect-ratio:1;border-radius:50%;
+  box-sizing:border-box;border:1px solid rgba(36,24,56,.55);
   background:#fff;z-index:2;pointer-events:none;
-  box-shadow:0 0 7px 3px rgba(255,255,255,.9),0 0 12px 4px rgba(185,137,255,.68);
+  box-shadow:0 0 0 1px rgba(255,255,255,.38),0 1px 3px rgba(35,21,50,.36);
   transition:left .35s cubic-bezier(.2,.75,.25,1);
 }
 @media(max-width:480px){
