@@ -20,6 +20,7 @@ const gifts = [
   { name: 'Crystal Crown', code: 'crystal-crown-1itryeu' },
   { name: 'Phoenix', code: 'phoenix-wep6uk' },
   { name: 'Beach Maracas', code: 'beach-maracas-1exxoag' },
+  { name: 'Maracas', code: 'maracas-1wegi7n' },
   { name: 'Royal Lions Scepter', code: 'royal-lions-scepter-15000-mgl' },
   { name: 'Baseball', code: 'baseball-orcdx9' }
 ];

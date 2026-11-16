@@ -180,3 +180,13 @@ Use supplied third-party screenshots only to understand geometry, hierarchy and 
 - PR: #387. Original isolated task commit: `b640926b112a1016ddc7ca3daf70a625274164c3`; seam compatibility correction: `a85c3d51d118a288198f230b40a4428810f15b25`. The current main head advanced to `7a6aa1b9...` during review and must be preserved in final sync.
 
 **Next action:** finish reconciling the documentation against current main, update the existing PR branch with a two-parent merge commit, rerun all required CI/layout/model-render checks on the new head, and merge only when all are verified successful.
+
+
+## Maracas bespoke LIVE asset continuation — 2026-11-15
+
+- Canonical record verified from `data/minglora-gift-catalog.json`: `maracas-1wegi7n`, Maracas, category `music`, configured value 1 Coin, source `active=true`. The catalogue data itself is unchanged.
+- Added original source model design at `assets/3d-assets/gift-models/maracas-model.mjs` with distinct coral and lagoon gourd shells, PBR materials, hardwood handles, spiral grip wraps and detailed inlays.
+- Added code-specific primary SVG and transparent icon artwork, exact-code model routing, LIVE shake choreography and synthesized shaker sound.
+- Added source regression checks and expanded the Chromium render matrix from 11 to 12 bespoke gifts (36 desktop/tablet/mobile model captures expected).
+- Verification status: **PENDING** remote CI and Chromium run on the final PR head. The model and artwork remain `design-review-pending`; rights review and physical-device testing are not complete.
+- Production Supabase gift catalogue, prices, wallet balances, payouts, transactions and deployment were not changed. Existing production v3 approval/release gate remains in force.

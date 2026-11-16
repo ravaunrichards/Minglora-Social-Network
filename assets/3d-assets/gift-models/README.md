@@ -112,3 +112,15 @@ The existing gift build generates both subject-specific transparent SVG artwork 
 - Review state: `design-review-pending`; no human art, rights or device approval is implied
 - Integration: exact-code route in `scripts/generate-minglora-gifts.mjs`; canonical catalogue price, active flag and LIVE transaction flow remain unchanged
 - Verification target: desktop, tablet and mobile Chromium model-render matrix plus gift-catalogue model/artwork regression tests
+
+
+## Maracas v1
+
+- Source: `maracas-model.mjs`
+- Canonical target: `maracas-1wegi7n` (Maracas; music; configured value 1 Coin; source active flag preserved)
+- Output: generated self-contained glTF 2.0, subject-specific primary SVG and transparent icon
+- Geometry: separately sculpted coral and lagoon calabash shells, tapered hardwood handles, spiral grip wraps, raised woven grip bands, concentric enamel rings, painted diamond seed inlays and radial sunburst details
+- LIVE motion: exact-code selection of the existing `maraca-rhythm` Web Animations choreography
+- LIVE audio: original locally synthesized shaker-noise pulses with short pitched accents; not a recorded or mastered audio file
+- Review state: `design-review-pending`; no premium, legal/rights, human visual or physical-device approval is implied
+- Integration: exact canonical gift code only; source catalogue metadata, configured coin value, publication flag, database rows and LIVE transaction flow are unchanged

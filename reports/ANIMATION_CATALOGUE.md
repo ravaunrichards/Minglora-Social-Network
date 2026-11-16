@@ -108,3 +108,12 @@ The generated motion-index record retains both `catalog_motion_preset` (unchange
 - Sound design ID: royal-lions-scepter-roar-and-regal-fanfare-v1. The existing Web Audio path synthesizes a low band-pass lion-like growl, a short low-frequency impact, five brass-like fanfare tones (196, 293.66, 392, 587.33 and 783.99 Hz) and a restrained high-pass jewel shimmer.
 - Audio is generated locally by Web Audio and is not a mastered/recorded sound asset. Existing sound opt-out behavior and reduced-motion handling remain active.
 - No Lottie/Rive file, GLTF skeletal animation track, mastered sound recording, licensing clearance, human design approval or physical-device QA is claimed. No catalogue pricing, activation, wallet or transaction state was changed.
+
+
+## Maracas dedicated LIVE choreography and sound — 2026-11-15
+
+- Canonical gift: `maracas-1wegi7n` (Maracas; configured `music-12` sound profile; price/status unchanged).
+- Visual choreography: the existing `maraca-rhythm` Web Animations keyframes are now selected for this exact gift code, rather than the generic music entrance.
+- Audio: an original locally synthesized high-pass shaker-noise sequence with six short rhythmic pulses and three quiet pitched accents is called from the normal gift playback path.
+- Artwork/model: the matching custom glTF and SVG gift pair is loaded through the canonical generated catalogue asset paths.
+- These sound effects are generated locally by Web Audio; they are not mastered recordings. The model and art remain design-review-pending; human visual, rights and physical-device review are still required.

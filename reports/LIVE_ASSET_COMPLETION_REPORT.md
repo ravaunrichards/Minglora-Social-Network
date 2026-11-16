@@ -355,3 +355,12 @@ The browser captures establish that all nine bespoke models load and remain visi
 - Expanded the Chromium model matrix to include Baseball and the existing Royal Lions Scepter alongside the original nine models, across desktop, tablet and mobile.
 - Validation: the initial CI run exposed an existing assertion requiring seam signature `stroke="#d84854" stroke-width="12"`; the SVG seam was corrected to match it while retaining the layered red seam treatment. Latest-head rerun is pending.
 - Release boundary: the model remains `design-review-pending`; human art review, rights clearance, mastered individual gift audio/animation and physical-device acceptance remain outstanding. No database, wallet, price, transaction or deployment operation occurred.
+
+
+## Maracas asset addition — implementation pending verification — 2026-11-15
+
+- A new original model source and catalogue-specific artwork have been authored for the existing Maracas record (`maracas-1wegi7n`, category `music`, configured value 1 Coin, source active flag true).
+- Exact-code generator wiring, original SVG artwork, rhythmic LIVE motion/audio handling, source-level tests and desktop/tablet/mobile renderer coverage have been prepared on an isolated feature branch.
+- Status remains **IN PROGRESS** until the pull-request build, unit tests, gift-asset generation and 36-view Chromium renderer matrix are checked on the final branch head.
+- Model/artwork review remains `design-review-pending`; rights clearance, human visual review, mastered recording and physical-device QA are not claimed.
+- No production catalogue, wallet, payment, transaction or deployment change is part of this addition.
