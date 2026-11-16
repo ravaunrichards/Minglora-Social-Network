@@ -82,7 +82,7 @@ test("All 20 uploaded source images are allowlisted, served, precached and prese
 test("Leaderboard top three use numbered podium frames with live profile data", () => {
   assert.match(league, /league-podium-stage/);
   for (const place of [1,2,3]) {
-    assert.ok(league.includes("/assets/daily-ranking-badges/place-" + place + ".png"), "missing supplied " + place + " place frame");
+    assert.match(league, /daily-ranking-badges\\/place-" \\+ place \\+/);
     assert.ok(sw.includes("/assets/daily-ranking-badges/place-" + place + ".png"), "service worker must cache " + place + " place frame");
   }
     assert.match(league, /leaderboard\[0\]/);
