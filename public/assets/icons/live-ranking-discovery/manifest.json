@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "name": "Minglora LIVE Discovery Ranking Icons",
+  "style": "Original Minglora outline vector ranking icons",
+  "view_box": "0 0 24 24",
+  "rendering": "Same-origin external SVG symbol references via SVG use",
+  "color": "currentColor inherited from the existing LIVE discovery tab",
+  "state_handling": "Existing data-live-discovery click routing and active class remain authoritative. The SVGs are decorative and aria-hidden.",
+  "icons": [
+    {
+      "id": "daily",
+      "label": "Daily rankings",
+      "file": "/assets/icons/live-ranking-discovery/daily.svg",
+      "destination": "daily",
+      "source": "original_minglora_svg_icon",
+      "review_status": "design-review-pending"
+    },
+    {
+      "id": "popular",
+      "label": "Popular LIVE rankings",
+      "file": "/assets/icons/live-ranking-discovery/popular.svg",
+      "destination": "popular",
+      "source": "original_minglora_svg_icon",
+      "review_status": "design-review-pending"
+    },
+    {
+      "id": "league",
+      "label": "League rankings",
+      "file": "/assets/icons/live-ranking-discovery/league.svg",
+      "destination": "league",
+      "source": "original_minglora_svg_icon",
+      "review_status": "design-review-pending"
+    }
+  ]
+}

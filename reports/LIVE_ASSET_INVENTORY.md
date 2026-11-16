@@ -314,3 +314,13 @@ The exact-code generator route does not change the source catalogue's 10-Coin va
 - All generated assets remain review-required; the source model sets design-review-pending. No screenshot crop, source-company artwork, trademark, third-party gift artwork or copied sound recording is used.
 - No production Supabase gift row, coin offer, wallet, purchase, transaction, payout, user data or deployment was changed. Existing production activation and asset-review gates remain in force.
 - Generated output, repository tests, CI and isolated Chromium model rendering must pass before this source can be called integrated. Human visual/rights approval and physical-device QA remain separate requirements.
+
+## LIVE discovery ranking navigation icons — 2026-11-16
+
+| Existing tab destination | Original icon file | Visible label / action |
+|---|---|---|
+| `daily` | `public/assets/icons/live-ranking-discovery/daily.svg` | Daily |
+| `popular` | `public/assets/icons/live-ranking-discovery/popular.svg` | Popular LIVE |
+| `league` | `public/assets/icons/live-ranking-discovery/league.svg` | League |
+
+Manifest: `public/assets/icons/live-ranking-discovery/manifest.json`. The icons are only visual labels on the existing `data-live-discovery` buttons; they do not create new ranking APIs or alter ranking calculations. The existing click handler and active state are unchanged. All three remain design-review-pending.

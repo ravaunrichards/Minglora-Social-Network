@@ -426,3 +426,23 @@ The browser captures establish that all nine bespoke models load and remain visi
 - Dedicated Chromium WebGL job completed successfully: **15 bespoke models × desktop/tablet/mobile = 45/45 model render checks and 45/45 non-empty pixel checks**, with 45 screenshots; the job reported zero page errors and zero request cancellations. Artifact: `minglora-live-gift-model-render-evidence` (ID `14200011992`, 10,147,846 bytes; run 43809576362).
 - The same head's LIVE/MeetWave seven-plus-two layout matrix, profile visual matrix and AI Network browser acceptance passed (runs 43809576395, 43809576394 and 43809576366). These viewport/browser checks do not represent physical-device acceptance.
 - Model/artwork and synthesized sound remain `design-review-pending` / `generated-review-required` as applicable. Human premium-art approval, rights clearance, professional audio listening/mastering and physical Android/iPhone/tablet/foldable/desktop/TV QA remain outstanding. No production activation, deployment or merge is claimed.
+
+## LIVE discovery ranking tab icons — implementation checkpoint — 2026-11-16
+
+- Added three original 24×24 currentColor SVG icons under `public/assets/icons/live-ranking-discovery/`: Daily (calendar/day marker), Popular LIVE (ascending trend bars/arrow) and League (trophy).
+- Replaced text-only markup inside the existing Daily / Popular LIVE / League buttons with their corresponding inline SVG symbol and retained each exact `data-live-discovery` destination, visible text label, existing click handler and active class.
+- Added a manifest and registered the three-icon pack in the unified LIVE asset manifest with file hashes and component usage.
+- Updated icon CSS to a 16×16 inline-flex glyph; advanced app/style cache URLs and bumped the service-worker shell to v331; all ranking symbols and manifest are pre-cached.
+- Added manifest inventory assertions and `tests/unit/live-ranking-discovery-icons.test.js` for exact destination mapping, SVG structure, labels, existing navigation logic, layout and offline cache.
+- Visual design and rights review remain pending. Browser layout CI is not physical-device or human design acceptance.
+
+## LIVE discovery ranking tab icons — CI verified — 2026-11-16
+
+- CI run 43818819598 completed successfully on PR #434 head `c7b0db86d8648db30d9d50e3aef3ae7f3f1429cd`.
+- Automated tests: 1,254 passed, 0 failed, 0 cancelled, 0 skipped.
+- For You functional-navigation acceptance: passed.
+- Supabase Auth/OAuth provider acceptance: passed.
+- Repository, dependency audit, JavaScript syntax, gift generation, motion index, audio pack generation, unified LIVE manifest build/verification, and supplied raster metadata audit: passed.
+- Unified manifest artifact: `minglora-live-asset-manifest-13655`, ID `14203508088`, 663,671 bytes.
+- Raster metadata audit artifact: `minglora-live-image-metadata-audit-13655`, ID `14203647369`, 154,001 bytes.
+- The icon pack is listed as 3 assets in the unified manifest. Visual and rights review remain pending; no physical-device claim is made.

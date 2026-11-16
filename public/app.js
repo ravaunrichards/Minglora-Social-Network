@@ -1468,7 +1468,7 @@ function renderLiveDirectory(sessions,status,catalog,wallet,livePro={}){
     (liveReady?"":"<p class='form-hint'>"+esc(status.error||"Minglora could not verify its LiveKit connection. Check the server URL and API credentials.")+"</p>")+"</section>"+
     "<div class='feed-header'><h2>Live now</h2></div>"+
     "<div class='live-directory-filters' role='group' aria-label='Filter LIVE broadcasts'><button type='button' data-live-filter='all' class='active'>All LIVE</button><button type='button' data-live-filter='video_audio'>Video + Audio</button><button type='button' data-live-filter='audio_only'>Audio Only</button><button type='button' data-live-filter='mobile_gaming'>Gaming</button><button type='button' data-live-filter='live_studio'>Studio</button></div>"+
-    "<section class='live-discovery-board card'><nav class='live-discovery-tabs' aria-label='LIVE discovery rankings'><button type='button' data-live-discovery='daily'>Daily</button><button type='button' data-live-discovery='popular'>Popular LIVE</button><button type='button' data-live-discovery='league'>League</button></nav><div id='live-discovery-content'><p class='muted'>Loading Daily LIVE rankings…</p></div></section>"+
+    "<section class='live-discovery-board card'><nav class='live-discovery-tabs' aria-label='LIVE discovery rankings'><button type='button' data-live-discovery='daily'>"+liveDiscoveryIcon("daily")+"<span>Daily</span></button><button type='button' data-live-discovery='popular'>"+liveDiscoveryIcon("popular")+"<span>Popular LIVE</span></button><button type='button' data-live-discovery='league'>"+liveDiscoveryIcon("league")+"<span>League</span></button></nav><div id='live-discovery-content'><p class='muted'>Loading Daily LIVE rankings…</p></div></section>"+
     "<div class='live-room-grid'>"+cards+"</div>"+
     "<section class='card live-coins-promo'><div><span class='eyebrow'>Support your favourite creators</span><h2>Send LIVE gifts with Minglora Coins</h2><p class='muted'>Your gifts support creators through Minglora’s 50/50 earnings share.</p></div><div class='live-promo-actions'><strong>"+
     (wallet.wallet&&wallet.wallet.balance_coins!=null?Number(wallet.wallet.balance_coins).toLocaleString()+" Coins":"Balance unavailable")+"</strong><button class='secondary' id='open-live-coins'>Recharge Coins</button></div>"+
@@ -2392,6 +2392,11 @@ function updateLiveControlButton(button,icon,label,caption,pressed){
   button.setAttribute("aria-label",label);
   button.title=label;
   if(pressed!==undefined)button.setAttribute("aria-pressed",String(Boolean(pressed)));
+}
+const LIVE_DISCOVERY_ICON_NAMES=Object.freeze(["daily","popular","league"]);
+function liveDiscoveryIcon(name){
+  if(!LIVE_DISCOVERY_ICON_NAMES.includes(name))return "";
+  return "<svg class='live-discovery-tab-icon' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true' focusable='false'><use href='/assets/icons/live-ranking-discovery/"+name+".svg#icon'></use></svg>";
 }
 const LIVE_TOOLS_SHORTCUT_ICON_NAMES=Object.freeze(["layout","permissions","guests","viewers","fanclub","matches","top-gifters","gifts","rewards","moderators","appearance","devices"]);
 const LIVE_TOOLS_PANEL_TARGET_ATTRIBUTES=Object.freeze({

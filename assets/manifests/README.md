@@ -25,3 +25,11 @@ Track asset identifier, relative path, source, license, content type, dimensions
 - Each standalone SVG record includes path, SHA-256, 24×24 viewBox, component usage, visual-review state and rights-review state.
 - CI validates all 18 room-control icons and all 22 gift-category icons before publishing the generated manifest. The two active-state variants cover stopping screen sharing and exiting fullscreen; the pack still records design/licensing review as pending.
 - The packs are individually addressable UI vector assets; this does not certify premium 3D gift art or human design approval.
+
+## LIVE discovery ranking icons
+
+- `public/assets/icons/live-ranking-discovery/` contains `daily.svg`, `popular.svg`, `league.svg` and `manifest.json`.
+- The three SVGs are decorative 24×24 currentColor symbols rendered in the pre-existing Daily, Popular LIVE and League tabs. Existing destination values, text labels and click handlers remain authoritative.
+- `public/app.js` renders the icons; `public/styles.css` controls 16×16 sizing; `public/sw.js` pre-caches the pack.
+- The unified asset manifest inventories the pack, hashes the SVG files and identifies component usage.
+- All three assets remain design-review-pending.
