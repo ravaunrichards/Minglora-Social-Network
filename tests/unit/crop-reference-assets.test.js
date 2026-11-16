@@ -118,6 +118,8 @@ test("the nine uploaded guest-layout references are used as LIVE layout thumbnai
     assert.ok(serviceWorker.includes("/assets/live-guest-layouts/" + layout + ".png"), "missing cache entry for " + layout);
   }
   assert.match(app, /live-layout-preview/);
+  assert.ok(app.includes('src=\'/assets/live-guest-layouts/"+option.value+".png\''), "LIVE previews use the matching original crop for each layout");
+  assert.ok(app.includes('seat.dataset.seatIndex=String(spec.seatIndex??0)'), "LIVE grid seats expose stable crop-layout positions");
   for (const layout of layouts) {
     assert.ok(meetwave.includes('src="/assets/live-guest-layouts/' + layout + '.png"'), "MeetWave preview must use the original crop for " + layout);
   }
