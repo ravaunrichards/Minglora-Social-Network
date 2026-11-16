@@ -543,7 +543,7 @@
 }
 .gp-progression-marker-cover{
   position:absolute;left:8.8%;top:85%;transform:translate(-50%,-50%);
-  display:block;width:1.75%;max-width:19px;min-width:8px;aspect-ratio:1;border-radius:50%;
+  display:block;width:1.75%;max-width:19px;min-width:5px;aspect-ratio:1;border-radius:50%;
   background:radial-gradient(circle,#21153f 0 54%,rgba(33,21,63,.96) 72%,rgba(33,21,63,0) 100%);
   z-index:3;pointer-events:none;
 }
