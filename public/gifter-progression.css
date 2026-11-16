@@ -606,3 +606,48 @@
 
 /* Respect reduced-motion preferences after the premium current-level pulse rule. */
 @media(prefers-reduced-motion:reduce){.gp-level-index-item.is-current .gp-level-index-art{animation:none}}
+
+
+/* Tight range-sheet gallery spacing and consistent full-colour Gifter badge presentation. */
+.gp-range-reference-grid{gap:5px}
+.gp-range-reference-figure{gap:4px;padding:5px}
+.gp-range-reference-figure img{
+  filter:brightness(1.08) saturate(1.12) contrast(1.06)
+    drop-shadow(0 0 2px rgba(255,255,255,.72))
+    drop-shadow(0 2px 5px rgba(15,23,42,.22));
+}
+@media(max-width:760px){
+  .gp-range-reference-grid{gap:4px}
+  .gp-range-reference-figure{gap:3px;padding:4px}
+}
+
+/* Keep every 170×76 source badge at its correct aspect ratio and readable size. */
+.gp-level-index-grid .gp-level-index-art{
+  width:min(100%,170px);height:auto;aspect-ratio:170 / 76;
+  object-fit:contain;object-position:center;image-rendering:auto;
+}
+.gp-level-index-grid[data-layout="vertical"] .gp-level-index-item{
+  grid-template-columns:minmax(0,170px) minmax(0,1fr) minmax(120px,auto) auto;
+}
+.gp-level-index-grid[data-layout="vertical"] .gp-level-index-art{width:min(100%,170px)}
+.gp-level-index-item.is-locked .gp-level-index-art{opacity:1}
+.gp-current-badge-art{flex:0 1 170px;width:min(100%,170px);height:auto}
+.gp-current-badge-art .gp-current-badge-image{
+  width:min(100%,170px);height:auto;aspect-ratio:170 / 76;object-fit:contain;
+  filter:brightness(1.48) saturate(1.3) contrast(1.12)
+    drop-shadow(0 0 3px rgba(255,255,255,.82))
+    drop-shadow(0 0 8px rgba(255,218,122,.72))
+    drop-shadow(0 2px 5px rgba(15,23,42,.2));
+}
+.gp-leader-badge img{
+  filter:brightness(1.48) saturate(1.3) contrast(1.12)
+    drop-shadow(0 0 3px rgba(255,255,255,.82))
+    drop-shadow(0 0 8px rgba(255,218,122,.72))
+    drop-shadow(0 2px 5px rgba(15,23,42,.2));
+}
+@media(max-width:760px){
+  .gp-level-index-grid[data-layout="vertical"] .gp-level-index-item{
+    grid-template-columns:minmax(0,170px) minmax(0,1fr);gap:8px 12px;
+  }
+  .gp-level-index-grid[data-layout="vertical"] .gp-level-index-art{width:min(100%,170px)}
+}
