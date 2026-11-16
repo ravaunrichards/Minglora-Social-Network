@@ -2539,3 +2539,16 @@
   .mw-meeting .mw-guest-layout-options .mw-crop-layout-option{grid-template-rows:68px auto!important}
   .mw-meeting .mw-guest-layout-options .mw-layout-preview{height:68px!important}
 }
+
+
+/* Force the two Fluid Panel thumbnail seats to their crop-matched lower-right stack. */
+.mw-meeting #mw-screen-stage[data-guest-layout="fluid-panel"] #mw-grid[data-guest-layout="fluid-panel"]>.live-guest-seat:not(.is-host)[data-seat-index="1"]:nth-child(n){
+  display:grid!important;position:absolute!important;inset:auto 7px calc(7px + 22%) auto!important;
+  width:29%!important;height:21%!important;min-width:0!important;min-height:0!important;
+  margin:0!important;grid-column:auto!important;grid-row:auto!important;transform:none!important;
+}
+.mw-meeting #mw-screen-stage[data-guest-layout="fluid-panel"] #mw-grid[data-guest-layout="fluid-panel"]>.live-guest-seat:not(.is-host)[data-seat-index="2"]:nth-child(n){
+  display:grid!important;position:absolute!important;inset:auto 7px 7px auto!important;
+  width:29%!important;height:21%!important;min-width:0!important;min-height:0!important;
+  margin:0!important;grid-column:auto!important;grid-row:auto!important;transform:none!important;
+}
