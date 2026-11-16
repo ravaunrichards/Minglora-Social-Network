@@ -45,7 +45,7 @@ function checkGeometry(layout,state,product,viewport){
     assertFullTile(host,state.grid,label+' main tile');
     assertSmallTile(g1,state.grid,label+' first lower-right panel');
     assertSmallTile(g2,state.grid,label+' second lower-right panel');
-    assert.ok(g1.y<g2.y,label+' guest panels should stack vertically; seat 1 y='+g1.y+', seat 2 y='+g2.y);
+    assert.ok(g1.y<g2.y,label+' guest panels should stack vertically; state='+JSON.stringify({g1,g2,grid:state.grid,stage:state.stage}));
     assert.ok(g1.x>state.grid.x+state.grid.width*.55,label+' guest panels should sit on the right');
   }else if(layout==='fluid-grid'){
     assert.equal(state.columns,2,label+' should have two columns');
@@ -89,7 +89,8 @@ function stateInPage(product){
   const tiles=Array.from(grid.querySelectorAll('.live-guest-seat'));
   const getTile=tile=>{
     const r=tile.getBoundingClientRect(),c=getComputedStyle(tile);
-    return {display:c.display,position:c.position,x:r.x,y:r.y,width:r.width,height:r.height,
+    return {display:c.display,position:c.position,top:c.top,bottom:c.bottom,left:c.left,right:c.right,
+      x:r.x,y:r.y,width:r.width,height:r.height,offsetParent:tile.offsetParent?.id||tile.offsetParent?.className||null,
       columnStart:c.gridColumnStart,columnEnd:c.gridColumnEnd,rowStart:c.gridRowStart,rowEnd:c.gridRowEnd};
   };
   const gr=grid.getBoundingClientRect();
