@@ -265,7 +265,7 @@ The canonical gift code, catalogue data, configured Coin value, active flag, dat
 
 ## LIVE provider readiness status icons — 2026-11-16
 
-- Added three original 24×24 SVG state marks under `public/assets/icons/live-provider-status/`: ready, not configured and unavailable.
+- Added three original 24×24 SVG state marks under `public/assets/icons/live-provider-status/` (`manifest.json` plus three SVGs): ready, not configured and unavailable.
 - `public/app.js` derives the state only from the existing provider response (`status.configured` and `status.connected === true`), retains the existing text label and places an aria-hidden icon inside the status pill.
 - `public/styles.css` sizes the icon at 14×14 and keeps the pill inline-flex; `public/sw.js` caches the icon manifest and all three symbols offline.
 - The unified LIVE asset manifest inventories the pack with three icon records and component usage. Unit coverage checks its files, hashes, state mapping, cache entries and manifest registration.
