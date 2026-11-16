@@ -37,7 +37,8 @@ test('LIVE applies the nine original crop geometries to its guest seats',()=>{
   assert.ok(contract.includes('data-live-layout="spotlight"]>.live-guest-seat.is-host{grid-column:1/-1!important;grid-row:1!important}'));
   assert.ok(contract.includes('data-live-layout="roundtable-1"]>.live-guest-seat.is-guest{'));
   assert.ok(contract.includes('data-live-layout="roundtable-2"]{\n  grid-template-columns:minmax(0,1fr) minmax(0,1.7fr) minmax(0,1fr)'));
-  assert.ok(app.includes("src='/assets/live-guest-layouts/"+'"+option.value+".png'));
+  assert.ok(app.includes('liveLayoutIcon(option.icon)'), 'LIVE layout buttons use the crop preview helper');
+  for(const layout of nine)assert.ok(app.includes(layout.replace(/-/g,'')) || app.includes(layout), layout+' is defined in the Live crop preview mapping');
   assert.ok(app.includes('seat.dataset.seatIndex=String(spec.seatIndex??0)'));
 });
 
