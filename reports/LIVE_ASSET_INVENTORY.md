@@ -267,3 +267,8 @@ The source catalogue grand-entry value, animation key and 1,900-ms duration are 
 - Geometry: full-grain ivory leather sphere, recessed curved seam channels, raised scarlet cotton seams, individual hand-sewn stitches and subtle leather-grain flecks.
 - Exact canonical source metadata: Baseball / sports / 1 Coin / source active true; unchanged by this asset implementation.
 - Artwork and model review: design-review-pending; no human visual, legal or physical device acceptance is implied.
+
+
+## Original gift-specific WAV pack — 2026-11-16
+
+Eleven existing individually modelled gifts now have build-generated original Minglora WAV cues (Rose, Hibiscus, Djembe Master, Palm Breeze, Gamer Otter, LIVE Island, Crystal Crown, Phoenix, Beach Maracas, Royal Lions Scepter and Baseball). The files are 44.1 kHz stereo PCM16, individually hashed and indexed in `public/assets/gift-sounds/manifest.json`. They are loaded through the existing GiftFX playback path, cached as decoded AudioBuffers and retain the existing Web Audio synthesis as an immediate-play and failure fallback. These cues are generated procedural audio and remain `generated-review-required`; professional listening review and mastering are not yet complete. The 1,748-row catalogue is not represented as having eleven audio files for every gift; this is an 11-gift subset only. No price, balance, transaction or production activation was changed.

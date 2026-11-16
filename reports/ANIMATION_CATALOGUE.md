@@ -108,3 +108,8 @@ The generated motion-index record retains both `catalog_motion_preset` (unchange
 - Sound design ID: royal-lions-scepter-roar-and-regal-fanfare-v1. The existing Web Audio path synthesizes a low band-pass lion-like growl, a short low-frequency impact, five brass-like fanfare tones (196, 293.66, 392, 587.33 and 783.99 Hz) and a restrained high-pass jewel shimmer.
 - Audio is generated locally by Web Audio and is not a mastered/recorded sound asset. Existing sound opt-out behavior and reduced-motion handling remain active.
 - No Lottie/Rive file, GLTF skeletal animation track, mastered sound recording, licensing clearance, human design approval or physical-device QA is claimed. No catalogue pricing, activation, wallet or transaction state was changed.
+
+
+## Original gift-specific WAV pack — 2026-11-16
+
+Eleven existing individually modelled gifts now have build-generated original Minglora WAV cues (Rose, Hibiscus, Djembe Master, Palm Breeze, Gamer Otter, LIVE Island, Crystal Crown, Phoenix, Beach Maracas, Royal Lions Scepter and Baseball). The files are 44.1 kHz stereo PCM16, individually hashed and indexed in `public/assets/gift-sounds/manifest.json`. They are loaded through the existing GiftFX playback path, cached as decoded AudioBuffers and retain the existing Web Audio synthesis as an immediate-play and failure fallback. These cues are generated procedural audio and remain `generated-review-required`; professional listening review and mastering are not yet complete. The 1,748-row catalogue is not represented as having eleven audio files for every gift; this is an 11-gift subset only. No price, balance, transaction or production activation was changed.

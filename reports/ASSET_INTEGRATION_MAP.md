@@ -230,3 +230,8 @@ The motion-index schema keeps the original `catalog_motion_preset` and the effec
 - Runtime: the existing gift viewer consumes the canonical generated `.gltf` path; no new renderer, third-party brand asset, transaction route or backend data mutation is introduced.
 - QA target: the isolated Chromium matrix includes 11 bespoke models at desktop (1280×900), tablet (768×1024) and mobile (390×844) sizes: 33 model/viewport renders. Workflow results are pending at this checkpoint.
 - Release boundary: the asset remains `design-review-pending`; production catalogue version-3 approval, rights review, human artwork sign-off and physical-device testing remain separate gates.
+
+
+## Original gift-specific WAV pack — 2026-11-16
+
+Eleven existing individually modelled gifts now have build-generated original Minglora WAV cues (Rose, Hibiscus, Djembe Master, Palm Breeze, Gamer Otter, LIVE Island, Crystal Crown, Phoenix, Beach Maracas, Royal Lions Scepter and Baseball). The files are 44.1 kHz stereo PCM16, individually hashed and indexed in `public/assets/gift-sounds/manifest.json`. They are loaded through the existing GiftFX playback path, cached as decoded AudioBuffers and retain the existing Web Audio synthesis as an immediate-play and failure fallback. These cues are generated procedural audio and remain `generated-review-required`; professional listening review and mastering are not yet complete. The 1,748-row catalogue is not represented as having eleven audio files for every gift; this is an 11-gift subset only. No price, balance, transaction or production activation was changed.
