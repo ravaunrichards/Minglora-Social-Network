@@ -1,4 +1,4 @@
-name: Minglora nine cropped guest layout visual QA
+name: Minglora nine crop-backed guest layout visual QA
 
 on:
   pull_request:
@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   layout-matrix:
-    name: LIVE and MeetWave layout independence matrix
+    name: LIVE and MeetWave nine-layout crop match matrix
     runs-on: ubuntu-24.04
     steps:
       - name: Check out repository
