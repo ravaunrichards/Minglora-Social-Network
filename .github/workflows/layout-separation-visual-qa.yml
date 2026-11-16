@@ -1,4 +1,4 @@
-name: Minglora seven-plus-two layout visual QA
+name: Minglora nine cropped guest layout visual QA
 
 on:
   pull_request:
@@ -26,13 +26,13 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Check visual test syntax
         run: node --check tests/e2e/layout-separation-visual.mjs
-      - name: Render every screen and guest-box combination
+      - name: Render all nine original crop-backed guest layouts
         run: node tests/e2e/layout-separation-visual.mjs
       - name: Upload layout screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: minglora-seven-plus-two-layout-visual-evidence
-          path: artifacts/layout-separation-visual/
+          name: minglora-nine-cropped-guest-layout-visual-evidence
+          path: artifacts/cropped-guest-layout-visual/
           if-no-files-found: warn
           retention-days: 7
