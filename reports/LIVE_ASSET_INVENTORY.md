@@ -96,7 +96,7 @@ The shortcuts remain Layout, Permissions, Guests, Viewers, Fan Club, Match, Top 
 | assets/3d-assets/gift-models/djembe-model.mjs | Djembe Master (djembe-master-1v3jzkm) | Mahogany shell, hollow bowl, hide drumhead, rim bindings, 16 tension strands, diamond lacing and carved detailing | Design review pending; CI/build tests passed in merged PR #339 |
 | assets/3d-assets/gift-models/palm-breeze-model.mjs | Palm Breeze (palm-breeze-gknyt0) | Curved trunk, eight pinnate fronds, grouped leaflets and veins, coconuts, roots and sand/water plinth | Design review pending; CI/build tests passed in merged PR #340 |
 
-The repository now has fifteen individually art-directed model sources: Rose, Hibiscus, Djembe Master, Palm Breeze, Gamer Otter, LIVE Island, Crystal Crown, Phoenix, Beach Maracas, Royal Lions Scepter, Baseball, Maracas, Dolphin and Crocodile. The generator still uses shared procedural category/name geometry for the remaining 1,733 catalogue gifts; the presence of a generated GLTF file per catalogue row must not be interpreted as proof of bespoke modelling or premium approval.
+The repository now has **sixteen individually art-directed model sources**: Rose, Hibiscus, Djembe Master, Palm Breeze, Gamer Otter, LIVE Island, Crystal Crown, Phoenix, Beach Maracas, Royal Lions Scepter, Baseball, Maracas, Dolphin, Crocodile, Carnival Music and Toucan. Each is mapped to its exact canonical gift code through `scripts/generate-minglora-gifts.mjs`. The generator still uses shared procedural category/name geometry for the remaining **1,732 catalogue gifts**; a generated GLTF file per catalogue row is not proof of bespoke modelling or premium approval.
 
 ## Transparent gift-icon inventory — 2026-11-14
 
@@ -311,7 +311,7 @@ The exact-code generator route does not change the source catalogue's 10-Coin va
 |---|---|---|---|
 | `assets/3d-assets/gift-models/carnival-music-model.mjs` | Carnival Music (`carnival-music-14x4zts`; music; 999 configured Coins; source active flag preserved) | Self-contained glTF 2.0 with named steelpan, tuning-note, mallet, tripod and feather-fan geometry; original primary SVG and transparent icon | Exact-code route in the canonical gift generator; included in gift catalogue tests, manifest provenance checks and desktop/tablet/mobile Chromium render matrix; design/rights review pending |
 
-Current source-model count is 15 individually authored gift models; the remaining 1,733 catalogue records still use shared procedural/category model generation. A generated GLTF file is not itself evidence of bespoke modelling or premium approval.
+Current source-model count is **16 individually authored gift models**; the remaining **1,732** catalogue records still use shared procedural/category model generation. A generated GLTF file is not itself evidence of bespoke modelling or premium approval.
 
 
 ## Carnival Music browser render verification — 2026-11-16
@@ -321,3 +321,12 @@ Current source-model count is 15 individually authored gift models; the remainin
 - Browser report: `page_errors=0`, `http_failures=0`, `request_failures=0`.
 - Workflow: GitHub Actions run `43787366815`; evidence artifact `14190154120` (`minglora-live-gift-model-render-evidence`).
 - This verifies generated asset loading and visible Chromium rendering in simulated viewports, not physical device certification, premium human art approval or rights clearance.
+
+
+## Toucan bespoke animal gift — 2026-11-16
+| `assets/3d-assets/gift-models/toucan-model.mjs` | Toucan (`toucan-1ovzxjb`; animals) | Original keel-billed toucan sculpture with separately surfaced anatomy, layered wings/feathers, curved coloured bill, feet and natural perch; matching primary SVG and transparent icon | Exact-code generator/runtime route; Toucan Glide motion and locally synthesized rainforest-call/rustle cue; design/rights review pending |
+
+## Current 16-model Chromium/WebGL inventory — 2026-11-16
+- 16 individually authored source models × desktop, tablet and mobile = **48/48 model renders, 48/48 non-empty pixel checks and 48 screenshots**.
+- GitHub Actions run `43789909388`, evidence artifact `14192111910`; zero page errors, HTTP failures, request failures or unexpected cancellations.
+- Earlier 14- and 15-model checkpoints above remain historical and are not overwritten.

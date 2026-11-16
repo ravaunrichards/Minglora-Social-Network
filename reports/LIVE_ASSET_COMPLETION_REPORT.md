@@ -435,3 +435,10 @@ The browser captures establish that all nine bespoke models load and remain visi
 - Carnival Music's dedicated catalogue/model/SVG regression passed. Canonical gift catalogue generation succeeded. LIVE/MeetWave layout independence QA passed in workflow `43787366768`.
 - Standard CI remains failed on five existing tests in unrelated API, Creator League, Home Stories/For You and League-ranking files; the separate For You navigation acceptance also fails. Supabase Auth acceptance passed in the same run. These unrelated failures have not been masked or modified by this asset task.
 - The asset is still `design-review-pending`: human art review, licensing/right clearance, mastered audio, premium approval and physical-device certification remain outstanding. No production gift activation, database, wallet, payment or payout change and no deployment occurred.
+
+
+## Toucan model, original rainforest effect and 16-source browser verification — 2026-11-16
+- Added `assets/3d-assets/gift-models/toucan-model.mjs` for canonical gift `toucan-1ovzxjb`, with exact-code generation of original primary SVG artwork, transparent icon and self-contained glTF geometry/materials.
+- LIVE playback uses the `toucan-glide` motion preset and a local Web Audio bird-call/rustle synthesis route. No mastered sound file or external licensed recording is claimed.
+- The combined current set is **16 individually authored gift models**. Chromium/WebGL QA passed **48/48 model renders and 48/48 non-empty pixel checks**, with 48 screenshots and zero page/network errors or unexpected cancellations (workflow `43789909388`, artifact `14192111910`).
+- The catalogue generator also built the complete 1,748-row SVG/icon/glTF output. The generated assets and browser matrix do not substitute for human art/rights review, mastered audio or physical-device acceptance.

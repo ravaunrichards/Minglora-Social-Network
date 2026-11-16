@@ -154,3 +154,9 @@ The generated motion-index record retains both `catalog_motion_preset` (unchange
 - Its original glTF model and SVG artwork are selected through the exact canonical gift code and existing LIVE gift event/viewer path.
 - The source catalogue `grand-entry` animation preset and music-category synthesized sound are reused without mutation. The model does not embed a glTF animation channel and no standalone Lottie, Rive, WebM or MP4 preview is introduced.
 - The sound remains locally synthesized; no mastered per-gift recording is claimed. Human visual, rights and physical-device review remain pending.
+
+
+## Toucan Glide and rainforest-call sound design — 2026-11-16
+- Canonical gift: `toucan-1ovzxjb` (Toucan). The exact-code LIVE animation route uses `toucan-glide`: a rising entrance, short banking/gliding movement and soft settle. Reduced-motion mode keeps a shorter entrance rather than running the full choreography.
+- The sound route locally synthesizes three rising/falling chime-like bird calls over a filtered leaf-rustle bed. It is an original Web Audio cue, not a mastered field recording or a production audio file.
+- The 16-source browser matrix rendered 48 model/viewport combinations successfully; this validates the 3D preview paths, not the audio mastering or real-device speaker mix.

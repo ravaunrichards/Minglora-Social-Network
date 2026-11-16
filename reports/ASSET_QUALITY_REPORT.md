@@ -277,7 +277,7 @@ The Crocodile model is a separate named mesh assembly (armoured torso, counter-s
 
 The earlier `public/assets/gifts/minglora_dolphin.gltf` file remains untouched. Its manifest record (`minglora-dolphin`) identifies a historical `Ocean Dolphin` record with code `dolphin`, source migration 021, historical 650-Coin value, and active-at-migration state. The current production database snapshot marks that record absent. Technical metadata records 10 meshes, 5 materials, no textures, no images and no embedded animations; visual review, technical render review and rights review remain pending, and `production_eligible=false`. This is not the current active catalogue record `dolphin-4bkejj` (10 Coins). The newly-authored Dolphin source targets only that current canonical code; the legacy model has been preserved, not overwritten or promoted.
 
-This browser evidence is not premium visual acceptance. Human visual/rights review for all fifteen bespoke sources, high-resolution texture packs, authored GLTF animation channels, mastered audio recordings and physical-device QA remain outstanding. The other 1,733 catalogue rows continue to use shared procedural category/name geometry.
+This browser evidence is not premium visual acceptance. Human visual/rights review for all sixteen bespoke sources, high-resolution texture packs, authored GLTF animation channels, mastered audio recordings and physical-device QA remain outstanding. The other 1,732 catalogue rows continue to use shared procedural category/name geometry.
 
 
 ## Carnival Music original steelpan model checkpoint — 2026-11-16
@@ -294,3 +294,10 @@ CI has verified canonical generation and the new catalogue test. The dedicated d
 The clean-mainline feature commit `e66f2e9d031b8656f87092f66dad418a623feef1` passed the original Minglora gift model browser renderer across 15 individually sourced models and three Chromium viewport sizes: **45/45 model checks, 45/45 non-empty pixel checks, zero page errors, zero HTTP failures and zero request failures**. Evidence is from workflow run `43787366815`, artifact `14190154120`.
 
 This proves build and visible browser loading for the tested Chromium viewports. It is not human visual approval, rights/licensing approval, physical Android/iOS/tablet/foldable/desktop/TV certification, or premium-production sign-off. All bespoke model review states remain `design-review-pending`.
+
+
+## Toucan bespoke model and current 16-source browser acceptance — 2026-11-16
+- `assets/3d-assets/gift-models/toucan-model.mjs` adds a separately authored keel-billed toucan with named body, head, bill, throat, wing/feather, feet and perch geometry and per-part PBR material factors. The canonical generator routes only `toucan-1ovzxjb` to this source and emits its matching primary SVG and transparent icon.
+- The LIVE runtime maps the exact gift code to `toucan-glide` choreography and a locally synthesized three-chirp/rainforest-rustle sound. This is Web Audio synthesis, not a mastered recording.
+- Current 16-source Chromium/WebGL matrix: **48/48 model renders, 48/48 non-empty pixel checks and 48 screenshots** across desktop/tablet/mobile; zero page errors, HTTP failures, request failures or unexpected cancellations (run `43789909388`, artifact `14192111910`).
+- Human visual approval, rights clearance, mastered audio, high-resolution texture packs, physical-device GPU/memory/battery tests and production approval remain pending.

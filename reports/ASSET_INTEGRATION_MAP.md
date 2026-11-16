@@ -267,3 +267,10 @@ The motion-index schema keeps the original `catalog_motion_preset` and the effec
 - Failures: `page_errors=0`, `http_failures=0`, `request_failures=0`.
 - GitHub Actions run `43787366815`; uploaded evidence artifact ID `14190154120`.
 - Scope is simulated Chromium rendering only; legal/design acceptance and physical-device validation remain open.
+
+
+## Toucan original LIVE gift integration — 2026-11-16
+- Canonical item: Toucan (`toucan-1ovzxjb`, animals). Source module: `assets/3d-assets/gift-models/toucan-model.mjs`; generated outputs use the existing canonical `/assets/gifts/catalog/<code>.svg`, `-icon.svg` and `.gltf` paths.
+- `scripts/generate-minglora-gifts.mjs` routes the exact code to the bespoke mesh/artwork builder. `public/gift-effects.js` provides `toucan-glide` motion and the locally synthesized three-chirp/rustle sound cue; catalogue price, active state and LIVE gift transaction handling are unchanged.
+- Verification: the complete 1,748-record asset build passed; dedicated Toucan tests passed in CI; current 16-source Chromium/WebGL run `43789909388` passed 48/48 render and 48/48 pixel checks, with 48 screenshots and no page/network failures (artifact `14192111910`).
+- Review state: `design-review-pending`; human visual/rights approval, mastered audio and physical-device testing are not inferred.
