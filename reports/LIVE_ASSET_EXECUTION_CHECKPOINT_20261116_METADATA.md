@@ -15,7 +15,7 @@
 2. `npm run audit:live-image-metadata` parsed all **2,869** supported raster images from six reference/artwork roots.
 3. Result: **1,748 PNG, 1,121 JPEG, 2,869 parsed, zero unsupported formats and zero parse failures**; total source size 432,539,358 bytes.
 4. The audit recorded header dimensions, orientation, bit-depth/type metadata, encoded alpha declarations, per-file size and SHA-256.
-5. Six newly-present Gifter range-sheet PNGs under `assets/Gifters Badge Levels/Gifters Badges/Png/` were included and remain unaltered. Six companion files in the sibling `psd/` directory are outside the raster-only scanner and remain untouched.
+5. Six cropped Gifter milestone badge PNGs (not the broad range sheets) were included from their then-current legacy path `assets/Gifters Badge Levels/Gifters Badges/Png/`. PR #443 moved the canonical PNG set to `assets/Crop References/Gifters Badges/Png/` and removed the legacy duplicates. Five genuine layered PSD references remain under `assets/Crop References/Gifters Badges/psd/`.
 6. Generated catalogue build: 1,748 primary SVG artworks, 1,748 transparent icon SVGs and 1,748 GLTF models. Motion index: 1,737 active profiles; 11 inactive items have no active motion profile.
 7. Manifest summary: 14 bespoke gift model sources and 1,734 procedural/category models; 18 LIVE control icons, 22 gift-category icons, 12 LIVE tools shortcut icons and 3 provider status icons; nine gift-specific synthesized sound designs; zero mastered gift-sound files; zero physical-device QA verifications.
 8. The PR CI suite passed **1,252 tests with zero failures**. For You functional navigation and Supabase Auth acceptance passed. LIVE/MeetWave layout independence matrix passed.
