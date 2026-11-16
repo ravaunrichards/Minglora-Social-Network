@@ -614,8 +614,8 @@ test("Crocodile uses a bespoke original 3D reptile model, transparent artwork an
   assert.ok(parts.some(name => name?.includes("Crocodile sweeping muscular tail")));
   assert.ok(parts.some(name => name?.includes("Crocodile upper ivory tooth")));
   assert.ok(parts.some(name => name?.includes("Crocodile amber eye")));
-  assert.ok(parts.some(name => name?.includes("Crocodile near front upper leg")));
-  assert.ok(parts.some(name => name?.includes("Crocodile near front dark claw")));
+  assert.ok(parts.some(name => name?.includes("Crocodile front near upper leg")));
+  assert.ok(parts.some(name => name?.includes("Crocodile front near dark claw")));
   assert.ok(model.buffers?.[0]?.uri.startsWith("data:application/octet-stream;base64,"), "Crocodile must be self-contained for the existing model viewer");
   assert.ok(model.accessors?.filter(accessor => accessor.type === "VEC3").length >= 140, "the crocodile must expose per-mesh positions and normals");
   for (const accessor of model.accessors.filter(value => value.type === "VEC3" && value.min && value.max)) {
