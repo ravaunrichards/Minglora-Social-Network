@@ -226,16 +226,20 @@ test("shared LIVE control and gift-category SVG packs are inventoried with file 
   const controlPack = packs.find(item => item.pack_id === "minglora-live-controls");
   const categoryPack = packs.find(item => item.pack_id === "minglora-live-gift-categories");
   const toolsPack = packs.find(item => item.pack_id === "minglora-live-tools-shortcuts");
+  const rankingPack = packs.find(item => item.pack_id === "minglora-live-ranking-discovery");
   assert.ok(controlPack);
   assert.ok(categoryPack);
   assert.ok(toolsPack);
+  assert.ok(rankingPack);
   assert.equal(controlPack.icon_count, 18);
   assert.equal(categoryPack.icon_count, 22);
   assert.equal(toolsPack.icon_count, 12);
+  assert.equal(rankingPack.icon_count, 3);
   assert.equal(manifest.summary.live_control_icon_count, 18);
   assert.equal(manifest.summary.live_gift_category_icon_count, 22);
   assert.equal(manifest.summary.live_tools_shortcut_icon_count, 12);
-  for (const pack of [controlPack, categoryPack, toolsPack]) {
+  assert.equal(manifest.summary.live_discovery_ranking_icon_count, 3);
+  for (const pack of [controlPack, categoryPack, toolsPack, rankingPack]) {
     assert.equal(pack.completeness, "standalone_svg_icon_pack");
     assert.equal(pack.assets.length, pack.icon_count);
     assert.equal(new Set(pack.icon_ids).size, pack.icon_ids.length);
@@ -253,6 +257,8 @@ test("shared LIVE control and gift-category SVG packs are inventoried with file 
   assert.ok(categoryPack.component_usage.includes("public/live-gift-access.css"));
   assert.ok(toolsPack.component_usage.includes("public/app.js"));
   assert.ok(toolsPack.component_usage.includes("public/live-tiktok-compact.css"));
+  assert.ok(rankingPack.component_usage.includes("public/app.js"));
+  assert.ok(rankingPack.component_usage.includes("public/styles.css"));
 });
 
 test("manifest generation is part of startup, CI and documentation", () => {
@@ -265,4 +271,5 @@ test("manifest generation is part of startup, CI and documentation", () => {
   assert.match(workflow, /minglora-live-asset-manifest/);
   assert.match(integration, /live-asset-manifest\.json/);
   assert.match(integration, /live-tools\/manifest\.json/);
+  assert.ok(integration.includes("live-ranking-discovery/manifest.json"));
 });
