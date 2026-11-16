@@ -41,7 +41,7 @@ test("Daily top-three ranking uses the supplied cropped first, second and third 
   assert.match(rankingStyles, /\.minglora-gifter-podium \.minglora-gifter-rank-avatar/);
   assert.match(app, /live-daily-podium/);
   assert.match(app, /Daily LIVE Gifter Rankings/);
-  assert.match(rankingStyles, /\\.live-daily-podium \\.live-daily-podium-frame/);
+  assert.match(rankingStyles, /\.live-daily-podium \.live-daily-podium-frame/);
 
 });
 
