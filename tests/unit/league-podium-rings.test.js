@@ -17,7 +17,7 @@ test("League renders the numbered three-step top-three podium and remaining clic
   assert.match(league, /league-podium-place--1/);
   assert.match(league, /league-podium-place--2/);
   assert.match(league, /league-podium-place--3/);
-  assert.match(league, /daily-ranking-badges\\/place-/);
+  assert.ok(league.includes("daily-ranking-badges/place-"), "podium must use the supplied numbered placement frames");
   assert.match(league, /data-league-profile=/);
   assert.match(league, /minglora:open-profile/);
   assert.match(league, /leaderboard\.slice\(3\)/);
