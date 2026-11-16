@@ -511,3 +511,12 @@
 .gp-progression-art-frame{display:block;min-width:0;max-width:100%;margin:0;padding:clamp(8px,1.2vw,13px);box-sizing:border-box;border:1px solid var(--border,#e2e7ef);border-radius:14px;background:var(--surface,#fff);box-shadow:0 4px 14px rgba(25,35,55,.06)}
 .gp-progression-art-frame img{display:block;width:100%;max-width:100%;height:auto;min-width:0;object-fit:contain;object-position:center;border-radius:8px}
 @media(max-width:760px){.gp-progression-art-frame{padding:8px;border-radius:12px}.gp-progression-art-frame img{width:100%;height:auto}}
+
+
+/* Original individual emblem crops from the uploaded Gifter progression photo. */
+.gp-tier-emblem-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;align-items:stretch;min-width:0}
+.gp-tier-emblem-card{display:grid;grid-template-rows:1fr auto;justify-items:center;align-items:center;gap:8px;min-width:0;margin:0;padding:12px 8px;border:1px solid var(--border,#e2e7ef);border-radius:12px;background:var(--surface,#fff)}
+.gp-tier-emblem-card img{display:block;width:min(100%,88px);height:auto;aspect-ratio:25 / 26;object-fit:contain;object-position:center}
+.gp-tier-emblem-card figcaption{color:var(--text,#172033);font-size:.76rem;font-weight:800;line-height:1.3;text-align:center;overflow-wrap:anywhere}
+@media(max-width:760px){.gp-tier-emblem-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.gp-tier-emblem-card{padding:10px 6px}}
+@media(max-width:480px){.gp-tier-emblem-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.gp-tier-emblem-card img{width:min(100%,82px)}}
