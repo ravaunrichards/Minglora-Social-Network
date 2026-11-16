@@ -9,7 +9,7 @@ export const MATCH_POWERUPS = Object.freeze([
   { id: "magic_mist", name: "Magic Mist", symbol: "☁️", durationMs: 30000, description: "Hides your side's score from the opposing creator for 30 seconds; scoring continues normally." },
   { id: "stun_hammer", name: "Stun Hammer", symbol: "🔨", durationMs: 30000, description: "Applies a 30-second playful visual stun to the opposing LIVE match panel without interrupting video or controls." },
   { id: "time_maker", name: "Time Maker", symbol: "⏱️", durationMs: 10000, maxUsesPerMatch: 3, description: "Adds 10 seconds to the match. Up to three uses are shared across both sides." },
-  { id: "boosters", name: "Boosters", symbol: "2×", durationMs: 30000, multiplier: 2, ranks: [2, 3], description: "Doubles eligible Gifts from your No. 2 or No. 3 ranked gifter for 30 seconds." },
+  { id: "boosters", name: "Boosters", symbol: "2×", durationMs: 30000, multiplier: 2, ranks: [2, 3], description: "Doubles eligible Gifts from both your No. 2 and No. 3 ranked gifters for 30 seconds." },
   { id: "speed_challenge", name: "Speed Challenge", symbol: "🚀", durationMs: 52000, multiplier: 2, maxUsesPerMatch: 1, description: "Starts a 52-second bonus round. Eligible Gifts from both sides score 2× match points." }
 ]);
 
@@ -662,7 +662,7 @@ export function recordLiveGiftForLeagues(db, details) {
             multiplier = Math.max(multiplier, 5);
             triggeredEffects.push("boosting_glove");
           }
-        } else if (effect.type === "boosters" && senderRank === Number(effect.targetRank)) {
+        } else if (effect.type === "boosters" && [2, 3].includes(senderRank)) {
           multiplier = Math.max(multiplier, 2);
           triggeredEffects.push("boosters");
         } else if (Number(effect.multiplier) > 1) {
@@ -806,9 +806,7 @@ export function useCreatorLeaguePowerup(db, match, userId, powerupId, now = new 
     const effect = { id: randomUUID(), type: powerupId, side, durationMs: powerup.durationMs, expiresAt: new Date(now.getTime() + powerup.durationMs).toISOString(), createdAt: now.toISOString() };
     if (powerupId === "stun_hammer") effect.targetSide = side === "challenger" ? "opponent" : "challenger";
     if (powerupId === "boosters") {
-      const targetRank = Number(options.boosterRank);
-      if (![2, 3].includes(targetRank)) throw Object.assign(new Error("Choose the No. 2 or No. 3 gifter for Boosters."), { status: 400 });
-      effect.targetRank = targetRank;
+      effect.targetRanks = [2, 3];
       effect.multiplier = 2;
     }
     if (powerupId === "boosting_glove") {
@@ -840,16 +838,16 @@ function decorateMatch(match, users, viewerId, now = new Date()) {
     scoreVisibility: { challenger: true, opponent: true }
   };
   const viewerSide = match.challengerId === viewerId ? "challenger" : match.opponentId === viewerId ? "opponent" : "";
-  const hiddenSide = decorated.activeEffects.find(effect =>
+  const hiddenSide = viewerSide ? decorated.activeEffects.find(effect =>
     effect.type === "magic_mist" && effect.side && effect.side !== viewerSide
-  )?.side;
+  )?.side : null;
   if (hiddenSide) {
     decorated.scoreVisibility[hiddenSide] = false;
     decorated.scores[hiddenSide] = null;
   }
   decorated.matchEffects = decorated.activeEffects.map(effect => ({
     type: effect.type, side: effect.side, targetSide: effect.targetSide || null,
-    targetRank: effect.targetRank || null, expiresAt: effect.expiresAt
+    targetRanks: effect.targetRanks || null, expiresAt: effect.expiresAt
   }));
   return decorated;
 }
