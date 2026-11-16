@@ -57,21 +57,22 @@ test('MeetWave presents all nine layouts as one mutually exclusive selector',()=
 });
 
 test('MeetWave maps each of the nine original crops to independent full-stage geometry',()=>{
-  const start=meetwaveCss.lastIndexOf('/* MINGLORA CROPPED GUEST LAYOUT CONTRACT');
+  const start=meetwaveCss.lastIndexOf('/* NINE COMPLETE GUEST LAYOUTS');
   const contract=meetwaveCss.slice(start);
   assert.ok(start>=0);
   for(const layout of nine){
-    assert.ok(contract.includes('data-screen-layout="'+layout+'"'),layout+' stage selector missing');
     assert.ok(contract.includes('data-layout="'+layout+'"'),layout+' grid selector missing');
   }
   assert.match(contract,/fluid-panel[\s\S]*?right:8px!important/);
-  assert.match(contract,/fluid-grid[\s\S]*?minmax\(0,2\.05fr\)/);
+  assert.match(contract,/fluid-grid[\s\S]*?grid-template-columns:minmax\(0,1\.12fr\)/);
   assert.match(contract,/fixed-grid[\s\S]*?repeat\(3,minmax\(0,1fr\)\)/);
-  assert.match(contract,/fixed-panel[\s\S]*?minmax\(0,2fr\)/);
+  assert.match(contract,/fixed-panel[\s\S]*?grid-template-columns:minmax\(0,1\.72fr\)/);
   assert.match(contract,/side-by-side[\s\S]*?grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
   assert.match(contract,/spotlight[\s\S]*?grid-column:1\/\-1!important/);
   assert.match(contract,/roundtable-1[\s\S]*?grid-column:2!important/);
   assert.match(contract,/roundtable-2[\s\S]*?grid-column:2\/4!important/);
+  assert.match(contract,/\.mw-meeting #mw-screen-stage\[data-screen-layout\] #mw-grid/);
+  assert.match(contract,/:is\(\.live-guest-seat\.is-guest,\.mw-empty-seat\)/);
   assert.doesNotMatch(contract,/data-guest-layout=/);
   assert.doesNotMatch(meetwaveCss,/MeetWave correction: equal-size host and guest seats in every preset/);
 });
