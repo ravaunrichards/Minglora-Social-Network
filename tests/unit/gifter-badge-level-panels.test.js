@@ -82,8 +82,8 @@ test("level artwork route is an explicit allow-list and serves JPEG without expo
 test("updated progression assets and all original JPG panels are included in the app shell", () => {
   const html = read("public/index.html");
   const sw = read("public/sw.js");
-  assert.ok(html.includes("/gifter-progression.css?v=20261115-gifter-original-art-marker-only-1"));
-  assert.ok(html.includes("/gifter-progression.js?v=20261115-gifter-original-art-marker-only-1"));
+  assert.ok(html.includes("/gifter-progression.css?v=20261115-gifter-no-black-edge-1"));
+  assert.ok(html.includes("/gifter-progression.js?v=20261115-gifter-no-black-edge-1"));
   panelFiles.forEach(filename => {
     const routeName = filename.toLowerCase().replaceAll(" ", "-");
     assert.ok(sw.includes("/assets/gifter-badge-level-panels/" + routeName));
@@ -117,20 +117,20 @@ test("original artwork panels are centered, responsive, uncropped and capped at 
 });
 
 
-test("Gifter artwork removes unused outer padding and uses a brighter clean edge", () => {
+test("Gifter sheet wrapper has no black edging while original artwork and sizing stay unchanged", () => {
   const styles = read("public/gifter-progression.css");
-  assert.match(styles, /\.gp-art-panel\{[\s\S]*?max-width:720px[\s\S]*?padding:0[\s\S]*?overflow:hidden[\s\S]*?border:1\.5px solid rgba\(196,216,255,\.88\)/);
+  assert.match(styles, /\.gp-art-panel\{[\s\S]*?max-width:720px[\s\S]*?padding:0[\s\S]*?overflow:hidden[\s\S]*?border:1\.5px solid rgba\(196,216,255,\.88\)[\s\S]*?background:transparent[\s\S]*?box-shadow:none/);
+  assert.doesNotMatch(styles, /\.gp-art-panel\{[^}]*background:#0b1020/);
   assert.match(styles, /\.gp-art-panel>img,[\s\S]*?width:100%[\s\S]*?max-width:none[\s\S]*?height:auto[\s\S]*?transform:scale\(1\.08,1\.05\) translateY\(-\.55%\)/);
   assert.match(styles, /\.gp-art-panel:first-child>img,[\s\S]*?\.gp-art-panel--final>img\{[\s\S]*?transform:scale\(1\.08,1\.10\) translateY\(-2\.5%\)/);
-  assert.match(styles, /box-shadow:[\s\S]*?inset 0 0 0 1px rgba\(245,249,255,\.42\)/);
   assert.match(styles, /@media\(max-width:760px\)\{[\s\S]*?\.gp-art-panel\{padding:0/);
 });
 
 test("clean-edge stylesheet cache key is current in HTML and service-worker shell", () => {
   const html = read("public/index.html");
   const sw = read("public/sw.js");
-  assert.ok(html.includes("/gifter-progression.css?v=20261115-gifter-original-art-marker-only-1"));
-  assert.ok(sw.includes("/gifter-progression.css?v=20261115-gifter-original-art-marker-only-1"));
+  assert.ok(html.includes("/gifter-progression.css?v=20261115-gifter-no-black-edge-1"));
+  assert.ok(sw.includes("/gifter-progression.css?v=20261115-gifter-no-black-edge-1"));
   assert.ok(!sw.includes("/gifter-progression.css?v=20261110-gifter-level-polish-1"));
 });
 
@@ -150,8 +150,8 @@ test("Gifter progression uses the original ordered Level panels as its primary a
   assert.ok(!progression.includes("gifters-level-up.png"));
   assert.ok(!progression.includes("gp-level-up-reference-note"));
   assert.ok(styles.includes(".gp-art-panel-stack{display:grid;grid-template-columns:minmax(0,1fr);gap:14px"));
-  assert.ok(html.includes("/gifter-progression.css?v=20261115-gifter-original-art-marker-only-1"));
-  assert.ok(sw.includes("/gifter-progression.css?v=20261115-gifter-original-art-marker-only-1"));
+  assert.ok(html.includes("/gifter-progression.css?v=20261115-gifter-no-black-edge-1"));
+  assert.ok(sw.includes("/gifter-progression.css?v=20261115-gifter-no-black-edge-1"));
   assert.match(sw, /const CACHE_NAME='minglora-shell-v\d+-self-updating-1';/);
 });
 
@@ -213,10 +213,10 @@ test("all 70 remaining Gifter reference images are placed at their correct Rewar
   assert.ok(progression.includes("src='/assets/gifter-badges/level_" + '" + badgeNumber + "' + ".png'"), "every original PNG is visibly previewed on its matching level card");
   assert.ok(!progression.includes("gp-level-index-original"), "level cards do not add a duplicate PNG thumbnail");
   assert.match(styles, /\.gp-reference-figure img\{display:block;width:100%[^}]*height:auto[^}]*object-fit:contain/);
-  assert.ok(html.includes("/gifter-progression.css?v=20261115-gifter-original-art-marker-only-1"));
-  assert.ok(html.includes("/gifter-progression.js?v=20261115-gifter-original-art-marker-only-1"));
-  assert.ok(sw.includes("/gifter-progression.css?v=20261115-gifter-original-art-marker-only-1"));
-  assert.ok(sw.includes("/gifter-progression.js?v=20261115-gifter-original-art-marker-only-1"));
+  assert.ok(html.includes("/gifter-progression.css?v=20261115-gifter-no-black-edge-1"));
+  assert.ok(html.includes("/gifter-progression.js?v=20261115-gifter-no-black-edge-1"));
+  assert.ok(sw.includes("/gifter-progression.css?v=20261115-gifter-no-black-edge-1"));
+  assert.ok(sw.includes("/gifter-progression.js?v=20261115-gifter-no-black-edge-1"));
 });
 
 test("the PWA shell precaches all 50 original numbered Gifter PNGs", () => {
