@@ -81,6 +81,9 @@ test("all 50 Gifter levels keep unique artwork while six crop badges light miles
   assert.ok(server.includes("/assets/gifter-badge-range-sheets/lv-1-9.jpg"));
   assert.ok(serviceWorker.includes("/assets/gifter-badge-range-sheets/lv-1-9.jpg"));
   assert.ok(server.includes("'Crop References','Gifter level range sheets'"));
+  assert.ok(server.includes("const gifterBadgeRangeSheetFiles = ({"), "range-sheet URLs use the cropped-reference handler");
+  assert.ok(!server.includes("const gifterBadgeRangeSheetFile = ({"), "obsolete legacy range-sheet handler cannot shadow uploaded crops");
+  assert.ok(!server.includes("'assets','Gifters Badge Levels',gifterBadgeRangeSheetFile"), "range-sheet requests do not fall back to the legacy source folder");
   assert.match(html, /gifter-progression\.js\?v=20261116-gifter-overlay-alignment-1/);
   assert.match(progressionStyles, /is-locked \.gp-level-index-art\{filter:grayscale/);
   assert.match(progressionStyles, /is-unlocked \.gp-level-index-art/);
