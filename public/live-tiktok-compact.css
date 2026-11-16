@@ -983,3 +983,11 @@ body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layo
   #live-layout-options .live-layout-option{grid-template-rows:70px auto!important}
   #live-layout-options .live-layout-preview{height:70px!important}
 }
+
+/* Full-height reference compositions use the entire stage without collapsing
+   when their main tile or overlays are absolutely positioned. */
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="full-screen"],
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="fluid-panel"],
+body:has(#live-player-shell) #live-video-stage #live-guest-layout[data-live-layout="roundtable-1"]{
+  height:100%!important;min-height:100%!important;
+}
