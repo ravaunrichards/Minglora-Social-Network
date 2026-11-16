@@ -10,7 +10,6 @@ const server = read("src/server.js");
 const app = read("public/app.js");
 const topGifters = read("public/top-gifters.js");
 const rankingStyles = read("public/styles.css");
-  assert.match(html, /gifter-progression\.css\?v=20261116-gifter-bright-stage-overlays-2/);
 const serviceWorker = read("public/sw.js");
 const html = read("public/index.html");
 
