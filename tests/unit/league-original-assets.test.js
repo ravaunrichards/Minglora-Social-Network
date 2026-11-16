@@ -102,6 +102,6 @@ test("the six Minglora Match Power-Ups use their original branded vector artwork
   }
   assert.match(league, /data-powerup-select=/);
   assert.match(league, /activateSelectedPowerup/);
-  assert.match(index, /leagues\.css\?v=20261116-match-powerups-six-reference-1/);
+  assert.match(index, /leagues\.css\?v=20261116-match-powerups-complete-2/);
   assert.match(index, /leagues\.js\?v=20261116-match-powerups-six-reference-1/);
 });
