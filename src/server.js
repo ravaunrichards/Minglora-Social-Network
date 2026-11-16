@@ -9717,23 +9717,6 @@ m=p.match(/^\/api\/friends\/([^/]+)\/request$/);
     });
     return;
   }
-  const gifterBadgeRangeSheetFile = ({
-    '/assets/gifter-badge-range-sheets/lv-1-9.jpg': 'LV.1 - LV.9.jpg',
-    '/assets/gifter-badge-range-sheets/lv-10-19.jpg': 'LV.10 - LV.19.jpg',
-    '/assets/gifter-badge-range-sheets/lv-20-29.jpg': 'LV.20 - LV.29.jpg',
-    '/assets/gifter-badge-range-sheets/lv-30-39.jpg': 'LV.30 - LV.39.jpg',
-    '/assets/gifter-badge-range-sheets/lv-40-49.jpg': 'LV.40 - LV.49.jpg',
-    '/assets/gifter-badge-range-sheets/lv-50-plus.jpg': 'LV.50+.jpg'
-  })[p];
-  if(gifterBadgeRangeSheetFile){
-    const assetFile=path.join(__dirname,'..','assets','Gifters Badge Levels',gifterBadgeRangeSheetFile);
-    fs.readFile(assetFile,(error,data)=>{
-      if(error)return json(res,404,{error:'Gifter badge range reference not found.'});
-      res.writeHead(200,{'Content-Type':'image/jpeg','Cache-Control':'public, max-age=86400',...SECURITY_HEADERS});
-      res.end(data);
-    });
-    return;
-  }
   const gifterBadgeMasterReference = ({
     '/assets/gifter-badge-reference/master-sheet.png': ['Badges_Level_01-50','Badges_Level_01-50.png','image/png'],
     '/assets/gifter-badge-reference/master-sheet-preview.jpg': ['Badges_Level_01-50','Badges_Level_01-50_preview.jpg','image/jpeg']
