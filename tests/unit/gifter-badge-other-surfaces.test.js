@@ -69,13 +69,17 @@ test("shared non-LIVE gifter badge styling is responsive and reduced-motion safe
 });
 
 
-test("original Gifter strip uses only its own artwork and one white live level marker", () => {
+test("original Gifter strip lights earned crop milestones and keeps one white live level marker", () => {
   assert.ok(progression.includes("PROGRESSION_TRACK_STAGES = Object.freeze([1, 10, 20, 30, 40, 50])"));
   assert.ok(progression.includes("Boolean(current.hasUnlockedBadge && level > 0)"));
   assert.ok(progression.includes("function progressionTrackState(current = {})"));
   assert.ok(progression.includes("Number(current.progressPercent || 0) / 100"));
   assert.ok(progression.includes("gp-progression-level-marker"));
   assert.ok(progression.includes("track.hasGifterBadge"));
+  assert.ok(progression.includes("PROGRESSION_TRACK_STAGES.map((stageLevel, index) => track.level >= stageLevel"));
+  assert.ok(progression.includes("gp-progression-range-badge"));
+  assert.ok(progressionCss.includes(".gp-live-progression-track>.gp-progression-range-badge"));
+
   assert.ok(!progression.includes("gp-progression-marker-cover"), "no black Level 1 cover dot is added");
   assert.ok(!progression.includes("gp-progression-glow-overlay"), "no mismatched SVG overlay is added");
   assert.ok(!progression.includes("gp-progression-link"), "no misaligned connector lines are drawn");
