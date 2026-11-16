@@ -243,15 +243,18 @@
           "<span class='league-class-step " + (item === active ? "is-current" : "") + "' " + (item === active ? "aria-current='true' aria-label='Current class " + esc(item) + "'" : "") + ">" + esc(item) + "</span>"
         ).join("") + "</div></article>";
     }).join("");
-    return "<div class='league-class-ladder league-tier-grid' aria-label='Creator League class hierarchy'>" + groups + "</div>";
+    return "<div class='league-original-reference-gallery' aria-label='Original Creator League reference artwork'>" +
+      "<figure class='league-original-reference league-original-reference--divisions'><figcaption>Original League division emblems</figcaption><img src='/assets/League/Screenshot_20261112_020436_TikTok(1).jpg' alt='Original four Creator League division emblems, D, C, B and A, in their original colors and ribbon designs' loading='lazy'></figure>" +
+      "<figure class='league-original-reference league-original-reference--classes'><figcaption>Original 18-class progression reference</figcaption><img src='/assets/League/Screenshot_20261112_020458_TikTok(1).jpg' alt='Original Creator League class progression: A3 to A1, B5 to B1, C5 to C1, and D5 to D1' loading='lazy'></figure>" +
+      "</div><div class='league-class-ladder league-tier-grid' aria-label='Live Creator League class status'>" + groups + "</div>";
   }
   function fragmentRulesMarkup() {
     const groups = [
-      { tier: "A", title: "A3–A1", rules: [[3, "Top 1%"], [2, "Top 10%"], [1, "Top 20%"], [0, "Top 60%"], [-1, "Bottom 40%"]] },
-      { tier: "B", title: "B5–B1", rules: [[3, "Top 1%"], [2, "Top 10%"], [1, "Top 20%"], [0, "Top 70%"], [-1, "Bottom 30%"]] },
-      { tier: "C", title: "C5–C1", rules: [[2, "Top 10%"], [1, "Top 20%"], [0, "Top 80%"], [-1, "Bottom 20%"]] },
-      { tier: "D", title: "D1", rules: [[2, "Top 10%"], [1, "Top 20%"], [0, "Top 80%"], [-1, "Bottom 20%"]] },
-      { tier: "D", title: "D2–D5", rules: [[2, "Top 10%"], [1, "Top 20%"], [0, "Other placements"]] }
+      { tier: "A", title: "A3–A1", rules: [[-1, "Bottom 99%"], [0, "Top 60%"], [1, "Top 20%"], [2, "Top 10%"], [3, "Top 1%"]] },
+      { tier: "B", title: "B5–B1", rules: [[-1, "Bottom 99%"], [0, "Top 70%"], [1, "Top 20%"], [2, "Top 10%"], [3, "Top 1%"]] },
+      { tier: "C", title: "C5–C1", rules: [[-1, "Bottom 99%"], [0, "Top 80%"], [1, "Top 20%"], [2, "Top 10%"]] },
+      { tier: "D", title: "D1", rules: [[-1, "Bottom 99%"], [0, "Top 80%"], [1, "Top 20%"], [2, "Top 10%"]] },
+      { tier: "D", title: "D2–D5", rules: [[0, "Bottom 99%"], [1, "Top 20%"], [2, "Top 10%"]] }
     ];
     const cards = groups.map(group =>
       "<article class='league-fragment-rule-card league-tier-card--" + group.tier + "'><div class='league-fragment-rule-heading'><span class='league-fragment-tier-mark'>" + group.tier + "</span><strong>" + group.title + "</strong></div>" +
@@ -262,7 +265,12 @@
     return "<section class='card league-fragment-reference' id='league-fragment-reference-zone' aria-labelledby='league-fragment-reference-heading'>" +
       "<div class='league-section-heading'><div><span class='league-eyebrow'>DAILY LEAGUE PLACEMENT</span><h2 id='league-fragment-reference-heading'>Fragment rewards and protection</h2>" +
       "<p>Each creator is ranked against their own class in their region using eligible confirmed LIVE Gift value for the completed day.</p></div><span class='league-reference-status'>4 FRAGMENTS = 1 TIER</span></div>" +
-      "<div class='league-fragment-rule-grid'>" + cards + "</div>" +
+      "<div class='league-original-fragment-references' aria-label='Original fragment rule reference screenshots'>" +
+      "<figure><figcaption>League A fragment rules</figcaption><img src='/assets/League/Screenshot_20261112_020335_TikTok(1).jpg' alt='Original League A fragment thresholds' loading='lazy'></figure>" +
+      "<figure><figcaption>League B fragment rules</figcaption><img src='/assets/League/Screenshot_20261112_020335_TikTok(2).jpg' alt='Original League B fragment thresholds' loading='lazy'></figure>" +
+      "<figure><figcaption>League C fragment rules</figcaption><img src='/assets/League/Screenshot_20261112_020335_TikTok(3).jpg' alt='Original League C fragment thresholds' loading='lazy'></figure>" +
+      "<figure><figcaption>League D1 and D2–D5 fragment rules</figcaption><img src='/assets/League/Screenshot_20261112_020335_TikTok(4).jpg' alt='Original League D fragment thresholds for D1 and D2 through D5' loading='lazy'><img src='/assets/League/Screenshot_20261112_020350_TikTok(1).jpg' alt='Original League D2 through D5 fragment thresholds' loading='lazy'></figure>" +
+      "</div><div class='league-fragment-rule-grid'>" + cards + "</div>" +
       "<p class='league-fragment-reference-note'>Four accumulated fragments promote one tier; four lost fragments demote one tier. A League Shield automatically protects one fragment loss, does not expire, and the balance is capped at 10. D2–D5 have no fragment-loss penalty. Placement thresholds are an observed public model, not a published TikTok specification.</p></section>";
   }
   function rankingControlsMarkup(overview) {

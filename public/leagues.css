@@ -186,3 +186,15 @@
 #league-leaderboard-results{min-width:0}
 @media(max-width:700px){.league-ranking-controls{grid-template-columns:1fr 1fr}.league-ranking-class-label{grid-column:2;grid-row:1}.league-ranking-period{grid-column:1;grid-row:1;align-self:end}.league-ranking-filter{flex:1;padding-inline:8px}#league-ranking-status{grid-column:1/-1;text-align:left}}
 @media(max-width:420px){.league-ranking-controls{grid-template-columns:1fr}.league-ranking-class-label,.league-ranking-period,#league-ranking-status{grid-column:1;grid-row:auto}.league-ranking-period{width:100%}}
+
+
+/* Original supplied Creator League reference artwork — preserve the source screenshots. */
+.league-original-reference-gallery{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:14px 0 18px}
+.league-original-reference,.league-original-fragment-references figure{min-width:0;margin:0;padding:12px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.league-original-reference figcaption,.league-original-fragment-references figcaption{margin:0 0 9px;color:var(--text);font-size:12px;font-weight:850}
+.league-original-reference img,.league-original-fragment-references img{display:block;width:100%;height:auto;object-fit:contain;border-radius:8px}
+.league-original-reference--divisions img{max-height:320px}
+.league-original-reference--classes img{max-height:340px}
+.league-original-fragment-references{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:14px 0}
+.league-original-fragment-references figure:last-child img+img{margin-top:10px}
+@media(max-width:680px){.league-original-reference-gallery,.league-original-fragment-references{grid-template-columns:minmax(0,1fr)}.league-original-reference--divisions img,.league-original-reference--classes img{max-height:none}}
