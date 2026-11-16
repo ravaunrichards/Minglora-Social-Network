@@ -41,7 +41,7 @@ test("Crop References use canonical folders and contain no duplicate image files
     "Spotlight.png", "Roundtable 1.png", "Roundtable 2.png"
   ];
   const sourceFiles = [
-    ...milestoneNames.map(name => path.join("assets", "Crop References", "Gifters Badges", "Png", name)),
+    ...milestoneNames.map(name => path.join("assets", "Crop References", "Gifters Badges", name)),
     ...rangeNames.map(name => path.join("assets", "Crop References", "Gifter level range sheets", name)),
     ...rankingNames.map(name => path.join("assets", "Crop References", "Daily Ranking Badge", "png", name)),
     ...guestNames.map(name => path.join("assets", "Crop References", "Guests Layout", "png", name)),
@@ -64,24 +64,22 @@ test("Crop References use canonical folders and contain no duplicate image files
     const stem = name.replace(".png", "");
     const rangeFolder = path.join(root, "assets", "Crop References", "Gifter level range sheets");
     assert.ok(fs.existsSync(path.join(rangeFolder, name)), name + " is the canonical PNG range sheet");
-    assert.ok(fs.existsSync(path.join(rangeFolder, stem + ".jpg")), stem + ".jpg is retained as the uploaded JPG companion");
     assert.ok(!fs.existsSync(path.join(root, "assets", "Gifters Badge Levels", name)), name + " has no duplicate legacy range-sheet copy");
   }
-  const psdDirectory = path.join(root, "assets", "Crop References", "Gifters Badges", "psd");
-  assert.equal(fs.readdirSync(psdDirectory).filter(file => file.endsWith(".psd")).length, 5, "five genuine layered PSD references remain");
-  assert.ok(!fs.existsSync(path.join(psdDirectory, "LV.1 - LV.9")), "extensionless PNG duplicate removed");
 });
 
 test("all 50 Gifter levels keep unique artwork while six crop badges light milestone stages", () => {
   assert.match(server, /individualGifterBadgeMatch[\s\S]*?Level_Badges_01-50_Individual/);
   assert.match(server, /gifter-crop-badges\/range-1\.png/);
   assert.match(server, /gifter-crop-badges\/range-6\.png/);
-  assert.match(server, /'Crop References','Gifters Badges','Png'/);
+  assert.match(server, /'Crop References','Gifters Badges'/);
   assert.match(read("public/gifter-progression.js"), /PROGRESSION_TRACK_STAGES\.map\(\(stageLevel, index\) => track\.level >= stageLevel/);
   assert.match(read("public/gifter-progression.js"), /gifter-crop-badges\/range-/);
 
-  assert.ok(server.includes("/assets/gifter-badge-range-sheets/lv-1-9.jpg"));
-  assert.ok(serviceWorker.includes("/assets/gifter-badge-range-sheets/lv-1-9.jpg"));
+  assert.ok(server.includes("/assets/gifter-badge-range-sheets/lv-1-9.png"));
+  assert.ok(serviceWorker.includes("/assets/gifter-badge-range-sheets/lv-1-9.png"));
+  assert.ok(!server.includes("/assets/gifter-badge-range-sheets/lv-1-9.jpg"));
+  assert.ok(!serviceWorker.includes("/assets/gifter-badge-range-sheets/lv-1-9.jpg"));
   assert.ok(server.includes("'Crop References','Gifter level range sheets'"));
   assert.match(html, /gifter-progression\.js\?v=20261116-gifter-range-sheets-png-2/);
   assert.match(progressionStyles, /is-locked \.gp-level-index-art\{filter:grayscale/);
