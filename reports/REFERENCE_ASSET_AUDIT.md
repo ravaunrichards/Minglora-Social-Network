@@ -18,7 +18,7 @@ The root reference Git tree was traversed recursively and was not truncated. The
 
 ## Machine-readable inventory
 
-The complete file-by-file listing is recorded in `reports/minglora-live-reference-assets.json` (1,121 records). It includes each repository path, filename, format, byte size, Git blob SHA, source group and explicit pending markers for dimensions/transparency/human review.
+The complete file-by-file listing is recorded in `reports/minglora-live-reference-assets.json` (1,121 records). It includes each repository path, filename, format, byte size, Git blob SHA and source group. The 2026-11-16 CI raster metadata run separately adds encoded dimensions, orientation, alpha-channel declarations and per-file SHA-256 for all 2,863 supported raster images across the six audited source roots; human visual review and pixel-level transparency verification remain separate, incomplete tasks.
 
 ## Visual samples inspected and corrected attribution
 
@@ -52,7 +52,7 @@ These nine references correspond to the existing implementation's seven host-sel
 - `assets/League/`: 20 JPEG reference captures; file inventory completed, with the Android League FAQ sample above visually inspected.
 - `assets/Gifts/`: 131 catalogue capture PNGs plus the `Video Gifts/Video Gifts.jpg` reference sheet. The directory contains 132 image files in total.
 
-The path/size/hash inventory is complete for the 1,121 images under `assets/reference/`. A complete image-by-image human visual review and per-image dimension/transparency extraction for all 1,121 references, all 1,509 extracted gift crops and all 71 badge files has **not** been completed. No original reference was altered or copied into a production asset directory.
+The path/size/hash inventory is complete for the 1,121 images under `assets/reference/`. Header-level dimension, format, orientation, encoded-alpha and SHA-256 metadata has now been parsed for all 2,863 raster files under the six audited source roots (see the verified result below). This does **not** scan decoded pixel alpha, apply JPEG EXIF orientation, or replace image-by-image human review. Human visual and rights review of the references and extracted crops remains incomplete. No original reference was altered or copied into a production asset directory.
 
 ## Preservation and source-of-truth rules
 
@@ -76,6 +76,28 @@ A separate read-only metadata scanner is part of the LIVE asset workflow:
 - Writes `reports/live-image-metadata-audit.json` and `reports/live-image-metadata-audit.md`; CI uploads both as a named artifact.
 - It does not apply EXIF orientation or scan decoded pixels. An alpha channel/transparency flag is not proof that an image has transparent pixels, and this audit does not certify visual quality, licensing or production approval.
 - Source images and extracted artwork remain read-only. Unsupported formats or malformed headers are reported and fail the audit rather than being silently skipped.
+
+## Verified raster metadata result — 2026-11-16
+
+Main-branch CI run [43819605997](https://github.com/ravaunrichards/Minglora-Social-Network/actions/runs/43819605997), test job **133139398636**, executed `npm run audit:live-image-metadata` against the audited source roots at commit `d89337a67aae1ea84b3813a8e1fc7dc08f956780`. The job and both audit-artifact upload steps completed successfully.
+
+| Source root | Files | Bytes | Header-dimension range (width × height) |
+|---|---:|---:|---|
+| `assets/reference/` | 1,121 | 387,820,405 | 144–1,366 × 157–2,408 px |
+| `assets/Gifts/` | 132 | 27,150,149 | 604–1,080 × 417–890 px |
+| `assets/Guests Layout/` | 9 | 66,481 | 154–170 × 292–323 px |
+| `assets/Gifters Badge Levels/` | 72 | 2,401,127 | 170–1,080 × 76–1,040 px |
+| `assets/League/` | 20 | 570,961 | 711–1,080 × 216–573 px |
+| `assets/Artwork/` | 1,509 | 13,972,858 | 256 × 256 px |
+| **Total** | **2,863** | **431,981,981** | — |
+
+**Format and parser outcome:** 1,742 PNG and 1,121 JPEG files; 2,863 parsed; zero unsupported formats; zero parse failures. The parser recorded an encoded alpha channel on 1,741 PNGs. It found no transparency chunks/flags and no animation metadata in this raster set.
+
+**Resolution observations:** the 1,121 reference screenshots are predominantly portrait (1,032 portrait, 89 landscape) and include 94 unique dimension pairs. The nine guest-layout reference diagrams are portrait. The 1,509 extracted artwork crops are all 256×256. The 50 individual Gifter badge PNGs are 170×76; those originals were not upscaled or modified by this scan.
+
+**Interpretation limit:** an encoded alpha channel does not prove that any pixel is transparent. The audit explicitly records `pixel_alpha_values_scanned=false`, does not apply EXIF orientation and performs no human visual, quality, rights or production-approval review. The 1,509 extracted artwork files remain quarantined from production use pending provenance/rights and visual approval. Source images remain unchanged.
+
+The CI uploaded `minglora-live-image-metadata-audit-13680` (artifact **14203658572**), containing the complete 2,863-record JSON report and its Markdown summary. The same run uploaded the generated LIVE asset manifest (artifact **14204031203**).
 
 ## Generated per-gift icon follow-up — 2026-11-14
 

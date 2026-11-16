@@ -299,3 +299,13 @@ The Rose reference refinement adds distinct satin-ribbon loop surfaces, a centra
 - Three original same-origin SVG symbols were added for configured-and-connected, not-configured and configured-but-unavailable provider states. All use a 24×24 viewBox, `currentColor` and the established status pill's visual language.
 - Automated review verifies SVG files and manifest paths/hashes, accessible decorative treatment, actual response-based state mapping and service-worker inclusion. The text label remains visible and authoritative.
 - Quality boundary: these are lightweight status indicators, not 3D artwork or animated network-health indicators. Human visual approval, rights sign-off and physical-device verification remain pending.
+
+
+## Source raster metadata audit — verified 2026-11-16
+
+The current main CI run 43819605997 (test job 133139398636) parsed **2,863/2,863** supplied raster files across references, gift captures, guest-layout diagrams, Gifter badge imagery, League captures and extracted gift artwork. The scan found 1,742 PNG and 1,121 JPEG files, 1,741 encoded alpha-channel declarations, **zero parse failures** and **zero unsupported raster formats**.
+
+The per-root dimensions and source sizes are recorded in `reports/REFERENCE_ASSET_AUDIT.md` and `reports/LIVE_ASSET_INVENTORY.md`. Notable source dimensions include 1,509 extracted artwork crops at 256×256 px and 50 original individual Gifter badge PNGs at 170×76 px. These source files were not upscaled or altered.
+
+**Quality boundary:** the scanner reads file headers and hashes. It does not decode pixels to measure alpha values, apply JPEG EXIF orientation, rate visual quality, check legal rights or approve product usage. Consequently, 1,741 encoded alpha channels are not 1,741 verified transparent backgrounds. Human review, rights clearance and device-specific design acceptance remain open.
+

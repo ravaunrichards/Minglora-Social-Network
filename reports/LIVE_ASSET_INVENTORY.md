@@ -316,3 +316,26 @@ The exact-code generator route does not change the source catalogue's 10-Coin va
 - Added `public/assets/icons/live-provider-status/manifest.json` plus `provider-ready.svg`, `provider-not-configured.svg` and `provider-unavailable.svg` (three original 24×24 SVG symbol assets).
 - Consumers: `public/app.js` provider-readiness pill; `public/styles.css`; `public/sw.js` offline shell; `scripts/generate-minglora-live-asset-manifest.mjs`.
 - The pack is included in the unified generated inventory as `minglora-live-provider-status`, with three records. All visual/licensing approval flags remain review-required; this is not a claim of premium-art approval.
+
+
+## Raster-source metadata baseline — verified 2026-11-16
+
+The main CI run 43819605997 (job 133139398636) completed the read-only header metadata audit of 2,863 source images across the six folders below. It parsed all 2,863 files with zero unsupported formats and zero parse failures.
+
+| Folder | Files | Bytes | Width range | Height range |
+|---|---:|---:|---:|---:|
+| `assets/reference/` | 1,121 | 387,820,405 | 144–1,366 px | 157–2,408 px |
+| `assets/Gifts/` | 132 | 27,150,149 | 604–1,080 px | 417–890 px |
+| `assets/Guests Layout/` | 9 | 66,481 | 154–170 px | 292–323 px |
+| `assets/Gifters Badge Levels/` | 72 | 2,401,127 | 170–1,080 px | 76–1,040 px |
+| `assets/League/` | 20 | 570,961 | 711–1,080 px | 216–573 px |
+| `assets/Artwork/` | 1,509 | 13,972,858 | 256 px | 256 px |
+| **Total** | **2,863** | **431,981,981** | — | — |
+
+- Formats: 1,742 PNG and 1,121 JPEG.
+- Encoded alpha-channel declarations: 1,741. This is a file-header property, not proof of transparent pixels.
+- Unsupported files: 0. Parse failures: 0.
+- Pixel alpha was not decoded, JPEG EXIF orientation was not applied, and the scan did not make visual, quality, rights or production-approval decisions.
+- The complete per-file report was uploaded by CI as artifact `minglora-live-image-metadata-audit-13680` (ID 14203658572); the generated per-gift manifest was uploaded as `minglora-live-asset-manifest-13680` (ID 14204031203).
+- Source files were read-only and unchanged by the audit. The 1,509 extracted artwork crops remain unapproved and must not be treated as cleared original production assets.
+
