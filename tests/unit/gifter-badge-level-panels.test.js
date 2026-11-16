@@ -238,10 +238,10 @@ test("range-sheet cleanup removes only edge-connected dark pixels and preserves 
   assert.ok(helperStart >= 0 && helperEnd > helperStart, "the targeted edge-mask helper exists");
   const helperSource = progression.slice(helperStart, helperEnd);
   const sandbox = {};
-  vm.runInNewContext(helperSource + "\\nglobalThis.runEdgeMask = removeRangeSheetOuterDarkEdgePixels;", sandbox);
+  vm.runInNewContext(helperSource + String.fromCharCode(10) + "globalThis.runEdgeMask = removeRangeSheetOuterDarkEdgePixels;", sandbox);
 
-  const width = 7;
-  const height = 7;
+  const width = 8;
+  const height = 8;
   const data = new Uint8ClampedArray(width * height * 4);
   for (let index = 0; index < width * height; index += 1) {
     data.set([132, 96, 188, 255], index * 4);
@@ -261,7 +261,7 @@ test("range-sheet cleanup removes only edge-connected dark pixels and preserves 
   data.set([12, 9, 34, 255], isolatedDarkInterior);
 
   const removed = sandbox.runEdgeMask({ data }, width, height);
-  assert.equal(removed, 24, "the connected outer border is cleared");
+  assert.equal(removed, 27, "the connected outer border except the bright badge tip is cleared");
   assert.equal(data[gemTip + 3], 255, "a bright badge tip touching the image boundary stays intact");
   assert.equal(data[isolatedDarkInterior + 3], 255, "dark pixels inside the artwork are not removed");
   assert.equal(data[(1 * width + 1) * 4 + 3], 255, "the image interior remains opaque");
