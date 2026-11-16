@@ -88,15 +88,19 @@ test("original Gifter strip uses only its own artwork and one white live level m
   const markerMarkup = progression.match(/class='gp-progression-level-marker'/g) || [];
   assert.equal(markerMarkup.length, 1, "exactly one live progression marker is rendered");
 
-  const markerRule = progressionCss.match(/\\.gp-progression-level-marker\\s*\\{([^}]+)\\}/)?.[1] || "";
-  assert.match(markerRule, /width:1\\.75%;min-width:5px;max-width:19px;aspect-ratio:1;/,
+  const markerRuleStart = progressionCss.indexOf(".gp-progression-level-marker{");
+  const markerRuleEnd = progressionCss.indexOf("}", markerRuleStart);
+  const markerRule = markerRuleStart >= 0 && markerRuleEnd >= 0
+    ? progressionCss.slice(markerRuleStart, markerRuleEnd + 1)
+    : "";
+  assert.ok(markerRule.includes("width:1.75%;min-width:5px;max-width:19px;aspect-ratio:1;"),
     "the moving marker matches the original dot's 1.75% / 5–19px footprint");
-  assert.match(markerRule, /box-sizing:border-box/);
-  assert.match(markerRule, /border:1px solid rgba\\(36,24,56,\\.55\\)/,
+  assert.ok(markerRule.includes("box-sizing:border-box"));
+  assert.ok(markerRule.includes("border:1px solid rgba(36,24,56,.55);"),
     "the replacement marker has a crisp defined edge");
-  assert.match(markerRule, /box-shadow:0 0 0 1px rgba\\(255,255,255,\\.38\\),0 1px 3px rgba\\(35,21,50,\\.36\\)/,
+  assert.ok(markerRule.includes("box-shadow:0 0 0 1px rgba(255,255,255,.38),0 1px 3px rgba(35,21,50,.36);"),
     "the marker uses a restrained crisp shadow, not a diffuse glow");
-  assert.doesNotMatch(markerRule, /0 0 7px|0 0 12px/,
+  assert.ok(!markerRule.includes("0 0 7px") && !markerRule.includes("0 0 12px"),
     "the moving dot must not be blurred by a large glow");
 });
 
