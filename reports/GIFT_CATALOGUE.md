@@ -160,3 +160,9 @@ The canonical Palm Breeze nature gift now uses its own palm-tree/island glTF sou
 - The model includes sculpted body and head forms, hooked beak, cheek mask, swept multicolour crest, individually named layered flight feathers, seven tail feathers, feet and gripping talons. Gift-specific LIVE motion is `parrot-swoop`; sound design `pop-parrot-rainbow-whistle-chirp-v1` uses local Web Audio synthesis and is not a mastered recording.
 - Verification: unit/full CI 1,251 passed / 0 failed; 15-model × 3-viewport Chromium matrix 45/45 renders and pixels, 45 screenshots, zero page errors and request cancellations (run 43809576362; artifact 14200011992).
 - Review remains pending for human visual/design approval, rights, mastered audio and physical-device QA. Production gift activation and all economy/transaction data remain untouched.
+ 
+## Gift-specific generated WAV cue mapping — 2026-11-16
+
+The generated 15-record audio manifest maps canonical codes to individual WAV paths: rose-4ieccm, hibiscus-5-mgl, djembe-master-1v3jzkm, palm-breeze-gknyt0, gamer-otter-100-mgl, live-island-rmn3mc, crystal-crown-1itryeu, phoenix-wep6uk, beach-maracas-1exxoag, royal-lions-scepter-15000-mgl, baseball-orcdx9, crocodile-tnyf2j, dolphin-4bkejj, maracas-1wegi7n and pop-parrot-alp4e8. Each entry is a distinct 44.1 kHz stereo 16-bit PCM WAV composition with an individual manifest SHA-256 and generated-review-required status.
+
+The WAV files are generated at startup/build from scripts/generate-minglora-gift-sounds.mjs; they are not checked-in binaries. Human listening/mastering approval is pending, and no production coin amounts, gift active flags or financial records are changed.
