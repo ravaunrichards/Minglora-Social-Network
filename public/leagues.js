@@ -221,14 +221,31 @@
       { member: leaderboard[2], place: 3 }
     ].filter(entry => entry.member && entry.member.id);
     if (!ranked.length) return "";
-    return "<div class='league-top-three-list' aria-label='Top three creators'>" + ranked.map(({member, place}) =>
-      "<button type='button' class='league-top-three-row is-place-" + place + "' data-league-profile='" + esc(member.id) + "' aria-label='Open " + esc(member.name || member.username || "creator") + " profile, ranked number " + place + "'>" +
-        "<b class='league-position'>#" + place + "</b>" +
-        "<span class='league-rank-avatar-wrap'>" + image(member, "ml-creator-ring ml-creator-ring--league") + "</span>" +
-        "<span class='league-leader-name'><strong>" + esc(member.name || "Minglora creator") + "</strong><small>@" + esc(member.username || "creator") + "</small>" +
-        "<span class='league-rank-pill league-rank-pill--place-" + place + "'>No. " + place + "</span></span>" +
-        "<strong class='league-leader-points'>" + Number(member.points ?? member.seasonPoints ?? 0).toLocaleString() + " pts</strong></button>"
-    ).join("") + "</div>";
+
+    return "<div class='league-podium-stage' aria-label='Top three creators: first place in the centre, second place on the left, third place on the right'>" +
+      ranked.map(({ member, place }) => {
+        const fullName = member.name || member.username || "Minglora creator";
+        const username = member.username || "creator";
+        const points = Number(member.points ?? member.seasonPoints ?? 0);
+        const pointsLabel = Number.isFinite(points) ? points.toLocaleString() : "0";
+        const avatarUrl = member.avatarUrl || member.avatar_url || member.avatar || member.profilePicture || "";
+        const initial = esc(String(fullName).slice(0, 1).toUpperCase());
+        const avatar = avatarUrl
+          ? "<img class='league-podium-avatar' src='" + esc(avatarUrl) + "' alt='' loading='lazy' decoding='async' referrerpolicy='no-referrer'>"
+          : "<span class='league-podium-avatar league-podium-avatar--fallback' aria-hidden='true'>" + initial + "</span>";
+        const ordinal = place === 1 ? "1st" : place === 2 ? "2nd" : "3rd";
+        return "<button type='button' class='league-podium-place league-podium-place--" + place +
+          "' data-league-profile='" + esc(member.id) + "' aria-label='Open " + esc(fullName) + " profile, " + ordinal +
+          " place, " + pointsLabel + " points'>" +
+          "<span class='league-podium-award' aria-hidden='true'>" +
+          "<img class='league-podium-frame' src='/assets/daily-ranking-badges/place-" + place +
+          ".png' alt='' loading='lazy' decoding='async' width='180' height='180'>" + avatar + "</span>" +
+          "<span class='league-podium-place-label'>" + ordinal + " PLACE</span>" +
+          "<strong class='league-podium-name'>" + esc(fullName) + "</strong>" +
+          "<small class='league-podium-handle'>@" + esc(username) + "</small>" +
+          "<strong class='league-podium-score'>" + pointsLabel + " <small>PTS</small></strong>" +
+          "<span class='league-podium-step' aria-hidden='true'>" + place + "</span></button>";
+      }).join("") + "</div>";
   }
   function leaderboardMarkup(leaderboard) {
     if (!leaderboard.length) return "<div class='league-empty-inline'>No creators have earned confirmed LIVE Gift points for this division and period yet.</div>";
