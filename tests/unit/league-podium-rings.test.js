@@ -9,11 +9,15 @@ const [league, css, rings, index] = await Promise.all([
   readFile(new URL("../../public/index.html", import.meta.url), "utf8")
 ]);
 
-test("League renders real-data top-three rank rows and remaining clickable standings", () => {
+test("League renders the numbered three-step top-three podium and remaining clickable standings", () => {
   assert.match(league, /leaderboard\[0\]/);
   assert.match(league, /leaderboard\[1\]/);
   assert.match(league, /leaderboard\[2\]/);
-  assert.match(league, /league-top-three-row/);
+  assert.match(league, /league-podium-stage/);
+  assert.match(league, /league-podium-place--1/);
+  assert.match(league, /league-podium-place--2/);
+  assert.match(league, /league-podium-place--3/);
+  assert.match(league, /daily-ranking-badges\\/place-/);
   assert.match(league, /data-league-profile=/);
   assert.match(league, /minglora:open-profile/);
   assert.match(league, /leaderboard\.slice\(3\)/);
@@ -31,7 +35,7 @@ test("creator rings retain distinct Stories, LIVE and League meanings", () => {
 
 test("League rank rows and original image references remain responsive and accessible", () => {
   assert.match(css, /@media\(max-width:600px\)/);
-  assert.match(css, /league-top-three-row:focus-visible/);
+  assert.match(css, /league-podium-place:focus-visible/);
   assert.match(css, /prefers-reduced-motion/);
   assert.match(index, /creator-rings\.js/);
   assert.match(league, /loading='lazy' decoding='async'/);
