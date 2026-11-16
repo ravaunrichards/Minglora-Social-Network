@@ -115,7 +115,7 @@ The following is the complete reference list in the order supplied. The duplicat
 - Instant, scheduled and reusable rooms; invite-only/friends/public access; waiting room and admission controls.
 - Host/co-host controls, participant management, screen sharing, meeting chat, polls/Q&A, breakout rooms and attendance.
 - Recording consent, retention controls, meeting reports and accessibility support including captions where available.
-- Keep the seven screen layouts separate from two guest-box arrangements: Full Screen, Fluid Panel, Fluid Grid, Fixed Grid, Fixed Panel, Side by Side and Spotlight are screen layouts; Roundtable 1 and Roundtable 2 are guest-box layouts inside the MeetWave panel/grid.
+- Keep all nine original guest layouts as independent complete presets: Full Screen, Fluid Panel, Fluid Grid, Fixed Grid, Fixed Panel, Side by Side, Spotlight, Roundtable 1 and Roundtable 2. Do not combine one preset with another.
 
 ### G. Professional Network and Publishing
 
