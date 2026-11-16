@@ -25,7 +25,7 @@
 | `assets/Gifts/` | 131 capture PNGs plus 1 reference-sheet JPEG (132 image files total) | Read-only source captures |
 | `assets/Artwork/` | 1,509 extracted PNG records | Review-only, not cleared for production |
 | `assets/Guests Layout/` | 9 JPEG layout diagrams | Read-only layout references; all 9 individually visually inspected |
-| `assets/Gifters Badge Levels/` | 66 raster image files (52 PNG, 14 JPEG; 65 unique contents because one progression-strip JPEG is duplicated at two paths) | Badge/level source references; the six cropped range sheets are catalogued separately under Crop References |
+| `assets/Gifters Badge Levels/` | 66 raster image files (52 PNG, 14 JPEG; 65 unique contents, 1,785,279 bytes) | 64 mapped source references plus two progression-strip paths; all 12 cropped range/milestone assets are canonical under Crop References |
 | `public/assets/gifter-badge-progression-art.jpg` | 1 JPEG (uploaded original badge-tier progression strip; byte-identical to the supplied source image) | Public production asset; served uncropped on the Gifter Progression page |
 | `assets/League/` | 20 JPEG reference captures | League/rules references; full visual review pending |
 | `public/assets/gifts/` | 45 standalone original Minglora GLTF models | Existing original gift models; retained |
@@ -343,4 +343,4 @@ PR #439 CI run 43821480523 (test job 133145316730) completed the read-only heade
 
 ## Gifter range-sheet source consolidation — 2026-11-16
 
-The six cropped range-sheet JPGs are now stored only under `assets/Crop References/Gifter level range sheets/`. The six padded PNG copies and six prior root JPG copies were removed from `assets/Gifters Badge Levels/` after the existing cropped JPG blobs were moved, not duplicated. The historical raster metadata table above predates this relocation; it is retained as the original CI snapshot and is not presented as a post-move scan.
+The six cropped range-sheet JPGs are stored only under `assets/Crop References/Gifter level range sheets/`, and the six milestone badge PNG crops are stored only under `assets/Crop References/Gifters Badges/Png/`. The duplicate padded range PNGs, root range JPG copies, milestone PNG copies and duplicate/obsolete PSD files were removed from `assets/Gifters Badge Levels/`; five genuine PSD source files remain under `assets/Crop References/Gifters Badges/psd/`. The historical raster metadata table above predates this consolidation; it remains the original CI snapshot and is not presented as a post-move scan.
