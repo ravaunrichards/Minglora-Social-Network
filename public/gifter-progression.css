@@ -517,12 +517,12 @@
 @media(max-width:760px){.gp-progression-art-frame{padding:8px;border-radius:12px}.gp-progression-art-frame img{width:100%;height:auto}}
 
 
-/* Original supplied badge artwork remains the layout; only the live white level marker overlays it. */
+/* The original strip remains the layout; earned crop badges and one white current-level marker overlay it. */
 .gp-live-progression-track{
   position:relative;display:block;width:100%;aspect-ratio:1080 / 153;min-width:0;
   overflow:visible;isolation:isolate;line-height:0;
 }
-.gp-live-progression-track>img{
+.gp-live-progression-track>img:first-child{
   display:block;width:100%;height:100%;max-width:100%;object-fit:fill;object-position:center;
   border-radius:8px;
 }
@@ -535,7 +535,7 @@
   transition:left .35s cubic-bezier(.2,.75,.25,1);
 }
 /* Bright cropped milestone badges sit directly over the matching muted symbols. */
-.gp-progression-range-badge{
+.gp-live-progression-track>.gp-progression-range-badge{
   position:absolute;top:55%;z-index:1;display:block;width:4.8%;min-width:16px;max-width:58px;
   height:auto;aspect-ratio:1;object-fit:contain;object-position:center;
   transform:translate(-50%,-50%);border-radius:0;pointer-events:none;
@@ -551,7 +551,7 @@
   .gp-progression-level-marker{transition:none}
 }
 
-/* Keep the original individual badge states; only the mismatched strip overlays were removed. */
+/* Keep the original individual badge state hierarchy while using the supplied crop artwork. */
 .gp-level-index-item.is-locked .gp-level-index-art{
   filter:grayscale(.88) brightness(.62) saturate(.48);opacity:.7;
 }
