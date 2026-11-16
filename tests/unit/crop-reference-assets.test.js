@@ -10,6 +10,7 @@ const server = read("src/server.js");
 const app = read("public/app.js");
 const topGifters = read("public/top-gifters.js");
 const rankingStyles = read("public/styles.css");
+const progressionStyles = read("public/gifter-progression.css");
 const serviceWorker = read("public/sw.js");
 const html = read("public/index.html");
 
@@ -73,7 +74,7 @@ test("ENIGMA is the default profile avatar and is served from the original crop-
 });
 
 test("frontend and service-worker versions invalidate old assets and scripts", () => {
-  assert.match(serviceWorker, /minglora-shell-v340-self-updating-1/);
+  assert.match(serviceWorker, /minglora-shell-v341-self-updating-1/);
   assert.match(html, /app\.js\?v=20261116-daily-ranking-podium-1/);
   assert.match(html, /top-gifters\.js\?v=20261116-daily-ranking-crop-badges-2/);
   assert.match(html, /gifter-progression\.css\?v=20261116-gifter-bright-stage-overlays-2/);
