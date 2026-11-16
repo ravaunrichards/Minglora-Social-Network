@@ -8,13 +8,13 @@ This directory is the **single source of truth** for the supplied cropped refere
 - The application exposes versionable image routes from `src/server.js`; those routes read these original files directly.
 - `public/sw.js` caches the application-facing routes. Update the relevant cache/version entry and the asset regression test whenever a route or source file changes.
 - Preserve the originals. Do not recolor, stretch, crop again, add a border, or replace a source file unless a separately approved edited reference is supplied.
-- The two Gifter groups intentionally use the same six level-range filenames in **different folders** for different purposes. They are separate source images, not duplicates.
+- The two Gifter groups intentionally use the same six level-range labels in **different folders** for different purposes: milestone overlays are PNG files; broad level-range reference sheets are JPG files. They are separate source images, not duplicates.
 
 ## 1. Gifter Badge Progression
 
 **Source folder:** `Gifters Badges/Png/`
 
-Six cropped milestone badge images:
+Six cropped milestone badge PNG images:
 
 - `LV.1 - LV.9.png`
 - `LV.10 - LV.19.png`
@@ -25,22 +25,24 @@ Six cropped milestone badge images:
 
 **Application routes:** `/assets/gifter-crop-badges/range-1.png` through `/assets/gifter-crop-badges/range-6.png`.
 
-**Progression behavior:** The six overlays align with the existing progression strip and reveal in earned order at Levels **1, 10, 20, 30, 40, and 50**. Unreached stages remain hidden/muted; earned stages use the supplied bright crop artwork. These overlays do not replace the 50 individual member Gifter badges.
+**Progression behavior:** The six PNG overlays align with the existing progression strip and reveal in earned order at Levels **1, 10, 20, 30, 40, and 50**. Unreached stages remain hidden/muted; reached stages use the supplied cropped artwork with stronger brightness, saturation, scale and glow. These overlays do not replace the 50 individual member Gifter badges. Five genuine layered PSD source files are preserved in `Gifters Badges/psd/`; duplicate legacy PSD copies are not kept.
 
 ## 2. Gifter Level Range Sheets
 
 **Source folder:** `Gifter level range sheets/`
 
-The six range reference sheets listed above, served through:
+The six cropped JPG range sheets (not the PNG milestone badges) are:
 
-- `/assets/gifter-crop-range-sheets/lv-1-9.png`
-- `/assets/gifter-crop-range-sheets/lv-10-19.png`
-- `/assets/gifter-crop-range-sheets/lv-20-29.png`
-- `/assets/gifter-crop-range-sheets/lv-30-39.png`
-- `/assets/gifter-crop-range-sheets/lv-40-49.png`
-- `/assets/gifter-crop-range-sheets/lv-50-plus.png`
+- `LV.1 - LV.9.jpg`
+- `LV.10 - LV.19.jpg`
+- `LV.20 - LV.29.jpg`
+- `LV.30 - LV.39.jpg`
+- `LV.40 - LV.49.jpg`
+- `LV.50+.jpg`
 
-These are range/reference-sheet artwork. Keep them separate from the six progression-overlay crops and from the 50 individual badge image files.
+They are served through `/assets/gifter-badge-range-sheets/lv-1-9.jpg`, `lv-10-19.jpg`, `lv-20-29.jpg`, `lv-30-39.jpg`, `lv-40-49.jpg`, and `lv-50-plus.jpg` (explicit JPEG routes).
+
+These are range/reference-sheet artwork stored in this folder exactly once. Keep them separate from the six milestone-overlay PNGs and from the 50 individual badge image files.
 
 ## 3. Daily Ranking Badges
 
