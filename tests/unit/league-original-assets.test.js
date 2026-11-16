@@ -62,7 +62,8 @@ test("League Arena displays the user's original uploaded division, class and fra
   assert.doesNotMatch(league, /leagueAssetIcon\(award/);
   assert.match(css, /\.league-original-reference-gallery/);
   assert.match(css, /\.league-original-fragment-references/);
-  assert.match(css, /\.league-top-three-row/);
+  assert.match(css, /\.league-podium-stage/);
+  assert.match(css, /\.league-podium-place--1/);
 });
 
 test("All 20 uploaded source images are allowlisted, served, precached and preserved", async () => {
@@ -78,10 +79,13 @@ test("All 20 uploaded source images are allowlisted, served, precached and prese
   assert.match(sw, /minglora-shell-v\d+-self-updating-1/);
 });
 
-test("Leaderboard top-three rows follow the supplied No.1/No.2/No.3 layout with live profile data", () => {
-  assert.match(league, /league-top-three-list/);
-  assert.match(league, /league-rank-pill--place-/);
-  assert.match(league, /leaderboard\[0\]/);
+test("Leaderboard top three use numbered podium frames with live profile data", () => {
+  assert.match(league, /league-podium-stage/);
+  for (const place of [1,2,3]) {
+    assert.ok(league.includes("/assets/daily-ranking-badges/place-" + place + ".png"), "missing supplied " + place + " place frame");
+    assert.ok(sw.includes("/assets/daily-ranking-badges/place-" + place + ".png"), "service worker must cache " + place + " place frame");
+  }
+    assert.match(league, /leaderboard\[0\]/);
   assert.match(league, /leaderboard\[1\]/);
   assert.match(league, /leaderboard\[2\]/);
   assert.match(league, /leaderboard\.slice\(3\)/);
@@ -100,6 +104,6 @@ test("Match Power-Ups retain their existing IDs and original behavior", () => {
   }
   assert.match(league, /data-powerup-select=/);
   assert.match(league, /activateSelectedPowerup/);
-  assert.match(index, /leagues\.css\?v=20261116-league-original-reference-assets-1/);
-  assert.match(index, /leagues\.js\?v=20261115-remove-class-order-reference-1/);
+  assert.match(index, /leagues\.css\?v=20261116-three-step-creator-podium-1/);
+  assert.match(index, /leagues\.js\?v=20261116-three-step-creator-podium-1/);
 });
