@@ -6727,7 +6727,7 @@ async function route(req, res) {
           }else if(action==='support'){
             supportCreatorLeagueMatch(db,match,user.id,String(input.side||''));
           }else{
-            useCreatorLeaguePowerup(db,match,user.id,String(input.powerupId||''),new Date(),{boosterRank:Number(input.boosterRank||0)});
+            useCreatorLeaguePowerup(db,match,user.id,String(input.powerupId||''),new Date());
           }
           match=(db.creatorLeagueMatches||[]).find(item=>item.id===match.id)||match;
           await saveStore();
