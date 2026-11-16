@@ -231,11 +231,12 @@ test('MeetWave layout and participant panels do not introduce inner scrolling', 
   assert.ok(finalFit.includes('max-height:none!important'));
   assert.ok(finalFit.includes('grid-template-columns:repeat(2,minmax(0,1fr))!important'));
 });
-test('MeetWave Full Screen retains one dominant stage panel and keeps every participant seat mounted', () => {
-  const contract=css.slice(css.lastIndexOf('/* MINGLORA CROPPED GUEST LAYOUT CONTRACT'));
+test('MeetWave Full Screen matches LIVE full-stage host row and two guest rows', () => {
+  const contract=css.slice(css.lastIndexOf('/* FINAL NINE GUEST LAYOUTS'));
   assert.ok(contract.includes('#mw-grid[data-layout="full-screen"]'));
-  assert.ok(contract.includes('>.live-guest-seat:nth-child(2)'));
-  assert.ok(contract.includes('>.live-guest-seat:not(:nth-child(2))'));
+  assert.ok(contract.includes('grid-template-columns:repeat(4,minmax(0,1fr))'));
+  assert.ok(contract.includes('grid-template-rows:22px minmax(0,1.65fr) repeat(2,minmax(0,.62fr))'));
+  assert.ok(contract.includes('>.live-guest-seat.is-host{grid-column:1/-1!important;grid-row:2!important}'));
   assert.ok(js.includes('MEETWAVE_PARTICIPANT_LIMIT = MEETWAVE_GUEST_LIMIT + 1'));
   assert.ok(js.includes('function ensureParticipantSeat(participant)'));
 });
