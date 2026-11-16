@@ -95,7 +95,7 @@ function stateInPage(product){
   const gr=grid.getBoundingClientRect();
   const gridStyle=getComputedStyle(grid);
   const tracks=String(gridStyle.gridTemplateColumns||'').trim();
-  const columns=!tracks||tracks==='none'?0:tracks.split(/\\s+/).length;
+  const columns=!tracks||tracks==='none'?0:tracks.split(/\s+/).length;
   return {display:gridStyle.display,columns,
     grid:{x:gr.x,y:gr.y,width:gr.width,height:gr.height},visibleSeats:tiles.filter(t=>getComputedStyle(t).display!=='none').length,
     seats:tiles.map(getTile),stage:[stage.getBoundingClientRect().width,stage.getBoundingClientRect().height]};
