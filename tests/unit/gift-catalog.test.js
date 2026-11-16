@@ -646,6 +646,8 @@ test("Pop Parrot uses original subject-specific 3D geometry and transparent artw
   assert.match(source, /Pop Parrot swept crest plume/);
   assert.match(source, /primary flight feather/);
   assert.match(source, /Pop Parrot long tail feather/);
+  assert.match(source, /\[side \* 0\.248, 0\.795, side \* 0\.39\]/, "each eye must be mirrored to its own side of the head");
+  assert.match(source, /tube\("Pop Parrot sculpted hooked upper beak"/, "the upper beak must use a curved multi-segment profile");
   const model = JSON.parse(readFileSync(path.join(assetRoot, parrot.code + ".gltf"), "utf8"));
   assert.equal(model.asset?.version, "2.0");
   assert.equal(model.asset?.extras?.mingloraAssetId, "gift-pop-parrot-3d-v1");

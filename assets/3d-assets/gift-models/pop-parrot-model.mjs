@@ -121,11 +121,11 @@ export function createPopParrotModel() {
   }
 
   // Original scarlet macaw silhouette with a warm breast and layered iridescent plumage.
-  ellipsoid("Pop Parrot scarlet feathered torso", [0, -0.06, 0], [0.55, 0.7, 0.39], "#c92e43", 0.025, 0.39, 38, 26);
-  ellipsoid("Pop Parrot golden orange breast", [0, -0.12, 0.305], [0.405, 0.49, 0.135], "#f2a83f", 0.04, 0.38, 34, 22);
-  ellipsoid("Pop Parrot coral throat bib", [0, 0.22, 0.342], [0.29, 0.23, 0.075], "#ef6d42", 0.025, 0.4, 28, 18);
-  ellipsoid("Pop Parrot scarlet head", [0, 0.7, 0.035], [0.445, 0.42, 0.365], "#d92d3c", 0.025, 0.35, 38, 26);
-  ellipsoid("Pop Parrot crown red cap", [0, 1.005, 0.015], [0.34, 0.19, 0.29], "#e34442", 0.025, 0.33, 30, 18);
+  ellipsoid("Pop Parrot scarlet feathered torso", [0, -0.06, 0], [0.55, 0.7, 0.39], "#b7192e", 0.0, 0.78, 38, 26);
+  ellipsoid("Pop Parrot golden orange breast", [0, -0.12, 0.305], [0.405, 0.49, 0.135], "#df8f2d", 0.0, 0.72, 34, 22);
+  ellipsoid("Pop Parrot coral throat bib", [0, 0.22, 0.342], [0.29, 0.23, 0.075], "#da5a37", 0.0, 0.74, 28, 18);
+  ellipsoid("Pop Parrot scarlet head", [0, 0.7, 0.035], [0.445, 0.42, 0.365], "#be1f31", 0.0, 0.76, 38, 26);
+  ellipsoid("Pop Parrot crown red cap", [0, 1.005, 0.015], [0.34, 0.19, 0.29], "#ca3034", 0.0, 0.72, 30, 18);
 
   // Each wing is assembled from a base and multiple individually named flight-feather meshes.
   for (const side of [-1, 1]) {
@@ -141,7 +141,7 @@ export function createPopParrotModel() {
         [tipX, -0.07 - index * 0.075],
         [tipX - side * 0.065, -0.11 - index * 0.075],
         [startX - side * 0.035, 0.25 - index * 0.04]
-      ], 0.105, 0.035, wingColors[index % wingColors.length], 0.04, 0.38);
+      ], side * 0.105, 0.035, wingColors[index % wingColors.length], 0.0, 0.68);
     }
     for (let row = 0; row < 3; row++) {
       for (let index = 0; index < 5; index++) {
@@ -151,24 +151,24 @@ export function createPopParrotModel() {
         fin("Pop Parrot " + (side < 0 ? "far" : "near") + " layered wing covert " + (row + 1) + "-" + (index + 1), [
           [x - side * 0.045, y + 0.045], [x + side * 0.055, y - 0.025],
           [x + side * 0.018, y - 0.14], [x - side * 0.06, y - 0.08]
-        ], 0.165 + row * 0.006, 0.024, color, 0.035, 0.42);
+        ], side * (0.165 + row * 0.006), 0.024, color, 0.0, 0.68);
       }
     }
 
     // The ivory cheek mask, amber iris and glossy pupil are separately surfaced on both sides.
     ellipsoid("Pop Parrot " + (side < 0 ? "far" : "near") + " ivory cheek feather patch",
-      [side * 0.22, 0.735, 0.318], [0.145, 0.18, 0.055], "#f8eedb", 0.015, 0.5, 22, 14);
+      [side * 0.22, 0.735, side * 0.318], [0.145, 0.18, 0.055], "#f8eedb", 0.0, 0.66, 22, 14);
     ellipsoid("Pop Parrot " + (side < 0 ? "far" : "near") + " amber eye ring",
-      [side * 0.248, 0.79, 0.367], [0.067, 0.074, 0.028], "#eeb849", 0.08, 0.3, 20, 14);
+      [side * 0.248, 0.79, side * 0.367], [0.067, 0.074, 0.028], "#eeb849", 0.08, 0.3, 20, 14);
     ellipsoid("Pop Parrot " + (side < 0 ? "far" : "near") + " glossy onyx eye",
-      [side * 0.248, 0.795, 0.39], [0.039, 0.048, 0.024], "#121d2c", 0.12, 0.12, 18, 12);
+      [side * 0.248, 0.795, side * 0.39], [0.039, 0.048, 0.024], "#121d2c", 0.12, 0.12, 18, 12);
     ellipsoid("Pop Parrot " + (side < 0 ? "far" : "near") + " eye catchlight",
-      [side * 0.237, 0.816, 0.411], [0.012, 0.015, 0.008], "#ffffff", 0.02, 0.12, 12, 8);
+      [side * 0.237, 0.816, side * 0.411], [0.012, 0.015, 0.008], "#ffffff", 0.02, 0.12, 12, 8);
     tube("Pop Parrot cheek feather groove " + side, [
-      [side * 0.15, 0.69, 0.37], [side * 0.22, 0.66, 0.377], [side * 0.3, 0.68, 0.35]
+      [side * 0.15, 0.69, side * 0.37], [side * 0.22, 0.66, side * 0.377], [side * 0.3, 0.68, side * 0.35]
     ], 0.006, "#d0c9bb", 0.01, 0.62, 6);
     ellipsoid("Pop Parrot " + (side < 0 ? "far" : "near") + " shoulder covert",
-      [side * 0.29, -0.36, 0.245], [0.205, 0.21, 0.085], "#d6463f", 0.025, 0.43, 22, 14);
+      [side * 0.29, -0.36, 0.245], [0.205, 0.21, 0.085], "#b92c2f", 0.0, 0.72, 22, 14);
   }
 
   // Seven separate red, gold, teal and cobalt tail feathers create a long fan.
@@ -203,11 +203,13 @@ export function createPopParrotModel() {
     ], 0.09, 0.035, color, 0.035, 0.37);
   });
   ellipsoid("Pop Parrot soft graphite cere", [0, 0.54, 0.353], [0.16, 0.115, 0.075], "#a7a69f", 0.02, 0.55, 24, 14);
-  taperedCylinder("Pop Parrot sculpted hooked upper beak", [0, 0.625, 0.385], [0, 0.39, 0.57],
-    0.155, 0.035, "#252c36", 0.1, 0.29, 28);
+  tube("Pop Parrot sculpted hooked upper beak", [
+    [0, 0.625, 0.385], [0, 0.56, 0.48], [0, 0.43, 0.57], [0, 0.39, 0.55]
+  ], [0.155, 0.13, 0.075, 0.025], "#252c36", 0.02, 0.48, 24);
   ellipsoid("Pop Parrot upper beak glossy ridge", [0, 0.595, 0.455], [0.095, 0.075, 0.042], "#404a54", 0.12, 0.24, 20, 12);
-  taperedCylinder("Pop Parrot curved lower beak", [0, 0.39, 0.55], [0, 0.245, 0.49],
-    0.09, 0.025, "#3b454d", 0.08, 0.32, 22);
+  tube("Pop Parrot curved lower beak", [
+    [0, 0.39, 0.55], [0, 0.32, 0.54], [0, 0.245, 0.49]
+  ], [0.09, 0.06, 0.025], "#3b454d", 0.02, 0.5, 20);
   ellipsoid("Pop Parrot lower beak tip", [0, 0.24, 0.49], [0.035, 0.045, 0.036], "#202a35", 0.08, 0.3, 16, 10);
 
   // Seven contour plumes detail the breast without obscuring its warm countershading.
