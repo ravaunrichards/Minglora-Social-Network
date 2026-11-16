@@ -88,18 +88,20 @@ test("Leaderboard top-three rows follow the supplied No.1/No.2/No.3 layout with 
   assert.match(league, /minglora:open-profile/);
 });
 
-test("Match Power-Ups retain their existing IDs and original behavior", () => {
+test("the six Minglora Match Power-Ups use their original branded vector artwork", () => {
   for (const [id, icon] of [
-    ["momentum_boost", "powerup-momentum"],
-    ["score_multiplier", "powerup-multiplier"],
-    ["shield", "powerup-shield"],
-    ["time_boost", "powerup-time"]
+    ["boosting_glove", "powerup-glove"],
+    ["magic_mist", "powerup-mist"],
+    ["stun_hammer", "powerup-hammer"],
+    ["time_maker", "powerup-time-maker"],
+    ["boosters", "powerup-boosters"],
+    ["speed_challenge", "powerup-speed"]
   ]) {
-    assert.ok(league.includes('"' + id + '":leagueAssetIcon("' + icon + '"'), id + " keeps its original functional identifier");
+    assert.ok(league.includes('"' + id + '": "' + icon + '"'), id + " is mapped to its branded icon");
     assert.ok(artwork.includes('<symbol id="' + icon + '"'), "missing " + icon + " artwork");
   }
   assert.match(league, /data-powerup-select=/);
   assert.match(league, /activateSelectedPowerup/);
-  assert.match(index, /leagues\.css\?v=20261116-league-original-reference-assets-1/);
-  assert.match(index, /leagues\.js\?v=20261115-remove-class-order-reference-1/);
+  assert.match(index, /leagues\.css\?v=20261116-match-powerups-six-reference-1/);
+  assert.match(index, /leagues\.js\?v=20261116-match-powerups-six-reference-1/);
 });
