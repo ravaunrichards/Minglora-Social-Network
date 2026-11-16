@@ -190,3 +190,20 @@ Use supplied third-party screenshots only to understand geometry, hierarchy and 
 - Added source regression checks and expanded the Chromium render matrix from 11 to 12 bespoke gifts (36 desktop/tablet/mobile model captures expected).
 - Verification status: **PENDING** remote CI and Chromium run on the final PR head. The model and artwork remain `design-review-pending`; rights review and physical-device testing are not complete.
 - Production Supabase gift catalogue, prices, wallet balances, payouts, transactions and deployment were not changed. Existing production v3 approval/release gate remains in force.
+
+
+## Verified checkpoint — PR #411 Maracas asset — 2026-11-15
+
+**Task ID:** LIVE-ASSET-12A — bespoke Maracas asset integration
+
+- Implementation: completed and source-verified; commit `710d5207508a03bf96a79383b5d216517d235567` on `feat/minglora-live-maracas-asset-20261115c`.
+- PR: [#411](https://github.com/ravaunrichards/Minglora-Social-Network/pull/411), based on `main` SHA `3d7daee854acef61619b503d1ce80ef8d6275b64`; implementation branch was one commit ahead and zero behind at verification.
+- Gift build and Maracas unit assertions: PASS. The actual job log confirms the new Maracas test passed and all 1,748 SVG/icon/GLTF generated outputs were built.
+- Chromium WebGL matrix: PASS — 12 models × desktop/tablet/mobile = 36 pixel render checks, 36 screenshots, 0 page errors, 0 HTTP/request failures and 0 cancellations. GitHub artifact ID `14187500566`, workflow run `43777989066`.
+- LIVE/MeetWave seven-plus-two layout visual QA: PASS, run `43777989036`.
+- Supabase Auth provider acceptance: PASS, run `43777989138`.
+- Standard CI: FAIL with 1,234 passed / 5 failed. The same five failures and the same separate For You navigation failure existed on the pre-PR base `main` run `43777940421`. Failures are unrelated API test fixture, Creator League sync/podium/ranking assertions, and For You stylesheet query expectation; these remain outside this LIVE-assets task.
+- PR overall merge state is `unstable`; not merged and not deployed. No bypass of red checks was attempted.
+- Model/artwork status: `design-review-pending`. Human visual, licensing, audio mastering and physical-device acceptance remain open.
+- Production DB/coin values/wallets/transactions/payouts are unchanged.
+- Exact next action: continue the bespoke model/artwork gap audit from the canonical gift catalogue; do not claim the full LIVE asset mission complete.

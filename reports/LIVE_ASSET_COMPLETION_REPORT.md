@@ -364,3 +364,18 @@ The browser captures establish that all nine bespoke models load and remain visi
 - Status remains **IN PROGRESS** until the pull-request build, unit tests, gift-asset generation and 36-view Chromium renderer matrix are checked on the final branch head.
 - Model/artwork review remains `design-review-pending`; rights clearance, human visual review, mastered recording and physical-device QA are not claimed.
 - No production catalogue, wallet, payment, transaction or deployment change is part of this addition.
+
+
+## Maracas CI verification — 2026-11-15
+
+- Pull request: [#411](https://github.com/ravaunrichards/Minglora-Social-Network/pull/411)
+- Implementation commit: `710d5207508a03bf96a79383b5d216517d235567`
+- Gift build: **PASS** — 1,748 primary SVG artworks, 1,748 transparent SVG icons and 1,748 self-contained GLTF models generated.
+- Maracas regression: **PASS** — the new bespoke Maracas model, SVG/icon provenance, canonical one-Coin price and source active flag, geometry/accessor bounds and dedicated LIVE audio/motion route all passed `tests/unit/gift-catalog.test.js`.
+- Dedicated browser renderer: **PASS** — 12 gifts × 3 Chromium viewports; 36/36 render checks, 36/36 pixel render checks and 36 screenshots; zero page errors, HTTP failures, request failures or request cancellations. Evidence artifact: `minglora-live-gift-model-render-evidence` (GitHub artifact 14187500566; run 43777989066).
+- LIVE/MeetWave layout visual QA: **PASS** — run 43777989036, including successful screenshot upload.
+- Supabase Auth acceptance: **PASS** — run 43777989138. No production Auth configuration was changed by this asset task.
+- Overall standard CI: **FAIL** — 1,234 passed, 5 failed; For You functional navigation: 14 passed, 1 failed. The same five standard-suite test failures and same For You stylesheet assertion were already present on the base `main` run 43777940421 before PR #411. Failures are in API test fixture expectation, Creator League sync/podium/ranking tests, and For You story stylesheet version expectation. No unrelated files were changed to mask these failures.
+- Merge state: **BLOCKED / NOT MERGED** — GitHub reports the PR mergeable for conflicts but overall state `unstable` because standard checks are red. Do not bypass required checks.
+- Review status remains `design-review-pending`; no human visual approval, rights clearance, mastered sound recording or physical-device QA is claimed.
+- Production Supabase gift rows, Coin values, wallet balances, purchases, ledger entries, payouts and deployments remain untouched.
