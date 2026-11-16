@@ -22,7 +22,7 @@ test("all 50 Gifter levels serve the six uploaded bright cropped badge reference
   assert.match(server, /badgeLevel<=49\s*\?\s*'LV\.40 - LV\.49\.png'/);
   assert.match(server, /'LV\.50\+\.png'/);
   assert.match(server, /'Crop References','Gifters Badges','Png'/);
-  assert.match(server, /gifter-crop-range-sheets\\/lv-1-9\\.png/);
+  assert.match(server, /gifter-crop-range-sheets\/lv-1-9\.png/);
   assert.match(server, /'Crop References','Gifter level range sheets'/);
   assert.match(read("public/gifter-progression.js"), /gifter-crop-range-sheets/);
   assert.match(progressionStyles, /is-locked \.gp-level-index-art\{filter:grayscale/);
@@ -30,7 +30,7 @@ test("all 50 Gifter levels serve the six uploaded bright cropped badge reference
   assert.match(progressionStyles, /is-current \.gp-level-index-art/);
   assert.match(progressionStyles, /is-admin-awarded \.gp-level-index-art/);
   assert.match(read("public/gifter-progression.js"), /gp-progression-range-badge/);
-  assert.match(progressionStyles, /\\.gp-progression-range-badge/);
+  assert.match(progressionStyles, /\.gp-progression-range-badge/);
 
 });
 
