@@ -11,12 +11,6 @@
   const giftSoundRecords=new Map(),giftSoundArrayBuffers=new Map(),giftSoundBuffers=new Map();
   const giftSoundLoads=new Map(),giftSoundDecodeLoads=new Map();
   let giftSoundManifestPromise=null;
-  function audio(){
-    const C=window.AudioContext||window.webkitAudioContext;
-    if(!C)return null;
-    if(!ctx)ctx=new C();
-    return ctx;
-  }
   async function loadGiftSoundManifest(){
     if(giftSoundRecords.size)return giftSoundRecords;
     if(!giftSoundManifestPromise){
